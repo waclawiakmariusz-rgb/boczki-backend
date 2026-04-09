@@ -7,6 +7,26 @@ const { randomUUID } = require('crypto');
 
 const NAZWY_MIESIECY = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
 
+// Zwraca dzień (liczba) z daty w dowolnym formacie: "15.04", "15.04.1985", "1985-04-15"
+function parseDzien(dataStr) {
+  if (!dataStr) return -1;
+  const s = String(dataStr);
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/); // YYYY-MM-DD
+  if (iso) return +iso[3];
+  const dot = s.match(/^(\d{1,2})\./);              // DD.MM lub DD.MM.YYYY
+  if (dot) return +dot[1];
+  return -1;
+}
+
+// Zwraca "DD.MM" bez roku
+function formatDDMM(dataStr) {
+  if (!dataStr) return '';
+  const s = String(dataStr);
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[3]}.${iso[2]}`;
+  return s.slice(0, 5); // DD.MM (lub DD.MM. z kropką - bierzemy 5 znaków)
+}
+
 // Mapowanie nazwy miesiąca na nazwę tabeli (MySQL nie lubi polskich znaków jako identyfikatory - korzystamy z backticks)
 const getMonthTable = (miesiac) => {
   if (NAZWY_MIESIECY.includes(miesiac)) return `\`${miesiac}\``;
@@ -36,18 +56,16 @@ module.exports = (db) => {
           const klienci = (rows || [])
             .filter(r => r.nazwisko || r.imie)
             .map((r, i) => {
-              let dataUr = r.data_urodzin ? String(r.data_urodzin).slice(0, 10) : '';
-              let dzienSort = 99;
-              const match = dataUr.match(/^(\d{1,2})/);
-              if (match) dzienSort = parseInt(match[1]);
+              const dataUr = formatDDMM(r.data_urodzin);
+              const dzienSort = parseDzien(r.data_urodzin);
               return {
-                wiersz: i + 2, // przybliżony numer wiersza
+                wiersz: i + 2,
                 id: r.id,
                 c_status: r.c_status,
                 nazwisko: r.nazwisko,
                 imie: r.imie,
-                data_ur: dataUr,
-                dzien_sort: dzienSort,
+                data_ur: dataUr,       // zawsze "DD.MM"
+                dzien_sort: dzienSort < 0 ? 99 : dzienSort,
                 telefon: r.nr_telefonu,
                 sms: r.sms,
                 zgoda_tel: r.telefon,
@@ -81,10 +99,7 @@ module.exports = (db) => {
           (err, rows) => {
             if (!err && rows) {
               rows.forEach(r => {
-                let dzien = -1;
-                const dataStr = r.data_urodzin ? String(r.data_urodzin) : '';
-                const m = dataStr.match(/^(\d{1,2})/);
-                if (m) dzien = Number(m[1]);
+                const dzien = parseDzien(r.data_urodzin);
                 if (dzien > 0) {
                   const by = new Date(year, mi, dzien);
                   by.setHours(0, 0, 0, 0);
@@ -124,8 +139,7 @@ module.exports = (db) => {
                 const wBazie2 = (imie + nazw).toLowerCase().replace(/\s/g, '');
                 if (wBazie1 === szukany || wBazie2 === szukany) {
                   found = true;
-                  const dataStr = r.data_urodzin ? String(r.data_urodzin).slice(0, 10) : '';
-                  return res.json({ znaleziona: true, data: dataStr, miesiac });
+                  return res.json({ znaleziona: true, data: formatDDMM(r.data_urodzin), miesiac });
                 }
               }
             }
