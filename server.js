@@ -12,37 +12,26 @@ app.use(express.json());
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 
-// Konfiguracja połączenia z bazą MySQL z auto-reconnect
-function connectDB() {
-    const connection = mysql.createConnection({
-        host: process.env.DB_HOST,
-        user: process.env.DB_USER,
-        password: process.env.DB_PASSWORD,
-        database: process.env.DB_NAME,
-        charset: 'utf8mb4'
-    });
+// Konfiguracja puli połączeń z bazą MySQL
+const db = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    charset: 'utf8mb4',
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+});
 
-    connection.connect((err) => {
-        if (err) {
-            console.error('Błąd połączenia z bazą danych:', err.message);
-            setTimeout(connectDB, 5000);
-            return;
-        }
+db.getConnection((err, connection) => {
+    if (err) {
+        console.error('Błąd połączenia z bazą danych:', err.message);
+    } else {
         console.log('SUKCES! Połączono z bazą danych MySQL!');
-    });
-
-    connection.on('error', (err) => {
-        console.error('Błąd bazy danych:', err.message);
-        if (err.fatal) {
-            console.log('Reconnecting...');
-            setTimeout(connectDB, 3000);
-        }
-    });
-
-    return connection;
-}
-
-const db = connectDB();
+        connection.release();
+    }
+});
 
 // ==========================================
 // IMPORTY ROUTERÓW
