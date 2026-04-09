@@ -8171,8 +8171,8 @@ function odswiezSprzedaz() {
         
         d.forEach(r => { 
             let salesDate = new Date(r.data).toLocaleDateString(); 
-            if(salesDate === today) { 
-                let time = new Date(r.data).toLocaleTimeString().slice(0,5); 
+            if(salesDate === today) {
+                let time = r.czas || new Date(r.data).toLocaleTimeString().slice(0,5);
                 let details = r.szczegoly ? ` (${r.szczegoly})` : ''; 
                 const rowStr = encodeURIComponent(JSON.stringify(r)); 
                 

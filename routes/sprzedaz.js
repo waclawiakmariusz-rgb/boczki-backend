@@ -94,12 +94,12 @@ module.exports = (db) => {
     if (action === 'sales_history') {
       const today = new Date().toISOString().slice(0, 10);
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND status != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
+        `SELECT id, data_sprzedazy, TIME_FORMAT(data_sprzedazy, '%H:%i') as czas_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND status != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
         [tenant_id, today],
         (err, rows) => {
           if (err) return res.json([]);
           return res.json(rows.map(r => ({
-            id: r.id, data: r.data_sprzedazy, klient: r.klient, zabieg: r.zabieg,
+            id: r.id, data: r.data_sprzedazy, czas: r.czas_sprzedazy, klient: r.klient, zabieg: r.zabieg,
             sprzedawca: r.sprzedawca, kwota: r.kwota, komentarz: r.komentarz,
             szczegoly: r.szczegoly, platnosc: r.platnosc, id_klienta: r.id_klienta
           })));
