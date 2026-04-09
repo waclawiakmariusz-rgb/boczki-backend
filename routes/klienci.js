@@ -92,7 +92,37 @@ module.exports = (db) => {
               data: r.data_kontaktu, id_klienta: r.id_klienta, klient: r.klient,
               kampania: r.kategoria_filtr, status: r.status, notatka: r.notatka, pracownik: r.pracownik
             }));
-            return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, urodziny: { znaleziona: false } });
+
+            // Szukaj urodzin w tabelach miesięcznych
+            const MIESIACE = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+            const szukany = nazwa.toLowerCase().replace(/\s/g, '');
+            let bdFound = false, bdPending = MIESIACE.length;
+            const formatDDMM = (s) => {
+              if (!s) return '';
+              const str = String(s);
+              const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+              if (iso) return `${iso[3]}.${iso[2]}`;
+              return str.slice(0, 5);
+            };
+            MIESIACE.forEach(miesiac => {
+              if (bdFound) { bdPending--; return; }
+              db.query(`SELECT imie, nazwisko, data_urodzin FROM \`${miesiac}\` WHERE tenant_id = ?`, [tenant_id], (bdErr, bdRows) => {
+                if (!bdFound && !bdErr && bdRows) {
+                  for (const r of bdRows) {
+                    const n = String(r.nazwisko || ''), im = String(r.imie || '');
+                    if ((n + im).toLowerCase().replace(/\s/g, '') === szukany ||
+                        (im + n).toLowerCase().replace(/\s/g, '') === szukany) {
+                      bdFound = true;
+                      return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, urodziny: { znaleziona: true, data: formatDDMM(r.data_urodzin), miesiac } });
+                    }
+                  }
+                }
+                bdPending--;
+                if (bdPending === 0 && !bdFound) {
+                  return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, urodziny: { znaleziona: false } });
+                }
+              });
+            });
           });
         });
       });
