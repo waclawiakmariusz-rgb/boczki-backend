@@ -8798,6 +8798,14 @@ function przywrocGrupowo(idsStr) {
 
 // --- NOWA LOGIKA PODSUMOWANIA (Z WYMUSZENIEM WYGLĄDU) ---
 
+// Helper: konwertuje godzinę UTC "HH:MM" (z bazy danych) na czas lokalny przeglądarki
+function utcTimeToLocal(g) {
+    if (!g || !g.includes(':')) return g || '--:--';
+    const [h, m] = g.split(':');
+    const d = new Date(Date.UTC(2000, 0, 1, +h, +m));
+    return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+}
+
 function zaladujPodsumowanieDnia() {
     const dateInput = document.getElementById('podsumowanie-data');
     let selectedDate = dateInput.value;
@@ -8926,7 +8934,7 @@ function generujNowaTabele(lista) {
 
         tbody.innerHTML += `
             <tr class="${rowClass}" style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:10px; opacity:0.7;">${r.godzina}</td>
+                <td style="padding:10px; opacity:0.7;">${utcTimeToLocal(r.godzina)}</td>
                 <td style="padding:10px; opacity:0.7;">${r.klient}</td>
                 <td style="padding:10px;">${nameHtml}</td>
                 <td style="padding:10px; ${amountStyle}">${kwota.toFixed(2)} zł</td>
@@ -9090,7 +9098,7 @@ function renderTabelaPodsumowania(lista) {
 
         tbody.innerHTML += `
             <tr class="${rowClass}" style="border-bottom:1px solid #f1f5f9;">
-                <td class="${dimmedClass}" style="padding:10px;">${r.godzina}</td>
+                <td class="${dimmedClass}" style="padding:10px;">${utcTimeToLocal(r.godzina)}</td>
                 <td class="${dimmedClass}" style="padding:10px;">${r.klient}</td>
                 <td style="padding:10px;">${nameHtml}</td>
                 <td style="padding:10px; ${amountStyle}">${kwota.toFixed(2)} zł</td>
@@ -13191,7 +13199,7 @@ if (inputNazwaCheck) {
 
                 tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid #f1f5f9; height: 50px;" class="${rowClass}">
-                        <td style="padding: 10px; color: #64748b;">${r.godzina}</td>
+                        <td style="padding: 10px; color: #64748b;">${utcTimeToLocal(r.godzina)}</td>
                         <td style="padding: 10px; font-weight: 500; color: #334155;">${r.klient}</td>
                         <td style="padding: 10px;">${nameHtml}</td>
                         <td style="padding: 10px; ${amountStyle}">${an_formatPLN(kwota)}</td>
