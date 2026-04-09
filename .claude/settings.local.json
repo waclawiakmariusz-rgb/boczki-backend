@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \":*)",
+      "Bash(node wielki_migrator.js)",
+      "Bash(node migracja_maj.js)",
+      "Bash(node --check \"/c/Users/aaell/Desktop/aplikacje boczki na bok/system magazynowy/boczki-backend/server.js\")",
+      "Bash(node --check '/c/Users/aaell/Desktop/aplikacje boczki na bok/system magazynowy/boczki-backend/routes/__TRACKED_VAR__.js')",
+      "Bash(node --check server.js)",
+      "Bash(timeout 5 node server.js)",
+      "Bash(git config:*)"
+    ]
+  }
+}

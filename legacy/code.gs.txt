@@ -1,0 +1,4072 @@
+// =========================================================================
+// SYSTEM BOCZKI SAAS tgt targety 3
+// Fuzja: Operacje (v3.1) + Analityka i Koszty (06032026) + Model Multi-Tenant
+// =========================================================================
+
+// ==========================================
+// ⚙️ SEKCJA 1: KONFIGURACJA SAAS I STAŁE
+// ==========================================
+
+const ID_BAZY_LICENCJI = "1d7Dos_4J0Vdv2XqALh-zfX610DWLBp69GbO06sf0oM8"; 
+const ID_FOLDERU_BACKUP = "1VoWzAUdagT2nuTm6M6M4059GZDOBH0TE"; 
+
+let GLOBAL_TENANT_ID = ""; 
+
+// =========================================================================
+// 🚀 ROUTER GŁÓWNY (GET) - AUTO-JSONIZER (NAPRAWIONY DLA ANALIZY)
+// =========================================================================
+function doGet(e) {
+  try {
+    const action = e.parameter.action;
+    
+    if (!action) return ContentService.createTextOutput("SaaS Master Engine działa poprawnie (Status: OK).");
+
+    GLOBAL_TENANT_ID = e.parameter.tenant_id;
+    if (!GLOBAL_TENANT_ID) return zwrocJSON({ status: 'error', message: 'Błąd sesji SaaS: Brak autoryzacji (tenant_id).' });
+
+    let result = null;
+
+    // --- OPERACJE CRM I MAGAZYN ---
+    if (action == 'read') result = pobierzDaneJakoJSON();
+    else if (action == 'archive_read') result = pobierzArchiwumJakoJSON();
+    else if (action == 'dictionary') result = pobierzSlownik();
+    else if (action == 'birthdays') result = pobierzUrodziny(e.parameter.miesiac);
+    else if (action == 'upcoming_birthdays') result = pobierzNajblizszeUrodziny();
+    else if (action == 'sales_history') result = pobierzHistorieSprzedazy(); 
+    else if (action == 'full_sales_history') result = pobierzPelnaHistorie(); 
+    else if (action == 'sales_dictionary') result = pobierzSlownikSprzedazy();
+    else if (action == 'get_system_logs') result = pobierzLogiSystemowe();
+    else if (action == 'get_clients') result = pobierzUnikalnychKlientowZPortfelem();
+    else if (action == 'get_client_profile_data') result = pobierzWszystkieDaneProfilu(e.parameter.klient);
+    else if (action == 'get_client_birthday') result = znajdzUrodzinyKlienta(e.parameter.klient);
+    else if (action == 'get_wallet') result = pobierzPortfelKlienta(e.parameter.klient);
+    else if (action == 'get_consents') result = pobierzZgodyKlienta(e.parameter.id);
+    else if (action == 'get_rodo') result = pobierzRODO(e.parameter.id);
+    else if (action == 'get_all_deposits') result = pobierzWszystkieZadatki();
+    else if (action == 'get_suggestion_rules') result = pobierzRegulySugestii();
+    else if (action == 'emergency_history') result = pobierzHistorieAwaryjna();
+    else if (action == 'get_discounts') result = pobierzRabaty();
+    else if (action == 'get_client_memo') result = pobierzNotatkeKlienta(e.parameter.klient);
+    else if (action == 'get_all_rodo') result = pobierzWszystkieRodo(); 
+    else if (action == 'get_retention') result = pobierzCalaRetencje(); 
+    
+    // --- AKCJE Z ANALIZY I KOSZTÓW (TU BYŁ BŁĄD) ---
+    else if (action === 'get_months' || action === 'an_get_months') result = fetchDashboardMonths();
+    else if (action === 'get_daily_summary' || action === 'an_get_daily_summary') result = pobierzTransakcjeZDnia(e.parameter.date);
+    else if (action === 'get_costs_list' || action === 'an_get_costs_list') result = getDashboardCostsList();
+    // Akcje wymagające payloadu (przez POST w analityce są bezpieczniejsze, ale dodajmy bezpiecznik)
+    else if (action === 'get_stats' || action === 'an_get_stats') result = getDashboardStats(e.parameter);
+    else if (action === 'get_yearly_summary' || action === 'an_get_yearly_summary') result = getDashboardYearlySummary(e.parameter);
+    else if (action === 'get_treatment_analysis' || action === 'an_get_treatment_analysis') result = getDashboardTreatmentAnalysis(e.parameter);
+    else if (action === 'get_bi_data' || action === 'an_get_bi_data') result = getDashboardBIData(e.parameter);
+    else if (action === 'get_monthly_details' || action === 'an_get_monthly_details') result = obsłużAkcjeAnalityczne(e.parameter, action);
+    // KONSULTACJE WPISYWANIE
+    else if (action === 'kon_read_results') result = kon_pobierzOstatnieWyniki();
+    else if (action === 'kon_get_consultants') result = kon_pobierzKonsultantow(e.parameter.onlyActive);
+    else if (action === 'kon_get_logs') result = kon_pobierzLogi();
+    else if (action === 'kon_get_campaigns') result = kon_pobierzKampanie();
+    // KONIEC KONSULTACJE WPISYWANIE
+    // --- RBAC ---
+    else if (action === 'get_pin_users') result = pobierzUzytkownikowDoPinu();
+    else if (action === 'get_admin_users') result = pobierzUzytkownikowAdmin();
+
+    else return zwrocJSON({ status: 'error', message: 'Błąd: Nieznana akcja GET: ' + action });
+
+    if (result && typeof result.getMimeType === 'function') {
+        return result; 
+    } else {
+        return zwrocJSON(result);
+    }
+  } catch (err) {
+    return zwrocJSON({ status: 'error', message: 'Błąd krytyczny GET: ' + err.toString() });
+  }
+}
+
+// =========================================================================
+// 🚀 ROUTER GŁÓWNY (POST)
+// =========================================================================
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action;
+    let result = "";
+
+    if (action == 'login') {
+      return zwrocJSON(sprawdzLogowanieSaaS(data.login, data.haslo));
+    }
+
+    GLOBAL_TENANT_ID = data.tenant_id;
+    if (!GLOBAL_TENANT_ID) {
+        return zwrocJSON({ status: 'error', message: 'Błąd sesji SaaS: Brak przypisanej bazy. Zaloguj się ponownie.' });
+    }
+
+    // --- OPERACJE ---
+    if (action == 'update') result = aktualizujStan(data.id, data.ilosc, data.opis, data.pracownik);
+    else if (action == 'add') result = dodajProdukt(data);
+    else if (action == 'add_model') result = dodajModelDoSlownika(data);
+    else if (action == 'delete') result = zarchiwizujProdukt(data.id, data.pracownik);
+    else if (action == 'restore') result = przywrocZArchiwum(data.id);
+    else if (action == 'update_birthday_status') result = zapiszStatusUrodzin(data);
+    else if (action == 'update_birthday_comment') result = zapiszKomentarzUrodzin(data);
+    else if (action == 'add_sale') result = dodajSprzedaz(data);
+    else if (action == 'edit_sale') result = edytujSprzedaz(data);
+    else if (action == 'delete_sale') result = ukryjSprzedaz(data);
+    else if (action == 'add_sales_def') result = dodajDefinicjeSprzedazy(data);
+    else if (action == 'delete_employee') result = usunPracownika(data);
+    else if (action == 'delete_service') result = usunZabieg(data);
+    else if (action == 'edit_service') result = edytujZabieg(data);
+    else if (action == 'save_rodo') result = zapiszRODO(data);
+    else if (action == 'add_multi_sale') result = dodajWieleSprzedazy(data);
+    else if (action == 'edit_product') result = edytujProduktWBazie(data);
+    else if (action == 'add_suggestion_rule') result = dodajReguleSugestii(data); 
+    else if (action == 'delete_suggestion_rule') result = usunReguleSugestii(data);
+    else if (action == 'add_client') result = dodajKlientaBackend(data);
+    else if (action == 'manage_deposit') result = operacjaNaZadatku(data); 
+    else if (action == 'add_client_fast_sales') result = dodajKlientaSzybkoSprzedaz(data); 
+    else if (action == 'update_consents') result = zapiszZgodyKlienta(data);
+    else if (action == 'save_client_memo') result = zapiszNotatke(data);
+    else if (action == 'add_birthday') result = dodajKlientaUrodzinowego(data);
+    else if (action == 'update_birthday_field') result = aktualizujPoleUrodzin(data);
+    else if (action == 'edit_dictionary_entry') result = edytujWpisSlownika(data);
+    else if (action == 'delete_dictionary_entry') result = usunWpisSlownikaBackend(data);
+    else if (action == 'add_discount_def') result = dodajDefinicjeRabatu(data);
+    else if (action == 'merge_deposits') result = scalZadatki(data); 
+    else if (action == 'edit_client_data') result = edytujDaneKlienta(data);
+    else if (action == 'emergency_edit_sale') result = edytujSprzedazAwaryjnie(data);
+    else if (action == 'save_retention') result = zapiszRetencje(data); 
+    else if (action == 'trigger_backup') result = wykonajKopieZapasowa();
+    // --- KONSULTACJE ---
+    else if (action === 'kon_save_result') result = kon_zapiszWynik(data);
+    else if (action === 'kon_update_result') result = kon_edytujWynik(data);
+    else if (action === 'kon_add_consultant') result = kon_dodajKonsultanta(data);
+    else if (action === 'kon_delete_consultant') result = kon_usunKonsultanta(data);
+    else if (action === 'kon_save_campaign') result = kon_zapiszKampanie(data);
+    else if (action === 'kon_toggle_campaign') result = kon_zmienStatusKampanii(data);
+    else if (action === 'odp_getReportData') result = odp_getReportData(data);
+    // ==========================================
+    // --- ANALITYKA KONSULTACJI (akon_) ---
+    // ==========================================
+    else if (action === 'akon_get_months') result = akon_getMonthsList();
+    else if (action === 'akon_get_stats') result = akon_getDashboardStats(data);
+    else if (action === 'akon_get_daily_summary') result = akon_getDailySummary(data);
+    else if (action === 'akon_get_monthly_details') result = akon_getMonthlyReport(data);
+    else if (action === 'akon_get_monthly_list') result = akon_getMonthlyList(data);    
+    else if (action === 'akon_get_consultants') result = akon_getConsultants(data);
+
+    // KONIEC KONSULTACJE
+    // --- ANALITYKA ---
+    else if (action === 'get_months' || action === 'an_get_months') result = fetchDashboardMonths();
+    else if (action === 'get_daily_summary' || action === 'an_get_daily_summary') result = pobierzTransakcjeZDnia(data.date);
+else if (action === 'get_monthly_details' || action === 'an_get_monthly_details') result = obsłużAkcjeAnalityczne(data, action);
+    else if (action === 'save_monthly_cost' || action === 'an_save_monthly_cost') result = saveDashboardCost(data);
+    else if (action === 'get_costs_list' || action === 'an_get_costs_list') result = getDashboardCostsList();
+    else if (action === 'get_stats' || action === 'an_get_stats') result = getDashboardStats(data);
+    else if (action === 'get_yearly_summary' || action === 'an_get_yearly_summary') result = getDashboardYearlySummary(data);
+    else if (action === 'get_treatment_analysis' || action === 'an_get_treatment_analysis') result = getDashboardTreatmentAnalysis(data);
+    else if (action === 'get_bi_data' || action === 'an_get_bi_data') result = getDashboardBIData();
+    // zarzadzanie dostepami
+    // --- ZARZĄDZANIE UŻYTKOWNIKAMI (RBAC & PIN) ---
+    else if (action === 'get_pin_users') result = pobierzUzytkownikowDoPinu();
+    else if (action === 'verify_pin') result = weryfikujPin(data.imie, data.pin);
+    else if (action === 'get_admin_users') result = pobierzUzytkownikowAdmin();
+    else if (action === 'add_admin_user') result = dodajUzytkownikaAdmin(data);
+    else if (action === 'delete_admin_user') result = usunUzytkownikaAdmin(data);
+    // Targety pracowników
+    else if (action == 'add_target') result = dodajTargetPracownika(data);
+    else if (action == 'get_targets') result = pobierzTargetyPracownikow();
+    else if (action == 'edit_target') result = edytujTargetPracownika(data);
+    else if (action === 'tgt_get_employee_dashboard') result = tgt_pobierzDashboardPracownika(data); 
+    // ==========================================
+    // --- MODUŁ RAPORT/MAGAZYN (rap_) ---
+    // ==========================================
+    // ==========================================
+    // --- MODUŁ MAGAZYN I RAPORT PRO (rap_) ---
+    // ==========================================
+    else if (action === 'rap_getInventory') result = rap_getInventory(data);
+    else if (action === 'rap_getCategories') result = rap_getCategories(data);
+    else if (action === 'rap_getLogs') result = rap_getLogs(data);
+    else if (action === 'rap_updateStock') result = rap_updateStock(data);
+    else if (action === 'rap_archiveProduct') result = rap_archiveProduct(data);
+    else if (action === 'rap_saveProduct') result = rap_saveProduct(data);
+    else if (action === 'rap_saveCategory') result = rap_saveCategory(data);
+    else if (action === 'rap_deleteCategory') result = rap_deleteCategory(data);
+
+    else return zwrocJSON({ status: 'error', message: 'Nieznana akcja POST: ' + action });
+    
+   // 🟢 MAGIA: Inteligentny Auto-JSON dla POST
+    if (typeof result === 'string') {
+        return zwrocJSON({ status: 'success', message: result });
+    } else if (result && typeof result.getMimeType === 'function') {
+        return result; // Już jest TextOutput (dane operacyjne CRM)
+    } else {
+        return zwrocJSON(result); // Pakujemy surowe obiekty (dane z Analizy) w JSON!
+    }
+  } catch (err) {
+    Logger.log("CRITICAL ERROR IN POST: " + err.toString());
+    return zwrocJSON({ status: 'error', message: 'Błąd serwera (POST): ' + err.toString() });
+  }
+}
+
+// =========================================================================
+// 🔐 FUNKCJE BAZOWE: LOGOWANIE, LOGI, HELPERY
+// =========================================================================
+
+function sprawdzLogowanieSaaS(loginInput, hasloInput) {
+  try {
+    const ssLicencje = SpreadsheetApp.openById(ID_BAZY_LICENCJI);
+    const sheet = ssLicencje.getSheetByName('Licencje');
+    if (!sheet) return { status: 'error', message: 'Błąd serwera: Brak arkusza Licencje w głównej bazie.' };
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      let dbLogin = String(data[i][0]).trim();
+      let dbPass = String(data[i][1]).trim();
+      let dbRole = String(data[i][2]).trim();     
+      let dbTenantId = String(data[i][3]).trim(); 
+      let dbStatus = String(data[i][4]).trim();   
+
+      if (dbLogin.toLowerCase() === String(loginInput).trim().toLowerCase() && dbPass === String(hasloInput).trim()) {
+        if (dbStatus.toLowerCase() !== 'aktywny') return { status: 'error', message: 'Licencja nieaktywna.' };
+        return { status: 'success', role: dbRole, tenant_id: dbTenantId };
+      }
+    }
+    return { status: 'error', message: 'Błędny login lub hasło' };
+  } catch (err) {
+    return { status: 'error', message: 'Błąd autoryzacji: ' + err.toString() };
+  }
+}
+
+function zwrocJSON(o) {
+    return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function zapiszLog(akcja, kto, opis) {
+  try {
+    const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let h = s.getSheetByName('Logi');
+    if (!h) {
+      h = s.insertSheet('Logi');
+      h.appendRow(['Data', 'Kto', 'Akcja', 'System', 'Opis']);
+    }
+    h.appendRow([new Date(), kto, akcja, "SYSTEM", opis]);
+  } catch (e) { Logger.log("Błąd zapisu logów: " + e); }
+}
+
+const parseDate = (raw) => {
+  if (!raw) return null;
+  if (raw instanceof Date) return raw;
+  let str = String(raw);
+  let d = new Date(str.substring(0, 10));
+  return isNaN(d.getTime()) ? null : d;
+};
+
+const parseAmount = (raw) => {
+  if (typeof raw === 'number') return raw;
+  if (!raw) return 0;
+  let str = String(raw).replace(',', '.').replace(/[^0-9.-]/g, '');
+  let val = parseFloat(str);
+  return isNaN(val) ? 0 : val;
+};
+
+const classifyPayment = (p) => {
+  let s = String(p).toLowerCase();
+  if (s.includes('blik')) return "Blik";
+  if (s.includes('gotówka') || s.includes('gotowka')) return "Gotówka";
+  if (s.includes('karta') || s.includes('terminal')) return "Karta";
+  if (s.includes('przelew') || s.includes('tpay')) return "Przelew";
+  if (s.includes('mediraty') || s.includes('raty')) return "MediRaty";
+  return "Inne";
+};
+
+// =========================================================================
+// 💰 MODUŁ: ZARZĄDZANIE TRANSAKCJAMI I MULTI-SPRZEDAŻ
+// =========================================================================
+
+function dodajWieleSprzedazy(d) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Sprzedaz');
+    const sheetZadatki = ss.getSheetByName('Zadatki'); 
+    
+    let sheetPlatnosci = ss.getSheetByName('Platnosci');
+    if (!sheetPlatnosci && d.split_breakdown) {
+       sheetPlatnosci = ss.insertSheet('Platnosci');
+       sheetPlatnosci.appendRow(['ID', 'Data', 'Klient', 'Metoda', 'Kwota']);
+    }
+    
+    const now = new Date();
+    const uniqueIdBase = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
+    const sprzedawcyStr = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(", ") : d.sprzedawca;
+
+    if (d.split_breakdown && Array.isArray(d.split_breakdown)) {
+        d.split_breakdown.forEach((part, idx) => {
+            sheetPlatnosci.appendRow([uniqueIdBase + "-SPLIT-" + idx, now, d.klient, part.method, parseFloat(part.amount)]);
+        });
+    }
+
+    if (sheetZadatki) {
+        d.pozycje.forEach(p => {
+           if ((p.platnosc === 'Portfel' || p.platnosc === 'Zadatek') && parseFloat(p.kwota) > 0) {
+               rozliczZadatekAutomatycznie({id: d.id_klienta, nazwa: d.klient}, parseFloat(p.kwota), sheetZadatki, p.depositId, sprzedawcyStr);
+           }
+        });
+    }
+
+    d.pozycje.forEach((poz, index) => {
+      if (poz.typ === 'Kosmetyk') zdejmijZeStanuFIFO(poz.nazwa_produktu, poz.ilosc, sprzedawcyStr);
+
+      const uniqueId = uniqueIdBase + "-" + (index + 1);
+      let zapisKategoria = poz.kategoria;
+      let zapisSzczegoly = poz.wariant;
+
+      if (poz.typ === 'Kosmetyk') {
+        zapisKategoria = "Kosmetyk: " + poz.nazwa_produktu;
+        zapisSzczegoly = poz.ilosc + " szt.";
+      }
+      
+      let idZadatkuLog = "";
+      if (poz.platnosc === 'Portfel' || poz.platnosc === 'Zadatek') idZadatkuLog = poz.depositId || ""; 
+
+      sheet.appendRow([now, uniqueId, d.klient, zapisKategoria, sprzedawcyStr, parseFloat(poz.kwota), poz.komentarz, zapisSzczegoly, "AKTYWNY", poz.platnosc, d.id_klienta || "", d.pracownik, idZadatkuLog]);
+    });
+    
+    return zwrocJSON({ status: 'success', message: "Zarejestrowano sprzedaż!" });
+  } catch (e) {
+    return zwrocJSON({ status: 'error', message: "Błąd: " + e.toString() });
+  }
+}
+
+function rozliczZadatekAutomatycznie(klientDane, kwotaDoPobrania, sheetZadatki, konkretneIdZadatku, pracownik) {
+  const data = sheetZadatki.getDataRange().getValues();
+  let pozostalo = parseFloat(kwotaDoPobrania);
+  
+  let szukaneId = "", szukaneNazwisko = "";
+  try {
+      const p = typeof klientDane === 'object' ? klientDane : JSON.parse(klientDane);
+      szukaneId = String(p.id); szukaneNazwisko = String(p.nazwa);
+  } catch(e) { szukaneNazwisko = String(klientDane); }
+
+  let dozwoloneId = [];
+  if (konkretneIdZadatku) dozwoloneId = String(konkretneIdZadatku).split(",");
+
+  for (let i = 1; i < data.length; i++) {
+    if (pozostalo <= 0) break;
+
+    const rowTransId = String(data[i][0]);
+    const rowClientId = String(data[i][1]); 
+    const rowClientName = String(data[i][3]); 
+    const rowTyp = data[i][4]; 
+    const rowStatus = data[i][8]; 
+    const dostepne = parseFloat(data[i][5]); 
+    const cel = data[i][7]; 
+    
+    let czyToTenKlient = false;
+    if (rowClientId && rowClientId === szukaneId) czyToTenKlient = true;
+    else if (rowClientName === szukaneNazwisko) czyToTenKlient = true;
+
+    if (czyToTenKlient && rowTyp === 'WPŁATA' && rowStatus === 'AKTYWNY') {
+        let czyUzyc = dozwoloneId.length > 0 ? dozwoloneId.includes(rowTransId) : true;
+        if (czyUzyc) {
+            let wykorzystanoKwote = 0, logInfo = "";
+
+            if (dostepne <= pozostalo) {
+                sheetZadatki.getRange(i + 1, 9).setValue('WYKORZYSTANY'); 
+                pozostalo -= dostepne; wykorzystanoKwote = dostepne;
+                logInfo = `Wykorzystano całość: ${dostepne.toFixed(2)} zł`;
+            } else {
+                sheetZadatki.getRange(i + 1, 9).setValue('WYKORZYSTANY'); 
+                const reszta = dostepne - pozostalo; wykorzystanoKwote = pozostalo;
+                const now = new Date();
+                const idReszty = "DEP-REST-" + now.getTime();
+                
+                sheetZadatki.appendRow([idReszty, rowClientId, now, rowClientName, 'WPŁATA', reszta, 'System', 'Reszta z: ' + cel, 'AKTYWNY', ""]);
+                logInfo = `Wykorzystano częściowo: ${wykorzystanoKwote.toFixed(2)} zł (Zostało: ${reszta.toFixed(2)} zł)`;
+                pozostalo = 0;
+            }
+            zapiszLog("UŻYCIE ZADATKU", pracownik, `${logInfo} | Klient: ${rowClientName} | Cel: ${cel} | ID: ${rowTransId}`);
+        }
+    }
+  }
+}
+
+function edytujSprzedaz(d) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Sprzedaz');
+  const v = s.getDataRange().getValues();
+  
+  for (let i = 1; i < v.length; i++) {
+    if (String(v[i][1]) === String(d.id)) {
+      let wiersz = i + 1, zmiany = [];
+      let oldKlient = v[i][2], oldZabieg = v[i][3], oldSprzedawca = v[i][4], oldKwota = v[i][5], oldKomentarz = v[i][6], oldSzczegoly = v[i][7], oldPlatnosc = v[i][9], oldIdKlienta = v[i][10];
+      let newSprzedawca = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(", ") : d.sprzedawca;
+
+      if (String(oldSprzedawca) !== String(newSprzedawca)) zmiany.push(`Sprzedawca: ${oldSprzedawca} -> ${newSprzedawca}`);
+      if (String(oldKlient) !== String(d.klient)) zmiany.push(`Klient: ${oldKlient} -> ${d.klient}`);
+      if (d.id_klienta && String(oldIdKlienta) !== String(d.id_klienta)) zmiany.push(`ID Klienta: ${oldIdKlienta} -> ${d.id_klienta}`);
+      if (String(oldZabieg) !== String(d.zabieg_nazwa)) zmiany.push(`Usługa: ${oldZabieg} -> ${d.zabieg_nazwa}`);
+      if (Number(oldKwota).toFixed(2) !== Number(d.kwota).toFixed(2)) zmiany.push(`Kwota: ${oldKwota} -> ${d.kwota}`);
+      if (String(oldSzczegoly) !== String(d.szczegoly)) zmiany.push(`Szczegóły: ${oldSzczegoly} -> ${d.szczegoly}`);
+      if (String(oldPlatnosc) !== String(d.platnosc)) zmiany.push(`Płatność: ${oldPlatnosc} -> ${d.platnosc}`);
+      if (String(oldKomentarz) !== String(d.komentarz)) zmiany.push(`Komentarz: zmiana treści`);
+
+      s.getRange(wiersz, 3).setValue(d.klient);
+      s.getRange(wiersz, 4).setValue(d.zabieg_nazwa);
+      s.getRange(wiersz, 5).setValue(newSprzedawca);
+      s.getRange(wiersz, 6).setValue(parseFloat(d.kwota)); 
+      s.getRange(wiersz, 7).setValue(d.komentarz);
+      s.getRange(wiersz, 8).setValue(d.szczegoly);
+      s.getRange(wiersz, 10).setValue(d.platnosc); 
+      if (d.id_klienta) s.getRange(wiersz, 11).setValue(d.id_klienta);
+      
+      zapiszLog("EDYCJA SPRZEDAŻY", d.pracownik, zmiany.length > 0 ? zmiany.join(" | ") : "Edycja danych (bez kluczowych zmian)");
+      return zwrocJSON({ status: 'success', message: 'Zaktualizowano transakcję!' });
+    }
+  }
+  return zwrocJSON({ status: 'error', message: "Nie znaleziono transakcji o ID: " + d.id });
+}
+
+function dodajSprzedaz(d){try{const s=SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Sprzedaz');if(d.typ_transakcji==='Kosmetyk')zdejmijZeStanuFIFO(d.produkt_nazwa,d.ilosc_sztuk,d.sprzedawca);const n=new Date(),u=Utilities.formatDate(n,Session.getScriptTimeZone(),"yyyyMMdd-HHmmss"),sp=Array.isArray(d.sprzedawca)?d.sprzedawca.join(", "):d.sprzedawca;s.appendRow([n,u,d.klient,d.zabieg_nazwa,sp,d.kwota,d.komentarz,d.szczegoly,"AKTYWNY"]);return"Sprzedaż zarejestrowana!";}catch(e){return"Błąd:"+e.toString();}}
+
+function ukryjSprzedaz(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Sprzedaz');
+  const data = sheet.getDataRange().getValues();
+  const targetId = String(d.id); 
+  const pracownik = d.pracownik || "Admin";
+  
+  let baseId = "", found = false, restoreMsg = "";
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === targetId) { 
+       const klientNazwa = data[i][2], usluga = data[i][3], kwota = data[i][5];
+       sheet.getRange(i + 1, 9).setValue("USUNIĘTY"); 
+       
+       if (data[i].length > 12) {
+           const idZadatku = String(data[i][12]); 
+           if (idZadatku && idZadatku !== "") {
+               const sheetZadatki = ss.getSheetByName('Zadatki');
+               if (sheetZadatki) {
+                   const dataZ = sheetZadatki.getDataRange().getValues();
+                   const idsToRestore = idZadatku.split(","); 
+                   for (let z = 1; z < dataZ.length; z++) {
+                       if (idsToRestore.includes(String(dataZ[z][0]))) {
+                           sheetZadatki.getRange(z + 1, 9).setValue("AKTYWNY");
+                           zapiszLog("AUTO-ZWROT ZADATKU", "System", `Przywrócono zadatek ${dataZ[z][0]} po usunięciu sprzedaży ${targetId}`);
+                           restoreMsg = "\n Zadatek wrócił na konto klienta!";
+                       }
+                   }
+               }
+           }
+       }
+       
+       let parts = targetId.split('-');
+       if (parts.length >= 2) { parts.pop(); baseId = parts.join('-'); }
+       zapiszLog("USUNIĘCIE SPRZEDAŻY", pracownik, `Klient: ${klientNazwa} | Usługa: ${usluga} | Kwota: ${kwota} zł | ID: ${targetId}`);
+       found = true; break;
+    }
+  }
+
+  if (!found) return zwrocJSON({ status: 'error', message: "Nie znaleziono transakcji o takim ID." });
+
+  if (baseId) {
+      const sheetPlatnosci = ss.getSheetByName('Platnosci');
+      if (sheetPlatnosci) {
+         if (sheetPlatnosci.getMaxColumns() < 6) {
+             sheetPlatnosci.insertColumnAfter(5); 
+             sheetPlatnosci.getRange("F1").setValue("Status"); 
+         }
+         let oznaczoneLicznik = 0; 
+         const pData = sheetPlatnosci.getDataRange().getValues();
+         for (let p = 1; p < pData.length; p++) {
+            let pId = String(pData[p][0]); 
+            if (pId.includes(baseId)) {
+               sheetPlatnosci.getRange(p + 1, 6).setValue("USUNIĘTY");
+               oznaczoneLicznik++;
+            }
+         }
+         if (oznaczoneLicznik > 0) zapiszLog("USUNIĘCIE MIX", pracownik, `Oznaczono ${oznaczoneLicznik} pozycji MIX jako USUNIĘTY (dot. ${targetId})`);
+      }
+  }
+  return zwrocJSON({ status: 'success', message: 'Transakcja pomyślnie usunięta.' + restoreMsg });
+}
+
+function edytujSprzedazAwaryjnie(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Sprzedaz');
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === String(d.id)) {
+      let wiersz = i + 1, logSzczegoly = [], row = data[i];
+      let snapshot = `[PRZED]: Klient: ${row[2]}, Usługa: ${row[3]}, Kwota: ${row[5]}, Sprzedawca: ${row[4]}, Płatność: ${row[9]}`;
+      
+      if (String(row[2]) !== String(d.klient)) logSzczegoly.push(`KLIENT: ${row[2]} >> ${d.klient}`);
+      if (String(row[3]) !== String(d.zabieg_nazwa)) logSzczegoly.push(`USŁUGA: ${row[3]} >> ${d.zabieg_nazwa}`);
+      let nowySprzedawca = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(", ") : d.sprzedawca;
+      if (String(row[4]) !== String(nowySprzedawca)) logSzczegoly.push(`SPRZEDAWCA: ${row[4]} >> ${nowySprzedawca}`);
+      if (Number(row[5]) !== Number(d.kwota)) logSzczegoly.push(`KWOTA: ${row[5]} >> ${d.kwota}`);
+      if (String(row[9]) !== String(d.platnosc)) logSzczegoly.push(`PŁATNOŚĆ: ${row[9]} >> ${d.platnosc}`);
+
+      sheet.getRange(wiersz, 3).setValue(d.klient);
+      sheet.getRange(wiersz, 4).setValue(d.zabieg_nazwa);
+      sheet.getRange(wiersz, 5).setValue(nowySprzedawca);
+      sheet.getRange(wiersz, 6).setValue(parseFloat(d.kwota));
+      sheet.getRange(wiersz, 7).setValue(d.komentarz);
+      sheet.getRange(wiersz, 8).setValue(d.szczegoly);
+      sheet.getRange(wiersz, 10).setValue(d.platnosc);
+      if(d.id_klienta) sheet.getRange(wiersz, 11).setValue(d.id_klienta);
+
+      zapiszLog("🚨 AWARIA EDYCJA", d.pracownik, `⚠️ ALARMOWA MODYFIKACJA ID:${d.id} | ZMIANY: ${logSzczegoly.join(" || ")} | ${snapshot}`);
+      return zwrocJSON({ status: 'success', message: 'KOREKTA ZAPISANA. ZDARZENIE ZALOGOWANE.' });
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nie znaleziono ID' });
+}
+
+function pobierzHistorieSprzedazy() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Sprzedaz');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+
+  const data = sheet.getDataRange().getValues();
+  const wynik = [];
+  const dzisStr = new Date().toLocaleDateString(); 
+
+  for (let i = data.length - 1; i > 0; i--) {
+    let row = data[i];
+    let rowDate = new Date(row[0]);
+    if (rowDate.toLocaleDateString() === dzisStr && String(row[8] || "") !== 'USUNIĘTY') { 
+       wynik.push({
+         id: row[1], data: row[0], klient: row[2], zabieg: row[3], sprzedawca: row[4],
+         kwota: row[5], komentarz: row[6], szczegoly: row[7], platnosc: row[9], id_klienta: row[10] 
+       });
+    }
+    if (wynik.length >= 50) break;
+  }
+  return zwrocJSON(wynik);
+}
+
+function pobierzPelnaHistorie() {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Sprzedaz');
+  if (!s || s.getLastRow() < 2) return zwrocJSON([]);
+  const range = s.getRange(2, 1, s.getLastRow() - 1, 11); 
+  const values = range.getValues(), displays = range.getDisplayValues();
+  const filtered = [];
+  for(let i=0; i<values.length; i++) {
+    if(values[i][8] !== "USUNIĘTY") {
+      filtered.push({
+        data: displays[i][0], id: values[i][1], klient: values[i][2], zabieg: values[i][3],
+        sprzedawca: values[i][4], kwota: values[i][5], komentarz: values[i][6],
+        szczegoly: values[i][7], platnosc: values[i][9], id_klienta: values[i][10] 
+      });
+    }
+  }
+  return zwrocJSON(filtered.reverse());
+}
+
+function pobierzTransakcjeZDnia(dataStr) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const wynik = [];
+  const clean = (txt) => String(txt || "").trim().toLowerCase();
+  
+  const getBaseId = (fullId) => {
+    if (!fullId) return "";
+    const str = String(fullId);
+    if (str.startsWith("DEP") && str.includes("-SPLIT-")) return str.split('-SPLIT-')[0];
+    if (str.startsWith("DEP")) return str; 
+    return str.length >= 15 ? str.substring(0, 15) : str;
+  };
+
+  const sheetZ = ss.getSheetByName('Zadatki');
+  if (sheetZ) {
+    const dataZ = sheetZ.getDataRange().getValues();
+    for (let i = 1; i < dataZ.length; i++) {
+       const row = dataZ[i], rowDate = new Date(row[2]); 
+       const rowDateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+       const status = String(row[8]).toUpperCase(), metoda = String(row[6]), pracownicy = (row.length > 9) ? row[9] : ""; 
+
+       if (rowDateStr === dataStr && status !== 'USUNIĘTY') {
+          wynik.push({
+            typ_rekordu: 'zadatek', timestamp: rowDate.getTime(), baseId: row[0], 
+            godzina: Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "HH:mm"),
+            klient: row[3], zabieg: "➕ Wpłata Zadatku (" + metoda + ")", 
+            sprzedawca: pracownicy || "-", kwota: row[5], platnosc: metoda 
+          });
+       }
+    }
+  }
+
+  const sheetS = ss.getSheetByName('Sprzedaz');
+  if (sheetS) {
+      const dataS = sheetS.getDataRange().getValues();
+      for (let i = 1; i < dataS.length; i++) {
+        const row = dataS[i], rowDate = new Date(row[0]), rowDateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        const status = String(row[8]), metoda = String(row[9]), metodaLower = clean(metoda), pelneId = row[1];
+        if (rowDateStr === dataStr && status !== 'USUNIĘTY') {
+          if (metodaLower.includes('portfel')) continue;
+          wynik.push({
+            typ_rekordu: 'sprzedaz', timestamp: rowDate.getTime(), baseId: getBaseId(pelneId),
+            godzina: Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "HH:mm"),
+            klient: row[2], zabieg: row[3], sprzedawca: row[4], kwota: row[5], platnosc: metoda
+          });
+        }
+      }
+  }
+
+  const sheetP = ss.getSheetByName('Platnosci');
+  if (sheetP) {
+    const dataP = sheetP.getDataRange().getValues();
+    for (let i = 1; i < dataP.length; i++) {
+       const row = dataP[i], rowDate = new Date(row[1]), rowDateStr = Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "yyyy-MM-dd");
+       const pelneId = row[0], metoda = String(row[3]), metodaLower = clean(metoda), status = (row.length > 5) ? String(row[5]) : "";
+       if (rowDateStr === dataStr && status !== 'USUNIĘTY') {
+          if (metodaLower.includes('portfel')) continue;
+          wynik.push({
+            typ_rekordu: 'platnosc_mix', timestamp: rowDate.getTime(), baseId: getBaseId(pelneId),
+            godzina: Utilities.formatDate(rowDate, Session.getScriptTimeZone(), "HH:mm"),
+            klient: row[2], zabieg: "↳ Dopłata Mix (" + metoda + ")", 
+            sprzedawca: "-", kwota: row[4], platnosc: metoda 
+          });
+       }
+    }
+  }
+  
+  wynik.sort((a, b) => {
+      if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+      if (a.baseId < b.baseId) return -1; if (a.baseId > b.baseId) return 1;
+      const getWeight = (row) => {
+          if (row.typ_rekordu === 'platnosc_mix') return 3;
+          if (String(row.platnosc).toLowerCase() === 'mix') return 2;
+          return 1;
+      };
+      return getWeight(a) - getWeight(b);
+  });
+  
+  return zwrocJSON(wynik);
+}
+
+function pobierzHistorieAwaryjna() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Sprzedaz');
+  if (!sheet) return zwrocJSON([]);
+
+  const range = sheet.getDataRange();
+  const data = range.getValues(), backgrounds = range.getBackgrounds(), wynik = [];
+  const limit = new Date(); limit.setDate(limit.getDate() - 35);
+
+  for (let i = data.length - 1; i > 0; i--) {
+    let rowDate = new Date(data[i][0]);
+    if (rowDate < limit) break; 
+    if (String(data[i][8]) !== 'USUNIĘTY') {
+       let isLocked = (backgrounds[i][0] != '#ffffff');
+       wynik.push({
+         id: data[i][1], data: data[i][0], klient: data[i][2], zabieg: data[i][3], sprzedawca: data[i][4], kwota: data[i][5],
+         komentarz: data[i][6], szczegoly: data[i][7], platnosc: data[i][9], id_klienta: data[i][10], kto_dodal: data[i][11], rozliczone: isLocked 
+       });
+    }
+  }
+  return zwrocJSON(wynik);
+}
+
+// =========================================================================
+// 👛 MODUŁ ZADATKÓW I PORTFELA
+// =========================================================================
+
+function operacjaNaZadatku(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Zadatki');
+  
+  if (!sheet) { 
+    sheet = ss.insertSheet('Zadatki');
+    sheet.appendRow(['ID', 'ID_KLIENTA', 'Data', 'Klient', 'Typ', 'Kwota', 'Metoda', 'Cel/Opis', 'Status', 'Pracownicy']);
+  }
+  
+  const now = new Date(), pracownik = d.pracownik || "System";
+ 
+  if (d.typ === 'WPŁATA') {
+    const id = "DEP-" + now.getTime();
+    const sprzedawcyStr = Array.isArray(d.sprzedawcy) ? d.sprzedawcy.join(", ") : (d.sprzedawcy || "");
+
+    sheet.appendRow([id, d.id_klienta || "", now, d.klient, 'WPŁATA', parseFloat(d.kwota), d.metoda, d.cel, 'AKTYWNY', sprzedawcyStr]);
+    
+    if (d.metoda === 'Mix' && d.split_breakdown && Array.isArray(d.split_breakdown)) {
+        let sheetPlatnosci = ss.getSheetByName('Platnosci');
+        if (!sheetPlatnosci) {
+           sheetPlatnosci = ss.insertSheet('Platnosci');
+           sheetPlatnosci.appendRow(['ID', 'Data', 'Klient', 'Metoda', 'Kwota', 'Status']);
+        }
+        d.split_breakdown.forEach((part, idx) => {
+            sheetPlatnosci.appendRow([id + "-SPLIT-" + idx, now, d.klient, part.method, parseFloat(part.amount), "AKTYWNY"]);
+        });
+    }
+    zapiszLog("WPŁATA ZADATKU", pracownik, `Klient: ${d.klient} | Kwota: ${d.kwota} zł | Metoda: ${d.metoda} | Obsługa: ${sprzedawcyStr}`);
+    return zwrocJSON({ status: 'success', message: 'Zadatek przyjęty pomyślnie!' });
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  if (d.typ === 'EDIT_GOAL') {
+      for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(d.id_zadatku)) {
+              sheet.getRange(i + 1, 8).setValue(d.nowy_cel); 
+              zapiszLog("EDYCJA ZADATKU", pracownik, `Klient: ${data[i][3]} | Zmiana celu na: ${d.nowy_cel}`);
+              return zwrocJSON({ status: 'success', message: 'Zmieniono opis zadatku!' });
+          }
+      }
+      return zwrocJSON({ status: 'error', message: 'Nie znaleziono zadatku.' });
+  }
+  if (d.typ === 'KARA' || d.typ === 'ZWROT') {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(d.id_zadatku)) {
+        const klientNazwa = data[i][3], kwota = data[i][5], nowyStatus = d.typ === 'KARA' ? 'PRZEPADŁ (KARA)' : 'ZWRÓCONY';
+        sheet.getRange(i + 1, 9).setValue(nowyStatus); 
+        const staryCel = data[i][7]; 
+        if (!String(staryCel).includes(d.typ)) sheet.getRange(i + 1, 8).setValue(staryCel + " [" + d.typ + "]");
+        zapiszLog("ROZLICZENIE ZADATKU", pracownik, `Akcja: ${d.typ} | Klient: ${klientNazwa} | Kwota: ${kwota} zł | ID: ${d.id_zadatku}`);
+        return zwrocJSON({ status: 'success', message: 'Status zmieniony na: ' + d.typ });
+      }
+    }
+    return zwrocJSON({ status: 'error', message: 'Nie znaleziono zadatku.' });
+  }
+  if (d.typ === 'EDIT_AMOUNT') {
+      for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(d.id_zadatku)) {
+              const nowaKwota = parseFloat(d.nowa_kwota);
+              sheet.getRange(i + 1, 6).setValue(nowaKwota); 
+              zapiszLog("KOREKTA ZADATKU", pracownik, `Klient: ${data[i][3]} | Zmiana kwoty: ${data[i][5]} zł -> ${nowaKwota} zł`);
+              return zwrocJSON({ status: 'success', message: 'Zaktualizowano kwotę zadatku!' });
+          }
+      }
+      return zwrocJSON({ status: 'error', message: 'Nie znaleziono zadatku.' });
+  }
+  if (d.typ === 'EDIT_FULL') {
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(d.id_zadatku)) {
+        sheet.getRange(i + 1, 6).setValue(parseFloat(d.nowa_kwota)); 
+        sheet.getRange(i + 1, 7).setValue(d.nowa_metoda);            
+        sheet.getRange(i + 1, 8).setValue(d.nowy_cel);               
+        sheet.getRange(i + 1, 10).setValue(d.nowi_pracownicy);      
+        if (d.nowy_status) sheet.getRange(i + 1, 9).setValue(d.nowy_status);        
+        if (d.nowa_data) sheet.getRange(i + 1, 3).setValue(new Date(d.nowa_data)); 
+        zapiszLog("EDYCJA ZADATKU", pracownik, `Edycja dla: ${data[i][3]} | Kwota: ${d.nowa_kwota} zł | Status: ${d.nowy_status || 'bez zmian'}`);
+        return zwrocJSON({ status: 'success', message: 'Zaktualizowano dane zadatku!' });
+      }
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nieznana operacja' });
+}
+
+function scalZadatki(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Zadatki');
+  const data = sheet.getDataRange().getValues();
+  const idsToMerge = d.ids; 
+  let suma = 0, znaleziono = 0, idKlientaDb = ""; 
+  
+  for (let i = 1; i < data.length; i++) {
+    const rowId = String(data[i][0]); 
+    if (idsToMerge.includes(rowId) && String(data[i][8]).trim() === 'AKTYWNY') {
+       suma += parseFloat(data[i][5]); 
+       if(!idKlientaDb) idKlientaDb = data[i][1];
+       sheet.getRange(i + 1, 9).setValue('SCALONY'); 
+       znaleziono++;
+    }
+  }
+  
+  if (znaleziono === 0) return zwrocJSON({ status: 'error', message: "Nie znaleziono aktywnych zadatków do scalenia (sprawdź kolumny w bazie)." });
+  const now = new Date();
+  sheet.appendRow(["DEP-MERGE-" + now.getTime(), idKlientaDb, now, d.klient, 'WPŁATA', suma, 'System', d.nowy_cel, 'AKTYWNY']);
+  zapiszLog("SCALENIE ZADATKÓW", d.pracownik, `Scalono ${znaleziono} wpłat na sumę ${suma.toFixed(2)} zł dla ${d.klient}`);
+  return zwrocJSON({ status: 'success', message: `Pomyślnie scalono ${znaleziono} pozycji w jedną kwotę: ${suma.toFixed(2)} zł` });
+}
+
+function pobierzWszystkieZadatki() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Zadatki');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 9).getValues();
+  const result = data.map(row => ({ id: row[0], id_klienta: row[1], data: row[2], klient: row[3], typ: row[4], kwota: row[5], metoda: row[6], cel: row[7], status: row[8] }));
+  result.sort((a, b) => new Date(b.data) - new Date(a.data));
+  return zwrocJSON(result);
+}
+
+function pobierzPortfelKlienta(parametr) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Zadatki');
+  if(!sheet || sheet.getLastRow() < 2) return zwrocJSON({ saldo: 0, historia: [] });
+  const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 10).getValues();
+  const historia = [];
+  let saldo = 0, szukaneId = "", szukaneNazwisko = "";
+  try { const p = JSON.parse(parametr); szukaneId = String(p.id); szukaneNazwisko = String(p.nazwa).toLowerCase(); } catch(e) { szukaneNazwisko = String(parametr).toLowerCase(); }
+
+  for (let i = 0; i < data.length; i++) {
+    const rowIdKlienta = String(data[i][1]), rowNazwisko = String(data[i][3]).toLowerCase();
+    if ((rowIdKlienta && rowIdKlienta === szukaneId) || rowNazwisko === szukaneNazwisko) {
+      const row = { id: data[i][0], data: data[i][2], typ: data[i][4], kwota: parseFloat(data[i][5]), metoda: data[i][6], cel: data[i][7], status: data[i][8], pracownicy: String(data[i][9] || "") };
+      if (row.typ === 'WPŁATA' && row.status === 'AKTYWNY') saldo += row.kwota;
+      historia.push(row);
+    }
+  }
+  return zwrocJSON({ saldo: saldo, historia: historia.reverse() });
+}
+
+// =========================================================================
+// 👥 MODUŁ KLIENTÓW, RODO, URODZIN (CRM)
+// =========================================================================
+
+function generujNoweIdKlienta(sheetKlienci) {
+  const lastRow = sheetKlienci.getLastRow();
+  if (lastRow < 2) return 1001; 
+  const ids = sheetKlienci.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+  let maxId = 1000;
+  ids.forEach(id => { const num = parseInt(id); if (!isNaN(num) && num > maxId) maxId = num; });
+  return maxId + 1;
+}
+
+function pobierzUnikalnychKlientowZPortfelem() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheetKlienci = ss.getSheetByName('Klienci'); 
+  const sheetZadatki = ss.getSheetByName('Zadatki');
+  if (!sheetKlienci || sheetKlienci.getLastRow() < 2) return zwrocJSON({ klienci: [], zadatki: [] });
+
+  const dataKlienci = sheetKlienci.getDataRange().getValues();
+  const naglowki = dataKlienci[0].map(h => String(h).toUpperCase()); // Bez trim, sprawdzimy to elastyczniej
+  
+  // 🛡️ SUPER-ODPORNE SZUKANIE KOLUMN
+  let colRodo = 6; // Domyślnie kolumna G (indeks 6)
+  let colOsw = 7;  // Domyślnie kolumna H (indeks 7)
+  
+  for (let j = 0; j < naglowki.length; j++) {
+     if (naglowki[j].includes('RODO')) colRodo = j;
+     if (naglowki[j].includes('OSW') || naglowki[j].includes('OŚWIAD')) colOsw = j;
+  }
+
+  const clients = [];
+  for (let i = 1; i < dataKlienci.length; i++) {
+    let row = dataKlienci[i];
+    if (!row[0]) continue; 
+
+    // Zabezpieczenie: pobieramy tylko jeśli kolumna fizycznie istnieje w danym wierszu
+    let valRodo = row.length > colRodo ? String(row[colRodo]).trim().toUpperCase() : "";
+    let valOsw = row.length > colOsw ? String(row[colOsw]).trim().toUpperCase() : "";
+
+    // Akceptujemy różne warianty "na tak"
+    let maRodo = (valRodo === "TAK" || valRodo === "TRUE" || valRodo === "PRAWDA");
+    let maOsw = (valOsw === "TAK" || valOsw === "TRUE" || valOsw === "PRAWDA");
+
+    clients.push({ 
+      id: row[0], 
+      nazwa: String(row[1]), 
+      telefon: String(row[2]),
+      rodo: maRodo, 
+      osw: maOsw    
+    });
+  }
+  
+  clients.sort((a, b) => a.nazwa.localeCompare(b.nazwa));
+
+  // --- SEKCJA ZADATKÓW BEZ ZMIAN ---
+  const aktywneZadatki = [];
+  if (sheetZadatki && sheetZadatki.getLastRow() >= 2) {
+    const dataZadatki = sheetZadatki.getRange(2, 1, sheetZadatki.getLastRow() - 1, 9).getValues();
+    for (let i = 0; i < dataZadatki.length; i++) {
+      const row = dataZadatki[i];
+      if (row[4] === 'WPŁATA' && row[8] === 'AKTYWNY') {
+         aktywneZadatki.push({ id: row[0], id_klienta: String(row[1]), data: row[2], klient: String(row[3]).toLowerCase(), kwota: parseFloat(row[5]), metoda: row[6], cel: row[7] });
+      }
+    }
+  }
+  return zwrocJSON({ klienci: clients, zadatki: aktywneZadatki });
+}
+
+function pobierzWszystkieDaneProfilu(parametr) {
+  let id = "", nazwa = "";
+  try { const p = JSON.parse(parametr); id = String(p.id); nazwa = String(p.nazwa); } catch(e) { nazwa = String(parametr); }
+
+  const urodziny = JSON.parse(znajdzUrodzinyKlienta(nazwa).getContent());
+  const portfel = JSON.parse(pobierzPortfelKlienta(parametr).getContent());
+  const memo = JSON.parse(pobierzNotatkeKlienta(parametr).getContent());
+
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheetRetencja = ss.getSheetByName('Retencja');
+  let retencjaData = [];
+  
+  if (sheetRetencja && sheetRetencja.getLastRow() > 1) {
+    const retData = sheetRetencja.getDataRange().getDisplayValues();
+    for (let i = 1; i < retData.length; i++) {
+      if ((id && String(retData[i][1]) === id) || (!id && String(retData[i][2]) === nazwa)) {
+        retencjaData.push({ data: retData[i][0], id_klienta: retData[i][1], klient: retData[i][2], kampania: retData[i][3], status: retData[i][4], notatka: retData[i][5], pracownik: retData[i][6] });
+      }
+    }
+    retencjaData.reverse(); 
+  }
+  return zwrocJSON({ urodziny: urodziny, portfel: portfel, memo: memo, retencja: retencjaData });
+}
+
+function dodajKlientaBackend(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheetKlienci = ss.getSheetByName('Klienci');
+  if (!sheetKlienci) return zwrocJSON({ status: 'error', message: 'Brak arkusza Klienci!' });
+
+  const now = new Date(), dataRejestracji = now.toISOString().slice(0,10), noweId = generujNoweIdKlienta(sheetKlienci);
+  const tekstZgody = d.zgoda_regulamin ? "Regulamin + RODO" : "BRAK (Do uzupełnienia)";
+  
+  sheetKlienci.appendRow([noweId, d.klient, d.telefon || "", dataRejestracji, tekstZgody, "Dodano przez: " + d.pracownik]);
+
+  let sheetRejestr = ss.getSheetByName('Rejestr_Oświadczeń');
+  if (!sheetRejestr) {
+      sheetRejestr = ss.insertSheet('Rejestr_Oświadczeń');
+      sheetRejestr.appendRow(['ID_Klienta', 'Data_Podpisu', 'Klient', 'Zapoznanie_z_Regulaminem', 'Przekazano_Wyciag', 'Pracownik', 'Link_PDF']);
+  }
+  const czyZgoda = d.zgoda_regulamin ? "TAK" : "NIE";
+  sheetRejestr.appendRow([noweId, d.data_podpisu, d.klient, czyZgoda, czyZgoda, d.pracownik, ""]);
+
+  let sheetRODO = ss.getSheetByName('Rejestr_RODO');
+  if (!sheetRODO) {
+      sheetRODO = ss.insertSheet('Rejestr_RODO');
+      sheetRODO.appendRow(['Lp', 'Klient', 'Data_Podpisu', 'Wizerunek', 'Newsletter_SMS', 'Kontakt_Tel', 'Newsletter_Email', 'Booksy_SMS', 'Email_Adres', 'ID_Klienta', 'Pracownik', 'Link_PDF', 'Email_Kontaktowy']);
+  }
+  const lp = Math.max(1, sheetRODO.getLastRow());
+  sheetRODO.appendRow([lp, d.klient, d.data_podpisu, "NIE", "NIE", "NIE", "NIE", "Nie dotyczy", "nie dotyczy", noweId, d.pracownik, "", ""]);
+
+  let opisLogu = `Nowy klient: ${d.klient} (ID: ${noweId}) [Tel: ${d.telefon || "brak"}]`;
+  if (d.info_duplikat && d.info_duplikat !== "") opisLogu += ` ⚠️ UWAGA: ${d.info_duplikat}`;
+  zapiszLog("DODANIE KLIENTA", d.pracownik, opisLogu);
+  
+  return zwrocJSON({ status: 'success', message: `Dodano klienta: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
+}
+
+function dodajKlientaSzybkoSprzedaz(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheetKlienci = ss.getSheetByName('Klienci');
+  if (!sheetKlienci) return zwrocJSON({ status: 'error', message: 'Brak arkusza Klienci!' });
+
+  const now = new Date(), dataRejestracji = now.toISOString().slice(0,10), noweId = generujNoweIdKlienta(sheetKlienci);
+  sheetKlienci.appendRow([noweId, d.klient, "", dataRejestracji, "BRAK", "Szybka rejestracja przy sprzedaży (" + d.pracownik + ")"]);
+
+  let sheetRejestr = ss.getSheetByName('Rejestr_Oświadczeń');
+  if (!sheetRejestr) {
+      sheetRejestr = ss.insertSheet('Rejestr_Oświadczeń');
+      sheetRejestr.appendRow(['ID_Klienta', 'Data_Podpisu', 'Klient', 'Zapoznanie_z_Regulaminem', 'Przekazano_Wyciag', 'Pracownik']);
+  }
+  sheetRejestr.appendRow([noweId, "", d.klient, "NIE", "NIE", d.pracownik]);
+
+  return zwrocJSON({ status: 'success', message: `Utworzono konto: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
+}
+
+function edytujDaneKlienta(d) {
+  const ssBaza = SpreadsheetApp.openById(GLOBAL_TENANT_ID); 
+  const sheet = ssBaza.getSheetByName("Klienci");
+  if (!sheet) return zwrocJSON({ status: 'error', message: 'Błąd: Brak zakładki Klienci.' });
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(d.id)) {
+      const wiersz = i + 1, stareImieNazwisko = data[i][1], staryTelefon = data[i][2], stareNotatki = data[i][5];
+      let zmianyOpis = []; 
+
+      if (stareImieNazwisko !== d.nowa_nazwa) {
+        sheet.getRange(wiersz, 2).setValue(d.nowa_nazwa); 
+        const teraz = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm");
+        const wpisLogu = `[SYSTEM]: zmiana z "${stareImieNazwisko}" na "${d.nowa_nazwa}" (${teraz})`;
+        sheet.getRange(wiersz, 6).setValue(stareNotatki ? stareNotatki + "\n" + wpisLogu : wpisLogu); 
+        zmianyOpis.push(`Nazwa: "${stareImieNazwisko}" -> "${d.nowa_nazwa}"`);
+      }
+      
+      if (d.nowy_telefon && String(staryTelefon) !== String(d.nowy_telefon)) {
+         sheet.getRange(wiersz, 3).setValue(d.nowy_telefon);
+         zmianyOpis.push(`Tel: "${staryTelefon}" -> "${d.nowy_telefon}"`);
+      }
+
+      if (zmianyOpis.length > 0) zapiszLog("EDYCJA DANYCH KLIENTA", d.pracownik || "Admin", `ID ${d.id}: ${zmianyOpis.join(" | ")}`);
+      return zwrocJSON({ status: 'success', message: 'Dane klienta zaktualizowane pomyślnie!' });
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nie znaleziono klienta o ID: ' + d.id + ' w bazie danych.' });
+}
+/*
+function pobierzRODO(id) {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Rejestr_RODO');
+  if (!sheet) return zwrocJSON({ znaleziona: false });
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][9]) === String(id)) {
+       return zwrocJSON({ 
+         znaleziona: true, data_podpisu: data[i][2], wizerunek: data[i][3], news_sms: data[i][4], kontakt_tel: data[i][5], news_email: data[i][6], booksy_sms: data[i][7], email_adres: data[i][8],
+         link_pdf: (data[i].length > 11) ? data[i][11] : "", email_kontaktowy: (data[i].length > 12) ? data[i][12] : ""
+       });
+    }
+  }
+  return zwrocJSON({ znaleziona: false });
+}*/
+
+
+function pobierzRODO(id) {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Rejestr_RODO');
+  if (!sheet) return zwrocJSON({ znaleziona: false });
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][9]) === String(id)) {
+       // 🕒 NAPRAWA DATY: Wymuszamy tekst w formacie YYYY-MM-DD
+       let dataPodpisuText = "";
+       if (data[i][2] instanceof Date) {
+           dataPodpisuText = Utilities.formatDate(data[i][2], Session.getScriptTimeZone(), "yyyy-MM-dd");
+       } else {
+           dataPodpisuText = data[i][2];
+       }
+
+       return zwrocJSON({ 
+         znaleziona: true, data_podpisu: dataPodpisuText, wizerunek: data[i][3], news_sms: data[i][4], kontakt_tel: data[i][5], news_email: data[i][6], booksy_sms: data[i][7], email_adres: data[i][8],
+         link_pdf: (data[i].length > 11) ? data[i][11] : "", email_kontaktowy: (data[i].length > 12) ? data[i][12] : ""
+       });
+    }
+  }
+  return zwrocJSON({ znaleziona: false });
+}
+// starsza wersja bez ikonek
+/*
+function zapiszRODO(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rejestr_RODO');
+  if (!sheet) {
+      sheet = ss.insertSheet('Rejestr_RODO');
+      sheet.appendRow(['Lp', 'Klient', 'Data_Podpisu', 'Wizerunek', 'Newsletter_SMS', 'Kontakt_Tel', 'Newsletter_Email', 'Booksy_SMS', 'Email_Adres', 'ID_Klienta', 'Pracownik', 'Link_PDF', 'Email_Kontaktowy']);
+  }
+  const data = sheet.getDataRange().getValues();
+  let wierszDoEdycji = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][9]) === String(d.id_klienta)) { wierszDoEdycji = i + 1; break; }
+  }
+  const values = [d.data_podpisu, d.wizerunek, d.news_sms, d.kontakt_tel, d.news_email, d.booksy_sms, d.email_adres, d.id_klienta, d.pracownik, d.link_pdf, d.email_kontaktowy];
+  if (wierszDoEdycji > 0) {
+      sheet.getRange(wierszDoEdycji, 3, 1, 11).setValues([values]);
+      return zwrocJSON({ status: 'success', message: 'Zaktualizowano zgody, link i email!' });
+  } else {
+      const lp = Math.max(1, sheet.getLastRow());
+      sheet.appendRow([lp, d.klient_nazwa, ...values]);
+      return zwrocJSON({ status: 'success', message: 'Dodano deklarację z emailem!' });
+  }
+} */
+// =========================================================================
+// ZAPISZ RODO (Z AKTUALIZACJĄ GŁÓWNEJ LISTY)
+// =========================================================================
+function zapiszRODO(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rejestr_RODO');
+  if (!sheet) {
+      sheet = ss.insertSheet('Rejestr_RODO');
+      sheet.appendRow(['Lp', 'Klient', 'Data_Podpisu', 'Wizerunek', 'Newsletter_SMS', 'Kontakt_Tel', 'Newsletter_Email', 'Booksy_SMS', 'Email_Adres', 'ID_Klienta', 'Pracownik', 'Link_PDF', 'Email_Kontaktowy']);
+  }
+  const data = sheet.getDataRange().getValues();
+  let wierszDoEdycji = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][9]) === String(d.id_klienta)) { wierszDoEdycji = i + 1; break; }
+  }
+  
+  const values = [d.data_podpisu, d.wizerunek, d.news_sms, d.kontakt_tel, d.news_email, d.booksy_sms, d.email_adres, d.id_klienta, d.pracownik, d.link_pdf, d.email_kontaktowy];
+  
+  // Wymuszenie flagi RODO, jeśli jest link do drive'a
+  if (d.link_pdf && String(d.link_pdf).includes('drive.google.com')) {
+      zaktualizujFlageDokumentow(d.id_klienta, 'RODO');
+  }
+
+  if (wierszDoEdycji > 0) {
+      sheet.getRange(wierszDoEdycji, 3, 1, 11).setValues([values]);
+      return zwrocJSON({ status: 'success', message: 'Zaktualizowano zgody, link i email!' });
+  } else {
+      const lp = Math.max(1, sheet.getLastRow());
+      sheet.appendRow([lp, d.klient_nazwa, ...values]);
+      return zwrocJSON({ status: 'success', message: 'Dodano deklarację z emailem!' });
+  }
+}
+
+// =========================================================================
+// POMOCNIK: ODSZUKAJ KLIENTA I ZAKTUALIZUJ "TAK" W ARKUSZU GŁÓWNYM
+// =========================================================================
+function zaktualizujFlageDokumentow(idKlienta, typDokumentu) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheetKlienci = ss.getSheetByName('Klienci');
+    if (!sheetKlienci) return;
+
+    const data = sheetKlienci.getDataRange().getValues();
+    const naglowki = data[0].map(h => String(h).toUpperCase());
+    
+    // Szukamy kolumn (Kulo-odpornie)
+    let colIndex = -1;
+    if (typDokumentu === 'RODO') {
+      colIndex = 6; // Domyślnie G
+      for (let j = 0; j < naglowki.length; j++) { if (naglowki[j].includes('RODO')) colIndex = j; }
+    } else if (typDokumentu === 'OSW') {
+      colIndex = 7; // Domyślnie H
+      for (let j = 0; j < naglowki.length; j++) { if (naglowki[j].includes('OSW') || naglowki[j].includes('OŚWIAD')) colIndex = j; }
+    }
+
+    if (colIndex === -1) return;
+
+    // Przeszukujemy bazę by znaleźć ID
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]).trim() === String(idKlienta).trim()) {
+        sheetKlienci.getRange(i + 1, colIndex + 1).setValue("TAK");
+        break; // Znaleziono, kończymy pętlę
+      }
+    }
+  } catch (e) {
+    Logger.log("Błąd w zaktualizujFlageDokumentow: " + e.toString());
+  }
+}
+
+/*
+function pobierzZgodyKlienta(id) {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Rejestr_Oświadczeń');
+  if (!sheet) return zwrocJSON({ znaleziona: false });
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+       return zwrocJSON({ znaleziona: true, data_podpisu: data[i][1], zapoznal: data[i][3], wyciag: data[i][4], link_pdf: (data[i].length > 6) ? data[i][6] : "" });
+    }
+  }
+  return zwrocJSON({ znaleziona: false });
+}*/
+
+function pobierzZgodyKlienta(id) {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Rejestr_Oświadczeń');
+  if (!sheet) return zwrocJSON({ znaleziona: false });
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(id)) {
+       // 🕒 NAPRAWA DATY: Wymuszamy tekst w formacie YYYY-MM-DD
+       let dataPodpisuText = "";
+       if (data[i][1] instanceof Date) {
+           dataPodpisuText = Utilities.formatDate(data[i][1], Session.getScriptTimeZone(), "yyyy-MM-dd");
+       } else {
+           dataPodpisuText = data[i][1];
+       }
+
+       return zwrocJSON({ znaleziona: true, data_podpisu: dataPodpisuText, zapoznal: data[i][3], wyciag: data[i][4], link_pdf: (data[i].length > 6) ? data[i][6] : "" });
+    }
+  }
+  return zwrocJSON({ znaleziona: false });
+}
+
+
+/*
+function zapiszZgodyKlienta(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rejestr_Oświadczeń');
+  if (!sheet) {
+      sheet = ss.insertSheet('Rejestr_Oświadczeń');
+      sheet.appendRow(['ID_Klienta', 'Data_Podpisu', 'Klient', 'Zapoznanie_z_Regulaminem', 'Przekazano_Wyciag', 'Pracownik', 'Link_PDF']);
+  }
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(d.id_klienta)) {
+       sheet.getRange(i+1, 2).setValue(d.data_podpisu); 
+       sheet.getRange(i+1, 4).setValue(d.zapoznal);     
+       sheet.getRange(i+1, 5).setValue(d.wyciag);        
+       sheet.getRange(i+1, 6).setValue(d.pracownik);    
+       sheet.getRange(i+1, 7).setValue(d.link_pdf);
+       return zwrocJSON({ status: 'success', message: 'Zaktualizowano status regulaminu i link!' });
+    }
+  }
+  sheet.appendRow([d.id_klienta, d.data_podpisu, d.klient_nazwa, d.zapoznal, d.wyciag, d.pracownik, d.link_pdf]);
+  return zwrocJSON({ status: 'success', message: 'Dodano oświadczenie z linkiem!' });
+} */
+
+// =========================================================================
+// ZAPISZ ZGODY (Z AKTUALIZACJĄ GŁÓWNEJ LISTY)
+// =========================================================================
+function zapiszZgodyKlienta(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rejestr_Oświadczeń');
+  if (!sheet) {
+      sheet = ss.insertSheet('Rejestr_Oświadczeń');
+      sheet.appendRow(['ID_Klienta', 'Data_Podpisu', 'Klient', 'Zapoznanie_z_Regulaminem', 'Przekazano_Wyciag', 'Pracownik', 'Link_PDF']);
+  }
+  const data = sheet.getDataRange().getValues();
+  
+  // Wymuszenie flagi Oświadczeń, jeśli jest link do drive'a
+  if (d.link_pdf && String(d.link_pdf).includes('drive.google.com')) {
+      zaktualizujFlageDokumentow(d.id_klienta, 'OSW');
+  }
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]) === String(d.id_klienta)) {
+       sheet.getRange(i+1, 2).setValue(d.data_podpisu); 
+       sheet.getRange(i+1, 4).setValue(d.zapoznal);     
+       sheet.getRange(i+1, 5).setValue(d.wyciag);        
+       sheet.getRange(i+1, 6).setValue(d.pracownik);    
+       sheet.getRange(i+1, 7).setValue(d.link_pdf);
+       return zwrocJSON({ status: 'success', message: 'Zaktualizowano status regulaminu i link!' });
+    }
+  }
+  sheet.appendRow([d.id_klienta, d.data_podpisu, d.klient_nazwa, d.zapoznal, d.wyciag, d.pracownik, d.link_pdf]);
+  return zwrocJSON({ status: 'success', message: 'Dodano oświadczenie z linkiem!' });
+}
+
+function zapiszNotatke(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Memo');
+  if (!sheet) { sheet = ss.insertSheet('Memo'); sheet.appendRow(['Id', 'ID_Klienta', 'Klient', 'Notatka']); }
+  const now = new Date().getTime(), data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][1]) === String(d.id_klienta) && d.id_klienta) {
+       sheet.getRange(i + 1, 4).setValue(d.tresc); 
+       return zwrocJSON({ status: 'success', message: 'Zaktualizowano notatkę (ID)!' });
+    }
+    if (String(data[i][2]) === d.klient && !data[i][1]) {
+       sheet.getRange(i + 1, 4).setValue(d.tresc);
+       if(d.id_klienta) sheet.getRange(i + 1, 2).setValue(d.id_klienta);
+       return zwrocJSON({ status: 'success', message: 'Zaktualizowano notatkę (Nazwa)!' });
+    }
+  }
+  sheet.appendRow([now, d.id_klienta || "", d.klient, d.tresc]);
+  return zwrocJSON({ status: 'success', message: 'Dodano nową notatkę!' });
+}
+
+function pobierzNotatkeKlienta(parametr) {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Memo');
+  if (!sheet) return zwrocJSON({ znaleziona: false });
+  const data = sheet.getDataRange().getValues();
+  let szukaneId = "", szukaneNazwisko = "";
+  try { const obj = JSON.parse(parametr); szukaneId = String(obj.id); szukaneNazwisko = String(obj.nazwa); } catch(e) { szukaneNazwisko = parametr; }
+  for (let i = data.length - 1; i > 0; i--) {
+    const rowId = String(data[i][1]), rowName = String(data[i][2]), tresc = data[i][3]; 
+    if (rowId && rowId === szukaneId) return zwrocJSON({ znaleziona: true, tresc: tresc });
+    if (!rowId && rowName === szukaneNazwisko) return zwrocJSON({ znaleziona: true, tresc: tresc });
+  }
+  return zwrocJSON({ znaleziona: false });
+}
+
+function dodajKlientaUrodzinowego(d) {
+  const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const parts = d.data_ur.split("-"); 
+  if (parts.length !== 3) throw new Error("Błędny format daty");
+  const miesiacIndex = parseInt(parts[1], 10) - 1;
+  const dzienMiesiac = `${parts[2]}.${parts[1]}`; 
+  const nazwyMiesiecy = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+  const sheet = f.getSheetByName(nazwyMiesiecy[miesiacIndex]);
+  if (!sheet) throw new Error("Nie znaleziono arkusza dla miesiąca: " + nazwyMiesiecy[miesiacIndex]);
+  sheet.appendRow(["", d.nazwisko, d.imie, dzienMiesiac, d.telefon, d.sms, d.zgoda_tel, d.komentarz]);
+  return "Dodano klienta do miesiąca: " + nazwyMiesiecy[miesiacIndex];
+}
+
+function pobierzNajblizszeUrodziny(){
+  const t=new Date(),y=t.getFullYear(),od=86400000,rd=5,f=[],nm=["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"],mc=[t.getMonth()];
+  if(t.getDate()>20)mc.push((t.getMonth()+1)%12);
+  try{
+    const fl=SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    mc.forEach(mi=>{
+      const sn=nm[mi],sh=fl.getSheetByName(sn);
+      if(sh&&sh.getLastRow()>1){
+        const dt=sh.getRange(2,1,sh.getLastRow()-1,6).getValues(),dv=sh.getRange(2,1,sh.getLastRow()-1,6).getDisplayValues();
+        for(let i=0;i<dt.length;i++){
+          let tx=dv[i][3],rw=dt[i][3],dy=-1;
+          if(tx){let m=String(tx).trim().match(/^(\d{1,2})/);if(m)dy=Number(m[1])}
+          if(dy===-1&&rw instanceof Date)dy=rw.getDate();
+          if(dy>0){
+            const by=new Date(y,mi,dy);by.setHours(0,0,0,0);const tz=new Date();tz.setHours(0,0,0,0);const diff=Math.ceil((by-tz)/od);
+            if(diff>=0&&diff<=rd)f.push({imie:dt[i][2],nazwisko:dt[i][1],dzien:dy,miesiac:sn,ile_dni:diff})
+          }
+        }
+      }
+    });
+    f.sort((a,b)=>a.ile_dni-b.ile_dni);
+    return zwrocJSON({lista:f})
+  }catch(e){return zwrocJSON({error:e.toString()})}
+}
+
+function znajdzUrodzinyKlienta(klientFull) {
+  const m = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"];
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const szukany = String(klientFull).toLowerCase().replace(/\s/g, "");
+  for (let i = 0; i < m.length; i++) {
+    const s = ss.getSheetByName(m[i]);
+    if (!s || s.getLastRow() < 2) continue;
+    const vals = s.getRange(2, 2, s.getLastRow() - 1, 3).getValues(), displays = s.getRange(2, 4, s.getLastRow() - 1, 1).getDisplayValues();
+    for (let r = 0; r < vals.length; r++) {
+      const nazwisko = String(vals[r][0]), imie = String(vals[r][1]);
+      const wBazie1 = (nazwisko + imie).toLowerCase().replace(/\s/g, ""), wBazie2 = (imie + nazwisko).toLowerCase().replace(/\s/g, "");
+      if (wBazie1 === szukany || wBazie2 === szukany) return zwrocJSON({ znaleziona: true, data: displays[r][0], miesiac: m[i] });
+    }
+  }
+  return zwrocJSON({ znaleziona: false });
+}
+
+function pobierzUrodziny(m) {
+  if (!m) m = ["Styczeń","Luty","Marzec","Kwiecień","Maj","Czerwiec","Lipiec","Sierpień","Wrzesień","Październik","Listopad","Grudzień"][new Date().getMonth()];
+  try {
+    const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID), s = f.getSheetByName(m);
+    if (!s) return zwrocJSON({ error: "Brak" });
+    const d = s.getRange(2, 1, s.getLastRow() - 1, 8).getValues(), v = s.getRange(2, 1, s.getLastRow() - 1, 8).getDisplayValues(), o = [];
+    for (let i = 0; i < d.length; i++) {
+      if (!d[i][1] && !d[i][2]) continue;
+      let dataUr = v[i][3], dzienSort = 99;
+      if (dataUr) { let match = String(dataUr).match(/^(\d{1,2})/); if (match) dzienSort = parseInt(match[1]); }
+      o.push({ wiersz: i + 2, nazwisko: d[i][1], imie: d[i][2], data_ur: dataUr, dzien_sort: dzienSort, telefon: d[i][4], sms: d[i][5], zgoda_tel: d[i][6], komentarz: d[i][7] });
+    }
+    o.sort((a, b) => a.dzien_sort - b.dzien_sort);
+    return zwrocJSON({ miesiac: m, klienci: o });
+  } catch (e) { return zwrocJSON({ error: "Błąd: " + e.toString() }); }
+}
+
+function aktualizujPoleUrodzin(d) { SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName(d.miesiac).getRange(d.wiersz, d.kolumna).setValue(d.wartosc); return "OK"; }
+function zapiszStatusUrodzin(d) { SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName(d.miesiac).getRange(d.wiersz, 5).setValue(d.status); return "OK"; }
+function zapiszKomentarzUrodzin(d) { SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName(d.miesiac).getRange(d.wiersz, 6).setValue(d.komentarz); return "OK"; }
+
+// =========================================================================
+// 📦 MODUŁ: MAGAZYN I SŁOWNIK ZABIEGÓW
+// =========================================================================
+
+function pobierzDaneJakoJSON() {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Magazyn');
+  if(!s || s.getLastRow() < 2) return zwrocJSON([]);
+  const z = s.getRange(2, 1, s.getLastRow() - 1, 11);
+  return zwrocJSON(mapujDane(z.getValues(), z.getDisplayValues()));
+}
+
+function pobierzArchiwumJakoJSON() {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Archiwum');
+  if(!s || s.getLastRow() < 2) return zwrocJSON([]);
+  const z = s.getRange(2, 1, s.getLastRow() - 1, 11);
+  return zwrocJSON(mapujDane(z.getValues(), z.getDisplayValues()));
+}
+
+function mapujDane(d,t){return d.map((r,i)=>({id:r[0],nazwa:r[1],typ:r[2],ilosc:r[3],min:r[4],waznosc:r[5],netto:r[6],brutto:r[7],kategoria:r[8],kto_dodal:r[9],data_dodania:t[i][10]||""}));}
+
+function dodajProdukt(d) {
+  if (!d.nazwa || d.nazwa.trim() === "" || d.nazwa.trim().startsWith("null") || d.nazwa.trim().startsWith("undefined")) throw new Error("Niepoprawna nazwa produktu.");
+  if (d.nazwa.startsWith(" ")) throw new Error("Błąd danych: Brak nazwy Firmy.");
+  if (!d.ilosc || !d.netto || !d.brutto || !d.waznosc) throw new Error("Wszystkie pola są obowiązkowe!");
+  const now = new Date(), readableDate = Utilities.formatDate(now, Session.getScriptTimeZone(), "dd-MM-yyyy");
+  SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Magazyn').appendRow([now.getTime(), d.nazwa, d.typ, d.ilosc, d.min, d.waznosc, d.netto, d.brutto, d.kategoria, d.pracownik, "'" + readableDate]);
+  zapiszLog("PRZYJĘCIE TOWARU", d.pracownik, `${d.nazwa} (${d.ilosc} szt.) [${d.kategoria}]`);
+  return "Dodano!";
+}
+
+function edytujProduktWBazie(d) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Magazyn');
+  const vals = s.getDataRange().getValues();
+  for (let i = 1; i < vals.length; i++) {
+    if (String(vals[i][0]) === String(d.id)) {
+      let row = i + 1, logiZmian = [], oldNazwa = vals[i][1], oldIlosc = vals[i][3], oldWaznoscObj = vals[i][5], oldNetto = vals[i][6], oldBrutto = vals[i][7];
+      let oldWaznosc = oldWaznoscObj instanceof Date ? Utilities.formatDate(oldWaznoscObj, Session.getScriptTimeZone(), "yyyy-MM-dd") : String(oldWaznoscObj);
+      if (String(oldNazwa).trim() !== String(d.nazwa).trim()) logiZmian.push(`Nazwa: ${oldNazwa} -> ${d.nazwa}`);
+      if (String(oldIlosc) != String(d.ilosc)) logiZmian.push(`Ilość: ${oldIlosc} -> ${d.ilosc}`);
+      if (Number(oldNetto).toFixed(2) !== Number(d.netto).toFixed(2)) logiZmian.push(`Netto: ${oldNetto} -> ${d.netto}`);
+      if (Number(oldBrutto).toFixed(2) !== Number(d.brutto).toFixed(2)) logiZmian.push(`Brutto: ${oldBrutto} -> ${d.brutto}`);
+      if (oldWaznosc !== d.waznosc) logiZmian.push(`Ważność: ${oldWaznosc} -> ${d.waznosc}`);
+
+      s.getRange(row, 2).setValue(d.nazwa); s.getRange(row, 4).setValue(d.ilosc); s.getRange(row, 6).setValue(d.waznosc); s.getRange(row, 7).setValue(d.netto); s.getRange(row, 8).setValue(d.brutto); 
+      zapiszLog("EDYCJA PRODUKTU", d.pracownik, `${oldNazwa !== d.nazwa ? oldNazwa + " (Nowa nazwa: " + d.nazwa + ")" : oldNazwa}: ${logiZmian.length > 0 ? logiZmian.join(" | ") : "Edycja (brak zmian wartości)"}`);
+      return "Zaktualizowano produkt!";
+    }
+  }
+  throw new Error("Nie znaleziono produktu o ID: " + d.id);
+}
+
+function aktualizujStan(i, n, o, p) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Magazyn');
+  const d = s.getDataRange().getValues();
+  for (let x = 1; x < d.length; x++) {
+    if (d[x][0] == i) {
+      let wiersz = x + 1, staraIlosc = Number(s.getRange(wiersz, 4).getValue()), nowaIlosc = staraIlosc + Number(n);
+      s.getRange(wiersz, 4).setValue(nowaIlosc);
+      zapiszLog("MAGAZYN " + o, p, `${d[x][1]} (Stan: ${staraIlosc} -> ${nowaIlosc})`);
+      return "Zaktualizowano!";
+    }
+  }
+  throw new Error("Brak ID");
+}
+
+function zdejmijZeStanuFIFO(n, il, k) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Magazyn'), d = s.getDataRange().getValues();
+  let p = [];
+  for (let i = 1; i < d.length; i++) if (d[i][1] === n && d[i][8] === 'Detal' && d[i][3] > 0) p.push({ ri: i + 1, il: d[i][3], dt: new Date(d[i][5]), id: d[i][0] });
+  p.sort((a, b) => a.dt - b.dt);
+  let rem = Number(il), l = "";
+  if (p.reduce((acc, x) => acc + x.il, 0) < rem) throw new Error("Za mało towaru!");
+  for (let x of p) { if (rem <= 0) break; let v = Math.min(x.il, rem); s.getRange(x.ri, 4).setValue(x.il - v); rem -= v; l += `[ID:${x.id} -${v}] `; }
+  zapiszLog("SPRZEDAŻ DETAL", Array.isArray(k) ? k.join(",") : k, `${n}: ${l}`);
+}
+
+function zarchiwizujProdukt(i,k){const s=SpreadsheetApp.openById(GLOBAL_TENANT_ID),m=s.getSheetByName('Magazyn'),a=s.getSheetByName('Archiwum'),l=s.getSheetByName('Logi'),d=m.getDataRange().getValues();for(let x=1;x<d.length;x++)if(d[x][0]==i){if(a)a.appendRow([...d[x],new Date(),k]);m.deleteRow(x+1);if(l)l.appendRow([new Date(),k,d[x][1],"USUNIĘCIE","Archiwizacja"]);return"Zarchiwizowano.";}throw new Error("Brak ID");}
+function przywrocZArchiwum(i){const s=SpreadsheetApp.openById(GLOBAL_TENANT_ID),m=s.getSheetByName('Magazyn'),a=s.getSheetByName('Archiwum'),d=a.getDataRange().getValues();for(let x=1;x<d.length;x++)if(d[x][0]==i){m.appendRow(d[x].slice(0,10));a.deleteRow(x+1);return"Przywrócono!";}throw new Error("Brak ID");}
+
+function pobierzSlownik() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Slownik') || ss.getSheetByName('Słownik');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+  const data = sheet.getDataRange().getValues(), wynik = [];
+  for (let i = 1; i < data.length; i++) {
+    const firma = String(data[i][0]).trim(), model = String(data[i][1]).trim(), cena = (data[i].length > 2 && data[i][2] !== "") ? parseFloat(data[i][2]) : ""; 
+    if (firma !== "") wynik.push({ firma: firma, model: model, cena: cena });
+  }
+  wynik.sort((a, b) => a.firma.localeCompare(b.firma) || a.model.localeCompare(b.model));
+  return zwrocJSON(wynik);
+}
+
+function dodajModelDoSlownika(d) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let h = s.getSheetByName('Slownik') || s.getSheetByName('Słownik');
+  if (!h) return "Błąd: Brak arkusza Słownik";
+  const v = h.getDataRange().getValues();
+  for (let i = 0; i < v.length; i++) if (String(v[i][0]).trim().toLowerCase() == String(d.firma).trim().toLowerCase() && String(v[i][1]).trim().toLowerCase() == String(d.model).trim().toLowerCase()) return "Istnieje!";
+  h.appendRow([d.firma, d.model, d.cena]);
+  return "Dodano!";
+}
+
+function edytujWpisSlownika(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Slownik') || ss.getSheetByName('Słownik');
+  if (!sheet) throw new Error("Brak arkusza Słownik");
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(d.old_firma).trim() && String(data[i][1]).trim() === String(d.old_model).trim()) {
+      sheet.getRange(i + 1, 1).setValue(d.new_firma); sheet.getRange(i + 1, 2).setValue(d.new_model); sheet.getRange(i + 1, 3).setValue(d.new_cena); 
+      zapiszLog("EDYCJA KOSMETYKU", d.pracownik, `${d.old_firma} ${d.old_model} -> ${d.new_firma} ${d.new_model} (${d.new_cena} zł)`);
+      return "Zaktualizowano kosmetyk!";
+    }
+  }
+  throw new Error("Nie znaleziono wpisu do edycji.");
+}
+
+function usunWpisSlownikaBackend(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheetMagazyn = ss.getSheetByName('Magazyn');
+  const nazwaSzukana = (String(d.firma).trim() + " " + String(d.model).trim()).toLowerCase();
+  if (sheetMagazyn) {
+    const magData = sheetMagazyn.getDataRange().getValues();
+    let totalStock = 0;
+    for (let i = 1; i < magData.length; i++) {
+      if (String(magData[i][1]).trim().toLowerCase() === nazwaSzukana) totalStock += Number(magData[i][3]) || 0;
+    }
+    if (totalStock > 0) return zwrocJSON({ status: 'error', message: `W systemie znajduje się jeszcze ${totalStock} szt. tego produktu! Najpierw wyzeruj stan magazynowy.` });
+  }
+  let sheetSlownik = ss.getSheetByName('Slownik') || ss.getSheetByName('Słownik');
+  if (!sheetSlownik) throw new Error("Brak arkusza Słownik");
+  const slowData = sheetSlownik.getDataRange().getValues();
+  for (let i = slowData.length - 1; i > 0; i--) {
+    if (String(slowData[i][0]).trim() === String(d.firma).trim() && String(slowData[i][1]).trim() === String(d.model).trim()) {
+      sheetSlownik.deleteRow(i + 1); 
+      zapiszLog("USUNIĘCIE SŁOWNIK KOSMETYK", d.pracownik || "Admin", `${d.firma} ${d.model} (Stan zweryfikowany: 0)`);
+      return zwrocJSON({ status: 'success', message: 'Kosmetyk został wycofany z systemu.' });
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nie znaleziono produktu w słowniku.' });
+}
+
+function pobierzSlownikSprzedazy() {
+  const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const p = f.getSheetByName('Pracownicy');
+  let pr = [];
+  if (p && p.getLastRow() > 0) {
+    p.getDataRange().getValues().forEach(row => { const val = String(row[0] || "").trim(); if (val !== "" && val.toLowerCase() !== "pracownik" && val.toLowerCase() !== "imię i nazwisko") pr.push(val); });
+  }
+  let u = f.getSheetByName('Usługi') || f.getSheetByName('Uslugi');
+  let zb = [];
+  if (u && u.getLastRow() > 1) {
+    const dataU = u.getDataRange().getValues();
+    for (let i = 1; i < dataU.length; i++) {
+      const kat = String(dataU[i][0] || "").trim(), war = String(dataU[i][1] || "").trim(), cena = (dataU[i].length > 2) ? dataU[i][2] : ""; 
+      if (kat !== "") zb.push({ kategoria: kat, wariant: war, cena: cena });
+    }
+    zb.sort((a, b) => a.kategoria.localeCompare(b.kategoria) || a.wariant.localeCompare(b.wariant));
+  }
+  return zwrocJSON({ pracownicy: pr.sort(), zabiegi: zb });
+}
+
+function dodajDefinicjeSprzedazy(d) {
+  const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  if (d.typ === 'Pracownik') {
+    let s = f.getSheetByName('Pracownicy');
+    if (!s) { s = f.insertSheet('Pracownicy'); s.appendRow(['Imię i Nazwisko']); }
+    s.appendRow([d.wartosc]); zapiszLog("DODANO PRACOWNIKA", d.pracownik, d.wartosc);
+  } else {
+    let s = f.getSheetByName('Usługi') || f.getSheetByName('Uslugi');
+    if (!s) { s = f.insertSheet('Usługi'); s.appendRow(['Kategoria', 'Podkategoria', 'Cena']); }
+    s.appendRow([d.kategoria, d.wariant, d.cena]); zapiszLog("DODANO ZABIEG", d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)`);
+  }
+  return "Dodano pomyślnie!";
+}
+
+function edytujZabieg(d) {
+  const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const s = f.getSheetByName('Usługi') || f.getSheetByName('Uslugi');
+  if (!s) throw new Error("Brak arkusza Usługi");
+  const v = s.getDataRange().getValues();
+  for (let i = 0; i < v.length; i++) {
+    if (String(v[i][0]).trim() === String(d.old_kategoria).trim() && String(v[i][1]).trim() === String(d.old_wariant).trim()) {
+      s.getRange(i + 1, 1).setValue(d.new_kategoria); s.getRange(i + 1, 2).setValue(d.new_wariant); s.getRange(i + 1, 3).setValue(d.new_cena); 
+      zapiszLog("EDYCJA ZABIEGU", d.pracownik, d.new_kategoria); return "Zaktualizowano";
+    }
+  }
+  throw new Error("Nie znaleziono zabiegu do edycji");
+}
+
+function usunZabieg(d) {
+  const f = SpreadsheetApp.openById(GLOBAL_TENANT_ID), s = f.getSheetByName('Usługi') || f.getSheetByName('Uslugi');
+  if (!s) throw new Error("Brak arkusza");
+  const v = s.getDataRange().getValues();
+  for (let i = 0; i < v.length; i++) {
+    if (String(v[i][0]).trim() === d.kategoria && String(v[i][1]).trim() === d.wariant) { s.deleteRow(i + 1); zapiszLog("USUNIĘCIE ZABIEGU", d.pracownik, d.kategoria); return "Usunięto"; }
+  }
+  throw new Error("Nie znaleziono");
+}
+
+function usunPracownika(d) {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Pracownicy'), v = s.getDataRange().getValues();
+  for (let i = 0; i < v.length; i++) { if (v[i][0] == d.imie) { s.deleteRow(i + 1); zapiszLog("USUNIĘCIE PRACOWNIKA", d.pracownik, d.imie); return "Usunięto"; } }
+  throw new Error("Błąd");
+}
+
+// =========================================================================
+// ✂️ MODUŁ: RABATY I SUGESTIE (CROSS-SELL)
+// =========================================================================
+
+function dodajDefinicjeRabatu(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rabaty') || ss.getSheetByName('Rabat');
+  if (!sheet) { sheet = ss.insertSheet('Rabaty'); sheet.appendRow(['Nazwa', 'Typ', 'Wartość', 'Aktywny', 'Data dodania', 'Kto']); }
+  sheet.appendRow([d.nazwa, d.typ, d.wartosc, 'TAK', new Date(), d.pracownik]);
+  zapiszLog("DODANO RABAT", d.pracownik, `${d.nazwa} (${d.wartosc} ${d.typ})`);
+  return "Dodano nowy rabat!";
+}
+
+function pobierzRabaty() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Rabaty') || ss.getSheetByName('Rabat');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+  const data = sheet.getDataRange().getValues(), rabaty = [];
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][3]).trim().toUpperCase() === 'TAK') rabaty.push({ nazwa: data[i][0], typ: data[i][1], wartosc: parseFloat(data[i][2]) });
+  }
+  return zwrocJSON(rabaty);
+}
+
+function pobierzRegulySugestii() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Sugestie');
+  if (!sheet) return zwrocJSON([]);
+  const data = sheet.getDataRange().getValues(), rules = [];
+  for (let i = 1; i < data.length; i++) rules.push({ matka: data[i][0], dziecko: data[i][1], opis: data[i][2] });
+  return zwrocJSON(rules);
+}
+
+function dodajReguleSugestii(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Sugestie');
+  if (!sheet) { sheet = ss.insertSheet('Sugestie'); sheet.appendRow(['Jeśli klient kupił (Matka)', 'Zaproponuj to (Dziecko)', 'Argumentacja', 'Kto dodał']); }
+  sheet.appendRow([d.matka, d.dziecko, d.opis, d.pracownik]);
+  return "Dodano nową regułę sugestii!";
+}
+
+function usunReguleSugestii(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Sugestie');
+  if(!sheet) throw new Error("Brak bazy sugestii");
+  const data = sheet.getDataRange().getValues();
+  for(let i=1; i<data.length; i++) {
+    if(String(data[i][0]) === d.matka && String(data[i][1]) === d.dziecko) { sheet.deleteRow(i+1); return "Usunięto regułę."; }
+  }
+  throw new Error("Nie znaleziono reguły.");
+}
+
+// =========================================================================
+// 📞 MODUŁ RETENCJI (CRM)
+// =========================================================================
+
+function pobierzWszystkieRodo() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Rejestr_RODO');
+  if (!sheet) return zwrocJSON([]);
+  const data = sheet.getDataRange().getValues(), res = [];
+  for (let i = 1; i < data.length; i++) res.push({ id_klienta: data[i][9], telefon_zgoda: String(data[i][5]).toUpperCase() });
+  return zwrocJSON(res);
+}
+
+function zapiszRetencje(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Retencja');
+  if (!sheet) {
+    sheet = ss.insertSheet('Retencja');
+    sheet.appendRow(['Data_Kontaktu', 'ID_Klienta', 'Klient', 'Kategoria/Filtr', 'Status', 'Notatka', 'Pracownik']);
+    sheet.getRange("A1:G1").setFontWeight("bold").setBackground("#dcfce7");
+    sheet.setFrozenRows(1);
+  }
+  sheet.appendRow([new Date(), d.id_klienta, d.klient, d.kampania, d.status, d.notatka, d.pracownik]);
+  return zwrocJSON({ status: 'success', message: 'Zapisano notatkę z rozmowy!' });
+}
+
+function pobierzCalaRetencje() {
+  const sheet = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Retencja');
+  if (!sheet) return zwrocJSON([]);
+  const data = sheet.getDataRange().getDisplayValues(), res = [];
+  for (let i = 1; i < data.length; i++) res.push({ data: data[i][0], id_klienta: data[i][1], klient: data[i][2], kampania: data[i][3], status: data[i][4], notatka: data[i][5], pracownik: data[i][6] });
+  return zwrocJSON(res.reverse()); 
+}
+
+function pobierzLogiSystemowe() {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Logi');
+  if (!s || s.getLastRow() < 2) return zwrocJSON([]);
+  try {
+    const lastRow = s.getLastRow(), rowsToGet = Math.min(lastRow - 1, 300), startRow = lastRow - rowsToGet + 1;
+    const data = s.getRange(startRow, 1, rowsToGet, 5).getDisplayValues();
+    const logi = data.map(row => ({ data: row[0], kto: row[1], akcja: row[2], opis: row[4] }));
+    return zwrocJSON(logi.reverse());
+  } catch (e) { return zwrocJSON([]); }
+}
+
+// =========================================================================
+// 📊 MODUŁ: DASHBOARD MANAGER (ANALYTICS & BI)
+// Zintegrowane z pliku analitycznego. Pobiera dane i liczy AOV, Churn itp.
+// =========================================================================
+
+function fetchDashboardMonths() {
+    try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Sprzedaz');
+    if(!sheet) return { status: 'success', months: [] };
+    
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) return { status: 'success', months: [] };
+
+    const naglowki = data[0].map(h => String(h).trim().toLowerCase());
+    let colData = naglowki.findIndex(n => n.includes('data') || n.includes('czas'));
+    if (colData === -1) colData = 0; 
+    
+    let months = new Set();
+    
+    for (let i = 1; i < data.length; i++) {
+      let raw = data[i][colData]; 
+      if (raw) {
+          let d = (raw instanceof Date) ? raw : new Date(String(raw).substring(0, 10));
+          if (!isNaN(d.getTime())) {
+              // Błyskawiczny natywny JS zamiast Utilities.formatDate!
+              const y = d.getFullYear();
+              const m = String(d.getMonth() + 1).padStart(2, '0');
+              months.add(`${y}-${m}`);
+          }
+      }
+    }
+    return { status: 'success', months: Array.from(months).sort().reverse() };
+  } catch (e) { return { status: 'error', message: e.toString() }; }
+}
+
+function saveDashboardCost(params) {
+    const targetMonth = params.month;
+    const amount = params.amount;
+    const ssCosts = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let sheetCosts = ssCosts.getSheetByName('Koszty');
+    
+    if (!sheetCosts) {
+        sheetCosts = ssCosts.insertSheet('Koszty');
+        sheetCosts.appendRow(['Miesiąc_Data', 'Kwota', 'Opis', 'ID']);
+    }
+
+    const data = sheetCosts.getDataRange().getValues();
+    let rowToUpdate = -1;
+
+    for (let i = 1; i < data.length; i++) {
+      let d = new Date(data[i][0]);
+      let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+      if (m === targetMonth) {
+        rowToUpdate = i + 1;
+        break;
+      }
+    }
+
+    if (rowToUpdate > 0) {
+      sheetCosts.getRange(rowToUpdate, 2).setValue(amount);
+      return { status: 'success', message: "Zaktualizowano koszt dla: " + targetMonth };
+    } else {
+      let id = new Date().getTime().toString();
+      sheetCosts.appendRow([targetMonth + "-01", amount, "Koszt Miesięczny", id]);
+      return { status: 'success', message: "Dodano koszt dla: " + targetMonth };
+    }
+}
+
+function getDashboardCostsList() {
+    const ssCosts = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let sheetCosts = ssCosts.getSheetByName('Koszty');
+    if (!sheetCosts) return { status: 'success', data: [] };
+
+    const data = sheetCosts.getDataRange().getValues();
+    let list = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if(data[i][0]) {
+         let d = new Date(data[i][0]);
+         let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+         list.push({ month: m, amount: data[i][1] });
+      }
+    }
+    list.sort((a,b) => b.month.localeCompare(a.month));
+    return { status: 'success', data: list };
+}
+
+function helper_PobierzKoszty(szukanyMiesiac) {
+  try {
+    var ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    var sheet = ss.getSheetByName("Koszty");
+    if (!sheet) return 0;
+
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      var rowDate = data[i][0];
+      if (rowDate) {
+        var d = new Date(rowDate);
+        var m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+        if (m === szukanyMiesiac) {
+          var val = data[i][1];
+          if (typeof val === 'string') { val = val.replace(',', '.').replace(/[^0-9.-]/g, ''); }
+          return parseFloat(val) || 0;
+        }
+      }
+    }
+  } catch (e) { Logger.log("Błąd w funkcji kosztów: " + e.toString()); }
+  return 0;
+}
+
+function getDashboardStats(params) {
+  return obsłużAkcjeAnalityczne(params, 'get_stats');
+}
+
+function getDashboardYearlySummary(params) {
+  return obsłużAkcjeAnalityczne(params, 'get_yearly_summary');
+}
+
+function getDashboardTreatmentAnalysis(params) {
+  return obsłużAkcjeAnalityczne(params, 'get_treatment_analysis');
+}
+
+function getDashboardBIData(params) {
+  return obsłużAkcjeAnalityczne(params, 'get_bi_data');
+}
+
+function obsłużAkcjeAnalityczne(params, action) {
+  try {
+    let response = {};
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName("Sprzedaz");
+    const data = sheet ? sheet.getDataRange().getValues() : [];
+
+// ========================================================
+    // 🧠 SMART MAPPING KOLUMN (Kulo-odporne wyszukiwanie)
+    // ========================================================
+    const naglowki = data.length > 0 ? data[0].map(h => String(h).trim().toLowerCase()) : [];
+    
+    const znajdzKolumne = (slowaKluczowe, domyslnyIndeks) => {
+        let index = naglowki.findIndex(n => slowaKluczowe.some(s => n.includes(s)));
+        return index !== -1 ? index : domyslnyIndeks;
+    };
+
+    const COL_DATA       = znajdzKolumne(['data', 'czas'], 0);
+    const COL_KLIENT     = znajdzKolumne(['klient', 'nazwisko', 'imie'], 2);
+    const COL_ZABIEG     = znajdzKolumne(['zabieg', 'usług', 'towar', 'produkt'], 3);
+    const COL_SPRZEDAWCA = znajdzKolumne(['sprzedawca', 'pracownik', 'wykonawca'], 4);
+    const COL_KWOTA      = znajdzKolumne(['kwota', 'cena', 'wartość', 'suma'], 5);
+    const COL_STATUS     = znajdzKolumne(['status', 'stan'], 8);
+    const COL_PLATNOSC   = znajdzKolumne(['metoda', 'płatność', 'platnosc', 'forma'], 9);
+    // ========================================================
+
+
+    // --- MIESIĄCE DLA GET_MONTHS ---
+    if (action === 'get_months' || action === 'an_get_months') {
+       let months = new Set();
+       const tz = Session.getScriptTimeZone();
+       for (let i = 1; i < data.length; i++) {
+         let raw = data[i][0];
+         if (raw) {
+             let d = (raw instanceof Date) ? raw : new Date(String(raw).substring(0, 10));
+             if (!isNaN(d.getTime())) months.add(Utilities.formatDate(d, tz, "yyyy-MM"));
+         }
+       }
+       return { status: 'success', months: Array.from(months).sort().reverse() };
+    }
+
+    if (action === 'get_daily_summary') {
+        return { status: 'success', data: pobierzTransakcjeZDnia(params.date) };
+    }
+
+    if (action === 'get_stats' || action === 'an_get_stats') {
+      const selectedMonth = params.month;
+      let stats = { 
+          totalRevenue: 0, count: 0, categorySplit: { "Zabiegi": 0, "Kosmetyki": 0 }, 
+          rankingPracownikow: [], employeeDetails: {}, debugLog: [] 
+      };
+      let empTemp = {}; 
+      
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase();
+        let platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+        if (status.includes("USUNIĘTY") || status.includes("SCALONY")) continue;
+        if (platnosc.includes("portfel") || platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+        let d = parseDate(row[COL_DATA]);
+        if (!d) continue;
+        let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+        if (m !== selectedMonth) continue;
+        
+        let amount = parseAmount(row[COL_KWOTA]);
+        let zabieg = String(row[COL_ZABIEG] || "Inne").trim();
+        let isKosmetyk = zabieg.toLowerCase().includes("kosmetyk") || zabieg.toLowerCase().includes("krem");
+        let klient = String(row[COL_KLIENT] || "Nieznany").trim(); 
+        
+        if (amount === 0 && !isKosmetyk) continue; 
+        stats.totalRevenue += amount; stats.count++; 
+        if (isKosmetyk) stats.categorySplit["Kosmetyki"] += amount; 
+        else stats.categorySplit["Zabiegi"] += amount;
+        
+        let rawSellers = String(row[COL_SPRZEDAWCA] || "").trim();
+        if (!rawSellers && amount > 0) rawSellers = "Brak sprzedawcy"; 
+        if (rawSellers) {
+          let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+          let count = sellers.length;
+          if (count > 0) {
+            let splitAmount = amount / count; 
+            sellers.forEach(person => {
+              if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
+              let e = empTemp[person];
+              e.total += splitAmount; e.transakcje += (1 / count); 
+              if (isKosmetyk) { e.kosmetyki += splitAmount; e.qty_kosmetyki += (1 / count); } else { e.zabiegi += splitAmount; }
+              if (!e.top[zabieg]) e.top[zabieg] = 0; e.top[zabieg] += (1 / count);
+              let day = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd.MM");
+              let icon = isKosmetyk ? "💄" : "💆‍♀️";
+              stats.debugLog.push(`👤 ${person.padEnd(12, ' ')} | ${day} | +${splitAmount.toFixed(2).padStart(7, ' ')} zł | ${icon} SPRZEDAŻ: ${zabieg} | ${platnosc.toUpperCase()}`);
+              if (amount > 0 || isKosmetyk) {
+                  e.transactionsList.push({ service: zabieg, val: splitAmount, date: day }); 
+                  let receiptKey = day + "_" + klient.toUpperCase();
+                  if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
+                  e.virtualReceipts[receiptKey].total += splitAmount;
+                  e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, "").trim());
+              }
+            });
+          }
+        }
+      }
+
+      const sheetZadatki = ss.getSheetByName('Zadatki');
+      if (sheetZadatki) {
+         const dataZ = sheetZadatki.getDataRange().getValues();
+         for (let i = 1; i < dataZ.length; i++) {
+             let d = parseDate(dataZ[i][2]);
+             if (!d) continue;
+             let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+             if (m !== selectedMonth) continue;
+             let typ = String(dataZ[i][4]).trim().toUpperCase();
+             let metodaRaw = String(dataZ[i][6]).trim().toLowerCase();
+             let statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+             
+             if (statusZadatku !== 'USUNIĘTY' && statusZadatku !== 'SCALONY' && typ === 'WPŁATA' && !metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                 let amount = parseAmount(dataZ[i][5]);
+                 if (amount === 0) continue;
+                 let klient = String(dataZ[i][3] || "Nieznany").trim(); 
+                 let rawSellers = String(dataZ[i][9] || "").trim(); 
+                 if (!rawSellers) rawSellers = "Brak pracownika (Zadatek)"; 
+                 stats.totalRevenue += amount; stats.count++; stats.categorySplit["Zabiegi"] += amount; 
+                 let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+                 let count = sellers.length;
+                 if (count > 0) {
+                     let splitAmount = amount / count; 
+                     sellers.forEach(person => {
+                         if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
+                         let e = empTemp[person];
+                         e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
+                         let nazwaWplaty = "Zadatek: " + String(dataZ[i][7] || "Umówienie").trim();
+                         if (!e.top["Wpłata Zadatku"]) e.top["Wpłata Zadatku"] = 0; e.top["Wpłata Zadatku"] += (1 / count);
+                         let day = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd.MM");
+                         stats.debugLog.push(`👤 ${person.padEnd(12, ' ')} | ${day} | +${splitAmount.toFixed(2).padStart(7, ' ')} zł | 💰 ${nazwaWplaty} | ${metodaRaw.toUpperCase()}`);
+                         e.transactionsList.push({ service: nazwaWplaty, val: splitAmount, date: day });
+                         let receiptKey = day + "_" + klient.toUpperCase();
+                         if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
+                         e.virtualReceipts[receiptKey].total += splitAmount;
+                         e.virtualReceipts[receiptKey].items.push("Wpłata Zadatku");
+                     });
+                 }
+             }
+         }
+      }
+
+      const TYLKO_ZABIEGI = ["Endermologia Infinity", "Arosha", "Ceremonia Purles", "Depilacja woskiem", "Endermologia Alliance", "Karboksyterapia", "Kriolipoliza", "Lipoliza iniekcyjna", "Masaż", "Meltivio", "Mezoterapia Igłowa", "Mezoterapia mikroigłowa", "Modelowanie Ust", "Peeling Cypryjski", "Presoterapia", "Storz", "Stymulatory Tkankowe", "Thermogenique", "Żelazko", "Oprawa Oka", "Oczyszczanie wodorowe", "Alma SpaDeep", "Adipologie", "Infuzja tlenowa", "Zaffiro twarz", "Zaffiro dłonie", "Zaffiro ciało", "Masaż Kobido", "Peeling chemiczny", "Koktajl Monako", "Rytuał Flerage z endermologią twarzy", "Vagheggi ciało", "Vagheggi twarz", "Mezoterapia igłowa stymulatorem", "Ultradźwięki", "Pielęgnacja", "Pixel RF"];
+      for (let person in empTemp) {
+          let e = empTemp[person]; let zeroSales = [];
+          TYLKO_ZABIEGI.forEach(service => {
+              let count = 0;
+              for (const [soldName, soldCount] of Object.entries(e.top)) { if (soldName.includes(service)) count += soldCount; }
+              if (count === 0) { zeroSales.push(service); }
+          });
+          e.worstTreatments = zeroSales; 
+          let receiptsArr = Object.values(e.virtualReceipts);
+          receiptsArr.sort((a, b) => b.total - a.total); 
+          if (receiptsArr.length > 0) {
+              let best = receiptsArr[0];
+              let uniqueItems = [...new Set(best.items)]; 
+              e.bestReceipt = { client: best.client, date: best.date, val: best.total, services: uniqueItems.join(" + ") };
+          }
+          delete e.virtualReceipts; 
+      }
+
+      stats.employeeDetails = empTemp;
+      stats.rankingPracownikow = Object.values(empTemp).sort((a,b) => b.total - a.total);
+      response.data = stats;
+      response.status = 'success';
+      return response;
+    }
+
+    if (action === 'get_monthly_details' || action === 'an_get_monthly_details') {
+      const targetMonth = params.month; 
+      const compareMonth = params.compareMonth; 
+      const ALL_SERVICES = ["Endermologia Infinity", "Arosha", "Bon podarunkowy", "Ceremonia Purles", "Depilacja woskiem", "Endermologia Alliance", "Inny - brak na liscie", "Karboksyterapia", "Kriolipoliza", "Lipoliza iniekcyjna", "Masaż", "Meltivio", "Mezoterapia Igłowa", "Mezoterapia mikroigłowa", "Modelowanie Ust", "Peeling Cypryjski", "Presoterapia", "Storz", "Stymulatory Tkankowe", "Thermogenique", "Żelazko", "Oprawa Oka", "Oczyszczanie wodorowe", "Alma SpaDeep", "Adipologie", "Infuzja tlenowa", "Zaffiro twarz", "Zaffiro dłonie", "Zaffiro ciało", "Masaż Kobido", "Peeling chemiczny", "Koktajl Monako", "Rytuał Flerage z endermologią twarzy", "Vagheggi ciało", "Vagheggi twarz", "Mezoterapia igłowa stymulatorem", "Ultradźwięki", "Pielęgnacja", "Pixel RF", "Doplata", "Dodatki do zabiegów"];
+
+      let report = {
+        total: 0, costs: 0, profit: 0,
+        payments: { "Gotówka": 0, "Karta": 0, "Blik": 0, "Przelew": 0, "MediRaty": 0, "Inne": 0 },
+        daily: {}, topTreatments: {}, worstTreatments: [], topEmployees: {}, chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: [] 
+      };
+
+      try { report.costs = helper_PobierzKoszty(targetMonth); } catch (e) { }
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase();
+        let platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+
+        if (status === "USUNIĘTY" || status === "SCALONY") continue;
+        let d = parseDate(row[COL_DATA]);
+        if (!d) continue;
+        let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+        
+        let zabieg = String(row[COL_ZABIEG] || "Inne").trim();
+        let isKosmetyk = zabieg.toLowerCase().includes("kosmetyk") || zabieg.toLowerCase().includes("krem");
+
+        if (m === targetMonth) {
+           if (isKosmetyk) { report.cosmeticsCount++; } 
+           else { if(!report.topTreatments[zabieg]) report.topTreatments[zabieg] = 0; report.topTreatments[zabieg] += 1; }
+        }
+
+        if (platnosc === "mix" || platnosc.includes("portfel") || platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+        let amount = parseAmount(row[COL_KWOTA]);
+        if (amount === 0) continue; 
+
+        if (m === targetMonth) {
+           let day = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd");
+           let method = classifyPayment(row[COL_PLATNOSC]);
+
+           report.total += amount; report.payments[method] += amount;
+           report.debugLog.push(`SPRZEDAŻ | ${day}.${m.slice(-2)} | ${amount.toFixed(2)} zł | ${zabieg} | ${method}`);
+
+           if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { "Gotówka":0,"Karta":0,"Blik":0,"Przelew":0,"MediRaty":0,"Inne":0 } };
+           report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+
+           let rawSellers = String(row[COL_SPRZEDAWCA] || "");
+           if (rawSellers) {
+              let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+              let count = sellers.length;
+              if (count > 0) {
+                 let splitVal = amount / count;
+                 sellers.forEach(s => { if(!report.topEmployees[s]) report.topEmployees[s] = 0; report.topEmployees[s] += splitVal; });
+              }
+           }
+        }
+        if (compareMonth && m === compareMonth) report.compareTotal += amount;
+      }
+
+      const sheetP = ss.getSheetByName('Platnosci');
+      if (sheetP) {
+        const dataP = sheetP.getDataRange().getValues();
+        for (let i = 1; i < dataP.length; i++) {
+           let d = parseDate(dataP[i][1]); 
+           if (!d) continue;
+           let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+           let metodaRaw = String(dataP[i][3]).trim().toLowerCase();
+           let status = (dataP[i].length > 5) ? String(dataP[i][5]).trim().toUpperCase() : "";
+
+           if ((m === targetMonth || m === compareMonth) && status !== 'USUNIĘTY' && !metodaRaw.includes('portfel')) {
+               let amount = parseAmount(dataP[i][4]);
+               if (m === targetMonth) {
+                   let method = classifyPayment(metodaRaw);
+                   let day = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd");
+                   report.total += amount; report.payments[method] += amount;
+                   report.debugLog.push(`DOPŁATA  | ${day}.${m.slice(-2)} | ${amount.toFixed(2)} zł | Składowa Mix | ${method}`);
+
+                   if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { "Gotówka":0,"Karta":0,"Blik":0,"Przelew":0,"MediRaty":0,"Inne":0 } };
+                   report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+               }
+               if (compareMonth && m === compareMonth) report.compareTotal += amount;
+           }
+        }
+      }
+
+      const sheetZadatki = ss.getSheetByName('Zadatki');
+      if (sheetZadatki) {
+         const dataZ = sheetZadatki.getDataRange().getValues();
+         for (let i = 1; i < dataZ.length; i++) {
+             let d = parseDate(dataZ[i][2]);
+             if (!d) continue;
+             let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM");
+             let typ = String(dataZ[i][4]).trim().toUpperCase();
+             let metodaRaw = String(dataZ[i][6]).trim().toLowerCase();
+             let statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+
+             if (m === targetMonth || m === compareMonth) {
+                 if (statusZadatku !== 'USUNIĘTY' && typ === 'WPŁATA' && !metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                     let amount = parseAmount(dataZ[i][5]);
+                     if(m === targetMonth) {
+                         let method = classifyPayment(metodaRaw);
+                         let day = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd");
+                         report.total += amount; report.payments[method] += amount;
+                         report.debugLog.push(`ZADATEK  | ${day}.${m.slice(-2)} | ${amount.toFixed(2)} zł | Wpłata zadatku | ${method}`);
+
+                         if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { "Gotówka":0,"Karta":0,"Blik":0,"Przelew":0,"MediRaty":0,"Inne":0 } };
+                         report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+                     }
+                     if(compareMonth && m === compareMonth) report.compareTotal += amount;
+                 }
+             }
+         }
+      }
+
+      report.profit = report.total - report.costs;
+      let worstList = [];
+      ALL_SERVICES.forEach(service => {
+          let count = 0;
+          for (const [soldName, soldCount] of Object.entries(report.topTreatments)) { if (soldName === service || soldName.includes(service)) count += soldCount; }
+          worstList.push({ name: service, count: count });
+      });
+      worstList.sort((a,b) => a.count - b.count); report.worstTreatments = worstList.slice(0, 10);
+
+      let sortedDays = Object.keys(report.daily).sort();
+      sortedDays.forEach(day => { report.daysLabels.push(day); report.chartValues.push(report.daily[day].total); });
+
+      report.topTreatments = Object.entries(report.topTreatments).sort((a,b) => b[1] - a[1]).slice(0, 6);
+      report.topEmployees = Object.entries(report.topEmployees).sort((a,b) => b[1] - a[1]).slice(0, 4);
+
+      response.data = report;
+      response.status = 'success';
+      return response;
+    }
+
+    if (action === 'get_yearly_summary' || action === 'an_get_yearly_summary') {
+      const selectedYear = String(params.year);
+      let summary = { months: {}, totalRevenue: 0, totalCosts: 0, totalProfit: 0 };
+      for (let i = 1; i <= 12; i++) { let m = i < 10 ? "0" + i : "" + i; summary.months[m] = { rev: 0, cost: 0, profit: 0 }; }
+
+      for (let i = 1; i < data.length; i++) {
+        if (String(data[i][8]).toUpperCase() === "USUNIĘTY") continue;
+        let platnosc = String(data[i][9]).toLowerCase();
+        if (platnosc.includes("portfel") || platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+        let d = parseDate(data[i][0]);
+        if (d) {
+          let y = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy");
+          if (y === selectedYear) {
+            let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM");
+            let amount = parseAmount(data[i][5]);
+            summary.months[m].rev += amount; summary.totalRevenue += amount;
+          }
+        }
+      }
+
+      const sheetZadatki = ss.getSheetByName('Zadatki');
+      if (sheetZadatki) {
+        const dataZ = sheetZadatki.getDataRange().getValues();
+        for (let i = 1; i < dataZ.length; i++) {
+           let d = parseDate(dataZ[i][2]);
+           if (d) {
+             let y = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy");
+             let typ = String(dataZ[i][4]).trim().toUpperCase();
+             let metodaRaw = String(dataZ[i][6]).trim().toLowerCase();
+             let statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+             if (y === selectedYear && typ === 'WPŁATA' && statusZadatku !== 'USUNIĘTY') {
+                 if (!metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                     let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM");
+                     let amount = parseAmount(dataZ[i][5]); 
+                     summary.months[m].rev += amount; summary.totalRevenue += amount;
+                 }
+             }
+           }
+        }
+      } 
+
+      try {
+        const sheetCosts = ss.getSheetByName("Koszty") || ss.getSheets()[0];
+        const dataCosts = sheetCosts.getDataRange().getValues();
+        for (let i = 1; i < dataCosts.length; i++) {
+          let rowVal = dataCosts[i][0];
+          if (rowVal) {
+            let d = (rowVal instanceof Date) ? rowVal : new Date(rowVal);
+            if (!isNaN(d.getTime())) {
+                let y = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy");
+                if (y === selectedYear) {
+                  let m = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM");
+                  let amount = parseAmount(dataCosts[i][1]);
+                  summary.months[m].cost += amount; summary.totalCosts += amount;
+                }
+            }
+          }
+        }
+      } catch (e) { console.log("Błąd kosztów rocznych: " + e); }
+
+      for (let m in summary.months) { summary.months[m].profit = summary.months[m].rev - summary.months[m].cost; }
+      summary.totalProfit = summary.totalRevenue - summary.totalCosts;
+      response.data = summary;
+      response.status = 'success';
+      return response;
+    }
+
+    if (action === 'get_treatment_analysis' || action === 'an_get_treatment_analysis') {
+      const selectedYear = String(params.year || new Date().getFullYear());
+      const selectedMonth = params.month; 
+      const selectedTreatment = params.treatment; 
+
+      let sY = 0, sM = 0, prevMonth = "";
+      if (selectedMonth) {
+          let parts = selectedMonth.split('-');
+          sY = parseInt(parts[0]); sM = parseInt(parts[1]);
+          let prevD = new Date(sY, sM - 2, 1);
+          prevMonth = prevD.getFullYear() + "-" + String(prevD.getMonth() + 1).padStart(2, '0');
+      }
+
+      let result = {
+        availableTreatments: [], yearlyTrendRev: { "01":0, "02":0, "03":0, "04":0, "05":0, "06":0, "07":0, "08":0, "09":0, "10":0, "11":0, "12":0 },
+        dayOfWeek: [0, 0, 0, 0, 0, 0, 0], totalYearlyRevenue: 0, treatmentCountYear: 0, uniqueClientsCount: 0, 
+        monthRev: 0, monthCount: 0, monthTotalRev: 0, prevMonthRev: 0, topSellersArr: [],
+        cosmeticsMonthRev: 0, cosmeticsMonthCount: 0, cosmeticsYearRev: 0, cosmeticsMonthTop20: [], cosmeticsTop20: [] 
+      };
+
+      let allTreatmentsSet = new Set(), clientsSet = new Set(), topSellersMap = {}, cosmeticsYearMap = {}, cosmeticsMonthMap = {};
+
+      const normalizeTreatmentName = (name) => { let n = String(name || "Inne").trim(); n = n.replace(/(?:\s|-)*dopłata$/i, "").trim(); return n; };
+      const getMultiplier = (uwagiStr, zabiegStr) => {
+          let str = (String(uwagiStr) + " " + String(zabiegStr)).toLowerCase();
+          let match = str.match(/(\d+)\s*(?:x|szt)/); if (match && parseInt(match[1]) > 0) return parseInt(match[1]);
+          let match2 = str.match(/(?:x|szt)\s*(\d+)/); if (match2 && parseInt(match2[1]) > 0) return parseInt(match2[1]);
+          return 1; 
+      };
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase();
+        let platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+
+        if (status.includes("USUNIĘTY") || status.includes("SCALONY")) continue;
+        if (platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+
+        let d = parseDate(row[0]); if (!d) continue;
+        let y = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy");
+        let mNum = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM"); 
+        let mFull = y + "-" + mNum; 
+        
+        let amount = parseAmount(row[COL_KWOTA]);
+        let rawZabieg = String(row[COL_ZABIEG] || "Inne").trim();
+        let zabieg = normalizeTreatmentName(rawZabieg);
+        let klient = String(row[COL_KLIENT] || "Nieznany").trim();
+        let uwagi = String(row[7] || ""); 
+        let multiplier = getMultiplier(uwagi, rawZabieg);
+        let isKosmetyk = zabieg.toLowerCase().includes("kosmetyk") || zabieg.toLowerCase().includes("krem");
+
+        if (amount === 0 && !isKosmetyk) continue;
+        if (mFull === selectedMonth && !platnosc.includes("portfel") && platnosc !== "mix") result.monthTotalRev += amount;
+
+        if (isKosmetyk) {
+            let cleanCosm = rawZabieg.replace(/^kosmetyk\s*[:-]?\s*/i, "").trim(); if(!cleanCosm) cleanCosm = rawZabieg;
+            if (y === selectedYear) {
+                result.cosmeticsYearRev += amount;
+                if (!cosmeticsYearMap[cleanCosm]) cosmeticsYearMap[cleanCosm] = { count: 0, rev: 0 };
+                cosmeticsYearMap[cleanCosm].count += multiplier; cosmeticsYearMap[cleanCosm].rev += amount; 
+            }
+            if (mFull === selectedMonth) {
+                result.cosmeticsMonthRev += amount; result.cosmeticsMonthCount += multiplier;
+                if (!cosmeticsMonthMap[cleanCosm]) cosmeticsMonthMap[cleanCosm] = { count: 0, rev: 0 };
+                cosmeticsMonthMap[cleanCosm].count += multiplier; cosmeticsMonthMap[cleanCosm].rev += amount; 
+            }
+            continue; 
+        } 
+
+        if (y === selectedYear && zabieg && !zabieg.includes("↳") && !zabieg.includes("Część Mix") && !zabieg.includes("Rozliczenie Mix")) allTreatmentsSet.add(zabieg);
+        if (zabieg === selectedTreatment) {
+            if (y === selectedYear) {
+                result.yearlyTrendRev[mNum] += amount; result.totalYearlyRevenue += amount; result.treatmentCountYear += multiplier; 
+                clientsSet.add(klient.toLowerCase());
+                let jsDay = d.getDay(); let normalDay = jsDay === 0 ? 6 : jsDay - 1; result.dayOfWeek[normalDay] += multiplier;
+                let rawSellers = String(row[COL_SPRZEDAWCA] || "").trim(); let sellers = rawSellers ? rawSellers.split(',').map(s => s.trim()).filter(s => s) : ["Brak"];
+                let count = sellers.length;
+                if (count > 0) { let splitAmount = amount / count; sellers.forEach(person => { if (!topSellersMap[person]) topSellersMap[person] = 0; topSellersMap[person] += splitAmount; }); }
+            }
+            if (mFull === selectedMonth) { result.monthRev += amount; result.monthCount += multiplier; } 
+            else if (mFull === prevMonth) result.prevMonthRev += amount;
+        }
+      }
+
+      const sheetP = ss.getSheetByName('Platnosci');
+      if (sheetP) {
+        const dataP = sheetP.getDataRange().getValues();
+        for (let i = 1; i < dataP.length; i++) {
+            let d = parseDate(dataP[i][1]); if (!d) continue;
+            if (Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM") === selectedMonth) {
+                let metodaRaw = String(dataP[i][3]).trim().toLowerCase();
+                let status = (dataP[i].length > 5) ? String(dataP[i][5]).trim().toUpperCase() : "";
+                if (status !== 'USUNIĘTY' && !metodaRaw.includes('portfel')) result.monthTotalRev += parseAmount(dataP[i][4]);
+            }
+        }
+      }
+
+      const sheetZadatki = ss.getSheetByName('Zadatki');
+      if (sheetZadatki) {
+         const dataZ = sheetZadatki.getDataRange().getValues();
+         for (let i = 1; i < dataZ.length; i++) {
+             let d = parseDate(dataZ[i][2]); if (!d) continue;
+             let y = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy");
+             let mNum = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM"); let mFull = y + "-" + mNum;
+             if (mFull !== selectedMonth) continue;
+             let typ = String(dataZ[i][4]).trim().toUpperCase(), metodaRaw = String(dataZ[i][6]).trim().toLowerCase(), statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+             if (statusZadatku !== 'USUNIĘTY' && statusZadatku !== 'SCALONY' && typ === 'WPŁATA' && !metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                 let amount = parseAmount(dataZ[i][5]); if (amount > 0) result.monthTotalRev += amount;
+             }
+         }
+      }
+
+      result.availableTreatments = Array.from(allTreatmentsSet).sort(); result.uniqueClientsCount = clientsSet.size;
+      result.topSellersArr = Object.entries(topSellersMap).sort((a,b) => b[1] - a[1]);
+      let cosmYearArr = Object.entries(cosmeticsYearMap).map(([name, obj]) => { return { name: name, count: obj.count, rev: obj.rev }; }); cosmYearArr.sort((a, b) => b.rev - a.rev || b.count - a.count); result.cosmeticsTop20 = cosmYearArr.slice(0, 20);
+      let cosmMonthArr = Object.entries(cosmeticsMonthMap).map(([name, obj]) => { return { name: name, count: obj.count, rev: obj.rev }; }); cosmMonthArr.sort((a, b) => b.rev - a.rev || b.count - a.count); result.cosmeticsMonthTop20 = cosmMonthArr.slice(0, 20);
+      response.data = result;
+      response.status = 'success';
+      return response;
+    }
+
+    if (action === 'get_bi_data' || action === 'an_get_bi_data') {
+      const currentYear = new Date().getFullYear();
+      const nowTime = new Date().getTime();
+      const ninetyDaysMs = 90 * 24 * 60 * 60 * 1000;
+      let bi = { retention: { newClients: 0, returningClients: 0, newRevenue: 0, returningRevenue: 0 }, aov: { labels: [], values: [] }, crossSell: [], sleepingVips: [] };
+      let clientsMap = {}, monthlyAovMap = {}, dailyBaskets = {}; 
+
+      for (let i = 1; i < data.length; i++) {
+        const row = data[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase(), platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+        if (status.includes("USUNIĘTY") || status.includes("SCALONY") || platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+        let d = parseDate(row[COL_DATA]); if (!d) continue;
+        let yyyy = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy"), mm = Utilities.formatDate(d, Session.getScriptTimeZone(), "MM"); let yyyy_mm = yyyy + "-" + mm; let dayStr = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        let amount = parseAmount(row[COL_KWOTA]);
+        let zabieg = String(row[COL_ZABIEG] || "Inne").trim().replace(/(?:\s|-)*dopłata$/i, ""), klient = String(row[COL_KLIENT] || "").trim().toUpperCase();
+        if (amount === 0 || !klient || klient === "NIEZNANY" || klient === "BRAK") continue;
+        if (zabieg.includes("↳") || zabieg.includes("Część Mix") || zabieg.includes("Rozliczenie Mix")) continue;
+
+        if (!clientsMap[klient]) clientsMap[klient] = { firstVisit: d.getTime(), lastVisit: d.getTime(), totalSpent: 0, visitDays: new Set() };
+        let c = clientsMap[klient]; if (d.getTime() < c.firstVisit) c.firstVisit = d.getTime(); if (d.getTime() > c.lastVisit) c.lastVisit = d.getTime();
+        c.totalSpent += amount; c.visitDays.add(dayStr);
+        let basketKey = dayStr + "_" + klient; if (!dailyBaskets[basketKey]) dailyBaskets[basketKey] = []; dailyBaskets[basketKey].push(zabieg);
+        if (!platnosc.includes("portfel")) { if (!monthlyAovMap[yyyy_mm]) monthlyAovMap[yyyy_mm] = { rev: 0, receipts: new Set() }; monthlyAovMap[yyyy_mm].rev += amount; monthlyAovMap[yyyy_mm].receipts.add(basketKey); }
+      }
+
+      for (let klient in clientsMap) {
+          let c = clientsMap[klient], firstVisitYear = new Date(c.firstVisit).getFullYear(), isNewThisYear = (firstVisitYear === currentYear);
+          if (isNewThisYear) { bi.retention.newClients++; bi.retention.newRevenue += c.totalSpent; } else { bi.retention.returningClients++; bi.retention.returningRevenue += c.totalSpent; }
+          if (c.visitDays.size >= 2 && c.totalSpent >= 500 && (nowTime - c.lastVisit) > ninetyDaysMs) {
+              let dObj = new Date(c.lastVisit), lastD = Utilities.formatDate(dObj, Session.getScriptTimeZone(), "dd.MM.yyyy");
+              bi.sleepingVips.push({ name: klient, spent: c.totalSpent, visits: c.visitDays.size, lastDate: lastD });
+          }
+      }
+      bi.sleepingVips.sort((a, b) => b.spent - a.spent); bi.sleepingVips = bi.sleepingVips.slice(0, 15); 
+      
+      let pairCounts = {};
+      for (let key in dailyBaskets) {
+          let basket = [...new Set(dailyBaskets[key])]; 
+          if (basket.length > 1) {
+              basket.sort(); 
+              for (let i = 0; i < basket.length; i++) { for (let j = i + 1; j < basket.length; j++) { let pairName = basket[i] + " + " + basket[j]; pairCounts[pairName] = (pairCounts[pairName] || 0) + 1; } }
+          }
+      }
+      bi.crossSell = Object.entries(pairCounts).map(([pair, count]) => ({ pair, count })); bi.crossSell.sort((a, b) => b.count - a.count); bi.crossSell = bi.crossSell.slice(0, 10); 
+      
+      let sortedMonths = Object.keys(monthlyAovMap).sort(); if(sortedMonths.length > 12) sortedMonths = sortedMonths.slice(-12); 
+      sortedMonths.forEach(m => { let mData = monthlyAovMap[m]; let avg = mData.receipts.size > 0 ? (mData.rev / mData.receipts.size) : 0; bi.aov.labels.push(m); bi.aov.values.push(avg); });
+
+      response.data = bi;
+      response.status = 'success';
+      return response;
+    }
+
+    return { status: 'error', message: 'Nieznana akcja analityczna: ' + action };
+
+  } catch (err) {
+    return { status: 'error', message: 'Błąd analityczny: ' + err.toString() };
+  }
+}
+
+// =========================================================================
+// 🔐 MODUŁ: KONTROLE DOSTĘPU (RBAC I PINY)
+// =========================================================================
+
+// Pobiera listę imion do kafelków na Ekranie Blokady (Bez przesyłania PIN-ów do przeglądarki!)
+function pobierzUzytkownikowDoPinu() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Użytkownicy') || ss.getSheetByName('Uzytkownicy');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+  
+  const data = sheet.getDataRange().getValues();
+  const users = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) users.push({ imie: data[i][0], rola: data[i][2] });
+  }
+  return zwrocJSON(users);
+}
+
+// Sprawdza, czy wpisany na klawiaturze PIN jest poprawny
+function weryfikujPin(imie, pin) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Użytkownicy') || ss.getSheetByName('Uzytkownicy');
+  if (!sheet) return zwrocJSON({ status: 'error', message: 'Brak zakładki Użytkownicy' });
+
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(imie).trim()) {
+      if (String(data[i][1]).trim() === String(pin).trim()) {
+        return zwrocJSON({ status: 'success', rola: data[i][2] });
+      } else {
+        return zwrocJSON({ status: 'error', message: 'Błędny PIN!' });
+      }
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nie znaleziono użytkownika.' });
+}
+
+// --- FUNKCJE DLA MEGAADMINA (ZARZĄDZANIE KONTAMI) ---
+function pobierzUzytkownikowAdmin() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Użytkownicy') || ss.getSheetByName('Uzytkownicy');
+  if (!sheet || sheet.getLastRow() < 2) return zwrocJSON([]);
+  
+  const data = sheet.getDataRange().getValues();
+  const users = [];
+  for (let i = 1; i < data.length; i++) {
+    if (data[i][0]) users.push({ imie: data[i][0], pin: data[i][1], rola: data[i][2] });
+  }
+  return zwrocJSON(users);
+}
+
+function dodajUzytkownikaAdmin(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Użytkownicy') || ss.getSheetByName('Uzytkownicy');
+  if (!sheet) {
+    sheet = ss.insertSheet('Użytkownicy');
+    sheet.appendRow(['Imię', 'PIN', 'Rola']);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(d.imie).trim()) {
+      sheet.getRange(i + 1, 2).setValue(d.pin);
+      sheet.getRange(i + 1, 3).setValue(d.rola);
+      zapiszLog("EDYCJA UŻYTKOWNIKA", d.pracownik, `Zaktualizowano profil: ${d.imie} (${d.rola})`);
+      return zwrocJSON({ status: 'success', message: 'Zaktualizowano profil pracownika!' });
+    }
+  }
+  
+  sheet.appendRow([d.imie, d.pin, d.rola]);
+  zapiszLog("NOWY UŻYTKOWNIK", d.pracownik, `Dodano: ${d.imie} (${d.rola})`);
+  return zwrocJSON({ status: 'success', message: 'Dodano nowego pracownika!' });
+}
+
+function usunUzytkownikaAdmin(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Użytkownicy') || ss.getSheetByName('Uzytkownicy');
+  if (!sheet) return zwrocJSON({ status: 'error', message: 'Brak zakładki Użytkownicy' });
+  
+  const data = sheet.getDataRange().getValues();
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(d.imie).trim()) {
+      sheet.deleteRow(i + 1);
+      zapiszLog("USUNIĘTO UŻYTKOWNIKA", d.pracownik, `Usunięto profil: ${d.imie}`);
+      return zwrocJSON({ status: 'success', message: 'Konto pracownika zostało usunięte.' });
+    }
+  }
+  return zwrocJSON({ status: 'error', message: 'Nie znaleziono użytkownika.' });
+}
+// =========================================================================
+// 🩺 MODUŁ KONSULTACJI (Zintegrowany z SaaS i Logami)
+// =========================================================================
+
+function kon_edytujWynik(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Wyniki_konsultacja');
+  if (!sheet) return zwrocJSON({status: 'error', message: 'Brak arkusza Wyniki_konsultacja'});
+  const data = sheet.getDataRange().getValues();
+  
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][2]) === String(d.id)) {
+      const row = i + 1;
+      
+      const staraData = Utilities.formatDate(new Date(data[i][3]), Session.getScriptTimeZone(), "yyyy-MM-dd");
+      const stareCialo = String(data[i][8] || ""); 
+      const stareTwarz = String(data[i][9] || ""); 
+      const staraKwotaPakiet = Number(data[i][11]); 
+      const staraKwotaReklama = Number(data[i][10]); 
+      const staryKto = String(data[i][12] || ""); 
+
+      const nowaData = d.data_konsultacji;
+      const noweCialo = String(d.zabiegi_cialo || "");
+      const noweTwarz = String(d.zabiegi_twarz || "");
+      const nowaKwotaPakiet = Number(d.kwota_pakiet);
+      const nowaKwotaReklama = Number(d.kwota_reklama);
+      const nowyKto = String(d.kto || "");
+
+      let zmiany = [];
+      if (staraData !== nowaData) zmiany.push(`Data: ${staraData} -> ${nowaData}`);
+      if (staryKto !== nowyKto) zmiany.push(`Osoba: '${staryKto}' -> '${nowyKto}'`);
+      if (staraKwotaPakiet !== nowaKwotaPakiet) zmiany.push(`Pakiet: ${staraKwotaPakiet}zł -> ${nowaKwotaPakiet}zł`);
+      if (staraKwotaReklama !== nowaKwotaReklama) zmiany.push(`Koszt: ${staraKwotaReklama}zł -> ${nowaKwotaReklama}zł`);
+      if (stareCialo !== noweCialo) zmiany.push(`Ciało: '${stareCialo}' -> '${noweCialo}'`);
+      if (stareTwarz !== noweTwarz) zmiany.push(`Twarz: '${stareTwarz}' -> '${noweTwarz}'`);
+
+      let szczegolyZmian = `Edycja konsultacji: ${d.klient}. `;
+      if (zmiany.length > 0) {
+        szczegolyZmian += zmiany.join(" | ");
+      } else {
+        szczegolyZmian += "Zaktualizowano inne dane (telefon/źródło/uwagi).";
+      }
+
+      sheet.getRange(row, 4).setValue(d.data_konsultacji);
+      sheet.getRange(row, 5).setValue(d.zrodlo);
+      sheet.getRange(row, 6).setValue(d.obszar_reklamy);
+      sheet.getRange(row, 7).setValue(d.klient);
+      sheet.getRange(row, 8).setValue(d.telefon);
+      sheet.getRange(row, 9).setValue(d.zabiegi_cialo);
+      sheet.getRange(row, 10).setValue(d.zabiegi_twarz);
+      sheet.getRange(row, 11).setValue(d.kwota_reklama);
+      sheet.getRange(row, 12).setValue(d.kwota_pakiet);
+      sheet.getRange(row, 13).setValue(d.kto);
+      sheet.getRange(row, 14).setValue(d.uwagi);
+      sheet.getRange(row, 17).setValue(d.typ_akcji);
+      sheet.getRange(row, 18).setValue(d.kwota_upsell);
+      
+      // Korzystamy z Twojego głównego systemu logów!
+      zapiszLog("KONSULTACJA EDYCJA", d.user_log, szczegolyZmian);
+      return zwrocJSON({status: 'success'});
+    }
+  }
+  return zwrocJSON({status: 'error', message: 'Nie znaleziono wpisu'});
+}
+
+function kon_zapiszWynik(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Wyniki_konsultacja');
+  
+  if(!sheet) {
+    sheet = ss.insertSheet('Wyniki_konsultacja');
+    sheet.appendRow(["Added Time", "IP", "Unique ID", "Data", "Zrodlo", "Obszar", "Klient", "Telefon", "Ciało", "Twarz", "Kwota_Reklama", "Kwota_Pakiet", "Kto", "Uwagi", "-", "0", "Typ_Akcji", "Upsell"]);
+  }
+
+  const now = new Date();
+  const uniqueID = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd-HHmmss");
+  
+  sheet.appendRow([
+    now, "WEB", uniqueID, d.data_konsultacji, d.zrodlo, d.obszar_reklamy,
+    d.klient, d.telefon, d.zabiegi_cialo, d.zabiegi_twarz, 
+    d.kwota_reklama, d.kwota_pakiet, d.kto, d.uwagi, 
+    "-", 0, d.typ_akcji, d.kwota_upsell
+  ]);
+
+  zapiszLog("KONSULTACJA NOWA", d.user_log, `Dodano: ${d.klient}, Kto: ${d.kto}, Pakiet: ${d.kwota_pakiet} zł`);
+  return zwrocJSON({status: 'success'});
+}
+
+function kon_pobierzOstatnieWyniki() { return zwrocJSON(kon_pobierzDaneZArkusza(50)); }
+
+function kon_pobierzDaneZArkusza(limit) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Wyniki_konsultacja');
+  if(!sheet) return [];
+  
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  let startRow = 2;
+  let numRows = lastRow - 1;
+  if (limit > 0 && numRows > limit) { startRow = lastRow - limit + 1; numRows = limit; }
+
+  const data = sheet.getRange(startRow, 1, numRows, 18).getValues();
+  
+  const output = data.map(r => {
+    let displayDate = "-"; let isoDate = "";
+    try {
+      let d = (r[3] instanceof Date) ? r[3] : new Date(r[3]);
+      if (!isNaN(d.getTime())) {
+        displayDate = Utilities.formatDate(d, Session.getScriptTimeZone(), "dd.MM.yyyy");
+        isoDate = Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd");
+      } else { displayDate = String(r[3]); isoDate = String(r[3]); }
+    } catch (e) { displayDate = String(r[3]); }
+
+    return {
+      id: r[2], data_display: displayDate, data_konsultacji: isoDate,
+      typ: r[4], obszar: r[5], klient: r[6],
+      zabiegi_cialo: String(r[8]), zabiegi_twarz: String(r[9]),
+      kwota_reklama: Number(r[10]) || 0, kwota: Number(r[11]) || 0,
+      kto: r[12], uwagi: r[13], typ_akcji: r[16], upsell: Number(r[17]) || 0
+    };
+  });
+  
+  if (limit > 0) output.reverse();
+  return output;
+}
+
+function kon_pobierzKonsultantow(onlyActive) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Pracownicy_konsultacja');
+  if (!sheet) { 
+      sheet = ss.insertSheet('Pracownicy_konsultacja'); 
+      sheet.appendRow(['Imię', 'Status']); 
+      return zwrocJSON([]); 
+  }
+  const data = sheet.getDataRange().getValues();
+  let output = [];
+  for (let i = 1; i < data.length; i++) {
+    if(data[i][0]) {
+       if(onlyActive === 'true') { if(data[i][1] === 'Aktywny') output.push(data[i][0]); }
+       else output.push({ imie: data[i][0], status: data[i][1] });
+    }
+  }
+  return zwrocJSON(output);
+}
+
+function kon_dodajKonsultanta(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Pracownicy_konsultacja');
+  if(!sheet) return zwrocJSON({status:'error', message: 'Brak arkusza Pracownicy_konsultacja'});
+  const data = sheet.getDataRange().getValues();
+  
+  for(let i=1; i<data.length; i++) {
+      if(String(data[i][0]).toLowerCase() == String(d.imie).toLowerCase()) {
+        sheet.getRange(i+1,2).setValue(d.status);
+        zapiszLog("KONSULTANT ZMIANA", d.user_log, `${d.imie} -> ${d.status}`);
+        return zwrocJSON({status:'success'});
+      }
+  }
+  sheet.appendRow([d.imie, d.status]);
+  zapiszLog("KONSULTANT DODANIE", d.user_log, `${d.imie}`);
+  return zwrocJSON({status:'success'});
+}
+
+function kon_usunKonsultanta(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Pracownicy_konsultacja');
+  if(!sheet) return zwrocJSON({status:'error'});
+  const data = sheet.getDataRange().getValues();
+  
+  for(let i=1; i<data.length; i++) {
+      if(String(data[i][0]) == String(d.imie)) {
+        sheet.deleteRow(i+1);
+        zapiszLog("KONSULTANT USUNIĘCIE", d.user_log, `${d.imie}`);
+        return zwrocJSON({status:'success'});
+      }
+  }
+  return zwrocJSON({status:'error'});
+}
+
+// =========================================================================
+// 🎯 KONSULTACJE - ZARZĄDZANIE KAMPANIAMI (AKCJAMI)
+// =========================================================================
+
+
+function kon_pobierzKampanie() {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Typy_konsultacji');
+  
+  if (!sheet) {
+    sheet = ss.insertSheet('Typy_konsultacji');
+    // Inicjujemy system domyślnymi typami
+    sheet.appendRow(['Nazwa Akcji', 'Obszar', 'Cena Standardowa', 'Próg Sukcesu (Upsell od)', 'Opis / Szablon Uwagi', 'Status']);
+    sheet.appendRow(['Konsultacja Standardowa', 'Ciało / Twarz', 199, 1000, 'Zwykła konsultacja z umówienia.', 'Aktywna']);
+  }
+  
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return zwrocJSON([]);
+  
+  const campaigns = [];
+  for (let i = 1; i < data.length; i++) {
+    if(data[i][0]) {
+       campaigns.push({
+         id_row: i + 1,
+         nazwa: String(data[i][0]),
+         obszar: String(data[i][1]),
+         cena: Number(data[i][2]) || 0,
+         prog: Number(data[i][3]) || 0,
+         opis: String(data[i][4] || ""),
+         status: String(data[i][5] || "Aktywna")
+       });
+    }
+  }
+  return zwrocJSON(campaigns);
+}
+
+function kon_zapiszKampanie(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  let sheet = ss.getSheetByName('Typy_konsultacji');
+  if(!sheet) return zwrocJSON({status:'error', message: 'Brak arkusza Typy_konsultacji'});
+  
+  const nowaCena = Number(d.cena) || 0;
+  const nowyProg = Number(d.prog) || 0;
+
+  if (d.id_row) {
+     // Edycja istniejącej
+     sheet.getRange(d.id_row, 1).setValue(d.nazwa);
+     sheet.getRange(d.id_row, 2).setValue(d.obszar);
+     sheet.getRange(d.id_row, 3).setValue(nowaCena);
+     sheet.getRange(d.id_row, 4).setValue(nowyProg);
+     sheet.getRange(d.id_row, 5).setValue(d.opis);
+     zapiszLog("KAMPANIA EDYCJA", d.user_log, `Zaktualizowano akcję: ${d.nazwa}`);
+  } else {
+     // Nowa kampania
+     sheet.appendRow([d.nazwa, d.obszar, nowaCena, nowyProg, d.opis, 'Aktywna']);
+     zapiszLog("KAMPANIA NOWA", d.user_log, `Utworzono akcję: ${d.nazwa}`);
+  }
+  
+  return zwrocJSON({status:'success'});
+}
+
+function kon_zmienStatusKampanii(d) {
+  const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+  const sheet = ss.getSheetByName('Typy_konsultacji');
+  if(!sheet) return zwrocJSON({status:'error'});
+  
+  const nowyStatus = d.status === 'Aktywna' ? 'Zakończona' : 'Aktywna';
+  sheet.getRange(d.id_row, 6).setValue(nowyStatus);
+  
+  zapiszLog("KAMPANIA STATUS", d.user_log, `Zmiana statusu ${d.nazwa} na ${nowyStatus}`);
+  return zwrocJSON({status:'success', newStatus: nowyStatus});
+}
+
+
+// Filtrujemy główne logi, wyciągając tylko te z Konsultacji
+function kon_pobierzLogi() {
+  const s = SpreadsheetApp.openById(GLOBAL_TENANT_ID).getSheetByName('Logi');
+  if (!s || s.getLastRow() < 2) return zwrocJSON([]);
+  try {
+    const lastRow = s.getLastRow(), rowsToGet = Math.min(lastRow - 1, 300), startRow = lastRow - rowsToGet + 1;
+    const data = s.getRange(startRow, 1, rowsToGet, 5).getDisplayValues();
+    
+    const logi = [];
+    for(let i = data.length - 1; i >= 0; i--) {
+        let r = data[i];
+        // Łapiemy tylko akcje, które mają KONSULTACJA lub KONSULTANT w nazwie
+        if(r[2].includes("KONSULTACJA") || r[2].includes("KONSULTANT")) {
+            logi.push({ data: r[0], user: r[1], akcja: r[2], opis: r[4] });
+        }
+    }
+    return zwrocJSON(logi);
+  } catch (e) { return zwrocJSON([]); }
+}
+
+// =========================================================================
+// 📊 MODUŁ: ANALIZA KONSULTACJI (akon_) - WERSJA SAAS MULTI-TENANT + DYNAMICZNE PROGI
+// =========================================================================
+
+// Indeksy kolumn dla zakładki 'Wyniki_konsultacja'
+// 0:Added Time, 1:IP, 2:UniqueID, 3:Data, 4:Zrodlo, 5:Reklama_Typ, 6:Klient, 7:Telefon, 8:Cialo, 9:Twarz, 10:KwotaRekl, 11:KwotaPakiet, 12:Kto, 16:Typ Akcji, 17:Upsell
+const akon_COL = { DATA: 3, ZRODLO: 4, REKLAMA_TYP: 5, KLIENT: 6, CIALO: 8, TWARZ: 9, KOSZT: 10, PAKIET: 11, KTO: 12, TYP_AKCJI: 16, UPSELL: 17 };
+
+// --- POMOCNICZA: Pobieranie mapy progów z Typy_konsultacji ---
+function akon_getThresholdsMap(ss) {
+  const sheet = ss.getSheetByName('Typy_konsultacji');
+  let map = {};
+  if (sheet && sheet.getLastRow() > 1) {
+    // Pobieramy kolumny A do D (1 do 4)
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 4).getValues();
+    for (let i = 0; i < data.length; i++) {
+      let nazwa = String(data[i][0]).trim();
+      let prog = Number(data[i][3]) || 0; // Kolumna D (Próg Sukcesu)
+      if (nazwa) map[nazwa] = prog;
+    }
+  }
+  return map;
+}
+
+// --- POMOCNICZA: Sprawdzenie sukcesu ---
+function akon_checkIfSuccess(pakiet, zrodlo, typAkcji, thresholdsMap) {
+  let threshold = 150; // Kwota domyślna, jeśli nie znajdzie dopasowania
+  
+  if (thresholdsMap[typAkcji] !== undefined) {
+      threshold = thresholdsMap[typAkcji];
+  } else if (thresholdsMap[zrodlo] !== undefined) { 
+      threshold = thresholdsMap[zrodlo];
+  } else if (zrodlo === "Normalna" && thresholdsMap["Konsultacja Standardowa"] !== undefined) {
+      threshold = thresholdsMap["Konsultacja Standardowa"];
+  }
+
+  return pakiet >= threshold;
+}
+
+// --- 0. POBIERANIE LISTY MIESIĘCY ---
+function akon_getMonthsList() {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Wyniki_konsultacja');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'success', months: [] };
+
+    const data = sheet.getDataRange().getValues();
+    let months = new Set();
+    
+    for (let i = 1; i < data.length; i++) {
+      let d = new Date(data[i][akon_COL.DATA]);
+      if (!isNaN(d.getTime())) {
+        months.add(Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM"));
+      }
+    }
+    return { status: 'success', months: Array.from(months).sort().reverse() };
+  } catch (e) {
+    return { status: 'error', message: 'Błąd pobierania miesięcy: ' + e.toString() };
+  }
+}
+
+// --- 1. GŁÓWNY DASHBOARD ---
+function akon_getDashboardStats(params) {
+  try {
+    const month = params.month;
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Wyniki_konsultacja');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'error', message: 'Brak danych w bazie.' };
+
+    const data = sheet.getDataRange().getValues();
+    const thresholdsMap = akon_getThresholdsMap(ss); // Pobranie słownika z progami
+
+    let stats = {
+      totalRevenue: 0, consultationsCount: 0, successes: 0, totalUpsell: 0,
+      categorySplit: { "Reklama": 0, "Normalna": 0 },
+      employeeDetails: {}, rankingPracownikow: []
+    };
+
+    for (let i = 1; i < data.length; i++) {
+      let d = new Date(data[i][akon_COL.DATA]);
+      if (isNaN(d.getTime()) || Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM") !== month) continue;
+
+      let pakiet = Number(data[i][akon_COL.PAKIET]) || 0;
+      let upsell = Number(data[i][akon_COL.UPSELL]) || 0;
+      let zrodlo = String(data[i][akon_COL.ZRODLO]).trim();
+      let typAkcji = String(data[i][akon_COL.TYP_AKCJI] || "").trim();
+      let pracownik = String(data[i][akon_COL.KTO]) || "Brak";
+      
+      // DYNAMICZNE SPRAWDZENIE SUKCESU
+      let isSuccess = akon_checkIfSuccess(pakiet, zrodlo, typAkcji, thresholdsMap);
+
+      stats.totalRevenue += pakiet;
+      stats.totalUpsell += upsell;
+      stats.consultationsCount++;
+      if (isSuccess) stats.successes++;
+      
+      if (zrodlo.toLowerCase().includes("reklama")) stats.categorySplit["Reklama"]++;
+      else stats.categorySplit["Normalna"]++;
+
+      if (!stats.employeeDetails[pracownik]) {
+        stats.employeeDetails[pracownik] = { name: pracownik, total: 0, upsell: 0, consultations: 0, successes: 0, top: {} };
+      }
+      
+      let emp = stats.employeeDetails[pracownik];
+      emp.total += pakiet;
+      emp.upsell += upsell;
+      emp.consultations++;
+      if (isSuccess) emp.successes++;
+
+      let zabiegi = (String(data[i][akon_COL.CIALO]) + " " + String(data[i][akon_COL.TWARZ])).trim();
+      if(zabiegi) {
+        if(!emp.top[zabiegi]) emp.top[zabiegi] = 0;
+        emp.top[zabiegi]++;
+      }
+    }
+
+    stats.rankingPracownikow = Object.keys(stats.employeeDetails)
+      .map(k => ({ name: k, total: stats.employeeDetails[k].total }))
+      .sort((a,b) => b.total - a.total);
+
+    return { status: 'success', data: stats };
+  } catch (e) {
+    return { status: 'error', message: 'Błąd Dashboardu: ' + e.toString() };
+  }
+}
+
+// --- 2. PODSUMOWANIE DNIA ---
+function akon_getDailySummary(params) {
+  try {
+    const dateStr = params.date;
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Wyniki_konsultacja');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'success', data: [] };
+
+    const data = sheet.getDataRange().getValues();
+    let list = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      let d = new Date(data[i][akon_COL.DATA]);
+      if (isNaN(d.getTime()) || Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd") !== dateStr) continue;
+
+      let cialo = String(data[i][akon_COL.CIALO]); 
+      let twarz = String(data[i][akon_COL.TWARZ]);
+      let zabiegiFull = (cialo + (cialo && twarz ? " + " : "") + twarz).trim() || "Konsultacja";
+
+      list.push({
+        klient: String(data[i][akon_COL.KLIENT]),
+        zabieg: zabiegiFull,
+        kwota: Number(data[i][akon_COL.PAKIET]) || 0,
+        upsell: Number(data[i][akon_COL.UPSELL]) || 0,
+        zrodlo: String(data[i][akon_COL.ZRODLO]),
+        sprzedawca: String(data[i][akon_COL.KTO])
+      });
+    }
+    return { status: 'success', data: list };
+  } catch (e) {
+    return { status: 'error', message: 'Błąd Dziennika: ' + e.toString() };
+  }
+}
+
+// --- 3. RAPORT MIESIĘCZNY (TRENDY I WYKRESY) ---
+function akon_getMonthlyReport(params) {
+  try {
+    const month = params.month;
+    const compareMonth = params.compareMonth;
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Wyniki_konsultacja');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'error', message: 'Brak danych' };
+
+    const data = sheet.getDataRange().getValues();
+    let res = {
+      total: 0, compareTotal: 0,
+      adsCount: 0, normCount: 0, upsellSum: 0,
+      daysLabels: [], chartValues: [], daily: {},
+      topEmployees: [], topTreatments: []
+    };
+
+    let empMap = {}; let treatMap = {}; let daysMap = {};
+
+    let [y, m] = month.split('-');
+    let daysInMonth = new Date(y, m, 0).getDate();
+    for(let i=1; i<=daysInMonth; i++) {
+      let dKey = i.toString().padStart(2, '0');
+      daysMap[dKey] = 0;
+    }
+
+    for (let i = 1; i < data.length; i++) {
+      let dObj = new Date(data[i][akon_COL.DATA]);
+      if (isNaN(dObj.getTime())) continue;
+      
+      let rowM = Utilities.formatDate(dObj, Session.getScriptTimeZone(), "yyyy-MM");
+      let pakiet = Number(data[i][akon_COL.PAKIET]) || 0;
+
+      if (rowM === compareMonth) res.compareTotal += pakiet;
+
+      if (rowM === month) {
+        res.total += pakiet;
+        res.upsellSum += Number(data[i][akon_COL.UPSELL]) || 0;
+        
+        let zrodlo = String(data[i][akon_COL.ZRODLO]);
+        if(zrodlo.toLowerCase().includes("reklama")) res.adsCount++; else res.normCount++;
+
+        let dayKey = Utilities.formatDate(dObj, Session.getScriptTimeZone(), "dd");
+        daysMap[dayKey] += pakiet;
+
+        let pracownik = String(data[i][akon_COL.KTO]);
+        if(pracownik) {
+          if(!empMap[pracownik]) empMap[pracownik] = 0;
+          empMap[pracownik] += pakiet;
+        }
+
+        let zabiegi = (String(data[i][akon_COL.CIALO]) + " " + String(data[i][akon_COL.TWARZ])).trim();
+        if(zabiegi) {
+          if(!treatMap[zabiegi]) treatMap[zabiegi] = 0;
+          treatMap[zabiegi]++;
+        }
+      }
+    }
+
+    res.daysLabels = Object.keys(daysMap).sort();
+    res.chartValues = res.daysLabels.map(k => daysMap[k]);
+    res.topEmployees = Object.entries(empMap).sort((a,b) => b[1] - a[1]);
+    res.topTreatments = Object.entries(treatMap).sort((a,b) => b[1] - a[1]).slice(0, 10);
+
+    return { status: 'success', data: res };
+  } catch (e) {
+    return { status: 'error', message: 'Błąd Raportu: ' + e.toString() };
+  }
+}
+
+// --- 4. LISTA MIESIĘCZNA (SZCZEGÓŁOWA) ---
+function akon_getMonthlyList(params) {
+  try {
+    const monthStr = params.month;
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Wyniki_konsultacja');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'success', data: [] };
+
+    const data = sheet.getDataRange().getValues();
+    const thresholdsMap = akon_getThresholdsMap(ss); // Pobranie słownika progów
+
+    let list = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      let d = new Date(data[i][akon_COL.DATA]);
+      if (isNaN(d.getTime()) || Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM") !== monthStr) continue;
+
+      let cialo = String(data[i][akon_COL.CIALO]); 
+      let twarz = String(data[i][akon_COL.TWARZ]);
+      let zabiegiFull = (cialo + (cialo && twarz ? " + " : "") + twarz).trim() || "Konsultacja";
+      let pakiet = Number(data[i][akon_COL.PAKIET]) || 0;
+      let zrodlo = String(data[i][akon_COL.ZRODLO]).trim();
+      let typAkcji = String(data[i][akon_COL.TYP_AKCJI] || "").trim();
+
+      // Backend decyduje czy wpis był sukcesem i podaje to do frontendu!
+      let isSuccess = akon_checkIfSuccess(pakiet, zrodlo, typAkcji, thresholdsMap);
+
+      list.push({
+        data: Utilities.formatDate(d, Session.getScriptTimeZone(), "yyyy-MM-dd"),
+        klient: String(data[i][akon_COL.KLIENT]),
+        zabieg: zabiegiFull,
+        reklama_typ: String(data[i][akon_COL.REKLAMA_TYP]), 
+        kwota: pakiet,
+        upsell: Number(data[i][akon_COL.UPSELL]) || 0,
+        zrodlo: zrodlo,
+        sprzedawca: String(data[i][akon_COL.KTO]),
+        isSuccess: isSuccess // <-- Przekazujemy gotowy werdykt!
+      });
+    }
+    
+    list.sort((a, b) => new Date(b.data) - new Date(a.data));
+    return { status: 'success', data: list };
+  } catch (e) {
+    return { status: 'error', message: 'Błąd Listy: ' + e.toString() };
+  }
+}
+// --- 5. POBIERANIE LISTY KONSULTANTÓW DO FILTRÓW (ANALITYKA) ---
+function akon_getConsultants(params) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let sheet = ss.getSheetByName('Pracownicy_konsultacja');
+    
+    // Zabezpieczenie: jeśli arkusza jeszcze nie ma, zwracamy pustą listę
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'success', data: [] };
+    
+    const data = sheet.getDataRange().getValues();
+    let output = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if(data[i][0]) {
+         // Pobieramy tylko aktywnych, jeśli taki jest parametr (z frontu leci jako string 'true')
+         if (String(params.onlyActive) === 'true') { 
+             if (data[i][1] === 'Aktywny') output.push(data[i][0]); 
+         } else {
+             // W razie czego (na przyszłość), zwraca pełne obiekty
+             output.push({ imie: data[i][0], status: data[i][1] });
+         }
+      }
+    }
+    
+    // Zwracamy dokładnie taki obiekt, jakiego oczekuje funkcja akon_apiCall na froncie
+    return { status: 'success', data: output };
+    
+  } catch (e) {
+    return { status: 'error', message: 'Błąd pobierania konsultantów: ' + e.toString() };
+  }
+}
+
+
+// =========================================================================
+// 📦 MODUŁ: MAGAZYN I RAPORT PRO (rap_) - SaaS Boczki
+// =========================================================================
+
+// --- FUNKCJA POMOCNICZA: AUTO-TWORZENIE ARKUSZY ---
+// --- FUNKCJA POMOCNICZA: AUTO-TWORZENIE ARKUSZY ---
+function rap_checkSheets(ss) {
+  if (!ss.getSheetByName('Raport_Magazyn')) {
+    ss.insertSheet('Raport_Magazyn').appendRow(['ID', 'Kategoria', 'Nazwa', 'Ilość', 'Minimum', 'Jednostka', 'Data Modyfikacji', 'Kto Zmodyfikował', 'Status', 'Cena Brutto', 'Puste', 'Data Ważności']);
+  }
+  if (!ss.getSheetByName('Raport_Kategorie')) {
+    ss.insertSheet('Raport_Kategorie').appendRow(['ID', 'Nazwa', 'Rodzic_ID', 'Pelna_Sciezka']);
+  }
+  // Usunięto tworzenie oddzielnego Raport_Logi - używamy głównego!
+}
+
+// --- FUNKCJA POMOCNICZA: LOGOWANIE ZDARZEŃ DO GŁÓWNEJ BAZY ---
+// --- FUNKCJA POMOCNICZA: LOGOWANIE ZDARZEŃ DO GŁÓWNEJ BAZY ---
+function rap_logAction(ss, akcja, produkt, opis, pracownik) {
+  const sheet = ss.getSheetByName('Logi');
+  if(!sheet) return;
+  
+  const now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd HH:mm:ss");
+  
+  // Doklejamy nazwę produktu w nawiasie do opisu, żeby główny dziennik zdarzeń to widział
+  const pelnyOpis = `[${produkt}] ${opis}`;
+  
+  // Format dla globalnej bazy: [Data, Kto, Akcja, System, Opis]
+  sheet.appendRow([now, pracownik, akcja, 'MAGAZYN: ' + produkt, pelnyOpis]);
+}
+
+// --- POBIERANIE LOGÓW (ODFILTROWANE Z GŁÓWNEJ BAZY) ---
+function rap_getLogs(params) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Logi');
+    if (!sheet || sheet.getLastRow() < 2) return { status: 'success', data: [] };
+    
+    const data = sheet.getDataRange().getValues();
+    let output = [];
+    
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][3]).includes('MAGAZYN:')) {
+         const czystyProdukt = String(data[i][3]).replace('MAGAZYN: ', '');
+         let czystyOpis = String(data[i][4]);
+         
+         // Odcinamy prefiks z produktu dla Wewnętrznych Logów Magazynu (żeby nie dublować nazwy)
+         const prefix = `[${czystyProdukt}] `;
+         if(czystyOpis.startsWith(prefix)) {
+             czystyOpis = czystyOpis.substring(prefix.length);
+         }
+         
+         output.push([
+            data[i][0], // Data
+            data[i][2], // Akcja
+            czystyProdukt, // Produkt
+            czystyOpis, // Czysty Opis
+            data[i][1]  // Pracownik
+         ]);
+      }
+    }
+    output.reverse(); 
+    return { status: 'success', data: output };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+// --- AKTUALIZACJA STANU (SZYBKA) ---
+function rap_updateStock(data) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Raport_Magazyn');
+    const rows = sheet.getDataRange().getValues();
+    let foundIndex = -1;
+    let oldQty = 0; let prodName = ""; let unit = "";
+
+    for(let i = 1; i < rows.length; i++) {
+      if(String(rows[i][0]) === String(data.id)) {
+         foundIndex = i + 1; oldQty = Number(rows[i][3]) || 0;
+         prodName = rows[i][2]; unit = rows[i][5] || "szt."; break;
+      }
+    }
+
+    if (foundIndex > -1) {
+       let newQty = (data.mode === 'delta') ? oldQty + Number(data.value) : Number(data.value);
+       sheet.getRange(foundIndex, 4).setValue(newQty);
+       sheet.getRange(foundIndex, 7).setValue(new Date().toISOString());
+       sheet.getRange(foundIndex, 8).setValue(data.userFull);
+
+       // Zaokrąglenie dla pewności, by JavaScript nie wypluł dziwnych liczb (np. 1.0000000001)
+       let diff = Math.round((newQty - oldQty) * 100) / 100;
+       newQty = Math.round(newQty * 100) / 100;
+       
+       // Budujemy dużo sensowniejszy i dokładniejszy komunikat!
+       let opTxt = "";
+       if (data.mode === 'absolute') {
+           opTxt = `Korekta ręczna: ze stanu ${oldQty} na ${newQty} ${unit}`;
+       } else {
+           let znak = diff > 0 ? "+" : "";
+           let slowo = diff > 0 ? "Dodano" : "Pobrano";
+           opTxt = `${slowo} ${znak}${diff} ${unit} (Obecny stan: ${newQty})`;
+       }
+
+       rap_logAction(ss, 'ZMIANA STANU', prodName, opTxt, data.userFull);
+       return { status: 'success' };
+    }
+    return { status: 'error', message: 'Nie znaleziono produktu' };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+
+// --- POBIERANIE MAGAZYNU ---
+function rap_getInventory(params) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    rap_checkSheets(ss);
+    const sheet = ss.getSheetByName('Raport_Magazyn');
+    if (sheet.getLastRow() < 2) return { status: 'success', data: [] };
+    
+    const data = sheet.getDataRange().getValues();
+    let output = [];
+    
+    // Zwracamy wszystko oprócz zarchiwizowanych
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][8] !== 'Archiwum') output.push(data[i]);
+    }
+    return { status: 'success', data: output };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+// --- POBIERANIE KATEGORII ---
+function rap_getCategories(params) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    rap_checkSheets(ss);
+    const sheet = ss.getSheetByName('Raport_Kategorie');
+    if (sheet.getLastRow() < 2) return { status: 'success', data: [] };
+    
+    const data = sheet.getDataRange().getValues();
+    let output = [];
+    for (let i = 1; i < data.length; i++) output.push(data[i]);
+    return { status: 'success', data: output };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+
+
+// --- ZAPIS PRODUKTU (NOWY LUB EDYCJA) ---
+function rap_saveProduct(data) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    rap_checkSheets(ss);
+    const sheet = ss.getSheetByName('Raport_Magazyn');
+    const rows = sheet.getDataRange().getValues();
+    const now = new Date().toISOString();
+
+    if (data.id) {
+       let foundIndex = -1;
+       for(let i = 1; i < rows.length; i++) {
+          if(String(rows[i][0]) === String(data.id)) { foundIndex = i + 1; break; }
+       }
+       if (foundIndex > -1) {
+          sheet.getRange(foundIndex, 2).setValue(data.category);
+          sheet.getRange(foundIndex, 3).setValue(data.nazwa);
+          sheet.getRange(foundIndex, 4).setValue(data.ilosc);
+          sheet.getRange(foundIndex, 5).setValue(data.min);
+          sheet.getRange(foundIndex, 6).setValue(data.unit);
+          sheet.getRange(foundIndex, 7).setValue(now);
+          sheet.getRange(foundIndex, 8).setValue(data.userFull);
+          sheet.getRange(foundIndex, 10).setValue(data.price_gross);
+          sheet.getRange(foundIndex, 12).setValue(data.expiration);
+
+          rap_logAction(ss, 'EDYCJA PRODUKTU', data.nazwa, 'Zaktualizowano dane', data.userFull);
+          return { status: 'success', message: 'Zapisano zmiany' };
+       } else return { status: 'error', message: 'Nie znaleziono produktu' };
+    } else {
+       const newId = "PRD_" + new Date().getTime().toString();
+       sheet.appendRow([
+           newId, data.category, data.nazwa, data.ilosc, data.min, data.unit, 
+           now, data.userFull, 'Aktywny', data.price_gross, '', data.expiration
+       ]);
+       rap_logAction(ss, 'NOWY PRODUKT', data.nazwa, `Dodano na stan: ${data.ilosc} ${data.unit}`, data.userFull);
+       return { status: 'success', message: 'Dodano produkt' };
+    }
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+
+
+// --- ARCHIWIZACJA PRODUKTU ---
+function rap_archiveProduct(data) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Raport_Magazyn');
+    const rows = sheet.getDataRange().getValues();
+    let foundIndex = -1; let prodName = "";
+
+    for(let i = 1; i < rows.length; i++) {
+      if(String(rows[i][0]) === String(data.id)) { foundIndex = i + 1; prodName = rows[i][2]; break; }
+    }
+
+    if (foundIndex > -1) {
+       sheet.getRange(foundIndex, 9).setValue('Archiwum'); 
+       rap_logAction(ss, 'ARCHIWIZACJA', prodName, 'Usunięto do archiwum', data.userFull);
+       return { status: 'success' };
+    }
+    return { status: 'error', message: 'Nie znaleziono produktu' };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+// --- ZAPIS KATEGORII ---
+function rap_saveCategory(data) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    rap_checkSheets(ss);
+    const sheet = ss.getSheetByName('Raport_Kategorie');
+    
+    const newId = "CAT_" + new Date().getTime().toString();
+    let fullPath = data.name;
+    
+    if (data.parentId) {
+      const rows = sheet.getDataRange().getValues();
+      for(let i=1; i<rows.length; i++) {
+        if(String(rows[i][0]) === String(data.parentId)) { fullPath = rows[i][3] + " > " + data.name; break; }
+      }
+    }
+    sheet.appendRow([newId, data.name, data.parentId || "", fullPath]);
+    return { status: 'success' };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+
+// --- USUWANIE KATEGORII ---
+function rap_deleteCategory(data) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Raport_Kategorie');
+    const rows = sheet.getDataRange().getValues();
+    
+    let foundIndex = -1;
+    for(let i = 1; i < rows.length; i++) {
+      if(String(rows[i][0]) === String(data.id)) { foundIndex = i + 1; break; }
+    }
+    
+    if (foundIndex > -1) {
+      sheet.deleteRow(foundIndex);
+      return { status: 'success' };
+    }
+    return { status: 'error', message: 'Nie znaleziono kategorii' };
+  } catch(e) { return { status: 'error', message: e.toString() }; }
+}
+// ==========================================
+// 📢 MODUŁ: RAPORT NA ODPRAWĘ
+// ==========================================
+// =========================================================================
+// 📢 MODUŁ: RAPORT NA ODPRAWĘ / ZEBRANIE (KLON GŁÓWNEJ ANALITYKI)
+// =========================================================================
+// =========================================================================
+// 📢 MODUŁ: RAPORT NA ODPRAWĘ / ZEBRANIE (KLON GŁÓWNEJ ANALITYKI + KOSMETYKI)
+// =========================================================================
+// =========================================================================
+// 📢 MODUŁ: RAPORT NA ODPRAWĘ / ZEBRANIE (BEZ KOSMETYKÓW W TOP PRACOWNICY)
+// =========================================================================
+function odp_getReportData(params) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const dFrom = new Date(params.dateFrom); dFrom.setHours(0,0,0,0);
+    const dTo = new Date(params.dateTo); dTo.setHours(23,59,59,999);
+
+    let res = {
+      totalSales: 0, transactions: 0, avgTicket: 0, 
+      cash: 0, card: 0, blik: 0, raty: 0, inne: 0, 
+      topEmployees: [], topItems: [], topClients: [],
+      konTotal: 0, konSuccess: 0, konUpsell: 0, konEmpStats: [],
+      sleepingItems: [], 
+      cosmeticsTotal: 0, topCosmeticsEmp: [] 
+    };
+
+    let empS = {}, itemS = {}, clientS = {}, empKon = {}, empCosm = {}, soldItemsSet = new Set();
+
+    const safeNum = (val) => Number(String(val).replace(',', '.').replace(/[^0-9.-]+/g,"")) || 0;
+    
+    const parseDate = (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+      let s = String(val).trim();
+      let m1 = s.match(/^(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
+      if (m1) return new Date(m1[3], m1[2] - 1, m1[1]);
+      let m2 = s.match(/^(\d{4})[\.\-\/](\d{2})[\.\-\/](\d{2})/);
+      if (m2) return new Date(m2[1], m2[2] - 1, m2[3]);
+      let d = new Date(val);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const classifyPayment = (methodRaw) => {
+      let m = methodRaw.toLowerCase();
+      if (m.includes('kart') || m.includes('terminal')) return 'card';
+      if (m.includes('blik')) return 'blik';
+      if (m.includes('raty') || m.includes('medirat') || m.includes('pay')) return 'raty';
+      if (m.includes('przelew') || m.includes('inne') || m.includes('tpay')) return 'inne';
+      return 'cash';
+    };
+
+    // ==========================================
+    // 1. SPRZEDAŻ
+    // ==========================================
+    const sheetSales = ss.getSheetByName("Sprzedaz") || ss.getSheetByName("Sprzedaż");
+    if (sheetSales && sheetSales.getLastRow() > 1) {
+      const dataSales = sheetSales.getDataRange().getValues();
+      const naglowki = dataSales[0].map(h => String(h).trim().toLowerCase());
+      
+      const znajdzKolumne = (slowaKluczowe, domyslnyIndeks) => {
+          let index = naglowki.findIndex(n => slowaKluczowe.some(s => n.includes(s)));
+          return index !== -1 ? index : domyslnyIndeks;
+      };
+
+      const COL_DATA       = znajdzKolumne(['data', 'czas'], 0);
+      const COL_KLIENT     = znajdzKolumne(['klient', 'nazwisko', 'imie'], 2);
+      const COL_ZABIEG     = znajdzKolumne(['zabieg', 'usług', 'towar', 'produkt'], 3);
+      const COL_SPRZEDAWCA = znajdzKolumne(['sprzedawca', 'pracownik', 'wykonawca'], 4);
+      const COL_KWOTA      = znajdzKolumne(['kwota', 'cena', 'wartość', 'suma'], 5);
+      const COL_STATUS     = znajdzKolumne(['status', 'stan'], 8);
+      const COL_PLATNOSC   = znajdzKolumne(['metoda', 'płatność', 'platnosc', 'forma'], 9);
+      const COL_UWAGI      = 7; 
+
+      for (let i = 1; i < dataSales.length; i++) {
+        let row = dataSales[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase();
+        let platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+
+        if (status.includes("USUNIĘTY") || status.includes("SCALONY")) continue;
+        if (platnosc.includes("portfel") || platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+
+        let d = parseDate(row[COL_DATA]);
+        if (!d || d < dFrom || d > dTo) continue;
+
+        let amount = safeNum(row[COL_KWOTA]);
+        if (amount === 0) continue;
+
+        let zabieg = String(row[COL_ZABIEG] || "Inne").trim();
+        let klient = String(row[COL_KLIENT] || "Nieznany").trim();
+        let methodCat = classifyPayment(platnosc);
+
+        // Zawsze dodajemy do całkowitego przychodu
+        res.totalSales += amount;
+        res.transactions++;
+        res[methodCat] += amount;
+
+        let isKosmetyk = zabieg.toLowerCase().includes("kosmetyk") || zabieg.toLowerCase().includes("krem");
+
+        // Klienci VIP (Zliczamy całość, bo wydali kasę)
+        if (klient && klient.toLowerCase() !== "nieznany") {
+            clientS[klient] = (clientS[klient] || 0) + amount;
+        }
+
+        let rawSellers = String(row[COL_SPRZEDAWCA] || "").trim();
+        if (!rawSellers) rawSellers = "Brak sprzedawcy";
+        let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+        let count = sellers.length;
+
+        // ROZDZIELENIE: KOSMETYK VS ZABIEG
+        if (isKosmetyk) {
+            let uwagi = String(row[COL_UWAGI] || "");
+            let multStr = (uwagi + " " + zabieg).toLowerCase();
+            let multiplier = 1;
+            let m1 = multStr.match(/(\d+)\s*(?:x|szt)/);
+            let m2 = multStr.match(/(?:x|szt)\s*(\d+)/);
+            if (m1 && parseInt(m1[1]) > 0) multiplier = parseInt(m1[1]);
+            else if (m2 && parseInt(m2[1]) > 0) multiplier = parseInt(m2[1]);
+
+            res.cosmeticsTotal += multiplier;
+
+            if (count > 0) {
+                let splitQty = multiplier / count;
+                let splitAmount = amount / count;
+                sellers.forEach(person => {
+                    if (!empCosm[person]) empCosm[person] = { count: 0, val: 0 };
+                    empCosm[person].count += splitQty;
+                    empCosm[person].val += splitAmount; // Zapisujemy zarobek z kosmetyku
+                });
+            }
+        } else {
+            // TYLKO ZABIEGI (Bestsellery i Top Pracownicy)
+            if (zabieg && zabieg !== "Inne") {
+                itemS[zabieg] = (itemS[zabieg] || 0) + 1;
+                soldItemsSet.add(zabieg.toLowerCase().replace(/(?:\s|-)*dopłata$/i, "").trim());
+            }
+
+            if (count > 0) {
+                let splitAmount = amount / count;
+                sellers.forEach(person => {
+                    empS[person] = (empS[person] || 0) + splitAmount;
+                });
+            }
+        }
+      }
+    }
+
+    // ==========================================
+    // 2. ZADATKI
+    // ==========================================
+    const sheetZadatki = ss.getSheetByName('Zadatki');
+    if (sheetZadatki && sheetZadatki.getLastRow() > 1) {
+      const dataZ = sheetZadatki.getDataRange().getValues();
+      for (let i = 1; i < dataZ.length; i++) {
+        let d = parseDate(dataZ[i][2]);
+        if (!d || d < dFrom || d > dTo) continue;
+
+        let typ = String(dataZ[i][4]).trim().toUpperCase();
+        let amount = safeNum(dataZ[i][5]);
+        let metodaRaw = String(dataZ[i][6]).trim().toLowerCase();
+        let statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+
+        if (statusZadatku !== 'USUNIĘTY' && statusZadatku !== 'SCALONY' && typ === 'WPŁATA') {
+            if (!metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                if (amount === 0) continue;
+
+                let methodCat = classifyPayment(metodaRaw);
+                res.totalSales += amount;
+                res[methodCat] += amount;
+
+                // Zadatki traktujemy jako zabiegi
+                let rawSellers = String(dataZ[i][9] || "").trim();
+                if (!rawSellers) rawSellers = "Brak pracownika";
+                let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+                let count = sellers.length;
+                if (count > 0) {
+                    let splitAmount = amount / count;
+                    sellers.forEach(person => {
+                        empS[person] = (empS[person] || 0) + splitAmount;
+                    });
+                }
+            }
+        }
+      }
+    }
+
+    // ==========================================
+    // 3. KONSULTACJE 
+    // ==========================================
+    const sheetKon = ss.getSheetByName('Wyniki_konsultacja');
+    if (sheetKon && sheetKon.getLastRow() > 1) {
+      const dataKon = sheetKon.getDataRange().getValues();
+      
+      let thresholdsMap = {};
+      const sheetTypy = ss.getSheetByName('Typy_konsultacji');
+      if (sheetTypy && sheetTypy.getLastRow() > 1) {
+        const dTypy = sheetTypy.getRange(2, 1, sheetTypy.getLastRow() - 1, 4).getValues();
+        for (let i = 0; i < dTypy.length; i++) {
+          let nazwa = String(dTypy[i][0]).trim();
+          let prog = Number(dTypy[i][3]) || 0;
+          if (nazwa) thresholdsMap[nazwa] = prog;
+        }
+      }
+
+      const checkIfSuccess = (pakiet, zrodlo, typAkcji) => {
+        let threshold = 150;
+        if (thresholdsMap[typAkcji] !== undefined) threshold = thresholdsMap[typAkcji];
+        else if (thresholdsMap[zrodlo] !== undefined) threshold = thresholdsMap[zrodlo];
+        else if (zrodlo === "Normalna" && thresholdsMap["Konsultacja Standardowa"] !== undefined) threshold = thresholdsMap["Konsultacja Standardowa"];
+        return pakiet >= threshold;
+      };
+
+      const akon_COL = { DATA: 3, ZRODLO: 4, PAKIET: 11, KTO: 12, TYP_AKCJI: 16, UPSELL: 17 };
+
+      for(let i = 1; i < dataKon.length; i++) {
+        let d = parseDate(dataKon[i][akon_COL.DATA]);
+        if (!d || d < dFrom || d > dTo) continue;
+
+        let pakiet = safeNum(dataKon[i][akon_COL.PAKIET]);
+        let upsell = safeNum(dataKon[i][akon_COL.UPSELL]);
+        let zrodlo = String(dataKon[i][akon_COL.ZRODLO]).trim();
+        let typAkcji = String(dataKon[i][akon_COL.TYP_AKCJI] || "").trim();
+        let pracownik = String(dataKon[i][akon_COL.KTO]).trim() || "Brak";
+
+        let isSuccess = checkIfSuccess(pakiet, zrodlo, typAkcji);
+
+        res.konTotal++;
+        res.konUpsell += upsell;
+        if (isSuccess) res.konSuccess++;
+
+        if (!empKon[pracownik]) empKon[pracownik] = { total: 0, success: 0 };
+        empKon[pracownik].total++;
+        if (isSuccess) empKon[pracownik].success++;
+      }
+    }
+
+    // ==========================================
+    // 4. USŁUGI ŚPIĄCE
+    // ==========================================
+    const sheetUslugi = ss.getSheetByName('Uslugi') || ss.getSheetByName('Usługi');
+    if (sheetUslugi && sheetUslugi.getLastRow() > 1) {
+      const dataUslugi = sheetUslugi.getDataRange().getValues();
+      for(let i=1; i<dataUslugi.length; i++) {
+        let cat = String(dataUslugi[i][0]).trim();
+        let wariant = String(dataUslugi[i][1]).trim();
+        let pelnaNazwa = wariant ? `${cat} - ${wariant}` : cat;
+        if (pelnaNazwa && !soldItemsSet.has(pelnaNazwa.toLowerCase()) && !soldItemsSet.has(cat.toLowerCase())) {
+            res.sleepingItems.push(pelnaNazwa);
+        }
+      }
+    }
+
+    // --- SORTOWANIE KOŃCOWE ---
+    res.avgTicket = res.transactions > 0 ? res.totalSales / res.transactions : 0;
+    
+    res.topEmployees = Object.keys(empS).map(k=>({name:k, val:empS[k]})).sort((a,b)=>b.val-a.val).slice(0,5);
+    res.topItems = Object.keys(itemS).map(k=>({name:k, count:itemS[k]})).sort((a,b)=>b.count-a.count).slice(0,8);
+    res.topClients = Object.keys(clientS).map(k=>({name:k, val:clientS[k]})).sort((a,b)=>b.val-a.val).slice(0,5);
+    res.konEmpStats = Object.keys(empKon).map(k=>({
+      name: k, total: empKon[k].total, success: empKon[k].success, 
+      rate: Math.round((empKon[k].success / empKon[k].total) * 100) || 0
+    })).sort((a,b)=>b.rate-a.rate);
+    
+    // Sortowanie Kosmetyków z wartością złotówkową
+    res.topCosmeticsEmp = Object.keys(empCosm).map(k=>({name:k, count:empCosm[k].count, val:empCosm[k].val})).sort((a,b)=>b.count-a.count);
+
+    return { status: 'success', data: res };
+
+  } catch(e) {
+    return { status: 'error', message: "Błąd serwera (Odprawa): " + e.toString() };
+  }
+}
+
+// ==========================================
+// 📢 MODUŁ: RAPORT NA ODPRAWĘ (PRO)
+// ==========================================
+/**
+ * 🚀 MEGA FUNKCJA RAPORTUJĄCA - System Boczki PRO
+ * Zbiera dane ze Sprzedaży, Konsultacji, Zadatków i Usług w jednym przebiegu.
+ */
+function odp_renderReport(data, dFrom, dTo) {
+    const format = (v) => (v || 0).toLocaleString('pl-PL', {minimumFractionDigits: 2}) + ' zł';
+    
+    // 🛡️ Bezpieczne wstrzykiwanie tekstu/HTML - chroni przed błędem "null"
+    const setText = (id, text) => { const el = document.getElementById(id); if(el) el.innerText = text; };
+    const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
+
+    // Główne liczby
+    setText('odp_total_rev', format(data.totalSales));
+    setText('odp_avg_ticket', format(data.avgTicket));
+    setText('odp_trans_count', data.transactions);
+    
+    // Płatności i straty
+    setText('odp_pay_card', format(data.card));
+    setText('odp_pay_cash', format(data.cash));
+    setText('odp_lost_money', format(data.lostMoney));
+    setText('odp_lost_count', `${data.lostCount} wizyt(y)`);
+
+    // Rankingi
+    setHtml('odp_emp_list', data.topEmployees && data.topEmployees.length ? data.topEmployees.map(e => 
+        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${format(e.val)}</span></li>`).join('') : "<li>Brak danych</li>");
+    
+    setHtml('odp_top_items_list', data.topItems && data.topItems.length ? data.topItems.map(i => 
+        `<li style="padding: 4px 0;">${i.name} <span style="float:right; color:#64748b; font-weight:bold;">${i.count} szt.</span></li>`).join('') : "<li>Brak danych</li>");
+
+    // VIP Tags
+    setHtml('odp_vip_list', data.topClients && data.topClients.length ? data.topClients.map(c => 
+        `<span style="background:#334155; padding:6px 12px; border-radius:8px; font-size:9pt; border:1px solid #475569; color:#f8fafc;">
+            ${c.name}: <strong>${format(c.val)}</strong>
+        </span>`).join('') : "<span style='color:#94a3b8;'>Brak klientów w tym okresie.</span>");
+
+    // Konsultacje
+    setText('odp_kon_total', data.konTotal);
+    setText('odp_kon_rate', (data.konTotal > 0 ? Math.round((data.konSuccess / data.konTotal) * 100) : 0) + "%");
+    setText('odp_kon_upsell', format(data.konUpsell));
+
+    setHtml('odp_kon_emp_list', data.konEmpStats && data.konEmpStats.length ? data.konEmpStats.map(e => 
+        `<li style="padding: 4px 0; font-size:10pt;">${e.name}: <strong>${e.rate}%</strong> skut. (${e.success} pakietów z ${e.total} spotkań)</li>`).join('') : "<li>Brak przeprowadzonych konsultacji.</li>");
+    
+    // Śpiące zabiegi
+    let sleepHtml = "";
+    if (data.sleepingItems && data.sleepingItems.length > 0) {
+        sleepHtml = data.sleepingItems.length > 15 
+            ? data.sleepingItems.slice(0, 15).join(', ') + " ...i " + (data.sleepingItems.length - 15) + " innych."
+            : data.sleepingItems.join(', ');
+    } else {
+        sleepHtml = "Niesamowite! Wszystkie usługi sprzedane co najmniej raz!";
+    }
+    setText('odp_sleeping_items', sleepHtml);
+
+    // Stopka i daty
+    setText('odp_display_dates', `ANALIZA OKRESU: ${dFrom} ➞ ${dTo}`);
+    setText('odp_print_timestamp', new Date().toLocaleString('pl-PL'));
+}
+
+
+
+// =========================================================================
+// 🎯 MODUŁ: ZARZĄDZANIE TARGETAMI PRACOWNIKÓW
+// =========================================================================
+
+// =========================================================================
+// 🏆 MODUŁ: DANE DO DASHBOARDU PRACOWNIKA (Z SERWERA)
+// =========================================================================
+
+// =========================================================================
+// 🏆 MODUŁ: DANE DO DASHBOARDU PRACOWNIKA (Z SERWERA)
+// =========================================================================
+
+function tgt_pobierzDashboardPracownika(d) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const pracownik = String(d.pracownik).trim();
+    
+    // Ustawiamy dokładny zakres dat dla miesiąca
+    const dFrom = new Date(d.dateFrom); dFrom.setHours(0,0,0,0);
+    const dTo = new Date(d.dateTo); dTo.setHours(23,59,59,999);
+
+    let res = {
+      utargTotal: 0,
+      utargUslogi: 0,
+      utargKosmetyki: 0,
+      kosmetykiSzt: 0,
+      uslugiSzt: 0,
+      zlotyParagon: 0,
+      aov: 0,
+      konCount: 0,
+      konSuccess: 0,
+      konUpsell: 0,
+      logZabiegow: [] // 🟢 Zbieranie historii zabiegów dla filtrowania pakietów/konkretów
+    };
+
+    let wizyty = {}; 
+
+    const safeNum = (val) => Number(String(val).replace(',', '.').replace(/[^0-9.-]+/g,"")) || 0;
+    const parseDate = (val) => {
+      if (!val) return null;
+      if (val instanceof Date) return isNaN(val.getTime()) ? null : val;
+      let s = String(val).trim();
+      let m1 = s.match(/^(\d{2})[\.\-\/](\d{2})[\.\-\/](\d{4})/);
+      if (m1) return new Date(m1[3], m1[2] - 1, m1[1]);
+      let m2 = s.match(/^(\d{4})[\.\-\/](\d{2})[\.\-\/](\d{2})/);
+      if (m2) return new Date(m2[1], m2[2] - 1, m2[3]);
+      let dataObj = new Date(val);
+      return isNaN(dataObj.getTime()) ? null : dataObj;
+    };
+
+    // ------------------------------------------
+    // 1. SPRZEDAŻ GŁÓWNA
+    // ------------------------------------------
+    const sheetSales = ss.getSheetByName("Sprzedaz") || ss.getSheetByName("Sprzedaż");
+    if (sheetSales && sheetSales.getLastRow() > 1) {
+      const dataSales = sheetSales.getDataRange().getValues();
+      const naglowki = dataSales[0].map(h => String(h).trim().toLowerCase());
+      
+      const znajdzKolumne = (slowaKluczowe, domyslnyIndeks) => {
+          let index = naglowki.findIndex(n => slowaKluczowe.some(s => n.includes(s)));
+          return index !== -1 ? index : domyslnyIndeks;
+      };
+
+      const COL_DATA       = znajdzKolumne(['data', 'czas'], 0);
+      const COL_KLIENT     = znajdzKolumne(['klient', 'nazwisko', 'imie'], 2);
+      const COL_ZABIEG     = znajdzKolumne(['zabieg', 'usług', 'towar', 'produkt'], 3);
+      const COL_SPRZEDAWCA = znajdzKolumne(['sprzedawca', 'pracownik', 'wykonawca'], 4);
+      const COL_KWOTA      = znajdzKolumne(['kwota', 'cena', 'wartość', 'suma'], 5);
+      const COL_STATUS     = znajdzKolumne(['status', 'stan'], 8);
+      const COL_PLATNOSC   = znajdzKolumne(['metoda', 'płatność', 'platnosc', 'forma'], 9);
+
+      for (let i = 1; i < dataSales.length; i++) {
+        let row = dataSales[i];
+        let status = String(row[COL_STATUS]).trim().toUpperCase();
+        let platnosc = String(row[COL_PLATNOSC]).trim().toLowerCase();
+
+        if (status.includes("USUNIĘTY") || status.includes("SCALONY")) continue;
+        
+        // Zostawiamy blokadę tylko dla korekt ręcznych/systemowych, przepuszczamy portfel!
+        if (platnosc.includes("ręczne") || platnosc.includes("reczne") || platnosc.includes("system")) continue;
+
+        let dataSprzedazy = parseDate(row[COL_DATA]);
+        if (!dataSprzedazy || dataSprzedazy < dFrom || dataSprzedazy > dTo) continue;
+
+        let amount = safeNum(row[COL_KWOTA]); // Kolumna F (Pełna Kwota Paragonu)
+
+        let rawSellers = String(row[COL_SPRZEDAWCA] || "").trim();
+        let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+        
+        if (!sellers.includes(pracownik)) continue;
+
+        let count = sellers.length;
+        let kwotaDlaMnie = amount / count; 
+
+        let zabieg = String(row[COL_ZABIEG] || "Inne").trim();
+        let isKosmetyk = zabieg.toLowerCase().includes("kosmetyk") || zabieg.toLowerCase().includes("krem");
+        let isDoplata = zabieg.toLowerCase().includes("dopłata") || zabieg.toLowerCase().includes("doplata"); // Wykrywamy dopłaty
+
+        let sztukiKoncowe = 1; // 🟢 PEŁNA SZTUKA dla pracownika na paragonie
+
+        // 🟢 Utarg całkowity (Tylko jeśli to NIE JEST portfel)
+        if (!platnosc.includes("portfel")) {
+            res.utargTotal += kwotaDlaMnie;
+            if (isKosmetyk) res.utargKosmetyki += kwotaDlaMnie;
+            else res.utargUslogi += kwotaDlaMnie;
+        }
+
+        // 🟢 Sztuki ogólne
+        if (isKosmetyk) {
+            if (!isDoplata) res.kosmetykiSzt += sztukiKoncowe;
+        } else {
+            if (!isDoplata) res.uslugiSzt += sztukiKoncowe;
+        }
+
+        // 🟢 ZAPIS DO LOGU DLA "LUPY" FRONTENDOWEJ
+        if (!isDoplata) {
+            res.logZabiegow.push({
+                n: zabieg,              // Nazwa
+                v: amount,              // 🟢 Wartość pełna (dla weryfikacji progu cenowego >700zł)
+                q: sztukiKoncowe        // Ilość sztuk = 1
+            });
+        }
+
+        let klient = String(row[COL_KLIENT] || "Nieznany").trim();
+        let keyDate = dataSprzedazy.getFullYear() + "-" + dataSprzedazy.getMonth() + "-" + dataSprzedazy.getDate();
+        let kluczWizyty = keyDate + "_" + klient;
+        
+        if (!wizyty[kluczWizyty]) wizyty[kluczWizyty] = 0;
+        wizyty[kluczWizyty] += kwotaDlaMnie;
+      }
+    }
+
+    // ------------------------------------------
+    // 2. ZADATKI 
+    // ------------------------------------------
+    const sheetZadatki = ss.getSheetByName('Zadatki');
+    if (sheetZadatki && sheetZadatki.getLastRow() > 1) {
+      const dataZ = sheetZadatki.getDataRange().getValues();
+      for (let i = 1; i < dataZ.length; i++) {
+        let dataSprzedazy = parseDate(dataZ[i][2]);
+        if (!dataSprzedazy || dataSprzedazy < dFrom || dataSprzedazy > dTo) continue;
+
+        let typ = String(dataZ[i][4]).trim().toUpperCase();
+        let amount = safeNum(dataZ[i][5]);
+        let metodaRaw = String(dataZ[i][6]).trim().toLowerCase();
+        let statusZadatku = String(dataZ[i][8]).trim().toUpperCase();
+
+        if (statusZadatku !== 'USUNIĘTY' && statusZadatku !== 'SCALONY' && typ === 'WPŁATA') {
+            if (!metodaRaw.includes('ręczne') && !metodaRaw.includes('reczne') && !metodaRaw.includes('system')) {
+                if (amount === 0) continue; 
+
+                let rawSellers = String(dataZ[i][9] || "").trim();
+                let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+                
+                if (!sellers.includes(pracownik)) continue;
+
+                let kwotaDlaMnie = amount / sellers.length;
+                
+                res.utargTotal += kwotaDlaMnie;
+                res.utargUslogi += kwotaDlaMnie;
+
+                let klient = String(dataZ[i][3]).trim();
+                let keyDate = dataSprzedazy.getFullYear() + "-" + dataSprzedazy.getMonth() + "-" + dataSprzedazy.getDate();
+                let kluczWizyty = keyDate + "_" + klient;
+                if (!wizyty[kluczWizyty]) wizyty[kluczWizyty] = 0;
+                wizyty[kluczWizyty] += kwotaDlaMnie;
+            }
+        }
+      }
+    }
+
+    // ------------------------------------------
+    // 3. KONSULTACJE
+    // ------------------------------------------
+    // ------------------------------------------
+    // 3. KONSULTACJE
+    // ------------------------------------------
+    const sheetKon = ss.getSheetByName('Wyniki_konsultacja');
+    if (sheetKon && sheetKon.getLastRow() > 1) {
+      const dataKon = sheetKon.getDataRange().getValues();
+      const naglowkiKon = dataKon[0].map(h => String(h).trim().toLowerCase());
+
+      // Dynamiczne szukanie kolumn (odporne na zmiany w Excelu)
+      const znajdzK = (slowa, domyslny) => {
+          let idx = naglowkiKon.findIndex(n => slowa.some(s => n.includes(s)));
+          return idx !== -1 ? idx : domyslny;
+      };
+
+      const COL_K_DATA   = znajdzK(['data', 'czas'], 3);
+      const COL_K_ZRODLO = znajdzK(['źródło', 'zrodlo'], 4);
+      const COL_K_PAKIET = znajdzK(['pakiet', 'kwota', 'wartość'], 11);
+      const COL_K_PRAC   = znajdzK(['pracownik', 'konsultant'], 12);
+      const COL_K_TYP    = znajdzK(['typ', 'akcja'], 16);
+      const COL_K_UPSELL = znajdzK(['upsell', 'dodatkow'], 17);
+      const COL_K_STATUS = znajdzK(['status', 'stan'], -1); 
+
+      let thresholdsMap = {};
+      const sheetTypy = ss.getSheetByName('Typy_konsultacji');
+      if (sheetTypy && sheetTypy.getLastRow() > 1) {
+        const dTypy = sheetTypy.getRange(2, 1, sheetTypy.getLastRow() - 1, 4).getValues();
+        for (let i = 0; i < dTypy.length; i++) {
+          let nazwa = String(dTypy[i][0]).trim();
+          let prog = Number(dTypy[i][3]) || 0;
+          if (nazwa) thresholdsMap[nazwa] = prog;
+        }
+      }
+
+      const checkIfSuccess = (pakiet, zrodlo, typAkcji) => {
+        let threshold = 150;
+        if (thresholdsMap[typAkcji] !== undefined) threshold = thresholdsMap[typAkcji];
+        else if (thresholdsMap[zrodlo] !== undefined) threshold = thresholdsMap[zrodlo];
+        else if (zrodlo === "Normalna" && thresholdsMap["Konsultacja Standardowa"] !== undefined) threshold = thresholdsMap["Konsultacja Standardowa"];
+        return pakiet >= threshold;
+      };
+/*
+      for(let i = 1; i < dataKon.length; i++) {
+        let row = dataKon[i];
+
+        if (COL_K_STATUS !== -1) {
+             let status = String(row[COL_K_STATUS]).trim().toUpperCase();
+             if (status.includes("USUNIĘTY") || status.includes("SCALONY")) continue;
+        }
+
+        let dataSprzedazy = parseDate(row[COL_K_DATA]);
+        if (!dataSprzedazy || dataSprzedazy < dFrom || dataSprzedazy > dTo) continue;
+
+        // 🟢 NAPRAWA: Zamiast sztywnego !== pracownik, obsługujemy przecinki
+        let rawSellers = String(row[COL_K_PRAC] || "").trim();
+        let sellers = rawSellers.split(',').map(s => s.trim()).filter(s => s);
+        
+        if (!sellers.includes(pracownik)) continue;
+
+        let pakiet = safeNum(row[COL_K_PAKIET]);
+        let upsell = safeNum(row[COL_K_UPSELL]);
+        let zrodlo = String(row[COL_K_ZRODLO]).trim();
+        let typAkcji = String(row[COL_K_TYP] || "").trim();
+
+        // Jeśli konsultację prowadziły 2 osoby, upsell (pieniądze) dzieli się na pół
+        let count = sellers.length;
+        let upsellDlaMnie = upsell / count;
+
+        res.konCount++;
+        res.konUpsell += upsellDlaMnie;
+        if (checkIfSuccess(pakiet, zrodlo, typAkcji)) {
+            res.konSuccess++;
+        }
+      } */
+      for(let i = 1; i < dataKon.length; i++) {
+        let dataSprzedazy = parseDate(dataKon[i][3]); 
+        if (!dataSprzedazy || dataSprzedazy < dFrom || dataSprzedazy > dTo) continue;
+
+        // 🟢 DETEKTYW SPACJA: Normalizujemy imiona (usuwamy spacje i dajemy małe litery)
+        let szukanyPracownik = pracownik.replace(/\s+/g, '').toLowerCase();
+        
+        let rawSellers = String(dataKon[i][12] || "");
+        let sellers = rawSellers.split(',').map(s => s.replace(/\s+/g, '').toLowerCase()).filter(s => s);
+        
+        if (!sellers.includes(szukanyPracownik)) continue;
+
+        let pakiet = safeNum(dataKon[i][11]); 
+        let upsell = safeNum(dataKon[i][17]); 
+        let zrodlo = String(dataKon[i][4]).trim(); 
+        let typAkcji = String(dataKon[i][16] || "").trim(); 
+
+        let count = sellers.length;
+        let upsellDlaMnie = upsell / count; // Jeśli prowadzą we dwie, upsell na pół
+
+        res.konCount++;
+        res.konUpsell += upsellDlaMnie;
+        if (checkIfSuccess(pakiet, zrodlo, typAkcji)) {
+            res.konSuccess++;
+        }
+      }
+    }
+
+    let iloscWizyt = 0;
+    for (let key in wizyty) {
+        iloscWizyt++;
+        if (wizyty[key] > res.zlotyParagon) res.zlotyParagon = wizyty[key];
+    }
+    res.aov = iloscWizyt > 0 ? (res.utargTotal / iloscWizyt) : 0;
+
+    return zwrocJSON({ status: 'success', data: res });
+
+  } catch(e) {
+    return zwrocJSON({ status: 'error', message: "Błąd serwera podczas wyliczania dashboardu: " + e.toString() });
+  }
+}
+
+
+function dodajTargetPracownika(d) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let sheet = ss.getSheetByName('Pracownicy_targety');
+    if (!sheet) {
+        sheet = ss.insertSheet('Pracownicy_targety');
+        // 🟢 DODANO: Kolumnę Min_Cena na samym końcu (Kolumna K)
+        sheet.appendRow(['ID_Targetu', 'Pracownik', 'Miesiac', 'Typ_Targetu', 'Szczegoly', 'Wartosc', 'Opis_Slowny', 'Status', 'Log_Data', 'Kto_Dodal', 'Min_Cena']);
+        sheet.getRange("A1:K1").setFontWeight("bold").setBackground("#fef08a");
+        sheet.setFrozenRows(1);
+    }
+    const now = new Date();
+    const id = "TGT-" + now.getTime();
+    
+    sheet.appendRow([
+        id, d.pracownik, d.miesiac, d.typ_targetu, d.szczegoly, 
+        parseFloat(d.wartosc), d.opis_slowny, 'Aktywny', now, d.kto_dodal, parseFloat(d.min_cena) || 0
+    ]);
+    zapiszLog("NOWY TARGET", d.kto_dodal, `Dla: ${d.pracownik} | ${d.opis_slowny}`);
+    return zwrocJSON({ status: 'success', message: 'Cel pracownika został pomyślnie dodany!' });
+  } catch (e) { return zwrocJSON({ status: 'error', message: 'Błąd dodawania targetu: ' + e.toString() }); }
+}
+
+function pobierzTargetyPracownikow() {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    let sheet = ss.getSheetByName('Pracownicy_targety');
+    if (!sheet || sheet.getLastRow() < 2) return zwrocJSON({ status: 'success', data: [] });
+    
+    const data = sheet.getDataRange().getValues();
+    let results = [];
+    for (let i = 1; i < data.length; i++) {
+        if (data[i][0] && String(data[i][7]) !== 'Usunięty') {
+            results.push({
+                id: data[i][0], pracownik: data[i][1], miesiac: data[i][2],
+                typ_targetu: data[i][3], szczegoly: data[i][4],
+                wartosc: parseFloat(data[i][5]) || 0, opis_slowny: data[i][6],
+                status: data[i][7], min_cena: parseFloat(data[i][10]) || 0 // 🟢 DODANO: Odczyt z bazy
+            });
+        }
+    }
+    return zwrocJSON({ status: 'success', data: results.reverse() });
+  } catch (e) { return zwrocJSON({ status: 'error', message: 'Błąd pobierania targetów: ' + e.toString() }); }
+}
+
+function edytujTargetPracownika(d) {
+  try {
+    const ss = SpreadsheetApp.openById(GLOBAL_TENANT_ID);
+    const sheet = ss.getSheetByName('Pracownicy_targety');
+    if (!sheet) return zwrocJSON({ status: 'error', message: 'Brak arkusza Pracownicy_targety' });
+
+    const data = sheet.getDataRange().getValues();
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][0]) === String(d.id_targetu)) {
+        const wiersz = i + 1;
+        sheet.getRange(wiersz, 2).setValue(d.pracownik);
+        sheet.getRange(wiersz, 3).setValue(d.miesiac);
+        sheet.getRange(wiersz, 4).setValue(d.typ_targetu);
+        sheet.getRange(wiersz, 5).setValue(d.szczegoly);
+        sheet.getRange(wiersz, 6).setValue(parseFloat(d.wartosc));
+        sheet.getRange(wiersz, 7).setValue(d.opis_slowny);
+        if (d.status) sheet.getRange(wiersz, 8).setValue(d.status);
+        sheet.getRange(wiersz, 11).setValue(parseFloat(d.min_cena) || 0); // 🟢 DODANO Zapis progu
+
+        zapiszLog("EDYCJA TARGETU", d.kto_dodal || "Admin", `Zaktualizowano cel dla: ${d.pracownik} | ${d.opis_slowny}`);
+        return zwrocJSON({ status: 'success', message: 'Target zaktualizowany pomyślnie!' });
+      }
+    }
+    return zwrocJSON({ status: 'error', message: 'Nie znaleziono targetu o podanym ID.' });
+  } catch (e) { return zwrocJSON({ status: 'error', message: 'Błąd edycji targetu: ' + e.toString() }); }
+}
+// =========================================================================
+// 🗄️ GLOBALNY BACKUP SAAS (Wszystkie aktywne bazy)
+// =========================================================================
+// =========================================================================
+// 🗄️ GLOBALNY BACKUP SAAS (Wersja z zaawansowaną diagnostyką)
+// =========================================================================
+function wykonajKopieZapasowa() {
+  try {
+    Logger.log("🟢 KROK 1: Start systemu backupu...");
+    const dzis = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd");
+    const czas = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "HH-mm");
+    const nazwaFolderu = "Multiplik_SaaS_Backup_" + dzis;
+
+    Logger.log("🟢 KROK 2: Łączenie z głównym folderem o ID: " + ID_FOLDERU_BACKUP);
+    const glownyFolder = DriveApp.getFolderById(ID_FOLDERU_BACKUP);
+    Logger.log("Folder główny odnaleziony: " + glownyFolder.getName());
+    
+    Logger.log("🟢 KROK 3: Wyszukiwanie lub tworzenie dzisiejszego podfolderu...");
+    const foldery = glownyFolder.getFoldersByName(nazwaFolderu);
+    let folderDzisiejszy = foldery.hasNext() ? foldery.next() : glownyFolder.createFolder(nazwaFolderu);
+    Logger.log("Folder docelowy gotowy: " + folderDzisiejszy.getName());
+
+    Logger.log("🟢 KROK 4: Otwieranie bazy licencji o ID: " + ID_BAZY_LICENCJI);
+    const ssLicencje = SpreadsheetApp.openById(ID_BAZY_LICENCJI);
+    const arkuszLicencje = ssLicencje.getSheetByName('Licencje');
+    
+    if (!arkuszLicencje) {
+       return { status: 'error', message: 'Błąd: Brak arkusza Licencje' };
+    }
+
+    Logger.log("🟢 KROK 5: Pobieranie listy baz do skopiowania...");
+    const daneLicencji = arkuszLicencje.getDataRange().getValues();
+    let unikalneBazy = new Set();
+    
+    for (let i = 1; i < daneLicencji.length; i++) {
+      let tenantId = String(daneLicencji[i][3]).trim();
+      let status = String(daneLicencji[i][4]).trim().toUpperCase();
+      if (tenantId && tenantId.length > 15 && status === 'AKTYWNY') { 
+        unikalneBazy.add(tenantId);
+      }
+    }
+
+    Logger.log("Znaleziono aktywnych baz do skopiowania: " + unikalneBazy.size);
+    if (unikalneBazy.size === 0) return { status: 'error', message: 'Brak aktywnych baz.' };
+
+    let skopiowano = 0;
+    let bledy = 0;
+
+    Logger.log("🟢 KROK 6: Rozpoczynamy kopiowanie plików...");
+    unikalneBazy.forEach(idBazy => {
+      try {
+        Logger.log("Próba skopiowania bazy: " + idBazy);
+        let plik = DriveApp.getFileById(idBazy);
+        plik.makeCopy(plik.getName() + "_BACKUP_" + czas, folderDzisiejszy);
+        skopiowano++;
+        Logger.log("✅ Sukces: " + idBazy);
+      } catch (e) {
+        bledy++;
+        Logger.log("❌ BŁĄD przy kopiowaniu bazy " + idBazy + ": " + e.toString());
+      }
+    });
+
+    Logger.log("🟢 KROK 7: Zakończono proces.");
+    return { status: 'success', message: `Zabezpieczono baz: ${skopiowano}` + (bledy > 0 ? ` (Błędy: ${bledy})` : '') };
+
+  } catch (e) { 
+    Logger.log("🔴 KRYTYCZNY BŁĄD CAŁEGO PROCESU: " + e.toString());
+    return { status: 'error', message: 'Krytyczny błąd: ' + e.toString() }; 
+  }
+}
+
+function TEST_BACKUPU() {
+  var wynik = wykonajKopieZapasowa();
+  Logger.log("WYNIK SKRYPTU: ");
+  Logger.log(JSON.stringify(wynik));
+}
+
+function wymusAutoryzacjeDysku() {
+  // Ta jedna linijka nic nie usuwa i nic nie tworzy.
+  // Służy tylko po to, by Google zauważyło, że potrzebujemy dostępu do Dysku i wyświetliło okienko.
+  DriveApp.getRootFolder(); 
+}
+
+function WYMUS_PELNY_DOSTEP_DO_DYSKU() {
+  // Ta komenda zmusza Google do poproszenia o PEŁNY dostęp (tworzenie folderów)
+  var temp = DriveApp.createFolder("Tymczasowy_Folder_Testowy");
+  
+  // I od razu wyrzucamy ten folder do kosza, żeby nie śmiecić
+  temp.setTrashed(true); 
+}
+
+
+// =========================================================================
+// 🤖 JEDNORAZOWY ROBOT SYNCHRONIZUJĄCY HISTORYCZNE ZGODY (Wersja na sztywno)
+// =========================================================================
+function JEDNORAZOWA_SYNCHRONIZACJA_ZGOD() {
+  const idBazy = '1DZM07FF2aao74Z_z5cE0BRd7AuoLpuFxLG2-xpaen2E'; 
+  const ss = SpreadsheetApp.openById(idBazy);
+  
+  const sheetKlienci = ss.getSheetByName('Klienci');
+  const sheetOsw = ss.getSheetByName('Rejestr_Oświadczeń');
+  const sheetRodo = ss.getSheetByName('Rejestr_RODO');
+
+  if (!sheetKlienci || !sheetOsw || !sheetRodo) {
+    Logger.log("❌ Błąd: Nie znaleziono zakładek.");
+    return;
+  }
+
+  Logger.log("⏳ KROK 1: Skanowanie zakładki Rejestr_Oświadczeń...");
+  const dataOsw = sheetOsw.getDataRange().getValues();
+  const oswSet = new Set();
+  
+  for (let i = 1; i < dataOsw.length; i++) {
+    // ID w kolumnie A (0), Link w kolumnie G (6)
+    let id = String(dataOsw[i][0]).trim();
+    let link = String(dataOsw[i][6]).trim();
+    if (id && link.includes('drive.google.com')) {
+      oswSet.add(id); 
+    }
+  }
+
+  Logger.log("⏳ KROK 2: Skanowanie zakładki Rejestr_RODO...");
+  const dataRodo = sheetRodo.getDataRange().getValues();
+  const rodoSet = new Set();
+  
+  for (let i = 1; i < dataRodo.length; i++) {
+    // ID w kolumnie J (9), Link w kolumnie L (11)
+    let id = String(dataRodo[i][9]).trim();
+    let link = String(dataRodo[i][11]).trim();
+    if (id && link.includes('drive.google.com')) {
+      rodoSet.add(id); 
+    }
+  }
+
+  Logger.log("⏳ KROK 3: Nanoszenie danych do Arkusza Klienci...");
+  const dataKlienci = sheetKlienci.getDataRange().getValues();
+  let noweWpisy = 0;
+
+  for (let i = 1; i < dataKlienci.length; i++) {
+    // ID w Klienci to kolumna A (0)
+    let id = String(dataKlienci[i][0]).trim(); 
+    if (!id) continue;
+
+    // Jeśli ID jest w zbiorze RODO -> wpisz TAK w kolumnie G (6)
+    if (rodoSet.has(id)) {
+      dataKlienci[i][6] = "TAK";
+      noweWpisy++;
+    }
+    // Jeśli ID jest w zbiorze Oświadczeń -> wpisz TAK w kolumnie H (7)
+    if (oswSet.has(id)) {
+      dataKlienci[i][7] = "TAK";
+      noweWpisy++;
+    }
+  }
+
+  // Wpisanie zaktualizowanych danych z powrotem do arkusza
+  sheetKlienci.getDataRange().setValues(dataKlienci);
+  Logger.log("✅ Gotowe! Wpisano słowo TAK w: " + noweWpisy + " komórkach.");
+}
