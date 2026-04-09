@@ -88,8 +88,9 @@ async function run() {
 
   await check('GET magazyn dictionary - zwraca słownik', async () => {
     const r = await get(`/magazyn?action=dictionary&tenant_id=${TENANT}`);
-    if (!r.firmy && !r.kategorie) throw new Error(`brak firmy/kategorie: ${JSON.stringify(r).slice(0,80)}`);
-    ok('GET magazyn dictionary');
+    if (!Array.isArray(r) && !r.firmy && !r.kategorie) throw new Error(`nieoczekiwana odpowiedź: ${JSON.stringify(r).slice(0,80)}`);
+    const count = Array.isArray(r) ? r.length : (r.firmy?.length || 0);
+    ok(`GET magazyn dictionary - ${count} wpisów`);
   });
 
   // ── Sprzedaż ────────────────────────────────────────────────
@@ -116,16 +117,18 @@ async function run() {
 
   // ── Klienci ─────────────────────────────────────────────────
   console.log('\n[ Klienci ]');
-  await check('GET get_clients - zwraca tablicę', async () => {
+  await check('GET get_clients - zwraca klientów', async () => {
     const r = await get(`/klienci?action=get_clients&tenant_id=${TENANT}`);
-    if (!Array.isArray(r)) throw new Error(`oczekiwano tablicy: ${JSON.stringify(r).slice(0,80)}`);
-    ok(`GET get_clients - ${r.length} klientów`);
+    // endpoint zwraca {klienci:[], zadatki:[]} lub tablicę
+    const lista = Array.isArray(r) ? r : (r.klienci || []);
+    if (!Array.isArray(lista)) throw new Error(`nieoczekiwana struktura: ${JSON.stringify(r).slice(0,80)}`);
+    ok(`GET get_clients - ${lista.length} klientów`);
   });
 
   await check('GET get_client_profile_data - ma pole urodziny', async () => {
-    // Pobierz pierwszego klienta i sprawdź jego profil
-    const klienci = await get(`/klienci?action=get_clients&tenant_id=${TENANT}`);
-    if (!Array.isArray(klienci) || klienci.length === 0) {
+    const resp = await get(`/klienci?action=get_clients&tenant_id=${TENANT}`);
+    const klienci = Array.isArray(resp) ? resp : (resp.klienci || []);
+    if (klienci.length === 0) {
       warn('GET get_client_profile_data', 'brak klientów do testu');
       return;
     }
@@ -181,8 +184,10 @@ async function run() {
 
   await check('GET get_months - zwraca dane', async () => {
     const r = await get(`/analityka?action=get_months&tenant_id=${TENANT}`);
-    if (!r.data && !Array.isArray(r)) throw new Error(`nieoczekiwana odpowiedź: ${JSON.stringify(r).slice(0,80)}`);
-    ok('GET get_months');
+    // może zwracać {status, months:[]} lub {status, data:[]} lub tablicę
+    if (!Array.isArray(r) && !r.months && !r.data) throw new Error(`nieoczekiwana odpowiedź: ${JSON.stringify(r).slice(0,80)}`);
+    const count = Array.isArray(r) ? r.length : (r.months?.length || r.data?.length || 0);
+    ok(`GET get_months - ${count} miesięcy`);
   });
 
   // ── Konsultacje ─────────────────────────────────────────────

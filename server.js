@@ -22,7 +22,9 @@ const db = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    dateStrings: true
+    dateStrings: true,
+    enableKeepAlive: true,
+    keepAliveInitialDelay: 30000
 });
 
 db.getConnection((err, connection) => {
