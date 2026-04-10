@@ -18,9 +18,11 @@ function slugify(text) {
 }
 
 // ─── Middleware: weryfikacja tokenu admina ────────────────────
+const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'boczki-admin-2026';
+
 function requireAdmin(req, res, next) {
   const token = req.headers['x-admin-token'] || req.body?.admin_token || req.query?.admin_token;
-  if (!token || token !== process.env.ADMIN_TOKEN) {
+  if (!token || token !== ADMIN_TOKEN) {
     return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
   }
   next();
@@ -32,8 +34,8 @@ module.exports = (db) => {
   router.post('/admin/login', (req, res) => {
     const { haslo } = req.body;
     if (!haslo) return res.json({ status: 'error', message: 'Podaj hasło.' });
-    if (haslo === process.env.ADMIN_TOKEN) {
-      return res.json({ status: 'success', token: process.env.ADMIN_TOKEN });
+    if (haslo === ADMIN_TOKEN) {
+      return res.json({ status: 'success', token: ADMIN_TOKEN });
     }
     return res.json({ status: 'error', message: 'Błędne hasło administratora.' });
   });
