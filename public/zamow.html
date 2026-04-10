@@ -139,8 +139,8 @@ textarea { resize: vertical; min-height: 90px; }
 <!-- FORMULARZ -->
 <div class="form-section">
   <div class="form-card" id="form-card">
-    <h2>📋 Zamów dostęp</h2>
-    <p class="sub">Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link do rejestracji po potwierdzeniu płatności.</p>
+    <h2 id="form-title">📋 Zamów dostęp</h2>
+    <p class="sub" id="form-sub">Ładowanie...</p>
 
     <div id="form-error" class="alert alert-error" style="display:none;"></div>
 
@@ -188,17 +188,30 @@ textarea { resize: vertical; min-height: 90px; }
 </div>
 
 <script>
-// Pobierz cenę z serwera
+// Pobierz konfigurację Stripe i dostosuj UI
 fetch('/api/stripe/config').then(r => r.json()).then(d => {
-  if (d.cena_display) document.getElementById('cena-display').textContent = d.cena_display;
-  if (!d.aktywny) {
-    // Stripe nie skonfigurowany — fallback na formularz zgłoszeniowy
-    document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
-    window._stripeAktywny = false;
-  } else {
+  if (d.aktywny) {
+    // ── TRYB PŁATNOŚCI ──
     window._stripeAktywny = true;
+    document.getElementById('form-title').textContent = '💳 Kup dostęp do systemu';
+    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą lub BLIK. Link rejestracyjny otrzymasz automatycznie na email.';
+    document.getElementById('cena-display').textContent = d.cena_display;
+    document.getElementById('cena-box').style.display = 'flex';
+    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_display + ' i utwórz salon';
+  } else {
+    // ── TRYB ZGŁOSZENIA (Stripe nie skonfigurowany) ──
+    window._stripeAktywny = false;
+    document.getElementById('form-title').textContent = '📋 Zamów dostęp';
+    document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link do rejestracji po potwierdzeniu płatności.';
+    document.getElementById('cena-box').style.display = 'none';
+    document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
   }
-}).catch(() => { window._stripeAktywny = false; });
+}).catch(() => {
+  window._stripeAktywny = false;
+  document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą wkrótce.';
+  document.getElementById('cena-box').style.display = 'none';
+  document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
+});
 
 // Obsługa anulowania płatności
 if (new URLSearchParams(location.search).get('anulowano')) {
