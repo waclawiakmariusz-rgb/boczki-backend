@@ -4,7 +4,17 @@
 const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
-const { wyslijLinkRejestracji, powiadomAdmina } = require('./mailer');
+
+let wyslijLinkRejestracji, powiadomAdmina;
+try {
+  const mailer = require('./mailer');
+  wyslijLinkRejestracji = mailer.wyslijLinkRejestracji;
+  powiadomAdmina = mailer.powiadomAdmina;
+} catch (e) {
+  console.warn('[admin] Mailer niedostępny:', e.message);
+  wyslijLinkRejestracji = async () => { throw new Error('Mailer nie skonfigurowany na serwerze.'); };
+  powiadomAdmina = async () => {};
+}
 
 // ─── Pomocnicze ──────────────────────────────────────────────
 function slugify(text) {
