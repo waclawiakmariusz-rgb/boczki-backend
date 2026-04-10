@@ -156,7 +156,7 @@ textarea { resize: vertical; min-height: 90px; }
       <div class="form-group">
         <label>Adres e-mail *</label>
         <input type="email" id="f-email" placeholder="np. anna@salon.pl" required>
-        <div style="font-size:11px; color:var(--muted); margin-top:5px;">Na ten adres wyślemy link rejestracyjny.</div>
+        <div style="font-size:11px; color:var(--muted); margin-top:5px;">Na ten adres wyślemy link rejestracyjny po płatności.</div>
       </div>
       <div class="form-row">
         <div class="form-group">
@@ -172,18 +172,46 @@ textarea { resize: vertical; min-height: 90px; }
         <label>Wiadomość (opcjonalnie)</label>
         <textarea id="f-wiadomosc" placeholder="Napisz coś o swoim salonie lub zadaj pytanie..."></textarea>
       </div>
-      <button type="submit" class="btn-submit" id="btn-wyslij">📩 Wyślij zgłoszenie</button>
+
+      <!-- Cena i przycisk płatności -->
+      <div id="cena-box" style="background:#fff0f3; border-radius:16px; padding:18px 20px; margin:20px 0; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Dostęp roczny</div>
+          <div id="cena-display" style="font-size:26px; font-weight:800; color:var(--primary);">199 zł</div>
+        </div>
+        <div style="font-size:12px; color:var(--muted); text-align:right; line-height:1.6;">Karta, BLIK<br>bezpieczna płatność</div>
+      </div>
+
+      <button type="submit" class="btn-submit" id="btn-wyslij">💳 Zapłać i utwórz salon</button>
     </form>
   </div>
 </div>
 
 <script>
+// Pobierz cenę z serwera
+fetch('/api/stripe/config').then(r => r.json()).then(d => {
+  if (d.cena_display) document.getElementById('cena-display').textContent = d.cena_display;
+  if (!d.aktywny) {
+    // Stripe nie skonfigurowany — fallback na formularz zgłoszeniowy
+    document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
+    window._stripeAktywny = false;
+  } else {
+    window._stripeAktywny = true;
+  }
+}).catch(() => { window._stripeAktywny = false; });
+
+// Obsługa anulowania płatności
+if (new URLSearchParams(location.search).get('anulowano')) {
+  document.getElementById('form-error').style.display = 'block';
+  document.getElementById('form-error').textContent = 'Płatność została anulowana. Możesz spróbować ponownie.';
+}
+
 async function wyslij(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error');
   errEl.style.display = 'none';
   const btn = document.getElementById('btn-wyslij');
-  btn.disabled = true; btn.textContent = '⏳ Wysyłam...';
+  btn.disabled = true; btn.textContent = '⏳ Przetwarzam...';
 
   const payload = {
     imie:         document.getElementById('f-imie').value.trim(),
@@ -195,6 +223,27 @@ async function wyslij(e) {
   };
 
   try {
+    // Stripe aktywny — tworzymy sesję płatności
+    if (window._stripeAktywny !== false) {
+      const res = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const d = await res.json();
+
+      if (d.status !== 'success') {
+        errEl.style.display = 'block'; errEl.textContent = d.message;
+        btn.disabled = false; btn.textContent = '💳 Zapłać i utwórz salon';
+        return;
+      }
+
+      // Przekieruj do Stripe Checkout
+      window.location.href = d.checkout_url;
+      return;
+    }
+
+    // Fallback — formularz zgłoszeniowy (Stripe nie skonfigurowany)
     const res = await fetch('/api/zamowienie', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -208,22 +257,20 @@ async function wyslij(e) {
       return;
     }
 
-    // Sukces
     document.getElementById('form-card').innerHTML = `
       <div class="success-wrap">
         <div class="icon">🎉</div>
         <h2>Zgłoszenie przyjęte!</h2>
-        <p>Dziękujemy, <strong>${payload.imie}</strong>! Twoje zgłoszenie zostało przyjęte.</p>
+        <p>Dziękujemy, <strong>${payload.imie}</strong>! Skontaktujemy się wkrótce.</p>
         <ul class="check-list">
           <li>Otrzymaliśmy Twoje dane</li>
-          <li>Skontaktujemy się wkrótce</li>
           <li>Po potwierdzeniu płatności wyślemy link rejestracyjny na <strong>${payload.email}</strong></li>
         </ul>
-      </div>
-    `;
+      </div>`;
+
   } catch {
     errEl.style.display = 'block'; errEl.textContent = 'Błąd połączenia. Spróbuj ponownie.';
-    btn.disabled = false; btn.textContent = '📩 Wyślij zgłoszenie';
+    btn.disabled = false; btn.textContent = '💳 Zapłać i utwórz salon';
   }
 }
 </script>

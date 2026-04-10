@@ -5,8 +5,12 @@ const cors = require('cors');
 
 const app = express();
 
-// Uruchamiamy zabezpieczenia i możliwość czytania danych
 app.use(cors());
+
+// Stripe webhook musi dostać raw body — PRZED express.json()
+app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+
+// Pozostałe endpointy — JSON
 app.use(express.json());
 
 // Serwowanie plików statycznych (index.html, etc.)
@@ -53,6 +57,7 @@ const raportRoutes     = require('./routes/raport')(db);
 const usersRoutes      = require('./routes/users')(db);
 const logiRoutes       = require('./routes/logi')(db);
 const adminRoutes      = require('./routes/admin')(db);
+const stripeRoutes     = require('./routes/stripe')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -71,6 +76,7 @@ app.use('/api', raportRoutes);
 app.use('/api', usersRoutes);
 app.use('/api', logiRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', stripeRoutes);
 
 // ==========================================
 // TEST ENDPOINT
