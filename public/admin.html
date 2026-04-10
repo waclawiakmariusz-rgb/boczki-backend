@@ -204,6 +204,36 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
   margin: 20px 0; letter-spacing: 1px; box-shadow: var(--shadow);
 }
 
+/* ── TOKENY ── */
+.token-card {
+  background: var(--white); border-radius: 16px; padding: 20px 24px;
+  box-shadow: var(--shadow); margin-bottom: 12px; display: flex;
+  align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+}
+.token-info { flex: 1; min-width: 0; }
+.token-code { font-family: monospace; font-size: 12px; color: var(--muted); word-break: break-all; }
+.token-meta { font-size: 13px; margin-top: 4px; color: var(--text); font-weight: 600; }
+.token-note { font-size: 12px; color: var(--muted); font-style: italic; }
+.token-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.badge-new { background: #dbeafe; color: #1d4ed8; }
+.badge-used { background: #dcfce7; color: #166534; }
+.badge-expired { background: #fee2e2; color: #991b1b; }
+.link-box {
+  background: #f8fafc; border-radius: 12px; padding: 12px 16px;
+  font-family: monospace; font-size: 12px; color: var(--text); word-break: break-all;
+  margin-top: 10px; border: 1px dashed #e2e8f0;
+}
+.gen-card { background: var(--white); border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); margin-bottom: 24px; }
+.gen-card h3 { font-size: 17px; font-weight: 800; margin-bottom: 20px; }
+.gen-result { background: #f0fdf4; border-radius: 14px; padding: 20px; margin-top: 20px; display: none; }
+.gen-result p { font-size: 13px; color: #166534; font-weight: 600; margin-bottom: 10px; }
+.copy-btn {
+  background: #dcfce7; color: #166534; border: none; padding: 8px 16px;
+  border-radius: 9px; font-family: inherit; font-weight: 700; font-size: 12px;
+  cursor: pointer; margin-top: 8px; transition: 0.2s;
+}
+.copy-btn:hover { background: #bbf7d0; }
+
 /* ── EDIT MODAL ── */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
@@ -268,12 +298,48 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
     <!-- Tabs -->
     <div class="tab-bar">
       <button class="tab-btn active" onclick="showTab('tab-salony')">🏪 Salony</button>
-      <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
+      <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki rejestracji</button>
+      <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon (admin)</button>
     </div>
 
     <!-- Tab: Lista salonów -->
     <div id="tab-salony" class="tab-panel active">
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
+    </div>
+
+    <!-- Tab: Linki rejestracji -->
+    <div id="tab-linki" class="tab-panel">
+
+      <!-- Generator nowego linku -->
+      <div class="gen-card">
+        <h3>🔗 Wygeneruj link rejestracyjny</h3>
+        <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">Wyślij link klientowi po otrzymaniu płatności. Każdy link działa tylko raz.</p>
+        <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end;">
+          <div class="form-group" style="margin:0;">
+            <label>Notatka (np. imię klienta)</label>
+            <input type="text" id="tok-notatka" placeholder="np. Kowalska Salon Poznan">
+          </div>
+          <div class="form-group" style="margin:0;">
+            <label>Ważność linku</label>
+            <select id="tok-dni">
+              <option value="3">3 dni</option>
+              <option value="7" selected>7 dni</option>
+              <option value="14">14 dni</option>
+              <option value="30">30 dni</option>
+            </select>
+          </div>
+          <button class="btn-primary" style="margin:0; padding:15px 24px; white-space:nowrap;" onclick="generujToken()">➕ Generuj</button>
+        </div>
+        <div class="gen-result" id="gen-result">
+          <p>✅ Link wygenerowany! Skopiuj go i wyślij klientowi.</p>
+          <div class="link-box" id="gen-link-box"></div>
+          <button class="copy-btn" onclick="kopiujLink()">📋 Kopiuj link</button>
+        </div>
+      </div>
+
+      <!-- Lista tokenów -->
+      <div id="tokeny-content" class="loading">Ładowanie...</div>
+
     </div>
 
     <!-- Tab: Wizard nowego salonu -->
@@ -507,7 +573,97 @@ function showTab(id) {
   document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
   if (id === 'tab-salony') zaladujSalony();
+  if (id === 'tab-linki') zaladujTokeny();
   if (id === 'tab-nowy') resetWizard();
+}
+
+// ═══════════════════════════════════════════════
+// TOKENY REJESTRACJI
+// ═══════════════════════════════════════════════
+let ostatniToken = '';
+
+function generujToken() {
+  const notatka = document.getElementById('tok-notatka').value.trim();
+  const dni = document.getElementById('tok-dni').value;
+  const result = document.getElementById('gen-result');
+  result.style.display = 'none';
+
+  fetch(`${API}/admin/generate_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ notatka, dni_waznosci: dni })
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status !== 'success') { alert('Błąd: ' + d.message); return; }
+    ostatniToken = d.token;
+    const link = `${location.origin}/rejestracja.html?token=${d.token}`;
+    document.getElementById('gen-link-box').textContent = link;
+    result.style.display = 'block';
+    document.getElementById('tok-notatka').value = '';
+    zaladujTokeny();
+  });
+}
+
+function kopiujLink() {
+  const link = document.getElementById('gen-link-box').textContent;
+  navigator.clipboard.writeText(link).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ Skopiowano!';
+    setTimeout(() => { btn.textContent = '📋 Kopiuj link'; }, 2000);
+  });
+}
+
+function zaladujTokeny() {
+  const cont = document.getElementById('tokeny-content');
+  cont.innerHTML = '<div class="loading">Ładowanie...</div>';
+
+  fetch(`${API}/admin/tokeny`, { headers: { 'X-Admin-Token': adminToken } })
+  .then(r => r.json())
+  .then(tokeny => {
+    if (!tokeny.length) {
+      cont.innerHTML = `<div class="empty-state"><div class="icon">🔗</div><p>Brak wygenerowanych linków.<br>Wygeneruj pierwszy link powyżej.</p></div>`;
+      return;
+    }
+
+    const badgeClass = { nowy: 'badge-new', wykorzystany: 'badge-used', wygasly: 'badge-expired' };
+    const badgeTxt = { nowy: '⏳ Aktywny', wykorzystany: '✓ Użyty', wygasly: '✗ Wygasł' };
+
+    cont.innerHTML = tokeny.map(t => {
+      const link = `${location.origin}/rejestracja.html?token=${t.token}`;
+      const wygasa = new Date(t.data_wygasniecia).toLocaleDateString('pl-PL');
+      const utworzono = new Date(t.data_utworzenia).toLocaleDateString('pl-PL');
+      const st = t.status || 'nowy';
+      return `
+        <div class="token-card">
+          <div class="token-info">
+            <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
+              <span class="badge ${badgeClass[st]}">${badgeTxt[st]}</span>
+              ${t.notatka ? `<span class="token-note">${t.notatka}</span>` : ''}
+            </div>
+            <div class="token-meta">Utworzono: ${utworzono} · Ważny do: ${wygasa}${t.tenant_id_utworzony ? ` · Salon: <code style="font-size:11px;">${t.tenant_id_utworzony}</code>` : ''}</div>
+            ${st === 'nowy' ? `<div class="link-box" style="margin-top:8px; font-size:11px;">${link}</div>` : ''}
+          </div>
+          <div class="token-actions">
+            ${st === 'nowy' ? `<button class="btn-sm btn-edit" onclick="navigator.clipboard.writeText('${link}').then(()=>{this.textContent='✅';setTimeout(()=>{this.textContent='📋 Kopiuj'},1500)})">📋 Kopiuj</button>` : ''}
+            <button class="btn-sm btn-deactivate" onclick="usunToken('${t.token}', this)">🗑️</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  })
+  .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania.</div>'; });
+}
+
+function usunToken(token, btn) {
+  if (!confirm('Usunąć ten link rejestracyjny?')) return;
+  fetch(`${API}/admin/delete_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ token })
+  })
+  .then(r => r.json())
+  .then(d => { if (d.status === 'success') zaladujTokeny(); });
 }
 
 // ═══════════════════════════════════════════════

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<title>Boczki na bok — Rejestracja salonu</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #ff758c;
+  --primary-dark: #ff7eb3;
+  --primary-glow: rgba(255,117,140,0.25);
+  --bg: #fdf8f5;
+  --white: #ffffff;
+  --text: #2d3748;
+  --muted: #a0aec0;
+  --radius: 24px;
+  --radius-btn: 16px;
+  --radius-input: 14px;
+  --shadow: 0 15px 35px rgba(0,0,0,0.04), 0 5px 15px rgba(0,0,0,0.02);
+  --shadow-glow: 0 12px 25px -5px var(--primary-glow);
+  --green: #10b981;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+
+/* ── LAYOUT ── */
+.page { max-width: 680px; margin: 0 auto; padding: 40px 20px 80px; }
+
+.top-brand {
+  text-align: center; margin-bottom: 40px;
+}
+.top-brand .logo { font-size: 48px; margin-bottom: 10px; }
+.top-brand h1 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+.top-brand p { color: var(--muted); font-size: 14px; }
+
+/* ── STANY ── */
+#state-loading, #state-error, #state-form, #state-success { display: none; }
+.state-box {
+  background: var(--white); border-radius: var(--radius); padding: 50px 40px;
+  box-shadow: var(--shadow); text-align: center;
+}
+.state-box .icon { font-size: 56px; margin-bottom: 20px; }
+.state-box h2 { font-size: 22px; font-weight: 800; margin-bottom: 10px; }
+.state-box p { color: var(--muted); font-size: 14px; line-height: 1.7; }
+.state-box.error h2 { color: #ef4444; }
+.state-box.success { background: linear-gradient(135deg, #f0fdf4, #dcfce7); }
+.state-box.success h2 { color: #166534; }
+.state-box.success p { color: #4ade80; }
+
+/* ── PROGRESS ── */
+.wizard-progress {
+  display: flex; align-items: center; background: var(--white);
+  border-radius: var(--radius); padding: 20px 24px; box-shadow: var(--shadow); margin-bottom: 24px;
+}
+.w-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.w-step:not(:last-child)::after {
+  content: ''; position: absolute; top: 18px; left: 58%; width: 84%;
+  height: 2px; background: #e2e8f0; z-index: 0;
+}
+.w-step.done::after { background: var(--green); }
+.w-dot {
+  width: 36px; height: 36px; border-radius: 50%; background: #f1f5f9;
+  color: var(--muted); font-weight: 700; font-size: 13px;
+  display: flex; align-items: center; justify-content: center; z-index: 1;
+  transition: all 0.3s; border: 2px solid #e2e8f0;
+}
+.w-step.active .w-dot {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border-color: transparent; box-shadow: var(--shadow-glow);
+}
+.w-step.done .w-dot { background: var(--green); color: white; border-color: transparent; }
+.w-label { font-size: 10px; color: var(--muted); margin-top: 6px; font-weight: 600; text-align: center; white-space: nowrap; }
+.w-step.active .w-label { color: var(--primary); }
+.w-step.done .w-label { color: var(--green); }
+
+/* ── KARTA ── */
+.card {
+  background: var(--white); border-radius: var(--radius); padding: 36px;
+  box-shadow: var(--shadow); margin-bottom: 16px;
+}
+.card h2 { font-size: 20px; font-weight: 800; margin-bottom: 4px; }
+.card .sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.5; }
+
+/* ── FORMULARZE ── */
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
+input[type=text], input[type=password], input[type=email], input[type=tel], input[type=number], select {
+  width: 100%; padding: 14px 17px; background: #f4f7f8; border: 2px solid transparent;
+  border-radius: var(--radius-input); font-size: 14px; color: var(--text); font-weight: 600;
+  outline: none; transition: all 0.3s; font-family: inherit;
+}
+input:focus, select:focus { background: white; border-color: var(--primary); box-shadow: 0 6px 18px rgba(255,117,140,0.12); transform: translateY(-1px); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.hint { font-size: 11px; color: var(--muted); margin-top: 5px; }
+.strength-bar { height: 4px; border-radius: 2px; background: #e2e8f0; margin-top: 6px; overflow: hidden; }
+.strength-fill { height: 100%; border-radius: 2px; transition: all 0.3s; width: 0; }
+
+/* ── PRACOWNICY / USŁUGI ── */
+.list-item {
+  display: flex; gap: 8px; align-items: center; padding: 10px;
+  background: #f8fafc; border-radius: 12px; margin-bottom: 8px;
+}
+.list-item input, .list-item select { flex: 1; margin: 0; padding: 10px 12px; font-size: 13px; }
+.btn-remove {
+  width: 34px; height: 34px; border: none; background: #fee2e2; color: #ef4444;
+  border-radius: 9px; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: 0.2s;
+}
+.btn-remove:hover { background: #fca5a5; }
+.btn-add-row {
+  width: 100%; padding: 13px; border: 2px dashed #e2e8f0; background: transparent;
+  border-radius: 12px; color: var(--muted); font-family: inherit; font-weight: 600;
+  font-size: 13px; cursor: pointer; transition: 0.2s; margin-top: 4px;
+}
+.btn-add-row:hover { border-color: var(--primary); color: var(--primary); background: #fff0f3; }
+
+/* ── PRZYCISKI ── */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; padding: 17px 28px; border-radius: var(--radius-btn);
+  font-family: inherit; font-weight: 700; font-size: 14px; text-transform: uppercase;
+  letter-spacing: 1px; cursor: pointer; box-shadow: var(--shadow-glow);
+  transition: all 0.3s; width: 100%;
+}
+.btn-primary:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(255,117,140,0.35); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btn-secondary {
+  background: var(--white); color: var(--muted); border: 2px solid #e2e8f0;
+  padding: 15px 24px; border-radius: var(--radius-btn); font-family: inherit;
+  font-weight: 700; font-size: 14px; cursor: pointer; transition: all 0.3s;
+}
+.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
+.nav { display: flex; gap: 10px; margin-top: 8px; }
+.nav .btn-secondary { flex: 0 0 auto; }
+.nav .btn-primary { flex: 1; }
+
+/* ── ALERT ── */
+.alert { padding: 13px 16px; border-radius: 11px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+.alert-error { background: #fee2e2; color: #991b1b; }
+
+/* ── PODSUMOWANIE ── */
+.summary-section { margin-bottom: 22px; }
+.summary-section h4 { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+.summary-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+.summary-row strong { color: var(--text); }
+.summary-row span { color: var(--muted); }
+.chip { display: inline-block; background: #f1f5f9; border-radius: 7px; padding: 3px 9px; font-size: 11px; font-weight: 600; margin: 2px 2px 2px 0; }
+
+/* ── SUCCESS ── */
+.success-box {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-radius: var(--radius); padding: 50px 36px; text-align: center; box-shadow: var(--shadow);
+}
+.success-box .icon { font-size: 64px; margin-bottom: 20px; }
+.success-box h2 { font-size: 24px; font-weight: 800; color: #166534; margin-bottom: 10px; }
+.success-box p { color: #15803d; font-size: 14px; margin-bottom: 6px; line-height: 1.6; }
+.credential-box {
+  background: white; border-radius: 14px; padding: 20px 24px; margin: 24px 0;
+  box-shadow: var(--shadow); text-align: left;
+}
+.credential-box .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
+.credential-box .row:last-child { border: none; }
+.credential-box .row strong { color: var(--text); }
+.credential-box .row span { font-family: monospace; font-weight: 700; color: var(--primary); font-size: 15px; }
+.btn-go {
+  display: inline-block; margin-top: 20px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; padding: 16px 36px; border-radius: var(--radius-btn);
+  font-family: inherit; font-weight: 700; font-size: 14px; text-decoration: none;
+  box-shadow: var(--shadow-glow); transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+}
+.btn-go:hover { transform: translateY(-2px); }
+
+/* ── STEP ANIMACJA ── */
+.step-panel { display: none; }
+.step-panel.visible { display: block; animation: fadeUp 0.35s ease; }
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <div class="top-brand">
+    <div class="logo">🎀</div>
+    <h1>Boczki na bok</h1>
+    <p>Załóż profil swojego salonu i zacznij zarządzać nim online</p>
+  </div>
+
+  <!-- Ładowanie -->
+  <div id="state-loading">
+    <div class="state-box">
+      <div class="icon">⏳</div>
+      <h2>Weryfikacja linku...</h2>
+      <p>Sprawdzamy Twój link rejestracyjny.</p>
+    </div>
+  </div>
+
+  <!-- Błąd tokenu -->
+  <div id="state-error">
+    <div class="state-box error">
+      <div class="icon">🔒</div>
+      <h2 id="err-title">Nieprawidłowy link</h2>
+      <p id="err-msg">Ten link rejestracyjny jest nieprawidłowy, wygasł lub został już wykorzystany.</p>
+      <p style="margin-top:20px; font-size:13px;">Skontaktuj się z administratorem systemu, aby uzyskać nowy link.</p>
+    </div>
+  </div>
+
+  <!-- Formularz rejestracji -->
+  <div id="state-form">
+
+    <!-- Progress -->
+    <div class="wizard-progress">
+      <div class="w-step active" id="ws-1"><div class="w-dot">1</div><div class="w-label">Salon</div></div>
+      <div class="w-step" id="ws-2"><div class="w-dot">2</div><div class="w-label">Logowanie</div></div>
+      <div class="w-step" id="ws-3"><div class="w-dot">3</div><div class="w-label">Pracownicy</div></div>
+      <div class="w-step" id="ws-4"><div class="w-dot">4</div><div class="w-label">Usługi</div></div>
+      <div class="w-step" id="ws-5"><div class="w-dot">5</div><div class="w-label">Gotowe!</div></div>
+    </div>
+
+    <!-- KROK 1: Dane salonu -->
+    <div class="step-panel visible" id="step-1">
+      <div class="card">
+        <h2>🏪 Dane Twojego salonu</h2>
+        <p class="sub">Podaj podstawowe informacje o swoim salonie. Możesz je później zmienić.</p>
+        <div id="s1-err" class="alert alert-error" style="display:none;"></div>
+        <div class="form-group">
+          <label>Nazwa salonu *</label>
+          <input type="text" id="s1-nazwa" placeholder="np. Studio Urody Kleopatra" oninput="autofillLogin()">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Miasto</label>
+            <input type="text" id="s1-miasto" placeholder="np. Warszawa">
+          </div>
+          <div class="form-group">
+            <label>Telefon kontaktowy</label>
+            <input type="tel" id="s1-telefon" placeholder="np. 500 123 456">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="s1-email" placeholder="np. kontakt@salon.pl">
+        </div>
+        <div class="nav">
+          <button class="btn-primary" onclick="step1()">Dalej →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KROK 2: Dane logowania -->
+    <div class="step-panel" id="step-2">
+      <div class="card">
+        <h2>🔑 Dane do logowania</h2>
+        <p class="sub">To będzie Twój login i hasło do systemu. Zapamiętaj je lub zapisz w bezpiecznym miejscu.</p>
+        <div id="s2-err" class="alert alert-error" style="display:none;"></div>
+        <div class="form-group">
+          <label>Login *</label>
+          <input type="text" id="s2-login" placeholder="np. studio-kleopatra" autocomplete="off">
+          <div class="hint">Tylko litery, cyfry i myślniki. Bez spacji i polskich znaków.</div>
+        </div>
+        <div class="form-group">
+          <label>Hasło *</label>
+          <input type="password" id="s2-haslo" placeholder="Minimum 6 znaków" autocomplete="new-password" oninput="checkStrength()">
+          <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+          <div class="hint" id="strength-label">Wpisz hasło</div>
+        </div>
+        <div class="form-group">
+          <label>Powtórz hasło *</label>
+          <input type="password" id="s2-haslo2" placeholder="Wpisz hasło ponownie" autocomplete="new-password">
+        </div>
+        <div class="nav">
+          <button class="btn-secondary" onclick="goStep(1)">← Wróć</button>
+          <button class="btn-primary" onclick="step2()">Dalej →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KROK 3: Pracownicy -->
+    <div class="step-panel" id="step-3">
+      <div class="card">
+        <h2>👤 Pracownicy i PIN-y</h2>
+        <p class="sub">Dodaj pracowników, którzy będą obsługiwać system. Każdy loguje się 4-cyfrowym PIN-em. Możesz to uzupełnić później.</p>
+        <div id="prac-lista"></div>
+        <button class="btn-add-row" onclick="dodajPracownika()">+ Dodaj pracownika</button>
+        <div class="nav" style="margin-top:22px;">
+          <button class="btn-secondary" onclick="goStep(2)">← Wróć</button>
+          <button class="btn-primary" onclick="goStep(4)">Dalej →</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KROK 4: Usługi -->
+    <div class="step-panel" id="step-4">
+      <div class="card">
+        <h2>💅 Usługi i zabiegi</h2>
+        <p class="sub">Dodaj usługi, które oferuje Twój salon. Możesz to uzupełnić i edytować później z poziomu systemu.</p>
+        <div id="uslugi-lista"></div>
+        <button class="btn-add-row" onclick="dodajUsluge()">+ Dodaj usługę</button>
+        <div class="nav" style="margin-top:22px;">
+          <button class="btn-secondary" onclick="goStep(3)">← Wróć</button>
+          <button class="btn-primary" onclick="goStep(5)">Dalej → Podsumowanie</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- KROK 5: Podsumowanie + submit -->
+    <div class="step-panel" id="step-5">
+      <div class="card">
+        <h2>✅ Sprawdź dane</h2>
+        <p class="sub">Upewnij się, że wszystko się zgadza. Po kliknięciu "Utwórz salon" nie będziesz mógł zmienić loginu.</p>
+        <div id="s5-err" class="alert alert-error" style="display:none;"></div>
+        <div id="summary"></div>
+        <div class="nav">
+          <button class="btn-secondary" onclick="goStep(4)">← Wróć</button>
+          <button class="btn-primary" id="btn-submit" onclick="zarejestruj()">🚀 Utwórz salon</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /state-form -->
+
+  <!-- Sukces -->
+  <div id="state-success"></div>
+
+</div><!-- /page -->
+
+<script>
+const API = '/api';
+let token = '';
+let currentStep = 1;
+let wData = { salon: {}, dostep: {}, pracownicy: [], uslugi: [] };
+
+// ═══════════════════════════════════════
+// INIT — weryfikacja tokenu
+// ═══════════════════════════════════════
+window.addEventListener('load', () => {
+  const params = new URLSearchParams(location.search);
+  token = params.get('token') || '';
+
+  show('state-loading');
+
+  if (!token) { showError('Brak tokenu', 'Link jest niekompletny. Upewnij się, że otworzyłeś pełny link rejestracyjny.'); return; }
+
+  fetch(`${API}/rejestracja/weryfikuj?token=${encodeURIComponent(token)}`)
+    .then(r => r.json())
+    .then(d => {
+      if (d.status !== 'ok') { showError('Link nieważny', d.message); return; }
+      hide('state-loading');
+      show('state-form');
+    })
+    .catch(() => showError('Błąd połączenia', 'Nie można połączyć się z serwerem. Spróbuj odświeżyć stronę.'));
+});
+
+function show(id) { document.getElementById(id).style.display = 'block'; }
+function hide(id) { document.getElementById(id).style.display = 'none'; }
+function showError(title, msg) {
+  hide('state-loading');
+  document.getElementById('err-title').textContent = title;
+  document.getElementById('err-msg').textContent = msg;
+  show('state-error');
+}
+
+// ═══════════════════════════════════════
+// NAWIGACJA
+// ═══════════════════════════════════════
+function goStep(n) {
+  document.getElementById(`step-${currentStep}`).classList.remove('visible');
+  document.getElementById(`ws-${currentStep}`).className = 'w-step done';
+  currentStep = n;
+  document.getElementById(`step-${currentStep}`).classList.add('visible');
+  document.getElementById(`ws-${currentStep}`).className = 'w-step active';
+  if (n === 5) renderSummary();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ═══════════════════════════════════════
+// KROK 1
+// ═══════════════════════════════════════
+function step1() {
+  const err = document.getElementById('s1-err');
+  err.style.display = 'none';
+  const nazwa = document.getElementById('s1-nazwa').value.trim();
+  if (!nazwa) { err.style.display='block'; err.textContent='Podaj nazwę salonu.'; return; }
+  wData.salon = {
+    nazwa_salonu: nazwa,
+    miasto: document.getElementById('s1-miasto').value.trim(),
+    telefon: document.getElementById('s1-telefon').value.trim(),
+    email: document.getElementById('s1-email').value.trim(),
+  };
+  goStep(2);
+}
+
+function autofillLogin() {
+  const nazwa = document.getElementById('s1-nazwa').value;
+  const loginEl = document.getElementById('s2-login');
+  if (!loginEl.dataset.touched) {
+    loginEl.value = nazwa.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/ł/g,'l').replace(/ą/g,'a').replace(/ę/g,'e').replace(/ó/g,'o')
+      .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z').replace(/ć/g,'c').replace(/ń/g,'n')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'');
+  }
+}
+
+// ═══════════════════════════════════════
+// KROK 2
+// ═══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('s2-login').addEventListener('input', function() { this.dataset.touched = '1'; });
+});
+
+function checkStrength() {
+  const val = document.getElementById('s2-haslo').value;
+  const fill = document.getElementById('strength-fill');
+  const lbl = document.getElementById('strength-label');
+  let score = 0;
+  if (val.length >= 6) score++;
+  if (val.length >= 10) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  const levels = [
+    { w: '0%',   bg: '#e2e8f0', txt: 'Wpisz hasło' },
+    { w: '25%',  bg: '#ef4444', txt: 'Zbyt krótkie' },
+    { w: '50%',  bg: '#f59e0b', txt: 'Słabe' },
+    { w: '70%',  bg: '#f59e0b', txt: 'Średnie' },
+    { w: '85%',  bg: '#10b981', txt: 'Dobre' },
+    { w: '100%', bg: '#10b981', txt: 'Silne hasło ✓' },
+  ];
+  const l = levels[Math.min(score, 5)];
+  fill.style.width = l.w; fill.style.background = l.bg; lbl.textContent = l.txt;
+}
+
+function step2() {
+  const err = document.getElementById('s2-err');
+  err.style.display = 'none';
+  const login = document.getElementById('s2-login').value.trim();
+  const haslo = document.getElementById('s2-haslo').value;
+  const haslo2 = document.getElementById('s2-haslo2').value;
+  if (!login) { err.style.display='block'; err.textContent='Podaj login.'; return; }
+  if (!/^[a-z0-9-]+$/.test(login)) { err.style.display='block'; err.textContent='Login może zawierać tylko małe litery, cyfry i myślniki.'; return; }
+  if (haslo.length < 6) { err.style.display='block'; err.textContent='Hasło musi mieć minimum 6 znaków.'; return; }
+  if (haslo !== haslo2) { err.style.display='block'; err.textContent='Hasła nie są identyczne.'; return; }
+  wData.dostep = { login, haslo };
+  goStep(3);
+}
+
+// ═══════════════════════════════════════
+// KROK 3 — Pracownicy
+// ═══════════════════════════════════════
+function dodajPracownika() {
+  const lista = document.getElementById('prac-lista');
+  const id = 'prac-' + Date.now();
+  lista.insertAdjacentHTML('beforeend', `
+    <div class="list-item" id="${id}">
+      <input type="text" placeholder="Imię i nazwisko" style="flex:2;">
+      <input type="text" placeholder="PIN (4 cyfry)" maxlength="4" inputmode="numeric" style="flex:1; font-family:monospace; letter-spacing:3px;">
+      <select style="flex:1.2; padding:9px 11px;">
+        <option value="pracownik">Pracownik</option>
+        <option value="manager">Manager</option>
+      </select>
+      <button class="btn-remove" onclick="document.getElementById('${id}').remove()">×</button>
+    </div>
+  `);
+}
+
+function getPracownicy() {
+  return Array.from(document.querySelectorAll('#prac-lista .list-item')).map(el => {
+    const inp = el.querySelectorAll('input');
+    return { imie: inp[0].value.trim(), pin: inp[1].value.trim(), rola: el.querySelector('select').value };
+  }).filter(p => p.imie);
+}
+
+// ═══════════════════════════════════════
+// KROK 4 — Usługi
+// ═══════════════════════════════════════
+function dodajUsluge() {
+  const lista = document.getElementById('uslugi-lista');
+  const id = 'us-' + Date.now();
+  lista.insertAdjacentHTML('beforeend', `
+    <div class="list-item" id="${id}">
+      <input type="text" placeholder="Kategoria (np. Twarz)" style="flex:1.3;">
+      <input type="text" placeholder="Wariant (np. Mezoterapia 45min)" style="flex:2.5;">
+      <input type="number" placeholder="Cena zł" step="0.01" min="0" style="flex:0.9;">
+      <button class="btn-remove" onclick="document.getElementById('${id}').remove()">×</button>
+    </div>
+  `);
+}
+
+function getUslugi() {
+  return Array.from(document.querySelectorAll('#uslugi-lista .list-item')).map(el => {
+    const inp = el.querySelectorAll('input');
+    return { kategoria: inp[0].value.trim(), wariant: inp[1].value.trim(), cena: inp[2].value };
+  }).filter(u => u.kategoria && u.wariant);
+}
+
+// ═══════════════════════════════════════
+// KROK 5 — Podsumowanie
+// ═══════════════════════════════════════
+function renderSummary() {
+  wData.pracownicy = getPracownicy();
+  wData.uslugi = getUslugi();
+  const { salon, dostep, pracownicy, uslugi } = wData;
+
+  document.getElementById('summary').innerHTML = `
+    <div class="summary-section">
+      <h4>Dane salonu</h4>
+      <div class="summary-row"><strong>Nazwa</strong><span>${salon.nazwa_salonu}</span></div>
+      ${salon.miasto ? `<div class="summary-row"><strong>Miasto</strong><span>${salon.miasto}</span></div>` : ''}
+      ${salon.telefon ? `<div class="summary-row"><strong>Telefon</strong><span>${salon.telefon}</span></div>` : ''}
+      ${salon.email ? `<div class="summary-row"><strong>E-mail</strong><span>${salon.email}</span></div>` : ''}
+    </div>
+    <div class="summary-section">
+      <h4>Dane logowania</h4>
+      <div class="summary-row"><strong>Login</strong><span>${dostep.login}</span></div>
+      <div class="summary-row"><strong>Hasło</strong><span>${'•'.repeat(dostep.haslo.length)}</span></div>
+    </div>
+    ${pracownicy.length ? `
+    <div class="summary-section">
+      <h4>Pracownicy (${pracownicy.length})</h4>
+      ${pracownicy.map(p => `<span class="chip">${p.imie} — PIN: ${p.pin||'—'}</span>`).join('')}
+    </div>` : `<div class="summary-section"><h4>Pracownicy</h4><p style="font-size:13px; color:var(--muted);">Brak — możesz dodać później z poziomu systemu.</p></div>`}
+    ${uslugi.length ? `
+    <div class="summary-section">
+      <h4>Usługi (${uslugi.length})</h4>
+      ${uslugi.map(u => `<span class="chip">${u.kategoria}: ${u.wariant} — ${u.cena} zł</span>`).join('')}
+    </div>` : `<div class="summary-section"><h4>Usługi</h4><p style="font-size:13px; color:var(--muted);">Brak — możesz dodać później z poziomu systemu.</p></div>`}
+  `;
+}
+
+// ═══════════════════════════════════════
+// ZAPIS
+// ═══════════════════════════════════════
+function zarejestruj() {
+  const err = document.getElementById('s5-err');
+  err.style.display = 'none';
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true; btn.textContent = '⏳ Tworzę Twój salon...';
+
+  const payload = {
+    token,
+    ...wData.salon,
+    ...wData.dostep,
+    pracownicy: wData.pracownicy,
+    uslugi: wData.uslugi,
+  };
+
+  fetch(`${API}/rejestracja/zaloz`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status !== 'success') {
+      err.style.display = 'block'; err.textContent = d.message;
+      btn.disabled = false; btn.textContent = '🚀 Utwórz salon';
+      return;
+    }
+    // Sukces!
+    hide('state-form');
+    show('state-success');
+    document.getElementById('state-success').innerHTML = `
+      <div class="success-box">
+        <div class="icon">🎉</div>
+        <h2>Salon gotowy!</h2>
+        <p>Twoje konto zostało założone. Możesz teraz zalogować się do systemu.</p>
+        <div class="credential-box">
+          <div class="row"><strong>Login</strong><span>${d.login}</span></div>
+          <div class="row"><strong>Hasło</strong><span>${wData.dostep.haslo}</span></div>
+          <div class="row"><strong>Salon</strong><span>${wData.salon.nazwa_salonu}</span></div>
+        </div>
+        <p style="font-size:12px; color:#166534;">⚠️ Zapisz te dane w bezpiecznym miejscu!</p>
+        <a href="/" class="btn-go">→ Przejdź do logowania</a>
+      </div>
+    `;
+  })
+  .catch(() => {
+    err.style.display = 'block'; err.textContent = 'Błąd połączenia z serwerem. Spróbuj ponownie.';
+    btn.disabled = false; btn.textContent = '🚀 Utwórz salon';
+  });
+}
+</script>
+</body>
+</html>
