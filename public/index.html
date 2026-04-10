@@ -14010,9 +14010,11 @@ function kon_pobierzKampanie() {
         
         const sel = document.getElementById('kon_k_kampania');
         if(sel) {
-            sel.innerHTML = '<option value="">-- Wybierz Typ / Kampanię --</option>';
-            d.filter(c => c.status === 'Aktywna').forEach(c => {
-                sel.innerHTML += `<option value="${c.id_row}">${c.nazwa} (${c.obszar})</option>`;
+            const aktywne = d.filter(c => String(c.status || '').trim().toLowerCase() === 'aktywna');
+            console.log(`[kon_get_campaigns] Pobrano: ${d.length} kampanii, aktywnych: ${aktywne.length}`);
+            sel.innerHTML = `<option value="">-- Wybierz Akcję (${aktywne.length} dostępnych) --</option>`;
+            aktywne.forEach(c => {
+                sel.innerHTML += `<option value="${c.id_row}">${c.nazwa} (${c.obszar || 'brak obszaru'})</option>`;
             });
         }
         
