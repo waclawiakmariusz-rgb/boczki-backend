@@ -4732,7 +4732,9 @@ let wciecieLogow = "";
                 args[1] = options;
             } catch(e) {}
         } else if (tId && akcja !== 'login') {
-            args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            if (!urlStr.includes('tenant_id=')) {
+                args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            }
         }
 
         // 3. WYSYŁKA I DIAGNOSTYKA ODPOWIEDZI
@@ -4812,7 +4814,9 @@ let wciecieLogow = "";
                 args[1] = options;
             } catch(e) {}
         } else if (tId && akcja !== 'login') {
-            args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            if (!urlStr.includes('tenant_id=')) {
+                args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            }
         }
 
         // 3. WYSYŁKA I DIAGNOSTYKA ODPOWIEDZI
