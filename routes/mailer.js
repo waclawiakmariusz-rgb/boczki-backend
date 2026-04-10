@@ -5,12 +5,10 @@ const nodemailer = require('nodemailer');
 
 function createTransport() {
   return nodemailer.createTransport({
-    host:   process.env.SMTP_HOST   || 'smtp.hostinger.com',
-    port:   parseInt(process.env.SMTP_PORT) || 465,
-    secure: process.env.SMTP_SECURE !== 'false', // true dla 465
+    service: 'gmail',
     auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
+      user: process.env.SMTP_USER,  // np. twojmail@gmail.com
+      pass: process.env.SMTP_PASS,  // App Password (16 znaków z myaccount.google.com/apppasswords)
     },
   });
 }
