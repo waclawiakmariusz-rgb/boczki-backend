@@ -14003,7 +14003,8 @@ const role = (localStorage.getItem('boczki_pracownik_rola') || "").toLowerCase()
 function kon_pobierzKampanie() {
     fetch(API_URL + "?action=kon_get_campaigns&tenant_id=" + localStorage.getItem('boczki_tenant_id'))
     .then(r => r.json())
-    .then(d => { 
+    .then(d => {
+        if (d && d.error) { console.error('[kon_get_campaigns] Błąd backendu:', d.error); d = []; }
         if (!Array.isArray(d)) d = [];
         kon_campaignsData = d;
         

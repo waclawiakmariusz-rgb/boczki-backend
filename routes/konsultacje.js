@@ -95,7 +95,7 @@ module.exports = (db) => {
         `SELECT id, nazwa, obszar, cena, prog, opis, status FROM Typy_konsultacji WHERE tenant_id = ?`,
         [tenant_id],
         (err, rows) => {
-          if (err) return res.json([]);
+          if (err) { console.error('[kon_get_campaigns] Błąd SQL:', err.message); return res.json({ error: err.message }); }
           return res.json((rows || []).map((r, i) => ({
             id_row: i + 2, id: r.id, nazwa: r.nazwa, obszar: r.obszar,
             cena: Number(r.cena) || 0, prog: Number(r.prog) || 0,
