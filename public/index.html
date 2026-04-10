@@ -5995,31 +5995,42 @@ function sortujZamowienia(kolumna) {
 
 function przywrocZadatek(id) {
     if(!confirm("Czy na pewno chcesz cofnąć utratę tego zadatku? \nKwota wróci na saldo dostępne klienta.")) return;
-    
+
     document.body.style.cursor = 'wait';
-    
+
+    const zadatek = window.cacheZadatkow.find(x => x.id == id);
+    const celBezPrefiksu = String(zadatek.cel || '').replace(/^Przywrócony:\s*/i, '');
+
     fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
             action: 'manage_deposit',
             typ: 'EDIT_FULL',
             id_zadatku: id,
-            nowy_status: 'AKTYWNY', // Kluczowa zmiana statusu
+            nowy_status: 'AKTYWNY',
             pracownik: currentUser,
-            // Przesyłamy obecne dane, by ich nie nadpisać pustymi wartościami
-            nowa_kwota: window.cacheZadatkow.find(x => x.id == id).kwota,
-            nowy_cel: window.cacheZadatkow.find(x => x.id == id).cel,
-            nowa_metoda: window.cacheZadatkow.find(x => x.id == id).metoda,
-            nowi_pracownicy: window.cacheZadatkow.find(x => x.id == id).pracownicy
+            nowa_kwota: zadatek.kwota,
+            nowy_cel: 'Przywrócony: ' + celBezPrefiksu,
+            nowa_metoda: zadatek.metoda,
+            nowi_pracownicy: zadatek.pracownicy
         })
     })
     .then(r => r.json())
     .then(d => {
         document.body.style.cursor = 'default';
+        if (d && d.status === 'error') {
+            alert("Błąd: " + d.message);
+            return;
+        }
         alert("Zadatek został przywrócony!");
-        document.getElementById('btn-odswiez-profil').click(); // Automatyczne odświeżenie widoku
+        if (window.aktualnyProfilKlientNazwa) {
+            pobierzPortfel(window.aktualnyProfilKlientNazwa);
+        }
     })
-    .catch(err => alert("Błąd przywracania: " + err));
+    .catch(err => {
+        document.body.style.cursor = 'default';
+        alert("Błąd przywracania: " + err);
+    });
 }
 
 // Funkcja wywoływana po wybraniu klienta z listy
@@ -6474,7 +6485,9 @@ function otworzProfil(idKlienta) {
         return;
     }
 
-    const nazwaKlienta = klientObj.nazwa; 
+    const nazwaKlienta = klientObj.nazwa;
+    window.aktualnyProfilKlientNazwa = nazwaKlienta;
+    window.aktualnyProfilKlientId = idKlienta;
 
     // 1. Przełącz widok
     document.getElementById('widok-listy-klientow').style.display = 'none';
@@ -14188,8 +14201,8 @@ function kon_przeliczAutomatyke() {
     const upsellInput = document.getElementById('kon_k_upsell');
     if(upsellInput) upsellInput.value = (upsell < 0 ? 0 : upsell).toFixed(2);
 
-    // Darmowość
-    if(progVal > 0 && pakietVal >= progVal) {
+    // Darmowość - w trybie Reklama zawsze zapisujemy bazowy koszt kampanii
+    if(kon_currentMode !== 'Reklama' && progVal > 0 && pakietVal >= progVal) {
         kosztEl.value = 0;
     } else {
         kosztEl.value = cenaBazowa;
