@@ -52,6 +52,7 @@ const targetyRoutes    = require('./routes/targety')(db);
 const raportRoutes     = require('./routes/raport')(db);
 const usersRoutes      = require('./routes/users')(db);
 const logiRoutes       = require('./routes/logi')(db);
+const adminRoutes      = require('./routes/admin')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -69,6 +70,7 @@ app.use('/api', targetyRoutes);
 app.use('/api', raportRoutes);
 app.use('/api', usersRoutes);
 app.use('/api', logiRoutes);
+app.use('/api', adminRoutes);
 
 // ==========================================
 // TEST ENDPOINT
