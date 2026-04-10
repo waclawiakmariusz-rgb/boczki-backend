@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="icon.png">
+<title>Boczki na bok — Zamów dostęp</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --primary: #ff758c;
+  --primary-dark: #ff7eb3;
+  --primary-glow: rgba(255,117,140,0.25);
+  --bg: #fdf8f5;
+  --white: #fff;
+  --text: #2d3748;
+  --muted: #a0aec0;
+  --radius: 24px;
+  --radius-btn: 16px;
+  --shadow: 0 15px 35px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.02);
+  --shadow-glow: 0 12px 25px -5px var(--primary-glow);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 50%, #fda4af 100%);
+  padding: 70px 20px 80px; text-align: center; position: relative; overflow: hidden;
+}
+.hero::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 60%),
+              radial-gradient(circle at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
+}
+.hero-content { position: relative; z-index: 1; }
+.hero .logo { font-size: 52px; margin-bottom: 16px; }
+.hero h1 { font-size: 36px; font-weight: 800; color: white; margin-bottom: 12px; line-height: 1.2; }
+.hero p { font-size: 16px; color: rgba(255,255,255,0.88); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+
+/* ── FEATURES ── */
+.features { max-width: 900px; margin: -30px auto 0; padding: 0 20px; position: relative; z-index: 2; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
+.feature-card {
+  background: var(--white); border-radius: 20px; padding: 24px 20px; text-align: center;
+  box-shadow: var(--shadow); transition: all 0.3s;
+}
+.feature-card:hover { transform: translateY(-4px); }
+.feature-card .icon { font-size: 32px; margin-bottom: 12px; }
+.feature-card h3 { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
+.feature-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ── FORMULARZ ── */
+.form-section { max-width: 600px; margin: 50px auto; padding: 0 20px 60px; }
+.form-card {
+  background: var(--white); border-radius: var(--radius); padding: 44px 40px;
+  box-shadow: var(--shadow);
+}
+.form-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
+.form-card .sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
+input, select, textarea {
+  width: 100%; padding: 14px 17px; background: #f4f7f8; border: 2px solid transparent;
+  border-radius: 14px; font-size: 14px; color: var(--text); font-weight: 600;
+  outline: none; transition: all 0.3s; font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+  background: white; border-color: var(--primary);
+  box-shadow: 0 6px 18px rgba(255,117,140,0.12); transform: translateY(-1px);
+}
+textarea { resize: vertical; min-height: 90px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.btn-submit {
+  width: 100%; padding: 18px; margin-top: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: white; border: none; border-radius: var(--radius-btn);
+  font-family: inherit; font-weight: 700; font-size: 15px; text-transform: uppercase;
+  letter-spacing: 1px; cursor: pointer; box-shadow: var(--shadow-glow); transition: all 0.3s;
+}
+.btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(255,117,140,0.35); }
+.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+.alert { padding: 13px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
+.alert-error { background: #fee2e2; color: #991b1b; }
+
+/* ── SUKCES ── */
+.success-wrap { text-align: center; padding: 50px 30px; }
+.success-wrap .icon { font-size: 64px; margin-bottom: 20px; }
+.success-wrap h2 { font-size: 24px; font-weight: 800; color: #166534; margin-bottom: 12px; }
+.success-wrap p { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 400px; margin: 0 auto; }
+.check-list { list-style: none; text-align: left; max-width: 340px; margin: 24px auto 0; }
+.check-list li { padding: 8px 0; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 10px; }
+.check-list li::before { content: '✓'; color: #10b981; font-weight: 800; font-size: 16px; flex-shrink: 0; }
+
+@media (max-width: 520px) {
+  .hero h1 { font-size: 26px; }
+  .form-card { padding: 30px 24px; }
+  .form-row { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-content">
+    <div class="logo">🎀</div>
+    <h1>System Boczki na bok<br>dla Twojego salonu</h1>
+    <p>Sprzedaż, klienci, zadatki, urodziny, analityka — wszystko w jednym miejscu. Wypełnij formularz i zacznij już dziś.</p>
+  </div>
+</div>
+
+<!-- CECHY -->
+<div class="features">
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="icon">💰</div>
+      <h3>Sprzedaż i kasa</h3>
+      <p>Rejestruj sprzedaż, zadatki i płatności kartą, gotówką czy BLIK.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">👥</div>
+      <h3>Baza klientów</h3>
+      <p>Profile klientów z historią wizyt, urodzinami i notatkami.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">📊</div>
+      <h3>Analityka</h3>
+      <p>Raporty miesięczne, dzienne podsumowania i analizy usług.</p>
+    </div>
+    <div class="feature-card">
+      <div class="icon">🎂</div>
+      <h3>Urodziny</h3>
+      <p>Automatyczne powiadomienia o urodzinach klientów.</p>
+    </div>
+  </div>
+</div>
+
+<!-- FORMULARZ -->
+<div class="form-section">
+  <div class="form-card" id="form-card">
+    <h2>📋 Zamów dostęp</h2>
+    <p class="sub">Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link do rejestracji po potwierdzeniu płatności.</p>
+
+    <div id="form-error" class="alert alert-error" style="display:none;"></div>
+
+    <form id="zamow-form" onsubmit="wyslij(event)">
+      <div class="form-group">
+        <label>Twoje imię i nazwisko *</label>
+        <input type="text" id="f-imie" placeholder="np. Anna Kowalska" required>
+      </div>
+      <div class="form-group">
+        <label>Nazwa salonu *</label>
+        <input type="text" id="f-salon" placeholder="np. Studio Urody Kleopatra" required>
+      </div>
+      <div class="form-group">
+        <label>Adres e-mail *</label>
+        <input type="email" id="f-email" placeholder="np. anna@salon.pl" required>
+        <div style="font-size:11px; color:var(--muted); margin-top:5px;">Na ten adres wyślemy link rejestracyjny.</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Telefon</label>
+          <input type="tel" id="f-telefon" placeholder="np. 500 123 456">
+        </div>
+        <div class="form-group">
+          <label>Miasto</label>
+          <input type="text" id="f-miasto" placeholder="np. Warszawa">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Wiadomość (opcjonalnie)</label>
+        <textarea id="f-wiadomosc" placeholder="Napisz coś o swoim salonie lub zadaj pytanie..."></textarea>
+      </div>
+      <button type="submit" class="btn-submit" id="btn-wyslij">📩 Wyślij zgłoszenie</button>
+    </form>
+  </div>
+</div>
+
+<script>
+async function wyslij(e) {
+  e.preventDefault();
+  const errEl = document.getElementById('form-error');
+  errEl.style.display = 'none';
+  const btn = document.getElementById('btn-wyslij');
+  btn.disabled = true; btn.textContent = '⏳ Wysyłam...';
+
+  const payload = {
+    imie:         document.getElementById('f-imie').value.trim(),
+    nazwa_salonu: document.getElementById('f-salon').value.trim(),
+    email:        document.getElementById('f-email').value.trim(),
+    telefon:      document.getElementById('f-telefon').value.trim(),
+    miasto:       document.getElementById('f-miasto').value.trim(),
+    wiadomosc:    document.getElementById('f-wiadomosc').value.trim(),
+  };
+
+  try {
+    const res = await fetch('/api/zamowienie', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const d = await res.json();
+
+    if (d.status !== 'success') {
+      errEl.style.display = 'block'; errEl.textContent = d.message;
+      btn.disabled = false; btn.textContent = '📩 Wyślij zgłoszenie';
+      return;
+    }
+
+    // Sukces
+    document.getElementById('form-card').innerHTML = `
+      <div class="success-wrap">
+        <div class="icon">🎉</div>
+        <h2>Zgłoszenie przyjęte!</h2>
+        <p>Dziękujemy, <strong>${payload.imie}</strong>! Twoje zgłoszenie zostało przyjęte.</p>
+        <ul class="check-list">
+          <li>Otrzymaliśmy Twoje dane</li>
+          <li>Skontaktujemy się wkrótce</li>
+          <li>Po potwierdzeniu płatności wyślemy link rejestracyjny na <strong>${payload.email}</strong></li>
+        </ul>
+      </div>
+    `;
+  } catch {
+    errEl.style.display = 'block'; errEl.textContent = 'Błąd połączenia. Spróbuj ponownie.';
+    btn.disabled = false; btn.textContent = '📩 Wyślij zgłoszenie';
+  }
+}
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
+const { wyslijLinkRejestracji, powiadomAdmina } = require('./mailer');
 
 // ─── Pomocnicze ──────────────────────────────────────────────
 function slugify(text) {
@@ -156,9 +157,9 @@ module.exports = (db) => {
 
   // ─── TOKENY REJESTRACJI ───────────────────────────────────────
 
-  // POST /api/admin/generate_token — wygeneruj link rejestracyjny
+  // POST /api/admin/generate_token — wygeneruj link rejestracyjny (opcjonalnie wyślij email)
   router.post('/admin/generate_token', requireAdmin, (req, res) => {
-    const { notatka, dni_waznosci } = req.body;
+    const { notatka, dni_waznosci, email_klienta, imie_klienta, nazwa_salonu } = req.body;
     const token = randomUUID();
     const dni = parseInt(dni_waznosci) || 7;
     const wygasa = new Date(Date.now() + dni * 24 * 60 * 60 * 1000);
@@ -166,11 +167,45 @@ module.exports = (db) => {
     db.query(
       `INSERT INTO Tokeny_rejestracji (token, status, data_wygasniecia, notatka) VALUES (?, 'nowy', ?, ?)`,
       [token, wygasa, notatka || null],
-      (err) => {
+      async (err) => {
         if (err) return res.json({ status: 'error', message: err.message });
-        return res.json({ status: 'success', token });
+
+        // Jeśli podano email — wyślij automatycznie
+        if (email_klienta) {
+          try {
+            await wyslijLinkRejestracji({ email: email_klienta, imie: imie_klienta, token, nazwa_salonu });
+            return res.json({ status: 'success', token, wyslano_email: true });
+          } catch (mailErr) {
+            console.error('[mailer] Błąd wysyłki:', mailErr.message);
+            return res.json({ status: 'success', token, wyslano_email: false, mail_error: mailErr.message });
+          }
+        }
+
+        return res.json({ status: 'success', token, wyslano_email: false });
       }
     );
+  });
+
+  // POST /api/admin/wyslij_link — wyślij link do istniejącego tokenu lub zamówienia
+  router.post('/admin/wyslij_link', requireAdmin, async (req, res) => {
+    const { token, email, imie, nazwa_salonu, zamowienie_id } = req.body;
+    if (!token || !email) return res.json({ status: 'error', message: 'Brak tokenu lub emaila.' });
+
+    try {
+      await wyslijLinkRejestracji({ email, imie, token, nazwa_salonu });
+
+      // Jeśli to zgłoszenie — aktualizuj status
+      if (zamowienie_id) {
+        db.query(
+          `UPDATE Zamowienia SET status='wyslano_link', token_wyslany=? WHERE id=?`,
+          [token, zamowienie_id]
+        );
+      }
+
+      return res.json({ status: 'success', message: 'Link wysłany!' });
+    } catch (err) {
+      return res.json({ status: 'error', message: 'Błąd wysyłki maila: ' + err.message });
+    }
   });
 
   // GET /api/admin/tokeny — lista tokenów
@@ -195,6 +230,54 @@ module.exports = (db) => {
   router.post('/admin/delete_token', requireAdmin, (req, res) => {
     const { token } = req.body;
     db.query(`DELETE FROM Tokeny_rejestracji WHERE token = ? LIMIT 1`, [token], (err) => {
+      if (err) return res.json({ status: 'error', message: err.message });
+      return res.json({ status: 'success' });
+    });
+  });
+
+  // ─── ZAMÓWIENIA (formularz publiczny) ────────────────────────
+
+  // POST /api/zamowienie — nowe zgłoszenie od klienta
+  router.post('/zamowienie', async (req, res) => {
+    const { imie, nazwa_salonu, email, telefon, miasto, wiadomosc } = req.body;
+    if (!imie || !nazwa_salonu || !email) {
+      return res.json({ status: 'error', message: 'Podaj imię, nazwę salonu i email.' });
+    }
+
+    const id = randomUUID();
+    db.query(
+      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, miasto, wiadomosc) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, miasto || null, wiadomosc || null],
+      async (err) => {
+        if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
+
+        // Powiadom admina emailem
+        try {
+          await powiadomAdmina({ imie, nazwa_salonu, email, telefon, miasto, wiadomosc });
+        } catch (mailErr) {
+          console.error('[mailer] Powiadomienie admina nie wysłane:', mailErr.message);
+        }
+
+        return res.json({ status: 'success', message: 'Zgłoszenie zostało przyjęte!' });
+      }
+    );
+  });
+
+  // GET /api/admin/zamowienia — lista zgłoszeń
+  router.get('/admin/zamowienia', requireAdmin, (req, res) => {
+    db.query(
+      `SELECT * FROM Zamowienia ORDER BY data_zgloszenia DESC`,
+      (err, rows) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        return res.json(rows || []);
+      }
+    );
+  });
+
+  // POST /api/admin/zamowienie_status — zmień status
+  router.post('/admin/zamowienie_status', requireAdmin, (req, res) => {
+    const { id, status } = req.body;
+    db.query(`UPDATE Zamowienia SET status=? WHERE id=?`, [status, id], (err) => {
       if (err) return res.json({ status: 'error', message: err.message });
       return res.json({ status: 'success' });
     });

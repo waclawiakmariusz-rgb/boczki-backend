@@ -204,6 +204,30 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
   margin: 20px 0; letter-spacing: 1px; box-shadow: var(--shadow);
 }
 
+/* ── ZGŁOSZENIA ── */
+.zgl-card {
+  background: var(--white); border-radius: 20px; padding: 24px 28px;
+  box-shadow: var(--shadow); margin-bottom: 14px; transition: all 0.3s;
+  border-left: 4px solid transparent;
+}
+.zgl-card.nowe { border-left-color: var(--primary); }
+.zgl-card.wyslano_link { border-left-color: var(--blue); }
+.zgl-card.zrealizowane { border-left-color: var(--green); opacity: 0.7; }
+.zgl-card.odrzucone { border-left-color: #cbd5e1; opacity: 0.55; }
+.zgl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+.zgl-name { font-size: 17px; font-weight: 800; }
+.zgl-salon { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.zgl-meta { font-size: 13px; color: var(--muted); line-height: 1.8; }
+.zgl-meta a { color: var(--primary); text-decoration: none; font-weight: 600; }
+.zgl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; padding-top: 16px; border-top: 1px solid #f1f5f9; }
+.zgl-msg { font-size: 13px; color: #4a5568; background: #f8fafc; border-radius: 10px; padding: 10px 14px; margin-top: 10px; font-style: italic; }
+.badge-nowe { background: #fff0f3; color: var(--primary); }
+.badge-wyslano { background: #eff6ff; color: var(--blue); }
+.badge-zreal { background: #dcfce7; color: var(--green); }
+.badge-odrz { background: #f1f5f9; color: var(--muted); }
+.send-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 200; padding: 20px; }
+.send-modal.open { display: flex; }
+
 /* ── TOKENY ── */
 .token-card {
   background: var(--white); border-radius: 16px; padding: 20px 24px;
@@ -298,13 +322,19 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
     <!-- Tabs -->
     <div class="tab-bar">
       <button class="tab-btn active" onclick="showTab('tab-salony')">🏪 Salony</button>
-      <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki rejestracji</button>
-      <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon (admin)</button>
+      <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
+      <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
+      <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
     </div>
 
     <!-- Tab: Lista salonów -->
     <div id="tab-salony" class="tab-panel active">
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
+    </div>
+
+    <!-- Tab: Zgłoszenia od klientów -->
+    <div id="tab-zgloszenia" class="tab-panel">
+      <div id="zgloszenia-content" class="loading">Ładowanie zgłoszeń...</div>
     </div>
 
     <!-- Tab: Linki rejestracji -->
@@ -466,6 +496,34 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
   </div><!-- /app-content -->
 </div><!-- /app -->
 
+<!-- Modal: Wyślij link do klienta -->
+<div class="send-modal" id="send-modal">
+  <div class="modal-box">
+    <h3>📩 Wyślij link rejestracyjny</h3>
+    <input type="hidden" id="sm-zamowienie-id">
+    <input type="hidden" id="sm-email">
+    <div id="sm-error" class="alert alert-error" style="display:none;"></div>
+    <div id="sm-info" style="background:#f8fafc; border-radius:12px; padding:14px 16px; margin-bottom:20px; font-size:13px; color:var(--text);"></div>
+    <div class="form-group">
+      <label>Ważność linku</label>
+      <select id="sm-dni">
+        <option value="3">3 dni</option>
+        <option value="7" selected>7 dni</option>
+        <option value="14">14 dni</option>
+        <option value="30">30 dni</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Notatka do tokenu</label>
+      <input type="text" id="sm-notatka" placeholder="np. imię klienta">
+    </div>
+    <div style="display:flex; gap:12px; margin-top:10px;">
+      <button class="btn-secondary" style="flex:1;" onclick="closeSendModal()">Anuluj</button>
+      <button class="btn-primary" style="flex:2; margin-top:0;" id="sm-btn" onclick="wyslijLinkDoKlienta()">📩 Generuj i wyślij email</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal edycji -->
 <div class="modal-overlay" id="edit-modal">
   <div class="modal-box">
@@ -539,6 +597,7 @@ function adminLogin() {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     zaladujSalony();
+    zaladujZgloszenia();
     initWizard();
   })
   .catch(() => { errEl.style.display = 'block'; errEl.textContent = 'Błąd połączenia z serwerem.'; });
@@ -552,6 +611,141 @@ function adminLogout() {
   document.getElementById('admin-password').value = '';
 }
 
+// ═══════════════════════════════════════════════
+// ZGŁOSZENIA
+// ═══════════════════════════════════════════════
+const statusLabel = { nowe: '🆕 Nowe', wyslano_link: '📩 Wysłano link', zrealizowane: '✅ Zrealizowane', odrzucone: '✗ Odrzucone' };
+const statusBadge = { nowe: 'badge-nowe', wyslano_link: 'badge-wyslano', zrealizowane: 'badge-zreal', odrzucone: 'badge-odrz' };
+
+function zaladujZgloszenia() {
+  const cont = document.getElementById('zgloszenia-content');
+  cont.innerHTML = '<div class="loading">Ładowanie zgłoszeń...</div>';
+
+  fetch(`${API}/admin/zamowienia`, { headers: { 'X-Admin-Token': adminToken } })
+  .then(r => r.json())
+  .then(data => {
+    const nowe = data.filter(z => z.status === 'nowe').length;
+    const badge = document.getElementById('badge-nowe');
+    if (nowe > 0) { badge.style.display = 'inline'; badge.textContent = nowe; }
+    else badge.style.display = 'none';
+
+    if (!data.length) {
+      cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Brak zgłoszeń.<br>Klienci mogą składać zamówienia przez <strong>/zamow.html</strong></p></div>`;
+      return;
+    }
+
+    cont.innerHTML = data.map(z => {
+      const data_zgl = new Date(z.data_zgloszenia).toLocaleString('pl-PL');
+      return `
+      <div class="zgl-card ${z.status}">
+        <div class="zgl-header">
+          <div>
+            <div class="zgl-name">${z.imie}</div>
+            <div class="zgl-salon">🏪 ${z.nazwa_salonu}${z.miasto ? ` · ${z.miasto}` : ''}</div>
+          </div>
+          <span class="badge ${statusBadge[z.status]}">${statusLabel[z.status]}</span>
+        </div>
+        <div class="zgl-meta">
+          📧 <a href="mailto:${z.email}">${z.email}</a>
+          ${z.telefon ? ` · 📞 ${z.telefon}` : ''}
+          · 🕐 ${data_zgl}
+          ${z.token_wyslany ? `<br>🔗 Token: <code style="font-size:11px;">${z.token_wyslany}</code>` : ''}
+        </div>
+        ${z.wiadomosc ? `<div class="zgl-msg">„${z.wiadomosc}"</div>` : ''}
+        <div class="zgl-actions">
+          ${z.status === 'nowe' ? `
+            <button class="btn-sm btn-edit" onclick="otworzSendModal('${z.id}','${z.email}','${z.imie}','${z.nazwa_salonu}')">
+              📩 Wyślij link
+            </button>` : ''}
+          ${z.status === 'wyslano_link' ? `
+            <button class="btn-sm btn-edit" onclick="otworzSendModal('${z.id}','${z.email}','${z.imie}','${z.nazwa_salonu}')">
+              🔄 Wyślij ponownie
+            </button>` : ''}
+          ${z.status !== 'zrealizowane' ? `
+            <button class="btn-sm btn-activate" onclick="zmienStatusZgl('${z.id}','zrealizowane')">✅ Zrealizowane</button>` : ''}
+          ${z.status !== 'odrzucone' ? `
+            <button class="btn-sm btn-deactivate" onclick="zmienStatusZgl('${z.id}','odrzucone')">✗ Odrzuć</button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  })
+  .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania zgłoszeń.</div>'; });
+}
+
+function zmienStatusZgl(id, status) {
+  fetch(`${API}/admin/zamowienie_status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ id, status })
+  }).then(() => zaladujZgloszenia());
+}
+
+// ── Modal wysyłki ──
+function otworzSendModal(id, email, imie, nazwa) {
+  document.getElementById('sm-zamowienie-id').value = id;
+  document.getElementById('sm-email').value = email;
+  document.getElementById('sm-notatka').value = imie;
+  document.getElementById('sm-info').innerHTML = `
+    <strong>${imie}</strong> — ${nazwa}<br>
+    <span style="color:var(--muted);">Link zostanie wysłany na: <strong>${email}</strong></span>
+  `;
+  document.getElementById('sm-error').style.display = 'none';
+  document.getElementById('sm-btn').disabled = false;
+  document.getElementById('sm-btn').textContent = '📩 Generuj i wyślij email';
+  document.getElementById('send-modal').classList.add('open');
+}
+
+function closeSendModal() {
+  document.getElementById('send-modal').classList.remove('open');
+}
+
+async function wyslijLinkDoKlienta() {
+  const btn = document.getElementById('sm-btn');
+  const errEl = document.getElementById('sm-error');
+  errEl.style.display = 'none';
+  btn.disabled = true; btn.textContent = '⏳ Wysyłam...';
+
+  const zamowienie_id = document.getElementById('sm-zamowienie-id').value;
+  const email = document.getElementById('sm-email').value;
+  const notatka = document.getElementById('sm-notatka').value;
+  const dni = document.getElementById('sm-dni').value;
+
+  // 1. Generuj token
+  const tokRes = await fetch(`${API}/admin/generate_token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ notatka, dni_waznosci: dni, email_klienta: email })
+  }).then(r => r.json());
+
+  if (tokRes.status !== 'success') {
+    errEl.style.display = 'block'; errEl.textContent = 'Błąd generowania tokenu: ' + tokRes.message;
+    btn.disabled = false; btn.textContent = '📩 Generuj i wyślij email';
+    return;
+  }
+
+  if (!tokRes.wyslano_email) {
+    errEl.style.display = 'block';
+    errEl.textContent = `Token wygenerowany, ale mail nie wysłany: ${tokRes.mail_error || 'Sprawdź konfigurację SMTP w .env'}`;
+    btn.disabled = false; btn.textContent = '📩 Generuj i wyślij email';
+    return;
+  }
+
+  // 2. Zaktualizuj status zgłoszenia
+  await fetch(`${API}/admin/zamowienie_status`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ id: zamowienie_id, status: 'wyslano_link' })
+  });
+
+  closeSendModal();
+  zaladujZgloszenia();
+  alert('✅ Link rejestracyjny wysłany!');
+}
+
+document.getElementById('send-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeSendModal();
+});
+
 // Auto-login z sessionStorage
 window.addEventListener('load', () => {
   const saved = sessionStorage.getItem('boczki_admin_token');
@@ -560,6 +754,7 @@ window.addEventListener('load', () => {
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
     zaladujSalony();
+    zaladujZgloszenia();
     initWizard();
   }
 });
@@ -573,6 +768,7 @@ function showTab(id) {
   document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
   if (id === 'tab-salony') zaladujSalony();
+  if (id === 'tab-zgloszenia') zaladujZgloszenia();
   if (id === 'tab-linki') zaladujTokeny();
   if (id === 'tab-nowy') resetWizard();
 }
