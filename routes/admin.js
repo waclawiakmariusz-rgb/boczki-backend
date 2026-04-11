@@ -29,7 +29,7 @@ function slugify(text) {
 }
 
 // ─── Middleware: weryfikacja tokenu admina ────────────────────
-const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'boczki-admin-2026';
+const ADMIN_TOKEN = (process.env.ADMIN_TOKEN || 'boczki-admin-2026').replace(/^['"]|['"]$/g, '');
 
 function requireAdmin(req, res, next) {
   const token = req.headers['x-admin-token'] || req.body?.admin_token || req.query?.admin_token;
