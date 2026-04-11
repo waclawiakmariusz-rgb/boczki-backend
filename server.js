@@ -16,12 +16,17 @@ app.use(express.json());
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 
+// Usuwa apostrofy/cudzysłowy które Hostinger panel dodaje do wartości env
+function env(key) {
+    return (process.env[key] || '').replace(/^['"]|['"]$/g, '');
+}
+
 // Konfiguracja puli połączeń z bazą MySQL
 const db = mysql.createPool({
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
+    host: env('DB_HOST'),
+    user: env('DB_USER'),
+    password: env('DB_PASSWORD'),
+    database: env('DB_NAME'),
     charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10,
