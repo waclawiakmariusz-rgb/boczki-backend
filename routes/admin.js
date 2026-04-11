@@ -384,5 +384,129 @@ module.exports = (db) => {
     );
   });
 
+  // ─── VOUCHERY ────────────────────────────────────────────────
+
+  // Auto-create tabeli jeśli nie istnieje
+  db.query(`CREATE TABLE IF NOT EXISTS Kody_rabatowe (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    kod VARCHAR(50) UNIQUE NOT NULL,
+    typ ENUM('procent','zlotowki') NOT NULL,
+    wartosc DECIMAL(10,2) NOT NULL,
+    czas_trwania ENUM('zawsze','miesiecy') NOT NULL DEFAULT 'zawsze',
+    czas_trwania_miesiecy INT NULL,
+    max_uzyc INT NULL,
+    ilosc_uzyc INT DEFAULT 0,
+    aktywny TINYINT DEFAULT 1,
+    notatka VARCHAR(255) NULL,
+    data_wygasniecia DATE NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  )`, (err) => {
+    if (err) console.error('[admin] Błąd tworzenia tabeli Kody_rabatowe:', err.message);
+  });
+
+  // GET /api/admin/vouchery — lista voucherów
+  router.get('/admin/vouchery', requireAdmin, (req, res) => {
+    db.query(`SELECT * FROM Kody_rabatowe ORDER BY created_at DESC`, (err, rows) => {
+      if (err) return res.json({ status: 'error', message: err.message });
+      return res.json(rows || []);
+    });
+  });
+
+  // POST /api/admin/voucher — utwórz voucher
+  router.post('/admin/voucher', requireAdmin, (req, res) => {
+    const { kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia } = req.body;
+    if (!kod || !typ || wartosc === undefined) return res.json({ status: 'error', message: 'Podaj kod, typ i wartość.' });
+    if (!['procent', 'zlotowki'].includes(typ)) return res.json({ status: 'error', message: 'Nieprawidłowy typ.' });
+
+    const ct = czas_trwania === 'miesiecy' ? 'miesiecy' : 'zawsze';
+    const ctMies = ct === 'miesiecy' ? (parseInt(czas_trwania_miesiecy) || 12) : null;
+
+    db.query(
+      `INSERT INTO Kody_rabatowe (kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        kod.trim().toUpperCase(), typ, parseFloat(wartosc), ct, ctMies,
+        max_uzyc ? parseInt(max_uzyc) : null,
+        notatka || null,
+        data_wygasniecia || null
+      ],
+      (err) => {
+        if (err) {
+          if (err.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', message: 'Kod już istnieje.' });
+          return res.json({ status: 'error', message: err.message });
+        }
+        return res.json({ status: 'success', message: 'Voucher utworzony.' });
+      }
+    );
+  });
+
+  // POST /api/admin/voucher/toggle — aktywuj/deaktywuj
+  router.post('/admin/voucher/toggle', requireAdmin, (req, res) => {
+    const { id, aktywny } = req.body;
+    db.query(`UPDATE Kody_rabatowe SET aktywny=? WHERE id=? LIMIT 1`, [aktywny ? 1 : 0, id], (err) => {
+      if (err) return res.json({ status: 'error', message: err.message });
+      return res.json({ status: 'success' });
+    });
+  });
+
+  // POST /api/admin/voucher/delete — usuń voucher
+  router.post('/admin/voucher/delete', requireAdmin, (req, res) => {
+    const { id } = req.body;
+    db.query(`DELETE FROM Kody_rabatowe WHERE id=? LIMIT 1`, [id], (err) => {
+      if (err) return res.json({ status: 'error', message: err.message });
+      return res.json({ status: 'success' });
+    });
+  });
+
+  // GET /api/voucher/weryfikuj?kod=... — publiczne, sprawdź voucher i zwróć rabat
+  router.get('/voucher/weryfikuj', (req, res) => {
+    const { kod } = req.query;
+    if (!kod) return res.json({ status: 'error', message: 'Brak kodu.' });
+
+    const cena = parseInt(process.env.STRIPE_CENA_GROSZE) || 19900;
+
+    db.query(
+      `SELECT * FROM Kody_rabatowe WHERE kod=? AND aktywny=1 LIMIT 1`,
+      [kod.trim().toUpperCase()],
+      (err, rows) => {
+        if (err || !rows.length) return res.json({ status: 'error', message: 'Nieprawidłowy kod rabatowy.' });
+        const v = rows[0];
+
+        if (v.data_wygasniecia && new Date(v.data_wygasniecia) < new Date()) {
+          return res.json({ status: 'error', message: 'Ten kod rabatowy wygasł.' });
+        }
+        if (v.max_uzyc !== null && v.ilosc_uzyc >= v.max_uzyc) {
+          return res.json({ status: 'error', message: 'Kod rabatowy został już w pełni wykorzystany.' });
+        }
+
+        let cenaPoRabacie;
+        if (v.typ === 'procent') {
+          cenaPoRabacie = Math.round(cena * (1 - v.wartosc / 100));
+        } else {
+          cenaPoRabacie = Math.max(0, cena - Math.round(v.wartosc * 100));
+        }
+
+        const czasOpis = v.czas_trwania === 'zawsze'
+          ? 'na zawsze'
+          : `przez ${v.czas_trwania_miesiecy} mies.`;
+
+        return res.json({
+          status: 'ok',
+          kod: v.kod,
+          typ: v.typ,
+          wartosc: parseFloat(v.wartosc),
+          czas_trwania: v.czas_trwania,
+          czas_trwania_miesiecy: v.czas_trwania_miesiecy,
+          cena_oryginalna_grosze: cena,
+          cena_po_rabacie_grosze: cenaPoRabacie,
+          cena_po_rabacie_display: (cenaPoRabacie / 100).toFixed(0) + ' zł',
+          opis_rabatu: v.typ === 'procent'
+            ? `-${v.wartosc}% ${czasOpis}`
+            : `-${v.wartosc} zł ${czasOpis}`,
+        });
+      }
+    );
+  });
+
   return router;
 };

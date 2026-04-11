@@ -324,6 +324,7 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
       <button class="tab-btn active" onclick="showTab('tab-salony')">🏪 Salony</button>
       <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
       <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
+      <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
       <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
     </div>
 
@@ -370,6 +371,78 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
       <!-- Lista tokenów -->
       <div id="tokeny-content" class="loading">Ładowanie...</div>
 
+    </div>
+
+    <!-- Tab: Vouchery -->
+    <div id="tab-vouchery" class="tab-panel">
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
+
+        <!-- Formularz tworzenia -->
+        <div style="background:var(--white); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow);">
+          <h3 style="font-size:17px; font-weight:800; margin-bottom:6px;">🏷️ Nowy voucher</h3>
+          <p style="font-size:13px; color:var(--muted); margin-bottom:24px;">Kody rabatowe dla klientów kupujących dostęp.</p>
+
+          <div class="form-group">
+            <label>Kod rabatowy *</label>
+            <input type="text" id="v-kod" placeholder="np. BOCZKI20" oninput="this.value=this.value.toUpperCase()" style="font-family:monospace; font-weight:700; letter-spacing:1px;">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label>Typ rabatu *</label>
+              <select id="v-typ">
+                <option value="procent">Procentowy (%)</option>
+                <option value="zlotowki">Kwotowy (zł)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Wartość *</label>
+              <input type="number" id="v-wartosc" placeholder="np. 20" min="0" step="0.01">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Czas trwania rabatu</label>
+            <select id="v-czas" onchange="toggleMiesiacePole()">
+              <option value="zawsze">Na zawsze (każde odnowienie)</option>
+              <option value="miesiecy">Przez X miesięcy</option>
+            </select>
+          </div>
+
+          <div class="form-group" id="v-miesiecy-box" style="display:none;">
+            <label>Liczba miesięcy</label>
+            <input type="number" id="v-miesiecy" placeholder="np. 12" min="1" max="120" value="12">
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+            <div class="form-group">
+              <label>Limit użyć (puste = bez limitu)</label>
+              <input type="number" id="v-maxuzyc" placeholder="np. 50" min="1">
+            </div>
+            <div class="form-group">
+              <label>Data wygaśnięcia (opcja)</label>
+              <input type="date" id="v-wygasa">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Notatka (wewnętrzna)</label>
+            <input type="text" id="v-notatka" placeholder="np. Kampania wiosenna 2026">
+          </div>
+
+          <div id="v-error" class="alert alert-error" style="display:none;"></div>
+          <button class="btn-primary" onclick="utworzVoucher()">✚ Utwórz voucher</button>
+        </div>
+
+        <!-- Lista voucherów -->
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="font-size:17px; font-weight:800;">Lista voucherów</h3>
+            <button onclick="zaladujVouchery()" style="background:none; border:none; color:var(--primary); font-weight:700; cursor:pointer; font-size:13px;">↻ Odśwież</button>
+          </div>
+          <div id="vouchery-lista" class="loading">Ładowanie...</div>
+        </div>
+      </div>
     </div>
 
     <!-- Tab: Wizard nowego salonu -->
@@ -770,6 +843,7 @@ function showTab(id) {
   if (id === 'tab-salony') zaladujSalony();
   if (id === 'tab-zgloszenia') zaladujZgloszenia();
   if (id === 'tab-linki') zaladujTokeny();
+  if (id === 'tab-vouchery') zaladujVouchery();
   if (id === 'tab-nowy') resetWizard();
 }
 
@@ -1211,6 +1285,120 @@ function aktywujSalon() {
     btn.disabled = false;
     btn.textContent = '🚀 Aktywuj salon';
   });
+}
+
+// ═══════════════════════════════════════════════
+// VOUCHERY
+// ═══════════════════════════════════════════════
+function toggleMiesiacePole() {
+  const v = document.getElementById('v-czas').value;
+  document.getElementById('v-miesiecy-box').style.display = v === 'miesiecy' ? 'block' : 'none';
+}
+
+async function zaladujVouchery() {
+  const el = document.getElementById('vouchery-lista');
+  el.innerHTML = '<div class="loading">Ładowanie...</div>';
+
+  const rows = await fetch(`${API}/admin/vouchery`, {
+    headers: { 'x-admin-token': adminToken }
+  }).then(r => r.json());
+
+  if (!rows.length) {
+    el.innerHTML = '<p style="color:var(--muted); font-size:14px;">Brak voucherów.</p>';
+    return;
+  }
+
+  el.innerHTML = rows.map(v => {
+    const aktywny = v.aktywny;
+    const typLabel = v.typ === 'procent' ? `${v.wartosc}%` : `${v.wartosc} zł`;
+    const czasLabel = v.czas_trwania === 'zawsze' ? 'na zawsze' : `${v.czas_trwania_miesiecy} mies.`;
+    const limitLabel = v.max_uzyc !== null ? `${v.ilosc_uzyc}/${v.max_uzyc}` : `${v.ilosc_uzyc}/∞`;
+    const wygasaLabel = v.data_wygasniecia
+      ? `<span style="color:#f59e0b">wygasa: ${v.data_wygasniecia}</span>`
+      : '';
+
+    return `
+      <div style="background:${aktywny ? 'var(--white)' : '#f8fafc'}; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); margin-bottom:12px; border-left:4px solid ${aktywny ? 'var(--primary)' : '#e2e8f0'};">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
+          <div>
+            <div style="font-family:monospace; font-size:16px; font-weight:800; letter-spacing:1px; color:${aktywny ? 'var(--primary)' : 'var(--muted)'};">${v.kod}</div>
+            <div style="font-size:13px; color:var(--text); margin-top:4px;">
+              <strong>-${typLabel}</strong> &nbsp;·&nbsp; ${czasLabel} &nbsp;·&nbsp; użyć: ${limitLabel}
+              ${wygasaLabel ? '&nbsp;·&nbsp;' + wygasaLabel : ''}
+            </div>
+            ${v.notatka ? `<div style="font-size:11px; color:var(--muted); margin-top:3px;">${v.notatka}</div>` : ''}
+          </div>
+          <div style="display:flex; gap:8px; flex-shrink:0;">
+            <button onclick="toggleVoucher(${v.id}, ${aktywny ? 0 : 1}, this)"
+              class="btn-sm ${aktywny ? 'btn-deactivate' : 'btn-activate'}" style="padding:8px 14px; border-radius:10px;">
+              ${aktywny ? 'Dezaktywuj' : 'Aktywuj'}
+            </button>
+            <button onclick="usunVoucher(${v.id}, this)"
+              class="btn-sm" style="background:#fff1f2; color:#be123c; padding:8px 14px; border-radius:10px;">
+              Usuń
+            </button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function utworzVoucher() {
+  const errEl = document.getElementById('v-error');
+  errEl.style.display = 'none';
+
+  const kod = document.getElementById('v-kod').value.trim().toUpperCase();
+  const typ = document.getElementById('v-typ').value;
+  const wartosc = document.getElementById('v-wartosc').value;
+  const czas_trwania = document.getElementById('v-czas').value;
+  const czas_trwania_miesiecy = document.getElementById('v-miesiecy').value;
+  const max_uzyc = document.getElementById('v-maxuzyc').value;
+  const notatka = document.getElementById('v-notatka').value;
+  const data_wygasniecia = document.getElementById('v-wygasa').value;
+
+  if (!kod || !wartosc) {
+    errEl.style.display = 'block'; errEl.textContent = 'Podaj kod i wartość rabatu.'; return;
+  }
+  if (typ === 'procent' && (parseFloat(wartosc) <= 0 || parseFloat(wartosc) > 100)) {
+    errEl.style.display = 'block'; errEl.textContent = 'Procent musi być w zakresie 1–100.'; return;
+  }
+
+  const res = await fetch(`${API}/admin/voucher`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+    body: JSON.stringify({ kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy: czas_trwania === 'miesiecy' ? czas_trwania_miesiecy : null, max_uzyc: max_uzyc || null, notatka, data_wygasniecia: data_wygasniecia || null })
+  }).then(r => r.json());
+
+  if (res.status !== 'success') {
+    errEl.style.display = 'block'; errEl.textContent = res.message; return;
+  }
+
+  // Reset formularza
+  ['v-kod','v-wartosc','v-maxuzyc','v-notatka','v-wygasa'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('v-czas').value = 'zawsze';
+  document.getElementById('v-miesiecy-box').style.display = 'none';
+  zaladujVouchery();
+}
+
+async function toggleVoucher(id, aktywny, btn) {
+  btn.disabled = true;
+  await fetch(`${API}/admin/voucher/toggle`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+    body: JSON.stringify({ id, aktywny })
+  });
+  zaladujVouchery();
+}
+
+async function usunVoucher(id, btn) {
+  if (!confirm('Usunąć voucher? Tej operacji nie można cofnąć.')) return;
+  btn.disabled = true;
+  await fetch(`${API}/admin/voucher/delete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+    body: JSON.stringify({ id })
+  });
+  zaladujVouchery();
 }
 </script>
 </body>

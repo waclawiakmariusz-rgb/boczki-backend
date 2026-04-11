@@ -33,9 +33,40 @@ module.exports = (db) => {
   router.post('/stripe/create-checkout', async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
-    const { imie, nazwa_salonu, email, telefon, miasto, wiadomosc } = req.body;
+    const { imie, nazwa_salonu, email, telefon, miasto, wiadomosc, kod_rabatowy } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
+    }
+
+    // Walidacja i obliczenie rabatu
+    const cenaBazowa = CENA_GROSZE();
+    let cenaFinalna = cenaBazowa;
+    let voucherInfo = null;
+
+    const voucherKod = (kod_rabatowy || '').trim().toUpperCase();
+    if (voucherKod) {
+      const rows = await new Promise((resolve) => {
+        db.query(
+          `SELECT * FROM Kody_rabatowe WHERE kod=? AND aktywny=1 LIMIT 1`,
+          [voucherKod],
+          (err, r) => resolve(err ? [] : r)
+        );
+      });
+
+      if (rows.length) {
+        const v = rows[0];
+        const wygasly = v.data_wygasniecia && new Date(v.data_wygasniecia) < new Date();
+        const wyczerpany = v.max_uzyc !== null && v.ilosc_uzyc >= v.max_uzyc;
+
+        if (!wygasly && !wyczerpany) {
+          if (v.typ === 'procent') {
+            cenaFinalna = Math.round(cenaBazowa * (1 - v.wartosc / 100));
+          } else {
+            cenaFinalna = Math.max(0, cenaBazowa - Math.round(v.wartosc * 100));
+          }
+          voucherInfo = v;
+        }
+      }
     }
 
     // Zapisz zgłoszenie w bazie (status: nowe — czeka na płatność)
@@ -46,6 +77,15 @@ module.exports = (db) => {
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
+        // Jeśli voucher był użyty — inkrementuj licznik (nie czekamy na wynik)
+        if (voucherInfo) {
+          db.query(`UPDATE Kody_rabatowe SET ilosc_uzyc = ilosc_uzyc + 1 WHERE id=? LIMIT 1`, [voucherInfo.id]);
+        }
+
+        const czasOpis = voucherInfo
+          ? (voucherInfo.czas_trwania === 'zawsze' ? 'na zawsze' : `przez ${voucherInfo.czas_trwania_miesiecy} mies.`)
+          : '';
+
         try {
           const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card', 'blik', 'p24'],
@@ -54,10 +94,12 @@ module.exports = (db) => {
                 currency: 'pln',
                 product_data: {
                   name: NAZWA_PRODUKTU(),
-                  description: `Salon: ${nazwa_salonu}`,
+                  description: voucherInfo
+                    ? `Salon: ${nazwa_salonu} | Kod: ${voucherInfo.kod} (${voucherInfo.typ === 'procent' ? `-${voucherInfo.wartosc}%` : `-${voucherInfo.wartosc} zł`} ${czasOpis})`
+                    : `Salon: ${nazwa_salonu}`,
                   images: [],
                 },
-                unit_amount: CENA_GROSZE(),
+                unit_amount: cenaFinalna,
               },
               quantity: 1,
             }],
@@ -68,6 +110,9 @@ module.exports = (db) => {
               imie,
               nazwa_salonu,
               email,
+              kod_rabatowy: voucherInfo ? voucherInfo.kod : '',
+              czas_trwania_rabatu: voucherInfo ? voucherInfo.czas_trwania : '',
+              czas_trwania_miesiecy: voucherInfo ? String(voucherInfo.czas_trwania_miesiecy || '') : '',
             },
             success_url: `${APP_URL()}/platnosc-sukces.html?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${APP_URL()}/zamow.html?anulowano=1`,

@@ -178,8 +178,24 @@ textarea { resize: vertical; min-height: 90px; }
         <div>
           <div style="font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Dostęp roczny</div>
           <div id="cena-display" style="font-size:26px; font-weight:800; color:var(--primary);">199 zł</div>
+          <div id="cena-oryginalna" style="font-size:13px; color:var(--muted); text-decoration:line-through; display:none;"></div>
         </div>
         <div style="font-size:12px; color:var(--muted); text-align:right; line-height:1.6;">Karta, BLIK<br>bezpieczna płatność</div>
+      </div>
+
+      <!-- Voucher / kod rabatowy -->
+      <div id="voucher-box" style="margin-bottom:16px; display:none;">
+        <div style="display:flex; gap:10px; align-items:flex-end;">
+          <div class="form-group" style="flex:1; margin:0;">
+            <label>Kod rabatowy (opcjonalnie)</label>
+            <input type="text" id="f-voucher" placeholder="np. BOCZKI20" oninput="this.value=this.value.toUpperCase()">
+          </div>
+          <button type="button" onclick="sprawdzVoucher()" id="btn-voucher"
+            style="padding:14px 20px; background:#f4f7f8; border:2px solid transparent; border-radius:14px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; transition:0.2s; white-space:nowrap; color:var(--text);">
+            Zastosuj
+          </button>
+        </div>
+        <div id="voucher-info" style="margin-top:8px; font-size:12px; font-weight:600; display:none;"></div>
       </div>
 
       <button type="submit" class="btn-submit" id="btn-wyslij">💳 Zapłać i utwórz salon</button>
@@ -193,10 +209,12 @@ fetch('/api/stripe/config').then(r => r.json()).then(d => {
   if (d.aktywny) {
     // ── TRYB PŁATNOŚCI ──
     window._stripeAktywny = true;
+    window._cenaBazowa = d.cena_display;
     document.getElementById('form-title').textContent = '💳 Kup dostęp do systemu';
     document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą lub BLIK. Link rejestracyjny otrzymasz automatycznie na email.';
     document.getElementById('cena-display').textContent = d.cena_display;
     document.getElementById('cena-box').style.display = 'flex';
+    document.getElementById('voucher-box').style.display = 'block';
     document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_display + ' i utwórz salon';
   } else {
     // ── TRYB ZGŁOSZENIA (Stripe nie skonfigurowany) ──
@@ -219,6 +237,56 @@ if (new URLSearchParams(location.search).get('anulowano')) {
   document.getElementById('form-error').textContent = 'Płatność została anulowana. Możesz spróbować ponownie.';
 }
 
+async function sprawdzVoucher() {
+  const kod = document.getElementById('f-voucher').value.trim().toUpperCase();
+  const infoEl = document.getElementById('voucher-info');
+  const btn = document.getElementById('btn-voucher');
+
+  infoEl.style.display = 'block';
+  infoEl.style.color = 'var(--muted)';
+  infoEl.textContent = 'Sprawdzam...';
+  btn.disabled = true;
+
+  if (!kod) {
+    infoEl.textContent = 'Wpisz kod rabatowy.';
+    btn.disabled = false;
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/voucher/weryfikuj?kod=' + encodeURIComponent(kod));
+    const d = await res.json();
+
+    if (d.status !== 'ok') {
+      infoEl.style.color = '#991b1b';
+      infoEl.textContent = '✗ ' + d.message;
+      window._zastosowanyVoucher = '';
+      // Przywróć oryginalną cenę
+      document.getElementById('cena-display').textContent = window._cenaBazowa || '';
+      document.getElementById('cena-oryginalna').style.display = 'none';
+      if (window._cenaBazowa) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + window._cenaBazowa + ' i utwórz salon';
+      btn.disabled = false;
+      return;
+    }
+
+    window._zastosowanyVoucher = d.kod;
+    infoEl.style.color = '#166534';
+    infoEl.textContent = '✓ Kod ważny — ' + d.opis_rabatu;
+
+    // Pokaż przekreśloną oryginalną cenę i nową
+    document.getElementById('cena-display').textContent = d.cena_po_rabacie_display;
+    const orygEl = document.getElementById('cena-oryginalna');
+    orygEl.textContent = window._cenaBazowa || '';
+    orygEl.style.display = 'block';
+    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i utwórz salon';
+
+  } catch {
+    infoEl.style.color = '#991b1b';
+    infoEl.textContent = '✗ Błąd połączenia.';
+  }
+  btn.disabled = false;
+}
+
 async function wyslij(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error');
@@ -227,12 +295,13 @@ async function wyslij(e) {
   btn.disabled = true; btn.textContent = '⏳ Przetwarzam...';
 
   const payload = {
-    imie:         document.getElementById('f-imie').value.trim(),
-    nazwa_salonu: document.getElementById('f-salon').value.trim(),
-    email:        document.getElementById('f-email').value.trim(),
-    telefon:      document.getElementById('f-telefon').value.trim(),
-    miasto:       document.getElementById('f-miasto').value.trim(),
-    wiadomosc:    document.getElementById('f-wiadomosc').value.trim(),
+    imie:          document.getElementById('f-imie').value.trim(),
+    nazwa_salonu:  document.getElementById('f-salon').value.trim(),
+    email:         document.getElementById('f-email').value.trim(),
+    telefon:       document.getElementById('f-telefon').value.trim(),
+    miasto:        document.getElementById('f-miasto').value.trim(),
+    wiadomosc:     document.getElementById('f-wiadomosc').value.trim(),
+    kod_rabatowy:  window._zastosowanyVoucher || '',
   };
 
   try {
