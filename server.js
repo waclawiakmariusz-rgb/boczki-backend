@@ -85,6 +85,25 @@ app.get('/test', (req, res) => {
     res.json({ message: 'Serwer Boczki API działa w 100%!' });
 });
 
+app.get('/dbstatus', (req, res) => {
+    const tabele = ['Licencje', 'Zamowienia', 'Kody_rabatowe', 'Tokeny_rejestracji'];
+    const wyniki = {};
+    let pozostalo = tabele.length;
+
+    tabele.forEach(t => {
+        db.query(`SELECT COUNT(*) AS n FROM \`${t}\``, (err, rows) => {
+            wyniki[t] = err ? 'BŁĄD: ' + err.message : rows[0].n + ' rekordów';
+            if (--pozostalo === 0) {
+                res.json({
+                    db_host: process.env.DB_HOST,
+                    db_name: process.env.DB_NAME,
+                    tabele: wyniki
+                });
+            }
+        });
+    });
+});
+
 // ==========================================
 // ENDPOINT GŁÓWNY - ROUTER KOMPATYBILNOŚCI
 // Obsługa starych klientów wysyłających ?action=...
