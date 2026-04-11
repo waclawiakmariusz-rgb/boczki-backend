@@ -2,7 +2,6 @@
 // Logowanie SaaS - sprawdzanie w tabeli Licencje + reset hasła
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 
 let wyslijResetHasla;
@@ -13,6 +12,7 @@ try {
 }
 
 module.exports = (db) => {
+  const router = express.Router();
   // Auto-create tabeli tokenów reset hasła
   db.query(`CREATE TABLE IF NOT EXISTS Tokeny_reset_hasla (
     token VARCHAR(36) PRIMARY KEY,
