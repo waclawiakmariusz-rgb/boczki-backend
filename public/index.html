@@ -1968,11 +1968,35 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
         <div class="login-card">
             <h2 style="color:var(--primary); margin-bottom:10px;">🎀 Boczki na bok</h2>
             <p style="color:#6b7280; margin-bottom:30px;">Zaloguj się do systemu magazynowego</p>
-            <form onsubmit="handleLogin(event)">
-                <input type="text" id="login" placeholder="Login" required>
-                <input type="password" id="password" placeholder="Hasło" required>
-                <button type="submit" id="btn-login" class="btn-primary">Zaloguj się</button>
-            </form>
+
+            <!-- Formularz logowania -->
+            <div id="login-form-wrap">
+                <form onsubmit="handleLogin(event)">
+                    <input type="text" id="login" placeholder="Login" required>
+                    <input type="password" id="password" placeholder="Hasło" required>
+                    <button type="submit" id="btn-login" class="btn-primary">Zaloguj się</button>
+                </form>
+                <div style="text-align:center; margin-top:16px;">
+                    <button onclick="pokazResetHasla()" style="background:none; border:none; color:#a0aec0; font-size:12px; font-family:inherit; cursor:pointer; text-decoration:underline;">
+                        Zapomniałem/am hasła
+                    </button>
+                </div>
+            </div>
+
+            <!-- Formularz resetu hasła (ukryty domyślnie) -->
+            <div id="reset-form-wrap" style="display:none;">
+                <p style="font-size:13px; color:#6b7280; margin-bottom:20px; line-height:1.6;">
+                    Podaj adres email przypisany do konta.<br>Wyślemy link do ustawienia nowego hasła.
+                </p>
+                <input type="email" id="reset-email" placeholder="Adres email" style="width:100%; padding:13px 16px; border:2px solid #e5e7eb; border-radius:14px; font-family:inherit; font-size:14px; outline:none; margin-bottom:12px;">
+                <button onclick="wyslijReset()" id="btn-reset" class="btn-primary">Wyślij link resetujący</button>
+                <div style="text-align:center; margin-top:14px;">
+                    <button onclick="pokazLogin()" style="background:none; border:none; color:#a0aec0; font-size:12px; font-family:inherit; cursor:pointer; text-decoration:underline;">
+                        ← Wróć do logowania
+                    </button>
+                </div>
+            </div>
+
             <div id="login-msg" style="margin-top:15px; color:red; font-size:13px;"></div>
         </div>
     </div>
@@ -5270,8 +5294,53 @@ function zapiszDefinicjeRabatu() {
     }).catch(err => alert("Błąd serwera: " + err));
 }
 
-        
-		
+// ─── RESET HASŁA ─────────────────────────────────────────────
+function pokazResetHasla() {
+    document.getElementById('login-form-wrap').style.display = 'none';
+    document.getElementById('reset-form-wrap').style.display = 'block';
+    document.getElementById('login-msg').textContent = '';
+    document.getElementById('reset-email').focus();
+}
+function pokazLogin() {
+    document.getElementById('reset-form-wrap').style.display = 'none';
+    document.getElementById('login-form-wrap').style.display = 'block';
+    document.getElementById('login-msg').textContent = '';
+}
+async function wyslijReset() {
+    const email = document.getElementById('reset-email').value.trim();
+    const btn = document.getElementById('btn-reset');
+    const msg = document.getElementById('login-msg');
+    if (!email) { msg.style.color = 'red'; msg.textContent = 'Podaj adres email.'; return; }
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Wysyłam...';
+    msg.textContent = '';
+
+    try {
+        const r = await fetch('/api/reset-hasla/wyslij', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const d = await r.json();
+        if (d.status === 'success') {
+            msg.style.color = '#15803d';
+            msg.textContent = '✅ ' + d.message;
+            btn.textContent = 'Wysłano!';
+        } else {
+            msg.style.color = 'red';
+            msg.textContent = d.message;
+            btn.disabled = false;
+            btn.textContent = 'Wyślij link resetujący';
+        }
+    } catch (e) {
+        msg.style.color = 'red';
+        msg.textContent = 'Błąd połączenia z serwerem.';
+        btn.disabled = false;
+        btn.textContent = 'Wyślij link resetujący';
+    }
+}
+
 	/*	function zaloguj(role, skipUI) {
     if (!role || role === "undefined") role = "Użytkownik";
     currentUser = role;

@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
+const path = require('path');
 
 const app = express();
 
@@ -234,6 +235,17 @@ app.post('/api', (req, res) => {
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
+});
+
+// ==========================================
+// HANDLER 404 — nieznane adresy
+// API zwraca JSON, strony HTML zwracają branded 404.html
+// ==========================================
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+        return res.status(404).json({ status: 'error', message: 'Nie znaleziono zasobu: ' + req.path });
+    }
+    res.status(404).sendFile(path.join(__dirname, 'public', '404.html'));
 });
 
 // ==========================================

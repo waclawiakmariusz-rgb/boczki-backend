@@ -8,7 +8,20 @@
       "Bash(node --check '/c/Users/aaell/Desktop/aplikacje boczki na bok/system magazynowy/boczki-backend/routes/__TRACKED_VAR__.js')",
       "Bash(node --check server.js)",
       "Bash(timeout 5 node server.js)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(npm install:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(powershell -Command \"Compress-Archive -Path '.gitignore','package.json','package-lock.json','server.js','routes','public','schema.sql' -DestinationPath '../boczki-deploy.zip' -Force\")",
+      "Bash(node -e \"require\\('./server.js'\\)\")",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(netstat -ano)",
+      "Bash(findstr \":3000\")",
+      "Bash(taskkill:*)",
+      "Bash(cmd:*)",
+      "Bash(node -e ':*)",
+      "Bash(npm test:*)",
+      "Bash(npx jest:*)"
     ]
   }
 }
