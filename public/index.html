@@ -4924,6 +4924,18 @@ function kopiujLogiDoSchowka() {
 	    // SYSTEM BOCZKI exec
 	
 const API_URL = window.location.origin + "/api"; // Auto-detect: localhost lub produkcja
+
+// ─── Normalizacja liczb (przecinek → kropka) ──────────────────
+// Używaj zamiast parseFloat() wszędzie gdzie dane origin od użytkownika
+function normNum(val) {
+    if (val === null || val === undefined || String(val).trim() === '') return '';
+    return String(val).trim().replace(',', '.');
+}
+// Wersja z fallbackiem na 0 gdy puste
+function normNumOr0(val) {
+    const n = parseFloat(normNum(val));
+    return isNaN(n) ? 0 : n;
+}
 	
 	
 //const API_URL = "https://script.google.com/macros/s/AKfycby9RPoXBmmrtuKftN80kfTnwqmJJBQQF2zY8Csh8_rGRCcYuQglvZuYEUhE7Io3LPlU/exec"; // tgt pakiety kwotowe
@@ -7932,7 +7944,7 @@ function ustawCeneZabiegu(kat, war) {
             let nazwa="", szcz="";
             if (typSprzedazy === 'Zabieg') { const k = document.getElementById('s_kat_zabiegu').value, w = document.getElementById('s_wariant_zabiegu').value; if(!k || !w) { alert("Uzupełnij zabieg!"); return; } nazwa = k; szcz = w; } 
             else { const p = document.getElementById('s_produkt_magazyn').value; if(!p) { alert("Wybierz produkt!"); return; } nazwa = "Kosmetyk: " + p; szcz = document.getElementById('s_ilosc_produktow').value + " szt."; }
-            const p = { action: editId ? 'edit_sale' : 'add_sale', id: editId, typ_transakcji:typSprzedazy, sprzedawca:sellers, klient:document.getElementById('s_klient').value, zabieg_nazwa:nazwa, szczegoly:szcz, kwota:document.getElementById('s_kwota').value, komentarz:document.getElementById('s_komentarz').value, produkt_nazwa:document.getElementById('s_produkt_magazyn').value, ilosc_sztuk:document.getElementById('s_ilosc_produktow').value, pracownik: currentUser };
+            const p = { action: editId ? 'edit_sale' : 'add_sale', id: editId, typ_transakcji:typSprzedazy, sprzedawca:sellers, klient:document.getElementById('s_klient').value, zabieg_nazwa:nazwa, szczegoly:szcz, kwota:normNum(document.getElementById('s_kwota').value), komentarz:document.getElementById('s_komentarz').value, produkt_nazwa:document.getElementById('s_produkt_magazyn').value, ilosc_sztuk:normNum(document.getElementById('s_ilosc_produktow').value), pracownik: currentUser };
             fetch(API_URL, { method: "POST", body: JSON.stringify(p) }).then(r => r.json()).then(d => { alert(d.message); anulujEdycje(); e.target.reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); odswiezSprzedaz(); if(typSprzedazy==='Kosmetyk') pobierzDane(); });
         }
        // --- OBSŁUGA POPUPA EDYCJI ---
@@ -8628,10 +8640,10 @@ function zapiszEdycjeProduktu(e) {
         action: 'edit_product',
         id: document.getElementById('ep_id').value,
         nazwa: document.getElementById('ep_nazwa').value, // <--- NOWOŚĆ: Wysyłamy nową nazwę
-        ilosc: document.getElementById('ep_ilosc').value,
+        ilosc: normNum(document.getElementById('ep_ilosc').value),
         waznosc: document.getElementById('ep_waznosc').value,
-        netto: document.getElementById('ep_netto').value,
-        brutto: document.getElementById('ep_brutto').value,
+        netto: normNum(document.getElementById('ep_netto').value),
+        brutto: normNum(document.getElementById('ep_brutto').value),
         pracownik: currentUser 
     };
 
@@ -9430,9 +9442,9 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
             const btn = e.target.querySelector('button[type="submit"]');
             const firma = document.getElementById('n_firma').value;
             const model = document.getElementById('n_model').value;
-            const ilosc = document.getElementById('n_ilosc').value;
-            const netto = document.getElementById('n_netto').value;
-            const brutto = document.getElementById('n_brutto').value;
+            const ilosc = normNum(document.getElementById('n_ilosc').value);
+            const netto = normNum(document.getElementById('n_netto').value);
+            const brutto = normNum(document.getElementById('n_brutto').value);
             const waznosc = document.getElementById('n_waznosc').value;
 
             if (!firma || firma === "" || firma === "--") { alert("⛔ BŁĄD: Musisz wybrać poprawną firmę!"); return; }
@@ -11875,7 +11887,7 @@ function wyslijZadatek(e) {
         else { nazwaKlienta = text.trim(); }
     }
 
-    const kwota = parseFloat(document.getElementById('dep_kwota').value) || 0;
+    const kwota = normNumOr0(document.getElementById('dep_kwota').value);
     let cel = document.getElementById('dep_cel').value;
     const metoda = document.getElementById('dep_metoda').value;
 

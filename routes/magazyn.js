@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { parseIlosc, parseKwota, parseNumOpt } = require('./utils');
 
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
@@ -95,7 +96,9 @@ module.exports = (db) => {
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Brak ID' });
           const stara = parseFloat(rows[0].ilosc) || 0;
-          const nowa = stara + parseFloat(d.ilosc);
+          let delta;
+          try { delta = parseIlosc(d.ilosc, 'ilość'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+          const nowa = stara + delta;
           db.query(
             `UPDATE Magazyn SET ilosc = ? WHERE tenant_id = ? AND id = ?`,
             [nowa, tenant_id, d.id],
@@ -113,11 +116,19 @@ module.exports = (db) => {
       if (!d.nazwa || !d.nazwa.trim()) return res.json({ status: 'error', message: 'Niepoprawna nazwa produktu.' });
       if (!d.ilosc || !d.netto || !d.brutto || !d.waznosc) return res.json({ status: 'error', message: 'Wszystkie pola są obowiązkowe!' });
 
+      let ilosc, netto, brutto, min;
+      try {
+        ilosc = parseIlosc(d.ilosc, 'ilość');
+        netto = parseKwota(d.netto, 'cena netto');
+        brutto = parseKwota(d.brutto, 'cena brutto');
+        min = parseNumOpt(d.min, 0);
+      } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
       const now = new Date();
       const id = now.getTime().toString();
       db.query(
         `INSERT INTO Magazyn (id, tenant_id, nazwa_produktu, typ, ilosc, min, jednostka, data_waznosci, cena_netto, cena_brutto, kategoria, kto_dodal, data_dodania) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, tenant_id, d.nazwa, d.typ || '', parseFloat(d.ilosc), parseFloat(d.min) || 0, d.jednostka || 'szt.', d.waznosc, parseFloat(d.netto), parseFloat(d.brutto), d.kategoria || '', d.pracownik, now],
+        [id, tenant_id, d.nazwa, d.typ || '', ilosc, min, d.jednostka || 'szt.', d.waznosc, netto, brutto, d.kategoria || '', d.pracownik, now],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'PRZYJĘCIE TOWARU', d.pracownik, `${d.nazwa} (${d.ilosc} szt.) [${d.kategoria || ''}]`);
@@ -135,7 +146,7 @@ module.exports = (db) => {
           const id = randomUUID();
           db.query(
             `INSERT INTO Slownik (id, tenant_id, firma, model, cena_detal) VALUES (?, ?, ?, ?, ?)`,
-            [id, tenant_id, d.firma, d.model, d.cena ? parseFloat(d.cena) : null],
+            [id, tenant_id, d.firma, d.model, d.cena ? parseNumOpt(d.cena) : null],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               return res.json({ status: 'success', message: 'Dodano!' });
@@ -204,9 +215,16 @@ module.exports = (db) => {
           if (Number(old.cena_brutto).toFixed(2) !== Number(d.brutto).toFixed(2)) logiZmian.push(`Brutto: ${old.cena_brutto} -> ${d.brutto}`);
           if (String(old.data_waznosci || '') !== String(d.waznosc || '')) logiZmian.push(`Ważność: ${old.data_waznosci} -> ${d.waznosc}`);
 
+          let _il, _ne, _br;
+          try {
+            _il = parseIlosc(d.ilosc, 'ilość');
+            _ne = parseKwota(d.netto, 'cena netto');
+            _br = parseKwota(d.brutto, 'cena brutto');
+          } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
           db.query(
             `UPDATE Magazyn SET nazwa_produktu = ?, ilosc = ?, data_waznosci = ?, cena_netto = ?, cena_brutto = ? WHERE tenant_id = ? AND id = ?`,
-            [d.nazwa, parseFloat(d.ilosc), d.waznosc || null, parseFloat(d.netto), parseFloat(d.brutto), tenant_id, d.id],
+            [d.nazwa, _il, d.waznosc || null, _ne, _br, tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               const opisLog = logiZmian.length > 0 ? logiZmian.join(' | ') : 'Edycja (brak zmian wartości)';
