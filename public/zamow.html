@@ -219,15 +219,17 @@ fetch('/api/stripe/config').then(r => r.json()).then(d => {
   } else {
     // ── TRYB ZGŁOSZENIA (Stripe nie skonfigurowany) ──
     window._stripeAktywny = false;
+    window._cenaBazowa = d.cena_display;
     document.getElementById('form-title').textContent = '📋 Zamów dostęp';
     document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link do rejestracji po potwierdzeniu płatności.';
-    document.getElementById('cena-box').style.display = 'none';
+    document.getElementById('cena-display').textContent = d.cena_display;
+    document.getElementById('cena-box').style.display = 'flex';
+    document.getElementById('voucher-box').style.display = 'block';
     document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
   }
 }).catch(() => {
   window._stripeAktywny = false;
   document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą wkrótce.';
-  document.getElementById('cena-box').style.display = 'none';
   document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
 });
 
