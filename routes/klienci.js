@@ -4,12 +4,12 @@
 //          get_suggestion_rules, add_suggestion_rule, delete_suggestion_rule
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
 const { parseKwota, parseNumOpt } = require('./utils');
 
 module.exports = (db) => {
+  const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
   // Helper: generuj nowe ID klienta (numeryczne, max+1)
@@ -318,9 +318,11 @@ module.exports = (db) => {
       if (d.typ === 'WPŁATA') {
         const id = 'DEP-' + Date.now();
         const sprzedawcyStr = Array.isArray(d.sprzedawcy) ? d.sprzedawcy.join(', ') : (d.sprzedawcy || '');
+        let kwota;
+        try { kwota = parseKwota(d.kwota, 'kwota zadatku'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
         db.query(
           `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?)`,
-          [id, tenant_id, d.id_klienta || '', d.klient, parseKwota(d.kwota, 'kwota zadatku'), d.metoda, d.cel, sprzedawcyStr],
+          [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda, d.cel, sprzedawcyStr],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
@@ -365,9 +367,11 @@ module.exports = (db) => {
         );
 
       } else if (d.typ === 'EDIT_AMOUNT') {
+        let kwota;
+        try { kwota = parseKwota(d.nowa_kwota, 'nowa kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
         db.query(
           `UPDATE Zadatki SET kwota = ? WHERE tenant_id = ? AND id = ?`,
-          [parseKwota(d.nowa_kwota, 'nowa kwota'), tenant_id, d.id_zadatku],
+          [kwota, tenant_id, d.id_zadatku],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'KOREKTA ZADATKU', pracownik, `Zmiana kwoty: ${d.nowa_kwota} zł`);
@@ -376,9 +380,11 @@ module.exports = (db) => {
         );
 
       } else if (d.typ === 'EDIT_FULL') {
+        let kwota;
+        try { kwota = parseKwota(d.nowa_kwota, 'nowa kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
         db.query(
           `UPDATE Zadatki SET kwota = ?, metoda = ?, cel = ?, pracownicy = ?, status = COALESCE(?, status), data_wplaty = COALESCE(?, data_wplaty) WHERE tenant_id = ? AND id = ?`,
-          [parseKwota(d.nowa_kwota, 'nowa kwota'), d.nowa_metoda, d.nowy_cel, d.nowi_pracownicy, d.nowy_status || null, d.nowa_data ? new Date(d.nowa_data) : null, tenant_id, d.id_zadatku],
+          [kwota, d.nowa_metoda, d.nowy_cel, d.nowi_pracownicy, d.nowy_status || null, d.nowa_data ? new Date(d.nowa_data) : null, tenant_id, d.id_zadatku],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'EDYCJA ZADATKU', pracownik, `Kwota: ${d.nowa_kwota} zł | Status: ${d.nowy_status || 'bez zmian'}`);

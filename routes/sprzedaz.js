@@ -4,11 +4,11 @@
 
 const express = require('express');
 const { parseKwota, parseIlosc, parseNumOpt } = require('./utils');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
 
 module.exports = (db) => {
+  const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
   // ==========================================
@@ -178,10 +178,13 @@ module.exports = (db) => {
       const sprzedawca = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(', ') : d.sprzedawca;
       const uniqueId = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 15);
 
+      let _kwotaAdd;
+      try { _kwotaAdd = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
       const doInsert = () => {
         db.query(
           `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?)`,
-          [uniqueId, tenant_id, now, d.klient, d.zabieg_nazwa, sprzedawca, parseKwota(d.kwota, 'kwota'), d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || ''],
+          [uniqueId, tenant_id, now, d.klient, d.zabieg_nazwa, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || ''],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${d.zabieg_nazwa} | ${d.kwota} zł`);
@@ -249,10 +252,13 @@ module.exports = (db) => {
           let idZadatkuLog = '';
           if (poz.platnosc === 'Portfel' || poz.platnosc === 'Zadatek') idZadatkuLog = poz.depositId || '';
 
+          let _kwotaPoz;
+          try { _kwotaPoz = parseKwota(poz.kwota, 'kwota pozycji'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
           const doInsertPoz = () => {
             db.query(
               `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?)`,
-              [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, parseKwota(poz.kwota, 'kwota pozycji'), poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog],
+              [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog],
               nextPoz
             );
           };
@@ -273,6 +279,9 @@ module.exports = (db) => {
 
     // --- EDIT_SALE ---
     } else if (action === 'edit_sale') {
+      let _kwotaEdit;
+      try { _kwotaEdit = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
       db.query(
         `SELECT klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
@@ -291,7 +300,7 @@ module.exports = (db) => {
 
           db.query(
             `UPDATE Sprzedaz SET klient = ?, zabieg = ?, sprzedawca = ?, kwota = ?, komentarz = ?, szczegoly = ?, platnosc = ?, id_klienta = ? WHERE tenant_id = ? AND id = ?`,
-            [d.klient, d.zabieg_nazwa, newSprzedawca, parseKwota(d.kwota, 'kwota'), d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
+            [d.klient, d.zabieg_nazwa, newSprzedawca, _kwotaEdit, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
@@ -355,6 +364,9 @@ module.exports = (db) => {
 
     // --- EMERGENCY_EDIT_SALE ---
     } else if (action === 'emergency_edit_sale') {
+      let _kwotaEmerg;
+      try { _kwotaEmerg = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
       db.query(
         `SELECT klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
@@ -372,7 +384,7 @@ module.exports = (db) => {
 
           db.query(
             `UPDATE Sprzedaz SET klient = ?, zabieg = ?, sprzedawca = ?, kwota = ?, komentarz = ?, szczegoly = ?, platnosc = ?, id_klienta = ? WHERE tenant_id = ? AND id = ?`,
-            [d.klient, d.zabieg_nazwa, nowySprzedawca, parseKwota(d.kwota, 'kwota'), d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
+            [d.klient, d.zabieg_nazwa, nowySprzedawca, _kwotaEmerg, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               zapiszLog(tenant_id, 'AWARIA EDYCJA', d.pracownik, `ALARMOWA MODYFIKACJA ID:${d.id} | ZMIANY: ${logSzczegoly.join(' || ')} | ${snapshot}`);

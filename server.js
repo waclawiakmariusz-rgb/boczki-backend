@@ -237,6 +237,28 @@ app.post('/api', (req, res) => {
 });
 
 // ==========================================
+// GLOBALNY HANDLER BŁĘDÓW EXPRESS
+// Przechwytuje wszystkie nieobsłużone wyjątki z routes i middleware.
+// Zamiast HTML 500, zwraca czysty JSON { status: 'error' }.
+// ==========================================
+app.use((err, req, res, next) => {
+    console.error('[SERWER ERROR]', req.method, req.url, '→', err.message);
+    if (res.headersSent) return next(err);
+    res.status(500).json({
+        status: 'error',
+        message: 'Nieoczekiwany błąd serwera. Spróbuj ponownie za chwilę.',
+    });
+});
+
+// Zabezpieczenie przed crashem procesu (Node nie padnie przy nieobsłużonym błędzie)
+process.on('uncaughtException', (err) => {
+    console.error('[KRYTYCZNY BŁĄD - uncaughtException]:', err.message, '\n', err.stack);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('[KRYTYCZNY BŁĄD - unhandledRejection]:', reason);
+});
+
+// ==========================================
 // URUCHOMIENIE SERWERA
 // ==========================================
 const PORT = process.env.PORT || 3000;

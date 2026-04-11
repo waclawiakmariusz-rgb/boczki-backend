@@ -287,9 +287,44 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
 .logout-btn:hover { background: #fee2e2; }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ─── POWIADOMIENIA TOAST ─────────────────── */
+#boczki-toasts {
+    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
+    display: flex; flex-direction: column-reverse; gap: 10px;
+    pointer-events: none; max-width: 340px; width: calc(100vw - 48px);
+}
+.b-toast {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px 16px 18px; border-radius: 16px;
+    background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    font-size: 13px; color: #2d3748; pointer-events: all; cursor: pointer;
+    animation: bToastIn 0.38s cubic-bezier(.22,1,.36,1) both;
+    border-left: 4px solid transparent; position: relative; overflow: hidden; word-break: break-word;
+}
+.b-toast.b-success { border-left-color: #27ae60; }
+.b-toast.b-error   { border-left-color: #e74c3c; }
+.b-toast.b-warning { border-left-color: #f39c12; }
+.b-toast.b-info    { border-left-color: #3498db; }
+.b-toast-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.b-toast-body { flex: 1; }
+.b-toast-title { font-weight: 600; margin-bottom: 2px; }
+.b-toast-msg { font-size: 12px; color: #6b7280; }
+.b-toast-bar {
+    position: absolute; bottom: 0; left: 0; height: 3px;
+    animation: bToastBar linear forwards;
+}
+.b-toast.b-success .b-toast-bar { background: #27ae60; }
+.b-toast.b-error   .b-toast-bar { background: #e74c3c; }
+.b-toast.b-warning .b-toast-bar { background: #f39c12; }
+.b-toast.b-info    .b-toast-bar { background: #3498db; }
+@keyframes bToastIn  { from { opacity:0; transform: translateX(50px) scale(.95); } to { opacity:1; transform: translateX(0) scale(1); } }
+@keyframes bToastOut { from { opacity:1; transform: translateX(0) scale(1); max-height:120px; padding:14px 16px 18px; } to { opacity:0; transform: translateX(50px) scale(.95); max-height:0; padding:0; margin:0; } }
+@keyframes bToastBar { from { width:100%; } to { width:0; } }
 </style>
 </head>
 <body>
+<div id="boczki-toasts" role="status" aria-live="polite"></div>
 
 <!-- ════════════════════════════════
      EKRAN LOGOWANIA
@@ -633,6 +668,42 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
 </div>
 
 <script>
+// ─── SYSTEM POWIADOMIEŃ ────────────────────────────────────────
+window.pokazPowiadomienie = function(typ, tytul, wiadomosc, czas) {
+    czas = czas || (typ === 'error' ? 7000 : 4500);
+    const ikonki = { success: '✅', error: '⚠️', warning: '⚡', info: 'ℹ️' };
+    const container = document.getElementById('boczki-toasts');
+    if (!container) return;
+    const toast = document.createElement('div');
+    toast.className = 'b-toast b-' + typ;
+    toast.innerHTML =
+        '<div class="b-toast-icon">' + (ikonki[typ] || 'ℹ️') + '</div>' +
+        '<div class="b-toast-body">' +
+            (tytul     ? '<div class="b-toast-title">' + String(tytul).replace(/</g,'&lt;') + '</div>' : '') +
+            (wiadomosc ? '<div class="b-toast-msg">'   + String(wiadomosc).replace(/</g,'&lt;') + '</div>' : '') +
+        '</div>' +
+        '<div class="b-toast-bar" style="animation-duration:' + czas + 'ms"></div>';
+    const usun = () => {
+        toast.style.animation = 'bToastOut 0.38s ease forwards';
+        setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+    };
+    toast.addEventListener('click', usun);
+    container.appendChild(toast);
+    setTimeout(usun, czas);
+};
+(function() {
+    const _nat = window.alert.bind(window);
+    window.alert = function(msg) {
+        if (!document.getElementById('boczki-toasts')) { _nat(msg); return; }
+        const str = String(msg || '');
+        const czyBlad = /błąd|error|nie można|brak /i.test(str);
+        const czySukces = /pomyślnie|skopiowano|zapisano|dodano|zaktualizowano|wysłan|usunięto|wygenerowano/i.test(str);
+        if (czySukces)     pokazPowiadomienie('success', null, str);
+        else if (czyBlad)  pokazPowiadomienie('error', 'Wystąpił problem', str);
+        else               pokazPowiadomienie('info', null, str);
+    };
+})();
+
 // ═══════════════════════════════════════════════
 // KONFIGURACJA
 // ═══════════════════════════════════════════════
@@ -812,7 +883,7 @@ async function wyslijLinkDoKlienta() {
 
   closeSendModal();
   zaladujZgloszenia();
-  alert('✅ Link rejestracyjny wysłany!');
+  pokazPowiadomienie('success', 'Link wysłany!', 'Email z linkiem rejestracyjnym trafił do klienta.');
 }
 
 document.getElementById('send-modal').addEventListener('click', function(e) {
@@ -865,7 +936,7 @@ function generujToken() {
   })
   .then(r => r.json())
   .then(d => {
-    if (d.status !== 'success') { alert('Błąd: ' + d.message); return; }
+    if (d.status !== 'success') { pokazPowiadomienie('error', 'Błąd generowania tokenu', d.message); return; }
     ostatniToken = d.token;
     const link = `${location.origin}/rejestracja.html?token=${d.token}`;
     document.getElementById('gen-link-box').textContent = link;
@@ -1002,7 +1073,7 @@ function toggleSalon(tenant_id, nowyStatus, btn) {
   .then(r => r.json())
   .then(d => {
     if (d.status === 'success') zaladujSalony();
-    else alert('Błąd: ' + d.message);
+    else pokazPowiadomienie('error', 'Błąd zmiany statusu', d.message);
   });
 }
 

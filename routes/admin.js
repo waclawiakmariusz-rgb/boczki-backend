@@ -2,7 +2,6 @@
 // Panel Administratora - zarządzanie salonami/tenantami
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 
 let wyslijLinkRejestracji, powiadomAdmina;
@@ -40,6 +39,7 @@ function requireAdmin(req, res, next) {
 }
 
 module.exports = (db) => {
+  const router = express.Router();
 
   // POST /api/admin/login — weryfikacja hasła admina
   router.post('/admin/login', (req, res) => {

@@ -1885,13 +1885,84 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
     color: #f8fafc !important;
     border: 1px solid #475569 !important;
 }
-.dark-mode input::placeholder, 
+.dark-mode input::placeholder,
 .dark-mode textarea::placeholder {
     color: #94a3b8 !important;
+}
+
+/* ─── SYSTEM POWIADOMIEŃ TOAST ───────────────────────────────── */
+#boczki-toasts {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 10px;
+    pointer-events: none;
+    max-width: 350px;
+    width: calc(100vw - 48px);
+}
+.b-toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px 18px;
+    border-radius: 18px;
+    background: #fff;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.05);
+    font-family: 'Poppins', sans-serif;
+    font-size: 13px;
+    color: #2d3748;
+    pointer-events: all;
+    cursor: pointer;
+    animation: bToastIn 0.38s cubic-bezier(.22,1,.36,1) both;
+    border-left: 4px solid transparent;
+    position: relative;
+    overflow: hidden;
+    word-break: break-word;
+    transition: box-shadow 0.2s;
+}
+.b-toast:hover { box-shadow: 0 12px 40px rgba(0,0,0,0.16); }
+.b-toast.b-success { border-left-color: #27ae60; }
+.b-toast.b-error   { border-left-color: #e74c3c; }
+.b-toast.b-warning { border-left-color: #f39c12; }
+.b-toast.b-info    { border-left-color: #3498db; }
+.b-toast-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+.b-toast-body { flex: 1; min-width: 0; }
+.b-toast-title { font-weight: 600; margin-bottom: 2px; line-height: 1.35; }
+.b-toast-msg { font-size: 12px; color: #6b7280; line-height: 1.45; }
+.b-toast-bar {
+    position: absolute;
+    bottom: 0; left: 0;
+    height: 3px;
+    border-radius: 0 0 0 14px;
+    animation: bToastBar linear forwards;
+}
+.b-toast.b-success .b-toast-bar { background: #27ae60; }
+.b-toast.b-error   .b-toast-bar { background: #e74c3c; }
+.b-toast.b-warning .b-toast-bar { background: #f39c12; }
+.b-toast.b-info    .b-toast-bar { background: #3498db; }
+.dark-mode .b-toast { background: #1e293b; color: #e2e8f0; box-shadow: 0 8px 30px rgba(0,0,0,0.35); }
+.dark-mode .b-toast-msg { color: #94a3b8; }
+@keyframes bToastIn {
+    from { opacity: 0; transform: translateX(50px) scale(0.95); }
+    to   { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes bToastOut {
+    from { opacity: 1; transform: translateX(0) scale(1); max-height: 120px; padding-top: 14px; padding-bottom: 18px; }
+    to   { opacity: 0; transform: translateX(50px) scale(0.95); max-height: 0; padding-top: 0; padding-bottom: 0; margin: 0; }
+}
+@keyframes bToastBar {
+    from { width: 100%; }
+    to   { width: 0; }
 }
 </style>
 </head>
 <body>
+
+<!-- Kontener powiadomień toast – wyświetlany nad całą aplikacją -->
+<div id="boczki-toasts" role="status" aria-live="polite"></div>
 
     <div id="login-overlay">
         <div class="login-card">
@@ -4330,9 +4401,58 @@ ANALIZA MANAGER
     </div>
 
     <script>
-	
+
+// =========================================================================
+//   SYSTEM POWIADOMIEŃ — Toast notifications (zastępuje natywne alert())
+//   Użycie: pokazPowiadomienie('success'|'error'|'warning'|'info', tytuł, treść)
+// =========================================================================
+
+window.pokazPowiadomienie = function(typ, tytul, wiadomosc, czas) {
+    czas = czas || (typ === 'error' ? 7000 : 4500);
+    const ikonki = { success: '✅', error: '⚠️', warning: '⚡', info: 'ℹ️' };
+    const container = document.getElementById('boczki-toasts');
+    if (!container) { console.warn('[Toast]', tytul, wiadomosc); return; }
+
+    const toast = document.createElement('div');
+    toast.className = 'b-toast b-' + typ;
+    toast.innerHTML =
+        '<div class="b-toast-icon">' + (ikonki[typ] || 'ℹ️') + '</div>' +
+        '<div class="b-toast-body">' +
+            (tytul    ? '<div class="b-toast-title">' + String(tytul).replace(/</g,'&lt;') + '</div>' : '') +
+            (wiadomosc ? '<div class="b-toast-msg">'  + String(wiadomosc).replace(/</g,'&lt;') + '</div>' : '') +
+        '</div>' +
+        '<div class="b-toast-bar" style="animation-duration:' + czas + 'ms"></div>';
+
+    const usun = () => {
+        toast.style.animation = 'bToastOut 0.38s ease forwards';
+        setTimeout(function() { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 400);
+    };
+    toast.addEventListener('click', usun);
+    container.appendChild(toast);
+    setTimeout(usun, czas);
+};
+
+// Zastąp natywne alert() płynnym toastem (wszystkie istniejące wywołania alert() korzystają automatycznie)
+(function() {
+    const _natywnyAlert = window.alert.bind(window);
+    window.alert = function(msg) {
+        const container = document.getElementById('boczki-toasts');
+        if (!container) { _natywnyAlert(msg); return; }
+        const str = String(msg || '');
+        const czyBlad = /błąd|error|awaria|nieprawidłow|nie znaleziono|nie można|brak |brak$/i.test(str);
+        const czySukces = /pomyślnie|skopiowano|zapisano|dodano|zaktualizowano|zatwierdzon|usunięto|zarchiwizowano|przywrócono|przyjęto|zmieniono|wygenerowano/i.test(str);
+        if (czySukces) {
+            pokazPowiadomienie('success', null, str);
+        } else if (czyBlad) {
+            pokazPowiadomienie('error', 'Wystąpił problem', str);
+        } else {
+            pokazPowiadomienie('info', null, str);
+        }
+    };
+})();
+
 //=========================================================================
-//   DOKUMENTACJA FUNKCJI SYSTEMU "BOCZKI" (v3.0)   
+//   DOKUMENTACJA FUNKCJI SYSTEMU "BOCZKI" (v3.0)
 //=========================================================================
 
 
@@ -4833,13 +4953,16 @@ let wciecieLogow = "";
                 
                 // Jeśli serwer sam zgłasza błąd logiczny
                 if (data.status === 'error' || data.error) {
-                    console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, data.message || data.error);
-                    
-                    // Pokazujemy alert TYLKO przy logowaniu (np. zły PIN), wyciszamy resztę w trakcie pracy!
-                    if (akcja === 'login' || akcja === 'verify_pin') {
-                        alert(data.message || data.error);
+                    const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
+                    console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, komunikat);
+
+                    // Akcje które zawsze pokazują błąd użytkownikowi
+                    const pokazBlad = ['login', 'verify_pin', 'manage_deposit', 'add_sale', 'edit_sale',
+                        'add_client', 'save_rodo', 'add_birthday', 'save_retention', 'save_client_memo'];
+                    if (pokazBlad.includes(akcja)) {
+                        pokazPowiadomienie('error', 'Nie udało się', komunikat);
                     }
-                } 
+                }
                 else if (akcja !== 'sales_dictionary') {
                     dodajDoLoga('SIEC', `✅ [${akcja}] Zakończono sukcesem.`);
                 }
@@ -4848,20 +4971,34 @@ let wciecieLogow = "";
                 return new Response(textResponse, { status: 200, headers: { 'Content-Type': 'application/json' } });
                 
             } catch (jsonErr) {
-                // 💥 SERWER WYBUCHŁ (Google wyrzuciło błąd 502/HTML zamiast JSON)
-                console.group(`💥 CICHY CRASH SERWERA [Akcja: ${akcja}]`);
-                console.warn("Zignorowano błąd serwera. Wygenerowano puste dane zabezpieczające.");
+                // 💥 Serwer zwrócił HTML zamiast JSON (np. błąd 500 lub brak internetu)
+                console.group(`💥 CRASH SERWERA [Akcja: ${akcja}]`);
+                console.warn("Serwer nie zwrócił JSON. Generowanie bezpiecznego fallbacku.");
                 console.groupEnd();
-                
-                // RATUJEMY APLIKACJĘ: Tworzymy uniwersalną, pustą paczkę, żeby żaden .forEach się nie wywalił
+
+                // Pokaż przyjazne powiadomienie tylko dla akcji zapisu (nie przy ładowaniu danych w tle)
+                const czyAkcjaZapisu = !akcja.startsWith('get_') && !akcja.startsWith('an_') &&
+                    !akcja.startsWith('akon_') && akcja !== 'sales_dictionary' && akcja !== 'read';
+                if (czyAkcjaZapisu) {
+                    pokazPowiadomienie('warning', 'Chwilowy problem z serwerem',
+                        'Dane mogą nie zostać zapisane. Odśwież stronę jeśli problem się powtarza.');
+                }
+
                 const bezpiecznyFallback = JSON.stringify({ status: 'error', data: [], klienci: [], zadatki: [], months: [] });
                 return new Response(bezpiecznyFallback, { status: 200, headers: { 'Content-Type': 'application/json' } });
             }
 
         } catch (err) {
             console.error(`🔌 BŁĄD POŁĄCZENIA [Akcja: ${akcja}]:`, err);
-            
-            // RATUJEMY APLIKACJĘ przed brakiem internetu (bez irytujących okienek)
+
+            // Pokaż powiadomienie o braku połączenia tylko dla akcji zapisu
+            const czyAkcjaZapisuNet = !akcja.startsWith('get_') && !akcja.startsWith('an_') &&
+                !akcja.startsWith('akon_') && akcja !== 'sales_dictionary' && akcja !== 'read';
+            if (czyAkcjaZapisuNet) {
+                pokazPowiadomienie('error', 'Brak połączenia z serwerem',
+                    'Sprawdź internet i spróbuj ponownie. Dane nie zostały zapisane.');
+            }
+
             const bezpiecznyFallbackNet = JSON.stringify({ status: 'error', data: [], klienci: [], zadatki: [], months: [] });
             return new Response(bezpiecznyFallbackNet, { status: 200, headers: { 'Content-Type': 'application/json' } });
         }

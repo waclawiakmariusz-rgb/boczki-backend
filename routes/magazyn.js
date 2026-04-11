@@ -2,12 +2,12 @@
 // Operacje magazynowe: read, add, update, delete, restore, archive_read, dictionary, add_model, edit_product, edit_dictionary_entry, delete_dictionary_entry
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
 const { parseIlosc, parseKwota, parseNumOpt } = require('./utils');
 
 module.exports = (db) => {
+  const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
   // ==========================================
