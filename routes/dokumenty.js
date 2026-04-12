@@ -5,7 +5,7 @@
 
 const express = require('express');
 const multer  = require('multer');
-const sharp   = require('sharp');
+const Jimp = require('jimp');
 const path    = require('path');
 const fs      = require('fs');
 const { randomUUID } = require('crypto');
@@ -25,23 +25,21 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024, files: 6 },
   fileFilter: (req, file, cb) => {
-    const ok = /^image\/(jpeg|jpg|png|webp|heic|heif)$/i.test(file.mimetype);
+    const ok = /^image\/(jpeg|jpg|png|webp|gif|heic|heif)$/i.test(file.mimetype);
     cb(ok ? null : new Error('Dozwolone tylko pliki graficzne (JPEG, PNG, WebP).'), ok);
   },
 });
 
-// ─── Optymalizacja jednej strony przez sharp ──────────────────
+// ─── Optymalizacja jednej strony przez jimp ───────────────────
 // Wynik: JPEG grayscale, max 1654×2339 px (200 DPI A4), quality 75
 async function optymalizujStrone(buffer) {
-  return sharp(buffer)
-    .rotate()                          // auto-orientacja z EXIF
-    .grayscale()
-    .resize(1654, 2339, {
-      fit: 'inside',
-      withoutEnlargement: true,
-    })
-    .jpeg({ quality: 75, mozjpeg: true })
-    .toBuffer();
+  const img = await Jimp.read(buffer);
+  img.greyscale();
+  // Skaluj tylko jeśli przekracza max wymiary (nie powiększaj)
+  if (img.bitmap.width > 1654 || img.bitmap.height > 2339) {
+    img.scaleToFit(1654, 2339);
+  }
+  return img.getBufferAsync(Jimp.MIME_PNG);
 }
 
 module.exports = (db) => {
@@ -81,8 +79,8 @@ module.exports = (db) => {
 
       // 2. Utwórz PDF
       const pdfDoc = await PDFDocument.create();
-      for (const jpegBuf of zoptymalizowane) {
-        const img   = await pdfDoc.embedJpg(jpegBuf);
+      for (const pngBuf of zoptymalizowane) {
+        const img   = await pdfDoc.embedPng(pngBuf);
         const page  = pdfDoc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }

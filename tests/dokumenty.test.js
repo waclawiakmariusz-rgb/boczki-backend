@@ -8,7 +8,7 @@ const request = require('supertest');
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
-const sharp   = require('sharp');
+const Jimp = require('jimp');
 
 const TEST_TENANT   = `test-dok-${Date.now()}`;
 const UPLOADS_ROOT  = path.join(__dirname, '..', 'uploads');
@@ -25,9 +25,8 @@ function buildApp() {
 
 // Generuje mały (20×20px) szary JPEG jako Buffer
 async function tinyJpeg() {
-  return sharp({
-    create: { width: 20, height: 20, channels: 3, background: { r: 200, g: 200, b: 200 } }
-  }).jpeg({ quality: 80 }).toBuffer();
+  const img = await Jimp.create(20, 20, 0xccccccff);
+  return img.getBufferAsync(Jimp.MIME_PNG);
 }
 
 let jpegBuf; // załadowany raz przed wszystkimi testami
