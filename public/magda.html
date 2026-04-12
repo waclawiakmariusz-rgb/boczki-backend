@@ -195,6 +195,49 @@
       font-size: 0.75rem; color: var(--gray-400);
     }
 
+    /* ══ SPRZEDAWCY SECTION ════════════════════════════════════ */
+    .sprzedawcy-section {
+      background: #fff; border-radius: var(--radius);
+      padding: 18px 20px; margin-bottom: 16px;
+      box-shadow: var(--shadow-sm);
+    }
+    .sprzedawcy-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px; flex-wrap: wrap; gap: 8px;
+    }
+    .sprzedawcy-title {
+      font-size: 0.85rem; font-weight: 700; color: var(--gray-600);
+      text-transform: uppercase; letter-spacing: .05em;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .sprzedawcy-subtitle {
+      font-size: 0.78rem; color: var(--gray-400); font-weight: 400;
+      text-transform: none; letter-spacing: 0;
+    }
+    .sprzedawcy-grid {
+      display: flex; flex-wrap: wrap; gap: 10px;
+    }
+    .seller-card {
+      background: linear-gradient(135deg, #f5f3ff 0%, #ede9ff 100%);
+      border-radius: 14px; padding: 14px 18px;
+      display: flex; align-items: center; gap: 14px;
+      min-width: 200px; flex: 1;
+      border: 1.5px solid #ddd6fe;
+      transition: box-shadow .15s, transform .15s;
+    }
+    .seller-card:hover { box-shadow: 0 4px 16px rgba(108,99,255,.15); transform: translateY(-1px); }
+    .seller-avatar {
+      width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--purple) 0%, #a78bfa 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.9rem; font-weight: 800; color: #fff;
+      box-shadow: 0 3px 8px rgba(108,99,255,.3);
+    }
+    .seller-info { min-width: 0; }
+    .seller-name { font-size: 0.95rem; font-weight: 700; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .seller-kwota { font-size: 1.1rem; font-weight: 800; color: var(--purple); margin-top: 1px; }
+    .seller-meta  { font-size: 0.74rem; color: var(--gray-400); margin-top: 2px; }
+
     /* ══ TABS ═══════════════════════════════════════════════════ */
     .tabs { display: flex; gap: 6px; margin-bottom: 0; }
     .tab-btn {
@@ -405,6 +448,17 @@
       <div class="breakdown-grid" id="breakdownGrid"></div>
     </div>
 
+    <!-- Sprzedawcy breakdown -->
+    <div class="sprzedawcy-section" id="sprzedawcySection" style="display:none">
+      <div class="sprzedawcy-header">
+        <div class="sprzedawcy-title">
+          👤 Rozliczenia per osoba
+          <span class="sprzedawcy-subtitle" id="sprzedawcySubtitle">— tylko rozliczone transakcje, kwota podzielona proporcjonalnie</span>
+        </div>
+      </div>
+      <div class="sprzedawcy-grid" id="sprzedawcyGrid"></div>
+    </div>
+
     <!-- Tabs -->
     <div class="tabs">
       <button class="tab-btn active" data-tab="sprzedaz">💳 Sprzedaż</button>
@@ -578,7 +632,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.classList.add('active');
     activeTab = btn.dataset.tab;
     $('panel' + activeTab.charAt(0).toUpperCase() + activeTab.slice(1)).classList.add('active');
-    updateStats(); renderBreakdown();
+    updateStats(); renderBreakdown(); renderSprzedawcy();
   });
 });
 
@@ -644,7 +698,7 @@ async function wczytajDane() {
   $('listaSprzedaz').innerHTML = '<div class="spinner">Wczytuję dane…</div>';
   $('listaZadatki').innerHTML  = '<div class="spinner">Wczytuję dane…</div>';
   await Promise.all([wczytajSprzedaz(od, _do), wczytajZadatki(od, _do)]);
-  updateStats(); renderBreakdown();
+  updateStats(); renderBreakdown(); renderSprzedawcy();
 }
 
 async function wczytajSprzedaz(od, _do) {
@@ -736,6 +790,63 @@ function renderBreakdown() {
       <div class="pay-card-count">${g.count} ${g.count===1?'transakcja':g.count<5?'transakcje':'transakcji'}</div>
     </div>
   `).join('');
+}
+
+// ── Sprzedawcy per-person breakdown ──────────────────────────────
+function renderSprzedawcy() {
+  const rows      = activeTab === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const personField = activeTab === 'sprzedaz' ? 'sprzedawca' : 'pracownicy';
+  const rozliczone  = rows.filter(r => r.czy_rozliczone);
+
+  if (!rozliczone.length) { $('sprzedawcySection').style.display = 'none'; return; }
+  $('sprzedawcySection').style.display = 'block';
+
+  // Build map: imie → { sum, txCount, txParticipated }
+  const map = {};
+  for (const r of rozliczone) {
+    const raw     = String(r[personField] || '');
+    const osoby   = raw.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+    if (!osoby.length) continue;
+    const share   = Number(r.kwota || 0) / osoby.length;
+    for (const osoba of osoby) {
+      if (!map[osoba]) map[osoba] = { sum: 0, txCount: 0, txFull: 0, txPart: 0 };
+      map[osoba].sum     += share;
+      map[osoba].txCount += 1;
+      if (osoby.length === 1) map[osoba].txFull++;
+      else                    map[osoba].txPart++;
+    }
+  }
+
+  // Sort by sum descending
+  const osoby = Object.entries(map).sort((a, b) => b[1].sum - a[1].sum);
+
+  // Color palette for avatars (cycles)
+  const colors = [
+    'linear-gradient(135deg,#6c63ff,#a78bfa)',
+    'linear-gradient(135deg,#10b981,#34d399)',
+    'linear-gradient(135deg,#f59e0b,#fcd34d)',
+    'linear-gradient(135deg,#ef4444,#fca5a5)',
+    'linear-gradient(135deg,#3b82f6,#93c5fd)',
+    'linear-gradient(135deg,#a855f7,#d8b4fe)',
+    'linear-gradient(135deg,#ec4899,#f9a8d4)',
+    'linear-gradient(135deg,#14b8a6,#5eead4)',
+  ];
+
+  $('sprzedawcyGrid').innerHTML = osoby.map(([imie, d], i) => {
+    const initials = imie.split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const color    = colors[i % colors.length];
+    let meta = `${d.txCount} ${d.txCount===1?'transakcja':d.txCount<5?'transakcje':'transakcji'}`;
+    if (d.txPart > 0 && d.txFull > 0) meta += ` (${d.txFull} solo, ${d.txPart} wspólnie)`;
+    else if (d.txPart > 0)             meta += ` (wspólnie)`;
+    return `<div class="seller-card">
+      <div class="seller-avatar" style="background:${color}">${escH(initials)}</div>
+      <div class="seller-info">
+        <div class="seller-name">${escH(imie)}</div>
+        <div class="seller-kwota">${fmtKwota(d.sum)}</div>
+        <div class="seller-meta">${escH(meta)}</div>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 // ── Render Sprzedaż ───────────────────────────────────────────────
@@ -834,7 +945,7 @@ async function onToggle(event, btn) {
     if (d.status!=='success') { alert(d.message||'Błąd.'); btn.classList.remove('loading'); return; }
     row.czy_rozliczone = d.czy_rozliczone;
     if (tabela==='sprzedaz') renderSprzedaz(); else renderZadatki();
-    updateStats(); renderBreakdown();
+    updateStats(); renderBreakdown(); renderSprzedawcy();
   } catch { alert('Błąd połączenia.'); btn.classList.remove('loading'); }
 }
 
