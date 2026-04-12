@@ -53,7 +53,20 @@ module.exports = (db) => {
   //   pages[]    — 1–6 plików graficznych (kolejność = kolejność stron)
   //
   // Odpowiedź: { status: 'success', url: '/api/dokumenty/[tenant]/[uuid].pdf' }
-  router.post('/dokumenty/upload', upload.array('pages', 6), async (req, res) => {
+  router.post('/dokumenty/upload', (req, res) => {
+    upload.array('pages', 6)(req, res, async (err) => {
+      if (err) {
+        const msg =
+          err.code === 'LIMIT_FILE_COUNT' ? 'Maksymalnie 6 zdjęć naraz.' :
+          err.code === 'LIMIT_FILE_SIZE'  ? 'Plik za duży (max 10 MB).' :
+          err.message || 'Błąd przesyłania pliku.';
+        return res.json({ status: 'error', message: msg });
+      }
+      await handleUpload(req, res);
+    });
+  });
+
+  async function handleUpload(req, res) {
     const tenant_id = req.body.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id.' });
     if (!req.files || req.files.length === 0) {
@@ -88,7 +101,7 @@ module.exports = (db) => {
       console.error('[dokumenty upload]', err.message);
       return res.json({ status: 'error', message: 'Błąd przetwarzania pliku: ' + err.message });
     }
-  });
+  }
 
   // ── GET /api/dokumenty/:tenant_id/:filename ─────────────────
   // Serwuje plik PDF — dostęp tylko dla właściwego tenanta
