@@ -3,371 +3,496 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Panel Magdy — Boczki na bok</title>
+  <title>Panel Magdy</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      background: #f0f4f8;
-      color: #1a202c;
-      min-height: 100vh;
+    :root {
+      --purple: #6c63ff;
+      --purple-dark: #574fd6;
+      --purple-light: #ede9ff;
+      --green: #10b981;
+      --green-light: #d1fae5;
+      --green-dark: #065f46;
+      --red: #ef4444;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-400: #9ca3af;
+      --gray-600: #4b5563;
+      --gray-800: #1f2937;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+      --shadow: 0 4px 16px rgba(108,99,255,.10), 0 1px 4px rgba(0,0,0,.06);
+      --radius: 14px;
     }
 
-    /* ── LOGIN ── */
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f4ff;
+      color: var(--gray-800);
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ══════════════ LOGIN ══════════════════════════════════════ */
     #loginScreen {
       display: flex;
       align-items: center;
       justify-content: center;
       min-height: 100vh;
+      background: linear-gradient(135deg, #6c63ff 0%, #a78bfa 100%);
     }
     .login-card {
       background: #fff;
-      border-radius: 16px;
-      padding: 40px 36px;
-      width: 340px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      border-radius: 24px;
+      padding: 44px 40px 36px;
+      width: 360px;
+      max-width: 92vw;
+      box-shadow: 0 20px 60px rgba(108,99,255,.25);
       text-align: center;
     }
-    .login-card h1 { font-size: 1.4rem; margin-bottom: 6px; color: #2d3748; }
-    .login-card p { font-size: 0.85rem; color: #718096; margin-bottom: 24px; }
+    .login-logo {
+      width: 64px; height: 64px;
+      background: var(--purple-light);
+      border-radius: 20px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 2rem;
+    }
+    .login-card h1 { font-size: 1.5rem; font-weight: 700; color: var(--gray-800); margin-bottom: 4px; }
+    .login-card p  { font-size: 0.9rem; color: var(--gray-400); margin-bottom: 28px; }
     .login-card input[type=password] {
-      width: 100%;
-      padding: 10px 14px;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      font-size: 1rem;
-      margin-bottom: 12px;
-      outline: none;
-      transition: border-color .2s;
+      width: 100%; padding: 13px 16px;
+      border: 2px solid var(--gray-200);
+      border-radius: 12px; font-size: 1rem;
+      margin-bottom: 14px; outline: none;
+      transition: border-color .2s, box-shadow .2s;
+      text-align: center; letter-spacing: 0.15em;
     }
-    .login-card input[type=password]:focus { border-color: #667eea; }
-    .login-card button {
-      width: 100%;
-      padding: 10px;
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      font-size: 1rem;
-      cursor: pointer;
-      transition: background .2s;
+    .login-card input[type=password]:focus {
+      border-color: var(--purple);
+      box-shadow: 0 0 0 4px rgba(108,99,255,.12);
     }
-    .login-card button:hover { background: #5a67d8; }
-    #loginError { color: #e53e3e; font-size: 0.85rem; margin-top: 10px; min-height: 20px; }
+    .login-card button.btn-login {
+      width: 100%; padding: 13px;
+      background: linear-gradient(135deg, var(--purple) 0%, #a78bfa 100%);
+      color: #fff; border: none; border-radius: 12px;
+      font-size: 1rem; font-weight: 600; cursor: pointer;
+      transition: opacity .2s, transform .1s;
+      box-shadow: 0 4px 14px rgba(108,99,255,.35);
+    }
+    .login-card button.btn-login:hover  { opacity: .92; }
+    .login-card button.btn-login:active { transform: scale(.98); }
+    #loginError { color: var(--red); font-size: 0.85rem; margin-top: 12px; min-height: 20px; }
 
-    /* ── MAIN ── */
+    /* ══════════════ MAIN ═══════════════════════════════════════ */
     #mainScreen { display: none; }
 
     header {
-      background: #fff;
-      border-bottom: 1px solid #e2e8f0;
-      padding: 12px 24px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
+      background: linear-gradient(135deg, var(--purple) 0%, #8b7cf8 100%);
+      padding: 16px 28px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 2px 12px rgba(108,99,255,.3);
     }
-    header h2 { font-size: 1.1rem; color: #2d3748; flex: 1; }
-    header span.salon { font-size: 0.8rem; color: #718096; }
+    .header-logo { font-size: 1.4rem; }
+    header h2 { font-size: 1.1rem; font-weight: 700; color: #fff; flex: 1; }
+    header span.salon { font-size: 0.82rem; color: rgba(255,255,255,.75); }
     #btnLogout {
-      background: none; border: 1px solid #e2e8f0; border-radius: 8px;
-      padding: 6px 14px; cursor: pointer; font-size: 0.85rem; color: #718096;
+      background: rgba(255,255,255,.18); border: 1px solid rgba(255,255,255,.3);
+      border-radius: 10px; padding: 6px 16px;
+      cursor: pointer; font-size: 0.85rem; color: #fff;
+      transition: background .2s;
     }
-    #btnLogout:hover { background: #f7fafc; }
+    #btnLogout:hover { background: rgba(255,255,255,.28); }
 
-    .container { max-width: 1100px; margin: 0 auto; padding: 20px 16px; }
+    .container { max-width: 980px; margin: 0 auto; padding: 22px 16px; }
 
-    /* ── DATE BAR ── */
+    /* ══════════════ DATE BAR ═══════════════════════════════════ */
     .date-bar {
       background: #fff;
-      border-radius: 12px;
-      padding: 14px 18px;
+      border-radius: var(--radius);
+      padding: 16px 20px;
       margin-bottom: 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      box-shadow: var(--shadow-sm);
     }
-    .date-bar label { font-size: 0.85rem; color: #4a5568; }
+    .date-bar label { font-size: 0.83rem; color: var(--gray-600); font-weight: 500; }
     .date-bar input[type=date] {
-      padding: 6px 10px;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      font-size: 0.9rem;
-      outline: none;
+      padding: 8px 12px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px; font-size: 0.88rem; outline: none;
+      transition: border-color .2s;
     }
-    .date-bar input[type=date]:focus { border-color: #667eea; }
+    .date-bar input[type=date]:focus { border-color: var(--purple); }
     .preset-btn {
-      padding: 6px 12px;
-      border: 1px solid #cbd5e0;
-      border-radius: 8px;
-      background: #f7fafc;
-      cursor: pointer;
-      font-size: 0.82rem;
-      color: #4a5568;
-      transition: all .15s;
+      padding: 7px 14px;
+      border: 2px solid var(--gray-200);
+      border-radius: 10px; background: var(--gray-50);
+      cursor: pointer; font-size: 0.82rem; color: var(--gray-600);
+      font-weight: 500; transition: all .15s;
     }
-    .preset-btn:hover, .preset-btn.active { background: #667eea; color: #fff; border-color: #667eea; }
+    .preset-btn:hover  { border-color: var(--purple); color: var(--purple); background: var(--purple-light); }
+    .preset-btn.active { background: var(--purple); color: #fff; border-color: var(--purple); }
     .btn-szukaj {
-      padding: 7px 18px;
-      background: #667eea;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
+      padding: 8px 22px;
+      background: linear-gradient(135deg, var(--purple), #a78bfa);
+      color: #fff; border: none; border-radius: 10px;
+      cursor: pointer; font-size: 0.9rem; font-weight: 600;
       margin-left: auto;
+      box-shadow: 0 3px 10px rgba(108,99,255,.3);
+      transition: opacity .2s;
     }
-    .btn-szukaj:hover { background: #5a67d8; }
+    .btn-szukaj:hover { opacity: .88; }
 
-    /* ── TABS ── */
-    .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+    /* ══════════════ STATS ══════════════════════════════════════ */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    @media (max-width: 680px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-card .stat-label { font-size: 0.75rem; color: var(--gray-400); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .stat-card .stat-value { font-size: 1.35rem; font-weight: 700; color: var(--gray-800); }
+    .stat-card .stat-sub   { font-size: 0.78rem; color: var(--gray-400); margin-top: 2px; }
+    .stat-card.green .stat-value { color: var(--green); }
+    .stat-card.orange .stat-value { color: #f59e0b; }
+
+    /* ══════════════ TABS ═══════════════════════════════════════ */
+    .tabs { display: flex; gap: 6px; margin-bottom: 0; }
     .tab-btn {
-      padding: 9px 22px;
-      border: none;
-      border-radius: 10px 10px 0 0;
-      background: #e2e8f0;
-      cursor: pointer;
-      font-size: 0.9rem;
-      color: #4a5568;
+      padding: 10px 24px; border: none;
+      border-radius: 12px 12px 0 0;
+      background: var(--gray-200); cursor: pointer;
+      font-size: 0.9rem; color: var(--gray-600); font-weight: 500;
       transition: all .15s;
     }
-    .tab-btn.active { background: #fff; color: #2d3748; font-weight: 600; box-shadow: 0 -2px 8px rgba(0,0,0,0.05); }
+    .tab-btn.active {
+      background: #fff; color: var(--purple); font-weight: 700;
+      box-shadow: 0 -2px 10px rgba(108,99,255,.08);
+    }
 
-    /* ── TABLE PANEL ── */
+    /* ══════════════ PANEL ══════════════════════════════════════ */
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .summary-bar {
+    .panel-wrap {
       background: #fff;
-      border-radius: 0 12px 12px 12px;
-      padding: 12px 18px;
-      margin-bottom: 4px;
-      font-size: 0.85rem;
-      color: #4a5568;
-      display: flex;
-      gap: 24px;
-      flex-wrap: wrap;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      border-radius: 0 var(--radius) var(--radius) var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
     }
-    .summary-bar strong { color: #2d3748; }
 
-    .table-wrap {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      overflow: auto;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.85rem;
-    }
-    thead th {
-      background: #f7fafc;
-      padding: 10px 12px;
-      text-align: left;
-      font-weight: 600;
-      color: #4a5568;
-      border-bottom: 2px solid #e2e8f0;
-      white-space: nowrap;
-    }
-    tbody tr {
-      border-bottom: 1px solid #f0f4f8;
-      cursor: pointer;
-      transition: background .1s;
-    }
-    tbody tr:hover { background: #ebf4ff; }
-    tbody tr.rozliczone { background: #f0fff4; }
-    tbody tr.rozliczone:hover { background: #c6f6d5; }
-    tbody td {
-      padding: 9px 12px;
-      vertical-align: middle;
-      white-space: nowrap;
-    }
-    .badge-rozliczone {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      background: #c6f6d5;
-      color: #276749;
-    }
-    .badge-nierozliczone {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 12px;
-      font-size: 0.78rem;
-      background: #fed7d7;
-      color: #9b2c2c;
-    }
-    .empty-msg { padding: 40px; text-align: center; color: #a0aec0; font-size: 0.9rem; }
+    /* ══════════════ ROW LIST ═══════════════════════════════════ */
+    .row-list { }
 
-    /* ── MODAL ── */
+    .list-header {
+      display: flex; align-items: center;
+      padding: 10px 16px 10px 14px;
+      background: var(--gray-50);
+      border-bottom: 2px solid var(--gray-100);
+      font-size: 0.74rem; font-weight: 700; color: var(--gray-400);
+      text-transform: uppercase; letter-spacing: .05em;
+      gap: 0;
+    }
+
+    /* Column widths */
+    .col-toggle  { width: 52px; flex-shrink: 0; }
+    .col-data    { width: 88px; flex-shrink: 0; }
+    .col-main    { flex: 1; min-width: 0; padding: 0 12px; }
+    .col-extra   { width: 110px; flex-shrink: 0; font-size: 0.82rem; color: var(--gray-600); }
+    .col-kwota   { width: 96px; flex-shrink: 0; text-align: right; }
+    .col-info    { width: 40px; flex-shrink: 0; text-align: center; }
+
+    .data-row {
+      display: flex; align-items: center;
+      padding: 10px 16px 10px 14px;
+      border-bottom: 1px solid var(--gray-100);
+      transition: background .12s;
+      gap: 0;
+    }
+    .data-row:last-child { border-bottom: none; }
+    .data-row:hover { background: #faf9ff; }
+    .data-row.rozliczone { background: #f0fdf7; }
+    .data-row.rozliczone:hover { background: #dcfce7; }
+
+    /* Toggle button */
+    .toggle-btn {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2.5px solid var(--gray-200);
+      background: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.1rem; line-height: 1;
+      transition: all .18s; outline: none;
+      position: relative;
+    }
+    .toggle-btn:hover { border-color: var(--green); background: var(--green-light); transform: scale(1.08); }
+    .toggle-btn.checked {
+      background: var(--green); border-color: var(--green);
+      box-shadow: 0 3px 10px rgba(16,185,129,.3);
+    }
+    .toggle-btn.checked:hover { background: #059669; border-color: #059669; }
+    .toggle-btn.loading { opacity: .5; cursor: wait; pointer-events: none; }
+    .toggle-btn svg { width: 16px; height: 16px; }
+
+    .col-data-val {
+      font-size: 0.82rem; color: var(--gray-400);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .col-main-klient {
+      font-size: 0.9rem; font-weight: 600; color: var(--gray-800);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .col-main-sub {
+      font-size: 0.78rem; color: var(--gray-400);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 1px;
+    }
+
+    .col-kwota-val {
+      font-size: 0.95rem; font-weight: 700; color: var(--gray-800);
+      text-align: right;
+    }
+    .data-row.rozliczone .col-kwota-val { color: var(--green); }
+
+    .info-btn {
+      width: 30px; height: 30px; border-radius: 50%;
+      border: none; background: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--gray-400); font-size: 1.1rem;
+      transition: all .15s; margin: 0 auto;
+    }
+    .info-btn:hover { background: var(--purple-light); color: var(--purple); }
+
+    .empty-msg {
+      padding: 52px 20px; text-align: center;
+      color: var(--gray-400); font-size: 0.9rem;
+    }
+    .empty-icon { font-size: 2.4rem; margin-bottom: 10px; }
+
+    .spinner {
+      padding: 52px 20px; text-align: center;
+      color: var(--gray-400); font-size: 0.9rem;
+    }
+    .spinner::before {
+      content: '';
+      display: block; width: 32px; height: 32px;
+      border: 3px solid var(--gray-200);
+      border-top-color: var(--purple);
+      border-radius: 50%; margin: 0 auto 12px;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ══════════════ MODAL ══════════════════════════════════════ */
     .modal-overlay {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.45);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
+      display: none; position: fixed; inset: 0;
+      background: rgba(31,41,55,.5);
+      z-index: 1000; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px);
     }
     .modal-overlay.open { display: flex; }
     .modal-box {
-      background: #fff;
-      border-radius: 16px;
-      padding: 28px 28px 22px;
-      width: 440px;
-      max-width: 96vw;
-      box-shadow: 0 8px 40px rgba(0,0,0,0.18);
+      background: #fff; border-radius: 20px;
+      padding: 28px 28px 24px;
+      width: 420px; max-width: 94vw;
+      box-shadow: 0 20px 60px rgba(0,0,0,.18);
+      animation: modalIn .2s ease;
     }
-    .modal-box h3 { font-size: 1.05rem; color: #2d3748; margin-bottom: 16px; }
-    .modal-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #f0f4f8; font-size: 0.88rem; }
-    .modal-row:last-of-type { border-bottom: none; }
-    .modal-row span:first-child { color: #718096; }
-    .modal-row span:last-child { color: #2d3748; font-weight: 500; text-align: right; max-width: 60%; word-break: break-word; white-space: normal; }
-    .modal-actions { margin-top: 20px; display: flex; gap: 10px; }
-    .modal-actions button {
-      flex: 1;
-      padding: 9px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 0.9rem;
-      transition: all .15s;
+    @keyframes modalIn { from { opacity:0; transform: scale(.94) translateY(8px); } }
+    .modal-box h3 {
+      font-size: 1.1rem; font-weight: 700; color: var(--gray-800);
+      margin-bottom: 18px; display: flex; align-items: center; gap: 8px;
     }
-    #btnToggleRozlicz { background: #48bb78; color: #fff; }
-    #btnToggleRozlicz:hover { background: #38a169; }
-    #btnToggleRozlicz.cofnij { background: #e53e3e; }
-    #btnToggleRozlicz.cofnij:hover { background: #c53030; }
-    #btnCloseModal { background: #e2e8f0; color: #4a5568; }
-    #btnCloseModal:hover { background: #cbd5e0; }
-
-    .spinner { text-align: center; padding: 40px; color: #a0aec0; }
-    .error-msg { text-align: center; padding: 20px; color: #e53e3e; font-size: 0.9rem; }
+    .modal-klient { font-size: 1rem; font-weight: 700; color: var(--purple); margin-bottom: 16px; }
+    .modal-rows { display: flex; flex-direction: column; gap: 0; }
+    .modal-r {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 9px 0; border-bottom: 1px solid var(--gray-100);
+      font-size: 0.875rem;
+    }
+    .modal-r:last-child { border-bottom: none; }
+    .modal-r .lbl { color: var(--gray-400); flex-shrink: 0; margin-right: 12px; }
+    .modal-r .val { color: var(--gray-800); font-weight: 500; text-align: right; word-break: break-word; }
+    .modal-r .val.bold { font-size: 1.05rem; font-weight: 700; }
+    .modal-status-bar {
+      margin-top: 18px; padding: 12px 16px;
+      border-radius: 12px; font-size: 0.88rem; font-weight: 600;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .modal-status-bar.rozliczone-bar   { background: var(--green-light); color: var(--green-dark); }
+    .modal-status-bar.nierozliczone-bar { background: #fff7ed; color: #92400e; }
+    .modal-close {
+      position: absolute; top: 14px; right: 16px;
+      background: none; border: none; cursor: pointer;
+      font-size: 1.3rem; color: var(--gray-400); padding: 4px;
+    }
+    .modal-close:hover { color: var(--gray-800); }
   </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══════════════════════════════════════════════════ -->
+<!-- ══ LOGIN ══════════════════════════════════════════════════════ -->
 <div id="loginScreen">
   <div class="login-card">
-    <h1>Panel Magdy</h1>
-    <p>Boczki na bok — rozliczenia</p>
+    <div class="login-logo">✂️</div>
+    <h1>Witaj, Magda!</h1>
+    <p>Panel rozliczeń — Boczki na bok</p>
     <input type="password" id="inputHaslo" placeholder="Hasło" autocomplete="current-password" />
-    <button id="btnLogin">Zaloguj</button>
+    <button class="btn-login" id="btnLogin">Zaloguj się</button>
     <div id="loginError"></div>
   </div>
 </div>
 
-<!-- ══ MAIN ═══════════════════════════════════════════════════ -->
+<!-- ══ MAIN ═══════════════════════════════════════════════════════ -->
 <div id="mainScreen">
   <header>
+    <span class="header-logo">✂️</span>
     <h2>Panel Magdy</h2>
     <span class="salon">Boczki na bok</span>
     <button id="btnLogout">Wyloguj</button>
   </header>
 
   <div class="container">
+
     <!-- Date bar -->
     <div class="date-bar">
-      <label>Od:</label>
+      <label>Od</label>
       <input type="date" id="dateOd" />
-      <label>Do:</label>
+      <label>Do</label>
       <input type="date" id="dateDo" />
       <button class="preset-btn" data-preset="today">Dziś</button>
-      <button class="preset-btn" data-preset="7">Ostatnie 7 dni</button>
-      <button class="preset-btn" data-preset="month">Ten miesiąc</button>
+      <button class="preset-btn" data-preset="7">7 dni</button>
+      <button class="preset-btn active" data-preset="month">Ten miesiąc</button>
       <button class="btn-szukaj" id="btnSzukaj">Szukaj</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid" id="statsGrid" style="display:none">
+      <div class="stat-card">
+        <div class="stat-label">Wszystkich</div>
+        <div class="stat-value" id="statAll">—</div>
+        <div class="stat-sub" id="statAllKwota">—</div>
+      </div>
+      <div class="stat-card green">
+        <div class="stat-label">Rozliczone</div>
+        <div class="stat-value" id="statRoz">—</div>
+        <div class="stat-sub" id="statRozKwota">—</div>
+      </div>
+      <div class="stat-card orange">
+        <div class="stat-label">Nierozliczone</div>
+        <div class="stat-value" id="statNie">—</div>
+        <div class="stat-sub" id="statNieKwota">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Suma łączna</div>
+        <div class="stat-value" id="statSuma" style="font-size:1.1rem">—</div>
+        <div class="stat-sub" id="statSumaTab">—</div>
+      </div>
     </div>
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab-btn active" data-tab="sprzedaz">Sprzedaż</button>
-      <button class="tab-btn" data-tab="zadatki">Zadatki</button>
+      <button class="tab-btn active" data-tab="sprzedaz">💳 Sprzedaż</button>
+      <button class="tab-btn" data-tab="zadatki">🏷️ Zadatki</button>
     </div>
 
-    <!-- Sprzedaż panel -->
+    <!-- Sprzedaż -->
     <div class="tab-panel active" id="panelSprzedaz">
-      <div class="summary-bar" id="summarySprzedaz">Wczytaj dane, aby zobaczyć podsumowanie.</div>
-      <div class="table-wrap">
-        <div id="tabelaSprzedaz" class="empty-msg">Wybierz zakres dat i kliknij Szukaj.</div>
+      <div class="panel-wrap">
+        <div class="list-header">
+          <div class="col-toggle"></div>
+          <div class="col-data">Data</div>
+          <div class="col-main" style="padding:0 12px">Klient / Zabieg</div>
+          <div class="col-extra">Sprzedawca</div>
+          <div class="col-extra">Płatność</div>
+          <div class="col-kwota" style="text-align:right">Kwota</div>
+          <div class="col-info"></div>
+        </div>
+        <div id="listaSprzedaz">
+          <div class="empty-msg"><div class="empty-icon">📋</div>Wybierz zakres dat i kliknij Szukaj.</div>
+        </div>
       </div>
     </div>
 
-    <!-- Zadatki panel -->
+    <!-- Zadatki -->
     <div class="tab-panel" id="panelZadatki">
-      <div class="summary-bar" id="summaryZadatki">Wczytaj dane, aby zobaczyć podsumowanie.</div>
-      <div class="table-wrap">
-        <div id="tabelaZadatki" class="empty-msg">Wybierz zakres dat i kliknij Szukaj.</div>
+      <div class="panel-wrap">
+        <div class="list-header">
+          <div class="col-toggle"></div>
+          <div class="col-data">Data</div>
+          <div class="col-main" style="padding:0 12px">Klient / Cel</div>
+          <div class="col-extra">Typ</div>
+          <div class="col-extra">Metoda</div>
+          <div class="col-kwota" style="text-align:right">Kwota</div>
+          <div class="col-info"></div>
+        </div>
+        <div id="listaZadatki">
+          <div class="empty-msg"><div class="empty-icon">🏷️</div>Wybierz zakres dat i kliknij Szukaj.</div>
+        </div>
       </div>
     </div>
-  </div>
+
+  </div><!-- /container -->
 </div>
 
-<!-- ══ MODAL ═══════════════════════════════════════════════════ -->
+<!-- ══ DETAIL MODAL ════════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modalOverlay">
-  <div class="modal-box">
+  <div class="modal-box" style="position:relative">
+    <button class="modal-close" id="btnCloseModal" title="Zamknij">✕</button>
     <h3 id="modalTitle">Szczegóły</h3>
     <div id="modalBody"></div>
-    <div class="modal-actions">
-      <button id="btnToggleRozlicz">Oznacz jako rozliczone</button>
-      <button id="btnCloseModal">Zamknij</button>
-    </div>
+    <div id="modalStatusBar" class="modal-status-bar"></div>
   </div>
 </div>
 
 <script>
-// ── State ──────────────────────────────────────────────────────
-let token = localStorage.getItem('magda_token') || '';
+// ── State ────────────────────────────────────────────────────────
+let token        = localStorage.getItem('magda_token') || '';
 let rowsSprzedaz = [];
 let rowsZadatki  = [];
 let activeTab    = 'sprzedaz';
-let modalTabela  = '';
-let modalId      = '';
-let modalRozliczone = 0;
 
-// ── Helpers ────────────────────────────────────────────────────
+// ── Utils ────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 function fmtKwota(v) {
   return Number(v).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
 }
-
-function dzisiaj() {
-  return new Date().toISOString().slice(0, 10);
-}
-
+function dzisiaj() { return new Date().toISOString().slice(0, 10); }
 function nDniTemu(n) {
-  const d = new Date();
-  d.setDate(d.getDate() - n + 1);
+  const d = new Date(); d.setDate(d.getDate() - n + 1);
   return d.toISOString().slice(0, 10);
 }
-
 function poczatekMiesiaca() {
   const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-01`;
+}
+function escH(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function authHeaders() {
+  return { 'Content-Type': 'application/json', 'x-magda-token': token };
 }
 
-// ── Init daty ─────────────────────────────────────────────────
-(function initDaty() {
-  $('dateDo').value  = dzisiaj();
-  $('dateOd').value  = poczatekMiesiaca();
-})();
+// ── Init dates ───────────────────────────────────────────────────
+$('dateOd').value = poczatekMiesiaca();
+$('dateDo').value = dzisiaj();
 
-// ── Auth ───────────────────────────────────────────────────────
+// ── Auth ─────────────────────────────────────────────────────────
 function showMain() {
   $('loginScreen').style.display = 'none';
   $('mainScreen').style.display  = 'block';
 }
-
-if (token) {
-  // Sprawdź czy token nadal ważny przez załadowanie minimalnej trasy
-  showMain();
-}
+if (token) showMain();
 
 $('btnLogin').addEventListener('click', login);
 $('inputHaslo').addEventListener('keydown', e => { if (e.key === 'Enter') login(); });
@@ -377,8 +502,7 @@ async function login() {
   $('loginError').textContent = '';
   try {
     const r = await fetch('/api/magda/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ haslo })
     });
     const d = await r.json();
@@ -389,9 +513,7 @@ async function login() {
     } else {
       $('loginError').textContent = d.message || 'Błąd logowania.';
     }
-  } catch (e) {
-    $('loginError').textContent = 'Błąd połączenia z serwerem.';
-  }
+  } catch { $('loginError').textContent = 'Błąd połączenia z serwerem.'; }
 }
 
 $('btnLogout').addEventListener('click', () => {
@@ -402,90 +524,6 @@ $('btnLogout').addEventListener('click', () => {
   $('inputHaslo').value = '';
 });
 
-// ── Auth header ────────────────────────────────────────────────
-function authHeaders() {
-  return { 'Content-Type': 'application/json', 'x-magda-token': token };
-}
-
-// ── Presets ────────────────────────────────────────────────────
-document.querySelectorAll('.preset-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    const p = btn.dataset.preset;
-    if (p === 'today') {
-      $('dateOd').value = dzisiaj();
-      $('dateDo').value = dzisiaj();
-    } else if (p === '7') {
-      $('dateOd').value = nDniTemu(7);
-      $('dateDo').value = dzisiaj();
-    } else if (p === 'month') {
-      $('dateOd').value = poczatekMiesiaca();
-      $('dateDo').value = dzisiaj();
-    }
-  });
-});
-
-// ── Tabs ───────────────────────────────────────────────────────
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    btn.classList.add('active');
-    activeTab = btn.dataset.tab;
-    $('panel' + activeTab.charAt(0).toUpperCase() + activeTab.slice(1)).classList.add('active');
-  });
-});
-
-// ── Szukaj ─────────────────────────────────────────────────────
-$('btnSzukaj').addEventListener('click', wczytajDane);
-
-async function wczytajDane() {
-  const od = $('dateOd').value;
-  const _do = $('dateDo').value;
-  if (!od || !_do) { alert('Podaj zakres dat.'); return; }
-
-  $('tabelaSprzedaz').innerHTML = '<div class="spinner">Ładowanie...</div>';
-  $('tabelaZadatki').innerHTML  = '<div class="spinner">Ładowanie...</div>';
-
-  await Promise.all([
-    wczytajSprzedaz(od, _do),
-    wczytajZadatki(od, _do)
-  ]);
-}
-
-async function wczytajSprzedaz(od, _do) {
-  try {
-    const r = await fetch(`/api/magda/sprzedaz?od=${od}&do=${_do}`, { headers: authHeaders() });
-    if (r.status === 401) { handleUnauth(); return; }
-    const d = await r.json();
-    if (d.status !== 'success') {
-      $('tabelaSprzedaz').innerHTML = `<div class="error-msg">${d.message}</div>`;
-      return;
-    }
-    rowsSprzedaz = d.rows || [];
-    renderSprzedaz();
-  } catch (e) {
-    $('tabelaSprzedaz').innerHTML = '<div class="error-msg">Błąd połączenia.</div>';
-  }
-}
-
-async function wczytajZadatki(od, _do) {
-  try {
-    const r = await fetch(`/api/magda/zadatki?od=${od}&do=${_do}`, { headers: authHeaders() });
-    if (r.status === 401) { handleUnauth(); return; }
-    const d = await r.json();
-    if (d.status !== 'success') {
-      $('tabelaZadatki').innerHTML = `<div class="error-msg">${d.message}</div>`;
-      return;
-    }
-    rowsZadatki = d.rows || [];
-    renderZadatki();
-  } catch (e) {
-    $('tabelaZadatki').innerHTML = '<div class="error-msg">Błąd połączenia.</div>';
-  }
-}
-
 function handleUnauth() {
   token = '';
   localStorage.removeItem('magda_token');
@@ -494,200 +532,234 @@ function handleUnauth() {
   alert('Sesja wygasła. Zaloguj się ponownie.');
 }
 
-// ── Render Sprzedaż ────────────────────────────────────────────
+// ── Presets ───────────────────────────────────────────────────────
+document.querySelectorAll('.preset-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const p = btn.dataset.preset;
+    if (p === 'today')  { $('dateOd').value = dzisiaj();         $('dateDo').value = dzisiaj(); }
+    if (p === '7')      { $('dateOd').value = nDniTemu(7);       $('dateDo').value = dzisiaj(); }
+    if (p === 'month')  { $('dateOd').value = poczatekMiesiaca(); $('dateDo').value = dzisiaj(); }
+  });
+});
+
+// ── Tabs ──────────────────────────────────────────────────────────
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    btn.classList.add('active');
+    activeTab = btn.dataset.tab;
+    $('panel' + activeTab.charAt(0).toUpperCase() + activeTab.slice(1)).classList.add('active');
+    updateStats();
+  });
+});
+
+// ── Szukaj ────────────────────────────────────────────────────────
+$('btnSzukaj').addEventListener('click', wczytajDane);
+
+async function wczytajDane() {
+  const od = $('dateOd').value, _do = $('dateDo').value;
+  if (!od || !_do) { alert('Podaj zakres dat.'); return; }
+
+  $('listaSprzedaz').innerHTML = '<div class="spinner">Wczytuję dane…</div>';
+  $('listaZadatki').innerHTML  = '<div class="spinner">Wczytuję dane…</div>';
+
+  await Promise.all([wczytajSprzedaz(od, _do), wczytajZadatki(od, _do)]);
+  updateStats();
+}
+
+async function wczytajSprzedaz(od, _do) {
+  try {
+    const r = await fetch(`/api/magda/sprzedaz?od=${od}&do=${_do}`, { headers: authHeaders() });
+    if (r.status === 401) { handleUnauth(); return; }
+    const d = await r.json();
+    if (d.status !== 'success') {
+      $('listaSprzedaz').innerHTML = `<div class="empty-msg" style="color:#ef4444">${escH(d.message)}</div>`;
+      return;
+    }
+    rowsSprzedaz = d.rows || [];
+    renderSprzedaz();
+  } catch { $('listaSprzedaz').innerHTML = '<div class="empty-msg" style="color:#ef4444">Błąd połączenia.</div>'; }
+}
+
+async function wczytajZadatki(od, _do) {
+  try {
+    const r = await fetch(`/api/magda/zadatki?od=${od}&do=${_do}`, { headers: authHeaders() });
+    if (r.status === 401) { handleUnauth(); return; }
+    const d = await r.json();
+    if (d.status !== 'success') {
+      $('listaZadatki').innerHTML = `<div class="empty-msg" style="color:#ef4444">${escH(d.message)}</div>`;
+      return;
+    }
+    rowsZadatki = d.rows || [];
+    renderZadatki();
+  } catch { $('listaZadatki').innerHTML = '<div class="empty-msg" style="color:#ef4444">Błąd połączenia.</div>'; }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────
+function updateStats() {
+  const rows = activeTab === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  if (!rows.length) { $('statsGrid').style.display = 'none'; return; }
+  $('statsGrid').style.display = 'grid';
+
+  const total  = rows.reduce((s, r) => s + Number(r.kwota||0), 0);
+  const licRoz = rows.filter(r => r.czy_rozliczone).length;
+  const kwRoz  = rows.filter(r => r.czy_rozliczone).reduce((s,r) => s + Number(r.kwota||0), 0);
+  const licNie = rows.length - licRoz;
+  const kwNie  = total - kwRoz;
+
+  $('statAll').textContent     = rows.length;
+  $('statAllKwota').textContent= fmtKwota(total);
+  $('statRoz').textContent     = licRoz;
+  $('statRozKwota').textContent= fmtKwota(kwRoz);
+  $('statNie').textContent     = licNie;
+  $('statNieKwota').textContent= fmtKwota(kwNie);
+  $('statSuma').textContent    = fmtKwota(total);
+  $('statSumaTab').textContent = activeTab === 'sprzedaz' ? 'sprzedaż' : 'zadatki';
+}
+
+// ── Render Sprzedaż ───────────────────────────────────────────────
 function renderSprzedaz() {
   const rows = rowsSprzedaz;
-  const total = rows.reduce((s, r) => s + Number(r.kwota || 0), 0);
-  const rozliczone = rows.filter(r => r.czy_rozliczone).reduce((s, r) => s + Number(r.kwota || 0), 0);
-  const nierozliczone = total - rozliczone;
-  const licRoz = rows.filter(r => r.czy_rozliczone).length;
-  $('summarySprzedaz').innerHTML =
-    `Łącznie: <strong>${rows.length} transakcji</strong> &nbsp;|&nbsp; ` +
-    `Suma: <strong>${fmtKwota(total)}</strong> &nbsp;|&nbsp; ` +
-    `Rozliczone: <strong>${licRoz} (${fmtKwota(rozliczone)})</strong> &nbsp;|&nbsp; ` +
-    `Nierozliczone: <strong>${rows.length - licRoz} (${fmtKwota(nierozliczone)})</strong>`;
-
   if (!rows.length) {
-    $('tabelaSprzedaz').innerHTML = '<div class="empty-msg">Brak transakcji w podanym okresie.</div>';
+    $('listaSprzedaz').innerHTML = '<div class="empty-msg"><div class="empty-icon">🔍</div>Brak transakcji w podanym okresie.</div>';
     return;
   }
-
-  let html = `<table><thead><tr>
-    <th>Data</th><th>Klient</th><th>Zabieg</th><th>Sprzedawca</th>
-    <th>Kwota</th><th>Płatność</th><th>Status</th><th>Rozliczenie</th>
-  </tr></thead><tbody>`;
-
-  rows.forEach(r => {
-    const cls = r.czy_rozliczone ? 'rozliczone' : '';
-    const badge = r.czy_rozliczone
-      ? '<span class="badge-rozliczone">Rozliczone</span>'
-      : '<span class="badge-nierozliczone">Nierozliczone</span>';
-    const data = r.data_sprzedazy ? String(r.data_sprzedazy).slice(0, 10) : '';
-    html += `<tr class="${cls}" data-id="${r.id}" data-tabela="sprzedaz">
-      <td>${data}</td>
-      <td>${escH(r.klient || '')}</td>
-      <td>${escH(r.zabieg || '')}</td>
-      <td>${escH(r.sprzedawca || '')}</td>
-      <td style="font-weight:600">${fmtKwota(r.kwota)}</td>
-      <td>${escH(r.platnosc || '')}</td>
-      <td>${escH(r.status || '')}</td>
-      <td>${badge}</td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  $('tabelaSprzedaz').innerHTML = html;
-  bindRowClicks('tabelaSprzedaz');
+  $('listaSprzedaz').innerHTML = rows.map(r => {
+    const data = r.data_sprzedazy ? String(r.data_sprzedazy).slice(0,10) : '';
+    const cls  = r.czy_rozliczone ? 'rozliczone' : '';
+    const chk  = r.czy_rozliczone ? 'checked' : '';
+    const icon = r.czy_rozliczone
+      ? `<svg viewBox="0 0 20 20" fill="white"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>`
+      : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/></svg>`;
+    return `<div class="data-row ${cls}" data-id="${escH(String(r.id))}" data-tabela="sprzedaz">
+      <div class="col-toggle">
+        <button class="toggle-btn ${chk}" data-id="${escH(String(r.id))}" data-tabela="sprzedaz" title="${r.czy_rozliczone?'Cofnij rozliczenie':'Oznacz jako rozliczone'}" onclick="onToggle(event,this)">${icon}</button>
+      </div>
+      <div class="col-data"><span class="col-data-val">${escH(data)}</span></div>
+      <div class="col-main">
+        <div class="col-main-klient">${escH(r.klient||'')}</div>
+        <div class="col-main-sub">${escH(r.zabieg||'')}</div>
+      </div>
+      <div class="col-extra">${escH(r.sprzedawca||'')}</div>
+      <div class="col-extra">${escH(r.platnosc||'')}</div>
+      <div class="col-kwota"><span class="col-kwota-val">${fmtKwota(r.kwota)}</span></div>
+      <div class="col-info"><button class="info-btn" data-id="${escH(String(r.id))}" data-tabela="sprzedaz" onclick="onInfo(event,this)" title="Szczegóły">ℹ️</button></div>
+    </div>`;
+  }).join('');
 }
 
-// ── Render Zadatki ─────────────────────────────────────────────
+// ── Render Zadatki ────────────────────────────────────────────────
 function renderZadatki() {
   const rows = rowsZadatki;
-  const total = rows.reduce((s, r) => s + Number(r.kwota || 0), 0);
-  const rozliczone = rows.filter(r => r.czy_rozliczone).reduce((s, r) => s + Number(r.kwota || 0), 0);
-  const licRoz = rows.filter(r => r.czy_rozliczone).length;
-  $('summaryZadatki').innerHTML =
-    `Łącznie: <strong>${rows.length} zadatków</strong> &nbsp;|&nbsp; ` +
-    `Suma: <strong>${fmtKwota(total)}</strong> &nbsp;|&nbsp; ` +
-    `Rozliczone: <strong>${licRoz} (${fmtKwota(rozliczone)})</strong> &nbsp;|&nbsp; ` +
-    `Nierozliczone: <strong>${rows.length - licRoz} (${fmtKwota(total - rozliczone)})</strong>`;
-
   if (!rows.length) {
-    $('tabelaZadatki').innerHTML = '<div class="empty-msg">Brak zadatków w podanym okresie.</div>';
+    $('listaZadatki').innerHTML = '<div class="empty-msg"><div class="empty-icon">🔍</div>Brak zadatków w podanym okresie.</div>';
     return;
   }
-
-  let html = `<table><thead><tr>
-    <th>Data</th><th>Klient</th><th>Typ</th><th>Kwota</th>
-    <th>Metoda</th><th>Cel</th><th>Pracownicy</th><th>Status</th><th>Rozliczenie</th>
-  </tr></thead><tbody>`;
-
-  rows.forEach(r => {
-    const cls = r.czy_rozliczone ? 'rozliczone' : '';
-    const badge = r.czy_rozliczone
-      ? '<span class="badge-rozliczone">Rozliczone</span>'
-      : '<span class="badge-nierozliczone">Nierozliczone</span>';
-    const data = r.data_wplaty ? String(r.data_wplaty).slice(0, 10) : '';
-    html += `<tr class="${cls}" data-id="${r.id}" data-tabela="zadatki">
-      <td>${data}</td>
-      <td>${escH(r.klient || '')}</td>
-      <td>${escH(r.typ || '')}</td>
-      <td style="font-weight:600">${fmtKwota(r.kwota)}</td>
-      <td>${escH(r.metoda || '')}</td>
-      <td>${escH(r.cel || '')}</td>
-      <td>${escH(r.pracownicy || '')}</td>
-      <td>${escH(r.status || '')}</td>
-      <td>${badge}</td>
-    </tr>`;
-  });
-  html += '</tbody></table>';
-  $('tabelaZadatki').innerHTML = html;
-  bindRowClicks('tabelaZadatki');
+  $('listaZadatki').innerHTML = rows.map(r => {
+    const data = r.data_wplaty ? String(r.data_wplaty).slice(0,10) : '';
+    const cls  = r.czy_rozliczone ? 'rozliczone' : '';
+    const chk  = r.czy_rozliczone ? 'checked' : '';
+    const icon = r.czy_rozliczone
+      ? `<svg viewBox="0 0 20 20" fill="white"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>`
+      : `<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="10" r="7"/></svg>`;
+    return `<div class="data-row ${cls}" data-id="${escH(String(r.id))}" data-tabela="zadatki">
+      <div class="col-toggle">
+        <button class="toggle-btn ${chk}" data-id="${escH(String(r.id))}" data-tabela="zadatki" title="${r.czy_rozliczone?'Cofnij rozliczenie':'Oznacz jako rozliczone'}" onclick="onToggle(event,this)">${icon}</button>
+      </div>
+      <div class="col-data"><span class="col-data-val">${escH(data)}</span></div>
+      <div class="col-main">
+        <div class="col-main-klient">${escH(r.klient||'')}</div>
+        <div class="col-main-sub">${escH(r.cel||'')}</div>
+      </div>
+      <div class="col-extra">${escH(r.typ||'')}</div>
+      <div class="col-extra">${escH(r.metoda||'')}</div>
+      <div class="col-kwota"><span class="col-kwota-val">${fmtKwota(r.kwota)}</span></div>
+      <div class="col-info"><button class="info-btn" data-id="${escH(String(r.id))}" data-tabela="zadatki" onclick="onInfo(event,this)" title="Szczegóły">ℹ️</button></div>
+    </div>`;
+  }).join('');
 }
 
-function bindRowClicks(containerId) {
-  document.querySelectorAll(`#${containerId} tbody tr`).forEach(tr => {
-    tr.addEventListener('click', () => {
-      const tabela = tr.dataset.tabela;
-      const id     = tr.dataset.id;
-      const rows   = tabela === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
-      const row    = rows.find(r => String(r.id) === String(id));
-      if (row) openModal(tabela, row);
+// ── Toggle (direct, no modal) ─────────────────────────────────────
+async function onToggle(event, btn) {
+  event.stopPropagation();
+  if (btn.classList.contains('loading')) return;
+
+  const id     = btn.dataset.id;
+  const tabela = btn.dataset.tabela;
+  const rows   = tabela === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const row    = rows.find(r => String(r.id) === String(id));
+  if (!row) return;
+
+  const nowaWartosc = row.czy_rozliczone ? 0 : 1;
+  btn.classList.add('loading');
+
+  try {
+    const r = await fetch('/api/magda/rozlicz', {
+      method: 'POST', headers: authHeaders(),
+      body: JSON.stringify({ tabela, id, czy_rozliczone: nowaWartosc })
     });
-  });
+    if (r.status === 401) { handleUnauth(); return; }
+    const d = await r.json();
+    if (d.status !== 'success') { alert(d.message || 'Błąd.'); btn.classList.remove('loading'); return; }
+    row.czy_rozliczone = d.czy_rozliczone;
+    if (tabela === 'sprzedaz') renderSprzedaz(); else renderZadatki();
+    updateStats();
+  } catch {
+    alert('Błąd połączenia.');
+    btn.classList.remove('loading');
+  }
 }
 
-// ── Modal ──────────────────────────────────────────────────────
-function openModal(tabela, row) {
-  modalTabela     = tabela;
-  modalId         = row.id;
-  modalRozliczone = row.czy_rozliczone ? 1 : 0;
+// ── Info modal ────────────────────────────────────────────────────
+function onInfo(event, btn) {
+  event.stopPropagation();
+  const id     = btn.dataset.id;
+  const tabela = btn.dataset.tabela;
+  const rows   = tabela === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const row    = rows.find(r => String(r.id) === String(id));
+  if (!row) return;
 
-  $('modalTitle').textContent = tabela === 'sprzedaz' ? 'Szczegóły sprzedaży' : 'Szczegóły zadatku';
+  $('modalTitle').textContent = tabela === 'sprzedaz' ? '💳 Szczegóły sprzedaży' : '🏷️ Szczegóły zadatku';
 
-  let bodyHtml = '';
+  let html = '';
   if (tabela === 'sprzedaz') {
-    const data = row.data_sprzedazy ? String(row.data_sprzedazy).slice(0, 10) : '';
-    bodyHtml = modalRow('Data', data)
-             + modalRow('Klient', row.klient)
-             + modalRow('Zabieg', row.zabieg)
-             + modalRow('Sprzedawca', row.sprzedawca)
-             + modalRow('Kwota', fmtKwota(row.kwota))
-             + modalRow('Płatność', row.platnosc)
-             + modalRow('Status', row.status)
-             + modalRow('Komentarz', row.komentarz || '—')
-             + modalRow('Szczegóły', row.szczegoly || '—');
+    const data = row.data_sprzedazy ? String(row.data_sprzedazy).slice(0,10) : '';
+    html = mr('Klient', row.klient, true) + mr('Data', data) + mr('Zabieg', row.zabieg)
+         + mr('Sprzedawca', row.sprzedawca) + mr('Kwota', fmtKwota(row.kwota), false, true)
+         + mr('Płatność', row.platnosc) + mr('Status', row.status)
+         + (row.komentarz ? mr('Komentarz', row.komentarz) : '')
+         + (row.szczegoly ? mr('Szczegóły', row.szczegoly) : '');
   } else {
-    const data = row.data_wplaty ? String(row.data_wplaty).slice(0, 10) : '';
-    bodyHtml = modalRow('Data wpłaty', data)
-             + modalRow('Klient', row.klient)
-             + modalRow('Typ', row.typ)
-             + modalRow('Kwota', fmtKwota(row.kwota))
-             + modalRow('Metoda', row.metoda)
-             + modalRow('Cel', row.cel)
-             + modalRow('Pracownicy', row.pracownicy || '—')
-             + modalRow('Status', row.status);
+    const data = row.data_wplaty ? String(row.data_wplaty).slice(0,10) : '';
+    html = mr('Klient', row.klient, true) + mr('Data wpłaty', data)
+         + mr('Typ', row.typ) + mr('Kwota', fmtKwota(row.kwota), false, true)
+         + mr('Metoda', row.metoda) + mr('Cel', row.cel)
+         + (row.pracownicy ? mr('Pracownicy', row.pracownicy) : '')
+         + mr('Status', row.status);
   }
-  $('modalBody').innerHTML = bodyHtml;
+  $('modalBody').innerHTML = `<div class="modal-rows">${html}</div>`;
 
-  const btn = $('btnToggleRozlicz');
-  if (modalRozliczone) {
-    btn.textContent = 'Cofnij rozliczenie';
-    btn.className   = 'cofnij';
+  const bar = $('modalStatusBar');
+  if (row.czy_rozliczone) {
+    bar.className = 'modal-status-bar rozliczone-bar';
+    bar.innerHTML = '✅ Transakcja rozliczona';
   } else {
-    btn.textContent = 'Oznacz jako rozliczone';
-    btn.className   = '';
+    bar.className = 'modal-status-bar nierozliczone-bar';
+    bar.innerHTML = '⏳ Transakcja nierozliczona — kliknij ○ w wierszu, aby rozliczyć';
   }
 
   $('modalOverlay').classList.add('open');
 }
 
-function modalRow(label, value) {
-  return `<div class="modal-row"><span>${escH(label)}</span><span>${escH(String(value || ''))}</span></div>`;
+function mr(lbl, val, big=false, bold=false) {
+  return `<div class="modal-r"><span class="lbl">${escH(lbl)}</span><span class="val${bold?' bold':''}">${escH(String(val||'—'))}</span></div>`;
 }
 
-$('btnCloseModal').addEventListener('click', () => {
-  $('modalOverlay').classList.remove('open');
-});
-$('modalOverlay').addEventListener('click', e => {
-  if (e.target === $('modalOverlay')) $('modalOverlay').classList.remove('open');
-});
-
-$('btnToggleRozlicz').addEventListener('click', toggleRozlicz);
-
-async function toggleRozlicz() {
-  const nowaWartosc = modalRozliczone ? 0 : 1;
-  try {
-    const r = await fetch('/api/magda/rozlicz', {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ tabela: modalTabela, id: modalId, czy_rozliczone: nowaWartosc })
-    });
-    if (r.status === 401) { handleUnauth(); return; }
-    const d = await r.json();
-    if (d.status !== 'success') { alert(d.message || 'Błąd.'); return; }
-
-    // Zaktualizuj lokalnie
-    const rows = modalTabela === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
-    const row  = rows.find(r => String(r.id) === String(modalId));
-    if (row) row.czy_rozliczone = d.czy_rozliczone;
-
-    if (modalTabela === 'sprzedaz') renderSprzedaz();
-    else renderZadatki();
-
-    $('modalOverlay').classList.remove('open');
-  } catch (e) {
-    alert('Błąd połączenia z serwerem.');
-  }
-}
-
-// ── XSS helper ────────────────────────────────────────────────
-function escH(s) {
-  return String(s)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+$('btnCloseModal').addEventListener('click', () => $('modalOverlay').classList.remove('open'));
+$('modalOverlay').addEventListener('click', e => { if (e.target === $('modalOverlay')) $('modalOverlay').classList.remove('open'); });
 </script>
 </body>
 </html>
