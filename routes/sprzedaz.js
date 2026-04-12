@@ -368,10 +368,13 @@ module.exports = (db) => {
       try { _kwotaEmerg = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
       db.query(
-        `SELECT klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
+        `SELECT klient, zabieg, sprzedawca, kwota, platnosc, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono ID' });
+          if (tenant_id === 'boczki-salon-glowny-001' && rows[0].czy_rozliczone) {
+            return res.json({ status: 'error', message: 'Transakcja jest już rozliczona przez Magdę. Cofnij rozliczenie przed edycją.' });
+          }
           const row = rows[0];
           const nowySprzedawca = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(', ') : d.sprzedawca;
           let logSzczegoly = [];

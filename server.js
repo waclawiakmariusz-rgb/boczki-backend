@@ -65,6 +65,7 @@ const logiRoutes       = require('./routes/logi')(db);
 const adminRoutes      = require('./routes/admin')(db);
 const stripeRoutes     = require('./routes/stripe')(db);
 const dokumentyRoutes  = require('./routes/dokumenty')(db);
+const magdaRoutes      = require('./routes/magda')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -85,6 +86,7 @@ app.use('/api', logiRoutes);
 app.use('/api', adminRoutes);
 app.use('/api', stripeRoutes);
 app.use('/api', dokumentyRoutes);
+app.use('/api', magdaRoutes);
 
 // ==========================================
 // TEST ENDPOINT
