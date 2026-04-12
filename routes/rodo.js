@@ -96,7 +96,7 @@ module.exports = (db) => {
           ];
 
           // Sprawdź link do dokumentu i zaktualizuj flagę
-          if (d.link_pdf && String(d.link_pdf).includes('drive.google.com')) {
+          if (d.link_pdf) {
             zaktualizujFlageDokumentow(tenant_id, d.id_klienta, 'RODO');
           }
 
@@ -130,7 +130,7 @@ module.exports = (db) => {
         [tenant_id, d.id_klienta],
         (err, rows) => {
           // Sprawdź link
-          if (d.link_pdf && String(d.link_pdf).includes('drive.google.com')) {
+          if (d.link_pdf) {
             zaktualizujFlageDokumentow(tenant_id, d.id_klienta, 'OSW');
           }
 

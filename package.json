@@ -10,7 +10,9 @@
   },
   "jest": {
     "testEnvironment": "node",
-    "testMatch": ["**/tests/**/*.test.js"]
+    "testMatch": [
+      "**/tests/**/*.test.js"
+    ]
   },
   "keywords": [],
   "author": "",
@@ -21,8 +23,11 @@
     "csv-parser": "^3.2.0",
     "dotenv": "^17.4.1",
     "express": "^4.22.1",
+    "multer": "^2.1.1",
     "mysql2": "^3.21.0",
     "nodemailer": "^8.0.5",
+    "pdf-lib": "^1.17.1",
+    "sharp": "^0.34.5",
     "stripe": "^22.0.1"
   },
   "devDependencies": {
