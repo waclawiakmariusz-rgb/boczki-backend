@@ -130,30 +130,6 @@
     overflow: hidden; aspect-ratio: 4/3;
     display: flex; flex-direction: column;
   }
-  .dash-top {
-    background: #f8f8f8; border-bottom: 1px solid #eee;
-    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
-    font-size: .62rem; color: #555;
-  }
-  .dash-logo { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: .9rem; color: var(--dark); }
-  .dash-nav-items { display: flex; gap: 12px; margin-left: 10px; }
-  .dash-nav-items span { color: #999; font-size: .6rem; }
-  .dash-nav-items span.active { color: var(--rose); font-weight: 600; }
-  .dash-avatar { margin-left: auto; width: 22px; height: 22px; background: var(--rose); border-radius: 50%; }
-  .dash-body { flex: 1; display: grid; grid-template-columns: 80px 1fr; }
-  .dash-sidebar { background: #fafafa; border-right: 1px solid #eee; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; }
-  .dash-sidebar-item { height: 7px; background: #e8e4de; border-radius: 4px; }
-  .dash-sidebar-item.active { background: var(--rose); opacity: .7; }
-  .dash-main { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
-  .dash-title { font-size: .65rem; font-weight: 600; color: #333; }
-  .dash-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
-  .dash-kpi { background: #f5f0ea; border-radius: 6px; padding: 8px; }
-  .dash-kpi-val { font-size: .72rem; font-weight: 700; color: var(--dark); }
-  .dash-kpi-label { font-size: .5rem; color: #999; margin-top: 2px; }
-  .dash-chart { background: #f5f0ea; border-radius: 6px; flex: 1; padding: 8px; overflow: hidden; }
-  .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 55px; }
-  .bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--rose); opacity: .6; }
-  .bar:nth-child(odd) { background: var(--gold); }
 
   .float-tip {
     position: absolute; top: -18px; right: -30px;
@@ -392,40 +368,7 @@
         <strong>Estelio Analytics:</strong>
         Twoje przychody wzrosły o 18% względem ubiegłego miesiąca.
       </div>
-      <div class="tablet">
-        <div class="tablet-screen">
-          <div class="dash-top">
-            <span class="dash-logo">Estelio</span>
-            <div class="dash-nav-items">
-              <span class="active">Dashboard</span>
-              <span>Klienci</span>
-              <span>Zabiegi</span>
-              <span>Raporty</span>
-            </div>
-            <div class="dash-avatar"></div>
-          </div>
-          <div class="dash-body">
-            <div class="dash-sidebar">
-              <div class="dash-sidebar-item active"></div>
-              <div class="dash-sidebar-item"></div>
-              <div class="dash-sidebar-item"></div>
-              <div class="dash-sidebar-item"></div>
-              <div class="dash-sidebar-item"></div>
-            </div>
-            <div class="dash-main">
-              <div class="dash-title">Przychody — ten miesiąc</div>
-              <div class="dash-kpis">
-                <div class="dash-kpi"><div class="dash-kpi-val">12 840 zł</div><div class="dash-kpi-label">Przychód</div></div>
-                <div class="dash-kpi"><div class="dash-kpi-val">187 zł</div><div class="dash-kpi-label">Śr. paragon</div></div>
-                <div class="dash-kpi"><div class="dash-kpi-val">+18%</div><div class="dash-kpi-label">vs poprz.</div></div>
-              </div>
-              <div class="dash-chart">
-                <div class="chart-bars" id="chartBars"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <img src="mockup.png" alt="Estelio — podgląd systemu" style="width:100%; display:block; filter:drop-shadow(0 30px 60px rgba(0,0,0,.18));">
       <div class="float-badge">
         <span class="float-badge-icon">🎂</span>
         <div>
@@ -572,15 +515,6 @@
 </footer>
 
 <script>
-// ── Chart bars ───────────────────────────────────────────────────
-const bars = [55, 70, 42, 88, 65, 78, 95, 60, 72, 85, 50, 90];
-const container = document.getElementById('chartBars');
-bars.forEach(h => {
-  const b = document.createElement('div');
-  b.className = 'bar'; b.style.height = h + '%';
-  container.appendChild(b);
-});
-
 // ── Reveal on scroll ─────────────────────────────────────────────
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
