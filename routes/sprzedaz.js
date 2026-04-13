@@ -145,7 +145,7 @@ module.exports = (db) => {
       const limit35 = new Date();
       limit35.setDate(limit35.getDate() - 35);
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, pracownik_dodajacy FROM Sprzedaz WHERE tenant_id = ? AND status != 'USUNIĘTY' AND data_sprzedazy >= ? ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, pracownik_dodajacy, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND status != 'USUNIĘTY' AND data_sprzedazy >= ? ORDER BY data_sprzedazy DESC`,
         [tenant_id, limit35.toISOString().slice(0, 10)],
         (err, rows) => {
           if (err) return res.json([]);
@@ -153,7 +153,7 @@ module.exports = (db) => {
             id: r.id, data: r.data_sprzedazy, klient: r.klient, zabieg: r.zabieg,
             sprzedawca: r.sprzedawca, kwota: r.kwota, komentarz: r.komentarz,
             szczegoly: r.szczegoly, platnosc: r.platnosc, id_klienta: r.id_klienta,
-            kto_dodal: r.pracownik_dodajacy, rozliczone: false
+            kto_dodal: r.pracownik_dodajacy, rozliczone: r.czy_rozliczone ? true : false
           })));
         }
       );
