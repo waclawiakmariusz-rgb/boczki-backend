@@ -8,6 +8,27 @@ const app = express();
 
 app.use(cors());
 
+// Podstawowe nagłówki bezpieczeństwa (bez Helmet — zero nowych paczek)
+app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+});
+
+// Timeout requestów — jeśli route nie odpowie w 30s, klient dostaje 503
+// (chroni przed zawieszeniem połączeń i wyczerpaniem puli)
+app.use((req, res, next) => {
+    res.setTimeout(30000, () => {
+        console.error('[TIMEOUT]', req.method, req.url);
+        if (!res.headersSent) {
+            res.status(503).json({ status: 'error', message: 'Przekroczono czas oczekiwania. Spróbuj ponownie.' });
+        }
+    });
+    next();
+});
+
 // Stripe webhook musi dostać raw body — PRZED express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
@@ -44,6 +65,12 @@ db.getConnection((err, connection) => {
         console.log('SUKCES! Połączono z bazą danych MySQL!');
         connection.release();
     }
+});
+
+// Pula połączeń DB — obsługa błędów runtime (np. serwer MySQL restartuje się)
+db.on('error', (err) => {
+    console.error('[DB POOL ERROR]', err.message);
+    // Nie rzucamy wyjątku — pool sam próbuje się zresetować
 });
 
 // ==========================================
@@ -278,7 +305,28 @@ process.on('unhandledRejection', (reason) => {
 // URUCHOMIENIE SERWERA
 // ==========================================
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     console.log(`Serwer nasłuchuje na porcie: ${PORT}`);
     console.log(`Otwórz w przeglądarce: http://localhost:${PORT}/test`);
 });
+
+// Graceful shutdown — Hostinger/system wysyła SIGTERM przed restartem
+// Dajemy czas na dokończenie aktywnych requestów zanim zamkniemy serwer
+function gracefulShutdown(signal) {
+    console.log(`[${signal}] Zamykanie serwera...`);
+    server.close(() => {
+        console.log('Serwer HTTP zamknięty. Zamykam pulę DB...');
+        db.end(() => {
+            console.log('Pula DB zamknięta. Do widzenia.');
+            process.exit(0);
+        });
+    });
+    // Wymuszony shutdown po 10s gdyby coś nie chciało się zamknąć
+    setTimeout(() => {
+        console.error('Wymuszony shutdown po 10s.');
+        process.exit(1);
+    }, 10000);
+}
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT',  () => gracefulShutdown('SIGINT'));
