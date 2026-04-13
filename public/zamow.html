@@ -4,224 +4,605 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="icon.png">
-<title>Boczki na bok — Zamów dostęp</title>
-<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+<title>Estelio — System zarządzania salonem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
-:root {
-  --primary: #ff758c;
-  --primary-dark: #ff7eb3;
-  --primary-glow: rgba(255,117,140,0.25);
-  --bg: #fdf8f5;
-  --white: #fff;
-  --text: #2d3748;
-  --muted: #a0aec0;
-  --radius: 24px;
-  --radius-btn: 16px;
-  --shadow: 0 15px 35px rgba(0,0,0,0.05), 0 5px 15px rgba(0,0,0,0.02);
-  --shadow-glow: 0 12px 25px -5px var(--primary-glow);
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: 'Poppins', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── HERO ── */
-.hero {
-  background: linear-gradient(135deg, #ff758c 0%, #ff7eb3 50%, #fda4af 100%);
-  padding: 70px 20px 80px; text-align: center; position: relative; overflow: hidden;
-}
-.hero::before {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(circle at 30% 50%, rgba(255,255,255,0.1) 0%, transparent 60%),
-              radial-gradient(circle at 70% 20%, rgba(255,255,255,0.08) 0%, transparent 50%);
-}
-.hero-content { position: relative; z-index: 1; }
-.hero .logo { font-size: 52px; margin-bottom: 16px; }
-.hero h1 { font-size: 36px; font-weight: 800; color: white; margin-bottom: 12px; line-height: 1.2; }
-.hero p { font-size: 16px; color: rgba(255,255,255,0.88); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+  :root {
+    --cream:      #f4efe6;
+    --cream2:     #ede6d8;
+    --dark:       #1c1a18;
+    --rose:       #b87080;
+    --rose-dark:  #a05e6e;
+    --rose-light: #f3dfe3;
+    --gold:       #c9a96e;
+    --gold-light: #d9bc88;
+    --blob-pink:  #c9849088;
+    --blob-gold:  #c9a96e66;
+    --text-muted: #6b6459;
+    --border:     #ddd4c4;
+    --white:      #ffffff;
+  }
 
-/* ── FEATURES ── */
-.features { max-width: 900px; margin: -30px auto 0; padding: 0 20px; position: relative; z-index: 2; }
-.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; }
-.feature-card {
-  background: var(--white); border-radius: 20px; padding: 24px 20px; text-align: center;
-  box-shadow: var(--shadow); transition: all 0.3s;
-}
-.feature-card:hover { transform: translateY(-4px); }
-.feature-card .icon { font-size: 32px; margin-bottom: 12px; }
-.feature-card h3 { font-size: 14px; font-weight: 800; margin-bottom: 6px; }
-.feature-card p { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--dark);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-/* ── FORMULARZ ── */
-.form-section { max-width: 600px; margin: 50px auto; padding: 0 20px 60px; }
-.form-card {
-  background: var(--white); border-radius: var(--radius); padding: 44px 40px;
-  box-shadow: var(--shadow);
-}
-.form-card h2 { font-size: 22px; font-weight: 800; margin-bottom: 6px; }
-.form-card .sub { font-size: 13px; color: var(--muted); margin-bottom: 32px; line-height: 1.6; }
-.form-group { margin-bottom: 18px; }
-label { display: block; font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 7px; }
-input, select, textarea {
-  width: 100%; padding: 14px 17px; background: #f4f7f8; border: 2px solid transparent;
-  border-radius: 14px; font-size: 14px; color: var(--text); font-weight: 600;
-  outline: none; transition: all 0.3s; font-family: inherit;
-}
-input:focus, select:focus, textarea:focus {
-  background: white; border-color: var(--primary);
-  box-shadow: 0 6px 18px rgba(255,117,140,0.12); transform: translateY(-1px);
-}
-textarea { resize: vertical; min-height: 90px; }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.btn-submit {
-  width: 100%; padding: 18px; margin-top: 8px;
-  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-  color: white; border: none; border-radius: var(--radius-btn);
-  font-family: inherit; font-weight: 700; font-size: 15px; text-transform: uppercase;
-  letter-spacing: 1px; cursor: pointer; box-shadow: var(--shadow-glow); transition: all 0.3s;
-}
-.btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 16px 30px rgba(255,117,140,0.35); }
-.btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
-.alert { padding: 13px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; margin-bottom: 18px; }
-.alert-error { background: #fee2e2; color: #991b1b; }
+  /* ── NAV ── */
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 60px;
+    border-bottom: 1px solid var(--border);
+    background: var(--cream);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; font-weight: 500;
+    letter-spacing: .01em; color: var(--dark);
+    text-decoration: none;
+  }
+  nav ul { display: flex; gap: 36px; list-style: none; }
+  nav ul a {
+    text-decoration: none; font-size: .88rem;
+    font-weight: 400; color: var(--text-muted);
+    letter-spacing: .02em; transition: color .2s;
+  }
+  nav ul a:hover { color: var(--dark); }
+  .nav-cta {
+    background: var(--rose); color: #fff !important;
+    padding: 9px 22px; border-radius: 6px;
+    font-weight: 500 !important; transition: background .2s !important;
+  }
+  .nav-cta:hover { background: var(--rose-dark) !important; }
 
-/* ── SUKCES ── */
-.success-wrap { text-align: center; padding: 50px 30px; }
-.success-wrap .icon { font-size: 64px; margin-bottom: 20px; }
-.success-wrap h2 { font-size: 24px; font-weight: 800; color: #166534; margin-bottom: 12px; }
-.success-wrap p { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 400px; margin: 0 auto; }
-.check-list { list-style: none; text-align: left; max-width: 340px; margin: 24px auto 0; }
-.check-list li { padding: 8px 0; font-size: 14px; color: var(--text); display: flex; align-items: center; gap: 10px; }
-.check-list li::before { content: '✓'; color: #10b981; font-weight: 800; font-size: 16px; flex-shrink: 0; }
+  /* ── HERO ── */
+  .hero {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 40px; align-items: center;
+    max-width: 1280px; margin: 0 auto;
+    padding: 80px 60px 60px;
+    position: relative;
+  }
+  .blob { position: absolute; border-radius: 50%; filter: blur(60px); pointer-events: none; z-index: 0; }
+  .blob-1 { width: 320px; height: 320px; background: var(--blob-pink); top: 10%; left: 35%; }
+  .blob-2 { width: 220px; height: 220px; background: var(--blob-gold); top: 5%; right: 8%; }
+  .blob-3 { width: 120px; height: 120px; background: var(--blob-pink); bottom: 20%; left: 2%; opacity:.6; }
+  .blob-4 { width: 80px; height: 80px; background: var(--gold); bottom: 5%; left: 40%; opacity:.45; border-radius:50%; filter:blur(20px); }
 
-@media (max-width: 520px) {
-  .hero h1 { font-size: 26px; }
-  .form-card { padding: 30px 24px; }
-  .form-row { grid-template-columns: 1fr; }
-}
+  .hero-left { position: relative; z-index: 1; }
+
+  .eyebrow {
+    font-size: .72rem; font-weight: 500;
+    letter-spacing: .22em; text-transform: uppercase;
+    color: var(--gold); margin-bottom: 20px;
+  }
+  h1 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.2rem, 3.5vw, 3.2rem);
+    font-weight: 600; line-height: 1.18; color: var(--dark);
+    margin-bottom: 6px;
+  }
+  h1 em { font-style: italic; font-weight: 400; }
+  .hero-desc {
+    font-size: .95rem; line-height: 1.7;
+    color: var(--text-muted); max-width: 440px;
+    margin: 18px 0 32px;
+  }
+  .hero-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--rose); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 16px 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .95rem; font-weight: 600;
+    cursor: pointer; letter-spacing: .01em;
+    box-shadow: 0 4px 18px rgba(184,112,128,.3);
+    transition: background .2s, transform .15s, box-shadow .2s;
+    text-decoration: none;
+  }
+  .hero-cta:hover { background: var(--rose-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(184,112,128,.4); }
+  .social-proof { margin-top: 16px; font-size: .78rem; color: var(--text-muted); }
+
+  /* right col – tablet mockup */
+  .hero-right {
+    position: relative; z-index: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .tablet-wrap { position: relative; width: 100%; max-width: 520px; }
+  .tablet {
+    background: #1a1a1e; border-radius: 22px; padding: 14px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.22), 0 6px 20px rgba(0,0,0,.12);
+    transform: perspective(900px) rotateY(-6deg) rotateX(4deg);
+    transition: transform .4s ease;
+  }
+  .tablet:hover { transform: perspective(900px) rotateY(-2deg) rotateX(2deg); }
+  .tablet-screen {
+    background: #fff; border-radius: 12px;
+    overflow: hidden; aspect-ratio: 4/3;
+    display: flex; flex-direction: column;
+  }
+  .dash-top {
+    background: #f8f8f8; border-bottom: 1px solid #eee;
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    font-size: .62rem; color: #555;
+  }
+  .dash-logo { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: .9rem; color: var(--dark); }
+  .dash-nav-items { display: flex; gap: 12px; margin-left: 10px; }
+  .dash-nav-items span { color: #999; font-size: .6rem; }
+  .dash-nav-items span.active { color: var(--rose); font-weight: 600; }
+  .dash-avatar { margin-left: auto; width: 22px; height: 22px; background: var(--rose); border-radius: 50%; }
+  .dash-body { flex: 1; display: grid; grid-template-columns: 80px 1fr; }
+  .dash-sidebar { background: #fafafa; border-right: 1px solid #eee; padding: 10px 8px; display: flex; flex-direction: column; gap: 6px; }
+  .dash-sidebar-item { height: 7px; background: #e8e4de; border-radius: 4px; }
+  .dash-sidebar-item.active { background: var(--rose); opacity: .7; }
+  .dash-main { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+  .dash-title { font-size: .65rem; font-weight: 600; color: #333; }
+  .dash-kpis { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .dash-kpi { background: #f5f0ea; border-radius: 6px; padding: 8px; }
+  .dash-kpi-val { font-size: .72rem; font-weight: 700; color: var(--dark); }
+  .dash-kpi-label { font-size: .5rem; color: #999; margin-top: 2px; }
+  .dash-chart { background: #f5f0ea; border-radius: 6px; flex: 1; padding: 8px; overflow: hidden; }
+  .chart-bars { display: flex; align-items: flex-end; gap: 5px; height: 55px; }
+  .bar { flex: 1; border-radius: 3px 3px 0 0; background: var(--rose); opacity: .6; }
+  .bar:nth-child(odd) { background: var(--gold); }
+
+  .float-tip {
+    position: absolute; top: -18px; right: -30px;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.13);
+    padding: 10px 14px; max-width: 180px;
+    font-size: .7rem; line-height: 1.4; color: var(--dark);
+    animation: floatTip 3s ease-in-out infinite;
+  }
+  .float-tip strong { font-size: .72rem; color: var(--rose); display: block; margin-bottom: 2px; }
+  .float-badge {
+    position: absolute; bottom: -20px; left: -30px;
+    background: #fff; border-radius: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,.13);
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    font-size: .7rem; color: var(--dark); line-height: 1.35;
+    animation: floatBadge 3.5s ease-in-out infinite;
+  }
+  .float-badge-icon { font-size: 1.4rem; }
+  .float-badge strong { display: block; font-size: .72rem; }
+  @keyframes floatTip    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  @keyframes floatBadge  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
+
+  /* ── FEATURES ── */
+  .features {
+    max-width: 1280px; margin: 70px auto 0; padding: 0 60px;
+  }
+  .section-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem; font-weight: 500;
+    text-align: center; margin-bottom: 28px; color: var(--dark);
+  }
+  .cards-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+  }
+  .card {
+    background: #fff; border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 22px 20px;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .card:hover { box-shadow: 0 8px 32px rgba(0,0,0,.07); transform: translateY(-3px); }
+  .card-icon { font-size: 1.5rem; margin-bottom: 12px; }
+  .card h3 { font-size: .92rem; font-weight: 600; color: var(--dark); margin-bottom: 6px; }
+  .card p { font-size: .82rem; color: var(--text-muted); line-height: 1.55; }
+
+  /* ── FORM SECTION ── */
+  .form-section {
+    background: var(--cream2); margin-top: 70px; padding: 70px 60px;
+  }
+  .form-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 60px; align-items: start;
+  }
+  .form-pitch h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+    font-weight: 600; line-height: 1.3; color: var(--dark);
+    margin-bottom: 16px;
+  }
+  .form-pitch h2 em { font-style: italic; font-weight: 400; }
+  .form-pitch p {
+    font-size: .9rem; line-height: 1.75; color: var(--text-muted); margin-bottom: 28px;
+  }
+  .pitch-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .pitch-list li {
+    display: flex; align-items: flex-start; gap: 12px;
+    font-size: .88rem; color: var(--text-muted); line-height: 1.5;
+  }
+  .pitch-list li::before {
+    content: '✦'; color: var(--gold); flex-shrink: 0;
+    margin-top: 2px; font-size: .75rem;
+  }
+
+  .form-card {
+    background: var(--white); border-radius: 20px;
+    padding: 40px 36px;
+    box-shadow: 0 8px 40px rgba(0,0,0,.09);
+    border: 1.5px solid var(--border);
+  }
+  .form-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.5rem; font-weight: 500;
+    color: var(--dark); margin-bottom: 6px;
+  }
+  .form-card .sub {
+    font-size: .83rem; color: var(--text-muted);
+    margin-bottom: 28px; line-height: 1.6;
+  }
+  .form-group { margin-bottom: 16px; }
+  label {
+    display: block; font-size: .72rem; font-weight: 600;
+    color: var(--text-muted); text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 7px;
+  }
+  input, select, textarea {
+    width: 100%; padding: 13px 16px;
+    background: var(--cream); border: 1.5px solid var(--border);
+    border-radius: 10px; font-family: 'DM Sans', sans-serif;
+    font-size: .9rem; color: var(--dark);
+    outline: none; transition: border-color .2s, box-shadow .2s, background .2s;
+  }
+  input::placeholder, textarea::placeholder { color: #b0a898; }
+  input:focus, select:focus, textarea:focus {
+    background: #fff; border-color: var(--rose);
+    box-shadow: 0 0 0 3px rgba(184,112,128,.12);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* price box */
+  .price-box {
+    background: var(--rose-light); border: 1.5px solid var(--border);
+    border-radius: 14px; padding: 18px 20px;
+    margin: 20px 0; display: flex;
+    align-items: center; justify-content: space-between;
+  }
+  .price-label {
+    font-size: .7rem; color: var(--text-muted);
+    font-weight: 600; text-transform: uppercase;
+    letter-spacing: .06em; margin-bottom: 4px;
+  }
+  #cena-display { font-size: 1.8rem; font-weight: 700; color: var(--rose); }
+  #cena-oryginalna { font-size: .85rem; color: var(--text-muted); text-decoration: line-through; }
+  .price-meta { font-size: .75rem; color: var(--text-muted); text-align: right; line-height: 1.6; }
+
+  /* voucher */
+  .voucher-row { display: flex; gap: 10px; align-items: flex-end; }
+  .voucher-row .form-group { flex: 1; margin: 0; }
+  .btn-voucher {
+    padding: 13px 18px; background: var(--cream);
+    border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-weight: 600;
+    font-size: .85rem; cursor: pointer; white-space: nowrap;
+    color: var(--dark); transition: all .2s;
+  }
+  .btn-voucher:hover { border-color: var(--rose); color: var(--rose); }
+  #voucher-info { margin-top: 8px; font-size: .78rem; font-weight: 600; display: none; }
+
+  .btn-submit {
+    width: 100%; padding: 16px 22px; margin-top: 8px;
+    background: var(--rose); color: #fff; border: none;
+    border-radius: 10px; font-family: 'DM Sans', sans-serif;
+    font-size: .95rem; font-weight: 600; cursor: pointer;
+    letter-spacing: .01em;
+    box-shadow: 0 4px 18px rgba(184,112,128,.3);
+    transition: background .2s, transform .15s, box-shadow .2s;
+  }
+  .btn-submit:hover:not(:disabled) { background: var(--rose-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(184,112,128,.4); }
+  .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+  .alert { padding: 12px 16px; border-radius: 10px; font-size: .83rem; font-weight: 600; margin-bottom: 16px; }
+  .alert-error { background: #fee2e2; color: #991b1b; }
+
+  /* success */
+  .success-wrap { text-align: center; padding: 40px 20px; }
+  .success-wrap .s-icon { font-size: 3.5rem; margin-bottom: 16px; }
+  .success-wrap h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; font-weight: 600; color: var(--dark); margin-bottom: 10px;
+  }
+  .success-wrap p { font-size: .88rem; color: var(--text-muted); line-height: 1.7; max-width: 340px; margin: 0 auto; }
+  .check-list { list-style: none; text-align: left; max-width: 320px; margin: 20px auto 0; }
+  .check-list li {
+    padding: 8px 0; font-size: .85rem; color: var(--dark);
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .check-list li:last-child { border-bottom: none; }
+  .check-list li::before { content: '✦'; color: var(--gold); font-size: .75rem; flex-shrink: 0; }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center; padding: 40px 60px;
+    font-size: .8rem; color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--rose); text-decoration: none; }
+
+  /* ── REVEAL ── */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    nav { padding: 18px 24px; }
+    nav ul { display: none; }
+    .hero { grid-template-columns: 1fr; padding: 50px 24px 40px; }
+    .hero-right { display: none; }
+    .features { padding: 0 24px; }
+    .cards-grid { grid-template-columns: 1fr; }
+    .form-section { padding: 50px 24px; }
+    .form-inner { grid-template-columns: 1fr; gap: 40px; }
+    .form-row { grid-template-columns: 1fr; }
+    .form-card { padding: 28px 22px; }
+  }
 </style>
 </head>
 <body>
 
+<!-- NAV -->
+<nav>
+  <a class="logo" href="#">Estelio</a>
+  <ul>
+    <li><a href="#funkcje">Funkcje</a></li>
+    <li><a href="#formularz">Cennik</a></li>
+    <li><a href="#formularz" class="nav-cta">Zamów dostęp</a></li>
+  </ul>
+</nav>
+
 <!-- HERO -->
-<div class="hero">
-  <div class="hero-content">
-    <div class="logo">🎀</div>
-    <h1>System Boczki na bok<br>dla Twojego salonu</h1>
-    <p>Sprzedaż, klienci, zadatki, urodziny, analityka — wszystko w jednym miejscu. Wypełnij formularz i zacznij już dziś.</p>
+<section class="hero">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+  <div class="blob blob-4"></div>
+
+  <div class="hero-left reveal">
+    <p class="eyebrow">Oprogramowanie dla salonów kosmetycznych</p>
+    <h1>
+      Pełna kontrola<br>nad Twoim salonem.<br>
+      <em>W jednym miejscu.</em>
+    </h1>
+    <p class="hero-desc">
+      Estelio to profesjonalny system zarządzania dla właścicielek salonów kosmetycznych,
+      klinik urody i studiów. Sprzedaż, klienci, rozliczenia, analityka —
+      wszystko zaprojektowane z myślą o Tobie.
+    </p>
+    <a class="hero-cta" href="#formularz">Zamów dostęp →</a>
+    <p class="social-proof">Roczny dostęp · bezpieczna płatność kartą lub BLIK</p>
   </div>
-</div>
 
-<!-- CECHY -->
-<div class="features">
-  <div class="features-grid">
-    <div class="feature-card">
-      <div class="icon">💰</div>
-      <h3>Sprzedaż i kasa</h3>
-      <p>Rejestruj sprzedaż, zadatki i płatności kartą, gotówką czy BLIK.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">👥</div>
-      <h3>Baza klientów</h3>
-      <p>Profile klientów z historią wizyt, urodzinami i notatkami.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">📊</div>
-      <h3>Analityka</h3>
-      <p>Raporty miesięczne, dzienne podsumowania i analizy usług.</p>
-    </div>
-    <div class="feature-card">
-      <div class="icon">🎂</div>
-      <h3>Urodziny</h3>
-      <p>Automatyczne powiadomienia o urodzinach klientów.</p>
-    </div>
-  </div>
-</div>
-
-<!-- FORMULARZ -->
-<div class="form-section">
-  <div class="form-card" id="form-card">
-    <h2 id="form-title">📋 Zamów dostęp</h2>
-    <p class="sub" id="form-sub">Ładowanie...</p>
-
-    <div id="form-error" class="alert alert-error" style="display:none;"></div>
-
-    <form id="zamow-form" onsubmit="wyslij(event)">
-      <div class="form-group">
-        <label>Twoje imię i nazwisko *</label>
-        <input type="text" id="f-imie" placeholder="np. Anna Kowalska" required>
+  <div class="hero-right reveal" style="transition-delay:.15s">
+    <div class="tablet-wrap">
+      <div class="float-tip">
+        <strong>Estelio Analytics:</strong>
+        Twoje przychody wzrosły o 18% względem ubiegłego miesiąca.
       </div>
-      <div class="form-group">
-        <label>Nazwa salonu *</label>
-        <input type="text" id="f-salon" placeholder="np. Studio Urody Kleopatra" required>
-      </div>
-      <div class="form-group">
-        <label>Adres e-mail *</label>
-        <input type="email" id="f-email" placeholder="np. anna@salon.pl" required>
-        <div style="font-size:11px; color:var(--muted); margin-top:5px;">Na ten adres wyślemy link rejestracyjny po płatności.</div>
-      </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Telefon</label>
-          <input type="tel" id="f-telefon" placeholder="np. 500 123 456">
-        </div>
-        <div class="form-group">
-          <label>Miasto</label>
-          <input type="text" id="f-miasto" placeholder="np. Warszawa">
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Wiadomość (opcjonalnie)</label>
-        <textarea id="f-wiadomosc" placeholder="Napisz coś o swoim salonie lub zadaj pytanie..."></textarea>
-      </div>
-
-      <!-- Cena i przycisk płatności -->
-      <div id="cena-box" style="background:#fff0f3; border-radius:16px; padding:18px 20px; margin:20px 0; display:flex; align-items:center; justify-content:space-between;">
-        <div>
-          <div style="font-size:12px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Dostęp roczny</div>
-          <div id="cena-display" style="font-size:26px; font-weight:800; color:var(--primary);">199 zł</div>
-          <div id="cena-oryginalna" style="font-size:13px; color:var(--muted); text-decoration:line-through; display:none;"></div>
-        </div>
-        <div style="font-size:12px; color:var(--muted); text-align:right; line-height:1.6;">Karta, BLIK<br>bezpieczna płatność</div>
-      </div>
-
-      <!-- Voucher / kod rabatowy -->
-      <div id="voucher-box" style="margin-bottom:16px; display:none;">
-        <div style="display:flex; gap:10px; align-items:flex-end;">
-          <div class="form-group" style="flex:1; margin:0;">
-            <label>Kod rabatowy (opcjonalnie)</label>
-            <input type="text" id="f-voucher" placeholder="np. BOCZKI20" oninput="this.value=this.value.toUpperCase()">
+      <div class="tablet">
+        <div class="tablet-screen">
+          <div class="dash-top">
+            <span class="dash-logo">Estelio</span>
+            <div class="dash-nav-items">
+              <span class="active">Dashboard</span>
+              <span>Klienci</span>
+              <span>Zabiegi</span>
+              <span>Raporty</span>
+            </div>
+            <div class="dash-avatar"></div>
           </div>
-          <button type="button" onclick="sprawdzVoucher()" id="btn-voucher"
-            style="padding:14px 20px; background:#f4f7f8; border:2px solid transparent; border-radius:14px; font-family:inherit; font-weight:700; font-size:13px; cursor:pointer; transition:0.2s; white-space:nowrap; color:var(--text);">
-            Zastosuj
-          </button>
+          <div class="dash-body">
+            <div class="dash-sidebar">
+              <div class="dash-sidebar-item active"></div>
+              <div class="dash-sidebar-item"></div>
+              <div class="dash-sidebar-item"></div>
+              <div class="dash-sidebar-item"></div>
+              <div class="dash-sidebar-item"></div>
+            </div>
+            <div class="dash-main">
+              <div class="dash-title">Przychody — ten miesiąc</div>
+              <div class="dash-kpis">
+                <div class="dash-kpi"><div class="dash-kpi-val">12 840 zł</div><div class="dash-kpi-label">Przychód</div></div>
+                <div class="dash-kpi"><div class="dash-kpi-val">187 zł</div><div class="dash-kpi-label">Śr. paragon</div></div>
+                <div class="dash-kpi"><div class="dash-kpi-val">+18%</div><div class="dash-kpi-label">vs poprz.</div></div>
+              </div>
+              <div class="dash-chart">
+                <div class="chart-bars" id="chartBars"></div>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="voucher-info" style="margin-top:8px; font-size:12px; font-weight:600; display:none;"></div>
       </div>
-
-      <button type="submit" class="btn-submit" id="btn-wyslij">💳 Zapłać i utwórz salon</button>
-    </form>
+      <div class="float-badge">
+        <span class="float-badge-icon">🎂</span>
+        <div>
+          <strong>3 urodziny dziś</strong>
+          Wyślij życzenia klientkom
+        </div>
+      </div>
+    </div>
   </div>
-</div>
+</section>
+
+<!-- FEATURES -->
+<section class="features" id="funkcje">
+  <h2 class="section-title reveal">Wszystko, czego potrzebuje Twój salon</h2>
+  <div class="cards-grid">
+    <div class="card reveal" style="transition-delay:.05s">
+      <div class="card-icon">💰</div>
+      <h3>Sprzedaż i rozliczenia</h3>
+      <p>Rejestruj każdą transakcję — gotówka, karta, BLIK, Mediraty. Pełna historia sprzedaży z filtrami i raportami.</p>
+    </div>
+    <div class="card reveal" style="transition-delay:.1s">
+      <div class="card-icon">👥</div>
+      <h3>Baza klientek</h3>
+      <p>Profile z historią wizyt, notatkami, zgodami RODO i dokumentami. Wyszukiwanie w sekundę.</p>
+    </div>
+    <div class="card reveal" style="transition-delay:.15s">
+      <div class="card-icon">📊</div>
+      <h3>Analityka i raporty</h3>
+      <p>Dzienny i miesięczny przegląd przychodów, ranking usług, wyniki pracowników i trendy sprzedaży.</p>
+    </div>
+    <div class="card reveal" style="transition-delay:.2s">
+      <div class="card-icon">🏷️</div>
+      <h3>Zadatki i zaliczki</h3>
+      <p>Przyjmuj i rozliczaj zadatki. System automatycznie pilnuje statusów i przypomina o zaliczkach.</p>
+    </div>
+    <div class="card reveal" style="transition-delay:.25s">
+      <div class="card-icon">📄</div>
+      <h3>Dokumenty RODO</h3>
+      <p>Skany zgód bezpośrednio w systemie. Zrób zdjęcie telefonem — Estelio zamieni je w PDF.</p>
+    </div>
+    <div class="card reveal" style="transition-delay:.3s">
+      <div class="card-icon">🎂</div>
+      <h3>Urodziny i retencja</h3>
+      <p>Powiadomienia o urodzinach klientek i narzędzia do budowania lojalności i powrotów.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FORM SECTION -->
+<section class="form-section" id="formularz">
+  <div class="form-inner">
+
+    <!-- PITCH -->
+    <div class="form-pitch reveal">
+      <h2>
+        Zacznij zarządzać<br>salonem jak <em>profesjonalistka.</em>
+      </h2>
+      <p>
+        Estelio to narzędzie stworzone specjalnie dla branży beauty.
+        Jeden system zamiast exceli, notatek i chaotycznych arkuszy.
+        Płacisz raz w roku — masz spokój przez cały rok.
+      </p>
+      <ul class="pitch-list">
+        <li>Pełny dostęp do wszystkich funkcji od pierwszego dnia</li>
+        <li>Nieograniczona liczba klientów, transakcji i dokumentów</li>
+        <li>Dostęp z każdego urządzenia — telefon, tablet, komputer</li>
+        <li>Bezpieczne dane — szyfrowanie i codzienne kopie zapasowe</li>
+        <li>Wsparcie techniczne w języku polskim</li>
+      </ul>
+    </div>
+
+    <!-- FORM CARD -->
+    <div class="form-card reveal" style="transition-delay:.1s">
+      <div id="form-card-inner">
+        <h3 id="form-title">Zamów dostęp</h3>
+        <p class="sub" id="form-sub">Ładowanie...</p>
+
+        <div id="form-error" class="alert alert-error" style="display:none;"></div>
+
+        <form id="zamow-form" onsubmit="wyslij(event)">
+          <div class="form-group">
+            <label>Imię i nazwisko *</label>
+            <input type="text" id="f-imie" placeholder="np. Anna Kowalska" required>
+          </div>
+          <div class="form-group">
+            <label>Nazwa salonu *</label>
+            <input type="text" id="f-salon" placeholder="np. Studio Urody Kleopatra" required>
+          </div>
+          <div class="form-group">
+            <label>Adres e-mail *</label>
+            <input type="email" id="f-email" placeholder="np. anna@salon.pl" required>
+            <div style="font-size:.72rem; color:var(--text-muted); margin-top:5px;">Na ten adres wyślemy link aktywacyjny.</div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>Telefon</label>
+              <input type="tel" id="f-telefon" placeholder="500 123 456">
+            </div>
+            <div class="form-group">
+              <label>Miasto</label>
+              <input type="text" id="f-miasto" placeholder="np. Warszawa">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Wiadomość (opcjonalnie)</label>
+            <textarea id="f-wiadomosc" placeholder="Napisz coś o swoim salonie lub zadaj pytanie..."></textarea>
+          </div>
+
+          <!-- CENA -->
+          <div class="price-box" id="cena-box" style="display:none;">
+            <div>
+              <div class="price-label">Dostęp roczny</div>
+              <div id="cena-display">—</div>
+              <div id="cena-oryginalna" style="display:none;"></div>
+            </div>
+            <div class="price-meta">Karta, BLIK<br>bezpieczna płatność</div>
+          </div>
+
+          <!-- VOUCHER -->
+          <div id="voucher-box" style="margin-bottom:16px; display:none;">
+            <div class="voucher-row">
+              <div class="form-group">
+                <label>Kod rabatowy (opcjonalnie)</label>
+                <input type="text" id="f-voucher" placeholder="np. ESTELIO20" oninput="this.value=this.value.toUpperCase()">
+              </div>
+              <button type="button" class="btn-voucher" id="btn-voucher" onclick="sprawdzVoucher()">Zastosuj</button>
+            </div>
+            <div id="voucher-info"></div>
+          </div>
+
+          <button type="submit" class="btn-submit" id="btn-wyslij">Zamów dostęp</button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  © 2025 Estelio · Wszystkie prawa zastrzeżone ·
+  <a href="#">Polityka prywatności</a> ·
+  <a href="#">Regulamin</a>
+</footer>
 
 <script>
-// Pobierz konfigurację Stripe i dostosuj UI
+// ── Chart bars ───────────────────────────────────────────────────
+const bars = [55, 70, 42, 88, 65, 78, 95, 60, 72, 85, 50, 90];
+const container = document.getElementById('chartBars');
+bars.forEach(h => {
+  const b = document.createElement('div');
+  b.className = 'bar'; b.style.height = h + '%';
+  container.appendChild(b);
+});
+
+// ── Reveal on scroll ─────────────────────────────────────────────
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Stripe config ────────────────────────────────────────────────
 fetch('/api/stripe/config').then(r => r.json()).then(d => {
   if (d.aktywny) {
-    // ── TRYB PŁATNOŚCI ──
     window._stripeAktywny = true;
     window._cenaBazowa = d.cena_display;
-    document.getElementById('form-title').textContent = '💳 Kup dostęp do systemu';
-    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą lub BLIK. Link rejestracyjny otrzymasz automatycznie na email.';
+    document.getElementById('form-title').textContent = 'Kup dostęp do Estelio';
+    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą lub BLIK. Link aktywacyjny otrzymasz automatycznie na e-mail.';
     document.getElementById('cena-display').textContent = d.cena_display;
     document.getElementById('cena-box').style.display = 'flex';
     document.getElementById('voucher-box').style.display = 'block';
-    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_display + ' i utwórz salon';
+    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_display + ' i aktywuj salon';
   } else {
-    // ── TRYB ZGŁOSZENIA (Stripe nie skonfigurowany) ──
     window._stripeAktywny = false;
     window._cenaBazowa = d.cena_display;
-    document.getElementById('form-title').textContent = '📋 Zamów dostęp';
-    document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link do rejestracji po potwierdzeniu płatności.';
+    document.getElementById('form-title').textContent = 'Zamów dostęp do Estelio';
+    document.getElementById('form-sub').textContent = 'Wypełnij formularz — skontaktujemy się z Tobą i wyślemy link aktywacyjny po potwierdzeniu płatności.';
     document.getElementById('cena-display').textContent = d.cena_display;
     document.getElementById('cena-box').style.display = 'flex';
     document.getElementById('voucher-box').style.display = 'block';
@@ -233,55 +614,44 @@ fetch('/api/stripe/config').then(r => r.json()).then(d => {
   document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
 });
 
-// Obsługa anulowania płatności
+// Anulowanie płatności
 if (new URLSearchParams(location.search).get('anulowano')) {
   document.getElementById('form-error').style.display = 'block';
   document.getElementById('form-error').textContent = 'Płatność została anulowana. Możesz spróbować ponownie.';
 }
 
+// ── Voucher ───────────────────────────────────────────────────────
 async function sprawdzVoucher() {
   const kod = document.getElementById('f-voucher').value.trim().toUpperCase();
   const infoEl = document.getElementById('voucher-info');
   const btn = document.getElementById('btn-voucher');
-
   infoEl.style.display = 'block';
-  infoEl.style.color = 'var(--muted)';
+  infoEl.style.color = 'var(--text-muted)';
   infoEl.textContent = 'Sprawdzam...';
   btn.disabled = true;
 
-  if (!kod) {
-    infoEl.textContent = 'Wpisz kod rabatowy.';
-    btn.disabled = false;
-    return;
-  }
+  if (!kod) { infoEl.textContent = 'Wpisz kod rabatowy.'; btn.disabled = false; return; }
 
   try {
     const res = await fetch('/api/voucher/weryfikuj?kod=' + encodeURIComponent(kod));
     const d = await res.json();
-
     if (d.status !== 'ok') {
       infoEl.style.color = '#991b1b';
       infoEl.textContent = '✗ ' + d.message;
       window._zastosowanyVoucher = '';
-      // Przywróć oryginalną cenę
       document.getElementById('cena-display').textContent = window._cenaBazowa || '';
       document.getElementById('cena-oryginalna').style.display = 'none';
-      if (window._cenaBazowa) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + window._cenaBazowa + ' i utwórz salon';
-      btn.disabled = false;
-      return;
+      if (window._cenaBazowa && window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + window._cenaBazowa + ' i aktywuj salon';
+      btn.disabled = false; return;
     }
-
     window._zastosowanyVoucher = d.kod;
     infoEl.style.color = '#166534';
-    infoEl.textContent = '✓ Kod ważny — ' + d.opis_rabatu;
-
-    // Pokaż przekreśloną oryginalną cenę i nową
+    infoEl.textContent = '✦ Kod ważny — ' + d.opis_rabatu;
     document.getElementById('cena-display').textContent = d.cena_po_rabacie_display;
     const orygEl = document.getElementById('cena-oryginalna');
     orygEl.textContent = window._cenaBazowa || '';
     orygEl.style.display = 'block';
-    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i utwórz salon';
-
+    if (window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i aktywuj salon';
   } catch {
     infoEl.style.color = '#991b1b';
     infoEl.textContent = '✗ Błąd połączenia.';
@@ -289,6 +659,7 @@ async function sprawdzVoucher() {
   btn.disabled = false;
 }
 
+// ── Submit ────────────────────────────────────────────────────────
 async function wyslij(e) {
   e.preventDefault();
   const errEl = document.getElementById('form-error');
@@ -297,64 +668,57 @@ async function wyslij(e) {
   btn.disabled = true; btn.textContent = '⏳ Przetwarzam...';
 
   const payload = {
-    imie:          document.getElementById('f-imie').value.trim(),
-    nazwa_salonu:  document.getElementById('f-salon').value.trim(),
-    email:         document.getElementById('f-email').value.trim(),
-    telefon:       document.getElementById('f-telefon').value.trim(),
-    miasto:        document.getElementById('f-miasto').value.trim(),
-    wiadomosc:     document.getElementById('f-wiadomosc').value.trim(),
-    kod_rabatowy:  window._zastosowanyVoucher || '',
+    imie:         document.getElementById('f-imie').value.trim(),
+    nazwa_salonu: document.getElementById('f-salon').value.trim(),
+    email:        document.getElementById('f-email').value.trim(),
+    telefon:      document.getElementById('f-telefon').value.trim(),
+    miasto:       document.getElementById('f-miasto').value.trim(),
+    wiadomosc:    document.getElementById('f-wiadomosc').value.trim(),
+    kod_rabatowy: window._zastosowanyVoucher || '',
   };
 
   try {
-    // Stripe aktywny — tworzymy sesję płatności
     if (window._stripeAktywny !== false) {
       const res = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
       const d = await res.json();
-
       if (d.status !== 'success') {
         errEl.style.display = 'block'; errEl.textContent = d.message;
-        btn.disabled = false; btn.textContent = '💳 Zapłać i utwórz salon';
+        btn.disabled = false; btn.textContent = '💳 Zapłać i aktywuj salon';
         return;
       }
-
-      // Przekieruj do Stripe Checkout
       window.location.href = d.checkout_url;
       return;
     }
 
-    // Fallback — formularz zgłoszeniowy (Stripe nie skonfigurowany)
+    // Fallback
     const res = await fetch('/api/zamowienie', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
     const d = await res.json();
-
     if (d.status !== 'success') {
       errEl.style.display = 'block'; errEl.textContent = d.message;
       btn.disabled = false; btn.textContent = '📩 Wyślij zgłoszenie';
       return;
     }
 
-    document.getElementById('form-card').innerHTML = `
+    document.getElementById('form-card-inner').innerHTML = `
       <div class="success-wrap">
-        <div class="icon">🎉</div>
-        <h2>Zgłoszenie przyjęte!</h2>
-        <p>Dziękujemy, <strong>${payload.imie}</strong>! Skontaktujemy się wkrótce.</p>
+        <div class="s-icon">✦</div>
+        <h3>Zgłoszenie przyjęte</h3>
+        <p>Dziękujemy, <strong>${payload.imie}</strong>!<br>Skontaktujemy się wkrótce.</p>
         <ul class="check-list">
-          <li>Otrzymaliśmy Twoje dane</li>
-          <li>Po potwierdzeniu płatności wyślemy link rejestracyjny na <strong>${payload.email}</strong></li>
+          <li>Twoje dane zostały przyjęte</li>
+          <li>Po potwierdzeniu płatności wyślemy link aktywacyjny na <strong>${payload.email}</strong></li>
+          <li>Dostęp aktywny przez 12 miesięcy</li>
         </ul>
       </div>`;
-
   } catch {
     errEl.style.display = 'block'; errEl.textContent = 'Błąd połączenia. Spróbuj ponownie.';
-    btn.disabled = false; btn.textContent = '💳 Zapłać i utwórz salon';
+    btn.disabled = false; btn.textContent = '💳 Zapłać i aktywuj salon';
   }
 }
 </script>
