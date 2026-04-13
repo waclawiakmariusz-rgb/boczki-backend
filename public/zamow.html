@@ -169,19 +169,51 @@
   }
   .section-title em { font-style: italic; font-weight: 400; }
 
+  /* ── MORANDI PALETTE ── */
+  /* sage, dusty-rose, clay, lavender, sky, sand */
+  .bc-sage     { background: linear-gradient(145deg, #edf0eb 0%, #dde4d8 100%); border-color: #cdd8c6; }
+  .bc-drose    { background: linear-gradient(145deg, #f4ecea 0%, #e8d8d4 100%); border-color: #d8c4be; }
+  .bc-clay     { background: linear-gradient(145deg, #f2ece4 0%, #e6d8ca 100%); border-color: #d4c0a8; }
+  .bc-lavender { background: linear-gradient(145deg, #eeeaf4 0%, #e0d8ec 100%); border-color: #ccc0dc; }
+  .bc-sky      { background: linear-gradient(145deg, #e8eef4 0%, #d8e4ef 100%); border-color: #c4d4e4; }
+  .bc-sand     { background: linear-gradient(145deg, #f4f0e8 0%, #ece4d4 100%); border-color: #d8cdb8; }
+
+  /* accent colors per variant */
+  .bc-sage     .bc-tag { background: rgba(130,160,120,.15); color: #5a7a52; }
+  .bc-drose    .bc-tag { background: rgba(184,120,112,.15); color: #8a4840; }
+  .bc-clay     .bc-tag { background: rgba(184,148,120,.15); color: #7a5438; }
+  .bc-lavender .bc-tag { background: rgba(148,120,184,.15); color: #6044a0; }
+  .bc-sky      .bc-tag { background: rgba(100,140,184,.15); color: #305880; }
+  .bc-sand     .bc-tag { background: rgba(180,160,120,.15); color: #7a6030; }
+
+  .bc-sage     .bc-deco { color: rgba(130,160,120,.18); }
+  .bc-drose    .bc-deco { color: rgba(184,120,112,.18); }
+  .bc-clay     .bc-deco { color: rgba(184,148,120,.18); }
+  .bc-lavender .bc-deco { color: rgba(148,120,184,.18); }
+  .bc-sky      .bc-deco { color: rgba(100,140,184,.18); }
+  .bc-sand     .bc-deco { color: rgba(180,160,120,.18); }
+
+  /* accent dot per variant */
+  .bc-sage     .bc-dot { background: #82a078; }
+  .bc-drose    .bc-dot { background: #b87870; }
+  .bc-clay     .bc-dot { background: #b89478; }
+  .bc-lavender .bc-dot { background: #9478b8; }
+  .bc-sky      .bc-dot { background: #6490b8; }
+  .bc-sand     .bc-dot { background: #b4a078; }
+
   /* bento grid */
   .bento {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    gap: 16px;
+    gap: 14px;
   }
   .bento-card {
-    border-radius: 22px; padding: 32px 30px;
+    border-radius: 24px; padding: 30px 28px;
     transition: box-shadow .3s, transform .3s;
     position: relative; overflow: hidden;
     background: #fff; border: 1.5px solid var(--border);
   }
-  .bento-card:hover { box-shadow: 0 16px 48px rgba(0,0,0,.09); transform: translateY(-4px); }
+  .bento-card:hover { box-shadow: 0 20px 50px rgba(0,0,0,.08); transform: translateY(-5px); }
 
   /* sizes */
   .bc-wide  { grid-column: span 7; }
@@ -189,112 +221,76 @@
   .bc-third { grid-column: span 4; }
   .bc-half  { grid-column: span 6; }
 
-  /* dark hero card */
-  .bento-card.dark {
-    background: var(--dark); border-color: transparent; color: #fff;
-  }
-  .bento-card.dark .bc-label { color: rgba(255,255,255,.4); }
-  .bento-card.dark h3 { color: #fff; }
-  .bento-card.dark p { color: rgba(255,255,255,.6); }
-  /* rose tint card */
-  .bento-card.rose-tint {
-    background: linear-gradient(145deg, #fff9f9 0%, #fbeef1 100%);
-    border-color: #edd8de;
-  }
-  /* gold tint card */
-  .bento-card.gold-tint {
-    background: linear-gradient(145deg, #fffdf6 0%, #f5edda 100%);
-    border-color: #e4d5b0;
-  }
-  /* cream tint card */
-  .bento-card.cream-tint {
-    background: var(--cream2); border-color: var(--border);
+  /* decorative huge number in corner */
+  .bc-deco {
+    position: absolute; right: 20px; bottom: 10px;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 7rem; font-weight: 600; line-height: 1;
+    pointer-events: none; user-select: none; letter-spacing: -.02em;
   }
 
-  /* decorative blob inside dark card */
-  .bento-card.dark::after {
-    content: '';
-    position: absolute; bottom: -40px; right: -40px;
-    width: 180px; height: 180px;
-    background: radial-gradient(circle, rgba(184,112,128,.35) 0%, transparent 70%);
-    border-radius: 50%; pointer-events: none;
+  /* dot accent */
+  .bc-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-right: 6px; flex-shrink: 0;
   }
 
-  /* card interior */
+  /* tag pill */
   .bc-tag {
-    display: inline-flex; align-items: center; gap: 6px;
+    display: inline-flex; align-items: center;
     font-size: .68rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .12em; color: var(--rose);
-    background: var(--rose-light); border-radius: 20px;
-    padding: 4px 12px; margin-bottom: 18px;
+    letter-spacing: .12em; border-radius: 20px;
+    padding: 4px 12px; margin-bottom: 16px;
   }
-  .bento-card.dark .bc-tag { background: rgba(184,112,128,.2); color: #e8a0ae; }
-  .bento-card.gold-tint .bc-tag { background: rgba(201,169,110,.15); color: var(--gold); }
+
+  /* headings + text */
   .bento-card h3 {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 1.3rem; font-weight: 600; color: var(--dark);
-    margin-bottom: 10px; line-height: 1.25;
+    font-size: 1.35rem; font-weight: 600; color: var(--dark);
+    margin-bottom: 10px; line-height: 1.25; position: relative; z-index: 1;
   }
-  .bento-card.dark h3 { color: #fff; font-size: 1.5rem; }
   .bento-card p {
-    font-size: .875rem; color: var(--text-muted); line-height: 1.7;
+    font-size: .84rem; color: var(--text-muted); line-height: 1.72;
+    position: relative; z-index: 1;
   }
-  .bento-card .bc-benefit {
-    font-size: .875rem; font-weight: 500; color: var(--dark);
-    line-height: 1.6; margin-bottom: 6px;
-  }
-  .bento-card.dark .bc-benefit { color: rgba(255,255,255,.85); }
-  .bc-benefit-list {
-    list-style: none; display: flex; flex-direction: column; gap: 8px;
-    margin-top: 14px;
-  }
-  .bc-benefit-list li {
-    display: flex; align-items: flex-start; gap: 10px;
-    font-size: .83rem; color: var(--text-muted); line-height: 1.5;
-  }
-  .bento-card.dark .bc-benefit-list li { color: rgba(255,255,255,.6); }
-  .bc-benefit-list li::before {
-    content: '✦'; color: var(--gold); font-size: .65rem;
-    flex-shrink: 0; margin-top: 3px;
-  }
-  .bento-card.dark .bc-benefit-list li::before { color: var(--gold-light); }
 
-  /* stat callout */
-  .bc-stat {
-    margin-top: 22px; padding-top: 18px;
-    border-top: 1px solid rgba(255,255,255,.12);
-    display: flex; align-items: baseline; gap: 8px;
+  /* big stat */
+  .bc-stat-block {
+    margin-top: 20px; position: relative; z-index: 1;
   }
   .bc-stat-num {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 2.6rem; font-weight: 600; line-height: 1;
-    color: var(--rose);
+    font-size: 2.8rem; font-weight: 600; line-height: 1;
+    color: var(--dark); display: block;
   }
-  .bento-card.dark .bc-stat-num { color: #e8a0ae; }
-  .bc-stat-label { font-size: .8rem; color: var(--text-muted); line-height: 1.4; }
-  .bento-card.dark .bc-stat-label { color: rgba(255,255,255,.45); }
+  .bc-stat-label {
+    font-size: .75rem; color: var(--text-muted);
+    letter-spacing: .04em; margin-top: 2px; display: block;
+  }
 
-  /* quote card */
-  .bc-quote {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.25rem; font-style: italic; font-weight: 400;
-    line-height: 1.55; color: var(--dark);
-    margin-bottom: 12px;
+  /* benefit list */
+  .bc-list {
+    list-style: none; display: flex; flex-direction: column;
+    gap: 9px; margin-top: 14px; position: relative; z-index: 1;
   }
-  .bc-quote-author { font-size: .75rem; color: var(--text-muted); letter-spacing: .06em; }
+  .bc-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: .82rem; color: var(--text-muted); line-height: 1.5;
+  }
 
-  /* wide card 2-col layout */
-  .bc-two-col { display: flex; gap: 32px; }
-  .bc-two-col-main { flex: 1; }
-  .bc-two-col-side {
-    flex-shrink: 0; width: 130px;
-    display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end;
+  /* wide card inner */
+  .bc-wide-body { position: relative; z-index: 1; }
+  .bc-wide-foot {
+    margin-top: 24px; padding-top: 18px;
+    border-top: 1px solid rgba(0,0,0,.06);
+    display: flex; gap: 32px; position: relative; z-index: 1;
   }
-  .bc-big-num {
+  .bc-foot-item { display: flex; flex-direction: column; gap: 2px; }
+  .bc-foot-num {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 5rem; font-weight: 600; line-height: 1;
-    color: rgba(255,255,255,.12); text-align: right; white-space: nowrap;
+    font-size: 1.9rem; font-weight: 600; line-height: 1; color: var(--dark);
   }
+  .bc-foot-lbl { font-size: .72rem; color: var(--text-muted); }
 
   /* ── FORM SECTION ── */
   .form-section {
@@ -442,7 +438,9 @@
     .hero-right { display: none; }
     .features { padding: 0 24px; }
     .cards-grid { grid-template-columns: 1fr; }
-    .bc-wide, .bc-small, .bc-third, .bc-half { grid-column: span 12; }
+    .bc-wide, .bc-small, .bc-third, .bc-half { grid-column: span 12 !important; }
+    .bc-deco { font-size: 5rem; }
+    .bc-wide-foot { flex-wrap: wrap; gap: 16px; }
     .form-section { padding: 50px 24px; }
     .form-inner { grid-template-columns: 1fr; gap: 40px; }
     .form-row { grid-template-columns: 1fr; }
@@ -504,87 +502,99 @@
 
 <!-- FEATURES -->
 <section class="features" id="funkcje">
-  <p class="section-eyebrow reveal">Dla kogo jest Estelio</p>
-  <h2 class="section-title reveal">Narzędzie, które rozumie<br><em>codzienność salonu beauty</em></h2>
+  <p class="section-eyebrow reveal">Dla właścicielek salonów beauty</p>
+  <h2 class="section-title reveal">Narzędzie, które rozumie<br><em>codzienność Twojego salonu</em></h2>
 
   <div class="bento">
 
-    <!-- ROW 1: dark hero (7) + rose tint (5) -->
-    <div class="bento-card bc-wide dark reveal" style="transition-delay:.04s">
-      <div class="bc-two-col">
-        <div class="bc-two-col-main">
-          <div class="bc-tag">Sprzedaż &amp; rozliczenia</div>
-          <h3>Wiesz ile zarobiłaś, zanim zamkniesz drzwi salonu</h3>
-          <p>Koniec z ręcznym liczeniem na koniec dnia. Każda transakcja — gotówka, karta, BLIK, Mediraty — trafia do systemu w kilka sekund. Sumy dzienne naliczają się same.</p>
-          <ul class="bc-benefit-list">
-            <li>Rozliczenie pracowników bez Excela i nieporozumień</li>
-            <li>Historia każdej transakcji z datą, kwotą i formą płatności</li>
-            <li>Miesięczne raporty jednym kliknięciem</li>
-          </ul>
+    <!-- ROW 1: hero wide sage (7) + drose (5) -->
+    <div class="bento-card bc-wide bc-sage reveal" style="transition-delay:.04s">
+      <span class="bc-tag"><span class="bc-dot"></span>Sprzedaż &amp; rozliczenia</span>
+      <div class="bc-wide-body">
+        <h3>Wiesz ile zarobiłaś,<br>zanim zamkniesz drzwi</h3>
+        <p>Koniec z liczeniem na kartce po zamknięciu. Każda transakcja — gotówka, karta, BLIK, Mediraty — wpisana w kilka sekund. Sumy naliczają się same, rozliczenia pracowników bez Excela.</p>
+        <ul class="bc-list">
+          <li><span class="bc-dot"></span>Historia każdej transakcji z datą, kwotą, formą płatności</li>
+          <li><span class="bc-dot"></span>Miesięczne raporty jednym kliknięciem — bez arkuszy</li>
+          <li><span class="bc-dot"></span>Rozliczenia dla każdej pracownicy — przejrzyście i sprawiedliwie</li>
+        </ul>
+      </div>
+      <div class="bc-wide-foot">
+        <div class="bc-foot-item">
+          <span class="bc-foot-num">0&thinsp;min</span>
+          <span class="bc-foot-lbl">na podsumowanie dnia</span>
         </div>
-        <div class="bc-two-col-side">
-          <div class="bc-big-num">₿</div>
+        <div class="bc-foot-item">
+          <span class="bc-foot-num">4</span>
+          <span class="bc-foot-lbl">formy płatności w jednym miejscu</span>
+        </div>
+        <div class="bc-foot-item">
+          <span class="bc-foot-num">100%</span>
+          <span class="bc-foot-lbl">historii bez luk</span>
         </div>
       </div>
-      <div class="bc-stat">
-        <span class="bc-stat-num">0 min</span>
-        <span class="bc-stat-label">na podsumowanie<br>sprzedaży dnia</span>
-      </div>
+      <span class="bc-deco" aria-hidden="true">₊</span>
     </div>
 
-    <div class="bento-card bc-small rose-tint reveal" style="transition-delay:.08s">
-      <div class="bc-tag">Magazyn</div>
+    <div class="bento-card bc-small bc-drose reveal" style="transition-delay:.08s">
+      <span class="bc-tag"><span class="bc-dot"></span>Magazyn</span>
       <h3>Nigdy więcej pustego opakowania przed zabiegiem</h3>
-      <p>System śledzi zużycie produktów i alertuje zanim skończy się towar. Masz pełny inwentarz bez kartek i pamięci.</p>
-      <ul class="bc-benefit-list" style="margin-top:16px">
-        <li>Alert, gdy produkt kończy się na stanie</li>
-        <li>Historia rozchodów — wiesz co zużywa ile</li>
-        <li>Mniej strat, lepsze zamówienia</li>
+      <p>System pilnuje stanów produktów i alertuje Cię zanim skończy się towar. Masz pełny inwentarz — bez kartek, bez pamięci, bez niespodzianek.</p>
+      <ul class="bc-list">
+        <li><span class="bc-dot"></span>Alert gdy stan spada poniżej minimum</li>
+        <li><span class="bc-dot"></span>Historia rozchodów — wiesz co zużywa ile</li>
+        <li><span class="bc-dot"></span>Mniej strat, trafniejsze zamówienia</li>
       </ul>
+      <span class="bc-deco" aria-hidden="true">◇</span>
     </div>
 
-    <!-- ROW 2: gold tint (5) + cream (4) + white (3) -->
-    <div class="bento-card bc-small gold-tint reveal" style="transition-delay:.10s">
-      <div class="bc-tag">Profile klientek</div>
+    <!-- ROW 2: clay (5) + lavender (4) + sky (3) -->
+    <div class="bento-card bc-small bc-clay reveal" style="transition-delay:.10s">
+      <span class="bc-tag"><span class="bc-dot"></span>Profile klientek</span>
       <h3>Klientka czuje się wyjątkowa, bo o niej pamiętasz</h3>
-      <p>Historia zabiegów, zadatki, zgody RODO i notatki — wszystko w jednym miejscu. Otwierasz kartę i już wiesz wszystko, zanim ona usiądzie.</p>
-      <ul class="bc-benefit-list" style="margin-top:14px">
-        <li>Wyszukiwanie w sekundę po imieniu lub telefonie</li>
-        <li>Dokumentacja RODO bez drukarki i szuflady</li>
+      <p>Historia zabiegów, zadatki, zgody RODO, notatki. Otwierasz kartę i już wiesz wszystko — zanim ona usiądzie w fotelu.</p>
+      <ul class="bc-list">
+        <li><span class="bc-dot"></span>Wyszukiwanie po imieniu lub telefonie — natychmiast</li>
+        <li><span class="bc-dot"></span>Dokumentacja RODO bez drukarki i szuflady</li>
       </ul>
+      <span class="bc-deco" aria-hidden="true">✿</span>
     </div>
 
-    <div class="bento-card bc-third cream-tint reveal" style="transition-delay:.13s">
-      <div class="bc-tag">Konsultacje</div>
-      <h3>Twoje efekty pracy mówią same za siebie</h3>
-      <p>Dokumentuj wyniki konsultacji i postępy leczenia. Zdjęcia, notatki, historia — buduj reputację ekspertki, nie tylko stylistki.</p>
+    <div class="bento-card bc-third bc-lavender reveal" style="transition-delay:.13s">
+      <span class="bc-tag"><span class="bc-dot"></span>Konsultacje</span>
+      <h3>Twoje efekty<br>mówią same za siebie</h3>
+      <p>Dokumentuj wyniki, postępy i efekty zabiegów. Notatki i historia budują reputację ekspertki — nie tylko stylistki.</p>
+      <span class="bc-deco" aria-hidden="true">◉</span>
     </div>
 
-    <div class="bento-card bc-third reveal" style="transition-delay:.16s">
-      <div class="bc-tag">Zadatki</div>
+    <div class="bento-card bc-third bc-sky reveal" style="transition-delay:.16s">
+      <span class="bc-tag"><span class="bc-dot"></span>Zadatki</span>
       <h3>Zaliczki bez karteczek i stresu</h3>
-      <p>Przyjmij zadatek, rozlicz go przy wizycie. System pilnuje statusów — Ty skupiasz się na klientce, nie na papierach.</p>
+      <p>Przyjmij zadatek, rozlicz go przy wizycie. System pilnuje statusów — Ty skupiasz się na klientce.</p>
+      <span class="bc-deco" aria-hidden="true">◈</span>
     </div>
 
-    <!-- ROW 3: half (6) + half (6) -->
-    <div class="bento-card bc-half reveal" style="transition-delay:.19s">
-      <div class="bc-tag">Wyniki pracowników</div>
+    <!-- ROW 3: sand (6) + sage (6) -->
+    <div class="bento-card bc-half bc-sand reveal" style="transition-delay:.19s">
+      <span class="bc-tag"><span class="bc-dot"></span>Wyniki pracowników</span>
       <h3>Wiesz kto napędza Twój salon — i możesz to udowodnić</h3>
-      <p>Obiektywne rankingi sprzedaży każdej osoby. Koniec z domysłami i niezręcznymi rozmowami — liczby mówią za Ciebie.</p>
-      <ul class="bc-benefit-list" style="margin-top:14px">
-        <li>Porównania tydzień do tygodnia i miesiąc do miesiąca</li>
-        <li>Motywuj zespół tym, co widać w liczbach</li>
+      <p>Obiektywne rankingi sprzedaży każdej osoby. Koniec z domysłami — liczby mówią za Ciebie. Motywuj zespół tym, co widać w danych.</p>
+      <ul class="bc-list">
+        <li><span class="bc-dot"></span>Porównania tydzień do tygodnia i miesiąc do miesiąca</li>
+        <li><span class="bc-dot"></span>Każda pracownica widzi swoje wyniki — nic ukrytego</li>
       </ul>
+      <span class="bc-deco" aria-hidden="true">↑</span>
     </div>
 
-    <div class="bento-card bc-half gold-tint reveal" style="transition-delay:.22s">
-      <div class="bc-tag">Budżety &amp; koszty</div>
-      <h3>Przestań zgadywać. Zacznij zarabiać świadomie.</h3>
-      <p>Planuj wydatki, śledź koszty operacyjne i porównuj z przychodami w czasie rzeczywistym. Wiesz ile naprawdę zostaje po wszystkim.</p>
-      <ul class="bc-benefit-list" style="margin-top:14px">
-        <li>Rentowność bez bólu głowy i arkuszy Excel</li>
-        <li>Widzisz na czym tracisz — zanim zacznie boleć</li>
+    <div class="bento-card bc-half bc-clay reveal" style="transition-delay:.22s">
+      <span class="bc-tag"><span class="bc-dot"></span>Budżety &amp; koszty</span>
+      <h3>Przestań zgadywać.<br>Zarabiaj świadomie.</h3>
+      <p>Planuj budżety, śledź koszty operacyjne, porównuj z przychodami. Wiesz ile naprawdę zostaje — zanim zacznie boleć.</p>
+      <ul class="bc-list">
+        <li><span class="bc-dot"></span>Rentowność bez Excela i bólu głowy</li>
+        <li><span class="bc-dot"></span>Widzisz na czym tracisz — we właściwym momencie</li>
       </ul>
+      <span class="bc-deco" aria-hidden="true">◎</span>
     </div>
 
   </div>
