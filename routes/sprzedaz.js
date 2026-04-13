@@ -283,10 +283,13 @@ module.exports = (db) => {
       try { _kwotaEdit = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
       db.query(
-        `SELECT klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
+        `SELECT klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono transakcji o ID: ' + d.id });
+          if (tenant_id === 'boczki-salon-glowny-001' && rows[0].czy_rozliczone) {
+            return res.json({ status: 'error', message: 'Transakcja jest już rozliczona przez Magdę. Cofnij rozliczenie przed edycją.' });
+          }
           const old = rows[0];
           const newSprzedawca = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(', ') : d.sprzedawca;
           let zmiany = [];
@@ -314,10 +317,13 @@ module.exports = (db) => {
     } else if (action === 'delete_sale') {
       const pracownik = d.pracownik || 'Admin';
       db.query(
-        `SELECT klient, zabieg, kwota, id_zadatku FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
+        `SELECT klient, zabieg, kwota, id_zadatku, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono transakcji o takim ID.' });
+          if (tenant_id === 'boczki-salon-glowny-001' && rows[0].czy_rozliczone) {
+            return res.json({ status: 'error', message: 'Transakcja jest już rozliczona przez Magdę. Cofnij rozliczenie przed usunięciem.' });
+          }
           const row = rows[0];
           db.query(
             `UPDATE Sprzedaz SET status = 'USUNIĘTY' WHERE tenant_id = ? AND id = ?`,
