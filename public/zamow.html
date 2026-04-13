@@ -173,83 +173,128 @@
   .bento {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
-    grid-template-rows: auto;
-    gap: 14px;
+    gap: 16px;
   }
   .bento-card {
-    background: #fff; border: 1.5px solid var(--border);
-    border-radius: 18px; padding: 28px 26px;
-    transition: box-shadow .25s, transform .25s;
+    border-radius: 22px; padding: 32px 30px;
+    transition: box-shadow .3s, transform .3s;
     position: relative; overflow: hidden;
+    background: #fff; border: 1.5px solid var(--border);
   }
-  .bento-card:hover { box-shadow: 0 12px 40px rgba(0,0,0,.08); transform: translateY(-3px); }
-
-  /* accent line top */
-  .bento-card::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0;
-    height: 3px; border-radius: 18px 18px 0 0;
-    background: linear-gradient(90deg, var(--rose), var(--gold));
-    opacity: 0; transition: opacity .25s;
-  }
-  .bento-card:hover::before { opacity: 1; }
+  .bento-card:hover { box-shadow: 0 16px 48px rgba(0,0,0,.09); transform: translateY(-4px); }
 
   /* sizes */
-  .bc-wide  { grid-column: span 8; }
-  .bc-small { grid-column: span 4; }
+  .bc-wide  { grid-column: span 7; }
+  .bc-small { grid-column: span 5; }
   .bc-third { grid-column: span 4; }
   .bc-half  { grid-column: span 6; }
 
-  /* dark card variant */
+  /* dark hero card */
   .bento-card.dark {
-    background: var(--dark); border-color: var(--dark); color: #fff;
+    background: var(--dark); border-color: transparent; color: #fff;
   }
-  .bento-card.dark .bc-label { color: rgba(255,255,255,.45); }
+  .bento-card.dark .bc-label { color: rgba(255,255,255,.4); }
   .bento-card.dark h3 { color: #fff; }
-  .bento-card.dark p { color: rgba(255,255,255,.65); }
-  .bento-card.dark::before { background: linear-gradient(90deg, var(--rose), var(--gold)); }
+  .bento-card.dark p { color: rgba(255,255,255,.6); }
+  /* rose tint card */
+  .bento-card.rose-tint {
+    background: linear-gradient(145deg, #fff9f9 0%, #fbeef1 100%);
+    border-color: #edd8de;
+  }
+  /* gold tint card */
+  .bento-card.gold-tint {
+    background: linear-gradient(145deg, #fffdf6 0%, #f5edda 100%);
+    border-color: #e4d5b0;
+  }
+  /* cream tint card */
+  .bento-card.cream-tint {
+    background: var(--cream2); border-color: var(--border);
+  }
+
+  /* decorative blob inside dark card */
+  .bento-card.dark::after {
+    content: '';
+    position: absolute; bottom: -40px; right: -40px;
+    width: 180px; height: 180px;
+    background: radial-gradient(circle, rgba(184,112,128,.35) 0%, transparent 70%);
+    border-radius: 50%; pointer-events: none;
+  }
 
   /* card interior */
-  .bc-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.3rem; margin-bottom: 16px;
-    background: var(--cream); flex-shrink: 0;
+  .bc-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: .68rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .12em; color: var(--rose);
+    background: var(--rose-light); border-radius: 20px;
+    padding: 4px 12px; margin-bottom: 18px;
   }
-  .bento-card.dark .bc-icon { background: rgba(255,255,255,.1); }
-  .bc-label {
-    font-size: .7rem; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .1em; color: var(--text-muted); margin-bottom: 8px;
-  }
+  .bento-card.dark .bc-tag { background: rgba(184,112,128,.2); color: #e8a0ae; }
+  .bento-card.gold-tint .bc-tag { background: rgba(201,169,110,.15); color: var(--gold); }
   .bento-card h3 {
-    font-size: 1.05rem; font-weight: 700; color: var(--dark);
-    margin-bottom: 8px; line-height: 1.3;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.3rem; font-weight: 600; color: var(--dark);
+    margin-bottom: 10px; line-height: 1.25;
   }
+  .bento-card.dark h3 { color: #fff; font-size: 1.5rem; }
   .bento-card p {
-    font-size: .85rem; color: var(--text-muted); line-height: 1.65;
+    font-size: .875rem; color: var(--text-muted); line-height: 1.7;
   }
-  .bc-pills {
-    display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px;
+  .bento-card .bc-benefit {
+    font-size: .875rem; font-weight: 500; color: var(--dark);
+    line-height: 1.6; margin-bottom: 6px;
   }
-  .bc-pill {
-    font-size: .72rem; font-weight: 600; padding: 4px 10px;
-    border-radius: 20px; background: var(--cream2); color: var(--text-muted);
-    border: 1px solid var(--border);
+  .bento-card.dark .bc-benefit { color: rgba(255,255,255,.85); }
+  .bc-benefit-list {
+    list-style: none; display: flex; flex-direction: column; gap: 8px;
+    margin-top: 14px;
   }
-  .bento-card.dark .bc-pill { background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.15); color: rgba(255,255,255,.7); }
+  .bc-benefit-list li {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: .83rem; color: var(--text-muted); line-height: 1.5;
+  }
+  .bento-card.dark .bc-benefit-list li { color: rgba(255,255,255,.6); }
+  .bc-benefit-list li::before {
+    content: '✦'; color: var(--gold); font-size: .65rem;
+    flex-shrink: 0; margin-top: 3px;
+  }
+  .bento-card.dark .bc-benefit-list li::before { color: var(--gold-light); }
 
-  /* wide card layout */
-  .bc-wide-inner { display: flex; gap: 28px; align-items: flex-start; }
-  .bc-wide-text { flex: 1; }
-  .bc-wide-stat {
-    flex-shrink: 0; text-align: right;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+  /* stat callout */
+  .bc-stat {
+    margin-top: 22px; padding-top: 18px;
+    border-top: 1px solid rgba(255,255,255,.12);
+    display: flex; align-items: baseline; gap: 8px;
   }
   .bc-stat-num {
     font-family: 'Cormorant Garamond', serif;
-    font-size: 3rem; font-weight: 600; line-height: 1;
+    font-size: 2.6rem; font-weight: 600; line-height: 1;
     color: var(--rose);
   }
-  .bc-stat-label { font-size: .75rem; color: var(--text-muted); }
+  .bento-card.dark .bc-stat-num { color: #e8a0ae; }
+  .bc-stat-label { font-size: .8rem; color: var(--text-muted); line-height: 1.4; }
+  .bento-card.dark .bc-stat-label { color: rgba(255,255,255,.45); }
+
+  /* quote card */
+  .bc-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.25rem; font-style: italic; font-weight: 400;
+    line-height: 1.55; color: var(--dark);
+    margin-bottom: 12px;
+  }
+  .bc-quote-author { font-size: .75rem; color: var(--text-muted); letter-spacing: .06em; }
+
+  /* wide card 2-col layout */
+  .bc-two-col { display: flex; gap: 32px; }
+  .bc-two-col-main { flex: 1; }
+  .bc-two-col-side {
+    flex-shrink: 0; width: 130px;
+    display: flex; flex-direction: column; align-items: flex-end; justify-content: flex-end;
+  }
+  .bc-big-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 5rem; font-weight: 600; line-height: 1;
+    color: rgba(255,255,255,.12); text-align: right; white-space: nowrap;
+  }
 
   /* ── FORM SECTION ── */
   .form-section {
@@ -459,89 +504,87 @@
 
 <!-- FEATURES -->
 <section class="features" id="funkcje">
-  <p class="section-eyebrow reveal">Funkcje systemu</p>
-  <h2 class="section-title reveal">Wszystko, czego potrzebuje <em>Twój salon</em></h2>
+  <p class="section-eyebrow reveal">Dla kogo jest Estelio</p>
+  <h2 class="section-title reveal">Narzędzie, które rozumie<br><em>codzienność salonu beauty</em></h2>
 
   <div class="bento">
 
-    <!-- ROW 1: big dark hero card (8) + small card (4) -->
-    <div class="bento-card bc-wide dark reveal" style="transition-delay:.05s">
-      <div class="bc-wide-inner">
-        <div class="bc-wide-text">
-          <div class="bc-icon">💰</div>
-          <div class="bc-label">Sprzedaż &amp; rozliczenia</div>
-          <h3>Pełna kontrola nad każdą złotówką</h3>
-          <p>Rejestruj transakcje w kilka sekund — gotówka, karta, BLIK, Mediraty. Każda forma płatności z osobną sumą dzienną. Historia sprzedaży z filtrami, rozliczenia pracowników i miesięczne podsumowania bez excelowych arkuszy.</p>
-          <div class="bc-pills">
-            <span class="bc-pill">Gotówka</span>
-            <span class="bc-pill">Karta</span>
-            <span class="bc-pill">BLIK</span>
-            <span class="bc-pill">Mediraty</span>
-            <span class="bc-pill">Rozliczenia pracowników</span>
-          </div>
+    <!-- ROW 1: dark hero (7) + rose tint (5) -->
+    <div class="bento-card bc-wide dark reveal" style="transition-delay:.04s">
+      <div class="bc-two-col">
+        <div class="bc-two-col-main">
+          <div class="bc-tag">Sprzedaż &amp; rozliczenia</div>
+          <h3>Wiesz ile zarobiłaś, zanim zamkniesz drzwi salonu</h3>
+          <p>Koniec z ręcznym liczeniem na koniec dnia. Każda transakcja — gotówka, karta, BLIK, Mediraty — trafia do systemu w kilka sekund. Sumy dzienne naliczają się same.</p>
+          <ul class="bc-benefit-list">
+            <li>Rozliczenie pracowników bez Excela i nieporozumień</li>
+            <li>Historia każdej transakcji z datą, kwotą i formą płatności</li>
+            <li>Miesięczne raporty jednym kliknięciem</li>
+          </ul>
         </div>
-        <div class="bc-wide-stat">
-          <span class="bc-stat-num">100%</span>
-          <span class="bc-stat-label">pełna historia<br>transakcji</span>
+        <div class="bc-two-col-side">
+          <div class="bc-big-num">₿</div>
         </div>
+      </div>
+      <div class="bc-stat">
+        <span class="bc-stat-num">0 min</span>
+        <span class="bc-stat-label">na podsumowanie<br>sprzedaży dnia</span>
       </div>
     </div>
 
-    <div class="bento-card bc-small reveal" style="transition-delay:.1s">
-      <div class="bc-icon">📦</div>
-      <div class="bc-label">Magazyn</div>
-      <h3>Stany kosmetyków pod kontrolą</h3>
-      <p>Śledź zużycie produktów i towarów w lokalu. Alerty niskiego stanu, historia rozchodów i pełny inwentarz na bieżąco.</p>
-      <div class="bc-pills">
-        <span class="bc-pill">Stany magazynowe</span>
-        <span class="bc-pill">Alerty</span>
-      </div>
+    <div class="bento-card bc-small rose-tint reveal" style="transition-delay:.08s">
+      <div class="bc-tag">Magazyn</div>
+      <h3>Nigdy więcej pustego opakowania przed zabiegiem</h3>
+      <p>System śledzi zużycie produktów i alertuje zanim skończy się towar. Masz pełny inwentarz bez kartek i pamięci.</p>
+      <ul class="bc-benefit-list" style="margin-top:16px">
+        <li>Alert, gdy produkt kończy się na stanie</li>
+        <li>Historia rozchodów — wiesz co zużywa ile</li>
+        <li>Mniej strat, lepsze zamówienia</li>
+      </ul>
     </div>
 
-    <!-- ROW 2: third (4) + third (4) + third (4) -->
-    <div class="bento-card bc-third reveal" style="transition-delay:.12s">
-      <div class="bc-icon">👤</div>
-      <div class="bc-label">Klientki</div>
-      <h3>Profile z pełną historią</h3>
-      <p>Zabiegi, zadatki, dokumentacja, zgody RODO. Wszystko w jednym miejscu — wyszukiwanie w sekundę.</p>
+    <!-- ROW 2: gold tint (5) + cream (4) + white (3) -->
+    <div class="bento-card bc-small gold-tint reveal" style="transition-delay:.10s">
+      <div class="bc-tag">Profile klientek</div>
+      <h3>Klientka czuje się wyjątkowa, bo o niej pamiętasz</h3>
+      <p>Historia zabiegów, zadatki, zgody RODO i notatki — wszystko w jednym miejscu. Otwierasz kartę i już wiesz wszystko, zanim ona usiądzie.</p>
+      <ul class="bc-benefit-list" style="margin-top:14px">
+        <li>Wyszukiwanie w sekundę po imieniu lub telefonie</li>
+        <li>Dokumentacja RODO bez drukarki i szuflady</li>
+      </ul>
+    </div>
+
+    <div class="bento-card bc-third cream-tint reveal" style="transition-delay:.13s">
+      <div class="bc-tag">Konsultacje</div>
+      <h3>Twoje efekty pracy mówią same za siebie</h3>
+      <p>Dokumentuj wyniki konsultacji i postępy leczenia. Zdjęcia, notatki, historia — buduj reputację ekspertki, nie tylko stylistki.</p>
     </div>
 
     <div class="bento-card bc-third reveal" style="transition-delay:.16s">
-      <div class="bc-icon">🩺</div>
-      <div class="bc-label">Konsultacje</div>
-      <h3>Wyniki i sukcesy klientek</h3>
-      <p>Dokumentuj postępy leczenia, wyniki konsultacji i efekty zabiegów. Buduj zaufanie historią, nie pamięcią.</p>
-    </div>
-
-    <div class="bento-card bc-third reveal" style="transition-delay:.20s">
-      <div class="bc-icon">💼</div>
-      <div class="bc-label">Budżety i koszty</div>
-      <h3>Rentowność bez zaskoczeń</h3>
-      <p>Planuj budżety, śledź koszty operacyjne i porównuj z przychodami. Wiesz, ile naprawdę zarabiasz.</p>
+      <div class="bc-tag">Zadatki</div>
+      <h3>Zaliczki bez karteczek i stresu</h3>
+      <p>Przyjmij zadatek, rozlicz go przy wizycie. System pilnuje statusów — Ty skupiasz się na klientce, nie na papierach.</p>
     </div>
 
     <!-- ROW 3: half (6) + half (6) -->
-    <div class="bento-card bc-half reveal" style="transition-delay:.24s">
-      <div class="bc-icon">📈</div>
-      <div class="bc-label">Wyniki pracowników</div>
-      <h3>Analiza sprzedaży każdej osoby</h3>
-      <p>Rankingi, sumy i trendy dla każdego pracownika. Obiektywne dane zamiast domysłów — motywuj zespół tym, co faktycznie widać w liczbach.</p>
-      <div class="bc-pills">
-        <span class="bc-pill">Rankingi</span>
-        <span class="bc-pill">Trendy miesięczne</span>
-        <span class="bc-pill">Porównania</span>
-      </div>
+    <div class="bento-card bc-half reveal" style="transition-delay:.19s">
+      <div class="bc-tag">Wyniki pracowników</div>
+      <h3>Wiesz kto napędza Twój salon — i możesz to udowodnić</h3>
+      <p>Obiektywne rankingi sprzedaży każdej osoby. Koniec z domysłami i niezręcznymi rozmowami — liczby mówią za Ciebie.</p>
+      <ul class="bc-benefit-list" style="margin-top:14px">
+        <li>Porównania tydzień do tygodnia i miesiąc do miesiąca</li>
+        <li>Motywuj zespół tym, co widać w liczbach</li>
+      </ul>
     </div>
 
-    <div class="bento-card bc-half reveal" style="transition-delay:.28s; background: linear-gradient(135deg, #fff 60%, var(--rose-light));">
-      <div class="bc-icon">🏷️</div>
-      <div class="bc-label">Zadatki</div>
-      <h3>Zaliczki bez papierowych karteczek</h3>
-      <p>Przyjmuj zadatki, rozliczaj je przy wizycie i śledź statusy. System pilnuje terminów, Ty skupiasz się na klientce.</p>
-      <div class="bc-pills">
-        <span class="bc-pill">Status zadatku</span>
-        <span class="bc-pill">Rozliczenie przy wizycie</span>
-      </div>
+    <div class="bento-card bc-half gold-tint reveal" style="transition-delay:.22s">
+      <div class="bc-tag">Budżety &amp; koszty</div>
+      <h3>Przestań zgadywać. Zacznij zarabiać świadomie.</h3>
+      <p>Planuj wydatki, śledź koszty operacyjne i porównuj z przychodami w czasie rzeczywistym. Wiesz ile naprawdę zostaje po wszystkim.</p>
+      <ul class="bc-benefit-list" style="margin-top:14px">
+        <li>Rentowność bez bólu głowy i arkuszy Excel</li>
+        <li>Widzisz na czym tracisz — zanim zacznie boleć</li>
+      </ul>
     </div>
 
   </div>
