@@ -226,7 +226,7 @@ module.exports = (db) => {
           const splitId = uniqueIdBase + '-SPLIT-' + si;
           db.query(
             `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, ?, ?, ?, ?, 'AKTYWNY')`,
-            [splitId, tenant_id, now, d.klient, part.method, parseFloat(part.amount)],
+            [splitId, tenant_id, now, d.klient || '', part.method || '', parseFloat(part.amount) || 0],
             nextSplit
           );
         }
@@ -429,7 +429,7 @@ module.exports = (db) => {
       const id = randomUUID();
       db.query(
         `INSERT INTO Rabaty (id, tenant_id, nazwa, typ, wartosc, aktywny, data_dodania, kto_dodal) VALUES (?, ?, ?, ?, ?, 'TAK', NOW(), ?)`,
-        [id, tenant_id, d.nazwa, d.typ, parseNumOpt(d.wartosc), d.pracownik],
+        [id, tenant_id, d.nazwa || '', d.typ || '', parseNumOpt(d.wartosc) || 0, d.pracownik || ''],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'DODANO RABAT', d.pracownik, `${d.nazwa} (${d.wartosc} ${d.typ})`);

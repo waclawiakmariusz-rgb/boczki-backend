@@ -322,7 +322,7 @@ module.exports = (db) => {
         try { kwota = parseKwota(d.kwota, 'kwota zadatku'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
         db.query(
           `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?)`,
-          [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda, d.cel, sprzedawcyStr],
+          [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda || '', d.cel || '', sprzedawcyStr],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
@@ -332,7 +332,7 @@ module.exports = (db) => {
                 const splitId = id + '-SPLIT-' + idx;
                 db.query(
                   `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, NOW(), ?, ?, ?, 'AKTYWNY')`,
-                  [splitId, tenant_id, d.klient, part.method, parseNumOpt(part.amount)],
+                  [splitId, tenant_id, d.klient || '', part.method || '', parseNumOpt(part.amount) || 0],
                   () => {}
                 );
               });
@@ -384,7 +384,7 @@ module.exports = (db) => {
         try { kwota = parseKwota(d.nowa_kwota, 'nowa kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
         db.query(
           `UPDATE Zadatki SET kwota = ?, metoda = ?, cel = ?, pracownicy = ?, status = COALESCE(?, status), data_wplaty = COALESCE(?, data_wplaty) WHERE tenant_id = ? AND id = ?`,
-          [kwota, d.nowa_metoda, d.nowy_cel, d.nowi_pracownicy, d.nowy_status || null, d.nowa_data ? new Date(d.nowa_data) : null, tenant_id, d.id_zadatku],
+          [kwota, d.nowa_metoda || '', d.nowy_cel || '', d.nowi_pracownicy || '', d.nowy_status || null, d.nowa_data ? new Date(d.nowa_data) : null, tenant_id, d.id_zadatku],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'EDYCJA ZADATKU', pracownik, `Kwota: ${d.nowa_kwota} zł | Status: ${d.nowy_status || 'bez zmian'}`);

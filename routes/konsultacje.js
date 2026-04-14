@@ -185,7 +185,7 @@ module.exports = (db) => {
       if (d.id) {
         db.query(
           `UPDATE Typy_konsultacji SET nazwa = ?, obszar = ?, cena = ?, prog = ?, opis = ? WHERE tenant_id = ? AND id = ?`,
-          [d.nazwa, d.obszar || '', Number(d.cena) || 0, Number(d.prog) || 0, d.opis || '', tenant_id, d.id],
+          [d.nazwa || '', d.obszar || '', Number(d.cena) || 0, Number(d.prog) || 0, d.opis || '', tenant_id, d.id],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'KAMPANIA EDYCJA', d.user_log || '', `Zaktualizowano akcję: ${d.nazwa}`);
@@ -196,7 +196,7 @@ module.exports = (db) => {
         const id = randomUUID();
         db.query(
           `INSERT INTO Typy_konsultacji (id, tenant_id, nazwa, obszar, cena, prog, opis, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'Aktywna')`,
-          [id, tenant_id, d.nazwa, d.obszar || '', Number(d.cena) || 0, Number(d.prog) || 0, d.opis || ''],
+          [id, tenant_id, d.nazwa || '', d.obszar || '', Number(d.cena) || 0, Number(d.prog) || 0, d.opis || ''],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'KAMPANIA NOWA', d.user_log || '', `Utworzono akcję: ${d.nazwa}`);
