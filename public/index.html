@@ -2347,6 +2347,114 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
     color: var(--an-text) !important;
 }
 
+/* ══════════════════════════════════════════
+   PASEK ZAKŁADEK — #an_tabs
+══════════════════════════════════════════ */
+#an_tabs {
+    display: none;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px 4px 14px;
+    margin-bottom: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: linear-gradient(to bottom, #f6f5fb 80%, transparent);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+.an_tab {
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: #64748b;
+    background: white;
+    border: 1px solid #e8e4f3;
+    border-radius: 20px;
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: background .18s, color .18s, border-color .18s, box-shadow .18s, transform .1s;
+    white-space: nowrap;
+}
+.an_tab:hover {
+    background: #ede9ff;
+    border-color: #c4b5fd;
+    color: #5b21b6;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(139,92,246,.15);
+}
+/* Aktywna zakładka przez CSS :has() — zero JS */
+body:has(#an_view-dashboard[style*="display: block"])           .an_tab[data-view="dashboard"],
+body:has(#an_view-summary[style*="display: block"])             .an_tab[data-view="summary"],
+body:has(#an_view-monthly-report[style*="display: block"])      .an_tab[data-view="monthly_report"],
+body:has(#an_view-yearly[style*="display: block"])              .an_tab[data-view="yearly"],
+body:has(#an_view-treatment-analysis[style*="display: block"])  .an_tab[data-view="treatment_analysis"],
+body:has(#an_view-bi[style*="display: block"])                  .an_tab[data-view="bi"],
+body:has(#an_view-costs[style*="display: block"])               .an_tab[data-view="costs"] {
+    background: #7c3aed;
+    color: white;
+    border-color: #7c3aed;
+    box-shadow: 0 3px 10px rgba(124,58,237,.35);
+    transform: none;
+}
+/* Pokazanie paska gdy aktywny widok */
+body:has(#an_view-dashboard[style*="display: block"]) #an_tabs,
+body:has(#an_view-summary[style*="display: block"]) #an_tabs,
+body:has(#an_view-monthly-report[style*="display: block"]) #an_tabs,
+body:has(#an_view-yearly[style*="display: block"]) #an_tabs,
+body:has(#an_view-treatment-analysis[style*="display: block"]) #an_tabs,
+body:has(#an_view-bi[style*="display: block"]) #an_tabs,
+body:has(#an_view-costs[style*="display: block"]) #an_tabs {
+    display: flex;
+}
+
+/* ══════════════════════════════════════════
+   ANIMACJA WEJŚCIA widoku
+══════════════════════════════════════════ */
+@keyframes an_fadeInUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.an_animate-in {
+    animation: an_fadeInUp .38s cubic-bezier(.16, 1, .3, 1) both;
+}
+
+/* ══════════════════════════════════════════
+   ZWIJALNE SEKCJE — <details>
+══════════════════════════════════════════ */
+.an_detail-section {
+    margin-bottom: 16px;
+}
+.an_detail-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--an-accent, #9b8ec4);
+    cursor: pointer;
+    padding: 12px 16px;
+    background: #f0ecff;
+    border-radius: 10px;
+    border: 1px solid #e0d8ff;
+    list-style: none;
+    user-select: none;
+    transition: background .15s, color .15s;
+}
+.an_detail-title::-webkit-details-marker { display: none; }
+.an_detail-title::before {
+    content: '▸';
+    font-size: 11px;
+    transition: transform .2s;
+    color: var(--an-accent, #9b8ec4);
+    flex-shrink: 0;
+}
+.an_detail-section[open] .an_detail-title { background: #e8e0ff; color: #5b21b6; }
+.an_detail-section[open] .an_detail-title::before { transform: rotate(90deg); }
+.an_detail-section > *:not(summary) {
+    animation: an_fadeInUp .3s ease both;
+}
+
 /* ══ MOBILE ══ */
 @media (max-width: 768px) {
     #an_view-dashboard, #an_view-summary,
@@ -2428,6 +2536,20 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
     #analiza-konsultacji .filter-btn {
         font-size: 12px !important;
         padding: 8px 12px !important;
+    }
+    /* pasek zakładek na mobile — scroll poziomy */
+    #an_tabs {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        scrollbar-width: none !important;
+        padding: 8px 2px 12px !important;
+        gap: 8px !important;
+    }
+    #an_tabs::-webkit-scrollbar { display: none; }
+    .an_tab {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
     }
 }
 
@@ -3753,12 +3875,25 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
         </div>
     </div>
 </div>
-<!-- 
+<!--
 ANALIZA MANAGER
 -->
 
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  PASEK ZAKŁADEK — Analiza Sprzedaży                 ║
+     ║  Widoczny tylko gdy aktywny widok an_view-*         ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div id="an_tabs" role="tablist" aria-label="Nawigacja analityczna">
+    <button class="an_tab" onclick="an_goTo('dashboard')"          data-view="dashboard">📊 Pracownik</button>
+    <button class="an_tab" onclick="an_goTo('summary')"            data-view="summary">🧾 Dzień</button>
+    <button class="an_tab" onclick="an_goTo('monthly_report')"     data-view="monthly_report">📅 Miesiąc</button>
+    <button class="an_tab" onclick="an_goTo('yearly')"             data-view="yearly">📆 Rok</button>
+    <button class="an_tab" onclick="an_goTo('treatment_analysis')" data-view="treatment_analysis">💉 Zabieg</button>
+    <button class="an_tab" onclick="an_goTo('bi')"                 data-view="bi">🧠 BI</button>
+    <button class="an_tab" onclick="an_goTo('costs')"              data-view="costs">💰 Koszty</button>
+</div>
 
-<div id="an_view-dashboard">
+<div id="an_view-dashboard" style="display:none;">
             <div class="dash-header">
                 <div class="header-left">
                     <!-- <button class="hamburger-btn" onclick="an_toggleMenu()">☰</button> -->
@@ -3827,31 +3962,34 @@ ANALIZA MANAGER
                     </div>
                 </div>
 
-               <div class="emp-grid">
-                    <div class="chart-box">
-                        <h3 style="margin-top:0; font-size:16px;">Struktura Sprzedaży</h3>
-                        <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
-                            <canvas id="an_empChart"></canvas>
+               <details class="an_detail-section" open>
+                    <summary class="an_detail-title">📈 Wykresy szczegółowe</summary>
+                    <div class="emp-grid">
+                        <div class="chart-box">
+                            <h3 style="margin-top:0; font-size:16px;">Struktura Sprzedaży</h3>
+                            <div style="position: relative; height: 300px; width: 100%; display: flex; justify-content: center;">
+                                <canvas id="an_empChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="chart-box">
+                            <h3 style="margin-top:0; font-size:16px;">🔥 Top 5 - Najczęściej sprzedawane</h3>
+                            <ul id="an_emp-top-list" class="top-list"></ul>
+                        </div>
+
+                        <div class="chart-box">
+                            <h6 class="text-muted fw-bold mb-3" style="margin-top:0; font-size:16px; color:#475569;">⚠️ Obszary do poprawy</h6>
+                            <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Zabiegi bez sprzedaży w tym miesiącu:</p>
+                            <ul id="an_emp-worst-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
+                        </div>
+
+                        <div class="chart-box">
+                            <h6 class="text-muted fw-bold mb-3" style="margin-top:0; font-size:16px; color:#475569;">💄 Sprzedane Kosmetyki</h6>
+                            <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Wykaz produktów pracownika w tym miesiącu:</p>
+                            <ul id="an_emp-cosmetics-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
                         </div>
                     </div>
-                    
-                    <div class="chart-box">
-                        <h3 style="margin-top:0; font-size:16px;">🔥 Top 5 - Najczęściej sprzedawane</h3>
-                        <ul id="an_emp-top-list" class="top-list"></ul>
-                    </div>
-
-                    <div class="chart-box">
-                        <h6 class="text-muted fw-bold mb-3" style="margin-top:0; font-size:16px; color:#475569;">⚠️ Obszary do poprawy</h6>
-                        <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Zabiegi bez sprzedaży w tym miesiącu:</p>
-                        <ul id="an_emp-worst-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
-                    </div>
-
-                    <div class="chart-box">
-                        <h6 class="text-muted fw-bold mb-3" style="margin-top:0; font-size:16px; color:#475569;">💄 Sprzedane Kosmetyki</h6>
-                        <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Wykaz produktów pracownika w tym miesiącu:</p>
-                        <ul id="an_emp-cosmetics-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
-                    </div>
-                </div>
+                </details>
             </div>
 
             <div class="section-title">📊 Ranking Zespołu</div>
@@ -4148,9 +4286,9 @@ ANALIZA MANAGER
         </div>
     </div>
 
-    <div style="margin-top: 50px; border-top: 2px dashed #cbd5e1; padding-top: 40px;">
-        <h3 style="margin-top:0px; font-size:18px; border-left: 4px solid #f59e0b; padding-left: 10px;">💄 Analiza Sprzedaży Kosmetyków - <span class="cosm-month-label">Miesiąc</span></h3>
-        <p style="font-size:13px; color:#64748b; margin-top:-5px; margin-bottom:20px;">Ranking i obroty kosmetyków w wybranym miesiącu.</p>
+    <details class="an_detail-section" style="margin-top: 40px; border-top: 2px dashed #e0daf5; padding-top: 30px;">
+        <summary class="an_detail-title">💄 Analiza Kosmetyków — <span class="cosm-month-label">Miesiąc</span></summary>
+        <p style="font-size:13px; color:#64748b; margin-top:12px; margin-bottom:20px;">Ranking i obroty kosmetyków w wybranym miesiącu.</p>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
             <div class="card" style="border-top: 4px solid #f59e0b;">
@@ -4177,11 +4315,11 @@ ANALIZA MANAGER
             </div>
             <ul id="an_ta-cosm-month-list" class="list-group list-group-flush" style="padding-left:0; margin-bottom:0; list-style:none;"></ul>
         </div>
-    </div>
+    </details>
 
-    <div style="margin-top: 30px; border-top: 2px dashed #cbd5e1; padding-top: 40px;">
-        <h3 style="margin-top:0px; font-size:18px; border-left: 4px solid #fbbf24; padding-left: 10px;">💄 Analiza Sprzedaży Kosmetyków - <span class="cosm-year-label">Rok</span></h3>
-        <p style="font-size:13px; color:#64748b; margin-top:-5px; margin-bottom:20px;">Zestawienie narastające dla całego bieżącego roku.</p>
+    <details class="an_detail-section" style="margin-top: 20px; border-top: 2px dashed #e0daf5; padding-top: 30px;">
+        <summary class="an_detail-title">💄 Analiza Kosmetyków — <span class="cosm-year-label">Rok</span></summary>
+        <p style="font-size:13px; color:#64748b; margin-top:12px; margin-bottom:20px;">Zestawienie narastające dla całego bieżącego roku.</p>
         
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
             <div class="card" style="border-top: 4px solid #fbbf24;">
@@ -4208,7 +4346,7 @@ ANALIZA MANAGER
             </div>
             <ul id="an_ta-cosm-year-list" class="list-group list-group-flush" style="padding-left:0; margin-bottom:0; list-style:none;"></ul>
         </div>
-    </div>
+    </details>
 </div>
 
     <div id="an_view-bi" style="display:none; padding-bottom: 50px;">
@@ -14580,8 +14718,44 @@ if (inputNazwaCheck) {
                 }
             });
         }
-    
-	
+
+        /* ─────────────────────────────────────────────────────────────────
+           an_goTo — wywoływany przez pasek zakładek analitycznych
+           Czyści active z nav-btn (sidebar), wywołuje pokaz() z danymi
+        ───────────────────────────────────────────────────────────────── */
+        function an_goTo(viewId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            pokaz(viewId);
+        }
+
+        /* ─────────────────────────────────────────────────────────────────
+           MutationObserver — animacja wejścia widoku analitycznego
+        ───────────────────────────────────────────────────────────────── */
+        (function() {
+            const anViews = [
+                'an_view-dashboard','an_view-summary','an_view-monthly-report',
+                'an_view-costs','an_view-yearly','an_view-treatment-analysis','an_view-bi'
+            ];
+            const obs = new MutationObserver(mutations => {
+                mutations.forEach(m => {
+                    if (m.attributeName === 'style') {
+                        const el = m.target;
+                        if (el.style.display === 'block') {
+                            el.classList.remove('an_animate-in');
+                            void el.offsetWidth; // reflow trick para reiniciar la animación
+                            el.classList.add('an_animate-in');
+                        }
+                    }
+                });
+            });
+            document.addEventListener('DOMContentLoaded', () => {
+                anViews.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) obs.observe(el, { attributes: true, attributeFilter: ['style'] });
+                });
+            });
+        })();
+
 	// ====================================================================
 // 👑 MODUŁ ADMINISTRACJI (ZARZĄDZANIE KONTAMI)
 // ====================================================================
