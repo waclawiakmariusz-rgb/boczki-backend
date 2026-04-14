@@ -1959,25 +1959,44 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
 }
 
 /* ══════════════════════════════════════════════════════════════
-   SEKCJE ANALITYCZNE — lekka estetyka inspirowana Panelem Magdy
+   SEKCJE ANALITYCZNE — redesign inspirowany Panelem Magdy
+   Morandi palette · clean cards · mobile-first
    Zakres: wyłącznie #an_view-* | #akon_view-* | #analiza-konsultacji
    Żadne inne sekcje systemu nie są dotknięte.
 ══════════════════════════════════════════════════════════════ */
 
-/* ── Selektor bazowy — wszystkie widoki analityczne ── */
-#an_view-dashboard,  #an_view-summary,
-#an_view-monthly-report, #an_view-costs,
-#an_view-yearly, #an_view-treatment-analysis,
-#an_view-bi, #analiza-konsultacji,
-#akon_view-dashboard, #akon_view-daily,
-#akon_view-monthly-list, #akon_view-monthly {
-    --an-radius:  16px;
-    --an-shadow:  0 2px 10px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.03);
-    --an-shadow-h:0 6px 20px rgba(0,0,0,.08);
-    --an-border:  1px solid #f0f4f8;
+/* ── Zmienne ── */
+:root {
+    --an-radius: 14px;
+    --an-radius-sm: 10px;
+    --an-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05);
+    --an-shadow-h: 0 6px 24px rgba(0,0,0,.10);
+    --an-border: 1px solid #eef0f6;
+    --an-bg: #f6f5fb;
+    --an-card: #ffffff;
+    --an-text: #1e293b;
+    --an-muted: #94a3b8;
+    --an-accent: #9b8ec4;
 }
 
-/* ── Karty i wykresy ── */
+/* ── Tło sekcji ── */
+#an_view-dashboard, #an_view-summary,
+#an_view-monthly-report, #an_view-costs,
+#an_view-yearly, #an_view-treatment-analysis,
+#an_view-bi, #analiza-konsultacji {
+    background: var(--an-bg) !important;
+    border-radius: 20px !important;
+    padding: 24px !important;
+    margin: -8px !important;
+}
+#akon_view-dashboard, #akon_view-daily,
+#akon_view-monthly-list, #akon_view-monthly {
+    background: var(--an-bg) !important;
+    border-radius: 20px !important;
+    padding: 20px !important;
+}
+
+/* ── Karty i chart-boxy ── */
 #an_view-dashboard .card,    #an_view-dashboard .chart-box,
 #an_view-summary .card,      #an_view-summary .chart-box,
 #an_view-monthly-report .card, #an_view-monthly-report .chart-box,
@@ -1989,119 +2008,448 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
 #akon_view-dashboard .card,  #akon_view-dashboard .chart-box,
 #akon_view-daily .card,      #akon_view-daily .chart-box,
 #akon_view-monthly-list .card, #akon_view-monthly-list .chart-box,
-#akon_view-monthly .card,    #akon_view-monthly .chart-box {
-    border-radius: var(--an-radius, 16px) !important;
+#akon_view-monthly .card,    #akon_view-monthly .chart-box,
+#akon_view-dashboard .akon_card, #akon_view-daily .akon_card,
+#akon_view-monthly-list .akon_card, #akon_view-monthly .akon_card,
+#akon_view-dashboard .akon_chart-box, #akon_view-daily .akon_chart-box,
+#akon_view-monthly-list .akon_chart-box, #akon_view-monthly .akon_chart-box {
+    background: var(--an-card) !important;
+    border-radius: var(--an-radius) !important;
     box-shadow: var(--an-shadow) !important;
     border: var(--an-border) !important;
-    padding: 22px 24px !important;
-    margin-bottom: 16px !important;
-    transition: box-shadow .2s, transform .2s !important;
+    padding: 20px 22px !important;
+    margin-bottom: 14px !important;
+    transition: box-shadow .2s, transform .18s !important;
 }
-#an_view-dashboard .card:hover,    #an_view-dashboard .chart-box:hover,
-#an_view-summary .card:hover,      #an_view-summary .chart-box:hover,
-#an_view-monthly-report .card:hover, #an_view-monthly-report .chart-box:hover,
-#an_view-costs .card:hover,        #an_view-costs .chart-box:hover,
-#an_view-yearly .card:hover,       #an_view-yearly .chart-box:hover,
-#an_view-treatment-analysis .card:hover, #an_view-treatment-analysis .chart-box:hover,
-#an_view-bi .card:hover,           #an_view-bi .chart-box:hover,
-#analiza-konsultacji .card:hover,  #analiza-konsultacji .chart-box:hover,
-#akon_view-dashboard .card:hover,  #akon_view-dashboard .chart-box:hover,
-#akon_view-daily .card:hover,      #akon_view-daily .chart-box:hover,
-#akon_view-monthly-list .card:hover, #akon_view-monthly-list .chart-box:hover,
-#akon_view-monthly .card:hover,    #akon_view-monthly .chart-box:hover {
+#an_view-dashboard .card:hover, #an_view-dashboard .chart-box:hover,
+#an_view-summary .card:hover,
+#an_view-monthly-report .card:hover,
+#an_view-costs .card:hover,
+#an_view-yearly .card:hover,
+#an_view-treatment-analysis .card:hover,
+#an_view-bi .card:hover,
+#analiza-konsultacji .card:hover,
+#akon_view-dashboard .card:hover, #akon_view-dashboard .akon_card:hover, #akon_view-dashboard .akon_chart-box:hover,
+#akon_view-daily .card:hover, #akon_view-daily .akon_card:hover,
+#akon_view-monthly-list .card:hover, #akon_view-monthly-list .akon_card:hover,
+#akon_view-monthly .card:hover, #akon_view-monthly .akon_card:hover {
     transform: translateY(-2px) !important;
     box-shadow: var(--an-shadow-h) !important;
 }
 
-/* ── KPI tytuły — subtelniejsze ── */
-#an_view-dashboard .kpi-title, #an_view-summary .kpi-title,
-#an_view-monthly-report .kpi-title, #akon_view-dashboard .kpi-title {
-    font-size: 10.5px !important;
-    font-weight: 600 !important;
-    letter-spacing: .09em !important;
-    color: #94a3b8 !important;
+/* ── Nagłówki h2/h3 w sekcjach analitycznych ── */
+#an_view-dashboard .dash-header h1,
+#an_view-dashboard .dash-header h2,
+#an_view-summary .dash-header h2,
+#an_view-monthly-report .dash-header h2,
+#an_view-treatment-analysis .dash-header h2,
+#an_view-bi .dash-header h2,
+#akon_view-dashboard .dash-header h2,
+#akon_view-daily .dash-header h2,
+#akon_view-monthly-list .dash-header h2,
+#akon_view-monthly .dash-header h2 {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    color: var(--an-text) !important;
+    letter-spacing: -.3px !important;
+    margin: 0 !important;
+}
+
+/* ── KPI tytuły ── */
+#an_view-dashboard .kpi-title,
+#an_view-summary .kpi-title,
+#an_view-monthly-report .kpi-title,
+#an_view-treatment-analysis .kpi-title,
+#an_view-bi .kpi-title,
+#akon_view-dashboard .kpi-title,
+#akon_view-monthly-list .kpi-title,
+#akon_view-monthly .kpi-title,
+#akon_view-dashboard .akon_kpi-title,
+#akon_view-monthly-list .akon_kpi-title,
+#akon_view-monthly .akon_kpi-title {
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    letter-spacing: .1em !important;
+    color: var(--an-muted) !important;
     text-transform: uppercase !important;
 }
 
-/* ── KPI wartości — czytelne bez krzyku ── */
-#an_view-dashboard .kpi-value, #an_view-summary .kpi-value,
-#an_view-monthly-report .kpi-value, #akon_view-dashboard .kpi-value {
+/* ── KPI wartości ── */
+#an_view-dashboard .kpi-value,
+#an_view-summary .kpi-value,
+#an_view-monthly-report .kpi-value,
+#akon_view-dashboard .kpi-value,
+#akon_view-dashboard .akon_kpi-value,
+#akon_view-monthly-list .akon_kpi-value,
+#akon_view-monthly .akon_kpi-value {
     font-size: 26px !important;
     font-weight: 700 !important;
     letter-spacing: -.5px !important;
     margin-top: 8px !important;
+    color: var(--an-text) !important;
 }
 
-/* ── Tytuły sekcji — lżejsze, z linią ── */
-#an_view-dashboard .section-title,  #an_view-summary .section-title,
-#an_view-monthly-report .section-title, #an_view-bi .section-title,
-#an_view-treatment-analysis .section-title,
-#akon_view-dashboard .section-title {
-    font-size: 11px !important;
+/* ── Tytuły sekcji — delikatna linia ── */
+#an_view-dashboard .section-title,
+#an_view-summary .section-title,
+#akon_view-dashboard .akon_section-title {
+    font-size: 10.5px !important;
     font-weight: 700 !important;
-    letter-spacing: .12em !important;
+    letter-spacing: .14em !important;
     text-transform: uppercase !important;
-    color: #94a3b8 !important;
-    margin: 26px 0 14px !important;
+    color: var(--an-accent) !important;
+    margin: 28px 0 16px !important;
     padding-bottom: 10px !important;
-    border-bottom: 1px solid #f1f5f9 !important;
+    border-bottom: 2px solid #ede9ff !important;
+    display: block !important;
 }
 
-/* ── Nagłówki widoków (dash-header) ── */
-#an_view-dashboard .dash-header h1,
-#an_view-summary .dash-header h1,
-#akon_view-dashboard .dash-header h1 {
-    font-size: 20px !important;
-    font-weight: 700 !important;
-    letter-spacing: -.3px !important;
-}
-
-/* ── KPI grid — mniejszy gap ── */
+/* ── KPI container gap ── */
 #an_view-dashboard .kpi-container,
 #an_view-summary .kpi-container,
-#an_view-monthly-report .kpi-container,
-#akon_view-dashboard .kpi-container {
+#an_view-treatment-analysis .kpi-container,
+#an_view-bi .kpi-container,
+#akon_view-dashboard .akon_kpi-container,
+#akon_view-monthly-list .akon_kpi-container,
+#akon_view-monthly .akon_kpi-container {
     gap: 14px !important;
-    margin-bottom: 24px !important;
-}
-
-/* ── Karty KPI z kolorowym lewym akcentem — bez ciemnego tła ── */
-#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"],
-#an_view-dashboard .kpi-container .card[style*="background: var(--primary)"],
-#an_view-summary .kpi-container .card[style*="background:var(--primary)"],
-#an_view-summary .kpi-container .card[style*="background: var(--primary)"] {
-    background: #fff0f8 !important;
-    border-left: 4px solid var(--primary) !important;
-}
-#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-value,
-#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-title,
-#an_view-summary .kpi-container .card[style*="background:var(--primary)"] .kpi-value,
-#an_view-summary .kpi-container .card[style*="background:var(--primary)"] .kpi-title {
-    color: var(--primary) !important;
-}
-
-/* ── emp-grid gap ── */
-#an_view-dashboard .emp-grid {
-    gap: 16px !important;
-    margin-bottom: 16px !important;
-}
-
-/* ── top-list — lekkie separatory ── */
-#an_view-dashboard .top-list li,
-#an_view-treatment-analysis .top-list li,
-#akon_view-dashboard .top-list li {
-    padding: 8px 0 !important;
-    font-size: 13px !important;
-    border-bottom: 1px solid #f8fafc !important;
+    margin-bottom: 22px !important;
 }
 
 /* ── best-deal-box ── */
 #an_view-dashboard .best-deal-box {
+    background: #fffbf5 !important;
     border-radius: var(--an-radius) !important;
-    border: var(--an-border) !important;
+    border: 1px solid #fde8c0 !important;
     box-shadow: var(--an-shadow) !important;
-    padding: 20px 22px !important;
+    padding: 18px 20px !important;
     margin-bottom: 16px !important;
+}
+
+/* ── emp-grid ── */
+#an_view-dashboard .emp-grid {
+    gap: 14px !important;
+    margin-bottom: 14px !important;
+}
+
+/* ── top-list separatory ── */
+#an_view-dashboard .top-list li,
+#an_view-treatment-analysis .top-list li,
+#akon_view-dashboard .akon_top-list li,
+#akon_view-monthly .akon_top-list li {
+    padding: 8px 0 !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* ── SUMMARY CARDS — jasna paleta Morandiego zamiast pełnych kolorów ── */
+#an_view-summary .summary-card {
+    border-radius: var(--an-radius) !important;
+    box-shadow: var(--an-shadow) !important;
+    padding: 20px !important;
+    color: var(--an-text) !important;
+    align-items: flex-start !important;
+    border: none !important;
+    border-left: 5px solid transparent !important;
+}
+#an_view-summary .summary-card .label {
+    color: inherit !important;
+    opacity: 0.7 !important;
+    font-size: 10px !important;
+    letter-spacing: .1em !important;
+}
+#an_view-summary .summary-card .value {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    letter-spacing: -.5px !important;
+    color: inherit !important;
+    margin-top: 6px !important;
+}
+/* gotówka — zieleń */
+#an_view-summary .summary-card[style*="background: #10b981"],
+#an_view-summary .summary-card[style*="background:#10b981"] {
+    background: #ecfdf5 !important;
+    border-left-color: #10b981 !important;
+    color: #065f46 !important;
+}
+/* karta — niebieski */
+#an_view-summary .summary-card[style*="background: #3b82f6"],
+#an_view-summary .summary-card[style*="background:#3b82f6"] {
+    background: #eff6ff !important;
+    border-left-color: #3b82f6 !important;
+    color: #1e40af !important;
+}
+/* przelew — fiolet */
+#an_view-summary .summary-card[style*="background: #8b5cf6"],
+#an_view-summary .summary-card[style*="background:#8b5cf6"] {
+    background: #f5f3ff !important;
+    border-left-color: #8b5cf6 !important;
+    color: #5b21b6 !important;
+}
+/* mediraty — amber */
+#an_view-summary .summary-card[style*="background: #f59e0b"],
+#an_view-summary .summary-card[style*="background:#f59e0b"] {
+    background: #fffbeb !important;
+    border-left-color: #f59e0b !important;
+    color: #92400e !important;
+}
+/* booksy — błękit */
+#an_view-summary .summary-card[style*="background: #0284c7"],
+#an_view-summary .summary-card[style*="background:#0284c7"] {
+    background: #f0f9ff !important;
+    border-left-color: #0284c7 !important;
+    color: #0c4a6e !important;
+}
+
+/* ── AKON SUMMARY CARDS — jasna paleta ── */
+#akon_view-daily .akon_summary-card,
+#akon_view-monthly-list .akon_summary-card {
+    border-radius: var(--an-radius) !important;
+    box-shadow: var(--an-shadow) !important;
+    color: var(--an-text) !important;
+    align-items: flex-start !important;
+    border-left: 5px solid transparent !important;
+    padding: 18px 20px !important;
+}
+#akon_view-daily .akon_summary-card .akon_label,
+#akon_view-monthly-list .akon_summary-card .akon_label {
+    color: var(--an-muted) !important;
+    opacity: 1 !important;
+}
+#akon_view-daily .akon_summary-card .akon_value,
+#akon_view-monthly-list .akon_summary-card .akon_value {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+    color: var(--an-text) !important;
+}
+#akon_view-daily .akon_bg-green,
+#akon_view-monthly-list .akon_bg-green {
+    background: #ecfdf5 !important;
+    border-left-color: #10b981 !important;
+    color: #065f46 !important;
+}
+#akon_view-daily .akon_bg-orange,
+#akon_view-monthly-list .akon_bg-orange {
+    background: #fffbeb !important;
+    border-left-color: #f59e0b !important;
+    color: #92400e !important;
+}
+#akon_view-daily .akon_bg-blue,
+#akon_view-monthly-list .akon_bg-blue {
+    background: #eff6ff !important;
+    border-left-color: #3b82f6 !important;
+    color: #1e40af !important;
+}
+#akon_view-daily .akon_bg-gray,
+#akon_view-monthly-list .akon_bg-gray {
+    background: #f8fafc !important;
+    border-left-color: #94a3b8 !important;
+    color: #475569 !important;
+}
+#akon_view-daily .akon_bg-green .akon_label,
+#akon_view-daily .akon_bg-green .akon_value,
+#akon_view-monthly-list .akon_bg-green .akon_label,
+#akon_view-monthly-list .akon_bg-green .akon_value { color: #065f46 !important; }
+#akon_view-daily .akon_bg-orange .akon_label,
+#akon_view-daily .akon_bg-orange .akon_value,
+#akon_view-monthly-list .akon_bg-orange .akon_label,
+#akon_view-monthly-list .akon_bg-orange .akon_value { color: #92400e !important; }
+#akon_view-daily .akon_bg-blue .akon_label,
+#akon_view-daily .akon_bg-blue .akon_value,
+#akon_view-monthly-list .akon_bg-blue .akon_label,
+#akon_view-monthly-list .akon_bg-blue .akon_value { color: #1e40af !important; }
+#akon_view-daily .akon_bg-gray .akon_label,
+#akon_view-daily .akon_bg-gray .akon_value,
+#akon_view-monthly-list .akon_bg-gray .akon_label,
+#akon_view-monthly-list .akon_bg-gray .akon_value { color: #475569 !important; }
+
+/* ── KPI z ciemnym tłem — główna karta udziału w utargu ── */
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"],
+#an_view-dashboard .kpi-container .card[style*="background: var(--primary)"] {
+    background: #fff0f8 !important;
+    border-left: 5px solid var(--primary) !important;
+    color: var(--primary) !important;
+}
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-value,
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-title,
+#an_view-dashboard .kpi-container .card[style*="background: var(--primary)"] .kpi-value,
+#an_view-dashboard .kpi-container .card[style*="background: var(--primary)"] .kpi-title {
+    color: var(--primary) !important;
+}
+
+/* ── BI: ciemna karta AOV → jasna wersja ── */
+#an_view-bi .card[style*="background: #1f2937"],
+#an_view-bi .card[style*="background:#1f2937"] {
+    background: #f0fdf4 !important;
+    color: #065f46 !important;
+    border-left: 5px solid #10b981 !important;
+}
+#an_view-bi .card[style*="background: #1f2937"] .kpi-title,
+#an_view-bi .card[style*="background:#1f2937"] .kpi-title {
+    color: #6b7280 !important;
+}
+#an_view-bi .card[style*="background: #1f2937"] #an_bi-aov-current,
+#an_view-bi .card[style*="background:#1f2937"] #an_bi-aov-current {
+    color: #10b981 !important;
+}
+#an_view-bi .card[style*="background: #1f2937"] div[style*="color:#9ca3af"],
+#an_view-bi .card[style*="background:#1f2937"] div[style*="color:#9ca3af"] {
+    color: #94a3b8 !important;
+}
+
+/* ── kpi-card-mini ── */
+#an_view-monthly-report .kpi-card-mini,
+#akon_view-monthly-list .kpi-card-mini {
+    background: white !important;
+    border-radius: var(--an-radius-sm) !important;
+    box-shadow: var(--an-shadow) !important;
+    padding: 16px 18px !important;
+    border: var(--an-border) !important;
+}
+
+/* ── Tabele — zebrowanie ── */
+#an_view-monthly-report table tbody tr:nth-child(even),
+#an_view-costs table tbody tr:nth-child(even),
+#an_view-yearly table tbody tr:nth-child(even),
+#an_view-bi table tbody tr:nth-child(even),
+#akon_view-daily table tbody tr:nth-child(even),
+#akon_view-monthly-list table tbody tr:nth-child(even) {
+    background: #f8fafc !important;
+}
+#an_view-monthly-report table tbody tr:hover,
+#an_view-costs table tbody tr:hover,
+#an_view-yearly table tbody tr:hover,
+#an_view-bi table tbody tr:hover,
+#akon_view-daily table tbody tr:hover,
+#akon_view-monthly-list table tbody tr:hover {
+    background: #f1f5f9 !important;
+}
+
+/* ── Separator dashed — łagodniejszy ── */
+#an_view-treatment-analysis [style*="border-top: 2px dashed"],
+#analiza-konsultacji [style*="border-bottom: 2px dashed"],
+#analiza-konsultacji .filters {
+    border-color: #e0daf5 !important;
+}
+
+/* ── Duże liczby podsumowania miesiąca (akon) ── */
+#akon_view-monthly-list #akon_mlist-total-big,
+#akon_view-monthly #akon_rep-total {
+    font-size: 36px !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px !important;
+    color: var(--an-text) !important;
+}
+#an_view-monthly-report #an_rep-total {
+    font-size: 32px !important;
+    font-weight: 800 !important;
+    letter-spacing: -1px !important;
+    color: var(--an-text) !important;
+}
+
+/* ══ MOBILE ══ */
+@media (max-width: 768px) {
+    #an_view-dashboard, #an_view-summary,
+    #an_view-monthly-report, #an_view-costs,
+    #an_view-yearly, #an_view-treatment-analysis,
+    #an_view-bi, #analiza-konsultacji {
+        padding: 14px !important;
+        margin: 0 !important;
+        border-radius: 14px !important;
+    }
+    #akon_view-dashboard, #akon_view-daily,
+    #akon_view-monthly-list, #akon_view-monthly {
+        padding: 14px !important;
+        border-radius: 14px !important;
+    }
+    #an_view-dashboard .card, #an_view-dashboard .chart-box,
+    #an_view-summary .card, #an_view-monthly-report .card,
+    #an_view-treatment-analysis .card,
+    #an_view-bi .card, #an_view-yearly .card, #an_view-costs .card,
+    #analiza-konsultacji .card,
+    #akon_view-dashboard .akon_card, #akon_view-dashboard .akon_chart-box,
+    #akon_view-daily .akon_card, #akon_view-monthly-list .akon_card,
+    #akon_view-monthly .akon_card {
+        padding: 14px 16px !important;
+    }
+    /* summary cards na mobilu — pełna szerokość, bardziej zwarte */
+    #an_view-summary .summary-card {
+        padding: 14px 16px !important;
+        border-radius: 10px !important;
+    }
+    #an_view-summary .summary-card .value {
+        font-size: 22px !important;
+    }
+    #akon_view-daily .akon_summary-card,
+    #akon_view-monthly-list .akon_summary-card {
+        padding: 14px 16px !important;
+    }
+    #an_view-dashboard .kpi-value,
+    #an_view-summary .kpi-value,
+    #akon_view-dashboard .akon_kpi-value {
+        font-size: 22px !important;
+    }
+    /* 2-column grid → single column for small cards */
+    #an_view-monthly-report > div[style*="grid-template-columns: 2fr 1fr"],
+    #an_view-treatment-analysis > div[style*="grid-template-columns: 2fr 1fr"],
+    #akon_view-monthly > div[style*="grid-template-columns: 2fr 1fr"],
+    #an_view-costs > div[style*="grid-template-columns: 1fr 1fr"],
+    #akon_view-dashboard .akon_emp-grid {
+        grid-template-columns: 1fr !important;
+    }
+    #an_view-dashboard .emp-grid {
+        grid-template-columns: 1fr !important;
+    }
+    #akon_view-monthly-list [style*="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr))"] {
+        grid-template-columns: 1fr !important;
+    }
+    /* tabele — scroll poziomy */
+    #akon_view-daily .table-container,
+    #akon_view-monthly-list .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+    #akon_view-daily table,
+    #akon_view-monthly-list table {
+        min-width: 560px !important;
+    }
+    /* duże liczby roczne */
+    #akon_view-monthly-list #akon_mlist-total-big,
+    #akon_view-monthly #akon_rep-total,
+    #an_view-monthly-report #an_rep-total {
+        font-size: 28px !important;
+    }
+    /* filters / tabs w akon */
+    #analiza-konsultacji .filters {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+    }
+    #analiza-konsultacji .filter-btn {
+        font-size: 12px !important;
+        padding: 8px 12px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    #an_view-dashboard, #an_view-summary,
+    #an_view-monthly-report, #an_view-costs,
+    #an_view-yearly, #an_view-treatment-analysis,
+    #an_view-bi, #analiza-konsultacji,
+    #akon_view-dashboard, #akon_view-daily,
+    #akon_view-monthly-list, #akon_view-monthly {
+        padding: 10px !important;
+        margin: 0 !important;
+        border-radius: 10px !important;
+    }
+    #an_view-dashboard .kpi-value,
+    #an_view-summary .kpi-value,
+    #akon_view-dashboard .akon_kpi-value {
+        font-size: 20px !important;
+    }
+    #an_view-summary .summary-card .value {
+        font-size: 20px !important;
+    }
 }
 </style>
 </head>
