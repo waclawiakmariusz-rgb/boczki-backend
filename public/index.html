@@ -5492,24 +5492,35 @@ let wciecieLogow = "";
             if (match) akcja = match[1];
         }
 
-        // 2. Wstrzykiwanie ID
+        // 2. Wstrzykiwanie ID + session token
         const tId = localStorage.getItem('boczki_tenant_id');
         if (!tId && akcja !== 'login') {
             console.error(`🔒 [BLOKADA] Brak tenant_id przy akcji: ${akcja}`);
             return Promise.reject("Brak autoryzacji");
         }
 
+        const sToken = localStorage.getItem('boczki_session_token');
+
         if (options.method && options.method.toUpperCase() === 'POST' && options.body) {
             try {
                 let parsedBody = JSON.parse(options.body);
                 if (parsedBody.action !== 'login') parsedBody.tenant_id = tId;
                 options.body = JSON.stringify(parsedBody);
-                options.headers = { ...(options.headers || {}), 'Content-Type': 'application/json' };
+                options.headers = {
+                    ...(options.headers || {}),
+                    'Content-Type': 'application/json',
+                    ...(sToken ? { 'x-session-token': sToken } : {})
+                };
                 args[1] = options;
             } catch(e) {}
         } else if (tId && akcja !== 'login') {
             if (!urlStr.includes('tenant_id=')) {
                 args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            }
+            if (sToken) {
+                let getOpts = args[1] || {};
+                getOpts.headers = { ...(getOpts.headers || {}), 'x-session-token': sToken };
+                args[1] = getOpts;
             }
         }
 
@@ -5574,24 +5585,35 @@ let wciecieLogow = "";
             if (match) akcja = match[1];
         }
 
-        // 2. Wstrzykiwanie ID
+        // 2. Wstrzykiwanie ID + session token
         const tId = localStorage.getItem('boczki_tenant_id');
         if (!tId && akcja !== 'login') {
             console.error(`🔒 [BLOKADA] Brak tenant_id przy akcji: ${akcja}`);
             return Promise.reject("Brak autoryzacji");
         }
 
+        const sToken = localStorage.getItem('boczki_session_token');
+
         if (options.method && options.method.toUpperCase() === 'POST' && options.body) {
             try {
                 let parsedBody = JSON.parse(options.body);
                 if (parsedBody.action !== 'login') parsedBody.tenant_id = tId;
                 options.body = JSON.stringify(parsedBody);
-                options.headers = { ...(options.headers || {}), 'Content-Type': 'application/json' };
+                options.headers = {
+                    ...(options.headers || {}),
+                    'Content-Type': 'application/json',
+                    ...(sToken ? { 'x-session-token': sToken } : {})
+                };
                 args[1] = options;
             } catch(e) {}
         } else if (tId && akcja !== 'login') {
             if (!urlStr.includes('tenant_id=')) {
                 args[0] = urlStr + (urlStr.includes('?') ? `&tenant_id=${tId}` : `?tenant_id=${tId}`);
+            }
+            if (sToken) {
+                let getOpts = args[1] || {};
+                getOpts.headers = { ...(getOpts.headers || {}), 'x-session-token': sToken };
+                args[1] = getOpts;
             }
         }
 
@@ -5916,11 +5938,11 @@ function zapiszDefinicjeRabatu() {
     
     fetch(API_URL, { method:"POST", body:JSON.stringify({action:'login',login:l,haslo:p}) })
     .then(r=>r.json()).then(d=>{ 
-        if(d.status==='success'){ 
-            localStorage.setItem('boczki_user', d.role); 
-            // 👇 TO JEST KLUCZ DO TWOJEJ BAZY, KTÓREGO BRAKOWAŁO:
-            localStorage.setItem('boczki_tenant_id', d.tenant_id); 
-            zaloguj(d.role); 
+        if(d.status==='success'){
+            localStorage.setItem('boczki_user', d.role);
+            localStorage.setItem('boczki_tenant_id', d.tenant_id);
+            if (d.session_token) localStorage.setItem('boczki_session_token', d.session_token);
+            zaloguj(d.role);
         } 
         else { alert("Błąd: " + d.message); }
     }).catch(err => alert("Błąd serwera: " + err));

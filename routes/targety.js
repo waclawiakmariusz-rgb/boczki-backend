@@ -54,7 +54,6 @@ module.exports = (db) => {
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
-          console.log(`[get_targets] tenant=${tenant_id} znaleziono=${(rows||[]).length} rekordów`);
           return res.json({ status: 'success', data: (rows || []).map(r => ({
             id: r.id, pracownik: r.pracownik, miesiac: r.miesiac,
             typ_targetu: r.typ_targetu, szczegoly: r.szczegoly,

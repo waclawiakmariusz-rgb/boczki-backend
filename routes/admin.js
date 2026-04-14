@@ -3,6 +3,7 @@
 
 const express = require('express');
 const { randomUUID } = require('crypto');
+const { rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
 
 let wyslijLinkRejestracji, powiadomAdmina;
 try {
@@ -30,11 +31,19 @@ function slugify(text) {
 // ─── Middleware: weryfikacja tokenu admina ────────────────────
 const ADMIN_TOKEN = (process.env.ADMIN_TOKEN || 'boczki-admin-2026').replace(/^['"]|['"]$/g, '');
 
+// Sesje admina — UUID z TTL 12h (nie zwracamy hasła jako tokenu)
+const ADMIN_SESSION_TTL = 12 * 60 * 60 * 1000;
+const adminSessions = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [t, s] of adminSessions.entries()) { if (now > s.expires) adminSessions.delete(t); }
+}, 30 * 60 * 1000);
+
 function requireAdmin(req, res, next) {
   const token = req.headers['x-admin-token'] || req.body?.admin_token || req.query?.admin_token;
-  if (!token || token !== ADMIN_TOKEN) {
-    return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
-  }
+  if (!token) return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
+  const s = adminSessions.get(token);
+  if (!s || Date.now() > s.expires) return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
   next();
 }
 
@@ -42,13 +51,17 @@ module.exports = (db) => {
   const router = express.Router();
 
   // POST /api/admin/login — weryfikacja hasła admina
-  router.post('/admin/login', (req, res) => {
+  router.post('/admin/login', rateLimitLogin, (req, res) => {
     const { haslo } = req.body;
     if (!haslo) return res.json({ status: 'error', message: 'Podaj hasło.' });
-    if (haslo === ADMIN_TOKEN) {
-      return res.json({ status: 'success', token: ADMIN_TOKEN });
+    if (haslo !== ADMIN_TOKEN) {
+      recordFailedLogin(req);
+      return res.json({ status: 'error', message: 'Błędne hasło administratora.' });
     }
-    return res.json({ status: 'error', message: 'Błędne hasło administratora.' });
+    recordSuccessLogin(req);
+    const sessionToken = randomUUID();
+    adminSessions.set(sessionToken, { expires: Date.now() + ADMIN_SESSION_TTL });
+    return res.json({ status: 'success', token: sessionToken });
   });
 
   // GET /api/admin/salony — lista wszystkich salonów

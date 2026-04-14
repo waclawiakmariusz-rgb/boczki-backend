@@ -30,12 +30,31 @@ app.use(cors({
   credentials: true,
 }));
 
-// Podstawowe nagłówki bezpieczeństwa (bez Helmet — zero nowych paczek)
+// Nagłówki bezpieczeństwa HTTP
 app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN');
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'self'");
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+    next();
+});
+
+// Sanityzacja błędów DB — nie ujawniamy szczegółów struktury bazy klientowi
+app.use((req, res, next) => {
+    const origJson = res.json.bind(res);
+    res.json = function(data) {
+        if (data && data.status === 'error' && typeof data.message === 'string') {
+            if (/Table '.+' doesn't exist|Unknown column|You have an error in your SQL|Duplicate entry|foreign key constraint|ER_/i.test(data.message)) {
+                console.error('[DB ERROR]', req.method, req.path, '|', data.message);
+                return origJson({ ...data, message: 'Błąd bazy danych. Spróbuj ponownie.' });
+            }
+        }
+        return origJson(data);
+    };
     next();
 });
 
