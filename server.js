@@ -5,8 +5,26 @@ const cors = require('cors');
 const path = require('path');
 
 const app = express();
+const { validateTenantAccess } = require('./routes/sessions');
 
-app.use(cors());
+// ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
+const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Zezwól na: brak origin (curl/Postman/server-to-server), localhost i własne domeny
+    const allowed = [
+      'https://estelio.com.pl',
+      'https://www.estelio.com.pl',
+    ];
+    if (!origin || origin.startsWith('http://localhost') || allowed.includes(origin)) {
+      return cb(null, true);
+    }
+    console.warn('[CORS] Zablokowane żądanie z:', origin);
+    cb(new Error('CORS: Brak dostępu.'));
+  },
+  credentials: true,
+}));
 
 // Podstawowe nagłówki bezpieczeństwa (bez Helmet — zero nowych paczek)
 app.use((req, res, next) => {
@@ -114,6 +132,47 @@ app.use('/api', adminRoutes);
 app.use('/api', stripeRoutes);
 app.use('/api', dokumentyRoutes);
 app.use('/api', magdaRoutes);
+
+// ==========================================
+// MIDDLEWARE WERYFIKACJI SESJI
+// Sprawdza czy x-session-token pasuje do tenant_id w żądaniu.
+// ENFORCE_SESSION=false → tylko loguje naruszenia (tryb miękki)
+// ENFORCE_SESSION=true  → blokuje nieprawidłowe żądania (tryb produkcyjny)
+// ==========================================
+const PUBLIC_PATHS = [
+  '/login', '/admin/login',
+  '/reset-hasla/wyslij', '/reset-hasla/weryfikuj', '/reset-hasla/ustaw',
+  '/rejestracja/weryfikuj', '/rejestracja/zaloz',
+  '/zamowienie', '/voucher/weryfikuj',
+  '/stripe/webhook',
+];
+
+app.use('/api', (req, res, next) => {
+  // Pomiń publiczne endpointy i panel Magdy (ma własną sesję)
+  if (PUBLIC_PATHS.includes(req.path) || req.path.startsWith('/magda') || req.path.startsWith('/admin')) {
+    return next();
+  }
+
+  const tenant_id = req.body?.tenant_id || req.query?.tenant_id;
+  if (!tenant_id) return next(); // brak tenant_id → nie dotyczy tej warstwy
+
+  const token = req.headers['x-session-token'];
+  const result = validateTenantAccess(token, tenant_id);
+
+  if (!result.valid) {
+    console.warn(`[SESJA ${result.reason.toUpperCase()}] ${req.method} ${req.path} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${token ? 'obecny' : 'brak'}`);
+
+    if (ENFORCE_SESSION) {
+      const status = result.reason === 'expired' ? 401 : 403;
+      const message = result.reason === 'expired'
+        ? 'Sesja wygasła. Zaloguj się ponownie.'
+        : 'Brak dostępu.';
+      return res.status(status).json({ status: 'error', message });
+    }
+  }
+
+  next();
+});
 
 // ==========================================
 // TEST ENDPOINT
