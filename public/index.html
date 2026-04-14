@@ -1957,6 +1957,152 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
     from { width: 100%; }
     to   { width: 0; }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   SEKCJE ANALITYCZNE — lekka estetyka inspirowana Panelem Magdy
+   Zakres: wyłącznie #an_view-* | #akon_view-* | #analiza-konsultacji
+   Żadne inne sekcje systemu nie są dotknięte.
+══════════════════════════════════════════════════════════════ */
+
+/* ── Selektor bazowy — wszystkie widoki analityczne ── */
+#an_view-dashboard,  #an_view-summary,
+#an_view-monthly-report, #an_view-costs,
+#an_view-yearly, #an_view-treatment-analysis,
+#an_view-bi, #analiza-konsultacji,
+#akon_view-dashboard, #akon_view-daily,
+#akon_view-monthly-list, #akon_view-monthly {
+    --an-radius:  16px;
+    --an-shadow:  0 2px 10px rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.03);
+    --an-shadow-h:0 6px 20px rgba(0,0,0,.08);
+    --an-border:  1px solid #f0f4f8;
+}
+
+/* ── Karty i wykresy ── */
+#an_view-dashboard .card,    #an_view-dashboard .chart-box,
+#an_view-summary .card,      #an_view-summary .chart-box,
+#an_view-monthly-report .card, #an_view-monthly-report .chart-box,
+#an_view-costs .card,        #an_view-costs .chart-box,
+#an_view-yearly .card,       #an_view-yearly .chart-box,
+#an_view-treatment-analysis .card, #an_view-treatment-analysis .chart-box,
+#an_view-bi .card,           #an_view-bi .chart-box,
+#analiza-konsultacji .card,  #analiza-konsultacji .chart-box,
+#akon_view-dashboard .card,  #akon_view-dashboard .chart-box,
+#akon_view-daily .card,      #akon_view-daily .chart-box,
+#akon_view-monthly-list .card, #akon_view-monthly-list .chart-box,
+#akon_view-monthly .card,    #akon_view-monthly .chart-box {
+    border-radius: var(--an-radius, 16px) !important;
+    box-shadow: var(--an-shadow) !important;
+    border: var(--an-border) !important;
+    padding: 22px 24px !important;
+    margin-bottom: 16px !important;
+    transition: box-shadow .2s, transform .2s !important;
+}
+#an_view-dashboard .card:hover,    #an_view-dashboard .chart-box:hover,
+#an_view-summary .card:hover,      #an_view-summary .chart-box:hover,
+#an_view-monthly-report .card:hover, #an_view-monthly-report .chart-box:hover,
+#an_view-costs .card:hover,        #an_view-costs .chart-box:hover,
+#an_view-yearly .card:hover,       #an_view-yearly .chart-box:hover,
+#an_view-treatment-analysis .card:hover, #an_view-treatment-analysis .chart-box:hover,
+#an_view-bi .card:hover,           #an_view-bi .chart-box:hover,
+#analiza-konsultacji .card:hover,  #analiza-konsultacji .chart-box:hover,
+#akon_view-dashboard .card:hover,  #akon_view-dashboard .chart-box:hover,
+#akon_view-daily .card:hover,      #akon_view-daily .chart-box:hover,
+#akon_view-monthly-list .card:hover, #akon_view-monthly-list .chart-box:hover,
+#akon_view-monthly .card:hover,    #akon_view-monthly .chart-box:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: var(--an-shadow-h) !important;
+}
+
+/* ── KPI tytuły — subtelniejsze ── */
+#an_view-dashboard .kpi-title, #an_view-summary .kpi-title,
+#an_view-monthly-report .kpi-title, #akon_view-dashboard .kpi-title {
+    font-size: 10.5px !important;
+    font-weight: 600 !important;
+    letter-spacing: .09em !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+}
+
+/* ── KPI wartości — czytelne bez krzyku ── */
+#an_view-dashboard .kpi-value, #an_view-summary .kpi-value,
+#an_view-monthly-report .kpi-value, #akon_view-dashboard .kpi-value {
+    font-size: 26px !important;
+    font-weight: 700 !important;
+    letter-spacing: -.5px !important;
+    margin-top: 8px !important;
+}
+
+/* ── Tytuły sekcji — lżejsze, z linią ── */
+#an_view-dashboard .section-title,  #an_view-summary .section-title,
+#an_view-monthly-report .section-title, #an_view-bi .section-title,
+#an_view-treatment-analysis .section-title,
+#akon_view-dashboard .section-title {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    letter-spacing: .12em !important;
+    text-transform: uppercase !important;
+    color: #94a3b8 !important;
+    margin: 26px 0 14px !important;
+    padding-bottom: 10px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+}
+
+/* ── Nagłówki widoków (dash-header) ── */
+#an_view-dashboard .dash-header h1,
+#an_view-summary .dash-header h1,
+#akon_view-dashboard .dash-header h1 {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    letter-spacing: -.3px !important;
+}
+
+/* ── KPI grid — mniejszy gap ── */
+#an_view-dashboard .kpi-container,
+#an_view-summary .kpi-container,
+#an_view-monthly-report .kpi-container,
+#akon_view-dashboard .kpi-container {
+    gap: 14px !important;
+    margin-bottom: 24px !important;
+}
+
+/* ── Karty KPI z kolorowym lewym akcentem — bez ciemnego tła ── */
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"],
+#an_view-dashboard .kpi-container .card[style*="background: var(--primary)"],
+#an_view-summary .kpi-container .card[style*="background:var(--primary)"],
+#an_view-summary .kpi-container .card[style*="background: var(--primary)"] {
+    background: #fff0f8 !important;
+    border-left: 4px solid var(--primary) !important;
+}
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-value,
+#an_view-dashboard .kpi-container .card[style*="background:var(--primary)"] .kpi-title,
+#an_view-summary .kpi-container .card[style*="background:var(--primary)"] .kpi-value,
+#an_view-summary .kpi-container .card[style*="background:var(--primary)"] .kpi-title {
+    color: var(--primary) !important;
+}
+
+/* ── emp-grid gap ── */
+#an_view-dashboard .emp-grid {
+    gap: 16px !important;
+    margin-bottom: 16px !important;
+}
+
+/* ── top-list — lekkie separatory ── */
+#an_view-dashboard .top-list li,
+#an_view-treatment-analysis .top-list li,
+#akon_view-dashboard .top-list li {
+    padding: 8px 0 !important;
+    font-size: 13px !important;
+    border-bottom: 1px solid #f8fafc !important;
+}
+
+/* ── best-deal-box ── */
+#an_view-dashboard .best-deal-box {
+    border-radius: var(--an-radius) !important;
+    border: var(--an-border) !important;
+    box-shadow: var(--an-shadow) !important;
+    padding: 20px 22px !important;
+    margin-bottom: 16px !important;
+}
 </style>
 </head>
 <body>
