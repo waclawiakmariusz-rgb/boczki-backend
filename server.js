@@ -12,12 +12,16 @@ const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Zezwól na: brak origin (curl/Postman/server-to-server), localhost i własne domeny
     const allowed = [
       'https://estelio.com.pl',
       'https://www.estelio.com.pl',
     ];
-    if (!origin || origin.startsWith('http://localhost') || allowed.includes(origin)) {
+    if (
+      !origin ||
+      origin.startsWith('http://localhost') ||
+      origin.endsWith('.hostingersite.com') ||
+      allowed.includes(origin)
+    ) {
       return cb(null, true);
     }
     console.warn('[CORS] Zablokowane żądanie z:', origin);
