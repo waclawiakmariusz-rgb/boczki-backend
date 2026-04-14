@@ -45,7 +45,7 @@ module.exports = (db) => {
   // Helper: rozlicz zadatek automatycznie
   function rozliczZadatekAutomatycznie(tenant_id, klientId, klientNazwa, kwotaDoPobrania, konkretneIdZadatku, pracownik, callback) {
     db.query(
-      `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND status = 'AKTYWNY' AND (id_klienta = ? OR LOWER(klient) = LOWER(?)) ORDER BY data_wplaty ASC`,
+      `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND (id_klienta = ? OR LOWER(klient) = LOWER(?)) ORDER BY data_wplaty ASC`,
       [tenant_id, klientId || '', klientNazwa || ''],
       (err, rows) => {
         if (err || !rows.length) return callback && callback();

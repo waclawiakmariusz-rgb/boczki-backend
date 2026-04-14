@@ -62,7 +62,7 @@ module.exports = (db) => {
       const onlyActive = req.query.onlyActive;
       if (onlyActive === 'true') {
         db.query(
-          `SELECT imie FROM Pracownicy_konsultacja WHERE tenant_id = ? AND status = 'Aktywny'`,
+          `SELECT imie FROM Pracownicy_konsultacja WHERE tenant_id = ? AND (status = 'Aktywny' OR status IS NULL)`,
           [tenant_id],
           (err, rows) => {
             if (err) return res.json([]);
@@ -365,7 +365,7 @@ module.exports = (db) => {
     } else if (action === 'akon_get_consultants') {
       const onlyActive = d.onlyActive;
       if (String(onlyActive) === 'true') {
-        db.query(`SELECT imie FROM Pracownicy_konsultacja WHERE tenant_id = ? AND status = 'Aktywny'`, [tenant_id], (err, rows) => {
+        db.query(`SELECT imie FROM Pracownicy_konsultacja WHERE tenant_id = ? AND (status = 'Aktywny' OR status IS NULL)`, [tenant_id], (err, rows) => {
           return res.json({ status: 'success', data: (rows || []).map(r => r.imie) });
         });
       } else {

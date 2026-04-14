@@ -37,7 +37,7 @@ module.exports = (db) => {
       const id = randomUUID();
       db.query(
         `INSERT INTO Retencja (id, tenant_id, data_kontaktu, id_klienta, klient, kategoria_filtr, status, notatka, pracownik) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?)`,
-        [id, tenant_id, d.id_klienta || '', d.klient, d.kampania || '', d.status || '', d.notatka || '', d.pracownik || ''],
+        [id, tenant_id, d.id_klienta || '', d.klient, d.kampania || '', d.status || 'nowy', d.notatka || '', d.pracownik || ''],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success', message: 'Zapisano notatkę z rozmowy!' });

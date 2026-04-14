@@ -44,7 +44,7 @@ module.exports = (db) => {
           }));
 
           db.query(
-            `SELECT id, id_klienta, data_wplaty, klient, kwota, metoda, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND status = 'AKTYWNY'`,
+            `SELECT id, id_klienta, data_wplaty, klient, kwota, metoda, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL)`,
             [tenant_id],
             (err2, zadatki) => {
               const aktywne = (zadatki || []).map(r => ({
@@ -401,7 +401,7 @@ module.exports = (db) => {
       if (!ids || !ids.length) return res.json({ status: 'error', message: 'Brak IDs do scalenia' });
 
       db.query(
-        `SELECT id, id_klienta, kwota FROM Zadatki WHERE tenant_id = ? AND id IN (?) AND status = 'AKTYWNY'`,
+        `SELECT id, id_klienta, kwota FROM Zadatki WHERE tenant_id = ? AND id IN (?) AND (status = 'AKTYWNY' OR status IS NULL)`,
         [tenant_id, ids],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono aktywnych zadatków do scalenia.' });
