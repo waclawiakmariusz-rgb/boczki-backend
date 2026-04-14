@@ -9,6 +9,12 @@ const { makeZapiszLog } = require('./logi');
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
 
+  // Auto-migrate: add min_cena if missing (errno 1060 = column already exists, ignored)
+  db.query(
+    `ALTER TABLE Pracownicy_targety ADD COLUMN min_cena DECIMAL(10,2) NULL DEFAULT 0`,
+    (err) => { if (err && err.errno !== 1060) console.warn('[targety] min_cena migration:', err.message); }
+  );
+
   const parseDate = (val) => {
     if (!val) return null;
     if (val instanceof Date) return isNaN(val.getTime()) ? null : val;

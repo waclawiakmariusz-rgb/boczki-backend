@@ -16720,12 +16720,16 @@ function tgt_pobierzBaze() {
     })
     .then(function(r) { return r.json(); })
     .then(function(json) {
+        if (json.status === 'error') {
+            if (list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red; padding:20px;">⚠️ Błąd serwera: ' + (json.message || 'nieznany') + '</td></tr>';
+            return;
+        }
         tgt_wszystkie = json.data || [];
         tgt_renderuj();
     })
-    .catch(function(e) { 
-        console.error('Błąd pobierania bazy celów:', e); 
-        if (list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Błąd pobierania</td></tr>';
+    .catch(function(e) {
+        console.error('Błąd pobierania bazy celów:', e);
+        if (list) list.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Błąd połączenia: ' + e + '</td></tr>';
     });
 }
 
@@ -17066,6 +17070,8 @@ async function tgt_zainicjujDashboard() {
             }
         }
         select.innerHTML = opcjeHtml;
+        // Auto-select first employee so report loads without manual selection
+        if (select.options.length > 1) select.selectedIndex = 1;
     }
 
     // 2. Ustawienie miesiąca domyślnego
@@ -17132,11 +17138,10 @@ function tgt_generujRaportPracownika() {
     // 2. ODPYTUJEMY BEZPOŚREDNIO NASZ NOWY ENDPOINT SERWERA
     fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ 
-            action: 'tgt_get_employee_dashboard', 
-            pracownik: pracownik, 
-            dateFrom: dateFrom, 
+        body: JSON.stringify({
+            action: 'tgt_get_employee_dashboard',
+            pracownik: pracownik,
+            dateFrom: dateFrom,
             dateTo: dateTo,
             tenant_id: tenantId
         })
