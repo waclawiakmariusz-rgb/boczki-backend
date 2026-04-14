@@ -16725,6 +16725,7 @@ function tgt_pobierzBaze() {
             return;
         }
         tgt_wszystkie = json.data || [];
+        console.log('[tgt] get_targets zwrócił:', tgt_wszystkie.length, 'rekordów', tgt_wszystkie);
         tgt_renderuj();
     })
     .catch(function(e) {

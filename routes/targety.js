@@ -50,10 +50,11 @@ module.exports = (db) => {
 
     } else if (action === 'get_targets') {
       db.query(
-        `SELECT id, pracownik, miesiac, typ_targetu, szczegoly, wartosc, opis_slowny, status, min_cena FROM Pracownicy_targety WHERE tenant_id = ? AND status != 'Usunięty' ORDER BY log_data DESC`,
+        `SELECT id, pracownik, miesiac, typ_targetu, szczegoly, wartosc, opis_slowny, status, min_cena FROM Pracownicy_targety WHERE tenant_id = ? AND COALESCE(status, '') != 'Usunięty' ORDER BY log_data DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
+          console.log(`[get_targets] tenant=${tenant_id} znaleziono=${(rows||[]).length} rekordów`);
           return res.json({ status: 'success', data: (rows || []).map(r => ({
             id: r.id, pracownik: r.pracownik, miesiac: r.miesiac,
             typ_targetu: r.typ_targetu, szczegoly: r.szczegoly,
