@@ -76,6 +76,9 @@ app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 // Pozostałe endpointy — JSON
 app.use(express.json());
 
+// Redirect strony głównej na zamów
+app.get('/', (req, res) => res.redirect(301, '/zamow.html'));
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 
