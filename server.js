@@ -152,13 +152,18 @@ const PUBLIC_PATHS = [
 ];
 
 app.use('/api', (req, res, next) => {
-  // Pomiń publiczne endpointy i panel Magdy (ma własną sesję)
-  if (PUBLIC_PATHS.includes(req.path) || req.path.startsWith('/magda') || req.path.startsWith('/admin')) {
+  // Pomiń publiczne endpointy, panel Magdy, admina i router kompatybilności (req.path = '/')
+  if (
+    req.path === '/' ||
+    PUBLIC_PATHS.includes(req.path) ||
+    req.path.startsWith('/magda') ||
+    req.path.startsWith('/admin')
+  ) {
     return next();
   }
 
   const tenant_id = req.body?.tenant_id || req.query?.tenant_id;
-  if (!tenant_id) return next(); // brak tenant_id → nie dotyczy tej warstwy
+  if (!tenant_id) return next();
 
   const token = req.headers['x-session-token'];
   const result = validateTenantAccess(token, tenant_id);
@@ -166,6 +171,7 @@ app.use('/api', (req, res, next) => {
   if (!result.valid) {
     console.warn(`[SESJA ${result.reason.toUpperCase()}] ${req.method} ${req.path} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${token ? 'obecny' : 'brak'}`);
 
+    // ENFORCE_SESSION=true blokuje — włączyć dopiero po aktualizacji frontendu
     if (ENFORCE_SESSION) {
       const status = result.reason === 'expired' ? 401 : 403;
       const message = result.reason === 'expired'
