@@ -95,7 +95,7 @@ module.exports = (db) => {
     if (action === 'sales_history') {
       const today = new Date().toISOString().slice(0, 10);
       db.query(
-        `SELECT id, data_sprzedazy, TIME_FORMAT(data_sprzedazy, '%H:%i') as czas_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND status != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
+        `SELECT id, data_sprzedazy, TIME_FORMAT(data_sprzedazy, '%H:%i') as czas_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
         [tenant_id, today],
         (err, rows) => {
           if (err) return res.json([]);
@@ -109,7 +109,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND status != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -145,7 +145,7 @@ module.exports = (db) => {
       const limit35 = new Date();
       limit35.setDate(limit35.getDate() - 35);
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, pracownik_dodajacy, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND status != 'USUNIĘTY' AND data_sprzedazy >= ? ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, pracownik_dodajacy, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' AND data_sprzedazy >= ? ORDER BY data_sprzedazy DESC`,
         [tenant_id, limit35.toISOString().slice(0, 10)],
         (err, rows) => {
           if (err) return res.json([]);

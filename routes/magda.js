@@ -70,7 +70,7 @@ module.exports = (db) => {
        FROM Sprzedaz
        WHERE tenant_id = ?
          AND DATE(data_sprzedazy) BETWEEN ? AND ?
-         AND status != 'USUNIĘTY'
+         AND COALESCE(status, '') != 'USUNIĘTY'
        ORDER BY data_sprzedazy DESC`,
       [TENANT_ID, od, _do],
       (err, rows) => {

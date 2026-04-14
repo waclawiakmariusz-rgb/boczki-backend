@@ -99,7 +99,7 @@ module.exports = (db) => {
 
     // Zadatki
     db.query(
-      `SELECT id, data_wplaty, klient, metoda, kwota, pracownicy, status FROM Zadatki WHERE tenant_id = ? AND DATE(data_wplaty) = ? AND status != 'USUNIĘTY'`,
+      `SELECT id, data_wplaty, klient, metoda, kwota, pracownicy, status FROM Zadatki WHERE tenant_id = ? AND DATE(data_wplaty) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
       [tenant_id, dataStr],
       (err1, zadatki) => {
         (zadatki || []).forEach(row => {
@@ -118,7 +118,7 @@ module.exports = (db) => {
 
         // Sprzedaż
         db.query(
-          `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND status != 'USUNIĘTY'`,
+          `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
           [tenant_id, dataStr],
           (err2, sprzedaz) => {
             (sprzedaz || []).forEach(row => {
@@ -139,7 +139,7 @@ module.exports = (db) => {
 
             // Płatności mix
             db.query(
-              `SELECT id, data_platnosci, klient, metoda_platnosci, kwota, status FROM Platnosci WHERE tenant_id = ? AND DATE(data_platnosci) = ? AND status != 'USUNIĘTY'`,
+              `SELECT id, data_platnosci, klient, metoda_platnosci, kwota, status FROM Platnosci WHERE tenant_id = ? AND DATE(data_platnosci) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
               [tenant_id, dataStr],
               (err3, platnosci) => {
                 (platnosci || []).forEach(row => {
@@ -240,7 +240,7 @@ module.exports = (db) => {
       const selectedMonth = d.month;
       // Sprzedaż główna
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND status NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
         [tenant_id, selectedMonth],
         (err1, sprzedaz) => {
           db.query(
@@ -360,7 +360,7 @@ module.exports = (db) => {
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
 
         db.query(
-          `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') IN (?) AND status NOT IN ('USUNIĘTY', 'SCALONY')`,
+          `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') IN (?) AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
           [tenant_id, months],
           (err1, sprzedaz) => {
             (sprzedaz || []).forEach(row => {
@@ -400,7 +400,7 @@ module.exports = (db) => {
 
             // Platnosci mix
             db.query(
-              `SELECT data_platnosci, klient, metoda_platnosci, kwota, status FROM Platnosci WHERE tenant_id = ? AND DATE_FORMAT(data_platnosci, '%Y-%m') IN (?) AND status != 'USUNIĘTY'`,
+              `SELECT data_platnosci, klient, metoda_platnosci, kwota, status FROM Platnosci WHERE tenant_id = ? AND DATE_FORMAT(data_platnosci, '%Y-%m') IN (?) AND COALESCE(status, '') != 'USUNIĘTY'`,
               [tenant_id, months],
               (err2, platnosci) => {
                 (platnosci || []).forEach(row => {
@@ -471,13 +471,13 @@ module.exports = (db) => {
       for (let i = 1; i <= 12; i++) { const m = String(i).padStart(2, '0'); summary.months[m] = { rev: 0, cost: 0, profit: 0 }; }
 
       db.query(
-        `SELECT DATE_FORMAT(data_sprzedazy, '%m') as m, SUM(kwota) as total FROM Sprzedaz WHERE tenant_id = ? AND YEAR(data_sprzedazy) = ? AND status NOT IN ('USUNIĘTY') AND platnosc NOT LIKE '%portfel%' AND platnosc NOT LIKE '%ręczne%' GROUP BY m`,
+        `SELECT DATE_FORMAT(data_sprzedazy, '%m') as m, SUM(kwota) as total FROM Sprzedaz WHERE tenant_id = ? AND YEAR(data_sprzedazy) = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY') AND platnosc NOT LIKE '%portfel%' AND platnosc NOT LIKE '%ręczne%' GROUP BY m`,
         [tenant_id, selectedYear],
         (err1, sRows) => {
           (sRows || []).forEach(r => { summary.months[r.m].rev += parseFloat(r.total) || 0; summary.totalRevenue += parseFloat(r.total) || 0; });
 
           db.query(
-            `SELECT DATE_FORMAT(data_wplaty, '%m') as m, SUM(kwota) as total FROM Zadatki WHERE tenant_id = ? AND YEAR(data_wplaty) = ? AND typ = 'WPŁATA' AND status NOT IN ('USUNIĘTY', 'SCALONY') AND metoda NOT LIKE '%ręczne%' GROUP BY m`,
+            `SELECT DATE_FORMAT(data_wplaty, '%m') as m, SUM(kwota) as total FROM Zadatki WHERE tenant_id = ? AND YEAR(data_wplaty) = ? AND typ = 'WPŁATA' AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND metoda NOT LIKE '%ręczne%' GROUP BY m`,
             [tenant_id, selectedYear],
             (err2, zRows) => {
               (zRows || []).forEach(r => { summary.months[r.m].rev += parseFloat(r.total) || 0; summary.totalRevenue += parseFloat(r.total) || 0; });
@@ -511,7 +511,7 @@ module.exports = (db) => {
       }
 
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND YEAR(data_sprzedazy) = ? AND status NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND YEAR(data_sprzedazy) = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
         [tenant_id, selectedYear],
         (err, sprzedaz) => {
           let result = {
@@ -590,7 +590,7 @@ module.exports = (db) => {
       let clientsMap = {}, monthlyAovMap = {}, dailyBaskets = {};
 
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND status NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
         [tenant_id],
         (err, sprzedaz) => {
           if (err) return res.json({ status: 'success', data: bi });

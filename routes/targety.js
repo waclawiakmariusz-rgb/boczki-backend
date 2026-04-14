@@ -90,7 +90,7 @@ module.exports = (db) => {
 
       // 1. Sprzedaż główna
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND status NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
         [tenant_id, dFrom, dTo],
         (err1, sprzedaz) => {
           if (!err1 && sprzedaz) {
