@@ -2053,6 +2053,93 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
 .b-toast.b-info    .b-toast-bar { background: #3498db; }
 .dark-mode .b-toast { background: #1e293b; color: #e2e8f0; box-shadow: 0 8px 30px rgba(0,0,0,0.35); }
 .dark-mode .b-toast-msg { color: #94a3b8; }
+
+/* =========================================
+   🌙 ŁATKI DARK MODE — brakujące elementy
+   ========================================= */
+
+/* Odznaki statusów w magazynie / tabeli sprzedaży */
+body.dark-mode .status-ok { background: rgba(5, 150, 105, 0.15) !important; color: #34d399 !important; }
+body.dark-mode .qty-bad { background: rgba(153, 27, 27, 0.2) !important; color: #f87171 !important; }
+body.dark-mode .st-zwrot { background: rgba(153, 27, 27, 0.2) !important; color: #f87171 !important; }
+body.dark-mode .st-wykorzystany { background: #1e293b !important; color: #64748b !important; }
+body.dark-mode .btn-restore { background: rgba(5, 150, 105, 0.15) !important; color: #34d399 !important; }
+body.dark-mode .btn-archive { background: #1e293b !important; color: #94a3b8 !important; border-color: #334155 !important; }
+body.dark-mode .kpi-sub { background: rgba(5, 150, 105, 0.15) !important; color: #34d399 !important; }
+
+/* Konsultacje — radio aktywny i nagłówek */
+body.dark-mode .kon_radio-label:has(input:checked) { background: #334155 !important; color: #f8fafc !important; }
+body.dark-mode .kon_res-table td { color: #cbd5e1 !important; }
+body.dark-mode .kon_res-table strong { color: #f8fafc !important; }
+body.dark-mode .kon_tab-btn { color: #94a3b8 !important; }
+body.dark-mode .kon_tab-btn:hover,
+body.dark-mode .kon_tab-btn.active { color: #f8fafc !important; }
+
+/* Sticky nagłówki tabel (thead z inline background:#f1f5f9) */
+body.dark-mode thead[style*="background: #f1f5f9"],
+body.dark-mode thead[style*="background:#f1f5f9"] {
+    background: #0f172a !important;
+}
+body.dark-mode thead[style*="background: #f1f5f9"] tr,
+body.dark-mode thead[style*="background:#f1f5f9"] tr {
+    background: #0f172a !important;
+}
+
+/* Analityka — sekcja Targetów (liczby KPI z color:#111) */
+body.dark-mode #an_ta-month-rev,
+body.dark-mode #an_ta-month-count,
+body.dark-mode #an_ta-year-rev,
+body.dark-mode #an_ta-cosm-month-rev,
+body.dark-mode #an_ta-cosm-year-rev,
+body.dark-mode #an_emp-best-name { color: #f8fafc !important; }
+
+/* Przyciski sortowania w analityce */
+body.dark-mode #an_btn-sort-m-count,
+body.dark-mode #an_btn-sort-m-name,
+body.dark-mode #an_btn-sort-y-count,
+body.dark-mode #an_btn-sort-y-name {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: #334155 !important;
+}
+
+/* Modal rozdzielenia wpłaty (#split-deposit-modal) */
+body.dark-mode #split-deposit-modal > div {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border: 1px solid #334155 !important;
+}
+body.dark-mode #split-deposit-modal h3,
+body.dark-mode #split-deposit-modal p,
+body.dark-mode #split-deposit-modal label { color: #cbd5e1 !important; }
+body.dark-mode #split-deposit-modal strong[style*="color:#111"],
+body.dark-mode #split-deposit-modal strong[style*="color: #111"] { color: #f8fafc !important; }
+
+/* Modal rozdzielenia płatności — nagłówek i tekst */
+body.dark-mode #split-payment-modal h3[style*="color:#374151"],
+body.dark-mode #split-payment-modal h3[style*="color: #374151"] { color: #f8fafc !important; }
+body.dark-mode #split-payment-modal strong[style*="color:#111"],
+body.dark-mode #split-payment-modal strong[style*="color: #111"] { color: #f8fafc !important; }
+
+/* Progress bar tła (#f1f5f9) */
+body.dark-mode div[style*="background:#f1f5f9"],
+body.dark-mode div[style*="background: #f1f5f9"] {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+/* Jasne tła w sekcji kontraktów/dokumentów */
+body.dark-mode div[style*="background: #f9fafb"],
+body.dark-mode div[style*="background:#f9fafb"] {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+body.dark-mode div[style*="background: #f9fafb"] *,
+body.dark-mode div[style*="background:#f9fafb"] * { color: #cbd5e1 !important; }
+
+/* Inline color:black w urodzinach */
+body.dark-mode span[style*="color:black"],
+body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 @keyframes bToastIn {
     from { opacity: 0; transform: translateX(50px) scale(0.95); }
     to   { opacity: 1; transform: translateX(0) scale(1); }
