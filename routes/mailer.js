@@ -236,4 +236,27 @@ async function wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu }) {
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia };
+// ─── Wiadomość z formularza kontaktowego ─────────────────────
+async function wyslijKontakt({ imie, email, typ, wiadomosc }) {
+  const transport = createTransport();
+  const typLabel = typ === 'klient' ? 'Istniejący klient' : 'Zainteresowany';
+
+  await transport.sendMail({
+    from: FROM(),
+    to: ADMIN_EMAIL(),
+    replyTo: email,
+    subject: `Kontakt z Estelio: ${imie} (${typLabel})`,
+    html: emailWrapper('✉️', 'Estelio', 'Wiadomość z formularza kontaktowego', `
+      <h2 style="font-size:16px; color:#1e1b4b; margin-top:0;">Nowa wiadomość z estelio.com.pl</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <tr><td style="padding:7px 0; color:#64748b; width:140px;">Typ:</td><td style="padding:7px 0; font-weight:600; color:#1e293b;">${typLabel}</td></tr>
+        <tr><td style="padding:7px 0; color:#64748b;">Imię:</td><td style="padding:7px 0; font-weight:600; color:#1e293b;">${imie}</td></tr>
+        <tr><td style="padding:7px 0; color:#64748b;">E-mail:</td><td style="padding:7px 0;"><a href="mailto:${email}" style="color:#7c3aed;">${email}</a></td></tr>
+        <tr><td style="padding:7px 0; color:#64748b; vertical-align:top;">Wiadomość:</td><td style="padding:7px 0; color:#1e293b; white-space:pre-line;">${wiadomosc}</td></tr>
+      </table>
+      ${emailBtn(`mailto:${email}`, 'Odpowiedz →')}
+    `)
+  });
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt };

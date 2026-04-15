@@ -177,7 +177,7 @@ const PUBLIC_PATHS = [
   '/reset-hasla/wyslij', '/reset-hasla/weryfikuj', '/reset-hasla/ustaw',
   '/rejestracja/weryfikuj', '/rejestracja/zaloz',
   '/zamowienie', '/voucher/weryfikuj',
-  '/stripe/webhook',
+  '/stripe/webhook', '/kontakt',
 ];
 
 app.use('/api', (req, res, next) => {
@@ -294,6 +294,32 @@ app.get('/api', (req, res) => {
     }
 
     return res.json({ status: 'error', message: 'Błąd: Nieznana akcja GET: ' + action });
+});
+
+// ==========================================
+// POST /api/kontakt — formularz kontaktowy z zamow.html
+// ==========================================
+app.post('/api/kontakt', async (req, res) => {
+  const { imie, email, typ, wiadomosc } = req.body || {};
+  if (!imie || !email || !wiadomosc) {
+    return res.json({ status: 'error', message: 'Uzupełnij wszystkie wymagane pola.' });
+  }
+  if (!email.includes('@')) {
+    return res.json({ status: 'error', message: 'Nieprawidłowy adres e-mail.' });
+  }
+  try {
+    const { wyslijKontakt } = require('./routes/mailer');
+    await wyslijKontakt({
+      imie:      String(imie).trim(),
+      email:     String(email).trim(),
+      typ:       typ === 'klient' ? 'klient' : 'zainteresowany',
+      wiadomosc: String(wiadomosc).trim(),
+    });
+    return res.json({ status: 'success' });
+  } catch (err) {
+    console.error('[kontakt] błąd wysyłki:', err.message);
+    return res.json({ status: 'error', message: 'Błąd wysyłki. Spróbuj napisać bezpośrednio na kontakt@estelio.com.pl.' });
+  }
 });
 
 // ==========================================
