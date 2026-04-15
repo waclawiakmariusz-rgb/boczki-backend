@@ -19682,7 +19682,7 @@ function estShowRelated(items) {
     }).join('');
     wrap.innerHTML = `<div class="est-related-label">Może też Cię zainteresować:</div><div class="est-related-chips">${chips}</div>`;
     wrap.querySelectorAll('.est-related-chip').forEach(btn => {
-        btn.addEventListener('click', () => estAsk(btn.dataset.q));
+        btn.addEventListener('click', () => estAsk(btn.dataset.q), { once: true });
     });
     msgs.appendChild(wrap);
     msgs.scrollTop = msgs.scrollHeight;
@@ -19718,6 +19718,7 @@ function estReply(userMsg) {
    PUBLICZNA FUNKCJA — klikanie sugestii
    ---------------------------------------------------------- */
 window.estAsk = function(text) {
+    document.getElementById('est-help-input').value = '';
     estReply(text);
     document.getElementById('est-help-input').focus();
 };
