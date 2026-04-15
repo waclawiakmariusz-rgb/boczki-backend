@@ -19643,27 +19643,18 @@ function estGetRelated(matchedItem) {
     const cat = matchedItem.category || 'Ogólne';
     const allEntries = [...EST_KB_DYNAMIC, ...EST_KB];
 
-    // Ta sama kategoria, wyklucz bieżący wpis (po pierwszym słowie kluczowym)
-    const matchedKey = matchedItem.keywords[0];
+    // Ta sama kategoria, wyklucz bieżący wpis (po tytule i pierwszym słowie kluczowym)
+    const matchedTitle = matchedItem.title || '';
+    const matchedKey   = matchedItem.keywords[0];
     const samecat = allEntries.filter(e => {
         if ((e.category || 'Ogólne') !== cat) return false;
+        if (matchedTitle && (e.title || '') === matchedTitle) return false;
         if (e.keywords[0] === matchedKey) return false;
         return true;
     });
 
-    // Jeśli za mało w kategorii — uzupełnij z innych kategorii
-    let pool = [...samecat];
-    if (pool.length < 3) {
-        const others = allEntries.filter(e => {
-            if ((e.category || 'Ogólne') === cat) return false;
-            if (e.keywords[0] === matchedKey) return false;
-            return true;
-        });
-        pool = [...pool, ...others.sort(() => Math.random() - 0.5)];
-    }
-
-    // Losuj max 4
-    return pool.sort(() => Math.random() - 0.5).slice(0, 4);
+    // Losuj max 3 — wyłącznie z tej samej kategorii
+    return samecat.sort(() => Math.random() - 0.5).slice(0, 3);
 }
 
 function estShowRelated(items) {
@@ -19674,9 +19665,14 @@ function estShowRelated(items) {
     const chips = items.map(item => {
         const label = item.title || (item.keywords[0].charAt(0).toUpperCase() + item.keywords[0].slice(1) + '?');
         const query = item.title || item.keywords[0];
-        return `<button class="est-related-chip" onclick="estAsk(${JSON.stringify(query)})">${label}</button>`;
+        // Użyj data-q zamiast inline onclick, by uniknąć problemów z cudzysłowami
+        const safeQ = query.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+        return `<button class="est-related-chip" data-q="${safeQ}">${label}</button>`;
     }).join('');
     wrap.innerHTML = `<div class="est-related-label">Może też Cię zainteresować:</div><div class="est-related-chips">${chips}</div>`;
+    wrap.querySelectorAll('.est-related-chip').forEach(btn => {
+        btn.addEventListener('click', () => estAsk(btn.dataset.q));
+    });
     msgs.appendChild(wrap);
     msgs.scrollTop = msgs.scrollHeight;
 }
