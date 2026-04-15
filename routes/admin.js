@@ -35,24 +35,41 @@ function slugify(text) {
 // ─── Middleware: weryfikacja tokenu admina ────────────────────
 const ADMIN_TOKEN = (process.env.ADMIN_TOKEN || 'boczki-admin-2026').replace(/^['"]|['"]$/g, '');
 
-// Sesje admina — UUID z TTL 12h (nie zwracamy hasła jako tokenu)
-const ADMIN_SESSION_TTL = 12 * 60 * 60 * 1000;
-const adminSessions = new Map();
-setInterval(() => {
-  const now = Date.now();
-  for (const [t, s] of adminSessions.entries()) { if (now > s.expires) adminSessions.delete(t); }
-}, 30 * 60 * 1000);
-
-function requireAdmin(req, res, next) {
-  const token = req.headers['x-admin-token'] || req.body?.admin_token || req.query?.admin_token;
-  if (!token) return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
-  const s = adminSessions.get(token);
-  if (!s || Date.now() > s.expires) return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
-  next();
-}
+// ─── Sesje admina w MySQL — przeżywają restart serwera ───────
+// Sliding expiry 7 dni: każde kliknięcie przedłuża sesję od nowa.
+const ADMIN_SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 dni
 
 module.exports = (db) => {
   const router = express.Router();
+
+  // Utwórz tabelę sesji jeśli nie istnieje
+  db.query(`
+    CREATE TABLE IF NOT EXISTS admin_sessions (
+      token VARCHAR(36) PRIMARY KEY,
+      expires BIGINT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `, err => { if (err) console.error('[admin_sessions] Błąd CREATE TABLE:', err.message); });
+
+  // Czyść stare sesje co godzinę
+  setInterval(() => {
+    db.query('DELETE FROM admin_sessions WHERE expires < ?', [Date.now()]);
+  }, 60 * 60 * 1000);
+
+  // Middleware weryfikacji tokenu admina (async, sliding expiry)
+  function requireAdmin(req, res, next) {
+    const token = req.headers['x-admin-token'] || req.body?.admin_token || req.query?.admin_token;
+    if (!token) return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
+    db.query('SELECT expires FROM admin_sessions WHERE token = ?', [token], (err, rows) => {
+      if (err || !rows || !rows.length || Date.now() > rows[0].expires) {
+        return res.status(403).json({ status: 'error', message: 'Sesja wygasła — zaloguj się ponownie.' });
+      }
+      // Sliding expiry — przedłuż sesję przy każdym żądaniu
+      const newExpires = Date.now() + ADMIN_SESSION_TTL_MS;
+      db.query('UPDATE admin_sessions SET expires = ? WHERE token = ?', [newExpires, token]);
+      next();
+    });
+  }
 
   // POST /api/admin/login — weryfikacja hasła admina
   router.post('/admin/login', rateLimitLogin, (req, res) => {
@@ -64,8 +81,11 @@ module.exports = (db) => {
     }
     recordSuccessLogin(req);
     const sessionToken = randomUUID();
-    adminSessions.set(sessionToken, { expires: Date.now() + ADMIN_SESSION_TTL });
-    return res.json({ status: 'success', token: sessionToken });
+    const expires = Date.now() + ADMIN_SESSION_TTL_MS;
+    db.query('INSERT INTO admin_sessions (token, expires) VALUES (?, ?)', [sessionToken, expires], (err) => {
+      if (err) return res.json({ status: 'error', message: 'Błąd zapisu sesji.' });
+      return res.json({ status: 'success', token: sessionToken });
+    });
   });
 
   // GET /api/admin/salony — lista wszystkich salonów
