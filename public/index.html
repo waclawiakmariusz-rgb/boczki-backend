@@ -19316,12 +19316,12 @@ body.dark-mode .est-typing { background: #0f172a; }
     </button>
 
     <!-- Panel chatu -->
-    <div id="est-help-panel" role="dialog" aria-label="Pomoc Estelio">
+    <div id="est-help-panel" role="dialog" aria-label="Esti — pomoc">
         <div id="est-help-header">
             <div class="est-avatar">🌸</div>
             <div class="est-header-info">
-                <strong>Pomoc Estelio</strong>
-                <span>Zadaj pytanie, odpiszę natychmiast</span>
+                <strong>Esti</strong>
+                <span>Twoja asystentka — zapytaj o cokolwiek!</span>
             </div>
             <button id="est-help-close" aria-label="Zamknij">✕</button>
         </div>
@@ -19329,10 +19329,10 @@ body.dark-mode .est-typing { background: #0f172a; }
         <div id="est-help-messages"></div>
 
         <div id="est-suggestions">
-            <button class="est-sug" onclick="estAsk('Jak dodać klienta?')">Jak dodać klienta?</button>
-            <button class="est-sug" onclick="estAsk('Jak dodać wizytę?')">Jak dodać wizytę?</button>
-            <button class="est-sug" onclick="estAsk('Jak zmienić PIN?')">Jak zmienić PIN?</button>
-            <button class="est-sug" onclick="estAsk('Jak dodać pracownika?')">Jak dodać pracownika?</button>
+            <button class="est-sug" onclick="estAsk('Jak dodać klienta?')">📋 Dodaj klienta</button>
+            <button class="est-sug" onclick="estAsk('Jak dodać wizytę?')">📅 Dodaj wizytę</button>
+            <button class="est-sug" onclick="estAsk('Jak zmienić PIN?')">🔑 Zmień PIN</button>
+            <button class="est-sug" onclick="estAsk('Raporty i statystyki')">📊 Raporty</button>
         </div>
 
         <div id="est-help-input-row">
@@ -19586,10 +19586,14 @@ function estReply(userMsg) {
         if (result) {
             estAddMsg(result.answer, 'bot');
         } else {
-            estAddMsg(
-                'Nie znam odpowiedzi na to pytanie 🙈<br>Napisz do nas bezpośrednio, odpiszemy szybko:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
-                'bot'
-            );
+            const noMatch = [
+                'Hmm, nie znam odpowiedzi na to pytanie 🤔 Ale możesz napisać do nas — odpiszemy szybko!<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'To pytanie mnie zaskoczyło! 😅 Nie mam jeszcze takiej odpowiedzi w bazie. Napisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'Ups, tego jeszcze nie wiem 🙈 Skontaktuj się z nami bezpośrednio, pomożemy:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'Nie mam tej odpowiedzi w swojej bazie wiedzy 💭 Chętnie pomożemy mailowo:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'To wykracza poza moją wiedzę! 🌸 Napisz do nas, a na pewno znajdziemy rozwiązanie:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+            ];
+            estAddMsg(noMatch[Math.floor(Math.random() * noMatch.length)], 'bot');
         }
     }, 700 + Math.random() * 400);
 }
@@ -19637,7 +19641,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (estOpen && document.getElementById('est-help-messages').childElementCount === 0) {
             // Wiadomość powitalna
             setTimeout(() => {
-                estAddMsg('Cześć! 👋 Jestem asystentem Estelio.<br>W czym mogę pomóc? Możesz zadać pytanie lub wybrać jeden z tematów poniżej.', 'bot');
+                estAddMsg('Cześć! 🌸 Jestem <b>Esti</b> — Twoja asystentka w systemie Estelio.<br>Zapytaj mnie o cokolwiek albo wybierz temat poniżej!', 'bot');
             }, 120);
         }
         if (estOpen) input.focus();
