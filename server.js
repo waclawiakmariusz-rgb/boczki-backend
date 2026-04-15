@@ -79,6 +79,11 @@ app.use(express.json());
 // Redirect strony głównej na zamów
 app.get('/', (req, res) => res.redirect(301, '/zamow.html'));
 
+// /zaloguj — główna aplikacja
+app.get('/zaloguj', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// Stary URL /index.html → redirect na /zaloguj
+app.get('/index.html', (req, res) => res.redirect(301, '/zaloguj'));
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 

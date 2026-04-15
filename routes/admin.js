@@ -5,15 +5,19 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const { rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
 
-let wyslijLinkRejestracji, powiadomAdmina;
+let wyslijLinkRejestracji, powiadomAdmina, wyslijWitamy, wyslijPotwierdzeniZgloszenia;
 try {
   const mailer = require('./mailer');
   wyslijLinkRejestracji = mailer.wyslijLinkRejestracji;
   powiadomAdmina = mailer.powiadomAdmina;
+  wyslijWitamy = mailer.wyslijWitamy;
+  wyslijPotwierdzeniZgloszenia = mailer.wyslijPotwierdzeniZgloszenia;
 } catch (e) {
   console.warn('[admin] Mailer niedostępny:', e.message);
   wyslijLinkRejestracji = async () => { throw new Error('Mailer nie skonfigurowany na serwerze.'); };
   powiadomAdmina = async () => {};
+  wyslijWitamy = async () => {};
+  wyslijPotwierdzeniZgloszenia = async () => {};
 }
 
 // ─── Pomocnicze ──────────────────────────────────────────────
@@ -281,6 +285,13 @@ module.exports = (db) => {
           console.error('[mailer] Powiadomienie admina nie wysłane:', mailErr.message);
         }
 
+        // Potwierdź klientowi przyjęcie zgłoszenia
+        try {
+          await wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu });
+        } catch (mailErr) {
+          console.error('[mailer] Potwierdzenie zgłoszenia nie wysłane:', mailErr.message);
+        }
+
         return res.json({ status: 'success', message: 'Zgłoszenie zostało przyjęte!' });
       }
     );
@@ -388,7 +399,16 @@ module.exports = (db) => {
                 [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0], () => resolve());
             }));
 
-            Promise.all([...pObietnice, ...uObietnice]).then(() => {
+            Promise.all([...pObietnice, ...uObietnice]).then(async () => {
+              // Wyślij welcome email z danymi logowania
+              if (email) {
+                try {
+                  await wyslijWitamy({ email, imie: imie || '', nazwa_salonu, login: login.trim(), haslo: haslo.trim() });
+                } catch (mailErr) {
+                  console.error('[admin] Błąd wysyłki welcome email:', mailErr.message);
+                  // Nie blokujemy odpowiedzi — salon już istnieje
+                }
+              }
               return res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: login.trim() });
             });
           }

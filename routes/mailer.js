@@ -136,4 +136,91 @@ async function wyslijResetHasla({ email, login, token }) {
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla };
+// ─── Welcome email po zakończeniu rejestracji ────────────────
+async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
+  const link = APP_URL();
+  const transport = createTransport();
+
+  await transport.sendMail({
+    from: FROM(),
+    to: email,
+    subject: `Witaj w Estelio — Twój salon jest gotowy! 🎉`,
+    html: emailWrapper('🎉', 'Estelio', 'System zarządzania salonem', `
+      <p style="font-size:16px; font-weight:700; color:#1e1b4b; margin-bottom:8px;">
+        Witaj${imie ? ' ' + imie : ''}! 🎀
+      </p>
+      <p style="font-size:14px; color:#64748b; line-height:1.7; margin-bottom:20px;">
+        Salon <strong>${nazwa_salonu}</strong> został pomyślnie zarejestrowany w systemie Estelio.
+        Poniżej znajdziesz swoje dane do logowania — zachowaj je w bezpiecznym miejscu.
+      </p>
+
+      <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:20px 24px; margin-bottom:24px;">
+        <p style="margin:0 0 10px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#7c3aed;">Twoje dane logowania</p>
+        <table style="width:100%; font-size:14px; border-collapse:collapse;">
+          <tr>
+            <td style="padding:5px 0; color:#64748b; width:80px;">Login:</td>
+            <td style="padding:5px 0; font-weight:700; color:#1e293b; font-family:monospace; font-size:15px;">${login}</td>
+          </tr>
+          <tr>
+            <td style="padding:5px 0; color:#64748b;">Hasło:</td>
+            <td style="padding:5px 0; font-weight:700; color:#1e293b; font-family:monospace; font-size:15px;">${haslo}</td>
+          </tr>
+        </table>
+      </div>
+
+      <div style="text-align:center; margin:28px 0;">
+        <a href="${link}" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
+          Przejdź do systemu →
+        </a>
+      </div>
+
+      <div style="background:#f8fafc; border-radius:10px; padding:16px 18px; margin-bottom:8px;">
+        <p style="font-size:12px; font-weight:700; color:#475569; margin:0 0 8px;">Co dalej?</p>
+        <ul style="font-size:13px; color:#64748b; margin:0; padding-left:18px; line-height:1.8;">
+          <li>Zaloguj się i uzupełnij listę pracowników</li>
+          <li>Dodaj zabiegi i ceny usług</li>
+          <li>Zarejestruj pierwszych klientów</li>
+        </ul>
+      </div>
+
+      <p style="font-size:12px; color:#94a3b8; line-height:1.6; margin-top:20px;">
+        Masz pytania? Odpisz na tego maila lub napisz na
+        <a href="mailto:${process.env.ADMIN_EMAIL || process.env.SMTP_USER}" style="color:#7c3aed;">${process.env.ADMIN_EMAIL || process.env.SMTP_USER}</a>.
+      </p>
+    `)
+  });
+}
+
+// ─── Potwierdzenie przyjęcia zgłoszenia (zamow.html) ─────────
+async function wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu }) {
+  const transport = createTransport();
+
+  await transport.sendMail({
+    from: FROM(),
+    to: email,
+    subject: `Otrzymaliśmy Twoje zgłoszenie — Estelio`,
+    html: emailWrapper('📬', 'Estelio', 'Potwierdzenie zgłoszenia', `
+      <p style="font-size:16px; font-weight:700; color:#1e1b4b; margin-bottom:8px;">
+        Cześć${imie ? ' ' + imie : ''}! 👋
+      </p>
+      <p style="font-size:14px; color:#64748b; line-height:1.7; margin-bottom:20px;">
+        Twoje zgłoszenie dla salonu <strong>${nazwa_salonu}</strong> zostało przyjęte.
+        Skontaktujemy się z Tobą wkrótce i wyślemy link do rejestracji systemu.
+      </p>
+
+      <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:16px 20px; margin-bottom:24px;">
+        <p style="font-size:13px; color:#166534; margin:0; line-height:1.7;">
+          ✅ Zgłoszenie zapisane<br>
+          ⏳ Oczekuj na email z linkiem aktywacyjnym (zazwyczaj do 24h)
+        </p>
+      </div>
+
+      <p style="font-size:13px; color:#64748b; line-height:1.7;">
+        Jeśli masz pytania — odpisz na tego maila lub skontaktuj się pod adresem
+        <a href="mailto:${process.env.ADMIN_EMAIL || process.env.SMTP_USER}" style="color:#7c3aed;">${process.env.ADMIN_EMAIL || process.env.SMTP_USER}</a>.
+      </p>
+    `)
+  });
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia };
