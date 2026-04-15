@@ -6273,13 +6273,13 @@ function uruchomAplikacjePracownika(imie, rola) {
         show('group-magazyn');
         pokaz('magazyn');
     } 
-    else if (r === 'kosmetolog') {
+    else if (r === 'kosmetolog' || r === 'pracownik') {
         show('group-magazyn');
         show('group-sales');
         show('group-clients');
         show('group-consultations');
         pokaz('sprzedaz');
-    } 
+    }
     else if (r === 'recepcja') {
         show('group-magazyn');
         show('group-sales');
