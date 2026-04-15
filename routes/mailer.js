@@ -27,21 +27,29 @@ const APP_URL   = () => (process.env.APP_URL || 'https://estelio.com.pl').replac
 
 // ─── Szablon bazowy emaila ────────────────────────────────────
 function emailWrapper(icon, tytul, podtytul, tresc) {
-  return `
-    <div style="font-family:'Segoe UI',Arial,sans-serif; max-width:560px; margin:0 auto; background:#fafafa; border-radius:16px; overflow:hidden; border:1px solid #e8e4f3;">
-      <div style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); padding:32px 40px; text-align:center;">
-        <div style="font-size:36px; margin-bottom:8px;">${icon}</div>
-        <h1 style="color:white; margin:0; font-size:20px; font-weight:700; letter-spacing:0.5px;">Estelio</h1>
-        <p style="color:rgba(255,255,255,0.8); margin:4px 0 0; font-size:13px;">${podtytul}</p>
-      </div>
-      <div style="padding:36px 40px;">
-        ${tresc}
-      </div>
-      <div style="background:#f1f5f9; padding:18px 40px; text-align:center;">
-        <p style="font-size:11px; color:#94a3b8; margin:0;">© Estelio · System zarządzania salonem beauty</p>
-      </div>
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${tytul}</title>
+</head>
+<body style="margin:0; padding:24px; background:#f1f5f9; font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px; margin:0 auto; background:#fafafa; border-radius:16px; overflow:hidden; border:1px solid #e8e4f3;">
+    <div style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); padding:32px 40px; text-align:center;">
+      <div style="font-size:36px; margin-bottom:8px;">${icon}</div>
+      <h1 style="color:white; margin:0; font-size:20px; font-weight:700; letter-spacing:0.5px;">Estelio</h1>
+      <p style="color:rgba(255,255,255,0.8); margin:4px 0 0; font-size:13px;">${podtytul}</p>
     </div>
-  `;
+    <div style="padding:36px 40px;">
+      ${tresc}
+    </div>
+    <div style="background:#f1f5f9; padding:18px 40px; text-align:center;">
+      <p style="font-size:11px; color:#94a3b8; margin:0;">© Estelio · System zarządzania salonem beauty</p>
+    </div>
+  </div>
+</body>
+</html>`;
 }
 
 // ─── Wyślij link rejestracyjny do klienta ────────────────────
@@ -61,7 +69,7 @@ async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
         ${nazwa_salonu ? `<strong>${nazwa_salonu}</strong>` : ''}.
       </p>
       <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
+        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
           Załóż profil salonu →
         </a>
       </div>
@@ -96,7 +104,7 @@ async function powiadomAdmina({ imie, nazwa_salonu, email, telefon, miasto, wiad
         ${wiadomosc ? `<tr><td style="padding:7px 0; color:#64748b; vertical-align:top;">Wiadomość:</td><td style="padding:7px 0; color:#1e293b;">${wiadomosc}</td></tr>` : ''}
       </table>
       <div style="margin-top:24px; text-align:center;">
-        <a href="${APP_URL()}/admin.html" style="background:#7c3aed; color:white; padding:12px 28px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;">
+        <a href="${APP_URL()}/admin.html" target="_blank" style="background:#7c3aed; color:white; padding:12px 28px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;">
           Przejdź do panelu admina →
         </a>
       </div>
@@ -120,7 +128,7 @@ async function wyslijResetHasla({ email, login, token }) {
         Kliknij poniższy przycisk, aby ustawić nowe hasło.
       </p>
       <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
+        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
           Ustaw nowe hasło →
         </a>
       </div>
@@ -169,7 +177,7 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
       </div>
 
       <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
+        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
           Przejdź do systemu →
         </a>
       </div>
