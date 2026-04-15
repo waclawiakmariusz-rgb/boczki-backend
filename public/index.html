@@ -19579,32 +19579,47 @@ function estActiveCategory() {
    ---------------------------------------------------------- */
 function estFind(query) {
     const q = estNormalize(query);
+    // Tokeny pytania — bez interpunkcji, min 4 znaki
+    const qTokens = q.replace(/[?!.,;:]/g, '').split(/\s+/).filter(t => t.length >= 4);
     let best = null, bestScore = 0;
-    const activeCat = estActiveCategory(); // np. 'Magazyn' gdy użytkownik jest w sekcji magazynu
+    const activeCat = estActiveCategory();
 
-    // EST_KB_DYNAMIC już zawiera _bonus (3=tenant, 1=global); wbudowane = 0
     const allEntries = [
         ...EST_KB_DYNAMIC,
         ...EST_KB.map(e => ({ ...e, _bonus: 0 }))
     ];
 
     allEntries.forEach(item => {
-        // Najpierw policz score słów kluczowych — bez bonusów
         let kwScore = 0;
+        // Każdy token pytania liczony tylko RAZ na wpis — zapobiega inflacji przez popularne słowa
+        const usedTokens = new Set();
+
         item.keywords.forEach(kw => {
             const kwN = estNormalize(kw);
-            if (q.includes(kwN)) kwScore += kwN.split(' ').length * 2;
-            else {
-                kwN.split(' ').forEach(word => { if (q.includes(word) && word.length > 3) kwScore += 1; });
+            if (q.includes(kwN)) {
+                // Pełne wyrażenie kluczowe w pytaniu → wysokie punkty
+                kwScore += kwN.split(' ').length * 2;
+                kwN.split(' ').filter(w => w.length >= 4).forEach(w => usedTokens.add(w));
+            } else {
+                // Pojedyncze słowa: dopasowanie przez prefix (obsługuje odmianę: "klienta"↔"klient", "zadatki"↔"zadatek")
+                kwN.split(' ').forEach(word => {
+                    if (word.length < 4) return;
+                    const match = qTokens.find(t =>
+                        !usedTokens.has(t) && (
+                            t === word ||
+                            t.startsWith(word) ||
+                            word.startsWith(t)
+                        )
+                    );
+                    if (match) { usedTokens.add(match); kwScore += 1; }
+                });
             }
         });
 
         // Bonusy kontekstowe działają TYLKO jeśli jest realne trafienie słowne
-        // (zapobiega wynoszeniu przypadkowych wpisów z aktywnej sekcji ponad trafne odpowiedzi)
         let score = kwScore;
         if (kwScore > 0) {
             score += item._bonus || 0;
-            // +2 za trafienie w aktywną kategorię sekcji (tiebreaker, nie override)
             if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
         }
 
