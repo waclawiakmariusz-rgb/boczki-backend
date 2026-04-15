@@ -345,8 +345,8 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 /* ── NOWY EKRAN LOGOWANIA (styl zamow.html) ── */
 #login-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #f4efe6 !important;
-    display: flex !important;
+    background: #f4efe6;
+    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 9999;
@@ -6204,40 +6204,64 @@ function pokazEkranPinu() {
                 </div>
             `;
         });
+    })
+    .catch(() => {
+        document.getElementById('pin-users-grid').innerHTML = '<div style="color:#ef4444;">Błąd połączenia z serwerem. Odśwież stronę.</div>';
     });
 }
 
 function wybierzPracownika(imie) {
     wybranyPracownik = imie;
     document.getElementById('pin-user-name').innerText = "Wpisz PIN: " + imie;
-	document.getElementById('pin-users-grid').style.display = 'none';
+    document.getElementById('pin-users-grid').style.display = 'none';
     document.getElementById('pin-input-section').style.display = 'flex';
     document.getElementById('pin-code').value = '';
+    document.getElementById('pin-error-msg').style.display = 'none';
     document.getElementById('pin-code').focus();
 }
 
 function anulujPin() {
     wybranyPracownik = "";
-	document.getElementById('pin-input-section').style.display = 'none';
+    document.getElementById('pin-input-section').style.display = 'none';
+    document.getElementById('pin-error-msg').style.display = 'none';
     document.getElementById('pin-users-grid').style.display = 'flex';
+}
+
+function pokazPinBlad(msg) {
+    const el = document.getElementById('pin-error-msg');
+    el.textContent = msg;
+    el.style.display = 'block';
+    document.getElementById('pin-code').value = '';
+    document.getElementById('pin-code').focus();
 }
 
 function zalogujPinem() {
     const pin = document.getElementById('pin-code').value;
     if(!pin) return;
-    
+
+    const btn = document.getElementById('btn-pin-zaloguj');
+    btn.disabled = true;
+    btn.textContent = '...';
+    document.getElementById('pin-error-msg').style.display = 'none';
+
     fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'verify_pin', imie: wybranyPracownik, pin: pin })
     })
     .then(r => r.json())
     .then(d => {
+        btn.disabled = false;
+        btn.textContent = 'Zaloguj';
         if(d.status === 'success') {
             uruchomAplikacjePracownika(wybranyPracownik, d.rola);
         } else {
-            alert(d.message || "Błędny PIN!");
-            document.getElementById('pin-code').value = '';
+            pokazPinBlad(d.message || 'Błędny PIN!');
         }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = 'Zaloguj';
+        pokazPinBlad('Błąd połączenia z serwerem. Sprawdź internet i spróbuj ponownie.');
     });
 }
 
@@ -18253,9 +18277,10 @@ initTheme();
     <div id="pin-input-section" style="display:none; flex-direction:column; align-items:center; background:#0f172a; padding:30px; border-radius:12px; border:1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
         <h3 id="pin-user-name" style="margin-top:0; color:#f8fafc;">Wpisz PIN</h3>
         <input type="password" id="pin-code" maxlength="4" style="font-size:32px; letter-spacing:8px; text-align:center; width:150px; padding:10px; border-radius:8px; border:none; outline:none; background:#1e293b; color:white; margin-bottom:20px;" placeholder="••••">
+        <div id="pin-error-msg" style="display:none; color:#f87171; background:#450a0a; border:1px solid #7f1d1d; border-radius:8px; padding:10px 18px; margin-bottom:14px; font-size:14px; text-align:center;"></div>
         <div style="display:flex; gap:10px;">
             <button onclick="anulujPin()" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">Anuluj</button>
-            <button onclick="zalogujPinem()" class="btn-primary" style="margin:0;">Zaloguj</button>
+            <button onclick="zalogujPinem()" id="btn-pin-zaloguj" class="btn-primary" style="margin:0;">Zaloguj</button>
         </div>
     </div>
     
