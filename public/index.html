@@ -19589,16 +19589,25 @@ function estFind(query) {
     ];
 
     allEntries.forEach(item => {
-        let score = item._bonus || 0;
-        // +2 za trafienie w aktywną kategorię sekcji
-        if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
+        // Najpierw policz score słów kluczowych — bez bonusów
+        let kwScore = 0;
         item.keywords.forEach(kw => {
             const kwN = estNormalize(kw);
-            if (q.includes(kwN)) score += kwN.split(' ').length * 2;
+            if (q.includes(kwN)) kwScore += kwN.split(' ').length * 2;
             else {
-                kwN.split(' ').forEach(word => { if (q.includes(word) && word.length > 3) score += 1; });
+                kwN.split(' ').forEach(word => { if (q.includes(word) && word.length > 3) kwScore += 1; });
             }
         });
+
+        // Bonusy kontekstowe działają TYLKO jeśli jest realne trafienie słowne
+        // (zapobiega wynoszeniu przypadkowych wpisów z aktywnej sekcji ponad trafne odpowiedzi)
+        let score = kwScore;
+        if (kwScore > 0) {
+            score += item._bonus || 0;
+            // +2 za trafienie w aktywną kategorię sekcji (tiebreaker, nie override)
+            if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
+        }
+
         if (score > bestScore) { bestScore = score; best = item; }
     });
 
