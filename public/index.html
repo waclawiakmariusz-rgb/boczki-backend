@@ -19509,8 +19509,10 @@ let EST_KB_DYNAMIC = []; // wpisy z bazy danych tenanta
 
 function estParseKbRows(rows) {
     return (rows || []).filter(e => e.active != 0).map(e => ({
+        title:    e.title    || undefined,
+        category: e.category || 'Ogólne',
         keywords: String(e.keywords).split(',').map(k => k.trim()).filter(Boolean),
-        answer: e.answer
+        answer:   e.answer,
     }));
 }
 
