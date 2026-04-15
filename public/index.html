@@ -5587,7 +5587,9 @@ let wciecieLogow = "";
 
         // 2. Wstrzykiwanie ID + session token
         const tId = localStorage.getItem('boczki_tenant_id');
-        if (!tId && akcja !== 'login') {
+        // Endpointy publiczne — nie wymagają tenant_id (reset hasła, rejestracja przez token)
+        const isPublicUrl = urlStr.includes('/reset-hasla/') || urlStr.includes('/rejestracja/');
+        if (!tId && akcja !== 'login' && !isPublicUrl) {
             console.error(`🔒 [BLOKADA] Brak tenant_id przy akcji: ${akcja}`);
             return Promise.reject("Brak autoryzacji");
         }
@@ -5597,7 +5599,7 @@ let wciecieLogow = "";
         if (options.method && options.method.toUpperCase() === 'POST' && options.body) {
             try {
                 let parsedBody = JSON.parse(options.body);
-                if (parsedBody.action !== 'login') parsedBody.tenant_id = tId;
+                if (parsedBody.action !== 'login' && !isPublicUrl) parsedBody.tenant_id = tId;
                 options.body = JSON.stringify(parsedBody);
                 options.headers = {
                     ...(options.headers || {}),
