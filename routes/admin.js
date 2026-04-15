@@ -615,6 +615,118 @@ module.exports = (db) => {
     );
   });
 
+  // POST /api/admin/help-kb/seed — wstaw domyślne wpisy (tylko gdy tabela pusta)
+  router.post('/admin/help-kb/seed', requireAdmin, (req, res) => {
+    const force = req.body?.force === true; // force=true nadpisuje istniejące
+
+    const SEED = [
+      // ── MAGAZYN ──────────────────────────────────────────────
+      { category:'Magazyn', keywords:'stan magazynowy, ile zostało, ilość produktu, sprawdź stan', answer:'Stan magazynowy sprawdzisz w sekcji <b>Magazyn</b>. Każdy produkt ma widoczną aktualną ilość. Czerwony kolor oznacza przekroczenie minimum — czas uzupełnić.' },
+      { category:'Magazyn', keywords:'przyjęcie towaru, dostawa, nowy towar, dodaj towar', answer:'Aby przyjąć dostawę, przejdź do <b>Magazyn → Przyjęcie towaru</b>. Wybierz produkt i wpisz liczbę sztuk. Stan zaktualizuje się automatycznie.' },
+      { category:'Magazyn', keywords:'inwentaryzacja, spis z natury, liczenie produktów', answer:'Inwentaryzację znajdziesz w sekcji <b>Inwentaryzacja</b>. Możesz tam zweryfikować rzeczywiste stany i wprowadzić korekty. System zapamięta datę spisu.' },
+      { category:'Magazyn', keywords:'co zamówić, brakujące produkty, lista zamówień, niski stan', answer:'Sekcja <b>Co zamówić?</b> w menu automatycznie wylicza produkty poniżej minimalnego stanu. To Twoja lista zakupów — gotowa od razu.' },
+      { category:'Magazyn', keywords:'usuń produkt, archiwum produktu, dezaktywuj produkt', answer:'Aby usunąć lub zarchiwizować produkt, wejdź w <b>Magazyn → Inwentaryzacja</b>, kliknij produkt i wybierz opcję <b>Archiwizuj</b>. Produkt zniknie z aktywnego widoku.' },
+      { category:'Magazyn', keywords:'minimalny stan, alert magazynowy, próg, minimum', answer:'Minimalne stany magazynowe ustawiasz edytując dany produkt — pole <b>Min. ilość</b>. Gdy stan spadnie poniżej, produkt automatycznie pojawi się w raporcie "Co zamówić?".' },
+
+      // ── KLIENCI ───────────────────────────────────────────────
+      { category:'Klienci', keywords:'wyszukaj klienta, znajdź klienta, szukaj, wyszukiwanie klientów', answer:'Klientów wyszukujesz za pomocą pola wyszukiwania w górnej części sekcji <b>Klienci</b>. Możesz szukać po imieniu, nazwisku lub numerze telefonu.' },
+      { category:'Klienci', keywords:'edytuj klienta, zmień dane klienta, aktualizuj telefon, zmień email', answer:'Wejdź w sekcję <b>Klienci</b>, kliknij wybranego klienta i wybierz <b>Edytuj</b>. Zmień potrzebne dane i zatwierdź przyciskiem <b>Zapisz</b>.' },
+      { category:'Klienci', keywords:'historia wizyt klienta, poprzednie wizyty, karta klienta', answer:'Po kliknięciu na klienta widzisz jego <b>kartę</b> z pełną historią wizyt, wydanymi kwotami i notatkami. Świetne do analizy lojalności.' },
+      { category:'Klienci', keywords:'notatka do klienta, uwagi, informacje o kliencie, special', answer:'W karcie klienta znajdziesz pole <b>Notatki</b>. Wpisz tam alergię, preferencje zabiegu, ulubiony produkt — widoczne przy każdej wizycie.' },
+      { category:'Klienci', keywords:'urodziny klienta, przypomnienie urodziny, życzenia', answer:'System automatycznie oznacza klientów z urodzinami w bieżącym tygodniu. Sprawdź sekcję <b>Urodziny</b> lub filtr w widoku klientów.' },
+      { category:'Klienci', keywords:'duplikat klienta, połącz klientów, ten sam klient dwa razy', answer:'Jeśli klient pojawia się dwa razy, skontaktuj się z pomocą techniczną: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> — ręcznie połączymy profile.' },
+
+      // ── SPRZEDAŻ ──────────────────────────────────────────────
+      { category:'Sprzedaż', keywords:'wizyty na dziś, harmonogram dnia, dzisiaj, plan dnia', answer:'Plan dnia znajdziesz w sekcji <b>Wizyty</b> lub <b>Kalendarz</b>. Widok domyślny pokazuje dzisiejsze wizyty wszystkich pracowników.' },
+      { category:'Sprzedaż', keywords:'zmień godzinę wizyty, przesuń wizytę, inny termin, reschedule', answer:'Otwórz wizytę z kalendarza i kliknij <b>Edytuj</b>. Zmień datę i godzinę, wybierz pracownika i zapisz. Możesz też przeciągnąć wizytę w widoku kalendarza.' },
+      { category:'Sprzedaż', keywords:'rabat, zniżka, promocja, kod rabatowy, discount', answer:'Rabat możesz dodać podczas kasowania wizyty — pole <b>Rabat</b> (kwotowy lub procentowy). Stałe rabaty dla grup klientów konfigurujesz w <b>Administracja → Rabaty</b>.' },
+      { category:'Sprzedaż', keywords:'podziel płatność, split, część gotówka część karta, dwa sposoby płatności', answer:'Przy kasowaniu wizyty kliknij <b>Podziel płatność</b>. Możesz dowolnie podzielić kwotę między gotówkę, kartę i voucher.' },
+      { category:'Sprzedaż', keywords:'dodaj usługę do wizyty, dopisz zabieg, więcej usług', answer:'Otwórz aktywną wizytę i kliknij <b>+ Dodaj usługę</b>. Wybierz usługę z listy — cena zostanie zsumowana automatycznie.' },
+      { category:'Sprzedaż', keywords:'anuluj wizytę, odwołaj wizytę, klient rezygnuje', answer:'Otwórz wizytę i kliknij <b>Anuluj wizytę</b>. Możesz wybrać powód (klient odwołał / brak czasu / choroba). Wizyty anulowane nie trafiają do przychodów.' },
+
+      // ── PRACOWNICY ────────────────────────────────────────────
+      { category:'Pracownicy', keywords:'zmień rolę pracownika, uprawnienia, dostęp pracownika', answer:'Wejdź w <b>Administracja → Pracownicy</b>, kliknij pracownika i zmień pole <b>Rola</b>. Role: <em>pracownik</em> (ograniczony dostęp), <em>recepcja</em>, <em>manager</em>, <em>właściciel</em>.' },
+      { category:'Pracownicy', keywords:'wyniki pracownika, statystyki pracownika, efektywność, ile zarobił', answer:'Statystyki każdego pracownika znajdziesz w <b>Analityka → Pracownik</b>. Widać tam przychody, liczbę wizyt i topowe usługi w wybranym okresie.' },
+      { category:'Pracownicy', keywords:'targety pracownika, cel, plan sprzedażowy, KPI pracownika', answer:'Targety konfigurujesz w <b>Analityka → Konfigurator Targetów</b>. Możesz ustawić miesięczny cel przychodów lub liczby wizyt dla każdego pracownika.' },
+      { category:'Pracownicy', keywords:'dezaktywuj pracownika, usuń pracownika, pracownik odszedł', answer:'W sekcji <b>Pracownicy</b> kliknij pracownika i wybierz <b>Dezaktywuj</b>. Pracownik zniknie z listy aktywnych, ale jego historia zostanie zachowana.' },
+      { category:'Pracownicy', keywords:'pracownik nie może się zalogować, błąd logowania pracownika, pin nie działa', answer:'Sprawdź PIN pracownika w <b>Administracja → Pracownicy → Edytuj</b>. Możesz też nadać nowy PIN. Jeśli problem pozostaje — napisz: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>' },
+      { category:'Pracownicy', keywords:'dodaj pracownika do usługi, przypisz pracownika, kto wykonuje zabieg', answer:'W sekcji <b>Usługi</b> edytuj wybraną usługę i w polu <b>Wykonujący</b> wskaż pracowników. Tylko oni będą propozowani przy tworzeniu wizyty na tę usługę.' },
+
+      // ── USŁUGI ────────────────────────────────────────────────
+      { category:'Usługi', keywords:'zmień cenę usługi, aktualizuj cennik, nowa cena zabiegu', answer:'Wejdź w <b>Administracja → Zabiegi</b>, kliknij usługę i zmień pole <b>Cena</b>. Nowa cena obowiązuje od razu przy kolejnych wizytach.' },
+      { category:'Usługi', keywords:'ukryj usługę, dezaktywuj zabieg, przestaliśmy oferować', answer:'W <b>Administracja → Zabiegi</b> kliknij usługę i wybierz <b>Dezaktywuj</b>. Usługa zniknie z listy przy tworzeniu wizyty, ale stare wizyty pozostaną nienaruszone.' },
+      { category:'Usługi', keywords:'czas trwania usługi, jak długo trwa zabieg, długość wizyty', answer:'Czas trwania ustawiasz w <b>Administracja → Zabiegi → Edytuj</b>, pole <b>Czas (min)</b>. System blokuje odpowiedni slot w kalendarzu automatycznie.' },
+      { category:'Usługi', keywords:'opis usługi, informacje o zabiegu, co zawiera usługa', answer:'Opis usługi dodajesz w <b>Administracja → Zabiegi → Edytuj</b>, pole <b>Opis</b>. Pojawi się na karcie wizyty i może być widoczny dla pracowników.' },
+      { category:'Usługi', keywords:'kategorie usług, grupy zabiegów, typ usługi', answer:'Usługi możesz grupować według kategorii (np. Paznokcie, Rzęsy, Masaż). Kategorię ustawiasz przy dodawaniu lub edycji usługi w polu <b>Kategoria</b>.' },
+      { category:'Usługi', keywords:'kopiuj usługę, duplikuj zabieg, podobna usługa', answer:'Przy edycji usługi użyj przycisku <b>Duplikuj</b> — skopiuje wszystkie ustawienia. Zmień tylko co potrzebujesz (np. cenę lub czas) i zapisz jako nową usługę.' },
+
+      // ── ANALITYKA ─────────────────────────────────────────────
+      { category:'Analityka', keywords:'przychody za miesiąc, obrót miesięczny, wyniki miesiąca', answer:'Miesięczne przychody znajdziesz w <b>Analityka → Podsumowanie M-c</b>. Widać tam łączny obrót, podział na pracowników i porównanie z poprzednim miesiącem.' },
+      { category:'Analityka', keywords:'najlepszy pracownik, ranking pracowników, top sprzedaż', answer:'Ranking pracowników jest w <b>Analityka → Pracownik</b>. Możesz sortować według przychodów, liczby wizyt lub ilości sprzedanych produktów.' },
+      { category:'Analityka', keywords:'najpopularniejsze usługi, bestseller, top zabiegi, najczęściej wykonywane', answer:'Statystyki usług znajdziesz w <b>Analityka → Analiza Zabiegu</b>. Widać top usługi według liczby wykonań i generowanego przychodu.' },
+      { category:'Analityka', keywords:'filtr dat, zakres czasu, od do, konkretny okres', answer:'W każdym widoku analitycznym znajdziesz selektor dat w górnym rogu. Wybierz zakres "od–do" i zatwierdź — wszystkie wykresy zaktualizują się automatycznie.' },
+      { category:'Analityka', keywords:'retencja klientów, powracający klienci, lojalność, ilu wraca', answer:'Wskaźnik retencji znajdziesz w <b>Moduł Retencji</b> w menu. System wylicza odsetek klientów, którzy wrócili w ciągu 30/60/90 dni od ostatniej wizyty.' },
+      { category:'Analityka', keywords:'roczne zestawienie, wyniki roczne, podsumowanie roku', answer:'Roczne zestawienie znajdziesz w <b>Analityka → Zestawienie Roczne</b>. Pokazuje przychody miesiąc po miesiącu z wykresem trendu.' },
+
+      // ── VOUCHERY ──────────────────────────────────────────────
+      { category:'Vouchery', keywords:'stwórz voucher, nowy bon, utwórz voucher, wygeneruj bon', answer:'Wejdź do sekcji <b>Vouchery</b> i kliknij <b>+ Nowy voucher</b>. Podaj wartość, opcjonalnie datę ważności i dane klienta. System wygeneruje unikalny kod.' },
+      { category:'Vouchery', keywords:'saldo vouchera, wartość bonu, ile zostało na voucherze, sprawdź', answer:'W sekcji <b>Vouchery</b> wyszukaj voucher po kodzie lub nazwisku klienta. Zobaczysz pierwotną wartość, wykorzystaną kwotę i aktualne saldo.' },
+      { category:'Vouchery', keywords:'zrealizuj voucher, zapłać voucherem, użyj bonu przy kasowaniu', answer:'Przy kasowaniu wizyty wybierz formę płatności <b>Voucher</b> i wpisz kod. System automatycznie odejmie kwotę od salda bonu.' },
+      { category:'Vouchery', keywords:'voucher wygasł, nieważny bon, przedłuż voucher', answer:'Jeśli voucher wygasł a klient chce go zrealizować — wejdź w szczegóły vouchera i zmień datę ważności. Możesz też skontaktować się z pomocą: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>' },
+      { category:'Vouchery', keywords:'drukuj voucher, PDF voucher, wyślij bon, wydruk', answer:'Po stworzeniu vouchera kliknij ikonę drukarki lub <b>Pobierz PDF</b>. Gotowy dokument możesz wydrukować lub przesłać klientowi mailem.' },
+      { category:'Vouchery', keywords:'voucher dla pracownika, voucher prezent, bon podarunkowy dla klienta VIP', answer:'Vouchery tworzysz ręcznie — możesz wystawić bon na dowolną kwotę dla wybranego klienta. Świetne jako prezent urodzinowy dla lojalnych klientów!' },
+
+      // ── USTAWIENIA ────────────────────────────────────────────
+      { category:'Ustawienia', keywords:'zmień nazwę salonu, edytuj profil salonu, dane salonu', answer:'Dane salonu (nazwa, adres, telefon) edytujesz w <b>Ustawienia → Profil salonu</b>. Pamiętaj by zapisać zmiany przyciskiem na dole strony.' },
+      { category:'Ustawienia', keywords:'godziny otwarcia, harmonogram pracy, kiedy otwarty salon', answer:'Godziny pracy ustawiasz w <b>Ustawienia → Godziny otwarcia</b>. Możesz ustawić różne godziny dla każdego dnia tygodnia i zaznaczyć dni wolne.' },
+      { category:'Ustawienia', keywords:'zarządzaj dostępami, uprawnienia użytkowników, kto może co widzieć', answer:'Dostępami zarządzasz w <b>Administracja → Dostępy</b>. Możesz precyzyjnie określić jakie sekcje widzi każda rola (pracownik, recepcja, manager).' },
+      { category:'Ustawienia', keywords:'backup danych, kopia zapasowa, przywróć dane', answer:'Automatyczne kopie zapasowe wykonuje Hostinger codziennie. W razie potrzeby przywrócenia danych skontaktuj się z nami: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>' },
+      { category:'Ustawienia', keywords:'zmień hasło właściciela, hasło do systemu, nowe hasło', answer:'Hasło zmienisz klikając <b>Zapomniałem hasła</b> na stronie logowania. Na Twój email zostanie wysłany jednorazowy link (ważny 1 godzinę).' },
+      { category:'Ustawienia', keywords:'integracje, połącz z systemem, API, stripe', answer:'Integracje (Stripe, SMS, email) konfigurowane są przez nasz zespół przy onboardingu. W razie zmian lub nowych potrzeb: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>' },
+
+      // ── OGÓLNE ────────────────────────────────────────────────
+      { category:'Ogólne', keywords:'czym jest estelio, opis systemu, co oferuje, system do salonu', answer:'Estelio to system zarządzania salonem beauty — obejmuje magazyn, klientów, wizyty, sprzedaż, vouchery i analitykę. Wszystko w jednym miejscu, dostępne z przeglądarki.' },
+      { category:'Ogólne', keywords:'pierwsze kroki, jak zacząć, onboarding, start, nowy użytkownik', answer:'Zacznij od: 1) Dodania pracowników (<b>Pracownicy</b>), 2) Dodania usług (<b>Zabiegi</b>), 3) Wprowadzenia pierwszych klientów (<b>Klienci</b>). Resztą zajmiesz się w trakcie!' },
+      { category:'Ogólne', keywords:'na jakich urządzeniach działa, mobile, tablet, telefon, przeglądarka', answer:'Estelio działa w przeglądarce internetowej na komputerze, tablecie i smartfonie. Nie wymaga instalacji — wystarczy adres <b>estelio.com.pl</b>.' },
+      { category:'Ogólne', keywords:'bezpieczeństwo danych, RODO, ochrona danych, prywatność', answer:'Dane przechowywane są na serwerach w UE (Hostinger). System posiada szyfrowanie SSL, kontrolę dostępu i izolację danych między salonami. Pełna polityka prywatności dostępna na stronie.' },
+      { category:'Ogólne', keywords:'zgłoś błąd, problem techniczny, coś nie działa, bug', answer:'Opisz problem i wyślij na <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>. Podaj co dokładnie się stało i na jakim widoku — to bardzo przyspiesza rozwiązanie.' },
+      { category:'Ogólne', keywords:'aktualizacje systemu, nowe funkcje, co nowego, changelog', answer:'Aktualizacje wdrażamy automatycznie — nie musisz nic robić. O ważnych zmianach informujemy emailem. Masz pomysł na nową funkcję? Napisz do nas! 🌸' },
+    ];
+
+    ensureKbTable(() => {
+      // Sprawdź ile jest już wpisów globalnych
+      db.query(`SELECT COUNT(*) AS cnt FROM help_kb WHERE tenant_id = ?`, [GLOBAL_TENANT], (err, rows) => {
+        if (err) return res.json({ status: 'error', message: 'Błąd bazy.' });
+        const existing = rows[0].cnt;
+        if (existing > 0 && !force) {
+          return res.json({ status: 'error', message: `Baza już zawiera ${existing} wpisów. Użyj force:true aby nadpisać.` });
+        }
+
+        // Jeśli force — wyczyść istniejące globalne
+        const doInsert = () => {
+          const values = SEED.map(e => [GLOBAL_TENANT, e.keywords, e.answer, e.category]);
+          db.query(
+            `INSERT INTO help_kb (tenant_id, keywords, answer, category) VALUES ?`,
+            [values],
+            (err, result) => {
+              if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
+              res.json({ status: 'ok', inserted: result.affectedRows });
+            }
+          );
+        };
+
+        if (force && existing > 0) {
+          db.query(`DELETE FROM help_kb WHERE tenant_id = ?`, [GLOBAL_TENANT], (err) => {
+            if (err) return res.json({ status: 'error', message: 'Błąd czyszczenia.' });
+            doInsert();
+          });
+        } else {
+          doInsert();
+        }
+      });
+    });
+  });
+
   // DELETE /api/admin/help-kb/:id
   router.delete('/admin/help-kb/:id', requireAdmin, (req, res) => {
     const id = parseInt(req.params.id, 10);

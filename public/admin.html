@@ -1629,7 +1629,12 @@ function kb_renderPanel(items) {
 .kb-filter-btn.active{background:#fff0f3;border-color:#ff758c;color:#ff758c;font-weight:700}
 </style>
 
-<h2 style="font-size:18px;font-weight:800;margin-bottom:6px;">💬 Baza Wiedzy Chatu Pomocy</h2>
+<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
+  <h2 style="font-size:18px;font-weight:800;margin:0;">💬 Baza Wiedzy Chatu Pomocy</h2>
+  <button id="kb-seed-btn" onclick="kb_seed()" style="padding:9px 18px;background:linear-gradient(135deg,#ff758c,#ff7eb3);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(255,117,140,.3);">
+    📥 Załaduj przykładowe wpisy
+  </button>
+</div>
 <p style="font-size:13px;color:#6b7280;margin-bottom:22px;line-height:1.6;">
   Wpisy globalne — widoczne w chacie pomocy we wszystkich salonach jako domyślne odpowiedzi.
   Własne wpisy salonu mają wyższy priorytet.
@@ -1722,6 +1727,45 @@ async function kb_init() {
     kb_renderPanel(d);
   } catch(e) {
     cont.innerHTML = '<div class="alert alert-error">Błąd połączenia z serwerem.</div>';
+  }
+}
+
+async function kb_seed() {
+  const btn = document.getElementById('kb-seed-btn');
+  if (!btn) return;
+
+  // Sprawdź czy są już wpisy
+  const r0 = await fetch(`${API}/admin/help-kb`, { headers: { 'X-Admin-Token': adminToken } });
+  const existing = await r0.json();
+  const count = Array.isArray(existing) ? existing.length : 0;
+
+  if (count > 0) {
+    if (!confirm(`W bazie jest już ${count} wpisów.\nCzy chcesz je usunąć i wczytać przykładowe od nowa?`)) return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = '⏳ Wczytuję...';
+
+  try {
+    const r = await fetch(`${API}/admin/help-kb/seed`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ force: count > 0 })
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      btn.textContent = `✅ Dodano ${d.inserted} wpisów!`;
+      setTimeout(() => { btn.textContent = '📥 Załaduj przykładowe wpisy'; btn.disabled = false; }, 2500);
+      kb_init();
+    } else {
+      alert(d.message || 'Błąd.');
+      btn.textContent = '📥 Załaduj przykładowe wpisy';
+      btn.disabled = false;
+    }
+  } catch(e) {
+    alert('Błąd połączenia.');
+    btn.textContent = '📥 Załaduj przykładowe wpisy';
+    btn.disabled = false;
   }
 }
 
