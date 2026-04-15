@@ -143,6 +143,7 @@ const stripeRoutes     = require('./routes/stripe')(db);
 const dokumentyRoutes  = require('./routes/dokumenty')(db);
 const magdaRoutes      = require('./routes/magda')(db);
 const helpkbRoutes     = require('./routes/helpkb')(db);
+const billingRoutes    = require('./routes/billing')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -165,6 +166,7 @@ app.use('/api', stripeRoutes);
 app.use('/api', dokumentyRoutes);
 app.use('/api', magdaRoutes);
 app.use('/api', helpkbRoutes);
+app.use('/api', billingRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -178,6 +180,7 @@ const PUBLIC_PATHS = [
   '/rejestracja/weryfikuj', '/rejestracja/zaloz',
   '/zamowienie', '/voucher/weryfikuj',
   '/stripe/webhook', '/kontakt',
+  '/billing/login',
 ];
 
 app.use('/api', (req, res, next) => {

@@ -213,7 +213,16 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
         </ul>
       </div>
 
-      <p style="font-size:12px; color:#a89e96; line-height:1.7; margin-top:20px;">
+      <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px; margin-top:8px;">
+        <p style="font-size:12px; font-weight:700; color:#c9a96e; margin:0 0 5px; text-transform:uppercase; letter-spacing:0.5px;">Panel rozliczeniowy</p>
+        <p style="font-size:12px; color:#7a6e66; margin:0; line-height:1.7;">
+          Faktury, status subskrypcji i historię płatności znajdziesz w panelu rozliczeniowym:<br>
+          <a href="${APP_URL()}/billing.html" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/billing.html</a><br>
+          <span style="opacity:.8;">Logujesz się tymi samymi danymi co do systemu Estelio.</span>
+        </p>
+      </div>
+
+      <p style="font-size:12px; color:#a89e96; line-height:1.7; margin-top:16px;">
         Masz pytania? Odpisz na tego maila lub napisz na
         <a href="mailto:${ADMIN_EMAIL()}" style="color:#b87080; text-decoration:none;">${ADMIN_EMAIL()}</a>.
       </p>

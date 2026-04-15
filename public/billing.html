@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estelio — Rozliczenia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --dark:       #1c1a18;
+      --dark2:      #2a2420;
+      --rose:       #b87080;
+      --rose-dark:  #a05e6e;
+      --rose-light: #f3dfe3;
+      --gold:       #c9a96e;
+      --cream:      #f4efe6;
+      --cream2:     #ede6d8;
+      --ink:        #2c2420;
+      --muted:      #7a6e66;
+      --border:     #e0d8ce;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+
+    /* ── LOGIN SCREEN ── */
+    #login-screen {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    #login-screen::before {
+      content: '';
+      position: fixed;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(184,112,128,.18) 0%, transparent 70%);
+      top: -80px; right: -80px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    #login-screen::after {
+      content: '';
+      position: fixed;
+      width: 300px; height: 300px;
+      background: radial-gradient(circle, rgba(201,169,110,.15) 0%, transparent 70%);
+      bottom: -60px; left: -60px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .login-card {
+      background: #fff;
+      border: 1px solid var(--cream2);
+      border-radius: 20px;
+      padding: 48px 44px;
+      width: 100%;
+      max-width: 400px;
+      box-shadow: 0 8px 40px rgba(28,26,24,.1);
+      position: relative;
+      z-index: 1;
+    }
+    .login-logo {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+    .login-logo .eyebrow {
+      font-size: .68rem;
+      letter-spacing: .2em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+    .login-logo h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem;
+      font-weight: 600;
+      color: var(--dark);
+      letter-spacing: .03em;
+      line-height: 1;
+    }
+    .login-logo .subtitle {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label {
+      display: block;
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 7px;
+    }
+    .form-group input {
+      width: 100%;
+      padding: 13px 16px;
+      background: var(--cream);
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      font-size: .95rem;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--ink);
+      outline: none;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .form-group input:focus {
+      background: #fff;
+      border-color: var(--rose);
+      box-shadow: 0 0 0 3px rgba(184,112,128,.12);
+    }
+    .form-group input::placeholder { color: #b0a898; }
+
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: var(--rose);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: .95rem;
+      font-weight: 600;
+      font-family: 'DM Sans', sans-serif;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background .2s, transform .15s;
+      box-shadow: 0 4px 16px rgba(184,112,128,.3);
+    }
+    .btn-login:hover:not(:disabled) { background: var(--rose-dark); transform: translateY(-1px); }
+    .btn-login:disabled { opacity: .6; cursor: not-allowed; }
+
+    .login-error {
+      background: #fff0f2;
+      border: 1px solid #f3c0c8;
+      color: #9b2335;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: .85rem;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .login-hint {
+      text-align: center;
+      font-size: .75rem;
+      color: var(--muted);
+      margin-top: 20px;
+      line-height: 1.6;
+    }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; min-height: 100vh; flex-direction: column; }
+
+    .dash-header {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .dash-header-brand {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+    }
+    .dash-header-brand h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--gold);
+      letter-spacing: .06em;
+    }
+    .dash-header-brand span {
+      font-size: .72rem;
+      color: rgba(255,255,255,.45);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .dash-header-salon {
+      font-size: .85rem;
+      color: rgba(255,255,255,.6);
+      text-align: right;
+    }
+    .dash-header-salon strong { display: block; color: #fff; font-size: .9rem; }
+
+    .btn-logout {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.7);
+      padding: 7px 16px;
+      border-radius: 8px;
+      font-size: .8rem;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      transition: background .2s;
+      white-space: nowrap;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    .dash-body {
+      padding: 40px 32px;
+      max-width: 800px;
+      width: 100%;
+      margin: 0 auto;
+      flex: 1;
+    }
+
+    .section-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 6px;
+    }
+    .section-sub {
+      font-size: .82rem;
+      color: var(--muted);
+      margin-bottom: 24px;
+    }
+
+    /* ── STATUS CARD ── */
+    .status-card {
+      background: #fff;
+      border: 1px solid var(--cream2);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    .status-icon {
+      width: 56px; height: 56px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.6rem;
+      flex-shrink: 0;
+    }
+    .status-icon.active  { background: #edf7ed; }
+    .status-icon.expired { background: #fff0f2; }
+    .status-info { flex: 1; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    .status-badge.active  { background: #edf7ed; color: #2d7a38; }
+    .status-badge.expired { background: #fff0f2; color: #9b2335; }
+    .status-dates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .status-date-item { font-size: .85rem; }
+    .status-date-item .lbl { color: var(--muted); font-size: .75rem; margin-bottom: 2px; }
+    .status-date-item .val { color: var(--ink); font-weight: 600; }
+
+    /* ── DETAILS GRID ── */
+    .detail-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 540px) { .detail-grid { grid-template-columns: 1fr; } }
+
+    .detail-card {
+      background: #fff;
+      border: 1px solid var(--cream2);
+      border-radius: 14px;
+      padding: 20px 22px;
+    }
+    .detail-card .dc-lbl {
+      font-size: .7rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .detail-card .dc-val {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--dark);
+    }
+    .detail-card .dc-sub {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ── INVOICES SECTION ── */
+    .invoices-card {
+      background: #fff;
+      border: 1px solid var(--cream2);
+      border-radius: 16px;
+      padding: 28px 32px;
+      margin-bottom: 24px;
+    }
+    .invoices-card h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .invoices-placeholder {
+      text-align: center;
+      padding: 32px 16px;
+      color: var(--muted);
+    }
+    .invoices-placeholder .ph-icon { font-size: 2.4rem; margin-bottom: 12px; }
+    .invoices-placeholder p { font-size: .9rem; line-height: 1.7; }
+
+    /* ── CANCEL SECTION ── */
+    .cancel-card {
+      background: #fff;
+      border: 1px solid var(--cream2);
+      border-radius: 16px;
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .cancel-info h4 { font-size: .95rem; font-weight: 600; color: var(--ink); margin-bottom: 4px; }
+    .cancel-info p  { font-size: .82rem; color: var(--muted); line-height: 1.5; }
+    .btn-cancel {
+      padding: 10px 22px;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      border-radius: 8px;
+      font-size: .85rem;
+      font-family: 'DM Sans', sans-serif;
+      color: var(--muted);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: border-color .2s, color .2s;
+    }
+    .btn-cancel:hover { border-color: #e07070; color: #c0353a; }
+
+    /* ── FOOTER ── */
+    .dash-footer {
+      background: var(--cream2);
+      border-top: 1px solid var(--border);
+      padding: 16px 32px;
+      text-align: center;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+
+    /* ── LOADING ── */
+    .skeleton {
+      background: linear-gradient(90deg, #f0ebe3 25%, #e8e0d4 50%, #f0ebe3 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 6px;
+    }
+    @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+    @media (max-width: 600px) {
+      .login-card { padding: 36px 24px; }
+      .dash-header { padding: 16px 20px; }
+      .dash-body { padding: 28px 20px; }
+      .status-card { padding: 20px; }
+      .invoices-card, .cancel-card { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="eyebrow">Panel rozliczeniowy</div>
+      <h1>Estelio</h1>
+      <div class="subtitle">Zaloguj się, aby zobaczyć swoje rozliczenia</div>
+    </div>
+    <form id="login-form" onsubmit="zaloguj(event)">
+      <div class="form-group">
+        <label>Login</label>
+        <input type="text" id="l-login" placeholder="Twój login do Estelio" autocomplete="username" required>
+      </div>
+      <div class="form-group">
+        <label>Hasło</label>
+        <input type="password" id="l-haslo" placeholder="••••••••" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login" id="btn-zaloguj">Zaloguj się</button>
+      <div class="login-error" id="login-error"></div>
+    </form>
+    <div class="login-hint">
+      Używasz tych samych danych co do panelu Estelio.<br>
+      Masz problem? Napisz na <a href="mailto:kontakt@estelio.com.pl" style="color:var(--rose);text-decoration:none;">kontakt@estelio.com.pl</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ DASHBOARD ══════════════ -->
+<div id="dashboard">
+
+  <header class="dash-header">
+    <div class="dash-header-brand">
+      <h1>Estelio</h1>
+      <span>Rozliczenia</span>
+    </div>
+    <div class="dash-header-salon">
+      <strong id="hdr-salon">—</strong>
+      <span id="hdr-email"></span>
+    </div>
+    <button class="btn-logout" onclick="wyloguj()">Wyloguj</button>
+  </header>
+
+  <main class="dash-body">
+
+    <!-- Status subskrypcji -->
+    <div class="section-title">Status subskrypcji</div>
+    <div class="section-sub">Aktualny stan Twojego dostępu do systemu Estelio.</div>
+
+    <div class="status-card" id="status-card">
+      <div class="status-icon" id="status-icon">⏳</div>
+      <div class="status-info">
+        <div class="status-badge" id="status-badge">Ładowanie...</div>
+        <div class="status-dates">
+          <div class="status-date-item">
+            <div class="lbl">Ważna do</div>
+            <div class="val" id="stat-wazna">—</div>
+          </div>
+          <div class="status-date-item">
+            <div class="lbl">Data rejestracji</div>
+            <div class="val" id="stat-rejestracja">—</div>
+          </div>
+          <div class="status-date-item">
+            <div class="lbl">Abonament</div>
+            <div class="val">49 zł / miesiąc</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dane salonu -->
+    <div class="detail-grid">
+      <div class="detail-card">
+        <div class="dc-lbl">Nazwa salonu</div>
+        <div class="dc-val" id="dc-nazwa">—</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-lbl">E-mail kontaktowy</div>
+        <div class="dc-val" id="dc-email">—</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-lbl">Telefon</div>
+        <div class="dc-val" id="dc-telefon">—</div>
+        <div class="dc-sub">widoczny w systemie</div>
+      </div>
+      <div class="detail-card">
+        <div class="dc-lbl">Miasto</div>
+        <div class="dc-val" id="dc-miasto">—</div>
+      </div>
+    </div>
+
+    <!-- Faktury -->
+    <div class="invoices-card">
+      <h3>🧾 Historia faktur</h3>
+      <div class="invoices-placeholder">
+        <div class="ph-icon">📄</div>
+        <p>
+          Twoje faktury VAT pojawią się tutaj automatycznie<br>
+          po każdej opłaconej płatności.<br>
+          <span style="font-size:.8rem; margin-top:6px; display:block; opacity:.7;">
+            Faktury są również wysyłane mailem na Twój adres e-mail po każdej płatności.
+          </span>
+        </p>
+      </div>
+    </div>
+
+    <!-- Anulowanie -->
+    <div class="cancel-card">
+      <div class="cancel-info">
+        <h4>Anulowanie subskrypcji</h4>
+        <p>Chcesz zrezygnować z Estelio? Możesz anulować w dowolnym momencie.<br>Dostęp pozostaje aktywny do końca opłaconego okresu.</p>
+      </div>
+      <button class="btn-cancel" onclick="anulujSubskrypcje()">Anuluj subskrypcję</button>
+    </div>
+
+  </main>
+
+  <footer class="dash-footer">
+    © Estelio · System zarządzania salonem beauty ·
+    <a href="mailto:kontakt@estelio.com.pl" style="color:var(--rose);text-decoration:none;">kontakt@estelio.com.pl</a>
+  </footer>
+
+</div>
+
+<script>
+  const TOKEN_KEY = 'billing_token';
+
+  // ── Pomocnicze ─────────────────────────────────────────────────
+  function formatDate(str) {
+    if (!str) return '—';
+    const d = new Date(str);
+    return d.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  function apiHeaders() {
+    return {
+      'Content-Type': 'application/json',
+      'x-billing-token': localStorage.getItem(TOKEN_KEY) || '',
+    };
+  }
+
+  // ── Login ──────────────────────────────────────────────────────
+  async function zaloguj(e) {
+    e.preventDefault();
+    const btn = document.getElementById('btn-zaloguj');
+    const err = document.getElementById('login-error');
+    err.style.display = 'none';
+    btn.disabled = true;
+    btn.textContent = 'Logowanie...';
+
+    try {
+      const res = await fetch('/api/billing/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          login: document.getElementById('l-login').value.trim(),
+          haslo: document.getElementById('l-haslo').value,
+        }),
+      });
+      const d = await res.json();
+      if (d.status !== 'success') {
+        err.textContent = d.message || 'Błąd logowania.';
+        err.style.display = 'block';
+        return;
+      }
+      localStorage.setItem(TOKEN_KEY, d.token);
+      pokażDashboard(d.salon);
+      wczytajInfo();
+    } catch {
+      err.textContent = 'Błąd połączenia z serwerem.';
+      err.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Zaloguj się';
+    }
+  }
+
+  // ── Wyloguj ────────────────────────────────────────────────────
+  function wyloguj() {
+    localStorage.removeItem(TOKEN_KEY);
+    document.getElementById('dashboard').style.display = 'none';
+    document.getElementById('login-screen').style.display = 'flex';
+  }
+
+  // ── Pokaż dashboard ────────────────────────────────────────────
+  function pokażDashboard(salon) {
+    document.getElementById('login-screen').style.display = 'none';
+    const dash = document.getElementById('dashboard');
+    dash.style.display = 'flex';
+    if (salon) {
+      document.getElementById('hdr-salon').textContent = salon.nazwa || '';
+      document.getElementById('hdr-email').textContent = salon.email || '';
+    }
+  }
+
+  // ── Wczytaj dane z API ─────────────────────────────────────────
+  async function wczytajInfo() {
+    try {
+      const res = await fetch('/api/billing/info', { headers: apiHeaders() });
+      if (res.status === 403) { wyloguj(); return; }
+      const d = await res.json();
+      if (d.status !== 'success') return;
+      renderDashboard(d.salon);
+    } catch { /* sieć — dane zostaną puste */ }
+  }
+
+  // ── Render danych ──────────────────────────────────────────────
+  function renderDashboard(s) {
+    // Header
+    document.getElementById('hdr-salon').textContent = s.nazwa || '';
+    document.getElementById('hdr-email').textContent = s.email || '';
+
+    // Status badge
+    const badge  = document.getElementById('status-badge');
+    const icon   = document.getElementById('status-icon');
+    if (s.aktywna) {
+      badge.className = 'status-badge active';
+      badge.textContent = '● Aktywna';
+      icon.className = 'status-icon active';
+      icon.textContent = '✅';
+    } else {
+      badge.className = 'status-badge expired';
+      badge.textContent = '● Nieaktywna';
+      icon.className = 'status-icon expired';
+      icon.textContent = '⛔';
+    }
+
+    document.getElementById('stat-wazna').textContent        = formatDate(s.data_waznosci);
+    document.getElementById('stat-rejestracja').textContent  = formatDate(s.data_utworzenia);
+
+    // Dane salonu
+    document.getElementById('dc-nazwa').textContent   = s.nazwa   || '—';
+    document.getElementById('dc-email').textContent   = s.email   || '—';
+    document.getElementById('dc-telefon').textContent = s.telefon || '—';
+    document.getElementById('dc-miasto').textContent  = s.miasto  || '—';
+  }
+
+  // ── Anulowanie ─────────────────────────────────────────────────
+  function anulujSubskrypcje() {
+    // Stripe Customer Portal — zostanie podpięty gdy Stripe będzie aktywny
+    alert('Aby anulować subskrypcję, napisz na kontakt@estelio.com.pl\n\nWkrótce udostępnimy samodzielne anulowanie bezpośrednio w tym panelu.');
+  }
+
+  // ── Start ──────────────────────────────────────────────────────
+  (function init() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (token) {
+      pokażDashboard(null);
+      wczytajInfo();
+    }
+  })();
+</script>
+</body>
+</html>
