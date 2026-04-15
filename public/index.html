@@ -19486,12 +19486,37 @@ function estNormalize(s) {
 }
 
 /* ----------------------------------------------------------
+   MAPA: sekcja systemu → kategoria KB
+   Dzięki temu chat promuje wpisy z kategorii pasującej do
+   aktualnie otwartej sekcji systemu.
+   ---------------------------------------------------------- */
+const EST_SECTION_TO_CAT = {
+    magazyn: 'Magazyn', inwentaryzacja: 'Magazyn', nowy: 'Magazyn', 'co-zamowic': 'Magazyn',
+    klienci: 'Klienci', 'profil-klienta': 'Klienci',
+    sprzedaz: 'Sprzedaż', kasa: 'Sprzedaż', wizyty: 'Sprzedaż',
+    'setup-pracownicy': 'Pracownicy', pracownicy: 'Pracownicy',
+    'setup-zabiegi': 'Usługi', zabiegi: 'Usługi',
+    dashboard: 'Analityka', monthly_report: 'Analityka', yearly: 'Analityka',
+    treatment_analysis: 'Analityka', bi: 'Analityka',
+    vouchery: 'Vouchery', voucher: 'Vouchery',
+    slownik: 'Ustawienia', 'setup-sugestie': 'Ustawienia', 'sekcja-kreator-rabatow': 'Ustawienia',
+    'sekcja-help-kb': 'Ustawienia',
+};
+
+function estActiveCategory() {
+    const active = document.querySelector('.section.active');
+    if (!active) return null;
+    return EST_SECTION_TO_CAT[active.id] || null;
+}
+
+/* ----------------------------------------------------------
    SILNIK DOPASOWANIA — scoring na bazie słów kluczowych
    Przeszukuje EST_KB (wbudowana) + EST_KB_DYNAMIC (z API)
    ---------------------------------------------------------- */
 function estFind(query) {
     const q = estNormalize(query);
     let best = null, bestScore = 0;
+    const activeCat = estActiveCategory(); // np. 'Magazyn' gdy użytkownik jest w sekcji magazynu
 
     // EST_KB_DYNAMIC już zawiera _bonus (3=tenant, 1=global); wbudowane = 0
     const allEntries = [
@@ -19500,7 +19525,9 @@ function estFind(query) {
     ];
 
     allEntries.forEach(item => {
-        let score = item._bonus;
+        let score = item._bonus || 0;
+        // +2 za trafienie w aktywną kategorię sekcji
+        if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
         item.keywords.forEach(kw => {
             const kwN = estNormalize(kw);
             if (q.includes(kwN)) score += kwN.split(' ').length * 2;

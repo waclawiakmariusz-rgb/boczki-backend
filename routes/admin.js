@@ -543,6 +543,8 @@ module.exports = (db) => {
 
   // ─── BAZA WIEDZY CHATU (GLOBALNA) ────────────────────────────
   const GLOBAL_TENANT = '__global__';
+  const VALID_KB_CATEGORIES = ['Ogólne','Magazyn','Klienci','Sprzedaż','Pracownicy','Usługi','Analityka','Vouchery','Ustawienia'];
+  const safeKbCat = (c) => VALID_KB_CATEGORIES.includes(c) ? c : 'Ogólne';
 
   function ensureKbTable(cb) {
     db.query(
@@ -551,10 +553,13 @@ module.exports = (db) => {
         tenant_id  VARCHAR(100) NOT NULL,
         keywords   TEXT NOT NULL,
         answer     TEXT NOT NULL,
+        category   VARCHAR(50) NOT NULL DEFAULT 'Ogólne',
         active     TINYINT(1) NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
-      cb
+      () => {
+        db.query(`ALTER TABLE help_kb ADD COLUMN IF NOT EXISTS category VARCHAR(50) NOT NULL DEFAULT 'Ogólne'`, () => cb && cb());
+      }
     );
   }
 
@@ -562,7 +567,7 @@ module.exports = (db) => {
   router.get('/admin/help-kb', requireAdmin, (req, res) => {
     ensureKbTable(() => {
       db.query(
-        `SELECT id, keywords, answer, active, created_at FROM help_kb WHERE tenant_id = ? ORDER BY id DESC`,
+        `SELECT id, keywords, answer, category, active, created_at FROM help_kb WHERE tenant_id = ? ORDER BY category, id DESC`,
         [GLOBAL_TENANT],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: 'Błąd bazy.' });
@@ -574,12 +579,12 @@ module.exports = (db) => {
 
   // POST /api/admin/help-kb
   router.post('/admin/help-kb', requireAdmin, (req, res) => {
-    const { keywords, answer } = req.body;
+    const { keywords, answer, category } = req.body;
     if (!keywords || !answer) return res.json({ status: 'error', message: 'Uzupełnij słowa kluczowe i odpowiedź.' });
     ensureKbTable(() => {
       db.query(
-        `INSERT INTO help_kb (tenant_id, keywords, answer) VALUES (?, ?, ?)`,
-        [GLOBAL_TENANT, String(keywords).trim(), String(answer).trim()],
+        `INSERT INTO help_kb (tenant_id, keywords, answer, category) VALUES (?, ?, ?, ?)`,
+        [GLOBAL_TENANT, String(keywords).trim(), String(answer).trim(), safeKbCat(category)],
         (err, result) => {
           if (err) return res.json({ status: 'error', message: 'Błąd zapisu.' });
           res.json({ status: 'ok', id: result.insertId });
@@ -591,11 +596,12 @@ module.exports = (db) => {
   // PUT /api/admin/help-kb/:id
   router.put('/admin/help-kb/:id', requireAdmin, (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const { keywords, answer } = req.body;
+    const { keywords, answer, category } = req.body;
     if (!id) return res.json({ status: 'error', message: 'Nieprawidłowe id.' });
     const fields = [], vals = [];
-    if (keywords !== undefined) { fields.push('keywords = ?'); vals.push(String(keywords).trim()); }
-    if (answer   !== undefined) { fields.push('answer = ?');   vals.push(String(answer).trim()); }
+    if (keywords !== undefined) { fields.push('keywords = ?');  vals.push(String(keywords).trim()); }
+    if (answer   !== undefined) { fields.push('answer = ?');    vals.push(String(answer).trim()); }
+    if (category !== undefined) { fields.push('category = ?');  vals.push(safeKbCat(category)); }
     if (!fields.length) return res.json({ status: 'error', message: 'Brak danych.' });
     vals.push(id, GLOBAL_TENANT);
     db.query(

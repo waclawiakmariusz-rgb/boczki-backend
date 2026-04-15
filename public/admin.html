@@ -1545,24 +1545,45 @@ function kb_setupTagInput(inputId, wrapId, stateKey) {
   });
 }
 
+const KB_CATS = ['Ogólne','Magazyn','Klienci','Sprzedaż','Pracownicy','Usługi','Analityka','Vouchery','Ustawienia'];
+const KB_CAT_ICONS = {Ogólne:'📋',Magazyn:'📦',Klienci:'👤',Sprzedaż:'💰',Pracownicy:'👩‍💼',Usługi:'💅',Analityka:'📊',Vouchery:'🏷️',Ustawienia:'⚙️'};
+let kb_activeFilter = 'Wszystkie';
+
+function kb_catSelect(current) {
+  return `<select class="kb-input" id="kb-category" style="margin-bottom:0">
+    ${KB_CATS.map(c=>`<option value="${c}"${c===current?' selected':''}>${KB_CAT_ICONS[c]||''} ${c}</option>`).join('')}
+  </select>`;
+}
+
 function kb_renderPanel(items) {
   const count = items.length;
   const countTxt = count ? `${count} ${count===1?'wpis':count<5?'wpisy':'wpisów'}` : '';
 
-  const listHtml = items.length ? items.map(item => {
+  // Grupuj po kategorii
+  const grouped = {};
+  KB_CATS.forEach(c => grouped[c] = []);
+  items.forEach(item => { const c = item.category||'Ogólne'; if (grouped[c]) grouped[c].push(item); else grouped['Ogólne'].push(item); });
+
+  function renderItem(item) {
     const tags = String(item.keywords).split(',').map(t=>t.trim()).filter(Boolean);
     const tagsHtml = tags.map(t=>`<span class="kb-item-tag">${kb_esc(t)}</span>`).join('');
     const preview = String(item.answer).replace(/<[^>]*>/g,'').substring(0,140);
+    const cat = item.category || 'Ogólne';
     return `
       <div class="kb-item" id="kb-item-${item.id}">
-        <div class="kb-item-kw">${tagsHtml}</div>
+        <div class="kb-item-kw">${tagsHtml}<span class="kb-cat-badge">${KB_CAT_ICONS[cat]||'📋'} ${kb_esc(cat)}</span></div>
         <div class="kb-item-ans">${kb_esc(preview)}${item.answer.length>140?'…':''}</div>
         <div class="kb-item-actions">
-          <button class="kb-btn-sm kb-btn-edit" onclick="kb_otworzEdycje(${item.id},${JSON.stringify(JSON.stringify(tags))},${JSON.stringify(item.answer)})">✏️ Edytuj</button>
+          <button class="kb-btn-sm kb-btn-edit" onclick="kb_otworzEdycje(${item.id},${JSON.stringify(JSON.stringify(tags))},${JSON.stringify(item.answer)},${JSON.stringify(cat)})">✏️ Edytuj</button>
           <button class="kb-btn-sm kb-btn-del" onclick="kb_usun(${item.id})">🗑️ Usuń</button>
         </div>
       </div>`;
-  }).join('') : `<div class="kb-empty"><div style="font-size:36px;margin-bottom:10px;">💬</div>Brak wpisów — dodaj pierwszy po lewej.</div>`;
+  }
+
+  const filtered = kb_activeFilter === 'Wszystkie' ? items : items.filter(i=>(i.category||'Ogólne')===kb_activeFilter);
+  const listHtml = filtered.length
+    ? filtered.map(renderItem).join('')
+    : `<div class="kb-empty"><div style="font-size:36px;margin-bottom:10px;">💬</div>${items.length?'Brak wpisów w tej kategorii.':'Brak wpisów — dodaj pierwszy po lewej.'}</div>`;
 
   document.getElementById('kb-content').innerHTML = `
 <style>
@@ -1601,7 +1622,11 @@ function kb_renderPanel(items) {
 .kb-toast.err{background:#fff0f0;color:#dc2626;border:1px solid #fecaca}
 #kb-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:center;justify-content:center}
 #kb-modal-overlay.open{display:flex}
-#kb-modal{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:500px;box-shadow:0 20px 50px rgba(0,0,0,.15);position:relative;max-height:90vh;overflow-y:auto}
+#kb-modal{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.15);position:relative;max-height:90vh;overflow-y:auto}
+.kb-cat-badge{background:#f1f5f9;color:#64748b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500;margin-left:4px}
+.kb-filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+.kb-filter-btn{padding:5px 13px;border-radius:20px;font-size:12px;font-family:inherit;font-weight:500;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#64748b;transition:all .15s}
+.kb-filter-btn.active{background:#fff0f3;border-color:#ff758c;color:#ff758c;font-weight:700}
 </style>
 
 <h2 style="font-size:18px;font-weight:800;margin-bottom:6px;">💬 Baza Wiedzy Chatu Pomocy</h2>
@@ -1613,6 +1638,10 @@ function kb_renderPanel(items) {
 <div class="kb-layout">
   <div class="kb-card">
     <div class="kb-card-title">✏️ Dodaj nowy wpis</div>
+    <div style="margin-bottom:14px">
+      <label class="kb-label">Kategoria</label>
+      ${kb_catSelect('Ogólne')}
+    </div>
     <div style="margin-bottom:14px">
       <label class="kb-label">Słowa kluczowe</label>
       <div class="kb-tags-wrap" id="kb-tags-wrap" onclick="document.getElementById('kb-tag-input').focus()">
@@ -1633,6 +1662,10 @@ function kb_renderPanel(items) {
       <span>📋 Zapisane wpisy</span>
       <span style="font-size:12px;color:#a0aec0;font-weight:400">${countTxt}</span>
     </div>
+    <div class="kb-filters" id="kb-filters">
+      <button class="kb-filter-btn${kb_activeFilter==='Wszystkie'?' active':''}" onclick="kb_setFilter('Wszystkie')">📋 Wszystkie</button>
+      ${KB_CATS.filter(c=>grouped[c]&&grouped[c].length).map(c=>`<button class="kb-filter-btn${kb_activeFilter===c?' active':''}" onclick="kb_setFilter('${c}')">${KB_CAT_ICONS[c]||''} ${c} <span style="opacity:.6">${grouped[c].length}</span></button>`).join('')}
+    </div>
     <div class="kb-list" id="kb-list">${listHtml}</div>
     <div class="kb-toast" id="kb-toast-list"></div>
   </div>
@@ -1643,6 +1676,12 @@ function kb_renderPanel(items) {
 <div id="kb-modal">
   <div style="font-size:15px;font-weight:700;margin-bottom:18px">✏️ Edytuj wpis</div>
   <input type="hidden" id="kb-edit-id">
+  <div style="margin-bottom:14px">
+    <label class="kb-label">Kategoria</label>
+    <select class="kb-input" id="kb-edit-category">
+      ${KB_CATS.map(c=>`<option value="${c}">${KB_CAT_ICONS[c]||''} ${c}</option>`).join('')}
+    </select>
+  </div>
   <div style="margin-bottom:14px">
     <label class="kb-label">Słowa kluczowe</label>
     <div class="kb-tags-wrap" id="kb-edit-tags-wrap" onclick="document.getElementById('kb-edit-tag-input').focus()">
@@ -1686,6 +1725,11 @@ async function kb_init() {
   }
 }
 
+function kb_setFilter(cat) {
+  kb_activeFilter = cat;
+  kb_init();
+}
+
 async function kb_dodaj() {
   const tagInput = document.getElementById('kb-tag-input');
   if (tagInput?.value.trim()) {
@@ -1696,6 +1740,7 @@ async function kb_dodaj() {
   }
   const keywords = kb_state.add.join(', ');
   const answer   = (document.getElementById('kb-answer')?.value||'').trim();
+  const category = document.getElementById('kb-category')?.value || 'Ogólne';
   if (!keywords) { kb_toast('kb-toast-form','err','Dodaj przynajmniej jedno słowo kluczowe.'); return; }
   if (!answer)   { kb_toast('kb-toast-form','err','Wpisz treść odpowiedzi.'); return; }
 
@@ -1705,7 +1750,7 @@ async function kb_dodaj() {
     const r = await fetch(`${API}/admin/help-kb`, {
       method: 'POST',
       headers: { 'Content-Type':'application/json', 'X-Admin-Token': adminToken },
-      body: JSON.stringify({ keywords, answer })
+      body: JSON.stringify({ keywords, answer, category })
     });
     const d = await r.json();
     if (d.status === 'ok') {
@@ -1731,10 +1776,12 @@ async function kb_usun(id) {
   } catch(e) { kb_toast('kb-toast-list','err','Błąd połączenia.'); }
 }
 
-function kb_otworzEdycje(id, tagsJson, answer) {
+function kb_otworzEdycje(id, tagsJson, answer, category) {
   kb_state.edit = [...JSON.parse(tagsJson)];
   document.getElementById('kb-edit-id').value = id;
   document.getElementById('kb-edit-answer').value = answer;
+  const catSel = document.getElementById('kb-edit-category');
+  if (catSel) catSel.value = category || 'Ogólne';
   kb_renderTags('kb-edit-tags-wrap', kb_state.edit, 'edit');
   document.getElementById('kb-modal-overlay').classList.add('open');
   document.getElementById('kb-edit-tag-input').focus();
@@ -1762,7 +1809,7 @@ async function kb_zapisz() {
     const r = await fetch(`${API}/admin/help-kb/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type':'application/json', 'X-Admin-Token': adminToken },
-      body: JSON.stringify({ keywords, answer })
+      body: JSON.stringify({ keywords, answer, category: document.getElementById('kb-edit-category')?.value || 'Ogólne' })
     });
     const d = await r.json();
     if (d.status==='ok') { kb_modalClose(); kb_init(); }
