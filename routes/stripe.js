@@ -41,7 +41,7 @@ module.exports = (db) => {
   router.post('/stripe/create-checkout', async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
-    const { imie, nazwa_salonu, email, telefon, miasto, wiadomosc, kod_rabatowy } = req.body;
+    const { imie, nazwa_salonu, email, telefon, miasto, nip, wiadomosc, kod_rabatowy } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
     }
@@ -120,6 +120,7 @@ module.exports = (db) => {
               email,
               telefon:       telefon || '',
               miasto:        miasto  || '',
+              nip:           nip     || '',
               kod_rabatowy:  voucherInfo ? voucherInfo.kod : '',
               czas_trwania_rabatu: voucherInfo ? voucherInfo.czas_trwania : '',
               czas_trwania_miesiecy: voucherInfo ? String(voucherInfo.czas_trwania_miesiecy || '') : '',

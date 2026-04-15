@@ -1178,6 +1178,10 @@
             </div>
           </div>
           <div class="form-group">
+            <label>NIP <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— opcjonalnie, do faktury VAT dla firmy</span></label>
+            <input type="text" id="f-nip" placeholder="np. 1234567890" maxlength="13">
+          </div>
+          <div class="form-group">
             <label>Wiadomość (opcjonalnie)</label>
             <textarea id="f-wiadomosc" placeholder="np. Mam 3 pracownice, czy system to obsługuje? Mam pytanie dotyczące..."></textarea>
           </div>
@@ -1456,6 +1460,7 @@ async function wyslij(e) {
     email:        document.getElementById('f-email').value.trim(),
     telefon:      document.getElementById('f-telefon').value.trim(),
     miasto:       document.getElementById('f-miasto').value.trim(),
+    nip:          document.getElementById('f-nip').value.replace(/\s|-/g, ''),
     wiadomosc:    document.getElementById('f-wiadomosc').value.trim(),
     kod_rabatowy: window._zastosowanyVoucher || '',
   };
