@@ -24,7 +24,7 @@ try {
 
 const APP_URL = () => process.env.APP_URL || 'https://yellow-ibex-409594.hostingersite.com';
 const CENA_GROSZE = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900; // 49 zł domyślnie
-const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Boczki na bok';
+const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
 
 module.exports = (db) => {
 
