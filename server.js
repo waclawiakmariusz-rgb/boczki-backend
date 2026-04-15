@@ -142,6 +142,7 @@ const adminRoutes      = require('./routes/admin')(db);
 const stripeRoutes     = require('./routes/stripe')(db);
 const dokumentyRoutes  = require('./routes/dokumenty')(db);
 const magdaRoutes      = require('./routes/magda')(db);
+const helpkbRoutes     = require('./routes/helpkb')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -163,6 +164,7 @@ app.use('/api', adminRoutes);
 app.use('/api', stripeRoutes);
 app.use('/api', dokumentyRoutes);
 app.use('/api', magdaRoutes);
+app.use('/api', helpkbRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI

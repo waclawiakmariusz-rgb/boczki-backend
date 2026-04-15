@@ -2923,6 +2923,7 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
                         <li><button onclick="pokaz('setup-pracownicy', this)">👩‍💼 Pracownicy</button></li>
                         <li><button onclick="pokaz('setup-sugestie', this)">🧠 Sugestia</button></li>
 						<li><button onclick="pokaz('slownik', this)">⚙️ Kosmetyki</button></li>
+                        <li><button onclick="pokaz('sekcja-help-kb', this); hkb_init()">💬 Baza Wiedzy Chatu</button></li>
                     </ul>
                 </li>
                 
@@ -3130,8 +3131,235 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
     </div>
 </div>
 <!-- koniec RETENCJA -->
-		
-			<div id="slownik" class="section">
+
+<!-- ============================================================
+     PANEL: BAZA WIEDZY CHATU POMOCY
+     ============================================================ -->
+<div id="sekcja-help-kb" class="section">
+<style>
+/* ── HELP KB PANEL ─────────────────────────────────────── */
+.hkb-layout { display: grid; grid-template-columns: 1fr 1.6fr; gap: 24px; align-items: start; }
+@media (max-width: 900px) { .hkb-layout { grid-template-columns: 1fr; } }
+
+.hkb-card {
+    background: #fff;
+    border-radius: 24px;
+    padding: 28px 24px;
+    box-shadow: var(--shadow-soft);
+    border: 1px solid #f0eef0;
+}
+body.dark-mode .hkb-card { background: #1e293b; border-color: #334155; }
+
+.hkb-card-title {
+    font-size: 15px; font-weight: 700; color: var(--text-dark);
+    margin: 0 0 20px 0; display: flex; align-items: center; gap: 8px;
+}
+body.dark-mode .hkb-card-title { color: #f1f5f9; }
+
+/* Form */
+.hkb-label { display: block; font-size: 12px; font-weight: 600; color: #6b7280; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+body.dark-mode .hkb-label { color: #94a3b8; }
+.hkb-input, .hkb-textarea {
+    width: 100%; padding: 11px 14px; border: 1.5px solid #e5e7eb;
+    border-radius: 12px; font-family: inherit; font-size: 14px;
+    color: var(--text-dark); outline: none; transition: border-color .2s;
+    background: #fafafa; box-sizing: border-box;
+}
+body.dark-mode .hkb-input, body.dark-mode .hkb-textarea { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+.hkb-input:focus, .hkb-textarea:focus { border-color: var(--primary); background: #fff; }
+body.dark-mode .hkb-input:focus, body.dark-mode .hkb-textarea:focus { background: #1e293b; }
+.hkb-textarea { resize: vertical; min-height: 110px; line-height: 1.6; }
+
+/* Tag input */
+.hkb-tags-wrap {
+    display: flex; flex-wrap: wrap; gap: 6px; align-items: center;
+    padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 12px;
+    background: #fafafa; min-height: 46px; cursor: text; transition: border-color .2s;
+}
+.hkb-tags-wrap:focus-within { border-color: var(--primary); background: #fff; }
+body.dark-mode .hkb-tags-wrap { background: #0f172a; border-color: #334155; }
+body.dark-mode .hkb-tags-wrap:focus-within { background: #1e293b; }
+.hkb-tag {
+    background: #fde8ed; color: #b87080; border-radius: 20px;
+    padding: 3px 10px 3px 12px; font-size: 12.5px; font-weight: 500;
+    display: flex; align-items: center; gap: 5px; white-space: nowrap;
+}
+body.dark-mode .hkb-tag { background: #3b1a24; color: #f4a0b0; }
+.hkb-tag-del {
+    background: none; border: none; cursor: pointer; color: inherit;
+    padding: 0; font-size: 14px; line-height: 1; opacity: .7;
+    transition: opacity .15s;
+}
+.hkb-tag-del:hover { opacity: 1; }
+.hkb-tag-input {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 13px; color: var(--text-dark);
+    min-width: 120px; flex: 1;
+}
+body.dark-mode .hkb-tag-input { color: #e2e8f0; }
+.hkb-tag-hint { font-size: 11px; color: #a0aec0; margin-top: 4px; }
+
+/* Buttons */
+.hkb-btn-add {
+    width: 100%; padding: 13px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: #fff; border: none; border-radius: 14px;
+    font-family: inherit; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 16px;
+    box-shadow: 0 6px 18px var(--primary-glow);
+    transition: transform .2s, box-shadow .2s;
+}
+.hkb-btn-add:hover { transform: translateY(-2px); box-shadow: 0 10px 24px var(--primary-glow); }
+.hkb-btn-add:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+/* List */
+.hkb-list { display: flex; flex-direction: column; gap: 12px; }
+.hkb-item {
+    background: #fff; border: 1.5px solid #f0eef0;
+    border-radius: 18px; padding: 16px 18px;
+    transition: box-shadow .2s, border-color .2s;
+    position: relative;
+}
+body.dark-mode .hkb-item { background: #1e293b; border-color: #334155; }
+.hkb-item:hover { box-shadow: 0 4px 16px rgba(184,112,128,.12); border-color: #f5cdd3; }
+body.dark-mode .hkb-item:hover { border-color: #4b3040; }
+
+.hkb-item-kw { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+.hkb-item-tag {
+    background: #fde8ed; color: #b87080; border-radius: 20px;
+    padding: 2px 10px; font-size: 11.5px; font-weight: 500;
+}
+body.dark-mode .hkb-item-tag { background: #3b1a24; color: #f4a0b0; }
+.hkb-item-ans {
+    font-size: 13px; color: #4a5568; line-height: 1.6;
+    /* Pokaż HTML jako tekst */
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+body.dark-mode .hkb-item-ans { color: #cbd5e1; }
+.hkb-item-actions {
+    display: flex; gap: 8px; margin-top: 12px; justify-content: flex-end;
+}
+.hkb-btn-sm {
+    padding: 6px 14px; border-radius: 10px; font-size: 12px;
+    font-family: inherit; font-weight: 600; cursor: pointer; border: none;
+    transition: opacity .15s, transform .15s;
+}
+.hkb-btn-sm:hover { opacity: .85; transform: translateY(-1px); }
+.hkb-btn-edit { background: #f0f4ff; color: #6366f1; }
+body.dark-mode .hkb-btn-edit { background: #1e2353; color: #a5b4fc; }
+.hkb-btn-del  { background: #fff0f0; color: #ef4444; }
+body.dark-mode .hkb-btn-del  { background: #3b1212; color: #fca5a5; }
+
+.hkb-badge-off {
+    display: inline-block; background: #fee2e2; color: #dc2626;
+    border-radius: 6px; font-size: 10px; font-weight: 700;
+    padding: 1px 7px; margin-left: 6px; vertical-align: middle;
+}
+
+/* Empty state */
+.hkb-empty {
+    text-align: center; padding: 40px 20px; color: #a0aec0; font-size: 14px;
+}
+.hkb-empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+/* Toast inline */
+.hkb-toast {
+    padding: 10px 16px; border-radius: 12px; font-size: 13px;
+    margin-top: 12px; display: none;
+}
+.hkb-toast.ok  { background: #f0fff4; color: #15803d; border: 1px solid #bbf7d0; }
+.hkb-toast.err { background: #fff0f0; color: #dc2626; border: 1px solid #fecaca; }
+
+/* Edit modal overlay */
+#hkb-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.45);
+    z-index: 99998; display: none; align-items: center; justify-content: center;
+}
+#hkb-modal-overlay.open { display: flex; }
+#hkb-modal {
+    background: #fff; border-radius: 24px; padding: 32px 28px;
+    width: 100%; max-width: 520px; box-shadow: 0 24px 60px rgba(0,0,0,.18);
+    position: relative; animation: estFadeIn .2s ease;
+    max-height: 90vh; overflow-y: auto;
+}
+body.dark-mode #hkb-modal { background: #1e293b; }
+</style>
+
+<div class="header">
+    <h1>💬 Baza Wiedzy — Chat Pomocy</h1>
+</div>
+<p style="color:#6b7280; font-size:13px; margin-bottom:24px; line-height:1.6;">
+    Dodaj własne pytania i odpowiedzi — pojawią się w chacie pomocy obok Twojego systemu.
+    Chat dopasowuje pytania klientów do słów kluczowych i wyświetla odpowiedź automatycznie.
+</p>
+
+<div class="hkb-layout">
+    <!-- LEWA: formularz dodawania -->
+    <div class="hkb-card" id="hkb-form-card">
+        <div class="hkb-card-title">✏️ Dodaj nowy wpis</div>
+
+        <div style="margin-bottom:16px;">
+            <label class="hkb-label">Słowa kluczowe</label>
+            <div class="hkb-tags-wrap" id="hkb-tags-wrap" onclick="document.getElementById('hkb-tag-input').focus()">
+                <!-- tagi generowane przez JS -->
+                <input id="hkb-tag-input" class="hkb-tag-input" placeholder="Wpisz i naciśnij Enter lub przecinek…" maxlength="60">
+            </div>
+            <div class="hkb-tag-hint">Wpisuj każde słowo kluczowe i zatwierdzaj Enterem lub przecinkiem. Im więcej, tym lepiej.</div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <label class="hkb-label">Odpowiedź</label>
+            <textarea class="hkb-textarea" id="hkb-answer" placeholder="Wpisz treść odpowiedzi, którą chat wyświetli użytkownikowi. Możesz używać HTML (<b>, <br>, <a>)."></textarea>
+        </div>
+
+        <button class="hkb-btn-add" id="hkb-btn-add" onclick="hkb_dodaj()">➕ Dodaj wpis</button>
+        <div class="hkb-toast" id="hkb-toast-form"></div>
+    </div>
+
+    <!-- PRAWA: lista wpisów -->
+    <div class="hkb-card">
+        <div class="hkb-card-title" style="justify-content:space-between;">
+            <span>📋 Zapisane wpisy</span>
+            <span id="hkb-count" style="font-size:12px; color:#a0aec0; font-weight:400;"></span>
+        </div>
+        <div class="hkb-list" id="hkb-list">
+            <div class="hkb-empty"><div class="hkb-empty-icon">💬</div>Brak wpisów — dodaj pierwszy po lewej.</div>
+        </div>
+        <div class="hkb-toast" id="hkb-toast-list"></div>
+    </div>
+</div>
+</div>
+<!-- koniec HELP KB -->
+
+<!-- MODAL EDYCJI -->
+<div id="hkb-modal-overlay">
+<div id="hkb-modal">
+    <div class="hkb-card-title" style="margin-bottom:20px;">✏️ Edytuj wpis</div>
+    <input type="hidden" id="hkb-edit-id">
+
+    <div style="margin-bottom:16px;">
+        <label class="hkb-label">Słowa kluczowe</label>
+        <div class="hkb-tags-wrap" id="hkb-edit-tags-wrap" onclick="document.getElementById('hkb-edit-tag-input').focus()">
+            <input id="hkb-edit-tag-input" class="hkb-tag-input" placeholder="Wpisz i naciśnij Enter lub przecinek…" maxlength="60">
+        </div>
+        <div class="hkb-tag-hint">Enter lub przecinek dodaje tag.</div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+        <label class="hkb-label">Odpowiedź</label>
+        <textarea class="hkb-textarea" id="hkb-edit-answer" style="min-height:130px;"></textarea>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:8px;">
+        <button class="hkb-btn-sm hkb-btn-del" onclick="hkb_modalClose()" style="padding:9px 20px; font-size:13px;">Anuluj</button>
+        <button class="hkb-btn-add" id="hkb-btn-save-edit" onclick="hkb_zapisz()" style="width:auto; padding:10px 28px; margin-top:0;">💾 Zapisz zmiany</button>
+    </div>
+    <div class="hkb-toast" id="hkb-toast-modal"></div>
+</div>
+</div>
+
+		<div id="slownik" class="section">
     <div class="header"><h1>Kreator Produktu / Kosmetyku</h1></div>
     <div class="card">
         <p style="font-size:12px; color:#666; margin-bottom:15px;">Tutaj definiujesz nazwy i ceny sprzedaży kosmetyków. Te dane pojawią się w "Rejestracji Sprzedaży".</p>
@@ -18596,6 +18824,804 @@ function dokumentInicjalizujWidget(prefix, url) {
     document.getElementById(`${prefix}-upload-done`).style.display = 'none';
   }
 }
+</script>
+
+<script>
+/* ============================================================
+   HELP KB PANEL — zarządzanie bazą wiedzy chatu
+   ============================================================ */
+
+// Stan tagów dla formularzy
+const hkb_state = {
+  add:  [],   // tagi w formularzu dodawania
+  edit: []    // tagi w modalu edycji
+};
+
+/* ── helpers tagów ───────────────────────────────────────── */
+function hkb_renderTags(containerId, tags, stateKey) {
+  const wrap = document.getElementById(containerId);
+  // usuń wszystkie tagi (zachowaj input)
+  wrap.querySelectorAll('.hkb-tag').forEach(el => el.remove());
+  const input = wrap.querySelector('.hkb-tag-input');
+  tags.forEach((tag, i) => {
+    const span = document.createElement('span');
+    span.className = 'hkb-tag';
+    span.innerHTML = `${tag} <button class="hkb-tag-del" onclick="hkb_delTag('${stateKey}',${i})" type="button">×</button>`;
+    wrap.insertBefore(span, input);
+  });
+}
+
+function hkb_delTag(stateKey, idx) {
+  hkb_state[stateKey].splice(idx, 1);
+  const wrapId = stateKey === 'add' ? 'hkb-tags-wrap' : 'hkb-edit-tags-wrap';
+  hkb_renderTags(wrapId, hkb_state[stateKey], stateKey);
+}
+
+function hkb_setupTagInput(inputId, wrapId, stateKey) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const val = this.value.trim().replace(/,$/, '');
+      if (val && !hkb_state[stateKey].includes(val)) {
+        hkb_state[stateKey].push(val);
+        hkb_renderTags(wrapId, hkb_state[stateKey], stateKey);
+      }
+      this.value = '';
+    } else if (e.key === 'Backspace' && !this.value && hkb_state[stateKey].length) {
+      hkb_state[stateKey].pop();
+      hkb_renderTags(wrapId, hkb_state[stateKey], stateKey);
+    }
+  });
+}
+
+/* ── toast ───────────────────────────────────────────────── */
+function hkb_toast(id, type, msg, ms = 3200) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'hkb-toast ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+
+/* ── API helpers ─────────────────────────────────────────── */
+function hkb_creds() {
+  return {
+    tenant_id:     localStorage.getItem('boczki_tenant_id') || '',
+    session_token: localStorage.getItem('boczki_session_token') || ''
+  };
+}
+
+/* ── INIT — ładuje listę z serwera ──────────────────────── */
+async function hkb_init() {
+  hkb_setupTagInput('hkb-tag-input', 'hkb-tags-wrap', 'add');
+  hkb_setupTagInput('hkb-edit-tag-input', 'hkb-edit-tags-wrap', 'edit');
+
+  const { tenant_id, session_token } = hkb_creds();
+  try {
+    const r = await fetch(`/api/help-kb?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`);
+    const d = await r.json();
+    if (d.status === 'ok') {
+      hkb_renderList(d.data);
+    } else {
+      hkb_toast('hkb-toast-list', 'err', d.message || 'Błąd ładowania.');
+    }
+  } catch(e) {
+    hkb_toast('hkb-toast-list', 'err', 'Błąd połączenia z serwerem.');
+  }
+}
+
+/* ── RENDERUJ LISTĘ ─────────────────────────────────────── */
+function hkb_renderList(items) {
+  const list = document.getElementById('hkb-list');
+  const count = document.getElementById('hkb-count');
+  if (!list) return;
+  count.textContent = items.length ? `${items.length} ${items.length === 1 ? 'wpis' : items.length < 5 ? 'wpisy' : 'wpisów'}` : '';
+
+  if (!items.length) {
+    list.innerHTML = `<div class="hkb-empty"><div class="hkb-empty-icon">💬</div>Brak wpisów — dodaj pierwszy po lewej.</div>`;
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const tags = String(item.keywords).split(',').map(t => t.trim()).filter(Boolean);
+    const tagsHtml = tags.map(t => `<span class="hkb-item-tag">${hkb_esc(t)}</span>`).join('');
+    const ansPreview = String(item.answer).replace(/<[^>]*>/g, '').substring(0, 140);
+    const inactive = item.active == 0 ? `<span class="hkb-badge-off">WYŁĄCZONY</span>` : '';
+    return `
+      <div class="hkb-item" id="hkb-item-${item.id}">
+        <div class="hkb-item-kw">${tagsHtml}${inactive}</div>
+        <div class="hkb-item-ans">${hkb_esc(ansPreview)}${item.answer.length > 140 ? '…' : ''}</div>
+        <div class="hkb-item-actions">
+          <button class="hkb-btn-sm hkb-btn-edit" onclick="hkb_otworzEdycje(${item.id}, ${JSON.stringify(JSON.stringify(tags))}, ${JSON.stringify(item.answer)}, ${item.active})">✏️ Edytuj</button>
+          <button class="hkb-btn-sm hkb-btn-del"  onclick="hkb_usun(${item.id})">🗑️ Usuń</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function hkb_esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── DODAJ ──────────────────────────────────────────────── */
+async function hkb_dodaj() {
+  // zflushuj wpisany tekst który nie był zatwierdzony Enterem
+  const tagInput = document.getElementById('hkb-tag-input');
+  if (tagInput && tagInput.value.trim()) {
+    const v = tagInput.value.trim();
+    if (!hkb_state.add.includes(v)) hkb_state.add.push(v);
+    tagInput.value = '';
+    hkb_renderTags('hkb-tags-wrap', hkb_state.add, 'add');
+  }
+
+  const keywords = hkb_state.add.join(', ');
+  const answer   = (document.getElementById('hkb-answer')?.value || '').trim();
+
+  if (!keywords) { hkb_toast('hkb-toast-form', 'err', 'Dodaj przynajmniej jedno słowo kluczowe.'); return; }
+  if (!answer)   { hkb_toast('hkb-toast-form', 'err', 'Wpisz treść odpowiedzi.'); return; }
+
+  const btn = document.getElementById('hkb-btn-add');
+  btn.disabled = true; btn.textContent = '⏳ Zapisywanie...';
+
+  const { tenant_id, session_token } = hkb_creds();
+  try {
+    const r = await fetch('/api/help-kb', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id, session_token, keywords, answer })
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      hkb_toast('hkb-toast-form', 'ok', '✅ Wpis dodany!');
+      hkb_state.add = [];
+      hkb_renderTags('hkb-tags-wrap', [], 'add');
+      document.getElementById('hkb-answer').value = '';
+      hkb_init(); // odśwież listę
+    } else {
+      hkb_toast('hkb-toast-form', 'err', d.message || 'Błąd zapisu.');
+    }
+  } catch(e) {
+    hkb_toast('hkb-toast-form', 'err', 'Błąd połączenia z serwerem.');
+  } finally {
+    btn.disabled = false; btn.textContent = '➕ Dodaj wpis';
+  }
+}
+
+/* ── USUŃ ───────────────────────────────────────────────── */
+async function hkb_usun(id) {
+  if (!confirm('Usunąć ten wpis z bazy wiedzy?')) return;
+  const { tenant_id, session_token } = hkb_creds();
+  try {
+    const r = await fetch(`/api/help-kb/${id}?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`,
+      { method: 'DELETE' });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      const el = document.getElementById(`hkb-item-${id}`);
+      if (el) { el.style.opacity = '0'; el.style.transform = 'scale(.95)'; el.style.transition = '.2s'; setTimeout(() => hkb_init(), 220); }
+    } else {
+      hkb_toast('hkb-toast-list', 'err', d.message || 'Błąd usunięcia.');
+    }
+  } catch(e) {
+    hkb_toast('hkb-toast-list', 'err', 'Błąd połączenia z serwerem.');
+  }
+}
+
+/* ── MODAL EDYCJI ───────────────────────────────────────── */
+function hkb_otworzEdycje(id, tagsJson, answer, active) {
+  const tags = JSON.parse(tagsJson);
+  hkb_state.edit = [...tags];
+  document.getElementById('hkb-edit-id').value = id;
+  document.getElementById('hkb-edit-answer').value = answer;
+  hkb_renderTags('hkb-edit-tags-wrap', hkb_state.edit, 'edit');
+  document.getElementById('hkb-modal-overlay').classList.add('open');
+  document.getElementById('hkb-edit-tag-input').focus();
+}
+
+function hkb_modalClose() {
+  document.getElementById('hkb-modal-overlay').classList.remove('open');
+  document.getElementById('hkb-toast-modal').style.display = 'none';
+}
+
+async function hkb_zapisz() {
+  // flush niezatwierdzony input
+  const tagInput = document.getElementById('hkb-edit-tag-input');
+  if (tagInput && tagInput.value.trim()) {
+    const v = tagInput.value.trim();
+    if (!hkb_state.edit.includes(v)) hkb_state.edit.push(v);
+    tagInput.value = '';
+    hkb_renderTags('hkb-edit-tags-wrap', hkb_state.edit, 'edit');
+  }
+
+  const id      = document.getElementById('hkb-edit-id').value;
+  const keywords = hkb_state.edit.join(', ');
+  const answer   = (document.getElementById('hkb-edit-answer')?.value || '').trim();
+
+  if (!keywords) { hkb_toast('hkb-toast-modal', 'err', 'Dodaj przynajmniej jedno słowo kluczowe.'); return; }
+  if (!answer)   { hkb_toast('hkb-toast-modal', 'err', 'Wpisz treść odpowiedzi.'); return; }
+
+  const btn = document.getElementById('hkb-btn-save-edit');
+  btn.disabled = true; btn.textContent = '⏳ Zapisywanie...';
+
+  const { tenant_id, session_token } = hkb_creds();
+  try {
+    const r = await fetch(`/api/help-kb/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tenant_id, session_token, keywords, answer })
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      hkb_modalClose();
+      hkb_init();
+    } else {
+      hkb_toast('hkb-toast-modal', 'err', d.message || 'Błąd zapisu.');
+    }
+  } catch(e) {
+    hkb_toast('hkb-toast-modal', 'err', 'Błąd połączenia z serwerem.');
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Zapisz zmiany';
+  }
+}
+
+// Zamknij modal klikając tło
+document.addEventListener('DOMContentLoaded', () => {
+  const overlay = document.getElementById('hkb-modal-overlay');
+  if (overlay) overlay.addEventListener('click', e => { if (e.target === overlay) hkb_modalClose(); });
+});
+</script>
+
+<!-- ============================================================
+     ESTELIO HELP CHAT WIDGET
+     Widoczny tylko po zalogowaniu (app-container visible).
+     Baza wiedzy: tablica obiektów { keywords, answer }.
+     Brak dopasowania → email kontakt@estelio.com.pl
+     ============================================================ -->
+<style>
+/* --- WIDGET KONTENER --- */
+#est-help-widget {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 99999;
+    font-family: 'DM Sans', 'Poppins', sans-serif;
+    display: none; /* pokazywany przez JS po zalogowaniu */
+}
+
+/* --- PRZYCISK OTWIERAJĄCY --- */
+#est-help-btn {
+    width: 54px;
+    height: 54px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b87080, #a05e6e);
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 6px 20px rgba(184,112,128,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+}
+#est-help-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 28px rgba(184,112,128,0.55);
+}
+#est-help-btn svg { width: 24px; height: 24px; fill: #fff; }
+#est-help-badge {
+    position: absolute;
+    top: -2px; right: -2px;
+    width: 14px; height: 14px;
+    background: #4ade80;
+    border-radius: 50%;
+    border: 2px solid #fff;
+    display: block;
+}
+
+/* --- OKNO CHATU --- */
+#est-help-panel {
+    position: absolute;
+    bottom: 66px;
+    right: 0;
+    width: 340px;
+    max-height: 520px;
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.14), 0 4px 16px rgba(184,112,128,0.12);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transform-origin: bottom right;
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+    pointer-events: none;
+    transition: transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease;
+}
+#est-help-panel.est-open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+    pointer-events: all;
+}
+
+/* --- NAGŁÓWEK --- */
+#est-help-header {
+    background: linear-gradient(135deg, #b87080, #a05e6e);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+.est-avatar {
+    width: 38px; height: 38px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+}
+.est-header-info { flex: 1; }
+.est-header-info strong { display: block; color: #fff; font-size: 14px; font-weight: 600; }
+.est-header-info span { color: rgba(255,255,255,0.8); font-size: 11px; }
+#est-help-close {
+    background: rgba(255,255,255,0.15);
+    border: none; cursor: pointer;
+    width: 28px; height: 28px; border-radius: 50%;
+    color: #fff; font-size: 16px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+}
+#est-help-close:hover { background: rgba(255,255,255,0.3); }
+
+/* --- WIADOMOŚCI --- */
+#est-help-messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    scroll-behavior: smooth;
+}
+#est-help-messages::-webkit-scrollbar { width: 4px; }
+#est-help-messages::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+
+.est-msg {
+    max-width: 88%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    animation: estFadeIn 0.2s ease;
+}
+@keyframes estFadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:none; } }
+
+.est-msg-bot {
+    background: #f4f4f6;
+    color: #2d3748;
+    border-bottom-left-radius: 6px;
+    align-self: flex-start;
+}
+.est-msg-user {
+    background: linear-gradient(135deg, #b87080, #a05e6e);
+    color: #fff;
+    border-bottom-right-radius: 6px;
+    align-self: flex-end;
+}
+.est-msg a { color: #b87080; font-weight: 600; }
+.est-msg-bot a { color: #a05e6e; }
+
+/* --- TYPING INDICATOR --- */
+.est-typing {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 12px 14px;
+    background: #f4f4f6;
+    border-radius: 18px;
+    border-bottom-left-radius: 6px;
+    align-self: flex-start;
+    width: 56px;
+}
+.est-typing span {
+    width: 7px; height: 7px;
+    background: #b87080;
+    border-radius: 50%;
+    animation: estBounce 1.2s infinite;
+}
+.est-typing span:nth-child(2) { animation-delay: 0.2s; }
+.est-typing span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes estBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.6; }
+    30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* --- SUGESTIE --- */
+#est-suggestions {
+    padding: 0 14px 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-shrink: 0;
+}
+.est-sug {
+    background: #fdf0f2;
+    color: #b87080;
+    border: 1px solid #f5cdd3;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+    white-space: nowrap;
+}
+.est-sug:hover {
+    background: #fbd8de;
+    transform: translateY(-1px);
+}
+
+/* --- INPUT --- */
+#est-help-input-row {
+    border-top: 1px solid #f0f0f2;
+    padding: 12px 14px;
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+#est-help-input {
+    flex: 1;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 9px 13px;
+    font-family: inherit;
+    font-size: 13px;
+    color: #2d3748;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fafafa;
+}
+#est-help-input:focus { border-color: #b87080; background: #fff; }
+#est-help-send {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #b87080, #a05e6e);
+    border: none; border-radius: 10px;
+    cursor: pointer; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+#est-help-send:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(184,112,128,0.4); }
+#est-help-send svg { width: 16px; height: 16px; fill: #fff; }
+
+/* --- DARK MODE --- */
+body.dark-mode #est-help-panel { background: #1e293b; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+body.dark-mode .est-msg-bot { background: #0f172a; color: #e2e8f0; }
+body.dark-mode #est-help-input { background: #0f172a; border-color: #334155; color: #e2e8f0; }
+body.dark-mode #est-help-input:focus { border-color: #b87080; }
+body.dark-mode #est-help-input-row { border-top-color: #334155; }
+body.dark-mode #est-suggestions { /* inherit */ }
+body.dark-mode .est-sug { background: #1e293b; border-color: #475569; color: #f4a0b0; }
+body.dark-mode .est-sug:hover { background: #2d3748; }
+body.dark-mode .est-typing { background: #0f172a; }
+</style>
+
+<div id="est-help-widget">
+    <!-- Przycisk otwierający -->
+    <button id="est-help-btn" aria-label="Pomoc">
+        <span id="est-help-badge"></span>
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M20 2H4c-1.103 0-2 .897-2 2v18l4-4h14c1.103 0 2-.897 2-2V4c0-1.103-.897-2-2-2zm-7 13h-2v-2h2v2zm0-4h-2V7h2v4z"/></svg>
+    </button>
+
+    <!-- Panel chatu -->
+    <div id="est-help-panel" role="dialog" aria-label="Pomoc Estelio">
+        <div id="est-help-header">
+            <div class="est-avatar">🌸</div>
+            <div class="est-header-info">
+                <strong>Pomoc Estelio</strong>
+                <span>Zadaj pytanie, odpiszę natychmiast</span>
+            </div>
+            <button id="est-help-close" aria-label="Zamknij">✕</button>
+        </div>
+
+        <div id="est-help-messages"></div>
+
+        <div id="est-suggestions">
+            <button class="est-sug" onclick="estAsk('Jak dodać klienta?')">Jak dodać klienta?</button>
+            <button class="est-sug" onclick="estAsk('Jak dodać wizytę?')">Jak dodać wizytę?</button>
+            <button class="est-sug" onclick="estAsk('Jak zmienić PIN?')">Jak zmienić PIN?</button>
+            <button class="est-sug" onclick="estAsk('Jak dodać pracownika?')">Jak dodać pracownika?</button>
+        </div>
+
+        <div id="est-help-input-row">
+            <input id="est-help-input" type="text" placeholder="Napisz pytanie..." autocomplete="off" maxlength="200">
+            <button id="est-help-send" aria-label="Wyślij">
+                <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+/* ============================================================
+   ESTELIO HELP CHAT — baza wiedzy + silnik dopasowania
+   ============================================================ */
+(function() {
+
+/* ----------------------------------------------------------
+   BAZA WIEDZY
+   Dodaj nowe obiekty do tablicy EST_KB w dowolnej chwili.
+   keywords: słowa kluczowe (małe litery, bez polskich znaków)
+   answer:   treść odpowiedzi (HTML dozwolony)
+   ---------------------------------------------------------- */
+const EST_KB = [
+    {
+        keywords: ['dodaj klienta', 'nowy klient', 'rejestracja klienta', 'dodac klienta', 'wpisac klienta', 'dodac nowego', 'nowego klienta'],
+        answer: 'Aby dodać nowego klienta, przejdź do sekcji <b>Klienci</b> w menu po lewej stronie, a następnie kliknij przycisk <b>+ Dodaj klienta</b>. Uzupełnij imię, nazwisko i numer telefonu — reszta pól jest opcjonalna.'
+    },
+    {
+        keywords: ['dodaj wizyte', 'nowa wizyta', 'zaplanuj wizyte', 'umow wizyte', 'nowe zamowienie', 'dodaj zamowienie', 'dodac wizyte'],
+        answer: 'Wizytę możesz dodać na dwa sposoby:<br>1. Z sekcji <b>Wizyty</b> → <b>+ Nowa wizyta</b><br>2. Bezpośrednio z karty klienta → przycisk <b>Zaplanuj wizytę</b>.<br>Wybierz pracownika, usługę i datę — gotowe!'
+    },
+    {
+        keywords: ['zmien pin', 'pin pracownika', 'zmiana pin', 'reset pin', 'zapomnial pin', 'nie pamietam pin', 'nowy pin'],
+        answer: 'PIN pracownika zmienisz w sekcji <b>Pracownicy</b> → kliknij na danego pracownika → <b>Edytuj</b> → pole <b>PIN</b>. Pracownik loguje się tym PINem do swojego widoku systemu.'
+    },
+    {
+        keywords: ['dodaj pracownika', 'nowy pracownik', 'rejestracja pracownika', 'dodac pracownika'],
+        answer: 'Przejdź do sekcji <b>Pracownicy</b> i kliknij <b>+ Dodaj pracownika</b>. Podaj imię i ustaw PIN (4–6 cyfr). Możesz też określić rolę: <em>pracownik</em> lub <em>właściciel</em>.'
+    },
+    {
+        keywords: ['dodaj usluge', 'nowa usluga', 'dodac usluge', 'cennik', 'dodaj zabieg', 'nowy zabieg'],
+        answer: 'Usługi (zabiegi) zarządzasz w sekcji <b>Usługi</b>. Kliknij <b>+ Dodaj usługę</b>, podaj nazwę, cenę i czas trwania. Usługi pojawią się automatycznie przy tworzeniu wizyt.'
+    },
+    {
+        keywords: ['produkt', 'towar', 'magazyn', 'stan magazynowy', 'dodaj produkt', 'stany', 'zapas'],
+        answer: 'Produkty i stany magazynowe znajdziesz w sekcji <b>Magazyn</b>. Możesz dodawać produkty, śledzić stany i rejestrować sprzedaż produktów podczas wizyty.'
+    },
+    {
+        keywords: ['dark mode', 'ciemny tryb', 'nocny tryb', 'zmien wyglad', 'jasny tryb', 'motyw'],
+        answer: 'Tryb ciemny włączysz klikając ikonę 🌙 w prawym górnym rogu paska bocznego (lub w ustawieniach). Kliknij ponownie, żeby wrócić do jasnego motywu.'
+    },
+    {
+        keywords: ['raport', 'statystyki', 'analityka', 'przychody', 'zestawienie', 'podsumowanie', 'wyniki'],
+        answer: 'Raporty i statystyki znajdziesz w sekcji <b>Analityka</b>. Zobaczysz tam przychody (dzienne, miesięczne, roczne), top pracowników, top usługi i wiele więcej. Możesz filtrować po zakresie dat.'
+    },
+    {
+        keywords: ['voucher', 'bon', 'bon podarunkowy', 'karta podarunkowa', 'voucher prezentowy'],
+        answer: 'Vouchery (bony podarunkowe) zarządzasz w sekcji <b>Vouchery</b>. Możesz tworzyć nowe bony, sprawdzać saldo i realizować je przy kasowaniu wizyty.'
+    },
+    {
+        keywords: ['zmien haslo', 'reset hasla', 'zapomnialem hasla', 'odzyskaj haslo', 'haslo wlasciciela'],
+        answer: 'Hasło właściciela możesz zresetować wchodząc na stronę logowania i klikając <b>Zapomniałem hasła</b>. Na Twój adres e-mail zostanie wysłany link do ustawienia nowego hasła (ważny 1 godzinę).'
+    },
+    {
+        keywords: ['faktura', 'paragon', 'rachunek', 'wydruk', 'drukowanie'],
+        answer: 'Po zamknięciu wizyty możesz wydrukować potwierdzenie / paragon klikając ikonę drukowania przy danej wizycie. Faktury VAT wystawiane są przez zewnętrzny serwis powiązany z Twoim kontem.'
+    },
+    {
+        keywords: ['sms', 'powiadomienie', 'przypomnienie', 'notyfikacja'],
+        answer: 'Powiadomienia SMS do klientów możesz skonfigurować w sekcji <b>Ustawienia → Powiadomienia</b>. Możesz ustawić automatyczne przypomnienie o wizycie (np. 24h przed).'
+    },
+    {
+        keywords: ['subskrypcja', 'platnosc', 'abonament', 'odnowienie', 'platnosc miesięczna', 'faktura estelio', 'anuluj'],
+        answer: 'Twoja subskrypcja Estelio jest odnawiana automatycznie co miesiąc. W razie pytań o płatność lub anulowanie — napisz do nas: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.'
+    },
+    {
+        keywords: ['kasa', 'kasowanie', 'zaplata', 'platnosc gotowka', 'karta platnicza', 'przyjmij platnosc'],
+        answer: 'Po zakończeniu wizyty kliknij przycisk <b>Zakończ wizytę</b>. Wybierz formę płatności (gotówka / karta / voucher) i zatwierdź. Wizyta zostanie zamknięta, a przychód trafi do statystyk.'
+    },
+    {
+        keywords: ['klient nie przyszedl', 'nieobecnosc', 'brak pojawienia', 'no show', 'odwolanie', 'anuluj wizyte'],
+        answer: 'Jeśli klient nie przyszedł lub odwołał wizytę, otwórz wizytę z kalendarza i wybierz status <b>Nieobecny</b> lub <b>Anulowana</b>. Wizyta zostanie oznaczona, ale nie trafi do przychodów.'
+    },
+    {
+        keywords: ['logowanie', 'nie moge sie zalogowac', 'blad logowania', 'problem z logowaniem'],
+        answer: 'Jeśli masz problem z logowaniem:<br>• Sprawdź czy login i hasło są wpisane poprawnie<br>• Skorzystaj z opcji <b>Zapomniałem hasła</b> na stronie logowania<br>• Jeśli problem nadal się pojawia, napisz: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>'
+    },
+    {
+        keywords: ['eksport', 'pobierz dane', 'csv', 'excel', 'eksportuj'],
+        answer: 'Dane możesz eksportować do pliku CSV/Excel z sekcji <b>Analityka</b> lub <b>Klienci</b> — kliknij ikonę pobierania (strzałka w dół) widoczną przy tabeli.'
+    },
+    {
+        keywords: ['kalendarz', 'harmonogram', 'grafik', 'plan dnia', 'widok tygodnia'],
+        answer: 'Kalendarz wizyt znajdziesz w sekcji <b>Kalendarz</b>. Możesz przełączać widok dzienny / tygodniowy i przeciągać wizyty, aby zmienić ich godzinę.'
+    },
+    {
+        keywords: ['wiele salonow', 'oddzialy', 'filial', 'inny salon', 'dodaj salon'],
+        answer: 'Obsługa wielu oddziałów jest dostępna w planie rozszerzonym. Aby dodać kolejny salon, skontaktuj się z nami: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> — podaj nazwę i dane nowego lokalu.'
+    },
+    {
+        keywords: ['kontakt', 'pomoc', 'support', 'blad', 'problem', 'nie dziala', 'awaria', 'zgloszenie'],
+        answer: 'W razie problemów technicznych lub pytań pisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a><br><br>Staramy się odpowiadać w ciągu kilku godzin w dni robocze. Opisz dokładnie, co się dzieje, i podaj nazwę swojego salonu — to przyspieszy pomoc.'
+    }
+];
+
+/* ----------------------------------------------------------
+   DYNAMICZNE WPISY z API (ładowane po zalogowaniu)
+   Mergowane z EST_KB przy dopasowaniu.
+   ---------------------------------------------------------- */
+let EST_KB_DYNAMIC = []; // wpisy z bazy danych tenanta
+
+async function estLoadDynamic() {
+    try {
+        const tenant_id     = localStorage.getItem('boczki_tenant_id') || '';
+        const session_token = localStorage.getItem('boczki_session_token') || '';
+        if (!tenant_id || !session_token) return;
+        const r = await fetch(`/api/help-kb?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`);
+        const d = await r.json();
+        if (d.status === 'ok') {
+            EST_KB_DYNAMIC = (d.data || [])
+                .filter(e => e.active != 0)
+                .map(e => ({
+                    keywords: String(e.keywords).split(',').map(k => k.trim()).filter(Boolean),
+                    answer: e.answer
+                }));
+        }
+    } catch(e) { /* cicho — brak internetu nie psuje chatu */ }
+}
+
+/* ----------------------------------------------------------
+   NORMALIZACJA — usuwa polskie znaki i zamienia na małe
+   ---------------------------------------------------------- */
+function estNormalize(s) {
+    return s.toLowerCase()
+        .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e')
+        .replace(/ł/g,'l').replace(/ń/g,'n').replace(/ó/g,'o')
+        .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z');
+}
+
+/* ----------------------------------------------------------
+   SILNIK DOPASOWANIA — scoring na bazie słów kluczowych
+   Przeszukuje EST_KB (wbudowana) + EST_KB_DYNAMIC (z API)
+   ---------------------------------------------------------- */
+function estFind(query) {
+    const q = estNormalize(query);
+    let best = null, bestScore = 0;
+
+    // Własne wpisy tenanta mają wyższy priorytet (+bonus)
+    const allEntries = [
+        ...EST_KB_DYNAMIC.map(e => ({ ...e, _bonus: 2 })),
+        ...EST_KB.map(e => ({ ...e, _bonus: 0 }))
+    ];
+
+    allEntries.forEach(item => {
+        let score = item._bonus;
+        item.keywords.forEach(kw => {
+            const kwN = estNormalize(kw);
+            if (q.includes(kwN)) score += kwN.split(' ').length * 2;
+            else {
+                kwN.split(' ').forEach(word => { if (q.includes(word) && word.length > 3) score += 1; });
+            }
+        });
+        if (score > bestScore) { bestScore = score; best = item; }
+    });
+
+    return bestScore >= 1 ? best : null;
+}
+
+/* ----------------------------------------------------------
+   STAN WIDGETU
+   ---------------------------------------------------------- */
+let estOpen = false;
+let estTypingTimeout = null;
+
+/* ----------------------------------------------------------
+   POMOCNICZE FUNKCJE UI
+   ---------------------------------------------------------- */
+function estAddMsg(text, role) {
+    const msgs = document.getElementById('est-help-messages');
+    const div = document.createElement('div');
+    div.className = 'est-msg est-msg-' + role;
+    div.innerHTML = text;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function estShowTyping() {
+    const msgs = document.getElementById('est-help-messages');
+    const el = document.createElement('div');
+    el.className = 'est-typing';
+    el.id = 'est-typing-el';
+    el.innerHTML = '<span></span><span></span><span></span>';
+    msgs.appendChild(el);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function estHideTyping() {
+    const el = document.getElementById('est-typing-el');
+    if (el) el.remove();
+}
+
+function estReply(userMsg) {
+    estAddMsg(userMsg, 'user');
+    document.getElementById('est-suggestions').style.display = 'none';
+
+    estShowTyping();
+    clearTimeout(estTypingTimeout);
+    estTypingTimeout = setTimeout(() => {
+        estHideTyping();
+        const result = estFind(userMsg);
+        if (result) {
+            estAddMsg(result.answer, 'bot');
+        } else {
+            estAddMsg(
+                'Nie znam odpowiedzi na to pytanie 🙈<br>Napisz do nas bezpośrednio, odpiszemy szybko:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'bot'
+            );
+        }
+    }, 700 + Math.random() * 400);
+}
+
+/* ----------------------------------------------------------
+   PUBLICZNA FUNKCJA — klikanie sugestii
+   ---------------------------------------------------------- */
+window.estAsk = function(text) {
+    estReply(text);
+    document.getElementById('est-help-input').focus();
+};
+
+/* ----------------------------------------------------------
+   INIT — po załadowaniu strony
+   ---------------------------------------------------------- */
+document.addEventListener('DOMContentLoaded', function() {
+    const widget = document.getElementById('est-help-widget');
+    const btn = document.getElementById('est-help-btn');
+    const panel = document.getElementById('est-help-panel');
+    const closeBtn = document.getElementById('est-help-close');
+    const input = document.getElementById('est-help-input');
+    const sendBtn = document.getElementById('est-help-send');
+
+    // Obserwuj widoczność app-container — widget pokazuj tylko po zalogowaniu
+    const appContainer = document.getElementById('app-container');
+    if (appContainer) {
+        const observer = new MutationObserver(() => {
+            const visible = appContainer.style.display !== 'none' && appContainer.style.display !== '';
+            widget.style.display = visible ? 'block' : 'none';
+        });
+        observer.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    // Załaduj własne wpisy tenanta gdy widget pojawia się po raz pierwszy
+    const observer2 = new MutationObserver(() => {
+        const visible = appContainer && appContainer.style.display !== 'none' && appContainer.style.display !== '';
+        if (visible) { estLoadDynamic(); observer2.disconnect(); }
+    });
+    if (appContainer) observer2.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
+
+    // Otwórz / zamknij
+    btn.addEventListener('click', () => {
+        estOpen = !estOpen;
+        panel.classList.toggle('est-open', estOpen);
+        if (estOpen && document.getElementById('est-help-messages').childElementCount === 0) {
+            // Wiadomość powitalna
+            setTimeout(() => {
+                estAddMsg('Cześć! 👋 Jestem asystentem Estelio.<br>W czym mogę pomóc? Możesz zadać pytanie lub wybrać jeden z tematów poniżej.', 'bot');
+            }, 120);
+        }
+        if (estOpen) input.focus();
+    });
+
+    closeBtn.addEventListener('click', () => {
+        estOpen = false;
+        panel.classList.remove('est-open');
+    });
+
+    // Wyślij wiadomość
+    function estSend() {
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+        estReply(text);
+    }
+
+    sendBtn.addEventListener('click', estSend);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') estSend(); });
+});
+
+})(); // end IIFE
 </script>
 </body>
 </html>
