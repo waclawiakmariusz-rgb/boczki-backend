@@ -22,6 +22,14 @@ try {
   powiadomAdmina = async () => {};
 }
 
+let wystawFakture;
+try {
+  wystawFakture = require('./fakturownia').wystawFakture;
+} catch (e) {
+  console.warn('[stripe] Fakturownia niedostępna:', e.message);
+  wystawFakture = async () => {};
+}
+
 const APP_URL = () => process.env.APP_URL || 'https://yellow-ibex-409594.hostingersite.com';
 const CENA_GROSZE = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900; // 49 zł domyślnie
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
@@ -110,7 +118,9 @@ module.exports = (db) => {
               imie,
               nazwa_salonu,
               email,
-              kod_rabatowy: voucherInfo ? voucherInfo.kod : '',
+              telefon:       telefon || '',
+              miasto:        miasto  || '',
+              kod_rabatowy:  voucherInfo ? voucherInfo.kod : '',
               czas_trwania_rabatu: voucherInfo ? voucherInfo.czas_trwania : '',
               czas_trwania_miesiecy: voucherInfo ? String(voucherInfo.czas_trwania_miesiecy || '') : '',
             },
@@ -166,13 +176,22 @@ module.exports = (db) => {
             [token, zamowienie_id]
           );
 
-          // Wyślij email z linkiem
+          // Wyślij email z linkiem rejestracyjnym
           try {
             await wyslijLinkRejestracji({ email, imie, token, nazwa_salonu });
             console.log(`[stripe webhook] Link wysłany do: ${email}`);
           } catch (mailErr) {
             console.error('[stripe webhook] Błąd wysyłki maila:', mailErr.message);
             // Mimo błędu maila — token jest w bazie, admin może wysłać ręcznie
+          }
+
+          // Wystaw fakturę VAT przez Fakturownia.pl (wysyła PDF mailem do klienta)
+          try {
+            const { miasto, telefon, nip } = session.metadata || {};
+            await wystawFakture({ nazwa_salonu, email, miasto, telefon, nip });
+          } catch (fakErr) {
+            console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
+            // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie
           }
         }
       );
