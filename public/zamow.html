@@ -206,6 +206,27 @@
   }
   .section-title em { font-style: italic; font-weight: 400; }
 
+  /* ── FEATURE GRID ── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+  .feat-card {
+    border-radius: 20px; padding: 24px 22px;
+    border: 1.5px solid var(--border);
+    transition: box-shadow .3s, transform .3s;
+  }
+  .feat-card:hover { box-shadow: 0 14px 36px rgba(0,0,0,.07); transform: translateY(-3px); }
+  .feat-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.15rem; font-weight: 600; color: var(--dark);
+    line-height: 1.3; margin-bottom: 8px;
+  }
+  .feat-card p {
+    font-size: .82rem; color: var(--text-muted); line-height: 1.65;
+  }
+
   /* ── MORANDI PALETTE ── */
   .bc-sage     { background: linear-gradient(145deg, #edf0eb 0%, #dde4d8 100%); border-color: #cdd8c6; }
   .bc-drose    { background: linear-gradient(145deg, #f4ecea 0%, #e8d8d4 100%); border-color: #d8c4be; }
@@ -626,10 +647,7 @@
     .hero { grid-template-columns: 1fr; padding: 50px 24px 40px; }
     .hero-right { display: none; }
     .features { padding: 0 24px; }
-    .cards-grid { grid-template-columns: 1fr; }
-    .bc-wide, .bc-small, .bc-third, .bc-half { grid-column: span 12 !important; }
-    .bc-deco { font-size: 5rem; }
-    .bc-wide-foot { flex-wrap: wrap; gap: 16px; }
+    .feat-grid { grid-template-columns: 1fr; }
     .form-section { padding: 50px 24px; }
     .form-inner { grid-template-columns: 1fr; gap: 40px; }
     .form-row { grid-template-columns: 1fr; }
@@ -781,93 +799,42 @@
   <p class="section-eyebrow reveal">Dla właścicielek salonów beauty</p>
   <h2 class="section-title reveal">Narzędzie, które rozumie<br><em>codzienność Twojego salonu</em></h2>
 
-  <div class="bento">
+  <div class="feat-grid">
 
-    <div class="bento-card bc-wide bc-sage reveal" style="transition-delay:.04s">
+    <div class="feat-card bc-sage reveal" style="transition-delay:.04s">
       <span class="bc-tag"><span class="bc-dot"></span>Sprzedaż &amp; rozliczenia</span>
-      <div class="bc-wide-body">
-        <h3>Wiesz ile zarobiłaś,<br>zanim zamkniesz drzwi</h3>
-        <p>Koniec z liczeniem na kartce po zamknięciu. Każda transakcja — gotówka, karta, BLIK, Mediraty — wpisana w kilka sekund. Sumy naliczają się same, rozliczenia pracowników bez Excela.</p>
-        <ul class="bc-list">
-          <li><span class="bc-dot"></span>Historia każdej transakcji z datą, kwotą, formą płatności</li>
-          <li><span class="bc-dot"></span>Miesięczne raporty jednym kliknięciem — bez arkuszy</li>
-          <li><span class="bc-dot"></span>Rozliczenia dla każdej pracownicy — przejrzyście i sprawiedliwie</li>
-        </ul>
-      </div>
-      <div class="bc-wide-foot">
-        <div class="bc-foot-item">
-          <span class="bc-foot-num">0&thinsp;min</span>
-          <span class="bc-foot-lbl">na podsumowanie dnia</span>
-        </div>
-        <div class="bc-foot-item">
-          <span class="bc-foot-num">4</span>
-          <span class="bc-foot-lbl">formy płatności w jednym miejscu</span>
-        </div>
-        <div class="bc-foot-item">
-          <span class="bc-foot-num">100%</span>
-          <span class="bc-foot-lbl">historii bez luk</span>
-        </div>
-      </div>
-      <span class="bc-deco" aria-hidden="true">₊</span>
+      <h3>Wiesz ile zarobiłaś, zanim zamkniesz drzwi</h3>
+      <p>Każda transakcja — gotówka, karta, BLIK — wpisana w sekundy. Sumy i rozliczenia pracownic naliczają się same.</p>
     </div>
 
-    <div class="bento-card bc-small bc-drose reveal" style="transition-delay:.08s">
+    <div class="feat-card bc-drose reveal" style="transition-delay:.07s">
       <span class="bc-tag"><span class="bc-dot"></span>Magazyn</span>
       <h3>Nigdy więcej pustego opakowania przed zabiegiem</h3>
-      <p>System pilnuje stanów produktów i alertuje Cię zanim skończy się towar. Masz pełny inwentarz — bez kartek, bez pamięci, bez niespodzianek.</p>
-      <ul class="bc-list">
-        <li><span class="bc-dot"></span>Alert gdy stan spada poniżej minimum</li>
-        <li><span class="bc-dot"></span>Historia rozchodów — wiesz co zużywa ile</li>
-        <li><span class="bc-dot"></span>Mniej strat, trafniejsze zamówienia</li>
-      </ul>
-      <span class="bc-deco" aria-hidden="true">◇</span>
+      <p>System pilnuje stanów i ostrzega zanim skończy się towar. Pełny inwentarz bez kartek i pamięci.</p>
     </div>
 
-    <div class="bento-card bc-small bc-clay reveal" style="transition-delay:.10s">
+    <div class="feat-card bc-clay reveal" style="transition-delay:.10s">
       <span class="bc-tag"><span class="bc-dot"></span>Profile klientek</span>
       <h3>Klientka czuje się wyjątkowa, bo o niej pamiętasz</h3>
-      <p>Historia zabiegów, zadatki, zgody RODO, notatki. Otwierasz kartę i już wiesz wszystko — zanim ona usiądzie w fotelu.</p>
-      <ul class="bc-list">
-        <li><span class="bc-dot"></span>Wyszukiwanie po imieniu lub telefonie — natychmiast</li>
-        <li><span class="bc-dot"></span>Dokumentacja RODO bez drukarki i szuflady</li>
-      </ul>
-      <span class="bc-deco" aria-hidden="true">✿</span>
+      <p>Historia zabiegów, zadatki, zgody RODO i notatki — otwierasz kartę i wiesz wszystko od razu.</p>
     </div>
 
-    <div class="bento-card bc-third bc-lavender reveal" style="transition-delay:.13s">
+    <div class="feat-card bc-lavender reveal" style="transition-delay:.13s">
       <span class="bc-tag"><span class="bc-dot"></span>Konsultacje</span>
-      <h3>Twoje efekty<br>mówią same za siebie</h3>
-      <p>Dokumentuj wyniki, postępy i efekty zabiegów. Notatki i historia budują reputację ekspertki — nie tylko stylistki.</p>
-      <span class="bc-deco" aria-hidden="true">◉</span>
+      <h3>Efekty i postępy na wyciągnięcie ręki</h3>
+      <p>Dokumentuj wyniki zabiegów. Historia i notatki budują Twoją reputację ekspertki.</p>
     </div>
 
-    <div class="bento-card bc-third bc-sky reveal" style="transition-delay:.16s">
-      <span class="bc-tag"><span class="bc-dot"></span>Zadatki</span>
-      <h3>Zaliczki bez karteczek i stresu</h3>
-      <p>Przyjmij zadatek, rozlicz go przy wizycie. System pilnuje statusów — Ty skupiasz się na klientce.</p>
-      <span class="bc-deco" aria-hidden="true">◈</span>
-    </div>
-
-    <div class="bento-card bc-half bc-sand reveal" style="transition-delay:.19s">
+    <div class="feat-card bc-sand reveal" style="transition-delay:.16s">
       <span class="bc-tag"><span class="bc-dot"></span>Wyniki pracowników</span>
-      <h3>Wiesz kto napędza Twój salon — i możesz to udowodnić</h3>
-      <p>Obiektywne rankingi sprzedaży każdej osoby. Koniec z domysłami — liczby mówią za Ciebie. Motywuj zespół tym, co widać w danych.</p>
-      <ul class="bc-list">
-        <li><span class="bc-dot"></span>Porównania tydzień do tygodnia i miesiąc do miesiąca</li>
-        <li><span class="bc-dot"></span>Każda pracownica widzi swoje wyniki — nic ukrytego</li>
-      </ul>
-      <span class="bc-deco" aria-hidden="true">↑</span>
+      <h3>Wiesz kto napędza Twój salon</h3>
+      <p>Obiektywne rankingi sprzedaży każdej osoby. Motywuj zespół liczbami — bez domysłów i napięć.</p>
     </div>
 
-    <div class="bento-card bc-half bc-clay reveal" style="transition-delay:.22s">
-      <span class="bc-tag"><span class="bc-dot"></span>Budżety &amp; koszty</span>
-      <h3>Przestań zgadywać.<br>Zarabiaj świadomie.</h3>
-      <p>Planuj budżety, śledź koszty operacyjne, porównuj z przychodami. Wiesz ile naprawdę zostaje — zanim zacznie boleć.</p>
-      <ul class="bc-list">
-        <li><span class="bc-dot"></span>Rentowność bez Excela i bólu głowy</li>
-        <li><span class="bc-dot"></span>Widzisz na czym tracisz — we właściwym momencie</li>
-      </ul>
-      <span class="bc-deco" aria-hidden="true">◎</span>
+    <div class="feat-card bc-sky reveal" style="transition-delay:.19s">
+      <span class="bc-tag"><span class="bc-dot"></span>Budżety &amp; zadatki</span>
+      <h3>Rentowność i zaliczki pod kontrolą</h3>
+      <p>Śledź koszty, planuj budżety, rozliczaj zadatki przy wizycie. Wiesz ile naprawdę zarabiasz.</p>
     </div>
 
   </div>
