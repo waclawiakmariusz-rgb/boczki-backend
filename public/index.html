@@ -19263,6 +19263,48 @@ document.addEventListener('DOMContentLoaded', () => {
     transform: translateY(-1px);
 }
 
+/* --- POWIĄZANE PYTANIA --- */
+.est-related {
+    align-self: flex-start;
+    max-width: 96%;
+    animation: estFadeIn 0.25s ease;
+}
+.est-related-label {
+    font-size: 11px;
+    color: #a0aec0;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+.est-related-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+.est-related-chip {
+    background: #fff;
+    color: #b87080;
+    border: 1.5px solid #f5cdd3;
+    border-radius: 20px;
+    padding: 5px 12px;
+    font-size: 11.5px;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.15s, transform 0.1s, border-color 0.15s;
+    white-space: nowrap;
+}
+.est-related-chip:hover {
+    background: #fde8ed;
+    border-color: #b87080;
+    transform: translateY(-1px);
+}
+body.dark-mode .est-related-chip {
+    background: #1e293b;
+    border-color: #4b3040;
+    color: #f4a0b0;
+}
+body.dark-mode .est-related-chip:hover { background: #2d1f2a; }
+
 /* --- INPUT --- */
 #est-help-input-row {
     border-top: 1px solid #f0f0f2;
@@ -19358,82 +19400,102 @@ body.dark-mode .est-typing { background: #0f172a; }
    ---------------------------------------------------------- */
 const EST_KB = [
     {
+        title: 'Jak dodać klienta?', category: 'Klienci',
         keywords: ['dodaj klienta', 'nowy klient', 'rejestracja klienta', 'dodac klienta', 'wpisac klienta', 'dodac nowego', 'nowego klienta'],
         answer: 'Aby dodać nowego klienta, przejdź do sekcji <b>Klienci</b> w menu po lewej stronie, a następnie kliknij przycisk <b>+ Dodaj klienta</b>. Uzupełnij imię, nazwisko i numer telefonu — reszta pól jest opcjonalna.'
     },
     {
+        title: 'Jak dodać wizytę?', category: 'Sprzedaż',
         keywords: ['dodaj wizyte', 'nowa wizyta', 'zaplanuj wizyte', 'umow wizyte', 'nowe zamowienie', 'dodaj zamowienie', 'dodac wizyte'],
         answer: 'Wizytę możesz dodać na dwa sposoby:<br>1. Z sekcji <b>Wizyty</b> → <b>+ Nowa wizyta</b><br>2. Bezpośrednio z karty klienta → przycisk <b>Zaplanuj wizytę</b>.<br>Wybierz pracownika, usługę i datę — gotowe!'
     },
     {
+        title: 'Jak zmienić PIN pracownika?', category: 'Pracownicy',
         keywords: ['zmien pin', 'pin pracownika', 'zmiana pin', 'reset pin', 'zapomnial pin', 'nie pamietam pin', 'nowy pin'],
         answer: 'PIN pracownika zmienisz w sekcji <b>Pracownicy</b> → kliknij na danego pracownika → <b>Edytuj</b> → pole <b>PIN</b>. Pracownik loguje się tym PINem do swojego widoku systemu.'
     },
     {
+        title: 'Jak dodać pracownika?', category: 'Pracownicy',
         keywords: ['dodaj pracownika', 'nowy pracownik', 'rejestracja pracownika', 'dodac pracownika'],
         answer: 'Przejdź do sekcji <b>Pracownicy</b> i kliknij <b>+ Dodaj pracownika</b>. Podaj imię i ustaw PIN (4–6 cyfr). Możesz też określić rolę: <em>pracownik</em> lub <em>właściciel</em>.'
     },
     {
+        title: 'Jak dodać usługę?', category: 'Usługi',
         keywords: ['dodaj usluge', 'nowa usluga', 'dodac usluge', 'cennik', 'dodaj zabieg', 'nowy zabieg'],
         answer: 'Usługi (zabiegi) zarządzasz w sekcji <b>Usługi</b>. Kliknij <b>+ Dodaj usługę</b>, podaj nazwę, cenę i czas trwania. Usługi pojawią się automatycznie przy tworzeniu wizyt.'
     },
     {
+        title: 'Jak zarządzać magazynem?', category: 'Magazyn',
         keywords: ['produkt', 'towar', 'magazyn', 'stan magazynowy', 'dodaj produkt', 'stany', 'zapas'],
         answer: 'Produkty i stany magazynowe znajdziesz w sekcji <b>Magazyn</b>. Możesz dodawać produkty, śledzić stany i rejestrować sprzedaż produktów podczas wizyty.'
     },
     {
+        title: 'Jak włączyć dark mode?', category: 'Ustawienia',
         keywords: ['dark mode', 'ciemny tryb', 'nocny tryb', 'zmien wyglad', 'jasny tryb', 'motyw'],
         answer: 'Tryb ciemny włączysz klikając ikonę 🌙 w prawym górnym rogu paska bocznego (lub w ustawieniach). Kliknij ponownie, żeby wrócić do jasnego motywu.'
     },
     {
+        title: 'Jak sprawdzić raporty?', category: 'Analityka',
         keywords: ['raport', 'statystyki', 'analityka', 'przychody', 'zestawienie', 'podsumowanie', 'wyniki'],
         answer: 'Raporty i statystyki znajdziesz w sekcji <b>Analityka</b>. Zobaczysz tam przychody (dzienne, miesięczne, roczne), top pracowników, top usługi i wiele więcej. Możesz filtrować po zakresie dat.'
     },
     {
+        title: 'Jak używać voucherów?', category: 'Vouchery',
         keywords: ['voucher', 'bon', 'bon podarunkowy', 'karta podarunkowa', 'voucher prezentowy'],
         answer: 'Vouchery (bony podarunkowe) zarządzasz w sekcji <b>Vouchery</b>. Możesz tworzyć nowe bony, sprawdzać saldo i realizować je przy kasowaniu wizyty.'
     },
     {
+        title: 'Jak zresetować hasło?', category: 'Ustawienia',
         keywords: ['zmien haslo', 'reset hasla', 'zapomnialem hasla', 'odzyskaj haslo', 'haslo wlasciciela'],
         answer: 'Hasło właściciela możesz zresetować wchodząc na stronę logowania i klikając <b>Zapomniałem hasła</b>. Na Twój adres e-mail zostanie wysłany link do ustawienia nowego hasła (ważny 1 godzinę).'
     },
     {
+        title: 'Jak wydrukować paragon?', category: 'Sprzedaż',
         keywords: ['faktura', 'paragon', 'rachunek', 'wydruk', 'drukowanie'],
         answer: 'Po zamknięciu wizyty możesz wydrukować potwierdzenie / paragon klikając ikonę drukowania przy danej wizycie. Faktury VAT wystawiane są przez zewnętrzny serwis powiązany z Twoim kontem.'
     },
     {
+        title: 'Jak ustawić powiadomienia SMS?', category: 'Ustawienia',
         keywords: ['sms', 'powiadomienie', 'przypomnienie', 'notyfikacja'],
         answer: 'Powiadomienia SMS do klientów możesz skonfigurować w sekcji <b>Ustawienia → Powiadomienia</b>. Możesz ustawić automatyczne przypomnienie o wizycie (np. 24h przed).'
     },
     {
+        title: 'Jak zarządzać subskrypcją?', category: 'Ustawienia',
         keywords: ['subskrypcja', 'platnosc', 'abonament', 'odnowienie', 'platnosc miesięczna', 'faktura estelio', 'anuluj'],
         answer: 'Twoja subskrypcja Estelio jest odnawiana automatycznie co miesiąc. W razie pytań o płatność lub anulowanie — napisz do nas: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.'
     },
     {
+        title: 'Jak zakończyć wizytę i pobrać płatność?', category: 'Sprzedaż',
         keywords: ['kasa', 'kasowanie', 'zaplata', 'platnosc gotowka', 'karta platnicza', 'przyjmij platnosc'],
         answer: 'Po zakończeniu wizyty kliknij przycisk <b>Zakończ wizytę</b>. Wybierz formę płatności (gotówka / karta / voucher) i zatwierdź. Wizyta zostanie zamknięta, a przychód trafi do statystyk.'
     },
     {
+        title: 'Co zrobić gdy klient nie przyszedł?', category: 'Sprzedaż',
         keywords: ['klient nie przyszedl', 'nieobecnosc', 'brak pojawienia', 'no show', 'odwolanie', 'anuluj wizyte'],
         answer: 'Jeśli klient nie przyszedł lub odwołał wizytę, otwórz wizytę z kalendarza i wybierz status <b>Nieobecny</b> lub <b>Anulowana</b>. Wizyta zostanie oznaczona, ale nie trafi do przychodów.'
     },
     {
+        title: 'Problem z logowaniem', category: 'Ogólne',
         keywords: ['logowanie', 'nie moge sie zalogowac', 'blad logowania', 'problem z logowaniem'],
         answer: 'Jeśli masz problem z logowaniem:<br>• Sprawdź czy login i hasło są wpisane poprawnie<br>• Skorzystaj z opcji <b>Zapomniałem hasła</b> na stronie logowania<br>• Jeśli problem nadal się pojawia, napisz: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>'
     },
     {
+        title: 'Jak eksportować dane?', category: 'Analityka',
         keywords: ['eksport', 'pobierz dane', 'csv', 'excel', 'eksportuj'],
         answer: 'Dane możesz eksportować do pliku CSV/Excel z sekcji <b>Analityka</b> lub <b>Klienci</b> — kliknij ikonę pobierania (strzałka w dół) widoczną przy tabeli.'
     },
     {
+        title: 'Jak korzystać z kalendarza?', category: 'Sprzedaż',
         keywords: ['kalendarz', 'harmonogram', 'grafik', 'plan dnia', 'widok tygodnia'],
         answer: 'Kalendarz wizyt znajdziesz w sekcji <b>Kalendarz</b>. Możesz przełączać widok dzienny / tygodniowy i przeciągać wizyty, aby zmienić ich godzinę.'
     },
     {
+        title: 'Jak dodać kolejny salon?', category: 'Ogólne',
         keywords: ['wiele salonow', 'oddzialy', 'filial', 'inny salon', 'dodaj salon'],
         answer: 'Obsługa wielu oddziałów jest dostępna w planie rozszerzonym. Aby dodać kolejny salon, skontaktuj się z nami: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> — podaj nazwę i dane nowego lokalu.'
     },
     {
+        title: 'Kontakt i pomoc techniczna', category: 'Ogólne',
         keywords: ['kontakt', 'pomoc', 'support', 'blad', 'problem', 'nie dziala', 'awaria', 'zgloszenie'],
         answer: 'W razie problemów technicznych lub pytań pisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a><br><br>Staramy się odpowiadać w ciągu kilku godzin w dni robocze. Opisz dokładnie, co się dzieje, i podaj nazwę swojego salonu — to przyspieszy pomoc.'
     }
@@ -19574,6 +19636,51 @@ function estHideTyping() {
     if (el) el.remove();
 }
 
+/* ----------------------------------------------------------
+   POWIĄZANE PYTANIA — po odpowiedzi pokaż 3-4 z tej samej kategorii
+   ---------------------------------------------------------- */
+function estGetRelated(matchedItem) {
+    const cat = matchedItem.category || 'Ogólne';
+    const allEntries = [...EST_KB_DYNAMIC, ...EST_KB];
+
+    // Ta sama kategoria, wyklucz bieżący wpis (po pierwszym słowie kluczowym)
+    const matchedKey = matchedItem.keywords[0];
+    const samecat = allEntries.filter(e => {
+        if ((e.category || 'Ogólne') !== cat) return false;
+        if (e.keywords[0] === matchedKey) return false;
+        return true;
+    });
+
+    // Jeśli za mało w kategorii — uzupełnij z innych kategorii
+    let pool = [...samecat];
+    if (pool.length < 3) {
+        const others = allEntries.filter(e => {
+            if ((e.category || 'Ogólne') === cat) return false;
+            if (e.keywords[0] === matchedKey) return false;
+            return true;
+        });
+        pool = [...pool, ...others.sort(() => Math.random() - 0.5)];
+    }
+
+    // Losuj max 4
+    return pool.sort(() => Math.random() - 0.5).slice(0, 4);
+}
+
+function estShowRelated(items) {
+    if (!items.length) return;
+    const msgs = document.getElementById('est-help-messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'est-related';
+    const chips = items.map(item => {
+        const label = item.title || (item.keywords[0].charAt(0).toUpperCase() + item.keywords[0].slice(1) + '?');
+        const query = item.title || item.keywords[0];
+        return `<button class="est-related-chip" onclick="estAsk(${JSON.stringify(query)})">${label}</button>`;
+    }).join('');
+    wrap.innerHTML = `<div class="est-related-label">Może też Cię zainteresować:</div><div class="est-related-chips">${chips}</div>`;
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
 function estReply(userMsg) {
     estAddMsg(userMsg, 'user');
     document.getElementById('est-suggestions').style.display = 'none';
@@ -19585,6 +19692,8 @@ function estReply(userMsg) {
         const result = estFind(userMsg);
         if (result) {
             estAddMsg(result.answer, 'bot');
+            // Pokaż powiązane pytania z lekkim opóźnieniem
+            setTimeout(() => estShowRelated(estGetRelated(result)), 300);
         } else {
             const noMatch = [
                 'Hmm, nie znam odpowiedzi na to pytanie 🤔 Ale możesz napisać do nas — odpiszemy szybko!<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
