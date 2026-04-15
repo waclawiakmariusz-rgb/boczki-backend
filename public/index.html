@@ -19445,21 +19445,33 @@ const EST_KB = [
    ---------------------------------------------------------- */
 let EST_KB_DYNAMIC = []; // wpisy z bazy danych tenanta
 
+function estParseKbRows(rows) {
+    return (rows || []).filter(e => e.active != 0).map(e => ({
+        keywords: String(e.keywords).split(',').map(k => k.trim()).filter(Boolean),
+        answer: e.answer
+    }));
+}
+
 async function estLoadDynamic() {
     try {
         const tenant_id     = localStorage.getItem('boczki_tenant_id') || '';
         const session_token = localStorage.getItem('boczki_session_token') || '';
         if (!tenant_id || !session_token) return;
-        const r = await fetch(`/api/help-kb?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`);
-        const d = await r.json();
-        if (d.status === 'ok') {
-            EST_KB_DYNAMIC = (d.data || [])
-                .filter(e => e.active != 0)
-                .map(e => ({
-                    keywords: String(e.keywords).split(',').map(k => k.trim()).filter(Boolean),
-                    answer: e.answer
-                }));
-        }
+
+        // Ładuj równolegle: wpisy tenanta + globalne wpisy admina
+        const [rTenant, rGlobal] = await Promise.allSettled([
+            fetch(`/api/help-kb?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`).then(r => r.json()),
+            fetch(`/api/help-kb/global`).then(r => r.json())
+        ]);
+
+        const tenantItems = rTenant.status === 'fulfilled' && rTenant.value.status === 'ok'
+            ? estParseKbRows(rTenant.value.data).map(e => ({ ...e, _bonus: 3 }))   // wyższy priorytet
+            : [];
+        const globalItems = rGlobal.status === 'fulfilled' && Array.isArray(rGlobal.value)
+            ? estParseKbRows(rGlobal.value).map(e => ({ ...e, _bonus: 1 }))
+            : [];
+
+        EST_KB_DYNAMIC = [...tenantItems, ...globalItems];
     } catch(e) { /* cicho — brak internetu nie psuje chatu */ }
 }
 
@@ -19481,9 +19493,9 @@ function estFind(query) {
     const q = estNormalize(query);
     let best = null, bestScore = 0;
 
-    // Własne wpisy tenanta mają wyższy priorytet (+bonus)
+    // EST_KB_DYNAMIC już zawiera _bonus (3=tenant, 1=global); wbudowane = 0
     const allEntries = [
-        ...EST_KB_DYNAMIC.map(e => ({ ...e, _bonus: 2 })),
+        ...EST_KB_DYNAMIC,
         ...EST_KB.map(e => ({ ...e, _bonus: 0 }))
     ];
 

@@ -541,5 +541,88 @@ module.exports = (db) => {
     );
   });
 
+  // ─── BAZA WIEDZY CHATU (GLOBALNA) ────────────────────────────
+  const GLOBAL_TENANT = '__global__';
+
+  function ensureKbTable(cb) {
+    db.query(
+      `CREATE TABLE IF NOT EXISTS help_kb (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        tenant_id  VARCHAR(100) NOT NULL,
+        keywords   TEXT NOT NULL,
+        answer     TEXT NOT NULL,
+        active     TINYINT(1) NOT NULL DEFAULT 1,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`,
+      cb
+    );
+  }
+
+  // GET /api/admin/help-kb
+  router.get('/admin/help-kb', requireAdmin, (req, res) => {
+    ensureKbTable(() => {
+      db.query(
+        `SELECT id, keywords, answer, active, created_at FROM help_kb WHERE tenant_id = ? ORDER BY id DESC`,
+        [GLOBAL_TENANT],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: 'Błąd bazy.' });
+          res.json(rows || []);
+        }
+      );
+    });
+  });
+
+  // POST /api/admin/help-kb
+  router.post('/admin/help-kb', requireAdmin, (req, res) => {
+    const { keywords, answer } = req.body;
+    if (!keywords || !answer) return res.json({ status: 'error', message: 'Uzupełnij słowa kluczowe i odpowiedź.' });
+    ensureKbTable(() => {
+      db.query(
+        `INSERT INTO help_kb (tenant_id, keywords, answer) VALUES (?, ?, ?)`,
+        [GLOBAL_TENANT, String(keywords).trim(), String(answer).trim()],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: 'Błąd zapisu.' });
+          res.json({ status: 'ok', id: result.insertId });
+        }
+      );
+    });
+  });
+
+  // PUT /api/admin/help-kb/:id
+  router.put('/admin/help-kb/:id', requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    const { keywords, answer } = req.body;
+    if (!id) return res.json({ status: 'error', message: 'Nieprawidłowe id.' });
+    const fields = [], vals = [];
+    if (keywords !== undefined) { fields.push('keywords = ?'); vals.push(String(keywords).trim()); }
+    if (answer   !== undefined) { fields.push('answer = ?');   vals.push(String(answer).trim()); }
+    if (!fields.length) return res.json({ status: 'error', message: 'Brak danych.' });
+    vals.push(id, GLOBAL_TENANT);
+    db.query(
+      `UPDATE help_kb SET ${fields.join(', ')} WHERE id = ? AND tenant_id = ?`,
+      vals,
+      (err, result) => {
+        if (err) return res.json({ status: 'error', message: 'Błąd zapisu.' });
+        if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono wpisu.' });
+        res.json({ status: 'ok' });
+      }
+    );
+  });
+
+  // DELETE /api/admin/help-kb/:id
+  router.delete('/admin/help-kb/:id', requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id, 10);
+    if (!id) return res.json({ status: 'error', message: 'Nieprawidłowe id.' });
+    db.query(
+      `DELETE FROM help_kb WHERE id = ? AND tenant_id = ?`,
+      [id, GLOBAL_TENANT],
+      (err, result) => {
+        if (err) return res.json({ status: 'error', message: 'Błąd usunięcia.' });
+        if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono wpisu.' });
+        res.json({ status: 'ok' });
+      }
+    );
+  });
+
   return router;
 };

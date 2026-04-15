@@ -1,10 +1,13 @@
 // routes/helpkb.js
 // Zarządzanie bazą wiedzy chatu pomocy (help_kb)
 // Tabela: help_kb(id, tenant_id, keywords TEXT, answer TEXT, active, created_at)
+// tenant_id = '__global__' → wpisy globalne zarządzane przez admina (endpointy w admin.js)
 
 const express = require('express');
 const router = express.Router();
 const { validateTenantAccess } = require('./sessions');
+
+const GLOBAL_TENANT = '__global__';
 
 // Tworzy tabelę jeśli nie istnieje (idempotentne)
 function ensureTable(db, cb) {
@@ -38,6 +41,19 @@ function auth(req, res) {
 }
 
 module.exports = (db) => {
+
+  // ── GET /api/help-kb/global — publiczny odczyt globalnej KB (bez auth) ──
+  router.get('/help-kb/global', (req, res) => {
+    ensureTable(db, () => {
+      db.query(
+        `SELECT keywords, answer FROM help_kb WHERE tenant_id = '__global__' AND active = 1 ORDER BY id DESC`,
+        (err, rows) => {
+          if (err) return res.json([]);
+          res.json(rows || []);
+        }
+      );
+    });
+  });
 
   // ── GET /api/help-kb — pobierz wszystkie wpisy tenanta ──────
   router.get('/help-kb', (req, res) => {

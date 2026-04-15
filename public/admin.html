@@ -360,12 +360,18 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
       <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
       <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
       <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
+      <button class="tab-btn" onclick="showTab('tab-kb')">💬 Baza Wiedzy</button>
       <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
     </div>
 
     <!-- Tab: Lista salonów -->
     <div id="tab-salony" class="tab-panel active">
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
+    </div>
+
+    <!-- Tab: Baza Wiedzy Chatu -->
+    <div id="tab-kb" class="tab-panel">
+      <div id="kb-content"></div>
     </div>
 
     <!-- Tab: Zgłoszenia od klientów -->
@@ -915,6 +921,7 @@ function showTab(id) {
   if (id === 'tab-zgloszenia') zaladujZgloszenia();
   if (id === 'tab-linki') zaladujTokeny();
   if (id === 'tab-vouchery') zaladujVouchery();
+  if (id === 'tab-kb') kb_init();
   if (id === 'tab-nowy') resetWizard();
 }
 
@@ -1019,6 +1026,16 @@ function zaladujSalony() {
   })
   .then(r => r.json())
   .then(salony => {
+    // Obsługa wygasłej sesji / błędu autoryzacji
+    if (!Array.isArray(salony)) {
+      if (salony.status === 'error' && (salony.message || '').includes('Brak dostępu')) {
+        cont.innerHTML = '<div class="alert alert-error">Sesja wygasła — zaloguj się ponownie.</div>';
+        setTimeout(() => adminLogout(), 2000);
+      } else {
+        cont.innerHTML = `<div class="alert alert-error">${salony.message || 'Błąd ładowania.'}</div>`;
+      }
+      return;
+    }
     if (!salony.length) {
       cont.innerHTML = `<div class="empty-state"><div class="icon">🏪</div><p>Brak salonów w systemie.<br>Dodaj pierwszy salon klikając "Nowy salon".</p></div>`;
       return;
@@ -1470,6 +1487,288 @@ async function usunVoucher(id, btn) {
     body: JSON.stringify({ id })
   });
   zaladujVouchery();
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  BAZA WIEDZY CHATU — panel administracyjny
+//  Wpisy globalne (tenant_id = '__global__') widoczne we wszystkich
+//  salonach jako wbudowane podpowiedzi chatu.
+// ═══════════════════════════════════════════════════════════════
+
+const kb_state = { add: [], edit: [] };
+
+function kb_esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function kb_toast(id, type, msg, ms = 3200) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.className = 'kb-toast ' + type;
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.style.display = 'none'; }, ms);
+}
+
+function kb_renderTags(wrapId, tags, stateKey) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  wrap.querySelectorAll('.kb-tag').forEach(el => el.remove());
+  const input = wrap.querySelector('.kb-tag-input');
+  tags.forEach((tag, i) => {
+    const span = document.createElement('span');
+    span.className = 'kb-tag';
+    span.innerHTML = `${kb_esc(tag)} <button class="kb-tag-del" onclick="kb_delTag('${stateKey}',${i})" type="button">×</button>`;
+    wrap.insertBefore(span, input);
+  });
+}
+
+function kb_delTag(stateKey, idx) {
+  kb_state[stateKey].splice(idx, 1);
+  kb_renderTags(stateKey === 'add' ? 'kb-tags-wrap' : 'kb-edit-tags-wrap', kb_state[stateKey], stateKey);
+}
+
+function kb_setupTagInput(inputId, wrapId, stateKey) {
+  const input = document.getElementById(inputId);
+  if (!input || input._kbReady) return;
+  input._kbReady = true;
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const v = this.value.trim().replace(/,$/,'');
+      if (v && !kb_state[stateKey].includes(v)) { kb_state[stateKey].push(v); kb_renderTags(wrapId, kb_state[stateKey], stateKey); }
+      this.value = '';
+    } else if (e.key === 'Backspace' && !this.value && kb_state[stateKey].length) {
+      kb_state[stateKey].pop(); kb_renderTags(wrapId, kb_state[stateKey], stateKey);
+    }
+  });
+}
+
+function kb_renderPanel(items) {
+  const count = items.length;
+  const countTxt = count ? `${count} ${count===1?'wpis':count<5?'wpisy':'wpisów'}` : '';
+
+  const listHtml = items.length ? items.map(item => {
+    const tags = String(item.keywords).split(',').map(t=>t.trim()).filter(Boolean);
+    const tagsHtml = tags.map(t=>`<span class="kb-item-tag">${kb_esc(t)}</span>`).join('');
+    const preview = String(item.answer).replace(/<[^>]*>/g,'').substring(0,140);
+    return `
+      <div class="kb-item" id="kb-item-${item.id}">
+        <div class="kb-item-kw">${tagsHtml}</div>
+        <div class="kb-item-ans">${kb_esc(preview)}${item.answer.length>140?'…':''}</div>
+        <div class="kb-item-actions">
+          <button class="kb-btn-sm kb-btn-edit" onclick="kb_otworzEdycje(${item.id},${JSON.stringify(JSON.stringify(tags))},${JSON.stringify(item.answer)})">✏️ Edytuj</button>
+          <button class="kb-btn-sm kb-btn-del" onclick="kb_usun(${item.id})">🗑️ Usuń</button>
+        </div>
+      </div>`;
+  }).join('') : `<div class="kb-empty"><div style="font-size:36px;margin-bottom:10px;">💬</div>Brak wpisów — dodaj pierwszy po lewej.</div>`;
+
+  document.getElementById('kb-content').innerHTML = `
+<style>
+.kb-layout{display:grid;grid-template-columns:1fr 1.5fr;gap:22px;align-items:start}
+@media(max-width:800px){.kb-layout{grid-template-columns:1fr}}
+.kb-card{background:#fff;border-radius:20px;padding:26px 22px;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid #f0eef0}
+.kb-card-title{font-size:15px;font-weight:700;color:#2d3748;margin:0 0 18px 0;display:flex;align-items:center;justify-content:space-between}
+.kb-label{display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.kb-input,.kb-textarea{width:100%;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:11px;font-family:inherit;font-size:13.5px;color:#2d3748;outline:none;transition:border-color .2s;background:#fafafa;box-sizing:border-box}
+.kb-input:focus,.kb-textarea:focus{border-color:#ff758c;background:#fff}
+.kb-textarea{resize:vertical;min-height:105px;line-height:1.6}
+.kb-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:11px;background:#fafafa;min-height:42px;cursor:text;transition:border-color .2s}
+.kb-tags-wrap:focus-within{border-color:#ff758c;background:#fff}
+.kb-tag{background:#fff0f3;color:#ff758c;border-radius:20px;padding:3px 10px 3px 12px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
+.kb-tag-del{background:none;border:none;cursor:pointer;color:inherit;padding:0;font-size:14px;line-height:1;opacity:.7}
+.kb-tag-del:hover{opacity:1}
+.kb-tag-input{border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:#2d3748;min-width:110px;flex:1}
+.kb-tag-hint{font-size:11px;color:#a0aec0;margin-top:4px}
+.kb-btn-add{width:100%;padding:12px;background:linear-gradient(135deg,#ff758c,#ff7eb3);color:#fff;border:none;border-radius:13px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:14px;box-shadow:0 5px 16px rgba(255,117,140,.3);transition:transform .2s,box-shadow .2s}
+.kb-btn-add:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(255,117,140,.4)}
+.kb-btn-add:disabled{opacity:.6;cursor:not-allowed;transform:none}
+.kb-list{display:flex;flex-direction:column;gap:10px}
+.kb-item{background:#fff;border:1.5px solid #f0eef0;border-radius:16px;padding:14px 16px;transition:box-shadow .2s,border-color .2s}
+.kb-item:hover{box-shadow:0 4px 14px rgba(255,117,140,.1);border-color:#ffd0d8}
+.kb-item-kw{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.kb-item-tag{background:#fff0f3;color:#ff758c;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500}
+.kb-item-ans{font-size:12.5px;color:#4a5568;line-height:1.55;word-break:break-word}
+.kb-item-actions{display:flex;gap:7px;margin-top:10px;justify-content:flex-end}
+.kb-btn-sm{padding:5px 13px;border-radius:9px;font-size:11.5px;font-family:inherit;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,transform .1s}
+.kb-btn-sm:hover{opacity:.85;transform:translateY(-1px)}
+.kb-btn-edit{background:#f0f4ff;color:#6366f1}
+.kb-btn-del{background:#fff0f0;color:#ef4444}
+.kb-empty{text-align:center;padding:36px 20px;color:#a0aec0;font-size:13.5px}
+.kb-toast{padding:9px 14px;border-radius:11px;font-size:12.5px;margin-top:10px;display:none}
+.kb-toast.ok{background:#f0fff4;color:#15803d;border:1px solid #bbf7d0}
+.kb-toast.err{background:#fff0f0;color:#dc2626;border:1px solid #fecaca}
+#kb-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:center;justify-content:center}
+#kb-modal-overlay.open{display:flex}
+#kb-modal{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:500px;box-shadow:0 20px 50px rgba(0,0,0,.15);position:relative;max-height:90vh;overflow-y:auto}
+</style>
+
+<h2 style="font-size:18px;font-weight:800;margin-bottom:6px;">💬 Baza Wiedzy Chatu Pomocy</h2>
+<p style="font-size:13px;color:#6b7280;margin-bottom:22px;line-height:1.6;">
+  Wpisy globalne — widoczne w chacie pomocy we wszystkich salonach jako domyślne odpowiedzi.
+  Własne wpisy salonu mają wyższy priorytet.
+</p>
+
+<div class="kb-layout">
+  <div class="kb-card">
+    <div class="kb-card-title">✏️ Dodaj nowy wpis</div>
+    <div style="margin-bottom:14px">
+      <label class="kb-label">Słowa kluczowe</label>
+      <div class="kb-tags-wrap" id="kb-tags-wrap" onclick="document.getElementById('kb-tag-input').focus()">
+        <input id="kb-tag-input" class="kb-tag-input" placeholder="Wpisz i zatwierdź Enterem lub przecinkiem…" maxlength="60">
+      </div>
+      <div class="kb-tag-hint">Enter lub przecinek = nowy tag. Backspace = usuwa ostatni.</div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="kb-label">Odpowiedź</label>
+      <textarea class="kb-textarea" id="kb-answer" placeholder="Treść odpowiedzi dla użytkownika. HTML dozwolony: <b>, <br>, <a href=…>."></textarea>
+    </div>
+    <button class="kb-btn-add" id="kb-btn-add" onclick="kb_dodaj()">➕ Dodaj wpis</button>
+    <div class="kb-toast" id="kb-toast-form"></div>
+  </div>
+
+  <div class="kb-card">
+    <div class="kb-card-title">
+      <span>📋 Zapisane wpisy</span>
+      <span style="font-size:12px;color:#a0aec0;font-weight:400">${countTxt}</span>
+    </div>
+    <div class="kb-list" id="kb-list">${listHtml}</div>
+    <div class="kb-toast" id="kb-toast-list"></div>
+  </div>
+</div>
+
+<!-- Modal edycji -->
+<div id="kb-modal-overlay">
+<div id="kb-modal">
+  <div style="font-size:15px;font-weight:700;margin-bottom:18px">✏️ Edytuj wpis</div>
+  <input type="hidden" id="kb-edit-id">
+  <div style="margin-bottom:14px">
+    <label class="kb-label">Słowa kluczowe</label>
+    <div class="kb-tags-wrap" id="kb-edit-tags-wrap" onclick="document.getElementById('kb-edit-tag-input').focus()">
+      <input id="kb-edit-tag-input" class="kb-tag-input" placeholder="Enter lub przecinek = nowy tag" maxlength="60">
+    </div>
+  </div>
+  <div style="margin-bottom:14px">
+    <label class="kb-label">Odpowiedź</label>
+    <textarea class="kb-textarea" id="kb-edit-answer" style="min-height:120px"></textarea>
+  </div>
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+    <button class="kb-btn-sm kb-btn-del" onclick="kb_modalClose()" style="padding:8px 18px;font-size:13px">Anuluj</button>
+    <button class="kb-btn-add" id="kb-btn-save" onclick="kb_zapisz()" style="width:auto;padding:9px 24px;margin-top:0">💾 Zapisz</button>
+  </div>
+  <div class="kb-toast" id="kb-toast-modal"></div>
+</div>
+</div>`;
+
+  // Podpięcie modal tło
+  const overlay = document.getElementById('kb-modal-overlay');
+  if (overlay) overlay.onclick = e => { if (e.target === overlay) kb_modalClose(); };
+
+  // Inicjalizacja tag-inputów
+  kb_setupTagInput('kb-tag-input', 'kb-tags-wrap', 'add');
+  kb_setupTagInput('kb-edit-tag-input', 'kb-edit-tags-wrap', 'edit');
+}
+
+async function kb_init() {
+  const cont = document.getElementById('kb-content');
+  cont.innerHTML = '<div class="loading">Ładowanie bazy wiedzy...</div>';
+  try {
+    const r = await fetch(`${API}/admin/help-kb`, { headers: { 'X-Admin-Token': adminToken } });
+    const d = await r.json();
+    if (!Array.isArray(d)) {
+      if (d.status === 'error' && (d.message||'').includes('Brak dostępu')) { setTimeout(()=>adminLogout(),2000); cont.innerHTML='<div class="alert alert-error">Sesja wygasła.</div>'; return; }
+      cont.innerHTML = `<div class="alert alert-error">${d.message||'Błąd ładowania.'}</div>`; return;
+    }
+    kb_renderPanel(d);
+  } catch(e) {
+    cont.innerHTML = '<div class="alert alert-error">Błąd połączenia z serwerem.</div>';
+  }
+}
+
+async function kb_dodaj() {
+  const tagInput = document.getElementById('kb-tag-input');
+  if (tagInput?.value.trim()) {
+    const v = tagInput.value.trim();
+    if (!kb_state.add.includes(v)) kb_state.add.push(v);
+    tagInput.value = '';
+    kb_renderTags('kb-tags-wrap', kb_state.add, 'add');
+  }
+  const keywords = kb_state.add.join(', ');
+  const answer   = (document.getElementById('kb-answer')?.value||'').trim();
+  if (!keywords) { kb_toast('kb-toast-form','err','Dodaj przynajmniej jedno słowo kluczowe.'); return; }
+  if (!answer)   { kb_toast('kb-toast-form','err','Wpisz treść odpowiedzi.'); return; }
+
+  const btn = document.getElementById('kb-btn-add');
+  btn.disabled = true; btn.textContent = '⏳ Zapisywanie...';
+  try {
+    const r = await fetch(`${API}/admin/help-kb`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ keywords, answer })
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      kb_state.add = [];
+      document.getElementById('kb-answer').value = '';
+      kb_init();
+    } else { kb_toast('kb-toast-form','err', d.message||'Błąd zapisu.'); }
+  } catch(e) { kb_toast('kb-toast-form','err','Błąd połączenia.'); }
+  finally { btn.disabled=false; btn.textContent='➕ Dodaj wpis'; }
+}
+
+async function kb_usun(id) {
+  if (!confirm('Usunąć ten wpis z globalnej bazy wiedzy?')) return;
+  try {
+    const r = await fetch(`${API}/admin/help-kb/${id}`, {
+      method: 'DELETE', headers: { 'X-Admin-Token': adminToken }
+    });
+    const d = await r.json();
+    if (d.status === 'ok') {
+      const el = document.getElementById(`kb-item-${id}`);
+      if (el) { el.style.opacity='0'; el.style.transition='.2s'; setTimeout(()=>kb_init(),220); }
+    } else { kb_toast('kb-toast-list','err', d.message||'Błąd usunięcia.'); }
+  } catch(e) { kb_toast('kb-toast-list','err','Błąd połączenia.'); }
+}
+
+function kb_otworzEdycje(id, tagsJson, answer) {
+  kb_state.edit = [...JSON.parse(tagsJson)];
+  document.getElementById('kb-edit-id').value = id;
+  document.getElementById('kb-edit-answer').value = answer;
+  kb_renderTags('kb-edit-tags-wrap', kb_state.edit, 'edit');
+  document.getElementById('kb-modal-overlay').classList.add('open');
+  document.getElementById('kb-edit-tag-input').focus();
+}
+function kb_modalClose() {
+  document.getElementById('kb-modal-overlay').classList.remove('open');
+}
+async function kb_zapisz() {
+  const tagInput = document.getElementById('kb-edit-tag-input');
+  if (tagInput?.value.trim()) {
+    const v = tagInput.value.trim();
+    if (!kb_state.edit.includes(v)) kb_state.edit.push(v);
+    tagInput.value = '';
+    kb_renderTags('kb-edit-tags-wrap', kb_state.edit, 'edit');
+  }
+  const id      = document.getElementById('kb-edit-id').value;
+  const keywords = kb_state.edit.join(', ');
+  const answer   = (document.getElementById('kb-edit-answer')?.value||'').trim();
+  if (!keywords) { kb_toast('kb-toast-modal','err','Brak słów kluczowych.'); return; }
+  if (!answer)   { kb_toast('kb-toast-modal','err','Wpisz odpowiedź.'); return; }
+
+  const btn = document.getElementById('kb-btn-save');
+  btn.disabled=true; btn.textContent='⏳ Zapisywanie...';
+  try {
+    const r = await fetch(`${API}/admin/help-kb/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type':'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ keywords, answer })
+    });
+    const d = await r.json();
+    if (d.status==='ok') { kb_modalClose(); kb_init(); }
+    else { kb_toast('kb-toast-modal','err', d.message||'Błąd zapisu.'); }
+  } catch(e) { kb_toast('kb-toast-modal','err','Błąd połączenia.'); }
+  finally { btn.disabled=false; btn.textContent='💾 Zapisz'; }
 }
 </script>
 </body>
