@@ -385,8 +385,8 @@ module.exports = (db) => {
         const licId = randomUUID();
 
         db.query(
-          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, miasto, telefon, email, data_utworzenia)
-           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, NOW())`,
+          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, miasto, telefon, email, data_waznosci, data_utworzenia)
+           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
           [licId, login.trim(), haslo.trim(), tenant_id, nazwa_salonu, miasto || '', telefon || '', email || ''],
           (err2) => {
             if (err2) {

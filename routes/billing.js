@@ -96,7 +96,7 @@ module.exports = (db) => {
         const s = rows[0];
         const teraz = new Date();
         const wazna = s.data_waznosci ? new Date(s.data_waznosci) : null;
-        const aktywna = s.status === 'aktywna' && wazna && wazna > teraz;
+        const aktywna = ['aktywna', 'aktywny'].includes(s.status) && wazna && wazna > teraz;
 
         return res.json({
           status: 'success',
