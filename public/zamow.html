@@ -502,6 +502,44 @@
     margin-top: 2px; font-size: .75rem;
   }
 
+  /* price anchor */
+  .price-anchor {
+    background: var(--white); border: 1.5px solid var(--border);
+    border-radius: 16px; padding: 20px 22px; margin: 24px 0;
+  }
+  .pa-main { display: flex; align-items: baseline; gap: 6px; margin-bottom: 6px; }
+  .pa-amount {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.2rem; font-weight: 600; color: var(--rose); line-height: 1;
+  }
+  .pa-period { font-size: .8rem; color: var(--text-muted); font-weight: 500; }
+  .pa-compare { font-size: .82rem; color: var(--text-muted); line-height: 1.55; margin-bottom: 12px; }
+  .pa-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pa-tag {
+    font-size: .68rem; font-weight: 600; letter-spacing: .06em;
+    text-transform: uppercase; padding: 4px 10px; border-radius: 20px;
+    background: var(--rose-light); color: var(--rose-dark);
+  }
+
+  /* how it works */
+  .how-it-works { margin: 0 0 24px; }
+  .how-label {
+    font-size: .68rem; font-weight: 600; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 14px;
+  }
+  .how-steps { display: flex; flex-direction: column; gap: 12px; }
+  .how-step {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .how-num {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: var(--dark); color: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .75rem; font-weight: 700;
+  }
+  .how-step strong { display: block; font-size: .88rem; font-weight: 600; color: var(--dark); }
+  .how-step span { font-size: .8rem; color: var(--text-muted); line-height: 1.5; }
+
   .form-card {
     background: var(--white); border-radius: 20px;
     padding: 40px 36px;
@@ -964,6 +1002,49 @@
         Jeden system zamiast exceli, notatek i chaotycznych arkuszy.
         Płacisz raz w roku — masz spokój przez cały rok.
       </p>
+
+      <!-- PRICE ANCHOR -->
+      <div class="price-anchor">
+        <div class="pa-main">
+          <span class="pa-amount">49 zł</span>
+          <span class="pa-period">/ miesiąc</span>
+        </div>
+        <p class="pa-compare">To mniej niż jedna kawa tygodniowo — a oszczędzasz kilka godzin każdego tygodnia.</p>
+        <div class="pa-tags">
+          <span class="pa-tag">Mniej niż 2 zł dziennie</span>
+          <span class="pa-tag">Płacisz raz w roku</span>
+          <span class="pa-tag">Bez ukrytych opłat</span>
+        </div>
+      </div>
+
+      <!-- HOW IT WORKS -->
+      <div class="how-it-works">
+        <p class="how-label">Jak to działa?</p>
+        <div class="how-steps">
+          <div class="how-step">
+            <div class="how-num">1</div>
+            <div>
+              <strong>Wypełnij formularz</strong>
+              <span>Imię, salon, e-mail — to wszystko.</span>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num">2</div>
+            <div>
+              <strong>Opłać dostęp</strong>
+              <span>Kartą lub BLIK, bezpiecznie przez Stripe.</span>
+            </div>
+          </div>
+          <div class="how-step">
+            <div class="how-num">3</div>
+            <div>
+              <strong>Zacznij od razu</strong>
+              <span>Link aktywacyjny trafia na Twój e-mail automatycznie.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <ul class="pitch-list">
         <li>Pełny dostęp do wszystkich funkcji od pierwszego dnia</li>
         <li>Nieograniczona liczba klientów, transakcji i dokumentów</li>
