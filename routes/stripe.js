@@ -30,7 +30,8 @@ try {
   wystawFakture = async () => {};
 }
 
-const APP_URL = () => process.env.APP_URL || 'https://yellow-ibex-409594.hostingersite.com';
+function stripQuotes(val) { return (val || '').replace(/^['"]|['"]$/g, ''); }
+const APP_URL = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
 const CENA_GROSZE = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900; // 49 zł domyślnie
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
 
