@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik po Systemie</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#f4efe6;--cream2:#ede6d8;--dark:#1c1a18;
+  --rose:#b87080;--rose-dark:#a05e6e;--rose-light:#f3dfe3;
+  --gold:#c9a96e;--gold-light:#d9bc88;
+  --text-muted:#6b6459;--border:#ddd4c4;--white:#ffffff;
+  --green:#166534;--green-bg:#f0fdf4;--green-border:#bbf7d0;
+  --sidebar:270px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar);flex-shrink:0;background:var(--dark);
+  position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
+  padding:0 0 60px;z-index:100;
+}
+#sidebar::-webkit-scrollbar{width:3px}
+#sidebar::-webkit-scrollbar-thumb{background:#3a342c}
+.sb-top{padding:28px 24px 20px;border-bottom:1px solid #2a2620}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:#f4efe6;letter-spacing:.02em}
+.sb-logo em{color:var(--rose);font-style:italic}
+.sb-tagline{font-size:.7rem;color:#6b6050;margin-top:3px}
+.sb-search{margin:14px 16px 0;position:relative}
+.sb-search input{
+  width:100%;background:#ffffff0d;border:1px solid #2e2a24;border-radius:8px;
+  padding:7px 12px 7px 30px;font-family:'DM Sans',sans-serif;
+  font-size:.78rem;color:#c9b99a;outline:none;
+}
+.sb-search input::placeholder{color:#4a4030}
+.sb-search::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#4a4030;font-size:.9rem}
+.sb-nav{padding:8px 0}
+.sb-group-label{font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#4a4030;padding:12px 24px 4px}
+.sb-link{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 24px;font-size:.8rem;color:#8a7a6a;
+  text-decoration:none;border-left:2px solid transparent;transition:all .15s;
+}
+.sb-link .sb-icon{font-size:.85rem;width:18px;text-align:center;flex-shrink:0}
+.sb-link:hover{color:#e8ddd0;background:#ffffff08;border-left-color:#3a342c}
+.sb-link.active{color:var(--rose);border-left-color:var(--rose);background:#ffffff0a}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar);flex:1;padding:0 0 100px;max-width:calc(100% - var(--sidebar))}
+
+/* ── HERO ── */
+.hero{
+  background:var(--dark);padding:70px 64px 56px;position:relative;overflow:hidden;
+}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.hb1{width:300px;height:300px;background:#c9849044;top:-60px;right:60px}
+.hb2{width:180px;height:180px;background:#c9a96e33;bottom:-40px;right:260px}
+.hero .eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:16px;position:relative;z-index:1}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,4vw,3.2rem);font-weight:600;color:#f4efe6;line-height:1.15;margin-bottom:16px;position:relative;z-index:1}
+.hero h1 em{font-style:italic;font-weight:400;color:var(--rose)}
+.hero p{font-size:.93rem;color:#a09080;line-height:1.8;max-width:580px;position:relative;z-index:1}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;position:relative;z-index:1}
+.hero-chip{background:#ffffff0f;border:1px solid #3a342c;border-radius:20px;padding:5px 14px;font-size:.75rem;color:#8a7a6a}
+
+/* ── CONTENT WRAPPER ── */
+.content{padding:0 64px}
+
+/* ── SECTION ── */
+.section{padding:56px 0;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px}
+.section h2{font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,2.5vw,2rem);font-weight:600;color:var(--dark);margin-bottom:14px;line-height:1.25}
+.section h2 em{font-style:italic;font-weight:400}
+.section > p{font-size:.9rem;color:var(--text-muted);line-height:1.85;margin-bottom:16px;max-width:700px}
+.section h3{font-size:1rem;font-weight:600;color:var(--dark);margin:28px 0 10px}
+
+/* ── MODULE HEADER ── */
+.mod-header{display:flex;align-items:flex-start;gap:18px;margin-bottom:22px}
+.mod-icon{
+  width:52px;height:52px;border-radius:16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+}
+.mod-icon.rose{background:var(--rose-light)}
+.mod-icon.gold{background:#fef3d0}
+.mod-icon.green{background:var(--green-bg)}
+.mod-icon.blue{background:#eff6ff}
+.mod-icon.purple{background:#f5f3ff}
+.mod-title h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.mod-title p{font-size:.85rem;color:var(--text-muted);line-height:1.6}
+
+/* ── CARDS ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.cards.col2{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.cards.col3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 8px 28px rgba(0,0,0,.07);transform:translateY(-2px)}
+.card-icon{font-size:1.1rem;margin-bottom:8px}
+.card h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:5px}
+.card p{font-size:.78rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── HOW IT WORKS STEPS ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.step{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--rose);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;margin-bottom:10px;
+}
+.step h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.step p{font-size:.78rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── TWO-COL LAYOUT ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:18px 0}
+.two-col.uneven{grid-template-columns:1.2fr 1fr}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--white);border:1.5px solid var(--border);border-radius:18px;padding:28px}
+.info-box h3{font-size:.95rem;font-weight:600;color:var(--dark);margin-bottom:14px}
+.info-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:.82rem}
+.info-row:last-child{margin-bottom:0}
+.info-row .dot{width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0;margin-top:6px}
+.info-row p{color:var(--text-muted);line-height:1.6;margin:0}
+.info-row strong{color:var(--dark)}
+
+/* ── HIGHLIGHT BOX ── */
+.highlight{
+  background:linear-gradient(135deg,#1c1a18,#2a2420);
+  border-radius:20px;padding:32px 36px;margin:22px 0;color:#f4efe6;
+  position:relative;overflow:hidden;
+}
+.highlight-blob{position:absolute;border-radius:50%;filter:blur(50px);pointer-events:none}
+.hl-b1{width:200px;height:200px;background:#c9849030;top:-60px;right:-40px}
+.hl-b2{width:120px;height:120px;background:#c9a96e25;bottom:-30px;left:60px}
+.highlight h3{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;margin-bottom:10px;position:relative;z-index:1}
+.highlight p{font-size:.86rem;color:#a09080;line-height:1.8;position:relative;z-index:1}
+.highlight ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
+.highlight ul li{font-size:.83rem;color:#a09080;padding-left:16px;position:relative;line-height:1.6}
+.highlight ul li::before{content:'✦';color:var(--gold);font-size:.65rem;position:absolute;left:0;top:3px}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:.82rem}
+.tbl th{text-align:left;padding:9px 14px;font-size:.71rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);background:var(--cream2);border-bottom:2px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--dark);line-height:1.55;vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#faf7f2}
+.tbl td:first-child{font-weight:600;color:var(--rose)}
+
+/* ── CALLOUT ── */
+.callout{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:.84rem;line-height:1.7}
+.callout.warn{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e}
+.callout.tip{background:var(--green-bg);border:1.5px solid var(--green-border);color:#166534}
+.callout.note{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1e40af}
+.callout strong{font-weight:700}
+
+/* ── FLOW ── */
+.flow{position:relative;margin:18px 0;display:flex;flex-direction:column;gap:0}
+.flow-item{display:flex;gap:14px;align-items:flex-start}
+.flow-left{display:flex;flex-direction:column;align-items:center}
+.flow-num{width:30px;height:30px;border-radius:50%;background:var(--rose);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.flow-line{width:2px;flex:1;background:var(--border);margin:4px 0;min-height:16px}
+.flow-body{padding-bottom:16px}
+.flow-body strong{display:block;font-size:.88rem;font-weight:600;color:var(--dark);margin-bottom:2px}
+.flow-body span{font-size:.8rem;color:var(--text-muted);line-height:1.6}
+
+/* ── BADGE ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.71rem;font-weight:600;margin:1px}
+.badge.rose{background:var(--rose-light);color:var(--rose-dark)}
+.badge.gold{background:#fef3d0;color:#a07030}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.gray{background:var(--cream2);color:var(--text-muted)}
+
+/* ── SCORE VIZ ── */
+.score-bars{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.score-bar-row{display:flex;align-items:center;gap:12px}
+.score-bar-label{font-size:.8rem;color:var(--dark);width:220px;flex-shrink:0}
+.score-bar-track{height:10px;background:var(--cream2);border-radius:5px;flex:1;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:5px;background:var(--rose)}
+.score-bar-val{font-size:.75rem;font-weight:700;color:var(--text-muted);width:30px;text-align:right;flex-shrink:0}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ── TOP BTN ── */
+#top-btn{position:fixed;bottom:28px;right:28px;width:42px;height:42px;border-radius:50%;background:var(--dark);color:#f4efe6;border:1.5px solid #3a342c;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;z-index:200}
+#top-btn.visible{opacity:1}
+
+@media(max-width:960px){
+  #sidebar{display:none}
+  #main{margin-left:0}
+  .content{padding:0 24px}
+  .hero{padding:48px 24px 40px}
+  .two-col,.cards.col3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">✦ <em>Estelio</em></div>
+    <div class="sb-tagline">Przewodnik po systemie</div>
+    <div class="sb-search"><input type="text" placeholder="Szukaj..." id="searchInput" oninput="filterNav(this.value)"></div>
+  </div>
+  <div class="sb-nav" id="sbNav">
+    <div class="sb-group-label">Wstęp</div>
+    <a class="sb-link" href="#czym-jest"><span class="sb-icon">🌸</span>Czym jest Estelio?</a>
+    <a class="sb-link" href="#jak-dziala-system"><span class="sb-icon">🏗️</span>Jak to działa pod spodem</a>
+    <a class="sb-link" href="#logowanie"><span class="sb-icon">🔐</span>Logowanie i dostęp</a>
+
+    <div class="sb-group-label">Moduły salonu</div>
+    <a class="sb-link" href="#sprzedaz"><span class="sb-icon">💰</span>Sprzedaż i wizyty</a>
+    <a class="sb-link" href="#klienci"><span class="sb-icon">👥</span>Klienci</a>
+    <a class="sb-link" href="#magazyn"><span class="sb-icon">📦</span>Magazyn</a>
+    <a class="sb-link" href="#analityka"><span class="sb-icon">📊</span>Analityka</a>
+    <a class="sb-link" href="#vouchery"><span class="sb-icon">🎟️</span>Vouchery i rabaty</a>
+    <a class="sb-link" href="#urodziny"><span class="sb-icon">🎂</span>Kampania urodzinowa</a>
+    <a class="sb-link" href="#retencja"><span class="sb-icon">🔄</span>Retencja klientów</a>
+    <a class="sb-link" href="#konsultacje"><span class="sb-icon">📋</span>Konsultacje</a>
+    <a class="sb-link" href="#targety"><span class="sb-icon">🎯</span>Targety pracowników</a>
+    <a class="sb-link" href="#rodo"><span class="sb-icon">🛡️</span>RODO i zgody</a>
+    <a class="sb-link" href="#logi"><span class="sb-icon">📝</span>Logi systemu</a>
+
+    <div class="sb-group-label">Właściciel &amp; Admin</div>
+    <a class="sb-link" href="#panel-admina"><span class="sb-icon">👑</span>Panel admina</a>
+    <a class="sb-link" href="#onboarding"><span class="sb-icon">🚀</span>Onboarding nowego salonu</a>
+    <a class="sb-link" href="#platnosci"><span class="sb-icon">💳</span>Płatności Stripe</a>
+    <a class="sb-link" href="#emaile"><span class="sb-icon">📧</span>Automatyczne emaile</a>
+
+    <div class="sb-group-label">Esti &amp; inne</div>
+    <a class="sb-link" href="#esti"><span class="sb-icon">💬</span>Esti — chatbot</a>
+    <a class="sb-link" href="#bezpieczenstwo"><span class="sb-icon">🔒</span>Bezpieczeństwo</a>
+    <a class="sb-link" href="#magda"><span class="sb-icon">💼</span>Panel Magdy</a>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main id="main">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-blob hb1"></div>
+  <div class="hero-blob hb2"></div>
+  <div class="eyebrow">Przewodnik po systemie</div>
+  <h1>Wszystko o <em>Estelio</em><br>w jednym miejscu</h1>
+  <p>Jak działa każdy moduł, co widzi użytkownik, jak system myśli pod spodem — i dlaczego jest zbudowany tak, a nie inaczej.</p>
+  <div class="hero-chips">
+    <span class="hero-chip">📦 Magazyn</span>
+    <span class="hero-chip">👥 Klienci</span>
+    <span class="hero-chip">💰 Sprzedaż</span>
+    <span class="hero-chip">📊 Analityka</span>
+    <span class="hero-chip">🎂 Urodziny</span>
+    <span class="hero-chip">🎯 Targety</span>
+    <span class="hero-chip">🛡️ RODO</span>
+    <span class="hero-chip">💬 Esti</span>
+    <span class="hero-chip">💳 Stripe</span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ══════════════ CZYM JEST ══════════════ -->
+<div class="section" id="czym-jest">
+  <div class="section-eyebrow">Wstęp</div>
+  <h2>Czym jest <em>Estelio?</em></h2>
+  <p>Estelio to system SaaS do zarządzania salonami beauty. Jeden właściciel — jedna aplikacja — wszystko w przeglądarce. Bez instalacji, bez pendrive'ów, bez Excela.</p>
+
+  <div class="cards col2">
+    <div class="card"><div class="card-icon">🏪</div><h4>Dla właściciela salonu</h4><p>Jedno miejsce do zarządzania klientami, sprzedażą, magazynem, pracownikami i raportami. Dostęp z każdego urządzenia przez przeglądarkę.</p></div>
+    <div class="card"><div class="card-icon">💇</div><h4>Dla pracownika</h4><p>Loguje się PINem przy stanowisku. Widzi tylko to, co potrzebuje — klientów, historię, kasowanie wizyt. Bez dostępu do finansów czy raportów.</p></div>
+    <div class="card"><div class="card-icon">👑</div><h4>Dla admina systemu</h4><p>Panel do zarządzania wszystkimi salonami naraz — tworzenie kont, tokeny rejestracyjne, globalna baza wiedzy Esti.</p></div>
+    <div class="card"><div class="card-icon">🔒</div><h4>Izolacja danych</h4><p>Każdy salon widzi tylko swoje dane. Ta sama baza danych, ale każdy rekord ma tenant_id — coś jak numer pokoju w hotelu.</p></div>
+  </div>
+
+  <div class="highlight">
+    <div class="highlight-blob hl-b1"></div>
+    <div class="highlight-blob hl-b2"></div>
+    <h3>Model: 49 zł miesięcznie</h3>
+    <p>Klient wchodzi na estelio.com.pl, wypełnia formularz, płaci kartą przez Stripe. System automatycznie generuje link aktywacyjny i wysyła go emailem. Salon gotowy w kilka minut.</p>
+    <ul>
+      <li>Dostęp roczny — 588 zł z góry lub 49 zł/mies.</li>
+      <li>Możliwe kody rabatowe (procent lub kwota stała)</li>
+      <li>Możliwy fallback bez Stripe — ręczny token od admina</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════ JAK DZIAŁA SYSTEM ══════════════ -->
+<div class="section" id="jak-dziala-system">
+  <div class="section-eyebrow">Architektura</div>
+  <h2>Jak to <em>działa pod spodem?</em></h2>
+  <p>Nie musisz tego znać żeby używać systemu — ale warto wiedzieć jak jest zbudowany, żeby rozumieć co się dzieje gdy coś pójdzie nie tak.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>🏗️ Stack technologiczny</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Backend:</strong> Node.js + Express — serwer aplikacji, obsługa API</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Baza danych:</strong> MySQL — jedna wspólna baza, dane rozdzielone przez tenant_id</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Frontend:</strong> Vanilla HTML + JavaScript — zero frameworków, ~17 000 linii index.html</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Hosting:</strong> Hostinger VPS, domena estelio.com.pl</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Email:</strong> Nodemailer + SMTP Hostinger (kontakt@estelio.com.pl)</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Dokumenty:</strong> Upload zdjęć → automatyczna konwersja do PDF (Jimp + pdf-lib)</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏢 Co to jest tenant_id?</h3>
+      <p style="font-size:.83rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">Wyobraź sobie hotel. Wszystkie pokoje są w jednym budynku (jedna baza danych), ale każdy gość ma swój klucz i widzi tylko swój pokój.</p>
+      <p style="font-size:.83rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">tenant_id to właśnie ten klucz — unikalny identyfikator salonu (np. <code style="background:var(--cream2);padding:1px 5px;border-radius:4px;font-size:.76rem">boczki-salon-8574</code>). Każdy rekord w bazie ma tenant_id — klient, sprzedaż, produkt w magazynie.</p>
+      <div class="info-row"><div class="dot"></div><p>Salon A nigdy nie zobaczy danych salonu B — nawet przez przypadek</p></div>
+      <div class="info-row"><div class="dot"></div><p>Jeden serwer obsługuje dziesiątki salonów jednocześnie</p></div>
+      <div class="info-row"><div class="dot"></div><p>tenant_id weryfikowany przy każdym żądaniu API</p></div>
+    </div>
+  </div>
+
+  <h3>Sesje — jak system wie że to Ty?</h3>
+  <p>Po zalogowaniu serwer generuje losowy token (UUID) i zapamiętuje go w pamięci na 8 godzin. Ten token jest wysyłany przy każdym żądaniu w nagłówku. Jeśli serwer się zrestartuje — wszystkie sesje giną i trzeba zalogować się ponownie.</p>
+  <div class="callout warn"><strong>Znana słabość:</strong> Sesje są przechowywane w pamięci RAM — restart serwera wylogowuje wszystkich. To planowane do naprawy (docelowo Redis lub baza danych).</div>
+</div>
+
+<!-- ══════════════ LOGOWANIE ══════════════ -->
+<div class="section" id="logowanie">
+  <div class="section-eyebrow">Dostęp</div>
+  <h2>Logowanie <em>i dostęp</em></h2>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">🔑</div><h4>Właściciel salonu</h4><p>Loguje się przez login + hasło na stronie głównej. Dostęp do wszystkich modułów i ustawień.</p></div>
+    <div class="card"><div class="card-icon">🔢</div><h4>Pracownik (PIN)</h4><p>Wybiera imię z listy i wpisuje swój PIN (4–6 cyfr). Widzi tylko wybrane sekcje — bez finansów, bez raportów.</p></div>
+    <div class="card"><div class="card-icon">👑</div><h4>Admin systemu</h4><p>Loguje się hasłem z konfiguracji serwera do osobnego panelu admin.html. Zarządza wszystkimi salonami.</p></div>
+    <div class="card"><div class="card-icon">🔄</div><h4>Reset hasła</h4><p>Link na stronie logowania — email z jednorazowym tokenem ważnym 1 godzinę. Link zużyty = nie działa drugi raz.</p></div>
+  </div>
+
+  <h3>Role pracowników</h3>
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Rola</th><th>Co widzi i może robić</th></tr></thead>
+    <tbody>
+      <tr><td>właściciel</td><td>Pełny dostęp — wszystkie moduły, raporty, ustawienia, pracownicy</td></tr>
+      <tr><td>manager</td><td>Sprzedaż, klienci, magazyn, podstawowe raporty — bez krytycznych ustawień</td></tr>
+      <tr><td>recepcja</td><td>Klienci, wizyty, kasowanie — codzienna obsługa bez dostępu do finansów</td></tr>
+      <tr><td>pracownik</td><td>Minimalny widok — kasowanie swojej sprzedaży, podgląd klientów</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ SPRZEDAŻ ══════════════ -->
+<div class="section" id="sprzedaz">
+  <div class="mod-header">
+    <div class="mod-icon rose">💰</div>
+    <div class="mod-title">
+      <h2>Sprzedaż <em>i wizyty</em></h2>
+      <p>Serce systemu — rejestrowanie każdej wizyty, każdej usługi, każdej płatności</p>
+    </div>
+  </div>
+
+  <p>Każda wizyta w salonie trafia do modułu Sprzedaż. Niezależnie czy to strzyżenie, manicure czy sprzedaż kosmetyku — wszystko ląduje w jednym miejscu z pełną historią.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">➕</div><h4>Dodawanie wizyty</h4><p>Wybierz klienta, usługę, pracownika i kwotę. System podpowiada ceny z cennika. Można przypisać kilku pracowników jednocześnie.</p></div>
+    <div class="card"><div class="card-icon">🛒</div><h4>Kasowanie kosmetyków</h4><p>Sprzedaż produktu z magazynu. System automatycznie odejmuje ilość ze stanu (FIFO — pierwsze przyszło, pierwsze wychodzi).</p></div>
+    <div class="card"><div class="card-icon">💳</div><h4>Metody płatności</h4><p>Gotówka, karta, voucher lub podział między kilka metod ("podziel płatność"). Wszystko zapisane.</p></div>
+    <div class="card"><div class="card-icon">🎫</div><h4>Rabaty</h4><p>Stały rabat procentowy lub kwotowy podczas kasowania. Konfigurowalne per salon w zakładce Rabaty.</p></div>
+    <div class="card"><div class="card-icon">📅</div><h4>Kalendarz</h4><p>Widok dzienny i tygodniowy. Wizyty można przeciągać (zmiana godziny bez edycji).</p></div>
+    <div class="card"><div class="card-icon">✏️</div><h4>Edycja i anulowanie</h4><p>Każdą wizytę można edytować lub oznaczyć jako anulowaną/no-show. Anulowane nie trafiają do przychodów.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Jak działa FIFO przy kosmetykach?</strong> Gdy sprzedajesz produkt, system zdejmuje go z najstarszego przyjęcia towaru. Dzięki temu rotacja stocku jest poprawna, a stare partie nie zalegają.</div>
+</div>
+
+<!-- ══════════════ KLIENCI ══════════════ -->
+<div class="section" id="klienci">
+  <div class="mod-header">
+    <div class="mod-icon gold">👥</div>
+    <div class="mod-title">
+      <h2>Klienci — <em>baza i profile</em></h2>
+      <p>Kartoteka klientów z historią wizyt, portfelem i notatkami</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p>Każdy klient w systemie to coś więcej niż imię i numer telefonu. To pełna historia relacji z salonem — od pierwszej wizyty po ostatnią uwagę pracownika.</p>
+      <div class="cards">
+        <div class="card"><div class="card-icon">📋</div><h4>Karta klienta</h4><p>Historia wizyt, wydane kwoty, notatki, flagi RODO — wszystko po kliknięciu na klienta.</p></div>
+        <div class="card"><div class="card-icon">💰</div><h4>Portfel (zadatki)</h4><p>Klient może mieć środki "na koncie". Wpłaty i pobrania z historią każdej transakcji. Saldo widoczne od razu.</p></div>
+        <div class="card"><div class="card-icon">📝</div><h4>Notatki (Memo)</h4><p>Alergia na produkt? Ulubiony kolor? Preferencje? Wpisz raz — widoczne przy każdej wizycie.</p></div>
+        <div class="card"><div class="card-icon">🔗</div><h4>Cross-sell (sugestie)</h4><p>Reguły: "po strzyżeniu zaproponuj odżywkę". System podpowiada pracownikowi co zaproponować.</p></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <h3>🔍 Wyszukiwanie klientów</h3>
+      <p style="font-size:.82rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">Szukasz po imieniu, nazwisku lub numerze telefonu — pole wyszukiwania w górze listy klientów. Wyniki pojawiają się w locie.</p>
+      <h3 style="margin-top:16px">📊 Flagi w liście</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>RODO</strong> — czy klient podpisał zgodę na przetwarzanie danych</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>OSW</strong> — czy klient podpisał oświadczenie (regulamin)</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Portfel</strong> — czy klient ma aktywne zadatki (saldo)</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAGAZYN ══════════════ -->
+<div class="section" id="magazyn">
+  <div class="mod-header">
+    <div class="mod-icon green">📦</div>
+    <div class="mod-title">
+      <h2>Magazyn — <em>stany i produkty</em></h2>
+      <p>Śledzenie stanów kosmetyków i towarów na bieżąco</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📊</div><h4>Stany na żywo</h4><p>Każdy produkt ma aktualną ilość. Czerwony kolor = poniżej minimum — czas zamawiać.</p></div>
+    <div class="card"><div class="card-icon">📥</div><h4>Przyjęcie towaru</h4><p>Dodaj dostawę — wybierz produkt i wpisz liczbę sztuk. Stan aktualizuje się natychmiast.</p></div>
+    <div class="card"><div class="card-icon">📋</div><h4>Inwentaryzacja</h4><p>Fizyczne przeliczenie z korektą stanów. System zapamięta datę i kto przeprowadził spis.</p></div>
+    <div class="card"><div class="card-icon">🛒</div><h4>Lista zakupów</h4><p>Sekcja "Co zamówić?" — automatycznie wylicza produkty poniżej minimum. Gotowa lista zamówień.</p></div>
+    <div class="card"><div class="card-icon">📚</div><h4>Słownik produktów</h4><p>Baza firm i modeli z cenami detalicznymi. Przyspiesza dodawanie nowych produktów (autocomplete).</p></div>
+    <div class="card"><div class="card-icon">🗄️</div><h4>Archiwum</h4><p>Produkty wycofane ze sprzedaży nie są usuwane — trafiają do archiwum. Można przywrócić w każdej chwili.</p></div>
+  </div>
+
+  <div class="callout note"><strong>Minimum magazynowe:</strong> Dla każdego produktu możesz ustawić minimalną ilość. Gdy stan spadnie poniżej — produkt pojawi się w "Co zamówić?" i w raporcie niskich stanów. Czerwony kolor na liście to automatyczny alert.</div>
+</div>
+
+<!-- ══════════════ ANALITYKA ══════════════ -->
+<div class="section" id="analityka">
+  <div class="mod-header">
+    <div class="mod-icon blue">📊</div>
+    <div class="mod-title">
+      <h2>Analityka — <em>raporty i wyniki</em></h2>
+      <p>Przychody, zestawienia, rankingi — wszystko z filtrem dat</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📅</div><h4>Raport dzienny</h4><p>Wszystkie transakcje z wybranego dnia — sprzedaż, zadatki, płatności. Podsumowanie kasy na koniec dnia.</p></div>
+    <div class="card"><div class="card-icon">📆</div><h4>Podsumowanie miesięczne</h4><p>Łączny obrót, podział na pracowników, porównanie z poprzednim miesiącem, koszty i przychód netto.</p></div>
+    <div class="card"><div class="card-icon">📈</div><h4>Zestawienie roczne</h4><p>Przychody miesiąc po miesiącu z wykresem trendu. Widać sezonowość i wzrost salonu.</p></div>
+    <div class="card"><div class="card-icon">🏆</div><h4>Ranking pracowników</h4><p>Top pracownicy według przychodów, liczby wizyt i sprzedanych produktów. Motywacja przez dane.</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Analiza zabiegów</h4><p>Które usługi generują największy przychód? Które są najczęściej wykonywane? Top zabiegi od razu widoczne.</p></div>
+    <div class="card"><div class="card-icon">💸</div><h4>Koszty operacyjne</h4><p>Wpisuj koszty miesiąca — kosmetyki, czynsz, media. System liczy przychód netto automatycznie.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Filtr dat</strong> działa w każdym widoku analitycznym — wybierz zakres "od–do" i wszystkie wykresy zaktualizują się automatycznie.</div>
+</div>
+
+<!-- ══════════════ VOUCHERY ══════════════ -->
+<div class="section" id="vouchery">
+  <div class="mod-header">
+    <div class="mod-icon purple">🎟️</div>
+    <div class="mod-title">
+      <h2>Vouchery <em>i rabaty</em></h2>
+      <p>Bony podarunkowe dla klientów + kody rabatowe na zakup Estelio</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>🎁 Vouchery dla klientów</h3>
+      <div class="info-row"><div class="dot"></div><p>Tworzysz bon na dowolną kwotę dla wybranego klienta</p></div>
+      <div class="info-row"><div class="dot"></div><p>Każdy voucher ma unikalny kod i opcjonalną datę ważności</p></div>
+      <div class="info-row"><div class="dot"></div><p>Przy kasowaniu wizyty wybierz "Voucher" i wpisz kod — system odejmie kwotę od salda automatycznie</p></div>
+      <div class="info-row"><div class="dot"></div><p>PDF do wydrukowania lub wysłania klientowi emailem</p></div>
+      <div class="info-row"><div class="dot"></div><p>Saldo vouchera widoczne w każdej chwili w sekcji Vouchery</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏷️ Kody rabatowe (Stripe)</h3>
+      <div class="info-row"><div class="dot"></div><p>Kody dla nowych klientów kupujących Estelio na zamow.html</p></div>
+      <div class="info-row"><div class="dot"></div><p>Typ: procentowy lub kwotowy (np. -20% lub -100 zł)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Opcjonalna data ważności i limit użyć</p></div>
+      <div class="info-row"><div class="dot"></div><p>Zarządzane przez admina systemu</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ URODZINY ══════════════ -->
+<div class="section" id="urodziny">
+  <div class="mod-header">
+    <div class="mod-icon rose">🎂</div>
+    <div class="mod-title">
+      <h2>Kampania <em>urodzinowa</em></h2>
+      <p>Automatyczne przypomnienia o urodzinach klientów i śledzenie kampanii</p>
+    </div>
+  </div>
+
+  <p>System potrafi powiedzieć komu za 5 dni są urodziny. Wystarczy wcześniej dodać datę urodzin do klienta — reszta działa sama.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📅</div><h4>12 zakładek</h4><p>Klienci pogrupowani po miesiącach urodzin. Każda zakładka to lista posortowana po dniu.</p></div>
+    <div class="card"><div class="card-icon">🔔</div><h4>Okno 5 dni</h4><p>Dashboard pokazuje klientów z urodzinami w ciągu najbliższych 5 dni — gotowa lista do działania.</p></div>
+    <div class="card"><div class="card-icon">📊</div><h4>Statusy kampanii</h4><p>Dla każdego klienta zaznaczasz: wysłano SMS, zadzwoniono, zaproponowano bon, brak kontaktu.</p></div>
+    <div class="card"><div class="card-icon">📝</div><h4>Komentarze</h4><p>Do każdego rekordu można dodać notatkę — np. "klient prosił żeby nie dzwonić, tylko SMS".</p></div>
+  </div>
+
+  <div class="callout note"><strong>Dane techniczne:</strong> Urodziny przechowywane są w 12 osobnych tabelach — po jednej na miesiąc (Styczeń, Luty, ..., Grudzień). To celowe — pozwala szybko pobierać tylko jeden miesiąc bez skanowania całej tabeli.</div>
+</div>
+
+<!-- ══════════════ RETENCJA ══════════════ -->
+<div class="section" id="retencja">
+  <div class="mod-header">
+    <div class="mod-icon gold">🔄</div>
+    <div class="mod-title">
+      <h2>Retencja — <em>klienci którzy zniknęli</em></h2>
+      <p>Kampania kontaktu z klientami którzy dawno nie odwiedzili salonu</p>
+    </div>
+  </div>
+
+  <p>Retencja to moduł do zarządzania "odejściem" klientów. Wyfiltruj klientów którzy nie byli od 60 dni, zadzwoń, zapisz wynik rozmowy. Proste — ale skuteczne.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Jak używać?</h3>
+      <div class="info-row"><div class="dot"></div><p>Przejdź do sekcji Retencja w menu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Filtruj klientów według kategorii kampanii</p></div>
+      <div class="info-row"><div class="dot"></div><p>Zadzwoń lub napisz SMS — zapisz status i notatkę</p></div>
+      <div class="info-row"><div class="dot"></div><p>Śledź którzy klienci wrócili po kontakcie</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Co zapisujesz?</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Data kontaktu</strong> — kiedy się odezwałeś</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Kampania</strong> — jakiego typu akcja (np. "klienci 60+ dni")</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Status</strong> — umówił wizytę / brak odpowiedzi / nie wraca</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Notatka</strong> — co powiedział klient</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Pracownik</strong> — kto przeprowadził kontakt</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ KONSULTACJE ══════════════ -->
+<div class="section" id="konsultacje">
+  <div class="mod-header">
+    <div class="mod-icon blue">📋</div>
+    <div class="mod-title">
+      <h2>Konsultacje — <em>kampanie sprzedażowe</em></h2>
+      <p>Śledzenie wyników reklam i pakietów — ile klientów z reklamy kupiło, ile wydało</p>
+    </div>
+  </div>
+
+  <p>Ten moduł odpowiada na pytanie: czy reklama na Facebooku przyniosła zwrot? Rejestrujesz każdą konsultację z potencjalnym klientem, wpisujesz kwotę zakupu — system sam liczy czy przekroczono próg opłacalności.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📈</div><h4>Wyniki kampanii</h4><p>Lista konsultacji z flagą sukcesu (zielona = kupiła powyżej progu, czerwona = poniżej).</p></div>
+    <div class="card"><div class="card-icon">⚙️</div><h4>Konfiguracja kampanii</h4><p>Tworzysz typy kampanii (np. "FB Cera+") z progiem kwoty uznawanym za sukces.</p></div>
+    <div class="card"><div class="card-icon">👩</div><h4>Konsultanci</h4><p>Lista pracowników przeprowadzających konsultacje. Aktywni/nieaktywni — filtrowani osobno.</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Zabiegi i upsell</h4><p>Dla każdej konsultacji wpisujesz: jakie zabiegi (ciało/twarz), kwotę pakietu, kwotę upsell.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ TARGETY ══════════════ -->
+<div class="section" id="targety">
+  <div class="mod-header">
+    <div class="mod-icon purple">🎯</div>
+    <div class="mod-title">
+      <h2>Targety — <em>cele dla pracowników</em></h2>
+      <p>Miesięczne cele sprzedażowe i dashboard wyników każdego pracownika</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p>Ustawiasz pracownikowi cel na miesiąc — np. 8 000 zł obrotu lub 120 wizyt. System na bieżąco liczy wyniki i pokazuje jak daleko do celu.</p>
+      <div class="cards">
+        <div class="card"><div class="card-icon">📝</div><h4>Dodawanie targetu</h4><p>Wybierz pracownika, miesiąc, typ celu (kwota / liczba wizyt / liczba produktów) i wartość.</p></div>
+        <div class="card"><div class="card-icon">📊</div><h4>Dashboard pracownika</h4><p>Pełne zestawienie: utarg, split usługi/kosmetyki, liczba transakcji, średni paragon (AOV), konsultacje.</p></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <h3>Co liczy dashboard?</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Utarg łączny</strong> — suma sprzedaży z wybranego okresu</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Usługi vs kosmetyki</strong> — podział procentowy i kwotowy</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Liczba transakcji</strong> — ile wizyt/sprzedaży w okresie</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>AOV</strong> — średnia wartość jednego paragonu</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Konsultacje</strong> — ile przeprowadziła i jaki % sukcesu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Dane pobierane z Sprzedaży, Zadatków i Wyników konsultacji jednocześnie</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ RODO ══════════════ -->
+<div class="section" id="rodo">
+  <div class="mod-header">
+    <div class="mod-icon rose">🛡️</div>
+    <div class="mod-title">
+      <h2>RODO — <em>zgody i dokumenty</em></h2>
+      <p>Rejestr zgód na przetwarzanie danych, oświadczeń i dokumentów PDF</p>
+    </div>
+  </div>
+
+  <div class="cards col2">
+    <div class="card"><div class="card-icon">📝</div><h4>Rejestr RODO</h4><p>Dla każdego klienta: zgoda na wizerunek, SMS marketing, newsletter, kontakt telefoniczny, Booksy. Data podpisu i kto przyjął.</p></div>
+    <div class="card"><div class="card-icon">📜</div><h4>Rejestr oświadczeń</h4><p>Osobny rejestr: czy klient zapoznał się z regulaminem i czy przekazano wyciąg. Obowiązkowe przy pierwszej wizycie.</p></div>
+    <div class="card"><div class="card-icon">📷</div><h4>Upload dokumentów</h4><p>Zrób zdjęcie podpisanego formularza (do 6 zdjęć) — system automatycznie optymalizuje i łączy w PDF. Link do pliku zapisuje się w kartotece klienta.</p></div>
+    <div class="card"><div class="card-icon">✅</div><h4>Flagi w kartotece</h4><p>Klienci z wypełnionym RODO mają zieloną flagę w liście. Łatwo widać kto jeszcze nie podpisał.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Jak działa upload?</strong> Zdjęcia (JPEG, PNG, HEIC) są automatycznie: konwertowane do skali szarości, skalowane do A4, kompresowane (jakość 75%) i łączone w jeden plik PDF. Plik zapisuje się w folderze salonu na serwerze i link trafia do bazy danych.</div>
+</div>
+
+<!-- ══════════════ LOGI ══════════════ -->
+<div class="section" id="logi">
+  <div class="mod-header">
+    <div class="mod-icon gray" style="background:var(--cream2)">📝</div>
+    <div class="mod-title">
+      <h2>Logi — <em>historia akcji</em></h2>
+      <p>Co, kiedy i kto zrobił w systemie</p>
+    </div>
+  </div>
+
+  <p>Każda ważna akcja w systemie jest logowana — dodanie sprzedaży, zmiana stanu magazynowego, dodanie klienta. Logi są widoczne w sekcji Logi i pokazują ostatnie 300 zdarzeń.</p>
+
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Rodzaj akcji</th><th>Kiedy logowane</th></tr></thead>
+    <tbody>
+      <tr><td>SPRZEDAŻ ADD</td><td>Dodanie nowej wizyty lub sprzedaży kosmetyku</td></tr>
+      <tr><td>MAGAZYN UPDATE</td><td>Przyjęcie towaru, ręczna zmiana stanu, archiwizacja produktu</td></tr>
+      <tr><td>KLIENT ADD</td><td>Dodanie nowego klienta do bazy</td></tr>
+      <tr><td>PRACOWNIK ADD/DELETE</td><td>Dodanie lub usunięcie pracownika</td></tr>
+      <tr><td>KONSULTACJA ADD</td><td>Zapisanie wyniku konsultacji</td></tr>
+      <tr><td>LOGIN</td><td>Udane logowanie właściciela lub pracownika</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ PANEL ADMINA ══════════════ -->
+<div class="section" id="panel-admina">
+  <div class="section-eyebrow">Zarządzanie</div>
+  <h2>Panel <em>admina</em></h2>
+  <p>Osobna aplikacja pod adresem <strong>/admin.html</strong>. Dostęp tylko z hasłem admina. Tu zarządzasz wszystkimi salonami naraz — jak centrum dowodzenia.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">🏪</div><h4>Lista salonów</h4><p>Wszystkie salony, ich status (aktywny/zablokowany), data waznosci dostępu. Jednym kliknięciem zablokujesz lub odblokujesz salon.</p></div>
+    <div class="card"><div class="card-icon">➕</div><h4>Nowy salon ręcznie</h4><p>Wizard 5 kroków: dane salonu → kontakt → pracownicy → usługi → podsumowanie. Bez Stripe — od razu aktywny.</p></div>
+    <div class="card"><div class="card-icon">🔗</div><h4>Tokeny rejestracji</h4><p>Generujesz link dla klienta który już zapłacił (lub dostaje próbę). Ważność 7 dni domyślnie. Można wysłać email automatycznie.</p></div>
+    <div class="card"><div class="card-icon">💬</div><h4>Baza wiedzy Esti</h4><p>Globalne wpisy które pojawiają się w chatbocie każdego salonu. CRUD + przycisk seeda 48 gotowych wpisów.</p></div>
+  </div>
+
+  <div class="callout warn"><strong>Sesje admina</strong> — jak sesje salonów — są in-memory. Po restarcie serwera trzeba zalogować się ponownie. Jeśli widzisz "Brak salonów" po restarcie — to właśnie ten problem.</div>
+</div>
+
+<!-- ══════════════ ONBOARDING ══════════════ -->
+<div class="section" id="onboarding">
+  <div class="section-eyebrow">Nowy klient</div>
+  <h2>Onboarding — <em>jak pojawia się nowy salon</em></h2>
+
+  <div class="two-col">
+    <div>
+      <h3>Ścieżka przez Stripe (automatyczna)</h3>
+      <div class="flow">
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient wypełnia formularz na zamow.html</strong><span>Imię, salon, email, telefon. Opcjonalnie kod rabatowy.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Płaci kartą przez Stripe Checkout</strong><span>Przekierowanie na stronę płatności Stripe. Gotówka, BLIK, karta.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Stripe wysyła webhook do serwera</strong><span>Automatycznie po potwierdzeniu płatności.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>System generuje link rejestracyjny</strong><span>UUID token, ważność 7 dni. Email wysyłany automatycznie.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">5</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient rejestruje salon</strong><span>Formularz: login, hasło, dane salonu → konto gotowe.</span></div></div>
+      </div>
+    </div>
+    <div>
+      <h3>Ścieżka ręczna (admin)</h3>
+      <div class="flow">
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Admin generuje token w panelu</strong><span>Podaje email klienta i klika "Generuj i wyślij email".</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient dostaje email z linkiem</strong><span>Link ważny 7 dni (lub inny okres ustawiony przez admina).</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient wypełnia formularz rejestracji</strong><span>To samo co po Stripe — login, hasło, dane salonu.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>Salon aktywny od razu</strong><span>Email powitalny z danymi logowania wysyłany automatycznie.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PŁATNOŚCI ══════════════ -->
+<div class="section" id="platnosci">
+  <div class="section-eyebrow">Finanse</div>
+  <h2>Płatności — <em>Stripe i vouchery</em></h2>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>💳 Jak działa Stripe?</h3>
+      <div class="info-row"><div class="dot"></div><p>System tworzy "sesję płatności" w Stripe — klient trafia na stronę Stripe (nie na naszą)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Stripe obsługuje całą płatność — karta, BLIK, wszystko przez nich</p></div>
+      <div class="info-row"><div class="dot"></div><p>Po sukcesie Stripe "oddzwania" do naszego serwera (webhook)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Webhook jest podpisany — serwer weryfikuje że to naprawdę Stripe, nie ktoś kto udaje</p></div>
+      <div class="info-row"><div class="dot"></div><p>Cena ustawiana przez env STRIPE_CENA_GROSZE (domyślnie 4900 = 49 zł)</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏷️ Kody rabatowe</h3>
+      <div class="info-row"><div class="dot"></div><p>Klient wpisuje kod na zamow.html przed płatnością</p></div>
+      <div class="info-row"><div class="dot"></div><p>System sprawdza: czy kod istnieje, czy aktywny, czy nie wygasł, czy nie przekroczył limitu użyć</p></div>
+      <div class="info-row"><div class="dot"></div><p>Jeśli OK — pokazuje nową cenę i liczy rabat (procent lub kwota stała)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Po udanej płatności licznik użyć kodu rośnie o 1</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ EMAILE ══════════════ -->
+<div class="section" id="emaile">
+  <div class="section-eyebrow">Komunikacja</div>
+  <h2>Automatyczne <em>emaile</em></h2>
+  <p>System wysyła kilka typów emaili automatycznie — wszystkie przez SMTP Hostinger z adresu kontakt@estelio.com.pl. Każdy email ma spójny szablon graficzny z logo Estelio.</p>
+
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Kiedy</th><th>Do kogo</th><th>Co zawiera</th></tr></thead>
+    <tbody>
+      <tr><td>Nowe zgłoszenie (formularz)</td><td>Admin systemu</td><td>Dane klienta, nazwa salonu, wiadomość, przycisk do panelu admina</td></tr>
+      <tr><td>Nowe zgłoszenie (formularz)</td><td>Klient</td><td>Potwierdzenie przyjęcia zgłoszenia, info o czasie oczekiwania</td></tr>
+      <tr><td>Po płatności Stripe</td><td>Klient</td><td>Link rejestracyjny do założenia salonu (jednorazowy, ważny 7 dni)</td></tr>
+      <tr><td>Rejestracja salonu</td><td>Klient</td><td>Dane logowania (login + hasło), link do systemu, co robić dalej</td></tr>
+      <tr><td>Reset hasła</td><td>Właściciel salonu</td><td>Jednorazowy link do ustawienia nowego hasła (ważny 1 godzinę)</td></tr>
+      <tr><td>Token rejestracyjny (ręczny)</td><td>Klient</td><td>Link rejestracyjny wygenerowany przez admina</td></tr>
+      <tr><td>Formularz kontaktowy</td><td>Admin systemu</td><td>Imię, email, typ (zainteresowany/klient), wiadomość. Reply-To ustawiony na nadawcę.</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ ESTI ══════════════ -->
+<div class="section" id="esti">
+  <div class="section-eyebrow">Chatbot</div>
+  <h2>Esti — <em>Twoja asystentka</em></h2>
+  <p>Esti to chatbot wbudowany w aplikację salonu. Odpowiada na pytania pracowników bez połączenia z AI — używa własnej bazy wiedzy i prostego, ale skutecznego algorytmu scoringowego.</p>
+
+  <div class="highlight">
+    <div class="highlight-blob hl-b1"></div>
+    <div class="highlight-blob hl-b2"></div>
+    <h3>Jak Esti znajduje odpowiedź?</h3>
+    <p>Dla każdej karty w bazie wiedzy system liczy punkty. Wygrywa karta z największą liczbą punktów.</p>
+    <ul>
+      <li>Normalizacja pytania: małe litery, bez polskich znaków, bez interpunkcji</li>
+      <li>Całe wyrażenie kluczowe w pytaniu → +2 pkt × liczba słów w wyrażeniu</li>
+      <li>Pojedyncze słowo (min. 4 litery) w pytaniu → +1 pkt za każde</li>
+      <li>Bonus za źródło (wpisy salonu: +3, wpisy globalne: +1, wbudowane: 0)</li>
+      <li>Bonus za kategorię aktywnej sekcji (+2) — ale tylko gdy karta już coś trafiła</li>
+    </ul>
+  </div>
+
+  <h3>Trzy źródła wiedzy</h3>
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Wbudowana baza (EST_KB)</h4><p>20 kart zaszyty w kodzie strony. Zawsze dostępne — bez internetu, bez bazy danych. Bonus: 0.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Globalna baza admina</h4><p>48 wpisów (i więcej) zarządzanych przez Ciebie w panelu admina. Wspólne dla wszystkich salonów. Bonus: +1.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Własna baza salonu</h4><p>Wpisy dodawane przez właściciela salonu — tylko dla jego salonu. Specyficzne procedury, własne produkty. Bonus: +3.</p></div>
+  </div>
+
+  <h3>Po odpowiedzi — powiązane pytania</h3>
+  <p>Po każdej odpowiedzi Esti pokazuje 2–3 chipy z pytaniami z tej samej kategorii. Kliknięcie w chip zadaje to pytanie automatycznie. Chipy tylko z tej samej kategorii — bez losowych sugestii z innych działów.</p>
+
+  <h3>9 kategorii wpisów</h3>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🌸</div><h4>Ogólne</h4><p>Logowanie, kontakt, informacje o systemie, błędy techniczne</p></div>
+    <div class="card"><div class="card-icon">📦</div><h4>Magazyn</h4><p>Stany, przyjęcia towaru, inwentaryzacja, alerty minimalne</p></div>
+    <div class="card"><div class="card-icon">👥</div><h4>Klienci</h4><p>Dodawanie, wyszukiwanie, historia, notatki, portfel</p></div>
+    <div class="card"><div class="card-icon">💰</div><h4>Sprzedaż</h4><p>Wizyty, kasowanie, kalendarz, rabaty, anulowanie</p></div>
+    <div class="card"><div class="card-icon">👩</div><h4>Pracownicy</h4><p>PINy, role, dezaktywacja, przypisanie do usług</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Usługi</h4><p>Cennik, czas trwania, kategorie zabiegów</p></div>
+    <div class="card"><div class="card-icon">📊</div><h4>Analityka</h4><p>Raporty, rankingi, filtry dat, zestawienia</p></div>
+    <div class="card"><div class="card-icon">🎟️</div><h4>Vouchery</h4><p>Tworzenie, saldo, realizacja, drukowanie</p></div>
+    <div class="card"><div class="card-icon">⚙️</div><h4>Ustawienia</h4><p>Hasła, powiadomienia, profil salonu, backup</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ BEZPIECZEŃSTWO ══════════════ -->
+<div class="section" id="bezpieczenstwo">
+  <div class="section-eyebrow">Ochrona danych</div>
+  <h2>Bezpieczeństwo — <em>co chroni Twoje dane</em></h2>
+
+  <div class="two-col">
+    <div>
+      <h3>Co już działa ✅</h3>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🏢</div><h4>Izolacja salonów</h4><p>Każde zapytanie filtrowane po tenant_id. Salon A fizycznie nie może zobaczyć danych salonu B.</p></div>
+        <div class="card"><div class="card-icon">⏱️</div><h4>Limit logowań</h4><p>Max 10 prób logowania na 15 minut z jednego IP. Dalej blokada 429.</p></div>
+        <div class="card"><div class="card-icon">🔑</div><h4>Tokeny sesji</h4><p>Losowy UUID przy każdym logowaniu, wygasa po 8h. Weryfikowany przy każdym żądaniu.</p></div>
+        <div class="card"><div class="card-icon">🛡️</div><h4>SQL Injection</h4><p>Wszystkie zapytania do bazy używają prepared statements — brak możliwości wstrzyknięcia kodu.</p></div>
+        <div class="card"><div class="card-icon">🔒</div><h4>HTTPS</h4><p>Certyfikat SSL, HSTS (1 rok), nagłówki bezpieczeństwa we wszystkich odpowiedziach.</p></div>
+        <div class="card"><div class="card-icon">🚫</div><h4>Ukryte błędy</h4><p>Szczegóły błędów MySQL nie trafiają do przeglądarki — tylko ogólny komunikat.</p></div>
+      </div>
+    </div>
+    <div>
+      <h3>Do naprawienia ⚠️</h3>
+      <div class="callout warn" style="margin-bottom:12px"><strong>Hasła w bazie</strong> — przechowywane jako plaintext. Przed pełnym SaaS konieczne wdrożenie <strong>bcrypt</strong> (hash + sól).</div>
+      <div class="callout warn" style="margin-bottom:12px"><strong>Sesje in-memory</strong> — znikają przy restarcie serwera. Docelowo <strong>Redis</strong> lub tabela w bazie danych z TTL.</div>
+      <div class="callout warn"><strong>ID z timestampa</strong> — ID sprzedaży generowane z YYYYMMDDHHmmss. Przy dużym ruchu możliwe kolizje. Docelowo <strong>UUID</strong> wszędzie.</div>
+
+      <h3 style="margin-top:24px">Dane i RODO</h3>
+      <div class="info-box" style="margin-top:10px">
+        <div class="info-row"><div class="dot"></div><p>Dane przechowywane na serwerach w UE (Hostinger)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Automatyczne kopie zapasowe przez Hostinger (codziennie)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Każdy salon ma własny folder na PDFy (<code style="font-size:.75rem">/uploads/tenant_id/</code>)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Dostęp do PDFów tylko z poprawnym tenant_id w URL</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAGDA ══════════════ -->
+<div class="section" id="magda">
+  <div class="section-eyebrow">Moduł specjalny</div>
+  <h2>Panel <em>Magdy</em></h2>
+  <p>Osobny panel rozliczeniowy dostępny tylko dla głównego salonu (<code style="background:var(--cream2);padding:1px 5px;border-radius:4px;font-size:.8rem">boczki-salon-glowny-001</code>). Służy do rozliczania transakcji między właścicielami — co jest już rozliczone, a co jeszcze czeka.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Do czego służy?</h3>
+      <div class="info-row"><div class="dot"></div><p>Przeglądanie sprzedaży i zadatków z wybranego zakresu dat</p></div>
+      <div class="info-row"><div class="dot"></div><p>Oznaczanie transakcji jako "rozliczone" (checkbox przy każdej pozycji)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Oddzielna sesja (x-magda-token, 12h TTL) — niezależna od sesji właściciela</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Jak wejść?</h3>
+      <div class="info-row"><div class="dot"></div><p>Osobna strona logowania z hasłem z konfiguracji serwera (env MAGDA_HASLO)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Dostęp wyłącznie z tenant_id głównego salonu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Widok: lista transakcji z filtrem dat i możliwością oznaczania</p></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /content -->
+</main>
+
+<button id="top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+// Scroll to top
+window.addEventListener('scroll', () => {
+  document.getElementById('top-btn').classList.toggle('visible', window.scrollY > 400);
+});
+
+// Active sidebar link
+const links = document.querySelectorAll('.sb-link');
+const sections = document.querySelectorAll('.section[id]');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector('.sb-link[href="#'+e.target.id+'"]');
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+sections.forEach(s => io.observe(s));
+
+// Search / filter nav
+function filterNav(val) {
+  const v = val.trim().toLowerCase();
+  document.querySelectorAll('.sb-link').forEach(link => {
+    const text = link.textContent.toLowerCase();
+    link.style.display = (!v || text.includes(v)) ? '' : 'none';
+  });
+  document.querySelectorAll('.sb-group-label').forEach(g => {
+    const next = g.nextElementSibling;
+    let anyVisible = false;
+    let el = g.nextElementSibling;
+    while (el && !el.classList.contains('sb-group-label')) {
+      if (el.classList.contains('sb-link') && el.style.display !== 'none') anyVisible = true;
+      el = el.nextElementSibling;
+    }
+    g.style.display = anyVisible ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
