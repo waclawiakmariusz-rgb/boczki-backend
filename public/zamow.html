@@ -153,6 +153,43 @@
   @keyframes floatTip    { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   @keyframes floatBadge  { 0%,100%{transform:translateY(0)} 50%{transform:translateY(5px)} }
 
+  /* ── PROBLEM & PROMISE ── */
+  .problem-section {
+    max-width: 1280px; margin: 70px auto 0; padding: 0 60px;
+  }
+  .problem-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px;
+  }
+  .problem-card {
+    border-radius: 24px; padding: 40px 36px;
+    border: 1.5px solid var(--border);
+  }
+  .problem-card.problems { background: #fdf8f5; }
+  .problem-card.promises { background: linear-gradient(145deg, #f4ece8 0%, #ede0d8 100%); }
+  .problem-card .pc-eyebrow {
+    font-size: .68rem; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; margin-bottom: 14px;
+  }
+  .problem-card.problems .pc-eyebrow { color: var(--text-muted); }
+  .problem-card.promises .pc-eyebrow { color: var(--rose); }
+  .problem-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.45rem; font-weight: 600; color: var(--dark);
+    line-height: 1.25; margin-bottom: 24px;
+  }
+  .pain-list { list-style: none; display: flex; flex-direction: column; gap: 14px; }
+  .pain-list li {
+    display: flex; align-items: flex-start; gap: 14px;
+    font-size: .88rem; color: var(--text-muted); line-height: 1.55;
+  }
+  .pain-icon {
+    width: 32px; height: 32px; border-radius: 8px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: .9rem;
+  }
+  .problem-card.problems .pain-icon { background: #f0e4e0; }
+  .problem-card.promises .pain-icon { background: rgba(184,112,128,.12); }
+  .pain-list li strong { display: block; font-weight: 600; color: var(--dark); font-size: .9rem; margin-bottom: 2px; }
+
   /* ── FEATURES ── */
   .features {
     max-width: 1280px; margin: 80px auto 0; padding: 0 60px;
@@ -170,7 +207,6 @@
   .section-title em { font-style: italic; font-weight: 400; }
 
   /* ── MORANDI PALETTE ── */
-  /* sage, dusty-rose, clay, lavender, sky, sand */
   .bc-sage     { background: linear-gradient(145deg, #edf0eb 0%, #dde4d8 100%); border-color: #cdd8c6; }
   .bc-drose    { background: linear-gradient(145deg, #f4ecea 0%, #e8d8d4 100%); border-color: #d8c4be; }
   .bc-clay     { background: linear-gradient(145deg, #f2ece4 0%, #e6d8ca 100%); border-color: #d4c0a8; }
@@ -178,7 +214,6 @@
   .bc-sky      { background: linear-gradient(145deg, #e8eef4 0%, #d8e4ef 100%); border-color: #c4d4e4; }
   .bc-sand     { background: linear-gradient(145deg, #f4f0e8 0%, #ece4d4 100%); border-color: #d8cdb8; }
 
-  /* accent colors per variant */
   .bc-sage     .bc-tag { background: rgba(130,160,120,.15); color: #5a7a52; }
   .bc-drose    .bc-tag { background: rgba(184,120,112,.15); color: #8a4840; }
   .bc-clay     .bc-tag { background: rgba(184,148,120,.15); color: #7a5438; }
@@ -193,7 +228,6 @@
   .bc-sky      .bc-deco { color: rgba(100,140,184,.18); }
   .bc-sand     .bc-deco { color: rgba(180,160,120,.18); }
 
-  /* accent dot per variant */
   .bc-sage     .bc-dot { background: #82a078; }
   .bc-drose    .bc-dot { background: #b87870; }
   .bc-clay     .bc-dot { background: #b89478; }
@@ -201,7 +235,6 @@
   .bc-sky      .bc-dot { background: #6490b8; }
   .bc-sand     .bc-dot { background: #b4a078; }
 
-  /* bento grid */
   .bento {
     display: grid;
     grid-template-columns: repeat(12, 1fr);
@@ -215,13 +248,11 @@
   }
   .bento-card:hover { box-shadow: 0 20px 50px rgba(0,0,0,.08); transform: translateY(-5px); }
 
-  /* sizes */
   .bc-wide  { grid-column: span 7; }
   .bc-small { grid-column: span 5; }
   .bc-third { grid-column: span 4; }
   .bc-half  { grid-column: span 6; }
 
-  /* decorative huge number in corner */
   .bc-deco {
     position: absolute; right: 20px; bottom: 10px;
     font-family: 'Cormorant Garamond', serif;
@@ -229,13 +260,11 @@
     pointer-events: none; user-select: none; letter-spacing: -.02em;
   }
 
-  /* dot accent */
   .bc-dot {
     width: 8px; height: 8px; border-radius: 50%;
     display: inline-block; margin-right: 6px; flex-shrink: 0;
   }
 
-  /* tag pill */
   .bc-tag {
     display: inline-flex; align-items: center;
     font-size: .68rem; font-weight: 600; text-transform: uppercase;
@@ -243,7 +272,6 @@
     padding: 4px 12px; margin-bottom: 16px;
   }
 
-  /* headings + text */
   .bento-card h3 {
     font-family: 'Cormorant Garamond', serif;
     font-size: 1.35rem; font-weight: 600; color: var(--dark);
@@ -254,7 +282,6 @@
     position: relative; z-index: 1;
   }
 
-  /* big stat */
   .bc-stat-block {
     margin-top: 20px; position: relative; z-index: 1;
   }
@@ -268,7 +295,6 @@
     letter-spacing: .04em; margin-top: 2px; display: block;
   }
 
-  /* benefit list */
   .bc-list {
     list-style: none; display: flex; flex-direction: column;
     gap: 9px; margin-top: 14px; position: relative; z-index: 1;
@@ -278,7 +304,6 @@
     font-size: .82rem; color: var(--text-muted); line-height: 1.5;
   }
 
-  /* wide card inner */
   .bc-wide-body { position: relative; z-index: 1; }
   .bc-wide-foot {
     margin-top: 24px; padding-top: 18px;
@@ -291,6 +316,141 @@
     font-size: 1.9rem; font-weight: 600; line-height: 1; color: var(--dark);
   }
   .bc-foot-lbl { font-size: .72rem; color: var(--text-muted); }
+
+  /* ── CALCULATOR ── */
+  .calculator-section {
+    background: var(--dark); margin-top: 80px; padding: 80px 60px;
+  }
+  .calculator-inner {
+    max-width: 1000px; margin: 0 auto;
+  }
+  .calculator-section .section-eyebrow { color: var(--gold); }
+  .calculator-section .section-title { color: #f4efe6; }
+  .calculator-section .section-title em { color: var(--gold-light); }
+
+  .calc-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center;
+    margin-top: 48px;
+  }
+  .calc-inputs { display: flex; flex-direction: column; gap: 24px; }
+  .calc-item label {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: .78rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    color: #a09080; margin-bottom: 10px;
+  }
+  .calc-item label span {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem; font-weight: 600; color: var(--gold-light);
+    letter-spacing: 0; text-transform: none;
+  }
+  .calc-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; border-radius: 2px;
+    background: #2e2a24; outline: none; cursor: pointer;
+  }
+  .calc-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--rose); cursor: pointer;
+    box-shadow: 0 2px 8px rgba(184,112,128,.5);
+  }
+  .calc-slider::-moz-range-thumb {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--rose); cursor: pointer; border: none;
+    box-shadow: 0 2px 8px rgba(184,112,128,.5);
+  }
+
+  .calc-result {
+    background: #16140f; border-radius: 24px; padding: 40px 36px;
+    border: 1px solid #2e2a24; text-align: center;
+  }
+  .calc-result-eyebrow {
+    font-size: .68rem; font-weight: 600; letter-spacing: .18em;
+    text-transform: uppercase; color: var(--gold); margin-bottom: 16px;
+  }
+  .calc-hours {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 5rem; font-weight: 600; line-height: 1;
+    color: var(--rose-light); display: block;
+  }
+  .calc-hours-label {
+    font-size: .8rem; color: #a09080; margin: 6px 0 28px; letter-spacing: .04em;
+  }
+  .calc-breakdown {
+    display: flex; gap: 0; border-top: 1px solid #2e2a24; padding-top: 24px;
+    margin-top: 4px;
+  }
+  .calc-breakdown-item {
+    flex: 1; display: flex; flex-direction: column; gap: 4px;
+    padding: 0 12px;
+  }
+  .calc-breakdown-item:not(:last-child) { border-right: 1px solid #2e2a24; }
+  .cb-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.6rem; font-weight: 600; color: #f4efe6;
+  }
+  .cb-lbl { font-size: .68rem; color: #6b6050; letter-spacing: .04em; text-transform: uppercase; }
+  .calc-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--rose); color: #fff;
+    border: none; border-radius: 8px;
+    padding: 14px 26px; margin-top: 28px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: .88rem; font-weight: 600;
+    cursor: pointer; letter-spacing: .01em;
+    box-shadow: 0 4px 18px rgba(184,112,128,.3);
+    transition: background .2s, transform .15s;
+    text-decoration: none;
+  }
+  .calc-cta:hover { background: var(--rose-dark); transform: translateY(-1px); }
+
+  /* ── SOCIAL PROOF ── */
+  .social-proof-section {
+    max-width: 1280px; margin: 80px auto; padding: 0 60px;
+  }
+  .sp-stats {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+    margin-bottom: 56px;
+  }
+  .sp-stat {
+    text-align: center; padding: 32px 24px;
+    background: var(--cream2); border-radius: 20px; border: 1.5px solid var(--border);
+  }
+  .sp-stat-num {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 3rem; font-weight: 600; color: var(--dark); line-height: 1;
+    margin-bottom: 8px;
+  }
+  .sp-stat-label { font-size: .82rem; color: var(--text-muted); line-height: 1.5; }
+
+  .testimonials {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px;
+  }
+  .testimonial {
+    background: var(--white); border-radius: 20px; padding: 28px 26px;
+    border: 1.5px solid var(--border);
+    transition: box-shadow .3s, transform .3s;
+  }
+  .testimonial:hover { box-shadow: 0 16px 40px rgba(0,0,0,.07); transform: translateY(-3px); }
+  .t-quote {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.05rem; line-height: 1.65; color: var(--dark);
+    margin-bottom: 20px; font-style: italic;
+  }
+  .t-quote::before { content: '\201C'; color: var(--gold); font-size: 1.4rem; line-height: 0; vertical-align: -.2em; margin-right: 2px; }
+  .t-quote::after  { content: '\201D'; color: var(--gold); font-size: 1.4rem; line-height: 0; vertical-align: -.2em; margin-left: 2px; }
+  .t-author { display: flex; align-items: center; gap: 12px; }
+  .t-avatar {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--rose-light), var(--cream2));
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Cormorant Garamond', serif; font-size: .9rem;
+    font-weight: 600; color: var(--rose);
+    border: 1.5px solid var(--border);
+  }
+  .t-name { font-size: .84rem; font-weight: 600; color: var(--dark); }
+  .t-role { font-size: .76rem; color: var(--text-muted); margin-top: 1px; }
+  .t-stars { font-size: .72rem; color: var(--gold); letter-spacing: 2px; margin-bottom: 12px; }
 
   /* ── FORM SECTION ── */
   .form-section {
@@ -357,7 +517,6 @@
   textarea { resize: vertical; min-height: 80px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
-  /* price box */
   .price-box {
     background: var(--rose-light); border: 1.5px solid var(--border);
     border-radius: 14px; padding: 18px 20px;
@@ -373,7 +532,6 @@
   #cena-oryginalna { font-size: .85rem; color: var(--text-muted); text-decoration: line-through; }
   .price-meta { font-size: .75rem; color: var(--text-muted); text-align: right; line-height: 1.6; }
 
-  /* voucher */
   .voucher-row { display: flex; gap: 10px; align-items: flex-end; }
   .voucher-row .form-group { flex: 1; margin: 0; }
   .btn-voucher {
@@ -401,7 +559,6 @@
   .alert { padding: 12px 16px; border-radius: 10px; font-size: .83rem; font-weight: 600; margin-bottom: 16px; }
   .alert-error { background: #fee2e2; color: #991b1b; }
 
-  /* success */
   .success-wrap { text-align: center; padding: 40px 20px; }
   .success-wrap .s-icon { font-size: 3.5rem; margin-bottom: 16px; }
   .success-wrap h3 {
@@ -417,6 +574,38 @@
   }
   .check-list li:last-child { border-bottom: none; }
   .check-list li::before { content: '✦'; color: var(--gold); font-size: .75rem; flex-shrink: 0; }
+
+  /* ── FAQ ── */
+  .faq-section {
+    max-width: 760px; margin: 80px auto; padding: 0 60px;
+  }
+  .faq-section .section-title { text-align: left; margin-bottom: 36px; }
+  .faq-item {
+    border-bottom: 1px solid var(--border); overflow: hidden;
+  }
+  .faq-item:first-of-type { border-top: 1px solid var(--border); }
+  .faq-question {
+    width: 100%; background: none; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 16px; padding: 20px 0;
+    font-family: 'DM Sans', sans-serif; font-size: .95rem;
+    font-weight: 600; color: var(--dark); text-align: left;
+  }
+  .faq-question:hover { color: var(--rose); }
+  .faq-icon {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--rose-light); color: var(--rose);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .8rem; flex-shrink: 0; transition: transform .3s, background .2s;
+    font-weight: 700;
+  }
+  .faq-item.open .faq-icon { transform: rotate(45deg); background: var(--rose); color: #fff; }
+  .faq-answer {
+    max-height: 0; overflow: hidden;
+    transition: max-height .35s ease, padding .35s ease;
+    font-size: .88rem; color: var(--text-muted); line-height: 1.75;
+  }
+  .faq-item.open .faq-answer { max-height: 200px; padding-bottom: 20px; }
 
   /* ── FOOTER ── */
   footer {
@@ -445,6 +634,14 @@
     .form-inner { grid-template-columns: 1fr; gap: 40px; }
     .form-row { grid-template-columns: 1fr; }
     .form-card { padding: 28px 22px; }
+    .problem-section { padding: 0 24px; }
+    .problem-grid { grid-template-columns: 1fr; gap: 16px; }
+    .calculator-section { padding: 60px 24px; }
+    .calc-grid { grid-template-columns: 1fr; gap: 36px; }
+    .social-proof-section { padding: 0 24px; }
+    .sp-stats { grid-template-columns: 1fr; gap: 12px; }
+    .testimonials { grid-template-columns: 1fr; }
+    .faq-section { padding: 0 24px; }
   }
 </style>
 </head>
@@ -455,7 +652,8 @@
   <a class="logo" href="#">Estelio</a>
   <ul>
     <li><a href="#funkcje">Funkcje</a></li>
-    <li><a href="#formularz">Cennik</a></li>
+    <li><a href="#opinie">Opinie</a></li>
+    <li><a href="#faq">FAQ</a></li>
     <li><a href="#formularz" class="nav-cta">Zamów dostęp</a></li>
   </ul>
 </nav>
@@ -470,13 +668,14 @@
   <div class="hero-left reveal">
     <p class="eyebrow">Oprogramowanie dla salonów kosmetycznych</p>
     <h1>
-      Pełna kontrola<br>nad Twoim salonem.<br>
-      <em>W jednym miejscu.</em>
+      Więcej czasu dla Ciebie.<br>
+      Mniej chaosu<br>
+      <em>w Twoim salonie.</em>
     </h1>
     <p class="hero-desc">
-      Estelio to profesjonalny system zarządzania dla właścicielek salonów kosmetycznych,
-      klinik urody i studiów. Sprzedaż, klienci, rozliczenia, analityka —
-      wszystko zaprojektowane z myślą o Tobie.
+      Estelio to jeden system zamiast Exceli, karteczek i chaosu.
+      Sprzedaż, klienci, rozliczenia, analityka —
+      zaprojektowane specjalnie dla branży beauty.
     </p>
     <a class="hero-cta" href="#formularz">Zamów dostęp →</a>
     <p class="social-proof">Roczny dostęp · bezpieczna płatność kartą lub BLIK</p>
@@ -500,6 +699,83 @@
   </div>
 </section>
 
+<!-- PROBLEM & PROMISE -->
+<section class="problem-section">
+  <div class="problem-grid">
+
+    <div class="problem-card problems reveal">
+      <p class="pc-eyebrow">Czy znasz to uczucie?</p>
+      <h3>Każdy dzień zaczyna się od gaszenia pożarów</h3>
+      <ul class="pain-list">
+        <li>
+          <div class="pain-icon">📋</div>
+          <div>
+            <strong>Rozliczenia przez godzinę po zamknięciu</strong>
+            Liczysz na kartce, porównujesz z aplikacją, szukasz błędu w arkuszu — i tak codziennie.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">📦</div>
+          <div>
+            <strong>Puste opakowanie przed zabiegiem</strong>
+            Klientka czeka, Ty szukasz produktu, który miał być w magazynie.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">👥</div>
+          <div>
+            <strong>Kto co zarobił? Nie masz pojęcia</strong>
+            Rozliczenia pracownic to co miesiąc nowy stres — bez danych nie ma sprawiedliwości.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">📊</div>
+          <div>
+            <strong>Nie wiesz czy salon zarabia</strong>
+            Przychody są, ale koszty też — czy na tym wychodzisz? Excel tego nie powie.
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="problem-card promises reveal" style="transition-delay:.1s">
+      <p class="pc-eyebrow">Z Estelio to przeszłość</p>
+      <h3>Jeden system, który rozumie codzienność salonu</h3>
+      <ul class="pain-list">
+        <li>
+          <div class="pain-icon">✦</div>
+          <div>
+            <strong>Podsumowanie dnia w 0 minut</strong>
+            Każda transakcja wpisana na bieżąco — sumy naliczają się same. Zamykasz i wychodzisz.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">✦</div>
+          <div>
+            <strong>Alert zanim skończy się towar</strong>
+            System pilnuje stanów i informuje Cię z wyprzedzeniem. Nie ma niespodzianek.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">✦</div>
+          <div>
+            <strong>Ranking pracownic bez domysłów</strong>
+            Obiektywne dane sprzedażowe dla każdej osoby. Motywujesz tym, co widać w liczbach.
+          </div>
+        </li>
+        <li>
+          <div class="pain-icon">✦</div>
+          <div>
+            <strong>Rentowność na jednym ekranie</strong>
+            Przychody kontra koszty, miesiąc do miesiąca — wiesz ile naprawdę zarabiasz.
+          </div>
+        </li>
+      </ul>
+    </div>
+
+  </div>
+</section>
+
 <!-- FEATURES -->
 <section class="features" id="funkcje">
   <p class="section-eyebrow reveal">Dla właścicielek salonów beauty</p>
@@ -507,7 +783,6 @@
 
   <div class="bento">
 
-    <!-- ROW 1: hero wide sage (7) + drose (5) -->
     <div class="bento-card bc-wide bc-sage reveal" style="transition-delay:.04s">
       <span class="bc-tag"><span class="bc-dot"></span>Sprzedaż &amp; rozliczenia</span>
       <div class="bc-wide-body">
@@ -548,7 +823,6 @@
       <span class="bc-deco" aria-hidden="true">◇</span>
     </div>
 
-    <!-- ROW 2: clay (5) + lavender (4) + sky (3) -->
     <div class="bento-card bc-small bc-clay reveal" style="transition-delay:.10s">
       <span class="bc-tag"><span class="bc-dot"></span>Profile klientek</span>
       <h3>Klientka czuje się wyjątkowa, bo o niej pamiętasz</h3>
@@ -574,7 +848,6 @@
       <span class="bc-deco" aria-hidden="true">◈</span>
     </div>
 
-    <!-- ROW 3: sand (6) + sage (6) -->
     <div class="bento-card bc-half bc-sand reveal" style="transition-delay:.19s">
       <span class="bc-tag"><span class="bc-dot"></span>Wyniki pracowników</span>
       <h3>Wiesz kto napędza Twój salon — i możesz to udowodnić</h3>
@@ -597,6 +870,116 @@
       <span class="bc-deco" aria-hidden="true">◎</span>
     </div>
 
+  </div>
+</section>
+
+<!-- CALCULATOR -->
+<section class="calculator-section">
+  <div class="calculator-inner">
+    <p class="section-eyebrow reveal" style="color:var(--gold);">Kalkulator oszczędności</p>
+    <h2 class="section-title reveal" style="color:#f4efe6;">Ile czasu odzyskasz<br><em style="color:var(--gold-light);">każdego miesiąca?</em></h2>
+
+    <div class="calc-grid reveal" style="transition-delay:.1s">
+      <div class="calc-inputs">
+        <div class="calc-item">
+          <label>Rozliczenia &amp; raporty dzienne <span id="val-rozliczenia">2 h / tydzień</span></label>
+          <input type="range" class="calc-slider" id="sl-rozliczenia" min="0" max="10" value="2" oninput="przeliczKalk()">
+        </div>
+        <div class="calc-item">
+          <label>Zarządzanie magazynem <span id="val-magazyn">1 h / tydzień</span></label>
+          <input type="range" class="calc-slider" id="sl-magazyn" min="0" max="6" value="1" oninput="przeliczKalk()">
+        </div>
+        <div class="calc-item">
+          <label>Śledzenie historii klientek <span id="val-klienci">2 h / tydzień</span></label>
+          <input type="range" class="calc-slider" id="sl-klienci" min="0" max="8" value="2" oninput="przeliczKalk()">
+        </div>
+        <div class="calc-item">
+          <label>Rozliczenia pracownic <span id="val-team">1 h / tydzień</span></label>
+          <input type="range" class="calc-slider" id="sl-team" min="0" max="6" value="1" oninput="przeliczKalk()">
+        </div>
+        <p style="font-size:.78rem; color:#6b5f50; margin-top:8px; line-height:1.6;">
+          Estelio skraca te zadania przeciętnie o <strong style="color:var(--gold-light);">75%</strong> dzięki automatyzacji i gotowym raportom.
+        </p>
+      </div>
+
+      <div class="calc-result">
+        <p class="calc-result-eyebrow">Twoje oszczędności z Estelio</p>
+        <span class="calc-hours" id="calc-hours-val">4,5</span>
+        <p class="calc-hours-label">godzin oszczędności tygodniowo</p>
+        <div class="calc-breakdown">
+          <div class="calc-breakdown-item">
+            <span class="cb-num" id="cb-miesiac">18</span>
+            <span class="cb-lbl">godz./miesiąc</span>
+          </div>
+          <div class="calc-breakdown-item">
+            <span class="cb-num" id="cb-rok">9</span>
+            <span class="cb-lbl">dni/rok</span>
+          </div>
+          <div class="calc-breakdown-item">
+            <span class="cb-num" id="cb-cena">5,4 zł</span>
+            <span class="cb-lbl">koszt / h pracy</span>
+          </div>
+        </div>
+        <a class="calc-cta" href="#formularz">Odzyskaj ten czas →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="social-proof-section" id="opinie">
+  <p class="section-eyebrow reveal">Zaufanie i opinie</p>
+  <h2 class="section-title reveal">Co mówią właścicielki<br><em>korzystające z Estelio</em></h2>
+
+  <div class="sp-stats reveal" style="transition-delay:.05s">
+    <div class="sp-stat">
+      <div class="sp-stat-num">4,9 / 5</div>
+      <div class="sp-stat-label">Średnia ocena od właścicielek salonów</div>
+    </div>
+    <div class="sp-stat">
+      <div class="sp-stat-num">5+ h</div>
+      <div class="sp-stat-label">Zaoszczędzonych na administracji tygodniowo</div>
+    </div>
+    <div class="sp-stat">
+      <div class="sp-stat-num">100%</div>
+      <div class="sp-stat-label">Użytkowniczek poleciłoby Estelio znajomej</div>
+    </div>
+  </div>
+
+  <div class="testimonials">
+    <div class="testimonial reveal" style="transition-delay:.08s">
+      <div class="t-stars">★★★★★</div>
+      <p class="t-quote">Wcześniej rozliczenia zajmowały mi wieczór. Teraz zamykam salon i po prostu wychodzę. Dane są już w systemie.</p>
+      <div class="t-author">
+        <div class="t-avatar">A</div>
+        <div>
+          <div class="t-name">Agnieszka K.</div>
+          <div class="t-role">Właścicielka salonu kosmetycznego</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial reveal" style="transition-delay:.14s">
+      <div class="t-stars">★★★★★</div>
+      <p class="t-quote">Mam teraz pełną kontrolę nad magazynem. Nigdy więcej sytuacji że zabieg się zaczął a produktu nie ma.</p>
+      <div class="t-author">
+        <div class="t-avatar">M</div>
+        <div>
+          <div class="t-name">Magda P.</div>
+          <div class="t-role">Studio urody, 4 pracownice</div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial reveal" style="transition-delay:.20s">
+      <div class="t-stars">★★★★★</div>
+      <p class="t-quote">Rozliczenia z pracownicami przestały być źródłem napięć. Każda widzi swoje wyniki — zero domysłów.</p>
+      <div class="t-author">
+        <div class="t-avatar">K</div>
+        <div>
+          <div class="t-name">Karolina W.</div>
+          <div class="t-role">Klinika estetyczna</div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -690,9 +1073,66 @@
   </div>
 </section>
 
+<!-- FAQ -->
+<section class="faq-section" id="faq">
+  <p class="section-eyebrow reveal" style="text-align:left;">Pytania i odpowiedzi</p>
+  <h2 class="section-title reveal">Masz pytania?<br><em>Mamy odpowiedzi.</em></h2>
+
+  <div class="faq-item reveal" style="transition-delay:.04s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Czy potrzebuję karty kredytowej, żeby zamówić dostęp?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Nie — do zamówienia potrzebujesz tylko karty debetowej lub możliwości płatności BLIK. Akceptujemy wszystkie popularne metody płatności online. Brak ukrytych opłat ani subskrypcji — płacisz raz za cały rok.
+    </div>
+  </div>
+
+  <div class="faq-item reveal" style="transition-delay:.08s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Czy system jest trudny w obsłudze?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Estelio jest zaprojektowane tak, żeby każda pracownica mogła zacząć korzystać w kilka minut — bez szkoleń. Logowanie przez PIN, czytelny interfejs na telefonie i tablecie. Jeśli coś sprawi problem, pomożemy bezpośrednio w języku polskim.
+    </div>
+  </div>
+
+  <div class="faq-item reveal" style="transition-delay:.12s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Co się dzieje z moimi danymi po roku?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Twoje dane są bezpieczne — masz do nich dostęp cały czas. Przed upływem roku skontaktujemy się z Tobą z propozycją odnowienia dostępu. Nigdy nie usuwamy danych bez Twojej wiedzy i zgody.
+    </div>
+  </div>
+
+  <div class="faq-item reveal" style="transition-delay:.16s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Na ilu urządzeniach mogę korzystać?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Bez ograniczeń. Estelio działa w przeglądarce — na telefonie, tablecie i komputerze. Twoje pracownice logują się przez PIN i mają dostęp tylko do swoich modułów. Możesz mieć otwartą aplikację na recepcji i sprawdzać raporty na telefonie jednocześnie.
+    </div>
+  </div>
+
+  <div class="faq-item reveal" style="transition-delay:.20s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Czy mogę porozmawiać przed zakupem?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Oczywiście. Napisz do nas na <a href="mailto:kontakt@estelio.com.pl" style="color:var(--rose);">kontakt@estelio.com.pl</a> — odpiszemy i omówimy czy Estelio pasuje do Twojego salonu. Nie ma presji sprzedaży.
+    </div>
+  </div>
+</section>
+
 <!-- FOOTER -->
 <footer>
   © 2025 Estelio · Wszystkie prawa zastrzeżone ·
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> ·
   <a href="#">Polityka prywatności</a> ·
   <a href="#">Regulamin</a>
 </footer>
@@ -703,6 +1143,43 @@ const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
 }, { threshold: 0.1 });
 document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── Kalkulator oszczędności ──────────────────────────────────────
+function przeliczKalk() {
+  const OSZCZEDNOSC = 0.75;
+  const CENA_ROCZNA = 588; // 49 zł × 12
+  const r = parseFloat(document.getElementById('sl-rozliczenia').value);
+  const m = parseFloat(document.getElementById('sl-magazyn').value);
+  const k = parseFloat(document.getElementById('sl-klienci').value);
+  const t = parseFloat(document.getElementById('sl-team').value);
+
+  document.getElementById('val-rozliczenia').textContent = r + ' h / tydzień';
+  document.getElementById('val-magazyn').textContent     = m + ' h / tydzień';
+  document.getElementById('val-klienci').textContent     = k + ' h / tydzień';
+  document.getElementById('val-team').textContent        = t + ' h / tydzień';
+
+  const tydzien  = Math.round((r + m + k + t) * OSZCZEDNOSC * 10) / 10;
+  const miesiac  = Math.round(tydzien * 4.3);
+  const dni      = Math.round(miesiac * 12 / 8);
+  const godzRok  = miesiac * 12;
+  const kosztH   = godzRok > 0
+    ? (CENA_ROCZNA / godzRok).toFixed(2).replace('.', ',')
+    : '—';
+
+  document.getElementById('calc-hours-val').textContent = tydzien.toString().replace('.', ',');
+  document.getElementById('cb-miesiac').textContent = miesiac;
+  document.getElementById('cb-rok').textContent = dni;
+  document.getElementById('cb-cena').textContent = kosztH !== '—' ? kosztH + ' zł' : '—';
+}
+przeliczKalk();
+
+// ── FAQ accordion ────────────────────────────────────────────────
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const isOpen = item.classList.contains('open');
+  document.querySelectorAll('.faq-item.open').forEach(el => el.classList.remove('open'));
+  if (!isOpen) item.classList.add('open');
+}
 
 // ── Stripe config ────────────────────────────────────────────────
 fetch('/api/stripe/config').then(r => r.json()).then(d => {
