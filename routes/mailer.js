@@ -21,9 +21,30 @@ function createTransport() {
   });
 }
 
-const FROM      = () => `"Estelio" <${process.env.SMTP_USER}>`;
-const ADMIN_EMAIL = () => process.env.ADMIN_EMAIL || process.env.SMTP_USER;
-const APP_URL   = () => (process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
+// Stripuje apostrofy/cudzysłowy które Hostinger dodaje do env varów
+function stripQuotes(val) {
+  return (val || '').replace(/^['"]|['"]$/g, '');
+}
+
+const FROM        = () => `"Estelio" <${stripQuotes(process.env.SMTP_USER)}>`;
+const ADMIN_EMAIL = () => stripQuotes(process.env.ADMIN_EMAIL) || stripQuotes(process.env.SMTP_USER);
+const APP_URL     = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
+
+// ─── Przycisk CTA kompatybilny z Gmail/Outlook ───────────────
+// Gmail blokuje background na <a> — wymagana tabela z bgcolor na <td>
+function emailBtn(link, tekst) {
+  return `
+    <table border="0" cellspacing="0" cellpadding="0" style="margin:28px auto;">
+      <tr>
+        <td bgcolor="#7c3aed" style="border-radius:12px; background-color:#7c3aed;">
+          <a href="${link}" target="_blank"
+             style="display:inline-block; padding:14px 32px; color:#ffffff; text-decoration:none; font-weight:700; font-size:14px; font-family:'Segoe UI',Arial,sans-serif; border-radius:12px;">
+            ${tekst}
+          </a>
+        </td>
+      </tr>
+    </table>`;
+}
 
 // ─── Szablon bazowy emaila ────────────────────────────────────
 function emailWrapper(icon, tytul, podtytul, tresc) {
@@ -36,7 +57,7 @@ function emailWrapper(icon, tytul, podtytul, tresc) {
 </head>
 <body style="margin:0; padding:24px; background:#f1f5f9; font-family:'Segoe UI',Arial,sans-serif;">
   <div style="max-width:560px; margin:0 auto; background:#fafafa; border-radius:16px; overflow:hidden; border:1px solid #e8e4f3;">
-    <div style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); padding:32px 40px; text-align:center;">
+    <div style="background:#7c3aed; padding:32px 40px; text-align:center;">
       <div style="font-size:36px; margin-bottom:8px;">${icon}</div>
       <h1 style="color:white; margin:0; font-size:20px; font-weight:700; letter-spacing:0.5px;">Estelio</h1>
       <p style="color:rgba(255,255,255,0.8); margin:4px 0 0; font-size:13px;">${podtytul}</p>
@@ -68,11 +89,7 @@ async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
         Kliknij poniższy przycisk, aby założyć profil swojego salonu
         ${nazwa_salonu ? `<strong>${nazwa_salonu}</strong>` : ''}.
       </p>
-      <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
-          Załóż profil salonu →
-        </a>
-      </div>
+      ${emailBtn(link, 'Załóż profil salonu →')}
       <div style="background:#f8fafc; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
         <p style="font-size:11px; color:#94a3b8; margin:0 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Lub skopiuj link ręcznie</p>
         <p style="font-size:11px; color:#475569; word-break:break-all; margin:0; font-family:monospace;">${link}</p>
@@ -103,11 +120,7 @@ async function powiadomAdmina({ imie, nazwa_salonu, email, telefon, miasto, wiad
         ${miasto ? `<tr><td style="padding:7px 0; color:#64748b;">Miasto:</td><td style="padding:7px 0; color:#1e293b;">${miasto}</td></tr>` : ''}
         ${wiadomosc ? `<tr><td style="padding:7px 0; color:#64748b; vertical-align:top;">Wiadomość:</td><td style="padding:7px 0; color:#1e293b;">${wiadomosc}</td></tr>` : ''}
       </table>
-      <div style="margin-top:24px; text-align:center;">
-        <a href="${APP_URL()}/admin.html" target="_blank" style="background:#7c3aed; color:white; padding:12px 28px; border-radius:10px; text-decoration:none; font-weight:700; font-size:13px;">
-          Przejdź do panelu admina →
-        </a>
-      </div>
+      ${emailBtn(`${APP_URL()}/admin.html`, 'Przejdź do panelu admina →')}
     `)
   });
 }
@@ -127,11 +140,7 @@ async function wyslijResetHasla({ email, login, token }) {
         Otrzymaliśmy prośbę o reset hasła do Twojego konta w systemie Estelio.<br>
         Kliknij poniższy przycisk, aby ustawić nowe hasło.
       </p>
-      <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
-          Ustaw nowe hasło →
-        </a>
-      </div>
+      ${emailBtn(link, 'Ustaw nowe hasło →')}
       <div style="background:#f8fafc; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
         <p style="font-size:11px; color:#94a3b8; margin:0 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Lub skopiuj link ręcznie</p>
         <p style="font-size:11px; color:#475569; word-break:break-all; margin:0; font-family:monospace;">${link}</p>
@@ -146,7 +155,7 @@ async function wyslijResetHasla({ email, login, token }) {
 
 // ─── Welcome email po zakończeniu rejestracji ────────────────
 async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
-  const link = APP_URL();
+  const link = `${APP_URL()}/zaloguj`;
   const transport = createTransport();
 
   await transport.sendMail({
@@ -176,11 +185,7 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
         </table>
       </div>
 
-      <div style="text-align:center; margin:28px 0;">
-        <a href="${link}" target="_blank" style="background:linear-gradient(135deg,#7c3aed,#9b8ec4); color:white; padding:14px 32px; border-radius:12px; text-decoration:none; font-weight:700; font-size:14px; display:inline-block;">
-          Przejdź do systemu →
-        </a>
-      </div>
+      ${emailBtn(link, 'Przejdź do systemu →')}
 
       <div style="background:#f8fafc; border-radius:10px; padding:16px 18px; margin-bottom:8px;">
         <p style="font-size:12px; font-weight:700; color:#475569; margin:0 0 8px;">Co dalej?</p>
@@ -193,7 +198,7 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
 
       <p style="font-size:12px; color:#94a3b8; line-height:1.6; margin-top:20px;">
         Masz pytania? Odpisz na tego maila lub napisz na
-        <a href="mailto:${process.env.ADMIN_EMAIL || process.env.SMTP_USER}" style="color:#7c3aed;">${process.env.ADMIN_EMAIL || process.env.SMTP_USER}</a>.
+        <a href="mailto:${ADMIN_EMAIL()}" style="color:#7c3aed;">${ADMIN_EMAIL()}</a>.
       </p>
     `)
   });
@@ -225,7 +230,7 @@ async function wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu }) {
 
       <p style="font-size:13px; color:#64748b; line-height:1.7;">
         Jeśli masz pytania — odpisz na tego maila lub skontaktuj się pod adresem
-        <a href="mailto:${process.env.ADMIN_EMAIL || process.env.SMTP_USER}" style="color:#7c3aed;">${process.env.ADMIN_EMAIL || process.env.SMTP_USER}</a>.
+        <a href="mailto:${ADMIN_EMAIL()}" style="color:#7c3aed;">${ADMIN_EMAIL()}</a>.
       </p>
     `)
   });
