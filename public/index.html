@@ -8,6 +8,7 @@
     <title>Estelio - zarządzanie salonem</title>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
 /* =========================================
    🎀 SYSTEM BOCZKI - DESIGN "DRIBBBLE 2026"
@@ -336,9 +337,116 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
    Zostawiamy oryginalne proporcje i rozmiary
    ========================================== */
 
-#login-overlay, #pin-overlay { 
-    background: var(--bg-body) !important; /* Kremowe tło z Dribbble UI */
-    color: var(--text-dark) !important; 
+#login-overlay, #pin-overlay {
+    background: var(--bg-body) !important;
+    color: var(--text-dark) !important;
+}
+
+/* ── NOWY EKRAN LOGOWANIA (styl zamow.html) ── */
+#login-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #f4efe6 !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    font-family: 'DM Sans', 'Poppins', sans-serif;
+}
+#login-overlay::before {
+    content: '';
+    position: absolute; top: 10%; left: 55%;
+    width: 340px; height: 340px;
+    background: rgba(201,132,144,0.18);
+    border-radius: 50%; filter: blur(70px);
+    pointer-events: none;
+}
+#login-overlay::after {
+    content: '';
+    position: absolute; bottom: 15%; right: 8%;
+    width: 200px; height: 200px;
+    background: rgba(201,169,110,0.2);
+    border-radius: 50%; filter: blur(50px);
+    pointer-events: none;
+}
+#login-overlay .login-card {
+    position: relative; z-index: 1;
+    width: 100%; max-width: 420px;
+    background: #ffffff !important;
+    border-radius: 24px !important;
+    padding: 52px 48px !important;
+    box-shadow: 0 24px 64px rgba(28,26,24,0.09), 0 4px 16px rgba(28,26,24,0.04) !important;
+    border: 1px solid #ede6d8 !important;
+    margin: 0 16px !important;
+}
+#login-overlay .login-eyebrow {
+    font-size: 0.68rem; font-weight: 500;
+    letter-spacing: 0.2em; text-transform: uppercase;
+    color: #c9a96e; margin-bottom: 10px;
+}
+#login-overlay .login-title {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 2.4rem; font-weight: 600;
+    color: #1c1a18; line-height: 1.1;
+    margin-bottom: 6px;
+}
+#login-overlay .login-subtitle {
+    font-size: 0.88rem; color: #6b6459;
+    margin-bottom: 36px;
+}
+#login-overlay .login-divider {
+    width: 40px; height: 2px;
+    background: linear-gradient(90deg, #b87080, #c9a96e);
+    border-radius: 2px; margin-bottom: 32px;
+}
+#login-overlay input {
+    width: 100%; padding: 13px 16px;
+    border: 1.5px solid #ddd4c4;
+    border-radius: 10px;
+    font-family: 'DM Sans', 'Poppins', sans-serif;
+    font-size: 14px; color: #1c1a18;
+    background: #fdfbf8;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    margin-bottom: 12px;
+    display: block;
+}
+#login-overlay input:focus {
+    border-color: #b87080;
+    box-shadow: 0 0 0 3px rgba(184,112,128,0.12);
+    background: #fff;
+}
+#login-overlay input::placeholder { color: #b0a89a; }
+#login-overlay .login-btn {
+    width: 100%; padding: 14px;
+    background: #b87080;
+    color: #fff; border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', 'Poppins', sans-serif;
+    font-size: 0.95rem; font-weight: 600;
+    cursor: pointer; letter-spacing: 0.01em;
+    box-shadow: 0 4px 18px rgba(184,112,128,0.3);
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    margin-top: 6px;
+}
+#login-overlay .login-btn:hover:not(:disabled) {
+    background: #a05e6e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 24px rgba(184,112,128,0.4);
+}
+#login-overlay .login-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+#login-overlay .login-link {
+    background: none; border: none;
+    color: #b0a89a; font-size: 12px;
+    font-family: 'DM Sans', 'Poppins', sans-serif;
+    cursor: pointer; text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.2s;
+    padding: 0;
+}
+#login-overlay .login-link:hover { color: #b87080; }
+#login-overlay #login-msg {
+    margin-top: 14px; font-size: 13px;
+    text-align: center; min-height: 18px;
 }
 
 #pin-overlay h1, #pin-overlay h2, #pin-overlay h3, #pin-overlay p, #pin-overlay span, #pin-users-grid div strong {
@@ -2582,38 +2690,35 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
 
     <div id="login-overlay">
         <div class="login-card">
-            <h2 style="color:var(--primary); margin-bottom:10px;">✨ Estelio</h2>
-            <p style="color:#6b7280; margin-bottom:30px;">Zaloguj się do systemu</p>
+            <div class="login-eyebrow">System dla salonów beauty</div>
+            <div class="login-title">Estelio</div>
+            <div class="login-divider"></div>
 
             <!-- Formularz logowania -->
             <div id="login-form-wrap">
                 <form onsubmit="handleLogin(event)">
-                    <input type="text" id="login" placeholder="Login" required>
-                    <input type="password" id="password" placeholder="Hasło" required>
-                    <button type="submit" id="btn-login" class="btn-primary">Zaloguj się</button>
+                    <input type="text" id="login" placeholder="Login" required autocomplete="username">
+                    <input type="password" id="password" placeholder="Hasło" required autocomplete="current-password">
+                    <button type="submit" id="btn-login" class="login-btn">Zaloguj się →</button>
                 </form>
-                <div style="text-align:center; margin-top:16px;">
-                    <button onclick="pokazResetHasla()" style="background:none; border:none; color:#a0aec0; font-size:12px; font-family:inherit; cursor:pointer; text-decoration:underline;">
-                        Zapomniałem/am hasła
-                    </button>
+                <div style="text-align:center; margin-top:18px;">
+                    <button onclick="pokazResetHasla()" class="login-link">Zapomniałem/am hasła</button>
                 </div>
             </div>
 
             <!-- Formularz resetu hasła (ukryty domyślnie) -->
             <div id="reset-form-wrap" style="display:none;">
-                <p style="font-size:13px; color:#6b7280; margin-bottom:20px; line-height:1.6;">
+                <p style="font-size:13px; color:#6b6459; margin-bottom:20px; line-height:1.6;">
                     Podaj adres email przypisany do konta.<br>Wyślemy link do ustawienia nowego hasła.
                 </p>
-                <input type="email" id="reset-email" placeholder="Adres email" style="width:100%; padding:13px 16px; border:2px solid #e5e7eb; border-radius:14px; font-family:inherit; font-size:14px; outline:none; margin-bottom:12px;">
-                <button onclick="wyslijReset()" id="btn-reset" class="btn-primary">Wyślij link resetujący</button>
-                <div style="text-align:center; margin-top:14px;">
-                    <button onclick="pokazLogin()" style="background:none; border:none; color:#a0aec0; font-size:12px; font-family:inherit; cursor:pointer; text-decoration:underline;">
-                        ← Wróć do logowania
-                    </button>
+                <input type="email" id="reset-email" placeholder="Adres email" autocomplete="email">
+                <button onclick="wyslijReset()" id="btn-reset" class="login-btn">Wyślij link resetujący →</button>
+                <div style="text-align:center; margin-top:16px;">
+                    <button onclick="pokazLogin()" class="login-link">← Wróć do logowania</button>
                 </div>
             </div>
 
-            <div id="login-msg" style="margin-top:15px; color:red; font-size:13px;"></div>
+            <div id="login-msg"></div>
         </div>
     </div>
 	
