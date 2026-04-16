@@ -31,9 +31,10 @@ try {
 }
 
 function stripQuotes(val) { return (val || '').replace(/^['"]|['"]$/g, ''); }
-const APP_URL = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
-const CENA_GROSZE = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900; // 49 zł domyślnie
+const APP_URL        = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
+const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900;
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
+const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
 
 module.exports = (db) => {
 
@@ -95,37 +96,30 @@ module.exports = (db) => {
           ? (voucherInfo.czas_trwania === 'zawsze' ? 'na zawsze' : `przez ${voucherInfo.czas_trwania_miesiecy} mies.`)
           : '';
 
+        const priceId = PRICE_ID();
+        if (!priceId) {
+          return res.json({ status: 'error', message: 'Brak konfiguracji cennika (STRIPE_PRICE_ID).' });
+        }
+
         try {
+          const sessionMeta = {
+            zamowienie_id: zamowienieId,
+            imie,
+            nazwa_salonu,
+            email,
+            telefon: telefon || '',
+            miasto:  miasto  || '',
+            nip:     nip     || '',
+          };
+
           const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'blik', 'p24'],
-            line_items: [{
-              price_data: {
-                currency: 'pln',
-                product_data: {
-                  name: NAZWA_PRODUKTU(),
-                  description: voucherInfo
-                    ? `Salon: ${nazwa_salonu} | Kod: ${voucherInfo.kod} (${voucherInfo.typ === 'procent' ? `-${voucherInfo.wartosc}%` : `-${voucherInfo.wartosc} zł`} ${czasOpis})`
-                    : `Salon: ${nazwa_salonu}`,
-                  images: [],
-                },
-                unit_amount: cenaFinalna,
-              },
-              quantity: 1,
-            }],
-            mode: 'payment',
+            payment_method_types: ['card'],
+            line_items: [{ price: priceId, quantity: 1 }],
+            mode: 'subscription',
             customer_email: email,
-            metadata: {
-              zamowienie_id: zamowienieId,
-              imie,
-              nazwa_salonu,
-              email,
-              telefon:       telefon || '',
-              miasto:        miasto  || '',
-              nip:           nip     || '',
-              kod_rabatowy:  voucherInfo ? voucherInfo.kod : '',
-              czas_trwania_rabatu: voucherInfo ? voucherInfo.czas_trwania : '',
-              czas_trwania_miesiecy: voucherInfo ? String(voucherInfo.czas_trwania_miesiecy || '') : '',
-            },
+            // metadata na session i subscription — potrzebne w webhookach
+            metadata: sessionMeta,
+            subscription_data: { metadata: sessionMeta },
             success_url: `${APP_URL()}/platnosc-sukces.html?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${APP_URL()}/zamow.html?anulowano=1`,
             locale: 'pl',
@@ -197,6 +191,41 @@ module.exports = (db) => {
           }
         }
       );
+    }
+
+    // ─── invoice.paid — przedłuż licencję o miesiąc ─────────────
+    if (event.type === 'invoice.paid') {
+      const invoice = event.data.object;
+      const customerEmail = invoice.customer_email;
+      if (customerEmail) {
+        db.query(
+          `UPDATE Licencje
+           SET data_waznosci = DATE_ADD(GREATEST(IFNULL(data_waznosci, NOW()), NOW()), INTERVAL 1 MONTH),
+               status = 'aktywny'
+           WHERE email = ? LIMIT 1`,
+          [customerEmail],
+          (err, result) => {
+            if (err) console.error('[stripe webhook] Błąd przedłużenia licencji:', err.message);
+            else console.log(`[stripe webhook] Licencja przedłużona dla: ${customerEmail} (${result.affectedRows} rekord)`);
+          }
+        );
+      }
+    }
+
+    // ─── customer.subscription.deleted — dezaktywuj salon ────────
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object;
+      const email = subscription.metadata?.email;
+      if (email) {
+        db.query(
+          `UPDATE Licencje SET status = 'nieaktywny' WHERE email = ? LIMIT 1`,
+          [email],
+          (err) => {
+            if (err) console.error('[stripe webhook] Błąd dezaktywacji salonu:', err.message);
+            else console.log(`[stripe webhook] Salon dezaktywowany: ${email}`);
+          }
+        );
+      }
     }
 
     res.json({ received: true });
