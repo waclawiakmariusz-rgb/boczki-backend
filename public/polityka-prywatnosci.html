@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polityka Prywatności — Estelio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
+      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
+
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; color: var(--gold);
+      text-decoration: none; letter-spacing: .06em;
+    }
+    header a.back {
+      font-size: .82rem; color: rgba(255,255,255,.55);
+      text-decoration: none; transition: color .2s;
+    }
+    header a.back:hover { color: #fff; }
+
+    .container {
+      max-width: 780px; margin: 0 auto;
+      padding: 56px 40px 80px;
+    }
+    .doc-eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem; font-weight: 600; color: var(--dark);
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .doc-meta {
+      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
+      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
+    }
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.35rem; font-weight: 600; color: var(--dark);
+      margin: 40px 0 12px;
+    }
+    h3 { font-size: .95rem; font-weight: 600; color: var(--dark); margin: 24px 0 8px; }
+    p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
+    ul, ol { margin: 8px 0 14px 20px; }
+    li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
+    strong { color: var(--dark); }
+    a { color: var(--rose); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .placeholder {
+      background: #fff8e6; border: 1px dashed var(--gold);
+      border-radius: 4px; padding: 1px 6px;
+      font-weight: 600; color: #7a5c00; font-size: .88rem;
+    }
+
+    .info-box {
+      background: #fdf9f3; border: 1px solid #e8d8c4;
+      border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+      font-size: .88rem; color: #5c4a3a;
+    }
+    .info-box strong { display: block; margin-bottom: 4px; color: var(--dark); }
+
+    footer {
+      background: var(--cream2); border-top: 1px solid var(--border);
+      padding: 20px 40px; text-align: center;
+      font-size: .75rem; color: var(--muted);
+    }
+    footer a { color: var(--rose); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 36px 20px 60px; }
+      header { padding: 18px 20px; }
+      h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="back" href="/zamow.html">← Wróć do strony głównej</a>
+</header>
+
+<div class="container">
+
+  <div class="doc-eyebrow">Dokument prawny</div>
+  <h1>Polityka Prywatności</h1>
+  <div class="doc-meta">Obowiązuje od: <strong>1 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0 &nbsp;·&nbsp; Zgodna z RODO</div>
+
+  <div class="info-box">
+    <strong>Administrator danych osobowych:</strong>
+    <span class="placeholder">[IMIĘ NAZWISKO / NAZWA FIRMY]</span>,
+    <span class="placeholder">[ADRES]</span>,
+    NIP: <span class="placeholder">[NIP]</span><br>
+    Kontakt: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  </div>
+
+  <h2>1. Jakie dane zbieramy</h2>
+
+  <h3>Dane właścicieli salonów (Klientów Estelio)</h3>
+  <ul>
+    <li>Imię i nazwisko, nazwa firmy</li>
+    <li>Adres e-mail, numer telefonu, miasto</li>
+    <li>NIP (jeśli podany, do celów fakturowych)</li>
+    <li>Dane płatnicze — przetwarzane wyłącznie przez Stripe (nie przechowujemy numerów kart)</li>
+    <li>Dane logowania (login, hasło w formie zaszyfrowanej)</li>
+  </ul>
+
+  <h3>Dane przetwarzane przez Klientów w systemie (dane klientów salonu)</h3>
+  <p>Klient (właściciel salonu) wprowadza do systemu Estelio dane osobowe swoich klientów (imię, nazwisko, telefon, historia usług itp.). W zakresie tych danych Klient jest <strong>administratorem</strong>, a Estelio jest <strong>podmiotem przetwarzającym</strong> w rozumieniu art. 28 RODO.</p>
+
+  <h2>2. Cele i podstawy prawne przetwarzania</h2>
+  <ul>
+    <li><strong>Realizacja umowy (art. 6 ust. 1 lit. b RODO)</strong> — świadczenie usługi dostępu do systemu Estelio, obsługa płatności, wysyłka faktur</li>
+    <li><strong>Obowiązek prawny (art. 6 ust. 1 lit. c RODO)</strong> — wystawianie faktur, archiwizacja dokumentów księgowych przez wymagany prawem okres</li>
+    <li><strong>Uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO)</strong> — bezpieczeństwo systemu, zapobieganie nadużyciom, komunikacja serwisowa</li>
+  </ul>
+
+  <h2>3. Okres przechowywania danych</h2>
+  <ul>
+    <li>Dane konta — przez czas trwania umowy + 30 dni po jej zakończeniu (umożliwienie eksportu)</li>
+    <li>Dane fakturowe — 5 lat od końca roku podatkowego (wymóg prawa podatkowego)</li>
+    <li>Logi systemowe — do 90 dni</li>
+  </ul>
+
+  <h2>4. Odbiorcy danych</h2>
+  <p>Dane mogą być przekazywane następującym podmiotom zewnętrznym:</p>
+  <ul>
+    <li><strong>Stripe Inc.</strong> — operator płatności (USA, Privacy Shield / SCC)</li>
+    <li><strong>Fakturownia sp. z o.o.</strong> — wystawianie faktur VAT (Polska, UE)</li>
+    <li><strong>Hostinger International Ltd.</strong> — hosting serwera (UE)</li>
+  </ul>
+  <p>Dane nie są sprzedawane ani udostępniane podmiotom trzecim w celach marketingowych.</p>
+
+  <h2>5. Prawa przysługujące osobom, których dane dotyczą</h2>
+  <p>Każda osoba, której dane przetwarzamy, ma prawo do:</p>
+  <ul>
+    <li><strong>Dostępu</strong> do swoich danych (art. 15 RODO)</li>
+    <li><strong>Sprostowania</strong> nieprawidłowych danych (art. 16 RODO)</li>
+    <li><strong>Usunięcia</strong> danych — „prawo do bycia zapomnianym" (art. 17 RODO)</li>
+    <li><strong>Ograniczenia przetwarzania</strong> (art. 18 RODO)</li>
+    <li><strong>Przenoszenia danych</strong> (art. 20 RODO)</li>
+    <li><strong>Sprzeciwu</strong> wobec przetwarzania (art. 21 RODO)</li>
+    <li><strong>Wniesienia skargi</strong> do Prezesa Urzędu Ochrony Danych Osobowych (UODO), ul. Stawki 2, 00-193 Warszawa</li>
+  </ul>
+  <p>Aby skorzystać z powyższych praw, napisz na: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></p>
+
+  <h2>6. Bezpieczeństwo danych</h2>
+  <ul>
+    <li>Połączenie z systemem szyfrowane protokołem HTTPS (TLS)</li>
+    <li>Dane przechowywane na serwerach w UE</li>
+    <li>Dostęp do danych ograniczony tylko do autoryzowanych użytkowników</li>
+    <li>Dane klientów salonów izolowane między sobą (każdy salon widzi tylko swoje dane)</li>
+    <li>Regularne kopie zapasowe bazy danych</li>
+  </ul>
+
+  <h2>7. Pliki cookies</h2>
+  <p>Strona estelio.com.pl nie używa plików cookies do celów analitycznych ani reklamowych. Aplikacja systemowa może używać sessionStorage/localStorage wyłącznie do przechowywania tokenu sesji po zalogowaniu — dane te pozostają w przeglądarce użytkownika i nie są przesyłane do podmiotów trzecich.</p>
+
+  <h2>8. Zmiany polityki prywatności</h2>
+  <p>O istotnych zmianach w niniejszej polityce prywatności informujemy Klientów drogą e-mailową z co najmniej 14-dniowym wyprzedzeniem.</p>
+
+  <h2>9. Kontakt</h2>
+  <p>W sprawach związanych z ochroną danych osobowych prosimy o kontakt:<br>
+  📧 <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></p>
+
+</div>
+
+<footer>
+  © Estelio ·
+  <a href="/regulamin.html">Regulamin</a> ·
+  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> ·
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+</footer>
+
+</body>
+</html>

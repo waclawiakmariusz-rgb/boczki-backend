@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Regulamin — Estelio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
+      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
+
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; color: var(--gold);
+      text-decoration: none; letter-spacing: .06em;
+    }
+    header a.back {
+      font-size: .82rem; color: rgba(255,255,255,.55);
+      text-decoration: none; transition: color .2s;
+    }
+    header a.back:hover { color: #fff; }
+
+    .container {
+      max-width: 780px; margin: 0 auto;
+      padding: 56px 40px 80px;
+    }
+    .doc-eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem; font-weight: 600; color: var(--dark);
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .doc-meta {
+      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
+      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
+    }
+
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.35rem; font-weight: 600; color: var(--dark);
+      margin: 40px 0 12px;
+    }
+    h3 {
+      font-size: .95rem; font-weight: 600; color: var(--dark);
+      margin: 24px 0 8px;
+    }
+    p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
+    ul, ol { margin: 8px 0 14px 20px; }
+    li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
+    strong { color: var(--dark); }
+
+    .placeholder {
+      background: #fff8e6; border: 1px dashed var(--gold);
+      border-radius: 4px; padding: 1px 6px;
+      font-weight: 600; color: #7a5c00; font-size: .88rem;
+    }
+
+    footer {
+      background: var(--cream2); border-top: 1px solid var(--border);
+      padding: 20px 40px; text-align: center;
+      font-size: .75rem; color: var(--muted);
+    }
+    footer a { color: var(--rose); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 36px 20px 60px; }
+      header { padding: 18px 20px; }
+      h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="back" href="/zamow.html">← Wróć do strony głównej</a>
+</header>
+
+<div class="container">
+
+  <div class="doc-eyebrow">Dokument prawny</div>
+  <h1>Regulamin świadczenia usług</h1>
+  <div class="doc-meta">Obowiązuje od: <strong>1 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0</div>
+
+  <h2>§1. Postanowienia ogólne</h2>
+  <p>1. Niniejszy regulamin określa zasady świadczenia usługi dostępu do systemu Estelio — oprogramowania do zarządzania salonem kosmetycznym w modelu SaaS (Software as a Service).</p>
+  <p>2. Usługodawcą jest: <span class="placeholder">[IMIĘ NAZWISKO / NAZWA FIRMY]</span>, <span class="placeholder">[ADRES]</span>, NIP: <span class="placeholder">[NIP]</span>, e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
+  <p>3. Usługobiorcą (dalej: Klient) jest osoba fizyczna prowadząca działalność gospodarczą lub osoba prawna, która zawarła umowę o świadczenie usług Estelio.</p>
+  <p>4. Korzystanie z usługi oznacza akceptację niniejszego regulaminu.</p>
+
+  <h2>§2. Przedmiot usługi</h2>
+  <p>1. Estelio to aplikacja webowa umożliwiająca zarządzanie salonem kosmetycznym, w tym: ewidencję klientów, sprzedaż, magazyn, rozliczenia pracowników i analitykę.</p>
+  <p>2. Usługa świadczona jest w modelu subskrypcyjnym — Klient uzyskuje dostęp do systemu na czas obowiązywania aktywnej subskrypcji.</p>
+  <p>3. Dostęp do systemu możliwy jest przez przeglądarkę internetową bez konieczności instalacji oprogramowania.</p>
+
+  <h2>§3. Zawarcie umowy i rejestracja</h2>
+  <p>1. Umowa zostaje zawarta z chwilą pomyślnego opłacenia pierwszej subskrypcji i dokończenia procesu rejestracji przez Klienta.</p>
+  <p>2. Klient zobowiązany jest podać prawdziwe dane podczas rejestracji.</p>
+  <p>3. Klient ponosi odpowiedzialność za bezpieczeństwo danych dostępowych do swojego konta.</p>
+
+  <h2>§4. Subskrypcja i płatności</h2>
+  <p>1. Opłata za dostęp wynosi <strong>49 zł brutto miesięcznie</strong> za jeden salon.</p>
+  <p>2. Płatność pobierana jest cyklicznie co 30 dni z karty płatniczej Klienta za pośrednictwem operatora płatności Stripe.</p>
+  <p>3. W przypadku nieudanej płatności Stripe podejmuje kolejne próby pobrania. Brak płatności skutkuje zawieszeniem dostępu do systemu.</p>
+  <p>4. Klient otrzymuje fakturę VAT na adres e-mail podany podczas rejestracji po każdej zrealizowanej płatności.</p>
+  <p>5. Cena może ulec zmianie. O zmianie Klient zostanie poinformowany na 30 dni przed jej wejściem w życie.</p>
+
+  <h2>§5. Anulowanie i rozwiązanie umowy</h2>
+  <p>1. Klient może anulować subskrypcję w dowolnym momencie przez panel rozliczeniowy (<a href="/billing.html">billing.html</a>) lub kontaktując się mailowo.</p>
+  <p>2. Po anulowaniu dostęp pozostaje aktywny do końca opłaconego okresu rozliczeniowego.</p>
+  <p>3. Usługodawca może rozwiązać umowę ze skutkiem natychmiastowym w przypadku naruszenia przez Klienta postanowień regulaminu.</p>
+
+  <h2>§6. Dane i prywatność</h2>
+  <p>1. Dane wprowadzone przez Klienta do systemu (dane klientów salonu, pracowników, sprzedaży) stanowią własność Klienta.</p>
+  <p>2. Usługodawca przetwarza dane zgodnie z <a href="/polityka-prywatnosci.html">Polityką Prywatności</a> i obowiązującymi przepisami RODO.</p>
+  <p>3. Dane są przechowywane na serwerach zlokalizowanych w Unii Europejskiej.</p>
+  <p>4. W przypadku rozwiązania umowy Klient może zażądać eksportu lub usunięcia swoich danych w ciągu 30 dni.</p>
+
+  <h2>§7. Dostępność i odpowiedzialność</h2>
+  <p>1. Usługodawca dąży do zapewnienia dostępności systemu na poziomie 99% w skali miesiąca, z wyłączeniem planowanych przerw konserwacyjnych.</p>
+  <p>2. Usługodawca nie ponosi odpowiedzialności za straty wynikające z przerw w działaniu systemu spowodowanych przyczynami niezależnymi (awaria infrastruktury, siła wyższa).</p>
+  <p>3. Usługodawca nie ponosi odpowiedzialności za działania Klienta ani dane wprowadzone do systemu przez Klienta.</p>
+
+  <h2>§8. Reklamacje</h2>
+  <p>1. Reklamacje należy składać na adres e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
+  <p>2. Reklamacja powinna zawierać: opis problemu, datę wystąpienia oraz dane kontaktowe Klienta.</p>
+  <p>3. Usługodawca rozpatruje reklamacje w terminie 14 dni roboczych.</p>
+
+  <h2>§9. Postanowienia końcowe</h2>
+  <p>1. Regulamin podlega prawu polskiemu.</p>
+  <p>2. Wszelkie spory rozstrzygane będą przez sąd właściwy dla siedziby Usługodawcy.</p>
+  <p>3. Usługodawca zastrzega prawo do zmiany regulaminu z zachowaniem 30-dniowego okresu wypowiedzenia.</p>
+  <p>4. W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego oraz ustawy o świadczeniu usług drogą elektroniczną.</p>
+
+</div>
+
+<footer>
+  © Estelio ·
+  <a href="/regulamin.html">Regulamin</a> ·
+  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> ·
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+</footer>
+
+</body>
+</html>
