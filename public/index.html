@@ -8549,7 +8549,7 @@ function pokaz(id, b) {
     if (id === 'urodziny') { pobierzUrodziny(); pobierzNajblizsze(); }
     if (id === 'slownik' || id === 'nowy') pobierzSlownik();
     if (id === 'magazyn') {
-        if(typeof daneCache !== 'undefined' && daneCache.length > 0) renderMagazyn(daneCache);
+        if(typeof daneCache !== 'undefined' && daneCache.length > 0) setTimeout(() => renderMagazyn(daneCache), 0);
         else pobierzDane();
     }
     if (id === 'co-zamowic') {
@@ -8683,7 +8683,7 @@ function pokaz(id, b) {
     if (id === 'urodziny') { pobierzUrodziny(); pobierzNajblizsze(); }
     if (id === 'slownik' || id === 'nowy') pobierzSlownik();
     if (id === 'magazyn') {
-        if(typeof daneCache !== 'undefined' && daneCache.length > 0) renderMagazyn(daneCache);
+        if(typeof daneCache !== 'undefined' && daneCache.length > 0) setTimeout(() => renderMagazyn(daneCache), 0);
         else pobierzDane();
     }
     if (id === 'co-zamowic') {
@@ -9690,20 +9690,21 @@ function renderMagazyn(d) {
             }
         });
 
+        let zbiorczyHtml = '';
         listaZbiorcza.forEach(p => {
             let s = 'qty-ok'; let txt = 'OK';
-            if (p.ilosc === 0) { s = 'qty-bad'; txt = '🛑 BRAK (0) - ZAMÓW!'; } 
-            else if (p.ilosc <= 2) { s = 'qty-bad'; txt = 'MAŁO! ZAMÓWIĆ'; } 
+            if (p.ilosc === 0) { s = 'qty-bad'; txt = '🛑 BRAK (0) - ZAMÓW!'; }
+            else if (p.ilosc <= 2) { s = 'qty-bad'; txt = 'MAŁO! ZAMÓWIĆ'; }
             else if (p.ilosc <= 6) { s = 'qty-warn'; txt = 'MONITOROWAĆ'; }
-
             let cb = p.kategoria === 'Detal' ? 'cat-detal' : 'cat-pro';
-            t.innerHTML += `
+            zbiorczyHtml += `
             <tr>
                 <td><span class="cat-badge ${cb}">${p.kategoria.toUpperCase()}</span> <strong>${p.nazwa}</strong></td>
                 <td><span class="qty-badge">${p.ilosc} szt.</span></td>
                 <td><span class="qty-status-badge ${s}">${txt}</span></td>
             </tr>`;
         });
+        t.innerHTML = zbiorczyHtml;
 
     } else {
         // ==========================================
