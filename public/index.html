@@ -7032,7 +7032,7 @@ function generujAnalizeAktywna(klient) {
     let mozliweZabiegi = [];
     if (salesDictCache && salesDictCache.zabiegi) {
         // Wyciągamy tylko unikalne kategorie
-        mozliweZabiegi = [...new Set(salesDictCache.zabiegi.map(z => z.kategoria))];
+        mozliweZabiegi = [...new Set(salesDictCache.zabiegi.map(z => z.kategoria).filter(Boolean))];
     } else {
         // Fallback jeśli cennik się nie załadował (żeby nie było pusto)
         mozliweZabiegi = ["Brak danych cennika"]; 
@@ -7047,7 +7047,7 @@ function generujAnalizeAktywna(klient) {
         if (brakiCount >= 4) return; // Max 4 propozycje
         
         // Sprawdzamy czy nazwa z cennika występuje w historii klienta
-        if (!historiaString.includes(usluga.toLowerCase())) {
+        if (!historiaString.includes((usluga || '').toLowerCase())) {
             missingList.innerHTML += `<li class="missing-item"><span class="missing-icon">○</span> ${usluga}</li>`;
             brakiCount++;
         }
