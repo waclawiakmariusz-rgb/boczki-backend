@@ -84,8 +84,124 @@ app.get('/zaloguj', (req, res) => res.sendFile(path.join(__dirname, 'public', 'i
 // Stary URL /index.html → redirect na /zaloguj
 app.get('/index.html', (req, res) => res.redirect(301, '/zaloguj'));
 
+// Dynamiczne renderowanie wpisów bloga z bazy danych
+// Działa dla /blog/:slug (bez rozszerzenia .html) — nowe wpisy dodane przez admin CMS
+app.get('/blog/:slug', (req, res, next) => {
+  const slug = req.params.slug;
+  // Jeśli slug zawiera kropkę — to pewnie plik statyczny (.html) — przekaż dalej
+  if (slug.includes('.')) return next();
+  db.query(
+    'SELECT * FROM blog_posts WHERE slug = ? AND status = ?',
+    [slug, 'published'],
+    (err, rows) => {
+      if (err || !rows.length) return next();
+      const p = rows[0];
+      const dateStr = new Date(p.date_published).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+      const catMeta = {
+        'Zarządzanie': 'cat-zarzadzanie',
+        'Pracownicy':  'cat-pracownicy',
+        'Magazyn':     'cat-magazyn',
+        'Klienci':     'cat-klienci',
+        'Sprzedaż':    'cat-sprzedaz',
+      };
+      const catCss = catMeta[p.category] || 'cat-zarzadzanie';
+      res.send(`<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${escHtml(p.title)} — Estelio Blog</title>
+  <meta name="description" content="${escHtml(p.excerpt || '')}">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://estelio.com.pl/blog/${escHtml(p.slug)}">
+  <meta property="og:title" content="${escHtml(p.title)}">
+  <meta property="og:description" content="${escHtml(p.excerpt || '')}">
+  <meta property="og:type" content="article">
+  <meta property="og:url" content="https://estelio.com.pl/blog/${escHtml(p.slug)}">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":${JSON.stringify(p.title)},"datePublished":${JSON.stringify(p.date_published)},"author":{"@type":"Organization","name":"Estelio"},"publisher":{"@type":"Organization","name":"Estelio","url":"https://estelio.com.pl"}}</script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--m-linen:#e8e0d5;--m-cream:#f2ede6;--m-sand:#d4c4a8;--m-taupe:#b8a898;--m-mauve:#c4a0a0;--m-mauve-d:#a88080;--m-sage:#9aab9a;--m-camel:#c4a870;--m-ink:#2c2420;--m-muted:#6a5e56}
+    body{font-family:'DM Sans',sans-serif;background:var(--m-linen);color:var(--m-ink)}
+    nav{display:flex;align-items:center;justify-content:space-between;padding:20px 60px;background:var(--m-cream);border-bottom:1px solid var(--m-sand);position:sticky;top:0;z-index:100}
+    .logo{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:600;color:var(--m-ink);text-decoration:none;letter-spacing:.06em}
+    .nav-links{display:flex;gap:24px;align-items:center}
+    .nav-links a{text-decoration:none;font-size:.85rem;color:var(--m-muted);transition:color .2s}
+    .nav-links a:hover{color:var(--m-ink)}
+    .nav-cta{background:var(--m-mauve)!important;color:#fff!important;padding:8px 18px;border-radius:6px;font-weight:500!important;transition:background .2s!important}
+    .nav-cta:hover{background:var(--m-mauve-d)!important}
+    @media(max-width:600px){nav{padding:14px 20px}.nav-links a:not(.nav-cta){display:none}}
+    .article-hero{background:var(--m-cream);border-bottom:1px solid var(--m-sand);padding:56px 60px 48px;text-align:center;position:relative;overflow:hidden}
+    .article-hero::before{content:'';position:absolute;width:420px;height:420px;background:radial-gradient(circle,rgba(196,160,160,.2) 0%,transparent 65%);top:-120px;right:-60px;border-radius:50%}
+    .article-hero::after{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(154,171,154,.18) 0%,transparent 65%);bottom:-80px;left:-30px;border-radius:50%}
+    .article-cat{display:inline-block;font-size:.68rem;font-weight:600;letter-spacing:.15em;text-transform:uppercase;background:rgba(196,168,112,.15);color:var(--m-camel);padding:4px 14px;border-radius:20px;margin-bottom:16px;border:1px solid rgba(196,168,112,.3);position:relative;z-index:1}
+    .article-hero h1{font-family:'Cormorant Garamond',serif;font-size:2.6rem;font-weight:600;color:var(--m-ink);line-height:1.2;max-width:720px;margin:0 auto 14px;position:relative;z-index:1}
+    .article-meta{font-size:.8rem;color:var(--m-taupe);position:relative;z-index:1}
+    .article-body{max-width:720px;margin:0 auto;padding:56px 40px 80px}
+    .back-link{display:inline-block;font-size:.82rem;color:var(--m-muted);text-decoration:none;margin-bottom:32px}
+    .back-link:hover{color:var(--m-mauve)}
+    .article-content h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--m-ink);margin:40px 0 14px;line-height:1.25}
+    .article-content h3{font-size:1rem;font-weight:600;color:var(--m-ink);margin:28px 0 10px}
+    .article-content p{font-size:.95rem;color:#4a3e38;line-height:1.85;margin-bottom:16px}
+    .article-content ul,.article-content ol{margin:10px 0 18px 22px}
+    .article-content li{font-size:.95rem;color:#4a3e38;line-height:1.8;margin-bottom:6px}
+    .article-content strong{color:var(--m-ink)}
+    .article-cta{background:var(--m-cream);border:1px solid var(--m-sand);border-radius:16px;padding:40px;text-align:center;margin-top:56px;position:relative;overflow:hidden}
+    .article-cta::before{content:'';position:absolute;width:280px;height:280px;background:radial-gradient(circle,rgba(196,160,160,.15) 0%,transparent 65%);top:-80px;right:-40px;border-radius:50%}
+    .article-cta h3{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--m-ink);margin-bottom:8px;font-weight:600;position:relative;z-index:1}
+    .article-cta p{color:var(--m-muted);font-size:.88rem;margin-bottom:20px;position:relative;z-index:1}
+    .article-cta a{background:var(--m-mauve);color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:.9rem;display:inline-block;transition:background .2s;position:relative;z-index:1}
+    .article-cta a:hover{background:var(--m-mauve-d)}
+    footer{text-align:center;padding:24px 40px;font-size:.75rem;color:var(--m-taupe);border-top:1px solid var(--m-sand)}
+    footer a{color:var(--m-mauve);text-decoration:none}
+    @media(max-width:600px){.article-hero{padding:40px 20px 36px}.article-hero h1{font-size:1.9rem}.article-body{padding:36px 20px 56px}}
+  </style>
+</head>
+<body>
+<nav>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <div class="nav-links">
+    <a href="/blog.html">← Blog</a>
+    <a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a>
+  </div>
+</nav>
+<div class="article-hero">
+  <span class="article-cat">${escHtml(p.category)}</span>
+  <h1>${escHtml(p.title)}</h1>
+  <div class="article-meta">${escHtml(dateStr)} &nbsp;·&nbsp; 5 min czytania</div>
+</div>
+<div class="article-body">
+  <a class="back-link" href="/blog.html">← Wróć do bloga</a>
+  <div class="article-content">${p.content_html || ''}</div>
+  <div class="article-cta">
+    <h3>Wypróbuj Estelio</h3>
+    <p>System zaprojektowany specjalnie dla salonów beauty.</p>
+    <a href="/zamow.html#formularz">Zamów dostęp za 49 zł / miesiąc →</a>
+  </div>
+</div>
+<footer>
+  © 2026 Estelio ·
+  <a href="/blog.html">Blog</a> ·
+  <a href="/zamow.html">Strona główna</a> ·
+  <a href="/regulamin.html">Regulamin</a> ·
+  <a href="/polityka-prywatnosci.html">Polityka prywatności</a>
+</footer>
+</body>
+</html>`);
+    }
+  );
+});
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
+
+// Escapowanie HTML (do renderowania dynamicznych stron bloga)
+function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
 
 // Usuwa apostrofy/cudzysłowy które Hostinger panel dodaje do wartości env
 function env(key) {
@@ -144,6 +260,7 @@ const dokumentyRoutes  = require('./routes/dokumenty')(db);
 const magdaRoutes      = require('./routes/magda')(db);
 const helpkbRoutes     = require('./routes/helpkb')(db);
 const billingRoutes    = require('./routes/billing')(db);
+const blogRoutes       = require('./routes/blog')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -167,6 +284,7 @@ app.use('/api', dokumentyRoutes);
 app.use('/api', magdaRoutes);
 app.use('/api', helpkbRoutes);
 app.use('/api', billingRoutes);
+app.use('/api', blogRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI

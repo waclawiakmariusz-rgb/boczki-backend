@@ -12,88 +12,161 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Paleta Morandi ── */
     :root {
-      --dark: #1c1a18; --dark2: #2a2420;
-      --rose: #b87080; --rose-dark: #a05e6e; --rose-light: #f3dfe3;
-      --gold: #c9a96e; --cream: #f4efe6; --cream2: #ede6d8;
-      --muted: #7a6e66; --border: #e0d8ce; --ink: #2c2420;
+      --m-linen:    #e8e0d5;
+      --m-cream:    #f2ede6;
+      --m-sand:     #d4c4a8;
+      --m-taupe:    #b8a898;
+      --m-mauve:    #c4a0a0;
+      --m-mauve-d:  #a88080;
+      --m-sage:     #9aab9a;
+      --m-slate:    #8b9aaa;
+      --m-camel:    #c4a870;
+      --m-ink:      #2c2420;
+      --m-muted:    #6a5e56;
     }
-    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); }
+
+    body { font-family: 'DM Sans', sans-serif; background: var(--m-linen); color: var(--m-ink); }
 
     /* NAV */
     nav {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 22px 60px; background: #fff; border-bottom: 1px solid var(--cream2);
+      padding: 20px 60px; background: var(--m-cream);
+      border-bottom: 1px solid var(--m-sand);
       position: sticky; top: 0; z-index: 100;
     }
-    .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: var(--dark); text-decoration: none; letter-spacing: .06em; }
-    nav ul { display: flex; gap: 32px; list-style: none; }
-    nav ul a { text-decoration: none; font-size: .88rem; color: var(--muted); transition: color .2s; }
-    nav ul a:hover { color: var(--dark); }
-    .nav-cta { background: var(--rose); color: #fff !important; padding: 8px 20px; border-radius: 6px; font-weight: 500 !important; transition: background .2s !important; }
-    .nav-cta:hover { background: var(--rose-dark) !important; }
-    @media (max-width: 768px) {
-      nav { padding: 16px 20px; }
-      nav ul { display: none; }
+    .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: var(--m-ink); text-decoration: none; letter-spacing: .06em; }
+    nav ul { display: flex; gap: 32px; list-style: none; align-items: center; }
+    nav ul a { text-decoration: none; font-size: .88rem; color: var(--m-muted); transition: color .2s; }
+    nav ul a:hover { color: var(--m-ink); }
+    .nav-cta {
+      background: var(--m-mauve) !important; color: #fff !important;
+      padding: 8px 20px; border-radius: 6px; font-weight: 500 !important;
+      transition: background .2s !important;
     }
+    .nav-cta:hover { background: var(--m-mauve-d) !important; }
+    @media (max-width: 768px) { nav { padding: 16px 20px; } nav ul { display: none; } }
 
     /* HERO */
     .blog-hero {
-      background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
-      padding: 64px 60px 56px;
+      padding: 72px 60px 60px;
       text-align: center;
+      background: var(--m-cream);
+      border-bottom: 1px solid var(--m-sand);
+      position: relative;
+      overflow: hidden;
     }
-    .blog-hero .eyebrow { font-size: .72rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
-    .blog-hero h1 { font-family: 'Cormorant Garamond', serif; font-size: 3rem; font-weight: 600; color: #fff; margin-bottom: 14px; line-height: 1.15; }
-    .blog-hero p { font-size: 1rem; color: rgba(255,255,255,.6); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+    .blog-hero::before {
+      content: '';
+      position: absolute;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(196,160,160,.18) 0%, transparent 65%);
+      top: -120px; right: -80px; border-radius: 50%;
+    }
+    .blog-hero::after {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(154,171,154,.15) 0%, transparent 65%);
+      bottom: -80px; left: -40px; border-radius: 50%;
+    }
+    .blog-hero .eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--m-camel); margin-bottom: 14px; position: relative; z-index: 1;
+    }
+    .blog-hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem; font-weight: 600; color: var(--m-ink);
+      margin-bottom: 14px; line-height: 1.15; position: relative; z-index: 1;
+    }
+    .blog-hero h1 em { color: var(--m-mauve); font-style: italic; font-weight: 400; }
+    .blog-hero p {
+      font-size: .95rem; color: var(--m-muted);
+      max-width: 500px; margin: 0 auto; line-height: 1.75;
+      position: relative; z-index: 1;
+    }
 
     /* GRID */
-    .blog-section { max-width: 1100px; margin: 0 auto; padding: 64px 40px 80px; }
-    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    .blog-section { max-width: 1060px; margin: 0 auto; padding: 60px 40px 80px; }
+
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
     @media (max-width: 900px) { .blog-grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 560px) { .blog-grid { grid-template-columns: 1fr; } .blog-section { padding: 40px 20px 60px; } .blog-hero { padding: 48px 20px 40px; } .blog-hero h1 { font-size: 2rem; } }
+    @media (max-width: 560px) { .blog-grid { grid-template-columns: 1fr; } .blog-section { padding: 36px 20px 56px; } .blog-hero { padding: 48px 20px 40px; } .blog-hero h1 { font-size: 2.1rem; } }
 
     /* CARD */
     .blog-card {
-      background: #fff; border: 1px solid var(--cream2);
-      border-radius: 16px; overflow: hidden;
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 18px; overflow: hidden;
       transition: box-shadow .3s, transform .3s;
       text-decoration: none; color: inherit; display: flex; flex-direction: column;
     }
-    .blog-card:hover { box-shadow: 0 12px 36px rgba(28,26,24,.09); transform: translateY(-4px); }
+    .blog-card:hover { box-shadow: 0 10px 32px rgba(44,36,32,.1); transform: translateY(-3px); }
+
     .card-thumb {
-      height: 160px; display: flex; align-items: center; justify-content: center;
-      font-size: 3.5rem; background: var(--cream);
+      height: 148px; display: flex; align-items: center; justify-content: center;
+      font-size: 3.2rem;
     }
-    .card-body { padding: 22px 24px 24px; flex: 1; display: flex; flex-direction: column; }
+    .card-thumb.zarzadzanie { background: #f0e8de; }
+    .card-thumb.pracownicy  { background: #ecdde0; }
+    .card-thumb.magazyn     { background: #e0e8e0; }
+    .card-thumb.klienci     { background: #dde4ec; }
+    .card-thumb.sprzedaz    { background: #eae0ec; }
+
+    .card-body { padding: 20px 22px 22px; flex: 1; display: flex; flex-direction: column; }
+
     .card-cat {
-      display: inline-block; font-size: .68rem; font-weight: 600;
-      letter-spacing: .12em; text-transform: uppercase;
-      background: var(--rose-light); color: var(--rose-dark);
+      display: inline-block; font-size: .67rem; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase;
       padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+      border: 1px solid;
     }
+    .cat-zarzadzanie { background: #f5ede4; color: #8a6040; border-color: #d4b898; }
+    .cat-pracownicy  { background: #f5e4e8; color: #8a4050; border-color: #d4a0a8; }
+    .cat-magazyn     { background: #e4f0e4; color: #407040; border-color: #98c498; }
+    .cat-klienci     { background: #e4ecf5; color: #405880; border-color: #98b4d4; }
+    .cat-sprzedaz    { background: #ece4f5; color: #604080; border-color: #b898d4; }
+
     .card-title {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.25rem; font-weight: 600; color: var(--dark);
+      font-size: 1.2rem; font-weight: 600; color: var(--m-ink);
       line-height: 1.3; margin-bottom: 10px;
     }
-    .card-excerpt { font-size: .85rem; color: var(--muted); line-height: 1.7; flex: 1; margin-bottom: 18px; }
+    .card-excerpt { font-size: .84rem; color: var(--m-muted); line-height: 1.7; flex: 1; margin-bottom: 16px; }
     .card-footer { display: flex; align-items: center; justify-content: space-between; }
-    .card-date { font-size: .75rem; color: var(--muted); }
-    .card-read { font-size: .8rem; font-weight: 600; color: var(--rose); }
+    .card-date { font-size: .73rem; color: var(--m-taupe); }
+    .card-read { font-size: .8rem; font-weight: 600; color: var(--m-mauve); }
+
+    /* Skeleton loader */
+    .skeleton { background: linear-gradient(90deg, var(--m-sand) 25%, var(--m-cream) 50%, var(--m-sand) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton-card { background: var(--m-cream); border: 1px solid var(--m-sand); border-radius: 18px; overflow: hidden; }
+    .skeleton-thumb { height: 148px; background: var(--m-sand); opacity: .4; }
+    .skeleton-body { padding: 20px 22px 22px; }
+    .sk-line { height: 12px; margin-bottom: 10px; }
 
     /* CTA */
     .blog-cta {
-      background: linear-gradient(135deg, var(--dark), var(--dark2));
-      border-radius: 20px; padding: 48px 40px; text-align: center; margin-top: 64px;
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 20px; padding: 48px 40px; text-align: center; margin-top: 56px;
     }
-    .blog-cta h2 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: #fff; margin-bottom: 10px; }
-    .blog-cta p { color: rgba(255,255,255,.6); font-size: .9rem; margin-bottom: 24px; }
-    .blog-cta a { background: var(--rose); color: #fff; padding: 13px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: .95rem; transition: background .2s; display: inline-block; }
-    .blog-cta a:hover { background: var(--rose-dark); }
+    .blog-cta .cta-eyebrow { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--m-camel); margin-bottom: 10px; }
+    .blog-cta h2 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--m-ink); margin-bottom: 10px; }
+    .blog-cta p { color: var(--m-muted); font-size: .9rem; margin-bottom: 24px; }
+    .blog-cta a {
+      background: var(--m-mauve); color: #fff; padding: 13px 32px;
+      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: .92rem;
+      transition: background .2s; display: inline-block;
+    }
+    .blog-cta a:hover { background: var(--m-mauve-d); }
 
-    footer { text-align: center; padding: 28px 40px; font-size: .78rem; color: var(--muted); border-top: 1px solid var(--cream2); }
-    footer a { color: var(--rose); text-decoration: none; }
+    footer {
+      text-align: center; padding: 28px 40px;
+      font-size: .75rem; color: var(--m-taupe);
+      border-top: 1px solid var(--m-sand);
+    }
+    footer a { color: var(--m-mauve); text-decoration: none; }
   </style>
 </head>
 <body>
@@ -108,57 +181,46 @@
 
 <div class="blog-hero">
   <div class="eyebrow">Wiedza i inspiracje</div>
-  <h1>Blog dla właścicielek<br><em style="font-style:italic; font-weight:400;">salonów beauty</em></h1>
+  <h1>Blog dla właścicielek<br><em>salonów beauty</em></h1>
   <p>Praktyczne porady jak zarządzać salonem mądrzej, oszczędzać czas i rozwijać biznes beauty.</p>
 </div>
 
 <div class="blog-section">
-  <div class="blog-grid">
-
-    <a class="blog-card" href="/blog/jak-estelio-oszczedza-czas.html">
-      <div class="card-thumb">⏱️</div>
-      <div class="card-body">
-        <span class="card-cat">Zarządzanie</span>
-        <div class="card-title">Jak Estelio oszczędza 4 godziny tygodniowo w salonie kosmetycznym</div>
-        <div class="card-excerpt">Większość właścicielek salonów traci kilka godzin tygodniowo na rozliczenia, które można zautomatyzować. Sprawdź, gdzie uciekają Twoje godziny.</div>
-        <div class="card-footer">
-          <span class="card-date">16 kwietnia 2026</span>
-          <span class="card-read">Czytaj →</span>
-        </div>
+  <div class="blog-grid" id="blog-grid">
+    <!-- Skeleton loaders -->
+    <div class="skeleton-card">
+      <div class="skeleton-thumb"></div>
+      <div class="skeleton-body">
+        <div class="skeleton sk-line" style="width:40%"></div>
+        <div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:80%;height:18px"></div>
+        <div class="skeleton sk-line" style="width:60%;margin-top:16px"></div>
       </div>
-    </a>
-
-    <a class="blog-card" href="/blog/rozliczenia-pracownic-salonu.html">
-      <div class="card-thumb">💅</div>
-      <div class="card-body">
-        <span class="card-cat">Pracownicy</span>
-        <div class="card-title">Rozliczenia pracownic w salonie beauty — koniec z Excelem</div>
-        <div class="card-excerpt">Excel, karteczki, zaufanie na słowo — tak wygląda rozliczanie pracownic w większości salonów. Jest lepszy sposób.</div>
-        <div class="card-footer">
-          <span class="card-date">14 kwietnia 2026</span>
-          <span class="card-read">Czytaj →</span>
-        </div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-thumb"></div>
+      <div class="skeleton-body">
+        <div class="skeleton sk-line" style="width:40%"></div>
+        <div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:80%;height:18px"></div>
+        <div class="skeleton sk-line" style="width:60%;margin-top:16px"></div>
       </div>
-    </a>
-
-    <a class="blog-card" href="/blog/magazyn-kosmetykow-w-salonie.html">
-      <div class="card-thumb">📦</div>
-      <div class="card-body">
-        <span class="card-cat">Magazyn</span>
-        <div class="card-title">Jak zarządzać magazynem kosmetyków bez chaosu i przepłacania</div>
-        <div class="card-excerpt">Brakujący produkt w połowie zabiegu, przeterminowane zapasy, zamówienia "na oko" — poznaj sposób na kontrolę magazynu w salonie.</div>
-        <div class="card-footer">
-          <span class="card-date">10 kwietnia 2026</span>
-          <span class="card-read">Czytaj →</span>
-        </div>
+    </div>
+    <div class="skeleton-card">
+      <div class="skeleton-thumb"></div>
+      <div class="skeleton-body">
+        <div class="skeleton sk-line" style="width:40%"></div>
+        <div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div>
+        <div class="skeleton sk-line" style="width:80%;height:18px"></div>
+        <div class="skeleton sk-line" style="width:60%;margin-top:16px"></div>
       </div>
-    </a>
-
+    </div>
   </div>
 
   <div class="blog-cta">
-    <h2>Gotowa na własny porządek w salonie?</h2>
-    <p>Wypróbuj Estelio — system, który robi robotę za Ciebie.</p>
+    <div class="cta-eyebrow">Gotowa na zmianę?</div>
+    <h2>Jeden system zamiast chaosu</h2>
+    <p>Wypróbuj Estelio — oprogramowanie zaprojektowane specjalnie dla salonów beauty.</p>
     <a href="/zamow.html#formularz">Zamów dostęp za 49 zł / miesiąc →</a>
   </div>
 </div>
@@ -171,5 +233,84 @@
   <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
 </footer>
 
+<script>
+const CAT_CSS = {
+  'Zarządzanie': { css: 'cat-zarzadzanie', thumb: 'zarzadzanie' },
+  'Pracownicy':  { css: 'cat-pracownicy',  thumb: 'pracownicy' },
+  'Magazyn':     { css: 'cat-magazyn',     thumb: 'magazyn' },
+  'Klienci':     { css: 'cat-klienci',     thumb: 'klienci' },
+  'Sprzedaż':    { css: 'cat-sprzedaz',    thumb: 'sprzedaz' },
+};
+
+function formatDate(str) {
+  const d = new Date(str);
+  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function loadPosts() {
+  try {
+    const res = await fetch('/api/blog/posts');
+    const data = await res.json();
+    const grid = document.getElementById('blog-grid');
+    if (!data.posts || !data.posts.length) {
+      grid.innerHTML = '<p style="color:var(--m-muted);text-align:center;grid-column:1/-1;padding:40px 0">Brak wpisów.</p>';
+      return;
+    }
+    grid.innerHTML = data.posts.map(p => {
+      const cat = CAT_CSS[p.category] || CAT_CSS['Zarządzanie'];
+      const url = p.url_override || '/blog/' + p.slug;
+      return `
+        <a class="blog-card" href="${esc(url)}">
+          <div class="card-thumb ${cat.thumb}">${esc(p.emoji || '✍️')}</div>
+          <div class="card-body">
+            <span class="card-cat ${cat.css}">${esc(p.category)}</span>
+            <div class="card-title">${esc(p.title)}</div>
+            <div class="card-excerpt">${esc(p.excerpt || '')}</div>
+            <div class="card-footer">
+              <span class="card-date">${formatDate(p.date_published)}</span>
+              <span class="card-read">Czytaj →</span>
+            </div>
+          </div>
+        </a>`;
+    }).join('');
+  } catch (e) {
+    // Fallback — pokaż statyczne linki jeśli API nie działa
+    document.getElementById('blog-grid').innerHTML = `
+      <a class="blog-card" href="/blog/jak-estelio-oszczedza-czas.html">
+        <div class="card-thumb zarzadzanie">⏱️</div>
+        <div class="card-body">
+          <span class="card-cat cat-zarzadzanie">Zarządzanie</span>
+          <div class="card-title">Jak Estelio oszczędza 4 godziny tygodniowo w salonie kosmetycznym</div>
+          <div class="card-excerpt">Większość właścicielek salonów traci kilka godzin tygodniowo na rozliczenia, które można zautomatyzować.</div>
+          <div class="card-footer"><span class="card-date">16 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
+        </div>
+      </a>
+      <a class="blog-card" href="/blog/rozliczenia-pracownic-salonu.html">
+        <div class="card-thumb pracownicy">💅</div>
+        <div class="card-body">
+          <span class="card-cat cat-pracownicy">Pracownicy</span>
+          <div class="card-title">Rozliczenia pracownic w salonie beauty — koniec z Excelem</div>
+          <div class="card-excerpt">Excel, karteczki, zaufanie na słowo — tak wygląda rozliczanie pracownic w większości salonów.</div>
+          <div class="card-footer"><span class="card-date">14 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
+        </div>
+      </a>
+      <a class="blog-card" href="/blog/magazyn-kosmetykow-w-salonie.html">
+        <div class="card-thumb magazyn">📦</div>
+        <div class="card-body">
+          <span class="card-cat cat-magazyn">Magazyn</span>
+          <div class="card-title">Jak zarządzać magazynem kosmetyków bez chaosu i przepłacania</div>
+          <div class="card-excerpt">Brakujący produkt w połowie zabiegu, przeterminowane zapasy — poznaj sposób na kontrolę magazynu.</div>
+          <div class="card-footer"><span class="card-date">10 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
+        </div>
+      </a>`;
+  }
+}
+
+loadPosts();
+</script>
 </body>
 </html>

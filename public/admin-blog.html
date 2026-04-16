@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Blog — Estelio</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --m-linen:   #e8e0d5;
+      --m-cream:   #f2ede6;
+      --m-sand:    #d4c4a8;
+      --m-taupe:   #b8a898;
+      --m-mauve:   #c4a0a0;
+      --m-mauve-d: #a88080;
+      --m-sage:    #9aab9a;
+      --m-camel:   #c4a870;
+      --m-ink:     #2c2420;
+      --m-muted:   #6a5e56;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--m-linen); color: var(--m-ink); min-height: 100vh; }
+
+    /* LOGIN */
+    #login-screen {
+      min-height: 100vh; display: flex; align-items: center; justify-content: center;
+      background: var(--m-linen);
+    }
+    .login-box {
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 20px; padding: 48px 40px; width: 360px; text-align: center;
+    }
+    .login-box .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 600; color: var(--m-ink); letter-spacing: .06em; margin-bottom: 6px; }
+    .login-box .sub { font-size: .8rem; color: var(--m-taupe); margin-bottom: 28px; }
+    .login-box input {
+      width: 100%; padding: 12px 14px; border: 1px solid var(--m-sand); border-radius: 8px;
+      font-size: .92rem; background: #fff; color: var(--m-ink); margin-bottom: 14px;
+      font-family: inherit; outline: none;
+    }
+    .login-box input:focus { border-color: var(--m-mauve); }
+    .login-box button {
+      width: 100%; padding: 12px; background: var(--m-mauve); color: #fff;
+      border: none; border-radius: 8px; font-size: .92rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .login-box button:hover { background: var(--m-mauve-d); }
+    .login-err { color: #c0304a; font-size: .82rem; margin-top: 10px; }
+
+    /* MAIN LAYOUT */
+    #app { display: none; }
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 40px; background: var(--m-cream);
+      border-bottom: 1px solid var(--m-sand);
+    }
+    .nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; color: var(--m-ink); letter-spacing: .06em; }
+    .nav-right { display: flex; gap: 12px; align-items: center; }
+    .nav-right a { font-size: .82rem; color: var(--m-muted); text-decoration: none; }
+    .nav-right a:hover { color: var(--m-ink); }
+    .btn-logout { font-size: .8rem; color: var(--m-taupe); background: none; border: 1px solid var(--m-sand); border-radius: 6px; padding: 6px 14px; cursor: pointer; font-family: inherit; transition: border-color .2s; }
+    .btn-logout:hover { border-color: var(--m-mauve); color: var(--m-mauve); }
+
+    .main { max-width: 1000px; margin: 0 auto; padding: 40px 32px 80px; }
+
+    /* HEADER ROW */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .page-title { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--m-ink); }
+    .btn-primary {
+      background: var(--m-mauve); color: #fff; border: none; padding: 10px 22px;
+      border-radius: 8px; font-size: .88rem; font-weight: 600; cursor: pointer;
+      font-family: inherit; transition: background .2s;
+    }
+    .btn-primary:hover { background: var(--m-mauve-d); }
+    .btn-secondary {
+      background: var(--m-cream); color: var(--m-ink); border: 1px solid var(--m-sand);
+      padding: 10px 22px; border-radius: 8px; font-size: .88rem; font-weight: 500;
+      cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .btn-secondary:hover { background: var(--m-linen); }
+    .btn-danger {
+      background: #f5e4e8; color: #8a4050; border: 1px solid #d4a0a8;
+      padding: 7px 16px; border-radius: 6px; font-size: .8rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .btn-danger:hover { background: #f0d0d8; }
+
+    /* POSTS TABLE */
+    .posts-table { width: 100%; border-collapse: collapse; }
+    .posts-table th {
+      text-align: left; font-size: .72rem; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase; color: var(--m-taupe);
+      padding: 10px 14px; border-bottom: 1px solid var(--m-sand);
+    }
+    .posts-table td { padding: 14px; border-bottom: 1px solid var(--m-sand); vertical-align: top; }
+    .posts-table tr:last-child td { border-bottom: none; }
+    .post-title-cell { font-weight: 500; color: var(--m-ink); font-size: .9rem; line-height: 1.4; }
+    .post-excerpt-cell { font-size: .8rem; color: var(--m-muted); line-height: 1.5; max-width: 260px; }
+    .post-meta-cell { font-size: .78rem; color: var(--m-taupe); white-space: nowrap; }
+    .badge {
+      display: inline-block; font-size: .65rem; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px;
+      border-radius: 12px; border: 1px solid;
+    }
+    .badge-published { background: #e4f0e4; color: #407040; border-color: #98c498; }
+    .badge-draft     { background: #f0e8de; color: #8a6040; border-color: #d4b898; }
+    .actions-cell { display: flex; gap: 8px; align-items: center; white-space: nowrap; }
+    .btn-edit {
+      background: var(--m-cream); color: var(--m-ink); border: 1px solid var(--m-sand);
+      padding: 5px 14px; border-radius: 6px; font-size: .8rem; font-weight: 500;
+      cursor: pointer; font-family: inherit; transition: background .2s;
+    }
+    .btn-edit:hover { background: var(--m-linen); }
+
+    /* EMPTY STATE */
+    .empty { text-align: center; padding: 56px 0; color: var(--m-taupe); }
+    .empty .empty-icon { font-size: 3rem; margin-bottom: 14px; }
+    .empty p { font-size: .9rem; }
+
+    /* MODAL / EDITOR */
+    .modal-bg {
+      display: none; position: fixed; inset: 0; background: rgba(44,36,32,.4);
+      z-index: 200; align-items: flex-start; justify-content: center;
+      padding: 40px 20px; overflow-y: auto;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 20px; width: 100%; max-width: 760px;
+      padding: 36px 40px; position: relative;
+    }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .modal-title { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--m-ink); }
+    .modal-close { background: none; border: none; font-size: 1.4rem; color: var(--m-taupe); cursor: pointer; padding: 4px 8px; line-height: 1; }
+    .modal-close:hover { color: var(--m-ink); }
+
+    .field { margin-bottom: 18px; }
+    .field label { display: block; font-size: .78rem; font-weight: 600; color: var(--m-muted); margin-bottom: 6px; letter-spacing: .04em; text-transform: uppercase; }
+    .field input, .field select, .field textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--m-sand);
+      border-radius: 8px; font-size: .9rem; background: #fff; color: var(--m-ink);
+      font-family: inherit; outline: none; transition: border-color .2s;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--m-mauve); }
+    .field textarea { min-height: 320px; resize: vertical; font-size: .85rem; line-height: 1.6; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 600px) { .field-row { grid-template-columns: 1fr; } .modal { padding: 24px 20px; } }
+
+    .field .hint { font-size: .74rem; color: var(--m-taupe); margin-top: 5px; line-height: 1.4; }
+
+    .modal-footer { display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--m-sand); }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 500;
+      background: var(--m-ink); color: #fff; padding: 12px 20px;
+      border-radius: 10px; font-size: .85rem; font-weight: 500;
+      opacity: 0; transform: translateY(12px);
+      transition: opacity .3s, transform .3s; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.err { background: #8a3040; }
+
+    /* Loading */
+    .loading { text-align: center; padding: 40px; color: var(--m-taupe); font-size: .9rem; }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="logo">Estelio</div>
+    <div class="sub">Panel admina — Blog CMS</div>
+    <input type="text" id="login-user" placeholder="Login admina" autocomplete="username">
+    <input type="password" id="login-pass" placeholder="Hasło" autocomplete="current-password">
+    <button onclick="doLogin()">Zaloguj się</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav>
+    <div class="nav-logo">Estelio · Blog CMS</div>
+    <div class="nav-right">
+      <a href="/blog.html" target="_blank">Podgląd bloga →</a>
+      <a href="/admin.html">← Panel admina</a>
+      <button class="btn-logout" onclick="logout()">Wyloguj</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="page-header">
+      <div class="page-title">Wpisy bloga</div>
+      <button class="btn-primary" onclick="openNew()">+ Nowy wpis</button>
+    </div>
+    <div id="posts-container">
+      <div class="loading">Ładowanie wpisów...</div>
+    </div>
+  </div>
+</div>
+
+<!-- EDITOR MODAL -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">Nowy wpis</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+
+    <input type="hidden" id="edit-id">
+
+    <div class="field">
+      <label>Tytuł *</label>
+      <input type="text" id="f-title" placeholder="Wpisz tytuł artykułu...">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Kategoria</label>
+        <select id="f-category">
+          <option value="Zarządzanie">Zarządzanie</option>
+          <option value="Pracownicy">Pracownicy</option>
+          <option value="Magazyn">Magazyn</option>
+          <option value="Klienci">Klienci</option>
+          <option value="Sprzedaż">Sprzedaż</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Emoji (ikona karty)</label>
+        <input type="text" id="f-emoji" placeholder="np. ✍️" maxlength="4">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Zajawka (skrócony opis na liście)</label>
+      <input type="text" id="f-excerpt" placeholder="1-2 zdania opisujące artykuł...">
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Data publikacji *</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select id="f-status">
+          <option value="published">Opublikowany</option>
+          <option value="draft">Szkic (ukryty)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>URL nadpisany (opcjonalnie)</label>
+      <input type="text" id="f-url" placeholder="np. /blog/moj-artykul.html — zostaw puste dla automatycznego URL">
+      <div class="hint">Zostaw puste — artykuł będzie dostępny pod /blog/slug-z-tytulu</div>
+    </div>
+
+    <div class="field">
+      <label>Treść artykułu (HTML)</label>
+      <textarea id="f-content" placeholder="Wpisz treść w HTML. Możesz używać tagów &lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;, &lt;strong&gt;.
+
+Przykład:
+&lt;p class=&quot;lead&quot;&gt;Wprowadzenie artykułu.&lt;/p&gt;
+
+&lt;h2&gt;Nagłówek sekcji&lt;/h2&gt;
+&lt;p&gt;Treść paragrafu.&lt;/p&gt;
+
+&lt;div class=&quot;highlight-box&quot;&gt;
+  &lt;p&gt;💡 &lt;strong&gt;Wskazówka:&lt;/strong&gt; tekst&lt;/p&gt;
+&lt;/div&gt;"></textarea>
+      <div class="hint">
+        Dostępne klasy: <code>lead</code> (wstęp), <code>highlight-box</code> (ramka złota), <code>steps</code> (lista ol z numerami)
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal()">Anuluj</button>
+      <button class="btn-primary" onclick="savePost()">Zapisz wpis</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+const ADMIN_TOKEN_KEY = 'estelio_admin_token';
+
+// ─── Auth ────────────────────────────────────────────────────
+async function doLogin() {
+  const user = document.getElementById('login-user').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  const err  = document.getElementById('login-err');
+  err.textContent = '';
+  if (!user || !pass) { err.textContent = 'Wypełnij oba pola.'; return; }
+
+  try {
+    const res  = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ login: user, haslo: pass }),
+    });
+    const data = await res.json();
+    if (data.status === 'success' && data.token) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, data.token);
+      showApp();
+    } else {
+      err.textContent = data.message || 'Błąd logowania.';
+    }
+  } catch (e) {
+    err.textContent = 'Błąd sieci. Spróbuj ponownie.';
+  }
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none'
+      && !document.getElementById('app').style.display) {
+    doLogin();
+  }
+});
+
+function logout() {
+  localStorage.removeItem(ADMIN_TOKEN_KEY);
+  location.reload();
+}
+
+function token() { return localStorage.getItem(ADMIN_TOKEN_KEY) || ''; }
+
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  loadPosts();
+}
+
+// Check existing session
+if (token()) showApp();
+
+// ─── Posts ───────────────────────────────────────────────────
+let posts = [];
+
+async function loadPosts() {
+  const container = document.getElementById('posts-container');
+  container.innerHTML = '<div class="loading">Ładowanie...</div>';
+  try {
+    const res = await fetch('/api/admin/blog/posts', { headers: { 'x-admin-token': token() } });
+    if (res.status === 403) { logout(); return; }
+    const data = await res.json();
+    posts = data.posts || [];
+    renderTable();
+  } catch (e) {
+    container.innerHTML = '<div class="loading">Błąd ładowania wpisów.</div>';
+  }
+}
+
+function renderTable() {
+  const container = document.getElementById('posts-container');
+  if (!posts.length) {
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">✍️</div>
+        <p>Brak wpisów. Kliknij „+ Nowy wpis" aby dodać pierwszy artykuł.</p>
+      </div>`;
+    return;
+  }
+  container.innerHTML = `
+    <table class="posts-table">
+      <thead>
+        <tr>
+          <th>Tytuł</th>
+          <th>Kategoria</th>
+          <th>Data</th>
+          <th>Status</th>
+          <th>Akcje</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${posts.map(p => `
+          <tr>
+            <td>
+              <div class="post-title-cell">${esc(p.title)}</div>
+              <div class="post-excerpt-cell">${esc(p.excerpt || '')}</div>
+            </td>
+            <td class="post-meta-cell">${esc(p.category)}</td>
+            <td class="post-meta-cell">${formatDate(p.date_published)}</td>
+            <td><span class="badge badge-${p.status}">${p.status === 'published' ? 'Opublikowany' : 'Szkic'}</span></td>
+            <td class="actions-cell">
+              <button class="btn-edit" onclick="openEdit(${p.id})">Edytuj</button>
+              <button class="btn-danger" onclick="deletePost(${p.id}, '${esc(p.title).replace(/'/g,"\\'")}')">Usuń</button>
+            </td>
+          </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+// ─── Editor ──────────────────────────────────────────────────
+function openNew() {
+  document.getElementById('edit-id').value = '';
+  document.getElementById('modal-title').textContent = 'Nowy wpis';
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-category').value = 'Zarządzanie';
+  document.getElementById('f-emoji').value = '';
+  document.getElementById('f-excerpt').value = '';
+  document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
+  document.getElementById('f-status').value = 'published';
+  document.getElementById('f-url').value = '';
+  document.getElementById('f-content').value = '';
+  document.getElementById('modal-bg').classList.add('open');
+}
+
+async function openEdit(id) {
+  try {
+    const res  = await fetch(`/api/admin/blog/posts/${id}`, { headers: { 'x-admin-token': token() } });
+    const data = await res.json();
+    if (data.status !== 'success') { showToast('Błąd ładowania wpisu.', true); return; }
+    const p = data.post;
+    document.getElementById('edit-id').value = p.id;
+    document.getElementById('modal-title').textContent = 'Edytuj wpis';
+    document.getElementById('f-title').value    = p.title || '';
+    document.getElementById('f-category').value = p.category || 'Zarządzanie';
+    document.getElementById('f-emoji').value    = p.emoji || '';
+    document.getElementById('f-excerpt').value  = p.excerpt || '';
+    document.getElementById('f-date').value     = (p.date_published || '').slice(0, 10);
+    document.getElementById('f-status').value   = p.status || 'published';
+    document.getElementById('f-url').value      = p.url_override || '';
+    document.getElementById('f-content').value  = p.content_html || '';
+    document.getElementById('modal-bg').classList.add('open');
+  } catch (e) {
+    showToast('Błąd sieci.', true);
+  }
+}
+
+function closeModal() {
+  document.getElementById('modal-bg').classList.remove('open');
+}
+
+async function savePost() {
+  const id      = document.getElementById('edit-id').value;
+  const title   = document.getElementById('f-title').value.trim();
+  const date    = document.getElementById('f-date').value;
+  if (!title)  { showToast('Tytuł jest wymagany.', true); return; }
+  if (!date)   { showToast('Data publikacji jest wymagana.', true); return; }
+
+  const payload = {
+    title,
+    excerpt:      document.getElementById('f-excerpt').value.trim(),
+    category:     document.getElementById('f-category').value,
+    emoji:        document.getElementById('f-emoji').value.trim(),
+    content_html: document.getElementById('f-content').value,
+    url_override: document.getElementById('f-url').value.trim() || null,
+    date_published: date,
+    status:       document.getElementById('f-status').value,
+  };
+
+  try {
+    const method = id ? 'PUT' : 'POST';
+    const url    = id ? `/api/admin/blog/posts/${id}` : '/api/admin/blog/posts';
+    const res    = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json', 'x-admin-token': token() },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      closeModal();
+      showToast(id ? 'Wpis zaktualizowany.' : 'Wpis dodany.');
+      loadPosts();
+    } else {
+      showToast(data.message || 'Błąd zapisu.', true);
+    }
+  } catch (e) {
+    showToast('Błąd sieci.', true);
+  }
+}
+
+async function deletePost(id, title) {
+  if (!confirm(`Usunąć wpis:\n"${title}"?\n\nTej akcji nie można cofnąć.`)) return;
+  try {
+    const res  = await fetch(`/api/admin/blog/posts/${id}`, {
+      method: 'DELETE',
+      headers: { 'x-admin-token': token() },
+    });
+    const data = await res.json();
+    if (data.status === 'success') {
+      showToast('Wpis usunięty.');
+      loadPosts();
+    } else {
+      showToast(data.message || 'Błąd usuwania.', true);
+    }
+  } catch (e) {
+    showToast('Błąd sieci.', true);
+  }
+}
+
+// ─── Utils ───────────────────────────────────────────────────
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+let toastTimer;
+function showToast(msg, err = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// Close modal on bg click
+document.getElementById('modal-bg').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-bg')) closeModal();
+});
+</script>
+</body>
+</html>
