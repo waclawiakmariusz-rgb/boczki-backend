@@ -63,6 +63,15 @@
     font-weight: 500 !important; transition: background .2s !important;
   }
   .nav-cta:hover { background: var(--rose-dark) !important; }
+  .nav-login-mobile {
+    display: none;
+    font-size: .85rem; font-weight: 500;
+    color: var(--dark); text-decoration: none;
+    border: 1.5px solid var(--border);
+    padding: 8px 18px; border-radius: 6px;
+    transition: border-color .2s, color .2s;
+  }
+  .nav-login-mobile:hover { border-color: var(--rose); color: var(--rose); }
 
   /* ── HERO ── */
   .hero {
@@ -773,6 +782,7 @@
   @media (max-width: 900px) {
     nav { padding: 18px 24px; }
     nav ul { display: none; }
+    .nav-login-mobile { display: inline-block; }
     .hero { grid-template-columns: 1fr; padding: 50px 24px 40px; }
     .hero-right { display: none; }
     .features { padding: 0 24px; }
@@ -802,8 +812,10 @@
     <li><a href="#opinie">Opinie</a></li>
     <li><a href="#faq">FAQ</a></li>
     <li><a href="#kontakt">Kontakt</a></li>
+    <li><a href="/zaloguj">Zaloguj</a></li>
     <li><a href="#formularz" class="nav-cta">Zamów dostęp</a></li>
   </ul>
+  <a href="/zaloguj" class="nav-login-mobile">Zaloguj</a>
 </nav>
 
 <!-- HERO -->
@@ -826,6 +838,9 @@
       zaprojektowane specjalnie dla branży beauty.
     </p>
     <a class="hero-cta" href="#formularz">Zamów dostęp →</a>
+    <p style="margin-top:14px; font-size:.82rem; color:var(--text-muted);">
+      Masz już konto? <a href="/zaloguj" style="color:var(--rose); text-decoration:none; font-weight:500;">Zaloguj się →</a>
+    </p>
   </div>
 
   <div class="hero-right reveal" style="transition-delay:.15s">
