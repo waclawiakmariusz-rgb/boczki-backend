@@ -7765,6 +7765,12 @@ function zapiszUrodzinyZProfilu(e) {
 // ==========================================
 // 🚀 NOWY, BŁYSKAWICZNY PROFIL KLIENTA
 // ==========================================
+function odswiezProfilAktualnegoKlienta() {
+    if (window.aktualnyProfilKlientId) {
+        otworzProfil(window.aktualnyProfilKlientId);
+    }
+}
+
 function otworzProfil(idKlienta) {
     const klientObj = window.wszyscyKlienciDane.find(k => k.id == idKlienta);
     const searchInput = document.getElementById('profil-history-search');
