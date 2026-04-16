@@ -8666,8 +8666,8 @@ function pokaz(id, b) {
         targetAnaliza.style.display = 'block';
     } else if (targetMagazyn && id !== 'kreator_dostepow') {
         targetMagazyn.classList.add('active');
-        targetMagazyn.style.display = 'block'; // 🟢 TWARDE ODKRYCIE WIDOKU
-    } else {
+        targetMagazyn.style.display = 'block';
+    } else if (!targetMagazyn) {
         console.error(`❌ BŁĄD: Nie znaleziono w dokumencie HTML sekcji o ID: ${id}`);
     }
 
