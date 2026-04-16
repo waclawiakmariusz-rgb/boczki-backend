@@ -174,8 +174,7 @@
   <div class="login-box">
     <div class="logo">Estelio</div>
     <div class="sub">Panel admina — Blog CMS</div>
-    <input type="text" id="login-user" placeholder="Login admina" autocomplete="username">
-    <input type="password" id="login-pass" placeholder="Hasło" autocomplete="current-password">
+    <input type="password" id="login-pass" placeholder="Hasło administratora" autocomplete="current-password">
     <button onclick="doLogin()">Zaloguj się</button>
     <div class="login-err" id="login-err"></div>
   </div>
@@ -293,17 +292,16 @@ const ADMIN_TOKEN_KEY = 'estelio_admin_token';
 
 // ─── Auth ────────────────────────────────────────────────────
 async function doLogin() {
-  const user = document.getElementById('login-user').value.trim();
   const pass = document.getElementById('login-pass').value;
   const err  = document.getElementById('login-err');
   err.textContent = '';
-  if (!user || !pass) { err.textContent = 'Wypełnij oba pola.'; return; }
+  if (!pass) { err.textContent = 'Wpisz hasło.'; return; }
 
   try {
     const res  = await fetch('/api/admin/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login: user, haslo: pass }),
+      body: JSON.stringify({ haslo: pass }),
     });
     const data = await res.json();
     if (data.status === 'success' && data.token) {
@@ -318,8 +316,7 @@ async function doLogin() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.key === 'Enter' && document.getElementById('login-screen').style.display !== 'none'
-      && !document.getElementById('app').style.display) {
+  if (e.key === 'Enter' && !document.getElementById('app').style.display) {
     doLogin();
   }
 });
