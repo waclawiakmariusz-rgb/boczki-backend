@@ -349,7 +349,10 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
 <div id="app">
   <div class="app-header">
     <div class="brand">✨ Estelio <span>— Panel Admina</span></div>
-    <button class="logout-btn" onclick="adminLogout()">Wyloguj ↩</button>
+    <div style="display:flex;gap:12px;align-items:center">
+      <a href="/admin-blog.html" style="font-size:13px;font-weight:600;color:#6366f1;text-decoration:none;padding:8px 16px;border:1px solid #c7d2fe;border-radius:10px;background:#eef2ff" target="_blank">✍️ Blog CMS</a>
+      <button class="logout-btn" onclick="adminLogout()">Wyloguj ↩</button>
+    </div>
   </div>
 
   <div class="app-content">
