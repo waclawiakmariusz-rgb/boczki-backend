@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estelio — Przewodnik Administratora</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --m-linen:   #e8e0d5;
+      --m-cream:   #f2ede6;
+      --m-sand:    #d4c4a8;
+      --m-taupe:   #b8a898;
+      --m-mauve:   #c4a0a0;
+      --m-mauve-d: #a88080;
+      --m-sage:    #9aab9a;
+      --m-camel:   #c4a870;
+      --m-ink:     #2c2420;
+      --m-muted:   #6a5e56;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--m-linen);
+      color: var(--m-ink);
+      line-height: 1.7;
+    }
+
+    /* ── SIDEBAR + LAYOUT ── */
+    .layout { display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 260px; flex-shrink: 0;
+      background: var(--m-cream);
+      border-right: 1px solid var(--m-sand);
+      padding: 32px 0;
+      position: sticky; top: 0; height: 100vh;
+      overflow-y: auto;
+    }
+    .sidebar-logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.5rem; font-weight: 600;
+      color: var(--m-ink); letter-spacing: .06em;
+      padding: 0 24px 24px;
+      border-bottom: 1px solid var(--m-sand);
+      margin-bottom: 20px;
+    }
+    .sidebar-logo em { color: var(--m-mauve); font-style: italic; font-weight: 400; }
+    .sidebar-logo small { display: block; font-size: .72rem; font-weight: 400; color: var(--m-taupe); letter-spacing: .04em; margin-top: 2px; font-family: 'DM Sans', sans-serif; font-style: normal; }
+
+    .nav-section { padding: 0 16px; margin-bottom: 8px; }
+    .nav-section-title {
+      font-size: .65rem; font-weight: 600; letter-spacing: .14em;
+      text-transform: uppercase; color: var(--m-taupe);
+      padding: 8px 8px 4px;
+    }
+    .nav-link {
+      display: block; padding: 8px 10px; border-radius: 8px;
+      font-size: .85rem; color: var(--m-muted); text-decoration: none;
+      transition: all .18s;
+    }
+    .nav-link:hover { background: var(--m-linen); color: var(--m-ink); }
+    .nav-link.active { background: rgba(196,160,160,.15); color: var(--m-mauve-d); font-weight: 600; }
+
+    /* ── MAIN CONTENT ── */
+    .main { flex: 1; padding: 56px 64px 100px; max-width: 860px; }
+
+    @media (max-width: 900px) {
+      .layout { flex-direction: column; }
+      .sidebar { width: 100%; height: auto; position: static; }
+      .main { padding: 32px 24px 60px; }
+    }
+
+    /* ── HERO ── */
+    .hero {
+      margin-bottom: 56px; padding-bottom: 40px;
+      border-bottom: 1px solid var(--m-sand);
+    }
+    .hero .eyebrow {
+      font-size: .68rem; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--m-camel); margin-bottom: 12px;
+    }
+    .hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.8rem; font-weight: 600; line-height: 1.1;
+      color: var(--m-ink); margin-bottom: 16px;
+    }
+    .hero h1 em { color: var(--m-mauve); font-style: italic; font-weight: 400; }
+    .hero p { font-size: 1rem; color: var(--m-muted); max-width: 580px; line-height: 1.75; }
+
+    /* ── TYPOGRAPHY ── */
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.8rem; font-weight: 600; color: var(--m-ink);
+      margin: 56px 0 18px; padding-top: 16px;
+      border-top: 1px solid var(--m-sand);
+    }
+    h2:first-of-type { margin-top: 0; border-top: none; }
+    h3 {
+      font-size: 1rem; font-weight: 600; color: var(--m-ink);
+      margin: 28px 0 10px;
+    }
+    p { font-size: .93rem; color: #4a3e38; margin-bottom: 14px; }
+    ul, ol { margin: 10px 0 16px 20px; }
+    li { font-size: .93rem; color: #4a3e38; line-height: 1.75; margin-bottom: 5px; }
+    strong { color: var(--m-ink); }
+    code {
+      font-family: monospace; font-size: .85em;
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 5px; padding: 1px 6px; color: var(--m-mauve-d);
+    }
+
+    /* ── CARDS ── */
+    .card {
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 14px; padding: 24px 28px; margin: 20px 0;
+    }
+    .card-title {
+      font-size: .8rem; font-weight: 600; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--m-taupe); margin-bottom: 10px;
+    }
+
+    /* ── INFO / WARNING / TIP BOXES ── */
+    .box {
+      border-radius: 10px; padding: 16px 20px; margin: 20px 0;
+      border-left: 3px solid;
+    }
+    .box p { margin: 0; font-size: .88rem; }
+    .box-tip     { background: #f0f5f0; border-color: var(--m-sage);  }
+    .box-warning { background: #f9f0e8; border-color: var(--m-camel); }
+    .box-alert   { background: #f9ecea; border-color: #c87878;        }
+    .box-info    { background: var(--m-cream); border-color: var(--m-sand); }
+
+    /* ── STEP LIST ── */
+    .steps { list-style: none; padding: 0; margin: 16px 0 24px; }
+    .steps li {
+      display: flex; gap: 16px; align-items: flex-start;
+      margin-bottom: 14px; font-size: .93rem; color: #4a3e38;
+    }
+    .step-num {
+      min-width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(196,160,160,.18); color: var(--m-mauve-d);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .78rem; flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-block; font-size: .67rem; font-weight: 600;
+      letter-spacing: .08em; text-transform: uppercase;
+      padding: 2px 10px; border-radius: 20px; border: 1px solid;
+      vertical-align: middle; margin: 0 2px;
+    }
+    .badge-tab { background: var(--m-cream); color: var(--m-muted); border-color: var(--m-sand); }
+    .badge-green { background: #e4f0e4; color: #3a6a3a; border-color: #b4d4b4; }
+    .badge-red   { background: #f5e4e4; color: #8a3030; border-color: #d4a4a4; }
+    .badge-blue  { background: #e4ecf5; color: #2a5080; border-color: #a4c0d8; }
+    .badge-gold  { background: rgba(196,168,112,.15); color: #8a6020; border-color: rgba(196,168,112,.4); }
+
+    /* ── TABLE ── */
+    table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: .88rem; }
+    th { text-align: left; font-size: .72rem; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--m-taupe); padding: 8px 12px; border-bottom: 1px solid var(--m-sand); }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--m-sand); color: #4a3e38; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+
+    /* ── KEYBOARD SHORTCUT ── */
+    kbd {
+      display: inline-block; font-family: monospace; font-size: .8rem;
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 5px; padding: 1px 7px; color: var(--m-muted);
+    }
+
+    /* ── DIVIDER ── */
+    hr { border: none; border-top: 1px solid var(--m-sand); margin: 40px 0; }
+
+    /* ── SECTION ANCHOR ── */
+    [id] { scroll-margin-top: 32px; }
+
+    /* ── PRINT ── */
+    @media print {
+      .sidebar { display: none; }
+      .main { padding: 20px; }
+      h2 { page-break-before: always; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      Este<em>lio</em>
+      <small>Przewodnik Administratora</small>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Wprowadzenie</div>
+      <a class="nav-link active" href="#wstep">O tym dokumencie</a>
+      <a class="nav-link" href="#dostep">Dane dostępowe</a>
+      <a class="nav-link" href="#logowanie">Logowanie do panelu</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Zakładki panelu</div>
+      <a class="nav-link" href="#salony">🏪 Salony</a>
+      <a class="nav-link" href="#zgloszenia">📋 Zgłoszenia</a>
+      <a class="nav-link" href="#linki">🔗 Linki rejestracji</a>
+      <a class="nav-link" href="#vouchery">🏷️ Vouchery</a>
+      <a class="nav-link" href="#baza-wiedzy">💬 Baza wiedzy</a>
+      <a class="nav-link" href="#nowy-salon">➕ Nowy salon</a>
+      <a class="nav-link" href="#blog-cms">✍️ Blog CMS</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Procesy</div>
+      <a class="nav-link" href="#proces-zamowienia">Obsługa nowego zamówienia</a>
+      <a class="nav-link" href="#proces-voucher">Tworzenie kampanii rabatowej</a>
+      <a class="nav-link" href="#proces-blog">Dodawanie wpisu na blog</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Pomoc</div>
+      <a class="nav-link" href="#faq">Najczęstsze pytania</a>
+      <a class="nav-link" href="#kontakt-dev">Kontakt z deweloperem</a>
+    </div>
+  </aside>
+
+  <!-- ════ MAIN ════ -->
+  <main class="main">
+
+    <!-- HERO -->
+    <div class="hero" id="wstep">
+      <div class="eyebrow">Dokumentacja wewnętrzna · 2026</div>
+      <h1>Przewodnik<br><em>Administratora</em> Estelio</h1>
+      <p>Ten dokument opisuje wszystko, co musisz wiedzieć, żeby samodzielnie zarządzać platformą Estelio — obsługiwać klientów, aktywować salony, generować linki, tworzyć kody rabatowe i publikować treści na blogu.</p>
+    </div>
+
+    <div class="box box-info">
+      <p>📌 <strong>Gdzie jest panel admina?</strong> Adres: <code>estelio.com.pl/admin.html</code><br>
+      Nie jest linkowany publicznie — wejście tylko przez bezpośredni adres URL.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="dostep">Dane dostępowe</h2>
+
+    <div class="card">
+      <div class="card-title">Panel Administratora</div>
+      <table>
+        <tr><th>Co</th><th>Wartość</th></tr>
+        <tr><td><strong>Adres panelu</strong></td><td><code>estelio.com.pl/admin.html</code></td></tr>
+        <tr><td><strong>Hasło</strong></td><td>Ustawione w zmiennej środowiskowej <code>ADMIN_TOKEN</code> na Hostingerze. Jeśli nie zmienione — domyślne hasło przekazane przez dewelopera.</td></tr>
+        <tr><td><strong>Blog CMS</strong></td><td><code>estelio.com.pl/admin-blog.html</code> — to samo hasło</td></tr>
+        <tr><td><strong>Sesja</strong></td><td>7 dni od ostatniego działania. Po 7 dniach bezczynności trzeba zalogować się ponownie.</td></tr>
+      </table>
+    </div>
+
+    <div class="box box-warning">
+      <p>⚠️ <strong>Bezpieczeństwo:</strong> Nie udostępniaj hasła osobom niezwiązanym z administracją. Jeśli podejrzewasz, że hasło wyciekło — zmień wartość <code>ADMIN_TOKEN</code> w panelu Hostingera i zrestartuj aplikację.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="logowanie">Logowanie do panelu</h2>
+
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Otwórz przeglądarkę i przejdź na <code>estelio.com.pl/admin.html</code></div></li>
+      <li><div class="step-num">2</div><div>Wpisz hasło administratora w polu „Hasło administratora"</div></li>
+      <li><div class="step-num">3</div><div>Kliknij <strong>Zaloguj się</strong> lub naciśnij <kbd>Enter</kbd></div></li>
+      <li><div class="step-num">4</div><div>Panel załaduje się automatycznie — pojawią się zakładki</div></li>
+    </ol>
+
+    <div class="box box-tip">
+      <p>💡 Sesja jest zapamiętana w przeglądarce przez 7 dni. Jeśli zamkniesz kartę i wrócisz — nie musisz logować się ponownie.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="salony">Zakładka: Salony 🏪</h2>
+
+    <p>Wyświetla listę wszystkich salonów zarejestrowanych w systemie. Każdy salon to oddzielna karta z podstawowymi informacjami.</p>
+
+    <h3>Co widać na karcie salonu?</h3>
+    <ul>
+      <li><strong>Nazwa salonu</strong> i miasto</li>
+      <li><strong>Status</strong> — <span class="badge badge-green">Aktywny</span> lub <span class="badge badge-red">Nieaktywny</span></li>
+      <li><strong>Login</strong>, <strong>e-mail</strong>, <strong>telefon</strong></li>
+      <li><strong>Data wygaśnięcia licencji</strong> — kiedy salon straci dostęp</li>
+      <li><strong>Tenant ID</strong> — unikalny identyfikator salonu w bazie</li>
+    </ul>
+
+    <h3>Dostępne akcje</h3>
+    <table>
+      <tr><th>Przycisk</th><th>Co robi</th></tr>
+      <tr><td><strong>Aktywuj</strong></td><td>Zmienia status salonu na „aktywny" — salon może się logować. Używaj po opłaceniu faktury lub po ręcznej aktywacji.</td></tr>
+      <tr><td><strong>Dezaktywuj</strong></td><td>Blokuje dostęp do salonu — nie może się zalogować. Używaj gdy klient nie zapłacił lub anulował subskrypcję.</td></tr>
+      <tr><td><strong>Edytuj</strong></td><td>Otwiera okno edycji: możesz zmienić nazwę, miasto, telefon, e-mail i datę ważności licencji.</td></tr>
+    </table>
+
+    <div class="box box-info">
+      <p>ℹ️ <strong>Subskrypcja Stripe:</strong> Przy płatności cyklicznej system automatycznie przedłuża licencję o 1 miesiąc po każdej opłaconej fakturze. Ręczna zmiana daty jest potrzebna tylko wyjątkowo (np. przy testach, kompensatach, darmowych miesiącach).</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="zgloszenia">Zakładka: Zgłoszenia 📋</h2>
+
+    <p>Tutaj trafiają wszystkie nowe zamówienia ze strony <code>estelio.com.pl/zamow.html</code>. Każde zgłoszenie to potencjalny nowy klient, który wypełnił formularz kontaktowy.</p>
+
+    <h3>Statusy zgłoszeń</h3>
+    <table>
+      <tr><th>Status</th><th>Znaczenie</th></tr>
+      <tr><td><span class="badge badge-red">Nowe</span></td><td>Świeże zgłoszenie — wymaga Twojej reakcji. Liczba nowych widoczna jest w czerwonej etykiecie obok zakładki.</td></tr>
+      <tr><td><span class="badge badge-blue">Wysłano link</span></td><td>Klientowi wysłano link rejestracyjny — czeka na założenie salonu.</td></tr>
+      <tr><td><span class="badge badge-green">Zrealizowane</span></td><td>Salon został założony — klient aktywny w systemie.</td></tr>
+      <tr><td><span class="badge">Odrzucone</span></td><td>Zgłoszenie odrzucone (np. spam lub klient zrezygnował).</td></tr>
+    </table>
+
+    <h3>Obsługa zgłoszenia — krok po kroku</h3>
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Wejdź w zakładkę <strong>Zgłoszenia</strong> — nowe są wyróżnione lewym różowym paskiem.</div></li>
+      <li><div class="step-num">2</div><div>Przeczytaj dane klienta: imię, nazwa salonu, miasto, e-mail, telefon, ewentualna wiadomość.</div></li>
+      <li><div class="step-num">3</div><div>Jeśli klient zapłacił przez Stripe — płatność jest widoczna w panelu Stripe. Możesz też zadzwonić lub napisać.</div></li>
+      <li><div class="step-num">4</div><div>Kliknij <strong>Wyślij link rejestracyjny</strong> — wybierz ważność linku (zazwyczaj 7 dni) i kliknij <strong>Generuj i wyślij email</strong>. System automatycznie wyśle klientowi e-mail z linkiem.</div></li>
+      <li><div class="step-num">5</div><div>Status zmieni się na <span class="badge badge-blue">Wysłano link</span>. Gdy klient założy salon — zmieni się na <span class="badge badge-green">Zrealizowane</span> automatycznie.</div></li>
+    </ol>
+
+    <div class="box box-tip">
+      <p>💡 Jeśli klient nie założył salonu po 7 dniach, możesz wygenerować nowy link z zakładki <strong>Linki</strong> i wysłać mu bezpośrednio.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="linki">Zakładka: Linki rejestracji 🔗</h2>
+
+    <p>Tutaj generujesz jednorazowe linki do rejestracji salonu. Każdy link działa <strong>tylko jeden raz</strong> i wygasa po wybranym czasie.</p>
+
+    <h3>Generowanie linku</h3>
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Wpisz <strong>notatkę</strong> — np. imię i nazwisko klienta lub nazwa salonu (tylko dla Ciebie, klient tego nie widzi).</div></li>
+      <li><div class="step-num">2</div><div>Wybierz <strong>ważność linku</strong> — domyślnie 7 dni. Dla pewniejszych klientów możesz dać 14 dni.</div></li>
+      <li><div class="step-num">3</div><div>Kliknij <strong>Generuj</strong> — link pojawi się poniżej.</div></li>
+      <li><div class="step-num">4</div><div>Kliknij <strong>Kopiuj link</strong> i wyślij klientowi (e-mailem, SMS-em, WhatsApp).</div></li>
+    </ol>
+
+    <h3>Lista tokenów</h3>
+    <p>Poniżej generatora widoczna jest lista wszystkich wygenerowanych tokenów z ich statusem:</p>
+    <table>
+      <tr><th>Status</th><th>Znaczenie</th></tr>
+      <tr><td><span class="badge badge-blue">Nowy</span></td><td>Token aktywny, jeszcze nie użyty.</td></tr>
+      <tr><td><span class="badge badge-green">Użyty</span></td><td>Klient skorzystał z linku i założył salon.</td></tr>
+      <tr><td><span class="badge badge-red">Wygasły</span></td><td>Minął termin ważności — link nie działa.</td></tr>
+    </table>
+
+    <div class="box box-warning">
+      <p>⚠️ Każdy link działa <strong>tylko raz</strong>. Jeśli klient przypadkowo go skasował albo go nie dostał — wygeneruj nowy. Stary token zostaje oznaczony jako nieaktywny.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="vouchery">Zakładka: Vouchery 🏷️</h2>
+
+    <p>Tworzysz tutaj kody rabatowe, które klienci mogą wpisać w formularzu zamówienia na <code>zamow.html</code>. Rabat jest automatycznie uwzględniany przy płatności Stripe.</p>
+
+    <h3>Pola przy tworzeniu vouchera</h3>
+    <table>
+      <tr><th>Pole</th><th>Opis</th></tr>
+      <tr><td><strong>Kod rabatowy</strong></td><td>Wpisywany przez klienta (np. <code>WIOSNA20</code>). Automatycznie zamieniane na wielkie litery.</td></tr>
+      <tr><td><strong>Typ rabatu</strong></td><td><strong>Procentowy</strong> — np. 20% taniej. <strong>Kwotowy</strong> — np. 10 zł taniej.</td></tr>
+      <tr><td><strong>Wartość</strong></td><td>Liczba: przy procencie np. <code>20</code>, przy kwocie np. <code>10</code>.</td></tr>
+      <tr><td><strong>Czas trwania</strong></td><td><strong>Na zawsze</strong> — rabat obowiązuje przy każdym odnowieniu subskrypcji. <strong>Przez X miesięcy</strong> — np. przez 12 pierwszych miesięcy.</td></tr>
+      <tr><td><strong>Limit użyć</strong></td><td>Ile razy można użyć kodu. Puste = bez limitu.</td></tr>
+      <tr><td><strong>Data wygaśnięcia</strong></td><td>Opcjonalnie — po tej dacie kod nie działa.</td></tr>
+      <tr><td><strong>Notatka</strong></td><td>Wewnętrzna (np. „Kampania Black Friday 2026") — klient nie widzi.</td></tr>
+    </table>
+
+    <h3>Kiedy używać voucherów?</h3>
+    <ul>
+      <li>Kampanie marketingowe (np. „Marzec — miesiąc salonów")</li>
+      <li>Rabat dla znajomych lub poleceń</li>
+      <li>Kompensata za problem techniczny</li>
+      <li>Specjalne oferty dla wybranych grup (np. targi branżowe)</li>
+    </ul>
+
+    <div class="box box-tip">
+      <p>💡 Możesz w każdej chwili usunąć voucher z listy — nieaktywny kod przestaje działać natychmiast.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="baza-wiedzy">Zakładka: Baza Wiedzy 💬</h2>
+
+    <p>Estelio ma wbudowany chat asystenta dla właścicielek salonów. Odpowiada on na pytania dotyczące systemu na podstawie <strong>bazy wiedzy</strong>, którą tutaj zarządzasz.</p>
+
+    <h3>Co to jest baza wiedzy?</h3>
+    <p>To zbiór par pytanie–odpowiedź. Gdy klientka pyta chata np. „jak dodać pracownicę?", system szuka w bazie wiedzy najbardziej pasującej odpowiedzi i ją zwraca.</p>
+
+    <h3>Zarządzanie wpisami</h3>
+    <ul>
+      <li><strong>Dodaj wpis</strong> — wpisz przykładowe pytanie i odpowiedź. Im więcej wpisów, tym lepiej chat radzi sobie z różnymi sformułowaniami.</li>
+      <li><strong>Edytuj wpis</strong> — kliknij wpis na liście, zmień treść.</li>
+      <li><strong>Usuń wpis</strong> — kliknij ikonę kosza przy wpisie.</li>
+      <li><strong>Kategoria</strong> — możesz przypisać wpis do kategorii (np. „Magazyn", „Pracownicy") — ułatwia to organizację.</li>
+    </ul>
+
+    <div class="box box-tip">
+      <p>💡 <strong>Dobra praktyka:</strong> Dodawaj pytania w różnych sformułowaniach dla tej samej odpowiedzi. Np. „jak dodać pracownicę", „jak dodać nową pracownicę", „dodawanie pracowników" — każde jako osobny wpis z tą samą odpowiedzią.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="nowy-salon">Zakładka: Nowy salon ➕</h2>
+
+    <p>Kreator do ręcznego tworzenia salonu — bez linku rejestracyjnego. Używaj gdy np. zakładasz salon demonstracyjny, testujesz system lub klient ma problem z samodzielną rejestracją.</p>
+
+    <h3>Krok 1 — Dane salonu</h3>
+    <p>Podstawowe informacje: nazwa salonu, miasto, telefon, e-mail. Tylko nazwa jest wymagana.</p>
+
+    <h3>Krok 2 — Dane dostępowe</h3>
+    <p>Login i hasło do systemu Estelio dla tego salonu. <strong>Uwaga:</strong> login nie może się powtarzać — musi być unikalny w całym systemie. Zalecany format: <code>nazwa-salon-miasto</code> (bez spacji i polskich liter).</p>
+    <p>Pole „Licencja ważna do" — ustaw datę do kiedy salon ma aktywny dostęp (zazwyczaj 1 miesiąc od dziś).</p>
+
+    <h3>Krok 3 — Pracownicy</h3>
+    <p>Dodaj pracowników salonu. Każda pracownica dostaje nazwę i PIN (4 cyfry) do logowania na tablecie. Można pominąć i dodać później w systemie salonu.</p>
+
+    <h3>Krok 4 — Usługi</h3>
+    <p>Lista usług oferowanych przez salon (np. „Manicure hybrydowy — 100 zł"). Można pominąć — właścicielka doda je sama po zalogowaniu.</p>
+
+    <h3>Krok 5 — Podsumowanie i aktywacja</h3>
+    <p>Przegląd wszystkich danych. Kliknij <strong>Aktywuj salon</strong> — system tworzy salon w bazie, wysyła e-mail powitalny do klientki i salon jest gotowy do pracy.</p>
+
+    <div class="box box-warning">
+      <p>⚠️ Po aktywacji nie możesz zmieniać loginu przez panel admina — tylko dane salonu i datę licencji. Login zmienia się wyłącznie bezpośrednio w bazie danych (kontakt z deweloperem).</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="blog-cms">Blog CMS ✍️</h2>
+
+    <p>Osobny panel do zarządzania wpisami na blogu Estelio. Dostępny pod adresem <code>estelio.com.pl/admin-blog.html</code> lub przez przycisk <strong>✍️ Blog CMS</strong> w nagłówku panelu admina.</p>
+
+    <h3>Logowanie</h3>
+    <p>To samo hasło co do panelu głównego. Sesja jest współdzielona — jeśli jesteś zalogowany w jednym, w drugim też możesz działać.</p>
+
+    <h3>Lista wpisów</h3>
+    <p>Widok tabeli ze wszystkimi wpisami: tytuł, kategoria, data, status (opublikowany / szkic). Możesz edytować lub usuwać każdy wpis.</p>
+
+    <h3>Tworzenie nowego wpisu</h3>
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Kliknij <strong>+ Nowy wpis</strong> w prawym górnym rogu.</div></li>
+      <li><div class="step-num">2</div><div>Wpisz <strong>tytuł</strong> — od niego automatycznie generowany jest adres URL artykułu (slug).</div></li>
+      <li><div class="step-num">3</div><div>Wybierz <strong>kategorię</strong> (Zarządzanie / Pracownicy / Magazyn / Klienci / Sprzedaż) i wpisz <strong>emoji</strong> (ikonka na liście bloga).</div></li>
+      <li><div class="step-num">4</div><div>Wpisz <strong>zajawkę</strong> — 1–2 zdania widoczne na liście blogowej (skrót artykułu).</div></li>
+      <li><div class="step-num">5</div><div>Ustaw <strong>datę publikacji</strong> i <strong>status</strong>: Opublikowany (widoczny od razu) lub Szkic (ukryty).</div></li>
+      <li><div class="step-num">6</div><div>Wpisz <strong>treść artykułu w HTML</strong> w dużym polu tekstowym.</div></li>
+      <li><div class="step-num">7</div><div>Kliknij <strong>Zapisz wpis</strong> — artykuł pojawia się natychmiast na blogu.</div></li>
+    </ol>
+
+    <h3>Jak pisać treść w HTML?</h3>
+    <p>Treść artykułu wpisujesz jako HTML. Nie musisz znać programowania — wystarczy kilka prostych tagów:</p>
+
+    <div class="card">
+      <div class="card-title">Podstawowe tagi HTML do artykułów</div>
+      <table>
+        <tr><th>Tag</th><th>Efekt</th><th>Przykład</th></tr>
+        <tr><td><code>&lt;p&gt;...&lt;/p&gt;</code></td><td>Akapit tekstu</td><td><code>&lt;p&gt;Tu wpisz zdanie.&lt;/p&gt;</code></td></tr>
+        <tr><td><code>&lt;h2&gt;...&lt;/h2&gt;</code></td><td>Nagłówek sekcji (duży)</td><td><code>&lt;h2&gt;Dlaczego warto?&lt;/h2&gt;</code></td></tr>
+        <tr><td><code>&lt;h3&gt;...&lt;/h3&gt;</code></td><td>Podnagłówek (mniejszy)</td><td><code>&lt;h3&gt;Krok pierwszy&lt;/h3&gt;</code></td></tr>
+        <tr><td><code>&lt;strong&gt;...&lt;/strong&gt;</code></td><td>Pogrubienie</td><td><code>&lt;strong&gt;ważne słowo&lt;/strong&gt;</code></td></tr>
+        <tr><td><code>&lt;ul&gt;&lt;li&gt;...&lt;/li&gt;&lt;/ul&gt;</code></td><td>Lista punktowana</td><td>patrz niżej</td></tr>
+      </table>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Specjalne klasy Estelio</div>
+      <table>
+        <tr><th>Klasa</th><th>Efekt</th></tr>
+        <tr><td><code>&lt;p class="lead"&gt;</code></td><td>Wstęp artykułu — większy, szary tekst pod hero</td></tr>
+        <tr><td><code>&lt;div class="highlight-box"&gt;&lt;p&gt;...&lt;/p&gt;&lt;/div&gt;</code></td><td>Złota ramka z poradą lub statystyką</td></tr>
+        <tr><td><code>&lt;ol class="steps"&gt;&lt;li&gt;...&lt;/li&gt;&lt;/ol&gt;</code></td><td>Lista kroków z numerowanymi kółkami</td></tr>
+      </table>
+    </div>
+
+    <div class="box box-tip">
+      <p>💡 <strong>Prosty szablon artykułu:</strong></p>
+      <pre style="font-family:monospace;font-size:.78rem;color:var(--m-muted);margin-top:8px;white-space:pre-wrap">&lt;p class="lead"&gt;Wprowadzenie artykułu — 2-3 zdania.&lt;/p&gt;
+
+&lt;h2&gt;Pierwszy nagłówek&lt;/h2&gt;
+&lt;p&gt;Treść pierwszej sekcji.&lt;/p&gt;
+
+&lt;div class="highlight-box"&gt;
+  &lt;p&gt;💡 &lt;strong&gt;Wskazówka:&lt;/strong&gt; Tu ciekawa informacja.&lt;/p&gt;
+&lt;/div&gt;
+
+&lt;h2&gt;Drugi nagłówek&lt;/h2&gt;
+&lt;p&gt;Treść drugiej sekcji.&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Punkt pierwszy&lt;/li&gt;
+  &lt;li&gt;Punkt drugi&lt;/li&gt;
+&lt;/ul&gt;</pre>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="proces-zamowienia">Proces: Obsługa nowego zamówienia</h2>
+
+    <p>To najczęstszy przepływ pracy. Klient wypełnia formularz na stronie → Ty obsługujesz zgłoszenie → Klient dostaje dostęp.</p>
+
+    <ol class="steps">
+      <li><div class="step-num">1</div><div><strong>Otrzymujesz e-mail</strong> z powiadomieniem o nowym zgłoszeniu (wysyłany automatycznie przez system na adres admina).</div></li>
+      <li><div class="step-num">2</div><div><strong>Wejdź do panelu admina</strong> → zakładka <strong>Zgłoszenia</strong>. Nowe zgłoszenie widoczne z czerwonym paskiem.</div></li>
+      <li><div class="step-num">3</div><div><strong>Zweryfikuj płatność</strong> w panelu Stripe (<code>dashboard.stripe.com</code>). Znajdź płatność po e-mailu klienta.</div></li>
+      <li><div class="step-num">4</div><div><strong>Kliknij „Wyślij link rejestracyjny"</strong> przy zgłoszeniu. Wybierz ważność (7 dni) i kliknij <strong>Generuj i wyślij email</strong>.</div></li>
+      <li><div class="step-num">5</div><div><strong>Klient dostaje e-mail</strong> z linkiem do rejestracji salonu. Klika link i przechodzi przez wizard zakładania salonu (nazwa, login, hasło, pracownicy, usługi).</div></li>
+      <li><div class="step-num">6</div><div><strong>Salon pojawia się w zakładce Salony</strong> ze statusem Aktywny. Klient dostaje e-mail powitalny z linkiem do systemu.</div></li>
+      <li><div class="step-num">7</div><div><strong>Gotowe.</strong> Subskrypcja Stripe automatycznie odnawia licencję co miesiąc — nie musisz nic robić.</div></li>
+    </ol>
+
+    <div class="box box-info">
+      <p>ℹ️ <strong>Przy płatności Stripe:</strong> Webhook automatycznie po udanej płatności przedłuża <code>data_waznosci</code> o 1 miesiąc i ustawia status <code>aktywny</code>. Przy anulowaniu subskrypcji — status zmienia się na <code>nieaktywny</code>. Dzieje się to bez Twojej interwencji.</p>
+    </div>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="proces-voucher">Proces: Kampania rabatowa</h2>
+
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Wejdź do zakładki <strong>Vouchery</strong>.</div></li>
+      <li><div class="step-num">2</div><div>Wypełnij formularz: kod (np. <code>LATO30</code>), typ = Procentowy, wartość = 30, czas = Na zawsze lub Przez 3 miesiące.</div></li>
+      <li><div class="step-num">3</div><div>Opcjonalnie ustaw limit użyć (np. 50) i datę wygaśnięcia (np. 30.06.2026).</div></li>
+      <li><div class="step-num">4</div><div>Kliknij <strong>Utwórz voucher</strong>.</div></li>
+      <li><div class="step-num">5</div><div>Udostępnij kod klientom — np. w mediach społecznościowych, na targach, w newsletterze.</div></li>
+      <li><div class="step-num">6</div><div>Klientka wpisuje kod w formularzu zamówienia na <code>zamow.html</code> przed płatnością — rabat jest automatycznie uwzględniany przez Stripe.</div></li>
+    </ol>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="proces-blog">Proces: Dodawanie wpisu na blog</h2>
+
+    <ol class="steps">
+      <li><div class="step-num">1</div><div>Wejdź na <code>estelio.com.pl/admin-blog.html</code> lub kliknij <strong>✍️ Blog CMS</strong> w nagłówku panelu.</div></li>
+      <li><div class="step-num">2</div><div>Kliknij <strong>+ Nowy wpis</strong>.</div></li>
+      <li><div class="step-num">3</div><div>Wpisz tytuł, zajawkę, wybierz kategorię i emoji.</div></li>
+      <li><div class="step-num">4</div><div>W polu <strong>Treść artykułu</strong> wpisz tekst w HTML (patrz sekcja wyżej).</div></li>
+      <li><div class="step-num">5</div><div>Ustaw datę publikacji i status <strong>Opublikowany</strong>.</div></li>
+      <li><div class="step-num">6</div><div>Kliknij <strong>Zapisz wpis</strong> — artykuł pojawia się natychmiast na <code>estelio.com.pl/blog.html</code> i jest dostępny pod adresem <code>estelio.com.pl/blog/tytul-artykulu</code>.</div></li>
+    </ol>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="faq">Najczęstsze pytania</h2>
+
+    <h3>Klient twierdzi, że nie dostał e-maila z linkiem.</h3>
+    <p>Sprawdź skrzynkę SPAM klienta. Jeśli tam też nie ma — wejdź do zakładki <strong>Linki</strong>, wygeneruj nowy token z notatką (imię klienta) i wyślij mu link ręcznie np. przez WhatsApp lub SMS.</p>
+
+    <h3>Salon jest aktywny w Stripe, ale panel pokazuje „Nieaktywny".</h3>
+    <p>Sprawdź zakładkę <strong>Salony</strong> — znajdź salon i kliknij <strong>Edytuj</strong>. Sprawdź datę ważności licencji. Jeśli jest przeszła — ustaw nową datę (np. miesiąc do przodu) i zapisz. Możesz też kliknąć <strong>Aktywuj</strong>.</p>
+
+    <h3>Klient chce anulować subskrypcję — co robię?</h3>
+    <p>Anulowanie subskrypcji Stripe robi się po stronie Stripe (zakładka Customers → znajdź klienta → Cancel subscription). System automatycznie przez webhook zmieni status salonu na „nieaktywny". Klient może też anulować sam przez panel billing (<code>estelio.com.pl/billing.html</code>).</p>
+
+    <h3>Chcę dać klientowi darmowy miesiąc.</h3>
+    <p>Wejdź do zakładki <strong>Salony</strong>, kliknij <strong>Edytuj</strong> przy salonie i przesuń datę ważności licencji o miesiąc do przodu. Zapisz. Nie musisz nic robić w Stripe — data w systemie jest niezależna.</p>
+
+    <h3>Klient zapomniał hasła do systemu Estelio.</h3>
+    <p>Klient może skorzystać z funkcji „Zapomniałam hasła" na stronie logowania (<code>estelio.com.pl/zaloguj</code>). System wyśle mu link do zmiany hasła e-mailem. Jeśli to nie działa — skontaktuj się z deweloperem w celu ręcznej zmiany hasła w bazie.</p>
+
+    <h3>Jak sprawdzić czy płatność Stripe doszła?</h3>
+    <p>Wejdź na <code>dashboard.stripe.com/test/payments</code> (środowisko testowe) lub <code>dashboard.stripe.com/payments</code> (produkcja). Możesz wyszukać po e-mailu klienta. Status „Succeeded" = płatność przeszła.</p>
+
+    <h3>Serwer się zawiesił — co robić?</h3>
+    <p>Wejdź na panel Hostingera → Node.js → zrestartuj aplikację. Jeśli to nie pomaga — skontaktuj się z deweloperem.</p>
+
+    <!-- ════════════════════════════════ -->
+    <h2 id="kontakt-dev">Kontakt z deweloperem</h2>
+
+    <div class="card">
+      <div class="card-title">Kiedy kontaktować się z deweloperem?</div>
+      <ul>
+        <li>Coś technicznie nie działa i restart serwera nie pomógł</li>
+        <li>Trzeba zmienić hasło admina lub login salonu w bazie danych</li>
+        <li>Potrzebujesz nowej funkcji lub modyfikacji systemu</li>
+        <li>Problem z konfiguracją Stripe lub Fakturownia</li>
+        <li>Błąd bezpieczeństwa lub podejrzana aktywność</li>
+      </ul>
+    </div>
+
+    <div class="box box-info">
+      <p>📧 Kontakt: <strong>waclawiak.mariusz@gmail.com</strong><br>
+      Przy kontakcie podaj: opis problemu, kiedy wystąpił, co próbowałeś(-aś) zrobić.</p>
+    </div>
+
+    <hr>
+
+    <p style="font-size:.8rem;color:var(--m-taupe);text-align:center;margin-top:0">
+      Estelio Panel Admina · Dokument wewnętrzny · Aktualizacja: kwiecień 2026<br>
+      <a href="/admin.html" style="color:var(--m-mauve);text-decoration:none">→ Przejdź do panelu admina</a>
+    </p>
+
+  </main>
+</div>
+
+<script>
+  // Aktywny link w sidebar przy scrollu
+  const sections = document.querySelectorAll('[id]');
+  const navLinks = document.querySelectorAll('.nav-link');
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navLinks.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-20% 0px -60% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
