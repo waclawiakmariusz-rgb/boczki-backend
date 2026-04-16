@@ -2958,7 +2958,7 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
 
         <main class="main-content">
             <div id="magazyn" class="section active">
-			<input type="text" id="szukaj-magazyn" onkeyup="szukajWMagazynie()" placeholder="🔍 Szukaj produktu w magazynie..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
+			<input type="text" id="szukaj-magazyn" onkeyup="_db('mag',szukajWMagazynie)" placeholder="🔍 Szukaj produktu w magazynie..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
                 <div class="header"><h1>Stan Magazynowy</h1><button onclick="pobierzDane()" class="btn-primary" style="width:auto;">🔄 Odśwież</button></div>
                 <div class="filters">
                     <button class="filter-btn active" onclick="filtrujMagazyn('Wszystkie', this)">Wszystkie</button>
@@ -2970,7 +2970,7 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
                 <div class="card"><div class="table-container"><table id="tabela"><thead id="tabela-head"></thead><tbody id="tabela-body"></tbody></table></div></div>
             </div>
             <div id="inwentaryzacja" class="section">
-			<input type="text" id="szukaj-inv" onkeyup="szukajWInwentaryzacji()" placeholder="🔍 Szukaj produktu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
+			<input type="text" id="szukaj-inv" onkeyup="_db('inv',szukajWInwentaryzacji)" placeholder="🔍 Szukaj produktu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
                 <div class="header"><h1>Inwentaryzacja</h1></div>
                 <div class="filters"><button class="filter-btn active" onclick="filtrujInwentaryzacje('Wszystkie', this)">Wszystkie</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Profesja', this)">🧴 Profesja</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Detal', this)">🛍️ Detal</button><button class="btn-archive filter-btn" onclick="filtrujInwentaryzacje('Archiwum', this)">🗑️ Archiwum</button></div>
                 <div class="card"><p style="color:#666; margin-bottom:20px;" id="inv-desc"></p><div id="lista-inv"></div></div>
@@ -2996,8 +2996,8 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
         <button onclick="renderCoZamowic()" class="btn-primary" style="width:auto;">🔄 Odśwież widok</button>
     </div>
 
-    <input type="text" id="szukaj-zamowienia" onkeyup="renderCoZamowic()" 
-           placeholder="🔍 Szukaj produktu..." 
+    <input type="text" id="szukaj-zamowienia" onkeyup="_db('zam',renderCoZamowic)"
+           placeholder="🔍 Szukaj produktu..."
            style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
 
     <div class="card" style="border-left: 5px solid #ef4444;">
@@ -3364,7 +3364,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
     <div class="card">
         <p style="font-size:12px; color:#666; margin-bottom:15px;">Tutaj definiujesz nazwy i ceny sprzedaży kosmetyków. Te dane pojawią się w "Rejestracji Sprzedaży".</p>
         <!-- <input type="text" id="szukaj-slownik" onkeyup="szukajWSlowniku()" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;"> -->
-        <input type="text" id="szukaj-slownik" onkeyup="szukajWSlowniku(this)" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
+        <input type="text" id="szukaj-slownik" onkeyup="_db('sl',()=>window.szukajWSlowniku())" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
         <form onsubmit="dodajModel(event)">
             <div class="form-grid" style="align-items:end;">
                 <div>
@@ -3715,7 +3715,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             <div id="historia" class="section">
                 <div class="header"><h1>Historia Sprzedaży</h1><button onclick="pobierzHistorie()" class="btn-primary" style="width:auto;">Odśwież</button></div>
                 <div class="card">
-                    <input type="text" id="historia-search" placeholder="Szukaj klienta, zabiegu, sprzedawcy..." onkeyup="renderHistoriaTable(1)" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+                    <input type="text" id="historia-search" placeholder="Szukaj klienta, zabiegu, sprzedawcy..." onkeyup="_db('hist',()=>renderHistoriaTable(1))" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
                     <div class="table-container">
                         <table style="width:100%">
                             <thead><tr><th>Data</th><th>Klient</th><th>Zabieg / Produkt</th><th>Sprzedawca</th><th>Kwota</th><th>Komentarz</th></tr></thead>
@@ -3733,8 +3733,8 @@ body.dark-mode #hkb-modal { background: #1e293b; }
     </div>
     
     <div class="card">
-        <input type="text" id="zadatki-search" onkeyup="filtrujZadatkiUI()" 
-               placeholder="🔍 Szukaj (klient, kwota, status, cel)..." 
+        <input type="text" id="zadatki-search" onkeyup="_db('zad',filtrujZadatkiUI)"
+               placeholder="🔍 Szukaj (klient, kwota, status, cel)..."
                style="width:100%; padding:12px; margin-bottom:15px; border:1px solid #e2e8f0; border-radius:8px; box-sizing: border-box;">
         
         <div class="table-container">
@@ -3760,8 +3760,8 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 
 <div id="awaryjna-zmiana" class="section">
     <div class="header">
-	<input type="text" id="search-emergency" onkeyup="filtrujAwaryjne()" 
-           placeholder="🔍 Szukaj (Klient, Data, Usługa)..." 
+	<input type="text" id="search-emergency" onkeyup="_db('aw',filtrujAwaryjne)"
+           placeholder="🔍 Szukaj (Klient, Data, Usługa)..."
            style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; max-width:400px;">
         <h1 style="color:#b91c1c;">🚨 Awaryjna Edycja (30 dni)</h1>
         <button onclick="pobierzAwaryjneTransakcje()" class="btn-primary" style="width:auto; background:#dc2626;">🔄 Odśwież</button>
@@ -3862,7 +3862,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             </div>
 
             <div id="setup-zabiegi" class="section">
-			<input type="text" id="szukaj-zabieg" onkeyup="filtrujZabiegi()" placeholder="🔍 Szukaj kategorii lub wariantu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
+			<input type="text" id="szukaj-zabieg" onkeyup="_db('zab',filtrujZabiegi)" placeholder="🔍 Szukaj kategorii lub wariantu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
                 <div class="header"><h1>Kreator Zabiegów</h1></div>
                 <div class="card">
                     <form onsubmit="dodajDefinicje(event, 'Zabieg')" id="form-zabieg">
@@ -4035,7 +4035,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             </div>
         </div>
         <div class="card">
-            <input type="text" id="szukaj-klienta-profil" onkeyup="filtrujListeKlientow()" placeholder="🔍 Szukaj klienta..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <input type="text" id="szukaj-klienta-profil" onkeyup="_db('kli',filtrujListeKlientow)" placeholder="🔍 Szukaj klienta..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
             <div id="lista-klientow-widok" style="max-height: 60vh; overflow-y: auto;">
                 <ul id="lista-klientow-ul" class="dict-list"></ul>
             </div>
@@ -4121,8 +4121,8 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 		
 		<div style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
         <div style="position: relative; width: 100%;">
-            <input type="text" id="profil-history-search" onkeyup="filtrujHistorieWProfilu()" 
-                   placeholder="🔍 Szukaj w historii zabiegów (nazwa, data, komentarz)..." 
+            <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)"
+                   placeholder="🔍 Szukaj w historii zabiegów (nazwa, data, komentarz)..."
                    style="width: 100%; padding: 12px 15px 12px 45px !important; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s;">
             <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 18px; opacity: 0.6; pointer-events: none;">🔎</span>
         </div>
@@ -4247,7 +4247,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 </div>
 </div>
 
-            <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="filtrujLogi()" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
+            <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
 			<div class="header"><h1>Dziennik Zdarzeń</h1>
 			<button onclick="kopiujLogiDoSchowka()" title="Kopiuj logi konsoli do schowka" 
                     style="background:none; border:1px dashed #f59e0b; color:#d97706; font-size:11px; padding:4px 8px; border-radius:5px; cursor:pointer; font-weight:bold; font-family:monospace;">
@@ -5133,7 +5133,7 @@ ANALIZA MANAGER
                      </div>
                      <button onclick="rap_fetchInventory()" class="action-btn-light" style="width:auto; margin:0;">🔄 Odśwież</button>
                   </div>
-                  <input type="text" id="rap_search" placeholder="🔍 Szukaj produktu (np. nazwa lub kategoria)..." onkeyup="rap_renderTable()" class="modern-form-control" style="margin-bottom: 25px;">
+                  <input type="text" id="rap_search" placeholder="🔍 Szukaj produktu (np. nazwa lub kategoria)..." onkeyup="_db('rap',rap_renderTable)" class="modern-form-control" style="margin-bottom: 25px;">
                   <div id="rap_inventory-container">Ładowanie magazynu...</div>
                 </div>
 
@@ -5181,7 +5181,7 @@ ANALIZA MANAGER
                   <h2>📜 Historia Operacji Magazynowych</h2>
                   <div class="rap_card">
                     <div style="display:flex; gap:15px; margin-bottom:20px; flex-wrap: wrap;">
-                        <input type="text" id="rap_log-search" placeholder="🔍 Szukaj w logach (produkt, kto, data)..." onkeyup="rap_renderLogsTable()" class="modern-form-control" style="margin:0; flex:1; min-width:250px;">
+                        <input type="text" id="rap_log-search" placeholder="🔍 Szukaj w logach (produkt, kto, data)..." onkeyup="_db('rlog',rap_renderLogsTable)" class="modern-form-control" style="margin:0; flex:1; min-width:250px;">
                         <button onclick="rap_fetchLogs()" class="action-btn-light" style="width:auto; margin:0;">🔄 Odśwież</button>
                     </div>
                     <div id="rap_logs-container" style="font-family:monospace; overflow-x: auto; background: #f8fafc; border-radius: 12px; padding: 10px; border: 1px solid #e2e8f0;">Pobieranie...</div>
@@ -5476,6 +5476,32 @@ ANALIZA MANAGER
     </div>
 
     <script>
+
+// =========================================================================
+//   NARZĘDZIA GLOBALNE
+// =========================================================================
+
+// Debounce: opóźnia wywołanie fn o delay ms — zapobiega re-renderowi na każdy klawisz
+const _dbTimers = {};
+function _db(key, fn) {
+    clearTimeout(_dbTimers[key]);
+    _dbTimers[key] = setTimeout(fn, 280);
+}
+
+// Bezpieczne wstawianie tekstu do innerHTML (zapobiega XSS)
+function escHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Wyciszenie logów na produkcji (zachowuje console.error)
+if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+    const _noop = () => {};
+    console.log = _noop;
+    console.warn = _noop;
+    console.group = _noop;
+    console.groupEnd = _noop;
+    console.groupCollapsed = _noop;
+}
 
 // =========================================================================
 //   SYSTEM POWIADOMIEŃ — Toast notifications (zastępuje natywne alert())
@@ -7091,9 +7117,6 @@ function zaladujKlientowDoKartoteki() {
     });
 }
 // Funkcja pomocnicza do rysowania kafelków (wydzielona dla porządku)
-
-   // --- ZOPTYMALIZOWANA FUNKCJA RYSOWANIA (SZYBKA) ---
-   /*
 function renderujKafelkiKlientow(data, kontener) {
     if(!kontener) return;
     
@@ -7109,73 +7132,23 @@ function renderujKafelkiKlientow(data, kontener) {
 
     // Budujemy jeden wielki ciąg HTML (dużo szybsze niż createElement w pętli)
     const htmlString = dataDoPokazania.map(klient => {
-        let nazwa = (typeof klient === 'object') ? klient.nazwa : klient;
+        let nazwa = escHtml((typeof klient === 'object') ? klient.nazwa : klient);
         let id = (typeof klient === 'object') ? klient.id : 0;
-        let telefon = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") 
-                      ? `<div style="font-size:12px; color:#0f766e; margin-top:2px;">📞 ${klient.telefon}</div>` 
-                      : "";
 
-        return `
-        <div onclick="otworzProfil('${id}')" 
-             style="padding:15px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:white; transition:0.2s;" 
-             onmouseover="this.style.background='#f8fafc'" 
-             onmouseout="this.style.background='white'">
-            <div>
-                <strong style="color:#334155; font-size:15px; display:block;">${nazwa}</strong>
-                ${telefon}
-            </div>
-            <div style="font-size:11px; font-weight:bold; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:10px;">
-                ID: ${id} ➝
-            </div>
-        </div>`;
-    }).join('');
-
-    // Wstawiamy wszystko naraz
-    kontener.innerHTML = htmlString;
-
-    // Jeśli jest więcej wyników niż limit, dodajemy informację
-    if (data.length > MAX_POKAZ) {
-        kontener.innerHTML += `
-            <div style="padding:15px; text-align:center; color:#64748b; font-style:italic; background:#f8fafc; font-size:13px;">
-                ...i jeszcze ${data.length - MAX_POKAZ} innych. Wpisz nazwisko, aby znaleźć.
-            </div>`;
-    }
-
-} */
-
-
-function renderujKafelkiKlientow(data, kontener) {
-    if(!kontener) return;
-    
-    if (!data || data.length === 0) {
-        kontener.innerHTML = '<div style="padding:20px; text-align:center; color:#888;">Brak klientów pasujących do wyszukiwania.</div>';
-        return;
-    }
-
-    // OGRANICZNIK: Pokazujemy max 50 wyników, żeby nie zamulić przeglądarki
-    // Jeśli ktoś szuka konkretnej osoby, to i tak wpisze nazwisko i lista się zawęzi.
-    const MAX_POKAZ = 50;
-    const dataDoPokazania = data.slice(0, MAX_POKAZ); 
-
-    // Budujemy jeden wielki ciąg HTML (dużo szybsze niż createElement w pętli)
-    const htmlString = dataDoPokazania.map(klient => {
-        let nazwa = (typeof klient === 'object') ? klient.nazwa : klient;
-        let id = (typeof klient === 'object') ? klient.id : 0;
-        
-        // 👇 NOWOŚĆ: Sprawdzamy czy klient ma RODO i Oświadczenie i generujemy ikony
+        // Sprawdzamy czy klient ma RODO i Oświadczenie i generujemy ikony
         let rodoIcon = (typeof klient === 'object' && klient.rodo) ? `<span title="RODO Podpisane" style="margin-left: 8px; font-size: 14px; cursor: help;">🛡️</span>` : ``;
         let oswIcon = (typeof klient === 'object' && klient.osw) ? `<span title="Oświadczenie Podpisane" style="margin-left: 4px; font-size: 14px; cursor: help;">📝</span>` : ``;
         let ikony = rodoIcon + oswIcon;
 
-        // 👇 Modyfikacja: Doklejamy zmienną "ikony" do telefonu
-        let telefon = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") 
-                      ? `<div style="font-size:12px; color:#0f766e; margin-top:2px; display:flex; align-items:center;">📞 ${klient.telefon} ${ikony}</div>` 
+        let tel = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") ? escHtml(klient.telefon) : "";
+        let telefon = tel
+                      ? `<div style="font-size:12px; color:#0f766e; margin-top:2px; display:flex; align-items:center;">📞 ${tel} ${ikony}</div>`
                       : (ikony ? `<div style="font-size:12px; color:#0f766e; margin-top:2px; display:flex; align-items:center;">${ikony}</div>` : "");
 
         return `
-        <div onclick="otworzProfil('${id}')" 
-             style="padding:15px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:white; transition:0.2s;" 
-             onmouseover="this.style.background='#f8fafc'" 
+        <div onclick="otworzProfil('${id}')"
+             style="padding:15px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:white; transition:0.2s;"
+             onmouseover="this.style.background='#f8fafc'"
              onmouseout="this.style.background='white'">
             <div>
                 <strong style="color:#334155; font-size:15px; display:block;">${nazwa}</strong>
@@ -9006,25 +8979,21 @@ function zamknijPopupAwaryjny() {
     const pagedData = filteredData.slice(start, start + itemsPerPage);
 
     pagedData.forEach(r => {
-        let detale = r.szczegoly ? `<br><small style="color:#666">${r.szczegoly}</small>` : '';
-        
-        // --- NAPRAWA LINKU ---
-        // Sprawdzamy czy mamy ID. Jeśli tak, robimy link. Jeśli nie (stary rekord), sam tekst.
-        let klientHtml = r.klient;
+        let detale = r.szczegoly ? `<br><small style="color:#666">${escHtml(r.szczegoly)}</small>` : '';
+
+        let klientHtml = escHtml(r.klient);
         if (r.id_klienta) {
-            // Przekazujemy ID do funkcji otworzProfil
-            klientHtml = `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${r.id_klienta}'), 50);">${r.klient}</span>`;
+            klientHtml = `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${r.id_klienta}'), 50);">${escHtml(r.klient)}</span>`;
         }
-        // ---------------------
 
         tbody.innerHTML += `
             <tr>
                 <td>${new Date(r.data).toLocaleDateString()}</td>
                 <td>${klientHtml}</td>
-                <td>${r.zabieg}${detale}</td>
-                <td>${r.sprzedawca}</td>
+                <td>${escHtml(r.zabieg)}${detale}</td>
+                <td>${escHtml(r.sprzedawca)}</td>
                 <td><strong>${parseFloat(r.kwota).toFixed(2)} zł</strong></td>
-                <td>${r.komentarz || ''}</td>
+                <td>${escHtml(r.komentarz || '')}</td>
             </tr>
         `;
     });
@@ -9071,14 +9040,14 @@ function zamknijPopupAwaryjny() {
             const pagedData = kartotekaDane.slice(start, start + itemsPerPage);
 
             pagedData.forEach(r => {
-                let detale = r.szczegoly ? `<br><small style="color:#666">${r.szczegoly}</small>` : '';
+                let detale = r.szczegoly ? `<br><small style="color:#666">${escHtml(r.szczegoly)}</small>` : '';
                 tbody.innerHTML += `
                     <tr>
-                        <td>${r.data}</td>
-                        <td>${r.zabieg}${detale}</td>
-                        <td>${r.sprzedawca}</td>
-                        <td><strong>${r.kwota} zł</strong></td>
-                        <td>${r.komentarz}</td>
+                        <td>${escHtml(r.data)}</td>
+                        <td>${escHtml(r.zabieg)}${detale}</td>
+                        <td>${escHtml(r.sprzedawca)}</td>
+                        <td><strong>${escHtml(String(r.kwota))} zł</strong></td>
+                        <td>${escHtml(r.komentarz || '')}</td>
                     </tr>
                 `;
             });
@@ -11752,51 +11721,23 @@ function sortujTabeleMagazynu(kolumna) {
     // 3. Odśwież tabelę z nową kolejnością
     renderMagazyn(tablicaDoSortowania);
 }
-/*
 function szukajWMagazynie() {
-    // 1. Pobieramy wpisaną frazę
-    var input = document.getElementById("szukaj-magazyn");
-    var filter = input.value.toLowerCase();
+    const filter = document.getElementById("szukaj-magazyn").value.toLowerCase().trim();
+    const dane = window.daneCache;
+    if (!dane) return;
 
-    // 2. Pobieramy tabelę i jej wiersze
-    var tbody = document.getElementById("tabela-body");
-    var tr = tbody.getElementsByTagName("tr");
-
-    // 3. Przechodzimy przez każdy wiersz
-    for (var i = 0; i < tr.length; i++) {
-        // Pobieramy cały tekst wiersza (nazwa, kategoria, cena itd.)
-        var text = tr[i].textContent || tr[i].innerText;
-
-        // 4. Sprawdzamy czy fraza występuje w tekście
-        if (text.toLowerCase().indexOf(filter) > -1) {
-            tr[i].style.display = ""; // Pasuje -> Pokaż
-        } else {
-            tr[i].style.display = "none"; // Nie pasuje -> Ukryj
-        }
+    if (!filter) {
+        renderMagazyn(dane);
+        return;
     }
-} */
 
-function szukajWSlowniku() {
-    // 1. Pobieramy tekst z pola wyszukiwania
-    var input = document.getElementById("szukaj-slownik");
-    var filter = input.value.toLowerCase();
-
-    // 2. Pobieramy listę (ul) i wszystkie jej elementy (li)
-    var ul = document.getElementById("lista-slownik");
-    var li = ul.getElementsByTagName("li");
-
-    // 3. Pętla przez wszystkie kafelki firm/modeli
-    for (var i = 0; i < li.length; i++) {
-        // Pobieramy tekst z kafelka (np. "Purles 111")
-        var text = li[i].textContent || li[i].innerText;
-
-        // 4. Jeśli tekst pasuje do wpisanej frazy -> Pokaż, w przeciwnym razie -> Ukryj
-        if (text.toLowerCase().indexOf(filter) > -1) {
-            li[i].style.display = "";
-        } else {
-            li[i].style.display = "none";
-        }
-    }
+    const filtered = dane.filter(p =>
+        (p.nazwa || "").toLowerCase().includes(filter) ||
+        (p.kategoria || "").toLowerCase().includes(filter) ||
+        (p.typ || "").toLowerCase().includes(filter) ||
+        (p.kto_dodal || "").toLowerCase().includes(filter)
+    );
+    renderMagazyn(filtered);
 }
 
 window.szukajWSlowniku = function(elementInput) {
@@ -17993,7 +17934,7 @@ initTheme();
                 </div>
                 
                 <div style="position:relative;">
-                    <input type="text" id="e_search_input" onkeyup="szukajKlientaStandardUI()" placeholder="🔍 Wpisz nazwisko, aby zmienić..." 
+                    <input type="text" id="e_search_input" onkeyup="_db('esrch',szukajKlientaStandardUI)" placeholder="🔍 Wpisz nazwisko, aby zmienić..." 
                            class="form-control" autocomplete="off"
                            style="width:100%; border:1px solid #d1d5db; padding:8px; font-size:12px; background:white;">
                     
@@ -18091,7 +18032,7 @@ initTheme();
                     <div>
 						<label style="font-size:12px; color:#7f1d1d;">ID Klienta:</label>
 						
-						<input type="text" id="em_id_klienta" onkeyup="sprawdzIdAwaryjnie()" 
+						<input type="text" id="em_id_klienta" onkeyup="_db('eid',sprawdzIdAwaryjnie)" 
 							   class="form-control" 
 							   style="width:100%; padding:10px; font-weight:bold; text-align:center; border:1px solid #fca5a5; border-radius:6px;">
 						
