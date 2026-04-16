@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blog Estelio — Wiedza dla właścicielek salonów beauty</title>
+  <meta name="description" content="Praktyczne porady dla właścicielek salonów kosmetycznych. Jak zarządzać salonem, rozliczać pracownice, kontrolować magazyn i oszczędzać czas dzięki systemowi Estelio.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://estelio.com.pl/blog.html">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --dark2: #2a2420;
+      --rose: #b87080; --rose-dark: #a05e6e; --rose-light: #f3dfe3;
+      --gold: #c9a96e; --cream: #f4efe6; --cream2: #ede6d8;
+      --muted: #7a6e66; --border: #e0d8ce; --ink: #2c2420;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--ink); }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 22px 60px; background: #fff; border-bottom: 1px solid var(--cream2);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: var(--dark); text-decoration: none; letter-spacing: .06em; }
+    nav ul { display: flex; gap: 32px; list-style: none; }
+    nav ul a { text-decoration: none; font-size: .88rem; color: var(--muted); transition: color .2s; }
+    nav ul a:hover { color: var(--dark); }
+    .nav-cta { background: var(--rose); color: #fff !important; padding: 8px 20px; border-radius: 6px; font-weight: 500 !important; transition: background .2s !important; }
+    .nav-cta:hover { background: var(--rose-dark) !important; }
+    @media (max-width: 768px) {
+      nav { padding: 16px 20px; }
+      nav ul { display: none; }
+    }
+
+    /* HERO */
+    .blog-hero {
+      background: linear-gradient(135deg, var(--dark) 0%, var(--dark2) 100%);
+      padding: 64px 60px 56px;
+      text-align: center;
+    }
+    .blog-hero .eyebrow { font-size: .72rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
+    .blog-hero h1 { font-family: 'Cormorant Garamond', serif; font-size: 3rem; font-weight: 600; color: #fff; margin-bottom: 14px; line-height: 1.15; }
+    .blog-hero p { font-size: 1rem; color: rgba(255,255,255,.6); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+
+    /* GRID */
+    .blog-section { max-width: 1100px; margin: 0 auto; padding: 64px 40px 80px; }
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; }
+    @media (max-width: 900px) { .blog-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .blog-grid { grid-template-columns: 1fr; } .blog-section { padding: 40px 20px 60px; } .blog-hero { padding: 48px 20px 40px; } .blog-hero h1 { font-size: 2rem; } }
+
+    /* CARD */
+    .blog-card {
+      background: #fff; border: 1px solid var(--cream2);
+      border-radius: 16px; overflow: hidden;
+      transition: box-shadow .3s, transform .3s;
+      text-decoration: none; color: inherit; display: flex; flex-direction: column;
+    }
+    .blog-card:hover { box-shadow: 0 12px 36px rgba(28,26,24,.09); transform: translateY(-4px); }
+    .card-thumb {
+      height: 160px; display: flex; align-items: center; justify-content: center;
+      font-size: 3.5rem; background: var(--cream);
+    }
+    .card-body { padding: 22px 24px 24px; flex: 1; display: flex; flex-direction: column; }
+    .card-cat {
+      display: inline-block; font-size: .68rem; font-weight: 600;
+      letter-spacing: .12em; text-transform: uppercase;
+      background: var(--rose-light); color: var(--rose-dark);
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+    }
+    .card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.25rem; font-weight: 600; color: var(--dark);
+      line-height: 1.3; margin-bottom: 10px;
+    }
+    .card-excerpt { font-size: .85rem; color: var(--muted); line-height: 1.7; flex: 1; margin-bottom: 18px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-date { font-size: .75rem; color: var(--muted); }
+    .card-read { font-size: .8rem; font-weight: 600; color: var(--rose); }
+
+    /* CTA */
+    .blog-cta {
+      background: linear-gradient(135deg, var(--dark), var(--dark2));
+      border-radius: 20px; padding: 48px 40px; text-align: center; margin-top: 64px;
+    }
+    .blog-cta h2 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: #fff; margin-bottom: 10px; }
+    .blog-cta p { color: rgba(255,255,255,.6); font-size: .9rem; margin-bottom: 24px; }
+    .blog-cta a { background: var(--rose); color: #fff; padding: 13px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: .95rem; transition: background .2s; display: inline-block; }
+    .blog-cta a:hover { background: var(--rose-dark); }
+
+    footer { text-align: center; padding: 28px 40px; font-size: .78rem; color: var(--muted); border-top: 1px solid var(--cream2); }
+    footer a { color: var(--rose); text-decoration: none; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <ul>
+    <li><a href="/zamow.html">Strona główna</a></li>
+    <li><a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a></li>
+  </ul>
+</nav>
+
+<div class="blog-hero">
+  <div class="eyebrow">Wiedza i inspiracje</div>
+  <h1>Blog dla właścicielek<br><em style="font-style:italic; font-weight:400;">salonów beauty</em></h1>
+  <p>Praktyczne porady jak zarządzać salonem mądrzej, oszczędzać czas i rozwijać biznes beauty.</p>
+</div>
+
+<div class="blog-section">
+  <div class="blog-grid">
+
+    <a class="blog-card" href="/blog/jak-estelio-oszczedza-czas.html">
+      <div class="card-thumb">⏱️</div>
+      <div class="card-body">
+        <span class="card-cat">Zarządzanie</span>
+        <div class="card-title">Jak Estelio oszczędza 4 godziny tygodniowo w salonie kosmetycznym</div>
+        <div class="card-excerpt">Większość właścicielek salonów traci kilka godzin tygodniowo na rozliczenia, które można zautomatyzować. Sprawdź, gdzie uciekają Twoje godziny.</div>
+        <div class="card-footer">
+          <span class="card-date">16 kwietnia 2026</span>
+          <span class="card-read">Czytaj →</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="blog-card" href="/blog/rozliczenia-pracownic-salonu.html">
+      <div class="card-thumb">💅</div>
+      <div class="card-body">
+        <span class="card-cat">Pracownicy</span>
+        <div class="card-title">Rozliczenia pracownic w salonie beauty — koniec z Excelem</div>
+        <div class="card-excerpt">Excel, karteczki, zaufanie na słowo — tak wygląda rozliczanie pracownic w większości salonów. Jest lepszy sposób.</div>
+        <div class="card-footer">
+          <span class="card-date">14 kwietnia 2026</span>
+          <span class="card-read">Czytaj →</span>
+        </div>
+      </div>
+    </a>
+
+    <a class="blog-card" href="/blog/magazyn-kosmetykow-w-salonie.html">
+      <div class="card-thumb">📦</div>
+      <div class="card-body">
+        <span class="card-cat">Magazyn</span>
+        <div class="card-title">Jak zarządzać magazynem kosmetyków bez chaosu i przepłacania</div>
+        <div class="card-excerpt">Brakujący produkt w połowie zabiegu, przeterminowane zapasy, zamówienia "na oko" — poznaj sposób na kontrolę magazynu w salonie.</div>
+        <div class="card-footer">
+          <span class="card-date">10 kwietnia 2026</span>
+          <span class="card-read">Czytaj →</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+
+  <div class="blog-cta">
+    <h2>Gotowa na własny porządek w salonie?</h2>
+    <p>Wypróbuj Estelio — system, który robi robotę za Ciebie.</p>
+    <a href="/zamow.html#formularz">Zamów dostęp za 49 zł / miesiąc →</a>
+  </div>
+</div>
+
+<footer>
+  © 2026 Estelio ·
+  <a href="/zamow.html">Strona główna</a> ·
+  <a href="/regulamin.html">Regulamin</a> ·
+  <a href="/polityka-prywatnosci.html">Polityka prywatności</a> ·
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+</footer>
+
+</body>
+</html>
