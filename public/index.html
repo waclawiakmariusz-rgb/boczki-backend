@@ -18561,12 +18561,14 @@ initTheme();
 
     <div id="pin-input-section" style="display:none; flex-direction:column; align-items:center; background:#0f172a; padding:30px; border-radius:12px; border:1px solid #334155; box-shadow: 0 10px 25px rgba(0,0,0,0.5);">
         <h3 id="pin-user-name" style="margin-top:0; color:#f8fafc;">Wpisz PIN</h3>
-        <input type="password" id="pin-code" maxlength="4" style="font-size:32px; letter-spacing:8px; text-align:center; width:150px; padding:10px; border-radius:8px; border:none; outline:none; background:#1e293b; color:white; margin-bottom:20px;" placeholder="••••">
+        <form autocomplete="off" onsubmit="zalogujPinem(); return false;">
+        <input type="password" id="pin-code" maxlength="4" autocomplete="off" style="font-size:32px; letter-spacing:8px; text-align:center; width:150px; padding:10px; border-radius:8px; border:none; outline:none; background:#1e293b; color:white; margin-bottom:20px;" placeholder="••••">
         <div id="pin-error-msg" style="display:none; color:#f87171; background:#450a0a; border:1px solid #7f1d1d; border-radius:8px; padding:10px 18px; margin-bottom:14px; font-size:14px; text-align:center;"></div>
         <div style="display:flex; gap:10px;">
-            <button onclick="anulujPin()" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">Anuluj</button>
-            <button onclick="zalogujPinem()" id="btn-pin-zaloguj" class="btn-primary" style="margin:0;">Zaloguj</button>
+            <button type="button" onclick="anulujPin()" style="padding:10px 20px; background:#475569; color:white; border:none; border-radius:8px; cursor:pointer;">Anuluj</button>
+            <button type="submit" id="btn-pin-zaloguj" class="btn-primary" style="margin:0;">Zaloguj</button>
         </div>
+        </form>
     </div>
     
     <button onclick="wylogujGlowne()" style="margin-top:50px; background:none; border:none; color:#64748b; cursor:pointer; text-decoration:underline;">Zmień salon (Wyloguj urządzenie)</button>
