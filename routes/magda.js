@@ -3,21 +3,29 @@
 // Dodaje kolumnę czy_rozliczone do Sprzedaz i Zadatki przy starcie serwera.
 
 const express = require('express');
-const { randomUUID } = require('crypto');
+const { createHmac } = require('crypto');
 
 const TENANT_ID   = 'boczki-salon-glowny-001';
 const MAGDA_HASLO = () => (process.env.MAGDA_HASLO || '').replace(/^['"]|['"]$/g, '');
-
-// Aktywne sesje (UUID → timestamp). Czyszczone po restarcie serwera.
-const sesje = new Map();
 const SESJA_TTL_MS = 12 * 60 * 60 * 1000; // 12 godzin
+
+// Stateless HMAC token — przeżywa restarty serwera
+// Format: "<timestamp>.<hmac-sha256>"
+function stworzToken() {
+  const ts = Date.now().toString();
+  const sig = createHmac('sha256', MAGDA_HASLO()).update(ts).digest('hex');
+  return `${ts}.${sig}`;
+}
 
 function weryfikujSesje(token) {
   if (!token) return false;
-  const ts = sesje.get(token);
-  if (!ts) return false;
-  if (Date.now() - ts > SESJA_TTL_MS) { sesje.delete(token); return false; }
-  return true;
+  const dot = token.lastIndexOf('.');
+  if (dot === -1) return false;
+  const ts = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  if (Date.now() - Number(ts) > SESJA_TTL_MS) return false;
+  const expected = createHmac('sha256', MAGDA_HASLO()).update(ts).digest('hex');
+  return sig === expected;
 }
 
 function requireMagda(req, res, next) {
@@ -54,8 +62,7 @@ module.exports = (db) => {
     if (haslo.trim() !== MAGDA_HASLO()) {
       return res.json({ status: 'error', message: 'Błędne hasło.' });
     }
-    const token = randomUUID();
-    sesje.set(token, Date.now());
+    const token = stworzToken();
     return res.json({ status: 'success', token });
   });
 
