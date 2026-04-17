@@ -3,7 +3,10 @@
 
 const express = require('express');
 const { randomUUID } = require('crypto');
+const bcrypt = require('bcrypt');
 const { rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
+
+const BCRYPT_ROUNDS = 10;
 
 let wyslijLinkRejestracji, powiadomAdmina, wyslijWitamy, wyslijPotwierdzeniZgloszenia;
 try {
@@ -101,7 +104,7 @@ module.exports = (db) => {
   });
 
   // POST /api/admin/create_tenant — tworzenie nowego salonu
-  router.post('/admin/create_tenant', requireAdmin, (req, res) => {
+  router.post('/admin/create_tenant', requireAdmin, async (req, res) => {
     const d = req.body;
     const { nazwa_salonu, miasto, telefon, email, login, haslo, data_waznosci, pracownicy, uslugi } = d;
 
@@ -114,12 +117,13 @@ module.exports = (db) => {
     const suffix = Date.now().toString().slice(-4);
     const tenant_id = `${slug}-${suffix}`;
     const licId = randomUUID();
+    const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
     // 1. Utwórz licencję
     db.query(
       `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, data_waznosci, nazwa_salonu, miasto, telefon, email, data_utworzenia)
        VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, NOW())`,
-      [licId, login.trim(), haslo.trim(), tenant_id, data_waznosci || null, nazwa_salonu, miasto || '', telefon || '', email || ''],
+      [licId, login.trim(), hasloHash, tenant_id, data_waznosci || null, nazwa_salonu, miasto || '', telefon || '', email || ''],
       (err) => {
         if (err) {
           if (err.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', message: 'Login już istnieje!' });
@@ -360,12 +364,14 @@ module.exports = (db) => {
   });
 
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
-  router.post('/rejestracja/zaloz', (req, res) => {
+  router.post('/rejestracja/zaloz', async (req, res) => {
     const d = req.body;
     const { token, nazwa_salonu, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
 
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
     if (!nazwa_salonu || !login || !haslo) return res.json({ status: 'error', message: 'Uzupełnij wszystkie wymagane pola.' });
+
+    const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
     // Sprawdź token i zablokuj go atomowo (UPDATE ... WHERE status='nowy')
     db.query(
@@ -387,7 +393,7 @@ module.exports = (db) => {
         db.query(
           `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, miasto, telefon, email, data_waznosci, data_utworzenia)
            VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, login.trim(), haslo.trim(), tenant_id, nazwa_salonu, miasto || '', telefon || '', email || ''],
+          [licId, login.trim(), hasloHash, tenant_id, nazwa_salonu, miasto || '', telefon || '', email || ''],
           (err2) => {
             if (err2) {
               // Cofnij token jeśli zapis się nie udał

@@ -3,7 +3,10 @@
 
 const express = require('express');
 const { randomUUID } = require('crypto');
+const bcrypt = require('bcrypt');
 const { createSession, rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
+
+const BCRYPT_ROUNDS = 10;
 
 let wyslijResetHasla;
 try {
@@ -33,7 +36,7 @@ module.exports = (db) => {
     }
 
     const sql = `SELECT login, haslo, rola, id_bazy, status FROM Licencje WHERE LOWER(TRIM(login)) = LOWER(TRIM(?)) LIMIT 1`;
-    db.query(sql, [login.trim()], (err, rows) => {
+    db.query(sql, [login.trim()], async (err, rows) => {
       if (err) return res.json({ status: 'error', message: 'Błąd bazy danych.' });
       if (!rows || rows.length === 0) {
         recordFailedLogin(req);
@@ -41,7 +44,22 @@ module.exports = (db) => {
       }
 
       const user = rows[0];
-      if (user.haslo.trim() !== haslo.trim()) {
+      const isHashed = user.haslo.startsWith('$2b$') || user.haslo.startsWith('$2a$');
+
+      let passwordOk = false;
+      if (isHashed) {
+        // Hasło już zahashowane — porównaj przez bcrypt
+        passwordOk = await bcrypt.compare(haslo.trim(), user.haslo);
+      } else {
+        // Hasło jeszcze plaintext — porównaj i od razu zahashuj (migracja)
+        passwordOk = user.haslo.trim() === haslo.trim();
+        if (passwordOk) {
+          const hash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
+          db.query('UPDATE Licencje SET haslo = ? WHERE LOWER(TRIM(login)) = LOWER(TRIM(?))', [hash, user.login]);
+        }
+      }
+
+      if (!passwordOk) {
         recordFailedLogin(req);
         return res.json({ status: 'error', message: 'Błędny login lub hasło.' });
       }
@@ -131,16 +149,17 @@ module.exports = (db) => {
         if (t.uzyty) return res.json({ status: 'error', message: 'Ten link został już wykorzystany.' });
         if (new Date(t.expires_at) < new Date()) return res.json({ status: 'error', message: 'Link wygasł. Poproś o nowy.' });
 
-        db.query(
-          `UPDATE Licencje SET haslo = ? WHERE LOWER(TRIM(login)) = LOWER(TRIM(?))`,
-          [nowe_haslo.trim(), t.login],
-          (err2) => {
-            if (err2) return res.json({ status: 'error', message: 'Błąd zapisu hasła.' });
-
-            db.query(`UPDATE Tokeny_reset_hasla SET uzyty = 1 WHERE token = ?`, [token]);
-            return res.json({ status: 'success', message: 'Hasło zostało zmienione. Możesz się teraz zalogować.' });
-          }
-        );
+        bcrypt.hash(nowe_haslo.trim(), BCRYPT_ROUNDS).then(hash => {
+          db.query(
+            `UPDATE Licencje SET haslo = ? WHERE LOWER(TRIM(login)) = LOWER(TRIM(?))`,
+            [hash, t.login],
+            (err2) => {
+              if (err2) return res.json({ status: 'error', message: 'Błąd zapisu hasła.' });
+              db.query(`UPDATE Tokeny_reset_hasla SET uzyty = 1 WHERE token = ?`, [token]);
+              return res.json({ status: 'success', message: 'Hasło zostało zmienione. Możesz się teraz zalogować.' });
+            }
+          );
+        }).catch(() => res.json({ status: 'error', message: 'Błąd przetwarzania hasła.' }));
       }
     );
   });
