@@ -177,6 +177,20 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
 .step-panel { display: none; }
 .step-panel.visible { display: block; animation: fadeUp 0.35s ease; }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+/* ── PREDEF KATEGORIE ── */
+.predef-kat { border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+.predef-kat-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; background: #f8fafc; user-select: none; }
+.predef-kat-header:hover { background: #f1f5f9; }
+.predef-kat-title { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.predef-kat-body { display: none; padding: 12px 18px 16px; background: #fff; }
+.predef-kat-body.open { display: block; }
+.predef-check-all { font-size: 12px; color: var(--primary); cursor: pointer; font-weight: 600; }
+.predef-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+.predef-item { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; }
+.predef-item:hover { background: #fdf8f5; }
+.predef-item input[type=checkbox] { accent-color: var(--primary); width: 16px; height: 16px; flex-shrink: 0; }
+.predef-item label { font-size: 13px; cursor: pointer; color: #334155; }
 </style>
 </head>
 <body>
@@ -296,11 +310,16 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
     <div class="step-panel" id="step-4">
       <div class="card">
         <h2>💅 Usługi i zabiegi</h2>
-        <p class="sub">Dodaj usługi, które oferuje Twój salon. Możesz to uzupełnić i edytować później z poziomu systemu.</p>
-        <div id="uslugi-lista"></div>
-        <button class="btn-add-row" onclick="dodajUsluge()">+ Dodaj usługę</button>
+        <p class="sub">Zaznacz usługi które oferuje Twój salon. Oszczędzisz czas przy pierwszym uruchomieniu — salony które to robią są gotowe do pracy od razu.</p>
+        <div id="predef-loading" style="text-align:center; padding:20px; color:#94a3b8;">Ładowanie listy usług...</div>
+        <div id="predef-kategorie" style="display:none;"></div>
+        <div style="margin-top:16px; border-top:1px solid #f1f5f9; padding-top:16px;">
+          <button class="btn-add-row" onclick="dodajUsluge()">+ Dodaj własną usługę ręcznie</button>
+          <div id="uslugi-lista"></div>
+        </div>
         <div class="nav" style="margin-top:22px;">
           <button class="btn-secondary" onclick="goStep(3)">← Wróć</button>
+          <button class="btn-secondary" style="color:#94a3b8; font-size:12px; background:none; border:none; cursor:pointer; text-decoration:underline;" onclick="goStep(5)">Pomiń — dodam później</button>
           <button class="btn-primary" onclick="goStep(5)">Dalej → Podsumowanie</button>
         </div>
       </div>
@@ -372,6 +391,7 @@ function goStep(n) {
   currentStep = n;
   document.getElementById(`step-${currentStep}`).classList.add('visible');
   document.getElementById(`ws-${currentStep}`).className = 'w-step active';
+  if (n === 4) loadPredef();
   if (n === 5) renderSummary();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
@@ -475,8 +495,75 @@ function getPracownicy() {
 }
 
 // ═══════════════════════════════════════
-// KROK 4 — Usługi
+// KROK 4 — Usługi (predef + ręczne)
 // ═══════════════════════════════════════
+let predefLoaded = false;
+
+function loadPredef() {
+  if (predefLoaded) return;
+  fetch('/api/predef/zabiegi')
+    .then(r => r.json())
+    .then(d => {
+      if (d.status !== 'success') return;
+      predefLoaded = true;
+      document.getElementById('predef-loading').style.display = 'none';
+      const container = document.getElementById('predef-kategorie');
+      container.style.display = 'block';
+      container.innerHTML = d.kategorie.map(kat => `
+        <div class="predef-kat">
+          <div class="predef-kat-header" onclick="toggleKat(${kat.id})">
+            <div class="predef-kat-title">${kat.ikona} ${kat.nazwa}</div>
+            <div style="display:flex; align-items:center; gap:12px;">
+              <span class="predef-check-all" onclick="event.stopPropagation(); zaznaczWszystkie(${kat.id})">Zaznacz wszystkie</span>
+              <span id="predef-arrow-${kat.id}" style="color:#94a3b8; transition:transform 0.2s;">▼</span>
+            </div>
+          </div>
+          <div class="predef-kat-body" id="predef-body-${kat.id}">
+            <div class="predef-grid">
+              ${kat.zabiegi.map(z => `
+                <div class="predef-item">
+                  <input type="checkbox" id="pz-${z.id}" value="${z.id}" data-kat-id="${kat.id}" data-nazwa="${z.nazwa.replace(/"/g,'&quot;')}" data-cena="${z.domyslna_cena}">
+                  <label for="pz-${z.id}">${z.nazwa}</label>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    })
+    .catch(() => {
+      document.getElementById('predef-loading').textContent = 'Nie udało się załadować listy. Możesz dodać usługi ręcznie poniżej.';
+    });
+}
+
+function toggleKat(id) {
+  const body = document.getElementById('predef-body-' + id);
+  const arrow = document.getElementById('predef-arrow-' + id);
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function zaznaczWszystkie(katId) {
+  const checkboxes = document.querySelectorAll(`input[data-kat-id="${katId}"]`);
+  const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+  checkboxes.forEach(cb => cb.checked = !allChecked);
+  if (!allChecked) {
+    const body = document.getElementById('predef-body-' + katId);
+    const arrow = document.getElementById('predef-arrow-' + katId);
+    body.classList.add('open');
+    arrow.style.transform = 'rotate(180deg)';
+  }
+}
+
+function getPredefUslugi() {
+  return Array.from(document.querySelectorAll('#predef-kategorie input[type=checkbox]:checked')).map(cb => ({
+    kategoria: cb.closest('.predef-kat').querySelector('.predef-kat-title').textContent.trim().replace(/^.\s/, ''),
+    wariant: cb.dataset.nazwa,
+    cena: cb.dataset.cena || '0'
+  }));
+}
+
 function dodajUsluge() {
   const lista = document.getElementById('uslugi-lista');
   const id = 'us-' + Date.now();
@@ -502,7 +589,7 @@ function getUslugi() {
 // ═══════════════════════════════════════
 function renderSummary() {
   wData.pracownicy = getPracownicy();
-  wData.uslugi = getUslugi();
+  wData.uslugi = [...getPredefUslugi(), ...getUslugi()];
   const { salon, dostep, pracownicy, uslugi } = wData;
 
   document.getElementById('summary').innerHTML = `

@@ -273,6 +273,7 @@ const magdaRoutes      = require('./routes/magda')(db);
 const helpkbRoutes     = require('./routes/helpkb')(db);
 const billingRoutes    = require('./routes/billing')(db);
 const blogRoutes       = require('./routes/blog')(db);
+const predefRoutes     = require('./routes/predef')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -297,6 +298,7 @@ app.use('/api', magdaRoutes);
 app.use('/api', helpkbRoutes);
 app.use('/api', billingRoutes);
 app.use('/api', blogRoutes);
+app.use('/api', predefRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
