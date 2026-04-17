@@ -3,6 +3,7 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const { validateTenantAccess } = require('./routes/sessions');
@@ -70,11 +71,21 @@ app.use((req, res, next) => {
     next();
 });
 
+// Rate limiting — ogólny limit na całe API
+const apiLimiter = rateLimit({
+    windowMs: 60 * 1000,        // okno 1 minuta
+    max: 120,                    // max 120 zapytań / minutę z jednego IP
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { status: 'error', message: 'Zbyt wiele zapytań. Spróbuj za chwilę.' },
+});
+app.use('/api/', apiLimiter);
+
 // Stripe webhook musi dostać raw body — PRZED express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
 
-// Pozostałe endpointy — JSON
-app.use(express.json());
+// Pozostałe endpointy — JSON z limitem 1MB
+app.use(express.json({ limit: '1mb' }));
 
 // Redirect strony głównej na zamów
 app.get('/', (req, res) => res.redirect(301, '/zamow.html'));
