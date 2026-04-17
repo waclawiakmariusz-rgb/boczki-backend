@@ -6504,7 +6504,16 @@ function pokazEkranPinu() {
         const grid = document.getElementById('pin-users-grid');
         grid.innerHTML = '';
         if(!users || users.length === 0 || users.error) {
-            grid.innerHTML = '<div style="color:#ef4444;">Brak ustawionych pracowników. Zaloguj się z innego urządzenia do Panelu Admina i dodaj ich.</div>';
+            const isAdmin = (localStorage.getItem('boczki_user') || '').toLowerCase() === 'admin';
+            if (isAdmin) {
+                grid.innerHTML = `
+                    <div style="text-align:center; padding:20px;">
+                        <div style="color:#f59e0b; font-size:15px; margin-bottom:18px;">Brak pracowników — dodaj pierwszego w Panelu Admina.</div>
+                        <button onclick="wejdzJakoAdmin()" style="background:var(--primary); color:#fff; border:none; padding:14px 32px; border-radius:10px; font-size:16px; cursor:pointer; font-weight:bold;">Wejdź do Panelu Admina</button>
+                    </div>`;
+            } else {
+                grid.innerHTML = '<div style="color:#ef4444;">Brak ustawionych pracowników. Zaloguj się z innego urządzenia do Panelu Admina i dodaj ich.</div>';
+            }
             return;
         }
 
@@ -6677,6 +6686,11 @@ function uruchomAplikacjePracownika(imie, rola) {
 
     // Odpalamy docelowe zaciąganie danych
     initApp();
+}
+
+// Wejście bezpośrednie do panelu admina gdy brak pracowników (pierwsze uruchomienie salonu)
+function wejdzJakoAdmin() {
+    uruchomAplikacjePracownika('Admin', 'admin');
 }
 
 // Stary przycisk Wyloguj teraz nie wyrzuca z salonu, tylko wraca do wyboru pracownika!
