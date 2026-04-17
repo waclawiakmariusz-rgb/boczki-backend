@@ -320,26 +320,47 @@ module.exports = (db) => {
         const sprzedawcyStr = Array.isArray(d.sprzedawcy) ? d.sprzedawcy.join(', ') : (d.sprzedawcy || '');
         let kwota;
         try { kwota = parseKwota(d.kwota, 'kwota zadatku'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
+        // Walidacja sumy split przed jakimkolwiek zapisem
+        if (d.metoda === 'Mix' && d.split_breakdown && Array.isArray(d.split_breakdown)) {
+          const sumaSplit = d.split_breakdown.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+          if (Math.abs(sumaSplit - kwota) > 0.01) {
+            return res.json({ status: 'error', message: `Suma płatności Mix (${sumaSplit.toFixed(2)} zł) nie zgadza się z kwotą zadatku (${kwota.toFixed(2)} zł).` });
+          }
+        }
+
         db.query(
           `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?)`,
           [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda || '', d.cel || '', sprzedawcyStr],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
-            // Mix split
+            const zakoncz = () => {
+              zapiszLog(tenant_id, 'WPŁATA ZADATKU', pracownik, `Klient: ${d.klient} | Kwota: ${d.kwota} zł | Metoda: ${d.metoda} | Obsługa: ${sprzedawcyStr}`);
+              return res.json({ status: 'success', message: 'Zadatek przyjęty pomyślnie!' });
+            };
+
+            // Mix split — sekwencyjnie, żeby nie tracić wpisów przy przerwaniu połączenia
             if (d.metoda === 'Mix' && d.split_breakdown && Array.isArray(d.split_breakdown)) {
-              d.split_breakdown.forEach((part, idx) => {
-                const splitId = id + '-SPLIT-' + idx;
+              let si = 0;
+              function nextSplit() {
+                if (si >= d.split_breakdown.length) return zakoncz();
+                const part = d.split_breakdown[si];
+                const splitId = id + '-SPLIT-' + si;
+                si++;
                 db.query(
                   `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, NOW(), ?, ?, ?, 'AKTYWNY')`,
                   [splitId, tenant_id, d.klient || '', part.method || '', parseNumOpt(part.amount) || 0],
-                  () => {}
+                  (splitErr) => {
+                    if (splitErr) console.error('[split wpłata] INSERT Platnosci failed:', splitErr.message);
+                    nextSplit();
+                  }
                 );
-              });
+              }
+              nextSplit();
+            } else {
+              zakoncz();
             }
-
-            zapiszLog(tenant_id, 'WPŁATA ZADATKU', pracownik, `Klient: ${d.klient} | Kwota: ${d.kwota} zł | Metoda: ${d.metoda} | Obsługa: ${sprzedawcyStr}`);
-            return res.json({ status: 'success', message: 'Zadatek przyjęty pomyślnie!' });
           }
         );
 
@@ -409,13 +430,18 @@ module.exports = (db) => {
           const idKlientaDb = rows[0].id_klienta;
           const idsFound = rows.map(r => r.id);
 
-          db.query(`UPDATE Zadatki SET status = 'SCALONY' WHERE tenant_id = ? AND id IN (?)`, [tenant_id, idsFound], () => {
-            const mergeId = 'DEP-MERGE-' + Date.now();
+          db.query(`UPDATE Zadatki SET status = 'SCALONY' WHERE tenant_id = ? AND id IN (?)`, [tenant_id, idsFound], (errUpd) => {
+            if (errUpd) return res.json({ status: 'error', message: errUpd.message });
+            const mergeId = 'DEP-MERGE-' + Date.now() + '-' + randomUUID().slice(0, 6);
             db.query(
               `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, 'System', ?, 'AKTYWNY')`,
               [mergeId, tenant_id, idKlientaDb, d.klient, suma, d.nowy_cel],
               (err2) => {
-                if (err2) return res.json({ status: 'error', message: err2.message });
+                if (err2) {
+                  // Cofnij — przywróć oryginalne zadatki jako aktywne
+                  db.query(`UPDATE Zadatki SET status = 'AKTYWNY' WHERE tenant_id = ? AND id IN (?)`, [tenant_id, idsFound], () => {});
+                  return res.json({ status: 'error', message: err2.message });
+                }
                 zapiszLog(tenant_id, 'SCALENIE ZADATKÓW', d.pracownik, `Scalono ${idsFound.length} wpłat na sumę ${suma.toFixed(2)} zł dla ${d.klient}`);
                 return res.json({ status: 'success', message: `Pomyślnie scalono ${idsFound.length} pozycji w jedną kwotę: ${suma.toFixed(2)} zł` });
               }

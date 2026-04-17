@@ -35,7 +35,10 @@ module.exports = (db) => {
           const v = Math.min(stara, rem);
           rem -= v;
           logParts += `[ID:${row.id} -${v}] `;
-          db.query(`UPDATE Magazyn SET ilosc = ? WHERE tenant_id = ? AND id = ?`, [stara - v, tenant_id, row.id], next);
+          db.query(`UPDATE Magazyn SET ilosc = ? WHERE tenant_id = ? AND id = ?`, [stara - v, tenant_id, row.id], (updErr) => {
+            if (updErr) return callback(updErr);
+            next();
+          });
         }
         next();
       }
@@ -65,12 +68,22 @@ module.exports = (db) => {
             });
           } else {
             const reszta = dostepne - pozostalo;
-            const idReszty = 'DEP-REST-' + Date.now();
-            db.query(`UPDATE Zadatki SET status = 'WYKORZYSTANY' WHERE tenant_id = ? AND id = ?`, [tenant_id, row.id], () => {
+            const idReszty = 'DEP-REST-' + Date.now() + '-' + randomUUID().slice(0, 6);
+            db.query(`UPDATE Zadatki SET status = 'WYKORZYSTANY' WHERE tenant_id = ? AND id = ?`, [tenant_id, row.id], (errUpd) => {
+              if (errUpd) {
+                console.error('[rozliczZadatek] UPDATE failed:', errUpd.message);
+                return callback && callback();
+              }
               db.query(
                 `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, 'System', ?, 'AKTYWNY')`,
                 [idReszty, tenant_id, klientId || '', klientNazwa, reszta, 'Reszta z: ' + row.cel],
-                () => {
+                (errIns) => {
+                  if (errIns) {
+                    console.error('[rozliczZadatek] INSERT reszta failed:', errIns.message);
+                    // Cofnij oznaczenie jako WYKORZYSTANY — zadatek wraca jako aktywny
+                    db.query(`UPDATE Zadatki SET status = 'AKTYWNY' WHERE tenant_id = ? AND id = ?`, [tenant_id, row.id], () => {});
+                    return callback && callback();
+                  }
                   zapiszLog(tenant_id, 'UŻYCIE ZADATKU', pracownik, `Wykorzystano częściowo: ${pozostalo.toFixed(2)} zł (Zostało: ${reszta.toFixed(2)} zł) | Klient: ${row.klient}`);
                   pozostalo = 0;
                   next();
@@ -277,7 +290,7 @@ module.exports = (db) => {
 
           if (poz.typ === 'Kosmetyk') {
             zdejmijZeStanuFIFO(tenant_id, poz.nazwa_produktu, poz.ilosc, sprzedawcyStr, (err) => {
-              if (err) console.error('FIFO err:', err.message);
+              if (err) return res.json({ status: 'error', message: 'Błąd magazynu: ' + err.message });
               doInsertPoz();
             });
           } else {
