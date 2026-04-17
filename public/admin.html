@@ -403,12 +403,36 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
       <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
       <button class="tab-btn" onclick="showTab('tab-kb')">💬 Baza Wiedzy</button>
+      <button class="tab-btn" onclick="showTab('tab-predef'); predef_init();">💅 Predef. usługi</button>
       <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
     </div>
 
     <!-- Tab: Lista salonów -->
     <div id="tab-salony" class="tab-panel active">
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
+    </div>
+
+    <!-- Tab: Predefiniowane usługi -->
+    <div id="tab-predef" class="tab-panel">
+      <div style="max-width:860px; margin:0 auto;">
+        <h3 style="margin-bottom:6px;">💅 Predefiniowane usługi</h3>
+        <p style="color:var(--taupe); font-size:13px; margin-bottom:24px;">Lista kategorii i zabiegów pokazywana nowym salonom podczas rejestracji. Zmiany widoczne natychmiast dla kolejnych rejestracji.</p>
+
+        <!-- Dodaj kategorię -->
+        <div class="gen-card" style="margin-bottom:24px;">
+          <h3>➕ Nowa kategoria</h3>
+          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
+            <input type="text" id="predef-new-kat-ikona" placeholder="Emoji ikona, np. 💅" style="width:100px; padding:9px 12px; border:1px solid var(--sand); border-radius:8px; font-size:14px;">
+            <input type="text" id="predef-new-kat-nazwa" placeholder="Nazwa kategorii, np. Stylizacja paznokci" style="flex:1; min-width:200px; padding:9px 12px; border:1px solid var(--sand); border-radius:8px; font-size:14px;">
+            <button class="btn-primary" style="margin:0; padding:9px 20px;" onclick="predef_dodajKat()">Dodaj kategorię</button>
+          </div>
+        </div>
+
+        <!-- Lista kategorii -->
+        <div id="predef-lista">
+          <div style="color:var(--taupe); text-align:center; padding:30px;">Ładowanie...</div>
+        </div>
+      </div>
     </div>
 
     <!-- Tab: Baza Wiedzy Chatu -->
@@ -1902,6 +1926,123 @@ async function kb_zapisz() {
     else { kb_toast('kb-toast-modal','err', d.message||'Błąd zapisu.'); }
   } catch(e) { kb_toast('kb-toast-modal','err','Błąd połączenia.'); }
   finally { btn.disabled=false; btn.textContent='💾 Zapisz'; }
+}
+
+// ═══════════════════════════════════════════════
+// PREDEFINIOWANE USŁUGI
+// ═══════════════════════════════════════════════
+let predef_initialized = false;
+
+async function predef_init() {
+  if (predef_initialized) return;
+  predef_initialized = true;
+  await predef_zaladuj();
+}
+
+async function predef_zaladuj() {
+  const lista = document.getElementById('predef-lista');
+  lista.innerHTML = '<div style="color:var(--taupe); text-align:center; padding:30px;">Ładowanie...</div>';
+  try {
+    const r = await fetch(`${API}/predef/zabiegi`);
+    const d = await r.json();
+    if (d.status !== 'success') { lista.innerHTML = '<div style="color:#ef4444;">Błąd ładowania.</div>'; return; }
+
+    if (!d.kategorie.length) {
+      lista.innerHTML = '<div style="color:var(--taupe); text-align:center; padding:30px;">Brak kategorii. Dodaj pierwszą powyżej.</div>';
+      return;
+    }
+
+    lista.innerHTML = d.kategorie.map(kat => `
+      <div style="border:1px solid var(--sand); border-radius:12px; margin-bottom:16px; overflow:hidden;">
+        <div style="background:var(--cream); padding:14px 18px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="font-weight:700; font-size:15px;">${kat.ikona} ${kat.nazwa}</div>
+          <button onclick="predef_usunKat(${kat.id}, '${kat.nazwa.replace(/'/g,"\\'")}' )" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:13px; font-weight:600;">🗑 Usuń kategorię</button>
+        </div>
+        <div style="padding:16px 18px;">
+          <div id="predef-zabiegi-${kat.id}" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+            ${kat.zabiegi.map(z => `
+              <span style="background:#f8fafc; border:1px solid var(--sand); border-radius:20px; padding:5px 12px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+                ${z.nazwa}${z.domyslna_cena > 0 ? ` <span style="color:var(--taupe); font-size:11px;">${z.domyslna_cena} zł</span>` : ''}
+                <button onclick="predef_usunZabieg(${z.id}, ${kat.id})" style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:14px; line-height:1; padding:0;">×</button>
+              </span>
+            `).join('')}
+          </div>
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <input type="text" id="predef-nowy-${kat.id}" placeholder="Nowy zabieg, np. Manicure japoński" style="flex:1; min-width:180px; padding:7px 11px; border:1px solid var(--sand); border-radius:8px; font-size:13px;">
+            <input type="number" id="predef-cena-${kat.id}" placeholder="Cena zł (opcj.)" min="0" step="0.01" style="width:130px; padding:7px 11px; border:1px solid var(--sand); border-radius:8px; font-size:13px;">
+            <button onclick="predef_dodajZabieg(${kat.id})" style="background:var(--primary); color:white; border:none; padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">+ Dodaj</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    lista.innerHTML = '<div style="color:#ef4444;">Błąd połączenia.</div>';
+  }
+}
+
+async function predef_dodajKat() {
+  const nazwa = document.getElementById('predef-new-kat-nazwa').value.trim();
+  const ikona = document.getElementById('predef-new-kat-ikona').value.trim() || '💅';
+  if (!nazwa) { alert('Podaj nazwę kategorii.'); return; }
+  const r = await fetch(`${API}/predef/kategorie`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ nazwa, ikona })
+  });
+  const d = await r.json();
+  if (d.status === 'success') {
+    document.getElementById('predef-new-kat-nazwa').value = '';
+    document.getElementById('predef-new-kat-ikona').value = '';
+    predef_initialized = false;
+    await predef_zaladuj();
+    predef_initialized = true;
+  } else { alert(d.message); }
+}
+
+async function predef_usunKat(id, nazwa) {
+  if (!confirm(`Usunąć kategorię "${nazwa}" wraz ze wszystkimi zabiegami?`)) return;
+  const r = await fetch(`${API}/predef/kategorie/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Admin-Token': adminToken }
+  });
+  const d = await r.json();
+  if (d.status === 'success') {
+    predef_initialized = false;
+    await predef_zaladuj();
+    predef_initialized = true;
+  } else { alert(d.message); }
+}
+
+async function predef_dodajZabieg(katId) {
+  const nazwa = document.getElementById(`predef-nowy-${katId}`).value.trim();
+  const cena = parseFloat(document.getElementById(`predef-cena-${katId}`).value) || 0;
+  if (!nazwa) { alert('Podaj nazwę zabiegu.'); return; }
+  const r = await fetch(`${API}/predef/zabiegi`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+    body: JSON.stringify({ kategoria_id: katId, nazwa, domyslna_cena: cena })
+  });
+  const d = await r.json();
+  if (d.status === 'success') {
+    document.getElementById(`predef-nowy-${katId}`).value = '';
+    document.getElementById(`predef-cena-${katId}`).value = '';
+    predef_initialized = false;
+    await predef_zaladuj();
+    predef_initialized = true;
+  } else { alert(d.message); }
+}
+
+async function predef_usunZabieg(id, katId) {
+  const r = await fetch(`${API}/predef/zabiegi/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Admin-Token': adminToken }
+  });
+  const d = await r.json();
+  if (d.status === 'success') {
+    predef_initialized = false;
+    await predef_zaladuj();
+    predef_initialized = true;
+  } else { alert(d.message); }
 }
 </script>
 </body>
