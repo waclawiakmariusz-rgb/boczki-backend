@@ -86,6 +86,22 @@ module.exports = (db) => {
     });
   });
 
+  // Tabela logów predef
+  db.query(`
+    CREATE TABLE IF NOT EXISTS Predef_logi (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      akcja ENUM('pominięto','użyto') NOT NULL,
+      ile_zabiegow INT DEFAULT 0,
+      data TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `, (err) => { if (err) console.error('[predef] Błąd tworzenia Predef_logi:', err.message); });
+
+  // ─── PUBLIC: POST /api/predef/pominięto ──────────────────────────────────
+  router.post('/predef/pominięto', (req, res) => {
+    db.query(`INSERT INTO Predef_logi (akcja, ile_zabiegow) VALUES ('pominięto', 0)`, () => {});
+    res.json({ status: 'ok' });
+  });
+
   // ─── PUBLIC: GET /api/predef/zabiegi ─────────────────────────────────────
   router.get('/predef/zabiegi', (req, res) => {
     db.query(

@@ -54,6 +54,11 @@ module.exports = (db) => {
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
   `, err => { if (err) console.error('[admin_sessions] Błąd CREATE TABLE:', err.message); });
 
+  // Migracja: kolumna zrodlo w Uslugi
+  db.query(`ALTER TABLE Uslugi ADD COLUMN zrodlo VARCHAR(10) NOT NULL DEFAULT 'reczne'`, (err) => {
+    if (err && err.code !== 'ER_DUP_FIELDNAME') console.error('[admin] ALTER Uslugi zrodlo:', err.message);
+  });
+
   // Czyść stare sesje co godzinę
   setInterval(() => {
     db.query('DELETE FROM admin_sessions WHERE expires < ?', [Date.now()]);
@@ -158,8 +163,8 @@ module.exports = (db) => {
           .map(u => new Promise((resolve) => {
             const uid = randomUUID();
             db.query(
-              `INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena) VALUES (?, ?, ?, ?, ?)`,
-              [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0],
+              `INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, zrodlo) VALUES (?, ?, ?, ?, ?, ?)`,
+              [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0, u.zrodlo || 'reczne'],
               () => resolve()
             );
           }));
@@ -421,8 +426,8 @@ module.exports = (db) => {
 
             const uObietnice = uslugiList.filter(u => u.kategoria && u.wariant).map(u => new Promise(resolve => {
               const uid = randomUUID();
-              db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena) VALUES (?, ?, ?, ?, ?)`,
-                [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0], () => resolve());
+              db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, zrodlo) VALUES (?, ?, ?, ?, ?, ?)`,
+                [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0, u.zrodlo || 'reczne'], () => resolve());
             }));
 
             Promise.all([...pObietnice, ...uObietnice]).then(async () => {
@@ -884,6 +889,32 @@ module.exports = (db) => {
         res.json({ status: 'ok' });
       }
     );
+  });
+
+  // ─── STATYSTYKI PREDEF ───────────────────────────────────────────────────
+  router.get('/admin/predef/statystyki', requireAdmin, (req, res) => {
+    const wyniki = {};
+    // Salony z predef
+    db.query(`SELECT COUNT(DISTINCT tenant_id) AS ile FROM Uslugi WHERE zrodlo = 'predef'`, (e, r) => {
+      wyniki.salony_z_predef = r?.[0]?.ile || 0;
+      // Salony bez predef (mają tylko ręczne lub brak)
+      db.query(`SELECT COUNT(DISTINCT tenant_id) AS ile FROM Uslugi WHERE zrodlo = 'reczne'`, (e2, r2) => {
+        wyniki.salony_tylko_reczne = r2?.[0]?.ile || 0;
+        // Pominięcia
+        db.query(`SELECT COUNT(*) AS ile FROM Predef_logi WHERE akcja = 'pominięto'`, (e3, r3) => {
+          wyniki.pominięcia = r3?.[0]?.ile || 0;
+          // Top kategorie
+          db.query(`
+            SELECT kategoria, COUNT(*) AS ile
+            FROM Uslugi WHERE zrodlo = 'predef'
+            GROUP BY kategoria ORDER BY ile DESC LIMIT 10
+          `, (e4, r4) => {
+            wyniki.top_kategorie = r4 || [];
+            res.json({ status: 'success', ...wyniki });
+          });
+        });
+      });
+    });
   });
 
   // ─── PREDEFINIOWANE USŁUGI ────────────────────────────────────────────────

@@ -416,7 +416,27 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
     <div id="tab-predef" class="tab-panel">
       <div style="max-width:860px; margin:0 auto;">
         <h3 style="margin-bottom:6px;">💅 Predefiniowane usługi</h3>
-        <p style="color:var(--taupe); font-size:13px; margin-bottom:24px;">Lista kategorii i zabiegów pokazywana nowym salonom podczas rejestracji. Zmiany widoczne natychmiast dla kolejnych rejestracji.</p>
+        <p style="color:var(--taupe); font-size:13px; margin-bottom:16px;">Lista kategorii i zabiegów pokazywana nowym salonom podczas rejestracji. Zmiany widoczne natychmiast dla kolejnych rejestracji.</p>
+
+        <!-- Statystyki -->
+        <div id="predef-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px;">
+          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
+            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Salony użyły predef</div>
+            <div id="stat-predef" style="font-size:26px; font-weight:800; color:var(--primary);">—</div>
+          </div>
+          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
+            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Tylko ręczne / brak</div>
+            <div id="stat-reczne" style="font-size:26px; font-weight:800; color:var(--ink);">—</div>
+          </div>
+          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
+            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Kliknięcia "Pomiń"</div>
+            <div id="stat-pominięcia" style="font-size:26px; font-weight:800; color:#f59e0b;">—</div>
+          </div>
+        </div>
+        <div id="predef-top-kat" style="margin-bottom:24px; display:none;">
+          <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Najpopularniejsze kategorie</div>
+          <div id="predef-top-kat-lista" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
+        </div>
 
         <!-- Dodaj kategorię -->
         <div class="gen-card" style="margin-bottom:24px;">
@@ -1936,7 +1956,31 @@ let predef_initialized = false;
 async function predef_init() {
   if (predef_initialized) return;
   predef_initialized = true;
-  await predef_zaladuj();
+  await Promise.all([predef_zaladuj(), predef_zaladujStatystyki()]);
+}
+
+async function predef_zaladujStatystyki() {
+  try {
+    const r = await fetch(`${API}/admin/predef/statystyki`, {
+      headers: { 'X-Admin-Token': adminToken }
+    });
+    const d = await r.json();
+    if (d.status !== 'success') return;
+
+    document.getElementById('stat-predef').textContent = d.salony_z_predef ?? '—';
+    document.getElementById('stat-reczne').textContent = d.salony_tylko_reczne ?? '—';
+    document.getElementById('stat-pominięcia').textContent = d.pominięcia ?? '—';
+
+    if (d.top_kategorie && d.top_kategorie.length) {
+      const lista = document.getElementById('predef-top-kat-lista');
+      lista.innerHTML = d.top_kategorie.map(k =>
+        `<span style="background:var(--cream); border:1px solid var(--sand); border-radius:20px; padding:5px 14px; font-size:13px;">
+          ${k.nazwa} <span style="color:var(--primary); font-weight:700;">${k.ilosc}</span>
+        </span>`
+      ).join('');
+      document.getElementById('predef-top-kat').style.display = 'block';
+    }
+  } catch(e) { /* stats are optional, fail silently */ }
 }
 
 async function predef_zaladuj() {

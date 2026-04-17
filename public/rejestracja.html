@@ -319,7 +319,7 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
         </div>
         <div class="nav" style="margin-top:22px;">
           <button class="btn-secondary" onclick="goStep(3)">← Wróć</button>
-          <button class="btn-secondary" style="color:#94a3b8; font-size:12px; background:none; border:none; cursor:pointer; text-decoration:underline;" onclick="goStep(5)">Pomiń — dodam później</button>
+          <button class="btn-secondary" style="color:#94a3b8; font-size:12px; background:none; border:none; cursor:pointer; text-decoration:underline;" onclick="logujPominięcie(); goStep(5)">Pomiń — dodam później</button>
           <button class="btn-primary" onclick="goStep(5)">Dalej → Podsumowanie</button>
         </div>
       </div>
@@ -560,8 +560,13 @@ function getPredefUslugi() {
   return Array.from(document.querySelectorAll('#predef-kategorie input[type=checkbox]:checked')).map(cb => ({
     kategoria: cb.closest('.predef-kat').querySelector('.predef-kat-title').textContent.trim().replace(/^.\s/, ''),
     wariant: cb.dataset.nazwa,
-    cena: cb.dataset.cena || '0'
+    cena: cb.dataset.cena || '0',
+    zrodlo: 'predef'
   }));
+}
+
+function logujPominięcie() {
+  fetch('/api/predef/pominięto', { method: 'POST' }).catch(() => {});
 }
 
 function dodajUsluge() {
@@ -580,7 +585,7 @@ function dodajUsluge() {
 function getUslugi() {
   return Array.from(document.querySelectorAll('#uslugi-lista .list-item')).map(el => {
     const inp = el.querySelectorAll('input');
-    return { kategoria: inp[0].value.trim(), wariant: inp[1].value.trim(), cena: inp[2].value };
+    return { kategoria: inp[0].value.trim(), wariant: inp[1].value.trim(), cena: inp[2].value, zrodlo: 'reczne' };
   }).filter(u => u.kategoria && u.wariant);
 }
 
