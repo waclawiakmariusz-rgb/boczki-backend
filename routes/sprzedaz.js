@@ -208,13 +208,25 @@ module.exports = (db) => {
       const sprzedawcyStr = Array.isArray(d.sprzedawca) ? d.sprzedawca.join(', ') : d.sprzedawca;
       const uniqueIdBase = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 15);
 
-      // Rozlicz zadatki portfela
-      const pozycjePortfel = (d.pozycje || []).filter(p => (p.platnosc === 'Portfel' || p.platnosc === 'Zadatek') && parseFloat(p.kwota) > 0);
+      // Rozlicz zadatki portfela — grupuj po depositId żeby uniknąć podwójnego rozliczenia
+      // (frontend dzieli jeden zadatek na wiele pozycji, co przy sekwencyjnych wywołaniach
+      //  powoduje że drugi call nie może znaleźć już WYKORZYSTANEGO oryginału)
+      const depositSumy = {};
+      (d.pozycje || []).forEach(p => {
+        if ((p.platnosc === 'Portfel' || p.platnosc === 'Zadatek') && parseFloat(p.kwota) > 0) {
+          const key = p.depositId || '__bez_id__';
+          depositSumy[key] = (depositSumy[key] || 0) + parseFloat(p.kwota);
+        }
+      });
+      const pozycjePortfel = Object.entries(depositSumy).map(([depositId, kwota]) => ({
+        depositId: depositId === '__bez_id__' ? null : depositId,
+        kwota
+      }));
       let portfelIdx = 0;
       function rozliczPortfele() {
         if (portfelIdx >= pozycjePortfel.length) return zapiszPozycje();
         const p = pozycjePortfel[portfelIdx++];
-        rozliczZadatekAutomatycznie(tenant_id, d.id_klienta, d.klient, parseFloat(p.kwota), p.depositId, sprzedawcyStr, rozliczPortfele);
+        rozliczZadatekAutomatycznie(tenant_id, d.id_klienta, d.klient, p.kwota, p.depositId, sprzedawcyStr, rozliczPortfele);
       }
 
       function zapiszSplit(callback) {
