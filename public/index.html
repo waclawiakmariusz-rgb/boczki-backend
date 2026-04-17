@@ -6508,8 +6508,17 @@ function pokazEkranPinu() {
             if (isAdmin) {
                 grid.innerHTML = `
                     <div style="text-align:center; padding:20px;">
-                        <div style="color:#f59e0b; font-size:15px; margin-bottom:18px;">Brak pracowników — dodaj pierwszego w Panelu Admina.</div>
-                        <button onclick="wejdzJakoAdmin()" style="background:var(--primary); color:#fff; border:none; padding:14px 32px; border-radius:10px; font-size:16px; cursor:pointer; font-weight:bold;">Wejdź do Panelu Admina</button>
+                        <div style="color:#f59e0b; font-size:16px; font-weight:bold; margin-bottom:12px;">Witaj w swoim systemie! 👋</div>
+                        <div style="color:#cbd5e1; font-size:14px; line-height:1.7; margin-bottom:20px; text-align:left; max-width:360px; margin-left:auto; margin-right:auto;">
+                            Nie masz jeszcze żadnych pracowników — to normalne przy pierwszym uruchomieniu.<br><br>
+                            <strong style="color:#fff;">Jak dodać pierwszego pracownika?</strong><br>
+                            1. Kliknij przycisk poniżej, żeby wejść do panelu.<br>
+                            2. W menu po lewej znajdź sekcję <strong style="color:#fff;">Administracja</strong>.<br>
+                            3. Wejdź w zakładkę <strong style="color:#fff;">Dostępy i konta</strong>.<br>
+                            4. Dodaj pracownika i nadaj mu rolę <strong style="color:#fff;">Admin</strong>.<br><br>
+                            <span style="color:#94a3b8; font-size:12px;">Po dodaniu pracownika ten ekran będzie działał normalnie.</span>
+                        </div>
+                        <button onclick="wejdzJakoAdmin()" style="background:var(--primary); color:#fff; border:none; padding:14px 32px; border-radius:10px; font-size:16px; cursor:pointer; font-weight:bold;">Wejdź do Panelu Admina →</button>
                     </div>`;
             } else {
                 grid.innerHTML = '<div style="color:#ef4444;">Brak ustawionych pracowników. Zaloguj się z innego urządzenia do Panelu Admina i dodaj ich.</div>';
