@@ -886,5 +886,48 @@ module.exports = (db) => {
     );
   });
 
+  // ─── PREDEFINIOWANE USŁUGI ────────────────────────────────────────────────
+  router.post('/admin/predef/kategorie', requireAdmin, (req, res) => {
+    const { nazwa, ikona = '💅' } = req.body;
+    if (!nazwa) return res.status(400).json({ status: 'error', message: 'Pole nazwa jest wymagane.' });
+    db.query('INSERT INTO Predef_kategorie (nazwa, ikona) VALUES (?, ?)', [nazwa, ikona], (err, result) => {
+      if (err) return res.status(500).json({ status: 'error', message: err.message });
+      res.json({ status: 'success', id: result.insertId });
+    });
+  });
+
+  router.delete('/admin/predef/kategorie/:id', requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ status: 'error', message: 'Nieprawidłowe id.' });
+    db.query('DELETE FROM Predef_zabiegi WHERE kategoria_id = ?', [id], (err) => {
+      if (err) return res.status(500).json({ status: 'error', message: err.message });
+      db.query('DELETE FROM Predef_kategorie WHERE id = ?', [id], (err2) => {
+        if (err2) return res.status(500).json({ status: 'error', message: err2.message });
+        res.json({ status: 'success' });
+      });
+    });
+  });
+
+  router.post('/admin/predef/zabiegi', requireAdmin, (req, res) => {
+    const { kategoria_id, nazwa, domyslna_cena = 0 } = req.body;
+    if (!kategoria_id || !nazwa) return res.status(400).json({ status: 'error', message: 'Pola kategoria_id i nazwa są wymagane.' });
+    db.query('INSERT INTO Predef_zabiegi (kategoria_id, nazwa, domyslna_cena) VALUES (?, ?, ?)',
+      [kategoria_id, nazwa, domyslna_cena],
+      (err, result) => {
+        if (err) return res.status(500).json({ status: 'error', message: err.message });
+        res.json({ status: 'success', id: result.insertId });
+      }
+    );
+  });
+
+  router.delete('/admin/predef/zabiegi/:id', requireAdmin, (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ status: 'error', message: 'Nieprawidłowe id.' });
+    db.query('DELETE FROM Predef_zabiegi WHERE id = ?', [id], (err) => {
+      if (err) return res.status(500).json({ status: 'error', message: err.message });
+      res.json({ status: 'success' });
+    });
+  });
+
   return router;
 };

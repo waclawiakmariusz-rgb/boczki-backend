@@ -1984,7 +1984,7 @@ async function predef_dodajKat() {
   const nazwa = document.getElementById('predef-new-kat-nazwa').value.trim();
   const ikona = document.getElementById('predef-new-kat-ikona').value.trim() || '💅';
   if (!nazwa) { alert('Podaj nazwę kategorii.'); return; }
-  const r = await fetch(`${API}/predef/kategorie`, {
+  const r = await fetch(`${API}/admin/predef/kategorie`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
     body: JSON.stringify({ nazwa, ikona })
@@ -2001,7 +2001,7 @@ async function predef_dodajKat() {
 
 async function predef_usunKat(id, nazwa) {
   if (!confirm(`Usunąć kategorię "${nazwa}" wraz ze wszystkimi zabiegami?`)) return;
-  const r = await fetch(`${API}/predef/kategorie/${id}`, {
+  const r = await fetch(`${API}/admin/predef/kategorie/${id}`, {
     method: 'DELETE',
     headers: { 'X-Admin-Token': adminToken }
   });
@@ -2017,7 +2017,7 @@ async function predef_dodajZabieg(katId) {
   const nazwa = document.getElementById(`predef-nowy-${katId}`).value.trim();
   const cena = parseFloat(document.getElementById(`predef-cena-${katId}`).value) || 0;
   if (!nazwa) { alert('Podaj nazwę zabiegu.'); return; }
-  const r = await fetch(`${API}/predef/zabiegi`, {
+  const r = await fetch(`${API}/admin/predef/zabiegi`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
     body: JSON.stringify({ kategoria_id: katId, nazwa, domyslna_cena: cena })
@@ -2033,7 +2033,7 @@ async function predef_dodajZabieg(katId) {
 }
 
 async function predef_usunZabieg(id, katId) {
-  const r = await fetch(`${API}/predef/zabiegi/${id}`, {
+  const r = await fetch(`${API}/admin/predef/zabiegi/${id}`, {
     method: 'DELETE',
     headers: { 'X-Admin-Token': adminToken }
   });
