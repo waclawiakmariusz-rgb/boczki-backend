@@ -2577,6 +2577,17 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
     transform: translateY(-1px);
     box-shadow: 0 2px 8px rgba(139,92,246,.15);
 }
+.an_tab-sep {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 4px;
+    color: #c4b5fd;
+    font-size: 14px;
+    letter-spacing: 2px;
+    cursor: default;
+    user-select: none;
+    opacity: 0.7;
+}
 /* Aktywna zakładka przez CSS :has() — zero JS */
 body:has(#an_view-dashboard[style*="display: block"])           .an_tab[data-view="dashboard"],
 body:has(#an_view-summary[style*="display: block"])             .an_tab[data-view="summary"],
@@ -2878,34 +2889,27 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
 				
 				<li id="group-an">
     <button onclick="toggleMenu('sub-analysis', this)" class="nav-parent">📊 Analiza ▼</button>
-    <ul id="sub-analysis" class="nav-submenu">                        
-        
+    <ul id="sub-analysis" class="nav-submenu">
+
         <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 12px 15px 4px 25px; user-select: none;">
-            Finanse i Salon
+            Podstawowe
         </li>
-        <li><button class="nav-btn" onclick="pokaz('monthly_report', this)">📊 Podsumowanie M-c</button></li>
-        <li><button class="nav-btn" onclick="pokaz('yearly', this)">📅 Zestawienie Roczne</button></li>
+        <li><button class="nav-btn" onclick="pokaz('summary', this)">🧾 Dzień</button></li>
+        <li><button class="nav-btn" onclick="pokaz('monthly_report', this)">📅 Miesiąc</button></li>
+        <li><button class="nav-btn" onclick="pokaz('dashboard', this)">👤 Pracownik</button></li>
+
+        <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 15px 15px 4px 25px; user-select: none; border-top: 1px solid #f1f5f9; margin-top: 5px;">
+            Zaawansowane
+        </li>
+        <li><button class="nav-btn" onclick="pokaz('yearly', this)">📆 Rok</button></li>
         <li><button class="nav-btn" onclick="pokaz('costs', this)">💰 Koszty</button></li>
-
-        <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 15px 15px 4px 25px; user-select: none; border-top: 1px solid #f1f5f9; margin-top: 5px;">
-            Zespół i Targety
-        </li>
-        <li><button class="nav-btn active" onclick="pokaz('dashboard', this)">📊 Pracownik</button></li>
-        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this)">🏆 Wyniki i Cele</button></li>
-        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this); tgt_otworz();">🎯 Konfigurator Targetów</button></li>
-        <li><button class="nav-btn" onclick="pokaz('odprawa', this)">📢 Zebranie</button></li>
-
-        <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 15px 15px 4px 25px; user-select: none; border-top: 1px solid #f1f5f9; margin-top: 5px;">
-            Usługi i Sprzedaż
-        </li>
-        <li><button class="nav-btn" onclick="pokaz('analiza-konsultacji', this)">🤝 Analiza Konsultacji</button></li>
         <li><button class="nav-btn" onclick="pokaz('treatment_analysis', this)">💉 Analiza Zabiegu</button></li>
-
-        <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 15px 15px 4px 25px; user-select: none; border-top: 1px solid #f1f5f9; margin-top: 5px;">
-            Asystent AI
-        </li>
+        <li><button class="nav-btn" onclick="pokaz('analiza-konsultacji', this)">🤝 Analiza Konsultacji</button></li>
+        <li><button class="nav-btn" onclick="pokaz('odprawa', this)">📢 Zebranie</button></li>
+        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this)">🏆 Wyniki i Cele</button></li>
+        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this); tgt_otworz();">🎯 Targety</button></li>
         <li><button class="nav-btn" onclick="pokaz('bi', this)" style="color: #ec4899; font-weight: bold;">🧠 Inteligentna Analiza</button></li>
-        
+
     </ul>
 </li>
 				
@@ -4303,13 +4307,14 @@ ANALIZA MANAGER
      ║  Widoczny tylko gdy aktywny widok an_view-*         ║
      ╚══════════════════════════════════════════════════════╝ -->
 <div id="an_tabs" role="tablist" aria-label="Nawigacja analityczna">
-    <button class="an_tab" onclick="an_goTo('dashboard')"          data-view="dashboard">📊 Pracownik</button>
     <button class="an_tab" onclick="an_goTo('summary')"            data-view="summary">🧾 Dzień</button>
     <button class="an_tab" onclick="an_goTo('monthly_report')"     data-view="monthly_report">📅 Miesiąc</button>
+    <button class="an_tab" onclick="an_goTo('dashboard')"          data-view="dashboard">👤 Pracownik</button>
+    <span class="an_tab-sep" title="Widoki zaawansowane">···</span>
     <button class="an_tab" onclick="an_goTo('yearly')"             data-view="yearly">📆 Rok</button>
     <button class="an_tab" onclick="an_goTo('treatment_analysis')" data-view="treatment_analysis">💉 Zabieg</button>
-    <button class="an_tab" onclick="an_goTo('bi')"                 data-view="bi">🧠 BI</button>
     <button class="an_tab" onclick="an_goTo('costs')"              data-view="costs">💰 Koszty</button>
+    <button class="an_tab" onclick="an_goTo('bi')"                 data-view="bi">🧠 BI</button>
 </div>
 
 <div id="an_view-dashboard" style="display:none;">
