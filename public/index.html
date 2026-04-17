@@ -453,7 +453,11 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 }
 
 #pin-overlay p, #pin-users-grid div span {
-    color: #cbd5e1 !important;
+    color: #e2e8f0 !important;
+}
+
+#pin-users-grid .onboarding-text, #pin-users-grid .onboarding-text strong, #pin-users-grid .onboarding-text span {
+    color: #000 !important;
 }
 
 /* Kafelki Pracowników - Białe tło i delikatny cień z zaokrągleniami, bez zmiany wielkości! */
@@ -6509,7 +6513,7 @@ function pokazEkranPinu() {
                 grid.innerHTML = `
                     <div style="text-align:center; padding:20px;">
                         <div style="color:#f59e0b; font-size:16px; font-weight:bold; margin-bottom:12px;">Witaj w swoim systemie! 👋</div>
-                        <div style="color:#000 !important; font-size:14px; line-height:1.7; margin-bottom:20px; text-align:left; max-width:360px; margin-left:auto; margin-right:auto;">
+                        <div class="onboarding-text" style="color:#000 !important; font-size:14px; line-height:1.7; margin-bottom:20px; text-align:left; max-width:360px; margin-left:auto; margin-right:auto;">
                             Nie masz jeszcze żadnych pracowników — to normalne przy pierwszym uruchomieniu.<br><br>
                             <strong style="color:#000 !important;">Jak dodać pierwszego pracownika?</strong><br>
                             1. Kliknij przycisk poniżej, żeby wejść do panelu.<br>
@@ -18553,8 +18557,8 @@ initTheme();
     </div>
 </div>
 <div id="pin-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#1e293b; z-index:9999; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:5vh; padding-bottom: 5vh; overflow-y:auto; color:white; box-sizing:border-box;">
-    <h2 style="color:var(--primary); margin-bottom:10px;">✨ Estelio</h2>
-    <p style="color:#94a3b8; margin-bottom:30px;">Wybierz swój profil, aby rozpocząć pracę</p>
+    <h2 style="color:#fff !important; margin-bottom:10px;">✨ Estelio</h2>
+    <p style="color:#e2e8f0 !important; margin-bottom:30px;">Wybierz swój profil, aby rozpocząć pracę</p>
     
     <div id="pin-users-grid" style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center; max-width:800px; margin-bottom:40px;">
         </div>
