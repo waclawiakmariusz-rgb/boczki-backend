@@ -205,27 +205,30 @@ module.exports = (db) => {
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
-            // Rejestr_Oświadczeń
+            // Rejestr_Oświadczeń → Rejestr_RODO → odpowiedź (sekwencyjnie)
             const idOsw = randomUUID();
             const czyZgoda = d.zgoda_regulamin ? 'TAK' : 'NIE';
             db.query(
               `INSERT INTO \`Rejestr_Oświadczeń\` (id, tenant_id, id_klienta, data_podpisu, klient, zapoznanie_z_regulaminem, przekazano_wyciag, pracownik) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
               [idOsw, tenant_id, String(noweId), d.data_podpisu || null, d.klient, czyZgoda, czyZgoda, d.pracownik || ''],
-              () => {}
-            );
+              (errOsw) => {
+                if (errOsw) console.error('[add_client] Rejestr_Oświadczeń INSERT failed:', errOsw.message);
 
-            // Rejestr_RODO
-            const idRodo = randomUUID();
-            db.query(
-              `INSERT INTO Rejestr_RODO (id, tenant_id, klient, data_podpisu, wizerunek, newsletter_sms, kontakt_tel, newsletter_email, booksy_sms, email_adres, id_klienta, pracownik) VALUES (?, ?, ?, ?, 'NIE', 'NIE', 'NIE', 'NIE', 'Nie dotyczy', 'nie dotyczy', ?, ?)`,
-              [idRodo, tenant_id, d.klient, d.data_podpisu || null, String(noweId), d.pracownik || ''],
-              () => {}
-            );
+                const idRodo = randomUUID();
+                db.query(
+                  `INSERT INTO Rejestr_RODO (id, tenant_id, klient, data_podpisu, wizerunek, newsletter_sms, kontakt_tel, newsletter_email, booksy_sms, email_adres, id_klienta, pracownik) VALUES (?, ?, ?, ?, 'NIE', 'NIE', 'NIE', 'NIE', 'Nie dotyczy', 'nie dotyczy', ?, ?)`,
+                  [idRodo, tenant_id, d.klient, d.data_podpisu || null, String(noweId), d.pracownik || ''],
+                  (errRodo) => {
+                    if (errRodo) console.error('[add_client] Rejestr_RODO INSERT failed:', errRodo.message);
 
-            let opisLogu = `Nowy klient: ${d.klient} (ID: ${noweId}) [Tel: ${d.telefon || 'brak'}]`;
-            if (d.info_duplikat && d.info_duplikat !== '') opisLogu += ` UWAGA: ${d.info_duplikat}`;
-            zapiszLog(tenant_id, 'DODANIE KLIENTA', d.pracownik, opisLogu);
-            return res.json({ status: 'success', message: `Dodano klienta: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
+                    let opisLogu = `Nowy klient: ${d.klient} (ID: ${noweId}) [Tel: ${d.telefon || 'brak'}]`;
+                    if (d.info_duplikat && d.info_duplikat !== '') opisLogu += ` UWAGA: ${d.info_duplikat}`;
+                    zapiszLog(tenant_id, 'DODANIE KLIENTA', d.pracownik, opisLogu);
+                    return res.json({ status: 'success', message: `Dodano klienta: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
+                  }
+                );
+              }
+            );
           }
         );
       });
@@ -242,9 +245,11 @@ module.exports = (db) => {
             db.query(
               `INSERT INTO \`Rejestr_Oświadczeń\` (id, tenant_id, id_klienta, klient, zapoznanie_z_regulaminem, przekazano_wyciag, pracownik) VALUES (?, ?, ?, ?, 'NIE', 'NIE', ?)`,
               [idOsw, tenant_id, String(noweId), d.klient, d.pracownik || ''],
-              () => {}
+              (errOsw) => {
+                if (errOsw) console.error('[add_client_fast] Rejestr_Oświadczeń INSERT failed:', errOsw.message);
+                return res.json({ status: 'success', message: `Utworzono konto: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
+              }
             );
-            return res.json({ status: 'success', message: `Utworzono konto: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
           }
         );
       });
