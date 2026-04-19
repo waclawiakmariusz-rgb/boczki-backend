@@ -52,7 +52,43 @@
     .nav-links a:hover { color: var(--m-ink); }
     .nav-cta { background: var(--m-mauve) !important; color: #fff !important; padding: 8px 18px; border-radius: 6px; font-weight: 500 !important; transition: background .2s !important; }
     .nav-cta:hover { background: var(--m-mauve-d) !important; }
-    @media (max-width: 600px) { nav { padding: 14px 20px; } .nav-links a:not(.nav-cta) { display: none; } }
+    @media (max-width: 600px) { nav { padding: 14px 20px; } .nav-links { display: none; } .hamburger { display: block; } }
+  .hamburger {
+    display: none; background: none; border: none; cursor: pointer;
+    padding: 6px; color: var(--m-ink);
+  }
+  .hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--m-ink); margin: 5px 0;
+    transition: transform .3s, opacity .3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .nav-mobile-menu {
+    display: none; flex-direction: column;
+    background: var(--m-cream);
+    border-top: 1px solid var(--m-sand);
+    padding: 14px 20px 20px;
+    position: absolute; top: 100%; left: 0; right: 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    z-index: 99;
+  }
+  .nav-mobile-menu.open { display: flex; }
+  .nav-mobile-menu a {
+    text-decoration: none; font-size: .93rem;
+    color: var(--m-muted); padding: 11px 0;
+    border-bottom: 1px solid var(--m-sand);
+    transition: color .2s;
+  }
+  .nav-mobile-menu a:last-child { border-bottom: none; }
+  .nav-mobile-menu a:hover { color: var(--m-ink); }
+  .nav-mobile-menu .nav-cta {
+    margin-top: 6px; text-align: center;
+    background: var(--m-mauve); color: #fff !important;
+    border-radius: 6px; padding: 11px; font-weight: 500;
+    border-bottom: none;
+  }
 
     /* ARTICLE HERO — Morandi light */
     .article-hero {
@@ -163,11 +199,19 @@
 </head>
 <body>
 
-<nav>
+<nav style="position:relative;">
   <a class="logo" href="/zamow.html">Estelio</a>
   <div class="nav-links">
     <a href="/blog.html">← Blog</a>
     <a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a>
+  </div>
+  <button class="hamburger" id="hamburger" aria-label="Menu" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-mobile-menu" id="mobileMenu">
+    <a href="/blog.html" onclick="closeMenu()">← Blog</a>
+    <a href="/zamow.html" onclick="closeMenu()">Strona główna</a>
+    <a href="/zamow.html#formularz" class="nav-cta" onclick="closeMenu()">Zamów dostęp</a>
   </div>
 </nav>
 
@@ -230,11 +274,35 @@
 </div>
 
 <footer>
-  © 2026 Estelio ·
+  <nav style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px 24px; margin-bottom:14px; padding:0;">
+    <a href="/blog.html">Blog</a>
+    <a href="/zamow.html">Strona główna</a>
+    <a href="/zamow.html#formularz" style="color:var(--m-mauve); font-weight:500;">Zamów dostęp</a>
+  </nav>
+  <div>© 2026 Estelio ·
   <a href="/blog.html">Blog</a> ·
   <a href="/zamow.html">Strona główna</a> ·
   <a href="/regulamin.html">Regulamin</a> ·
-  <a href="/polityka-prywatnosci.html">Polityka prywatności</a>
+  <a href="/polityka-prywatnosci.html">Polityka prywatności</a></div>
 </footer>
+
+<script>
+function toggleMenu() {
+  const btn = document.getElementById('hamburger');
+  const menu = document.getElementById('mobileMenu');
+  btn.classList.toggle('open');
+  menu.classList.toggle('open');
+}
+function closeMenu() {
+  const btn = document.getElementById('hamburger');
+  const menu = document.getElementById('mobileMenu');
+  if (btn) btn.classList.remove('open');
+  if (menu) menu.classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  const nav = document.querySelector('nav');
+  if (nav && !nav.contains(e.target)) closeMenu();
+});
+</script>
 </body>
 </html>
