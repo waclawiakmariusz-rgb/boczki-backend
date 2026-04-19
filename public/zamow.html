@@ -72,6 +72,42 @@
     transition: border-color .2s, color .2s;
   }
   .nav-login-mobile:hover { border-color: var(--rose); color: var(--rose); }
+  .hamburger {
+    display: none; background: none; border: none; cursor: pointer;
+    padding: 6px; color: var(--dark);
+  }
+  .hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--dark); margin: 5px 0;
+    transition: transform .3s, opacity .3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .nav-mobile-menu {
+    display: none; flex-direction: column;
+    background: var(--cream);
+    border-top: 1px solid var(--border);
+    padding: 16px 24px 24px;
+    position: absolute; top: 100%; left: 0; right: 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08);
+    z-index: 99;
+  }
+  .nav-mobile-menu.open { display: flex; }
+  .nav-mobile-menu a {
+    text-decoration: none; font-size: .95rem;
+    color: var(--text-muted); padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    transition: color .2s;
+  }
+  .nav-mobile-menu a:last-child { border-bottom: none; }
+  .nav-mobile-menu a:hover { color: var(--dark); }
+  .nav-mobile-menu .nav-cta {
+    margin-top: 8px; text-align: center;
+    background: var(--rose); color: #fff !important;
+    border-radius: 6px; padding: 12px; font-weight: 500;
+    border-bottom: none;
+  }
 
   /* ── HERO ── */
   .hero {
@@ -782,7 +818,8 @@
   @media (max-width: 900px) {
     nav { padding: 18px 24px; }
     nav ul { display: none; }
-    .nav-login-mobile { display: inline-block; }
+    .nav-login-mobile { display: none; }
+    .hamburger { display: block; }
     .hero { grid-template-columns: 1fr; padding: 50px 24px 40px; }
     .hero-right { display: none; }
     .features { padding: 0 24px; }
@@ -805,7 +842,7 @@
 <body>
 
 <!-- NAV -->
-<nav>
+<nav style="position:relative;">
   <a class="logo" href="#">Estelio</a>
   <ul>
     <li><a href="#funkcje">Funkcje</a></li>
@@ -816,7 +853,18 @@
     <li><a href="/zaloguj">Zaloguj</a></li>
     <li><a href="#formularz" class="nav-cta">Zamów dostęp</a></li>
   </ul>
-  <a href="/zaloguj" class="nav-login-mobile">Zaloguj</a>
+  <button class="hamburger" id="hamburger" aria-label="Menu" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-mobile-menu" id="mobileMenu">
+    <a href="#funkcje" onclick="closeMenu()">Funkcje</a>
+    <a href="#opinie" onclick="closeMenu()">Opinie</a>
+    <a href="/blog.html">Blog</a>
+    <a href="#faq" onclick="closeMenu()">FAQ</a>
+    <a href="#kontakt" onclick="closeMenu()">Kontakt</a>
+    <a href="/zaloguj">Zaloguj</a>
+    <a href="#formularz" class="nav-cta" onclick="closeMenu()">Zamów dostęp</a>
+  </div>
 </nav>
 
 <!-- HERO -->
@@ -1340,13 +1388,40 @@
 
 <!-- FOOTER -->
 <footer>
-  © 2026 Estelio · Wszystkie prawa zastrzeżone ·
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> ·
-  <a href="/polityka-prywatnosci.html">Polityka prywatności</a> ·
-  <a href="/regulamin.html">Regulamin</a>
+  <nav style="display:flex; flex-wrap:wrap; justify-content:center; gap:8px 28px; margin-bottom:20px; padding:0;">
+    <a href="#funkcje">Funkcje</a>
+    <a href="#opinie">Opinie</a>
+    <a href="/blog.html">Blog</a>
+    <a href="#faq">FAQ</a>
+    <a href="#kontakt">Kontakt</a>
+    <a href="/zaloguj">Zaloguj</a>
+    <a href="#formularz" style="color:var(--rose); font-weight:500;">Zamów dostęp</a>
+  </nav>
+  <div>
+    © 2026 Estelio · Wszystkie prawa zastrzeżone ·
+    <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> ·
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> ·
+    <a href="/regulamin.html">Regulamin</a>
+  </div>
 </footer>
 
 <script>
+// ── Hamburger menu ───────────────────────────────────────────────
+function toggleMenu() {
+  const btn = document.getElementById('hamburger');
+  const menu = document.getElementById('mobileMenu');
+  btn.classList.toggle('open');
+  menu.classList.toggle('open');
+}
+function closeMenu() {
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('mobileMenu').classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  const nav = document.querySelector('nav');
+  if (!nav.contains(e.target)) closeMenu();
+});
+
 // ── Reveal on scroll ─────────────────────────────────────────────
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
