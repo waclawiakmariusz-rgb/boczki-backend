@@ -256,9 +256,12 @@ async function startIncrementalMigration() {
             continue;
         }
 
-        // Kolumny DB do wgrania (bez id/tenant_id/utworzono_w)
+        // Kolumny DB do wgrania (bez id/tenant_id/utworzono_w i kolumn dodanych po eksporcie Excel)
+        // 'zrodlo' dodano 2026-04-17 — DEFAULT 'reczne'
+        // 'czy_rozliczone' — kolumna Magdy, DEFAULT 0, nie istnieje w starym Excelu
+        const SKIP_COLS = new Set(['id', 'tenant_id', 'utworzono_w', 'zrodlo', 'czy_rozliczone']);
         const dbCols = columns.map(c => c.Field)
-            .filter(f => !['id', 'tenant_id', 'utworzono_w'].includes(f));
+            .filter(f => !SKIP_COLS.has(f));
 
         // Wczytaj arkusz Excel
         const sheetData = xlsx.utils.sheet_to_json(
