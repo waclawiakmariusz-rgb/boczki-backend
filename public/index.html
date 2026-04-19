@@ -19353,10 +19353,10 @@ body.dark-mode .est-typing { background: #0f172a; }
         <div id="est-help-messages"></div>
 
         <div id="est-suggestions">
-            <button class="est-sug" onclick="estAsk('Jak dodać klienta?')">📋 Dodaj klienta</button>
-            <button class="est-sug" onclick="estAsk('Jak dodać wizytę?')">📅 Dodaj wizytę</button>
-            <button class="est-sug" onclick="estAsk('Jak zmienić PIN?')">🔑 Zmień PIN</button>
-            <button class="est-sug" onclick="estAsk('Raporty i statystyki')">📊 Raporty</button>
+            <button class="est-sug" onclick="estAsk('Jak działa Esti?')">🤖 Jak działa Esti</button>
+            <button class="est-sug" onclick="estAsk('Jak działają rabaty?')">🏷️ Rabaty</button>
+            <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
+            <button class="est-sug" onclick="estAsk('Konsultacje')">📝 Konsultacje</button>
         </div>
 
         <div id="est-help-input-row">
@@ -19381,6 +19381,26 @@ body.dark-mode .est-typing { background: #0f172a; }
    answer:   treść odpowiedzi (HTML dozwolony)
    ---------------------------------------------------------- */
 const EST_KB = [
+    {
+        title: 'Jak działa Esti?', category: 'Ogólne',
+        keywords: ['jak dziala esti', 'co to esti', 'co potrafi', 'o esti', 'asystent', 'chat', 'pomoc', 'jak korzystac z esti', 'do czego sluzy'],
+        answer: 'Esti to Twój asystent wbudowany w system Estelio. Możesz tu zadawać pytania dotyczące obsługi systemu — np. jak dodać klienta, jak działa magazyn, co zrobić z zadatkiem.<br><br>Esti przeszukuje bazę wiedzy i podpowiada odpowiedzi. Jeśli czegoś nie wie — wyświetli kontakt do wsparcia.<br><br>Możesz też wpisać własne pytanie w pole poniżej.'
+    },
+    {
+        title: 'Jak działają rabaty?', category: 'Ustawienia',
+        keywords: ['rabat', 'rabaty', 'znizka', 'znizki', 'przecena', 'znizkowy', 'procent znizki', 'kreator rabatow', 'kod rabatowy'],
+        answer: 'Rabaty zarządzasz w sekcji <b>Kreator Rabatów</b>. Możesz przypisać stały rabat procentowy do wybranego klienta — będzie automatycznie uwzględniany przy kasowaniu wizyty.<br><br>Aby ustawić rabat: otwórz kartę klienta → zakładka <b>Rabaty</b> → podaj procent i zapisz.'
+    },
+    {
+        title: 'Urodziny klientów', category: 'Klienci',
+        keywords: ['urodziny', 'urodzin', 'data urodzenia', 'lista urodzin', 'kto ma urodziny', 'zyczyc', 'zyczyc urodzin', 'jubileusz'],
+        answer: 'W sekcji <b>Klienci</b> znajdziesz zakładkę 🎂 <b>Urodziny</b>. Widoczna jest tam lista klientów z najbliższymi urodzinami — możesz łatwo sprawdzić, komu dzisiaj lub wkrótce minął termin.<br><br>Data urodzenia przypisywana jest w karcie klienta podczas jego rejestracji lub edycji.'
+    },
+    {
+        title: 'Konsultacje', category: 'Sprzedaż',
+        keywords: ['konsultacja', 'konsultacje', 'wywiad', 'ankieta', 'formularz konsultacji', 'oswiadczenie', 'zgody', 'rejestr oswiadczen'],
+        answer: 'Konsultacje (wywiady przed zabiegiem) obsługiwane są w sekcji <b>Rejestr Oświadczeń</b>. Możesz tam przeglądać i zapisywać zgody klientów na zabiegi.<br><br>Jeśli chcesz przypisać oświadczenie do klienta — otwórz jego kartę i skorzystaj z zakładki <b>Oświadczenia</b>.'
+    },
     {
         title: 'Jak dodać klienta?', category: 'Klienci',
         keywords: ['dodaj klienta', 'nowy klient', 'rejestracja klienta', 'dodac klienta', 'wpisac klienta', 'dodac nowego', 'nowego klienta'],
