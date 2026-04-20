@@ -4573,76 +4573,177 @@ ANALIZA MANAGER
     <!-- Nagłówek -->
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
         <h2 style="margin:0;">💰 Planowanie Kosztów</h2>
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-            <input type="month" id="kp_miesiac" style="padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; cursor:pointer;" onchange="kp_zaladuj()">
-            <button onclick="kp_otworzPowiel()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">📋 Powiel z...</button>
-            <button onclick="kp_otworzKat()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">➕ Dodaj kategorię</button>
-            <button onclick="kp_zapisz()" style="padding:8px 20px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">💾 Zapisz</button>
-        </div>
+        <button onclick="kp_otworzKat()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">➕ Dodaj kategorię</button>
     </div>
 
-    <!-- Tabela kosztów -->
-    <div class="card" style="padding:0; overflow:hidden;">
+    <!-- Lista miesięcy -->
+    <div class="card" style="padding:0; overflow:hidden; margin-bottom:24px;">
         <div style="overflow-x:auto;">
             <table style="width:100%; border-collapse:collapse; font-size:13px;">
                 <thead>
                     <tr style="background:#f8fafc; color:#64748b; text-transform:uppercase; font-size:11px; font-weight:700;">
-                        <th style="padding:12px 10px; text-align:left; width:36px;">Lp.</th>
-                        <th style="padding:12px 10px; text-align:left;">Nazwa</th>
-                        <th style="padding:12px 10px; text-align:right; width:160px;">Część Stała</th>
-                        <th style="padding:12px 10px; text-align:right; width:160px;">Część Zmienna</th>
-                        <th style="padding:12px 10px; text-align:right; width:140px; color:#7c3aed;">Razem</th>
-                        <th style="padding:12px 10px; width:36px;"></th>
+                        <th style="padding:12px 16px; text-align:left;">Miesiąc</th>
+                        <th style="padding:12px 16px; text-align:right;">Część Stała</th>
+                        <th style="padding:12px 16px; text-align:right;">Część Zmienna</th>
+                        <th style="padding:12px 16px; text-align:right; color:#7c3aed;">Razem</th>
+                        <th style="padding:12px 16px; text-align:center; width:160px;"></th>
                     </tr>
                 </thead>
-                <tbody id="kp_tbody"></tbody>
-                <tfoot>
-                    <tr style="background:#f1f0ff; font-weight:700; font-size:14px; border-top:2px solid #7c3aed;">
-                        <td colspan="2" style="padding:14px 10px; color:#4c1d95;">RAZEM</td>
-                        <td id="kp_sum_stala"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
-                        <td id="kp_sum_zmienna" style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
-                        <td id="kp_sum_razem"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
+                <tbody id="kp_lista_tbody">
+                    <tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>
+                </tbody>
             </table>
         </div>
-        <div id="kp_pusty" style="display:none; padding:40px; text-align:center; color:#94a3b8; font-size:14px;">
-            Wybierz miesiąc, aby załadować koszty.
+    </div>
+
+    <!-- Panel szczegółów (rozwijany) -->
+    <div id="kp_panel_szczegoly" style="display:none;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+            <div>
+                <h3 id="kp_panel_tytul" style="margin:0; font-size:17px; color:#4c1d95;">📋 Szczegóły kosztów</h3>
+                <p style="margin:4px 0 0 0; font-size:12px; color:#94a3b8;">Edytuj wartości i kliknij Zapisz.</p>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button onclick="kp_otworzPowiel()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">📋 Powiel z...</button>
+                <button onclick="kp_zapisz()" style="padding:8px 20px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">💾 Zapisz</button>
+                <button onclick="kp_zamknijPanel()" style="padding:8px 12px; background:white; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; color:#64748b;">✕ Zamknij</button>
+            </div>
+        </div>
+        <div class="card" style="padding:0; overflow:hidden;">
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead>
+                        <tr style="background:#f8fafc; color:#64748b; text-transform:uppercase; font-size:11px; font-weight:700;">
+                            <th style="padding:12px 10px; text-align:left; width:36px;">Lp.</th>
+                            <th style="padding:12px 10px; text-align:left;">Nazwa</th>
+                            <th style="padding:12px 10px; text-align:right; width:160px;">Część Stała</th>
+                            <th style="padding:12px 10px; text-align:right; width:160px;">Część Zmienna</th>
+                            <th style="padding:12px 10px; text-align:right; width:140px; color:#7c3aed;">Razem</th>
+                            <th style="padding:12px 10px; width:36px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="kp_tbody"></tbody>
+                    <tfoot>
+                        <tr style="background:#f1f0ff; font-weight:700; font-size:14px; border-top:2px solid #7c3aed;">
+                            <td colspan="2" style="padding:14px 10px; color:#4c1d95;">RAZEM</td>
+                            <td id="kp_sum_stala"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                            <td id="kp_sum_zmienna" style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                            <td id="kp_sum_razem"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
         </div>
     </div>
 
     <script>
     // ── Planowanie Kosztów — logika ──────────────────────────────
-    let kp_dane = [];      // bieżące wiersze { id, lp, nazwa, typ, czesc_stala, czesc_zmienna }
-    let kp_loaded = false; // czy dane załadowane
+    let kp_dane        = [];   // wiersze aktywnego miesiąca
+    let kp_aktywnyMies = null; // aktualnie otwarty miesiąc
 
-    function kp_init() {
-        const now = new Date();
-        const m   = String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('kp_miesiac').value = `${now.getFullYear()}-${m}`;
-        kp_zaladuj();
+    const KP_MIESIACE_PL = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec',
+                             'Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+
+    function kp_fmt(v) {
+        return Number(v || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
     }
 
-    async function kp_zaladuj() {
-        const miesiac = document.getElementById('kp_miesiac').value;
-        if (!miesiac) { document.getElementById('kp_pusty').style.display = 'block'; return; }
+    function kp_nazwaMs(ms) { // '2026-04' → 'Kwiecień 2026'
+        const [y, m] = ms.split('-').map(Number);
+        return KP_MIESIACE_PL[m - 1] + ' ' + y;
+    }
+
+    // ── Lista miesięcy ───────────────────────────────────────────
+    async function kp_init() {
         const tid = localStorage.getItem('boczki_tenant_id') || '';
         const tok = localStorage.getItem('boczki_session_token') || '';
-        document.getElementById('kp_tbody').innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>`;
+        try {
+            const r = await fetch(`/api/koszty-plan/lista?tenant_id=${encodeURIComponent(tid)}&session_token=${encodeURIComponent(tok)}`);
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            kp_renderujListe(d.data);
+        } catch(e) {
+            document.getElementById('kp_lista_tbody').innerHTML =
+                `<tr><td colspan="5" style="padding:24px; text-align:center; color:#ef4444;">Błąd: ${e.message}</td></tr>`;
+        }
+    }
+
+    function kp_renderujListe(lista) {
+        const tbody = document.getElementById('kp_lista_tbody');
+        if (!lista.length) {
+            tbody.innerHTML = `<tr><td colspan="5" style="padding:24px; text-align:center; color:#94a3b8;">Brak danych.</td></tr>`;
+            return;
+        }
+        tbody.innerHTML = lista.map(m => {
+            const aktywny = m.miesiac_rok === kp_aktywnyMies;
+            const bg = aktywny ? 'background:#faf5ff;' : '';
+            const razem = m.ma_dane ? kp_fmt(m.suma_razem) : '<span style="color:#cbd5e1;">—</span>';
+            const stala = m.ma_dane ? kp_fmt(m.suma_stala) : '<span style="color:#cbd5e1;">—</span>';
+            const zmienna = m.ma_dane ? kp_fmt(m.suma_zmienna) : '<span style="color:#cbd5e1;">—</span>';
+            return `<tr style="border-bottom:1px solid #f1f5f9; ${bg}">
+                <td style="padding:12px 16px; font-weight:600;">${kp_nazwaMs(m.miesiac_rok)}</td>
+                <td style="padding:12px 16px; text-align:right; color:#64748b;">${stala}</td>
+                <td style="padding:12px 16px; text-align:right; color:#64748b;">${zmienna}</td>
+                <td style="padding:12px 16px; text-align:right; font-weight:700; color:#4c1d95;">${razem}</td>
+                <td style="padding:12px 16px; text-align:center;">
+                    <button onclick="kp_zobaczSzczegoly('${m.miesiac_rok}')"
+                        style="padding:6px 14px; background:${aktywny ? '#7c3aed' : 'white'}; color:${aktywny ? 'white' : '#7c3aed'}; border:1.5px solid #7c3aed; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600;">
+                        ${aktywny ? '▲ Ukryj' : '▼ Szczegóły'}
+                    </button>
+                </td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Otwórz/zamknij szczegóły miesiąca ───────────────────────
+    async function kp_zobaczSzczegoly(miesiac) {
+        if (kp_aktywnyMies === miesiac) { kp_zamknijPanel(); return; }
+        kp_aktywnyMies = miesiac;
+        document.getElementById('kp_panel_tytul').textContent = '📋 Szczegóły kosztów: ' + kp_nazwaMs(miesiac);
+        document.getElementById('kp_panel_szczegoly').style.display = 'block';
+        document.getElementById('kp_tbody').innerHTML =
+            `<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>`;
+        document.getElementById('kp_panel_szczegoly').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+        const tid = localStorage.getItem('boczki_tenant_id') || '';
+        const tok = localStorage.getItem('boczki_session_token') || '';
         try {
             const r = await fetch(`/api/koszty-plan/${miesiac}?tenant_id=${encodeURIComponent(tid)}&session_token=${encodeURIComponent(tok)}`);
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message);
             kp_dane = d.data;
-            kp_renderuj();
-            kp_loaded = true;
+            kp_renderujSzczegoly();
+            kp_odswiezListe();
         } catch(e) {
-            document.getElementById('kp_tbody').innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Błąd: ${e.message}</td></tr>`;
+            document.getElementById('kp_tbody').innerHTML =
+                `<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Błąd: ${e.message}</td></tr>`;
         }
     }
 
-    function kp_renderuj() {
+    function kp_zamknijPanel() {
+        kp_aktywnyMies = null;
+        document.getElementById('kp_panel_szczegoly').style.display = 'none';
+        kp_odswiezListe();
+    }
+
+    function kp_odswiezListe() {
+        // Odśwież podświetlenie aktywnego wiersza bez pełnego przeładowania
+        document.querySelectorAll('#kp_lista_tbody tr').forEach(tr => {
+            const btn = tr.querySelector('button');
+            if (!btn) return;
+            const ms = btn.getAttribute('onclick').match(/'([^']+)'/)?.[1];
+            if (!ms) return;
+            const aktywny = ms === kp_aktywnyMies;
+            tr.style.background = aktywny ? '#faf5ff' : '';
+            btn.style.background = aktywny ? '#7c3aed' : 'white';
+            btn.style.color = aktywny ? 'white' : '#7c3aed';
+            btn.textContent = aktywny ? '▲ Ukryj' : '▼ Szczegóły';
+        });
+    }
+
+    // ── Renderuj tabelę szczegółów ───────────────────────────────
+    function kp_renderujSzczegoly() {
         const tbody = document.getElementById('kp_tbody');
         if (!kp_dane.length) {
             tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Brak kategorii.</td></tr>`;
@@ -4650,27 +4751,29 @@ ANALIZA MANAGER
             return;
         }
         tbody.innerHTML = kp_dane.map((r, i) => {
-            const stalaDisabled   = r.typ === 'zmienna'  ? 'disabled style="background:#f8fafc; color:#94a3b8;"' : '';
-            const zmiennaDisabled = r.typ === 'stała'    ? 'disabled style="background:#f8fafc; color:#94a3b8;"' : '';
             const razem = (r.czesc_stala || 0) + (r.czesc_zmienna || 0);
-            return `<tr style="border-bottom:1px solid #f1f5f9;" data-idx="${i}">
+            const stalaGrey   = r.typ === 'zmienna' ? 'background:#f8fafc; color:#94a3b8;' : '';
+            const zmiennaGrey = r.typ === 'stała'   ? 'background:#f8fafc; color:#94a3b8;' : '';
+            return `<tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px; color:#94a3b8; font-size:12px;">${r.lp}</td>
                 <td style="padding:10px; font-weight:500;">${escHtml(r.nazwa)}</td>
                 <td style="padding:6px 10px; text-align:right;">
                     <input type="number" step="0.01" min="0" value="${r.czesc_stala || 0}"
-                        ${stalaDisabled}
+                        ${r.typ === 'zmienna' ? 'disabled' : ''}
                         oninput="kp_zmiana(${i},'stala',this.value)"
-                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${r.typ==='zmienna'?'background:#f8fafc;color:#94a3b8;':''}">
+                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${stalaGrey}">
                 </td>
                 <td style="padding:6px 10px; text-align:right;">
                     <input type="number" step="0.01" min="0" value="${r.czesc_zmienna || 0}"
-                        ${zmiennaDisabled}
+                        ${r.typ === 'stała' ? 'disabled' : ''}
                         oninput="kp_zmiana(${i},'zmienna',this.value)"
-                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${r.typ==='stała'?'background:#f8fafc;color:#94a3b8;':''}">
+                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${zmiennaGrey}">
                 </td>
                 <td id="kp_razem_${i}" style="padding:10px; text-align:right; font-weight:600; color:#4c1d95;">${kp_fmt(razem)}</td>
                 <td style="padding:10px; text-align:center;">
-                    <button onclick="kp_usunKat('${r.id}',${i})" title="Usuń kategorię" style="border:none; background:none; color:#94a3b8; cursor:pointer; font-size:16px; line-height:1; padding:2px 6px; border-radius:4px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">×</button>
+                    <button onclick="kp_usunKat('${r.id}',${i})" title="Usuń kategorię"
+                        style="border:none; background:none; color:#cbd5e1; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px; border-radius:4px;"
+                        onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'">×</button>
                 </td>
             </tr>`;
         }).join('');
@@ -4695,30 +4798,31 @@ ANALIZA MANAGER
         document.getElementById('kp_sum_razem').textContent   = kp_fmt(sumS + sumZ);
     }
 
-    function kp_fmt(v) {
-        return Number(v || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
-    }
-
+    // ── Zapisz miesiąc ───────────────────────────────────────────
     async function kp_zapisz() {
-        const miesiac = document.getElementById('kp_miesiac').value;
-        if (!miesiac || !kp_dane.length) return alert('Najpierw załaduj miesiąc.');
+        if (!kp_aktywnyMies || !kp_dane.length) return alert('Najpierw otwórz szczegóły miesiąca.');
         const tid = localStorage.getItem('boczki_tenant_id') || '';
         const tok = localStorage.getItem('boczki_session_token') || '';
         try {
             const r = await fetch('/api/koszty-plan/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tenant_id: tid, session_token: tok, miesiac_rok: miesiac, rows: kp_dane })
+                body: JSON.stringify({ tenant_id: tid, session_token: tok, miesiac_rok: kp_aktywnyMies, rows: kp_dane })
             });
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message);
-            alert(`Zapisano. Łączne koszty: ${kp_fmt(d.kwota)}`);
+            // Odśwież listę po zapisie
+            await kp_init();
+            // Przywróć otwarty panel
+            const ms = kp_aktywnyMies;
+            kp_aktywnyMies = null;
+            await kp_zobaczSzczegoly(ms);
         } catch(e) { alert('Błąd zapisu: ' + e.message); }
     }
 
     // ── Usuwanie kategorii ───────────────────────────────────────
     async function kp_usunKat(id, idx) {
-        if (!confirm(`Usunąć kategorię "${kp_dane[idx].nazwa}"?\n\nKategoria zniknie z nowych miesięcy. Zapisane wartości w poprzednich miesiącach pozostaną.`)) return;
+        if (!confirm(`Usunąć kategorię "${kp_dane[idx].nazwa}"?\n\nZniknie z nowych miesięcy. Dane w historii pozostaną.`)) return;
         const tid = localStorage.getItem('boczki_tenant_id') || '';
         const tok = localStorage.getItem('boczki_session_token') || '';
         try {
@@ -4726,28 +4830,24 @@ ANALIZA MANAGER
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message);
             kp_dane.splice(idx, 1);
-            kp_renderuj();
+            kp_renderujSzczegoly();
         } catch(e) { alert('Błąd: ' + e.message); }
     }
 
     // ── Modal: Powiel ────────────────────────────────────────────
     function kp_otworzPowiel() {
-        const cel = document.getElementById('kp_miesiac').value;
-        if (!cel) return alert('Najpierw wybierz miesiąc docelowy.');
-        // Domyślnie zaproponuj poprzedni miesiąc
-        const [y, m] = cel.split('-').map(Number);
+        if (!kp_aktywnyMies) return alert('Najpierw otwórz szczegóły miesiąca docelowego.');
+        const [y, m] = kp_aktywnyMies.split('-').map(Number);
         const prev = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
-        document.getElementById('kp_powiel_z').value   = prev;
-        document.getElementById('kp_powiel_cel').textContent = cel;
-        const ov = document.getElementById('kp_powiel_overlay');
-        ov.style.display = 'flex';
+        document.getElementById('kp_powiel_z').value = prev;
+        document.getElementById('kp_powiel_cel').textContent = kp_nazwaMs(kp_aktywnyMies);
+        document.getElementById('kp_powiel_overlay').style.display = 'flex';
     }
     function kp_zamknijPowiel() {
         document.getElementById('kp_powiel_overlay').style.display = 'none';
     }
     async function kp_wykonajPowiel() {
         const z   = document.getElementById('kp_powiel_z').value;
-        const na  = document.getElementById('kp_miesiac').value;
         const tid = localStorage.getItem('boczki_tenant_id') || '';
         const tok = localStorage.getItem('boczki_session_token') || '';
         if (!z) return alert('Wybierz miesiąc źródłowy.');
@@ -4755,13 +4855,15 @@ ANALIZA MANAGER
             const r = await fetch('/api/koszty-plan/powiel', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tenant_id: tid, session_token: tok, z_miesiaca: z, na_miesiac: na })
+                body: JSON.stringify({ tenant_id: tid, session_token: tok, z_miesiaca: z, na_miesiac: kp_aktywnyMies })
             });
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message);
             kp_zamknijPowiel();
-            await kp_zaladuj();
-            alert(`Powielono z ${z} do ${na}. Łączne koszty: ${kp_fmt(d.kwota)}`);
+            const ms = kp_aktywnyMies;
+            kp_aktywnyMies = null;
+            await kp_init();
+            await kp_zobaczSzczegoly(ms);
         } catch(e) { alert('Błąd: ' + e.message); }
     }
 
@@ -4769,8 +4871,7 @@ ANALIZA MANAGER
     function kp_otworzKat() {
         document.getElementById('kp_kat_nazwa').value = '';
         document.getElementById('kp_kat_typ').value   = 'stała';
-        const ov = document.getElementById('kp_kat_overlay');
-        ov.style.display = 'flex';
+        document.getElementById('kp_kat_overlay').style.display = 'flex';
         setTimeout(() => document.getElementById('kp_kat_nazwa').focus(), 50);
     }
     function kp_zamknijKat() {
@@ -4791,10 +4892,9 @@ ANALIZA MANAGER
             const d = await r.json();
             if (d.status !== 'ok') throw new Error(d.message);
             kp_zamknijKat();
-            // Dodaj do bieżącego widoku jeśli miesiąc załadowany
-            if (kp_loaded) {
+            if (kp_aktywnyMies) {
                 kp_dane.push({ id: d.id, lp: d.lp, nazwa: d.nazwa, typ: d.typ, czesc_stala: 0, czesc_zmienna: 0 });
-                kp_renderuj();
+                kp_renderujSzczegoly();
             }
         } catch(e) { alert('Błąd: ' + e.message); }
     }

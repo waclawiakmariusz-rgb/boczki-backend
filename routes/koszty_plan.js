@@ -112,6 +112,65 @@ module.exports = (db) => {
     return kwota;
   }
 
+  // ── GET /api/koszty-plan/lista — lista miesięcy z sumami ────
+  router.get('/koszty-plan/lista', async (req, res) => {
+    const { tenant_id } = req.query;
+    if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
+    try {
+      // Najwcześniejszy miesiąc z wpisem w Koszty lub Koszty_Szczegoly
+      const [earliest] = await q(
+        `SELECT DATE_FORMAT(MIN(data_kosztu), '%Y-%m') as min_m FROM Koszty WHERE tenant_id = ?`,
+        [tenant_id]
+      );
+      const now   = new Date();
+      const endY  = now.getFullYear();
+      const endM  = now.getMonth() + 1;
+
+      let startY, startM;
+      if (earliest.min_m) {
+        [startY, startM] = earliest.min_m.split('-').map(Number);
+      } else {
+        // Brak historii — pokaż ostatnie 12 miesięcy
+        const d = new Date(now);
+        d.setMonth(d.getMonth() - 11);
+        startY = d.getFullYear();
+        startM = d.getMonth() + 1;
+      }
+
+      // Pobierz sumy ze szczegółów (per miesiąc)
+      const sumy = await q(
+        `SELECT miesiac_rok,
+                SUM(czesc_stala)   as suma_stala,
+                SUM(czesc_zmienna) as suma_zmienna,
+                SUM(czesc_stala + czesc_zmienna) as suma_razem
+         FROM Koszty_Szczegoly WHERE tenant_id = ?
+         GROUP BY miesiac_rok`,
+        [tenant_id]
+      );
+      const mapaSum = {};
+      sumy.forEach(s => { mapaSum[s.miesiac_rok] = s; });
+
+      // Wygeneruj pełny zakres miesięcy
+      const miesiac_lista = [];
+      let y = startY, m = startM;
+      while (y < endY || (y === endY && m <= endM)) {
+        const key = `${y}-${String(m).padStart(2, '0')}`;
+        const s = mapaSum[key];
+        miesiac_lista.push({
+          miesiac_rok:   key,
+          suma_stala:    s ? parseFloat(s.suma_stala)   : null,
+          suma_zmienna:  s ? parseFloat(s.suma_zmienna) : null,
+          suma_razem:    s ? parseFloat(s.suma_razem)   : null,
+          ma_dane:       !!s,
+        });
+        m++;
+        if (m > 12) { m = 1; y++; }
+      }
+
+      return res.json({ status: 'ok', data: miesiac_lista.reverse() }); // najnowsze pierwsze
+    } catch(e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
   // ── GET /api/koszty-plan/kategorie ──────────────────────────
   router.get('/koszty-plan/kategorie', async (req, res) => {
     const { tenant_id } = req.query;
