@@ -898,7 +898,8 @@ function renderSprzedawcy() {
 
 // ── Render Sprzedaż ───────────────────────────────────────────────
 function renderSprzedaz() {
-  const rows = sortedRows(rowsSprzedaz, sortS);
+  const rows = sortedRows(rowsSprzedaz, sortS)
+    .filter(r => !String(r.zabieg||'').toLowerCase().includes('kosmetyk:'));
   if (!rows.length) {
     $('listaSprzedaz').innerHTML='<div class="empty-msg"><div class="empty-icon">🔍</div>Brak transakcji w podanym okresie.</div>';
     return;
