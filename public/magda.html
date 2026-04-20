@@ -933,7 +933,8 @@ function rowHtmlSprzedaz(r) {
 
 // ── Render Zadatki ────────────────────────────────────────────────
 function renderZadatki() {
-  const rows = sortedRows(rowsZadatki, sortZ);
+  const rows = sortedRows(rowsZadatki, sortZ)
+    .filter(r => !String(r.cel||'').toLowerCase().includes('kosmetyk:'));
   if (!rows.length) {
     $('listaZadatki').innerHTML='<div class="empty-msg"><div class="empty-icon">🔍</div>Brak zadatków w podanym okresie.</div>';
     return;
