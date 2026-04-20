@@ -566,7 +566,6 @@ process.on('unhandledRejection', (reason) => {
 // KATALOGI WYMAGANE PRZEZ APLIKACJĘ
 // ==========================================
 const fs   = require('fs');
-const path = require('path');
 const UPLOADS_ROOT = path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_ROOT)) {
     fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
