@@ -392,6 +392,21 @@ module.exports = (db) => {
           }
         );
 
+      } else if (d.typ === 'USUN') {
+        if (!d.powod || String(d.powod).trim().length < 3) {
+          return res.json({ status: 'error', message: 'Podaj powód usunięcia (min. 3 znaki).' });
+        }
+        db.query(
+          `UPDATE Zadatki SET status = 'USUNIĘTY' WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNY'`,
+          [tenant_id, d.id_zadatku],
+          (err, result) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono aktywnego zadatku o podanym ID.' });
+            zapiszLog(tenant_id, 'USUNIĘCIE ZADATKU (BŁĄD WPISU)', pracownik, `ID: ${d.id_zadatku} | Powód: ${String(d.powod).trim()}`);
+            return res.json({ status: 'success', message: 'Zadatek oznaczony jako USUNIĘTY.' });
+          }
+        );
+
       } else if (d.typ === 'EDIT_AMOUNT') {
         let kwota;
         try { kwota = parseKwota(d.nowa_kwota, 'nowa kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }

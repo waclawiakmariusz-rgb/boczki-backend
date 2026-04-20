@@ -7973,6 +7973,9 @@ function renderTabelaZadatkow(data) {
     }
 
     data.forEach(r => {
+        // Ukryj usunięte zadatki (błąd wpisu)
+        if (String(r.status || '').toUpperCase().includes('USUNI')) return;
+
         // Formatowanie Daty
         const dateObj = new Date(r.data);
         const dataStr = dateObj.toLocaleDateString('pl-PL') + ' <small style="color:#999">' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</small>';
@@ -13122,40 +13125,45 @@ function zapiszPelnaEdycjeZadatku(e) {
         }
     }
 
-    // 3. Pytanie
-    const pytanie = typ === 'KARA' 
-        ? "⛔ Czy na pewno zabrać ten zadatek jako KARĘ?" 
-        : "↩️ Czy zwrócić środki klientowi?";
-
-    if(!confirm(pytanie)) {
-        console.log("❌ Anulowano przez użytkownika.");
-        return;
+    // 3. Pytanie / powód
+    let pytanie, powod = null;
+    if (typ === 'KARA') {
+        pytanie = "⛔ Czy na pewno zabrać ten zadatek jako KARĘ?";
+    } else if (typ === 'ZWROT') {
+        pytanie = "↩️ Czy zwrócić środki klientowi?";
+    } else if (typ === 'USUN') {
+        powod = prompt("🗑️ Podaj powód usunięcia zadatku (np. pomylona osoba):");
+        if (powod === null) return; // anulowano
+        if (!powod || powod.trim().length < 3) {
+            alert("Powód usunięcia musi mieć co najmniej 3 znaki.");
+            return;
+        }
+        pytanie = "🗑️ Czy na pewno usunąć ten zadatek?\n\nPowód: " + powod + "\n\nZadatek zniknie z listy i nie będzie liczony w saldzie.";
     }
-    
-    // 4. Wysyłka
-    console.log("🚀 Wysyłam do API...");
-    alert("🚀 Wysyłam do API..."); // Potwierdzenie przed fetch
 
+    if(!confirm(pytanie)) return;
+
+    // 4. Wysyłka
     fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
             action: 'manage_deposit',
             typ: typ,
             id_zadatku: id,
-            pracownik: currentUser
+            pracownik: currentUser,
+            powod: powod
         })
     })
     .then(r => r.json())
     .then(d => {
-        console.log("✅ Odpowiedź API:", d);
-        alert("✅ SUKCES: " + d.message);
+        if (d.status === 'error') { alert("❌ Błąd: " + d.message); return; }
+        alert("✅ " + d.message);
         document.getElementById('deposit-edit-modal-overlay').style.display = 'none';
         if (nazwaKlienta && typeof pobierzPortfel === 'function') {
             pobierzPortfel(nazwaKlienta);
         }
     })
     .catch(err => {
-        console.error("❌ BŁĄD API:", err);
         alert("❌ Błąd krytyczny: " + err);
     });
 }
@@ -18943,6 +18951,12 @@ initTheme();
                             </button>
                             <button type="button" onclick="wykonajAkcjeZadatku('ZWROT')" style="flex:1; padding:8px; background:#fff; border:1px solid #b91c1c; color:#b91c1c; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">
                                 ↩️ ZWROT ŚRODKÓW
+                            </button>
+                        </div>
+                        <div style="margin-top:10px; border-top:1px dashed #fca5a5; padding-top:10px;">
+                            <p style="font-size:11px; color:#6b7280; margin:0 0 6px 0;">Błąd wpisu (np. pomylona osoba) — zadatek znika z listy, nie jest liczony:</p>
+                            <button type="button" onclick="wykonajAkcjeZadatku('USUN')" style="width:100%; padding:8px; background:#f1f5f9; border:1px solid #94a3b8; color:#475569; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">
+                                🗑️ USUŃ (błąd wpisu)
                             </button>
                         </div>
                     </div>
