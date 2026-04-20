@@ -4569,34 +4569,269 @@ ANALIZA MANAGER
     </div>
 
 <div id="an_view-costs" style="display:none;">
-    <div class="header-flex">
-        <h2>Zarządzanie Kosztami</h2>
-    </div>
-    
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
-        <div class="card" style="height:fit-content;">
-            <h3>➕ Dodaj / Edytuj Koszt Miesięczny</h3>
-            <p style="font-size:12px; color:#666;">Wpisz łączną kwotę kosztów. Jeśli miesiąc już istnieje, kwota zostanie nadpisana.</p>
-            
-            <div style="margin-bottom:15px;">
-                <label>Miesiąc</label><br>
-                <input type="month" id="an_cost-month" style="width:100%; box-sizing:border-box;">
-            </div>
-            <div style="margin-bottom:20px;">
-                <label>Łączna Kwota (PLN)</label><br>
-                <input type="number" id="an_cost-amount" placeholder="np. 45000" style="width:100%; box-sizing:border-box;">
-            </div>
-            <button onclick="an_saveMonthlyCost()" class="btn-primary" style="width:100%;">Zapisz Koszt</button>
-        </div>
 
-        <div class="card">
-            <h3>📋 Historia Kosztów</h3>
-            <table style="width:100%">
-                <thead><tr><th>Miesiąc</th><th>Kwota</th></tr></thead>
-                <tbody id="an_costs-table-body"><tr><td>Ładowanie...</td></tr></tbody>
+    <!-- Modal: Powiel miesiąc -->
+    <div id="kp_powiel_overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; display:none; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:28px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <h3 style="margin:0 0 16px 0; font-size:17px;">📋 Powiel miesiąc</h3>
+            <p style="font-size:13px; color:#64748b; margin:0 0 16px 0;">Skopiuje wszystkie wartości z wybranego miesiąca do <strong id="kp_powiel_cel"></strong>. Istniejące dane zostaną nadpisane.</p>
+            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Kopiuj z miesiąca:</label>
+            <input type="month" id="kp_powiel_z" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; margin-bottom:20px;">
+            <div style="display:flex; gap:10px;">
+                <button onclick="kp_zamknijPowiel()" style="flex:1; padding:10px; border:1.5px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; font-size:14px;">Anuluj</button>
+                <button onclick="kp_wykonajPowiel()" style="flex:1; padding:10px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">Powiel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Dodaj kategorię -->
+    <div id="kp_kat_overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:9000; align-items:center; justify-content:center;">
+        <div style="background:white; border-radius:16px; padding:28px; width:380px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
+            <h3 style="margin:0 0 16px 0; font-size:17px;">➕ Dodaj kategorię kosztu</h3>
+            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Nazwa</label>
+            <input type="text" id="kp_kat_nazwa" placeholder="np. Subskrypcja Canva" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; margin-bottom:14px;">
+            <label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Typ kosztu</label>
+            <select id="kp_kat_typ" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; margin-bottom:20px;">
+                <option value="stała">Stały (tylko część stała)</option>
+                <option value="zmienna">Zmienny (tylko część zmienna)</option>
+                <option value="mieszana">Mieszany (stała + zmienna)</option>
+            </select>
+            <div style="display:flex; gap:10px;">
+                <button onclick="kp_zamknijKat()" style="flex:1; padding:10px; border:1.5px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; font-size:14px;">Anuluj</button>
+                <button onclick="kp_dodajKat()" style="flex:1; padding:10px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">Dodaj</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nagłówek -->
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
+        <h2 style="margin:0;">💰 Planowanie Kosztów</h2>
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <input type="month" id="kp_miesiac" style="padding:8px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; cursor:pointer;" onchange="kp_zaladuj()">
+            <button onclick="kp_otworzPowiel()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">📋 Powiel z...</button>
+            <button onclick="kp_otworzKat()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">➕ Dodaj kategorię</button>
+            <button onclick="kp_zapisz()" style="padding:8px 20px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">💾 Zapisz</button>
+        </div>
+    </div>
+
+    <!-- Tabela kosztów -->
+    <div class="card" style="padding:0; overflow:hidden;">
+        <div style="overflow-x:auto;">
+            <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                <thead>
+                    <tr style="background:#f8fafc; color:#64748b; text-transform:uppercase; font-size:11px; font-weight:700;">
+                        <th style="padding:12px 10px; text-align:left; width:36px;">Lp.</th>
+                        <th style="padding:12px 10px; text-align:left;">Nazwa</th>
+                        <th style="padding:12px 10px; text-align:right; width:160px;">Część Stała</th>
+                        <th style="padding:12px 10px; text-align:right; width:160px;">Część Zmienna</th>
+                        <th style="padding:12px 10px; text-align:right; width:140px; color:#7c3aed;">Razem</th>
+                        <th style="padding:12px 10px; width:36px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="kp_tbody"></tbody>
+                <tfoot>
+                    <tr style="background:#f1f0ff; font-weight:700; font-size:14px; border-top:2px solid #7c3aed;">
+                        <td colspan="2" style="padding:14px 10px; color:#4c1d95;">RAZEM</td>
+                        <td id="kp_sum_stala"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                        <td id="kp_sum_zmienna" style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                        <td id="kp_sum_razem"   style="padding:14px 10px; text-align:right; color:#4c1d95;">0,00 zł</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
+        <div id="kp_pusty" style="display:none; padding:40px; text-align:center; color:#94a3b8; font-size:14px;">
+            Wybierz miesiąc, aby załadować koszty.
+        </div>
     </div>
+
+    <script>
+    // ── Planowanie Kosztów — logika ──────────────────────────────
+    let kp_dane = [];      // bieżące wiersze { id, lp, nazwa, typ, czesc_stala, czesc_zmienna }
+    let kp_loaded = false; // czy dane załadowane
+
+    function kp_init() {
+        const now = new Date();
+        const m   = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('kp_miesiac').value = `${now.getFullYear()}-${m}`;
+        kp_zaladuj();
+    }
+
+    async function kp_zaladuj() {
+        const miesiac = document.getElementById('kp_miesiac').value;
+        if (!miesiac) { document.getElementById('kp_pusty').style.display = 'block'; return; }
+        const tid = localStorage.getItem('boczki_tenant_id') || '';
+        const tok = localStorage.getItem('boczki_session_token') || '';
+        document.getElementById('kp_tbody').innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>`;
+        try {
+            const r = await fetch(`/api/koszty-plan/${miesiac}?tenant_id=${encodeURIComponent(tid)}&session_token=${encodeURIComponent(tok)}`);
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            kp_dane = d.data;
+            kp_renderuj();
+            kp_loaded = true;
+        } catch(e) {
+            document.getElementById('kp_tbody').innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#ef4444;">Błąd: ${e.message}</td></tr>`;
+        }
+    }
+
+    function kp_renderuj() {
+        const tbody = document.getElementById('kp_tbody');
+        if (!kp_dane.length) {
+            tbody.innerHTML = `<tr><td colspan="6" style="padding:20px; text-align:center; color:#94a3b8;">Brak kategorii.</td></tr>`;
+            kp_aktualizujSumy();
+            return;
+        }
+        tbody.innerHTML = kp_dane.map((r, i) => {
+            const stalaDisabled   = r.typ === 'zmienna'  ? 'disabled style="background:#f8fafc; color:#94a3b8;"' : '';
+            const zmiennaDisabled = r.typ === 'stała'    ? 'disabled style="background:#f8fafc; color:#94a3b8;"' : '';
+            const razem = (r.czesc_stala || 0) + (r.czesc_zmienna || 0);
+            return `<tr style="border-bottom:1px solid #f1f5f9;" data-idx="${i}">
+                <td style="padding:10px; color:#94a3b8; font-size:12px;">${r.lp}</td>
+                <td style="padding:10px; font-weight:500;">${escHtml(r.nazwa)}</td>
+                <td style="padding:6px 10px; text-align:right;">
+                    <input type="number" step="0.01" min="0" value="${r.czesc_stala || 0}"
+                        ${stalaDisabled}
+                        oninput="kp_zmiana(${i},'stala',this.value)"
+                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${r.typ==='zmienna'?'background:#f8fafc;color:#94a3b8;':''}">
+                </td>
+                <td style="padding:6px 10px; text-align:right;">
+                    <input type="number" step="0.01" min="0" value="${r.czesc_zmienna || 0}"
+                        ${zmiennaDisabled}
+                        oninput="kp_zmiana(${i},'zmienna',this.value)"
+                        style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${r.typ==='stała'?'background:#f8fafc;color:#94a3b8;':''}">
+                </td>
+                <td id="kp_razem_${i}" style="padding:10px; text-align:right; font-weight:600; color:#4c1d95;">${kp_fmt(razem)}</td>
+                <td style="padding:10px; text-align:center;">
+                    <button onclick="kp_usunKat('${r.id}',${i})" title="Usuń kategorię" style="border:none; background:none; color:#94a3b8; cursor:pointer; font-size:16px; line-height:1; padding:2px 6px; border-radius:4px;" onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#94a3b8'">×</button>
+                </td>
+            </tr>`;
+        }).join('');
+        kp_aktualizujSumy();
+    }
+
+    function kp_zmiana(idx, pole, val) {
+        const v = parseFloat(val) || 0;
+        if (pole === 'stala')   kp_dane[idx].czesc_stala   = v;
+        if (pole === 'zmienna') kp_dane[idx].czesc_zmienna = v;
+        const razem = (kp_dane[idx].czesc_stala || 0) + (kp_dane[idx].czesc_zmienna || 0);
+        const el = document.getElementById(`kp_razem_${idx}`);
+        if (el) el.textContent = kp_fmt(razem);
+        kp_aktualizujSumy();
+    }
+
+    function kp_aktualizujSumy() {
+        let sumS = 0, sumZ = 0;
+        kp_dane.forEach(r => { sumS += r.czesc_stala || 0; sumZ += r.czesc_zmienna || 0; });
+        document.getElementById('kp_sum_stala').textContent   = kp_fmt(sumS);
+        document.getElementById('kp_sum_zmienna').textContent = kp_fmt(sumZ);
+        document.getElementById('kp_sum_razem').textContent   = kp_fmt(sumS + sumZ);
+    }
+
+    function kp_fmt(v) {
+        return Number(v || 0).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+    }
+
+    async function kp_zapisz() {
+        const miesiac = document.getElementById('kp_miesiac').value;
+        if (!miesiac || !kp_dane.length) return alert('Najpierw załaduj miesiąc.');
+        const tid = localStorage.getItem('boczki_tenant_id') || '';
+        const tok = localStorage.getItem('boczki_session_token') || '';
+        try {
+            const r = await fetch('/api/koszty-plan/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id: tid, session_token: tok, miesiac_rok: miesiac, rows: kp_dane })
+            });
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            alert(`Zapisano. Łączne koszty: ${kp_fmt(d.kwota)}`);
+        } catch(e) { alert('Błąd zapisu: ' + e.message); }
+    }
+
+    // ── Usuwanie kategorii ───────────────────────────────────────
+    async function kp_usunKat(id, idx) {
+        if (!confirm(`Usunąć kategorię "${kp_dane[idx].nazwa}"?\n\nKategoria zniknie z nowych miesięcy. Zapisane wartości w poprzednich miesiącach pozostaną.`)) return;
+        const tid = localStorage.getItem('boczki_tenant_id') || '';
+        const tok = localStorage.getItem('boczki_session_token') || '';
+        try {
+            const r = await fetch(`/api/koszty-plan/kategorie/${id}?tenant_id=${encodeURIComponent(tid)}&session_token=${encodeURIComponent(tok)}`, { method: 'DELETE' });
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            kp_dane.splice(idx, 1);
+            kp_renderuj();
+        } catch(e) { alert('Błąd: ' + e.message); }
+    }
+
+    // ── Modal: Powiel ────────────────────────────────────────────
+    function kp_otworzPowiel() {
+        const cel = document.getElementById('kp_miesiac').value;
+        if (!cel) return alert('Najpierw wybierz miesiąc docelowy.');
+        // Domyślnie zaproponuj poprzedni miesiąc
+        const [y, m] = cel.split('-').map(Number);
+        const prev = m === 1 ? `${y-1}-12` : `${y}-${String(m-1).padStart(2,'0')}`;
+        document.getElementById('kp_powiel_z').value   = prev;
+        document.getElementById('kp_powiel_cel').textContent = cel;
+        const ov = document.getElementById('kp_powiel_overlay');
+        ov.style.display = 'flex';
+    }
+    function kp_zamknijPowiel() {
+        document.getElementById('kp_powiel_overlay').style.display = 'none';
+    }
+    async function kp_wykonajPowiel() {
+        const z   = document.getElementById('kp_powiel_z').value;
+        const na  = document.getElementById('kp_miesiac').value;
+        const tid = localStorage.getItem('boczki_tenant_id') || '';
+        const tok = localStorage.getItem('boczki_session_token') || '';
+        if (!z) return alert('Wybierz miesiąc źródłowy.');
+        try {
+            const r = await fetch('/api/koszty-plan/powiel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id: tid, session_token: tok, z_miesiaca: z, na_miesiac: na })
+            });
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            kp_zamknijPowiel();
+            await kp_zaladuj();
+            alert(`Powielono z ${z} do ${na}. Łączne koszty: ${kp_fmt(d.kwota)}`);
+        } catch(e) { alert('Błąd: ' + e.message); }
+    }
+
+    // ── Modal: Dodaj kategorię ───────────────────────────────────
+    function kp_otworzKat() {
+        document.getElementById('kp_kat_nazwa').value = '';
+        document.getElementById('kp_kat_typ').value   = 'stała';
+        const ov = document.getElementById('kp_kat_overlay');
+        ov.style.display = 'flex';
+        setTimeout(() => document.getElementById('kp_kat_nazwa').focus(), 50);
+    }
+    function kp_zamknijKat() {
+        document.getElementById('kp_kat_overlay').style.display = 'none';
+    }
+    async function kp_dodajKat() {
+        const nazwa = document.getElementById('kp_kat_nazwa').value.trim();
+        const typ   = document.getElementById('kp_kat_typ').value;
+        const tid   = localStorage.getItem('boczki_tenant_id') || '';
+        const tok   = localStorage.getItem('boczki_session_token') || '';
+        if (!nazwa) return alert('Podaj nazwę kategorii.');
+        try {
+            const r = await fetch('/api/koszty-plan/kategorie', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id: tid, session_token: tok, nazwa, typ })
+            });
+            const d = await r.json();
+            if (d.status !== 'ok') throw new Error(d.message);
+            kp_zamknijKat();
+            // Dodaj do bieżącego widoku jeśli miesiąc załadowany
+            if (kp_loaded) {
+                kp_dane.push({ id: d.id, lp: d.lp, nazwa: d.nazwa, typ: d.typ, czesc_stala: 0, czesc_zmienna: 0 });
+                kp_renderuj();
+            }
+        } catch(e) { alert('Błąd: ' + e.message); }
+    }
+    </script>
 </div>
 <div id="an_view-yearly" style="display:none;">
     <div class="header-flex" style="margin-bottom:20px;">
@@ -14842,18 +15077,7 @@ if (inputNazwaCheck) {
         }
         
         function an_loadCostsView() {
-            document.getElementById('an_cost-month').value = new Date().toISOString().slice(0,7);
-            fetch(API_URL, { method: "POST", body: JSON.stringify({ action: 'get_costs_list' }) })
-            .then(r => r.json())
-            .then(res => {
-                const tbody = document.getElementById('an_costs-table-body');
-                tbody.innerHTML = "";
-                if(res.data && res.data.length > 0) {
-                    res.data.forEach(row => {
-                        tbody.innerHTML += `<tr style="border-bottom:1px solid #eee;"><td style="padding:10px; font-weight:bold;">${row.month}</td><td style="padding:10px;">${new Intl.NumberFormat('pl-PL', {style:'currency', currency:'PLN'}).format(row.amount)}</td></tr>`;
-                    });
-                } else { tbody.innerHTML = "<tr><td colspan='2' style='padding:20px; text-align:center;'>Brak wpisów</td></tr>"; }
-            });
+            if (typeof kp_init === 'function') kp_init();
         }
 
         function an_saveMonthlyCost() {

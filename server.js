@@ -274,6 +274,7 @@ const helpkbRoutes     = require('./routes/helpkb')(db);
 const billingRoutes    = require('./routes/billing')(db);
 const blogRoutes       = require('./routes/blog')(db);
 const predefRoutes     = require('./routes/predef')(db);
+const kosztPlanRoutes  = require('./routes/koszty_plan')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -299,6 +300,7 @@ app.use('/api', helpkbRoutes);
 app.use('/api', billingRoutes);
 app.use('/api', blogRoutes);
 app.use('/api', predefRoutes);
+app.use('/api', kosztPlanRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
