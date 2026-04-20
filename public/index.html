@@ -4770,7 +4770,10 @@ ANALIZA MANAGER
                         style="width:130px; text-align:right; padding:6px 8px; border:1.5px solid #e2e8f0; border-radius:6px; font-size:13px; ${zmiennaGrey}">
                 </td>
                 <td id="kp_razem_${i}" style="padding:10px; text-align:right; font-weight:600; color:#4c1d95;">${kp_fmt(razem)}</td>
-                <td style="padding:10px; text-align:center;">
+                <td style="padding:10px; text-align:center; white-space:nowrap;">
+                    <button onclick="kp_editKat('${r.id}',${i})" title="Edytuj kategorię"
+                        style="border:none; background:none; color:#cbd5e1; cursor:pointer; font-size:15px; line-height:1; padding:2px 6px; border-radius:4px;"
+                        onmouseover="this.style.color='#7c3aed'" onmouseout="this.style.color='#cbd5e1'">✏️</button>
                     <button onclick="kp_usunKat('${r.id}',${i})" title="Usuń kategorię"
                         style="border:none; background:none; color:#cbd5e1; cursor:pointer; font-size:18px; line-height:1; padding:2px 6px; border-radius:4px;"
                         onmouseover="this.style.color='#ef4444'" onmouseout="this.style.color='#cbd5e1'">×</button>
@@ -4867,10 +4870,28 @@ ANALIZA MANAGER
         } catch(e) { alert('Błąd: ' + e.message); }
     }
 
-    // ── Modal: Dodaj kategorię ───────────────────────────────────
+    // ── Modal: Dodaj / Edytuj kategorię ─────────────────────────
+    let kp_kat_editId  = null;
+    let kp_kat_editIdx = null;
+
     function kp_otworzKat() {
+        kp_kat_editId  = null;
+        kp_kat_editIdx = null;
         document.getElementById('kp_kat_nazwa').value = '';
         document.getElementById('kp_kat_typ').value   = 'stała';
+        document.getElementById('kp_kat_title').textContent    = '➕ Dodaj kategorię kosztu';
+        document.getElementById('kp_kat_submit').textContent   = 'Dodaj';
+        document.getElementById('kp_kat_overlay').style.display = 'flex';
+        setTimeout(() => document.getElementById('kp_kat_nazwa').focus(), 50);
+    }
+    function kp_editKat(id, idx) {
+        const row = kp_dane[idx];
+        kp_kat_editId  = id;
+        kp_kat_editIdx = idx;
+        document.getElementById('kp_kat_nazwa').value = row.nazwa;
+        document.getElementById('kp_kat_typ').value   = row.typ;
+        document.getElementById('kp_kat_title').textContent    = '✏️ Edytuj kategorię';
+        document.getElementById('kp_kat_submit').textContent   = 'Zapisz';
         document.getElementById('kp_kat_overlay').style.display = 'flex';
         setTimeout(() => document.getElementById('kp_kat_nazwa').focus(), 50);
     }
@@ -4884,17 +4905,33 @@ ANALIZA MANAGER
         const tok   = localStorage.getItem('boczki_session_token') || '';
         if (!nazwa) return alert('Podaj nazwę kategorii.');
         try {
-            const r = await fetch('/api/koszty-plan/kategorie', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tenant_id: tid, session_token: tok, nazwa, typ })
-            });
-            const d = await r.json();
-            if (d.status !== 'ok') throw new Error(d.message);
-            kp_zamknijKat();
-            if (kp_aktywnyMies) {
-                kp_dane.push({ id: d.id, lp: d.lp, nazwa: d.nazwa, typ: d.typ, czesc_stala: 0, czesc_zmienna: 0 });
+            if (kp_kat_editId !== null) {
+                // Tryb edycji
+                const r = await fetch(`/api/koszty-plan/kategorie/${kp_kat_editId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: tid, session_token: tok, nazwa, typ })
+                });
+                const d = await r.json();
+                if (d.status !== 'ok') throw new Error(d.message);
+                kp_dane[kp_kat_editIdx].nazwa = nazwa;
+                kp_dane[kp_kat_editIdx].typ   = typ;
+                kp_zamknijKat();
                 kp_renderujSzczegoly();
+            } else {
+                // Tryb dodawania
+                const r = await fetch('/api/koszty-plan/kategorie', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tenant_id: tid, session_token: tok, nazwa, typ })
+                });
+                const d = await r.json();
+                if (d.status !== 'ok') throw new Error(d.message);
+                kp_zamknijKat();
+                if (kp_aktywnyMies) {
+                    kp_dane.push({ id: d.id, lp: d.lp, nazwa: d.nazwa, typ: d.typ, czesc_stala: 0, czesc_zmienna: 0 });
+                    kp_renderujSzczegoly();
+                }
             }
         } catch(e) { alert('Błąd: ' + e.message); }
     }
@@ -18688,7 +18725,7 @@ initTheme();
 <!-- Modal: Dodaj kategorię (Koszty) -->
 <div id="kp_kat_overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.45); z-index:10030; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:16px; padding:28px; width:380px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
-        <h3 style="margin:0 0 16px 0; font-size:17px;">➕ Dodaj kategorię kosztu</h3>
+        <h3 id="kp_kat_title" style="margin:0 0 16px 0; font-size:17px;">➕ Dodaj kategorię kosztu</h3>
         <label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Nazwa</label>
         <input type="text" id="kp_kat_nazwa" placeholder="np. Subskrypcja Canva" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px; margin-bottom:14px;">
         <label style="font-size:13px; font-weight:600; display:block; margin-bottom:6px;">Typ kosztu</label>
@@ -18699,7 +18736,7 @@ initTheme();
         </select>
         <div style="display:flex; gap:10px;">
             <button onclick="kp_zamknijKat()" style="flex:1; padding:10px; border:1.5px solid #e2e8f0; background:white; border-radius:8px; cursor:pointer; font-size:14px;">Anuluj</button>
-            <button onclick="kp_dodajKat()" style="flex:1; padding:10px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">Dodaj</button>
+            <button id="kp_kat_submit" onclick="kp_dodajKat()" style="flex:1; padding:10px; background:#7c3aed; color:white; border:none; border-radius:8px; cursor:pointer; font-size:14px; font-weight:600;">Dodaj</button>
         </div>
     </div>
 </div>
