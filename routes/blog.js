@@ -3,7 +3,6 @@
 
 const express = require('express');
 const { randomUUID } = require('crypto');
-const fs   = require('fs');
 const path = require('path');
 
 // Wbudowany slugify (polska diacritica)
@@ -267,49 +266,13 @@ module.exports = (db) => {
         );
       });
       console.log('[blog] Seed: dodano 3 starter posts');
-      // Po seedzie od razu wypełnij content_html z plików statycznych
-      setTimeout(extractStaticContent, 500);
     });
-
-    // Dla istniejących pustych wpisów też uzupełnij content_html
-    extractStaticContent();
 
     // Wyczyść stare url_override dla 3 artykułów statycznych
     ['jak-estelio-oszczedza-czas','rozliczenia-pracownic-salonu','magazyn-kosmetykow-w-salonie'].forEach(slug => {
       db.query(`UPDATE blog_posts SET url_override = NULL WHERE slug = ? AND url_override IS NOT NULL`, [slug]);
     });
   });
-
-  // Wyciąga treść artykułu z pliku statycznego i zapisuje do DB
-  function extractStaticContent() {
-    const publicDir = path.join(__dirname, '..', 'public', 'blog');
-    const STATIC_MAP = [
-      { slug: 'jak-estelio-oszczedza-czas',    file: 'jak-estelio-oszczedza-czas.html' },
-      { slug: 'rozliczenia-pracownic-salonu',  file: 'rozliczenia-pracownic-salonu.html' },
-      { slug: 'magazyn-kosmetykow-w-salonie',  file: 'magazyn-kosmetykow-w-salonie.html' },
-    ];
-
-    STATIC_MAP.forEach(({ slug, file }) => {
-      db.query('SELECT id, content_html FROM blog_posts WHERE slug = ?', [slug], (err, rows) => {
-        if (err || !rows.length) return;
-        if (rows[0].content_html && rows[0].content_html.trim().length > 50) return; // już wypełniony
-
-        const filePath = path.join(publicDir, file);
-        if (!fs.existsSync(filePath)) return;
-
-        const html = fs.readFileSync(filePath, 'utf8');
-
-        // Wyciągnij wszystko między back-link a article-cta
-        const bodyMatch = html.match(/<a class="back-link"[^>]*>.*?<\/a>([\s\S]*?)<div class="article-cta">/);
-        if (!bodyMatch) return;
-
-        const content = bodyMatch[1].trim();
-        db.query('UPDATE blog_posts SET content_html = ? WHERE id = ?', [content, rows[0].id], (e) => {
-          if (!e) console.log(`[blog] Wypełniono content_html dla: ${slug}`);
-        });
-      });
-    });
-  }
 
   // ─── Middleware admina (lokalny, oparty na tokenie) ──────────
   function requireAdmin(req, res, next) {
