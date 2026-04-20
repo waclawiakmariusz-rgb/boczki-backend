@@ -566,8 +566,8 @@
             </span>
           </div>
           <div class="col-extra">
-            <span class="hcol" data-sort="typ" data-tab="zadatki">
-              Typ <span class="sort-arrow">↕</span>
+            <span class="hcol" data-sort="pracownicy" data-tab="zadatki">
+              Sprzedawca <span class="sort-arrow">↕</span>
             </span>
           </div>
           <div class="col-extra">
@@ -957,7 +957,7 @@ function rowHtmlZadatek(r) {
       <div class="col-main-klient">${escH(r.klient||'')}</div>
       <div class="col-main-sub">${escH(r.cel||'')}</div>
     </div>
-    <div class="col-extra" style="font-size:.82rem;color:var(--gray-600)">${escH(r.typ||'')}</div>
+    <div class="col-extra" style="font-size:.82rem;color:var(--gray-600)">${escH(r.pracownicy||'')}</div>
     <div class="col-extra" style="font-size:.82rem;color:var(--gray-600)">${escH(r.metoda||'')}</div>
     <div class="col-kwota"><span class="col-kwota-val">${fmtKwota(r.kwota)}</span></div>
     <div class="col-info">
