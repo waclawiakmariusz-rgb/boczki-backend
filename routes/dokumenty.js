@@ -31,15 +31,16 @@ const upload = multer({
 });
 
 // ─── Optymalizacja jednej strony przez jimp ───────────────────
-// Wynik: JPEG grayscale, max 1654×2339 px (200 DPI A4), quality 75
+// Wynik: JPEG grayscale, max 1240×1754 px (150 DPI A4), quality 75
 async function optymalizujStrone(buffer) {
   const img = await Jimp.read(buffer);
   img.greyscale();
   // Skaluj tylko jeśli przekracza max wymiary (nie powiększaj)
-  if (img.bitmap.width > 1654 || img.bitmap.height > 2339) {
-    img.scaleToFit(1654, 2339);
+  if (img.bitmap.width > 1240 || img.bitmap.height > 1754) {
+    img.scaleToFit(1240, 1754);
   }
-  return img.getBufferAsync(Jimp.MIME_PNG);
+  img.quality(75);
+  return img.getBufferAsync(Jimp.MIME_JPEG);
 }
 
 module.exports = (db) => {
@@ -79,8 +80,8 @@ module.exports = (db) => {
 
       // 2. Utwórz PDF
       const pdfDoc = await PDFDocument.create();
-      for (const pngBuf of zoptymalizowane) {
-        const img   = await pdfDoc.embedPng(pngBuf);
+      for (const jpgBuf of zoptymalizowane) {
+        const img   = await pdfDoc.embedJpg(jpgBuf);
         const page  = pdfDoc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }
