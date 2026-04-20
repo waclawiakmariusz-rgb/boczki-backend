@@ -207,6 +207,15 @@ app.get('/blog/:slug', (req, res, next) => {
   );
 });
 
+// 301 przekierowania ze starych URLi bloga (.html → bez .html) — PRZED express.static
+[
+  '/blog/jak-estelio-oszczedza-czas.html',
+  '/blog/rozliczenia-pracownic-salonu.html',
+  '/blog/magazyn-kosmetykow-w-salonie.html',
+].forEach(oldUrl => {
+  app.get(oldUrl, (req, res) => res.redirect(301, oldUrl.replace('.html', '')));
+});
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 
