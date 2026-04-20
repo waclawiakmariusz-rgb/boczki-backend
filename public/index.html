@@ -3069,12 +3069,16 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
             
             <div style="flex:1;"></div>
             
-           <div style="display:flex; gap:10px;">
-                <button class="filter-btn active" onclick="ustawCzasRetencji(3, this)">3 Dni (Test)</button>
-                <button class="filter-btn" onclick="ustawCzasRetencji(7, this)">7 Dni (Test)</button>
-                <button class="filter-btn" onclick="ustawCzasRetencji(14, this)">14 Dni (Test)</button>
-                <button class="filter-btn" onclick="ustawCzasRetencji(30, this)">30+ Dni (Test)</button>
+           <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <button class="filter-btn active" onclick="ustawCzasRetencji(3, this)" title="Klienci, którzy powinni wrócić 3–7 dni temu">3–7 dni</button>
+                <button class="filter-btn" onclick="ustawCzasRetencji(7, this)" title="Klienci, którzy powinni wrócić 7–14 dni temu">7–14 dni</button>
+                <button class="filter-btn" onclick="ustawCzasRetencji(14, this)" title="Klienci, którzy powinni wrócić 14–30 dni temu">14–30 dni</button>
+                <button class="filter-btn" onclick="ustawCzasRetencji(30, this)" title="Klienci, którzy nie wrócili od ponad 30 dni">30+ dni</button>
             </div>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; color:#475569; cursor:pointer; white-space:nowrap;">
+                <input type="checkbox" id="ret-ukryj-zalatwione" checked onchange="generujListeRetencji()" style="cursor:pointer;">
+                Ukryj umówionych i niezainteresowanych
+            </label>
 			
 			
 			
@@ -3085,6 +3089,8 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
         <div style="background:#f0fdf4; color:#166534; padding:10px; border-radius:8px; font-size:12px; margin-bottom:15px;">
             💡 System automatycznie <b>dodaje 14 dni</b> buforu do wyliczonej daty za każdy zabieg w pakiecie (np. pakiet 5x). Filtruje tylko osoby, które <b>wyraziły zgodę</b> na kontakt w RODO.
         </div>
+
+        <div id="ret-stats" style="display:none; margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap;"></div>
 
         <div class="table-container">
             <table style="width:100%">
@@ -3098,7 +3104,7 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
                     </tr>
                 </thead>
                 <tbody id="retencja-lista">
-                    <tr><td colspan="5" style="text-align:center; padding:20px; color:#888;">Wybierz filtry i kliknij "Szukaj Klientów".</td></tr>
+                    <tr><td colspan="5" style="text-align:center; padding:20px; color:#888;">⏳ Ładowanie danych...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -3747,7 +3753,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
                         <th>Data</th>
                         <th>Klient</th>
                         <th>Kwota</th>
-                        <th>Typ / Metoda</th>
+                        <th>Sprzedawca / Metoda</th>
                         <th>Cel / Opis</th>
                         <th>Status</th>
                     </tr>
@@ -7996,7 +8002,7 @@ function renderTabelaZadatkow(data) {
             </td>
             <td style="padding:12px; ${kwotaStyle}">${kwotaStr}</td>
             <td style="padding:12px; font-size:13px;">
-                <div>${r.typ}</div>
+                <div>${r.pracownicy || '—'}</div>
                 <div style="color:#64748b; font-size:11px;">${r.metoda}</div>
             </td>
             <td style="padding:12px; color:#334155;">${r.cel}</td>
@@ -12337,15 +12343,39 @@ function generujListeRetencji() {
         }
     });
 
-    if (wyniki.length === 0) {
+    // Filtr: ukryj umówionych / nie zainteresowanych
+    const ukryjZalatwione = document.getElementById('ret-ukryj-zalatwione')?.checked;
+    const STATUSY_DO_UKRYCIA = ['Umówiona', 'Nie zainteresowana'];
+    const wynikiFinal = ukryjZalatwione ? wyniki.filter(w => {
+        const historiaKlienta = (window.retencjaCache || []).filter(r => String(r.id_klienta) === String(w.klient.id));
+        if (!historiaKlienta.length) return true;
+        return !STATUSY_DO_UKRYCIA.includes(historiaKlienta[0].status);
+    }) : wyniki;
+
+    // Statystyki
+    const statsDiv = document.getElementById('ret-stats');
+    const wszystkich = wynikiFinal.length;
+    const zHistoria = wynikiFinal.filter(w => (window.retencjaCache||[]).some(r => String(r.id_klienta)===String(w.klient.id))).length;
+    const bezKontaktu = wszystkich - zHistoria;
+    if (statsDiv) {
+        statsDiv.style.display = 'flex';
+        const pill = (txt, bg, clr) => `<span style="background:${bg}; color:${clr}; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600;">${txt}</span>`;
+        statsDiv.innerHTML =
+            pill(`📋 Łącznie: ${wszystkich}`, '#f1f5f9', '#334155') +
+            pill(`📞 Bez kontaktu: ${bezKontaktu}`, '#ecfdf5', '#166534') +
+            pill(`🔄 Kontaktowanych: ${zHistoria}`, '#eff6ff', '#1e40af');
+    }
+
+    if (wynikiFinal.length === 0) {
         tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:20px;">Brak klientów w tym przedziale czasowym.</td></tr>';
         return;
     }
 
-    wyniki.sort((a,b) => b.dniTemu - a.dniTemu);
+    wynikiFinal.sort((a,b) => b.dniTemu - a.dniTemu);
 
-    wyniki.forEach(w => {
-        const kampania = `Retencja: ${tryb === 'CUSTOM' ? customFraz : tryb} (Test: ${aktualnyCzasRetencji}d)`;
+    wynikiFinal.forEach(w => {
+        const zakresLabel = aktualnyCzasRetencji === 3 ? '3–7 dni' : aktualnyCzasRetencji === 7 ? '7–14 dni' : aktualnyCzasRetencji === 14 ? '14–30 dni' : '30+ dni';
+        const kampania = `Retencja: ${tryb === 'CUSTOM' ? customFraz : tryb} (${zakresLabel})`;
         const badgeColor = w.dniTemu > 14 ? '#dc2626' : '#b45309';
 
         let infoDodatkowe = "";
