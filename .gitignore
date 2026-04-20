@@ -2,3 +2,5 @@
 node_modules/
 *.xlsx
 csv/
+uploads/**
+!uploads/.gitkeep
