@@ -3753,7 +3753,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
                         <th>Data</th>
                         <th>Klient</th>
                         <th>Kwota</th>
-                        <th>Sprzedawca / Metoda</th>
+                        <th>Typ / Metoda</th>
                         <th>Cel / Opis</th>
                         <th>Status</th>
                     </tr>
@@ -8002,7 +8002,7 @@ function renderTabelaZadatkow(data) {
             </td>
             <td style="padding:12px; ${kwotaStyle}">${kwotaStr}</td>
             <td style="padding:12px; font-size:13px;">
-                <div>${r.pracownicy || '—'}</div>
+                <div>${r.typ}</div>
                 <div style="color:#64748b; font-size:11px;">${r.metoda}</div>
             </td>
             <td style="padding:12px; color:#334155;">${r.cel}</td>

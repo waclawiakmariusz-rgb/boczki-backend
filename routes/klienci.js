@@ -151,11 +151,11 @@ module.exports = (db) => {
 
     } else if (action === 'get_all_deposits') {
       db.query(
-        `SELECT id, id_klienta, data_wplaty, klient, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? ORDER BY data_wplaty DESC`,
+        `SELECT id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status FROM Zadatki WHERE tenant_id = ? ORDER BY data_wplaty DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
-          return res.json((rows || []).map(r => ({ id: r.id, id_klienta: r.id_klienta, data: r.data_wplaty, klient: r.klient, kwota: r.kwota, metoda: r.metoda, cel: r.cel, status: r.status, pracownicy: r.pracownicy })));
+          return res.json((rows || []).map(r => ({ id: r.id, id_klienta: r.id_klienta, data: r.data_wplaty, klient: r.klient, typ: r.typ, kwota: r.kwota, metoda: r.metoda, cel: r.cel, status: r.status })));
         }
       );
 
