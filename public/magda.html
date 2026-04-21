@@ -510,6 +510,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="sprzedaz">💳 Sprzedaż</button>
       <button class="tab-btn" data-tab="zadatki">🏷️ Zadatki</button>
+      <button class="tab-btn" data-tab="kosmetyki">💄 Kosmetyki</button>
     </div>
 
     <!-- Sprzedaż -->
@@ -588,6 +589,42 @@
       </div>
     </div>
 
+    <!-- Kosmetyki -->
+    <div class="tab-panel" id="panelKosmetyki">
+      <div class="panel-wrap">
+        <div class="list-header" id="headerKosmetyki">
+          <div class="col-toggle"></div>
+          <div class="col-data">
+            <span class="hcol" data-sort="data" data-tab="kosmetyki">
+              Data <span class="sort-arrow">↕</span>
+            </span>
+          </div>
+          <div class="col-main" style="padding:0 12px">
+            <span class="hcol" data-sort="klient" data-tab="kosmetyki">
+              Klient / Produkt <span class="sort-arrow">↕</span>
+            </span>
+          </div>
+          <div class="col-extra">
+            <span class="hcol" data-sort="sprzedawca" data-tab="kosmetyki">
+              Sprzedawca <span class="sort-arrow">↕</span>
+            </span>
+          </div>
+          <div class="col-extra">
+            <span class="hcol no-sort">Płatność</span>
+          </div>
+          <div class="col-kwota" style="text-align:right">
+            <span class="hcol" data-sort="kwota" data-tab="kosmetyki" style="justify-content:flex-end">
+              Kwota <span class="sort-arrow">↕</span>
+            </span>
+          </div>
+          <div class="col-info"></div>
+        </div>
+        <div id="listaKosmetyki">
+          <div class="empty-msg"><div class="empty-icon">💄</div>Wybierz zakres dat i kliknij Szukaj.</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -611,6 +648,8 @@ let bdMode       = 'all'; // 'all' | 'rozliczone'
 
 let sortS = { col: 'data_sprzedazy', dir: 'desc' };
 let sortZ = { col: 'data_wplaty',    dir: 'desc' };
+let sortK = { col: 'data',           dir: 'desc' };
+let rowsKosmetyki = [];
 
 // ── Utils ────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -699,18 +738,18 @@ document.addEventListener('click', e => {
   if (!hcol) return;
   const col   = hcol.dataset.sort;
   const tab   = hcol.dataset.tab;
-  const state = tab === 'sprzedaz' ? sortS : sortZ;
+  const state = tab === 'sprzedaz' ? sortS : tab === 'zadatki' ? sortZ : sortK;
 
   if (state.col === col) { state.dir = state.dir==='asc' ? 'desc' : 'asc'; }
   else                   { state.col = col; state.dir = 'asc'; }
 
   updateSortHeaders(tab);
-  if (tab === 'sprzedaz') renderSprzedaz(); else renderZadatki();
+  if (tab === 'sprzedaz') renderSprzedaz(); else if (tab === 'zadatki') renderZadatki(); else renderKosmetyki();
 });
 
 function updateSortHeaders(tab) {
-  const state  = tab === 'sprzedaz' ? sortS : sortZ;
-  const prefix = tab === 'sprzedaz' ? 'headerSprzedaz' : 'headerZadatki';
+  const state  = tab === 'sprzedaz' ? sortS : tab === 'zadatki' ? sortZ : sortK;
+  const prefix = tab === 'sprzedaz' ? 'headerSprzedaz' : tab === 'zadatki' ? 'headerZadatki' : 'headerKosmetyki';
   document.querySelectorAll(`#${prefix} .hcol`).forEach(h => {
     h.classList.remove('sort-active');
     const arrow = h.querySelector('.sort-arrow');
@@ -742,9 +781,12 @@ $('btnSzukaj').addEventListener('click', wczytajDane);
 async function wczytajDane() {
   const od = $('dateOd').value, _do = $('dateDo').value;
   if (!od || !_do) { alert('Podaj zakres dat.'); return; }
-  $('listaSprzedaz').innerHTML = '<div class="spinner">Wczytuję dane…</div>';
-  $('listaZadatki').innerHTML  = '<div class="spinner">Wczytuję dane…</div>';
+  $('listaSprzedaz').innerHTML  = '<div class="spinner">Wczytuję dane…</div>';
+  $('listaZadatki').innerHTML   = '<div class="spinner">Wczytuję dane…</div>';
+  $('listaKosmetyki').innerHTML = '<div class="spinner">Wczytuję dane…</div>';
   await Promise.all([wczytajSprzedaz(od, _do), wczytajZadatki(od, _do)]);
+  buildKosmetyki();
+  renderKosmetyki();
   updateStats(); renderBreakdown(); renderSprzedawcy();
 }
 
@@ -774,7 +816,7 @@ async function wczytajZadatki(od, _do) {
 
 // ── Stats ─────────────────────────────────────────────────────────
 function updateStats() {
-  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : activeTab==='zadatki' ? rowsZadatki : rowsKosmetyki;
   if (!rows.length) { $('statsGrid').style.display='none'; return; }
   $('statsGrid').style.display='grid';
   const total  = rows.reduce((s,r) => s+Number(r.kwota||0), 0);
@@ -787,7 +829,7 @@ function updateStats() {
   $('statNie').textContent      = rows.length-licRoz;
   $('statNieKwota').textContent = fmtKwota(total-kwRoz);
   $('statSuma').textContent     = fmtKwota(total);
-  $('statSumaTab').textContent  = activeTab==='sprzedaz' ? 'sprzedaż' : 'zadatki';
+  $('statSumaTab').textContent  = activeTab==='sprzedaz' ? 'sprzedaż' : activeTab==='zadatki' ? 'zadatki' : 'kosmetyki';
 }
 
 // ── Payment breakdown ─────────────────────────────────────────────
@@ -805,12 +847,12 @@ function classifyPayment(val) {
 }
 
 function renderBreakdown() {
-  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : activeTab==='zadatki' ? rowsZadatki : rowsKosmetyki;
   if (!rows.length) { $('breakdownSection').style.display='none'; return; }
   $('breakdownSection').style.display='block';
 
   const source   = bdMode==='rozliczone' ? rows.filter(r=>r.czy_rozliczone) : rows;
-  const payField = activeTab==='sprzedaz' ? 'platnosc' : 'metoda';
+  const payField = activeTab==='sprzedaz' ? 'platnosc' : activeTab==='zadatki' ? 'metoda' : 'platnosc_display';
 
   // Group
   const groups = {};
@@ -841,8 +883,8 @@ function renderBreakdown() {
 
 // ── Sprzedawcy per-person breakdown ──────────────────────────────
 function renderSprzedawcy() {
-  const rows      = activeTab === 'sprzedaz' ? rowsSprzedaz : rowsZadatki;
-  const personField = activeTab === 'sprzedaz' ? 'sprzedawca' : 'pracownicy';
+  const rows      = activeTab === 'sprzedaz' ? rowsSprzedaz : activeTab === 'zadatki' ? rowsZadatki : rowsKosmetyki;
+  const personField = activeTab === 'kosmetyki' ? 'sprzedawca' : activeTab === 'sprzedaz' ? 'sprzedawca' : 'pracownicy';
   const rozliczone  = rows.filter(r => r.czy_rozliczone);
 
   if (!rozliczone.length) { $('sprzedawcySection').style.display = 'none'; return; }
@@ -968,6 +1010,64 @@ function rowHtmlZadatek(r) {
   </div>`;
 }
 
+// ── Kosmetyki ─────────────────────────────────────────────────────
+function buildKosmetyki() {
+  const fromSp = rowsSprzedaz
+    .filter(r => String(r.zabieg||'').toLowerCase().includes('kosmetyk:'))
+    .map(r => ({
+      ...r,
+      _tabela: 'sprzedaz',
+      data: r.data_sprzedazy,
+      produkt: String(r.zabieg||'').replace(/^kosmetyk:\s*/i, ''),
+      platnosc_display: r.platnosc
+    }));
+  const fromZa = rowsZadatki
+    .filter(r => String(r.cel||'').toLowerCase().includes('kosmetyk:'))
+    .map(r => ({
+      ...r,
+      _tabela: 'zadatki',
+      data: r.data_wplaty,
+      produkt: String(r.cel||'').replace(/^kosmetyk:\s*/i, ''),
+      sprzedawca: r.pracownicy,
+      platnosc_display: r.metoda
+    }));
+  rowsKosmetyki = [...fromSp, ...fromZa];
+}
+
+function renderKosmetyki() {
+  const rows = sortedRows(rowsKosmetyki, sortK);
+  if (!rows.length) {
+    $('listaKosmetyki').innerHTML='<div class="empty-msg"><div class="empty-icon">💄</div>Brak kosmetyków w podanym okresie.</div>';
+    return;
+  }
+  $('listaKosmetyki').innerHTML = rows.map(r => rowHtmlKosmetyk(r)).join('');
+}
+
+function rowHtmlKosmetyk(r) {
+  const data = r.data ? String(r.data).slice(0,10) : '';
+  const cls  = r.czy_rozliczone ? 'rozliczone' : '';
+  const chk  = r.czy_rozliczone ? 'checked' : '';
+  return `<div class="data-row ${cls}">
+    <div class="col-toggle">
+      <button class="toggle-btn ${chk}" data-id="${escH(String(r.id))}" data-tabela="${escH(r._tabela)}"
+        title="${r.czy_rozliczone?'Cofnij rozliczenie':'Oznacz jako rozliczone'}" onclick="onToggle(event,this)">
+        ${toggleIcon(r.czy_rozliczone)}
+      </button>
+    </div>
+    <div class="col-data"><span class="col-data-val">${escH(data)}</span></div>
+    <div class="col-main">
+      <div class="col-main-klient">${escH(r.klient||'')}</div>
+      <div class="col-main-sub">${escH(r.produkt||'')}</div>
+    </div>
+    <div class="col-extra" style="font-size:.82rem;color:var(--gray-600)">${escH(r.sprzedawca||'')}</div>
+    <div class="col-extra" style="font-size:.82rem;color:var(--gray-600)">${escH(r.platnosc_display||'')}</div>
+    <div class="col-kwota"><span class="col-kwota-val">${fmtKwota(r.kwota)}</span></div>
+    <div class="col-info">
+      <button class="info-btn" data-id="${escH(String(r.id))}" data-tabela="kosmetyki" onclick="onInfo(event,this)" title="Szczegóły">ℹ️</button>
+    </div>
+  </div>`;
+}
+
 function toggleIcon(checked) {
   return checked
     ? `<svg viewBox="0 0 20 20" fill="white"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>`
@@ -994,6 +1094,8 @@ async function onToggle(event, btn) {
     if (d.status!=='success') { alert(d.message||'Błąd.'); btn.classList.remove('loading'); return; }
     row.czy_rozliczone = d.czy_rozliczone;
     if (tabela==='sprzedaz') renderSprzedaz(); else renderZadatki();
+    buildKosmetyki();
+    if (activeTab === 'kosmetyki') renderKosmetyki();
     updateStats(); renderBreakdown(); renderSprzedawcy();
   } catch { alert('Błąd połączenia.'); btn.classList.remove('loading'); }
 }
@@ -1002,12 +1104,18 @@ async function onToggle(event, btn) {
 function onInfo(event, btn) {
   event.stopPropagation();
   const id = btn.dataset.id, tabela = btn.dataset.tabela;
-  const rows = tabela==='sprzedaz' ? rowsSprzedaz : rowsZadatki;
+  const rows = tabela==='sprzedaz' ? rowsSprzedaz : tabela==='zadatki' ? rowsZadatki : rowsKosmetyki;
   const row  = rows.find(r => String(r.id)===String(id));
   if (!row) return;
-  $('modalTitle').textContent = tabela==='sprzedaz' ? '💳 Szczegóły sprzedaży' : '🏷️ Szczegóły zadatku';
+  $('modalTitle').textContent = tabela==='sprzedaz' ? '💳 Szczegóły sprzedaży' : tabela==='zadatki' ? '🏷️ Szczegóły zadatku' : '💄 Szczegóły kosmetyku';
   let html = '';
-  if (tabela==='sprzedaz') {
+  if (tabela==='kosmetyki') {
+    const data = row.data ? String(row.data).slice(0,10) : '';
+    html = mr('Klient', row.klient) + mr('Data', data) + mr('Produkt', row.produkt)
+         + mr('Sprzedawca', row.sprzedawca) + mr('Kwota', fmtKwota(row.kwota), true)
+         + mr('Płatność', row.platnosc_display)
+         + (row.status ? mr('Status', row.status) : '');
+  } else if (tabela==='sprzedaz') {
     const data = row.data_sprzedazy ? String(row.data_sprzedazy).slice(0,10) : '';
     html = mr('Klient',row.klient)+mr('Data',data)+mr('Zabieg',row.zabieg)
          + mr('Sprzedawca',row.sprzedawca)+mr('Kwota',fmtKwota(row.kwota),true)
