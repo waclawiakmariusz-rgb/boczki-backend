@@ -46,10 +46,6 @@ async function optymalizujStrone(buffer) {
 module.exports = (db) => {
   const router = express.Router();
 
-  // ── GET /api/dokumenty/diagnostyka — tylko admin, pokazuje ścieżkę ──
-  router.get('/dokumenty/diagnostyka', (req, res) => {
-    res.json({ uploads_root: UPLOADS_ROOT, exists: fs.existsSync(UPLOADS_ROOT) });
-  });
 
   // ── POST /api/dokumenty/upload ──────────────────────────────
   // Body (multipart/form-data):
