@@ -12,7 +12,7 @@ const { randomUUID } = require('crypto');
 const { PDFDocument } = require('pdf-lib');
 
 // ─── Katalog uploads ──────────────────────────────────────────
-const UPLOADS_ROOT = path.join(__dirname, '..', 'uploads');
+const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 
 function tenantDir(tenant_id) {
   const dir = path.join(UPLOADS_ROOT, tenant_id);

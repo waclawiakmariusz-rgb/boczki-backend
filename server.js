@@ -575,10 +575,10 @@ process.on('unhandledRejection', (reason) => {
 // KATALOGI WYMAGANE PRZEZ APLIKACJĘ
 // ==========================================
 const fs   = require('fs');
-const UPLOADS_ROOT = path.join(__dirname, 'uploads');
+const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_ROOT)) {
     fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
-    console.log('[startup] Utworzono katalog uploads/');
+    console.log('[startup] Utworzono katalog uploads:', UPLOADS_ROOT);
 }
 
 // ==========================================
