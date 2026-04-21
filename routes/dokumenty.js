@@ -95,7 +95,7 @@ module.exports = (db) => {
       fs.writeFileSync(filepath, pdfBytes);
 
       const url = `/api/dokumenty/${tenant_id}/${filename}`;
-      return res.json({ status: 'success', url, pages: req.files.length, _debug_path: filepath });
+      return res.json({ status: 'success', url, pages: req.files.length });
 
     } catch (err) {
       console.error('[dokumenty upload]', err.message);

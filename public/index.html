@@ -19152,7 +19152,6 @@ async function dokumentWyslij(prefix) {
     setTimeout(() => {
       dokumentPokazDone(prefix, d.url);
       pokazPowiadomienie('success', 'Dokument zapisany', `PDF z ${d.pages} str. gotowy. Kliknij Zapisz formularz.`);
-      if (d._debug_path) alert('ŚCIEŻKA PLIKU NA SERWERZE:\n' + d._debug_path);
     }, 400);
 
   } catch (e) {
