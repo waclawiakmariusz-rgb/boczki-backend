@@ -10814,31 +10814,31 @@ function renderBirthdayPage(p) {
                 <td><strong>${k.nazwisko} ${k.imie}</strong></td>
                 
                 <td>
-                    <input value="${k.telefon || ''}" style="${inputStyle}" 
-                           onfocus="${inputFocus}" onblur="${inputBlur}" 
-                           onchange="zmienDaneUrodzin(${k.wiersz}, 5, this.value)">
+                    <input value="${k.telefon || ''}" style="${inputStyle}"
+                           onfocus="${inputFocus}" onblur="${inputBlur}"
+                           onchange="zmienDaneUrodzin('${k.id}', 5, this.value)">
                 </td>
-                
+
                 <td>
-                    <select style="${inputStyle} width:auto;" onchange="zmienDaneUrodzin(${k.wiersz}, 6, this.value)">
+                    <select style="${inputStyle} width:auto;" onchange="zmienDaneUrodzin('${k.id}', 6, this.value)">
                         <option value="tak" ${k.sms === 'tak' ? 'selected' : ''}>tak</option>
                         <option value="nie" ${k.sms === 'nie' ? 'selected' : ''}>nie</option>
                         <option value="brak" ${!k.sms || k.sms === 'brak' ? 'selected' : ''}>brak</option>
                     </select>
                 </td>
-                
+
                 <td>
-                    <select style="${inputStyle} width:auto;" onchange="zmienDaneUrodzin(${k.wiersz}, 7, this.value)">
+                    <select style="${inputStyle} width:auto;" onchange="zmienDaneUrodzin('${k.id}', 7, this.value)">
                         <option value="tak" ${k.zgoda_tel === 'tak' ? 'selected' : ''}>tak</option>
                         <option value="brak" ${!k.zgoda_tel || k.zgoda_tel === 'brak' ? 'selected' : ''}>brak</option>
                         <option value="nie" ${k.zgoda_tel === 'nie' ? 'selected' : ''}>nie</option>
                     </select>
                 </td>
-                
+
                 <td>
-                    <input value="${k.komentarz || ''}" style="${inputStyle} border:1px solid #e2e8f0; background:#f9fafb;" 
-                           onfocus="${inputFocus}" onblur="${inputBlur} this.style.background='#f9fafb';" 
-                           onchange="zmienDaneUrodzin(${k.wiersz}, 8, this.value)">
+                    <input value="${k.komentarz || ''}" style="${inputStyle} border:1px solid #e2e8f0; background:#f9fafb;"
+                           onfocus="${inputFocus}" onblur="${inputBlur} this.style.background='#f9fafb';"
+                           onchange="zmienDaneUrodzin('${k.id}', 8, this.value)">
                 </td>
             </tr>`;
     });
@@ -10855,19 +10855,16 @@ function renderBirthdayPage(p) {
 }
 
 // Funkcja wysyłająca każdą zmianę do backendu
-function zmienDaneUrodzin(wiersz, kolumna, wartosc) {
+function zmienDaneUrodzin(id, kolumna, wartosc) {
     fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
             action: 'update_birthday_field',
             miesiac: aktualnyMiesiac,
-            wiersz: wiersz,
+            id: id,
             kolumna: kolumna,
             wartosc: wartosc
         })
-    }).then(() => {
-        // Opcjonalnie: małe powiadomienie typu toast, że zapisano
-        console.log("Zapisano zmianę");
     });
 }
 
