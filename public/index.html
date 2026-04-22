@@ -2962,11 +2962,11 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
 
         <main class="main-content">
             <div id="magazyn" class="section active">
-			<input type="text" id="szukaj-magazyn" onkeyup="_db('mag',szukajWMagazynie)" placeholder="🔍 Szukaj produktu w magazynie..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
-                <div class="header"><h1>Stan Magazynowy</h1><button onclick="pobierzDane()" class="btn-primary" style="width:auto;">🔄 Odśwież</button></div>
-                <div class="filters">
+			<input type="text" id="szukaj-magazyn" onkeyup="_db('mag',szukajWMagazynie)" placeholder="🔍 Szukaj produktu w magazynie..." style="width:100%; padding:12px 16px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:10px; box-sizing:border-box; font-size:14px; background:#f8fafc;">
+                <div class="header"><h1>Stan Magazynowy</h1><button onclick="pobierzDane()" class="btn-primary" style="width:auto; background:#9f1239; border-radius:10px; padding:10px 20px;">🔄 Odśwież</button></div>
+                <div class="filters" style="gap:8px;">
                     <button class="filter-btn active" onclick="filtrujMagazyn('Wszystkie', this)">Wszystkie</button>
-                    <button class="filter-btn" onclick="filtrujMagazyn('Detal', this)">🛍️ Detal</button>
+                    <button class="filter-btn" onclick="filtrujMagazyn('Detal', this)">Detal</button>
                     <button class="btn-zbiorczy filter-btn" onclick="filtrujMagazyn('Zbiorczy', this)">∑ Lista Zbiorcza</button>
                 </div>
                 <div id="magazyn-legenda" style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
@@ -10182,27 +10182,29 @@ function renderMagazyn(d) {
                 let datySortowane = g.partie.slice().sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
                 let najstarsza = new Date(datySortowane[0].waznosc).toLocaleDateString();
                 let najnowsza = new Date(datySortowane[datySortowane.length-1].waznosc).toLocaleDateString();
-                podtytulHtml = '<br><span style="font-size:11px; font-weight:bold; color:#0284c7; display:inline-block; margin-top:5px; background:#e0f2fe; padding:2px 8px; border-radius:10px; cursor:pointer;">📦 ' + g.partie.length + ' dostawy — ważność: ' + najstarsza + ' – ' + najnowsza + '</span>'
-                    + '<br><span style="font-size:10px; color:#94a3b8; margin-top:2px; display:inline-block;">↳ sprzedaż pobiera automatycznie z najstarszej</span>';
+                podtytulHtml = '<br><span style="font-size:11px; font-weight:600; color:#0284c7; display:inline-block; margin-top:4px; background:#e0f2fe; padding:2px 10px; border-radius:20px; cursor:pointer;">🚛 ' + g.partie.length + ' dostawy — ważność: ' + najstarsza + ' – ' + najnowsza + '</span>'
+                    + '<br><span style="font-size:11px; color:#94a3b8; margin-top:2px; display:inline-block;">↓ sprzedaż pobiera automatycznie z najstarszej</span>';
                 akcjaHtml = '<span style="font-size:11px; color:#94a3b8; font-style:italic;">(kliknij wiersz, by zobaczyć)</span>';
             } else {
-                podtytulHtml = '<br><small style="color:#888">' + g.typ + ' | ' + (g.kto_dodal || '-') + '</small>';
+                podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ || '') + ' | ' + (g.kto_dodal || '-') + '</small>';
                 let obiektPartii = encodeURIComponent(JSON.stringify(g.partie[0]));
-                akcjaHtml = '<button class="btn-edit" onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="width:35px; height:35px; margin:0;">✎</button>';
+                akcjaHtml = '<button onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="background:none; border:none; cursor:pointer; font-size:20px; color:#16a34a;" title="Zamów / Edytuj">📞</button>';
             }
+
+            let cenaFormatowana = parseFloat(g.cena || 0).toFixed(2).replace('.', ',') + ' PLN';
 
             // A. Wiersz Główny
             htmlWynikowy += `
             <tr style="border-bottom:1px solid #f1f5f9; ${tloWiersza} transition:0.2s;" ${zdarzenieKlik}>
-                <td style="padding-top:15px; padding-bottom:15px;">
-                    <span class="cat-badge ${cb}">${g.kategoria.toUpperCase()}</span> 
+                <td style="padding-top:14px; padding-bottom:14px;">
+                    <span class="cat-badge ${cb}">${g.kategoria.toUpperCase()}</span>
                     <strong style="color:#1e293b;">${g.nazwa}</strong>
                     ${podtytulHtml}
                 </td>
-                <td><span class="${stylIlosci}" style="${tloIlosci}">${tekstIlosci}</span></td>
+                <td style="text-align:center; font-weight:700; color:#1e293b; font-size:15px;">${g.iloscCalkowita > 0 ? g.iloscCalkowita : '<span style="color:#ef4444;">0</span>'}</td>
                 <td><div class="date-badge ${c}">${new Date(g.najblizszaWaznoscStr).toLocaleDateString()}</div></td>
-                <td>${g.cena} PLN</td>
-                <td>${akcjaHtml}</td>
+                <td style="color:#475569; font-size:13px;">${cenaFormatowana}</td>
+                <td style="text-align:center;">${akcjaHtml}</td>
             </tr>`;
 
             // B. Wiersze Dzieci (Partie)
@@ -10212,20 +10214,24 @@ function renderMagazyn(d) {
                     let pdf = Math.ceil((new Date(p.waznosc) - new Date()) / 86400000);
                     let pc = pdf < 0 ? 'status-bad' : (pdf <= 90 ? 'status-warn' : 'status-ok');
                     const rowStr = encodeURIComponent(JSON.stringify(p));
-                    let etykietaDostawy = pIdx === 0 ? '📦 Starsza dostawa <span style="font-size:10px;color:#f59e0b;font-weight:600;">(sprzedawana pierwsza)</span>' : '📦 Dostawa ' + (pIdx + 1);
-                    let dzieckoIlosc = p.ilosc == 0 ? '<span class="qty-status-badge status-bad" style="font-size:10px;">0 (BRAK)</span>' : '<span class="qty-badge" style="font-size:11px; background:#f1f5f9;">' + p.ilosc + ' szt.</span>';
+                    let ikonaDostawy = pIdx === 0 ? '☆' : '○';
+                    let etykietaDostawy = pIdx === 0
+                        ? ikonaDostawy + ' <strong style="color:#475569;">Starsza dostawa</strong> <span style="font-size:10px;color:#f59e0b;font-weight:600;">(sprzedawana pierwsza)</span>'
+                        : ikonaDostawy + ' Dostawa ' + (pIdx + 1);
+                    let dzieckoIlosc = p.ilosc == 0 ? '<span style="color:#ef4444;font-size:12px;font-weight:700;">0 (BRAK)</span>' : '<span style="font-size:12px;color:#475569;">' + parseFloat(p.ilosc).toFixed(2).replace('.', ',') + ' SZT.</span>';
+                    let cenaPartii = parseFloat(p.brutto || 0).toFixed(2).replace('.', ',') + ' PLN';
 
                     htmlWynikowy += `
-                    <tr class="${rowId}" style="display:none; background:#ffffff;">
-                        <td style="padding-left: 40px; border-bottom: 1px dashed #e2e8f0;">
-                            <span style="color:#cbd5e1;">└─</span> <span style="font-size:12px; font-weight:600; color:#475569;">${etykietaDostawy}</span><br>
-                            <small style="color:#94a3b8; margin-left: 20px;">Dodał: ${p.kto_dodal || '-'}</small>
+                    <tr class="${rowId}" style="display:none; background:#fafafa;">
+                        <td style="padding-left:40px; border-bottom:1px dashed #e2e8f0; padding-top:10px; padding-bottom:10px;">
+                            <span style="font-size:13px; color:#475569;">${etykietaDostawy}</span><br>
+                            <small style="color:#94a3b8; margin-left:18px;">Dodał: ${p.kto_dodal || '-'}</small>
                         </td>
-                        <td style="border-bottom: 1px dashed #e2e8f0;">${dzieckoIlosc}</td>
-                        <td style="border-bottom: 1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${new Date(p.waznosc).toLocaleDateString()}</div></td>
-                        <td style="border-bottom: 1px dashed #e2e8f0; font-size:12px; color:#64748b;">${p.brutto} PLN</td>
-                        <td style="border-bottom: 1px dashed #e2e8f0;">
-                            <button class="btn-edit" onclick="otworzEdycjeProduktu('${rowStr}')" style="width:28px; height:28px; margin:0; font-size:12px;" title="Edytuj Partię">✎</button>
+                        <td style="border-bottom:1px dashed #e2e8f0; text-align:center; font-size:12px; color:#475569;">${dzieckoIlosc}</td>
+                        <td style="border-bottom:1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${new Date(p.waznosc).toLocaleDateString()}</div></td>
+                        <td style="border-bottom:1px dashed #e2e8f0; font-size:12px; color:#64748b;">${cenaPartii}</td>
+                        <td style="border-bottom:1px dashed #e2e8f0; text-align:center;">
+                            <button onclick="otworzEdycjeProduktu('${rowStr}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:#16a34a;" title="Edytuj Partię">📞</button>
                         </td>
                     </tr>`;
                 });
