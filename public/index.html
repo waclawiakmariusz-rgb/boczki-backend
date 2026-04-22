@@ -7363,7 +7363,7 @@ function zaladujPulpit() {
     };
 
     // ── KPIs + ostatnie transakcje ──
-    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'full_sales_history' }) })
+    fetch(API_URL + '?action=full_sales_history')
     .then(r => r.json())
     .then(data => {
         const rows = Array.isArray(data) ? data : [];
@@ -7412,8 +7412,8 @@ function zaladujPulpit() {
 
     // ── Wymaga uwagi: niski stan + zadatki ──
     Promise.all([
-        fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'rap_getInventory' }) }).then(r=>r.json()).catch(()=>({status:'error',data:[]})),
-        fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_all_deposits' }) }).then(r=>r.json()).catch(()=>[])
+        fetch(API_URL + '?action=rap_getInventory').then(r=>r.json()).catch(()=>({status:'error',data:[]})),
+        fetch(API_URL + '?action=get_all_deposits').then(r=>r.json()).catch(()=>[])
     ]).then(([inv, deposits]) => {
         const items = [];
 
