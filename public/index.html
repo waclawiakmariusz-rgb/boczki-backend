@@ -6690,19 +6690,6 @@ let wciecieLogow = "";
                 if (data.status === 'error' || data.error) {
                     const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
 
-                    // Sesja wygasła — wyczyść i wróć do PIN
-                    if (komunikat.includes('Sesja wygasła') || komunikat.includes('wygasła')) {
-                        localStorage.removeItem('boczki_pracownik_imie');
-                        localStorage.removeItem('boczki_pracownik_rola');
-                        localStorage.removeItem('boczki_session_token');
-                        const appC = document.getElementById('app-container');
-                        if (appC) appC.style.display = 'none';
-                        const pinO = document.getElementById('pin-overlay');
-                        if (pinO) { pinO.style.display = 'flex'; }
-                        else { location.reload(); }
-                        return new Response(JSON.stringify({ status: 'error', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-                    }
-
                     console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, komunikat);
 
                     // Akcje które zawsze pokazują błąd użytkownikowi
