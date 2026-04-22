@@ -10836,9 +10836,13 @@ function renderBirthdayPage(p) {
                 </td>
 
                 <td>
-                    <input value="${k.komentarz || ''}" style="${inputStyle} border:1px solid #e2e8f0; background:#f9fafb;"
-                           onfocus="${inputFocus}" onblur="${inputBlur} this.style.background='#f9fafb';"
-                           onchange="zmienDaneUrodzin('${k.id}', 8, this.value)">
+                    <div style="display:flex; align-items:center; gap:4px;">
+                        <input id="kom-${k.id}" value="${k.komentarz || ''}" style="${inputStyle} border:1px solid #e2e8f0; background:#f9fafb;"
+                               onfocus="${inputFocus}" onblur="${inputBlur} this.style.background='#f9fafb';">
+                        <button onclick="zapiszKomentarzBtn('${k.id}')" id="btn-kom-${k.id}"
+                                style="border:none; background:none; cursor:pointer; font-size:1rem; padding:2px 4px; border-radius:4px; flex-shrink:0;"
+                                title="Zapisz komentarz">💾</button>
+                    </div>
                 </td>
             </tr>`;
     });
@@ -10855,6 +10859,24 @@ function renderBirthdayPage(p) {
 }
 
 // Funkcja wysyłająca każdą zmianę do backendu
+function zapiszKomentarzBtn(id) {
+    const input = document.getElementById('kom-' + id);
+    const btn   = document.getElementById('btn-kom-' + id);
+    if (!input || !btn) return;
+    btn.textContent = '⏳';
+    btn.disabled = true;
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'update_birthday_field', miesiac: aktualnyMiesiac, id: id, kolumna: 8, wartosc: input.value })
+    }).then(() => {
+        btn.textContent = '✅';
+        setTimeout(() => { btn.textContent = '💾'; btn.disabled = false; }, 2000);
+    }).catch(() => {
+        btn.textContent = '❌';
+        setTimeout(() => { btn.textContent = '💾'; btn.disabled = false; }, 2000);
+    });
+}
+
 function zmienDaneUrodzin(id, kolumna, wartosc) {
     fetch(API_URL, {
         method: "POST",
