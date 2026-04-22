@@ -2969,7 +2969,7 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
                     <button class="filter-btn" onclick="filtrujMagazyn('Detal', this)">🛍️ Detal</button>
                     <button class="btn-zbiorczy filter-btn" onclick="filtrujMagazyn('Zbiorczy', this)">∑ Lista Zbiorcza</button>
                 </div>
-                <div id="magazyn-legenda" style="margin-bottom:15px; font-size:11px; display:flex; gap:10px;"></div>
+                <div id="magazyn-legenda" style="margin-bottom:15px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"></div>
                 <div class="card"><div class="table-container"><table id="tabela"><thead id="tabela-head"></thead><tbody id="tabela-body"></tbody></table></div></div>
             </div>
             <div id="inwentaryzacja" class="section">
@@ -6585,6 +6585,7 @@ function normNumOr0(val) {
         let daneCache=[], slownikCache=[], salesDictCache={pracownicy:[], zabiegi:[]}, currentUser=null, aktualnyMiesiac="";
         let allBirthdays = [], currentBirthdayPage = 1, itemsPerPage = 20;
         let aktualnyFiltrMagazyn='Wszystkie', aktualnyFiltrInv='Wszystkie';
+        let aktywneStatusyMagazyn = new Set(['mniej','krotko','ok']);
         let cacheZadatkow = []; // Magazyn tymczasowy dla zadatków
 		let stanSortowania = { kolumna: 'waznosc', kierunek: 'asc' };
         // NOWE ZMIENNE DLA HISTORII
@@ -10084,8 +10085,8 @@ function renderMagazyn(d) {
         // ==========================================
         // WIDOK SZCZEGÓŁOWY (AKORDEON DLA DUBELKÓW)
         // ==========================================
-        l.innerHTML = '<span>🔴 Minął</span> <span>🟡 < 3 m-ce</span> <span>🟢 OK</span>';
-        
+        l.innerHTML = renderChipsyStatusMagazyn();
+
         h.innerHTML = `
         <tr>
             <th onclick="sortujTabeleMagazynu('nazwa')" style="cursor:pointer; user-select:none;">Produkt${getArrow('nazwa')}</th>
@@ -10126,8 +10127,11 @@ function renderMagazyn(d) {
             }
         });
 
-        // 2. Sortowanie
-        let listaDoSortowania = Object.values(zgrupowane);
+        // 2. Filtrowanie po statusie (chipy)
+        let listaDoSortowania = Object.values(zgrupowane).filter(g => {
+            const s = statusGrupyMagazyn(g);
+            return aktywneStatusyMagazyn.has(s);
+        });
         let kolumnaSort = (typeof stanSortowania !== 'undefined') ? stanSortowania.kolumna : 'nazwa';
         let kierunekSort = (typeof stanSortowania !== 'undefined' && stanSortowania.kierunek === 'desc') ? -1 : 1;
 
@@ -10250,6 +10254,37 @@ function toggleMagazynAkordeon(groupId) {
             row.style.display = 'none';
         }
     });
+}
+
+// --- STATUSY I CHIPY FILTROWANIA MAGAZYNU ---
+function statusGrupyMagazyn(g) {
+    if (g.iloscCalkowita <= 2) return 'mniej';
+    const df = Math.ceil((new Date(g.najblizszaWaznoscStr) - new Date()) / 86400000);
+    return df <= 90 ? 'krotko' : 'ok';
+}
+
+function renderChipsyStatusMagazyn() {
+    const chips = [
+        { id: 'mniej', label: 'Mniej', color: '#ef4444' },
+        { id: 'krotko', label: '< 3 m-ce', color: '#f59e0b' },
+        { id: 'ok', label: 'OK', color: '#22c55e' }
+    ];
+    return chips.map(ch => {
+        const active = aktywneStatusyMagazyn.has(ch.id);
+        const s = active
+            ? `background:${ch.color}; color:#fff; border:1px solid ${ch.color};`
+            : `background:#fff; color:${ch.color}; border:1px solid ${ch.color};`;
+        return `<button onclick="toggleStatusMagazyn('${ch.id}')" style="display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:20px; cursor:pointer; font-size:12px; font-weight:600; ${s}">● ${ch.label}</button>`;
+    }).join('');
+}
+
+function toggleStatusMagazyn(status) {
+    if (aktywneStatusyMagazyn.has(status)) {
+        aktywneStatusyMagazyn.delete(status);
+    } else {
+        aktywneStatusyMagazyn.add(status);
+    }
+    renderMagazyn(daneCache);
 }
 
 // --- NOWE FUNKCJE DO OBSŁUGI POPUPA PRODUKTU ---
