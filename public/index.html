@@ -305,7 +305,29 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .pp-tab { position:relative; height:46px; background:none; border:none; display:inline-flex; align-items:center; gap:8px; color:#4d5363; font-weight:500; font-size:14px; padding:0 12px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; white-space:nowrap; font-family:inherit; }
 .pp-tab:hover { color:#cf3d78; }
 .pp-tab.pp-tab-active { color:#cf3d78; font-weight:700; border-bottom-color:#e8568f; }
-/* legacy (nie usuwamy bo mogą być jeszcze odniesienia) */
+/* PROFIL — GRID RWD */
+.pp-content-grid { display:grid; grid-template-columns:1fr 310px; gap:20px; align-items:start; }
+.pp-hero-top { background:#fff2f5; padding:28px 28px 22px; display:grid; grid-template-columns:120px 1fr 200px; gap:22px; align-items:center; border-bottom:1px solid #f3e3e8; }
+.pp-hero-stats { padding:18px 22px 22px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#fff; }
+.pp-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.pp-right-col { display:grid; gap:18px; position:sticky; top:20px; }
+@media (max-width: 1200px) {
+  .pp-content-grid { grid-template-columns:1fr; }
+  .pp-right-col { position:static; grid-template-columns:1fr 1fr; }
+}
+@media (max-width: 860px) {
+  .pp-hero-top { grid-template-columns:90px 1fr; padding:18px 16px 16px; gap:14px; }
+  .pp-hero-birthday { grid-column:1/-1; border-left:0 !important; padding-left:0 !important; border-top:1px solid #f3e3e8; padding-top:14px !important; }
+  .pp-hero-stats { grid-template-columns:1fr; gap:10px; padding:14px 16px; }
+  .pp-summary-grid { grid-template-columns:1fr; }
+  .pp-right-col { grid-template-columns:1fr; }
+}
+@media (max-width: 560px) {
+  .pp-hero-top { grid-template-columns:1fr; text-align:center; }
+  .pp-avatar-lg { margin:0 auto; }
+  .pp-hero-actions { justify-content:center; }
+}
+/* legacy */
 .profil-tab { background:none; border:none; padding:10px 14px; font-size:13px; font-weight:600; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
 .profil-tab-active { color:#db2777; border-bottom-color:#db2777; }
 #wallet-list .deposit-item, #wallet-list-manual .deposit-item {
@@ -4064,7 +4086,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
     <div style="color:#555c6b; font-weight:500; font-size:14px; margin-bottom:14px; cursor:pointer;" onclick="zamknijProfilKlienta()">← Wróć do listy klientów</div>
 
     <!-- content grid: main + right sidebar -->
-    <div style="display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;">
+    <div class="pp-content-grid">
 
         <!-- ===== LEFT / CENTER ===== -->
         <section>
@@ -4073,10 +4095,10 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); overflow:hidden; margin-bottom:18px;">
 
                 <!-- hero-top: avatar | name/phone/actions | birthday -->
-                <div style="background:#fff2f5; padding:28px 28px 22px; display:grid; grid-template-columns:120px 1fr 200px; gap:22px; align-items:center; border-bottom:1px solid #f3e3e8;">
+                <div class="pp-hero-top">
 
                     <!-- avatar -->
-                    <div id="profil-avatar" style="width:108px; height:108px; border-radius:50%; background:#fff; border:1px solid #f1e1e6; box-shadow:0 8px 20px rgba(28,22,37,.05); display:grid; place-items:center; color:#e28aac; font-size:42px; font-weight:300; letter-spacing:-.03em;">??</div>
+                    <div id="profil-avatar" class="pp-avatar-lg" style="width:108px; height:108px; border-radius:50%; background:#fff; border:1px solid #f1e1e6; box-shadow:0 8px 20px rgba(28,22,37,.05); display:grid; place-items:center; color:#e28aac; font-size:42px; font-weight:300; letter-spacing:-.03em;">??</div>
 
                     <!-- name + data + actions -->
                     <div>
@@ -4089,21 +4111,21 @@ body.dark-mode #hkb-modal { background: #1e293b; }
                             <div id="profil-id-row"></div>
                             <div id="profil-tel-row" style="font-size:15px; font-weight:700; color:#2a3040;"></div>
                         </div>
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <div class="pp-hero-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                             <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#6e49df; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔒 REGULAMIN</button>
                             <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#13a05f; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔓 ZGODY</button>
                         </div>
                     </div>
 
                     <!-- birthday box -->
-                    <div style="border-left:1px solid #e8d9df; padding-left:24px; color:#5f6577; font-size:15px; line-height:1.5; min-height:64px; display:flex; flex-direction:column; justify-content:center; gap:4px;">
+                    <div class="pp-hero-birthday" style="border-left:1px solid #e8d9df; padding-left:24px; color:#5f6577; font-size:15px; line-height:1.5; min-height:64px; display:flex; flex-direction:column; justify-content:center; gap:4px;">
                         <div>📅 Urodziny</div>
                         <div id="profil-meta" style="font-size:16px; font-weight:700; color:#262b39;"></div>
                     </div>
                 </div>
 
                 <!-- hero-stats: 3 boxes -->
-                <div style="padding:18px 22px 22px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#fff;">
+                <div class="pp-hero-stats">
                     <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; position:relative;">
                         <div style="color:#7b8091; font-size:14px; margin-bottom:8px;">Dostępne środki</div>
                         <div id="wallet-balance" class="wallet-amount" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#202534;">0,00 zł</div>
@@ -4139,7 +4161,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 
                     <!-- ===== Tab: Podsumowanie ===== -->
                     <div id="tab-profil-podsumowanie">
-                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+                        <div class="pp-summary-grid">
 
                             <!-- Sugestie -->
                             <div id="asystent-box" style="display:none; background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px 18px 16px;">
@@ -4263,7 +4285,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
         </section>
 
         <!-- ===== RIGHT SIDEBAR ===== -->
-        <aside style="display:grid; gap:18px; position:sticky; top:20px;">
+        <aside class="pp-right-col">
 
             <!-- Szybkie akcje -->
             <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); padding:18px;">
