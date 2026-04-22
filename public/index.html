@@ -13878,30 +13878,16 @@ function zarzadzajZadatkiem(idZadatku, typ) {
 // edycja KLIENTA
 
 function otworzEdycjeKlienta() {
-    // 1. Pobieramy ID z nagłówka profilu (to jest nasz klucz)
-    const naglowek = document.getElementById('profil-naglowek');
-    let id = "";
-    const match = naglowek.innerText.match(/ID:\s*(\d+)/);
-    if (match) id = match[1];
-
-    let nazwa = "";
+    const id = window.aktualnyProfilKlientId || "";
+    let nazwa = window.aktualnyProfilKlientNazwa || "";
     let telefon = "";
 
-    // 2. Szukamy danych klienta w pamięci przeglądarki (window.wszyscyKlienciDane)
-    // To gwarantuje, że pobierzemy prawdziwy numer, bez ikonek 📞 i spacji
     if (id && window.wszyscyKlienciDane) {
         const k = window.wszyscyKlienciDane.find(x => String(x.id) === String(id));
         if (k) {
             nazwa = k.nazwa;
-            telefon = k.telefon || ""; // Pobieramy telefon z bazy!
+            telefon = k.telefon || "";
         }
-    }
-
-    // Zabezpieczenie: Jeśli z jakiegoś powodu nie znaleziono w bazie, weź nazwę z HTML
-    if (!nazwa) {
-        const h1 = naglowek.querySelector('h1');
-        if (h1) nazwa = h1.innerText.trim();
-        else nazwa = naglowek.innerText.split('ID:')[0].trim();
     }
 
     // 3. Wypełniamy formularz
