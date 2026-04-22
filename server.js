@@ -17,6 +17,7 @@ app.use(cors({
     const allowed = [
       'https://estelio.com.pl',
       'https://www.estelio.com.pl',
+      'https://dev.estelio.com.pl',
     ];
     if (
       !origin ||
