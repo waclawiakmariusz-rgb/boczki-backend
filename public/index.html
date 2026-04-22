@@ -7345,6 +7345,8 @@ function wylogujGlowne() {
 // PULPIT STARTOWY — ładowanie danych
 // ═══════════════════════════════════════════
 function zaladujPulpit() {
+    const pulpitEl = document.getElementById('pulpit');
+    console.log('🏠 zaladujPulpit: el=', pulpitEl, 'display=', pulpitEl ? pulpitEl.style.display : 'NIE ZNALEZIONO', 'computed=', pulpitEl ? window.getComputedStyle(pulpitEl).display : '—');
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
