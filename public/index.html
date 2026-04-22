@@ -6689,6 +6689,20 @@ let wciecieLogow = "";
                 // Jeśli serwer sam zgłasza błąd logiczny
                 if (data.status === 'error' || data.error) {
                     const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
+
+                    // Sesja wygasła — wyczyść i wróć do PIN
+                    if (komunikat.includes('Sesja wygasła') || komunikat.includes('wygasła')) {
+                        localStorage.removeItem('boczki_pracownik_imie');
+                        localStorage.removeItem('boczki_pracownik_rola');
+                        localStorage.removeItem('boczki_session_token');
+                        const appC = document.getElementById('app-container');
+                        if (appC) appC.style.display = 'none';
+                        const pinO = document.getElementById('pin-overlay');
+                        if (pinO) { pinO.style.display = 'flex'; }
+                        else { location.reload(); }
+                        return new Response(JSON.stringify({ status: 'error', data: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+                    }
+
                     console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, komunikat);
 
                     // Akcje które zawsze pokazują błąd użytkownikowi
@@ -7262,7 +7276,6 @@ function uruchomAplikacjePracownika(imie, rola) {
     show('menu-kreator-dostepow');
 
     // 2. OTWIERAMY NA BAZIE ROLI (teraz bez ryzyka błędu!):
-    console.log('🔑 uruchomAplikacjePracownika: rola =', JSON.stringify(r));
     if (r === 'praktykantka') {
         show('group-magazyn');
         pokaz('magazyn');
@@ -7352,8 +7365,6 @@ function wylogujGlowne() {
 // PULPIT STARTOWY — ładowanie danych
 // ═══════════════════════════════════════════
 function zaladujPulpit() {
-    const pulpitEl = document.getElementById('pulpit');
-    console.log('🏠 zaladujPulpit: el=', pulpitEl, 'display=', pulpitEl ? pulpitEl.style.display : 'NIE ZNALEZIONO', 'computed=', pulpitEl ? window.getComputedStyle(pulpitEl).display : '—');
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
     const timeStr = pad(now.getHours()) + ':' + pad(now.getMinutes());
