@@ -6882,19 +6882,8 @@ function normNumOr0(val) {
     let pracownikRola = localStorage.getItem('boczki_pracownik_rola'); // Rola z PINu
 
     if (pracownikImie && pracownikRola) {
-        const sTime = parseInt(localStorage.getItem('boczki_session_time') || '0');
-        const sesjaSwiezа = sTime > 0 && (Date.now() - sTime) < 8 * 60 * 60 * 1000;
-        if (sesjaSwiezа) {
-            document.getElementById('login-overlay').style.display = 'none';
-            uruchomAplikacjePracownika(pracownikImie, pracownikRola);
-        } else {
-            // Sesja wygasła — wyczyść i pokaż ekran PIN
-            localStorage.removeItem('boczki_pracownik_imie');
-            localStorage.removeItem('boczki_pracownik_rola');
-            localStorage.removeItem('boczki_session_token');
-            localStorage.removeItem('boczki_session_time');
-            zaloguj(s, true);
-        }
+        document.getElementById('login-overlay').style.display = 'none';
+        uruchomAplikacjePracownika(pracownikImie, pracownikRola);
     }
     else if(s && s !== "undefined") { 
         // Jeśli jest tylko sesja urządzenia (zwykłe wejście z linku), pokazujemy ekran PIN
