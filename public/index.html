@@ -301,6 +301,10 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .client-sidebar details:hover { background: #f1f5f9 !important; }
 .client-sidebar details summary { font-weight: 800 !important; color: var(--text-dark) !important; font-size: 14px !important; list-style: none !important; outline: none !important; cursor: pointer; }
 .client-sidebar details summary::-webkit-details-marker { display: none !important; }
+/* PROFIL — NOWE TABY */
+.profil-tab { background: none; border: none; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 0; transition: color 0.15s; }
+.profil-tab:hover { color: #475569; }
+.profil-tab-active { color: #db2777; border-bottom-color: #db2777; }
 #wallet-list .deposit-item, #wallet-list-manual .deposit-item {
     background: var(--white) !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02) !important; margin-top: 10px !important; border: none !important; padding: 12px;
 }
@@ -4052,208 +4056,180 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 
 	
 	<div id="widok-szczegolow-klienta" style="display:none;">
-    
-    <div class="client-dashboard">
-        
-        <aside class="client-sidebar">
-            
-            <div class="client-avatar">👩</div>
-            <div class="client-name-box">
-                <div id="profil-naglowek">Ładowanie...</div>
-                <div id="profil-meta" style="margin-top:10px; font-size:13px;"></div>
-            </div>
 
-            <div class="wallet-card">
-                <div class="wallet-label">Dostępne środki</div>
-                <div id="wallet-balance" class="wallet-amount">0.00 zł</div>
-                <div class="wallet-actions">
-                    <button onclick="otworzWplateZadatku()">+ Wpłać Zadatek</button>
+    <!-- Top bar -->
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+        <button onclick="zamknijProfilKlienta()" style="background:none; border:none; cursor:pointer; color:#64748b; font-size:14px; padding:0; display:flex; align-items:center; gap:6px;">← Wróć do listy klientów</button>
+        <button id="btn-odswiez-profil" onclick="odswiezProfilAktualnegoKlienta()" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; color:#64748b; font-size:13px; padding:7px 14px;">🔄 Odśwież</button>
+    </div>
+
+    <!-- Layout: main + right sidebar -->
+    <div style="display:grid; grid-template-columns:1fr 256px; gap:20px; align-items:start;">
+
+        <!-- CENTER -->
+        <div>
+            <!-- Header card -->
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:20px; margin-bottom:14px; display:flex; align-items:center; gap:16px;">
+                <div id="profil-avatar" style="width:54px; height:54px; border-radius:50%; background:#fce7f3; display:flex; align-items:center; justify-content:center; font-size:19px; font-weight:800; color:#db2777; flex-shrink:0; letter-spacing:-1px;">??</div>
+                <div style="flex:1; min-width:0;">
+                    <div id="profil-naglowek"></div>
+                    <div id="profil-meta" style="margin-top:4px; font-size:13px;"></div>
                 </div>
             </div>
-<div style="margin-bottom:25px;">
-                <details open style="font-size:13px; color:#666; cursor:pointer;">
+
+            <!-- Stats -->
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:14px;">
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; text-align:center;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">Dostępne środki</div>
+                    <div id="wallet-balance" class="wallet-amount" style="font-size:20px; font-weight:800; color:#1e293b;">0,00 zł</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; text-align:center;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">Wizyty</div>
+                    <div id="profil-stat-wizyty" style="font-size:20px; font-weight:800; color:#1e293b;">–</div>
+                </div>
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; text-align:center;">
+                    <div style="font-size:10px; color:#94a3b8; text-transform:uppercase; font-weight:700; letter-spacing:0.5px; margin-bottom:4px;">Łączna wartość</div>
+                    <div id="profil-stat-wartosc" style="font-size:20px; font-weight:800; color:#1e293b;">–</div>
+                </div>
+            </div>
+
+            <!-- Tabs -->
+            <div style="display:flex; gap:2px; border-bottom:2px solid #f1f5f9; margin-bottom:16px; flex-wrap:wrap;">
+                <button class="profil-tab profil-tab-active" onclick="przelaczTabProfilu('podsumowanie',this)">Podsumowanie</button>
+                <button class="profil-tab" onclick="przelaczTabProfilu('wizyty',this)">Wizyty</button>
+                <button class="profil-tab" onclick="przelaczTabProfilu('produkty',this)">Produkty</button>
+                <button class="profil-tab" onclick="przelaczTabProfilu('zadatki',this)">Zadatki</button>
+                <button class="profil-tab" onclick="przelaczTabProfilu('analityki',this)">Analityki</button>
+                <button class="profil-tab" onclick="przelaczTabProfilu('dokumenty',this)">Dokumenty</button>
+            </div>
+
+            <!-- Tab: Podsumowanie -->
+            <div id="tab-profil-podsumowanie">
+                <div id="asystent-box" style="display:none; background:#fff5f7; border-left:4px solid #db2777; padding:16px; border-radius:0 12px 12px 0; margin-bottom:14px;">
+                    <h3 style="margin:0 0 8px; color:#9f1239; font-size:14px; display:flex; align-items:center; gap:6px;">💡 Sugestie dla Recepcji</h3>
+                    <ul id="lista-sugestii" style="margin:0; padding-left:18px; color:#334155; font-size:13px;"></ul>
+                </div>
+                <div class="client-memo-container memo-widget">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <span style="font-weight:bold; color:#b45309; font-size:12px;">📌 NOTATKA</span>
+                        <button onclick="edytujNotatkeUI()" style="border:none; background:none; cursor:pointer; color:#b45309; font-weight:bold; font-size:12px;"><span id="memo-action-label">EDYTUJ</span></button>
+                    </div>
+                    <div id="memo-content" style="font-style:italic; color:#78350f; font-size:14px; line-height:1.5;">Brak notatki.</div>
+                </div>
+                <div class="client-retention-container memo-widget" style="background:#f0fdfa; border-color:#5eead4; margin-top:12px;">
+                    <div style="font-weight:bold; color:#0f766e; font-size:12px; margin-bottom:10px;">📞 HISTORIA KONTAKTÓW</div>
+                    <div id="profil-retencja-content" style="font-size:12px; color:#115e59; line-height:1.4;">Ładowanie...</div>
+                </div>
+            </div>
+
+            <!-- Tab: Wizyty -->
+            <div id="tab-profil-wizyty" style="display:none;">
+                <div style="background:#fff; padding:12px; border-radius:10px; margin-bottom:12px; border:1px solid #e2e8f0; position:relative;">
+                    <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)" placeholder="🔍 Szukaj w historii zabiegów..." style="width:100%; padding:10px 10px 10px 36px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                    <span style="position:absolute; left:24px; top:50%; transform:translateY(-50%); opacity:0.5; pointer-events:none;">🔎</span>
+                </div>
+                <details class="history-group group-twarz" open>
+                    <summary class="history-summary"><div class="summary-title txt-twarz">💆‍♀️ Twarz <span id="cnt-twarz" class="count-badge">0 poz.</span></div></summary>
+                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-twarz"></tbody></table></div>
+                </details>
+                <details class="history-group group-cialo">
+                    <summary class="history-summary"><div class="summary-title txt-cialo">🧘‍♀️ Ciało <span id="cnt-cialo" class="count-badge">0 poz.</span></div></summary>
+                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-cialo"></tbody></table></div>
+                </details>
+                <details class="history-group" style="border-left:5px solid #991b1b !important;">
+                    <summary class="history-summary"><div class="summary-title" style="color:#991b1b;">📉 Utracone zadatki <span id="cnt-utracone" class="count-badge" style="background:#fee2e2;color:#991b1b;">0 poz.</span></div></summary>
+                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-utracone"></tbody></table></div>
+                </details>
+            </div>
+
+            <!-- Tab: Produkty -->
+            <div id="tab-profil-produkty" style="display:none;">
+                <details class="history-group group-kosm" open>
+                    <summary class="history-summary"><div class="summary-title txt-kosm">🛍️ Kosmetyki <span id="cnt-kosm" class="count-badge">0 poz.</span></div></summary>
+                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-kosmetyki"></tbody></table></div>
+                </details>
+            </div>
+
+            <!-- Tab: Zadatki -->
+            <div id="tab-profil-zadatki" style="display:none;">
+                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+                    <div>
+                        <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:4px;">Dostępne środki</div>
+                        <div style="font-size:22px; font-weight:800; color:#1e293b;" id="wallet-balance-zadatki">–</div>
+                    </div>
+                    <button onclick="otworzWplateZadatku()" class="btn-primary" style="width:auto; font-size:13px; padding:10px 18px; border-radius:10px;">+ Wpłać zadatek</button>
+                </div>
+                <details open style="font-size:13px; color:#666; cursor:pointer; margin-bottom:12px;">
                     <summary style="margin-bottom:10px; font-weight:600;">▼ Szczegóły zadatków</summary>
                     <div id="wallet-list"></div>
                 </details>
-            </div>
-			<div style="margin-bottom:25px;">
-    <details open style="font-size:13px; color:#666; cursor:pointer;">
-        <summary style="margin-bottom:10px; font-weight:600; color:#b45309;">▼ Ręczne Potrącenia</summary>
-        <div id="wallet-list-manual"></div>
-    </details>
-</div>
-           
-
-            <div class="client-memo-container memo-widget">
-                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                    <span style="font-weight:bold; color:#b45309; font-size:12px;">📌 NOTATKA</span>
-                    <button onclick="edytujNotatkeUI()" style="border:none; background:none; cursor:pointer; color:#b45309; font-weight:bold; font-size:12px;">
-                        <span id="memo-action-label">EDYTUJ</span>
-                    </button>
-                </div>
-                <div id="memo-content" style="font-style:italic; color:#78350f; font-size:14px; line-height:1.5;">
-                    Brak notatki.
-                </div>
+                <details style="font-size:13px; color:#666; cursor:pointer;">
+                    <summary style="margin-bottom:10px; font-weight:600; color:#b45309;">▼ Ręczne Potrącenia</summary>
+                    <div id="wallet-list-manual"></div>
+                </details>
             </div>
 
-			<div class="client-retention-container memo-widget" style="background:#f0fdfa; border-color:#5eead4; margin-bottom:25px;">
-                <div style="font-weight:bold; color:#0f766e; font-size:12px; margin-bottom:10px;">📞 HISTORIA KONTAKTÓW</div>
-                <div id="profil-retencja-content" style="font-size:12px; color:#115e59; line-height:1.4;">
-                    Ładowanie...
-                </div>
-            </div>
-
-
-<!--
-            <div class="action-buttons-grid">
-                <button id="btn-odswiez-profil" class="action-btn" style="background:#e0f2fe; color:#0284c7;">
-                    🔄 Odśwież
-                </button>
-                <button onclick="zamknijProfilKlienta()" class="action-btn" style="background:#f3f4f6; color:#4b5563;">
-                    ⬅ Wróć
-                </button>
-            </div> -->
-<div class="action-buttons-grid">
-    <button class="action-btn-light" onclick="odswiezProfilAktualnegoKlienta()">
-        🔄 Odśwież
-    </button>
-    <button class="action-btn-outline" onclick="zamknijProfilKlienta()">
-        ⬅ Wróć
-    </button>
-</div>
-
-
-        </aside>
-
-        <main class="client-content">
-		
-		<div style="background: white; padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
-        <div style="position: relative; width: 100%;">
-            <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)"
-                   placeholder="🔍 Szukaj w historii zabiegów (nazwa, data, komentarz)..."
-                   style="width: 100%; padding: 12px 15px 12px 45px !important; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; box-sizing: border-box; outline: none; transition: 0.2s;">
-            <span style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 18px; opacity: 0.6; pointer-events: none;">🔎</span>
-        </div>
-    </div>
-
-   
-	
-	<div id="asystent-box" style="display:none; background: #fff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 0 12px 12px 0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
-    <h3 style="margin-top:0; color:#1e40af; display:flex; align-items:center; gap:8px; font-size:16px;">
-        💡 Sugestie dla Recepcji
-    </h3>
-    <ul id="lista-sugestii" style="margin:0; padding-left:20px; color:#334155; font-size:14px;"></ul>
-</div>
-		
-		
-
-
-
-<details class="history-group group-twarz">
-                <summary class="history-summary">
-                    <div class="summary-title txt-twarz">
-                        💆‍♀️ Twarz
-                        <span id="cnt-twarz" class="count-badge">0 poz.</span>
-                    </div>
-                </summary>
-                <div class="table-container">
-                    <table class="modern-table">
-                        <thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead>
-                        <tbody id="tabela-twarz"></tbody>
-                    </table>
-                </div>
-            </details>
-
-            <details class="history-group group-cialo">
-                <summary class="history-summary">
-                    <div class="summary-title txt-cialo">
-                        🧘‍♀️ Ciało
-                        <span id="cnt-cialo" class="count-badge">0 poz.</span>
-                    </div>
-                </summary>
-                <div class="table-container">
-                    <table class="modern-table">
-                        <thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead>
-                        <tbody id="tabela-cialo"></tbody>
-                    </table>
-                </div>
-            </details>
-
-            <details class="history-group group-kosm">
-                <summary class="history-summary">
-                    <div class="summary-title txt-kosm">
-                        🛍️ Kosmetyki
-                        <span id="cnt-kosm" class="count-badge">0 poz.</span>
-                    </div>
-                </summary>
-                <div class="table-container">
-                    <table class="modern-table">
-                        <thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th></tr></thead>
-                        <tbody id="tabela-kosmetyki"></tbody>
-                    </table>
-                </div>
-            </details>
-			<details class="history-group" style="border-left: 5px solid #991b1b !important;">
-    <summary class="history-summary">
-        <div class="summary-title" style="color: #991b1b;">
-            📉 Utracone zadatki
-            <span id="cnt-utracone" class="count-badge" style="background: #fee2e2; color: #991b1b;">0 poz.</span>
-        </div>
-    </summary>
-    <div class="table-container">
-        <table class="modern-table">
-            <thead>
-                <tr>
-                    <th>Data wpłaty</th>
-                    <th>Tytuł / Cel</th>
-                    <th>Kwota</th>
-                    <th>Płatność</th>
-                    <th style="text-align: right;">Akcja</th>
-                </tr>
-            </thead>
-            <tbody id="tabela-utracone"></tbody>
-        </table>
-    </div>
-</details>
-			<div id="analiza-klienta-container" style="display:none;">
-                <div class="analysis-card" style="flex-direction: column;">
-                    
-                    <div style="display:flex; flex-wrap:wrap; gap:30px; padding-bottom: 20px; border-bottom: 1px solid #fcd34d;">
-                        
-                        <div class="analysis-section" style="flex:1; border-right: 1px dashed #e5e7eb; padding-right: 20px;">
-                            <div class="analysis-header">🏆 Ulubiony Zabieg</div>
-                            <div id="analiza-fav-content" class="fav-treatment">Brak danych</div>
-                            <div id="analiza-fav-sub" style="font-size:12px; color:#666; margin-top:5px;">Na podstawie historii.</div>
-                        </div>
-
-                        <div class="analysis-section" style="flex:1.5;">
-                            <div class="analysis-header">✨ Zaproponuj nowość (Klientka nie zna):</div>
-                            <ul id="analiza-missing-list" class="missing-list"></ul>
-                        </div>
-                    </div>
-
-                    <div id="analiza-retail-box" style="padding-top: 15px; display:none;">
-                        <div class="analysis-header" style="color:#c2410c;">🧴 Czas na zakupy? (Minęły 3 miesiące)</div>
-                        <div id="analiza-retail-list">
+            <!-- Tab: Analityki -->
+            <div id="tab-profil-analityki" style="display:none;">
+                <div id="analiza-klienta-container">
+                    <div class="analysis-card" style="flex-direction:column;">
+                        <div style="display:flex; flex-wrap:wrap; gap:30px; padding-bottom:20px; border-bottom:1px solid #fcd34d;">
+                            <div class="analysis-section" style="flex:1; border-right:1px dashed #e5e7eb; padding-right:20px;">
+                                <div class="analysis-header">🏆 Ulubiony Zabieg</div>
+                                <div id="analiza-fav-content" class="fav-treatment">Brak danych</div>
+                                <div id="analiza-fav-sub" style="font-size:12px; color:#666; margin-top:5px;">Na podstawie historii.</div>
                             </div>
+                            <div class="analysis-section" style="flex:1.5;">
+                                <div class="analysis-header">✨ Zaproponuj nowość (Klientka nie zna):</div>
+                                <ul id="analiza-missing-list" class="missing-list"></ul>
+                            </div>
+                        </div>
+                        <div id="analiza-retail-box" style="padding-top:15px; display:none;">
+                            <div class="analysis-header" style="color:#c2410c;">🧴 Czas na zakupy? (Minęły 3 miesiące)</div>
+                            <div id="analiza-retail-list"></div>
+                        </div>
                     </div>
-
                 </div>
             </div>
-			
-        </main>
+
+            <!-- Tab: Dokumenty -->
+            <div id="tab-profil-dokumenty" style="display:none;">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; padding:8px 0;">
+                    <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" class="btn-primary" style="background:#8b5cf6; width:auto; font-size:13px; padding:12px 22px; border-radius:10px; border:none; cursor:pointer;">📜 Regulamin</button>
+                    <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" class="btn-primary" style="background:#0f766e; width:auto; font-size:13px; padding:12px 22px; border-radius:10px; border:none; cursor:pointer;">🔒 Zgody RODO</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT SIDEBAR -->
+        <div style="position:sticky; top:20px; display:flex; flex-direction:column; gap:14px;">
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
+                <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:12px;">Szybkie akcje</div>
+                <div style="display:flex; flex-direction:column; gap:8px;">
+                    <button onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.profil-tab')[1])" style="background:#fdf2f8; border:1px solid #fbcfe8; color:#9f1239; border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; font-weight:500;">📅 Historia wizyt</button>
+                    <button onclick="edytujNotatkeUI()" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; font-weight:500;">📝 Notatka</button>
+                    <button onclick="otworzWplateZadatku()" style="background:#fefce8; border:1px solid #fde68a; color:#92400e; border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; font-weight:500;">💰 Dodaj zadatek</button>
+                    <button onclick="otworzEdycjeKlienta()" style="background:#f0f9ff; border:1px solid #bae6fd; color:#075985; border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; font-weight:500;">✏️ Edytuj dane</button>
+                </div>
+            </div>
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Ostatnie wizyty</div>
+                    <button onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.profil-tab')[1])" style="background:none; border:none; cursor:pointer; font-size:11px; color:#db2777; font-weight:600;">wszystkie →</button>
+                </div>
+                <div id="profil-sidebar-wizyty" style="font-size:12px; color:#475569; line-height:1.7;">–</div>
+            </div>
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:16px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                    <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Ostatnie produkty</div>
+                    <button onclick="przelaczTabProfilu('produkty', document.querySelectorAll('.profil-tab')[2])" style="background:none; border:none; cursor:pointer; font-size:11px; color:#db2777; font-weight:600;">wszystkie →</button>
+                </div>
+                <div id="profil-sidebar-produkty" style="font-size:12px; color:#475569; line-height:1.7;">–</div>
+            </div>
+        </div>
     </div>
 </div>
-	
-	
-	
-	<div id="asystent-box" style="display:none; background: #f0f9ff; border: 1px solid #bae6fd; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-    <h3 style="margin-top:0; color:#0369a1; display:flex; align-items:center; gap:8px;">
-        💡 Sugestie dla Recepcji
-    </h3>
-    <ul id="lista-sugestii" style="margin:0; padding-left:20px; color:#334155;"></ul>
-</div>
-</div>
+
 
             <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
 			<div class="header"><h1>Dziennik Zdarzeń</h1>
@@ -8164,35 +8140,25 @@ function otworzProfil(idKlienta) {
     document.getElementById('widok-listy-klientow').style.display = 'none';
     document.getElementById('widok-szczegolow-klienta').style.display = 'block';
     
-    // 2. Rysuj nagłówek
-    const naglowekHTML = `
-        <h1 style="margin:0; font-size:22px; color:#111;">${nazwaKlienta}</h1>
-        <div style="margin-top:5px; font-size:12px; color:#999;">ID: ${klientObj.id}</div>
-        <div style="font-size:13px; color:#0f766e; margin-top:4px; font-weight:500;">
-             📞 ${klientObj.telefon && klientObj.telefon !== "undefined" ? klientObj.telefon : 'Brak telefonu'}
-        </div>
-        <div style="margin-top:15px; display:flex; gap:10px; justify-content:center; align-items:center;">
-            <button onclick="otworzEdycjeZgod('${klientObj.id}', '${nazwaKlienta}')" 
-                    class="btn-primary" style="background:#8b5cf6; width:auto; font-size:11px; padding:6px 12px; border-radius:20px; border:none; cursor:pointer;">
-                📜 Regulamin
-            </button>
-            <button onclick="otworzOkienkoRODO('${klientObj.id}', '${nazwaKlienta}')" 
-                    class="btn-primary" style="background:#0f766e; width:auto; font-size:11px; padding:6px 12px; border-radius:20px; border:none; cursor:pointer;">
-                🔒 Zgody
-            </button>
-            <div style="display:flex; flex-direction:column; align-items:center; margin-left:5px;">            
-                <button onclick="otworzEdycjeKlienta()" style="border:none; background:none; cursor:pointer; font-size:16px; color:#64748b;" title="Edytuj nazwisko/telefon">✏️</button>
-                <div style="font-size:10px; color:#999;">EDYCJA</div>
-            </div>
-        </div>
-    `;
+    // 2. Avatar inicjały
+    const initials = nazwaKlienta.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const avatarEl = document.getElementById('profil-avatar');
+    if (avatarEl) avatarEl.textContent = initials;
+
+    // 3. Rysuj nagłówek (uproszczony)
+    const tel = klientObj.telefon && klientObj.telefon !== "undefined" ? klientObj.telefon : null;
+    const naglowekHTML = `<div style="font-size:19px; font-weight:800; color:#1e293b; margin:0;">${nazwaKlienta}</div>
+        ${tel ? `<div style="font-size:13px; color:#64748b; margin-top:2px;">📞 ${tel}</div>` : ''}`;
     const divNaglowek = document.getElementById('profil-naglowek');
     divNaglowek.innerHTML = naglowekHTML;
-    divNaglowek.style.display = 'block'; 
+    divNaglowek.style.display = 'block';
+
+    // Reset tabów do Podsumowanie
+    przelaczTabProfilu('podsumowanie', document.querySelector('.profil-tab'));
 
     // Ustawienie wskaźników ładowania
     const metaDiv = document.getElementById('profil-meta');
-    if(metaDiv) metaDiv.innerHTML = '<span style="color:#999; font-weight:bold; font-size:16px;">⏳ Błyskawiczne ładowanie profilu...</span>';
+    if(metaDiv) metaDiv.innerHTML = '<span style="color:#94a3b8; font-size:12px;">⏳ Ładowanie...</span>';
     
     document.getElementById('tabela-twarz').innerHTML = "";
     document.getElementById('tabela-cialo').innerHTML = "";
@@ -8217,22 +8183,21 @@ function otworzProfil(idKlienta) {
                     const diffDays = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
 
                     if (diffDays < 0 && diffDays >= -7) {
-                        alertUrodzinowy = `<span style="color:red; font-weight:bold; font-size:20px; margin-left:15px;">🎁 Miała urodziny ${Math.abs(diffDays)} dni temu!</span>`;
+                        alertUrodzinowy = ` <span style="color:#ef4444; font-weight:700; font-size:13px;">🎁 ${Math.abs(diffDays)} dni temu!</span>`;
                     } else {
                         if (targetDate < today) targetDate.setFullYear(today.getFullYear() + 1);
                         const diffFuture = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
                         if (diffFuture >= 0 && diffFuture <= 20) {
-                            alertUrodzinowy = diffFuture === 0 ? 
-                                `<span style="color:red; font-weight:bold; font-size:20px; margin-left:15px; animation: pulse 1.5s infinite;">🎉 To DZIŚ!!</span>` : 
-                                `<span style="color:red; font-weight:bold; font-size:20px; margin-left:15px;">⏰ Za ${diffFuture} dni!!</span>`;
+                            alertUrodzinowy = diffFuture === 0 ?
+                                ` <span style="color:#ef4444; font-weight:700; font-size:13px; animation:pulse 1.5s infinite;">🎉 DZIŚ!!</span>` :
+                                ` <span style="color:#ef4444; font-weight:700; font-size:13px;">⏰ Za ${diffFuture} dni!</span>`;
                         }
                     }
                 }
             } catch (e) {}
-            metaDiv.innerHTML = `<span style="color:black; font-weight:bold; font-size:20px;">🎂 Urodziny: ${data.urodziny.data} (Miesiąc: ${data.urodziny.miesiac})</span>${alertUrodzinowy}`;
+            metaDiv.innerHTML = `<span style="font-size:13px; color:#475569;">🎂 ${data.urodziny.data}</span>${alertUrodzinowy}`;
         } else {
-            metaDiv.innerHTML = `<span style="color:#ef4444; font-size:14px;">Brak daty urodzin.</span> 
-                                 <button onclick="otworzModalUrodzinZProfilu()" class="btn-primary" style="background:#db2777; width:auto; padding:4px 10px; font-size:11px; margin-left:10px; border:none; border-radius:4px;">➕ Dodaj datę</button>`;
+            metaDiv.innerHTML = `<span style="color:#94a3b8; font-size:12px;">Brak daty urodzin.</span> <button onclick="otworzModalUrodzinZProfilu()" style="background:#db2777; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:11px; cursor:pointer; margin-left:6px;">➕ Dodaj</button>`;
         }
 
         // --- B: Portfel, Notatki i Retencja (Wstrzykujemy gotowe dane) ---
@@ -8628,12 +8593,43 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
     document.getElementById('cnt-twarz').innerText = cTwarz + " poz.";
     document.getElementById('cnt-cialo').innerText = cCialo + " poz.";
     document.getElementById('cnt-kosm').innerText = cKosm + " poz.";
-    
+
     // Obsługa pustych (gdy nie szukamy)
     if (fraza === "") {
         if (cTwarz === 0) tTwarz.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zabiegów.</td></tr>";
         if (cCialo === 0) tCialo.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zabiegów.</td></tr>";
         if (cKosm === 0) tKosm.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
+
+        // Stats bar
+        const zabiegi = transakcje.filter(t => {
+            const n = t.zabieg.toLowerCase();
+            return !(n.includes('kosmetyk') || (t.szczegoly && String(t.szczegoly).includes('szt')));
+        });
+        const lacznaWartosc = zabiegi.reduce((s, t) => s + parseFloat(t.kwota || 0), 0);
+        const statWizyty = document.getElementById('profil-stat-wizyty');
+        const statWartosc = document.getElementById('profil-stat-wartosc');
+        if (statWizyty) statWizyty.textContent = zabiegi.length;
+        if (statWartosc) statWartosc.textContent = lacznaWartosc.toLocaleString('pl-PL', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' zł';
+
+        // Sidebar — ostatnie wizyty (5)
+        const sideWizyty = document.getElementById('profil-sidebar-wizyty');
+        if (sideWizyty) {
+            const ostatnie = zabiegi.slice(0, 5);
+            sideWizyty.innerHTML = ostatnie.length
+                ? ostatnie.map(t => `<div style="padding:4px 0; border-bottom:1px solid #f1f5f9;">${t.data} — ${t.zabieg}</div>`).join('')
+                : '–';
+        }
+        // Sidebar — ostatnie produkty (5)
+        const sideProdukty = document.getElementById('profil-sidebar-produkty');
+        if (sideProdukty) {
+            const prods = transakcje.filter(t => {
+                const n = t.zabieg.toLowerCase();
+                return n.includes('kosmetyk') || (t.szczegoly && String(t.szczegoly).includes('szt'));
+            }).slice(0, 5);
+            sideProdukty.innerHTML = prods.length
+                ? prods.map(t => `<div style="padding:4px 0; border-bottom:1px solid #f1f5f9;">${t.data} — ${t.zabieg}</div>`).join('')
+                : '–';
+        }
     }
 }
 
@@ -8739,6 +8735,16 @@ function segregujHistorie(klient) {
 function zamknijProfilKlienta() {
     document.getElementById('widok-szczegolow-klienta').style.display = 'none';
     document.getElementById('widok-listy-klientow').style.display = 'block';
+}
+
+function przelaczTabProfilu(tabId, btn) {
+    const tabs = ['podsumowanie','wizyty','produkty','zadatki','analityki','dokumenty'];
+    tabs.forEach(t => {
+        const el = document.getElementById('tab-profil-' + t);
+        if (el) el.style.display = (t === tabId) ? '' : 'none';
+    });
+    document.querySelectorAll('.profil-tab').forEach(b => b.classList.remove('profil-tab-active'));
+    if (btn) btn.classList.add('profil-tab-active');
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
         function toggleMenu(id, btn) { document.getElementById(id).classList.toggle('open'); if(btn) btn.classList.toggle('open'); }
@@ -12873,7 +12879,10 @@ function pobierzPortfel(nazwaKlienta, preloadedData = null) {
     const lostCountEl = document.getElementById('cnt-utracone');
     
     const renderWalletUI = (d) => {
-        balanceEl.innerText = parseFloat(d.saldo).toFixed(2) + " zł";
+        const saldoFmt = parseFloat(d.saldo).toFixed(2).replace('.', ',') + ' zł';
+        balanceEl.innerText = saldoFmt;
+        const balZad = document.getElementById('wallet-balance-zadatki');
+        if (balZad) balZad.innerText = saldoFmt;
         listContainer.innerHTML = "";
         if(manualContainer) manualContainer.innerHTML = "";
         if(lostContainer) lostContainer.innerHTML = "";
