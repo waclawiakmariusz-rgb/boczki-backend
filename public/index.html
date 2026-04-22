@@ -8568,20 +8568,19 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
     // 1. Filtrowanie główne
     const transakcje = historiaDane.filter(r => {
-        // A. Sprawdzenie czy to ten klient
-        const czyTenKlient = (r.id_klienta && String(r.id_klienta) === String(idKlienta)) || 
-                             (!r.id_klienta && r.klient === nazwaKlienta);
-        
-        if (!czyTenKlient) return false;
+        // A. Sprawdzenie czy to ten klient — dopasowanie po ID lub nazwie
+        const idMatch = idKlienta && r.id_klienta && String(r.id_klienta) === String(idKlienta);
+        const nameMatch = nazwaKlienta && r.klient === nazwaKlienta;
+        if (!idMatch && !nameMatch) return false;
 
         // B. Jeśli nie wpisano nic w szukajkę -> pokazujemy wszystko
         if (!fraza) return true;
 
         // C. Wyszukiwanie w treści (Zabieg, Szczegóły, Komentarz, Data, Kwota)
         const textDoPrzesukania = (
-            (r.zabieg || "") + " " + 
-            (r.szczegoly || "") + " " + 
-            (r.komentarz || "") + " " + 
+            (r.zabieg || "") + " " +
+            (r.szczegoly || "") + " " +
+            (r.komentarz || "") + " " +
             (r.data || "") + " " +
             (r.kwota || "")
         ).toLowerCase();
@@ -8605,6 +8604,11 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
     let cTwarz = 0, cCialo = 0, cKosm = 0;
 
     tTwarz.innerHTML = ""; tCialo.innerHTML = ""; tKosm.innerHTML = "";
+
+    // Podczas wyszukiwania — otwórz wszystkie akordeony żeby wyniki były widoczne
+    if (fraza) {
+        document.querySelectorAll('#tab-profil-wizyty details.history-group').forEach(d => d.open = true);
+    }
 
     // Sortowanie
     transakcje.sort((a, b) => new Date(b.data) - new Date(a.data));
