@@ -237,6 +237,7 @@ const db = mysql.createPool({
     password: env('DB_PASSWORD'),
     database: env('DB_NAME'),
     charset: 'utf8mb4',
+    family: 4,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
