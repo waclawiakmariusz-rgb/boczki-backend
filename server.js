@@ -231,8 +231,7 @@ function env(key) {
 }
 
 // Konfiguracja puli połączeń z bazą MySQL
-const db = mysql.createPool({
-    host: env('DB_HOST'),
+const dbConfig = {
     user: env('DB_USER'),
     password: env('DB_PASSWORD'),
     database: env('DB_NAME'),
@@ -243,7 +242,13 @@ const db = mysql.createPool({
     dateStrings: true,
     enableKeepAlive: true,
     keepAliveInitialDelay: 30000
-});
+};
+if (process.env.DB_SOCKET) {
+    dbConfig.socketPath = process.env.DB_SOCKET;
+} else {
+    dbConfig.host = env('DB_HOST');
+}
+const db = mysql.createPool(dbConfig);
 
 db.getConnection((err, connection) => {
     if (err) {
