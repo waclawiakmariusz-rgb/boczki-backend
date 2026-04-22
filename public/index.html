@@ -301,10 +301,13 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .client-sidebar details:hover { background: #f1f5f9 !important; }
 .client-sidebar details summary { font-weight: 800 !important; color: var(--text-dark) !important; font-size: 14px !important; list-style: none !important; outline: none !important; cursor: pointer; }
 .client-sidebar details summary::-webkit-details-marker { display: none !important; }
-/* PROFIL — NOWE TABY */
-.profil-tab { background: none; border: none; padding: 10px 14px; font-size: 13px; font-weight: 600; color: #94a3b8; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 0; transition: color 0.15s; }
-.profil-tab:hover { color: #475569; }
-.profil-tab-active { color: #db2777; border-bottom-color: #db2777; }
+/* PROFIL — TABY (nowy design) */
+.pp-tab { position:relative; height:46px; background:none; border:none; display:inline-flex; align-items:center; gap:8px; color:#4d5363; font-weight:500; font-size:14px; padding:0 12px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; white-space:nowrap; font-family:inherit; }
+.pp-tab:hover { color:#cf3d78; }
+.pp-tab.pp-tab-active { color:#cf3d78; font-weight:700; border-bottom-color:#e8568f; }
+/* legacy (nie usuwamy bo mogą być jeszcze odniesienia) */
+.profil-tab { background:none; border:none; padding:10px 14px; font-size:13px; font-weight:600; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
+.profil-tab-active { color:#db2777; border-bottom-color:#db2777; }
 #wallet-list .deposit-item, #wallet-list-manual .deposit-item {
     background: var(--white) !important; border-radius: 12px !important; box-shadow: 0 4px 10px rgba(0,0,0,0.02) !important; margin-top: 10px !important; border: none !important; padding: 12px;
 }
@@ -4057,207 +4060,261 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 	
 	<div id="widok-szczegolow-klienta" style="display:none;">
 
-    <!-- Top bar -->
-    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
-        <button onclick="zamknijProfilKlienta()" style="background:none; border:none; cursor:pointer; color:#64748b; font-size:13px; padding:0; display:flex; align-items:center; gap:5px;">← Wróć do listy klientów</button>
-        <button id="btn-odswiez-profil" onclick="odswiezProfilAktualnegoKlienta()" style="background:#fff; border:1px solid #e2e8f0; border-radius:8px; cursor:pointer; color:#64748b; font-size:12px; padding:6px 12px;">🔄 Odśwież</button>
-    </div>
+    <!-- breadcrumb -->
+    <div style="color:#555c6b; font-weight:500; font-size:14px; margin-bottom:14px; cursor:pointer;" onclick="zamknijProfilKlienta()">← Wróć do listy klientów</div>
 
-    <!-- Layout: main + right sidebar -->
-    <div style="display:grid; grid-template-columns:1fr 240px; gap:18px; align-items:start;">
+    <!-- content grid: main + right sidebar -->
+    <div style="display:grid; grid-template-columns:1fr 320px; gap:20px; align-items:start;">
 
-        <!-- CENTER -->
-        <div>
+        <!-- ===== LEFT / CENTER ===== -->
+        <section>
 
-            <!-- HEADER CARD: avatar + name + stats inline -->
-            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px 20px; margin-bottom:12px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-                <!-- Avatar -->
-                <div id="profil-avatar" style="width:52px; height:52px; border-radius:50%; background:#fce7f3; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:800; color:#db2777; flex-shrink:0; letter-spacing:-1px;">??</div>
-                <!-- Name & phone -->
-                <div style="flex:1; min-width:140px;">
-                    <div id="profil-naglowek" style="font-size:17px; font-weight:800; color:#1e293b; line-height:1.2;"></div>
-                    <div id="profil-meta" style="margin-top:3px; font-size:12px; color:#64748b;"></div>
-                </div>
-                <!-- Stats -->
-                <div style="display:flex; gap:20px; align-items:center; flex-wrap:wrap;">
-                    <div style="text-align:center;">
-                        <div style="font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Środki</div>
-                        <div id="wallet-balance" class="wallet-amount" style="font-size:18px; font-weight:800; color:#1e293b;">0,00 zł</div>
-                    </div>
-                    <div style="width:1px; height:32px; background:#e2e8f0;"></div>
-                    <div style="text-align:center;">
-                        <div style="font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Wizyty</div>
-                        <div id="profil-stat-wizyty" style="font-size:18px; font-weight:800; color:#1e293b;">–</div>
-                    </div>
-                    <div style="width:1px; height:32px; background:#e2e8f0;"></div>
-                    <div style="text-align:center;">
-                        <div style="font-size:10px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:2px;">Łączna wartość</div>
-                        <div id="profil-stat-wartosc" style="font-size:18px; font-weight:800; color:#1e293b;">–</div>
-                    </div>
-                    <div style="width:1px; height:32px; background:#e2e8f0;"></div>
-                    <button onclick="otworzWplateZadatku()" style="background:#3b82f6; color:#fff; border:none; border-radius:8px; padding:9px 16px; cursor:pointer; font-size:13px; font-weight:600; white-space:nowrap;">+ Dodaj zadatek</button>
-                </div>
-            </div>
+            <!-- HERO CARD -->
+            <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); overflow:hidden; margin-bottom:18px;">
 
-            <!-- TABS -->
-            <div style="display:flex; gap:0; border-bottom:2px solid #f1f5f9; margin-bottom:14px; overflow-x:auto;">
-                <button class="profil-tab profil-tab-active" onclick="przelaczTabProfilu('podsumowanie',this)">Podsumowanie</button>
-                <button class="profil-tab" onclick="przelaczTabProfilu('wizyty',this)">Wizyty</button>
-                <button class="profil-tab" onclick="przelaczTabProfilu('zadatki',this)">Zadatki</button>
-                <button class="profil-tab" onclick="przelaczTabProfilu('produkty',this)">Produkty</button>
-                <button class="profil-tab" onclick="przelaczTabProfilu('analityki',this)">Analityki</button>
-                <button class="profil-tab" onclick="przelaczTabProfilu('dokumenty',this)">Dokumenty</button>
-            </div>
+                <!-- hero-top: avatar | name/phone/actions | birthday -->
+                <div style="background:#fff2f5; padding:28px 28px 22px; display:grid; grid-template-columns:120px 1fr 200px; gap:22px; align-items:center; border-bottom:1px solid #f3e3e8;">
 
-            <!-- Tab: Podsumowanie -->
-            <div id="tab-profil-podsumowanie">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px;">
-                    <!-- Lewa kolumna: sugestie + analityki -->
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div id="asystent-box" style="display:none; background:#f0fdf4; border-left:4px solid #22c55e; padding:14px; border-radius:0 10px 10px 0;">
-                            <div style="font-weight:700; color:#166534; font-size:12px; margin-bottom:8px; display:flex; align-items:center; gap:5px;">💡 Sugestie dla Recepcji</div>
-                            <ul id="lista-sugestii" style="margin:0; padding-left:16px; color:#334155; font-size:12px; line-height:1.7;"></ul>
-                        </div>
-                        <div id="analiza-klienta-container">
-                            <div class="analysis-card" style="flex-direction:column; padding:14px; border-radius:10px;">
-                                <div style="display:flex; flex-wrap:wrap; gap:16px; padding-bottom:12px; border-bottom:1px solid #fcd34d;">
-                                    <div style="flex:1; min-width:100px;">
-                                        <div class="analysis-header" style="font-size:11px;">🏆 Ulubiony Zabieg</div>
-                                        <div id="analiza-fav-content" class="fav-treatment" style="font-size:13px;">Brak danych</div>
-                                        <div id="analiza-fav-sub" style="font-size:11px; color:#666; margin-top:3px;">Na podstawie historii.</div>
-                                    </div>
-                                    <div style="flex:1.2; min-width:120px;">
-                                        <div class="analysis-header" style="font-size:11px;">✨ Zaproponuj nowość:</div>
-                                        <ul id="analiza-missing-list" class="missing-list" style="font-size:12px;"></ul>
-                                    </div>
-                                </div>
-                                <div id="analiza-retail-box" style="padding-top:10px; display:none;">
-                                    <div class="analysis-header" style="font-size:11px; color:#c2410c;">🧴 Czas na zakupy? (Minęły 3 miesiące)</div>
-                                    <div id="analiza-retail-list" style="font-size:12px;"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Prawa kolumna: historia kontaktów + zadatki skrót -->
-                    <div style="display:flex; flex-direction:column; gap:12px;">
-                        <div class="client-retention-container memo-widget" style="background:#f0fdfa; border-color:#5eead4; margin:0;">
-                            <div style="font-weight:700; color:#0f766e; font-size:12px; margin-bottom:8px;">📞 Historia kontaktów</div>
-                            <div id="profil-retencja-content" style="font-size:12px; color:#115e59; line-height:1.5;">Ładowanie...</div>
-                        </div>
-                        <div style="background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:14px;">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                                <div style="font-weight:700; color:#1e293b; font-size:12px;">💰 Ostatnie zadatki</div>
-                                <button onclick="przelaczTabProfilu('zadatki', document.querySelectorAll('.profil-tab')[2])" style="background:none; border:none; cursor:pointer; font-size:11px; color:#3b82f6; font-weight:600;">wszystkie →</button>
-                            </div>
-                            <div id="wallet-list-skrot" style="font-size:12px; color:#475569; line-height:1.7;">–</div>
-                            <button onclick="otworzWplateZadatku()" style="margin-top:10px; width:100%; background:#eff6ff; border:1px solid #bfdbfe; color:#1d4ed8; border-radius:7px; padding:7px; cursor:pointer; font-size:12px; font-weight:600;">+ Wpłać zadatek</button>
-                        </div>
-                    </div>
-                </div>
-                <!-- Notatka -->
-                <div class="client-memo-container memo-widget" style="margin:0;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
-                        <span style="font-weight:700; color:#b45309; font-size:12px;">📌 Notatka o kliencie</span>
-                        <button onclick="edytujNotatkeUI()" style="border:none; background:none; cursor:pointer; color:#b45309; font-weight:700; font-size:12px;"><span id="memo-action-label">EDYTUJ</span></button>
-                    </div>
-                    <div id="memo-content" style="font-style:italic; color:#78350f; font-size:13px; line-height:1.5;">Brak notatki.</div>
-                </div>
-            </div>
+                    <!-- avatar -->
+                    <div id="profil-avatar" style="width:108px; height:108px; border-radius:50%; background:#fff; border:1px solid #f1e1e6; box-shadow:0 8px 20px rgba(28,22,37,.05); display:grid; place-items:center; color:#e28aac; font-size:42px; font-weight:300; letter-spacing:-.03em;">??</div>
 
-            <!-- Tab: Wizyty -->
-            <div id="tab-profil-wizyty" style="display:none;">
-                <div style="background:#fff; padding:10px 12px; border-radius:10px; margin-bottom:12px; border:1px solid #e2e8f0; position:relative;">
-                    <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)" placeholder="🔍 Szukaj w historii zabiegów..." style="width:100%; padding:9px 10px 9px 34px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; box-sizing:border-box;">
-                    <span style="position:absolute; left:24px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;">🔎</span>
-                </div>
-                <details class="history-group group-twarz" open>
-                    <summary class="history-summary"><div class="summary-title txt-twarz">💆‍♀️ Twarz <span id="cnt-twarz" class="count-badge">0 poz.</span></div></summary>
-                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-twarz"></tbody></table></div>
-                </details>
-                <details class="history-group group-cialo">
-                    <summary class="history-summary"><div class="summary-title txt-cialo">🧘‍♀️ Ciało <span id="cnt-cialo" class="count-badge">0 poz.</span></div></summary>
-                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-cialo"></tbody></table></div>
-                </details>
-                <details class="history-group" style="border-left:5px solid #991b1b !important;">
-                    <summary class="history-summary"><div class="summary-title" style="color:#991b1b;">📉 Utracone zadatki <span id="cnt-utracone" class="count-badge" style="background:#fee2e2;color:#991b1b;">0 poz.</span></div></summary>
-                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-utracone"></tbody></table></div>
-                </details>
-            </div>
-
-            <!-- Tab: Zadatki -->
-            <div id="tab-profil-zadatki" style="display:none;">
-                <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+                    <!-- name + data + actions -->
                     <div>
-                        <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; margin-bottom:3px;">Dostępne środki</div>
-                        <div style="font-size:22px; font-weight:800; color:#1e293b;" id="wallet-balance-zadatki">–</div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
+                            <div id="profil-naglowek" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;"></div>
+                            <span id="profil-vip-badge" style="display:none; background:#ffd6e4; color:#b74673; border-radius:10px; padding:5px 11px; font-size:13px; font-weight:800;">VIP</span>
+                            <button onclick="otworzEdycjeKlienta()" style="background:none; border:none; cursor:pointer; color:#5a5f70; font-size:15px; padding:2px;">✎</button>
+                        </div>
+                        <div style="display:grid; gap:6px; font-size:14px; color:#63697b; margin-bottom:12px;">
+                            <div id="profil-id-row"></div>
+                            <div id="profil-tel-row" style="font-size:15px; font-weight:700; color:#2a3040;"></div>
+                        </div>
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#6e49df; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔒 REGULAMIN</button>
+                            <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#13a05f; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔓 ZGODY</button>
+                        </div>
                     </div>
-                    <button onclick="otworzWplateZadatku()" class="btn-primary" style="width:auto; font-size:13px; padding:10px 18px; border-radius:10px;">+ Wpłać zadatek</button>
+
+                    <!-- birthday box -->
+                    <div style="border-left:1px solid #e8d9df; padding-left:24px; color:#5f6577; font-size:15px; line-height:1.5; min-height:64px; display:flex; flex-direction:column; justify-content:center; gap:4px;">
+                        <div>📅 Urodziny</div>
+                        <div id="profil-meta" style="font-size:16px; font-weight:700; color:#262b39;"></div>
+                    </div>
                 </div>
-                <details open style="font-size:13px; color:#666; cursor:pointer; margin-bottom:10px;">
-                    <summary style="margin-bottom:8px; font-weight:600;">▼ Szczegóły zadatków</summary>
-                    <div id="wallet-list"></div>
-                </details>
-                <details style="font-size:13px; color:#666; cursor:pointer;">
-                    <summary style="margin-bottom:8px; font-weight:600; color:#b45309;">▼ Ręczne Potrącenia</summary>
-                    <div id="wallet-list-manual"></div>
-                </details>
-            </div>
 
-            <!-- Tab: Produkty -->
-            <div id="tab-profil-produkty" style="display:none;">
-                <details class="history-group group-kosm" open>
-                    <summary class="history-summary"><div class="summary-title txt-kosm">🛍️ Kosmetyki <span id="cnt-kosm" class="count-badge">0 poz.</span></div></summary>
-                    <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-kosmetyki"></tbody></table></div>
-                </details>
-            </div>
-
-            <!-- Tab: Analityki -->
-            <div id="tab-profil-analityki" style="display:none;">
-                <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:14px; font-size:13px; color:#78350f;">Analityki dostępne w zakładce Podsumowanie.</div>
-            </div>
-
-            <!-- Tab: Dokumenty -->
-            <div id="tab-profil-dokumenty" style="display:none;">
-                <div style="display:flex; gap:10px; flex-wrap:wrap; padding:8px 0;">
-                    <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" class="btn-primary" style="background:#8b5cf6; width:auto; font-size:13px; padding:12px 22px; border-radius:10px; border:none; cursor:pointer;">📜 Regulamin</button>
-                    <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" class="btn-primary" style="background:#0f766e; width:auto; font-size:13px; padding:12px 22px; border-radius:10px; border:none; cursor:pointer;">🔒 Zgody RODO</button>
+                <!-- hero-stats: 3 boxes -->
+                <div style="padding:18px 22px 22px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#fff;">
+                    <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; position:relative;">
+                        <div style="color:#7b8091; font-size:14px; margin-bottom:8px;">Dostępne środki</div>
+                        <div id="wallet-balance" class="wallet-amount" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#202534;">0,00 zł</div>
+                        <button onclick="otworzWplateZadatku()" style="margin-top:12px; display:inline-block; background:#fdeff4; color:#cf477c; border-radius:10px; padding:6px 13px; font-size:13px; font-weight:700; border:none; cursor:pointer;">+ Wpłać zadatek</button>
+                    </div>
+                    <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; position:relative;">
+                        <div style="color:#7b8091; font-size:14px; margin-bottom:8px;">Liczba wizyt</div>
+                        <div id="profil-stat-wizyty" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#202534;">–</div>
+                        <div style="position:absolute; right:16px; top:16px; color:#f194b4; font-size:20px;">🗓</div>
+                    </div>
+                    <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; position:relative;">
+                        <div style="color:#7b8091; font-size:14px; margin-bottom:8px;">Łącznie wydano</div>
+                        <div id="profil-stat-wartosc" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#202534;">–</div>
+                        <div style="position:absolute; right:16px; top:16px; color:#f194b4; font-size:20px;">👜</div>
+                    </div>
                 </div>
             </div>
 
-        </div>
+            <!-- TABS CARD -->
+            <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); overflow:hidden;">
 
-        <!-- RIGHT SIDEBAR -->
-        <div style="position:sticky; top:20px; display:flex; flex-direction:column; gap:12px;">
+                <!-- tab bar -->
+                <div style="display:flex; gap:8px; padding:0 18px; height:60px; align-items:flex-end; border-bottom:1px solid #efe5e8; background:#fff; overflow-x:auto;">
+                    <button class="pp-tab pp-tab-active" onclick="przelaczTabProfilu('podsumowanie',this)">📋 Podsumowanie</button>
+                    <button class="pp-tab" onclick="przelaczTabProfilu('wizyty',this)">🗓 Wizyty</button>
+                    <button class="pp-tab" onclick="przelaczTabProfilu('produkty',this)">👜 Produkty</button>
+                    <button class="pp-tab" onclick="przelaczTabProfilu('zadatki',this)">💳 Zadatki</button>
+                    <button class="pp-tab" onclick="przelaczTabProfilu('analityki',this)">📊 Analityki</button>
+                    <button class="pp-tab" onclick="przelaczTabProfilu('dokumenty',this)">📎 Dokumenty</button>
+                </div>
+
+                <div style="padding:22px 18px 20px;">
+
+                    <!-- ===== Tab: Podsumowanie ===== -->
+                    <div id="tab-profil-podsumowanie">
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px;">
+
+                            <!-- Sugestie -->
+                            <div id="asystent-box" style="display:none; background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px 18px 16px;">
+                                <div style="font-size:16px; font-weight:700; margin-bottom:14px; color:#2c3242; display:flex; align-items:center; gap:8px;">💡 Sugestie dla Recepcji</div>
+                                <ul id="lista-sugestii" style="margin:0; padding-left:20px; color:#4c5364; font-size:14px; line-height:1.95;"></ul>
+                            </div>
+
+                            <!-- Zaproponuj nowość -->
+                            <div style="background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px 18px 16px;">
+                                <div style="font-size:15px; font-weight:700; margin-bottom:14px; color:#2c3242;">✨ Zaproponuj nowość</div>
+                                <ul id="analiza-missing-list" style="margin:0; padding-left:20px; color:#4c5364; font-size:14px; line-height:1.95;"></ul>
+                            </div>
+
+                            <!-- Ulubiony zabieg -->
+                            <div style="background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px 18px 16px;">
+                                <div style="font-size:15px; font-weight:700; margin-bottom:10px; color:#2c3242; display:flex; align-items:center;">♡ Ulubiony Zabieg <span style="margin-left:auto; color:#f0b64d; font-size:17px;">☆</span></div>
+                                <div id="analiza-fav-content" style="color:#2a3040; font-size:15px; font-weight:500;">Brak danych</div>
+                                <div id="analiza-fav-sub" style="margin-top:6px; color:#a2a7b8; font-size:13px;">Na podstawie historii.</div>
+                            </div>
+
+                            <!-- Historia kontaktów -->
+                            <div style="background:#f0fdfa; border:1px solid #5eead4; border-radius:18px; padding:18px 18px 16px;">
+                                <div style="font-size:15px; font-weight:700; margin-bottom:10px; color:#0f766e;">📞 Historia kontaktów</div>
+                                <div id="profil-retencja-content" style="font-size:13px; color:#115e59; line-height:1.55;">Ładowanie...</div>
+                            </div>
+                        </div>
+
+                        <!-- Notatki -->
+                        <div style="background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px 18px 16px;">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+                                <div style="font-size:16px; font-weight:700; color:#2c3242;">🖉 Notatki o kliencie</div>
+                                <button onclick="edytujNotatkeUI()" style="border:0; background:#c54f7f; color:#fff; border-radius:10px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;"><span id="memo-action-label">Dodaj notatkę</span></button>
+                            </div>
+                            <div id="memo-content" style="border:1px solid #ece7ea; background:#fcfbfc; border-radius:12px; padding:14px 16px; color:#78350f; font-size:14px; line-height:1.6; font-style:italic; min-height:46px;">Brak notatki.</div>
+                        </div>
+
+                        <!-- Retail box (hidden by default) -->
+                        <div id="analiza-retail-box" style="display:none; margin-top:14px; background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:18px;">
+                            <div style="font-size:15px; font-weight:700; color:#c2410c; margin-bottom:10px;">🧴 Czas na zakupy? (Minęły 3 miesiące)</div>
+                            <div id="analiza-retail-list" style="font-size:13px;"></div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Tab: Wizyty ===== -->
+                    <div id="tab-profil-wizyty" style="display:none;">
+                        <div style="background:#fff; padding:10px 12px; border-radius:10px; margin-bottom:14px; border:1px solid #efe5e8; position:relative;">
+                            <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)" placeholder="🔍 Szukaj w historii zabiegów..." style="width:100%; padding:9px 10px 9px 34px; border:1px solid #efe5e8; border-radius:8px; font-size:13px; box-sizing:border-box;">
+                            <span style="position:absolute; left:24px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;">🔎</span>
+                        </div>
+                        <details class="history-group group-twarz" open>
+                            <summary class="history-summary"><div class="summary-title txt-twarz">💆‍♀️ Twarz <span id="cnt-twarz" class="count-badge">0 poz.</span></div></summary>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-twarz"></tbody></table></div>
+                        </details>
+                        <details class="history-group group-cialo">
+                            <summary class="history-summary"><div class="summary-title txt-cialo">🧘‍♀️ Ciało <span id="cnt-cialo" class="count-badge">0 poz.</span></div></summary>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-cialo"></tbody></table></div>
+                        </details>
+                        <details class="history-group" style="border-left:5px solid #991b1b !important;">
+                            <summary class="history-summary"><div class="summary-title" style="color:#991b1b;">📉 Utracone zadatki <span id="cnt-utracone" class="count-badge" style="background:#fee2e2;color:#991b1b;">0 poz.</span></div></summary>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-utracone"></tbody></table></div>
+                        </details>
+                    </div>
+
+                    <!-- ===== Tab: Produkty ===== -->
+                    <div id="tab-profil-produkty" style="display:none;">
+                        <details class="history-group group-kosm" open>
+                            <summary class="history-summary"><div class="summary-title txt-kosm">🛍️ Kosmetyki <span id="cnt-kosm" class="count-badge">0 poz.</span></div></summary>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-kosmetyki"></tbody></table></div>
+                        </details>
+                    </div>
+
+                    <!-- ===== Tab: Zadatki ===== -->
+                    <div id="tab-profil-zadatki" style="display:none;">
+                        <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+                            <div>
+                                <div style="font-size:13px; color:#7b8091; margin-bottom:4px;">Dostępne środki</div>
+                                <div id="wallet-balance-zadatki" style="font-size:24px; font-weight:800; color:#202534; letter-spacing:-.03em;">–</div>
+                            </div>
+                            <button onclick="otworzWplateZadatku()" style="background:#e8568f; color:#fff; border:none; border-radius:12px; padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer;">+ Wpłać zadatek</button>
+                        </div>
+                        <details open style="font-size:13px; color:#666; cursor:pointer; margin-bottom:10px;">
+                            <summary style="margin-bottom:8px; font-weight:600;">▼ Szczegóły zadatków</summary>
+                            <div id="wallet-list"></div>
+                        </details>
+                        <details style="font-size:13px; color:#666; cursor:pointer;">
+                            <summary style="margin-bottom:8px; font-weight:600; color:#b45309;">▼ Ręczne Potrącenia</summary>
+                            <div id="wallet-list-manual"></div>
+                        </details>
+                    </div>
+
+                    <!-- ===== Tab: Analityki ===== -->
+                    <div id="tab-profil-analityki" style="display:none;">
+                        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:14px; padding:16px; font-size:13px; color:#78350f; margin-bottom:14px;">Pełna analityka dostępna po przejrzeniu historii klientki.</div>
+                        <div id="analiza-klienta-container" style="display:none;">
+                            <div class="analysis-card" style="flex-direction:column;">
+                                <div style="display:flex; flex-wrap:wrap; gap:30px; padding-bottom:20px; border-bottom:1px solid #fcd34d;">
+                                    <div class="analysis-section" style="flex:1;">
+                                        <div class="analysis-header">🏆 Ulubiony Zabieg</div>
+                                        <div id="analiza-fav-content-2" class="fav-treatment">Brak danych</div>
+                                        <div style="font-size:12px; color:#666; margin-top:5px;">Na podstawie historii.</div>
+                                    </div>
+                                </div>
+                                <div id="analiza-retail-box-2" style="padding-top:15px; display:none;">
+                                    <div class="analysis-header" style="color:#c2410c;">🧴 Czas na zakupy? (Minęły 3 miesiące)</div>
+                                    <div id="analiza-retail-list-2"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== Tab: Dokumenty ===== -->
+                    <div id="tab-profil-dokumenty" style="display:none;">
+                        <div style="display:flex; gap:10px; flex-wrap:wrap; padding:4px 0;">
+                            <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#6e49df; color:#fff; border:0; border-radius:12px; padding:12px 22px; font-size:14px; font-weight:700; cursor:pointer;">📜 Regulamin</button>
+                            <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#13a05f; color:#fff; border:0; border-radius:12px; padding:12px 22px; font-size:14px; font-weight:700; cursor:pointer;">🔒 Zgody RODO</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== RIGHT SIDEBAR ===== -->
+        <aside style="display:grid; gap:18px; position:sticky; top:20px;">
+
             <!-- Szybkie akcje -->
-            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px;">
-                <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Szybkie akcje</div>
-                <div style="display:flex; flex-direction:column; gap:6px;">
-                    <button onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.profil-tab')[1])" style="background:#fdf2f8; border:1px solid #fbcfe8; color:#9f1239; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:12px; text-align:left; font-weight:500;">📅 Historia wizyt</button>
-                    <button onclick="edytujNotatkeUI()" style="background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:12px; text-align:left; font-weight:500;">📝 Notatka</button>
-                    <button onclick="otworzWplateZadatku()" style="background:#fefce8; border:1px solid #fde68a; color:#92400e; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:12px; text-align:left; font-weight:500;">💰 Dodaj zadatek</button>
-                    <button onclick="otworzEdycjeKlienta()" style="background:#f0f9ff; border:1px solid #bae6fd; color:#075985; border-radius:8px; padding:9px 12px; cursor:pointer; font-size:12px; text-align:left; font-weight:500;">✏️ Edytuj dane</button>
+            <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); padding:18px;">
+                <div style="font-size:17px; font-weight:700; color:#1f2430; margin-bottom:14px;">Szybkie akcje</div>
+                <div onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.pp-tab')[1])" style="border:1px solid #efe5e8; border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; margin-bottom:8px;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:#fdeff4; color:#d64e81; display:grid; place-items:center; font-size:20px; flex-shrink:0;">📅</div>
+                    <div><strong style="display:block; font-size:15px; color:#1f2430;">Historia wizyt</strong><span style="color:#8b90a1; font-size:13px;">Przeglądaj zabiegi</span></div>
+                    <div style="margin-left:auto; color:#6f7386; font-size:20px;">›</div>
+                </div>
+                <div onclick="edytujNotatkeUI()" style="border:1px solid #efe5e8; border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; margin-bottom:8px;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:#f0fdf4; color:#166534; display:grid; place-items:center; font-size:20px; flex-shrink:0;">📝</div>
+                    <div><strong style="display:block; font-size:15px; color:#1f2430;">Notatka</strong><span style="color:#8b90a1; font-size:13px;">Edytuj notatkę</span></div>
+                    <div style="margin-left:auto; color:#6f7386; font-size:20px;">›</div>
+                </div>
+                <div onclick="otworzWplateZadatku()" style="border:1px solid #efe5e8; border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer; margin-bottom:8px;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:#fefce8; color:#92400e; display:grid; place-items:center; font-size:20px; flex-shrink:0;">💰</div>
+                    <div><strong style="display:block; font-size:15px; color:#1f2430;">Dodaj zadatek</strong><span style="color:#8b90a1; font-size:13px;">Wpłać środki</span></div>
+                    <div style="margin-left:auto; color:#6f7386; font-size:20px;">›</div>
+                </div>
+                <div onclick="otworzEdycjeKlienta()" style="border:1px solid #efe5e8; border-radius:16px; padding:14px 16px; display:flex; align-items:center; gap:14px; cursor:pointer;">
+                    <div style="width:44px; height:44px; border-radius:50%; background:#f0f9ff; color:#075985; display:grid; place-items:center; font-size:20px; flex-shrink:0;">👤</div>
+                    <div><strong style="display:block; font-size:15px; color:#1f2430;">Edytuj dane</strong><span style="color:#8b90a1; font-size:13px;">Zmień imię / telefon</span></div>
+                    <div style="margin-left:auto; color:#6f7386; font-size:20px;">›</div>
                 </div>
             </div>
+
             <!-- Ostatnie wizyty -->
-            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Ostatnie wizyty</div>
-                    <button onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.profil-tab')[1])" style="background:none; border:none; cursor:pointer; font-size:11px; color:#db2777; font-weight:600;">wszystkie →</button>
+            <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); padding:18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                    <div style="font-size:17px; font-weight:700; color:#1f2430;">📅 Ostatnie wizyty</div>
+                    <button onclick="przelaczTabProfilu('wizyty', document.querySelectorAll('.pp-tab')[1])" style="background:none; border:none; cursor:pointer; color:#ce527f; font-weight:700; font-size:13px;">Zobacz wszystkie →</button>
                 </div>
-                <div id="profil-sidebar-wizyty" style="font-size:12px; color:#475569; line-height:1.8;">–</div>
+                <div id="profil-sidebar-wizyty" style="font-size:14px; color:#50586b;">–</div>
             </div>
+
             <!-- Ostatnie produkty -->
-            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:14px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                    <div style="font-size:11px; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Ostatnie produkty</div>
-                    <button onclick="przelaczTabProfilu('produkty', document.querySelectorAll('.profil-tab')[3])" style="background:none; border:none; cursor:pointer; font-size:11px; color:#db2777; font-weight:600;">wszystkie →</button>
+            <div style="background:#fff; border:1px solid #efe5e8; border-radius:22px; box-shadow:0 8px 24px rgba(33,31,53,.04); padding:18px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px;">
+                    <div style="font-size:17px; font-weight:700; color:#1f2430;">☆ Ostatnie produkty</div>
+                    <button onclick="przelaczTabProfilu('produkty', document.querySelectorAll('.pp-tab')[2])" style="background:none; border:none; cursor:pointer; color:#ce527f; font-weight:700; font-size:13px;">Zobacz wszystkie →</button>
                 </div>
-                <div id="profil-sidebar-produkty" style="font-size:12px; color:#475569; line-height:1.8;">–</div>
+                <div id="profil-sidebar-produkty" style="font-size:14px; color:#50586b;">–</div>
             </div>
-        </div>
+
+            <!-- Odśwież -->
+            <button id="btn-odswiez-profil" onclick="odswiezProfilAktualnegoKlienta()" style="background:#fff; border:1px solid #efe5e8; border-radius:14px; cursor:pointer; color:#8c8fa1; font-size:13px; padding:10px 16px; box-shadow:0 8px 24px rgba(33,31,53,.04);">🔄 Odśwież profil</button>
+        </aside>
 
     </div>
 </div>
+
 
 
 
@@ -8175,20 +8232,21 @@ function otworzProfil(idKlienta) {
     const avatarEl = document.getElementById('profil-avatar');
     if (avatarEl) avatarEl.textContent = initials;
 
-    // 3. Rysuj nagłówek (uproszczony)
+    // 3. Nagłówek
     const tel = klientObj.telefon && klientObj.telefon !== "undefined" ? klientObj.telefon : null;
-    const naglowekHTML = `<div style="font-size:19px; font-weight:800; color:#1e293b; margin:0;">${nazwaKlienta}</div>
-        ${tel ? `<div style="font-size:13px; color:#64748b; margin-top:2px;">📞 ${tel}</div>` : ''}`;
     const divNaglowek = document.getElementById('profil-naglowek');
-    divNaglowek.innerHTML = naglowekHTML;
-    divNaglowek.style.display = 'block';
+    if (divNaglowek) { divNaglowek.textContent = nazwaKlienta; divNaglowek.style.display = 'block'; }
+    const idRow = document.getElementById('profil-id-row');
+    if (idRow) idRow.textContent = 'ID: ' + klientObj.id;
+    const telRow = document.getElementById('profil-tel-row');
+    if (telRow) telRow.innerHTML = tel ? '📞 ' + tel : '<span style="color:#8c8fa1;">Brak telefonu</span>';
 
     // Reset tabów do Podsumowanie
-    przelaczTabProfilu('podsumowanie', document.querySelector('.profil-tab'));
+    przelaczTabProfilu('podsumowanie', document.querySelector('.pp-tab'));
 
     // Ustawienie wskaźników ładowania
     const metaDiv = document.getElementById('profil-meta');
-    if(metaDiv) metaDiv.innerHTML = '<span style="color:#94a3b8; font-size:12px;">⏳ Ładowanie...</span>';
+    if(metaDiv) metaDiv.innerHTML = '<span style="color:#94a3b8; font-size:13px;">⏳ Ładowanie...</span>';
     
     document.getElementById('tabela-twarz').innerHTML = "";
     document.getElementById('tabela-cialo').innerHTML = "";
@@ -8773,8 +8831,10 @@ function przelaczTabProfilu(tabId, btn) {
         const el = document.getElementById('tab-profil-' + t);
         if (el) el.style.display = (t === tabId) ? '' : 'none';
     });
-    document.querySelectorAll('.profil-tab').forEach(b => b.classList.remove('profil-tab-active'));
-    if (btn) btn.classList.add('profil-tab-active');
+    document.querySelectorAll('.pp-tab, .profil-tab').forEach(b => {
+        b.classList.remove('pp-tab-active', 'profil-tab-active');
+    });
+    if (btn) { btn.classList.add('pp-tab-active'); btn.classList.add('profil-tab-active'); }
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
         function toggleMenu(id, btn) { document.getElementById(id).classList.toggle('open'); if(btn) btn.classList.toggle('open'); }
