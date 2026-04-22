@@ -7223,6 +7223,7 @@ function zalogujPinem() {
         btn.disabled = false;
         btn.textContent = 'Zaloguj';
         if(d.status === 'success') {
+            if (d.session_token) localStorage.setItem('boczki_session_token', d.session_token);
             uruchomAplikacjePracownika(wybranyPracownik, d.rola);
         } else {
             pokazPinBlad(d.message || 'Błędny PIN!');

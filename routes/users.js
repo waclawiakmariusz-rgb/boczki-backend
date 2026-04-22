@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { createSession } = require('./sessions');
 
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
@@ -55,7 +56,8 @@ module.exports = (db) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono użytkownika.' });
           const user = rows[0];
           if (String(user.haslo_pin).trim() === String(d.pin).trim()) {
-            return res.json({ status: 'success', rola: user.rola });
+            const session_token = createSession(tenant_id, d.imie);
+            return res.json({ status: 'success', rola: user.rola, session_token });
           }
           return res.json({ status: 'error', message: 'Błędny PIN!' });
         }
