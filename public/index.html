@@ -4122,6 +4122,123 @@ body.dark-mode #hkb-modal { background: #1e293b; }
         <div id="bd-pagination" class="pagination-container"></div>
     </div>
 </div>
+<div id="pulpit" class="section">
+  <div class="ds-topbar">
+    <div class="ds-hello">
+      <h2 id="ds-greeting">Dzień dobry! 👋</h2>
+      <p>Sprawdź, co wymaga Twojej uwagi i co możesz zrobić dzisiaj.</p>
+    </div>
+    <div class="ds-update">⟳ <span id="ds-kpi-time">—</span></div>
+  </div>
+
+  <div class="ds-grid">
+    <!-- KPI: Na dziś -->
+    <section class="ds-card ds-summary-card">
+      <div class="ds-section-head">
+        <h3>📊 Na dziś</h3>
+      </div>
+      <div class="ds-kpis">
+        <div class="ds-kpi">
+          <div class="ds-kpi-icon">🧾</div>
+          <div><div class="ds-kpi-value" id="ds-kpi-sprzedaz">—</div><div class="ds-kpi-label">Sprzedaż dzisiaj</div></div>
+        </div>
+        <div class="ds-kpi">
+          <div class="ds-kpi-icon">👜</div>
+          <div><div class="ds-kpi-value" id="ds-kpi-transakcji">—</div><div class="ds-kpi-label">Transakcji</div></div>
+        </div>
+        <div class="ds-kpi">
+          <div class="ds-kpi-icon">👥</div>
+          <div><div class="ds-kpi-value" id="ds-kpi-klientow">—</div><div class="ds-kpi-label">Klientów dzisiaj</div></div>
+        </div>
+        <div class="ds-kpi">
+          <div class="ds-kpi-icon">📈</div>
+          <div><div class="ds-kpi-value" id="ds-kpi-srednia">—</div><div class="ds-kpi-label">Śr. wartość transakcji</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Wymaga uwagi -->
+    <section class="ds-card" style="padding:22px 20px 18px;">
+      <div class="ds-card-title-row">
+        <h3 class="ds-card-title">⚠️ Wymaga uwagi</h3>
+        <span class="ds-badge-count" id="ds-uwaga-count">…</span>
+      </div>
+      <div class="ds-attention-list" id="ds-attention-list">
+        <div style="color:#94a3b8; font-size:14px; padding:8px 0;">Ładowanie...</div>
+      </div>
+    </section>
+
+    <!-- Co możesz zrobić teraz? -->
+    <section class="ds-card" style="padding:22px 20px 18px;">
+      <div class="ds-card-title-row">
+        <h3 class="ds-card-title">💡 Co możesz zrobić teraz?</h3>
+      </div>
+      <div class="ds-action-list">
+        <div class="ds-action-item">
+          <div class="ds-round-icon">🎁</div>
+          <div>
+            <div class="ds-item-title">Zaproponuj zabieg</div>
+            <div class="ds-item-sub">Sprawdź klientki gotowe na kolejną wizytę.</div>
+          </div>
+          <button class="ds-action-btn" onclick="pokaz('klient-profil', null)">Sprawdź</button>
+        </div>
+        <div class="ds-action-item">
+          <div class="ds-round-icon">👤</div>
+          <div>
+            <div class="ds-item-title">Dodaj nową klientkę</div>
+            <div class="ds-item-sub">Szybko dodaj i umów kolejną wizytę.</div>
+          </div>
+          <button class="ds-action-btn" onclick="otworzPopupNowyKlient()">Dodaj</button>
+        </div>
+        <div class="ds-action-item">
+          <div class="ds-round-icon orange">📅</div>
+          <div>
+            <div class="ds-item-title">Podsumowanie dnia</div>
+            <div class="ds-item-sub">Sprawdź dzisiejsze wyniki sprzedaży.</div>
+          </div>
+          <button class="ds-action-btn" onclick="pokaz('podsumowanie', null)">Otwórz</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Szybki dostęp -->
+    <section class="ds-card ds-quick-card" style="padding:22px 20px 18px; grid-column:1/-1;">
+      <div class="ds-card-title-row">
+        <h3 class="ds-card-title">⚡ Szybki dostęp</h3>
+      </div>
+      <div class="ds-quick-grid">
+        <div class="ds-quick-tile" onclick="pokaz('sprzedaz', null)"><div class="ds-tile-icon">＋</div><span>Dodaj<br>sprzedaż</span></div>
+        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()"><div class="ds-tile-icon">👤</div><span>Dodaj<br>klienta</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista', null)"><div class="ds-tile-icon">💳</div><span>Spis<br>zadatków</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn', null); typeof rap_initApp==='function'&&rap_initApp();"><div class="ds-tile-icon">📦</div><span>Stan<br>magazynu</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('historia', null)"><div class="ds-tile-icon">📜</div><span>Historia<br>sprzedaży</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('podsumowanie', null)"><div class="ds-tile-icon">📅</div><span>Podsumowanie<br>dnia</span></div>
+      </div>
+    </section>
+
+    <!-- Ostatnie transakcje -->
+    <section class="ds-card ds-transactions-card" style="padding:18px 20px 20px; grid-column:1/span 2;">
+      <div class="ds-transactions-head">
+        <h3>Ostatnie transakcje (dziś)</h3>
+        <span class="ds-pink-link" onclick="pokaz('historia', null)">Zobacz wszystkie →</span>
+      </div>
+      <div class="ds-transactions-table" id="ds-transactions-table">
+        <div style="color:#94a3b8; font-size:14px;">Ładowanie...</div>
+      </div>
+    </section>
+
+    <!-- Wskazówki -->
+    <section class="ds-card ds-tips-card" style="padding:18px 20px 20px;">
+      <div class="ds-transactions-head">
+        <h3>💡 Wskazówki</h3>
+      </div>
+      <div class="ds-tips-box">
+        <h4 class="ds-tips-title">Pakiety zabiegów zwiększają powroty</h4>
+        <p class="ds-tips-text">Klientki, które kupują pakiety, wracają średnio 3× częściej. Przy kolejnej wizycie zaproponuj serię zabiegów zamiast pojedynczej usługi.</p>
+      </div>
+    </section>
+  </div>
+</div>
 <div id="klient-profil" class="section">
     <div id="widok-listy-klientow">
         <div class="header">
@@ -4400,123 +4517,6 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 
 
 
-            <div id="pulpit" class="section">
-  <div class="ds-topbar">
-    <div class="ds-hello">
-      <h2 id="ds-greeting">Dzień dobry! 👋</h2>
-      <p>Sprawdź, co wymaga Twojej uwagi i co możesz zrobić dzisiaj.</p>
-    </div>
-    <div class="ds-update">⟳ <span id="ds-kpi-time">—</span></div>
-  </div>
-
-  <div class="ds-grid">
-    <!-- KPI: Na dziś -->
-    <section class="ds-card ds-summary-card">
-      <div class="ds-section-head">
-        <h3>📊 Na dziś</h3>
-      </div>
-      <div class="ds-kpis">
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">🧾</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-sprzedaz">—</div><div class="ds-kpi-label">Sprzedaż dzisiaj</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">👜</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-transakcji">—</div><div class="ds-kpi-label">Transakcji</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">👥</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-klientow">—</div><div class="ds-kpi-label">Klientów dzisiaj</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">📈</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-srednia">—</div><div class="ds-kpi-label">Śr. wartość transakcji</div></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Wymaga uwagi -->
-    <section class="ds-card" style="padding:22px 20px 18px;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">⚠️ Wymaga uwagi</h3>
-        <span class="ds-badge-count" id="ds-uwaga-count">…</span>
-      </div>
-      <div class="ds-attention-list" id="ds-attention-list">
-        <div style="color:#94a3b8; font-size:14px; padding:8px 0;">Ładowanie...</div>
-      </div>
-    </section>
-
-    <!-- Co możesz zrobić teraz? -->
-    <section class="ds-card" style="padding:22px 20px 18px;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">💡 Co możesz zrobić teraz?</h3>
-      </div>
-      <div class="ds-action-list">
-        <div class="ds-action-item">
-          <div class="ds-round-icon">🎁</div>
-          <div>
-            <div class="ds-item-title">Zaproponuj zabieg</div>
-            <div class="ds-item-sub">Sprawdź klientki gotowe na kolejną wizytę.</div>
-          </div>
-          <button class="ds-action-btn" onclick="pokaz('klient-profil', null)">Sprawdź</button>
-        </div>
-        <div class="ds-action-item">
-          <div class="ds-round-icon">👤</div>
-          <div>
-            <div class="ds-item-title">Dodaj nową klientkę</div>
-            <div class="ds-item-sub">Szybko dodaj i umów kolejną wizytę.</div>
-          </div>
-          <button class="ds-action-btn" onclick="otworzPopupNowyKlient()">Dodaj</button>
-        </div>
-        <div class="ds-action-item">
-          <div class="ds-round-icon orange">📅</div>
-          <div>
-            <div class="ds-item-title">Podsumowanie dnia</div>
-            <div class="ds-item-sub">Sprawdź dzisiejsze wyniki sprzedaży.</div>
-          </div>
-          <button class="ds-action-btn" onclick="pokaz('podsumowanie', null)">Otwórz</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- Szybki dostęp -->
-    <section class="ds-card ds-quick-card" style="padding:22px 20px 18px; grid-column:1/-1;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">⚡ Szybki dostęp</h3>
-      </div>
-      <div class="ds-quick-grid">
-        <div class="ds-quick-tile" onclick="pokaz('sprzedaz', null)"><div class="ds-tile-icon">＋</div><span>Dodaj<br>sprzedaż</span></div>
-        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()"><div class="ds-tile-icon">👤</div><span>Dodaj<br>klienta</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista', null)"><div class="ds-tile-icon">💳</div><span>Spis<br>zadatków</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn', null); typeof rap_initApp==='function'&&rap_initApp();"><div class="ds-tile-icon">📦</div><span>Stan<br>magazynu</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('historia', null)"><div class="ds-tile-icon">📜</div><span>Historia<br>sprzedaży</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('podsumowanie', null)"><div class="ds-tile-icon">📅</div><span>Podsumowanie<br>dnia</span></div>
-      </div>
-    </section>
-
-    <!-- Ostatnie transakcje -->
-    <section class="ds-card ds-transactions-card" style="padding:18px 20px 20px; grid-column:1/span 2;">
-      <div class="ds-transactions-head">
-        <h3>Ostatnie transakcje (dziś)</h3>
-        <span class="ds-pink-link" onclick="pokaz('historia', null)">Zobacz wszystkie →</span>
-      </div>
-      <div class="ds-transactions-table" id="ds-transactions-table">
-        <div style="color:#94a3b8; font-size:14px;">Ładowanie...</div>
-      </div>
-    </section>
-
-    <!-- Wskazówki -->
-    <section class="ds-card ds-tips-card" style="padding:18px 20px 20px;">
-      <div class="ds-transactions-head">
-        <h3>💡 Wskazówki</h3>
-      </div>
-      <div class="ds-tips-box">
-        <h4 class="ds-tips-title">Pakiety zabiegów zwiększają powroty</h4>
-        <p class="ds-tips-text">Klientki, które kupują pakiety, wracają średnio 3× częściej. Przy kolejnej wizycie zaproponuj serię zabiegów zamiast pojedynczej usługi.</p>
-      </div>
-    </section>
-  </div>
-</div>
             <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
 			<div class="header"><h1>Dziennik Zdarzeń</h1>
 			<button onclick="kopiujLogiDoSchowka()" title="Kopiuj logi konsoli do schowka" 
