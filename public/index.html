@@ -15048,6 +15048,7 @@ if (inputNazwaCheck) {
 
         function an_pobierzMiesiace() {
             const sel = document.getElementById('an_monthSelect');
+            if (!sel) return;
             sel.innerHTML = "<option>Ładowanie...</option>";
 
             fetch(API_URL, { method: "POST", body: JSON.stringify({ action: 'get_months' }) })
