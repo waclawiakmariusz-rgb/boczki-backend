@@ -13932,33 +13932,11 @@ function zapiszEdycjeKlienta(e) {
 
 // --- WYSZUKIWANIE W HISTORII PROFILU ---
 function filtrujHistorieWProfilu() {
-    // 1. Pobieramy frazę wpisaną przez użytkownika
     const input = document.getElementById('profil-history-search');
     if (!input) return;
     const fraza = input.value;
-
-    // 2. Musimy ustalić, kogo aktualnie wyświetlamy (z nagłówka)
-    const naglowek = document.getElementById('profil-naglowek');
-    let idKlienta = "";
-    let nazwaKlienta = "";
-
-    // Próba wyciągnięcia ID (nowy wygląd ma ID w divie, stary w nawiasie)
-    // Szukamy w całym tekście nagłówka ciągu cyfr po "ID:"
-    const match = naglowek.innerText.match(/ID:\s*(\d+)/);
-    if (match) {
-        idKlienta = match[1];
-    }
-    
-    // Nazwa klienta (pobieramy z H1)
-    const h1 = naglowek.querySelector('h1');
-    if (h1) {
-        nazwaKlienta = h1.innerText.trim();
-    } else {
-        // Fallback dla starego wyglądu
-        nazwaKlienta = naglowek.innerText.split('ID:')[0].trim();
-    }
-
-    // 3. Uruchamiamy przetwarzanie z filtrem
+    const idKlienta = window.aktualnyProfilKlientId || "";
+    const nazwaKlienta = window.aktualnyProfilKlientNazwa || "";
     przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, fraza);
 }
 
