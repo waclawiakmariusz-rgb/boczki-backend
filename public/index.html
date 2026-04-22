@@ -6882,11 +6882,20 @@ function normNumOr0(val) {
     let pracownikRola = localStorage.getItem('boczki_pracownik_rola'); // Rola z PINu
 
     if (pracownikImie && pracownikRola) {
-        // Jeśli pracownik ma zapisaną sesję (bo wcisnął F5), wpuszczamy go bez PINu
-        console.log("🔄 Odświeżenie strony: Przywracam sesję dla: " + pracownikImie);
-        document.getElementById('login-overlay').style.display = 'none';
-        uruchomAplikacjePracownika(pracownikImie, pracownikRola);
-    } 
+        const sTime = parseInt(localStorage.getItem('boczki_session_time') || '0');
+        const sesjaSwiezа = sTime > 0 && (Date.now() - sTime) < 8 * 60 * 60 * 1000;
+        if (sesjaSwiezа) {
+            document.getElementById('login-overlay').style.display = 'none';
+            uruchomAplikacjePracownika(pracownikImie, pracownikRola);
+        } else {
+            // Sesja wygasła — wyczyść i pokaż ekran PIN
+            localStorage.removeItem('boczki_pracownik_imie');
+            localStorage.removeItem('boczki_pracownik_rola');
+            localStorage.removeItem('boczki_session_token');
+            localStorage.removeItem('boczki_session_time');
+            zaloguj(s, true);
+        }
+    }
     else if(s && s !== "undefined") { 
         // Jeśli jest tylko sesja urządzenia (zwykłe wejście z linku), pokazujemy ekran PIN
         console.log("Znaleziono sesję urządzenia, ładuję ekran PIN-ów...");
@@ -7223,7 +7232,10 @@ function zalogujPinem() {
         btn.disabled = false;
         btn.textContent = 'Zaloguj';
         if(d.status === 'success') {
-            if (d.session_token) localStorage.setItem('boczki_session_token', d.session_token);
+            if (d.session_token) {
+                localStorage.setItem('boczki_session_token', d.session_token);
+                localStorage.setItem('boczki_session_time', Date.now().toString());
+            }
             uruchomAplikacjePracownika(wybranyPracownik, d.rola);
         } else {
             pokazPinBlad(d.message || 'Błędny PIN!');
@@ -10424,10 +10436,10 @@ function pobierzDane(wymus = false) {
     fetch(API_URL + "?action=read")
     .then(r => r.json())
     .then(d => {
-        console.log("✅ [API] Magazyn pobrany:", d.length);
-        d.sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
-        window.daneCache = d; // Zapis
-        renderujWszystko(d);
+        const arr = Array.isArray(d) ? d : [];
+        arr.sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
+        window.daneCache = arr;
+        renderujWszystko(arr);
     })
     .catch(err => console.error("❌ Błąd magazynu:", err));
 }
