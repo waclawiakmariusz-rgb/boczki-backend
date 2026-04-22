@@ -7262,6 +7262,7 @@ function uruchomAplikacjePracownika(imie, rola) {
     show('menu-kreator-dostepow');
 
     // 2. OTWIERAMY NA BAZIE ROLI (teraz bez ryzyka błędu!):
+    console.log('🔑 uruchomAplikacjePracownika: rola =', JSON.stringify(r));
     if (r === 'praktykantka') {
         show('group-magazyn');
         pokaz('magazyn');
@@ -7300,6 +7301,12 @@ function uruchomAplikacjePracownika(imie, rola) {
     } 
     else if (r === 'megaadmin' || r === 'admin') {
         // MEGAADMIN WIDZI WSZYSTKO
+        grupy.forEach(g => show(g));
+        pokaz('pulpit'); zaladujPulpit();
+    }
+    else {
+        // Nieznana rola — traktuj jak pełny dostęp i pokaż pulpit
+        console.warn('⚠️ Nieobsługiwana rola: "' + r + '" — przyznano pełny dostęp jako fallback');
         grupy.forEach(g => show(g));
         pokaz('pulpit'); zaladujPulpit();
     }
