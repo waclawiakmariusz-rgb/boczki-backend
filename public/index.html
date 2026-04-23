@@ -7579,13 +7579,12 @@ function zaladujPulpit() {
     };
 
     // ── KPIs + ostatnie transakcje ──
-    fetch(API_URL + '?action=full_sales_history')
+    fetch(API_URL + '?action=get_daily_summary&date=' + todayStr)
     .then(r => r.json())
     .then(data => {
-        const rows = Array.isArray(data) ? data : [];
-        const today = rows.filter(r => String(r.data || '').substring(0, 10) === todayStr);
+        const today = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
         const total = today.reduce((s, r) => s + (parseFloat(r.kwota) || 0), 0);
-        const uniqClients = new Set(today.map(r => String(r.id_klienta || r.klient || '')).filter(Boolean));
+        const uniqClients = new Set(today.map(r => String(r.klient || '')).filter(Boolean));
         const avg = today.length > 0 ? total / today.length : 0;
 
         const qs = id => document.getElementById(id);
@@ -7601,7 +7600,7 @@ function zaladujPulpit() {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
             } else {
                 tbl.innerHTML = last5.map(r => {
-                    const t = String(r.data || '').substring(11, 16) || '—';
+                    const t = r.godzina || '—';
                     const name = escHtml(r.zabieg || r.klient || '—');
                     const klientSub = r.klient ? '<br><span style="color:#9ca3af;font-size:12px;">' + escHtml(r.klient) + '</span>' : '';
                     const kwota = parseFloat(r.kwota) || 0;
