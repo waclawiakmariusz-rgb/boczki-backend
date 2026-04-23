@@ -8101,6 +8101,8 @@ function zapiszUrodzinyZProfilu(e) {
     };
 
     if(!payload.data_ur) { alert("Data urodzenia jest wymagana!"); return; }
+    const _urParts = payload.data_ur.split('-');
+    if (_urParts.length !== 3 || parseInt(_urParts[2], 10) < 1) { alert("Wybierz pełną datę urodzenia (dzień, miesiąc, rok)."); return; }
 
     const btn = e.target.querySelector('button[type="submit"]');
     const oldText = btn.innerText;
@@ -12584,6 +12586,8 @@ function filtrujLogi() {
     const komentarz = document.getElementById('u_komentarz').value || "";
 
     if (!imie || !nazwisko || !data) { alert("Nazwisko, Imię i Data są wymagane!"); return; }
+    const _dp = data.split('-');
+    if (_dp.length !== 3 || parseInt(_dp[2], 10) < 1) { alert("Wybierz pełną datę urodzenia (dzień, miesiąc, rok)."); return; }
 
     const dataObj = new Date(data);
     const miesiac = dataObj.toLocaleString('pl-PL', { month: 'long' });
