@@ -814,9 +814,17 @@ async function wczytajZadatki(od, _do) {
   } catch { $('listaZadatki').innerHTML='<div class="empty-msg" style="color:#ef4444">Błąd połączenia.</div>'; }
 }
 
+// ── Helpers — kosmetyki filter ────────────────────────────────────
+function sprzedazBezKosmetykow() {
+  return rowsSprzedaz.filter(r => !String(r.zabieg||'').toLowerCase().includes('kosmetyk:'));
+}
+function zadatkiBezKosmetykow() {
+  return rowsZadatki.filter(r => !String(r.cel||'').toLowerCase().includes('kosmetyk:'));
+}
+
 // ── Stats ─────────────────────────────────────────────────────────
 function updateStats() {
-  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : activeTab==='zadatki' ? rowsZadatki : rowsKosmetyki;
+  const rows = activeTab==='sprzedaz' ? sprzedazBezKosmetykow() : activeTab==='zadatki' ? zadatkiBezKosmetykow() : rowsKosmetyki;
   if (!rows.length) { $('statsGrid').style.display='none'; return; }
   $('statsGrid').style.display='grid';
   const total  = rows.reduce((s,r) => s+Number(r.kwota||0), 0);
@@ -847,7 +855,7 @@ function classifyPayment(val) {
 }
 
 function renderBreakdown() {
-  const rows = activeTab==='sprzedaz' ? rowsSprzedaz : activeTab==='zadatki' ? rowsZadatki : rowsKosmetyki;
+  const rows = activeTab==='sprzedaz' ? sprzedazBezKosmetykow() : activeTab==='zadatki' ? zadatkiBezKosmetykow() : rowsKosmetyki;
   if (!rows.length) { $('breakdownSection').style.display='none'; return; }
   $('breakdownSection').style.display='block';
 
@@ -882,21 +890,13 @@ function renderBreakdown() {
 }
 
 // ── Sprzedawcy per-person breakdown ──────────────────────────────
-function renderSprzedawcy() {
-  const rows      = activeTab === 'sprzedaz' ? rowsSprzedaz : activeTab === 'zadatki' ? rowsZadatki : rowsKosmetyki;
-  const personField = activeTab === 'kosmetyki' ? 'sprzedawca' : activeTab === 'sprzedaz' ? 'sprzedawca' : 'pracownicy';
-  const rozliczone  = rows.filter(r => r.czy_rozliczone);
-
-  if (!rozliczone.length) { $('sprzedawcySection').style.display = 'none'; return; }
-  $('sprzedawcySection').style.display = 'block';
-
-  // Build map: imie → { sum, txCount, txParticipated }
+function buildPersonMap(rows, personField) {
   const map = {};
-  for (const r of rozliczone) {
-    const raw     = String(r[personField] || '');
-    const osoby   = raw.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
+  for (const r of rows.filter(r => r.czy_rozliczone)) {
+    const raw   = String(r[personField] || '');
+    const osoby = raw.split(/[,;]+/).map(s => s.trim()).filter(Boolean);
     if (!osoby.length) continue;
-    const share   = Number(r.kwota || 0) / osoby.length;
+    const share = Number(r.kwota || 0) / osoby.length;
     for (const osoba of osoby) {
       if (!map[osoba]) map[osoba] = { sum: 0, txCount: 0, txFull: 0, txPart: 0 };
       map[osoba].sum     += share;
@@ -905,9 +905,41 @@ function renderSprzedawcy() {
       else                    map[osoba].txPart++;
     }
   }
+  return map;
+}
 
-  // Sort by sum descending
+function mergePersonMaps(...maps) {
+  const merged = {};
+  for (const map of maps) {
+    for (const [osoba, d] of Object.entries(map)) {
+      if (!merged[osoba]) merged[osoba] = { sum: 0, txCount: 0, txFull: 0, txPart: 0 };
+      merged[osoba].sum     += d.sum;
+      merged[osoba].txCount += d.txCount;
+      merged[osoba].txFull  += d.txFull;
+      merged[osoba].txPart  += d.txPart;
+    }
+  }
+  return merged;
+}
+
+function renderSprzedawcy() {
+  let map;
+  if (activeTab === 'kosmetyki') {
+    map = buildPersonMap(rowsKosmetyki, 'sprzedawca');
+  } else {
+    // Sprzedaż+Zadatki combined (bez kosmetyków) — shown on both sprzedaz and zadatki tabs
+    map = mergePersonMaps(
+      buildPersonMap(sprzedazBezKosmetykow(), 'sprzedawca'),
+      buildPersonMap(zadatkiBezKosmetykow(), 'pracownicy')
+    );
+  }
+
   const osoby = Object.entries(map).sort((a, b) => b[1].sum - a[1].sum);
+  if (!osoby.length) { $('sprzedawcySection').style.display = 'none'; return; }
+  $('sprzedawcySection').style.display = 'block';
+  $('sprzedawcySubtitle').textContent = activeTab === 'kosmetyki'
+    ? '— tylko rozliczone transakcje, kwota podzielona proporcjonalnie'
+    : '— Sprzedaż + Zadatki (bez kosmetyków), tylko rozliczone, kwota podzielona proporcjonalnie';
 
   // Color palette for avatars (cycles)
   const colors = [
