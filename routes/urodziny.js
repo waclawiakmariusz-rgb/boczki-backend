@@ -176,7 +176,9 @@ module.exports = (db) => {
 
     if (action === 'add_birthday') {
       const parts = String(d.data_ur || '').split('-');
-      if (parts.length !== 3) return res.json({ status: 'error', message: 'Błędny format daty' });
+      if (parts.length !== 3) return res.json({ status: 'error', message: 'Błędny format daty (wymagany: RRRR-MM-DD)' });
+      const dzien = parseInt(parts[2], 10);
+      if (dzien < 1 || dzien > 31) return res.json({ status: 'error', message: 'Nieprawidłowy dzień — wybierz pełną datę (dzień, miesiąc, rok).' });
       const miesiacIndex = parseInt(parts[1], 10) - 1;
       const miesiac = NAZWY_MIESIECY[miesiacIndex];
       if (!miesiac) return res.json({ status: 'error', message: 'Nieprawidłowy miesiąc' });
