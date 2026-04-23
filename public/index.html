@@ -2808,6 +2808,149 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
         font-size: 20px !important;
     }
 }
+
+/* ══════════════════════════════════════════════════════════════
+   MONTHLY REPORT — Premium redesign  (an_view-monthly-report)
+   Klasy z prefiksem anm- — nie dotykają innych sekcji
+══════════════════════════════════════════════════════════════ */
+#an_view-monthly-report .anm-topbar {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 14px; margin-bottom: 20px; flex-wrap: wrap;
+}
+#an_view-monthly-report .anm-top-actions {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+#an_view-monthly-report .anm-date-select,
+#an_view-monthly-report .anm-compare-select {
+    height: 44px; border-radius: 12px; border: 1px solid #e9e1e5;
+    background: white; padding: 0 14px; font-size: 14px; font-weight: 600;
+    color: #2e3445; cursor: pointer; font-family: inherit;
+}
+#an_view-monthly-report .anm-refresh-btn {
+    height: 44px; border: 1px solid #efcada; border-radius: 12px;
+    padding: 0 18px; background: white; color: #e8568f;
+    font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+#an_view-monthly-report .anm-refresh-btn:hover { background: #fdeef4; }
+
+#an_view-monthly-report .anm-hero {
+    background: linear-gradient(180deg,#fffefe 0%,#fff9fb 100%);
+    border: 1px solid #eee6ea; border-radius: 22px;
+    box-shadow: 0 10px 28px rgba(34,27,45,.05);
+    padding: 24px 28px; margin-bottom: 18px;
+    position: relative; overflow: hidden;
+}
+#an_view-monthly-report .anm-hero-content {
+    display: flex; align-items: center; gap: 20px; position: relative; z-index: 1;
+}
+#an_view-monthly-report .anm-hero-icon {
+    width: 96px; height: 96px; border-radius: 50%;
+    background: #fdeaf2; display: grid; place-items: center;
+    font-size: 44px; flex: 0 0 auto;
+}
+#an_view-monthly-report .anm-hero-meta { display: grid; gap: 8px; }
+#an_view-monthly-report .anm-eyebrow {
+    font-size: 13px; letter-spacing: .08em; text-transform: uppercase;
+    color: #8f93a3; font-weight: 800;
+}
+#an_view-monthly-report .anm-hero-value {
+    font-size: 32px; font-weight: 800; letter-spacing: -.04em;
+    line-height: 1; color: #1f2430;
+}
+#an_view-monthly-report .anm-hero-note { font-size: 14px; color: #7d8294; }
+#an_view-monthly-report .anm-hero-wave {
+    position: absolute; right: -20px; top: 16px;
+    width: 480px; height: 150px; opacity: .55; pointer-events: none;
+}
+
+#an_view-monthly-report .anm-metrics {
+    display: grid; grid-template-columns: repeat(5,1fr); gap: 14px; margin-bottom: 18px;
+}
+#an_view-monthly-report .anm-metric {
+    background: white; border: 1px solid #eee6ea; border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(34,27,45,.04); padding: 16px 16px 14px;
+}
+#an_view-monthly-report .anm-metric-head {
+    display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+}
+#an_view-monthly-report .anm-metric-icon {
+    width: 38px; height: 38px; border-radius: 12px;
+    display: grid; place-items: center; font-size: 20px; flex: 0 0 auto;
+}
+#an_view-monthly-report .anm-metric-title {
+    font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+    font-weight: 800; color: #7a8092;
+}
+#an_view-monthly-report .anm-metric-value {
+    font-size: 19px; font-weight: 800; letter-spacing: -.03em;
+    line-height: 1; margin-bottom: 6px; color: #1f2430;
+}
+#an_view-monthly-report .anm-metric-sub { color: #8c90a1; font-size: 12px; margin-bottom: 10px; }
+#an_view-monthly-report .anm-metric-bar {
+    height: 4px; border-radius: 999px; background: #f2f0f4; overflow: hidden;
+}
+#an_view-monthly-report .anm-metric-bar > span {
+    display: block; height: 100%; border-radius: inherit; width: 0%; transition: width .6s ease;
+}
+#an_view-monthly-report .anm-m-green  .anm-metric-icon { background:#dff5e6; color:#31b66b; }
+#an_view-monthly-report .anm-m-green  .anm-metric-bar > span { background:#31b66b; }
+#an_view-monthly-report .anm-m-blue   .anm-metric-icon { background:#e4edfb; color:#5e95f4; }
+#an_view-monthly-report .anm-m-blue   .anm-metric-bar > span { background:#5e95f4; }
+#an_view-monthly-report .anm-m-violet .anm-metric-icon { background:#ece4fd; color:#9c7af4; }
+#an_view-monthly-report .anm-m-violet .anm-metric-bar > span { background:#9c7af4; }
+#an_view-monthly-report .anm-m-orange .anm-metric-icon { background:#faebdc; color:#ef9b39; }
+#an_view-monthly-report .anm-m-orange .anm-metric-bar > span { background:#ef9b39; }
+#an_view-monthly-report .anm-m-deep   .anm-metric-icon { background:#e4f1fb; color:#2b77bd; }
+#an_view-monthly-report .anm-m-deep   .anm-metric-bar > span { background:#79b6ef; }
+
+#an_view-monthly-report .anm-content-grid {
+    display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start;
+}
+#an_view-monthly-report .anm-left-col { display: flex; flex-direction: column; gap: 16px; }
+#an_view-monthly-report .anm-chart-card,
+#an_view-monthly-report .anm-plain-card,
+#an_view-monthly-report .anm-side-card,
+#an_view-monthly-report .anm-daily-card {
+    background: white; border: 1px solid #eee6ea; border-radius: 20px;
+    box-shadow: 0 6px 20px rgba(34,27,45,.04); padding: 18px 20px;
+}
+#an_view-monthly-report .anm-daily-card { margin-top: 16px; }
+#an_view-monthly-report .anm-card-head {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;
+}
+#an_view-monthly-report .anm-title-inline {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 15px; font-weight: 700; letter-spacing: -.02em; color: #1f2430;
+}
+#an_view-monthly-report .anm-title-icon { color: #e8568f; }
+#an_view-monthly-report .anm-chart-wrap { height: 280px; position: relative; }
+#an_view-monthly-report .anm-side-col { display: flex; flex-direction: column; gap: 14px; }
+#an_view-monthly-report .anm-cosmetics-hero {
+    background: linear-gradient(135deg,#fce7f3 0%,#fbcfe8 100%);
+    border-radius: 18px; padding: 18px 20px; text-align: center;
+}
+#an_view-monthly-report .anm-cosm-count {
+    font-size: 30px; font-weight: 800; color: #831843; margin-top: 4px; letter-spacing: -.03em;
+}
+#an_view-monthly-report .anm-side-head {
+    margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #f3ecef;
+}
+#an_view-monthly-report .anm-side-head h3 { margin: 0; }
+#an_view-monthly-report .anm-daily-thead th {
+    background: #f9fafb; color: #6b7280; text-transform: uppercase;
+    font-size: 11px; letter-spacing: .04em; font-weight: 700; padding: 10px;
+}
+@media (max-width: 1200px) {
+    #an_view-monthly-report .anm-metrics { grid-template-columns: repeat(3,1fr); }
+    #an_view-monthly-report .anm-content-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+    #an_view-monthly-report .anm-metrics { grid-template-columns: repeat(2,1fr); }
+    #an_view-monthly-report .anm-topbar { flex-direction: column; align-items: stretch; }
+    #an_view-monthly-report .anm-top-actions { flex-direction: column; }
+    #an_view-monthly-report .anm-date-select,
+    #an_view-monthly-report .anm-compare-select { width: 100%; }
+}
 </style>
 </head>
 <body>
@@ -4752,75 +4895,138 @@ ANALIZA MANAGER
             </div>
         </div>
         <div id="an_view-monthly-report" style="display:none; padding-bottom: 50px;">
-        
-        <div class="header-flex" style="margin-bottom: 20px;">
+
+        <!-- Topbar -->
+        <div class="anm-topbar">
             <div>
-                <h2 style="margin:0;">Podsumowanie Miesiąca</h2>
-                <p style="margin:5px 0 0 0; opacity:0.7;">Analiza finansowa i trendy sprzedaży</p>
+                <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;">Podsumowanie Miesiąca</h2>
+                <p style="margin:6px 0 0; font-size:14px; color:#6f7486;">Analiza finansowa i trendy sprzedaży</p>
             </div>
-            <div style="display:flex; gap:10px;">
-                <select id="an_reportMonthSelect" onchange="an_pobierzRaportMiesieczny()" style="padding:10px; border-radius:8px; border:1px solid #ddd; font-weight:bold; cursor:pointer;"></select>
-                <select id="an_compareMonthSelect" onchange="an_pobierzRaportMiesieczny()" style="padding:10px; border-radius:8px; border:1px solid #ddd; background:#f9fafb; cursor:pointer;"></select>
+            <div class="anm-top-actions">
+                <select id="an_reportMonthSelect" class="anm-date-select" onchange="an_pobierzRaportMiesieczny()"></select>
+                <select id="an_compareMonthSelect" class="anm-compare-select" onchange="an_pobierzRaportMiesieczny()"></select>
+                <button onclick="an_pobierzRaportMiesieczny()" class="anm-refresh-btn">⟳ Odśwież</button>
             </div>
         </div>
 
-        <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 20px; text-align: center;">
-            <div style="font-size: 14px; color: #6b7280; text-transform: uppercase; letter-spacing: 1px;">Całkowity Przychód</div>
-            <div id="an_rep-total" style="font-size: 36px; font-weight: 800; color: #111827; margin: 5px 0;">0,00 zł</div>
-            <div id="an_rep-compare-text" style="font-size: 14px; font-weight: 500;">Brak danych do porównania</div>
-        </div>
+        <!-- Hero — całkowity przychód -->
+        <section class="anm-hero">
+            <div class="anm-hero-content">
+                <div class="anm-hero-icon">📈</div>
+                <div class="anm-hero-meta">
+                    <div class="anm-eyebrow">Całkowity Przychód</div>
+                    <div class="anm-hero-value" id="an_rep-total">0,00 zł</div>
+                    <div id="an_rep-compare-text" class="anm-hero-note"></div>
+                </div>
+            </div>
+            <svg class="anm-hero-wave" viewBox="0 0 560 180" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M0 95C47 78 93 30 137 40C177 49 201 110 241 116C290 123 319 60 366 62C416 64 440 121 487 122C514 123 537 111 560 90" stroke="#f2d1de" stroke-width="2.2" stroke-linecap="round"/>
+                <path d="M8 112C52 95 87 57 129 60C171 63 188 110 229 119C277 129 319 96 366 96C403 96 437 114 479 111C511 109 536 95 560 78" stroke="#efeef0" stroke-width="2.2" stroke-linecap="round"/>
+            </svg>
+        </section>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 25px;">
-            <div class="kpi-card-mini" style="border-top: 4px solid #10b981;"><div class="label">Gotówka 💵</div><div class="val" id="an_rep-cash" style="color: #059669;">0 zł</div></div>
-            <div class="kpi-card-mini" style="border-top: 4px solid #3b82f6;"><div class="label">Karta 💳</div><div class="val" id="an_rep-card" style="color: #2563eb;">0 zł</div></div>
-            <div class="kpi-card-mini" style="border-top: 4px solid #8b5cf6;"><div class="label">Blik #️⃣</div><div class="val" id="an_rep-blik" style="color: #7c3aed;">0 zł</div></div>
-            <div class="kpi-card-mini" style="border-top: 4px solid #f59e0b;"><div class="label">MediRaty 🏥</div><div class="val" id="an_rep-medi" style="color: #d97706;">0 zł</div></div>
-            <div class="kpi-card-mini" style="border-top: 4px solid #6b7280;"><div class="label">Przelew / Inne 🏦</div><div class="val" id="an_rep-transfer" style="color: #4b5563;">0 zł</div></div>
-        </div>
+        <!-- Metryki płatności -->
+        <section class="anm-metrics">
+            <div class="anm-metric anm-m-green">
+                <div class="anm-metric-head">
+                    <div class="anm-metric-icon">💵</div>
+                    <div class="anm-metric-title">Gotówka</div>
+                </div>
+                <div class="anm-metric-value" id="an_rep-cash">0 zł</div>
+                <div class="anm-metric-sub" id="an_rep-cash-pct">—</div>
+                <div class="anm-metric-bar"><span id="an_rep-cash-bar"></span></div>
+            </div>
+            <div class="anm-metric anm-m-blue">
+                <div class="anm-metric-head">
+                    <div class="anm-metric-icon">💳</div>
+                    <div class="anm-metric-title">Karta</div>
+                </div>
+                <div class="anm-metric-value" id="an_rep-card">0 zł</div>
+                <div class="anm-metric-sub" id="an_rep-card-pct">—</div>
+                <div class="anm-metric-bar"><span id="an_rep-card-bar"></span></div>
+            </div>
+            <div class="anm-metric anm-m-violet">
+                <div class="anm-metric-head">
+                    <div class="anm-metric-icon">📱</div>
+                    <div class="anm-metric-title">BLIK</div>
+                </div>
+                <div class="anm-metric-value" id="an_rep-blik">0 zł</div>
+                <div class="anm-metric-sub" id="an_rep-blik-pct">—</div>
+                <div class="anm-metric-bar"><span id="an_rep-blik-bar"></span></div>
+            </div>
+            <div class="anm-metric anm-m-orange">
+                <div class="anm-metric-head">
+                    <div class="anm-metric-icon">♛</div>
+                    <div class="anm-metric-title">MediRaty</div>
+                </div>
+                <div class="anm-metric-value" id="an_rep-medi">0 zł</div>
+                <div class="anm-metric-sub" id="an_rep-medi-pct">—</div>
+                <div class="anm-metric-bar"><span id="an_rep-medi-bar"></span></div>
+            </div>
+            <div class="anm-metric anm-m-deep">
+                <div class="anm-metric-head">
+                    <div class="anm-metric-icon">🏦</div>
+                    <div class="anm-metric-title">Przelew / Inne</div>
+                </div>
+                <div class="anm-metric-value" id="an_rep-transfer">0 zł</div>
+                <div class="anm-metric-sub" id="an_rep-transfer-pct">—</div>
+                <div class="anm-metric-bar"><span id="an_rep-transfer-bar"></span></div>
+            </div>
+        </section>
 
-        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
-            
-            <div style="display: flex; flex-direction: column; gap: 20px;">
-                <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <h3 style="margin-top:0;">📊 Sprzedaż Dzienna</h3>
-                    <div style="position: relative; height: 350px; width: 100%; min-height: 350px;">
+        <!-- Siatka treści -->
+        <div class="anm-content-grid">
+
+            <!-- Lewa kolumna: wykres + najrzadsze zabiegi -->
+            <div class="anm-left-col">
+                <div class="anm-chart-card">
+                    <div class="anm-card-head">
+                        <div class="anm-title-inline"><span class="anm-title-icon">▮▮</span>Sprzedaż Dzienna</div>
+                    </div>
+                    <div class="anm-chart-wrap">
                         <canvas id="an_monthlyTrendChart"></canvas>
                     </div>
                 </div>
 
-                <div style="background:white; padding:20px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); border-left: 5px solid #ef4444;">
-                    <h3 style="margin-top:0; color: #b91c1c;">📉 Najrzadziej wybierane (0 sprzedaży)</h3>
-                    <p style="font-size:12px; color:#666; margin-top:-10px;">Zabiegi z najsłabszym wynikiem w tym miesiącu:</p>
-                    <div id="an_rep-worst-treat" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 15px;">
-                        </div>
+                <div class="anm-plain-card">
+                    <div class="anm-card-head">
+                        <div class="anm-title-inline"><span style="color:#ef4444;">📉</span>Najrzadziej wybierane</div>
+                    </div>
+                    <p style="font-size:12px; color:#6b7280; margin:-4px 0 12px;">Zabiegi z najsłabszym wynikiem w tym miesiącu:</p>
+                    <div id="an_rep-worst-treat" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
                 </div>
             </div>
 
-            <div style="display: flex; flex-direction: column; gap: 15px;">
-                
-                <div style="background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%); padding:20px; border-radius:12px; text-align:center;">
-                    <div style="font-size:12px; color:#9d174d; font-weight:bold; text-transform:uppercase;">Sprzedano Kosmetyków</div>
-                    <div id="an_rep-cosmetics-count" style="font-size:32px; font-weight:800; color:#831843;">0 szt.</div>
+            <!-- Prawa kolumna -->
+            <aside class="anm-side-col">
+                <div class="anm-cosmetics-hero">
+                    <div class="anm-eyebrow" style="color:#9d174d;">Sprzedano Kosmetyków</div>
+                    <div id="an_rep-cosmetics-count" class="anm-cosm-count">0 szt.</div>
                 </div>
 
-                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">🏆 Top Pracownicy</h4>
+                <div class="anm-side-card">
+                    <div class="anm-side-head">
+                        <h3 class="anm-title-inline"><span class="anm-title-icon">◉</span>Top Pracownicy</h3>
+                    </div>
                     <ul id="an_rep-top-emp" style="list-style:none; padding:0; margin:0; font-size:14px;"></ul>
                 </div>
-                
-                <div style="background:white; padding:15px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05);">
-                    <h4 style="margin:0 0 10px 0; border-bottom:1px solid #eee; padding-bottom:5px;">🔥 Top Zabiegi</h4>
+
+                <div class="anm-side-card">
+                    <div class="anm-side-head">
+                        <h3 class="anm-title-inline"><span class="anm-title-icon">🔥</span>Top Zabiegi</h3>
+                    </div>
                     <ul id="an_rep-top-treat" style="list-style:none; padding:0; margin:0; font-size:13px;"></ul>
                 </div>
-            </div>
+            </aside>
         </div>
 
-        <div style="margin-top: 25px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-            <h3 style="margin-top:0;">📅 Dziennik Finansowy</h3>
+        <!-- Dziennik Finansowy -->
+        <div class="anm-daily-card">
+            <h3 style="margin-top:0; font-size:17px; font-weight:700; letter-spacing:-.02em;">📅 Dziennik Finansowy</h3>
             <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; font-size:13px; text-align:right;">
                     <thead>
-                        <tr style="background:#f9fafb; color:#6b7280; text-transform:uppercase; font-size:11px;">
+                        <tr class="anm-daily-thead">
                             <th style="padding:10px; text-align:left;">Dzień</th>
                             <th style="padding:10px;">Suma</th>
                             <th style="padding:10px;">Gotówka</th>
@@ -15627,6 +15833,23 @@ if (inputNazwaCheck) {
             document.getElementById('an_rep-medi').innerText = an_formatPLN(data.payments["MediRaty"]);
             let inne = (data.payments["Przelew"] || 0) + (data.payments["Inne"] || 0);
             document.getElementById('an_rep-transfer').innerText = an_formatPLN(inne);
+
+            // Paski procentowe i napisy dla kart płatności
+            const anmPayments = [
+                { val: data.payments["Gotówka"]||0, pctEl: 'an_rep-cash-pct',     barEl: 'an_rep-cash-bar'     },
+                { val: data.payments["Karta"]||0,   pctEl: 'an_rep-card-pct',     barEl: 'an_rep-card-bar'     },
+                { val: data.payments["Blik"]||0,    pctEl: 'an_rep-blik-pct',     barEl: 'an_rep-blik-bar'     },
+                { val: data.payments["MediRaty"]||0,pctEl: 'an_rep-medi-pct',     barEl: 'an_rep-medi-bar'     },
+                { val: inne,                        pctEl: 'an_rep-transfer-pct', barEl: 'an_rep-transfer-bar' },
+            ];
+            const anmTotal = revenue || 1;
+            anmPayments.forEach(p => {
+                const pct = Math.round(p.val / anmTotal * 100);
+                const pctEl = document.getElementById(p.pctEl);
+                const barEl = document.getElementById(p.barEl);
+                if (pctEl) pctEl.textContent = pct + '% płatności';
+                if (barEl) barEl.style.width = pct + '%';
+            });
             document.getElementById('an_rep-cosmetics-count').innerText = (data.cosmeticsCount || 0) + " szt.";
 
             const ctx = document.getElementById('an_monthlyTrendChart');
