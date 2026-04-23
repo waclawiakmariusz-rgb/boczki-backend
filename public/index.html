@@ -3471,59 +3471,66 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 </style>
 <style>
 /* ── Pulpit (ds-) dashboard styles ── */
-.ds-grid { display:grid; grid-template-columns:1.25fr 1.25fr 1fr; gap:18px; }
-.ds-card { background:#fff; border:1px solid #eee5e9; border-radius:22px; box-shadow:0 8px 22px rgba(40,32,54,0.04); }
-.ds-summary-card { grid-column:1/-1; padding:20px 18px 16px; }
-.ds-section-head { display:flex; justify-content:space-between; align-items:center; padding:0 4px 16px; margin-bottom:6px; border-bottom:1px solid #f2ecef; }
-.ds-section-head h3 { margin:0; font-size:20px; font-weight:700; letter-spacing:-.02em; }
+.ds-topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
+.ds-hello h2 { margin:0 0 5px; font-size:22px; letter-spacing:-.03em; font-weight:800; }
+.ds-hello p { margin:0; font-size:14px; color:#6f7486; }
+.ds-update { color:#7b8092; font-size:13px; display:flex; align-items:center; gap:8px; }
+.ds-frame-card { background:linear-gradient(180deg,#fffefe 0%,#fff9fb 100%); border:1px solid #eee5e9; border-radius:26px; box-shadow:0 10px 28px rgba(39,31,52,.04); padding:18px; margin-bottom:16px; }
+.ds-section-head { display:flex; justify-content:space-between; align-items:center; padding:2px 4px 16px; border-bottom:1px solid #f2ecef; margin-bottom:12px; }
+.ds-section-head h3 { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; display:flex; align-items:center; gap:10px; }
 .ds-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
-.ds-kpi { border:1px solid #efe7ea; border-radius:16px; min-height:90px; display:flex; align-items:center; gap:18px; padding:20px 18px; background:#fffdfd; }
+.ds-kpi { min-height:104px; border:1px solid #f0e7eb; border-radius:18px; background:white; padding:18px; display:flex; align-items:center; gap:16px; }
 .ds-kpi-icon { width:56px; height:56px; border-radius:50%; display:grid; place-items:center; font-size:28px; color:#ef4f86; background:#fdeef4; flex:0 0 auto; }
-.ds-kpi-value { font-size:26px; font-weight:800; letter-spacing:-.03em; line-height:1; margin-bottom:8px; }
-.ds-kpi-label { color:#6f7587; font-size:15px; line-height:1.3; }
-.ds-card-title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.ds-card-title { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; display:flex; align-items:center; gap:10px; }
-.ds-badge-count { min-width:34px; height:28px; border-radius:999px; background:#fdebf2; color:#dd4d82; display:inline-flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; padding:0 10px; }
-.ds-attention-list, .ds-action-list { display:flex; flex-direction:column; gap:0; }
-.ds-attention-item, .ds-action-item { display:grid; grid-template-columns:54px 1fr auto; align-items:center; gap:14px; padding:16px 0; border-top:1px solid #f1eaee; }
-.ds-attention-item:first-child, .ds-action-item:first-child { border-top:0; }
-.ds-round-icon { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; font-size:22px; background:#fdeff4; color:#e45388; flex:0 0 auto; }
-.ds-round-icon.orange { background:#fff1e2; color:#f39a22; }
-.ds-round-icon.yellow { background:#fff6df; color:#f3be2a; }
-.ds-round-icon.purple { background:#f1e9ff; color:#8b62ff; }
-.ds-item-title { font-size:15px; font-weight:700; color:#252b3a; margin-bottom:3px; }
-.ds-item-sub { color:#7d8395; font-size:13px; line-height:1.45; }
-.ds-item-arrow { font-size:24px; color:#73788b; line-height:1; cursor:pointer; }
-.ds-action-btn { min-width:80px; height:38px; border:0; border-radius:10px; background:#fdeff4; color:#e45588; font-weight:700; font-size:14px; padding:0 14px; cursor:pointer; white-space:nowrap; }
-.ds-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:4px; }
-.ds-quick-tile { min-height:112px; border:1px solid #eee7eb; border-radius:16px; background:white; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; gap:10px; padding:14px 10px; cursor:pointer; transition:background .15s; }
+.ds-kpi-value { font-size:24px; font-weight:800; letter-spacing:-.03em; line-height:1; margin-bottom:6px; }
+.ds-kpi-label { color:#6f7587; font-size:14px; }
+.ds-kpi-delta { margin-top:8px; font-size:13px; font-weight:700; min-height:18px; }
+.ds-kpi-delta.up { color:#29b35f; }
+.ds-kpi-delta.down { color:#e35a78; }
+.ds-middle-grid { display:grid; grid-template-columns:1.08fr .92fr; gap:16px; margin-bottom:16px; }
+.ds-sub-card { background:white; border:1px solid #eee5e9; border-radius:22px; box-shadow:0 10px 28px rgba(39,31,52,.04); padding:18px; }
+.ds-sub-card h4 { margin:0 0 16px; font-size:18px; font-weight:700; letter-spacing:-.02em; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.ds-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+.ds-quick-tile { min-height:130px; border:1px solid #efe7eb; border-radius:18px; background:linear-gradient(180deg,#fffdfd 0%,#fffafb 100%); display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; gap:8px; padding:18px 12px; cursor:pointer; transition:background .15s; }
 .ds-quick-tile:hover { background:#fff5f8; }
-.ds-tile-icon { width:44px; height:44px; border-radius:50%; display:grid; place-items:center; color:#eb4f84; font-size:22px; background:#fff5f8; }
-.ds-quick-tile span { font-size:14px; font-weight:500; line-height:1.35; color:#2c3242; }
-.ds-transactions-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
-.ds-transactions-head h3 { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
+.ds-tile-icon { width:54px; height:54px; border-radius:50%; display:grid; place-items:center; font-size:26px; background:#fff1f6; color:#e8568f; }
+.ds-quick-tile strong { display:block; font-size:14px; font-weight:700; color:#2a3142; line-height:1.3; }
+.ds-quick-tile span { display:block; color:#7a8092; font-size:12px; line-height:1.5; margin-top:2px; }
+.ds-badge-count { min-width:34px; height:28px; border-radius:999px; background:#fdebf2; color:#dd4d82; display:inline-flex; align-items:center; justify-content:center; font-size:14px; font-weight:800; padding:0 10px; }
+.ds-attention-list, .ds-action-list { display:flex; flex-direction:column; }
+.ds-attention-item, .ds-action-item { display:grid; grid-template-columns:44px 1fr auto; align-items:center; gap:14px; padding:14px 0; border-top:1px solid #f1eaee; cursor:pointer; }
+.ds-attention-item:first-child, .ds-action-item:first-child { border-top:0; padding-top:6px; }
+.ds-round-icon { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-size:20px; background:#fff7de; color:#f0a23d; flex:0 0 auto; }
+.ds-round-icon.orange { background:#fff1e2; color:#f39a22; }
+.ds-round-icon.yellow { background:#fff7de; color:#f4c12a; }
+.ds-round-icon.purple { background:#f1e9ff; color:#8f6cf1; }
+.ds-round-icon.blue { background:#e5efff; color:#5f97f6; }
+.ds-round-icon.green { background:#dff5e7; color:#29b35f; }
+.ds-item-title { font-size:15px; font-weight:700; color:#2b3242; margin-bottom:4px; }
+.ds-item-sub { color:#7b8092; font-size:13px; }
+.ds-item-arrow { font-size:22px; color:#8c91a3; line-height:1; }
+.ds-card-title-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; }
+.ds-card-title { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
+.ds-action-btn { min-width:76px; height:36px; border:0; border-radius:10px; background:#fdeff4; color:#e45588; font-weight:700; font-size:13px; padding:0 12px; cursor:pointer; white-space:nowrap; }
 .ds-pink-link { color:#eb5087; text-decoration:none; font-weight:700; font-size:14px; cursor:pointer; }
-.ds-transactions-table { display:grid; gap:0; }
-.ds-t-row { display:grid; grid-template-columns:80px 1fr 100px 120px; gap:14px; align-items:center; font-size:14px; color:#2d3343; border-top:1px solid #f5eef2; padding:12px 0; }
-.ds-t-row:first-child { border-top:0; padding-top:0; }
-.ds-t-time { color:#6c7285; font-weight:500; }
-.ds-t-name { line-height:1.45; }
-.ds-pay-pill { display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 10px; border-radius:999px; font-weight:700; font-size:12px; }
+.ds-bottom-grid { display:grid; grid-template-columns:1fr 310px; gap:16px; }
+.ds-table-card, .ds-actions-card { background:white; border:1px solid #eee5e9; border-radius:22px; box-shadow:0 10px 28px rgba(39,31,52,.04); padding:16px 18px 12px; }
+.ds-table-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+.ds-table-head h4 { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
+.ds-ttable { width:100%; border-collapse:collapse; }
+.ds-ttable thead th { text-align:left; padding:10px 12px; color:#9ca1b2; font-size:11px; text-transform:uppercase; letter-spacing:.10em; font-weight:800; border-bottom:1px solid #f0eaee; }
+.ds-ttable tbody td { padding:13px 12px; border-bottom:1px solid #f3edf0; font-size:14px; color:#2f3748; vertical-align:middle; }
+.ds-ttable tbody tr:last-child td { border-bottom:0; }
+.ds-t-muted { color:#6f7587; }
+.ds-t-amount { text-align:right; font-weight:600; white-space:nowrap; }
+.ds-pay-pill { display:inline-flex; align-items:center; justify-content:center; height:26px; padding:0 10px; border-radius:999px; font-weight:700; font-size:12px; white-space:nowrap; }
 .ds-pay-pill.cash { background:#ddf6e6; color:#20a564; }
 .ds-pay-pill.card { background:#e8f0ff; color:#2d77ea; }
 .ds-pay-pill.transfer { background:#efe7ff; color:#7c3aed; }
+.ds-pay-pill.blik { background:#f2f2f4; color:#616775; }
 .ds-pay-pill.other { background:#f3f4f6; color:#6b7280; }
-.ds-t-amount { text-align:right; font-weight:600; color:#2a3040; }
-.ds-tips-box { border-radius:18px; background:linear-gradient(180deg,#fff7fa 0%,#fff8fb 100%); border:1px solid #f4e6ec; padding:24px 22px; }
-.ds-tips-title { margin:0 0 10px; font-size:17px; font-weight:700; line-height:1.35; }
-.ds-tips-text { margin:0 0 18px; color:#757b8d; font-size:14px; line-height:1.7; }
-.ds-hello h2 { margin:0 0 5px; font-size:22px; letter-spacing:-.03em; font-weight:800; }
-.ds-hello p { margin:0; font-size:14px; color:#6f7486; }
-.ds-topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:22px; flex-wrap:wrap; gap:12px; }
-.ds-update { color:#7b8092; font-size:13px; display:flex; align-items:center; gap:8px; }
-@media(max-width:1400px){ .ds-grid { grid-template-columns:1fr 1fr; } .ds-summary-card, .ds-transactions-card, .ds-tips-card, .ds-quick-card { grid-column:1/-1; } }
-@media(max-width:900px){ .ds-grid { grid-template-columns:1fr; } .ds-kpis { grid-template-columns:1fr 1fr; } .ds-quick-grid { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:580px){ .ds-kpis { grid-template-columns:1fr; } .ds-quick-grid { grid-template-columns:1fr; } .ds-t-row { grid-template-columns:60px 1fr; } }
+@media(max-width:1400px){ .ds-middle-grid,.ds-bottom-grid { grid-template-columns:1fr; } .ds-kpis { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:900px){ .ds-kpis { grid-template-columns:1fr 1fr; } .ds-quick-grid { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:580px){ .ds-kpis { grid-template-columns:1fr; } .ds-quick-grid { grid-template-columns:1fr; } }
 </style>
 
 <div class="header">
@@ -4274,71 +4281,98 @@ body.dark-mode #hkb-modal { background: #1e293b; }
     <div class="ds-update">⟳ <span id="ds-kpi-time">—</span></div>
   </div>
 
-  <div class="ds-grid">
-    <!-- KPI: Na dziś -->
-    <section class="ds-card ds-summary-card">
-      <div class="ds-section-head">
-        <h3>📊 Na dziś</h3>
-      </div>
-      <div class="ds-kpis">
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">🧾</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-sprzedaz">—</div><div class="ds-kpi-label">Sprzedaż dzisiaj</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">👜</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-transakcji">—</div><div class="ds-kpi-label">Transakcji</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">👥</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-klientow">—</div><div class="ds-kpi-label">Klientów dzisiaj</div></div>
-        </div>
-        <div class="ds-kpi">
-          <div class="ds-kpi-icon">📈</div>
-          <div><div class="ds-kpi-value" id="ds-kpi-srednia">—</div><div class="ds-kpi-label">Śr. wartość transakcji</div></div>
+  <!-- KPI -->
+  <section class="ds-frame-card">
+    <div class="ds-section-head"><h3>📊 Na dziś</h3></div>
+    <div class="ds-kpis">
+      <div class="ds-kpi">
+        <div class="ds-kpi-icon">🧾</div>
+        <div>
+          <div class="ds-kpi-value" id="ds-kpi-sprzedaz">—</div>
+          <div class="ds-kpi-label">Sprzedaż dzisiaj</div>
+          <div class="ds-kpi-delta" id="ds-kpi-sprzedaz-delta"></div>
         </div>
       </div>
-    </section>
+      <div class="ds-kpi">
+        <div class="ds-kpi-icon">👜</div>
+        <div>
+          <div class="ds-kpi-value" id="ds-kpi-transakcji">—</div>
+          <div class="ds-kpi-label">Transakcji</div>
+          <div class="ds-kpi-delta" id="ds-kpi-transakcji-delta"></div>
+        </div>
+      </div>
+      <div class="ds-kpi">
+        <div class="ds-kpi-icon">👥</div>
+        <div>
+          <div class="ds-kpi-value" id="ds-kpi-klientow">—</div>
+          <div class="ds-kpi-label">Klientów dzisiaj</div>
+          <div class="ds-kpi-delta" id="ds-kpi-klientow-delta"></div>
+        </div>
+      </div>
+      <div class="ds-kpi">
+        <div class="ds-kpi-icon">📈</div>
+        <div>
+          <div class="ds-kpi-value" id="ds-kpi-srednia">—</div>
+          <div class="ds-kpi-label">Śr. wartość transakcji</div>
+          <div class="ds-kpi-delta" id="ds-kpi-srednia-delta"></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- Szybki dostęp -->
-    <section class="ds-card ds-quick-card" style="padding:22px 20px 18px; grid-column:1/-1;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">⚡ Szybki dostęp</h3>
-      </div>
+  <!-- Szybki dostęp + Wymaga uwagi -->
+  <div class="ds-middle-grid">
+    <div class="ds-sub-card">
+      <h4>⚡ Szybki dostęp</h4>
       <div class="ds-quick-grid">
-        <div class="ds-quick-tile" onclick="pokaz('sprzedaz', null)"><div class="ds-tile-icon">＋</div><span>Dodaj<br>sprzedaż</span></div>
-        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()"><div class="ds-tile-icon">👤</div><span>Dodaj<br>klienta</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista', null)"><div class="ds-tile-icon">💳</div><span>Spis<br>zadatków</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn', null); typeof rap_initApp==='function'&&rap_initApp();"><div class="ds-tile-icon">📦</div><span>Stan<br>magazynu</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('historia', null)"><div class="ds-tile-icon">📜</div><span>Historia<br>sprzedaży</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('podsumowanie', null)"><div class="ds-tile-icon">📅</div><span>Podsumowanie<br>dnia</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('sprzedaz',null)">
+          <div class="ds-tile-icon">＋</div>
+          <div><strong>Dodaj sprzedaż</strong><span>Nowa usługa lub produkt</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()">
+          <div class="ds-tile-icon" style="background:#f2ebff;color:#8f6cf1;">👤</div>
+          <div><strong>Dodaj klienta</strong><span>Szybkie dodanie klienta do bazy</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista',null)">
+          <div class="ds-tile-icon" style="background:#eaf2ff;color:#4f94f5;">💳</div>
+          <div><strong>Spis zadatków</strong><span>Przegląd wszystkich zadatków</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn',null);typeof rap_initApp==='function'&&rap_initApp();">
+          <div class="ds-tile-icon" style="background:#fff1df;color:#ef9b39;">📦</div>
+          <div><strong>Stan magazynu</strong><span>Sprawdź zapasy i stany produktów</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('historia',null)">
+          <div class="ds-tile-icon" style="background:#ffeef4;color:#e8568f;">📜</div>
+          <div><strong>Historia sprzedaży</strong><span>Zobacz ostatnie transakcje</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('podsumowanie',null)">
+          <div class="ds-tile-icon" style="background:#f2ebff;color:#7f6af0;">🗓</div>
+          <div><strong>Podsumowanie dnia</strong><span>Pełny raport z dzisiejszych działań</span></div>
+        </div>
       </div>
-    </section>
+    </div>
 
-    <!-- Ostatnie transakcje -->
-    <section class="ds-card ds-transactions-card" style="padding:18px 20px 20px; grid-column:1/span 2;">
-      <div class="ds-transactions-head">
-        <h3>Ostatnie transakcje (dziś)</h3>
-        <span class="ds-pink-link" onclick="pokaz('historia', null)">Zobacz wszystkie →</span>
-      </div>
-      <div class="ds-transactions-table" id="ds-transactions-table">
-        <div style="color:#94a3b8; font-size:14px;">Ładowanie...</div>
-      </div>
-    </section>
-
-    <!-- Wymaga uwagi -->
-    <section class="ds-card" style="padding:22px 20px 18px;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">⚠️ Wymaga uwagi</h3>
-        <span class="ds-badge-count" id="ds-uwaga-count">…</span>
-      </div>
+    <div class="ds-sub-card">
+      <h4><span>⚠️ Wymaga uwagi</span><span class="ds-badge-count" id="ds-uwaga-count">…</span></h4>
       <div class="ds-attention-list" id="ds-attention-list">
-        <div style="color:#94a3b8; font-size:14px; padding:8px 0;">Ładowanie...</div>
+        <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
       </div>
-    </section>
+    </div>
+  </div>
 
-    <!-- Co możesz zrobić teraz? -->
-    <section class="ds-card" style="padding:22px 20px 18px;">
+  <!-- Ostatnie transakcje + Co możesz zrobić -->
+  <div class="ds-bottom-grid">
+    <div class="ds-table-card">
+      <div class="ds-table-head">
+        <h4>Ostatnie transakcje (dziś)</h4>
+        <span class="ds-pink-link" onclick="pokaz('historia',null)">Zobacz wszystkie →</span>
+      </div>
+      <div id="ds-transactions-table">
+        <div style="color:#94a3b8;font-size:14px;">Ładowanie...</div>
+      </div>
+    </div>
+
+    <div class="ds-actions-card">
       <div class="ds-card-title-row">
         <h3 class="ds-card-title">💡 Co możesz zrobić teraz?</h3>
       </div>
@@ -4349,7 +4383,7 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             <div class="ds-item-title">Zaproponuj zabieg</div>
             <div class="ds-item-sub">Sprawdź klientki gotowe na kolejną wizytę.</div>
           </div>
-          <button class="ds-action-btn" onclick="pokaz('klient-profil', null)">Sprawdź</button>
+          <button class="ds-action-btn" onclick="pokaz('klient-profil',null)">Sprawdź</button>
         </div>
         <div class="ds-action-item">
           <div class="ds-round-icon">👤</div>
@@ -4365,10 +4399,10 @@ body.dark-mode #hkb-modal { background: #1e293b; }
             <div class="ds-item-title">Podsumowanie dnia</div>
             <div class="ds-item-sub">Sprawdź dzisiejsze wyniki sprzedaży.</div>
           </div>
-          <button class="ds-action-btn" onclick="pokaz('podsumowanie', null)">Otwórz</button>
+          <button class="ds-action-btn" onclick="pokaz('podsumowanie',null)">Otwórz</button>
         </div>
       </div>
-    </section>
+    </div>
   </div>
 </div>
 <div id="klient-profil" class="section">
@@ -7589,23 +7623,28 @@ function zaladujPulpit() {
             if (last5.length === 0) {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
             } else {
-                tbl.innerHTML = last5.map(r => {
+                const rows = last5.map(r => {
                     const t = r.godzina || '—';
-                    const name = escHtml(r.zabieg || r.klient || '—');
-                    const klientSub = r.klient ? '<br><span style="color:#9ca3af;font-size:12px;">' + escHtml(r.klient) + '</span>' : '';
+                    const klient = escHtml(r.klient || '—');
+                    const zabieg = escHtml(r.zabieg || '—');
                     const kwota = parseFloat(r.kwota) || 0;
                     const pl = String(r.platnosc || '').toLowerCase();
                     let pillCls = 'other', pillTxt = r.platnosc || '—';
                     if (pl.includes('got') || pl.includes('cash')) { pillCls='cash'; pillTxt='Gotówka'; }
                     else if (pl.includes('kart') || pl.includes('card')) { pillCls='card'; pillTxt='Karta'; }
                     else if (pl.includes('przel') || pl.includes('trans')) { pillCls='transfer'; pillTxt='Przelew'; }
-                    return '<div class="ds-t-row">' +
-                        '<div class="ds-t-time">' + t + '</div>' +
-                        '<div class="ds-t-name">' + name + klientSub + '</div>' +
-                        '<span class="ds-pay-pill ' + pillCls + '">' + escHtml(pillTxt) + '</span>' +
-                        '<div class="ds-t-amount">' + fmtPLN(kwota) + '</div>' +
-                        '</div>';
+                    else if (pl.includes('blik')) { pillCls='blik'; pillTxt='Blik'; }
+                    return '<tr>' +
+                        '<td class="ds-t-muted">' + t + '</td>' +
+                        '<td>' + klient + '</td>' +
+                        '<td>' + zabieg + '</td>' +
+                        '<td><span class="ds-pay-pill ' + pillCls + '">' + escHtml(pillTxt) + '</span></td>' +
+                        '<td class="ds-t-amount">' + fmtPLN(kwota) + '</td>' +
+                        '</tr>';
                 }).join('');
+                tbl.innerHTML = '<table class="ds-ttable"><thead><tr>' +
+                    '<th>Godzina</th><th>Klient</th><th>Usługa</th><th>Płatność</th><th style="text-align:right">Kwota</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table>';
             }
         }
     })
