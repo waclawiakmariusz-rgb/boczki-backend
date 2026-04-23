@@ -4300,6 +4300,32 @@ body.dark-mode #hkb-modal { background: #1e293b; }
       </div>
     </section>
 
+    <!-- Szybki dostęp -->
+    <section class="ds-card ds-quick-card" style="padding:22px 20px 18px; grid-column:1/-1;">
+      <div class="ds-card-title-row">
+        <h3 class="ds-card-title">⚡ Szybki dostęp</h3>
+      </div>
+      <div class="ds-quick-grid">
+        <div class="ds-quick-tile" onclick="pokaz('sprzedaz', null)"><div class="ds-tile-icon">＋</div><span>Dodaj<br>sprzedaż</span></div>
+        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()"><div class="ds-tile-icon">👤</div><span>Dodaj<br>klienta</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista', null)"><div class="ds-tile-icon">💳</div><span>Spis<br>zadatków</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn', null); typeof rap_initApp==='function'&&rap_initApp();"><div class="ds-tile-icon">📦</div><span>Stan<br>magazynu</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('historia', null)"><div class="ds-tile-icon">📜</div><span>Historia<br>sprzedaży</span></div>
+        <div class="ds-quick-tile" onclick="pokaz('podsumowanie', null)"><div class="ds-tile-icon">📅</div><span>Podsumowanie<br>dnia</span></div>
+      </div>
+    </section>
+
+    <!-- Ostatnie transakcje -->
+    <section class="ds-card ds-transactions-card" style="padding:18px 20px 20px; grid-column:1/span 2;">
+      <div class="ds-transactions-head">
+        <h3>Ostatnie transakcje (dziś)</h3>
+        <span class="ds-pink-link" onclick="pokaz('historia', null)">Zobacz wszystkie →</span>
+      </div>
+      <div class="ds-transactions-table" id="ds-transactions-table">
+        <div style="color:#94a3b8; font-size:14px;">Ładowanie...</div>
+      </div>
+    </section>
+
     <!-- Wymaga uwagi -->
     <section class="ds-card" style="padding:22px 20px 18px;">
       <div class="ds-card-title-row">
@@ -4341,43 +4367,6 @@ body.dark-mode #hkb-modal { background: #1e293b; }
           </div>
           <button class="ds-action-btn" onclick="pokaz('podsumowanie', null)">Otwórz</button>
         </div>
-      </div>
-    </section>
-
-    <!-- Szybki dostęp -->
-    <section class="ds-card ds-quick-card" style="padding:22px 20px 18px; grid-column:1/-1;">
-      <div class="ds-card-title-row">
-        <h3 class="ds-card-title">⚡ Szybki dostęp</h3>
-      </div>
-      <div class="ds-quick-grid">
-        <div class="ds-quick-tile" onclick="pokaz('sprzedaz', null)"><div class="ds-tile-icon">＋</div><span>Dodaj<br>sprzedaż</span></div>
-        <div class="ds-quick-tile" onclick="otworzPopupNowyKlient()"><div class="ds-tile-icon">👤</div><span>Dodaj<br>klienta</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('zadatki-lista', null)"><div class="ds-tile-icon">💳</div><span>Spis<br>zadatków</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('rap_magazyn', null); typeof rap_initApp==='function'&&rap_initApp();"><div class="ds-tile-icon">📦</div><span>Stan<br>magazynu</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('historia', null)"><div class="ds-tile-icon">📜</div><span>Historia<br>sprzedaży</span></div>
-        <div class="ds-quick-tile" onclick="pokaz('podsumowanie', null)"><div class="ds-tile-icon">📅</div><span>Podsumowanie<br>dnia</span></div>
-      </div>
-    </section>
-
-    <!-- Ostatnie transakcje -->
-    <section class="ds-card ds-transactions-card" style="padding:18px 20px 20px; grid-column:1/span 2;">
-      <div class="ds-transactions-head">
-        <h3>Ostatnie transakcje (dziś)</h3>
-        <span class="ds-pink-link" onclick="pokaz('historia', null)">Zobacz wszystkie →</span>
-      </div>
-      <div class="ds-transactions-table" id="ds-transactions-table">
-        <div style="color:#94a3b8; font-size:14px;">Ładowanie...</div>
-      </div>
-    </section>
-
-    <!-- Wskazówki -->
-    <section class="ds-card ds-tips-card" style="padding:18px 20px 20px;">
-      <div class="ds-transactions-head">
-        <h3>💡 Wskazówki</h3>
-      </div>
-      <div class="ds-tips-box">
-        <h4 class="ds-tips-title">Pakiety zabiegów zwiększają powroty</h4>
-        <p class="ds-tips-text">Klientki, które kupują pakiety, wracają średnio 3× częściej. Przy kolejnej wizycie zaproponuj serię zabiegów zamiast pojedynczej usługi.</p>
       </div>
     </section>
   </div>
