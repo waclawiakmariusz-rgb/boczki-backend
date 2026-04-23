@@ -8089,12 +8089,16 @@ function zapiszUrodzinyZProfilu(e) {
     e.preventDefault();
     
     // Pobranie danych z formularza
+    const _kObj = window.wszyscyKlienciDane && window.aktualnyProfilKlientNazwa
+        ? window.wszyscyKlienciDane.find(k => k.nazwa === window.aktualnyProfilKlientNazwa)
+        : null;
+    const _tel = (_kObj && _kObj.telefon && _kObj.telefon !== 'undefined') ? _kObj.telefon : '';
     const payload = {
-        action: 'add_birthday', // To wywoła Twoją funkcję backendową
+        action: 'add_birthday',
         imie: document.getElementById('bm_imie').value,
         nazwisko: document.getElementById('bm_nazwisko').value,
         data_ur: document.getElementById('bm_data').value,
-        telefon: document.getElementById('bm_telefon').value,
+        telefon: _tel,
         sms: document.getElementById('bm_sms').value,
         zgoda_tel: document.getElementById('bm_tel').value,
         komentarz: document.getElementById('bm_komentarz').value
