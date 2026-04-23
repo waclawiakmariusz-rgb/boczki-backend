@@ -15847,7 +15847,13 @@ if (inputNazwaCheck) {
                 const pct = Math.round(p.val / anmTotal * 100);
                 const pctEl = document.getElementById(p.pctEl);
                 const barEl = document.getElementById(p.barEl);
-                if (pctEl) pctEl.textContent = pct + '% płatności';
+                if (pctEl) {
+                    let sub = pct + '% płatności';
+                    if (p.pctEl === 'an_rep-medi-pct' && data.mediRatyCount > 0) {
+                        sub += ' · ' + data.mediRatyCount + ' ' + (data.mediRatyCount === 1 ? 'osoba' : data.mediRatyCount < 5 ? 'osoby' : 'osób');
+                    }
+                    pctEl.textContent = sub;
+                }
                 if (barEl) barEl.style.width = pct + '%';
             });
             document.getElementById('an_rep-cosmetics-count').innerText = (data.cosmeticsCount || 0) + " szt.";

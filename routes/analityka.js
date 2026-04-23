@@ -354,7 +354,8 @@ module.exports = (db) => {
           total: 0, costs, profit: 0,
           payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 },
           daily: {}, topTreatments: {}, worstTreatments: [], topEmployees: {},
-          chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: []
+          chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: [],
+          _mediRatyClients: new Set()
         };
 
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
@@ -383,6 +384,7 @@ module.exports = (db) => {
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 const method = classifyPayment(row.platnosc);
                 report.total += amount; report.payments[method] += amount;
+                if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
                 if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
                 report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                 const rawSellers = String(row.sprzedawca || '');
@@ -413,6 +415,7 @@ module.exports = (db) => {
                     const method = classifyPayment(metoda);
                     const day = String(dateObj.getDate()).padStart(2, '0');
                     report.total += amount; report.payments[method] += amount;
+                    if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
                     if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
                     report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                   }
@@ -455,6 +458,8 @@ module.exports = (db) => {
                     sortedDays.forEach(day => { report.daysLabels.push(day); report.chartValues.push(report.daily[day].total); });
                     report.topTreatments = Object.entries(report.topTreatments).sort((a, b) => b[1] - a[1]).slice(0, 6);
                     report.topEmployees = Object.entries(report.topEmployees).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                    report.mediRatyCount = report._mediRatyClients.size;
+                    delete report._mediRatyClients;
 
                     return res.json({ status: 'success', data: report });
                   }
