@@ -12335,13 +12335,17 @@ function przywrocGrupowo(idsStr) {
 
 // --- NOWA LOGIKA PODSUMOWANIA (Z WYMUSZENIEM WYGLĄDU) ---
 
-// Helper: zwraca godzinę "HH:MM" z bazy bez konwersji.
-// Czas w bazie jest już zapisywany w strefie lokalnej serwera (Europe/Warsaw),
-// więc nie trzeba dodatkowo konwertować z UTC.
+// Helper: konwertuje godzinę UTC "HH:MM" (z bazy danych) na czas lokalny przeglądarki.
+// MySQL zwraca czas zapisany w UTC, doliczamy offset strefy przeglądarki
+// (CET +1 zimą, CEST +2 latem — toLocaleTimeString() respektuje DST).
 function utcTimeToLocal(g) {
     if (!g || !g.includes(':')) return g || '--:--';
     const [h, m] = g.split(':');
-    return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    // Używamy aktualnej daty zamiast 2000-01-01, żeby DST był zgodny
+    // z dniem w którym dane są oglądane (a nie zawsze zimą).
+    const today = new Date();
+    const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), +h, +m));
+    return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
 }
 
 function zaladujPodsumowanieDnia() {
