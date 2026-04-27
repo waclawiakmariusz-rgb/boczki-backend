@@ -97,6 +97,13 @@ body {
     stroke-width: 1.75;
     vertical-align: middle;
 }
+/* Ikony akcji (edit, trash, plus, refresh) w wnętrzu — tabele/karty */
+.icon-action {
+    width: 18px; height: 18px;
+    stroke-width: 1.75;
+    vertical-align: middle;
+    pointer-events: none;
+}
 .nav-parent .nav-label, .nav-single-btn .nav-label, .nav-btn .nav-label {
     display: inline-flex; align-items: center; flex: 1;
 }
@@ -7874,6 +7881,13 @@ function normNumOr0(val) {
 
 	
         
+        // Inline SVG ikony akcji (Lucide-like) — używane w rendererach JS
+        const ICON_EDIT = '<svg class="icon-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21.17 6.81a1 1 0 0 0-3.98-3.98L3.84 16.17a2 2 0 0 0-.5.83l-1.32 4.35a.5.5 0 0 0 .62.62l4.35-1.32a2 2 0 0 0 .83-.5z"/><path d="m15 5 4 4"/></svg>';
+        const ICON_TRASH = '<svg class="icon-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
+        const ICON_PLUS = '<svg class="icon-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>';
+        const ICON_REFRESH = '<svg class="icon-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>';
+        const ICON_CLOSE = '<svg class="icon-action" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+
         let daneCache=[], slownikCache=[], salesDictCache={pracownicy:[], zabiegi:[]}, currentUser=null, aktualnyMiesiac="";
         let allBirthdays = [], currentBirthdayPage = 1, itemsPerPage = 20;
         let aktualnyFiltrMagazyn='Wszystkie', aktualnyFiltrInv='Wszystkie';
@@ -11687,7 +11701,7 @@ function renderMagazyn(d) {
             } else {
                 podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ || '') + ' | ' + (g.kto_dodal || '-') + '</small>';
                 let obiektPartii = encodeURIComponent(JSON.stringify(g.partie[0]));
-                akcjaHtml = '<button onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="background:none; border:none; cursor:pointer; font-size:20px; color:#16a34a;" title="Zamów / Edytuj">📞</button>';
+                akcjaHtml = '<button onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="background:none; border:none; cursor:pointer; color:#16a34a; padding:6px;" title="Edytuj produkt">' + ICON_EDIT + '</button>';
             }
 
             let cenaFormatowana = parseFloat(g.cena || 0).toFixed(2).replace('.', ',') + ' PLN';
@@ -11730,7 +11744,7 @@ function renderMagazyn(d) {
                         <td style="border-bottom:1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${new Date(p.waznosc).toLocaleDateString()}</div></td>
                         <td style="border-bottom:1px dashed #e2e8f0; font-size:12px; color:#64748b;">${cenaPartii}</td>
                         <td style="border-bottom:1px dashed #e2e8f0; text-align:center;">
-                            <button onclick="otworzEdycjeProduktu('${rowStr}')" style="background:none;border:none;cursor:pointer;font-size:18px;color:#16a34a;" title="Edytuj Partię">📞</button>
+                            <button onclick="otworzEdycjeProduktu('${rowStr}')" style="background:none;border:none;cursor:pointer;color:#16a34a;padding:6px;" title="Edytuj partię">${ICON_EDIT}</button>
                         </td>
                     </tr>`;
                 });
@@ -17165,8 +17179,8 @@ function zaladujModulAdmina() {
                     <td><span style="background: ${rolaColor}; padding: 3px 8px; border-radius: 4px; font-size: 11px;">${user.rola}</span></td>
                     <td style="letter-spacing: 2px;">${user.pin}</td>
                     <td style="text-align: right;">
-                        <button onclick="edytujUzytkownikaAdmin('${user.imie}', '${user.pin}', '${user.rola}')" style="background:none; border:none; cursor:pointer; font-size:16px;" title="Edytuj">✏️</button>
-                        <button onclick="usunUzytkownikaAdmin('${user.imie}')" style="background:none; border:none; cursor:pointer; font-size:16px; margin-left: 10px;" title="Usuń">🗑️</button>
+                        <button onclick="edytujUzytkownikaAdmin('${user.imie}', '${user.pin}', '${user.rola}')" style="background:none; border:none; cursor:pointer; color:#3b82f6; padding:6px;" title="Edytuj">${ICON_EDIT}</button>
+                        <button onclick="usunUzytkownikaAdmin('${user.imie}')" style="background:none; border:none; cursor:pointer; color:#ef4444; padding:6px; margin-left: 6px;" title="Usuń">${ICON_TRASH}</button>
                     </td>
                 </tr>
             `;
@@ -17291,8 +17305,8 @@ function kon_pobierzKampanie() {
                     <td>${c.prog} zł</td>
                     <td>${statusBadge}</td>
                     <td>
-                        <button class="kon_btn-sm" onclick="kon_edytujKampanieUI(${c.id_row})">✏️</button>
-                        <button class="kon_btn-sm" onclick="kon_zmienStatusKampanii(${c.id_row}, '${c.status}')">🔄</button>
+                        <button class="kon_btn-sm" onclick="kon_edytujKampanieUI(${c.id_row})" title="Edytuj">${ICON_EDIT}</button>
+                        <button class="kon_btn-sm" onclick="kon_zmienStatusKampanii(${c.id_row}, '${c.status}')" title="Zmień status">${ICON_REFRESH}</button>
                     </td>
                 </tr>`;
             });
@@ -19146,8 +19160,8 @@ function tgt_renderuj() {
         htmlStr += '<td style="padding:10px;">' + t.opis_slowny + '</td>';
         htmlStr += '<td style="padding:10px; font-weight:bold; color:#ff7eb3;">' + t.wartosc + '</td>';
         htmlStr += '<td style="padding:10px; text-align:center;">';
-        htmlStr += '<button class="btn-icon" onclick="tgt_edytuj(\'' + t.id + '\')" title="Edytuj">✏️</button> ';
-        htmlStr += '<button class="btn-icon" onclick="tgt_usun(\'' + t.id + '\')" title="Usuń">🗑️</button>';
+        htmlStr += '<button class="btn-icon" onclick="tgt_edytuj(\'' + t.id + '\')" title="Edytuj">' + ICON_EDIT + '</button> ';
+        htmlStr += '<button class="btn-icon" onclick="tgt_usun(\'' + t.id + '\')" title="Usuń">' + ICON_TRASH + '</button>';
         htmlStr += '</td>';
         htmlStr += '</tr>';
     }
@@ -19245,8 +19259,8 @@ function tgt_renderuj() {
         htmlStr += '<td style="padding:10px;">' + t.opis_slowny + '</td>';
         htmlStr += '<td style="padding:10px; font-weight:bold; color:#ff7eb3;">' + t.wartosc + '</td>';
         htmlStr += '<td style="padding:10px; text-align:center;">';
-        htmlStr += '<button class="btn-icon" onclick="tgt_edytuj(\'' + t.id + '\')" title="Edytuj">✏️</button> ';
-        htmlStr += '<button class="btn-icon" onclick="tgt_usun(\'' + t.id + '\')" title="Usuń">🗑️</button>';
+        htmlStr += '<button class="btn-icon" onclick="tgt_edytuj(\'' + t.id + '\')" title="Edytuj">' + ICON_EDIT + '</button> ';
+        htmlStr += '<button class="btn-icon" onclick="tgt_usun(\'' + t.id + '\')" title="Usuń">' + ICON_TRASH + '</button>';
         htmlStr += '</td>';
         htmlStr += '</tr>';
     }
