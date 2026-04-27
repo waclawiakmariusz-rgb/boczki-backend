@@ -3880,6 +3880,101 @@ body.dark-mode #odprawa div[style*="background:#1e293b"] * {
 body.dark-mode #odprawa div[style*="background:#1e293b"] [style*="color:#fbbf24"] {
     color: #fbbf24 !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Konfigurator Targetów (#tgt-modal)
+   Modal używa var(--bg-body, #fff) i var(--sidebar-bg, #f8fafc)
+   z fallbackami które nie są nadpisane w dark-mode
+══════════════════════════════════════════════ */
+
+/* Modal content — ciemne tło */
+body.dark-mode #tgt-modal .modal-content {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    box-shadow: 0 15px 35px rgba(0,0,0,.5) !important;
+}
+
+/* H2 i H3 wewnątrz modala */
+body.dark-mode #tgt-modal h2,
+body.dark-mode #tgt-modal h3 { color: #f8fafc !important; }
+
+/* Inner box konfiguracyjny (var(--sidebar-bg, #f8fafc)) */
+body.dark-mode #tgt-modal div[style*="background: var(--sidebar-bg"] {
+    background: #243044 !important;
+    border-color: #334155 !important;
+}
+
+/* Wszystkie etykiety w modalu — jasny szary (color:#64748b inline) */
+body.dark-mode #tgt-modal label[style*="color:#64748b"],
+body.dark-mode #tgt-modal label[style*="color: #64748b"] {
+    color: #cbd5e1 !important;
+}
+
+/* Pomarańczowy label "Próg cenowy" — pozostaw, ale rozjaśnij */
+body.dark-mode #tgt-modal label[style*="color:#f59e0b"],
+body.dark-mode #tgt-modal label[style*="color: #f59e0b"] {
+    color: #fbbf24 !important;
+}
+
+/* H3 "Lista Aktywnych Celów" (color:#475569) → jasny */
+body.dark-mode #tgt-modal h3[style*="color:#475569"],
+body.dark-mode #tgt-modal h3[style*="color: #475569"] {
+    color: #f8fafc !important;
+}
+
+/* Tabela — kontener border */
+body.dark-mode #tgt-modal div[style*="border: 1px solid #e2e8f0"],
+body.dark-mode #tgt-modal div[style*="border:1px solid #e2e8f0"] {
+    border-color: #334155 !important;
+}
+
+/* Thead tabeli (background:#f1f5f9; color:#475569) */
+body.dark-mode #tgt-modal thead[style*="background: #f1f5f9"],
+body.dark-mode #tgt-modal thead[style*="background:#f1f5f9"] {
+    background: #243044 !important;
+}
+body.dark-mode #tgt-modal thead tr[style*="color: #475569"],
+body.dark-mode #tgt-modal thead tr[style*="color:#475569"] {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tgt-modal thead th { color: #cbd5e1 !important; }
+
+/* Tbody — wiersze z renderera (renderTargety w JS) */
+body.dark-mode #tgt-modal tbody td { color: #f8fafc !important; }
+body.dark-mode #tgt-modal tbody tr { border-bottom-color: #334155 !important; }
+body.dark-mode #tgt-modal tbody tr:hover td { background: #243044 !important; }
+
+/* Paginacja (background:#f8fafc; color:#64748b; border-top:1px solid #e2e8f0) */
+body.dark-mode #tgt-modal #tgt-pagination {
+    background: #243044 !important;
+    border-top-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tgt-modal #tgt-pagination * { color: #cbd5e1 !important; }
+
+/* Przycisk Zamknij (×) */
+body.dark-mode #tgt-modal .close {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tgt-modal .close:hover { color: #f490b3 !important; }
+
+/* Przyciski w modalu */
+body.dark-mode #tgt-modal .btn-primary {
+    background: var(--primary) !important;
+    color: #fff !important;
+}
+body.dark-mode #tgt-modal .btn-secondary {
+    background: #334155 !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
+}
+
+/* btn-icon (Edytuj/Usuń) w wierszach Targetów */
+body.dark-mode #tgt-modal .btn-icon {
+    background: transparent !important;
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 </style>
 </head>
 <body>
