@@ -8721,20 +8721,25 @@ function zaladujPulpit() {
     .then(r => r.json())
     .then(data => {
         const today = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
-        const counted = today.filter(r => String(r.platnosc || '').toLowerCase() !== 'mix');
-        const total = counted.reduce((s, r) => s + (parseFloat(r.kwota) || 0), 0);
-        const uniqClients = new Set(counted.map(r => String(r.klient || '')).filter(Boolean));
-        const avg = counted.length > 0 ? total / counted.length : 0;
+        // Wykluczamy: 'mix' (parent agregacyjny) i 'System' (ręczne korekty,
+        // nie realny wpływ gotówki — np. zadatki przeniesione automatycznie)
+        const widoczne = today.filter(r => {
+            const p = String(r.platnosc || '').toLowerCase().trim();
+            return p !== 'mix' && p !== 'system';
+        });
+        const total = widoczne.reduce((s, r) => s + (parseFloat(r.kwota) || 0), 0);
+        const uniqClients = new Set(widoczne.map(r => String(r.klient || '')).filter(Boolean));
+        const avg = widoczne.length > 0 ? total / widoczne.length : 0;
 
         const qs = id => document.getElementById(id);
         if (qs('ds-kpi-sprzedaz')) qs('ds-kpi-sprzedaz').textContent = fmtPLN(total);
-        if (qs('ds-kpi-transakcji')) qs('ds-kpi-transakcji').textContent = counted.length;
+        if (qs('ds-kpi-transakcji')) qs('ds-kpi-transakcji').textContent = widoczne.length;
         if (qs('ds-kpi-klientow')) qs('ds-kpi-klientow').textContent = uniqClients.size;
-        if (qs('ds-kpi-srednia')) qs('ds-kpi-srednia').textContent = counted.length ? fmtPLN(avg) : '—';
+        if (qs('ds-kpi-srednia')) qs('ds-kpi-srednia').textContent = widoczne.length ? fmtPLN(avg) : '—';
 
         const tbl = document.getElementById('ds-transactions-table');
         if (tbl) {
-            const last5 = today.slice(0, 5);
+            const last5 = widoczne.slice(0, 5);
             if (last5.length === 0) {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
             } else {
