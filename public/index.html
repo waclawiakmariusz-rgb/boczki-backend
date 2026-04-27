@@ -8722,10 +8722,18 @@ function zaladujPulpit() {
     };
 
     // ── KPI sekcja "Na dziś" — tylko admin/megaadmin/manager ──
-    const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+    const rolaRaw = localStorage.getItem('boczki_pracownik_rola') || '';
+    const rola = rolaRaw.toLowerCase().trim();
     const widziKpi = ['admin', 'megaadmin', 'manager'].includes(rola);
+    console.log('[Pulpit RBAC] rola w localStorage:', JSON.stringify(rolaRaw), '→ widzi KPI?', widziKpi);
     const kpiSection = document.getElementById('ds-kpi-section');
-    if (kpiSection) kpiSection.style.display = widziKpi ? '' : 'none';
+    if (kpiSection) {
+        if (widziKpi) {
+            kpiSection.style.display = '';
+        } else {
+            kpiSection.style.setProperty('display', 'none', 'important');
+        }
+    }
 
     // ── KPIs + ostatnie transakcje ──
     fetch(API_URL + '?action=get_daily_summary&date=' + todayStr)
