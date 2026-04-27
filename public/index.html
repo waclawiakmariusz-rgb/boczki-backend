@@ -3673,6 +3673,43 @@ body.dark-mode #asystent-box li strong {
 body.dark-mode #asystent-box small {
     color: #94a3b8 !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Historia sprzedaży i Spis Zadatków
+   Override inline ciemnych kolorów w rendererach
+══════════════════════════════════════════════ */
+
+/* Historia sprzedaży — <small style="color:#666"> dla szczegółów zabiegu */
+body.dark-mode #historia-list small[style*="color:#666"],
+body.dark-mode #historia-list small[style*="color: #666"] {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #historia-list td { color: #f8fafc !important; }
+body.dark-mode #historia-list td strong { color: #f8fafc !important; }
+
+/* Spis Zadatków — inline ciemne kolory w renderTabelaZadatkow */
+body.dark-mode #tabela-zadatki-body td { color: #f8fafc !important; }
+body.dark-mode #tabela-zadatki-body td[style*="color:#334155"],
+body.dark-mode #tabela-zadatki-body td[style*="color: #334155"] {
+    color: #f8fafc !important;
+}
+body.dark-mode #tabela-zadatki-body td[style*="color:#94a3b8"],
+body.dark-mode #tabela-zadatki-body td[style*="color: #94a3b8"] {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tabela-zadatki-body div[style*="color:#64748b"],
+body.dark-mode #tabela-zadatki-body div[style*="color: #64748b"] {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tabela-zadatki-body small[style*="color:#999"],
+body.dark-mode #tabela-zadatki-body small[style*="color: #999"] {
+    color: #cbd5e1 !important;
+}
+/* Kwota AKTYWNY (color:#166534) — zielony, na ciemnym tle jaśniejszy */
+body.dark-mode #tabela-zadatki-body td[style*="color:#166534"],
+body.dark-mode #tabela-zadatki-body td[style*="color: #166534"] {
+    color: #5dd599 !important;
+}
 </style>
 </head>
 <body>
