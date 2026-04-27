@@ -8453,11 +8453,13 @@ function zaladujPulpit() {
         });
     });
 
-    // ── Wymaga uwagi: niski stan + zadatki ──
+    // ── Wymaga uwagi: niski stan + zadatki + urodziny + brak dokumentów ──
     Promise.all([
         fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'rap_getInventory' }) }).then(r=>r.json()).catch(()=>({status:'error',data:[]})),
-        fetch(API_URL + '?action=get_all_deposits').then(r=>r.json()).catch(()=>[])
-    ]).then(([inv, deposits]) => {
+        fetch(API_URL + '?action=get_all_deposits').then(r=>r.json()).catch(()=>[]),
+        fetch(API_URL + '?action=upcoming_birthdays').then(r=>r.json()).catch(()=>({lista:[]})),
+        fetch(API_URL + '?action=get_clients').then(r=>r.json()).catch(()=>({klienci:[]}))
+    ]).then(([inv, deposits, urodziny, clientsResp]) => {
         const items = [];
 
         const invData = (inv && inv.data) ? inv.data : [];
@@ -8485,6 +8487,33 @@ function zaladujPulpit() {
                 title: lost.length + ' utracony' + (lost.length===1?'':lost.length<5?' zadatki':' zadatków'),
                 sub: 'Łączna wartość: ' + fmtPLN(lostVal),
                 onclick: "pokaz('zadatki-lista',null)"
+            });
+        }
+
+        const upBday = (urodziny && Array.isArray(urodziny.lista)) ? urodziny.lista : [];
+        if (upBday.length > 0) {
+            const dzis = upBday.filter(b => b.ile_dni === 0);
+            const sub = dzis.length > 0
+                ? dzis.length + (dzis.length === 1 ? ' osoba ma urodziny dziś' : ' osoby mają urodziny dziś')
+                : 'Najbliższe: ' + (upBday[0].imie || '') + ' za ' + upBday[0].ile_dni + (upBday[0].ile_dni === 1 ? ' dzień' : ' dni');
+            const n = upBday.length;
+            items.push({
+                icon: '🎂', cls: 'orange',
+                title: n + ' zbliżając' + (n === 1 ? 'e się urodziny' : 'ych się urodzin'),
+                sub: sub,
+                onclick: "pokaz('urodziny',null)"
+            });
+        }
+
+        const klienci = (clientsResp && Array.isArray(clientsResp.klienci)) ? clientsResp.klienci : [];
+        const bezDok = klienci.filter(k => !k.rodo || !k.osw);
+        if (bezDok.length > 0) {
+            const n = bezDok.length;
+            items.push({
+                icon: '📎', cls: 'blue',
+                title: n + ' klient' + (n === 1 ? '' : n < 5 ? 'ów' : 'ów') + ' bez kompletu dokumentów',
+                sub: 'Brakuje RODO lub regulaminu — uzupełnij przy następnej wizycie',
+                onclick: "pokaz('klient-profil',null)"
             });
         }
 
