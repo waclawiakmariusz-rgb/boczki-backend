@@ -5394,8 +5394,8 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     <div class="ds-update">⟳ <span id="ds-kpi-time">—</span></div>
   </div>
 
-  <!-- KPI -->
-  <section class="ds-frame-card">
+  <!-- KPI — widoczne tylko dla admin/megaadmin/manager -->
+  <section class="ds-frame-card" id="ds-kpi-section" style="display:none;">
     <div class="ds-section-head"><h3>📊 Na dziś</h3></div>
     <div class="ds-kpis">
       <div class="ds-kpi">
@@ -8720,6 +8720,12 @@ function zaladujPulpit() {
         const n = parseFloat(v) || 0;
         return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
     };
+
+    // ── KPI sekcja "Na dziś" — tylko admin/megaadmin/manager ──
+    const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+    const widziKpi = ['admin', 'megaadmin', 'manager'].includes(rola);
+    const kpiSection = document.getElementById('ds-kpi-section');
+    if (kpiSection) kpiSection.style.display = widziKpi ? '' : 'none';
 
     // ── KPIs + ostatnie transakcje ──
     fetch(API_URL + '?action=get_daily_summary&date=' + todayStr)
