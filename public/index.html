@@ -3479,6 +3479,151 @@ body.dark-mode #tabela tr[class^="mag-group-"] td small {
 body.dark-mode #tabela tr[class^="mag-group-"] td strong[style*="color:#475569"] {
     color: #f8fafc !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Panel klienta (#widok-szczegolow-klienta)
+   Hero stats inner boxy + wszystkie inline color/background w sekcjach
+══════════════════════════════════════════════ */
+
+/* Hero stats — 3 wewnętrzne boxy z jasnym gradientem #fffafc→#fff7fa */
+body.dark-mode #widok-szczegolow-klienta .pp-hero-stats > div {
+    background: linear-gradient(180deg,#243044 0%,#2a3650 100%) !important;
+    border-color: #334155 !important;
+}
+
+/* Tabs — jaśniejszy szary dla lepszej widoczności */
+body.dark-mode .pp-tab { color: #e2e8f0 !important; }
+body.dark-mode .pp-tab.pp-tab-active,
+body.dark-mode .pp-tab:hover { color: #f490b3 !important; border-bottom-color: #f490b3 !important; }
+
+/* Wszystkie ciemne kolory inline w widok-szczegolow → biały */
+body.dark-mode #widok-szczegolow-klienta [style*="color:#1f2430"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #1f2430"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#2c3242"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #2c3242"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#2a3040"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #2a3040"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#202534"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #202534"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#262b39"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #262b39"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#1e293b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #1e293b"] {
+    color: #f8fafc !important;
+}
+
+/* Średnie szarości w widok-szczegolow → jasny szary */
+body.dark-mode #widok-szczegolow-klienta [style*="color:#7b8091"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #7b8091"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#63697b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #63697b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#5f6577"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #5f6577"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#5a5f70"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #5a5f70"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#6f7386"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #6f7386"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#4c5364"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #4c5364"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#50586b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #50586b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#8b90a1"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #8b90a1"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#a2a7b8"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #a2a7b8"],
+body.dark-mode #widok-szczegolow-klienta [style*="color:#555c6b"],
+body.dark-mode #widok-szczegolow-klienta [style*="color: #555c6b"] {
+    color: #cbd5e1 !important;
+}
+
+/* Memo content — jasne tło #fcfbfc */
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#fcfbfc"],
+body.dark-mode #widok-szczegolow-klienta div[style*="background: #fcfbfc"] {
+    background: #243044 !important;
+    border-color: #334155 !important;
+    color: #fcd34d !important;
+}
+
+/* Historia kontaktów — pastelowy zielony #f0fdfa */
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdfa"],
+body.dark-mode #widok-szczegolow-klienta div[style*="background: #f0fdfa"] {
+    background: rgba(20,184,166,.12) !important;
+    border-color: rgba(20,184,166,.35) !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdfa"] [style*="color:#0f766e"] {
+    color: #5eead4 !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdfa"] [style*="color:#115e59"] {
+    color: #99f6e4 !important;
+}
+
+/* Analityki box — żółty #fffbeb */
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#fffbeb"] {
+    background: rgba(245,158,11,.12) !important;
+    border-color: rgba(245,158,11,.3) !important;
+    color: #fcd34d !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#fffbeb"] [style*="color:#78350f"] {
+    color: #fcd34d !important;
+}
+
+/* Szybkie akcje — kolorowe ikony okrągłe */
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#fdeff4"] {
+    background: rgba(214,78,129,.2) !important;
+    color: #f490b3 !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdf4"] {
+    background: rgba(22,101,52,.2) !important;
+    color: #5dd599 !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#fefce8"] {
+    background: rgba(146,64,14,.22) !important;
+    color: #fcd34d !important;
+}
+body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0f9ff"] {
+    background: rgba(7,89,133,.25) !important;
+    color: #93c5fd !important;
+}
+
+/* VIP badge */
+body.dark-mode #widok-szczegolow-klienta span[style*="background:#ffd6e4"] {
+    background: rgba(183,70,115,.25) !important;
+    color: #f9a8c5 !important;
+}
+
+/* Avatar (jasne tło) */
+body.dark-mode #widok-szczegolow-klienta .pp-avatar-lg {
+    background: #243044 !important;
+    border-color: #334155 !important;
+    color: #f490b3 !important;
+}
+
+/* "Ulubiony zabieg" star — pastelowy żółty */
+body.dark-mode #widok-szczegolow-klienta span[style*="color:#f0b64d"] {
+    color: #fcd34d !important;
+}
+
+/* Linki "Zobacz wszystkie →" */
+body.dark-mode #widok-szczegolow-klienta button[style*="color:#ce527f"] {
+    color: #f490b3 !important;
+}
+
+/* Birthday separator border-left */
+body.dark-mode #widok-szczegolow-klienta .pp-hero-birthday {
+    border-left-color: #334155 !important;
+}
+
+/* "Wpłać zadatek" guzik w hero stats */
+body.dark-mode #widok-szczegolow-klienta button[style*="background:#fdeff4"] {
+    background: rgba(207,71,124,.22) !important;
+    color: #f490b3 !important;
+}
+
+/* Strong z ciemnym kolorem — jeszcze jeden łapacz w razie inline z różnicami */
+body.dark-mode #widok-szczegolow-klienta strong[style*="color:#1f2430"],
+body.dark-mode #widok-szczegolow-klienta strong[style*="color: #1f2430"] {
+    color: #f8fafc !important;
+}
 </style>
 </head>
 <body>
