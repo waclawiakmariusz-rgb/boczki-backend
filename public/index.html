@@ -3035,6 +3035,251 @@ body.dark-mode #an_view-monthly-report .anm-daily-thead th {
     background: #243044 !important;
     color: #94a3b8 !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — sekcje analityczne (an_view-* i akon_view-*)
+   Nadpisanie zmiennych --an-* w body.dark-mode na elementach sekcji
+══════════════════════════════════════════════ */
+body.dark-mode #an_view-dashboard,
+body.dark-mode #an_view-summary,
+body.dark-mode #an_view-monthly-report,
+body.dark-mode #an_view-costs,
+body.dark-mode #an_view-yearly,
+body.dark-mode #an_view-treatment-analysis,
+body.dark-mode #an_view-bi,
+body.dark-mode #analiza-konsultacji,
+body.dark-mode #akon_view-dashboard,
+body.dark-mode #akon_view-daily,
+body.dark-mode #akon_view-monthly-list,
+body.dark-mode #akon_view-monthly {
+    --an-bg: #0f172a;
+    --an-card: #1e293b;
+    --an-text: #f8fafc;
+    --an-muted: #94a3b8;
+    --an-accent: #b497ff;
+    --an-border: 1px solid #334155;
+    --an-shadow: 0 1px 4px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+    --an-shadow-h: 0 6px 24px rgba(0,0,0,.4);
+    background: #0f172a !important;
+}
+
+/* Section title — fioletowy border + jasny akcent */
+body.dark-mode #an_view-dashboard .section-title,
+body.dark-mode #an_view-summary .section-title,
+body.dark-mode #akon_view-dashboard .akon_section-title {
+    border-bottom-color: #334155 !important;
+    color: #b497ff !important;
+}
+
+/* Top-list separators */
+body.dark-mode #an_view-dashboard .top-list li,
+body.dark-mode #an_view-treatment-analysis .top-list li,
+body.dark-mode #akon_view-dashboard .akon_top-list li,
+body.dark-mode #akon_view-monthly .akon_top-list li {
+    border-bottom-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+/* Tabele — zebra + hover */
+body.dark-mode #an_view-monthly-report table tbody tr:nth-child(even),
+body.dark-mode #an_view-costs table tbody tr:nth-child(even),
+body.dark-mode #an_view-yearly table tbody tr:nth-child(even),
+body.dark-mode #an_view-bi table tbody tr:nth-child(even),
+body.dark-mode #akon_view-daily table tbody tr:nth-child(even),
+body.dark-mode #akon_view-monthly-list table tbody tr:nth-child(even) {
+    background: #243044 !important;
+}
+body.dark-mode #an_view-monthly-report table tbody tr:hover,
+body.dark-mode #an_view-costs table tbody tr:hover,
+body.dark-mode #an_view-yearly table tbody tr:hover,
+body.dark-mode #an_view-bi table tbody tr:hover,
+body.dark-mode #akon_view-daily table tbody tr:hover,
+body.dark-mode #akon_view-monthly-list table tbody tr:hover {
+    background: #334155 !important;
+}
+
+/* Pasek zakładek #an_tabs */
+body.dark-mode #an_tabs {
+    background: linear-gradient(to bottom, #0f172a 80%, transparent) !important;
+}
+body.dark-mode .an_tab {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+body.dark-mode .an_tab:hover {
+    background: #334155 !important;
+    border-color: #4b3040 !important;
+    color: #f490b3 !important;
+    box-shadow: 0 2px 8px rgba(180,151,255,.18) !important;
+}
+body.dark-mode .an_tab-sep { color: #475569 !important; }
+body.dark-mode body:has(#an_view-dashboard[style*="display: block"])           .an_tab[data-view="dashboard"],
+body.dark-mode body:has(#an_view-summary[style*="display: block"])             .an_tab[data-view="summary"],
+body.dark-mode body:has(#an_view-monthly-report[style*="display: block"])      .an_tab[data-view="monthly_report"],
+body.dark-mode body:has(#an_view-yearly[style*="display: block"])              .an_tab[data-view="yearly"],
+body.dark-mode body:has(#an_view-treatment-analysis[style*="display: block"])  .an_tab[data-view="treatment_analysis"],
+body.dark-mode body:has(#an_view-bi[style*="display: block"])                  .an_tab[data-view="bi"],
+body.dark-mode body:has(#an_view-costs[style*="display: block"])               .an_tab[data-view="costs"] {
+    background: #7c3aed !important;
+    color: #fff !important;
+    border-color: #7c3aed !important;
+}
+
+/* Zwijalne sekcje an_detail */
+body.dark-mode .an_detail-title {
+    background: #243044 !important;
+    border-color: #334155 !important;
+    color: #b497ff !important;
+}
+body.dark-mode .an_detail-section[open] .an_detail-title {
+    background: #2a3650 !important;
+    color: #d6c8ff !important;
+}
+body.dark-mode .an_detail-title::before { color: #b497ff !important; }
+
+/* Best-deal-box (Dashboard analizy) */
+body.dark-mode #an_view-dashboard .best-deal-box {
+    background: rgba(245,158,11,.08) !important;
+    border-color: rgba(245,158,11,.3) !important;
+}
+
+/* kpi-card-mini w an_view-monthly-report / akon_view-monthly-list */
+body.dark-mode #an_view-monthly-report .kpi-card-mini,
+body.dark-mode #akon_view-monthly-list .kpi-card-mini {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+
+/* Summary-cards #an_view-summary: pastele -> półprzezroczyste warianty dark */
+body.dark-mode #an_view-summary .summary-card[style*="background: #10b981"],
+body.dark-mode #an_view-summary .summary-card[style*="background:#10b981"] {
+    background: rgba(16,185,129,.15) !important;
+    color: #5dd599 !important;
+}
+body.dark-mode #an_view-summary .summary-card[style*="background: #3b82f6"],
+body.dark-mode #an_view-summary .summary-card[style*="background:#3b82f6"] {
+    background: rgba(59,130,246,.15) !important;
+    color: #93b9ff !important;
+}
+body.dark-mode #an_view-summary .summary-card[style*="background: #8b5cf6"],
+body.dark-mode #an_view-summary .summary-card[style*="background:#8b5cf6"] {
+    background: rgba(139,92,246,.15) !important;
+    color: #b497ff !important;
+}
+body.dark-mode #an_view-summary .summary-card[style*="background: #f59e0b"],
+body.dark-mode #an_view-summary .summary-card[style*="background:#f59e0b"] {
+    background: rgba(245,158,11,.15) !important;
+    color: #fcd34d !important;
+}
+body.dark-mode #an_view-summary .summary-card[style*="background: #0284c7"],
+body.dark-mode #an_view-summary .summary-card[style*="background:#0284c7"] {
+    background: rgba(2,132,199,.18) !important;
+    color: #7dd3fc !important;
+}
+
+/* AKON summary cards */
+body.dark-mode #akon_view-daily .akon_bg-green,
+body.dark-mode #akon_view-monthly-list .akon_bg-green {
+    background: rgba(16,185,129,.15) !important;
+    color: #5dd599 !important;
+}
+body.dark-mode #akon_view-daily .akon_bg-orange,
+body.dark-mode #akon_view-monthly-list .akon_bg-orange {
+    background: rgba(245,158,11,.15) !important;
+    color: #fcd34d !important;
+}
+body.dark-mode #akon_view-daily .akon_bg-blue,
+body.dark-mode #akon_view-monthly-list .akon_bg-blue {
+    background: rgba(59,130,246,.15) !important;
+    color: #93b9ff !important;
+}
+body.dark-mode #akon_view-daily .akon_bg-gray,
+body.dark-mode #akon_view-monthly-list .akon_bg-gray {
+    background: rgba(148,163,184,.18) !important;
+    color: #cbd5e1 !important;
+}
+body.dark-mode #akon_view-daily .akon_bg-green .akon_label,
+body.dark-mode #akon_view-daily .akon_bg-green .akon_value,
+body.dark-mode #akon_view-monthly-list .akon_bg-green .akon_label,
+body.dark-mode #akon_view-monthly-list .akon_bg-green .akon_value { color: #5dd599 !important; }
+body.dark-mode #akon_view-daily .akon_bg-orange .akon_label,
+body.dark-mode #akon_view-daily .akon_bg-orange .akon_value,
+body.dark-mode #akon_view-monthly-list .akon_bg-orange .akon_label,
+body.dark-mode #akon_view-monthly-list .akon_bg-orange .akon_value { color: #fcd34d !important; }
+body.dark-mode #akon_view-daily .akon_bg-blue .akon_label,
+body.dark-mode #akon_view-daily .akon_bg-blue .akon_value,
+body.dark-mode #akon_view-monthly-list .akon_bg-blue .akon_label,
+body.dark-mode #akon_view-monthly-list .akon_bg-blue .akon_value { color: #93b9ff !important; }
+body.dark-mode #akon_view-daily .akon_bg-gray .akon_label,
+body.dark-mode #akon_view-daily .akon_bg-gray .akon_value,
+body.dark-mode #akon_view-monthly-list .akon_bg-gray .akon_label,
+body.dark-mode #akon_view-monthly-list .akon_bg-gray .akon_value { color: #cbd5e1 !important; }
+
+/* KPI z var(--primary) i ciemna karta BI #1f2937 */
+body.dark-mode #an_view-dashboard .kpi-container .card[style*="background:var(--primary)"],
+body.dark-mode #an_view-dashboard .kpi-container .card[style*="background: var(--primary)"] {
+    background: rgba(232,86,143,.18) !important;
+}
+body.dark-mode #an_view-bi .card[style*="background: #1f2937"],
+body.dark-mode #an_view-bi .card[style*="background:#1f2937"] {
+    background: rgba(16,185,129,.15) !important;
+    color: #5dd599 !important;
+}
+body.dark-mode #an_view-bi .card[style*="background: #1f2937"] #an_bi-aov-current,
+body.dark-mode #an_view-bi .card[style*="background:#1f2937"] #an_bi-aov-current {
+    color: #5dd599 !important;
+}
+
+/* Separatory dashed */
+body.dark-mode #an_view-treatment-analysis [style*="border-top: 2px dashed"],
+body.dark-mode #analiza-konsultacji [style*="border-bottom: 2px dashed"],
+body.dark-mode #analiza-konsultacji .filters {
+    border-color: #334155 !important;
+}
+
+/* Duże liczby podsumowań */
+body.dark-mode #akon_view-monthly-list #akon_mlist-total-big,
+body.dark-mode #akon_view-monthly #akon_rep-total,
+body.dark-mode #an_view-monthly-report #an_rep-total {
+    color: #f8fafc !important;
+}
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Magazyn (Stan Magazynowy) badges
+══════════════════════════════════════════════ */
+body.dark-mode .qty-badge { background: #243044 !important; color: #cbd5e1 !important; }
+body.dark-mode .qty-ok { background: rgba(22,163,74,.22) !important; color: #5dd599 !important; }
+body.dark-mode .qty-warn { background: rgba(202,138,4,.22) !important; color: #fcd34d !important; }
+body.dark-mode .cat-pro { background: rgba(79,70,229,.22) !important; color: #a5b4fc !important; }
+body.dark-mode .cat-detal { background: rgba(219,39,119,.22) !important; color: #f490b3 !important; }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Klienci: lista wszystkich klientów
+   Override inline-styles z renderera renderujKafelkiKlientow
+══════════════════════════════════════════════ */
+body.dark-mode #lista-klientow-widok > div[style*="background:white"],
+body.dark-mode #lista-klientow-widok > div[style*="background: white"] {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode #lista-klientow-widok strong[style*="color:#334155"],
+body.dark-mode #lista-klientow-widok strong[style*="color: #334155"] {
+    color: #f8fafc !important;
+}
+body.dark-mode #lista-klientow-widok div[style*="background:#f1f5f9"],
+body.dark-mode #lista-klientow-widok div[style*="background: #f1f5f9"] {
+    background: #334155 !important;
+    color: #cbd5e1 !important;
+}
+body.dark-mode #lista-klientow-widok div[style*="color:#0f766e"] {
+    color: #5dd599 !important;
+}
+body.dark-mode #lista-klientow-widok div[style*="background:#f8fafc"] {
+    background: #243044 !important;
+    color: #cbd5e1 !important;
+}
 </style>
 </head>
 <body>
