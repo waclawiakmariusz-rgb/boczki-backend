@@ -81,10 +81,15 @@ body {
 }
 
 .brand {
-    font-size: 26px; font-weight: 800; margin-bottom: 45px;
-    color: var(--text-dark); display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; letter-spacing: -0.5px;
+    margin-bottom: 35px;
+    display: flex; align-items: center; justify-content: center;
 }
+.brand img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+body.dark-mode .brand img { filter: brightness(0) invert(1); }
 
 .nav-links { list-style: none; padding: 0; margin: 0; flex: 1; }
 .nav-links li { margin-bottom: 8px; }
@@ -4018,12 +4023,12 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 	
 	<!-- menu rwd -->
 <div id="mobile-bar" style="display:none; background: #1f2937; padding: 15px; align-items: center; justify-content: space-between; color: white;">
-    <div style="font-weight:bold; font-size: 18px;">✨ Estelio</div>
+    <div style="display:flex; align-items:center;"><img src="img/estelio-logo.png" alt="Estelio" style="height:30px; width:auto; filter: brightness(0) invert(1);"></div>
     <button onclick="toggleMobileMenu()" style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">☰</button>
 </div>
     <div id="app-container">
         <aside class="sidebar">
-            <div class="brand">✨ Estelio</div>
+            <div class="brand"><img src="img/estelio-logo.png" alt="Estelio"></div>
             <ul class="nav-links">
                 <li id="group-pulpit">
                     <button onclick="pokaz('pulpit', this); zaladujPulpit();" class="nav-single-btn" style="color:#ef4f86; font-weight:700; background:rgba(239,79,134,0.07);"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Pulpit</span></button>
@@ -20851,7 +20856,7 @@ initTheme();
     </div>
 </div>
 <div id="pin-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:#1e293b; z-index:9999; flex-direction:column; align-items:center; justify-content:flex-start; padding-top:5vh; padding-bottom: 5vh; overflow-y:auto; color:white; box-sizing:border-box;">
-    <h2 style="color:var(--primary) !important; margin-bottom:10px;">✨ Estelio</h2>
+    <h2 style="margin-bottom:10px; display:flex; align-items:center; justify-content:center;"><img src="img/estelio-logo.png" alt="Estelio" style="height:60px; width:auto; filter: brightness(0) invert(1);"></h2>
     <p style="color:#475569 !important; margin-bottom:30px;">Wybierz swój profil, aby rozpocząć pracę</p>
     
     <div id="pin-users-grid" style="display:flex; gap:15px; flex-wrap:wrap; justify-content:center; max-width:800px; margin-bottom:40px;">
