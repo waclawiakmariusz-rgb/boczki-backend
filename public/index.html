@@ -891,6 +891,22 @@ body.dark-mode .client-name-box h1 {
     color: #f8fafc !important;
 }
 
+/* Profil klienta — hero strefa (pp-) DARK MODE */
+body.dark-mode .pp-hero-top {
+    background: linear-gradient(180deg,#1e293b 0%,#243044 100%) !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode .pp-hero-stats {
+    background: #1e293b !important;
+}
+body.dark-mode .pp-hero-top *,
+body.dark-mode .pp-hero-stats * {
+    color: #f8fafc !important;
+}
+body.dark-mode .pp-tab { color: #cbd5e1 !important; }
+body.dark-mode .pp-tab:hover,
+body.dark-mode .pp-tab.pp-tab-active { color: #f490b3 !important; border-bottom-color: #f490b3 !important; }
+
 /* Agresywniejsze wyłapywanie twardych teł (łapie również skróty #fff i różne spacje) */
 body.dark-mode div[style*="background: #fff"],
 body.dark-mode div[style*="background:#fff"],
@@ -2950,6 +2966,74 @@ body:has(#an_view-costs[style*="display: block"]) #an_tabs {
     #an_view-monthly-report .anm-top-actions { flex-direction: column; }
     #an_view-monthly-report .anm-date-select,
     #an_view-monthly-report .anm-compare-select { width: 100%; }
+}
+
+/* ── Analiza/Miesiąc (anm-) — DARK MODE ── */
+body.dark-mode #an_view-monthly-report .anm-date-select,
+body.dark-mode #an_view-monthly-report .anm-compare-select {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    color: #f8fafc !important;
+}
+body.dark-mode #an_view-monthly-report .anm-refresh-btn {
+    background: #1e293b !important;
+    border-color: #4b3040 !important;
+    color: #f490b3 !important;
+}
+body.dark-mode #an_view-monthly-report .anm-refresh-btn:hover { background: #334155 !important; }
+
+body.dark-mode #an_view-monthly-report .anm-hero {
+    background: linear-gradient(180deg,#1e293b 0%,#243044 100%) !important;
+    border-color: #334155 !important;
+    box-shadow: 0 15px 35px rgba(0,0,0,.3) !important;
+}
+body.dark-mode #an_view-monthly-report .anm-hero-icon {
+    background: rgba(232,86,143,.2) !important;
+}
+body.dark-mode #an_view-monthly-report .anm-eyebrow { color: #94a3b8 !important; }
+body.dark-mode #an_view-monthly-report .anm-hero-value { color: #f8fafc !important; }
+body.dark-mode #an_view-monthly-report .anm-hero-note { color: #cbd5e1 !important; }
+
+body.dark-mode #an_view-monthly-report .anm-metric {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,.3) !important;
+}
+body.dark-mode #an_view-monthly-report .anm-metric-title { color: #94a3b8 !important; }
+body.dark-mode #an_view-monthly-report .anm-metric-value { color: #f8fafc !important; }
+body.dark-mode #an_view-monthly-report .anm-metric-sub { color: #cbd5e1 !important; }
+body.dark-mode #an_view-monthly-report .anm-metric-bar { background: #334155 !important; }
+
+body.dark-mode #an_view-monthly-report .anm-m-green  .anm-metric-icon { background: rgba(49,182,107,.2) !important; color: #5dd599 !important; }
+body.dark-mode #an_view-monthly-report .anm-m-blue   .anm-metric-icon { background: rgba(94,149,244,.22) !important; color: #93b9ff !important; }
+body.dark-mode #an_view-monthly-report .anm-m-violet .anm-metric-icon { background: rgba(156,122,244,.22) !important; color: #b497ff !important; }
+body.dark-mode #an_view-monthly-report .anm-m-orange .anm-metric-icon { background: rgba(239,155,57,.2) !important; color: #fbbf68 !important; }
+body.dark-mode #an_view-monthly-report .anm-m-deep   .anm-metric-icon { background: rgba(43,119,189,.22) !important; color: #93b9ff !important; }
+
+body.dark-mode #an_view-monthly-report .anm-chart-card,
+body.dark-mode #an_view-monthly-report .anm-plain-card,
+body.dark-mode #an_view-monthly-report .anm-side-card,
+body.dark-mode #an_view-monthly-report .anm-daily-card {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+    box-shadow: 0 6px 20px rgba(0,0,0,.3) !important;
+}
+
+body.dark-mode #an_view-monthly-report .anm-title-inline { color: #f8fafc !important; }
+body.dark-mode #an_view-monthly-report .anm-title-icon { color: #f490b3 !important; }
+
+body.dark-mode #an_view-monthly-report .anm-cosmetics-hero {
+    background: linear-gradient(135deg, rgba(252,231,243,.12) 0%, rgba(251,207,232,.16) 100%) !important;
+    border: 1px solid #4b3040 !important;
+}
+body.dark-mode #an_view-monthly-report .anm-cosm-count { color: #f490b3 !important; }
+
+body.dark-mode #an_view-monthly-report .anm-side-head { border-bottom-color: #334155 !important; }
+body.dark-mode #an_view-monthly-report .anm-side-head h3 { color: #f8fafc !important; }
+
+body.dark-mode #an_view-monthly-report .anm-daily-thead th {
+    background: #243044 !important;
+    color: #94a3b8 !important;
 }
 </style>
 </head>
