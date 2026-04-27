@@ -89,6 +89,18 @@ body {
 .nav-links { list-style: none; padding: 0; margin: 0; flex: 1; }
 .nav-links li { margin-bottom: 8px; }
 
+/* Ikony line-style w menu (Lucide-like) — czyściej niż emoji */
+.nav-icon {
+    width: 18px; height: 18px;
+    flex-shrink: 0;
+    margin-right: 10px;
+    stroke-width: 1.75;
+    vertical-align: middle;
+}
+.nav-parent .nav-label, .nav-single-btn .nav-label, .nav-btn .nav-label {
+    display: inline-flex; align-items: center; flex: 1;
+}
+
 /* Kafelkowe przyciski menu */
 .nav-parent, .nav-single-btn, .nav-btn {
     width: 100%; background: transparent; border: none;
@@ -3705,43 +3717,41 @@ body.dark-mode #asystent-box small {
             <div class="brand">✨ Estelio</div>
             <ul class="nav-links">
                 <li id="group-pulpit">
-                    <button onclick="pokaz('pulpit', this); zaladujPulpit();" class="nav-single-btn" style="color:#ef4f86; font-weight:700; background:rgba(239,79,134,0.07);">🏠 Pulpit</button>
+                    <button onclick="pokaz('pulpit', this); zaladujPulpit();" class="nav-single-btn" style="color:#ef4f86; font-weight:700; background:rgba(239,79,134,0.07);"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Pulpit</span></button>
                 </li>
                 <li id="group-magazyn">
-                    <button onclick="toggleMenu('sub-magazyn', this)" class="nav-parent">📦 Kosmetyki ▼</button>
+                    <button onclick="toggleMenu('sub-magazyn', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>Kosmetyki</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-magazyn" class="nav-submenu">
-                        <li><button onclick="pokaz('magazyn', this)">📊 Stan Magazynowy</button></li>
-                        <li><button onclick="pokaz('inwentaryzacja', this)">📝 Inwentaryzacja</button></li>
-                        <li><button onclick="pokaz('nowy', this)">➕ Przyjęcie towaru</button></li> 
-						<li><button onclick="pokaz('co-zamowic', this)" style="color:#f59e0b; font-weight:bold;">🛒 Co zamówić?</button></li>						
+                        <li><button onclick="pokaz('magazyn', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Stan Magazynowy</span></button></li>
+                        <li><button onclick="pokaz('inwentaryzacja', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4"/><path d="M12 16h4"/><path d="M8 11h.01"/><path d="M8 16h.01"/></svg>Inwentaryzacja</span></button></li>
+                        <li><button onclick="pokaz('nowy', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l1-.57"/><path d="M3.29 7 12 12l8.71-5"/><path d="M12 22V12"/></svg>Przyjęcie towaru</span></button></li>
+						<li><button onclick="pokaz('co-zamowic', this)" style="color:#f59e0b; font-weight:bold;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>Co zamówić?</span></button></li>
                     </ul>
                 </li>
                 <li id="group-raport">
-                    <button onclick="toggleMenu('sub-raport', this)" class="nav-parent">📊 Magazyn ▼</button>
+                    <button onclick="toggleMenu('sub-raport', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/></svg>Magazyn</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-raport" class="nav-submenu">
-                        <li><button class="nav-btn" onclick="pokaz('rap_report', this); typeof rap_initApp === 'function' && rap_initApp();" style="color:#f59e0b; font-weight:bold;">🛒 Zadania na dziś</button></li>
-						<li><button class="nav-btn active" onclick="pokaz('rap_magazyn', this); typeof rap_initApp === 'function' && rap_initApp();">📊 Stan Magazynowy</button></li>                        
-                        <li><button class="nav-btn" onclick="pokaz('rap_add', this)">➕ Nowy Produkt</button></li> 
-                        <li><button class="nav-btn" onclick="pokaz('rap_categories', this)">📂 Kategorie</button></li>                        
+                        <li><button class="nav-btn" onclick="pokaz('rap_report', this); typeof rap_initApp === 'function' && rap_initApp();" style="color:#f59e0b; font-weight:bold;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5h10"/><path d="M11 12h10"/><path d="M11 19h10"/><path d="m3 5 1 1 2-2"/><path d="m3 12 1 1 2-2"/><path d="m3 19 1 1 2-2"/></svg>Zadania na dziś</span></button></li>
+						<li><button class="nav-btn active" onclick="pokaz('rap_magazyn', this); typeof rap_initApp === 'function' && rap_initApp();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg>Stan Magazynowy</span></button></li>
+                        <li><button class="nav-btn" onclick="pokaz('rap_add', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><line x1="12" x2="12" y1="8" y2="16"/><line x1="8" x2="16" y1="12" y2="12"/></svg>Nowy Produkt</span></button></li>
+                        <li><button class="nav-btn" onclick="pokaz('rap_categories', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Kategorie</span></button></li>
                     </ul>
                 </li>
                 <li id="group-sales">
-                    <button onclick="toggleMenu('sub-sales', this)" class="nav-parent">💰 Sprzedaż ▼</button>
+                    <button onclick="toggleMenu('sub-sales', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>Sprzedaż</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-sales" class="nav-submenu">
-                        <li><button onclick="pokaz('sprzedaz', this)">💸 Dodanie Sprzedaży</button></li>                        
-                        <li><button onclick="pokaz('historia', this)">📜 Historia</button></li>
-						<li><button onclick="pokaz('zadatki-lista', this)">👛 Spis Zadatków</button></li>
-						<li><button onclick="pokaz('podsumowanie', this)">📅 Podsumowanie</button></li>                        
+                        <li><button onclick="pokaz('sprzedaz', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>Dodanie Sprzedaży</span></button></li>
+                        <li><button onclick="pokaz('historia', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Historia</span></button></li>
+						<li><button onclick="pokaz('zadatki-lista', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>Spis Zadatków</span></button></li>
+						<li><button onclick="pokaz('podsumowanie', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Podsumowanie</span></button></li>
                     </ul>
                 </li>
                 <li id="group-clients">
-                    <button onclick="toggleMenu('sub-clients', this)" class="nav-parent">👥 Klienci ▼</button>
+                    <button onclick="toggleMenu('sub-clients', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Klienci</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-clients" class="nav-submenu">
-                        <li><button onclick="pokaz('urodziny', this)">🎂 Urodziny</button></li>
-						<li><button onclick="pokaz('klient-profil', this)">📂 Klienci</button></li>
-						
-						<li><button onclick="otworzPopupNowyKlient()" style="color:#34d399; font-weight:bold;">➕ Dodaj Klienta</button>
-						</li>
+                        <li><button onclick="pokaz('urodziny', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/></svg>Urodziny</span></button></li>
+						<li><button onclick="pokaz('klient-profil', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Klienci</span></button></li>
+						<li><button onclick="otworzPopupNowyKlient()" style="color:#34d399; font-weight:bold;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>Dodaj Klienta</span></button></li>
                     </ul>
                 </li>
 				
@@ -3767,60 +3777,57 @@ body.dark-mode #asystent-box small {
 				</li> -->
 				
 				<li id="group-an">
-    <button onclick="toggleMenu('sub-analysis', this)" class="nav-parent">📊 Analiza ▼</button>
+    <button onclick="toggleMenu('sub-analysis', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>Analiza</span> <span style="font-size:11px;">▼</span></button>
     <ul id="sub-analysis" class="nav-submenu">
 
         <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 12px 15px 4px 25px; user-select: none;">
             Podstawowe
         </li>
-        <li><button class="nav-btn" onclick="pokaz('summary', this)">🧾 Dzień</button></li>
-        <li><button class="nav-btn" onclick="pokaz('monthly_report', this)">📅 Miesiąc</button></li>
-        <li><button class="nav-btn" onclick="pokaz('dashboard', this)">👤 Pracownik</button></li>
+        <li><button class="nav-btn" onclick="pokaz('summary', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>Dzień</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('monthly_report', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>Miesiąc</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('dashboard', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Pracownik</span></button></li>
 
         <li style="font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; padding: 15px 15px 4px 25px; user-select: none; border-top: 1px solid #f1f5f9; margin-top: 5px;">
             Zaawansowane
         </li>
-        <li><button class="nav-btn" onclick="pokaz('yearly', this)">📆 Rok</button></li>
-        <li><button class="nav-btn" onclick="pokaz('costs', this)">💰 Koszty</button></li>
-        <li><button class="nav-btn" onclick="pokaz('treatment_analysis', this)">💉 Analiza Zabiegu</button></li>
-        <li><button class="nav-btn" onclick="pokaz('analiza-konsultacji', this)">🤝 Analiza Konsultacji</button></li>
-        <li><button class="nav-btn" onclick="pokaz('odprawa', this)">📢 Zebranie</button></li>
-        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this)">🏆 Wyniki i Cele</button></li>
-        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this); tgt_otworz();">🎯 Targety</button></li>
-        <li><button class="nav-btn" onclick="pokaz('bi', this)" style="color: #ec4899; font-weight: bold;">🧠 Inteligentna Analiza</button></li>
+        <li><button class="nav-btn" onclick="pokaz('yearly', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M17 14h-5"/><path d="M9 14h.01"/></svg>Rok</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('costs', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Koszty</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('treatment_analysis', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>Analiza Zabiegu</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('analiza-konsultacji', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>Analiza Konsultacji</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('odprawa', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>Zebranie</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>Wyniki i Cele</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('widok-pracownicy-targety', this); tgt_otworz();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>Targety</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('bi', this)" style="color: #ec4899; font-weight: bold;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>Inteligentna Analiza</span></button></li>
 
     </ul>
 </li>
-				
+
                 <li id="group-retention">
-					<button onclick="pokaz('retencja', this)" class="nav-single-btn" style="color:#10b981; border: 1px solid #10b98133;">📞 Moduł Retencji</button>
+					<button onclick="pokaz('retencja', this)" class="nav-single-btn" style="color:#10b981; border: 1px solid #10b98133;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Moduł Retencji</span></button>
 				</li>
                 <li id="group-config">
-                    <button onclick="toggleMenu('sub-config', this)" class="nav-parent">⚙️ Administracja ▼</button>
+                    <button onclick="toggleMenu('sub-config', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Administracja</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-config" class="nav-submenu">
-					    <li><button onclick="pokaz('awaryjna-zmiana', this)" style="color:#dc2626; font-weight:bold; border:1px solid #fecaca;">🚨 Awaryjna Zmiana</button></li>
-						<!--<li><button class="nav-btn" onclick="pokaz('kreator_dostepow', this)">🔐 Kreator Dostępów</button></li>-->
-						<li id="menu-kreator-dostepow"><button class="nav-btn" onclick="pokaz('kreator_dostepow', this)">🔐 Dostępy</button></li>
-                        <li><button onclick="pokaz('sekcja-kreator-rabatow', this)">✂️ Rabaty</button></li>
-                        <li><button onclick="pokaz('setup-zabiegi', this)">🛠️ Zabiegi</button></li>
-                        <li><button onclick="pokaz('setup-pracownicy', this)">👩‍💼 Pracownicy</button></li>
-                        <li><button onclick="pokaz('setup-sugestie', this)">🧠 Sugestia</button></li>
-						<li><button onclick="pokaz('slownik', this)">⚙️ Kosmetyki</button></li>
-                        <!-- Baza Wiedzy dostępna tylko z poziomu panelu admina serwisu -->
+					    <li><button onclick="pokaz('awaryjna-zmiana', this)" style="color:#dc2626; font-weight:bold; border:1px solid #fecaca;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Awaryjna Zmiana</span></button></li>
+						<li id="menu-kreator-dostepow"><button class="nav-btn" onclick="pokaz('kreator_dostepow', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Dostępy</span></button></li>
+                        <li><button onclick="pokaz('sekcja-kreator-rabatow', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>Rabaty</span></button></li>
+                        <li><button onclick="pokaz('setup-zabiegi', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Zabiegi</span></button></li>
+                        <li><button onclick="pokaz('setup-pracownicy', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</span></button></li>
+                        <li><button onclick="pokaz('setup-sugestie', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>Sugestia</span></button></li>
+						<li><button onclick="pokaz('slownik', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>Kosmetyki</span></button></li>
                     </ul>
                 </li>
-                
+
 				<li>
-    <button class="nav-btn" onclick="toggleKonMenu()">📋 Konsultacje ▼</button>
+    <button class="nav-btn" onclick="toggleKonMenu()"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/></svg>Konsultacje</span> <span style="font-size:11px;">▼</span></button>
     <div id="menu-konsultacje" style="display: none; flex-direction: column; padding-left: 15px; border-left: 2px solid #f1f5f9; margin-left: 15px; margin-top: 5px;">
-        <button class="nav-btn" onclick="pokaz('kon_raportowanie', this)" style="font-size: 13px; padding: 10px;">📝 Raportowanie</button>
-        <button class="nav-btn kon-admin-only" style="font-size: 13px; padding: 10px;" onclick="pokaz('kon_admin-panel', this)">⚙️ Ustawienia / Kreator</button>
-       <!-- <button class="nav-btn kon-admin-only" style="display:none; font-size: 13px; padding: 10px;" onclick="pokaz('kon_historia-panel', this); kon_pobierzHistorie();">📜 Historia Zdarzeń</button> -->
+        <button class="nav-btn" onclick="pokaz('kon_raportowanie', this)" style="font-size: 13px; padding: 10px;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/></svg>Raportowanie</span></button>
+        <button class="nav-btn kon-admin-only" style="font-size: 13px; padding: 10px;" onclick="pokaz('kon_admin-panel', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>Ustawienia / Kreator</span></button>
     </div>
 </li>
 
                 <li id="group-logs">
-                    <button onclick="pokaz('logi', this)" class="nav-single-btn">⚠️ Dziennik Zdarzeń</button>
+                    <button onclick="pokaz('logi', this)" class="nav-single-btn"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Dziennik Zdarzeń</span></button>
                 </li>
             </ul>
             <div class="sidebar-footer">
