@@ -3280,6 +3280,146 @@ body.dark-mode #lista-klientow-widok div[style*="background:#f8fafc"] {
     background: #243044 !important;
     color: #cbd5e1 !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Magazyn renderer override
+   <tr style="background:#fff"> i ciemne kolory inline w td/strong
+══════════════════════════════════════════════ */
+body.dark-mode #tabela tr[style*="background:#fff"],
+body.dark-mode #tabela tr[style*="background: #fff"] {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode #tabela tr[style*="background:#f8fafc"],
+body.dark-mode #tabela tr[style*="background: #f8fafc"],
+body.dark-mode #tabela tr[style*="background:#fafafa"],
+body.dark-mode #tabela tr[style*="background: #fafafa"] {
+    background: #243044 !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode #tabela strong[style*="color:#1e293b"],
+body.dark-mode #tabela strong[style*="color: #1e293b"],
+body.dark-mode #tabela strong[style*="color:#475569"],
+body.dark-mode #tabela strong[style*="color: #475569"] {
+    color: #f8fafc !important;
+}
+body.dark-mode #tabela td[style*="color:#1e293b"],
+body.dark-mode #tabela td[style*="color: #1e293b"] { color: #f8fafc !important; }
+body.dark-mode #tabela td[style*="color:#475569"],
+body.dark-mode #tabela td[style*="color: #475569"],
+body.dark-mode #tabela td[style*="color:#64748b"],
+body.dark-mode #tabela td[style*="color: #64748b"] { color: #cbd5e1 !important; }
+body.dark-mode #tabela span[style*="color:#475569"],
+body.dark-mode #tabela span[style*="color: #475569"] { color: #cbd5e1 !important; }
+body.dark-mode #tabela span[style*="background:#e0f2fe"] {
+    background: rgba(14,165,233,.18) !important;
+    color: #7dd3fc !important;
+}
+body.dark-mode #tabela td[style*="border-bottom:1px dashed #e2e8f0"],
+body.dark-mode #tabela td[style*="border-bottom: 1px dashed #e2e8f0"] {
+    border-bottom-color: #334155 !important;
+}
+
+/* ══════════════════════════════════════════════
+   DARK MODE — uniwersalne overrides dla inline-styles
+   Rozszerzenie globalnej reguły z divów na span/td/tr/strong/small
+   Dla potomków sekcji analitycznych
+══════════════════════════════════════════════ */
+body.dark-mode #an_view-dashboard span[style*="background: white"],
+body.dark-mode #an_view-dashboard span[style*="background:white"],
+body.dark-mode #an_view-dashboard span[style*="background:#fff"],
+body.dark-mode #an_view-dashboard span[style*="background: #fff"],
+body.dark-mode #an_view-summary span[style*="background: white"],
+body.dark-mode #an_view-summary span[style*="background:white"],
+body.dark-mode #an_view-summary span[style*="background:#fff"],
+body.dark-mode #an_view-summary span[style*="background: #fff"],
+body.dark-mode #an_view-monthly-report span[style*="background: white"],
+body.dark-mode #an_view-monthly-report span[style*="background:white"],
+body.dark-mode #an_view-monthly-report span[style*="background:#fff"],
+body.dark-mode #an_view-monthly-report span[style*="background: #fff"],
+body.dark-mode #an_view-yearly span[style*="background: white"],
+body.dark-mode #an_view-yearly span[style*="background:white"],
+body.dark-mode #an_view-yearly span[style*="background:#fff"],
+body.dark-mode #an_view-yearly span[style*="background: #fff"],
+body.dark-mode #an_view-treatment-analysis span[style*="background: white"],
+body.dark-mode #an_view-treatment-analysis span[style*="background:white"],
+body.dark-mode #an_view-treatment-analysis span[style*="background:#fff"],
+body.dark-mode #an_view-treatment-analysis span[style*="background: #fff"],
+body.dark-mode #an_view-bi span[style*="background: white"],
+body.dark-mode #an_view-bi span[style*="background:white"],
+body.dark-mode #an_view-bi span[style*="background:#fff"],
+body.dark-mode #an_view-bi span[style*="background: #fff"],
+body.dark-mode #an_view-costs span[style*="background: white"],
+body.dark-mode #an_view-costs span[style*="background:white"],
+body.dark-mode #an_view-costs span[style*="background:#fff"],
+body.dark-mode #an_view-costs span[style*="background: #fff"],
+body.dark-mode #analiza-konsultacji span[style*="background: white"],
+body.dark-mode #analiza-konsultacji span[style*="background:white"],
+body.dark-mode #analiza-konsultacji span[style*="background:#fff"],
+body.dark-mode #analiza-konsultacji span[style*="background: #fff"] {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+/* Białe chipsy/spany wewnątrz analitycznych sekcji — wymuś ciemny tekst
+   gdy parent zmienia tło, by uniknąć "biały na białym" */
+body.dark-mode div[id^="an_view-"] span.qty-badge,
+body.dark-mode div[id^="akon_view-"] span.qty-badge,
+body.dark-mode #analiza-konsultacji span.qty-badge,
+body.dark-mode div[id^="an_view-"] .badge-status,
+body.dark-mode div[id^="akon_view-"] .badge-status,
+body.dark-mode #analiza-konsultacji .badge-status {
+    color: #f8fafc !important;
+}
+
+/* Generic: cokolwiek z białym tłem inline — wymuś ciemny tekst we wszystkich
+   inline-children (override niewidocznego białego tekstu na białym chip) */
+body.dark-mode div[style*="background: white"] *[style*="background:white"],
+body.dark-mode div[style*="background:white"] *[style*="background:white"],
+body.dark-mode div[style*="background: white"] *[style*="background:#fff"],
+body.dark-mode div[style*="background:white"] *[style*="background:#fff"],
+body.dark-mode div[style*="background: white"] *[style*="background:#ffffff"],
+body.dark-mode div[style*="background:white"] *[style*="background:#ffffff"] {
+    background: #f8fafc !important;
+    color: #1e293b !important;
+}
+
+/* Ciemne karty (var(--an-card) = #1e293b w dark) — wymuś jasny tekst potomków
+   z inline ciemnym kolorem (color:#1e293b/#0f172a/#111/#111827/#374151 → biały) */
+body.dark-mode div[id^="an_view-"] [style*="color:#1e293b"],
+body.dark-mode div[id^="an_view-"] [style*="color: #1e293b"],
+body.dark-mode div[id^="an_view-"] [style*="color:#0f172a"],
+body.dark-mode div[id^="an_view-"] [style*="color: #0f172a"],
+body.dark-mode div[id^="an_view-"] [style*="color:#111"],
+body.dark-mode div[id^="an_view-"] [style*="color: #111"],
+body.dark-mode div[id^="an_view-"] [style*="color:#111827"],
+body.dark-mode div[id^="an_view-"] [style*="color: #111827"],
+body.dark-mode div[id^="an_view-"] [style*="color:#374151"],
+body.dark-mode div[id^="an_view-"] [style*="color: #374151"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#1e293b"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #1e293b"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#0f172a"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #0f172a"],
+body.dark-mode #analiza-konsultacji [style*="color:#1e293b"],
+body.dark-mode #analiza-konsultacji [style*="color: #1e293b"] {
+    color: #f8fafc !important;
+}
+
+/* Średnie szare (#475569/#334155/#64748b) → jasny szary */
+body.dark-mode div[id^="an_view-"] [style*="color:#475569"],
+body.dark-mode div[id^="an_view-"] [style*="color: #475569"],
+body.dark-mode div[id^="an_view-"] [style*="color:#334155"],
+body.dark-mode div[id^="an_view-"] [style*="color: #334155"],
+body.dark-mode div[id^="an_view-"] [style*="color:#64748b"],
+body.dark-mode div[id^="an_view-"] [style*="color: #64748b"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#475569"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #475569"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#64748b"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #64748b"],
+body.dark-mode #analiza-konsultacji [style*="color:#475569"],
+body.dark-mode #analiza-konsultacji [style*="color: #475569"] {
+    color: #cbd5e1 !important;
+}
 </style>
 </head>
 <body>
