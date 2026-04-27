@@ -3790,6 +3790,96 @@ body.dark-mode #an_view-bi [style*="color: #059669"],
 body.dark-mode #an_view-bi [style*="color:#059669"] {
     color: #5dd599 !important;
 }
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Zebranie / Odprawa (#odprawa)
+   Tła stref, lista, przycisk Generuj, tytuły
+══════════════════════════════════════════════ */
+
+/* Przycisk Generuj — fioletowy akcent, nie zlewa się z tłem karty */
+body.dark-mode #odp_btn_gen,
+body.dark-mode #odp_btn_gen.action-btn-light {
+    background: #8b5cf6 !important;
+    color: #fff !important;
+    border-color: #8b5cf6 !important;
+}
+body.dark-mode #odp_btn_gen:hover {
+    background: #7c3aed !important;
+}
+
+/* odp-zone z inline background (bez spacji po :) — globalna reguła
+   matchuje tylko ze spacją; dodajemy warianty bez spacji */
+body.dark-mode #odprawa div[style*="background:#f8fafc"],
+body.dark-mode #odprawa div[style*="background: #f8fafc"] {
+    background: #243044 !important;
+    border-color: #334155 !important;
+}
+/* Ranking Kosmetyków — pastelowy fiolet #fdf4ff */
+body.dark-mode #odprawa div[style*="background:#fdf4ff"],
+body.dark-mode #odprawa div[style*="background: #fdf4ff"] {
+    background: rgba(232,121,249,.12) !important;
+    border-color: rgba(232,121,249,.35) !important;
+}
+/* KPI box PRZYCHÓD CAŁKOWITY — pastelowy fiolet #f5f3ff */
+body.dark-mode #odprawa div[style*="background:#f5f3ff"],
+body.dark-mode #odprawa div[style*="background: #f5f3ff"] {
+    background: rgba(124,58,237,.18) !important;
+    border-color: rgba(124,58,237,.4) !important;
+}
+
+/* odp-list — wymuś jasny kolor tekstu (nadpisuje #334155 z .odp-list global) */
+body.dark-mode #odprawa .odp-list { color: #cbd5e1 !important; }
+body.dark-mode #odprawa .odp-list li,
+body.dark-mode #odprawa .odp-list li * { color: #cbd5e1 !important; }
+body.dark-mode #odprawa .odp-list strong { color: #f8fafc !important; }
+
+/* odp-zone-title default (bez inline color) — jasny */
+body.dark-mode #odprawa .odp-zone-title { color: #f8fafc !important; }
+
+/* odp-zone-title z bordowym akcentem (color:#a21caf — Ranking Kosmetyków,
+   color:#b91c1c — Śpiące zabiegi) → jaśniejsze warianty */
+body.dark-mode #odprawa .odp-zone-title[style*="color:#a21caf"],
+body.dark-mode #odprawa .odp-zone-title[style*="color: #a21caf"] {
+    color: #e879f9 !important;
+}
+body.dark-mode #odprawa .odp-zone-title[style*="color:#b91c1c"],
+body.dark-mode #odprawa .odp-zone-title[style*="color: #b91c1c"] {
+    color: #fca5a5 !important;
+}
+
+/* Wartości w stylach inline — różowe/fioletowe ciemne → jaśniejsze */
+body.dark-mode #odprawa [style*="color:#a21caf"],
+body.dark-mode #odprawa [style*="color: #a21caf"] { color: #e879f9 !important; }
+body.dark-mode #odprawa [style*="color:#86198f"],
+body.dark-mode #odprawa [style*="color: #86198f"] { color: #f0abfc !important; }
+body.dark-mode #odprawa [style*="color:#7c3aed"],
+body.dark-mode #odprawa [style*="color: #7c3aed"] { color: #c4b5fd !important; }
+body.dark-mode #odprawa [style*="color:#2563eb"],
+body.dark-mode #odprawa [style*="color: #2563eb"] { color: #93b9ff !important; }
+body.dark-mode #odprawa [style*="color:#db2777"],
+body.dark-mode #odprawa [style*="color: #db2777"] { color: #f490b3 !important; }
+body.dark-mode #odprawa [style*="color:#475569"],
+body.dark-mode #odprawa [style*="color: #475569"] { color: #cbd5e1 !important; }
+body.dark-mode #odprawa [style*="color:#64748b"],
+body.dark-mode #odprawa [style*="color: #64748b"] { color: #cbd5e1 !important; }
+
+/* Border-top w liście odp_kon_emp_list (#dbeafe) → ciemny */
+body.dark-mode #odprawa ul[style*="border-top:1px solid #dbeafe"],
+body.dark-mode #odprawa ul[style*="border-top: 1px solid #dbeafe"] {
+    border-top-color: rgba(59,130,246,.35) !important;
+}
+
+/* Box VIP (background:#1e293b inline) — już ciemny, tylko upewnij się że tekst jasny */
+body.dark-mode #odprawa div[style*="background:#1e293b"],
+body.dark-mode #odprawa div[style*="background: #1e293b"] {
+    background: #0f172a !important;
+}
+body.dark-mode #odprawa div[style*="background:#1e293b"] * {
+    color: #f8fafc !important;
+}
+body.dark-mode #odprawa div[style*="background:#1e293b"] [style*="color:#fbbf24"] {
+    color: #fbbf24 !important;
+}
 </style>
 </head>
 <body>
