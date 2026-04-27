@@ -3405,20 +3405,79 @@ body.dark-mode #analiza-konsultacji [style*="color: #1e293b"] {
     color: #f8fafc !important;
 }
 
-/* Średnie szare (#475569/#334155/#64748b) → jasny szary */
+/* Średnie szare (#475569/#334155/#64748b/#555/#666/#6b7280) → jasny szary */
 body.dark-mode div[id^="an_view-"] [style*="color:#475569"],
 body.dark-mode div[id^="an_view-"] [style*="color: #475569"],
 body.dark-mode div[id^="an_view-"] [style*="color:#334155"],
 body.dark-mode div[id^="an_view-"] [style*="color: #334155"],
 body.dark-mode div[id^="an_view-"] [style*="color:#64748b"],
 body.dark-mode div[id^="an_view-"] [style*="color: #64748b"],
+body.dark-mode div[id^="an_view-"] [style*="color:#555"],
+body.dark-mode div[id^="an_view-"] [style*="color: #555"],
+body.dark-mode div[id^="an_view-"] [style*="color:#666"],
+body.dark-mode div[id^="an_view-"] [style*="color: #666"],
+body.dark-mode div[id^="an_view-"] [style*="color:#6b7280"],
+body.dark-mode div[id^="an_view-"] [style*="color: #6b7280"],
 body.dark-mode div[id^="akon_view-"] [style*="color:#475569"],
 body.dark-mode div[id^="akon_view-"] [style*="color: #475569"],
 body.dark-mode div[id^="akon_view-"] [style*="color:#64748b"],
 body.dark-mode div[id^="akon_view-"] [style*="color: #64748b"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#555"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #555"],
+body.dark-mode div[id^="akon_view-"] [style*="color:#666"],
+body.dark-mode div[id^="akon_view-"] [style*="color: #666"],
 body.dark-mode #analiza-konsultacji [style*="color:#475569"],
 body.dark-mode #analiza-konsultacji [style*="color: #475569"] {
     color: #cbd5e1 !important;
+}
+
+/* ══════════════════════════════════════════════
+   DARK MODE — chipsy w Analizie (background:#f3f4f6 / #fef3c7)
+   Pozostawiamy jasne tło chipa, wymuszamy CIEMNY tekst
+   (rozwiązuje "biały na białym chipie" w Top 5 Pracownik itd.)
+══════════════════════════════════════════════ */
+body.dark-mode div[id^="an_view-"] span[style*="background:#f3f4f6"],
+body.dark-mode div[id^="an_view-"] span[style*="background: #f3f4f6"],
+body.dark-mode div[id^="akon_view-"] span[style*="background:#f3f4f6"],
+body.dark-mode div[id^="akon_view-"] span[style*="background: #f3f4f6"],
+body.dark-mode #analiza-konsultacji span[style*="background:#f3f4f6"] {
+    color: #1e293b !important;
+}
+body.dark-mode div[id^="an_view-"] span[style*="background:#fef3c7"],
+body.dark-mode div[id^="an_view-"] span[style*="background: #fef3c7"],
+body.dark-mode div[id^="akon_view-"] span[style*="background:#fef3c7"],
+body.dark-mode div[id^="akon_view-"] span[style*="background: #fef3c7"] {
+    color: #b45309 !important;
+}
+body.dark-mode div[id^="an_view-"] span[style*="background:#dcfce7"],
+body.dark-mode div[id^="akon_view-"] span[style*="background:#dcfce7"] {
+    color: #166534 !important;
+}
+body.dark-mode div[id^="an_view-"] span[style*="background:#fee2e2"],
+body.dark-mode div[id^="akon_view-"] span[style*="background:#fee2e2"],
+body.dark-mode #analiza-konsultacji span[style*="background:#fee2e2"] {
+    color: #991b1b !important;
+}
+
+/* ══════════════════════════════════════════════
+   DARK MODE — Magazyn: wiersze rozwiniętych partii
+   Selektor po klasie (mag-group-N) bo JS toggle zmienia format inline-style
+══════════════════════════════════════════════ */
+body.dark-mode #tabela tr[class^="mag-group-"] {
+    background: #243044 !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode #tabela tr[class^="mag-group-"] td {
+    color: #f8fafc !important;
+    border-bottom-color: #334155 !important;
+}
+body.dark-mode #tabela tr[class^="mag-group-"] td span,
+body.dark-mode #tabela tr[class^="mag-group-"] td strong,
+body.dark-mode #tabela tr[class^="mag-group-"] td small {
+    color: #cbd5e1 !important;
+}
+body.dark-mode #tabela tr[class^="mag-group-"] td strong[style*="color:#475569"] {
+    color: #f8fafc !important;
 }
 </style>
 </head>
