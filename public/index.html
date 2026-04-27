@@ -8749,7 +8749,7 @@ function zaladujPulpit() {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
             } else {
                 const rows = last5.map(r => {
-                    const t = r.godzina || '—';
+                    const t = r.godzina ? utcTimeToLocal(r.godzina) : '—';
                     const klient = escHtml(r.klient || '—');
                     const zabieg = escHtml(r.zabieg || '—');
                     const kwota = parseFloat(r.kwota) || 0;
@@ -12335,17 +12335,22 @@ function przywrocGrupowo(idsStr) {
 
 // --- NOWA LOGIKA PODSUMOWANIA (Z WYMUSZENIEM WYGLĄDU) ---
 
-// Helper: konwertuje godzinę UTC "HH:MM" (z bazy danych) na czas lokalny przeglądarki.
-// MySQL zwraca czas zapisany w UTC, doliczamy offset strefy przeglądarki
-// (CET +1 zimą, CEST +2 latem — toLocaleTimeString() respektuje DST).
+// Helper: koryguje godzinę "HH:MM" z bazy danych.
+// Ustalono empirycznie: czas w bazie jest zapisywany w strefie CET (UTC+1)
+// BEZ uwzględnienia DST. Latem (CEST) trzeba dodać +1h, zimą +0h —
+// żeby pokazany czas był zgodny z faktycznym lokalnym (zegarem usera).
 function utcTimeToLocal(g) {
     if (!g || !g.includes(':')) return g || '--:--';
     const [h, m] = g.split(':');
-    // Używamy aktualnej daty zamiast 2000-01-01, żeby DST był zgodny
-    // z dniem w którym dane są oglądane (a nie zawsze zimą).
-    const today = new Date();
-    const d = new Date(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate(), +h, +m));
-    return d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
+    // Detekcja DST: porównaj offset stycznia (zima, bez DST) z dziś.
+    // Jeśli aktualny offset jest "mniejszy" (czyli więcej godzin do UTC),
+    // to znaczy DST jest aktywny.
+    const now = new Date();
+    const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
+    const isDST = now.getTimezoneOffset() < jan;
+    let hh = parseInt(h, 10) + (isDST ? 1 : 0);
+    if (hh >= 24) hh -= 24;
+    return String(hh).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
 function zaladujPodsumowanieDnia() {
