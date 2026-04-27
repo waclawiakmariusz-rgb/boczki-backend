@@ -37,7 +37,8 @@
       border-bottom: 1px solid var(--m-sand);
       position: sticky; top: 0; z-index: 100;
     }
-    .logo { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; color: var(--m-ink); text-decoration: none; letter-spacing: .06em; }
+    .logo { display: inline-flex; align-items: center; text-decoration: none; }
+    .logo img { height: 36px; width: auto; display: block; }
     nav ul { display: flex; gap: 32px; list-style: none; align-items: center; }
     nav ul a { text-decoration: none; font-size: .88rem; color: var(--m-muted); transition: color .2s; }
     nav ul a:hover { color: var(--m-ink); }
@@ -203,7 +204,7 @@
 <body>
 
 <nav style="position:relative;">
-  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="logo" href="/zamow.html"><img src="img/estelio-logo.png" alt="Estelio"></a>
   <ul>
     <li><a href="/zamow.html">Strona główna</a></li>
     <li><a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a></li>
