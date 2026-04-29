@@ -45,6 +45,57 @@ module.exports = (db) => {
     );
   }
 
+  // ==========================================
+  // Helper: parsuj pozycję sprzedaży kosmetyku
+  // Format: zabieg = "Kosmetyk: NAZWA", szczegoly = "X szt." (lub "X,5 szt.")
+  // Zwraca {nazwa, ilosc} lub null jeśli to nie kosmetyk.
+  // ==========================================
+  function parsujKosmetyk(zabieg, szczegoly) {
+    const z = String(zabieg || '');
+    const s = String(szczegoly || '');
+    if (!z.toLowerCase().startsWith('kosmetyk:')) return null;
+    const nazwa = z.replace(/^[Kk]osmetyk:\s*/, '').trim();
+    const m = s.match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+    const il = m ? parseFloat(m[1].replace(',', '.')) : 0;
+    if (!nazwa || !(il > 0)) return null;
+    return { nazwa, ilosc: il };
+  }
+
+  // ==========================================
+  // Helper: przywróć ilość kosmetyku do magazynu (dodaje do najstarszej partii FIFO)
+  // Używany przy delete_sale i edit_sale gdy zmniejsza się ilość lub zmienia produkt.
+  // ==========================================
+  function przywrocDoMagazynu(tenant_id, nazwa, ilosc, pracownik, callback) {
+    const il = parseFloat(String(ilosc).replace(',', '.'));
+    if (!nazwa || !(il > 0)) return callback(null);
+    db.query(
+      `SELECT id, ilosc FROM Magazyn WHERE tenant_id = ? AND nazwa_produktu = ? AND kategoria = 'Detal' ORDER BY data_waznosci ASC LIMIT 1`,
+      [tenant_id, nazwa],
+      (err, rows) => {
+        if (err) return callback(err);
+        if (rows.length === 0) {
+          // Brak partii — nie tworzymy nowej (wymagałoby data_waznosci, cen, typu).
+          // Logujemy ostrzeżenie żeby admin mógł ręcznie utworzyć partię.
+          zapiszLog(tenant_id, 'OSTRZEŻENIE STANU', pracownik || 'System',
+            `Nie udało się przywrócić ${il} szt. produktu "${nazwa}" — brak partii w magazynie. Dodaj partię ręcznie.`);
+          return callback(null);
+        }
+        const r = rows[0];
+        const nowa = parseFloat(r.ilosc) + il;
+        db.query(
+          `UPDATE Magazyn SET ilosc = ? WHERE tenant_id = ? AND id = ?`,
+          [nowa, tenant_id, r.id],
+          (uErr) => {
+            if (uErr) return callback(uErr);
+            zapiszLog(tenant_id, 'PRZYWRÓCENIE STANU', pracownik || 'System',
+              `${nazwa}: +${il} szt. (partia ID:${r.id}, było ${r.ilosc} → ${nowa})`);
+            callback(null);
+          }
+        );
+      }
+    );
+  }
+
   // Helper: rozlicz zadatek automatycznie
   function rozliczZadatekAutomatycznie(tenant_id, klientId, klientNazwa, kwotaDoPobrania, konkretneIdZadatku, pracownik, callback) {
     db.query(
@@ -326,15 +377,74 @@ module.exports = (db) => {
           if (String(old.szczegoly) !== String(d.szczegoly)) zmiany.push(`Szczegóły: ${old.szczegoly} -> ${d.szczegoly}`);
           if (String(old.platnosc) !== String(d.platnosc)) zmiany.push(`Płatność: ${old.platnosc} -> ${d.platnosc}`);
 
-          db.query(
-            `UPDATE Sprzedaz SET klient = ?, zabieg = ?, sprzedawca = ?, kwota = ?, komentarz = ?, szczegoly = ?, platnosc = ?, id_klienta = ? WHERE tenant_id = ? AND id = ?`,
-            [d.klient, d.zabieg_nazwa, newSprzedawca, _kwotaEdit, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
-            (err2) => {
-              if (err2) return res.json({ status: 'error', message: err2.message });
-              zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
-              return res.json({ status: 'success', message: 'Zaktualizowano transakcję!' });
-            }
-          );
+          // Magazyn — różnicowa korekta gdy edycja dotyczy kosmetyku
+          const stary = parsujKosmetyk(old.zabieg, old.szczegoly);
+          const nowy = parsujKosmetyk(d.zabieg_nazwa, d.szczegoly);
+
+          // Pre-check: czy nowa pozycja kosmetyku ma pokrycie w magazynie
+          const sprawdzDostepnoscNowego = (cb) => {
+            if (!nowy) return cb(null);
+            // Ten sam produkt, mniejsza/równa ilość — bez sprawdzania (zwracamy nadmiar)
+            if (stary && stary.nazwa === nowy.nazwa && nowy.ilosc <= stary.ilosc) return cb(null);
+            // Inaczej musimy zdjąć dodatkową ilość (różnicę lub całość nowego produktu)
+            const doZdjecia = (stary && stary.nazwa === nowy.nazwa)
+              ? (nowy.ilosc - stary.ilosc)   // ten sam produkt, większa ilość
+              : nowy.ilosc;                  // inny produkt → cała nowa ilość
+            db.query(
+              `SELECT SUM(ilosc) AS total FROM Magazyn WHERE tenant_id = ? AND nazwa_produktu = ? AND kategoria = 'Detal' AND ilosc > 0`,
+              [tenant_id, nowy.nazwa],
+              (sErr, sRows) => {
+                if (sErr) return cb(sErr);
+                const totalDost = parseFloat((sRows[0] || {}).total || 0);
+                if (totalDost < doZdjecia) {
+                  return cb(new Error(`Za mało towaru "${nowy.nazwa}" w magazynie (dostępne: ${totalDost}, potrzeba: ${doZdjecia})`));
+                }
+                cb(null);
+              }
+            );
+          };
+
+          sprawdzDostepnoscNowego((checkErr) => {
+            if (checkErr) return res.json({ status: 'error', message: checkErr.message });
+
+            db.query(
+              `UPDATE Sprzedaz SET klient = ?, zabieg = ?, sprzedawca = ?, kwota = ?, komentarz = ?, szczegoly = ?, platnosc = ?, id_klienta = ? WHERE tenant_id = ? AND id = ?`,
+              [d.klient, d.zabieg_nazwa, newSprzedawca, _kwotaEdit, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
+              (err2) => {
+                if (err2) return res.json({ status: 'error', message: err2.message });
+                zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
+
+                // Korekta magazynu — po pomyślnym UPDATE
+                const finish = () => res.json({ status: 'success', message: 'Zaktualizowano transakcję!' });
+
+                if (stary && nowy && stary.nazwa === nowy.nazwa) {
+                  // Ten sam produkt, różnica ilości
+                  const diff = nowy.ilosc - stary.ilosc;
+                  if (diff > 0) {
+                    zdejmijZeStanuFIFO(tenant_id, nowy.nazwa, diff, d.pracownik, () => finish());
+                  } else if (diff < 0) {
+                    przywrocDoMagazynu(tenant_id, nowy.nazwa, -diff, d.pracownik, () => finish());
+                  } else {
+                    finish();
+                  }
+                } else {
+                  // Zmiana produktu / typu — zwróć stary, zdejmij nowy (oba mogą być null)
+                  const krok2 = () => {
+                    if (nowy) {
+                      zdejmijZeStanuFIFO(tenant_id, nowy.nazwa, nowy.ilosc, d.pracownik, () => finish());
+                    } else {
+                      finish();
+                    }
+                  };
+                  if (stary) {
+                    przywrocDoMagazynu(tenant_id, stary.nazwa, stary.ilosc, d.pracownik, () => krok2());
+                  } else {
+                    krok2();
+                  }
+                }
+              }
+            );
+          });
         }
       );
 
@@ -342,7 +452,7 @@ module.exports = (db) => {
     } else if (action === 'delete_sale') {
       const pracownik = d.pracownik || 'Admin';
       db.query(
-        `SELECT klient, zabieg, kwota, id_zadatku, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
+        `SELECT klient, zabieg, kwota, id_zadatku, czy_rozliczone, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono transakcji o takim ID.' });
@@ -356,6 +466,12 @@ module.exports = (db) => {
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               zapiszLog(tenant_id, 'USUNIĘCIE SPRZEDAŻY', pracownik, `Klient: ${row.klient} | Usługa: ${row.zabieg} | Kwota: ${row.kwota} zł | ID: ${d.id}`);
+
+              // Przywrócenie stanu magazynu, jeśli to była sprzedaż kosmetyku
+              const kosm = parsujKosmetyk(row.zabieg, row.szczegoly);
+              if (kosm) {
+                przywrocDoMagazynu(tenant_id, kosm.nazwa, kosm.ilosc, pracownik, () => {});
+              }
 
               // Auto-zwrot zadatku
               let restoreMsg = '';
