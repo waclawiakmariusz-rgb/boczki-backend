@@ -10427,16 +10427,23 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
         if (cCialo === 0) tCialo.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zabiegów.</td></tr>";
         if (cKosm === 0) tKosm.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
 
-        // Stats bar — wykluczamy rekordy z platnosc='Portfel' żeby nie liczyć
+        // Liczba wizyt — wykluczamy rekordy z platnosc='Portfel' żeby nie liczyć
         // tej samej wizyty podwójnie (gdy klient płaci część zadatkiem,
-        // sprzedaż rozbija się na dwie pozycje: Portfel + faktyczna płatność)
+        // sprzedaż rozbija się na dwie pozycje: Portfel + faktyczna płatność).
         const zabiegi = transakcje.filter(t => {
             const n = t.zabieg.toLowerCase();
             const isProdukt = n.includes('kosmetyk') || (t.szczegoly && String(t.szczegoly).includes('szt'));
             const isPortfel = String(t.platnosc || '').toLowerCase().trim() === 'portfel';
             return !isProdukt && !isPortfel;
         });
-        const lacznaWartosc = zabiegi.reduce((s, t) => s + parseFloat(t.kwota || 0), 0);
+        // Łączna wartość — sumujemy WSZYSTKIE pozycje zabiegów (włącznie z Portfel),
+        // bo każdy wiersz w Sprzedaz to osobna kwota faktyczna (375 z zadatku + 220
+        // gotówką = 595 zł realnie wydane).
+        const zabiegiKwoty = transakcje.filter(t => {
+            const n = t.zabieg.toLowerCase();
+            return !(n.includes('kosmetyk') || (t.szczegoly && String(t.szczegoly).includes('szt')));
+        });
+        const lacznaWartosc = zabiegiKwoty.reduce((s, t) => s + parseFloat(t.kwota || 0), 0);
         const statWizyty = document.getElementById('profil-stat-wizyty');
         const statWartosc = document.getElementById('profil-stat-wartosc');
         if (statWizyty) statWizyty.textContent = zabiegi.length;
