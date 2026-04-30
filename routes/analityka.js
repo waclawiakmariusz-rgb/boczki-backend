@@ -343,6 +343,25 @@ module.exports = (db) => {
                     const wariant = String(szczegoly || '').trim();
                     e.wykonaneZabiegi.add(`${zabieg}||${wariant}`);
                   }
+
+                  // Debug log per pracownik per dzień — diagnostyka rozbieżności z Magdą
+                  if (dateObj) {
+                    const dataStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+                    let liczone, kategoria;
+                    if (isKosmetyk) {
+                      liczone = '→ KOSMETYK (osobno, nie do total)';
+                      kategoria = 'KOSMETYK';
+                    } else if (isPortfel) {
+                      liczone = '→ ✗ pomijane (Portfel)';
+                      kategoria = 'PORTFEL';
+                    } else {
+                      liczone = `→ ✓ +${splitAmount.toFixed(2)} do total`;
+                      kategoria = 'SPRZEDAŻ';
+                    }
+                    stats.debugLog.push(
+                      `${dataStr} | ${person.padEnd(12)} | ${kategoria.padEnd(10)} | ${zabieg.substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(platnosc || '').padEnd(8)} | ${liczone}`
+                    );
+                  }
                 });
               };
 
@@ -381,8 +400,17 @@ module.exports = (db) => {
                 // z normalnymi wpisami zespołowymi (3 osoby).
                 // Potwierdzone na danych Boczki: 02.03, 09.03, 02.04 — Magda
                 // pomijała wszystkie zadatki z 4+ osobami.
+                const dateObjZ = row.data_wplaty ? new Date(row.data_wplaty) : null;
+                const dataStrZ = dateObjZ
+                  ? `${dateObjZ.getFullYear()}-${String(dateObjZ.getMonth()+1).padStart(2,'0')}-${String(dateObjZ.getDate()).padStart(2,'0')}`
+                  : '????-??-??';
+
                 const PROG_GRUPOWY = 4;
                 if (count >= PROG_GRUPOWY) {
+                  // Log pomijanego zadatku grupowego
+                  stats.debugLog.push(
+                    `${dataStrZ} | (pomijany)  | ZAD-GRUPA | ${String(row.cel || row.klient || '').substring(0, 40).padEnd(40)} | ${amount.toFixed(2).padStart(8)} zł (${count}os: ${sellers.join(',')}) | ${String(row.metoda || '').padEnd(8)} | → ✗ pomijane (Reguła 2: >=4 os)`
+                  );
                   return;
                 }
 
@@ -396,6 +424,11 @@ module.exports = (db) => {
                   // Wpłata zadatku NIE liczy się do Top 5 zabiegów (to nie jest zabieg).
                   // Pozostaje w transactionsList dla pełnej historii pracownika.
                   e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
+
+                  // Debug log dla zadatku
+                  stats.debugLog.push(
+                    `${dataStrZ} | ${person.padEnd(12)} | ZADATEK    | ${String(row.cel || row.klient || '').substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(row.metoda || '').padEnd(8)} | → ✓ +${splitAmount.toFixed(2)} do total`
+                  );
                 });
               });
 
@@ -435,6 +468,16 @@ module.exports = (db) => {
                     delete e.virtualReceipts;
                     delete e._topReceipts;
                     delete e.wykonaneZabiegi;
+                  }
+
+                  // Podsumowanie miesięczne per pracownik na końcu logu
+                  // (sortowanie aktualnie chronologiczne — sumy zostaną na końcu)
+                  stats.debugLog.push('────────── SUMY MIESIĘCZNE ──────────');
+                  for (let person in empTemp) {
+                    const e = empTemp[person];
+                    stats.debugLog.push(
+                      `ZZZ-SUM | ${person.padEnd(12)} | total=${e.total.toFixed(2)} zł | zabiegi=${e.zabiegi.toFixed(2)} | kosmetyki=${e.kosmetyki.toFixed(2)} (${e.qty_kosmetyki.toFixed(0)} szt.) | transakcji=${e.transakcje.toFixed(1)}`
+                    );
                   }
 
                   stats.employeeDetails = empTemp;
