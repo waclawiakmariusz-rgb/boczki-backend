@@ -393,7 +393,8 @@ module.exports = (db) => {
                   if (!empTemp[person]) empTemp[person] = initEmp(person);
                   const e = empTemp[person];
                   e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
-                  if (!e.top['Wpłata Zadatku']) e.top['Wpłata Zadatku'] = 0; e.top['Wpłata Zadatku'] += (1 / count);
+                  // Wpłata zadatku NIE liczy się do Top 5 zabiegów (to nie jest zabieg).
+                  // Pozostaje w transactionsList dla pełnej historii pracownika.
                   e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
                 });
               });
