@@ -299,11 +299,14 @@ module.exports = (db) => {
                   if (!empTemp[person]) empTemp[person] = initEmp(person);
                   const e = empTemp[person];
 
-                  // Sumy finansowe — pomijamy dla Portfel
-                  if (!isPortfel) {
-                    e.total += splitAmount; e.transakcje += (1 / count);
-                    if (isKosmetyk) e.kosmetyki += splitAmount;
-                    else e.zabiegi += splitAmount;
+                  // REGUŁA 1 (Magda): kosmetyki NIE liczą do total/zabiegi/transakcje
+                  // pracownika — Magda traktuje je osobno (zakładka "Kosmetyki" + helpery
+                  // sprzedazBezKosmetykow). Kwota i ilość kosmetyków pozostają w
+                  // dedykowanych KPI (e.kosmetyki, e.qty_kosmetyki, e.top).
+                  if (!isPortfel && !isKosmetyk) {
+                    e.total += splitAmount;
+                    e.transakcje += (1 / count);
+                    e.zabiegi += splitAmount;
 
                     if (dateObj) {
                       const day = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
@@ -313,6 +316,11 @@ module.exports = (db) => {
                       e.virtualReceipts[receiptKey].total += splitAmount;
                       e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, '').trim());
                     }
+                  }
+
+                  // Wartość kosmetyków per pracownik — osobne KPI (nie wlicza się do total)
+                  if (!isPortfel && isKosmetyk) {
+                    e.kosmetyki += splitAmount;
                   }
 
                   // qty_kosmetyki — fizyczna ilość sprzedanych sztuk, niezależnie od metody
@@ -359,20 +367,35 @@ module.exports = (db) => {
                 if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                 const amount = parseAmount(row.kwota);
                 if (amount === 0) return;
-                stats.totalRevenue += amount; stats.count++;
-                stats.categorySplit['Zabiegi'] += amount;
+
                 const sellers = String(row.pracownicy || '').split(',').map(s => s.trim()).filter(Boolean);
                 const count = sellers.length;
-                if (count > 0) {
-                  const splitAmount = amount / count;
-                  sellers.forEach(person => {
-                    if (!empTemp[person]) empTemp[person] = initEmp(person);
-                    const e = empTemp[person];
-                    e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
-                    if (!e.top['Wpłata Zadatku']) e.top['Wpłata Zadatku'] = 0; e.top['Wpłata Zadatku'] += (1 / count);
-                    e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
-                  });
+                if (count === 0) return;
+
+                // REGUŁA 2: zadatki gdzie liczba pracowników >= 4 są pomijane
+                // per pracownik. Tak duża liczba osób na jednym zadatku zwykle
+                // oznacza wpis grupowy (konsultacja reklamowa / Booksy reception /
+                // wpłata online) — nie zaliczany indywidualnie pracownikom.
+                // W typowym salonie (1-2 osoby na transakcję) reguła nigdy się
+                // nie aktywuje. Próg jest celowo wysoki (4) żeby nie kolidował
+                // z normalnymi wpisami zespołowymi (3 osoby).
+                // Potwierdzone na danych Boczki: 02.03, 09.03, 02.04 — Magda
+                // pomijała wszystkie zadatki z 4+ osobami.
+                const PROG_GRUPOWY = 4;
+                if (count >= PROG_GRUPOWY) {
+                  return;
                 }
+
+                stats.totalRevenue += amount; stats.count++;
+                stats.categorySplit['Zabiegi'] += amount;
+                const splitAmount = amount / count;
+                sellers.forEach(person => {
+                  if (!empTemp[person]) empTemp[person] = initEmp(person);
+                  const e = empTemp[person];
+                  e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
+                  if (!e.top['Wpłata Zadatku']) e.top['Wpłata Zadatku'] = 0; e.top['Wpłata Zadatku'] += (1 / count);
+                  e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
+                });
               });
 
               // Pobierz pełną listę zabiegów z tabeli Uslugi — dla worstTreatments
