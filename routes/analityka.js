@@ -30,6 +30,7 @@ module.exports = (db) => {
     if (s.includes('gotówka') || s.includes('gotowka')) return 'Gotówka';
     if (s.includes('karta') || s.includes('terminal')) return 'Karta';
     if (s.includes('przelew') || s.includes('tpay')) return 'Przelew';
+    if (s.includes('tubapay') || s.includes('tuba')) return 'TubaPay';
     if (s.includes('mediraty') || s.includes('raty')) return 'MediRaty';
     return 'Inne';
   };
@@ -240,11 +241,11 @@ module.exports = (db) => {
       const selectedMonth = d.month;
       // Sprzedaż główna
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
         [tenant_id, selectedMonth],
         (err1, sprzedaz) => {
           db.query(
-            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ?`,
+            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
             [tenant_id, selectedMonth],
             (err2, zadatki) => {
               let stats = {
@@ -382,7 +383,7 @@ module.exports = (db) => {
                 const status = String(row.status || '').toUpperCase();
                 const typ = String(row.typ || '').toUpperCase();
                 const metoda = String(row.metoda || '').toLowerCase();
-                if (status === 'USUNIĘTY' || status === 'SCALONY' || typ !== 'WPŁATA') return;
+                if ((status !== 'AKTYWNY' && status !== '') || typ !== 'WPŁATA') return;
                 if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                 const amount = parseAmount(row.kwota);
                 if (amount === 0) return;
@@ -489,10 +490,11 @@ module.exports = (db) => {
       pobierzKoszt(tenant_id, targetMonth, (costs) => {
         let report = {
           total: 0, costs, profit: 0,
-          payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 },
+          payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 },
           daily: {}, topTreatments: {}, worstTreatments: [], topEmployees: {},
           chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: [],
-          _mediRatyClients: new Set()
+          _mediRatyClients: new Set(),
+          _tubaPayClients: new Set()
         };
 
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
@@ -522,7 +524,8 @@ module.exports = (db) => {
                 const method = classifyPayment(row.platnosc);
                 report.total += amount; report.payments[method] += amount;
                 if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
-                if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                if (method === 'TubaPay' && row.klient) report._tubaPayClients.add(String(row.klient).trim().toLowerCase());
+                if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                 report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                 const rawSellers = String(row.sprzedawca || '');
                 if (rawSellers) {
@@ -553,7 +556,8 @@ module.exports = (db) => {
                     const day = String(dateObj.getDate()).padStart(2, '0');
                     report.total += amount; report.payments[method] += amount;
                     if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
-                    if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                    if (method === 'TubaPay' && row.klient) report._tubaPayClients.add(String(row.klient).trim().toLowerCase());
+                    if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                     report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                   }
                   if (compareMonth && m === compareMonth) report.compareTotal += amount;
@@ -576,7 +580,7 @@ module.exports = (db) => {
                         const method = classifyPayment(metoda);
                         const day = String(dateObj.getDate()).padStart(2, '0');
                         report.total += amount; report.payments[method] += amount;
-                        if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                        if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                         report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                       }
                       if (compareMonth && m === compareMonth) report.compareTotal += amount;
@@ -596,7 +600,9 @@ module.exports = (db) => {
                     report.topTreatments = Object.entries(report.topTreatments).sort((a, b) => b[1] - a[1]).slice(0, 6);
                     report.topEmployees = Object.entries(report.topEmployees).sort((a, b) => b[1] - a[1]).slice(0, 4);
                     report.mediRatyCount = report._mediRatyClients.size;
+                    report.tubaPayCount = report._tubaPayClients.size;
                     delete report._mediRatyClients;
+                    delete report._tubaPayClients;
 
                     return res.json({ status: 'success', data: report });
                   }

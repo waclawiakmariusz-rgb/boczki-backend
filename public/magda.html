@@ -228,6 +228,7 @@
     .pay-card.karta    { background: #eff6ff; } .pay-card.karta::before    { background: #3b82f6; }
     .pay-card.blik     { background: #fff7ed; } .pay-card.blik::before     { background: #f59e0b; }
     .pay-card.mediraty { background: var(--rose-light); } .pay-card.mediraty::before { background: var(--rose); }
+    .pay-card.tubapay  { background: #f0fdfa; } .pay-card.tubapay::before  { background: #14b8a6; }
     .pay-card.inne     { background: var(--cream); } .pay-card.inne::before { background: var(--gray-400); }
     .pay-card-label {
       font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
@@ -237,6 +238,7 @@
     .pay-card.karta    .pay-card-label { color: #1e40af; }
     .pay-card.blik     .pay-card-label { color: #92400e; }
     .pay-card.mediraty .pay-card-label { color: var(--rose-dark); }
+    .pay-card.tubapay  .pay-card-label { color: #115e59; }
     .pay-card.inne     .pay-card-label { color: var(--gray-600); }
     .pay-card-kwota { font-size: 1.05rem; font-weight: 800; color: var(--gray-800); }
     .pay-card-count { font-size: 0.75rem; color: var(--gray-400); }
@@ -838,6 +840,7 @@ const PAY_CONFIG = [
   { key: 'karta',    label: 'Karta',      cls: 'karta',    match: v => /karta|card/i.test(v) },
   { key: 'blik',     label: 'BLIK',       cls: 'blik',     match: v => /blik/i.test(v) },
   { key: 'mediraty', label: 'Mediraty',   cls: 'mediraty', match: v => /medi/i.test(v) },
+  { key: 'tubapay',  label: 'TubaPay 0%', cls: 'tubapay',  match: v => /tuba/i.test(v) },
 ];
 
 function classifyPayment(val) {
