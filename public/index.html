@@ -5962,6 +5962,32 @@ ANALIZA MANAGER
                 </details>
             </div>
 
+            <div id="an_emp-debug-section" class="chart-box" style="display:none; margin-top:20px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
+                    <h6 style="margin:0; font-size:16px; color:#475569;">🔍 Lista transakcji pracownika (diagnostyka)</h6>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="an_emp-debug-filter" placeholder="🔎 filtr (np. data, klient, zabieg)" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; width:260px;">
+                        <button onclick="an_kopiujLogPracownika()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">📋 Kopiuj</button>
+                    </div>
+                </div>
+                <div style="max-height:400px; overflow-y:auto; background:#fafafa; border-radius:8px; padding:8px;">
+                    <table id="an_emp-debug-table" style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Consolas','Monaco',monospace;">
+                        <thead style="position:sticky; top:0; background:#e2e8f0; z-index:1;">
+                            <tr>
+                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Data</th>
+                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Typ</th>
+                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Pozycja</th>
+                                <th style="padding:6px 8px; text-align:right; border-bottom:2px solid #cbd5e1;">Udział</th>
+                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Płatność</th>
+                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Wpływ</th>
+                            </tr>
+                        </thead>
+                        <tbody id="an_emp-debug-tbody"></tbody>
+                        <tfoot id="an_emp-debug-tfoot" style="font-weight:700;"></tfoot>
+                    </table>
+                </div>
+            </div>
+
             <div class="section-title">📊 Ranking Zespołu</div>
             <div class="chart-box">
                 <canvas id="an_globalChart" height="100"></canvas>
@@ -16580,11 +16606,16 @@ if (inputNazwaCheck) {
 
             if(!name || !an_globalData || !an_globalData.employeeDetails[name]) {
                 section.style.display = 'none';
+                const dbg = document.getElementById('an_emp-debug-section');
+                if (dbg) dbg.style.display = 'none';
                 return;
             }
 
             const emp = an_globalData.employeeDetails[name];
             section.style.display = 'block';
+
+            // Diagnostyka — lista transakcji wybranego pracownika
+            an_renderDebugLog(name);
 
             document.getElementById('an_emp-zabiegi').innerText = an_formatPLN(emp.zabiegi);
             document.getElementById('an_emp-kosmetyki').innerText = an_formatPLN(emp.kosmetyki);
@@ -16680,6 +16711,97 @@ if (inputNazwaCheck) {
                     });
                 }
             }
+        }
+
+        // ── DEBUG LOG: lista transakcji per wybrany pracownik ──
+        // Backend zwraca data.debugLog (tablica stringów). Każdy wpis ma format:
+        // "YYYY-MM-DD | Imię | TYP | Pozycja | kwota zł (z X/Yos) | metoda | wpływ"
+        let an_emp_debug_currentName = '';
+        function an_renderDebugLog(name) {
+            const sec = document.getElementById('an_emp-debug-section');
+            const tbody = document.getElementById('an_emp-debug-tbody');
+            const tfoot = document.getElementById('an_emp-debug-tfoot');
+            if (!sec || !tbody || !tfoot) return;
+
+            const logs = (an_globalData && an_globalData.debugLog) ? an_globalData.debugLog : [];
+            if (!logs.length) {
+                sec.style.display = 'none';
+                return;
+            }
+
+            an_emp_debug_currentName = name;
+            sec.style.display = '';
+
+            const filterInput = document.getElementById('an_emp-debug-filter');
+            const txt = filterInput ? filterInput.value.toLowerCase().trim() : '';
+
+            tbody.innerHTML = '';
+            tfoot.innerHTML = '';
+
+            let sumaLiczona = 0;
+            let liczbaWpisow = 0;
+            const matched = [];
+
+            logs.forEach(line => {
+                if (line.startsWith('ZZZ-SUM') || line.startsWith('────')) return;
+                const parts = line.split('|').map(s => s.trim());
+                if (parts.length < 7) return;
+                const [data, kto, kategoria, pozycja, kwotaStr, platnosc, wplyw] = parts;
+
+                if (kto !== name && !(kto === '(pomijany)' && line.toLowerCase().includes(name.toLowerCase()))) return;
+                if (txt && !line.toLowerCase().includes(txt)) return;
+
+                matched.push({ data, kategoria, pozycja, kwotaStr, platnosc, wplyw });
+                liczbaWpisow++;
+                if (wplyw && wplyw.startsWith('→ ✓')) {
+                    const m = kwotaStr.match(/(\d+(?:[.,]\d+)?)/);
+                    if (m) sumaLiczona += parseFloat(m[1].replace(',', '.'));
+                }
+            });
+
+            if (matched.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="padding:20px; text-align:center; color:#94a3b8;">Brak wpisów dla tego pracownika</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = matched.map(r => {
+                let bg = '', icon = '';
+                if (r.kategoria === 'KOSMETYK') { bg = 'background:#fef3c7;'; icon = '💄 '; }
+                else if (r.kategoria === 'PORTFEL') { bg = 'background:#fee2e2;'; icon = '👛 '; }
+                else if (r.kategoria === 'ZAD-GRUPA') { bg = 'background:#fce7f3;'; icon = '🚫 '; }
+                else if (r.kategoria === 'ZADATEK') { bg = 'background:#dcfce7;'; icon = '💰 '; }
+                else { icon = '🛍️ '; }
+                return `<tr style="${bg} border-bottom:1px solid #e2e8f0;">
+                    <td style="padding:5px 8px; white-space:nowrap;">${escHtml(r.data)}</td>
+                    <td style="padding:5px 8px; white-space:nowrap;">${icon}${escHtml(r.kategoria)}</td>
+                    <td style="padding:5px 8px;">${escHtml(r.pozycja)}</td>
+                    <td style="padding:5px 8px; text-align:right; white-space:nowrap; font-weight:600;">${escHtml(r.kwotaStr)}</td>
+                    <td style="padding:5px 8px;">${escHtml(r.platnosc)}</td>
+                    <td style="padding:5px 8px; font-size:11px;">${escHtml(r.wplyw)}</td>
+                </tr>`;
+            }).join('');
+
+            tfoot.innerHTML = `<tr style="background:#f1f5f9;">
+                <td colspan="3" style="padding:10px 8px; text-align:right;">Suma wpisów liczonych do total:</td>
+                <td style="padding:10px 8px; text-align:right; color:#16a34a;">${sumaLiczona.toFixed(2)} zł</td>
+                <td colspan="2" style="padding:10px 8px; color:#64748b;">${liczbaWpisow} wpis(ów)</td>
+            </tr>`;
+        }
+        document.addEventListener('input', (e) => {
+            if (e.target && e.target.id === 'an_emp-debug-filter' && an_emp_debug_currentName) {
+                an_renderDebugLog(an_emp_debug_currentName);
+            }
+        });
+        function an_kopiujLogPracownika() {
+            const tbody = document.getElementById('an_emp-debug-tbody');
+            if (!tbody) return;
+            const rows = Array.from(tbody.querySelectorAll('tr')).map(tr =>
+                Array.from(tr.querySelectorAll('td')).map(td => td.innerText.trim()).join('\t')
+            ).join('\n');
+            if (!rows) return;
+            navigator.clipboard.writeText(rows).then(() => {
+                alert('Skopiowano do schowka — wklej w Excelu lub do porównania z Magdą.');
+            }).catch(() => alert('Nie udało się skopiować.'));
         }
 
         function an_zaladujPodsumowanieDnia() {
