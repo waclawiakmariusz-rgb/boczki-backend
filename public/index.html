@@ -5481,7 +5481,6 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
     <div class="ds-section-head" style="display:flex; justify-content:space-between; align-items:center;">
       <h3 style="margin:0;">📋 <span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span></h3>
-      <span class="ds-pink-link" onclick="pokaz('zadania',null)" style="cursor:pointer;">Zobacz wszystkie →</span>
     </div>
     <div id="ds-zadania-list" style="margin-top:12px;">
       <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
@@ -11033,9 +11032,28 @@ function pokaz(id, b) {
 } */
 /*
 function pokaz(id, b) {
+    // --- 0. RBAC GUARD — Analiza tylko dla admin/megaadmin/manager ---
+    // Defense in depth: nawet jeśli sidebar ukryty, ktoś może wywołać pokaz()
+    // bezpośrednio (link, console, kod widgetu). Twarda blokada na froncie.
+    const __ANALIZA_RESTRICTED = new Set([
+        'summary', 'monthly_report', 'dashboard',
+        'yearly', 'costs', 'treatment_analysis', 'bi', 'zadania',
+        'analiza-konsultacji', 'odprawa',
+        'widok-pracownicy-targety', 'widok-targety',
+        'rap_magazyn', 'rap_report'
+    ]);
+    if (__ANALIZA_RESTRICTED.has(id)) {
+        const __rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+        if (!['admin', 'megaadmin', 'manager'].includes(__rola)) {
+            console.warn('[RBAC] Zablokowano dostęp do', id, '— rola:', __rola);
+            alert('Brak uprawnień. Sekcje analityczne są dostępne tylko dla administratora i managera.');
+            return;
+        }
+    }
+
     // --- 1. LOGOWANIE NAWIGACJI ---
-    console.groupEnd(); 
-    console.group(`📍 NAWIGACJA: ${id.toUpperCase()}`); 
+    console.groupEnd();
+    console.group(`📍 NAWIGACJA: ${id.toUpperCase()}`);
     console.log(`%c Kliknięto sekcję: ${id}`, 'color: #d63384; font-weight: bold;');
 
     // --- 2. ZAKRYWANIE WSZYSTKIEGO ---
@@ -11163,9 +11181,28 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
 } */
 
 function pokaz(id, b) {
+    // --- 0. RBAC GUARD — Analiza tylko dla admin/megaadmin/manager ---
+    // Defense in depth: nawet jeśli sidebar ukryty, ktoś może wywołać pokaz()
+    // bezpośrednio (link, console, kod widgetu). Twarda blokada na froncie.
+    const __ANALIZA_RESTRICTED = new Set([
+        'summary', 'monthly_report', 'dashboard',
+        'yearly', 'costs', 'treatment_analysis', 'bi', 'zadania',
+        'analiza-konsultacji', 'odprawa',
+        'widok-pracownicy-targety', 'widok-targety',
+        'rap_magazyn', 'rap_report'
+    ]);
+    if (__ANALIZA_RESTRICTED.has(id)) {
+        const __rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+        if (!['admin', 'megaadmin', 'manager'].includes(__rola)) {
+            console.warn('[RBAC] Zablokowano dostęp do', id, '— rola:', __rola);
+            alert('Brak uprawnień. Sekcje analityczne są dostępne tylko dla administratora i managera.');
+            return;
+        }
+    }
+
     // --- 1. LOGOWANIE NAWIGACJI ---
-    console.groupEnd(); 
-    console.group(`📍 NAWIGACJA: ${id.toUpperCase()}`); 
+    console.groupEnd();
+    console.group(`📍 NAWIGACJA: ${id.toUpperCase()}`);
     console.log(`%c Kliknięto sekcję: ${id}`, 'color: #d63384; font-weight: bold;');
 
     // --- 2. ZAKRYWANIE WSZYSTKIEGO ---
