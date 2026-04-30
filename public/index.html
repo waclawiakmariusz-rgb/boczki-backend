@@ -8903,6 +8903,8 @@ function wylogujGlowne() {
 // ═══════════════════════════════════════════
 function ds_loadZadania(rola, imie) {
     const sec = document.getElementById('ds-zadania-section');
+    if (sec) sec.style.setProperty('display', 'none', 'important');
+    return; // TYMCZASOWO ukryte na Pulpicie — zarządzanie w zakładce Analiza/Zadania
     const list = document.getElementById('ds-zadania-list');
     const titleEl = document.getElementById('ds-zadania-title');
     const countEl = document.getElementById('ds-zadania-count');
