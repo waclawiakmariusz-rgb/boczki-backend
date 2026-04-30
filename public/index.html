@@ -2450,6 +2450,33 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
     border-left-color: #8b5cf6 !important;
     color: #5b21b6 !important;
 }
+/* zadania — chipy filtrów */
+.zd-chip:hover { background:#f8fafc !important; border-color:#cbd5e1 !important; }
+.zd-chip.zd-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
+.zd-chip.zd-chip-active:hover { background:#db2777 !important; }
+.zd-row-action { background:transparent; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; }
+.zd-row-action:hover { background:#f1f5f9; }
+.zd-sort-arr { color:#cbd5e1; font-size:10px; }
+body.dark-mode #an_view-zadania { background:transparent !important; }
+body.dark-mode #an_view-zadania div[style*="background:#fff"],
+body.dark-mode #an_view-zadania div[style*="background:white"],
+body.dark-mode #an_view-zadania div[style*="background: #fff"] { background:#1e293b !important; border-color:#334155 !important; }
+body.dark-mode #an_view-zadania table { background:#1e293b; }
+body.dark-mode #an_view-zadania thead { background:#0f172a !important; }
+body.dark-mode #an_view-zadania thead th { color:#94a3b8 !important; }
+body.dark-mode #an_view-zadania tbody td { color:#e2e8f0 !important; border-color:#334155 !important; }
+body.dark-mode #an_view-zadania .zd-chip { background:#1e293b !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+body.dark-mode #an_view-zadania .zd-chip.zd-chip-active { background:#ec4899 !important; color:#fff !important; }
+body.dark-mode #an_view-zadania input,
+body.dark-mode #an_view-zadania select,
+body.dark-mode #an_view-zadania textarea { background:#0f172a !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+body.dark-mode #zd-modal-overlay > div { background:#1e293b !important; color:#e2e8f0 !important; }
+body.dark-mode #zd-modal-overlay h3 { color:#f8fafc !important; }
+body.dark-mode #zd-modal-overlay label { color:#cbd5e1 !important; }
+body.dark-mode #zd-modal-overlay input,
+body.dark-mode #zd-modal-overlay select,
+body.dark-mode #zd-modal-overlay textarea { background:#0f172a !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+
 /* mediraty — amber */
 #an_view-summary .summary-card[style*="background: #f59e0b"],
 #an_view-summary .summary-card[style*="background:#f59e0b"] {
@@ -2672,7 +2699,8 @@ body:has(#an_view-monthly-report[style*="display: block"])      .an_tab[data-vie
 body:has(#an_view-yearly[style*="display: block"])              .an_tab[data-view="yearly"],
 body:has(#an_view-treatment-analysis[style*="display: block"])  .an_tab[data-view="treatment_analysis"],
 body:has(#an_view-bi[style*="display: block"])                  .an_tab[data-view="bi"],
-body:has(#an_view-costs[style*="display: block"])               .an_tab[data-view="costs"] {
+body:has(#an_view-costs[style*="display: block"])               .an_tab[data-view="costs"],
+body:has(#an_view-zadania[style*="display: block"])             .an_tab[data-view="zadania"] {
     background: #7c3aed;
     color: white;
     border-color: #7c3aed;
@@ -2686,7 +2714,8 @@ body:has(#an_view-monthly-report[style*="display: block"]) #an_tabs,
 body:has(#an_view-yearly[style*="display: block"]) #an_tabs,
 body:has(#an_view-treatment-analysis[style*="display: block"]) #an_tabs,
 body:has(#an_view-bi[style*="display: block"]) #an_tabs,
-body:has(#an_view-costs[style*="display: block"]) #an_tabs {
+body:has(#an_view-costs[style*="display: block"]) #an_tabs,
+body:has(#an_view-zadania[style*="display: block"]) #an_tabs {
     display: flex;
 }
 
@@ -5875,6 +5904,7 @@ ANALIZA MANAGER
     <button class="an_tab" onclick="an_goTo('treatment_analysis')" data-view="treatment_analysis">💉 Zabieg</button>
     <button class="an_tab" onclick="an_goTo('costs')"              data-view="costs">💰 Koszty</button>
     <button class="an_tab" onclick="an_goTo('bi')"                 data-view="bi">🧠 BI</button>
+    <button class="an_tab" onclick="an_goTo('zadania')"            data-view="zadania">📋 Zadania</button>
 </div>
 
 <div id="an_view-dashboard" style="display:none;">
@@ -6836,6 +6866,104 @@ ANALIZA MANAGER
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  ZADANIA — manager/admin zleca, recepcja wykonuje     ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div id="an_view-zadania" style="display:none; padding-bottom:50px;">
+    <div class="dash-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+        <div>
+            <h1 style="margin:0; font-size:24px;">📋 Zadania zespołu</h1>
+            <span style="color:#6b7280; font-size:14px;">Zlecaj zadania recepcji i pracownikom — śledź wykonanie</span>
+        </div>
+        <button onclick="zd_addOpen()" style="background:#ec4899; color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px;">+ Nowe zadanie</button>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
+        <button class="zd-chip zd-chip-active" data-status="AKTYWNE" onclick="zd_setFilter('AKTYWNE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">🟢 Aktywne</button>
+        <button class="zd-chip" data-status="WYKONANE" onclick="zd_setFilter('WYKONANE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">✅ Wykonane</button>
+        <button class="zd-chip" data-status="ZARCHIWIZOWANE" onclick="zd_setFilter('ZARCHIWIZOWANE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📦 Zarchiwizowane</button>
+        <button class="zd-chip" data-status="" onclick="zd_setFilter('', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📋 Wszystkie</button>
+        <input id="zd-search" oninput="zd_render()" placeholder="🔍 Wyszukaj po tytule, opisie, osobie..." style="flex:1; min-width:200px; padding:8px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none;">
+    </div>
+
+    <div style="background:#fff; border-radius:14px; border:1px solid #e2e8f0; overflow:hidden;">
+        <table id="zd-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                <tr>
+                    <th data-sort="priorytet" onclick="zd_sort('priorytet')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none; width:60px;">Pri. <span class="zd-sort-arr"></span></th>
+                    <th data-sort="kategoria" onclick="zd_sort('kategoria')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Typ <span class="zd-sort-arr"></span></th>
+                    <th data-sort="tytul" onclick="zd_sort('tytul')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Tytuł <span class="zd-sort-arr"></span></th>
+                    <th style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em;">Opis</th>
+                    <th data-sort="przypisane_do" onclick="zd_sort('przypisane_do')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Przypisane do <span class="zd-sort-arr"></span></th>
+                    <th data-sort="deadline" onclick="zd_sort('deadline')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Deadline <span class="zd-sort-arr">▲</span></th>
+                    <th data-sort="status" onclick="zd_sort('status')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Status <span class="zd-sort-arr"></span></th>
+                    <th style="padding:12px 14px; text-align:right; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em;">Akcje</th>
+                </tr>
+            </thead>
+            <tbody id="zd-tbody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal: Nowe / Edytuj zadanie -->
+<div id="zd-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
+    <div style="background:#fff; padding:28px; border-radius:16px; width:90%; max-width:520px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+            <h3 id="zd-modal-title" style="margin:0; font-size:18px; color:#1f2430;">Nowe zadanie</h3>
+            <button onclick="zd_modalClose()" style="background:none; border:none; font-size:26px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+        <form onsubmit="event.preventDefault(); zd_save();">
+            <input type="hidden" id="zd-edit-id" value="">
+
+            <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Tytuł <span style="color:#dc2626;">*</span></label>
+            <input id="zd-tytul" required maxlength="255" placeholder="np. Zadzwoń do klientki w sprawie..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
+
+            <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Opis</label>
+            <textarea id="zd-opis" rows="4" placeholder="Szczegóły, instrukcje, kontekst..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none; resize:vertical;"></textarea>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Kategoria</label>
+                    <select id="zd-kategoria" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+                        <option value="INNE">📋 Inne / Ogólne</option>
+                        <option value="MAGAZYN">📦 Magazyn</option>
+                        <option value="KOSMETYK">💄 Kosmetyk</option>
+                        <option value="KLIENT">👤 Klient</option>
+                        <option value="SPRZEDAZ">💰 Sprzedaż</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Priorytet</label>
+                    <select id="zd-priorytet" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+                        <option value="NORMALNY">▫️ Normalny</option>
+                        <option value="WAZNY">🟠 Ważny</option>
+                        <option value="PILNY">🔴 Pilny</option>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:16px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Przypisz do <span style="color:#dc2626;">*</span></label>
+                    <select id="zd-przypisane" required style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+                        <option value="">— wybierz —</option>
+                        <option value="recepcja">📞 Recepcja (rola)</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Deadline</label>
+                    <input id="zd-deadline" type="datetime-local" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #f1f5f9; padding-top:12px;">
+                <button type="button" onclick="zd_modalClose()" style="padding:9px 18px; background:#f3f4f6; color:#475569; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">Anuluj</button>
+                <button type="submit" style="padding:9px 22px; background:#ec4899; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px;">Zapisz</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -10661,7 +10789,8 @@ function pokaz(id, b) {
     // B) Ukrywamy Analizę
     const analizaViews = [
         'an_view-dashboard', 'an_view-summary', 'an_view-monthly-report', 
-        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs'
+        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs',
+        'an_view-zadania'
     ];
     analizaViews.forEach(viewId => {
         const el = document.getElementById(viewId);
@@ -10769,6 +10898,7 @@ function pokaz(id, b) {
     if (id === 'bi') an_loadBiData();
     if (id === 'costs') an_loadCostsView();
     if (id === 'yearly') an_initYearSelect();
+    if (id === 'zadania') zd_init();
 
     console.log("✅ [NAWIGACJA] Widok przełączony pomyślnie.");
 
@@ -10790,7 +10920,8 @@ function pokaz(id, b) {
     
     const analizaViews = [
         'an_view-dashboard', 'an_view-summary', 'an_view-monthly-report', 
-        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs'
+        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs',
+        'an_view-zadania'
     ];
     analizaViews.forEach(viewId => {
         const el = document.getElementById(viewId);
@@ -10876,6 +11007,7 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
     if (id === 'bi') an_loadBiData();
     if (id === 'costs') an_loadCostsView();
     if (id === 'yearly') an_initYearSelect();
+    if (id === 'zadania') zd_init();
 // 🟢 NOWOŚĆ: Wybudzenie Analizy Konsultacji PRO
     if (id === 'analiza-konsultacji') {
         akon_uruchomAplikacje();
@@ -10921,7 +11053,8 @@ function pokaz(id, b) {
     
     const analizaViews = [
         'an_view-dashboard', 'an_view-summary', 'an_view-monthly-report', 
-        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs'
+        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs',
+        'an_view-zadania'
     ];
     analizaViews.forEach(viewId => {
         const el = document.getElementById(viewId);
@@ -11019,6 +11152,7 @@ function pokaz(id, b) {
     if (id === 'bi') an_loadBiData();
     if (id === 'costs') an_loadCostsView();
     if (id === 'yearly') an_initYearSelect();
+    if (id === 'zadania') zd_init();
     if (id === 'analiza-konsultacji') {
         akon_uruchomAplikacje();
         const btnDashboard = document.querySelector('.akon_nav-btn.akon_active') || document.querySelector('.akon_nav-btn');
@@ -17109,7 +17243,9 @@ if (inputNazwaCheck) {
             const treatmentView = document.getElementById('an_view-treatment-analysis');
             if(treatmentView) treatmentView.style.display = 'none';
             document.getElementById('an_view-bi').style.display = 'none';
-            
+            const zadaniaView = document.getElementById('an_view-zadania');
+            if(zadaniaView) zadaniaView.style.display = 'none';
+
             if(yearlyView) yearlyView.style.display = 'none';
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
 
@@ -17744,12 +17880,272 @@ if (inputNazwaCheck) {
         }
 
         /* ─────────────────────────────────────────────────────────────────
+           ZADANIA — manager/admin zleca, recepcja wykonuje
+        ───────────────────────────────────────────────────────────────── */
+        let zd_data = [];
+        let zd_filterStatus = 'AKTYWNE';
+        let zd_sortBy = 'deadline';
+        let zd_sortDir = 'asc';
+
+        function zd_init() {
+            zd_fillPracownicy();
+            zd_loadList();
+        }
+
+        function zd_fillPracownicy() {
+            const sel = document.getElementById('zd-przypisane');
+            if (!sel) return;
+            const baseHtml = '<option value="">— wybierz —</option><option value="recepcja">📞 Recepcja (rola)</option>';
+            const list = (window.salesDictCache && Array.isArray(window.salesDictCache.pracownicy))
+                ? window.salesDictCache.pracownicy : [];
+            sel.innerHTML = baseHtml + list.map(p => `<option value="${escHtml(p)}">👤 ${escHtml(p)}</option>`).join('');
+        }
+
+        function zd_apiCall(payload) {
+            const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+            return fetch(API_URL + '/zadania', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+                body: JSON.stringify({ ...payload, tenant_id })
+            }).then(r => r.json());
+        }
+
+        function zd_loadList() {
+            const tbody = document.getElementById('zd-tbody');
+            if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="padding:30px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>';
+            const payload = { action: 'list' };
+            if (zd_filterStatus) payload.status = zd_filterStatus;
+            zd_apiCall(payload).then(res => {
+                if (res.status !== 'success') {
+                    if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:#dc2626;">Błąd: ${escHtml(res.message || '')}</td></tr>`;
+                    return;
+                }
+                zd_data = res.data || [];
+                zd_render();
+            });
+        }
+
+        function zd_setFilter(status, btn) {
+            zd_filterStatus = status;
+            document.querySelectorAll('.zd-chip').forEach(b => b.classList.remove('zd-chip-active'));
+            if (btn) btn.classList.add('zd-chip-active');
+            zd_loadList();
+        }
+
+        function zd_sort(col) {
+            if (zd_sortBy === col) {
+                zd_sortDir = zd_sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                zd_sortBy = col;
+                zd_sortDir = 'asc';
+            }
+            zd_render();
+        }
+
+        function zd_render() {
+            const tbody = document.getElementById('zd-tbody');
+            if (!tbody) return;
+            const search = (document.getElementById('zd-search')?.value || '').trim().toLowerCase();
+            let rows = zd_data.slice();
+            if (search) {
+                rows = rows.filter(r =>
+                    String(r.tytul||'').toLowerCase().includes(search) ||
+                    String(r.opis||'').toLowerCase().includes(search) ||
+                    String(r.przypisane_do||'').toLowerCase().includes(search)
+                );
+            }
+            const PRI_RANK = { PILNY: 0, WAZNY: 1, NORMALNY: 2 };
+            rows.sort((a, b) => {
+                let va = a[zd_sortBy] || ''; let vb = b[zd_sortBy] || '';
+                if (zd_sortBy === 'deadline') {
+                    va = va ? new Date(va).getTime() : Infinity;
+                    vb = vb ? new Date(vb).getTime() : Infinity;
+                } else if (zd_sortBy === 'priorytet') {
+                    va = PRI_RANK[va] !== undefined ? PRI_RANK[va] : 99;
+                    vb = PRI_RANK[vb] !== undefined ? PRI_RANK[vb] : 99;
+                }
+                if (va < vb) return zd_sortDir === 'asc' ? -1 : 1;
+                if (va > vb) return zd_sortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            // Strzałki sortowania w nagłówkach
+            document.querySelectorAll('#zd-table th[data-sort]').forEach(th => {
+                const col = th.getAttribute('data-sort');
+                const arr = th.querySelector('.zd-sort-arr');
+                if (arr) arr.textContent = (col === zd_sortBy) ? (zd_sortDir === 'asc' ? '▲' : '▼') : '';
+            });
+
+            if (!rows.length) {
+                tbody.innerHTML = '<tr><td colspan="8" style="padding:30px; text-align:center; color:#94a3b8;">Brak zadań w tej kategorii</td></tr>';
+                return;
+            }
+
+            const KAT_MAP = {
+                MAGAZYN:  { icon: '📦', label: 'Magazyn',  bg: '#fef3c7', col: '#92400e' },
+                KOSMETYK: { icon: '💄', label: 'Kosmetyk', bg: '#fce7f3', col: '#9d174d' },
+                KLIENT:   { icon: '👤', label: 'Klient',   bg: '#dbeafe', col: '#1e40af' },
+                SPRZEDAZ: { icon: '💰', label: 'Sprzedaż', bg: '#dcfce7', col: '#166534' },
+                INNE:     { icon: '📋', label: 'Inne',     bg: '#f1f5f9', col: '#475569' }
+            };
+            const PRI_MAP = {
+                NORMALNY: { icon: '▫️', label: 'Normalny', bg: 'transparent', col: '#94a3b8' },
+                WAZNY:    { icon: '🟠', label: 'Ważny',    bg: '#fff7ed', col: '#c2410c', border: '2px solid #fb923c' },
+                PILNY:    { icon: '🔴', label: 'PILNY',    bg: '#fee2e2', col: '#991b1b', border: '2px solid #dc2626' }
+            };
+
+            const now = Date.now();
+            tbody.innerHTML = rows.map(r => {
+                const deadline = r.deadline ? new Date(r.deadline) : null;
+                const overdue = (r.status === 'AKTYWNE' && deadline && deadline.getTime() < now);
+                const deadlineStr = deadline
+                    ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours() || deadline.getMinutes() ? ' ' + String(deadline.getHours()).padStart(2,'0') + ':' + String(deadline.getMinutes()).padStart(2,'0') : '')
+                    : '<span style="color:#cbd5e1;">brak</span>';
+                let statusBadge;
+                if (r.status === 'AKTYWNE') statusBadge = '<span style="display:inline-block; padding:3px 9px; border-radius:6px; background:#dcfce7; color:#166534; font-size:11px; font-weight:700;">🟢 Aktywne</span>';
+                else if (r.status === 'WYKONANE') statusBadge = '<span style="display:inline-block; padding:3px 9px; border-radius:6px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:700;">✅ Wykonane</span>';
+                else statusBadge = '<span style="display:inline-block; padding:3px 9px; border-radius:6px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700;">📦 Archiwum</span>';
+
+                const kat = KAT_MAP[r.kategoria] || KAT_MAP.INNE;
+                const katBadge = `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; background:${kat.bg}; color:${kat.col}; font-size:11px; font-weight:700; white-space:nowrap;">${kat.icon} ${kat.label}</span>`;
+
+                const pri = PRI_MAP[r.priorytet] || PRI_MAP.NORMALNY;
+                const priCell = (r.priorytet && r.priorytet !== 'NORMALNY')
+                    ? `<span title="${pri.label}" style="display:inline-block; padding:3px 8px; border-radius:6px; background:${pri.bg}; color:${pri.col}; font-size:11px; font-weight:800;">${pri.icon}</span>`
+                    : `<span title="Normalny" style="color:#cbd5e1;">▫️</span>`;
+                const rowBorderLeft = (r.priorytet === 'PILNY') ? 'border-left:3px solid #dc2626;' : (r.priorytet === 'WAZNY') ? 'border-left:3px solid #fb923c;' : '';
+
+                const opisShort = String(r.opis || '').slice(0, 80);
+                const opisCell = opisShort ? escHtml(opisShort) + (r.opis.length > 80 ? '…' : '') : '<span style="color:#cbd5e1;">—</span>';
+
+                let actions = '';
+                if (r.status === 'AKTYWNE') {
+                    actions = `
+                        <button class="zd-row-action" onclick="zd_editOpen('${r.id}')" title="Edytuj">✏️</button>
+                        <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj">📦</button>
+                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
+                    `;
+                } else {
+                    actions = `
+                        <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
+                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
+                    `;
+                }
+
+                return `<tr style="border-bottom:1px solid #f1f5f9; ${rowBorderLeft} ${overdue ? 'background:#fef2f2;' : ''}">
+                    <td style="padding:12px 14px; text-align:center;">${priCell}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${katBadge}</td>
+                    <td style="padding:12px 14px; font-weight:600; color:#1f2430; max-width:220px;">
+                        ${escHtml(r.tytul)}
+                        ${overdue ? '<div style="font-size:10px; color:#dc2626; font-weight:700; margin-top:2px;">⚠️ PO TERMINIE</div>' : ''}
+                    </td>
+                    <td style="padding:12px 14px; color:#475569; font-size:12px; max-width:260px;">${opisCell}</td>
+                    <td style="padding:12px 14px; color:#334155; font-weight:600; white-space:nowrap;">${escHtml(r.przypisane_do)}</td>
+                    <td style="padding:12px 14px; color:${overdue ? '#dc2626' : '#475569'}; font-weight:600; white-space:nowrap;">${deadlineStr}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${statusBadge}</td>
+                    <td style="padding:12px 14px; text-align:right; white-space:nowrap;">${actions}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function zd_addOpen() {
+            zd_fillPracownicy();
+            document.getElementById('zd-modal-title').textContent = 'Nowe zadanie';
+            document.getElementById('zd-edit-id').value = '';
+            document.getElementById('zd-tytul').value = '';
+            document.getElementById('zd-opis').value = '';
+            document.getElementById('zd-przypisane').value = '';
+            document.getElementById('zd-deadline').value = '';
+            document.getElementById('zd-kategoria').value = 'INNE';
+            document.getElementById('zd-priorytet').value = 'NORMALNY';
+            const ov = document.getElementById('zd-modal-overlay');
+            ov.style.display = 'flex';
+        }
+
+        function zd_editOpen(id) {
+            const z = zd_data.find(r => r.id === id);
+            if (!z) return;
+            zd_fillPracownicy();
+            document.getElementById('zd-modal-title').textContent = 'Edytuj zadanie';
+            document.getElementById('zd-edit-id').value = id;
+            document.getElementById('zd-tytul').value = z.tytul || '';
+            document.getElementById('zd-opis').value = z.opis || '';
+            const sel = document.getElementById('zd-przypisane');
+            // Jeśli przypisana osoba nie ma pasującej opcji (np. dawny pracownik usunięty),
+            // dorzuć ją tymczasowo żeby pokazać poprawnie
+            if (z.przypisane_do && !Array.from(sel.options).some(o => o.value === z.przypisane_do)) {
+                const opt = document.createElement('option');
+                opt.value = z.przypisane_do; opt.textContent = '👤 ' + z.przypisane_do;
+                sel.appendChild(opt);
+            }
+            sel.value = z.przypisane_do || '';
+            document.getElementById('zd-kategoria').value = z.kategoria || 'INNE';
+            document.getElementById('zd-priorytet').value = z.priorytet || 'NORMALNY';
+            // Konwersja deadline do formatu datetime-local (YYYY-MM-DDTHH:MM)
+            if (z.deadline) {
+                const d = new Date(z.deadline);
+                const local = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+                document.getElementById('zd-deadline').value = local;
+            } else {
+                document.getElementById('zd-deadline').value = '';
+            }
+            document.getElementById('zd-modal-overlay').style.display = 'flex';
+        }
+
+        function zd_modalClose() {
+            document.getElementById('zd-modal-overlay').style.display = 'none';
+        }
+
+        function zd_save() {
+            const id = document.getElementById('zd-edit-id').value;
+            const tytul = document.getElementById('zd-tytul').value.trim();
+            const opis = document.getElementById('zd-opis').value.trim();
+            const przypisane_do = document.getElementById('zd-przypisane').value.trim();
+            const kategoria = document.getElementById('zd-kategoria').value;
+            const priorytet = document.getElementById('zd-priorytet').value;
+            const deadlineLocal = document.getElementById('zd-deadline').value;
+            const deadline = deadlineLocal ? deadlineLocal.replace('T', ' ') + ':00' : null;
+
+            if (!tytul) { alert('Tytuł jest wymagany'); return; }
+            if (!przypisane_do) { alert('Wybierz osobę lub rolę'); return; }
+
+            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline };
+            const payload = id
+                ? { action: 'edit', id, ...base }
+                : { action: 'add', ...base, utworzone_przez: localStorage.getItem('boczki_pracownik_imie') || '' };
+
+            zd_apiCall(payload).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd zapisu'); return; }
+                zd_modalClose();
+                zd_loadList();
+            });
+        }
+
+        function zd_archive(id) {
+            if (!confirm('Przenieść zadanie do archiwum?')) return;
+            zd_apiCall({ action: 'archive', id, kto_zarchiwizowal: localStorage.getItem('boczki_pracownik_imie') || '' })
+                .then(res => { if (res.status !== 'success') alert(res.message || 'Błąd'); zd_loadList(); });
+        }
+
+        function zd_restore(id) {
+            zd_apiCall({ action: 'restore', id })
+                .then(res => { if (res.status !== 'success') alert(res.message || 'Błąd'); zd_loadList(); });
+        }
+
+        function zd_delete(id) {
+            if (!confirm('Usunąć zadanie na stałe? Operacja nieodwracalna.')) return;
+            zd_apiCall({ action: 'delete', id })
+                .then(res => { if (res.status !== 'success') alert(res.message || 'Błąd'); zd_loadList(); });
+        }
+
+        /* ─────────────────────────────────────────────────────────────────
            MutationObserver — animacja wejścia widoku analitycznego
         ───────────────────────────────────────────────────────────────── */
         (function() {
             const anViews = [
                 'an_view-dashboard','an_view-summary','an_view-monthly-report',
-                'an_view-costs','an_view-yearly','an_view-treatment-analysis','an_view-bi'
+                'an_view-costs','an_view-yearly','an_view-treatment-analysis','an_view-bi',
+                'an_view-zadania'
             ];
             const obs = new MutationObserver(mutations => {
                 mutations.forEach(m => {

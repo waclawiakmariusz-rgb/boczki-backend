@@ -290,6 +290,7 @@ const billingRoutes    = require('./routes/billing')(db);
 const blogRoutes       = require('./routes/blog')(db);
 const predefRoutes     = require('./routes/predef')(db);
 const kosztPlanRoutes  = require('./routes/koszty_plan')(db);
+const zadaniaRoutes    = require('./routes/zadania')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -316,6 +317,7 @@ app.use('/api', billingRoutes);
 app.use('/api', blogRoutes);
 app.use('/api', predefRoutes);
 app.use('/api', kosztPlanRoutes);
+app.use('/api', zadaniaRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
