@@ -240,7 +240,7 @@ module.exports = (db) => {
       const selectedMonth = d.month;
       // Sprzedaż główna
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
         [tenant_id, selectedMonth],
         (err1, sprzedaz) => {
           db.query(
@@ -254,44 +254,101 @@ module.exports = (db) => {
               };
               let empTemp = {};
 
-              const TYLKO_ZABIEGI = ['Endermologia Infinity', 'Arosha', 'Ceremonia Purles', 'Depilacja woskiem', 'Endermologia Alliance', 'Karboksyterapia', 'Kriolipoliza', 'Lipoliza iniekcyjna', 'Masaż', 'Meltivio', 'Mezoterapia Igłowa', 'Mezoterapia mikroigłowa', 'Modelowanie Ust', 'Peeling Cypryjski', 'Presoterapia', 'Storz', 'Stymulatory Tkankowe', 'Thermogenique', 'Żelazko', 'Oprawa Oka', 'Oczyszczanie wodorowe', 'Alma SpaDeep', 'Adipologie', 'Infuzja tlenowa', 'Zaffiro twarz', 'Zaffiro dłonie', 'Zaffiro ciało', 'Masaż Kobido', 'Peeling chemiczny', 'Koktajl Monako', 'Rytuał Flerage z endermologią twarzy', 'Vagheggi ciało', 'Vagheggi twarz', 'Mezoterapia igłowa stymulatorem', 'Ultradźwięki', 'Pielęgnacja', 'Pixel RF'];
+              // Helper: wyciąga liczbę sztuk z `szczegoly` (np. "5 szt." -> 5, "1,5 szt." -> 1.5)
+              const parsujIloscSzt = (szczegoly) => {
+                const m = String(szczegoly || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+                return m ? parseFloat(m[1].replace(',', '.')) : 1;
+              };
 
-              const processRow = (amount, zabieg, klient, sprzedawca, platnosc, dateObj) => {
+              const initEmp = (person) => ({
+                name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0,
+                transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {},
+                _topReceipts: new Set(),       // dedup Top 5 po (baseId, zabieg)
+                wykonaneZabiegi: new Set()     // dla worstTreatments: klucz "kategoria||wariant"
+              });
+
+              const processRow = (amount, zabieg, klient, sprzedawca, platnosc, dateObj, id, szczegoly) => {
                 const platL = String(platnosc || '').toLowerCase();
-                if (platL.includes('portfel') || platL.includes('ręczne') || platL.includes('reczne') || platL.includes('system')) return;
+                // Korekty (ręczne / system) — pomijamy całkowicie
+                if (platL.includes('ręczne') || platL.includes('reczne') || platL.includes('system')) return;
+                // Portfel: pomijamy w sumach finansowych (zadatek już zaliczony przy wpłacie),
+                // ALE liczymy do Top 5 / wykonaneZabiegi / qty_kosmetyki (faktyczna sprzedaż fizyczna).
+                const isPortfel = (platL === 'portfel');
                 const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
-                if (amount === 0 && !isKosmetyk) return;
-                stats.totalRevenue += amount; stats.count++;
-                if (isKosmetyk) stats.categorySplit['Kosmetyki'] += amount;
-                else stats.categorySplit['Zabiegi'] += amount;
+                if (amount === 0 && !isKosmetyk && !isPortfel) return;
+
+                // baseId — multi-sale ma format "<base>-<n>"; single-sale = całe id
+                const idStr = String(id || '');
+                const baseId = idStr.includes('-') ? idStr.split('-').slice(0, -1).join('-') || idStr : idStr;
+                const ilosc = isKosmetyk ? parsujIloscSzt(szczegoly) : 1;
+
+                if (!isPortfel) {
+                  stats.totalRevenue += amount; stats.count++;
+                  if (isKosmetyk) stats.categorySplit['Kosmetyki'] += amount;
+                  else stats.categorySplit['Zabiegi'] += amount;
+                }
 
                 const rawSellers = String(sprzedawca || '').trim();
-                if (rawSellers) {
-                  const sellers = rawSellers.split(',').map(s => s.trim()).filter(Boolean);
-                  const count = sellers.length;
-                  if (count > 0) {
-                    const splitAmount = amount / count;
-                    sellers.forEach(person => {
-                      if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
-                      const e = empTemp[person];
-                      e.total += splitAmount; e.transakcje += (1 / count);
-                      if (isKosmetyk) { e.kosmetyki += splitAmount; e.qty_kosmetyki += (1 / count); } else { e.zabiegi += splitAmount; }
-                      if (!e.top[zabieg]) e.top[zabieg] = 0; e.top[zabieg] += (1 / count);
-                      if (dateObj) {
-                        const day = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-                        e.transactionsList.push({ service: zabieg, val: splitAmount, date: day });
-                        const receiptKey = `${day}_${klient.toUpperCase()}`;
-                        if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
-                        e.virtualReceipts[receiptKey].total += splitAmount;
-                        e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, '').trim());
-                      }
-                    });
+                if (!rawSellers) return;
+                const sellers = rawSellers.split(',').map(s => s.trim()).filter(Boolean);
+                const count = sellers.length;
+                if (count === 0) return;
+                const splitAmount = amount / count;
+
+                sellers.forEach(person => {
+                  if (!empTemp[person]) empTemp[person] = initEmp(person);
+                  const e = empTemp[person];
+
+                  // Sumy finansowe — pomijamy dla Portfel
+                  if (!isPortfel) {
+                    e.total += splitAmount; e.transakcje += (1 / count);
+                    if (isKosmetyk) e.kosmetyki += splitAmount;
+                    else e.zabiegi += splitAmount;
+
+                    if (dateObj) {
+                      const day = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                      e.transactionsList.push({ service: zabieg, val: splitAmount, date: day });
+                      const receiptKey = `${day}_${klient.toUpperCase()}`;
+                      if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
+                      e.virtualReceipts[receiptKey].total += splitAmount;
+                      e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, '').trim());
+                    }
                   }
-                }
+
+                  // qty_kosmetyki — fizyczna ilość sprzedanych sztuk, niezależnie od metody
+                  if (isKosmetyk) {
+                    e.qty_kosmetyki += (ilosc / count);
+                  }
+
+                  // Top 5 — uwzględnia Portfel; dedup po (baseId, zabieg) eliminuje
+                  // podwójne liczenie tego samego zabiegu rozbitego na pozycje multi-sale
+                  const topKey = `${baseId}|${zabieg}`;
+                  if (!e._topReceipts.has(topKey)) {
+                    e._topReceipts.add(topKey);
+                    if (!e.top[zabieg]) e.top[zabieg] = 0;
+                    e.top[zabieg] += isKosmetyk ? ilosc : 1;
+                  }
+
+                  // wykonaneZabiegi — dla worstTreatments (tylko zabiegi, nie kosmetyki).
+                  // Klucz "kategoria||wariant" pasuje do struktury tabeli Uslugi.
+                  if (!isKosmetyk) {
+                    const wariant = String(szczegoly || '').trim();
+                    e.wykonaneZabiegi.add(`${zabieg}||${wariant}`);
+                  }
+                });
               };
 
               (sprzedaz || []).forEach(row => {
-                processRow(parseAmount(row.kwota), String(row.zabieg || '').trim(), String(row.klient || '').trim(), row.sprzedawca, row.platnosc, new Date(row.data_sprzedazy));
+                processRow(
+                  parseAmount(row.kwota),
+                  String(row.zabieg || '').trim(),
+                  String(row.klient || '').trim(),
+                  row.sprzedawca,
+                  row.platnosc,
+                  new Date(row.data_sprzedazy),
+                  row.id,
+                  row.szczegoly
+                );
               });
 
               (zadatki || []).forEach(row => {
@@ -309,7 +366,7 @@ module.exports = (db) => {
                 if (count > 0) {
                   const splitAmount = amount / count;
                   sellers.forEach(person => {
-                    if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
+                    if (!empTemp[person]) empTemp[person] = initEmp(person);
                     const e = empTemp[person];
                     e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
                     if (!e.top['Wpłata Zadatku']) e.top['Wpłata Zadatku'] = 0; e.top['Wpłata Zadatku'] += (1 / count);
@@ -318,27 +375,49 @@ module.exports = (db) => {
                 }
               });
 
-              for (let person in empTemp) {
-                const e = empTemp[person];
-                const zeroSales = [];
-                TYLKO_ZABIEGI.forEach(service => {
-                  let cnt = 0;
-                  for (const [sn, sc] of Object.entries(e.top)) { if (sn.includes(service)) cnt += sc; }
-                  if (cnt === 0) zeroSales.push(service);
-                });
-                e.worstTreatments = zeroSales;
-                const receiptsArr = Object.values(e.virtualReceipts).sort((a, b) => b.total - a.total);
-                if (receiptsArr.length > 0) {
-                  const best = receiptsArr[0];
-                  const uniqueItems = [...new Set(best.items)];
-                  e.bestReceipt = { client: best.client, date: best.date, val: best.total, services: uniqueItems.join(' + ') };
-                }
-                delete e.virtualReceipts;
-              }
+              // Pobierz pełną listę zabiegów z tabeli Uslugi — dla worstTreatments
+              db.query(
+                `SELECT kategoria, wariant FROM Uslugi WHERE tenant_id = ?`,
+                [tenant_id],
+                (errU, uslugi) => {
+                  const wszystkieUslugi = (uslugi || [])
+                    .map(u => ({
+                      kategoria: String(u.kategoria || '').trim(),
+                      wariant: String(u.wariant || '').trim()
+                    }))
+                    .filter(u => u.kategoria);
 
-              stats.employeeDetails = empTemp;
-              stats.rankingPracownikow = Object.values(empTemp).sort((a, b) => b.total - a.total);
-              return res.json({ status: 'success', data: stats });
+                  for (let person in empTemp) {
+                    const e = empTemp[person];
+                    // worstTreatments — pozycje z Uslugi NIE wykonane przez tego pracownika
+                    const zeroSales = [];
+                    wszystkieUslugi.forEach(u => {
+                      const klucz = `${u.kategoria}||${u.wariant}`;
+                      if (!e.wykonaneZabiegi.has(klucz)) {
+                        zeroSales.push(u.wariant ? `${u.kategoria} — ${u.wariant}` : u.kategoria);
+                      }
+                    });
+                    e.worstTreatments = zeroSales;
+
+                    // bestReceipt (Złoty paragon) — bez zmian, działa OK
+                    const receiptsArr = Object.values(e.virtualReceipts).sort((a, b) => b.total - a.total);
+                    if (receiptsArr.length > 0) {
+                      const best = receiptsArr[0];
+                      const uniqueItems = [...new Set(best.items)];
+                      e.bestReceipt = { client: best.client, date: best.date, val: best.total, services: uniqueItems.join(' + ') };
+                    }
+
+                    // Cleanup pól pomocniczych — nie wysyłamy ich do frontendu
+                    delete e.virtualReceipts;
+                    delete e._topReceipts;
+                    delete e.wykonaneZabiegi;
+                  }
+
+                  stats.employeeDetails = empTemp;
+                  stats.rankingPracownikow = Object.values(empTemp).sort((a, b) => b.total - a.total);
+                  return res.json({ status: 'success', data: stats });
+                }
+              );
             }
           );
         }
