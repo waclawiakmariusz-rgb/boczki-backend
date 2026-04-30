@@ -12707,22 +12707,18 @@ function przywrocGrupowo(idsStr) {
 
 // --- NOWA LOGIKA PODSUMOWANIA (Z WYMUSZENIEM WYGLĄDU) ---
 
-// Helper: koryguje godzinę "HH:MM" z bazy danych.
-// Ustalono empirycznie: czas w bazie jest zapisywany w strefie CET (UTC+1)
-// BEZ uwzględnienia DST. Latem (CEST) trzeba dodać +1h, zimą +0h —
-// żeby pokazany czas był zgodny z faktycznym lokalnym (zegarem usera).
+// Helper: koryguje godzinę "HH:MM" z bazy danych do lokalnego czasu zegarka usera.
+// Baza zapisuje godziny w UTC. JS automatycznie zna offset strefy + DST przez
+// getTimezoneOffset() (zwraca minuty NA WSCHÓD od UTC z minusem — dlatego negujemy).
+// Polska latem (CEST) = UTC+2, zimą (CET) = UTC+1 → offsetHours odpowiednio +2/+1.
 function utcTimeToLocal(g) {
     if (!g || !g.includes(':')) return g || '--:--';
     const [h, m] = g.split(':');
-    // Detekcja DST: porównaj offset stycznia (zima, bez DST) z dziś.
-    // Jeśli aktualny offset jest "mniejszy" (czyli więcej godzin do UTC),
-    // to znaczy DST jest aktywny.
-    const now = new Date();
-    const jan = new Date(now.getFullYear(), 0, 1).getTimezoneOffset();
-    const isDST = now.getTimezoneOffset() < jan;
-    let hh = parseInt(h, 10) + (isDST ? 1 : 0);
-    if (hh >= 24) hh -= 24;
-    return String(hh).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    const offsetHours = -new Date().getTimezoneOffset() / 60;
+    let hh = parseInt(h, 10) + offsetHours;
+    while (hh >= 24) hh -= 24;
+    while (hh < 0) hh += 24;
+    return String(Math.floor(hh)).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
 function zaladujPodsumowanieDnia() {
