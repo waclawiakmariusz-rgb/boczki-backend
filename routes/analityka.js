@@ -405,15 +405,6 @@ module.exports = (db) => {
                   ? `${dateObjZ.getFullYear()}-${String(dateObjZ.getMonth()+1).padStart(2,'0')}-${String(dateObjZ.getDate()).padStart(2,'0')}`
                   : '????-??-??';
 
-                const PROG_GRUPOWY = 4;
-                if (count >= PROG_GRUPOWY) {
-                  // Log pomijanego zadatku grupowego
-                  stats.debugLog.push(
-                    `${dataStrZ} | (pomijany)  | ZAD-GRUPA | ${String(row.cel || row.klient || '').substring(0, 40).padEnd(40)} | ${amount.toFixed(2).padStart(8)} zł (${count}os: ${sellers.join(',')}) | ${String(row.metoda || '').padEnd(8)} | → ✗ pomijane (Reguła 2: >=4 os)`
-                  );
-                  return;
-                }
-
                 stats.totalRevenue += amount; stats.count++;
                 stats.categorySplit['Zabiegi'] += amount;
                 const splitAmount = amount / count;

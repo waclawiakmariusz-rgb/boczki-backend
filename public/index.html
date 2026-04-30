@@ -5962,29 +5962,43 @@ ANALIZA MANAGER
                 </details>
             </div>
 
-            <div id="an_emp-debug-section" class="chart-box" style="display:none; margin-top:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px;">
-                    <h6 style="margin:0; font-size:16px; color:#475569;">🔍 Lista transakcji pracownika (diagnostyka)</h6>
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="an_emp-debug-filter" placeholder="🔎 filtr (np. data, klient, zabieg)" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; width:260px;">
-                        <button onclick="an_kopiujLogPracownika()" style="background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; padding:6px 12px; border-radius:8px; cursor:pointer; font-size:12px;">📋 Kopiuj</button>
+            <div id="an_emp-debug-section" class="chart-box" style="display:none; margin-top:24px; padding:24px;">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; flex-wrap:wrap; gap:12px;">
+                    <div>
+                        <h3 style="margin:0 0 6px; font-size:18px; font-weight:700; color:#1f2430; letter-spacing:-.02em;">📋 Szczegóły transakcji pracownika</h3>
+                        <p style="margin:0; font-size:13px; color:#64748b; line-height:1.55;">Pełna lista pozycji z miesiąca składających się na obrót.<br>Pomocna gdy chcesz porównać liczby z innym źródłem (np. ręczny raport).</p>
+                    </div>
+                    <div style="display:flex; gap:8px; align-items:center;">
+                        <input type="text" id="an_emp-debug-filter" placeholder="🔎 Szukaj po dacie, kliencie, zabiegu..." style="padding:9px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; width:280px; outline:none; transition:border-color .2s;" onfocus="this.style.borderColor='#cf3d78'" onblur="this.style.borderColor='#e2e8f0'">
+                        <button onclick="an_kopiujLogPracownika()" title="Skopiuj listę do schowka jako TSV — wklej w Excel" style="background:#fff; border:1px solid #cbd5e1; color:#334155; padding:9px 14px; border-radius:10px; cursor:pointer; font-size:13px; font-weight:600; transition:.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#fff'">📋 Kopiuj do Excela</button>
                     </div>
                 </div>
-                <div style="max-height:400px; overflow-y:auto; background:#fafafa; border-radius:8px; padding:8px;">
-                    <table id="an_emp-debug-table" style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Consolas','Monaco',monospace;">
-                        <thead style="position:sticky; top:0; background:#e2e8f0; z-index:1;">
-                            <tr>
-                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Data</th>
-                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Typ</th>
-                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Pozycja</th>
-                                <th style="padding:6px 8px; text-align:right; border-bottom:2px solid #cbd5e1;">Udział</th>
-                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Płatność</th>
-                                <th style="padding:6px 8px; text-align:left; border-bottom:2px solid #cbd5e1;">Wpływ</th>
-                            </tr>
-                        </thead>
-                        <tbody id="an_emp-debug-tbody"></tbody>
-                        <tfoot id="an_emp-debug-tfoot" style="font-weight:700;"></tfoot>
-                    </table>
+
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 18px; padding:12px 16px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0;">
+                    <span style="font-size:12px; color:#64748b; font-weight:600; align-self:center; margin-right:4px;">Legenda:</span>
+                    <span style="font-size:12px; padding:4px 10px; border-radius:6px; background:#dcfce7; color:#166534;">🛍️ Zabieg — liczony do obrotu</span>
+                    <span style="font-size:12px; padding:4px 10px; border-radius:6px; background:#dbeafe; color:#1e40af;">💰 Wpłata zadatku — liczona</span>
+                    <span style="font-size:12px; padding:4px 10px; border-radius:6px; background:#fef3c7; color:#92400e;">💄 Kosmetyk — osobny KPI</span>
+                    <span style="font-size:12px; padding:4px 10px; border-radius:6px; background:#fee2e2; color:#991b1b;">👛 Portfel — pominięty (już zaliczony)</span>
+                </div>
+
+                <div style="overflow:hidden; border-radius:14px; border:1px solid #e2e8f0;">
+                    <div style="max-height:500px; overflow-y:auto; background:#fff;">
+                        <table id="an_emp-debug-table" style="width:100%; border-collapse:collapse; font-size:13px;">
+                            <thead style="position:sticky; top:0; background:#fff; z-index:1; box-shadow:0 1px 0 #e2e8f0;">
+                                <tr>
+                                    <th style="padding:14px 16px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Data</th>
+                                    <th style="padding:14px 16px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Rodzaj</th>
+                                    <th style="padding:14px 16px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Pozycja / Klient</th>
+                                    <th style="padding:14px 16px; text-align:right; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Udział pracownika</th>
+                                    <th style="padding:14px 16px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Płatność</th>
+                                    <th style="padding:14px 16px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.08em;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="an_emp-debug-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="an_emp-debug-tfoot" style="background:#f8fafc; border-top:1px solid #e2e8f0; padding:18px 22px;"></div>
                 </div>
             </div>
 
@@ -16764,28 +16778,85 @@ if (inputNazwaCheck) {
                 return;
             }
 
+            // Sumy częściowe per kategoria
+            let sumaKosmetyki = 0, sumaPortfel = 0, sumaZadatki = 0, sumaZabiegi = 0;
+            let licznikKosmetyki = 0, licznikPortfel = 0, licznikZadatki = 0, licznikZabiegi = 0;
+
             tbody.innerHTML = matched.map(r => {
-                let bg = '', icon = '';
-                if (r.kategoria === 'KOSMETYK') { bg = 'background:#fef3c7;'; icon = '💄 '; }
-                else if (r.kategoria === 'PORTFEL') { bg = 'background:#fee2e2;'; icon = '👛 '; }
-                else if (r.kategoria === 'ZAD-GRUPA') { bg = 'background:#fce7f3;'; icon = '🚫 '; }
-                else if (r.kategoria === 'ZADATEK') { bg = 'background:#dcfce7;'; icon = '💰 '; }
-                else { icon = '🛍️ '; }
-                return `<tr style="${bg} border-bottom:1px solid #e2e8f0;">
-                    <td style="padding:5px 8px; white-space:nowrap;">${escHtml(r.data)}</td>
-                    <td style="padding:5px 8px; white-space:nowrap;">${icon}${escHtml(r.kategoria)}</td>
-                    <td style="padding:5px 8px;">${escHtml(r.pozycja)}</td>
-                    <td style="padding:5px 8px; text-align:right; white-space:nowrap; font-weight:600;">${escHtml(r.kwotaStr)}</td>
-                    <td style="padding:5px 8px;">${escHtml(r.platnosc)}</td>
-                    <td style="padding:5px 8px; font-size:11px;">${escHtml(r.wplyw)}</td>
+                const kwotaMatch = r.kwotaStr.match(/(\d+(?:[.,]\d+)?)/);
+                const kwotaUdzial = kwotaMatch ? parseFloat(kwotaMatch[1].replace(',', '.')) : 0;
+                const splitMatch = r.kwotaStr.match(/\(z ([\d.,]+)\/(\d+)os\)/);
+                const splitInfo = splitMatch ? `<span style="font-size:11px; color:#94a3b8;"> z ${splitMatch[1]} zł / ${splitMatch[2]} os.</span>` : '';
+
+                let rodzajLabel, rodzajBg, rodzajCol, rowBg = '', statusHtml;
+
+                if (r.kategoria === 'KOSMETYK') {
+                    rodzajLabel = '💄 Kosmetyk'; rodzajBg = '#fef3c7'; rodzajCol = '#92400e';
+                    rowBg = 'background:rgba(254,243,199,0.18);';
+                    statusHtml = '<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#fef3c7; color:#92400e; font-size:11px; font-weight:600;">📊 Liczony osobno (KPI Kosmetyki)</span>';
+                    sumaKosmetyki += kwotaUdzial; licznikKosmetyki++;
+                } else if (r.kategoria === 'PORTFEL') {
+                    rodzajLabel = '👛 Portfel'; rodzajBg = '#fee2e2'; rodzajCol = '#991b1b';
+                    rowBg = 'background:rgba(254,226,226,0.18);';
+                    statusHtml = '<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#fee2e2; color:#991b1b; font-size:11px; font-weight:600;">⊘ Pomijany — zaliczony przy wpłacie</span>';
+                    sumaPortfel += kwotaUdzial; licznikPortfel++;
+                } else if (r.kategoria === 'ZADATEK') {
+                    rodzajLabel = '💰 Wpłata zadatku'; rodzajBg = '#dbeafe'; rodzajCol = '#1e40af';
+                    statusHtml = `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#dcfce7; color:#166534; font-size:11px; font-weight:600;">✓ +${kwotaUdzial.toFixed(2)} zł do obrotu</span>`;
+                    sumaZadatki += kwotaUdzial; licznikZadatki++;
+                } else {
+                    rodzajLabel = '🛍️ Zabieg'; rodzajBg = '#dcfce7'; rodzajCol = '#166534';
+                    statusHtml = `<span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:#dcfce7; color:#166534; font-size:11px; font-weight:600;">✓ +${kwotaUdzial.toFixed(2)} zł do obrotu</span>`;
+                    sumaZabiegi += kwotaUdzial; licznikZabiegi++;
+                }
+
+                return `<tr style="${rowBg} border-bottom:1px solid #f1f5f9;">
+                    <td style="padding:12px 16px; white-space:nowrap; color:#475569; font-weight:500;">${escHtml(r.data)}</td>
+                    <td style="padding:12px 16px; white-space:nowrap;">
+                        <span style="display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:6px; background:${rodzajBg}; color:${rodzajCol}; font-size:12px; font-weight:600;">${rodzajLabel}</span>
+                    </td>
+                    <td style="padding:12px 16px; color:#1f2430; font-weight:500;">${escHtml(r.pozycja)}</td>
+                    <td style="padding:12px 16px; text-align:right; white-space:nowrap; color:#1f2430; font-weight:700;">${kwotaUdzial.toFixed(2)} zł${splitInfo}</td>
+                    <td style="padding:12px 16px; color:#475569;">${escHtml(r.platnosc)}</td>
+                    <td style="padding:12px 16px;">${statusHtml}</td>
                 </tr>`;
             }).join('');
 
-            tfoot.innerHTML = `<tr style="background:#f1f5f9;">
-                <td colspan="3" style="padding:10px 8px; text-align:right;">Suma wpisów liczonych do total:</td>
-                <td style="padding:10px 8px; text-align:right; color:#16a34a;">${sumaLiczona.toFixed(2)} zł</td>
-                <td colspan="2" style="padding:10px 8px; color:#64748b;">${liczbaWpisow} wpis(ów)</td>
-            </tr>`;
+            // Stopka — sumy podsumowujące + tłumaczenie
+            const sumaObrotu = sumaZabiegi + sumaZadatki;
+            tfoot.innerHTML = `
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:14px; margin-bottom:14px;">
+                    <div style="background:#fff; border:1px solid #d1fae5; border-radius:10px; padding:12px 14px;">
+                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:4px;">Zabiegi (liczone)</div>
+                        <div style="font-size:18px; font-weight:800; color:#166534;">${sumaZabiegi.toFixed(2)} zł</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${licznikZabiegi} pozycj${licznikZabiegi===1?'a':licznikZabiegi<5?'e':'i'}</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #bfdbfe; border-radius:10px; padding:12px 14px;">
+                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:4px;">Zadatki (liczone)</div>
+                        <div style="font-size:18px; font-weight:800; color:#1e40af;">${sumaZadatki.toFixed(2)} zł</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${licznikZadatki} wpłat${licznikZadatki===1?'a':licznikZadatki<5?'y':''}</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #fde68a; border-radius:10px; padding:12px 14px;">
+                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:4px;">Kosmetyki (osobno)</div>
+                        <div style="font-size:18px; font-weight:800; color:#92400e;">${sumaKosmetyki.toFixed(2)} zł</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${licznikKosmetyki} sprzedaż${licznikKosmetyki===1?'':'y'}</div>
+                    </div>
+                    <div style="background:#fff; border:1px solid #fecaca; border-radius:10px; padding:12px 14px;">
+                        <div style="font-size:11px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:700; margin-bottom:4px;">Portfel (pomijane)</div>
+                        <div style="font-size:18px; font-weight:800; color:#991b1b;">${sumaPortfel.toFixed(2)} zł</div>
+                        <div style="font-size:11px; color:#94a3b8; margin-top:2px;">${licznikPortfel} wykorzystani${licznikPortfel===1?'e':'a'}</div>
+                    </div>
+                </div>
+                <div style="border-top:2px dashed #e2e8f0; padding-top:14px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                    <div>
+                        <span style="font-size:12px; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; font-weight:700;">Obrót pracownika łącznie</span>
+                        <div style="font-size:24px; font-weight:800; color:#1f2430; letter-spacing:-.02em;">${sumaObrotu.toFixed(2)} zł</div>
+                    </div>
+                    <div style="font-size:12px; color:#64748b; text-align:right; max-width:400px;">
+                        Suma <strong>Zabiegi + Zadatki</strong>. Kosmetyki i Portfel nie są wliczane do obrotu (osobne KPI / już zaliczone wcześniej).
+                    </div>
+                </div>
+            `;
         }
         document.addEventListener('input', (e) => {
             if (e.target && e.target.id === 'an_emp-debug-filter' && an_emp_debug_currentName) {
