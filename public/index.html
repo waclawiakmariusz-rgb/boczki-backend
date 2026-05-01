@@ -2458,6 +2458,13 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 #ds-zadania-list details[open] > summary .ds-zd-arrow { transform: rotate(90deg); }
 #ds-zadania-list details > summary::-webkit-details-marker { display:none; }
 #ds-zadania-list details > summary:hover { background:#fafafa; }
+/* widget Zadania na Pulpicie — taby kategorii */
+.ds-zd-tab { padding:7px 13px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:12px; color:#475569; display:inline-flex; align-items:center; gap:6px; transition:all .15s; }
+.ds-zd-tab:hover { background:#f8fafc; border-color:#cbd5e1; }
+.ds-zd-tab.active { background:#ec4899; color:#fff; border-color:#ec4899; }
+.ds-zd-tab.active:hover { background:#db2777; }
+.ds-zd-tab-badge { background:#f1f5f9; color:#475569; padding:1px 7px; border-radius:999px; font-size:10px; font-weight:700; min-width:18px; text-align:center; }
+.ds-zd-tab.active .ds-zd-tab-badge { background:rgba(255,255,255,0.3); color:#fff; }
 .zd-row-action { background:transparent; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; }
 .zd-row-action:hover { background:#f1f5f9; }
 .zd-sort-arr { color:#cbd5e1; font-size:10px; }
@@ -5486,7 +5493,8 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     <div class="ds-section-head" style="display:flex; justify-content:space-between; align-items:center;">
       <h3 style="margin:0;">📋 <span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span></h3>
     </div>
-    <div id="ds-zadania-list" style="margin-top:12px;">
+    <div id="ds-zadania-tabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; margin-bottom:8px;"></div>
+    <div id="ds-zadania-list">
       <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
     </div>
   </section>
@@ -8947,70 +8955,133 @@ function ds_loadZadania(rola, imie) {
         }
         const all = res.data || [];
         if (countEl) countEl.textContent = all.length ? `(${all.length})` : '';
-        if (!all.length) {
-            list.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:14px 0; color:#10b981; font-weight:600;">
-                <span style="font-size:20px;">✨</span><span>Brak aktywnych zadań — wszystko ogarnięte!</span>
-            </div>`;
-            return;
-        }
-        const top = all.slice(0, 5);
-        const KAT = {
-            MAGAZYN:{i:'📦',l:'Magazyn',bg:'#fef3c7',c:'#92400e'},
-            KOSMETYK:{i:'💄',l:'Kosmetyk',bg:'#fce7f3',c:'#9d174d'},
-            KLIENT:{i:'👤',l:'Klient',bg:'#dbeafe',c:'#1e40af'},
-            SPRZEDAZ:{i:'💰',l:'Sprzedaż',bg:'#dcfce7',c:'#166534'},
-            INNE:{i:'📋',l:'Inne',bg:'#f1f5f9',c:'#475569'}
-        };
-        const PRI = {
-            NORMALNY:{i:'',c:'transparent'},
-            WAZNY:{i:'🟠',c:'#fb923c'},
-            PILNY:{i:'🔴',c:'#dc2626'}
-        };
-        const now = Date.now();
-        list.innerHTML = top.map(z => {
-            const k = KAT[z.kategoria] || KAT.INNE;
-            const p = PRI[z.priorytet] || PRI.NORMALNY;
-            const deadline = z.deadline ? new Date(z.deadline) : null;
-            const overdue = deadline && deadline.getTime() < now;
-            const deadlineStr = deadline
-                ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
-                : '';
-            const action = isRecepcja
-                ? `<button onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
-                : '';
-            const klientLink = z.id_klienta && z.klient_nazwa
-                ? `<span onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')" style="display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer;">👤 ${escHtml(z.klient_nazwa)}</span>`
-                : '';
-            const opisHtml = z.opis ? String(z.opis).trim() : '';
-            const opisBody = opisHtml
-                ? `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
-                : `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
-            return `<details style="border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+';' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
-                <summary style="list-style:none; cursor:pointer; padding:12px ${p.c !== 'transparent' ? '12px 12px 10px' : '0'}; display:flex; align-items:center; gap:12px;">
-                    <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
-                    <div style="flex:1; min-width:0;">
-                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                            <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:${k.bg}; color:${k.c}; font-size:10px; font-weight:700;">${k.i} ${k.l}</span>
-                            <span style="font-weight:700; color:#1f2430; font-size:14px;">${escHtml(z.tytul)}</span>
-                            ${klientLink}
-                        </div>
-                        <div style="font-size:11px; color:#64748b; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
-                            ${!isRecepcja ? `<span>👤 ${escHtml(z.przypisane_do || '')}</span>` : ''}
-                            ${deadlineStr ? `<span style="${overdue?'color:#dc2626; font-weight:700;':''}">⏰ ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : '<span style="color:#cbd5e1;">⏰ brak deadline</span>'}
-                        </div>
-                    </div>
-                    <span class="ds-zd-arrow" style="color:#cbd5e1; font-size:12px; transition:transform .15s;">▶</span>
-                    <div>${action}</div>
-                </summary>
-                ${opisBody}
-            </details>`;
-        }).join('');
-        if (all.length > 5) {
-            list.innerHTML += `<div style="text-align:center; padding-top:10px; color:#64748b; font-size:12px;">…i ${all.length - 5} ${all.length-5===1?'kolejne zadanie':all.length-5<5?'kolejne zadania':'kolejnych zadań'}</div>`;
-        }
+        // Cache wszystkich aktywnych zadań — używane przy zmianie taba bez ponownego fetch
+        window.__ds_zd_all = all;
+        window.__ds_zd_isRecepcja = isRecepcja;
+        ds_zd_renderTabs();
     }).catch(e => {
         list.innerHTML = `<div style="color:#dc2626; font-size:13px; padding:8px 0;">Błąd: ${escHtml(e.message||'')}</div>`;
     });
+}
+
+// Aktywny tab kategorii w widgecie Pulpitu — domyślnie pokazuje tab z najwięcej
+// zadaniami (lub Klient jeśli wszystkie 0)
+let ds_zd_activeTab = null;
+
+function ds_zd_renderTabs() {
+    const tabsBox = document.getElementById('ds-zadania-tabs');
+    const list = document.getElementById('ds-zadania-list');
+    if (!tabsBox || !list) return;
+    const all = window.__ds_zd_all || [];
+    if (!all.length) {
+        tabsBox.innerHTML = '';
+        list.innerHTML = `<div style="display:flex; align-items:center; gap:10px; padding:14px 0; color:#10b981; font-weight:600;">
+            <span style="font-size:20px;">✨</span><span>Brak aktywnych zadań — wszystko ogarnięte!</span>
+        </div>`;
+        return;
+    }
+
+    // 5 kategorii w stałej kolejności
+    const TABS = [
+        { key: 'KLIENT',   icon: '👤', label: 'Klient' },
+        { key: 'MAGAZYN',  icon: '📦', label: 'Magazyn' },
+        { key: 'KOSMETYK', icon: '💄', label: 'Kosmetyk' },
+        { key: 'SPRZEDAZ', icon: '💰', label: 'Sprzedaż' },
+        { key: 'INNE',     icon: '📋', label: 'Inne' }
+    ];
+    const counts = {};
+    TABS.forEach(t => counts[t.key] = 0);
+    all.forEach(z => { const k = z.kategoria || 'INNE'; if (counts[k] !== undefined) counts[k]++; else counts.INNE++; });
+
+    // Pierwszy raz — wybierz tab z największą liczbą zadań (a jeśli wszystkie 0, Klient)
+    if (!ds_zd_activeTab || counts[ds_zd_activeTab] === undefined) {
+        ds_zd_activeTab = TABS.reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
+    }
+
+    tabsBox.innerHTML = TABS.map(t => {
+        const cnt = counts[t.key] || 0;
+        const active = (t.key === ds_zd_activeTab) ? ' active' : '';
+        return `<button class="ds-zd-tab${active}" onclick="ds_zd_setTab('${t.key}')">${t.icon} ${t.label} <span class="ds-zd-tab-badge">${cnt}</span></button>`;
+    }).join('');
+
+    ds_zd_renderList();
+}
+
+function ds_zd_setTab(katKey) {
+    ds_zd_activeTab = katKey;
+    document.querySelectorAll('.ds-zd-tab').forEach(b => b.classList.remove('active'));
+    const all = document.querySelectorAll('.ds-zd-tab');
+    // Re-render dla pewności (badges mogą się zmienić po complete)
+    ds_zd_renderTabs();
+}
+
+function ds_zd_renderList() {
+    const list = document.getElementById('ds-zadania-list');
+    if (!list) return;
+    const all = window.__ds_zd_all || [];
+    const isRecepcja = !!window.__ds_zd_isRecepcja;
+    const filtered = all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
+
+    if (!filtered.length) {
+        list.innerHTML = `<div style="padding:18px 0; text-align:center; color:#94a3b8; font-size:13px;">Brak zadań w tej kategorii</div>`;
+        return;
+    }
+
+    const KAT = {
+        MAGAZYN:{i:'📦',l:'Magazyn',bg:'#fef3c7',c:'#92400e'},
+        KOSMETYK:{i:'💄',l:'Kosmetyk',bg:'#fce7f3',c:'#9d174d'},
+        KLIENT:{i:'👤',l:'Klient',bg:'#dbeafe',c:'#1e40af'},
+        SPRZEDAZ:{i:'💰',l:'Sprzedaż',bg:'#dcfce7',c:'#166534'},
+        INNE:{i:'📋',l:'Inne',bg:'#f1f5f9',c:'#475569'}
+    };
+    const PRI = {
+        NORMALNY:{i:'',c:'transparent'},
+        WAZNY:{i:'🟠',c:'#fb923c'},
+        PILNY:{i:'🔴',c:'#dc2626'}
+    };
+    const now = Date.now();
+    const top = filtered.slice(0, 5);
+    list.innerHTML = top.map(z => {
+        const k = KAT[z.kategoria] || KAT.INNE;
+        const p = PRI[z.priorytet] || PRI.NORMALNY;
+        const deadline = z.deadline ? new Date(z.deadline) : null;
+        const overdue = deadline && deadline.getTime() < now;
+        const deadlineStr = deadline
+            ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
+            : '';
+        const action = isRecepcja
+            ? `<button onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
+            : '';
+        const klientLink = z.id_klienta && z.klient_nazwa
+            ? `<span onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')" style="display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer;">👤 ${escHtml(z.klient_nazwa)}</span>`
+            : '';
+        const opisHtml = z.opis ? String(z.opis).trim() : '';
+        const opisBody = opisHtml
+            ? `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
+            : `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
+        return `<details style="border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+';' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
+            <summary style="list-style:none; cursor:pointer; padding:12px ${p.c !== 'transparent' ? '12px 12px 10px' : '0'}; display:flex; align-items:center; gap:12px;">
+                <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
+                <div style="flex:1; min-width:0;">
+                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                        <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:${k.bg}; color:${k.c}; font-size:10px; font-weight:700;">${k.i} ${k.l}</span>
+                        <span style="font-weight:700; color:#1f2430; font-size:14px;">${escHtml(z.tytul)}</span>
+                        ${klientLink}
+                    </div>
+                    <div style="font-size:11px; color:#64748b; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
+                        ${!isRecepcja ? `<span>👤 ${escHtml(z.przypisane_do || '')}</span>` : ''}
+                        ${deadlineStr ? `<span style="${overdue?'color:#dc2626; font-weight:700;':''}">⏰ ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : '<span style="color:#cbd5e1;">⏰ brak deadline</span>'}
+                    </div>
+                </div>
+                <span class="ds-zd-arrow" style="color:#cbd5e1; font-size:12px; transition:transform .15s;">▶</span>
+                <div>${action}</div>
+            </summary>
+            ${opisBody}
+        </details>`;
+    }).join('');
+    if (filtered.length > 5) {
+        list.innerHTML += `<div style="text-align:center; padding-top:10px; color:#64748b; font-size:12px;">…i ${filtered.length - 5} ${filtered.length-5===1?'kolejne zadanie':filtered.length-5<5?'kolejne zadania':'kolejnych zadań'} w tej kategorii</div>`;
+    }
 }
 
 function ds_zadanieComplete(id) {
