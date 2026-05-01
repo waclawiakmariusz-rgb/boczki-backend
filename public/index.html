@@ -7129,7 +7129,10 @@ ANALIZA MANAGER
                     <span id="zd-klient-selected-text" style="color:#166534; font-weight:700;"></span>
                     <button type="button" onclick="zd_clearKlient()" style="background:none; border:none; color:#991b1b; cursor:pointer; font-size:18px; line-height:1;">&times;</button>
                 </div>
-                <input type="text" id="zd-klient-search" list="lista-klientow" oninput="zd_klientFromInput()" placeholder="🔍 Wpisz nazwisko klienta..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
+                <div style="position:relative;">
+                    <input type="text" id="zd-klient-search" list="lista-klientow" oninput="zd_klientSearchInput()" autocomplete="off" placeholder="🔍 Wpisz fragment nazwiska, telefon lub ID..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
+                    <div id="zd-klient-results" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:#fff; border:1px solid #e2e8f0; border-radius:8px; z-index:100; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:2px;"></div>
+                </div>
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #f1f5f9; padding-top:12px;">
@@ -9081,6 +9084,8 @@ function ds_loadZadania(rola, imie) {
     // Przycisk dodawania — recepcja i wyżej (praktykantka NIE)
     const addBtn = document.getElementById('ds-zadania-add-btn');
     if (addBtn) addBtn.style.display = (isManager || isRecepcja) ? '' : 'none';
+    // Pre-load klientów do datalisty w modalu (cache, działa też dla recepcji bez wizyty w sprzedaży)
+    if ((isManager || isRecepcja) && typeof zaladujListeKlientow === 'function') zaladujListeKlientow();
 
     const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
     const sToken = localStorage.getItem('boczki_session_token') || '';
@@ -18516,16 +18521,43 @@ if (inputNazwaCheck) {
             }
         }
 
-        // Autocomplete oparty o natywny <datalist id="lista-klientow"> (jak w sprzedaży).
-        // Po wyborze pasującej pozycji input zawiera dokładną nazwę klienta — wtedy
-        // znajdujemy go w cache i ustawiamy hidden fields + zielony badge.
-        function zd_klientFromInput() {
+        // Custom dropdown — substring case-insensitive (datalist HTML5 jest niespójny w Chrome).
+        // Lista klientów z window.wszyscyKlienciDane (cache zaludnia zaladujListeKlientow).
+        function zd_klientSearchInput() {
             const inp = document.getElementById('zd-klient-search');
-            if (!inp) return;
-            const val = String(inp.value || '').trim();
-            if (!val || !window.wszyscyKlienciDane) return;
-            const match = window.wszyscyKlienciDane.find(k => String(k.nazwa).toLowerCase() === val.toLowerCase());
-            if (match) zd_pickKlient(match.id, match.nazwa);
+            const resultsDiv = document.getElementById('zd-klient-results');
+            if (!inp || !resultsDiv) return;
+            const fraza = String(inp.value || '').toLowerCase().trim();
+            if (fraza.length < 2) { resultsDiv.style.display = 'none'; return; }
+            // Jeśli cache pusty — spróbuj załadować i ponów
+            if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) {
+                if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow();
+                resultsDiv.innerHTML = '<div style="padding:10px; color:#94a3b8; font-size:12px;">Ładowanie klientów...</div>';
+                resultsDiv.style.display = 'block';
+                setTimeout(zd_klientSearchInput, 600);
+                return;
+            }
+            const wyniki = window.wszyscyKlienciDane.filter(k =>
+                String(k.nazwa||'').toLowerCase().includes(fraza) ||
+                String(k.id||'').includes(fraza) ||
+                (k.telefon && String(k.telefon).includes(fraza))
+            ).slice(0, 8);
+            resultsDiv.innerHTML = '';
+            if (!wyniki.length) {
+                resultsDiv.innerHTML = '<div style="padding:10px; color:#94a3b8; font-size:12px; font-style:italic;">Brak pasujących klientów</div>';
+                resultsDiv.style.display = 'block';
+                return;
+            }
+            resultsDiv.style.display = 'block';
+            wyniki.forEach(k => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding:9px 12px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:13px;';
+                div.innerHTML = `<b>${escHtml(k.nazwa)}</b> <span style="color:#94a3b8; font-size:11px; float:right;">ID: ${escHtml(String(k.id))}${k.telefon?' · '+escHtml(String(k.telefon)):''}</span>`;
+                div.onmouseover = () => div.style.backgroundColor = '#fdf4f8';
+                div.onmouseout  = () => div.style.backgroundColor = 'transparent';
+                div.onclick = () => zd_pickKlient(k.id, k.nazwa);
+                resultsDiv.appendChild(div);
+            });
         }
 
         function zd_pickKlient(id, nazwa) {
@@ -18536,7 +18568,8 @@ if (inputNazwaCheck) {
             txt.textContent = `✅ ${nazwa} (ID: ${id})`;
             sel.style.display = 'flex';
             document.getElementById('zd-klient-search').value = '';
-            document.getElementById('zd-klient-results').style.display = 'none';
+            const resDiv = document.getElementById('zd-klient-results');
+            if (resDiv) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; }
             const sugDiv = document.getElementById('zd-klient-suggest');
             if (sugDiv) sugDiv.innerHTML = '';
         }
@@ -18877,6 +18910,9 @@ if (inputNazwaCheck) {
         function zd_addOpen() {
             if (!zd_canCreate()) { alert('Twoja rola nie pozwala dodawać zadań.'); return; }
             zd_fillPracownicy();
+            // Zapewnij datalist klientów w polu 'Powiązany klient' — recepcja może
+            // otworzyć modal z Pulpitu (bez wcześniejszej wizyty w sprzedaży/zadaniach)
+            if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow();
             document.getElementById('zd-modal-title').textContent = 'Nowe zadanie';
             document.getElementById('zd-edit-id').value = '';
             document.getElementById('zd-tytul').value = '';
