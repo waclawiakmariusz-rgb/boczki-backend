@@ -97,6 +97,7 @@ module.exports = (db) => {
     if (action === 'list') {
       const status = d.status; // AKTYWNE | WYKONANE | ZARCHIWIZOWANE | undefined (wszystkie)
       const kategoria = d.kategoria;
+      const utworzonePrzez = d.utworzone_przez;
       const params = [tenant_id];
       let sql = `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis,
                         kategoria, priorytet, deadline, status,
@@ -110,6 +111,10 @@ module.exports = (db) => {
       if (kategoria && ALLOWED_KATEGORIE.includes(kategoria)) {
         sql += ` AND kategoria = ?`;
         params.push(kategoria);
+      }
+      if (utworzonePrzez) {
+        sql += ` AND TRIM(utworzone_przez) = TRIM(?)`;
+        params.push(String(utworzonePrzez).trim());
       }
       // PILNY → najpierw, potem WAŻNY, potem NORMALNY; w obrębie priorytetu po deadline
       sql += ` ORDER BY FIELD(priorytet,'PILNY','WAZNY','NORMALNY'), (deadline IS NULL), deadline ASC, data_utworzenia DESC`;

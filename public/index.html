@@ -5498,6 +5498,12 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     <div id="ds-zadania-list">
       <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
     </div>
+    <details id="ds-zadania-zlecone-wrap" style="display:none; margin-top:14px; border-top:1px dashed #e2e8f0; padding-top:10px;">
+      <summary style="cursor:pointer; font-size:13px; font-weight:700; color:#475569; list-style:none; padding:6px 0;">
+        📤 Zlecone przeze mnie <span id="ds-zadania-zlecone-count" style="font-size:12px; color:#94a3b8; font-weight:600; margin-left:4px;"></span>
+      </summary>
+      <div id="ds-zadania-zlecone-list" style="margin-top:8px;"></div>
+    </details>
   </section>
 
   <!-- Szybki dostęp + Wymaga uwagi -->
@@ -8958,13 +8964,65 @@ function ds_loadZadania(rola, imie) {
         }
         const all = res.data || [];
         if (countEl) countEl.textContent = all.length ? `(${all.length})` : '';
-        // Cache wszystkich aktywnych zadań — używane przy zmianie taba bez ponownego fetch
         window.__ds_zd_all = all;
         window.__ds_zd_isRecepcja = isRecepcja;
         ds_zd_renderTabs();
     }).catch(e => {
         list.innerHTML = `<div style="color:#dc2626; font-size:13px; padding:8px 0;">Błąd: ${escHtml(e.message||'')}</div>`;
     });
+
+    // Drugi widok: zadania zlecone przeze mnie (recepcja+manager+admin; praktykantka i tak nie zleca)
+    ds_loadZleconePrzezeMnie(rola, imie);
+}
+
+// Sekcja "Zlecone przeze mnie" — pokazuje aktywne zadania utworzone przeze mnie,
+// żeby śledzić czy odbiorca odhaczył. Praktykantka nie ma sekcji.
+function ds_loadZleconePrzezeMnie(rola, imie) {
+    const wrap = document.getElementById('ds-zadania-zlecone-wrap');
+    const list = document.getElementById('ds-zadania-zlecone-list');
+    const cntEl = document.getElementById('ds-zadania-zlecone-count');
+    if (!wrap || !list) return;
+    const r = String(rola || '').toLowerCase().trim();
+    if (!['admin','megaadmin','manager','recepcja'].includes(r) || !imie) { wrap.style.display = 'none'; return; }
+    const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+    const sToken = localStorage.getItem('boczki_session_token') || '';
+    fetch(API_URL + '/zadania', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-session-token': sToken },
+        body: JSON.stringify({ action: 'list', status: 'AKTYWNE', utworzone_przez: imie, tenant_id })
+    }).then(r => r.json()).then(res => {
+        if (res.status !== 'success') { wrap.style.display = 'none'; return; }
+        const all = (res.data || []).filter(z =>
+            // Wykluczamy zadania zlecone samemu sobie (już widać w głównej liście)
+            String(z.przypisane_do || '').toLowerCase() !== imie.toLowerCase() &&
+            String(z.przypisane_do || '').toLowerCase() !== 'recepcja' || true
+        );
+        // Powyższy filtr jest celowo permisywny — pokazujemy WSZYSTKO zlecone, bo
+        // zadania zlecone na 'recepcja' (rolę) też chcemy widzieć tutaj
+        const lista = res.data || [];
+        if (!lista.length) { wrap.style.display = 'none'; return; }
+        wrap.style.display = '';
+        if (cntEl) cntEl.textContent = `(${lista.length})`;
+        const now = Date.now();
+        const top = lista.slice(0, 5);
+        list.innerHTML = top.map(z => {
+            const deadline = z.deadline ? new Date(z.deadline) : null;
+            const overdue = deadline && deadline.getTime() < now;
+            const deadlineStr = deadline
+                ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
+                : '';
+            return `<div style="padding:8px 0; border-bottom:1px solid #f1f5f9; display:flex; gap:10px; align-items:center;">
+                <span style="font-size:13px; color:#475569; flex:1;">
+                    <strong>${escHtml(z.tytul)}</strong>
+                    <span style="color:#94a3b8;"> → ${escHtml(z.przypisane_do)}</span>
+                </span>
+                <span style="font-size:11px; color:${overdue?'#dc2626':'#94a3b8'}; font-weight:${overdue?'700':'500'}; white-space:nowrap;">${deadlineStr || 'brak'}</span>
+            </div>`;
+        }).join('');
+        if (lista.length > 5) {
+            list.innerHTML += `<div style="padding:6px 0; text-align:center; color:#64748b; font-size:11px;">…i ${lista.length-5} więcej</div>`;
+        }
+    }).catch(() => { wrap.style.display = 'none'; });
 }
 
 // Aktywny tab kategorii w widgecie Pulpitu — domyślnie pokazuje tab z najwięcej
