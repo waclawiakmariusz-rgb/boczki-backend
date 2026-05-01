@@ -6937,6 +6937,25 @@ ANALIZA MANAGER
     </div>
 </div>
 
+<!-- Modal: Komentarze do zadania -->
+<div id="zd-comments-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10001; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
+    <div style="background:#fff; padding:24px; border-radius:16px; width:90%; max-width:520px; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:10px; margin-bottom:14px;">
+            <h3 style="margin:0; font-size:17px; color:#1f2430;">💬 Komentarze <span id="zd-comments-task-title" style="font-size:13px; color:#94a3b8; font-weight:600;"></span></h3>
+            <button onclick="zd_closeComments()" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+        <input type="hidden" id="zd-comments-task-id" value="">
+        <div id="zd-comments-list" style="flex:1; overflow-y:auto; padding:8px 0; min-height:120px;"></div>
+        <div style="border-top:1px solid #f1f5f9; padding-top:12px; margin-top:8px;">
+            <textarea id="zd-comment-input" rows="2" placeholder="Napisz komentarz..." style="width:100%; padding:9px 11px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; resize:vertical; box-sizing:border-box;"></textarea>
+            <div style="text-align:right; margin-top:8px;">
+                <button type="button" onclick="zd_closeComments()" style="padding:7px 14px; background:#f3f4f6; color:#475569; border:none; border-radius:7px; cursor:pointer; font-size:12px; margin-right:4px;">Zamknij</button>
+                <button type="button" onclick="zd_addComment()" style="padding:7px 16px; background:#ec4899; color:#fff; border:none; border-radius:7px; cursor:pointer; font-weight:700; font-size:12px;">Wyślij</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Nowe / Edytuj zadanie -->
 <div id="zd-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:center; backdrop-filter:blur(3px);">
     <div style="background:#fff; padding:28px; border-radius:16px; width:90%; max-width:520px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
@@ -9117,9 +9136,14 @@ function ds_zd_renderList() {
             ? `<span onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')" style="display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer;">👤 ${escHtml(z.klient_nazwa)}</span>`
             : '';
         const opisHtml = z.opis ? String(z.opis).trim() : '';
-        const opisBody = opisHtml
-            ? `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
-            : `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
+        const opisInner = opisHtml
+            ? `<div style="color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
+            : `<div style="color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
+        const tytulEsc = String(z.tytul || '').replace(/'/g, "&#39;");
+        const opisBody = `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9;">
+            ${opisInner}
+            <button onclick="event.stopPropagation(); zd_openComments('${z.id}', '${escHtml(tytulEsc)}')" style="margin-top:8px; padding:5px 11px; border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;">💬 Komentarze</button>
+        </div>`;
         return `<details style="border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+';' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
             <summary style="list-style:none; cursor:pointer; padding:12px ${p.c !== 'transparent' ? '12px 12px 10px' : '0'}; display:flex; align-items:center; gap:12px;">
                 <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
@@ -18331,6 +18355,59 @@ if (inputNazwaCheck) {
             }, 300);
         }
 
+        // ── KOMENTARZE pod zadaniem ──
+        function zd_openComments(zadanieId, tytul) {
+            document.getElementById('zd-comments-task-id').value = zadanieId;
+            const titleEl = document.getElementById('zd-comments-task-title');
+            if (titleEl) titleEl.textContent = tytul ? '— ' + tytul : '';
+            document.getElementById('zd-comment-input').value = '';
+            document.getElementById('zd-comments-modal-overlay').style.display = 'flex';
+            zd_loadComments(zadanieId);
+        }
+
+        function zd_closeComments() {
+            document.getElementById('zd-comments-modal-overlay').style.display = 'none';
+        }
+
+        function zd_loadComments(zadanieId) {
+            const list = document.getElementById('zd-comments-list');
+            if (!list) return;
+            list.innerHTML = '<div style="color:#94a3b8; font-size:12px; padding:14px 0; text-align:center;">Ładowanie...</div>';
+            zd_apiCall({ action: 'comments_list', id_zadania: zadanieId }).then(res => {
+                if (res.status !== 'success') { list.innerHTML = `<div style="color:#dc2626; font-size:12px;">Błąd: ${escHtml(res.message||'')}</div>`; return; }
+                const arr = res.data || [];
+                if (!arr.length) {
+                    list.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:20px 0; text-align:center; font-style:italic;">Brak komentarzy. Bądź pierwszy.</div>';
+                    return;
+                }
+                const myImie = (localStorage.getItem('boczki_pracownik_imie') || '').toLowerCase();
+                list.innerHTML = arr.map(c => {
+                    const isMine = String(c.autor||'').toLowerCase() === myImie;
+                    const data = c.data_utworzenia ? new Date(c.data_utworzenia).toLocaleString('pl-PL', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}) : '';
+                    return `<div style="margin-bottom:10px; padding:9px 12px; border-radius:9px; background:${isMine?'#dbeafe':'#f1f5f9'}; ${isMine?'margin-left:24px;':'margin-right:24px;'}">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:3px;">
+                            <span style="font-weight:700; font-size:11px; color:${isMine?'#1e40af':'#475569'};">${escHtml(c.autor || '?')}</span>
+                            <span style="font-size:10px; color:#94a3b8;">${data}</span>
+                        </div>
+                        <div style="font-size:13px; color:#1f2430; white-space:pre-wrap; line-height:1.4;">${escHtml(c.tresc || '')}</div>
+                    </div>`;
+                }).join('');
+                list.scrollTop = list.scrollHeight;
+            });
+        }
+
+        function zd_addComment() {
+            const id = document.getElementById('zd-comments-task-id').value;
+            const tresc = document.getElementById('zd-comment-input').value.trim();
+            const autor = localStorage.getItem('boczki_pracownik_imie') || '';
+            if (!id || !tresc) return;
+            zd_apiCall({ action: 'comment_add', id_zadania: id, autor, tresc }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                document.getElementById('zd-comment-input').value = '';
+                zd_loadComments(id);
+            });
+        }
+
         // Cache pracowników z rolami (do filtrowania komu wolno zlecać)
         function zd_loadUsersWithRoles() {
             if (window.zd_users_cache) return Promise.resolve(window.zd_users_cache);
@@ -18493,15 +18570,18 @@ if (inputNazwaCheck) {
                 const opisShort = String(r.opis || '').slice(0, 80);
                 const opisCell = opisShort ? escHtml(opisShort) + (r.opis.length > 80 ? '…' : '') : '<span style="color:#cbd5e1;">—</span>';
 
+                const tytulEsc = String(r.tytul || '').replace(/'/g, "&#39;");
                 let actions = '';
                 if (r.status === 'AKTYWNE') {
                     actions = `
+                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬</button>
                         <button class="zd-row-action" onclick="zd_editOpen('${r.id}')" title="Edytuj">✏️</button>
                         <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj">📦</button>
                         <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;
                 } else {
                     actions = `
+                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬</button>
                         <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
                         <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;

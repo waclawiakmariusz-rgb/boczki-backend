@@ -87,6 +87,20 @@ module.exports = (db) => {
     }
   );
 
+  // Tabela komentarzy — historia rozmowy pod zadaniem
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Zadania_Komentarze (
+       id VARCHAR(36) PRIMARY KEY,
+       tenant_id VARCHAR(64) NOT NULL,
+       id_zadania VARCHAR(36) NOT NULL,
+       autor VARCHAR(100),
+       tresc TEXT,
+       data_utworzenia DATETIME DEFAULT CURRENT_TIMESTAMP,
+       INDEX idx_zadania (tenant_id, id_zadania, data_utworzenia)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => { if (err) console.error('[Zadania_Komentarze] CREATE TABLE error:', err.message); }
+  );
+
   router.post('/zadania', (req, res) => {
     const d = req.body || {};
     const tenant_id = d.tenant_id;
@@ -256,6 +270,47 @@ module.exports = (db) => {
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
+          return res.json({ status: 'success' });
+        }
+      );
+
+    } else if (action === 'comment_add') {
+      const id_zadania = String(d.id_zadania || '').trim();
+      const autor = String(d.autor || '').trim().slice(0, 100);
+      const tresc = String(d.tresc || '').trim();
+      if (!id_zadania) return res.json({ status: 'error', message: 'Brak id_zadania' });
+      if (!tresc) return res.json({ status: 'error', message: 'Pusty komentarz' });
+      const id = randomUUID();
+      db.query(
+        `INSERT INTO Zadania_Komentarze (id, tenant_id, id_zadania, autor, tresc) VALUES (?, ?, ?, ?, ?)`,
+        [id, tenant_id, id_zadania, autor, tresc],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', id });
+        }
+      );
+
+    } else if (action === 'comments_list') {
+      const id_zadania = String(d.id_zadania || '').trim();
+      if (!id_zadania) return res.json({ status: 'error', message: 'Brak id_zadania' });
+      db.query(
+        `SELECT id, autor, tresc, data_utworzenia FROM Zadania_Komentarze
+         WHERE tenant_id = ? AND id_zadania = ? ORDER BY data_utworzenia ASC`,
+        [tenant_id, id_zadania],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', data: rows || [] });
+        }
+      );
+
+    } else if (action === 'comment_delete') {
+      const id = String(d.id || '').trim();
+      if (!id) return res.json({ status: 'error', message: 'Brak id' });
+      db.query(
+        `DELETE FROM Zadania_Komentarze WHERE tenant_id = ? AND id = ?`,
+        [tenant_id, id],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success' });
         }
       );
