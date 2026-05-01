@@ -8902,8 +8902,6 @@ function wylogujGlowne() {
 // ═══════════════════════════════════════════
 function ds_loadZadania(rola, imie) {
     const sec = document.getElementById('ds-zadania-section');
-    if (sec) sec.style.setProperty('display', 'none', 'important');
-    return; // TYMCZASOWO ukryte na Pulpicie — zarządzanie w zakładce Analiza/Zadania
     const list = document.getElementById('ds-zadania-list');
     const titleEl = document.getElementById('ds-zadania-title');
     const countEl = document.getElementById('ds-zadania-count');
@@ -8963,7 +8961,7 @@ function ds_loadZadania(rola, imie) {
                 : '';
             const action = isRecepcja
                 ? `<button onclick="ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
-                : `<button onclick="pokaz('zadania',null)" title="Otwórz w zarządzaniu" style="border:1px solid #e2e8f0; background:#fff; color:#475569; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer; white-space:nowrap;">Zarządzaj</button>`;
+                : '';
             return `<div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+'; padding-left:10px;' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
                 <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
                 <div style="flex:1; min-width:0;">
