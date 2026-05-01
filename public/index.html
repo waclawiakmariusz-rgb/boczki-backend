@@ -6915,6 +6915,7 @@ ANALIZA MANAGER
         <button class="zd-chip" data-status="WYKONANE" onclick="zd_setFilter('WYKONANE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">✅ Wykonane</button>
         <button class="zd-chip" data-status="ZARCHIWIZOWANE" onclick="zd_setFilter('ZARCHIWIZOWANE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📦 Zarchiwizowane</button>
         <button class="zd-chip" data-status="" onclick="zd_setFilter('', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📋 Wszystkie</button>
+        <button class="zd-chip" data-status="SZABLONY" onclick="zd_setFilter('SZABLONY', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">🔄 Szablony</button>
         <input id="zd-search" oninput="zd_render()" placeholder="🔍 Wyszukaj po tytule, opisie, osobie..." style="flex:1; min-width:200px; padding:8px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none;">
     </div>
 
@@ -7005,6 +7006,22 @@ ANALIZA MANAGER
                 <div>
                     <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Deadline</label>
                     <input id="zd-deadline" type="datetime-local" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
+                </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+                <div>
+                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powtarzaj</label>
+                    <select id="zd-powtarzaj" onchange="zd_powtarzajChange()" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+                        <option value="NIE">🚫 Nie powtarzaj</option>
+                        <option value="CODZIENNIE">🌞 Codziennie</option>
+                        <option value="TYGODNIOWO">📆 Co tydzień</option>
+                        <option value="MIESIECZNIE">📅 Co miesiąc</option>
+                    </select>
+                </div>
+                <div id="zd-powtarzaj-dzien-wrap" style="display:none;">
+                    <label id="zd-powtarzaj-dzien-label" style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Dzień</label>
+                    <select id="zd-powtarzaj-dzien" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;"></select>
                 </div>
             </div>
 
@@ -18259,9 +18276,29 @@ if (inputNazwaCheck) {
 
         function zd_init() {
             zd_fillPracownicy();
-            // Klienci do datalisty 'lista-klientow' (cache + autocomplete jak w sprzedaży)
             if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow();
             zd_loadList();
+        }
+
+        // Pokaż/ukryj select dnia (tygodnia/miesiąca) i wypełnij opcje wg typu powtarzania
+        function zd_powtarzajChange() {
+            const typ = document.getElementById('zd-powtarzaj').value;
+            const wrap = document.getElementById('zd-powtarzaj-dzien-wrap');
+            const sel = document.getElementById('zd-powtarzaj-dzien');
+            const lbl = document.getElementById('zd-powtarzaj-dzien-label');
+            if (typ === 'NIE' || typ === 'CODZIENNIE') { wrap.style.display = 'none'; return; }
+            wrap.style.display = '';
+            if (typ === 'TYGODNIOWO') {
+                lbl.textContent = 'Dzień tygodnia';
+                sel.innerHTML = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela']
+                    .map((n, i) => `<option value="${i+1}">${n}</option>`).join('');
+            } else if (typ === 'MIESIECZNIE') {
+                lbl.textContent = 'Dzień miesiąca';
+                let opts = '';
+                for (let i = 1; i <= 28; i++) opts += `<option value="${i}">${i}</option>`;
+                opts += '<option value="99">Ostatni dzień miesiąca</option>';
+                sel.innerHTML = opts;
+            }
         }
 
         // Autocomplete oparty o natywny <datalist id="lista-klientow"> (jak w sprzedaży).
@@ -18466,7 +18503,11 @@ if (inputNazwaCheck) {
             const tbody = document.getElementById('zd-tbody');
             if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="padding:30px; text-align:center; color:#94a3b8;">Ładowanie...</td></tr>';
             const payload = { action: 'list' };
-            if (zd_filterStatus) payload.status = zd_filterStatus;
+            if (zd_filterStatus === 'SZABLONY') {
+                payload.tylko_szablony = true;
+            } else if (zd_filterStatus) {
+                payload.status = zd_filterStatus;
+            }
             zd_apiCall(payload).then(res => {
                 if (res.status !== 'success') {
                     if (tbody) tbody.innerHTML = `<tr><td colspan="8" style="padding:20px; text-align:center; color:#dc2626;">Błąd: ${escHtml(res.message || '')}</td></tr>`;
@@ -18619,6 +18660,8 @@ if (inputNazwaCheck) {
             document.getElementById('zd-deadline').value = '';
             document.getElementById('zd-kategoria').value = 'INNE';
             document.getElementById('zd-priorytet').value = 'NORMALNY';
+            document.getElementById('zd-powtarzaj').value = 'NIE';
+            zd_powtarzajChange();
             zd_clearKlient();
             const ov = document.getElementById('zd-modal-overlay');
             ov.style.display = 'flex';
@@ -18675,8 +18718,11 @@ if (inputNazwaCheck) {
 
             const id_klienta = document.getElementById('zd-id-klienta').value || null;
             const klient_nazwa = document.getElementById('zd-klient-nazwa').value || null;
+            const powtarzaj = document.getElementById('zd-powtarzaj').value;
+            const powtarzaj_dzien = (powtarzaj === 'TYGODNIOWO' || powtarzaj === 'MIESIECZNIE')
+                ? parseInt(document.getElementById('zd-powtarzaj-dzien').value, 10) : null;
             const myImie = localStorage.getItem('boczki_pracownik_imie') || '';
-            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa };
+            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien };
             const payload = id
                 ? { action: 'edit', id, ...base, kto_edytuje: myImie }
                 : { action: 'add', ...base, utworzone_przez: myImie };
