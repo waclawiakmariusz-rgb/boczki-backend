@@ -103,7 +103,7 @@ module.exports = (db) => {
     if (rola_kto === 'praktykantka') return cb(false, 'Praktykantka nie może zlecać zadań');
     if (rola_kto === 'recepcja') {
       const t = String(target || '').toLowerCase().trim();
-      if (t === 'recepcja') return cb(true);
+      if (t === 'recepcja' || t === 'praktykantka') return cb(true);
       // Sprawdź rolę odbiorcy w bazie
       pobierzRoleUzytkownika(tenant_id, target, (rolaTarget) => {
         if (!rolaTarget) return cb(false, 'Nie znaleziono roli odbiorcy');
@@ -217,20 +217,28 @@ module.exports = (db) => {
       else materializujWzorce(tenant_id, runQuery);
 
     } else if (action === 'moje') {
-      // Zadania konkretnej osoby (do widoku recepcji w przyszłości)
+      // Zadania konkretnej osoby — recepcja widzi też zadania zlecone na rolę 'recepcja',
+      // praktykantka widzi tylko swoje (rola praktykantka nie ma "grupowych" zadań).
       const osoba = String(d.osoba || '').trim();
+      const rolaOsoby = String(d.rola || '').toLowerCase().trim();
       if (!osoba) return res.json({ status: 'error', message: 'Brak osoby' });
       // Materializacja wzorców (jeśli osoba ma przypisane szablony cykliczne)
       materializujWzorce(tenant_id, () => {
+        const params = [tenant_id, osoba];
+        let whereOsoba = `AND (przypisane_do = ?`;
+        // Recepcja widzi też zadania dla roli 'recepcja', praktykantka — dla 'praktykantka'
+        if (rolaOsoby === 'recepcja') { whereOsoba += ` OR LOWER(przypisane_do) = 'recepcja'`; }
+        else if (rolaOsoby === 'praktykantka') { whereOsoba += ` OR LOWER(przypisane_do) = 'praktykantka'`; }
+        whereOsoba += `)`;
         db.query(
           `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status,
                   kategoria, priorytet, id_klienta, klient_nazwa,
                   powtarzaj, powtarzaj_dzien, parent_powtarzajacy_id
              FROM Zadania
             WHERE tenant_id = ? AND status = 'AKTYWNE' AND is_szablon = 0
-              AND (przypisane_do = ? OR LOWER(przypisane_do) = 'recepcja')
+              ${whereOsoba}
             ORDER BY FIELD(priorytet,'PILNY','WAZNY','NORMALNY'), (deadline IS NULL), deadline ASC`,
-          [tenant_id, osoba],
+          params,
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
             return res.json({ status: 'success', data: rows || [] });

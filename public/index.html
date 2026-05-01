@@ -9006,10 +9006,13 @@ function ds_loadZadania(rola, imie) {
     const r = String(rola || '').toLowerCase().trim();
     const isManager = ['admin', 'megaadmin', 'manager'].includes(r);
     const isRecepcja = (r === 'recepcja');
-    if (!isManager && !isRecepcja) { sec.style.display = 'none'; return; }
+    const isPraktykantka = (r === 'praktykantka');
+    const isReceiver = isRecepcja || isPraktykantka;
+    // Tylko praktykantka i wyżej widzi widget — kosmetolog itp. nie ma zadań
+    if (!isManager && !isReceiver) { sec.style.display = 'none'; return; }
     sec.style.display = '';
-    if (titleEl) titleEl.textContent = isRecepcja ? 'Twoje zadania' : 'Zadania zespołu';
-    // Przycisk dodawania — recepcja i wyżej
+    if (titleEl) titleEl.textContent = isReceiver ? 'Twoje zadania' : 'Zadania zespołu';
+    // Przycisk dodawania — recepcja i wyżej (praktykantka NIE)
     const addBtn = document.getElementById('ds-zadania-add-btn');
     if (addBtn) addBtn.style.display = (isManager || isRecepcja) ? '' : 'none';
 
@@ -9017,7 +9020,7 @@ function ds_loadZadania(rola, imie) {
     const sToken = localStorage.getItem('boczki_session_token') || '';
     const payload = isManager
         ? { action: 'list', status: 'AKTYWNE', tenant_id }
-        : { action: 'moje', osoba: imie || '', tenant_id };
+        : { action: 'moje', osoba: imie || '', rola: r, tenant_id };
 
     fetch(API_URL + '/zadania', {
         method: 'POST',
@@ -9031,7 +9034,7 @@ function ds_loadZadania(rola, imie) {
         const all = res.data || [];
         if (countEl) countEl.textContent = all.length ? `(${all.length})` : '';
         window.__ds_zd_all = all;
-        window.__ds_zd_isRecepcja = isRecepcja;
+        window.__ds_zd_isRecepcja = isReceiver;  // recepcja LUB praktykantka — wszyscy widzą "✓ Wykonane"
         ds_zd_renderTabs();
     }).catch(e => {
         list.innerHTML = `<div style="color:#dc2626; font-size:13px; padding:8px 0;">Błąd: ${escHtml(e.message||'')}</div>`;
@@ -18497,19 +18500,29 @@ if (inputNazwaCheck) {
                 let opts = '<option value="">— wybierz —</option>';
                 if (isManager) {
                     // Wszystkie role + wszyscy pracownicy
-                    opts += '<option value="recepcja">📞 Recepcja (rola)</option>';
+                    opts += '<optgroup label="Role grupowe">';
+                    opts += '<option value="recepcja">📞 Recepcja (cała rola)</option>';
+                    opts += '<option value="praktykantka">🌱 Praktykantka (cała rola)</option>';
+                    opts += '</optgroup>';
+                    opts += '<optgroup label="Konkretni pracownicy">';
                     users.forEach(u => {
                         const rolaIco = ({recepcja:'📞', kosmetolog:'💄', praktykantka:'🌱', manager:'👔', admin:'🛡️', megaadmin:'🛡️'})[String(u.rola||'').toLowerCase()] || '👤';
                         opts += `<option value="${escHtml(u.imie)}">${rolaIco} ${escHtml(u.imie)} (${escHtml(u.rola || '')})</option>`;
                     });
+                    opts += '</optgroup>';
                 } else if (isRecepcja) {
-                    // Tylko 'recepcja' (rola) + osoby z rolą recepcja/praktykantka
-                    opts += '<option value="recepcja">📞 Recepcja (rola)</option>';
+                    // Role grupowe (recepcja+praktykantka) + osoby z rolą recepcja/praktykantka
+                    opts += '<optgroup label="Role grupowe">';
+                    opts += '<option value="recepcja">📞 Recepcja (cała rola)</option>';
+                    opts += '<option value="praktykantka">🌱 Praktykantka (cała rola)</option>';
+                    opts += '</optgroup>';
+                    opts += '<optgroup label="Konkretni pracownicy">';
                     users.filter(u => ['recepcja','praktykantka'].includes(String(u.rola||'').toLowerCase()))
                          .forEach(u => {
                             const ico = String(u.rola||'').toLowerCase() === 'recepcja' ? '📞' : '🌱';
                             opts += `<option value="${escHtml(u.imie)}">${ico} ${escHtml(u.imie)} (${escHtml(u.rola || '')})</option>`;
                          });
+                    opts += '</optgroup>';
                 }
                 // praktykantka: brak opcji (i tak nie powinna otworzyć modalu)
                 sel.innerHTML = opts;
