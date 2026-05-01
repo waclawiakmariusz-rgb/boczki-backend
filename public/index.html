@@ -6930,10 +6930,11 @@ ANALIZA MANAGER
             <input type="hidden" id="zd-edit-id" value="">
 
             <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Tytuł <span style="color:#dc2626;">*</span></label>
-            <input id="zd-tytul" required maxlength="255" placeholder="np. Zadzwoń do klientki w sprawie..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
+            <input id="zd-tytul" required maxlength="255" oninput="zd_autoSuggest()" placeholder="np. Zadzwoń do klientki w sprawie..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
 
             <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Opis</label>
-            <textarea id="zd-opis" rows="4" placeholder="Szczegóły, instrukcje, kontekst..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none; resize:vertical;"></textarea>
+            <textarea id="zd-opis" rows="4" oninput="zd_autoSuggest()" placeholder="Szczegóły, instrukcje, kontekst..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:6px; outline:none; resize:vertical;"></textarea>
+            <div id="zd-klient-suggest" style="margin-bottom:12px;"></div>
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
                 <div>
@@ -18097,6 +18098,8 @@ if (inputNazwaCheck) {
             sel.style.display = 'flex';
             document.getElementById('zd-klient-search').value = '';
             document.getElementById('zd-klient-results').style.display = 'none';
+            const sugDiv = document.getElementById('zd-klient-suggest');
+            if (sugDiv) sugDiv.innerHTML = '';
         }
 
         function zd_clearKlient() {
@@ -18104,6 +18107,56 @@ if (inputNazwaCheck) {
             document.getElementById('zd-klient-nazwa').value = '';
             document.getElementById('zd-klient-selected').style.display = 'none';
             document.getElementById('zd-klient-search').value = '';
+            // Po wyczyszczeniu — wykryj ponownie z istniejącej treści
+            zd_autoSuggest();
+        }
+
+        // Auto-wykrywanie klienta z treści tytułu/opisu — po każdym wpisanym słowie
+        // szuka match'y w bazie klientów i proponuje przypięcie jednym kliknięciem.
+        let zd_autoSuggestTimer = null;
+        function zd_autoSuggest() {
+            clearTimeout(zd_autoSuggestTimer);
+            zd_autoSuggestTimer = setTimeout(() => {
+                const sugDiv = document.getElementById('zd-klient-suggest');
+                if (!sugDiv) return;
+                // Klient już wybrany — nie pokazuj sugestii
+                if (document.getElementById('zd-id-klienta').value) { sugDiv.innerHTML = ''; return; }
+                if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) { sugDiv.innerHTML = ''; return; }
+                const tytul = (document.getElementById('zd-tytul')?.value || '').toLowerCase();
+                const opis = (document.getElementById('zd-opis')?.value || '').toLowerCase();
+                const text = tytul + ' ' + opis;
+                // Wyciągnij słowa o długości ≥ 3, polskie litery włącznie
+                const words = (text.match(/[a-ząćęłńóśźż]{3,}/gi) || []).map(w => w.toLowerCase());
+                if (!words.length) { sugDiv.innerHTML = ''; return; }
+                // Stop-words — popularne polskie słowa, które nie są imionami
+                const stop = new Set([
+                    'zadzwonic','zadzwonić','wyslac','wysłać','sprawdzic','sprawdzić','zrobic','zrobić',
+                    'jutro','dzis','dziś','wczoraj','dzisiaj','tygodniu','miesiacu','miesiącu','rano','wieczorem',
+                    'klient','klientka','klientka','klienta','klienci','klientow','klientów',
+                    'kosmetyk','kosmetolog','kosmetykow','kosmetyków','zabieg','zabiegu','zabiegi',
+                    'recepcja','manager','admin','salon','salonu','telefon','telefonu','adres',
+                    'pani','pana','panu','panie','panią','pana','tej','tego','jego','jej','swoj','swój','swoje',
+                    'oraz','bez','dla','przy','niech','tylko','aby','żeby','potem','jeszcze','musi','musze','muszę',
+                    'jest','byly','byłl','jako','jakim','jaka','który','która','które','razem',
+                    'sprawie','sprawe','sprawę','informacja','informacje','wiadomosc','wiadomość'
+                ]);
+                const candidates = new Map();
+                for (const w of new Set(words)) {
+                    if (stop.has(w)) continue;
+                    for (const k of window.wszyscyKlienciDane) {
+                        const nLow = String(k.nazwa || '').toLowerCase();
+                        // Każdy "token" w nazwie klienta — porównujemy do słowa
+                        const nTokens = nLow.split(/\s+/);
+                        if (nTokens.some(t => t === w || (w.length >= 4 && t.startsWith(w)))) {
+                            candidates.set(String(k.id), k);
+                        }
+                    }
+                }
+                const top = Array.from(candidates.values()).slice(0, 5);
+                if (!top.length) { sugDiv.innerHTML = ''; return; }
+                sugDiv.innerHTML = '<div style="font-size:11px; color:#475569; margin-bottom:5px; font-weight:600;">💡 Wykryto klientów z treści — kliknij by powiązać:</div>' +
+                    top.map(k => `<button type="button" onclick="zd_pickKlient('${escHtml(String(k.id))}', '${escHtml(String(k.nazwa).replace(/'/g,'&#39;'))}')" style="margin:2px; padding:5px 11px; border-radius:6px; border:1px solid #93c5fd; background:#eff6ff; color:#1e40af; font-size:12px; font-weight:600; cursor:pointer;">+ ${escHtml(k.nazwa)}</button>`).join('');
+            }, 250);
         }
 
         function zd_otworzKlienta(id) {
