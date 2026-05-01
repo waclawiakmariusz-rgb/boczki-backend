@@ -2454,47 +2454,112 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 .zd-chip:hover { background:#f8fafc !important; border-color:#cbd5e1 !important; }
 .zd-chip.zd-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
 .zd-chip.zd-chip-active:hover { background:#db2777 !important; }
-/* widget Zadania na Pulpicie — wygląd całego boxa */
-#ds-zadania-section { background:linear-gradient(135deg, #fffefe 0%, #fdf4f8 100%); border:1px solid #f5e1ea; border-radius:24px; box-shadow:0 10px 32px rgba(236,72,153,.05); }
-#ds-zadania-section .ds-section-head { padding-bottom:14px; border-bottom:1px solid #fce7f3; margin-bottom:14px; }
-#ds-zadania-section .ds-section-head h3 { font-size:18px; letter-spacing:-.02em; }
-#ds-zadania-add-btn { box-shadow:0 4px 14px rgba(236,72,153,.35); transition:all .15s; }
-#ds-zadania-add-btn:hover { box-shadow:0 6px 20px rgba(236,72,153,.45); transform:translateY(-1px); }
+/* widget Zadania na Pulpicie — Estelio premium look */
+#ds-zadania-section { background:rgba(255,255,255,.95); border:1px solid #f1dfe7; border-radius:22px; box-shadow:0 18px 45px rgba(65,31,47,.08); }
+#ds-zadania-section .ds-section-head { padding-bottom:14px; border-bottom:1px solid #f1e6eb; margin-bottom:14px; }
+#ds-zadania-section .ds-section-head h3 { font-size:17px; letter-spacing:-.01em; display:flex; align-items:center; gap:9px; }
+#ds-zadania-add-btn { background:linear-gradient(135deg, #f74ca0, #df247e); border:none; padding:11px 18px; border-radius:13px; font-weight:700; box-shadow:0 10px 22px rgba(236,63,145,.22); transition:all .15s; }
+#ds-zadania-add-btn:hover { box-shadow:0 14px 28px rgba(236,63,145,.32); transform:translateY(-1px); }
 
-/* widget Zadania na Pulpicie — strzałka rotacji */
-#ds-zadania-list details { background:#fff; border:1px solid #f1f5f9; border-radius:14px; margin-bottom:8px; overflow:hidden; transition:all .2s; }
-#ds-zadania-list details:hover { border-color:#fbcfe8; box-shadow:0 4px 14px rgba(236,72,153,.08); }
-#ds-zadania-list details[open] { border-color:#fbcfe8; box-shadow:0 6px 20px rgba(236,72,153,.1); }
-#ds-zadania-list details[open] > summary .ds-zd-arrow { transform: rotate(90deg); color:#ec4899; }
-#ds-zadania-list details > summary::-webkit-details-marker { display:none; }
-#ds-zadania-list details > summary { transition:background .15s; }
-#ds-zadania-list details > summary:hover { background:linear-gradient(90deg, #fdf4f8 0%, transparent 60%); }
-#ds-zadania-list details > div { background:linear-gradient(180deg, #fafbfc 0%, #fff 100%) !important; }
+/* Banner podsumowujący "Masz N zadań na dziś, X pilnych" */
+.ds-zd-summary-banner { margin-top:14px; padding:18px 22px; border:1px solid #ffd4e5; background:linear-gradient(90deg, #fff8fb, #fff); border-radius:18px; display:flex; align-items:center; justify-content:space-between; min-height:78px; }
+.ds-zd-summary-left { display:flex; align-items:center; gap:16px; }
+.ds-zd-summary-icon { width:46px; height:46px; border-radius:50%; background:#fff0f6; display:grid; place-items:center; font-size:22px; flex:0 0 auto; }
+.ds-zd-summary-text strong { display:block; font-size:15px; color:#16233a; font-weight:700; margin-bottom:3px; }
+.ds-zd-summary-text span { color:#ec3f91; font-weight:500; font-size:13px; }
+.ds-zd-summary-deco { font-size:36px; opacity:.4; }
 
-/* widget Zadania na Pulpicie — taby kategorii */
-.ds-zd-tab { padding:8px 14px; border-radius:999px; border:1px solid #e9e1e5; background:#fff; cursor:pointer; font-weight:700; font-size:12px; color:#5b6378; display:inline-flex; align-items:center; gap:7px; transition:all .15s; box-shadow:0 1px 3px rgba(0,0,0,.03); }
-.ds-zd-tab:hover { background:#fdf4f8; border-color:#fbcfe8; transform:translateY(-1px); box-shadow:0 4px 10px rgba(236,72,153,.1); }
-.ds-zd-tab.active { background:linear-gradient(135deg, #ec4899 0%, #db2777 100%); color:#fff; border-color:#ec4899; box-shadow:0 4px 14px rgba(236,72,153,.35); }
-.ds-zd-tab.active:hover { transform:translateY(-1px); }
-.ds-zd-tab-badge { background:#f1f5f9; color:#475569; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:800; min-width:20px; text-align:center; }
-.ds-zd-tab.active .ds-zd-tab-badge { background:rgba(255,255,255,0.28); color:#fff; }
-.ds-zd-tab.active .ds-zd-tab-badge:not(:empty) { backdrop-filter:blur(6px); }
+/* Tabs kategorii — pill z różowym aktywem (Estelio look) */
+#ds-zadania-tabs { gap:10px; margin-top:14px; margin-bottom:12px; }
+.ds-zd-tab { padding:11px 16px; border:1px solid #eadfe5; border-radius:14px; background:#fff; cursor:pointer; font-weight:700; font-size:12px; color:#465066; display:inline-flex; align-items:center; gap:8px; transition:all .2s; flex:1; min-width:auto; justify-content:center; }
+.ds-zd-tab:hover { border-color:#ff77b6; color:#ec3f91; }
+.ds-zd-tab.active { border-color:#ff77b6; background:#fff3f8; color:#ec3f91; }
+.ds-zd-tab-badge { background:#f4f6f9; color:#465066; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:700; min-width:22px; text-align:center; }
+.ds-zd-tab.active .ds-zd-tab-badge { background:#ff5aa9; color:#fff; }
 
-/* widget Zadania — sekcja "Zlecone przeze mnie" */
+/* Grupy w obrębie kategorii: pilne / dziś / w przyszłości / bez terminu */
+.ds-zd-group { margin-bottom:14px; }
+.ds-zd-group-title { font-weight:700; color:#ec3f91; margin:8px 2px 10px; display:flex; align-items:center; gap:8px; font-size:13px; }
+.ds-zd-group-title.orange { color:#ff8a00; }
+.ds-zd-group-title.blue { color:#5b85b3; }
+.ds-zd-group-title.gray { color:#7b879b; }
+.ds-zd-group-title small { color:#8a8f9d; font-weight:600; }
+
+/* Pojedynczy task — karta z lewym paskiem priorytetu */
+.ds-zd-task { background:#fff; border:1px solid #efe3e9; border-radius:16px; padding:14px 16px; box-shadow:0 8px 22px rgba(30,35,50,.04); position:relative; overflow:hidden; margin-bottom:10px; transition:all .2s; }
+.ds-zd-task:hover { box-shadow:0 14px 28px rgba(30,35,50,.07); transform:translateY(-1px); }
+.ds-zd-task::before { content:""; position:absolute; left:0; top:0; width:4px; height:100%; background:#ec3f91; }
+.ds-zd-task.pri-WAZNY::before { background:#ff961f; }
+.ds-zd-task.pri-PILNY::before { background:#dc2626; }
+.ds-zd-task.pri-NORMALNY::before { background:#9fb1c7; }
+.ds-zd-task.done { opacity:.45; transform:scale(.995); }
+.ds-zd-task summary { display:grid; grid-template-columns:1fr auto; align-items:center; gap:18px; cursor:pointer; list-style:none; }
+.ds-zd-task summary::-webkit-details-marker { display:none; }
+.ds-zd-task[open] { box-shadow:0 14px 28px rgba(30,35,50,.07); }
+.ds-zd-task-main { display:flex; align-items:center; gap:13px; min-width:0; }
+.ds-zd-dot { width:36px; height:36px; border-radius:50%; background:#fff0f6; display:grid; place-items:center; flex:0 0 auto; }
+.ds-zd-dot::after { content:""; width:14px; height:14px; border-radius:50%; background:linear-gradient(135deg, #ff6c99, #df164f); }
+.ds-zd-task.pri-WAZNY .ds-zd-dot { background:#fff5e9; }
+.ds-zd-task.pri-WAZNY .ds-zd-dot::after { background:linear-gradient(135deg, #ffb14f, #ff6d22); }
+.ds-zd-task.pri-PILNY .ds-zd-dot { background:#fee2e2; }
+.ds-zd-task.pri-PILNY .ds-zd-dot::after { background:linear-gradient(135deg, #fb7185, #dc2626); }
+.ds-zd-task.pri-NORMALNY .ds-zd-dot { background:#eef2f6; }
+.ds-zd-task.pri-NORMALNY .ds-zd-dot::after { background:linear-gradient(135deg, #94a3b8, #475569); }
+.ds-zd-task-title { font-weight:700; font-size:14.5px; color:#16233a; margin-bottom:5px; }
+.ds-zd-task-meta { display:flex; gap:11px; align-items:center; flex-wrap:wrap; color:#718096; font-size:11.5px; }
+.ds-zd-task-meta .pill { padding:3px 9px; border-radius:999px; background:#ffe8f1; color:#ec3f91; font-weight:700; font-size:10.5px; }
+.ds-zd-task-meta .pill-klient { background:linear-gradient(135deg,#dbeafe,#bfdbfe); color:#1e40af; cursor:pointer; transition:transform .15s; }
+.ds-zd-task-meta .pill-klient:hover { transform:scale(1.05); }
+.ds-zd-task-meta .overdue { color:#dc2626; font-weight:700; }
+.ds-zd-task-actions { display:flex; align-items:center; gap:8px; }
+.ds-zd-action-done { background:#fff; border:1px solid #dfe8e8; color:#26364a; border-radius:12px; padding:10px 16px; font-weight:700; cursor:pointer; font-size:12px; transition:all .15s; font-family:inherit; }
+.ds-zd-action-done:hover { background:#f0fdf4; border-color:#86efac; color:#166534; }
+.ds-zd-more { width:38px; height:38px; border-radius:11px; border:1px solid #e3dde3; background:#fff; cursor:pointer; font-size:18px; line-height:1; color:#465066; transition:all .15s; }
+.ds-zd-more:hover { background:#fff3f8; border-color:#ff77b6; color:#ec3f91; }
+.ds-zd-more-popover { position:absolute; right:14px; top:50px; background:#fff; border:1px solid #efe3e9; border-radius:12px; box-shadow:0 10px 28px rgba(0,0,0,.12); padding:6px; z-index:10; min-width:160px; }
+.ds-zd-more-popover button { display:block; width:100%; text-align:left; padding:9px 12px; border:none; background:transparent; cursor:pointer; border-radius:7px; font-size:13px; color:#26364a; font-family:inherit; }
+.ds-zd-more-popover button:hover { background:#fff3f8; color:#ec3f91; }
+.ds-zd-more-popover button.danger:hover { background:#fee2e2; color:#dc2626; }
+
+/* Rozwijany opis + komentarze */
+.ds-zd-task-body { padding:12px 8px 6px 49px; color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap; }
+.ds-zd-task-body-empty { color:#cbd5e1; font-style:italic; }
+.ds-zd-task-comments-btn { margin-top:8px; padding:5px 11px; border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; }
+
+/* Empty state */
+.ds-zd-empty { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:36px 16px; background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius:16px; border:2px dashed #86efac; }
+.ds-zd-empty-icon { font-size:42px; }
+.ds-zd-empty-title { font-size:15px; font-weight:700; color:#166534; }
+.ds-zd-empty-sub { font-size:12px; color:#15803d; opacity:.8; }
+
+/* "Zobacz wszystkie zadania →" link pod listą */
+.ds-zd-all-link { text-align:center; padding:12px; color:#ec3f91; font-weight:700; border-top:1px solid #f3e5eb; margin-top:8px; cursor:pointer; font-size:13px; }
+.ds-zd-all-link:hover { color:#df247e; }
+
+/* Sekcja "Zlecone przeze mnie" — bursztyn */
 #ds-zadania-zlecone-wrap { border-top:none !important; padding-top:0 !important; }
-#ds-zadania-zlecone-wrap > summary { padding:10px 14px !important; background:linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius:12px; color:#92400e !important; transition:all .15s; }
+#ds-zadania-zlecone-wrap > summary { padding:10px 14px !important; background:linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%); border-radius:12px; color:#92400e !important; transition:all .15s; list-style:none; }
+#ds-zadania-zlecone-wrap > summary::-webkit-details-marker { display:none; }
 #ds-zadania-zlecone-wrap > summary:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(217,119,6,.2); }
 #ds-zadania-zlecone-wrap[open] > summary { border-radius:12px 12px 0 0; }
 #ds-zadania-zlecone-list { background:#fff; border:1px solid #fde68a; border-top:none; border-radius:0 0 12px 12px; padding:8px 14px !important; }
 
+/* Dark mode */
 body.dark-mode #ds-zadania-section { background:linear-gradient(135deg, #1e293b 0%, #1a2332 100%) !important; border-color:#334155 !important; }
 body.dark-mode #ds-zadania-section .ds-section-head { border-bottom-color:#334155 !important; }
-body.dark-mode #ds-zadania-list details { background:#1e293b !important; border-color:#334155 !important; }
-body.dark-mode #ds-zadania-list details:hover,
-body.dark-mode #ds-zadania-list details[open] { border-color:#ec4899 !important; }
+body.dark-mode .ds-zd-task { background:#1e293b !important; border-color:#334155 !important; }
+body.dark-mode .ds-zd-task-title { color:#e2e8f0 !important; }
+body.dark-mode .ds-zd-task-meta { color:#cbd5e1 !important; }
 body.dark-mode .ds-zd-tab { background:#0f172a !important; border-color:#334155 !important; color:#cbd5e1 !important; }
-body.dark-mode .ds-zd-tab:hover { background:#1e293b !important; }
+body.dark-mode .ds-zd-tab.active { background:#1e293b !important; color:#ec4899 !important; border-color:#ec4899 !important; }
 body.dark-mode .ds-zd-tab-badge { background:#334155 !important; color:#94a3b8 !important; }
+body.dark-mode .ds-zd-summary-banner { background:#0f172a !important; border-color:#334155 !important; }
+body.dark-mode .ds-zd-summary-text strong { color:#f8fafc !important; }
+body.dark-mode .ds-zd-action-done { background:#1e293b !important; border-color:#334155 !important; color:#e2e8f0 !important; }
+body.dark-mode .ds-zd-more { background:#1e293b !important; border-color:#334155 !important; color:#cbd5e1 !important; }
+body.dark-mode .ds-zd-more-popover { background:#1e293b !important; border-color:#334155 !important; }
+body.dark-mode .ds-zd-more-popover button { color:#e2e8f0 !important; }
+body.dark-mode .ds-zd-task-body { color:#cbd5e1 !important; }
 .zd-row-action { background:transparent; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; }
 .zd-row-action:hover { background:#f1f5f9; }
 .zd-sort-arr { color:#cbd5e1; font-size:10px; }
@@ -5524,7 +5589,8 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
       <h3 style="margin:0;">📋 <span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span></h3>
       <button id="ds-zadania-add-btn" onclick="zd_addOpen()" style="display:none; background:#ec4899; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px;">+ Nowe zadanie</button>
     </div>
-    <div id="ds-zadania-tabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; margin-bottom:8px;"></div>
+    <div id="ds-zadania-banner" style="display:none;"></div>
+    <div id="ds-zadania-tabs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
     <div id="ds-zadania-list">
       <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
     </div>
@@ -9101,16 +9167,43 @@ let ds_zd_activeTab = null;
 function ds_zd_renderTabs() {
     const tabsBox = document.getElementById('ds-zadania-tabs');
     const list = document.getElementById('ds-zadania-list');
+    const banner = document.getElementById('ds-zadania-banner');
     if (!tabsBox || !list) return;
     const all = window.__ds_zd_all || [];
     if (!all.length) {
         tabsBox.innerHTML = '';
-        list.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:36px 16px; background:linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius:16px; border:2px dashed #86efac;">
-            <span style="font-size:42px;">✨</span>
-            <div style="font-size:15px; font-weight:700; color:#166534;">Wszystko ogarnięte!</div>
-            <div style="font-size:12px; color:#15803d; opacity:.8;">Brak aktywnych zadań — czas na kawę ☕</div>
+        if (banner) banner.style.display = 'none';
+        list.innerHTML = `<div class="ds-zd-empty">
+            <span class="ds-zd-empty-icon">✨</span>
+            <div class="ds-zd-empty-title">Wszystko ogarnięte!</div>
+            <div class="ds-zd-empty-sub">Brak aktywnych zadań — czas na kawę ☕</div>
         </div>`;
         return;
+    }
+
+    // Banner podsumowujący — liczy zadania na dziś + pilne (PILNY)
+    if (banner) {
+        const dzisStr = new Date().toLocaleDateString('sv-SE'); // YYYY-MM-DD
+        const dzisCount = all.filter(z => z.deadline && new Date(z.deadline).toLocaleDateString('sv-SE') === dzisStr).length;
+        const pilneCount = all.filter(z => z.priorytet === 'PILNY').length;
+        const total = all.length;
+        const napis = dzisCount > 0
+            ? `Masz <b>${dzisCount}</b> ${dzisCount===1?'zadanie':dzisCount<5?'zadania':'zadań'} na dziś`
+            : `Masz <b>${total}</b> ${total===1?'aktywne zadanie':total<5?'aktywne zadania':'aktywnych zadań'}`;
+        const sub = pilneCount > 0
+            ? `${pilneCount} ${pilneCount===1?'wymaga pilnego działania':pilneCount<5?'wymagają pilnego działania':'wymaga pilnego działania'}`
+            : 'Wszystko pod kontrolą';
+        banner.style.display = '';
+        banner.innerHTML = `<div class="ds-zd-summary-banner">
+            <div class="ds-zd-summary-left">
+                <div class="ds-zd-summary-icon">🎯</div>
+                <div class="ds-zd-summary-text">
+                    <strong>${napis}</strong>
+                    <span>${sub}</span>
+                </div>
+            </div>
+            <div class="ds-zd-summary-deco">📋</div>
+        </div>`;
     }
 
     // 5 kategorii w stałej kolejności
@@ -9125,7 +9218,6 @@ function ds_zd_renderTabs() {
     TABS.forEach(t => counts[t.key] = 0);
     all.forEach(z => { const k = z.kategoria || 'INNE'; if (counts[k] !== undefined) counts[k]++; else counts.INNE++; });
 
-    // Pierwszy raz — wybierz tab z największą liczbą zadań (a jeśli wszystkie 0, Klient)
     if (!ds_zd_activeTab || counts[ds_zd_activeTab] === undefined) {
         ds_zd_activeTab = TABS.reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
     }
@@ -9151,78 +9243,164 @@ function ds_zd_renderList() {
     const list = document.getElementById('ds-zadania-list');
     if (!list) return;
     const all = window.__ds_zd_all || [];
-    const isRecepcja = !!window.__ds_zd_isRecepcja;
+    const isReceiver = !!window.__ds_zd_isRecepcja;
+    const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+    const isPraktykantka = (myRola === 'praktykantka');
     const filtered = all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
 
     if (!filtered.length) {
-        list.innerHTML = `<div style="padding:18px 0; text-align:center; color:#94a3b8; font-size:13px;">Brak zadań w tej kategorii</div>`;
+        list.innerHTML = `<div style="padding:24px 0; text-align:center; color:#94a3b8; font-size:13px;">Brak zadań w tej kategorii</div>`;
         return;
     }
 
-    const KAT = {
-        MAGAZYN:{i:'📦',l:'Magazyn',bg:'#fef3c7',c:'#92400e'},
-        KOSMETYK:{i:'💄',l:'Kosmetyk',bg:'#fce7f3',c:'#9d174d'},
-        KLIENT:{i:'👤',l:'Klient',bg:'#dbeafe',c:'#1e40af'},
-        SPRZEDAZ:{i:'💰',l:'Sprzedaż',bg:'#dcfce7',c:'#166534'},
-        INNE:{i:'📋',l:'Inne',bg:'#f1f5f9',c:'#475569'}
+    // Grupowanie wewnątrz kategorii: pilne / dziś / w przyszłości / bez terminu
+    const dzisStr = new Date().toLocaleDateString('sv-SE');
+    const groups = {
+        pilne:    { title: '❗ Do pilnego działania', cls: '',       items: [] },
+        dzis:     { title: '🕘 Na dziś',              cls: 'orange', items: [] },
+        przyszle: { title: '📅 Zaplanowane',          cls: 'blue',   items: [] },
+        bez:      { title: '🗒 Bez terminu',          cls: 'gray',   items: [] }
     };
-    const PRI = {
-        NORMALNY:{i:'',c:'transparent'},
-        WAZNY:{i:'🟠',c:'#fb923c'},
-        PILNY:{i:'🔴',c:'#dc2626'}
+    filtered.forEach(z => {
+        if (z.priorytet === 'PILNY') return groups.pilne.items.push(z);
+        if (!z.deadline) return groups.bez.items.push(z);
+        const d = new Date(z.deadline).toLocaleDateString('sv-SE');
+        if (d === dzisStr) return groups.dzis.items.push(z);
+        if (d > dzisStr) return groups.przyszle.items.push(z);
+        // Po terminie i nie pilne — daj do "Na dziś" z PO TERMINIE flagą
+        groups.dzis.items.push(z);
+    });
+
+    const KAT = {
+        MAGAZYN:{i:'📦',l:'Magazyn'}, KOSMETYK:{i:'💄',l:'Kosmetyk'}, KLIENT:{i:'👤',l:'Klient'},
+        SPRZEDAZ:{i:'💰',l:'Sprzedaż'}, INNE:{i:'📋',l:'Inne'}
     };
     const now = Date.now();
-    const top = filtered.slice(0, 5);
-    list.innerHTML = top.map(z => {
-        const k = KAT[z.kategoria] || KAT.INNE;
-        const p = PRI[z.priorytet] || PRI.NORMALNY;
-        const deadline = z.deadline ? new Date(z.deadline) : null;
-        const overdue = deadline && deadline.getTime() < now;
-        const deadlineStr = deadline
-            ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
-            : '';
-        const action = isRecepcja
-            ? `<button onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
-            : '';
-        const klientLink = z.id_klienta && z.klient_nazwa
-            ? `<span onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')" style="display:inline-flex; align-items:center; gap:4px; padding:3px 10px; border-radius:999px; background:linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color:#1e40af; font-size:11px; font-weight:700; cursor:pointer; box-shadow:0 1px 3px rgba(30,64,175,.15); transition:transform .15s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">👤 ${escHtml(z.klient_nazwa)} →</span>`
-            : '';
-        const opisHtml = z.opis ? String(z.opis).trim() : '';
-        const opisInner = opisHtml
-            ? `<div style="color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
-            : `<div style="color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
-        const tytulEsc = String(z.tytul || '').replace(/'/g, "&#39;");
-        const opisBody = `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9;">
-            ${opisInner}
-            <button onclick="event.stopPropagation(); zd_openComments('${z.id}', '${escHtml(tytulEsc)}')" style="margin-top:8px; padding:5px 11px; border:1px solid #c7d2fe; background:#eef2ff; color:#4338ca; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer;">💬 Komentarze</button>
+
+    let html = '';
+    Object.values(groups).forEach(g => {
+        if (!g.items.length) return;
+        html += `<div class="ds-zd-group">
+            <div class="ds-zd-group-title ${g.cls}">${g.title} <small>(${g.items.length})</small></div>
+            ${g.items.slice(0, 5).map(z => ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now)).join('')}
+            ${g.items.length > 5 ? `<div style="text-align:center; color:#94a3b8; font-size:11px; padding:4px 0;">…i ${g.items.length-5} więcej</div>` : ''}
         </div>`;
-        return `<details style="${p.c !== 'transparent' ? 'border-left:4px solid '+p.c+'!important;' : ''} ${overdue ? 'background:linear-gradient(90deg, #fef2f2 0%, #fff 80%)!important;' : ''}">
-            <summary style="list-style:none; cursor:pointer; padding:14px 16px; display:flex; align-items:center; gap:14px;">
-                <span style="font-size:22px; min-width:28px; text-align:center;">${p.i || k.i}</span>
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:5px;">
-                        <span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; background:${k.bg}; color:${k.c}; font-size:10px; font-weight:800; letter-spacing:.02em; text-transform:uppercase;">${k.i} ${k.l}</span>
-                        <span style="font-weight:700; color:#1f2430; font-size:14.5px; letter-spacing:-.01em;">${escHtml(z.tytul)}</span>
-                        ${klientLink}
-                    </div>
-                    <div style="font-size:11.5px; color:#64748b; display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
-                        ${!isRecepcja ? `<span style="display:inline-flex; align-items:center; gap:4px;"><span style="color:#94a3b8;">👤</span><span style="font-weight:600; color:#475569;">${escHtml(z.przypisane_do || '')}</span></span>` : ''}
-                        ${deadlineStr ? `<span style="display:inline-flex; align-items:center; gap:4px; ${overdue?'color:#dc2626; font-weight:700;':''}">⏰ ${deadlineStr}${overdue?' <span style="background:#dc2626; color:#fff; padding:1px 6px; border-radius:4px; font-size:9px; font-weight:800; margin-left:4px;">PO TERMINIE</span>':''}</span>` : '<span style="color:#cbd5e1;">⏰ brak terminu</span>'}
+    });
+
+    list.innerHTML = html;
+}
+
+function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
+    const KAT = { MAGAZYN:{i:'📦',l:'Magazyn'}, KOSMETYK:{i:'💄',l:'Kosmetyk'}, KLIENT:{i:'👤',l:'Klient'},
+                  SPRZEDAZ:{i:'💰',l:'Sprzedaż'}, INNE:{i:'📋',l:'Inne'} };
+    const k = KAT[z.kategoria] || KAT.INNE;
+    const deadline = z.deadline ? new Date(z.deadline) : null;
+    const overdue = deadline && deadline.getTime() < now;
+    const deadlineStr = deadline
+        ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
+        : '';
+    const tytulEsc = String(z.tytul || '').replace(/'/g, '&#39;');
+    const klientPill = z.id_klienta && z.klient_nazwa
+        ? `<span class="pill pill-klient" onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')">👤 ${escHtml(z.klient_nazwa)} →</span>`
+        : '';
+    const przypisanyPill = !isReceiver && z.przypisane_do
+        ? `<span class="pill" style="background:#fff3f8;">${escHtml(z.przypisane_do)}</span>` : '';
+    // Akcje — recepcja+praktykantka mają ✓ Zrobione, recepcja+manager też ⋮ menu
+    const doneBtn = isReceiver
+        ? `<button class="ds-zd-action-done" onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')">✓ Zrobione</button>`
+        : '';
+    const moreBtn = !isPraktykantka
+        ? `<button class="ds-zd-more" onclick="event.stopPropagation(); ds_zd_toggleMore('${z.id}', this)" title="Więcej">⋮</button>`
+        : '';
+    const opis = z.opis ? String(z.opis).trim() : '';
+    const opisInner = opis
+        ? `<div class="ds-zd-task-body">${escHtml(opis)}</div>`
+        : `<div class="ds-zd-task-body ds-zd-task-body-empty">Brak dodatkowego opisu</div>`;
+
+    return `<details class="ds-zd-task pri-${z.priorytet || 'NORMALNY'}" data-id="${z.id}">
+        <summary>
+            <div class="ds-zd-task-main">
+                <div class="ds-zd-dot"></div>
+                <div style="min-width:0; flex:1;">
+                    <div class="ds-zd-task-title">${escHtml(z.tytul)}</div>
+                    <div class="ds-zd-task-meta">
+                        <span class="pill" style="background:${z.kategoria==='KLIENT'?'#dbeafe':z.kategoria==='MAGAZYN'?'#fef3c7':z.kategoria==='KOSMETYK'?'#fce7f3':z.kategoria==='SPRZEDAZ'?'#dcfce7':'#f1f5f9'}; color:${z.kategoria==='KLIENT'?'#1e40af':z.kategoria==='MAGAZYN'?'#92400e':z.kategoria==='KOSMETYK'?'#9d174d':z.kategoria==='SPRZEDAZ'?'#166534':'#475569'};">${k.i} ${k.l}</span>
+                        ${przypisanyPill}
+                        ${deadlineStr ? `<span class="${overdue?'overdue':''}">📅 ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : ''}
+                        ${klientPill}
                     </div>
                 </div>
-                <span class="ds-zd-arrow" style="color:#cbd5e1; font-size:14px; transition:transform .2s;">▶</span>
-                <div>${action}</div>
-            </summary>
-            ${opisBody}
-        </details>`;
-    }).join('');
-    if (filtered.length > 5) {
-        list.innerHTML += `<div style="text-align:center; padding-top:10px; color:#64748b; font-size:12px;">…i ${filtered.length - 5} ${filtered.length-5===1?'kolejne zadanie':filtered.length-5<5?'kolejne zadania':'kolejnych zadań'} w tej kategorii</div>`;
+            </div>
+            <div class="ds-zd-task-actions">
+                ${doneBtn}
+                ${moreBtn}
+            </div>
+        </summary>
+        ${opisInner}
+        <div style="padding:0 16px 14px 49px;">
+            <button class="ds-zd-task-comments-btn" onclick="event.stopPropagation(); zd_openComments('${z.id}', '${escHtml(tytulEsc)}')">💬 Komentarze</button>
+        </div>
+    </details>`;
+}
+
+// Popover ⋮ — Edytuj / Archiwizuj / Usuń
+function ds_zd_toggleMore(id, btn) {
+    // Zamknij wszystkie inne popovery
+    document.querySelectorAll('.ds-zd-more-popover').forEach(p => p.remove());
+    if (btn.dataset.open === '1') { btn.dataset.open = '0'; return; }
+    btn.dataset.open = '1';
+    const pop = document.createElement('div');
+    pop.className = 'ds-zd-more-popover';
+    pop.innerHTML = `
+        <button onclick="ds_zd_actionEdit('${id}')">✏️ Edytuj</button>
+        <button onclick="ds_zd_actionArchive('${id}')">📦 Archiwizuj</button>
+        <button class="danger" onclick="ds_zd_actionDelete('${id}')">🗑 Usuń</button>
+    `;
+    btn.parentElement.appendChild(pop);
+    // Zamknij przy kliknięciu poza
+    setTimeout(() => {
+        const closeOnOut = (e) => {
+            if (!pop.contains(e.target) && e.target !== btn) {
+                pop.remove(); btn.dataset.open = '0';
+                document.removeEventListener('click', closeOnOut);
+            }
+        };
+        document.addEventListener('click', closeOnOut);
+    }, 50);
+}
+
+function ds_zd_actionEdit(id) {
+    document.querySelectorAll('.ds-zd-more-popover').forEach(p => p.remove());
+    if (typeof zd_editOpen === 'function') {
+        // zd_editOpen wymaga zd_data — pobieramy potrzebne zadanie z cache lub z API
+        const z = (window.__ds_zd_all || []).find(x => x.id === id);
+        if (!z) return;
+        // Wstrzykujemy do zd_data tymczasowo żeby zd_editOpen znalazł zadanie
+        if (!Array.isArray(window.zd_data)) window.zd_data = [];
+        if (!zd_data.find(x => x.id === id)) zd_data.push(z);
+        zd_editOpen(id);
     }
+}
+
+function ds_zd_actionArchive(id) {
+    document.querySelectorAll('.ds-zd-more-popover').forEach(p => p.remove());
+    if (typeof zd_archive === 'function') zd_archive(id);
+}
+
+function ds_zd_actionDelete(id) {
+    document.querySelectorAll('.ds-zd-more-popover').forEach(p => p.remove());
+    if (typeof zd_delete === 'function') zd_delete(id);
 }
 
 function ds_zadanieComplete(id) {
     if (!confirm('Oznaczyć zadanie jako wykonane?')) return;
+    // Wizualne potwierdzenie — fade out + zielona ikona
+    const card = document.querySelector(`.ds-zd-task[data-id="${id}"]`);
+    if (card) {
+        card.classList.add('done');
+        const btn = card.querySelector('.ds-zd-action-done');
+        if (btn) { btn.textContent = '✓ Gotowe'; btn.style.background = '#dcfce7'; btn.style.color = '#166534'; btn.style.borderColor = '#86efac'; }
+    }
     const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
     const sToken = localStorage.getItem('boczki_session_token') || '';
     const imie = localStorage.getItem('boczki_pracownik_imie') || '';
@@ -9232,10 +9410,12 @@ function ds_zadanieComplete(id) {
         body: JSON.stringify({ action: 'complete', id, wykonane_przez: imie, tenant_id })
     }).then(r => r.json()).then(res => {
         if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
-        // Przeładuj widget + badge w sidebarze
-        const rola = localStorage.getItem('boczki_pracownik_rola') || '';
-        ds_loadZadania(rola, imie);
-        zd_refreshSidebarBadge();
+        // Krótki delay żeby user zobaczył animację, potem reload
+        setTimeout(() => {
+            const rola = localStorage.getItem('boczki_pracownik_rola') || '';
+            ds_loadZadania(rola, imie);
+            zd_refreshSidebarBadge();
+        }, 350);
     });
 }
 
