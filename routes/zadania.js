@@ -11,6 +11,44 @@ module.exports = (db) => {
   const ALLOWED_KATEGORIE = ['MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE'];
   const ALLOWED_PRIORYTETY = ['NORMALNY','WAZNY','PILNY'];
 
+  // Pobierz rolę użytkownika z tabeli Użytkownicy (imie_login = imie)
+  function pobierzRoleUzytkownika(tenant_id, imie, cb) {
+    if (!imie) return cb(null);
+    db.query(
+      `SELECT rola FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?) LIMIT 1`,
+      [tenant_id, imie],
+      (err, rows) => {
+        if (err || !rows || !rows.length) return cb(null);
+        cb(String(rows[0].rola || '').toLowerCase().trim());
+      }
+    );
+  }
+
+  // Czy zlecający (rola_kto) może zlecić odbiorcy (target — imię lub rola string)?
+  // Reguły:
+  //  - praktykantka — nie może zlecać nikomu
+  //  - recepcja     — może: 'recepcja' (rola) + osoby z rolą recepcja/praktykantka
+  //  - manager/admin/megaadmin — wszyscy
+  // cb(true|false, errorMsg)
+  function sprawdzCzyMozeZlecic(tenant_id, rola_kto, target, cb) {
+    if (!rola_kto) return cb(false, 'Nie udało się ustalić roli wykonującego');
+    if (['admin','megaadmin','manager'].includes(rola_kto)) return cb(true);
+    if (rola_kto === 'praktykantka') return cb(false, 'Praktykantka nie może zlecać zadań');
+    if (rola_kto === 'recepcja') {
+      const t = String(target || '').toLowerCase().trim();
+      if (t === 'recepcja') return cb(true);
+      // Sprawdź rolę odbiorcy w bazie
+      pobierzRoleUzytkownika(tenant_id, target, (rolaTarget) => {
+        if (!rolaTarget) return cb(false, 'Nie znaleziono roli odbiorcy');
+        if (['recepcja', 'praktykantka'].includes(rolaTarget)) return cb(true);
+        return cb(false, 'Recepcja może zlecać tylko recepcji i praktykantce');
+      });
+      return;
+    }
+    // Inne role (np. kosmetolog) — domyślnie nie pozwalamy zlecać
+    return cb(false, 'Brak uprawnień do zlecania zadań');
+  }
+
   // Auto-tworzenie tabeli przy starcie modułu + idempotentna migracja kolumn
   db.query(
     `CREATE TABLE IF NOT EXISTS Zadania (
@@ -110,16 +148,22 @@ module.exports = (db) => {
       const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
-      const id = randomUUID();
-      db.query(
-        `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?)`,
-        [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa],
-        (err) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          return res.json({ status: 'success', id });
-        }
-      );
+      // RBAC: sprawdź czy wykonujący (utworzone_przez) ma prawo zlecić temu odbiorcy
+      pobierzRoleUzytkownika(tenant_id, utworzone_przez, (rolaKto) => {
+        sprawdzCzyMozeZlecic(tenant_id, rolaKto, przypisane_do, (mozna, msg) => {
+          if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
+          const id = randomUUID();
+          db.query(
+            `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?)`,
+            [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              return res.json({ status: 'success', id });
+            }
+          );
+        });
+      });
 
     } else if (action === 'edit') {
       const id = d.id;
@@ -132,19 +176,26 @@ module.exports = (db) => {
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
       const id_klienta = d.id_klienta ? String(d.id_klienta).trim() : null;
       const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
+      const kto_edytuje = String(d.kto_edytuje || d.utworzone_przez || '').trim();
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
-      db.query(
-        `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
-                            id_klienta = ?, klient_nazwa = ?
-         WHERE tenant_id = ? AND id = ?`,
-        [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, tenant_id, id],
-        (err, result) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
-          return res.json({ status: 'success' });
-        }
-      );
+      // RBAC: sprawdź czy edytujący ma prawo zlecić tej osobie/roli
+      pobierzRoleUzytkownika(tenant_id, kto_edytuje, (rolaKto) => {
+        sprawdzCzyMozeZlecic(tenant_id, rolaKto, przypisane_do, (mozna, msg) => {
+          if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
+          db.query(
+            `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
+                                id_klienta = ?, klient_nazwa = ?
+             WHERE tenant_id = ? AND id = ?`,
+            [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, tenant_id, id],
+            (err, result) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
+              return res.json({ status: 'success' });
+            }
+          );
+        });
+      });
 
     } else if (action === 'complete') {
       const id = d.id;

@@ -5492,6 +5492,7 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
     <div class="ds-section-head" style="display:flex; justify-content:space-between; align-items:center;">
       <h3 style="margin:0;">📋 <span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span></h3>
+      <button id="ds-zadania-add-btn" onclick="zd_addOpen()" style="display:none; background:#ec4899; color:#fff; border:none; padding:8px 14px; border-radius:8px; font-weight:700; cursor:pointer; font-size:12px;">+ Nowe zadanie</button>
     </div>
     <div id="ds-zadania-tabs" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:12px; margin-bottom:8px;"></div>
     <div id="ds-zadania-list">
@@ -8936,6 +8937,9 @@ function ds_loadZadania(rola, imie) {
     if (!isManager && !isRecepcja) { sec.style.display = 'none'; return; }
     sec.style.display = '';
     if (titleEl) titleEl.textContent = isRecepcja ? 'Twoje zadania' : 'Zadania zespołu';
+    // Przycisk dodawania — recepcja i wyżej
+    const addBtn = document.getElementById('ds-zadania-add-btn');
+    if (addBtn) addBtn.style.display = (isManager || isRecepcja) ? '' : 'none';
 
     const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
     const sToken = localStorage.getItem('boczki_session_token') || '';
@@ -18237,13 +18241,49 @@ if (inputNazwaCheck) {
             }, 300);
         }
 
+        // Cache pracowników z rolami (do filtrowania komu wolno zlecać)
+        function zd_loadUsersWithRoles() {
+            if (window.zd_users_cache) return Promise.resolve(window.zd_users_cache);
+            return fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_pin_users' }) })
+                .then(r => r.json()).then(users => {
+                    window.zd_users_cache = Array.isArray(users) ? users : [];
+                    return window.zd_users_cache;
+                }).catch(() => []);
+        }
+
         function zd_fillPracownicy() {
             const sel = document.getElementById('zd-przypisane');
             if (!sel) return;
-            const baseHtml = '<option value="">— wybierz —</option><option value="recepcja">📞 Recepcja (rola)</option>';
-            const list = (window.salesDictCache && Array.isArray(window.salesDictCache.pracownicy))
-                ? window.salesDictCache.pracownicy : [];
-            sel.innerHTML = baseHtml + list.map(p => `<option value="${escHtml(p)}">👤 ${escHtml(p)}</option>`).join('');
+            const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+            zd_loadUsersWithRoles().then(users => {
+                const isManager = ['admin','megaadmin','manager'].includes(myRola);
+                const isRecepcja = (myRola === 'recepcja');
+                let opts = '<option value="">— wybierz —</option>';
+                if (isManager) {
+                    // Wszystkie role + wszyscy pracownicy
+                    opts += '<option value="recepcja">📞 Recepcja (rola)</option>';
+                    users.forEach(u => {
+                        const rolaIco = ({recepcja:'📞', kosmetolog:'💄', praktykantka:'🌱', manager:'👔', admin:'🛡️', megaadmin:'🛡️'})[String(u.rola||'').toLowerCase()] || '👤';
+                        opts += `<option value="${escHtml(u.imie)}">${rolaIco} ${escHtml(u.imie)} (${escHtml(u.rola || '')})</option>`;
+                    });
+                } else if (isRecepcja) {
+                    // Tylko 'recepcja' (rola) + osoby z rolą recepcja/praktykantka
+                    opts += '<option value="recepcja">📞 Recepcja (rola)</option>';
+                    users.filter(u => ['recepcja','praktykantka'].includes(String(u.rola||'').toLowerCase()))
+                         .forEach(u => {
+                            const ico = String(u.rola||'').toLowerCase() === 'recepcja' ? '📞' : '🌱';
+                            opts += `<option value="${escHtml(u.imie)}">${ico} ${escHtml(u.imie)} (${escHtml(u.rola || '')})</option>`;
+                         });
+                }
+                // praktykantka: brak opcji (i tak nie powinna otworzyć modalu)
+                sel.innerHTML = opts;
+            });
+        }
+
+        // Czy zalogowany użytkownik może w ogóle dodawać zadania?
+        function zd_canCreate() {
+            const r = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+            return ['admin','megaadmin','manager','recepcja'].includes(r);
         }
 
         function zd_apiCall(payload) {
@@ -18399,6 +18439,7 @@ if (inputNazwaCheck) {
         }
 
         function zd_addOpen() {
+            if (!zd_canCreate()) { alert('Twoja rola nie pozwala dodawać zadań.'); return; }
             zd_fillPracownicy();
             document.getElementById('zd-modal-title').textContent = 'Nowe zadanie';
             document.getElementById('zd-edit-id').value = '';
@@ -18464,10 +18505,11 @@ if (inputNazwaCheck) {
 
             const id_klienta = document.getElementById('zd-id-klienta').value || null;
             const klient_nazwa = document.getElementById('zd-klient-nazwa').value || null;
+            const myImie = localStorage.getItem('boczki_pracownik_imie') || '';
             const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa };
             const payload = id
-                ? { action: 'edit', id, ...base }
-                : { action: 'add', ...base, utworzone_przez: localStorage.getItem('boczki_pracownik_imie') || '' };
+                ? { action: 'edit', id, ...base, kto_edytuje: myImie }
+                : { action: 'add', ...base, utworzone_przez: myImie };
 
             zd_apiCall(payload).then(res => {
                 if (res.status !== 'success') { alert(res.message || 'Błąd zapisu'); return; }
