@@ -2454,6 +2454,10 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 .zd-chip:hover { background:#f8fafc !important; border-color:#cbd5e1 !important; }
 .zd-chip.zd-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
 .zd-chip.zd-chip-active:hover { background:#db2777 !important; }
+/* widget Zadania na Pulpicie — strzałka rotacji */
+#ds-zadania-list details[open] > summary .ds-zd-arrow { transform: rotate(90deg); }
+#ds-zadania-list details > summary::-webkit-details-marker { display:none; }
+#ds-zadania-list details > summary:hover { background:#fafafa; }
 .zd-row-action { background:transparent; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; cursor:pointer; font-size:12px; font-weight:600; color:#475569; }
 .zd-row-action:hover { background:#f1f5f9; }
 .zd-sort-arr { color:#cbd5e1; font-size:10px; }
@@ -8972,26 +8976,34 @@ function ds_loadZadania(rola, imie) {
                 ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
                 : '';
             const action = isRecepcja
-                ? `<button onclick="ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
+                ? `<button onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')" title="Oznacz jako wykonane" style="border:1px solid #16a34a; background:#fff; color:#16a34a; padding:6px 12px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✓ Wykonane</button>`
                 : '';
             const klientLink = z.id_klienta && z.klient_nazwa
                 ? `<span onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')" style="display:inline-flex; align-items:center; gap:3px; padding:1px 7px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer;">👤 ${escHtml(z.klient_nazwa)}</span>`
                 : '';
-            return `<div style="display:flex; align-items:center; gap:12px; padding:12px 0; border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+'; padding-left:10px;' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
-                <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
-                <div style="flex:1; min-width:0;">
-                    <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                        <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:${k.bg}; color:${k.c}; font-size:10px; font-weight:700;">${k.i} ${k.l}</span>
-                        <span style="font-weight:700; color:#1f2430; font-size:14px;">${escHtml(z.tytul)}</span>
-                        ${klientLink}
+            const opisHtml = z.opis ? String(z.opis).trim() : '';
+            const opisBody = opisHtml
+                ? `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#475569; font-size:13px; line-height:1.5; white-space:pre-wrap;">${escHtml(opisHtml)}</div>`
+                : `<div style="padding:10px 14px 14px 44px; background:#fafafa; border-top:1px solid #f1f5f9; color:#cbd5e1; font-size:12px; font-style:italic;">Brak dodatkowego opisu</div>`;
+            return `<details style="border-bottom:1px solid #f1f5f9; ${p.c !== 'transparent' ? 'border-left:3px solid '+p.c+';' : ''} ${overdue ? 'background:#fef2f2;' : ''}">
+                <summary style="list-style:none; cursor:pointer; padding:12px ${p.c !== 'transparent' ? '12px 12px 10px' : '0'}; display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:18px; min-width:22px;">${p.i || k.i}</span>
+                    <div style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                            <span style="display:inline-flex; align-items:center; gap:4px; padding:2px 7px; border-radius:5px; background:${k.bg}; color:${k.c}; font-size:10px; font-weight:700;">${k.i} ${k.l}</span>
+                            <span style="font-weight:700; color:#1f2430; font-size:14px;">${escHtml(z.tytul)}</span>
+                            ${klientLink}
+                        </div>
+                        <div style="font-size:11px; color:#64748b; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
+                            ${!isRecepcja ? `<span>👤 ${escHtml(z.przypisane_do || '')}</span>` : ''}
+                            ${deadlineStr ? `<span style="${overdue?'color:#dc2626; font-weight:700;':''}">⏰ ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : '<span style="color:#cbd5e1;">⏰ brak deadline</span>'}
+                        </div>
                     </div>
-                    <div style="font-size:11px; color:#64748b; margin-top:4px; display:flex; gap:10px; flex-wrap:wrap;">
-                        ${!isRecepcja ? `<span>👤 ${escHtml(z.przypisane_do || '')}</span>` : ''}
-                        ${deadlineStr ? `<span style="${overdue?'color:#dc2626; font-weight:700;':''}">⏰ ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : '<span style="color:#cbd5e1;">⏰ brak deadline</span>'}
-                    </div>
-                </div>
-                <div>${action}</div>
-            </div>`;
+                    <span class="ds-zd-arrow" style="color:#cbd5e1; font-size:12px; transition:transform .15s;">▶</span>
+                    <div>${action}</div>
+                </summary>
+                ${opisBody}
+            </details>`;
         }).join('');
         if (all.length > 5) {
             list.innerHTML += `<div style="text-align:center; padding-top:10px; color:#64748b; font-size:12px;">…i ${all.length - 5} ${all.length-5===1?'kolejne zadanie':all.length-5<5?'kolejne zadania':'kolejnych zadań'}</div>`;
