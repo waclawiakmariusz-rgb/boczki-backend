@@ -29,16 +29,23 @@ module.exports = (db) => {
        wykonane_przez VARCHAR(100),
        data_archiwizacji DATETIME NULL,
        kto_zarchiwizowal VARCHAR(100),
+       id_klienta VARCHAR(36) NULL,
+       klient_nazwa VARCHAR(200) NULL,
        INDEX idx_tenant_status (tenant_id, status),
-       INDEX idx_przypisane (tenant_id, przypisane_do, status)
+       INDEX idx_przypisane (tenant_id, przypisane_do, status),
+       INDEX idx_klient (tenant_id, id_klienta)
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
     (err) => {
       if (err) { console.error('[Zadania] CREATE TABLE error:', err.message); return; }
       // Migracja dla istniejących baz — dodaj kolumny jeśli brakuje
-      db.query(`ALTER TABLE Zadania ADD COLUMN kategoria ENUM('MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE') DEFAULT 'INNE'`,
-        (e) => { if (e && !/Duplicate column/i.test(e.message)) console.error('[Zadania] migrate kategoria:', e.message); });
-      db.query(`ALTER TABLE Zadania ADD COLUMN priorytet ENUM('NORMALNY','WAZNY','PILNY') DEFAULT 'NORMALNY'`,
-        (e) => { if (e && !/Duplicate column/i.test(e.message)) console.error('[Zadania] migrate priorytet:', e.message); });
+      const safeAlter = (sql, label) => db.query(sql, (e) => {
+        if (e && !/Duplicate column|Duplicate key/i.test(e.message)) console.error('[Zadania] migrate ' + label + ':', e.message);
+      });
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN kategoria ENUM('MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE') DEFAULT 'INNE'`, 'kategoria');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN priorytet ENUM('NORMALNY','WAZNY','PILNY') DEFAULT 'NORMALNY'`, 'priorytet');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN id_klienta VARCHAR(36) NULL`, 'id_klienta');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN klient_nazwa VARCHAR(200) NULL`, 'klient_nazwa');
+      safeAlter(`ALTER TABLE Zadania ADD INDEX idx_klient (tenant_id, id_klienta)`, 'idx_klient');
     }
   );
 
@@ -55,7 +62,8 @@ module.exports = (db) => {
       const params = [tenant_id];
       let sql = `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis,
                         kategoria, priorytet, deadline, status,
-                        data_wykonania, wykonane_przez, data_archiwizacji, kto_zarchiwizowal
+                        data_wykonania, wykonane_przez, data_archiwizacji, kto_zarchiwizowal,
+                        id_klienta, klient_nazwa
                  FROM Zadania WHERE tenant_id = ?`;
       if (status && ['AKTYWNE','WYKONANE','ZARCHIWIZOWANE'].includes(status)) {
         sql += ` AND status = ?`;
@@ -77,11 +85,12 @@ module.exports = (db) => {
       const osoba = String(d.osoba || '').trim();
       if (!osoba) return res.json({ status: 'error', message: 'Brak osoby' });
       db.query(
-        `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status
+        `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status,
+                kategoria, priorytet, id_klienta, klient_nazwa
            FROM Zadania
           WHERE tenant_id = ? AND status = 'AKTYWNE'
             AND (przypisane_do = ? OR LOWER(przypisane_do) = 'recepcja')
-          ORDER BY (deadline IS NULL), deadline ASC`,
+          ORDER BY FIELD(priorytet,'PILNY','WAZNY','NORMALNY'), (deadline IS NULL), deadline ASC`,
         [tenant_id, osoba],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
@@ -97,13 +106,15 @@ module.exports = (db) => {
       const deadline = d.deadline || null;
       const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
+      const id_klienta = d.id_klienta ? String(d.id_klienta).trim() : null;
+      const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
       const id = randomUUID();
       db.query(
-        `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE')`,
-        [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline],
+        `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?)`,
+        [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success', id });
@@ -119,12 +130,15 @@ module.exports = (db) => {
       const deadline = d.deadline || null;
       const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
+      const id_klienta = d.id_klienta ? String(d.id_klienta).trim() : null;
+      const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
       db.query(
-        `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?
+        `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
+                            id_klienta = ?, klient_nazwa = ?
          WHERE tenant_id = ? AND id = ?`,
-        [tytul, opis, przypisane_do, kategoria, priorytet, deadline, tenant_id, id],
+        [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, tenant_id, id],
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
