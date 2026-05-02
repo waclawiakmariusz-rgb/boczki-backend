@@ -1066,13 +1066,15 @@ function showTab(id) {
 // DEMO SALON — klonowanie Boczki -> demo-estelio
 // ═══════════════════════════════════════════════
 async function sprawdzCzyDemoIstnieje() {
-  // Sprawdza czy w Salonach jest tenant 'demo-estelio' — pokazuje force button
+  // Force button jest ZAWSZE widoczny — bo poprzednie klonowanie mogło padnąć
+  // w połowie zostawiając część rekordów. Force czyści wszystko i klonuje od nowa.
+  document.getElementById('btn-demo-force').style.display = 'inline-block';
+  // Warning pokazujemy gdy Licencje ma demo (czyli pełne sklonowanie się udało wcześniej)
   try {
     const r = await fetch(`${API}/admin/salony`, { headers: { 'X-Admin-Token': adminToken } });
     const lista = await r.json();
     const istnieje = Array.isArray(lista) && lista.some(s => s.id_bazy === 'demo-estelio');
     document.getElementById('demo-existing-warning').style.display = istnieje ? 'block' : 'none';
-    document.getElementById('btn-demo-force').style.display = istnieje ? 'inline-block' : 'none';
   } catch (e) { console.warn('sprawdzCzyDemoIstnieje:', e); }
 }
 

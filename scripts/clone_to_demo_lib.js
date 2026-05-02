@@ -74,22 +74,30 @@ async function cloneBoczkiToDemo(db, opts = {}) {
   logLine(`FORCE mode: ${force}`);
   logLine('═══════════════════════════════════════════════════════════════════');
 
-  // 1. SPRAWDŹ czy demo istnieje
-  const existing = await q(db, 'SELECT COUNT(*) as cnt FROM `Klienci` WHERE tenant_id = ?', [DEMO_TENANT]);
-  if (existing[0].cnt > 0) {
+  // 1. SPRAWDŹ czy demo istnieje (we wszystkich kluczowych tabelach!)
+  // Może być, że poprzednie klonowanie padło w połowie i część tabel ma rekordy.
+  const tabeleCheck = ['Klienci','Sprzedaz','Platnosci','Zadatki','Magazyn','Uslugi','Pracownicy','Użytkownicy','Koszty'];
+  const counts = {};
+  let totalCnt = 0;
+  for (const t of tabeleCheck) {
+    const r = await q(db, 'SELECT COUNT(*) as cnt FROM `' + t + '` WHERE tenant_id = ?', [DEMO_TENANT]);
+    counts[t] = r[0].cnt;
+    totalCnt += r[0].cnt;
+  }
+  if (totalCnt > 0) {
+    const detale = Object.entries(counts).filter(([_,v]) => v > 0).map(([k,v]) => `${k}=${v}`).join(', ');
     if (!force) {
-      return { status: 'error', message: `Tenant ${DEMO_TENANT} już istnieje (${existing[0].cnt} klientów). Użyj opcji 'force' żeby nadpisać.`, log };
+      return { status: 'error', message: `Tenant ${DEMO_TENANT} ma już ${totalCnt} rekordów (${detale}). Użyj opcji 'force' żeby wyczyścić i sklonować ponownie.`, log };
     }
-    logLine(`⚠ FORCE: czyszczę istniejący tenant ${DEMO_TENANT}...`);
-    const tabele = ['Klienci','Sprzedaz','Platnosci','Zadatki','Magazyn','Uslugi','Pracownicy','Użytkownicy','Koszty'];
-    for (const t of tabele) {
+    logLine(`⚠ FORCE: czyszczę istniejący tenant ${DEMO_TENANT} (${totalCnt} rekordów)...`);
+    for (const t of tabeleCheck) {
       const sql = 'DELETE FROM `' + t + '` WHERE tenant_id = ?';
       if (sql.includes(SOURCE_TENANT)) throw new Error('SECURITY: SQL contains SOURCE');
       const result = await q(db, sql, [DEMO_TENANT]);
       logLine(`    ${t}: usunięto ${result.affectedRows}`);
     }
-    await q(db, 'DELETE FROM `Licencje` WHERE login = ?', [DEMO_LOGIN]);
-    logLine(`    Licencje (login=demo): usunięto`);
+    const lic = await q(db, 'DELETE FROM `Licencje` WHERE login = ?', [DEMO_LOGIN]);
+    logLine(`    Licencje (login=demo): usunięto ${lic.affectedRows}`);
   }
 
   // 2. POBIERZ DANE Z BOCZKÓW (READ-ONLY)
