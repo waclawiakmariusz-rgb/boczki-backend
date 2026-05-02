@@ -142,7 +142,43 @@ async function cloneBoczkiToDemo(db, opts = {}) {
     return oldNazwa || 'Klient anonimowy';
   };
 
-  // 4. INSERTY (każda tabela osobno, batch po 1)
+  // 4. MAPY ID — KAŻDA TABELA dostaje nowe UUID (PRIMARY KEY jest globalne, nie per tenant!)
+  // Relacje przemapowujemy przez te mapy.
+  logLine('▸ Generuję mapy nowych ID (zachowując relacje)...');
+  const sprzedazIdMap = new Map(); // stary id Sprzedaz → nowy id (uwzględnia SPLIT-y)
+  const zadatkiIdMap = new Map();  // stary id Zadatki → nowy id
+
+  // Sprzedaz: jeśli id ma format "<base>-SPLIT-N", zachowaj relację (ten sam base = ten sam newBase)
+  for (const s of sprzedaz) {
+    const m = String(s.id).match(/^(.+?)(-SPLIT-\d+)$/);
+    if (m) {
+      const base = m[1], suffix = m[2];
+      if (!sprzedazIdMap.has(base)) sprzedazIdMap.set(base, randomUUID());
+      sprzedazIdMap.set(s.id, sprzedazIdMap.get(base) + suffix);
+    } else {
+      sprzedazIdMap.set(s.id, randomUUID());
+    }
+  }
+  for (const z of zadatki) zadatkiIdMap.set(z.id, randomUUID());
+
+  // Helper: przemapuj id_zadatku (może być comma-separated lista)
+  const mapIdZadatku = (val) => {
+    if (!val) return null;
+    return String(val).split(',').map(x => x.trim()).filter(Boolean)
+      .map(id => zadatkiIdMap.get(id) || id).join(',');
+  };
+  // Helper: przemapuj Platnosci.id (format: "<sprzedazId>-SPLIT-N" lub samo)
+  const mapPlatnosciId = (id) => {
+    if (!id) return randomUUID();
+    if (sprzedazIdMap.has(id)) return sprzedazIdMap.get(id);
+    // może być z suffix-em — wyciągnij base
+    const m = String(id).match(/^(.+?)(-SPLIT-\d+)$/);
+    if (m && sprzedazIdMap.has(m[1])) return sprzedazIdMap.get(m[1]) + m[2];
+    // nie pasuje — losowy UUID
+    return randomUUID();
+  };
+
+  // 5. INSERTY
   let insK = 0, insS = 0, insP = 0, insZ = 0, insM = 0, insU = 0, insKo = 0;
 
   logLine('▸ INSERT Klienci...');
@@ -156,70 +192,74 @@ async function cloneBoczkiToDemo(db, opts = {}) {
   }
   logLine(`  ✓ Klienci: ${insK}`);
 
-  logLine('▸ INSERT Sprzedaz...');
-  for (const s of sprzedaz) {
-    await q(db,
-      'INSERT INTO `Sprzedaz` (`id`,`tenant_id`,`data_sprzedazy`,`klient`,`zabieg`,`sprzedawca`,`kwota`,`komentarz`,`szczegoly`,`status`,`platnosc`,`id_klienta`,`pracownik_dodajacy`,`czy_rozliczone`,`id_zadatku`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
-      [s.id, DEMO_TENANT, s.data_sprzedazy, mapKlient(s.id_klienta, s.klient), s.zabieg, mapPracownik(s.sprzedawca), s.kwota, null, s.szczegoly, s.status, s.platnosc, s.id_klienta, mapPracownik(s.pracownik_dodajacy), s.czy_rozliczone, s.id_zadatku]
-    );
-    insS++;
-  }
-  logLine(`  ✓ Sprzedaz: ${insS}`);
-
-  logLine('▸ INSERT Platnosci...');
-  for (const p of platnosci) {
-    await q(db,
-      'INSERT INTO `Platnosci` (`id`,`tenant_id`,`data_platnosci`,`klient`,`metoda_platnosci`,`kwota`,`status`) VALUES (?,?,?,?,?,?,?)',
-      [p.id, DEMO_TENANT, p.data_platnosci, p.klient || '', p.metoda_platnosci, p.kwota, p.status]
-    );
-    insP++;
-  }
-  logLine(`  ✓ Platnosci: ${insP}`);
-
-  logLine('▸ INSERT Zadatki...');
+  logLine('▸ INSERT Zadatki (z nowym UUID)...');
   for (const z of zadatki) {
+    const newId = zadatkiIdMap.get(z.id);
     await q(db,
       'INSERT INTO `Zadatki` (`id`,`tenant_id`,`id_klienta`,`data_wplaty`,`klient`,`typ`,`kwota`,`metoda`,`cel`,`status`,`pracownicy`) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
-      [z.id, DEMO_TENANT, z.id_klienta, z.data_wplaty, mapKlient(z.id_klienta, z.klient), z.typ, z.kwota, z.metoda, z.cel || null, z.status, mapPracownik(z.pracownicy)]
+      [newId, DEMO_TENANT, z.id_klienta, z.data_wplaty, mapKlient(z.id_klienta, z.klient), z.typ, z.kwota, z.metoda, z.cel || null, z.status, mapPracownik(z.pracownicy)]
     );
     insZ++;
   }
   logLine(`  ✓ Zadatki: ${insZ}`);
 
-  logLine('▸ INSERT Magazyn...');
+  logLine('▸ INSERT Sprzedaz (z nowym UUID + przemapowane id_zadatku)...');
+  for (const s of sprzedaz) {
+    const newId = sprzedazIdMap.get(s.id);
+    const newIdZadatku = mapIdZadatku(s.id_zadatku);
+    await q(db,
+      'INSERT INTO `Sprzedaz` (`id`,`tenant_id`,`data_sprzedazy`,`klient`,`zabieg`,`sprzedawca`,`kwota`,`komentarz`,`szczegoly`,`status`,`platnosc`,`id_klienta`,`pracownik_dodajacy`,`czy_rozliczone`,`id_zadatku`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)',
+      [newId, DEMO_TENANT, s.data_sprzedazy, mapKlient(s.id_klienta, s.klient), s.zabieg, mapPracownik(s.sprzedawca), s.kwota, null, s.szczegoly, s.status, s.platnosc, s.id_klienta, mapPracownik(s.pracownik_dodajacy), s.czy_rozliczone, newIdZadatku]
+    );
+    insS++;
+  }
+  logLine(`  ✓ Sprzedaz: ${insS}`);
+
+  logLine('▸ INSERT Platnosci (przemapowane id z formatu sprzedazId-SPLIT-N)...');
+  for (const p of platnosci) {
+    const newId = mapPlatnosciId(p.id);
+    await q(db,
+      'INSERT INTO `Platnosci` (`id`,`tenant_id`,`data_platnosci`,`klient`,`metoda_platnosci`,`kwota`,`status`) VALUES (?,?,?,?,?,?,?)',
+      [newId, DEMO_TENANT, p.data_platnosci, p.klient || '', p.metoda_platnosci, p.kwota, p.status]
+    );
+    insP++;
+  }
+  logLine(`  ✓ Platnosci: ${insP}`);
+
+  logLine('▸ INSERT Magazyn (z nowym UUID dla każdego)...');
   for (const m of magazyn) {
-    const cols = Object.keys(m).filter(c => c !== 'tenant_id');
+    const cols = Object.keys(m).filter(c => c !== 'tenant_id' && c !== 'id');
     const colsList = cols.map(c => '`' + c + '`').join(',');
     const placeholders = cols.map(() => '?').join(',');
     await q(db,
-      'INSERT INTO `Magazyn` (' + colsList + ', `tenant_id`) VALUES (' + placeholders + ', ?)',
-      [...cols.map(c => m[c]), DEMO_TENANT]
+      'INSERT INTO `Magazyn` (`id`,' + colsList + ', `tenant_id`) VALUES (?,' + placeholders + ', ?)',
+      [randomUUID(), ...cols.map(c => m[c]), DEMO_TENANT]
     );
     insM++;
   }
   logLine(`  ✓ Magazyn: ${insM}`);
 
-  logLine('▸ INSERT Uslugi...');
+  logLine('▸ INSERT Uslugi (z nowym UUID)...');
   for (const u of uslugi) {
-    const cols = Object.keys(u).filter(c => c !== 'tenant_id');
+    const cols = Object.keys(u).filter(c => c !== 'tenant_id' && c !== 'id');
     const colsList = cols.map(c => '`' + c + '`').join(',');
     const placeholders = cols.map(() => '?').join(',');
     await q(db,
-      'INSERT INTO `Uslugi` (' + colsList + ', `tenant_id`) VALUES (' + placeholders + ', ?)',
-      [...cols.map(c => u[c]), DEMO_TENANT]
+      'INSERT INTO `Uslugi` (`id`,' + colsList + ', `tenant_id`) VALUES (?,' + placeholders + ', ?)',
+      [randomUUID(), ...cols.map(c => u[c]), DEMO_TENANT]
     );
     insU++;
   }
   logLine(`  ✓ Uslugi: ${insU}`);
 
-  logLine('▸ INSERT Koszty...');
+  logLine('▸ INSERT Koszty (z nowym UUID)...');
   for (const k of koszty) {
-    const cols = Object.keys(k).filter(c => c !== 'tenant_id');
+    const cols = Object.keys(k).filter(c => c !== 'tenant_id' && c !== 'id');
     const colsList = cols.map(c => '`' + c + '`').join(',');
     const placeholders = cols.map(() => '?').join(',');
     await q(db,
-      'INSERT INTO `Koszty` (' + colsList + ', `tenant_id`) VALUES (' + placeholders + ', ?)',
-      [...cols.map(c => k[c]), DEMO_TENANT]
+      'INSERT INTO `Koszty` (`id`,' + colsList + ', `tenant_id`) VALUES (?,' + placeholders + ', ?)',
+      [randomUUID(), ...cols.map(c => k[c]), DEMO_TENANT]
     );
     insKo++;
   }
