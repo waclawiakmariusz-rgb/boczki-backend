@@ -9209,20 +9209,30 @@ function ds_zd_renderTabs() {
         </div>`;
     }
 
-    // 5 kategorii w stałej kolejności
+    // 5 kategorii + tab "Moje" (zadania utworzone przeze mnie — niezależnie od kategorii)
     const TABS = [
         { key: 'KLIENT',   icon: '👤', label: 'Klient' },
         { key: 'MAGAZYN',  icon: '📦', label: 'Magazyn' },
         { key: 'KOSMETYK', icon: '💄', label: 'Kosmetyk' },
         { key: 'SPRZEDAZ', icon: '💰', label: 'Sprzedaż' },
-        { key: 'INNE',     icon: '📋', label: 'Inne' }
+        { key: 'INNE',     icon: '📋', label: 'Inne' },
+        { key: 'MOJE',     icon: '✏️', label: 'Moje' }
     ];
+    const myImieTab = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
     const counts = {};
     TABS.forEach(t => counts[t.key] = 0);
-    all.forEach(z => { const k = z.kategoria || 'INNE'; if (counts[k] !== undefined) counts[k]++; else counts.INNE++; });
+    all.forEach(z => {
+        const k = z.kategoria || 'INNE';
+        if (counts[k] !== undefined) counts[k]++; else counts.INNE++;
+        // Tab "Moje" — niezależnie od kategorii, jeśli zadanie utworzyła osoba zalogowana
+        if (myImieTab && z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === myImieTab) {
+            counts.MOJE++;
+        }
+    });
 
     if (!ds_zd_activeTab || counts[ds_zd_activeTab] === undefined) {
-        ds_zd_activeTab = TABS.reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
+        // Wybierz domyślny — preferuj największą kategorię (pomijając MOJE żeby nie skoczyć na nią automatycznie)
+        ds_zd_activeTab = TABS.filter(t => t.key !== 'MOJE').reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
     }
 
     tabsBox.innerHTML = TABS.map(t => {
@@ -9249,10 +9259,16 @@ function ds_zd_renderList() {
     const isReceiver = !!window.__ds_zd_isRecepcja;
     const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
     const isPraktykantka = (myRola === 'praktykantka');
-    const filtered = all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
+    const myImieFilter = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
+    const filtered = (ds_zd_activeTab === 'MOJE')
+        ? all.filter(z => myImieFilter && String(z.utworzone_przez || '').trim().toLowerCase() === myImieFilter)
+        : all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
 
     if (!filtered.length) {
-        list.innerHTML = `<div style="padding:24px 0; text-align:center; color:#94a3b8; font-size:13px;">Brak zadań w tej kategorii</div>`;
+        const emptyMsg = (ds_zd_activeTab === 'MOJE')
+            ? 'Nie utworzyłeś jeszcze żadnych zadań'
+            : 'Brak zadań w tej kategorii';
+        list.innerHTML = `<div style="padding:24px 0; text-align:center; color:#94a3b8; font-size:13px;">${emptyMsg}</div>`;
         return;
     }
 
