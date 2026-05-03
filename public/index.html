@@ -7122,17 +7122,15 @@ ANALIZA MANAGER
             </div>
 
             <div style="margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powiązany klient (opcjonalnie)</label>
-                <input type="hidden" id="zd-id-klienta" value="">
-                <input type="hidden" id="zd-klient-nazwa" value="">
-                <div id="zd-klient-selected" style="display:none; padding:8px 12px; background:#dcfce7; border:1px solid #86efac; border-radius:8px; margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-                    <span id="zd-klient-selected-text" style="color:#166534; font-weight:700;"></span>
-                    <button type="button" onclick="zd_clearKlient()" style="background:none; border:none; color:#991b1b; cursor:pointer; font-size:18px; line-height:1;">&times;</button>
-                </div>
-                <div style="position:relative;">
+                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powiązani klienci (opcjonalnie)</label>
+                <!-- Lista wybranych klientów (badge) — można dodać kilku -->
+                <div id="zd-klienci-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"></div>
+                <!-- Wyszukiwarka — ukryta dopóki user nie kliknie "+ Dodaj klienta" -->
+                <div id="zd-klient-search-wrap" style="display:none; position:relative; margin-bottom:6px;">
                     <input type="text" id="zd-klient-search" list="lista-klientow" oninput="zd_klientSearchInput()" autocomplete="off" placeholder="🔍 Wpisz fragment nazwiska, telefon lub ID..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
                     <div id="zd-klient-results" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:#fff; border:1px solid #e2e8f0; border-radius:8px; z-index:100; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:2px;"></div>
                 </div>
+                <button type="button" id="zd-add-klient-btn" onclick="zd_showKlientSearch()" style="background:#fff; color:#ec4899; border:1px dashed #f9a8d4; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">+ Dodaj klienta</button>
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #f1f5f9; padding-top:12px;">
@@ -9305,16 +9303,27 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
         ? deadline.toLocaleDateString('pl-PL') + (deadline.getHours()||deadline.getMinutes()?' '+String(deadline.getHours()).padStart(2,'0')+':'+String(deadline.getMinutes()).padStart(2,'0'):'')
         : '';
     const tytulEsc = String(z.tytul || '').replace(/'/g, '&#39;');
-    const klientPill = z.id_klienta && z.klient_nazwa
-        ? `<span class="pill pill-klient" onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(z.id_klienta))}')">👤 ${escHtml(z.klient_nazwa)} →</span>`
-        : '';
+    // Multi-klient: lista wszystkich klientów (lub fallback do starego pola)
+    const klienciW = (Array.isArray(z.klienci) && z.klienci.length > 0)
+        ? z.klienci
+        : (z.id_klienta && z.klient_nazwa ? [{ id: z.id_klienta, nazwa: z.klient_nazwa }] : []);
+    const klientPill = klienciW.map(k =>
+        `<span class="pill pill-klient" onclick="event.stopPropagation(); zd_otworzKlienta('${escHtml(String(k.id))}')">👤 ${escHtml(k.nazwa)} →</span>`
+    ).join('');
     const przypisanyPill = !isReceiver && z.przypisane_do
         ? `<span class="pill" style="background:#fff3f8;">${escHtml(z.przypisane_do)}</span>` : '';
-    // Akcje — recepcja+praktykantka mają ✓ Zrobione, recepcja+manager też ⋮ menu
+    // RBAC menu ⋮: manager/admin zawsze; recepcja TYLKO dla zadań które sama utworzyła;
+    // praktykantka nigdy. Sprawdzamy po imieniu zalogowanego vs z.utworzone_przez.
+    const myRolaLocal = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+    const myImieLocal = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
+    const isManagerLocal = ['admin','megaadmin','manager'].includes(myRolaLocal);
+    const utworzylJa = z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === myImieLocal;
+    const mozeMore = isManagerLocal || (myRolaLocal === 'recepcja' && utworzylJa);
+    // Akcje — recepcja+praktykantka mają ✓ Zrobione, ⋮ menu wg powyższego RBAC
     const doneBtn = isReceiver
         ? `<button class="ds-zd-action-done" onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')">✓ Zrobione</button>`
         : '';
-    const moreBtn = !isPraktykantka
+    const moreBtn = mozeMore
         ? `<button class="ds-zd-more" onclick="event.stopPropagation(); ds_zd_toggleMore('${z.id}', this)" title="Więcej">⋮</button>`
         : '';
     const opis = z.opis ? String(z.opis).trim() : '';
@@ -18560,28 +18569,53 @@ if (inputNazwaCheck) {
             });
         }
 
-        function zd_pickKlient(id, nazwa) {
-            document.getElementById('zd-id-klienta').value = String(id);
-            document.getElementById('zd-klient-nazwa').value = String(nazwa);
-            const sel = document.getElementById('zd-klient-selected');
-            const txt = document.getElementById('zd-klient-selected-text');
-            txt.textContent = `✅ ${nazwa} (ID: ${id})`;
-            sel.style.display = 'flex';
-            document.getElementById('zd-klient-search').value = '';
-            const resDiv = document.getElementById('zd-klient-results');
-            if (resDiv) { resDiv.style.display = 'none'; resDiv.innerHTML = ''; }
-            const sugDiv = document.getElementById('zd-klient-suggest');
-            if (sugDiv) sugDiv.innerHTML = '';
+        // Lista wybranych klientów dla edytowanego/tworzonego zadania (multi-klient)
+        let zd_klienci = [];
+
+        function zd_renderKlienciBadges() {
+            const wrap = document.getElementById('zd-klienci-badges');
+            if (!wrap) return;
+            wrap.innerHTML = zd_klienci.map((k, idx) =>
+                `<span style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:linear-gradient(135deg, #dcfce7, #fff); border:1px solid #86efac; border-radius:999px; font-size:12.5px; font-weight:700; color:#166534;">
+                    👤 ${escHtml(k.nazwa)} <span style="color:#94a3b8; font-weight:500; font-size:10.5px;">ID: ${escHtml(String(k.id))}</span>
+                    <button type="button" onclick="zd_removeKlient(${idx})" style="background:none; border:none; color:#991b1b; cursor:pointer; font-size:16px; line-height:1; padding:0; margin-left:2px;">&times;</button>
+                </span>`
+            ).join('');
         }
 
-        function zd_clearKlient() {
-            document.getElementById('zd-id-klienta').value = '';
-            document.getElementById('zd-klient-nazwa').value = '';
-            document.getElementById('zd-klient-selected').style.display = 'none';
-            document.getElementById('zd-klient-search').value = '';
-            // Po wyczyszczeniu — wykryj ponownie z istniejącej treści
+        function zd_addKlient(id, nazwa) {
+            id = String(id).trim();
+            if (zd_klienci.some(k => String(k.id) === id)) return; // już dodany
+            zd_klienci.push({ id, nazwa: String(nazwa).trim() });
+            zd_renderKlienciBadges();
+            zd_hideKlientSearch();
+            const sugDiv = document.getElementById('zd-klient-suggest');
+            if (sugDiv) zd_autoSuggest(); // odśwież sugestie (mogą zniknąć już dodane)
+        }
+
+        function zd_removeKlient(idx) {
+            zd_klienci.splice(idx, 1);
+            zd_renderKlienciBadges();
             zd_autoSuggest();
         }
+
+        function zd_showKlientSearch() {
+            document.getElementById('zd-klient-search-wrap').style.display = 'block';
+            document.getElementById('zd-add-klient-btn').style.display = 'none';
+            const inp = document.getElementById('zd-klient-search');
+            if (inp) { inp.value = ''; inp.focus(); }
+        }
+
+        function zd_hideKlientSearch() {
+            document.getElementById('zd-klient-search-wrap').style.display = 'none';
+            document.getElementById('zd-add-klient-btn').style.display = 'inline-block';
+            const inp = document.getElementById('zd-klient-search'); if (inp) inp.value = '';
+            const r = document.getElementById('zd-klient-results'); if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+        }
+
+        // Wstecznie kompatybilne — dawne nazwy
+        function zd_pickKlient(id, nazwa) { zd_addKlient(id, nazwa); }
+        function zd_clearKlient() { zd_klienci = []; zd_renderKlienciBadges(); zd_hideKlientSearch(); zd_autoSuggest(); }
 
         // Auto-wykrywanie klienta z treści tytułu/opisu — po każdym wpisanym słowie
         // szuka match'y w bazie klientów i proponuje przypięcie jednym kliknięciem.
@@ -18591,9 +18625,8 @@ if (inputNazwaCheck) {
             zd_autoSuggestTimer = setTimeout(() => {
                 const sugDiv = document.getElementById('zd-klient-suggest');
                 if (!sugDiv) return;
-                // Klient już wybrany — nie pokazuj sugestii
-                if (document.getElementById('zd-id-klienta').value) { sugDiv.innerHTML = ''; return; }
                 if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) { sugDiv.innerHTML = ''; return; }
+                const juzDodani = new Set(zd_klienci.map(k => String(k.id)));
                 const tytul = (document.getElementById('zd-tytul')?.value || '').toLowerCase();
                 const opis = (document.getElementById('zd-opis')?.value || '').toLowerCase();
                 const text = tytul + ' ' + opis;
@@ -18616,8 +18649,8 @@ if (inputNazwaCheck) {
                 for (const w of new Set(words)) {
                     if (stop.has(w)) continue;
                     for (const k of window.wszyscyKlienciDane) {
+                        if (juzDodani.has(String(k.id))) continue;
                         const nLow = String(k.nazwa || '').toLowerCase();
-                        // Każdy "token" w nazwie klienta — porównujemy do słowa
                         const nTokens = nLow.split(/\s+/);
                         if (nTokens.some(t => t === w || (w.length >= 4 && t.startsWith(w)))) {
                             candidates.set(String(k.id), k);
@@ -18626,8 +18659,8 @@ if (inputNazwaCheck) {
                 }
                 const top = Array.from(candidates.values()).slice(0, 5);
                 if (!top.length) { sugDiv.innerHTML = ''; return; }
-                sugDiv.innerHTML = '<div style="font-size:11px; color:#475569; margin-bottom:5px; font-weight:600;">💡 Wykryto klientów z treści — kliknij by powiązać:</div>' +
-                    top.map(k => `<button type="button" onclick="zd_pickKlient('${escHtml(String(k.id))}', '${escHtml(String(k.nazwa).replace(/'/g,'&#39;'))}')" style="margin:2px; padding:5px 11px; border-radius:6px; border:1px solid #93c5fd; background:#eff6ff; color:#1e40af; font-size:12px; font-weight:600; cursor:pointer;">+ ${escHtml(k.nazwa)}</button>`).join('');
+                sugDiv.innerHTML = '<div style="font-size:11px; color:#475569; margin-bottom:5px; font-weight:600;">💡 Wykryto klientów z treści — kliknij by dodać:</div>' +
+                    top.map(k => `<button type="button" onclick="zd_addKlient('${escHtml(String(k.id))}', '${escHtml(String(k.nazwa).replace(/'/g,'&#39;'))}')" style="margin:2px; padding:5px 11px; border-radius:6px; border:1px solid #93c5fd; background:#eff6ff; color:#1e40af; font-size:12px; font-weight:600; cursor:pointer;">+ ${escHtml(k.nazwa)}</button>`).join('');
             }, 250);
         }
 
@@ -18886,8 +18919,14 @@ if (inputNazwaCheck) {
                     `;
                 }
 
-                const klientBadge = r.id_klienta && r.klient_nazwa
-                    ? `<div style="margin-top:4px;"><span onclick="zd_otworzKlienta('${escHtml(String(r.id_klienta))}')" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer; text-decoration:none;" onmouseover="this.style.background='#bfdbfe'" onmouseout="this.style.background='#dbeafe'">👤 ${escHtml(r.klient_nazwa)} →</span></div>`
+                // Multi-klient: lista wszystkich klientów jako badge'y (lub fallback do starego id_klienta)
+                const klienciTabela = (Array.isArray(r.klienci) && r.klienci.length > 0)
+                    ? r.klienci
+                    : (r.id_klienta && r.klient_nazwa ? [{ id: r.id_klienta, nazwa: r.klient_nazwa }] : []);
+                const klientBadge = klienciTabela.length > 0
+                    ? '<div style="margin-top:4px; display:flex; flex-wrap:wrap; gap:4px;">' + klienciTabela.map(k =>
+                        `<span onclick="zd_otworzKlienta('${escHtml(String(k.id))}')" style="display:inline-flex; align-items:center; gap:4px; padding:2px 8px; border-radius:5px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:600; cursor:pointer;" onmouseover="this.style.background='#bfdbfe'" onmouseout="this.style.background='#dbeafe'">👤 ${escHtml(k.nazwa)} →</span>`
+                      ).join('') + '</div>'
                     : '';
 
                 return `<tr style="border-bottom:1px solid #f1f5f9; ${rowBorderLeft} ${overdue ? 'background:#fef2f2;' : ''}">
@@ -18947,8 +18986,16 @@ if (inputNazwaCheck) {
             sel.value = z.przypisane_do || '';
             document.getElementById('zd-kategoria').value = z.kategoria || 'INNE';
             document.getElementById('zd-priorytet').value = z.priorytet || 'NORMALNY';
-            if (z.id_klienta && z.klient_nazwa) zd_pickKlient(z.id_klienta, z.klient_nazwa);
-            else zd_clearKlient();
+            // Multi-klient: jeśli backend zwrócił z.klienci (array) — użyj go,
+            // wpp fallback do starego z.id_klienta/klient_nazwa
+            zd_klienci = [];
+            if (Array.isArray(z.klienci) && z.klienci.length > 0) {
+                zd_klienci = z.klienci.map(k => ({ id: String(k.id), nazwa: String(k.nazwa || '') }));
+            } else if (z.id_klienta && z.klient_nazwa) {
+                zd_klienci = [{ id: String(z.id_klienta), nazwa: String(z.klient_nazwa) }];
+            }
+            zd_renderKlienciBadges();
+            zd_hideKlientSearch();
             // Konwersja deadline do formatu datetime-local (YYYY-MM-DDTHH:MM)
             if (z.deadline) {
                 const d = new Date(z.deadline);
@@ -18977,13 +19024,14 @@ if (inputNazwaCheck) {
             if (!tytul) { alert('Tytuł jest wymagany'); return; }
             if (!przypisane_do) { alert('Wybierz osobę lub rolę'); return; }
 
-            const id_klienta = document.getElementById('zd-id-klienta').value || null;
-            const klient_nazwa = document.getElementById('zd-klient-nazwa').value || null;
+            // Multi-klient: wysyłamy array `klienci`. Backend zachowa też id_klienta/klient_nazwa
+            // jako "główny" (pierwszy z listy) dla kompatybilności wstecznej.
+            const klienci = zd_klienci.slice(); // [{id, nazwa}, ...]
             const powtarzaj = document.getElementById('zd-powtarzaj').value;
             const powtarzaj_dzien = (powtarzaj === 'TYGODNIOWO' || powtarzaj === 'MIESIECZNIE')
                 ? parseInt(document.getElementById('zd-powtarzaj-dzien').value, 10) : null;
             const myImie = localStorage.getItem('boczki_pracownik_imie') || '';
-            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien };
+            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, klienci, powtarzaj, powtarzaj_dzien };
             const payload = id
                 ? { action: 'edit', id, ...base, kto_edytuje: myImie }
                 : { action: 'add', ...base, utworzone_przez: myImie };

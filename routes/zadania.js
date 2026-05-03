@@ -174,6 +174,82 @@ module.exports = (db) => {
     (err) => { if (err) console.error('[Zadania_Komentarze] CREATE TABLE error:', err.message); }
   );
 
+  // Tabela klientów powiązanych z zadaniem (relacja wiele-do-wielu)
+  // Zachowujemy też pola id_klienta/klient_nazwa w Zadania (pierwszy klient = "main")
+  // dla kompatybilności wstecznej z auto-suggest i widget render.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Zadania_Klienci (
+       id VARCHAR(36) PRIMARY KEY,
+       tenant_id VARCHAR(64) NOT NULL,
+       id_zadania VARCHAR(36) NOT NULL,
+       id_klienta VARCHAR(50) NOT NULL,
+       klient_nazwa VARCHAR(200),
+       INDEX idx_zadania (tenant_id, id_zadania),
+       INDEX idx_klient (tenant_id, id_klienta)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => { if (err) console.error('[Zadania_Klienci] CREATE TABLE error:', err.message); }
+  );
+
+  // Helper: zapisz listę klientów dla zadania (idempotentnie — DELETE + INSERT)
+  function setKlienciZadania(tenant_id, id_zadania, klienci, cb) {
+    db.query(
+      `DELETE FROM Zadania_Klienci WHERE tenant_id = ? AND id_zadania = ?`,
+      [tenant_id, id_zadania],
+      (err) => {
+        if (err) return cb(err);
+        const lista = Array.isArray(klienci) ? klienci.filter(k => k && k.id) : [];
+        if (!lista.length) return cb();
+        let pending = lista.length;
+        let errFinal = null;
+        lista.forEach(k => {
+          db.query(
+            `INSERT INTO Zadania_Klienci (id, tenant_id, id_zadania, id_klienta, klient_nazwa) VALUES (?, ?, ?, ?, ?)`,
+            [randomUUID(), tenant_id, id_zadania, String(k.id).trim(), String(k.nazwa || '').trim().slice(0, 200)],
+            (err2) => {
+              if (err2 && !errFinal) errFinal = err2;
+              if (--pending === 0) cb(errFinal);
+            }
+          );
+        });
+      }
+    );
+  }
+
+  // Helper: dla listy zadań pobierz wszystkich klientów (jednym query)
+  function dolaczKlientow(tenant_id, zadania, cb) {
+    if (!zadania || !zadania.length) return cb(zadania);
+    const ids = zadania.map(z => z.id);
+    db.query(
+      `SELECT id_zadania, id_klienta, klient_nazwa FROM Zadania_Klienci WHERE tenant_id = ? AND id_zadania IN (?)`,
+      [tenant_id, ids],
+      (err, rows) => {
+        if (err) { console.error('[dolaczKlientow]', err.message); zadania.forEach(z => z.klienci = []); return cb(zadania); }
+        const map = {};
+        (rows || []).forEach(r => {
+          if (!map[r.id_zadania]) map[r.id_zadania] = [];
+          map[r.id_zadania].push({ id: r.id_klienta, nazwa: r.klient_nazwa });
+        });
+        zadania.forEach(z => {
+          z.klienci = map[z.id] || [];
+          // Backward compat: jeśli pusto a stary main jest ustawiony — dodaj go
+          if (z.klienci.length === 0 && z.id_klienta && z.klient_nazwa) {
+            z.klienci = [{ id: z.id_klienta, nazwa: z.klient_nazwa }];
+          }
+        });
+        cb(zadania);
+      }
+    );
+  }
+
+  // Helper: parsuj klientów z payloadu (akceptuje array LUB stare pola id_klienta/klient_nazwa)
+  function parseKlienciPayload(d) {
+    if (Array.isArray(d.klienci)) {
+      return d.klienci.filter(k => k && k.id).map(k => ({ id: String(k.id).trim(), nazwa: String(k.nazwa || '').trim() }));
+    }
+    if (d.id_klienta) return [{ id: String(d.id_klienta).trim(), nazwa: String(d.klient_nazwa || '').trim() }];
+    return [];
+  }
+
   router.post('/zadania', (req, res) => {
     const d = req.body || {};
     const tenant_id = d.tenant_id;
@@ -211,7 +287,9 @@ module.exports = (db) => {
       // Najpierw zmaterializuj brakujące instancje wzorców na dziś, potem zwróć listę
       const runQuery = () => db.query(sql, params, (err, rows) => {
         if (err) return res.json({ status: 'error', message: err.message });
-        return res.json({ status: 'success', data: rows || [] });
+        dolaczKlientow(tenant_id, rows || [], (zZKlientami) => {
+          return res.json({ status: 'success', data: zZKlientami });
+        });
       });
       if (tylkoSzablony || status === 'WYKONANE' || status === 'ZARCHIWIZOWANE') runQuery();
       else materializujWzorce(tenant_id, runQuery);
@@ -241,7 +319,9 @@ module.exports = (db) => {
           params,
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            return res.json({ status: 'success', data: rows || [] });
+            dolaczKlientow(tenant_id, rows || [], (zZKlientami) => {
+              return res.json({ status: 'success', data: zZKlientami });
+            });
           }
         );
       });
@@ -254,8 +334,9 @@ module.exports = (db) => {
       const deadline = d.deadline || null;
       const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
-      const id_klienta = d.id_klienta ? String(d.id_klienta).trim() : null;
-      const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
+      const klienciList = parseKlienciPayload(d);
+      const id_klienta = klienciList.length > 0 ? klienciList[0].id : null;
+      const klient_nazwa = klienciList.length > 0 ? klienciList[0].nazwa.slice(0, 200) : null;
       const powtarzaj = ALLOWED_POWTARZAJ.includes(d.powtarzaj) ? d.powtarzaj : 'NIE';
       let powtarzaj_dzien = null;
       if (powtarzaj === 'TYGODNIOWO') powtarzaj_dzien = parseInt(d.powtarzaj_dzien, 10) || 1;
@@ -274,9 +355,11 @@ module.exports = (db) => {
             [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, isSzablon],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
-              // Jeśli to wzorzec — od razu spróbuj utworzyć dzisiejszą instancję (jeśli pasuje)
-              if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
-              else res.json({ status: 'success', id });
+              // Zapisz wszystkich klientów (multi-klient)
+              setKlienciZadania(tenant_id, id, klienciList, () => {
+                if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
+                else res.json({ status: 'success', id });
+              });
             }
           );
         });
@@ -291,8 +374,9 @@ module.exports = (db) => {
       const deadline = d.deadline || null;
       const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
-      const id_klienta = d.id_klienta ? String(d.id_klienta).trim() : null;
-      const klient_nazwa = d.klient_nazwa ? String(d.klient_nazwa).trim().slice(0, 200) : null;
+      const klienciListEdit = parseKlienciPayload(d);
+      const id_klienta = klienciListEdit.length > 0 ? klienciListEdit[0].id : null;
+      const klient_nazwa = klienciListEdit.length > 0 ? klienciListEdit[0].nazwa.slice(0, 200) : null;
       const kto_edytuje = String(d.kto_edytuje || d.utworzone_przez || '').trim();
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
@@ -308,7 +392,9 @@ module.exports = (db) => {
             (err, result) => {
               if (err) return res.json({ status: 'error', message: err.message });
               if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
-              return res.json({ status: 'success' });
+              setKlienciZadania(tenant_id, id, klienciListEdit, () => {
+                return res.json({ status: 'success' });
+              });
             }
           );
         });
