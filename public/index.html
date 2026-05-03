@@ -9352,7 +9352,7 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
         </summary>
         ${opisInner}
         <div style="padding:0 16px 14px 49px;">
-            <button class="ds-zd-task-comments-btn" onclick="event.stopPropagation(); zd_openComments('${z.id}', '${escHtml(tytulEsc)}')">💬 Komentarze</button>
+            <button class="ds-zd-task-comments-btn" onclick="event.stopPropagation(); zd_openComments('${z.id}', '${escHtml(tytulEsc)}')">💬 Komentarze${z.komentarzy ? ' — ' + z.komentarzy : ''}</button>
         </div>
     </details>`;
 }
@@ -18723,6 +18723,13 @@ if (inputNazwaCheck) {
                 if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
                 document.getElementById('zd-comment-input').value = '';
                 zd_loadComments(id);
+                // Odśwież liczniki w widgecie + tabeli (mogły się zmienić)
+                if (typeof ds_loadZadania === 'function') {
+                    const rola = localStorage.getItem('boczki_pracownik_rola') || '';
+                    const imie = localStorage.getItem('boczki_pracownik_imie') || '';
+                    ds_loadZadania(rola, imie);
+                }
+                if (typeof zd_loadList === 'function' && document.getElementById('zd-tbody')) zd_loadList();
             });
         }
 
@@ -18906,14 +18913,14 @@ if (inputNazwaCheck) {
                 let actions = '';
                 if (r.status === 'AKTYWNE') {
                     actions = `
-                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬</button>
+                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_editOpen('${r.id}')" title="Edytuj">✏️</button>
                         <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj">📦</button>
                         <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;
                 } else {
                     actions = `
-                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬</button>
+                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
                         <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;

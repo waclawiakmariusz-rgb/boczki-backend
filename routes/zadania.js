@@ -215,7 +215,7 @@ module.exports = (db) => {
     );
   }
 
-  // Helper: dla listy zadań pobierz wszystkich klientów (jednym query)
+  // Helper: dla listy zadań pobierz wszystkich klientów + liczbę komentarzy (jednym query każdy)
   function dolaczKlientow(tenant_id, zadania, cb) {
     if (!zadania || !zadania.length) return cb(zadania);
     const ids = zadania.map(z => z.id);
@@ -223,7 +223,7 @@ module.exports = (db) => {
       `SELECT id_zadania, id_klienta, klient_nazwa FROM Zadania_Klienci WHERE tenant_id = ? AND id_zadania IN (?)`,
       [tenant_id, ids],
       (err, rows) => {
-        if (err) { console.error('[dolaczKlientow]', err.message); zadania.forEach(z => z.klienci = []); return cb(zadania); }
+        if (err) { console.error('[dolaczKlientow]', err.message); zadania.forEach(z => { z.klienci = []; z.komentarzy = 0; }); return cb(zadania); }
         const map = {};
         (rows || []).forEach(r => {
           if (!map[r.id_zadania]) map[r.id_zadania] = [];
@@ -231,12 +231,21 @@ module.exports = (db) => {
         });
         zadania.forEach(z => {
           z.klienci = map[z.id] || [];
-          // Backward compat: jeśli pusto a stary main jest ustawiony — dodaj go
           if (z.klienci.length === 0 && z.id_klienta && z.klient_nazwa) {
             z.klienci = [{ id: z.id_klienta, nazwa: z.klient_nazwa }];
           }
         });
-        cb(zadania);
+        // Drugie zapytanie: liczba komentarzy per zadanie
+        db.query(
+          `SELECT id_zadania, COUNT(*) AS cnt FROM Zadania_Komentarze WHERE tenant_id = ? AND id_zadania IN (?) GROUP BY id_zadania`,
+          [tenant_id, ids],
+          (err2, kRows) => {
+            const cMap = {};
+            if (!err2) (kRows || []).forEach(r => { cMap[r.id_zadania] = Number(r.cnt) || 0; });
+            zadania.forEach(z => { z.komentarzy = cMap[z.id] || 0; });
+            cb(zadania);
+          }
+        );
       }
     );
   }
