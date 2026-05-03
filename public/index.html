@@ -23499,9 +23499,29 @@ const EST_KB = [
         answer: 'Pełna lista wszystkich transakcji jest w <b>Sprzedaż → Historia</b>. Możesz filtrować po dacie, kliencie, pracowniku i typie (Zabieg/Kosmetyk/Mix). Kliknięcie wiersza otwiera szczegóły — możesz edytować lub usunąć transakcję (uprawnienia zależą od roli).'
     },
     {
+        title: 'Co to są zadatki?', category: 'Sprzedaż',
+        keywords: ['co to zadatek', 'co to zadatki', 'czym sa zadatki', 'czym jest zadatek', 'definicja zadatku', 'wytlumacz zadatki', 'do czego zadatki', 'zadatek znaczenie', 'na co zadatek'],
+        answer: '<b>Zadatek</b> to kwota którą klient wpłaca <b>z góry</b> jako rezerwację wizyty lub gwarancję pojawienia się. Najczęściej:<br>• klient zostawia np. 50 zł zadatku przy umawianiu wizyty<br>• kwota „czeka" w systemie do dnia wizyty<br>• w dniu wizyty zadatek <b>zalicza się na poczet płatności</b> (klient dopłaca tylko resztę)<br><br>Jeśli klient nie pojawi się — zadatek może <b>przepaść</b> (oznaczasz „usunięty") albo <b>zostać zwrócony</b> (oznaczasz „zwrócony").<br><br>Zadatki obsłużysz w sekcji <b>Sprzedaż → Spis Zadatków</b> — patrz wpis „Spis zadatków".'
+    },
+    {
         title: 'Spis zadatków', category: 'Sprzedaż',
-        keywords: ['zadatek', 'zadatki', 'spis zadatkow', 'lista zadatkow', 'zaliczka', 'rezerwacja', 'wplata', 'klient wplacil zadatek', 'rozliczenie zadatkow'],
-        answer: 'Wszystkie zadatki znajdziesz w <b>Sprzedaż → Spis Zadatków</b>. Tabela pokazuje: kto wpłacił, kwotę, datę, status (aktywny / wykorzystany / zwrócony / usunięty).<br><br>Zadatek wykorzystujesz przy kasowaniu — wybierając go jako częściową lub pełną płatność.'
+        keywords: ['spis zadatkow', 'lista zadatkow', 'gdzie zadatki', 'pokaz zadatki', 'aktywne zadatki', 'rozliczenie zadatkow', 'wykorzystany zadatek', 'zwrocony zadatek', 'klient wplacil zadatek'],
+        answer: 'Wszystkie zadatki znajdziesz w <b>Sprzedaż → Spis Zadatków</b>. Tabela pokazuje: kto wpłacił, kwotę, datę, status (aktywny / wykorzystany / zwrócony / usunięty).<br><br>Zadatek wykorzystujesz przy kasowaniu — wybierając go jako częściową lub pełną płatność (forma „Zadatek" lub „Mix" w rejestracji sprzedaży).'
+    },
+    {
+        title: 'Co to jest voucher?', category: 'Vouchery',
+        keywords: ['co to voucher', 'czym jest voucher', 'definicja vouchera', 'wytlumacz voucher', 'co to bon', 'czym jest bon podarunkowy', 'jak dziala voucher', 'do czego voucher'],
+        answer: '<b>Voucher</b> (bon podarunkowy) to przedpłacona forma płatności o określonej wartości — np. klient kupuje voucher na 200 zł i daje go w prezencie, a obdarowana osoba realizuje go u Ciebie w salonie zamiast płacić gotówką.<br><br>Różnica względem <b>zadatku</b>: zadatek jest przypisany do konkretnego klienta na konkretną wizytę. Voucher jest „bonem na okaziciela" — może go wykorzystać każdy kto poda kod.<br><br>Vouchery zarządzasz w sekcji <b>Vouchery</b> w lewym menu (tworzenie, sprawdzanie salda, realizacja).'
+    },
+    {
+        title: 'Zabieg vs Kosmetyk — różnica', category: 'Sprzedaż',
+        keywords: ['roznica zabieg kosmetyk', 'czym sie rozni zabieg od kosmetyku', 'zabieg czy kosmetyk', 'co wybrac zabieg czy kosmetyk', 'kategorie sprzedazy', 'typ pozycji'],
+        answer: '<b>Zabieg (usługa)</b> to praca wykonana w salonie (np. manicure, masaż, depilacja). Nie ma stanu magazynowego, jest definiowany w <b>Usługi</b>. Sprzedaż zabiegu nie wpływa na magazyn.<br><br><b>Kosmetyk (produkt)</b> to fizyczny towar sprzedawany klientowi (np. krem, szampon). Ma stan magazynowy w <b>Magazyn</b>, sprzedaż kosmetyku <b>automatycznie odejmuje stan</b> (FIFO — z najstarszej partii).<br><br>Przy jednej transakcji możesz dodać i zabiegi, i kosmetyki — system rozliczy oba typy osobno w raportach.'
+    },
+    {
+        title: 'FIFO — co to znaczy?', category: 'Magazyn',
+        keywords: ['fifo', 'co to fifo', 'czym jest fifo', 'pierwsze przyszlo', 'partie magazynu', 'po co partie', 'najstarsza partia'],
+        answer: '<b>FIFO</b> (<i>First In, First Out</i> — „pierwsze weszło, pierwsze wychodzi") to zasada której używa Estelio do rozliczania magazynu. Gdy sprzedasz kosmetyk, system odejmie ilość <b>z najstarszej partii</b> (tej która przyszła pierwsza).<br><br>Dzięki temu:<br>• cena zakupu w raportach jest poprawna (bo wiadomo z której partii poszedł produkt)<br>• terminy ważności rotują naturalnie<br>• można śledzić marżę per partia.<br><br>Partie widzisz w <b>Magazyn → Stan Magazynowy</b> po rozwinięciu produktu.'
     },
     {
         title: 'Jak używać voucherów?', category: 'Vouchery',
@@ -23643,12 +23663,17 @@ function estActiveCategory() {
 const EST_LOOKUP_INTENT_RX = /^(gdzie|pokaz|pokaż|jaki raport|jaka lista|zobacz|sprawdz|sprawdź|ile|znajde|znajdę|wyswietl|wyświetl)\b/;
 const EST_LOOKUP_BOOST_KEYWORDS = ['gdzie','raport','lista','spis','historia','zobacz','sprawdz','przeglad','podsumowanie'];
 
+// Intent — pytania definicyjne („co to / czym jest / definicja / wytłumacz").
+// Boost wpisów których tytuł zaczyna się od „Co to / Czym jest" — bo to definicje.
+const EST_DEFINE_INTENT_RX = /^(co to|czym jest|czym sa|czym są|definicja|wytlumacz|wytłumacz|znaczenie|do czego)\b/;
+
 function estFind(query) {
     const q = estNormalize(query);
     // Tokeny pytania — bez interpunkcji, min 4 znaki
     const qTokens = q.replace(/[?!.,;:]/g, '').split(/\s+/).filter(t => t.length >= 4);
     const activeCat = estActiveCategory();
     const isLookup = EST_LOOKUP_INTENT_RX.test(q);
+    const isDefine = EST_DEFINE_INTENT_RX.test(q);
 
     const allEntries = [
         ...EST_KB_DYNAMIC,
@@ -23688,12 +23713,30 @@ function estFind(query) {
         if (kwScore > 0) {
             score += item._bonus || 0;
             if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
+
+            // Title-match boost — jeśli token pytania (≥4 znaki) trafia w słowo w tytule wpisu,
+            // to silny sygnał że wpis jest „o tym". Każde trafienie +3.
+            // Tytuł opisuje TEMAT wpisu, keyword — różne formy/synonimy. Tytuł to silniejszy sygnał.
+            const titleN = estNormalize(item.title || '');
+            const titleWords = new Set(titleN.replace(/[?!.,;:—–-]/g,' ').split(/\s+/).filter(w => w.length >= 4));
+            let titleHits = 0;
+            qTokens.forEach(t => {
+                titleWords.forEach(tw => {
+                    if (t === tw || t.startsWith(tw) || tw.startsWith(t)) titleHits++;
+                });
+            });
+            if (titleHits > 0) score += titleHits * 3;
+
             // Intent boost — pytanie typu "gdzie/pokaz/zobacz" → preferuj wpisy będące raportami/listami
             if (isLookup) {
-                const titleN  = estNormalize(item.title || '');
-                const kwAllN  = item.keywords.map(estNormalize).join(' ');
+                const kwAllN = item.keywords.map(estNormalize).join(' ');
                 const isLookupEntry = EST_LOOKUP_BOOST_KEYWORDS.some(w => titleN.includes(w) || kwAllN.includes(w));
                 if (isLookupEntry) score += 3;
+            }
+            // Intent boost — pytanie typu „co to / czym jest" → preferuj wpisy definicyjne
+            if (isDefine) {
+                const isDefineEntry = /^(co to|czym jest|czym sa|czym są|definicja)/.test(titleN);
+                if (isDefineEntry) score += 5;
             }
         }
 
@@ -23791,11 +23834,11 @@ function estReply(userMsg) {
         estHideTyping();
         const { best, score, runners } = estFind(userMsg);
 
-        // Próg pewności:
-        //  • score >= 4  → pewne dopasowanie — pokaż odpowiedź + powiązane z kategorii
-        //  • score 1–3   → niepewne — pokaż odpowiedź + DODATKOWO „Jeśli nie o to chodziło: [alternatywy]"
+        // Próg pewności (po dodaniu title-boost +3/trafienie):
+        //  • score >= 6  → pewne dopasowanie — pokaż odpowiedź + powiązane z kategorii
+        //  • score 1–5   → niepewne — pokaż odpowiedź + DODATKOWO „Jeśli nie o to chodziło: [alternatywy]"
         //  • brak best   → fallback: top-N najbliższych (jeśli są jakieś runners ze score 0+)
-        if (best && score >= 4) {
+        if (best && score >= 6) {
             estAddMsg(best.answer, 'bot');
             setTimeout(() => estShowRelated(estGetRelated(best)), 300);
         } else if (best && score >= 1) {
