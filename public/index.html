@@ -23473,13 +23473,18 @@ function estGuideBuildSubAnswer(h3) {
 
 async function estLoadGuide() {
     try {
+        console.log('[Esti] estLoadGuide() — start');
         // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
         const v = new Date().toISOString().slice(0,10); // YYYY-MM-DD
         const r = await fetch(`/Estelio_Przewodnik_Pracownik.html?v=${v}`, { cache: 'no-cache' });
-        if (!r.ok) return;
+        if (!r.ok) {
+            console.warn('[Esti] Nie udało się pobrać przewodnika — HTTP', r.status);
+            return;
+        }
         const html = await r.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
         const sections = doc.querySelectorAll('section.card[id]');
+        console.log('[Esti] Pobrano przewodnik:', html.length, 'znaków, sekcji:', sections.length);
         const entries = [];
 
         sections.forEach(sec => {
@@ -23518,7 +23523,10 @@ async function estLoadGuide() {
         });
 
         EST_KB_GUIDE = entries;
-    } catch(e) { /* cicho — gdy przewodnik niedostępny chat zwróci „nie wiem" */ }
+        console.log('[Esti] KB załadowane:', entries.length, 'wpisów');
+    } catch(e) {
+        console.warn('[Esti] Błąd ładowania przewodnika:', e.message);
+    }
 }
 
 // === LEGACY (wyłączone) ===
@@ -23837,12 +23845,36 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
     }
 
-    // Załaduj przewodnik pracownika (jedyne źródło wiedzy Esti) gdy widget pojawia się po raz pierwszy
-    const observer2 = new MutationObserver(() => {
+    // Załaduj przewodnik pracownika (jedyne źródło wiedzy Esti).
+    // Trzy ścieżki uruchomienia — żeby obojętne było czy user wchodzi już
+    // zalogowany, czy logowanie aktywuje appContainer dopiero po init widgetu:
+    let estGuideLoaded = false;
+    const tryLoadGuide = () => {
+        if (estGuideLoaded) return true;
         const visible = appContainer && appContainer.style.display !== 'none' && appContainer.style.display !== '';
-        if (visible) { estLoadGuide(); observer2.disconnect(); }
-    });
-    if (appContainer) observer2.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
+        if (visible) { estGuideLoaded = true; estLoadGuide(); return true; }
+        return false;
+    };
+
+    // (1) Eager — gdy DOM już ma appContainer pokazany (re-login, hot-reload)
+    tryLoadGuide();
+
+    // (2) MutationObserver — gdy user dopiero zaloguje się po init
+    if (!estGuideLoaded && appContainer) {
+        const observer2 = new MutationObserver(() => {
+            if (tryLoadGuide()) observer2.disconnect();
+        });
+        observer2.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
+    }
+
+    // (3) Bezpiecznik — jeśli po 5 sekundach nadal nie załadowane, wymuś próbę
+    setTimeout(() => {
+        if (!estGuideLoaded) {
+            console.log('[Esti] Bezpiecznik 5s — wymuszam estLoadGuide()');
+            estGuideLoaded = true;
+            estLoadGuide();
+        }
+    }, 5000);
 
     // Otwórz / zamknij
     btn.addEventListener('click', () => {
