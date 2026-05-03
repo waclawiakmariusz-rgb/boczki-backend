@@ -5585,21 +5585,30 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
 
   <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje -->
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
-    <div class="ds-section-head" style="display:flex; justify-content:space-between; align-items:center;">
-      <h3 style="margin:0;">📋 <span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span></h3>
-      <button id="ds-zadania-add-btn" onclick="zd_addOpen()" style="display:none; color:#fff; cursor:pointer; font-size:13px; font-family:inherit;">+ Nowe zadanie</button>
+    <div class="ds-section-head" id="ds-zadania-head" onclick="ds_zd_toggleCollapse(event)" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
+      <h3 style="margin:0; display:flex; align-items:center; gap:8px;">
+        <span id="ds-zadania-chevron" style="display:inline-block; transition:transform .2s; font-size:12px; color:#64748b;">▼</span>
+        📋 <span id="ds-zadania-title">Zadania zespołu</span>
+        <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span>
+      </h3>
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span id="ds-zadania-summary" style="font-size:12px; color:#64748b; font-weight:600;"></span>
+        <button id="ds-zadania-add-btn" onclick="event.stopPropagation(); zd_addOpen();" style="display:none; color:#fff; cursor:pointer; font-size:13px; font-family:inherit;">+ Nowe zadanie</button>
+      </div>
     </div>
-    <div id="ds-zadania-banner" style="display:none;"></div>
-    <div id="ds-zadania-tabs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-    <div id="ds-zadania-list">
-      <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
+    <div id="ds-zadania-body">
+      <div id="ds-zadania-banner" style="display:none;"></div>
+      <div id="ds-zadania-tabs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
+      <div id="ds-zadania-list">
+        <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
+      </div>
+      <details id="ds-zadania-zlecone-wrap" style="display:none; margin-top:14px; border-top:1px dashed #e2e8f0; padding-top:10px;">
+        <summary style="cursor:pointer; font-size:13px; font-weight:700; color:#475569; list-style:none; padding:6px 0;">
+          📤 Zlecone przeze mnie <span id="ds-zadania-zlecone-count" style="font-size:12px; color:#94a3b8; font-weight:600; margin-left:4px;"></span>
+        </summary>
+        <div id="ds-zadania-zlecone-list" style="margin-top:8px;"></div>
+      </details>
     </div>
-    <details id="ds-zadania-zlecone-wrap" style="display:none; margin-top:14px; border-top:1px dashed #e2e8f0; padding-top:10px;">
-      <summary style="cursor:pointer; font-size:13px; font-weight:700; color:#475569; list-style:none; padding:6px 0;">
-        📤 Zlecone przeze mnie <span id="ds-zadania-zlecone-count" style="font-size:12px; color:#94a3b8; font-weight:600; margin-left:4px;"></span>
-      </summary>
-      <div id="ds-zadania-zlecone-list" style="margin-top:8px;"></div>
-    </details>
   </section>
 
   <!-- Szybki dostęp + Wymaga uwagi -->
@@ -9167,6 +9176,52 @@ function ds_loadZleconePrzezeMnie(rola, imie) {
 // zadaniami (lub Klient jeśli wszystkie 0)
 let ds_zd_activeTab = null;
 
+// === Harmonijka kafla "Twoje Zadania" (zwiń/rozwiń) ===
+function ds_zd_isCollapsed() {
+    return localStorage.getItem('ds_zadania_collapsed') === '1';
+}
+function ds_zd_applyCollapseState() {
+    const body = document.getElementById('ds-zadania-body');
+    const chev = document.getElementById('ds-zadania-chevron');
+    const summ = document.getElementById('ds-zadania-summary');
+    if (!body) return;
+    const collapsed = ds_zd_isCollapsed();
+    body.style.display = collapsed ? 'none' : '';
+    if (chev) chev.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+    if (summ) summ.style.display = collapsed ? '' : 'none';
+}
+function ds_zd_toggleCollapse(ev) {
+    if (ev) ev.stopPropagation();
+    const cur = ds_zd_isCollapsed();
+    localStorage.setItem('ds_zadania_collapsed', cur ? '0' : '1');
+    ds_zd_applyCollapseState();
+    ds_zd_updateCollapsedSummary();
+}
+function ds_zd_updateCollapsedSummary() {
+    const summ = document.getElementById('ds-zadania-summary');
+    if (!summ) return;
+    const all = window.__ds_zd_all || [];
+    if (!all.length) {
+        summ.textContent = 'Brak aktywnych zadań ✨';
+        return;
+    }
+    const dzisStr = new Date().toLocaleDateString('sv-SE');
+    let dzis = 0, pilne = 0, poTerminie = 0;
+    all.forEach(z => {
+        if (z.priorytet === 'PILNY') pilne++;
+        if (z.deadline) {
+            const d = new Date(z.deadline).toLocaleDateString('sv-SE');
+            if (d === dzisStr) dzis++;
+            else if (d < dzisStr) poTerminie++;
+        }
+    });
+    const parts = [`${all.length} aktywnych`];
+    if (dzis) parts.push(`<b style="color:#ea580c;">${dzis} na dziś</b>`);
+    if (pilne) parts.push(`<b style="color:#dc2626;">${pilne} pilnych</b>`);
+    if (poTerminie) parts.push(`<b style="color:#dc2626;">${poTerminie} po terminie</b>`);
+    summ.innerHTML = parts.join(' • ');
+}
+
 function ds_zd_renderTabs() {
     const tabsBox = document.getElementById('ds-zadania-tabs');
     const list = document.getElementById('ds-zadania-list');
@@ -9181,6 +9236,8 @@ function ds_zd_renderTabs() {
             <div class="ds-zd-empty-title">Wszystko ogarnięte!</div>
             <div class="ds-zd-empty-sub">Brak aktywnych zadań — czas na kawę ☕</div>
         </div>`;
+        ds_zd_updateCollapsedSummary();
+        ds_zd_applyCollapseState();
         return;
     }
 
@@ -9242,6 +9299,8 @@ function ds_zd_renderTabs() {
     }).join('');
 
     ds_zd_renderList();
+    ds_zd_updateCollapsedSummary();
+    ds_zd_applyCollapseState();
 }
 
 function ds_zd_setTab(katKey) {
