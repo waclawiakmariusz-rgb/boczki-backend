@@ -23370,10 +23370,11 @@ body.dark-mode .est-typing { background: #0f172a; }
         <div id="est-help-messages"></div>
 
         <div id="est-suggestions">
-            <button class="est-sug" onclick="estAsk('Jak działa Esti?')">🤖 Jak działa Esti</button>
-            <button class="est-sug" onclick="estAsk('Jak działają rabaty?')">🏷️ Rabaty</button>
+            <button class="est-sug" onclick="estAsk('Jak wpisać sprzedaż?')">💰 Sprzedaż</button>
+            <button class="est-sug" onclick="estAsk('Co to są zadatki?')">💳 Zadatki</button>
+            <button class="est-sug" onclick="estAsk('Magazyn — pilnowanie zapasów')">📦 Magazyn</button>
             <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
-            <button class="est-sug" onclick="estAsk('Konsultacje')">📝 Konsultacje</button>
+            <button class="est-sug" onclick="window.open('/Estelio_Przewodnik_Pracownik.html','_blank')">📖 Pełny przewodnik</button>
         </div>
 
         <div id="est-help-input-row">
@@ -23581,42 +23582,130 @@ const EST_KB = [
 ];
 
 /* ----------------------------------------------------------
-   DYNAMICZNE WPISY z API (ładowane po zalogowaniu)
-   Mergowane z EST_KB przy dopasowaniu.
+   ŹRÓDŁO WIEDZY: PRZEWODNIK PRACOWNIKA (parsowany z HTML)
+   Esti czerpie wiedzę WYŁĄCZNIE z `/Estelio_Przewodnik_Pracownik.html`.
+   Plik jest zewnętrzny (nie kopiowany do JS) — żeby zaktualizować Esti
+   wystarczy edytować HTML przewodnika, bez zmian w kodzie.
    ---------------------------------------------------------- */
-let EST_KB_DYNAMIC = []; // wpisy z bazy danych tenanta
+let EST_KB_GUIDE = [];
 
-function estParseKbRows(rows) {
-    return (rows || []).filter(e => e.active != 0).map(e => ({
-        title:    e.title    || undefined,
-        category: e.category || 'Ogólne',
-        keywords: String(e.keywords).split(',').map(k => k.trim()).filter(Boolean),
-        answer:   e.answer,
-    }));
+// Mapa: id sekcji w przewodniku → kategoria (do EST_SECTION_TO_CAT bonusu)
+const EST_GUIDE_CAT_MAP = {
+    logowanie: 'Ogólne', pulpit: 'Ogólne', sprzedaz: 'Sprzedaż',
+    zadatki: 'Sprzedaż', kosmetyki: 'Sprzedaż', klienci: 'Klienci',
+    urodziny: 'Klienci', dokumenty: 'Klienci', magazyn: 'Magazyn',
+    inwentaryzacja: 'Magazyn', zadania: 'Ogólne', konsultacje: 'Sprzedaż',
+    zebranie: 'Analityka', retencja: 'Analityka', wskazowki: 'Ogólne', faq: 'Ogólne'
+};
+
+// Wyciąga keyword tokens z dowolnej liczby tekstów (tytuł, h3, id, lead).
+// Normalizuje polskie znaki i bierze tylko wyrazy ≥4 znaki.
+function estGuideTokens(...parts) {
+    const norm = parts.filter(Boolean).join(' ').toLowerCase()
+        .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e')
+        .replace(/ł/g,'l').replace(/ń/g,'n').replace(/ó/g,'o')
+        .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z');
+    const tokens = norm.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t => t.length >= 4);
+    // Unique, max 25 — zapobiegnie inflacji score'u od długich nagłówków
+    return [...new Set(tokens)].slice(0, 25);
 }
 
-async function estLoadDynamic() {
+// Buduje krótkie HTML body sub-wpisu z elementów między dwoma <h3>.
+// Pomija długie scenario/anty-przykłady — niech user kliknie link do pełnego rozdziału.
+function estGuideBuildSubAnswer(h3) {
+    const buf = [];
+    let n = h3.nextElementSibling;
+    while (n && n.tagName !== 'H3') {
+        const tag = n.tagName.toLowerCase();
+        if (tag === 'p') {
+            buf.push(`<p>${n.innerHTML}</p>`);
+        } else if (tag === 'ul' || tag === 'ol') {
+            buf.push(n.outerHTML);
+        } else if (n.classList && n.classList.contains('step')) {
+            const num = n.querySelector('.num')?.textContent?.trim() || '•';
+            const t   = n.querySelector('strong')?.textContent?.trim() || '';
+            const s   = n.querySelector('span')?.innerHTML || '';
+            buf.push(`<p><b>${num}. ${t}</b><br>${s}</p>`);
+        } else if (n.classList && n.classList.contains('warning')) {
+            buf.push(`<p>⚠️ ${n.innerHTML}</p>`);
+        } else if (n.classList && n.classList.contains('tip')) {
+            buf.push(`<p>💡 ${n.innerHTML}</p>`);
+        }
+        // scenario/h4 — pomijamy (dłuższe przykłady, dostępne w przewodniku)
+        n = n.nextElementSibling;
+    }
+    let answerHtml = buf.join('');
+    // Twardy limit na długość: 800 znaków plain-text (HTML rośnie ~30%)
+    const plain = answerHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    if (plain.length > 800) {
+        const paras = answerHtml.match(/<(p|ul|ol)\b[^>]*>[\s\S]*?<\/\1>/gi) || [];
+        const trimmed = [];
+        let acc = 0;
+        for (const p of paras) {
+            const pPlain = p.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ');
+            if (acc + pPlain.length > 800) break;
+            trimmed.push(p); acc += pPlain.length;
+        }
+        answerHtml = trimmed.join('') || (answerHtml.substring(0, 600) + '…');
+    }
+    return answerHtml;
+}
+
+async function estLoadGuide() {
     try {
-        const tenant_id     = localStorage.getItem('boczki_tenant_id') || '';
-        const session_token = localStorage.getItem('boczki_session_token') || '';
-        if (!tenant_id || !session_token) return;
+        const r = await fetch('/Estelio_Przewodnik_Pracownik.html', { cache: 'no-cache' });
+        if (!r.ok) return;
+        const html = await r.text();
+        const doc = new DOMParser().parseFromString(html, 'text/html');
+        const sections = doc.querySelectorAll('section.card[id]');
+        const entries = [];
 
-        // Ładuj równolegle: wpisy tenanta + globalne wpisy admina
-        const [rTenant, rGlobal] = await Promise.allSettled([
-            fetch(`/api/help-kb?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`).then(r => r.json()),
-            fetch(`/api/help-kb/global`).then(r => r.json())
-        ]);
+        sections.forEach(sec => {
+            const id = sec.id;
+            const cat = EST_GUIDE_CAT_MAP[id] || 'Ogólne';
+            const h2 = sec.querySelector('h2');
+            if (!h2) return;
+            const sectionTitle = h2.textContent.trim();
+            const link = `<br><br><a href="/Estelio_Przewodnik_Pracownik.html#${id}" target="_blank" style="color:#ec3f91;font-weight:600;">📖 Otwórz pełny rozdział →</a>`;
 
-        const tenantItems = rTenant.status === 'fulfilled' && rTenant.value.status === 'ok'
-            ? estParseKbRows(rTenant.value.data).map(e => ({ ...e, _bonus: 3 }))   // wyższy priorytet
-            : [];
-        const globalItems = rGlobal.status === 'fulfilled' && Array.isArray(rGlobal.value)
-            ? estParseKbRows(rGlobal.value).map(e => ({ ...e, _bonus: 1 }))
-            : [];
+            // 1) Wpis główny sekcji (lead = ogólne wprowadzenie)
+            const lead = sec.querySelector('p.lead');
+            const leadHtml = lead ? lead.innerHTML.trim() : '';
+            entries.push({
+                title: sectionTitle,
+                category: cat,
+                keywords: estGuideTokens(sectionTitle, id),
+                answer: (leadHtml || `Sekcja „${sectionTitle}" w przewodniku pracownika.`) + link,
+                _bonus: 0
+            });
 
-        EST_KB_DYNAMIC = [...tenantItems, ...globalItems];
-    } catch(e) { /* cicho — brak internetu nie psuje chatu */ }
+            // 2) Sub-wpisy: każdy <h3> w sekcji to osobny wpis (precyzyjne procedury)
+            sec.querySelectorAll('h3').forEach(h3 => {
+                const subTitle = h3.textContent.trim();
+                if (!subTitle) return;
+                const answerHtml = estGuideBuildSubAnswer(h3);
+                if (!answerHtml || answerHtml.length < 30) return; // Pomijamy puste/za krótkie
+                entries.push({
+                    title: `${sectionTitle.split('—')[0].trim()} — ${subTitle}`,
+                    category: cat,
+                    keywords: estGuideTokens(subTitle, sectionTitle, id),
+                    answer: answerHtml + link,
+                    _bonus: 0
+                });
+            });
+        });
+
+        EST_KB_GUIDE = entries;
+    } catch(e) { /* cicho — gdy przewodnik niedostępny chat zwróci „nie wiem" */ }
 }
+
+// === LEGACY (wyłączone) ===
+// Hardcoded EST_KB i EST_KB_DYNAMIC zostawione jako PUSTE zmienne dla
+// kompatybilności z resztą kodu (estGetRelated/estReply ich szuka).
+// 2026-05-03: user prosił by Esti czerpała wiedzę WYŁĄCZNIE z przewodnika,
+// bo stare wpisy z bazy help_kb i hardcoded EST_KB wprowadzały w błąd
+// (halucynacje o Wizytach/Kalendarzu, „ć sprzedaż?" w chipach).
+let EST_KB_DYNAMIC = [];
 
 /* ----------------------------------------------------------
    NORMALIZACJA — usuwa polskie znaki i zamienia na małe
@@ -23675,10 +23764,9 @@ function estFind(query) {
     const isLookup = EST_LOOKUP_INTENT_RX.test(q);
     const isDefine = EST_DEFINE_INTENT_RX.test(q);
 
-    const allEntries = [
-        ...EST_KB_DYNAMIC,
-        ...EST_KB.map(e => ({ ...e, _bonus: 0 }))
-    ];
+    // 2026-05-03: WYŁĄCZNIE przewodnik pracownika. Stare EST_KB i EST_KB_DYNAMIC
+    // zostały zachowane jako uśpiony kod, ale silnik ich nie używa.
+    const allEntries = [...EST_KB_GUIDE];
 
     const scored = [];
     allEntries.forEach(item => {
@@ -23788,7 +23876,8 @@ function estHideTyping() {
    ---------------------------------------------------------- */
 function estGetRelated(matchedItem) {
     const cat = matchedItem.category || 'Ogólne';
-    const allEntries = [...EST_KB_DYNAMIC, ...EST_KB];
+    // Powiązane czerpiemy WYŁĄCZNIE z przewodnika (analogicznie do estFind)
+    const allEntries = [...EST_KB_GUIDE];
 
     // Ta sama kategoria, wyklucz bieżący wpis (po tytule i pierwszym słowie kluczowym)
     const matchedTitle = matchedItem.title || '';
@@ -23857,14 +23946,19 @@ function estReply(userMsg) {
                 'To pytanie mnie zaskoczyło 😅 Sprawdź proponowane tematy poniżej, lub skontaktuj się: <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
             ];
             estAddMsg(noMatch[Math.floor(Math.random() * noMatch.length)], 'bot');
-            // Nawet bez trafienia — pokaż 3 najczęstsze tematy żeby user mógł kliknąć
+            // Nawet bez trafienia — pokaż 3 najpopularniejsze sekcje przewodnika
             setTimeout(() => {
+                // Wyciągamy główne wpisy sekcji (te BEZ „—" w title — które są lead'ami)
+                const isSection = e => e.title && !e.title.includes(' — ');
+                const findSec = id => EST_KB_GUIDE.find(e => isSection(e) && estGuideTokens(e.title).join(' ').includes(id));
                 const fallbackPicks = [
-                    EST_KB.find(e => e.title === 'Raporty — gdzie znajdę?'),
-                    EST_KB.find(e => e.title === 'Sprzedaż kosmetyków — gdzie zobaczyć?'),
-                    EST_KB.find(e => e.title === 'Stan magazynu — gdzie sprawdzić?')
+                    findSec('sprzedaz') || EST_KB_GUIDE[0],
+                    findSec('zadatki') || EST_KB_GUIDE[1],
+                    findSec('magazyn') || EST_KB_GUIDE[2]
                 ].filter(Boolean);
-                estShowAlternatives(fallbackPicks, 'Może zaczniemy od czegoś takiego?');
+                if (fallbackPicks.length) {
+                    estShowAlternatives(fallbackPicks, 'Może zaczniemy od czegoś takiego?');
+                }
             }, 300);
         }
     }, 700 + Math.random() * 400);
@@ -23921,10 +24015,10 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
     }
 
-    // Załaduj własne wpisy tenanta gdy widget pojawia się po raz pierwszy
+    // Załaduj przewodnik pracownika (jedyne źródło wiedzy Esti) gdy widget pojawia się po raz pierwszy
     const observer2 = new MutationObserver(() => {
         const visible = appContainer && appContainer.style.display !== 'none' && appContainer.style.display !== '';
-        if (visible) { estLoadDynamic(); observer2.disconnect(); }
+        if (visible) { estLoadGuide(); observer2.disconnect(); }
     });
     if (appContainer) observer2.observe(appContainer, { attributes: true, attributeFilter: ['style'] });
 
