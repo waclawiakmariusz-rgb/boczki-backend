@@ -23424,9 +23424,9 @@ const EST_KB = [
         answer: 'Aby dodać nowego klienta, przejdź do sekcji <b>Klienci</b> w menu po lewej stronie, a następnie kliknij przycisk <b>+ Dodaj klienta</b>. Uzupełnij imię, nazwisko i numer telefonu — reszta pól jest opcjonalna.'
     },
     {
-        title: 'Jak dodać wizytę?', category: 'Sprzedaż',
-        keywords: ['dodaj wizyte', 'nowa wizyta', 'zaplanuj wizyte', 'umow wizyte', 'nowe zamowienie', 'dodaj zamowienie', 'dodac wizyte'],
-        answer: 'Wizytę możesz dodać na dwa sposoby:<br>1. Z sekcji <b>Wizyty</b> → <b>+ Nowa wizyta</b><br>2. Bezpośrednio z karty klienta → przycisk <b>Zaplanuj wizytę</b>.<br>Wybierz pracownika, usługę i datę — gotowe!'
+        title: 'Jak dodać sprzedaż?', category: 'Sprzedaż',
+        keywords: ['dodaj sprzedaz', 'nowa sprzedaz', 'kasa', 'kasowanie', 'dodac sprzedaz', 'rejestracja sprzedazy', 'nowe zamowienie', 'paragon', 'pobierz platnosc', 'zaplata', 'platnosc gotowka', 'platnosc karta'],
+        answer: 'Sprzedaż dodajesz w sekcji <b>Sprzedaż → Dodanie Sprzedaży</b>:<br>1. Wybierz klienta (lub dodaj nowego)<br>2. Dodaj pozycje — <b>Zabieg</b> i/lub <b>Kosmetyk</b><br>3. Wybierz pracownika i formę płatności (gotówka / karta / voucher / mix / zadatek)<br>4. Kliknij <b>Zapisz Sprzedaż</b>.<br><br>Stan magazynu odejmie się automatycznie (FIFO), a transakcja trafi do raportów.'
     },
     {
         title: 'Jak zmienić PIN pracownika?', category: 'Pracownicy',
@@ -23444,9 +23444,24 @@ const EST_KB = [
         answer: 'Usługi (zabiegi) zarządzasz w sekcji <b>Usługi</b>. Kliknij <b>+ Dodaj usługę</b>, podaj nazwę, cenę i czas trwania. Usługi pojawią się automatycznie przy tworzeniu wizyt.'
     },
     {
-        title: 'Jak zarządzać magazynem?', category: 'Magazyn',
-        keywords: ['produkt', 'towar', 'magazyn', 'stan magazynowy', 'dodaj produkt', 'stany', 'zapas'],
-        answer: 'Produkty i stany magazynowe znajdziesz w sekcji <b>Magazyn</b>. Możesz dodawać produkty, śledzić stany i rejestrować sprzedaż produktów podczas wizyty.'
+        title: 'Stan magazynu — gdzie sprawdzić?', category: 'Magazyn',
+        keywords: ['stan magazynu', 'stany magazynowe', 'gdzie magazyn', 'stan', 'zapas', 'ile mam produktu', 'stan kosmetykow', 'stan towaru', 'lista produktow', 'co mam w magazynie', 'stan produktu'],
+        answer: 'Stan magazynu zobaczysz w sekcji <b>Magazyn → Stan Magazynowy</b>. Tabela pokazuje wszystkie produkty z aktualnymi ilościami, datami przyjęć i partiami (FIFO).<br><br>Pasek wyszukiwania na górze filtruje po nazwie. Kolorowe wskaźniki sygnalizują niski stan.'
+    },
+    {
+        title: 'Co zamówić — niskie stany', category: 'Magazyn',
+        keywords: ['co zamowic', 'niskie stany', 'kończą sie produkty', 'zamowienie do dostawcy', 'brakuje produktu', 'zamow', 'wykończyły sie kosmetyki'],
+        answer: 'Lista produktów do zamówienia jest w sekcji <b>Magazyn → Co zamówić?</b>. System automatycznie wskazuje produkty których stan spadł poniżej minimum lub które kończą się szybciej niż zwykle.<br><br>Możesz wyeksportować listę albo wysłać ją do dostawcy.'
+    },
+    {
+        title: 'Przyjęcie towaru / nowa partia', category: 'Magazyn',
+        keywords: ['przyjecie towaru', 'nowa partia', 'dostawa', 'przyjmij dostawe', 'wprowadz dostawe', 'wprowadz produkt', 'nowy produkt magazyn', 'dolicz produkt'],
+        answer: 'Nową dostawę wprowadzisz w sekcji <b>Magazyn → Przyjęcie towaru</b>. Wybierz produkt, podaj ilość, cenę zakupu i datę przyjęcia. System utworzy nową partię (dla FIFO).<br><br>Jeśli produktu jeszcze nie ma w bazie — dodaj go w <b>Magazyn → Stan Magazynowy → + Nowy Produkt</b>.'
+    },
+    {
+        title: 'Inwentaryzacja', category: 'Magazyn',
+        keywords: ['inwentaryzacja', 'remanent', 'spis z natury', 'sprawdz stan', 'rozliczenie magazynu', 'porownaj stany'],
+        answer: 'Inwentaryzację wykonasz w sekcji <b>Magazyn → Inwentaryzacja</b>. Wpisz faktyczne ilości policzone w salonie — system pokaże różnice między systemem a rzeczywistością i pozwoli je zaakceptować jako korekty.'
     },
     {
         title: 'Jak włączyć dark mode?', category: 'Ustawienia',
@@ -23454,9 +23469,39 @@ const EST_KB = [
         answer: 'Tryb ciemny włączysz klikając ikonę 🌙 w prawym górnym rogu paska bocznego (lub w ustawieniach). Kliknij ponownie, żeby wrócić do jasnego motywu.'
     },
     {
-        title: 'Jak sprawdzić raporty?', category: 'Analityka',
-        keywords: ['raport', 'statystyki', 'analityka', 'przychody', 'zestawienie', 'podsumowanie', 'wyniki'],
-        answer: 'Raporty i statystyki znajdziesz w sekcji <b>Analityka</b>. Zobaczysz tam przychody (dzienne, miesięczne, roczne), top pracowników, top usługi i wiele więcej. Możesz filtrować po zakresie dat.'
+        title: 'Raporty — gdzie znajdę?', category: 'Analityka',
+        keywords: ['raport', 'raporty', 'statystyki', 'analityka', 'analiza', 'przychody', 'zestawienie', 'podsumowanie', 'wyniki', 'gdzie raporty', 'gdzie statystyki'],
+        answer: 'Wszystkie raporty są w sekcji <b>Analiza</b> w lewym menu:<br>• <b>Dzień</b> — podsumowanie wybranego dnia<br>• <b>Miesiąc</b> — pełny raport miesięczny (zabiegi, kosmetyki, KPI, wykresy)<br>• <b>Rok</b> — zestawienie roczne<br>• <b>Pracownik</b> — wyniki konkretnej osoby<br>• <b>Analiza Zabiegu</b> — ranking pojedynczych zabiegów<br>• <b>Inteligentna Analiza</b> — automatyczne wnioski AI<br>• <b>Koszty</b> — wydatki salonu.<br><br>Bieżące podsumowanie dnia jest też na <b>Pulpicie</b> (główny widok po zalogowaniu).'
+    },
+    {
+        title: 'Raport dzienny — gdzie znajdę?', category: 'Analityka',
+        keywords: ['raport dzienny', 'podsumowanie dnia', 'utarg dzienny', 'co zarobilismy dzisiaj', 'sprzedaz dzisiaj', 'utarg dzis', 'ile dzisiaj', 'dzisiaj sprzedaz', 'sprzedaz dnia', 'rozliczenie dnia'],
+        answer: 'Masz dwa miejsca z raportem dziennym:<br>1. <b>Pulpit</b> (po zalogowaniu) — kafelek <b>Podsumowanie Dnia</b> z utargiem, liczbą klientów, podziałem na płatności i KPI<br>2. <b>Analiza → Dzień</b> — pełna lista transakcji dnia (zabiegi, kosmetyki, formy płatności, vouchery, zadatki).<br><br>Możesz wybrać dowolną datę z kalendarza — nie tylko dzisiaj.'
+    },
+    {
+        title: 'Sprzedaż kosmetyków — gdzie zobaczyć?', category: 'Analityka',
+        keywords: ['sprzedaz kosmetykow', 'sprzedaz kosmetyki', 'gdzie sprzedaz kosmetykow', 'raport kosmetykow', 'utarg kosmetykow', 'ile sprzedalam kosmetykow', 'historia kosmetykow', 'rozliczenie kosmetykow', 'analiza kosmetykow', 'co sie sprzedalo', 'kosmetyki sprzedaz', 'pokaz kosmetyki'],
+        answer: 'Sprzedaż kosmetyków znajdziesz w kilku miejscach:<br>• <b>Pulpit → Podsumowanie Dnia</b> — KPI „Sprzedaż Kosmetyków" (kwota + ilość sztuk dzisiaj)<br>• <b>Analiza → Miesiąc</b> → zwiń sekcję <b>💄 Analiza Kosmetyków</b> (przychód miesięczny, ranking Top 20, ilości)<br>• <b>Analiza → Rok</b> → sekcja <b>💄 Analiza Kosmetyków</b> (utarg roczny, ranking)<br>• <b>Sprzedaż → Historia</b> — lista wszystkich transakcji z filtrem typu „Kosmetyk"<br>• <b>Karta klienta</b> → zakładka <b>🛍️ Kosmetyki</b> — co konkretny klient kupował.'
+    },
+    {
+        title: 'Sprzedaż zabiegów / usług — gdzie zobaczyć?', category: 'Analityka',
+        keywords: ['sprzedaz zabiegow', 'sprzedaz uslug', 'utarg zabiegi', 'ranking zabiegow', 'top zabiegi', 'analiza zabiegu', 'jakie zabiegi sie sprzedaja', 'historia zabiegow', 'pokaz zabiegi', 'najpopularniejsze zabiegi', 'jakie zarobilam'],
+        answer: 'Raporty zabiegów (usług):<br>• <b>Analiza → Analiza Zabiegu</b> — ranking pojedynczych zabiegów (ile razy, kwota, średnia cena)<br>• <b>Analiza → Miesiąc</b> — bestseller miesiąca + KPI „Zabiegi vs Kosmetyki"<br>• <b>Analiza → Pracownik</b> — które zabiegi wykonała konkretna osoba<br>• <b>Sprzedaż → Historia</b> — lista wszystkich transakcji<br>• <b>Karta klienta</b> → historia zabiegów klienta.'
+    },
+    {
+        title: 'Ranking pracowników', category: 'Analityka',
+        keywords: ['ranking pracownikow', 'top pracownik', 'wyniki pracownikow', 'kto najwiecej zarobil', 'najlepszy pracownik', 'pracownicy ranking', 'porownanie pracownikow', 'targety pracownikow'],
+        answer: 'Wyniki pracowników są w <b>Analiza → Pracownik</b> — wybierasz osobę i widzisz: utarg, liczbę klientów, ranking jej zabiegów, średnią wartość transakcji.<br><br>Porównanie wszystkich w jednym miejscu: <b>Analiza → Wyniki i Cele</b> (też dostępne z menu) — z realizacją targetów %.'
+    },
+    {
+        title: 'Historia sprzedaży', category: 'Sprzedaż',
+        keywords: ['historia sprzedazy', 'historia transakcji', 'lista sprzedazy', 'wszystkie sprzedaze', 'zobacz transakcje', 'archiwum sprzedazy', 'dawne sprzedaze', 'cofnij sprzedaz', 'edytuj sprzedaz'],
+        answer: 'Pełna lista wszystkich transakcji jest w <b>Sprzedaż → Historia</b>. Możesz filtrować po dacie, kliencie, pracowniku i typie (Zabieg/Kosmetyk/Mix). Kliknięcie wiersza otwiera szczegóły — możesz edytować lub usunąć transakcję (uprawnienia zależą od roli).'
+    },
+    {
+        title: 'Spis zadatków', category: 'Sprzedaż',
+        keywords: ['zadatek', 'zadatki', 'spis zadatkow', 'lista zadatkow', 'zaliczka', 'rezerwacja', 'wplata', 'klient wplacil zadatek', 'rozliczenie zadatkow'],
+        answer: 'Wszystkie zadatki znajdziesz w <b>Sprzedaż → Spis Zadatków</b>. Tabela pokazuje: kto wpłacił, kwotę, datę, status (aktywny / wykorzystany / zwrócony / usunięty).<br><br>Zadatek wykorzystujesz przy kasowaniu — wybierając go jako częściową lub pełną płatność.'
     },
     {
         title: 'Jak używać voucherów?', category: 'Vouchery',
@@ -23469,14 +23514,9 @@ const EST_KB = [
         answer: 'Hasło właściciela możesz zresetować wchodząc na stronę logowania i klikając <b>Zapomniałem hasła</b>. Na Twój adres e-mail zostanie wysłany link do ustawienia nowego hasła (ważny 1 godzinę).'
     },
     {
-        title: 'Jak wydrukować paragon?', category: 'Sprzedaż',
-        keywords: ['faktura', 'paragon', 'rachunek', 'wydruk', 'drukowanie'],
-        answer: 'Po zamknięciu wizyty możesz wydrukować potwierdzenie / paragon klikając ikonę drukowania przy danej wizycie. Faktury VAT wystawiane są przez zewnętrzny serwis powiązany z Twoim kontem.'
-    },
-    {
-        title: 'Jak ustawić powiadomienia SMS?', category: 'Ustawienia',
-        keywords: ['sms', 'powiadomienie', 'przypomnienie', 'notyfikacja'],
-        answer: 'Powiadomienia SMS do klientów możesz skonfigurować w sekcji <b>Ustawienia → Powiadomienia</b>. Możesz ustawić automatyczne przypomnienie o wizycie (np. 24h przed).'
+        title: 'Faktura VAT — Fakturownia', category: 'Sprzedaż',
+        keywords: ['faktura', 'faktura vat', 'fakturownia', 'wystaw fakture', 'rachunek dla klienta', 'paragon', 'numer faktury'],
+        answer: 'Faktury VAT wystawiasz przez integrację z <b>Fakturownią</b>. Przy transakcji w <b>Sprzedaż → Dodanie Sprzedaży</b> zaznacz „Wystaw fakturę" — system wyśle dane do Fakturowni i utworzy fakturę.<br><br>Dane firmy klienta pobierane są z jego karty (NIP, adres). Konto Fakturowni konfiguruje admin w panelu administracyjnym.'
     },
     {
         title: 'Jak zarządzać subskrypcją?', category: 'Ustawienia',
@@ -23484,14 +23524,14 @@ const EST_KB = [
         answer: 'Twoja subskrypcja Estelio jest odnawiana automatycznie co miesiąc. W razie pytań o płatność lub anulowanie — napisz do nas: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.'
     },
     {
-        title: 'Jak zakończyć wizytę i pobrać płatność?', category: 'Sprzedaż',
-        keywords: ['kasa', 'kasowanie', 'zaplata', 'platnosc gotowka', 'karta platnicza', 'przyjmij platnosc'],
-        answer: 'Po zakończeniu wizyty kliknij przycisk <b>Zakończ wizytę</b>. Wybierz formę płatności (gotówka / karta / voucher) i zatwierdź. Wizyta zostanie zamknięta, a przychód trafi do statystyk.'
+        title: 'Płatność mieszana (mix) — gotówka + karta', category: 'Sprzedaż',
+        keywords: ['platnosc mix', 'platnosc mieszana', 'czesc gotowka czesc karta', 'podziel platnosc', 'rozbij platnosc', 'dwie formy platnosci', 'gotowka i karta'],
+        answer: 'Przy kasowaniu w sekcji <b>Sprzedaż → Dodanie Sprzedaży</b> wybierz formę płatności <b>Mix</b>. Wpisz kwotę gotówki, karty, vouchera i/lub zadatku — system sam sprawdzi czy suma się zgadza.'
     },
     {
-        title: 'Co zrobić gdy klient nie przyszedł?', category: 'Sprzedaż',
-        keywords: ['klient nie przyszedl', 'nieobecnosc', 'brak pojawienia', 'no show', 'odwolanie', 'anuluj wizyte'],
-        answer: 'Jeśli klient nie przyszedł lub odwołał wizytę, otwórz wizytę z kalendarza i wybierz status <b>Nieobecny</b> lub <b>Anulowana</b>. Wizyta zostanie oznaczona, ale nie trafi do przychodów.'
+        title: 'Klient odwołał lub nie przyszedł — co z zadatkiem?', category: 'Sprzedaż',
+        keywords: ['klient nie przyszedl', 'nieobecnosc', 'brak pojawienia', 'no show', 'odwolanie', 'anulowana wizyta', 'klient odwolal', 'zadatek przepadl', 'zwrot zadatku'],
+        answer: 'Estelio nie ma kalendarza wizyt — system rejestruje sprzedaż w momencie kiedy klient już przyszedł. Jeśli klient nie pojawił się i miał wpłacony zadatek:<br>• <b>Sprzedaż → Spis Zadatków</b> → otwórz zadatek → możesz oznaczyć jako <b>zwrócony</b> (jeśli zwracasz pieniądze) lub <b>usunąć</b> (jeśli przepadł).<br><br>Jeśli salon prowadzi zewnętrzny kalendarz (np. Booksy / kalendarz Google) — zmiany rezerwacji robisz tam.'
     },
     {
         title: 'Problem z logowaniem', category: 'Ogólne',
@@ -23504,9 +23544,9 @@ const EST_KB = [
         answer: 'Dane możesz eksportować do pliku CSV/Excel z sekcji <b>Analityka</b> lub <b>Klienci</b> — kliknij ikonę pobierania (strzałka w dół) widoczną przy tabeli.'
     },
     {
-        title: 'Jak korzystać z kalendarza?', category: 'Sprzedaż',
-        keywords: ['kalendarz', 'harmonogram', 'grafik', 'plan dnia', 'widok tygodnia'],
-        answer: 'Kalendarz wizyt znajdziesz w sekcji <b>Kalendarz</b>. Możesz przełączać widok dzienny / tygodniowy i przeciągać wizyty, aby zmienić ich godzinę.'
+        title: 'Czy Estelio ma kalendarz wizyt?', category: 'Ogólne',
+        keywords: ['kalendarz', 'harmonogram', 'grafik', 'plan dnia', 'widok tygodnia', 'czy jest kalendarz', 'rezerwacja online', 'booksy'],
+        answer: 'Obecna wersja Estelio <b>nie ma własnego kalendarza wizyt</b> — system skupia się na sprzedaży, magazynie i analizie. Większość salonów prowadzi rezerwacje w zewnętrznym narzędziu (np. Booksy, Versum, kalendarz Google) i rejestruje wykonaną wizytę w Estelio jako sprzedaż.<br><br>Jeśli zależy Ci na wbudowanym kalendarzu — napisz na <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>, zbieramy zgłoszenia funkcji.'
     },
     {
         title: 'Jak dodać kolejny salon?', category: 'Ogólne',
@@ -23595,19 +23635,27 @@ function estActiveCategory() {
 /* ----------------------------------------------------------
    SILNIK DOPASOWANIA — scoring na bazie słów kluczowych
    Przeszukuje EST_KB (wbudowana) + EST_KB_DYNAMIC (z API)
+   Zwraca: { best, score, runners[] } — runners do pokazania
+   alternatyw przy niskiej pewności.
    ---------------------------------------------------------- */
+// Intent — pytania zaczynające się od tych słów to "lookup" (gdzie zobaczyć),
+// nie "action" (jak zrobić). Boost wpisów które są raportami/listami.
+const EST_LOOKUP_INTENT_RX = /^(gdzie|pokaz|pokaż|jaki raport|jaka lista|zobacz|sprawdz|sprawdź|ile|znajde|znajdę|wyswietl|wyświetl)\b/;
+const EST_LOOKUP_BOOST_KEYWORDS = ['gdzie','raport','lista','spis','historia','zobacz','sprawdz','przeglad','podsumowanie'];
+
 function estFind(query) {
     const q = estNormalize(query);
     // Tokeny pytania — bez interpunkcji, min 4 znaki
     const qTokens = q.replace(/[?!.,;:]/g, '').split(/\s+/).filter(t => t.length >= 4);
-    let best = null, bestScore = 0;
     const activeCat = estActiveCategory();
+    const isLookup = EST_LOOKUP_INTENT_RX.test(q);
 
     const allEntries = [
         ...EST_KB_DYNAMIC,
         ...EST_KB.map(e => ({ ...e, _bonus: 0 }))
     ];
 
+    const scored = [];
     allEntries.forEach(item => {
         let kwScore = 0;
         // Każdy token pytania liczony tylko RAZ na wpis — zapobiega inflacji przez popularne słowa
@@ -23640,12 +23688,23 @@ function estFind(query) {
         if (kwScore > 0) {
             score += item._bonus || 0;
             if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
+            // Intent boost — pytanie typu "gdzie/pokaz/zobacz" → preferuj wpisy będące raportami/listami
+            if (isLookup) {
+                const titleN  = estNormalize(item.title || '');
+                const kwAllN  = item.keywords.map(estNormalize).join(' ');
+                const isLookupEntry = EST_LOOKUP_BOOST_KEYWORDS.some(w => titleN.includes(w) || kwAllN.includes(w));
+                if (isLookupEntry) score += 3;
+            }
         }
 
-        if (score > bestScore) { bestScore = score; best = item; }
+        if (score > 0) scored.push({ item, score });
     });
 
-    return bestScore >= 1 ? best : null;
+    scored.sort((a, b) => b.score - a.score);
+    const best     = scored[0]?.item  || null;
+    const bestScr  = scored[0]?.score || 0;
+    const runners  = scored.slice(1, 4).map(s => s.item);
+    return { best, score: bestScr, runners };
 }
 
 /* ----------------------------------------------------------
@@ -23730,22 +23789,63 @@ function estReply(userMsg) {
     clearTimeout(estTypingTimeout);
     estTypingTimeout = setTimeout(() => {
         estHideTyping();
-        const result = estFind(userMsg);
-        if (result) {
-            estAddMsg(result.answer, 'bot');
-            // Pokaż powiązane pytania z lekkim opóźnieniem
-            setTimeout(() => estShowRelated(estGetRelated(result)), 300);
+        const { best, score, runners } = estFind(userMsg);
+
+        // Próg pewności:
+        //  • score >= 4  → pewne dopasowanie — pokaż odpowiedź + powiązane z kategorii
+        //  • score 1–3   → niepewne — pokaż odpowiedź + DODATKOWO „Jeśli nie o to chodziło: [alternatywy]"
+        //  • brak best   → fallback: top-N najbliższych (jeśli są jakieś runners ze score 0+)
+        if (best && score >= 4) {
+            estAddMsg(best.answer, 'bot');
+            setTimeout(() => estShowRelated(estGetRelated(best)), 300);
+        } else if (best && score >= 1) {
+            estAddMsg(best.answer, 'bot');
+            setTimeout(() => {
+                if (runners.length) {
+                    estShowAlternatives(runners, 'Jeśli nie o to chodziło, może o to:');
+                } else {
+                    estShowRelated(estGetRelated(best));
+                }
+            }, 300);
         } else {
             const noMatch = [
-                'Hmm, nie znam odpowiedzi na to pytanie 🤔 Ale możesz napisać do nas — odpiszemy szybko!<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
-                'To pytanie mnie zaskoczyło! 😅 Nie mam jeszcze takiej odpowiedzi w bazie. Napisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
-                'Ups, tego jeszcze nie wiem 🙈 Skontaktuj się z nami bezpośrednio, pomożemy:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
-                'Nie mam tej odpowiedzi w swojej bazie wiedzy 💭 Chętnie pomożemy mailowo:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
-                'To wykracza poza moją wiedzę! 🌸 Napisz do nas, a na pewno znajdziemy rozwiązanie:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'Hmm, nie jestem pewna o co chodzi 🤔 Spróbuj zadać pytanie inaczej, albo napisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'Nie znalazłam dokładnej odpowiedzi 💭 Może chodziło o coś z poniższych — albo napisz na <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
+                'To pytanie mnie zaskoczyło 😅 Sprawdź proponowane tematy poniżej, lub skontaktuj się: <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>',
             ];
             estAddMsg(noMatch[Math.floor(Math.random() * noMatch.length)], 'bot');
+            // Nawet bez trafienia — pokaż 3 najczęstsze tematy żeby user mógł kliknąć
+            setTimeout(() => {
+                const fallbackPicks = [
+                    EST_KB.find(e => e.title === 'Raporty — gdzie znajdę?'),
+                    EST_KB.find(e => e.title === 'Sprzedaż kosmetyków — gdzie zobaczyć?'),
+                    EST_KB.find(e => e.title === 'Stan magazynu — gdzie sprawdzić?')
+                ].filter(Boolean);
+                estShowAlternatives(fallbackPicks, 'Może zaczniemy od czegoś takiego?');
+            }, 300);
         }
     }, 700 + Math.random() * 400);
+}
+
+// Alternatywy przy niskiej pewności — wyświetlają się tak samo jak "powiązane",
+// ale z innym labelem ("Jeśli nie o to chodziło, może o to...").
+function estShowAlternatives(items, label) {
+    if (!items || !items.length) return;
+    const msgs = document.getElementById('est-help-messages');
+    const wrap = document.createElement('div');
+    wrap.className = 'est-related';
+    const chips = items.map(item => {
+        const lbl = item.title || (item.keywords[0].charAt(0).toUpperCase() + item.keywords[0].slice(1) + '?');
+        const query = item.title || item.keywords[0];
+        const safeQ = query.replace(/&/g,'&amp;').replace(/"/g,'&quot;');
+        return `<button class="est-related-chip" data-q="${safeQ}">${lbl}</button>`;
+    }).join('');
+    wrap.innerHTML = `<div class="est-related-label">${label}</div><div class="est-related-chips">${chips}</div>`;
+    wrap.querySelectorAll('.est-related-chip').forEach(btn => {
+        btn.addEventListener('click', () => estAsk(btn.dataset.q), { once: true });
+    });
+    msgs.appendChild(wrap);
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
 /* ----------------------------------------------------------
