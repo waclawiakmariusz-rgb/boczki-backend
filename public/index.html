@@ -23393,193 +23393,13 @@ body.dark-mode .est-typing { background: #0f172a; }
 (function() {
 
 /* ----------------------------------------------------------
-   BAZA WIEDZY
-   Dodaj nowe obiekty do tablicy EST_KB w dowolnej chwili.
-   keywords: słowa kluczowe (małe litery, bez polskich znaków)
-   answer:   treść odpowiedzi (HTML dozwolony)
+   BAZA WIEDZY — od 2026-05-03 PUSTA.
+   Esti czerpie wiedzę WYŁĄCZNIE z public/Estelio_Przewodnik_Pracownik.html
+   (patrz EST_KB_GUIDE i estLoadGuide() poniżej).
+   Stara hardcoded EST_KB usunięta — żeby cache przeglądarki nie
+   wracał z halucynacjami nawet gdyby ktoś trzymał poprzednią wersję JS.
    ---------------------------------------------------------- */
-const EST_KB = [
-    {
-        title: 'Jak działa Esti?', category: 'Ogólne',
-        keywords: ['jak dziala esti', 'co to esti', 'co potrafi', 'o esti', 'asystent', 'chat', 'pomoc', 'jak korzystac z esti', 'do czego sluzy'],
-        answer: 'Esti to Twój asystent wbudowany w system Estelio. Możesz tu zadawać pytania dotyczące obsługi systemu — np. jak dodać klienta, jak działa magazyn, co zrobić z zadatkiem.<br><br>Esti przeszukuje bazę wiedzy i podpowiada odpowiedzi. Jeśli czegoś nie wie — wyświetli kontakt do wsparcia.<br><br>Możesz też wpisać własne pytanie w pole poniżej.'
-    },
-    {
-        title: 'Jak działają rabaty?', category: 'Ustawienia',
-        keywords: ['rabat', 'rabaty', 'znizka', 'znizki', 'przecena', 'znizkowy', 'procent znizki', 'kreator rabatow', 'kod rabatowy'],
-        answer: 'Rabaty zarządzasz w sekcji <b>Kreator Rabatów</b>. Możesz przypisać stały rabat procentowy do wybranego klienta — będzie automatycznie uwzględniany przy kasowaniu wizyty.<br><br>Aby ustawić rabat: otwórz kartę klienta → zakładka <b>Rabaty</b> → podaj procent i zapisz.'
-    },
-    {
-        title: 'Urodziny klientów', category: 'Klienci',
-        keywords: ['urodziny', 'urodzin', 'data urodzenia', 'lista urodzin', 'kto ma urodziny', 'zyczyc', 'zyczyc urodzin', 'jubileusz'],
-        answer: 'W sekcji <b>Klienci</b> znajdziesz zakładkę 🎂 <b>Urodziny</b>. Widoczna jest tam lista klientów z najbliższymi urodzinami — możesz łatwo sprawdzić, komu dzisiaj lub wkrótce minął termin.<br><br>Data urodzenia przypisywana jest w karcie klienta podczas jego rejestracji lub edycji.'
-    },
-    {
-        title: 'Konsultacje', category: 'Sprzedaż',
-        keywords: ['konsultacja', 'konsultacje', 'wywiad', 'ankieta', 'formularz konsultacji', 'oswiadczenie', 'zgody', 'rejestr oswiadczen'],
-        answer: 'Konsultacje (wywiady przed zabiegiem) obsługiwane są w sekcji <b>Rejestr Oświadczeń</b>. Możesz tam przeglądać i zapisywać zgody klientów na zabiegi.<br><br>Jeśli chcesz przypisać oświadczenie do klienta — otwórz jego kartę i skorzystaj z zakładki <b>Oświadczenia</b>.'
-    },
-    {
-        title: 'Jak dodać klienta?', category: 'Klienci',
-        keywords: ['dodaj klienta', 'nowy klient', 'rejestracja klienta', 'dodac klienta', 'wpisac klienta', 'dodac nowego', 'nowego klienta'],
-        answer: 'Aby dodać nowego klienta, przejdź do sekcji <b>Klienci</b> w menu po lewej stronie, a następnie kliknij przycisk <b>+ Dodaj klienta</b>. Uzupełnij imię, nazwisko i numer telefonu — reszta pól jest opcjonalna.'
-    },
-    {
-        title: 'Jak dodać sprzedaż?', category: 'Sprzedaż',
-        keywords: ['dodaj sprzedaz', 'nowa sprzedaz', 'kasa', 'kasowanie', 'dodac sprzedaz', 'rejestracja sprzedazy', 'nowe zamowienie', 'paragon', 'pobierz platnosc', 'zaplata', 'platnosc gotowka', 'platnosc karta'],
-        answer: 'Sprzedaż dodajesz w sekcji <b>Sprzedaż → Dodanie Sprzedaży</b>:<br>1. Wybierz klienta (lub dodaj nowego)<br>2. Dodaj pozycje — <b>Zabieg</b> i/lub <b>Kosmetyk</b><br>3. Wybierz pracownika i formę płatności (gotówka / karta / voucher / mix / zadatek)<br>4. Kliknij <b>Zapisz Sprzedaż</b>.<br><br>Stan magazynu odejmie się automatycznie (FIFO), a transakcja trafi do raportów.'
-    },
-    {
-        title: 'Jak zmienić PIN pracownika?', category: 'Pracownicy',
-        keywords: ['zmien pin', 'pin pracownika', 'zmiana pin', 'reset pin', 'zapomnial pin', 'nie pamietam pin', 'nowy pin'],
-        answer: 'PIN pracownika zmienisz w sekcji <b>Pracownicy</b> → kliknij na danego pracownika → <b>Edytuj</b> → pole <b>PIN</b>. Pracownik loguje się tym PINem do swojego widoku systemu.'
-    },
-    {
-        title: 'Jak dodać pracownika?', category: 'Pracownicy',
-        keywords: ['dodaj pracownika', 'nowy pracownik', 'rejestracja pracownika', 'dodac pracownika'],
-        answer: 'Przejdź do sekcji <b>Pracownicy</b> i kliknij <b>+ Dodaj pracownika</b>. Podaj imię i ustaw PIN (4–6 cyfr). Możesz też określić rolę: <em>pracownik</em> lub <em>właściciel</em>.'
-    },
-    {
-        title: 'Jak dodać usługę?', category: 'Usługi',
-        keywords: ['dodaj usluge', 'nowa usluga', 'dodac usluge', 'cennik', 'dodaj zabieg', 'nowy zabieg'],
-        answer: 'Usługi (zabiegi) zarządzasz w sekcji <b>Usługi</b>. Kliknij <b>+ Dodaj usługę</b>, podaj nazwę, cenę i czas trwania. Usługi pojawią się automatycznie przy tworzeniu wizyt.'
-    },
-    {
-        title: 'Stan magazynu — gdzie sprawdzić?', category: 'Magazyn',
-        keywords: ['stan magazynu', 'stany magazynowe', 'gdzie magazyn', 'stan', 'zapas', 'ile mam produktu', 'stan kosmetykow', 'stan towaru', 'lista produktow', 'co mam w magazynie', 'stan produktu'],
-        answer: 'Stan magazynu zobaczysz w sekcji <b>Magazyn → Stan Magazynowy</b>. Tabela pokazuje wszystkie produkty z aktualnymi ilościami, datami przyjęć i partiami (FIFO).<br><br>Pasek wyszukiwania na górze filtruje po nazwie. Kolorowe wskaźniki sygnalizują niski stan.'
-    },
-    {
-        title: 'Co zamówić — niskie stany', category: 'Magazyn',
-        keywords: ['co zamowic', 'niskie stany', 'kończą sie produkty', 'zamowienie do dostawcy', 'brakuje produktu', 'zamow', 'wykończyły sie kosmetyki'],
-        answer: 'Lista produktów do zamówienia jest w sekcji <b>Magazyn → Co zamówić?</b>. System automatycznie wskazuje produkty których stan spadł poniżej minimum lub które kończą się szybciej niż zwykle.<br><br>Możesz wyeksportować listę albo wysłać ją do dostawcy.'
-    },
-    {
-        title: 'Przyjęcie towaru / nowa partia', category: 'Magazyn',
-        keywords: ['przyjecie towaru', 'nowa partia', 'dostawa', 'przyjmij dostawe', 'wprowadz dostawe', 'wprowadz produkt', 'nowy produkt magazyn', 'dolicz produkt'],
-        answer: 'Nową dostawę wprowadzisz w sekcji <b>Magazyn → Przyjęcie towaru</b>. Wybierz produkt, podaj ilość, cenę zakupu i datę przyjęcia. System utworzy nową partię (dla FIFO).<br><br>Jeśli produktu jeszcze nie ma w bazie — dodaj go w <b>Magazyn → Stan Magazynowy → + Nowy Produkt</b>.'
-    },
-    {
-        title: 'Inwentaryzacja', category: 'Magazyn',
-        keywords: ['inwentaryzacja', 'remanent', 'spis z natury', 'sprawdz stan', 'rozliczenie magazynu', 'porownaj stany'],
-        answer: 'Inwentaryzację wykonasz w sekcji <b>Magazyn → Inwentaryzacja</b>. Wpisz faktyczne ilości policzone w salonie — system pokaże różnice między systemem a rzeczywistością i pozwoli je zaakceptować jako korekty.'
-    },
-    {
-        title: 'Jak włączyć dark mode?', category: 'Ustawienia',
-        keywords: ['dark mode', 'ciemny tryb', 'nocny tryb', 'zmien wyglad', 'jasny tryb', 'motyw'],
-        answer: 'Tryb ciemny włączysz klikając ikonę 🌙 w prawym górnym rogu paska bocznego (lub w ustawieniach). Kliknij ponownie, żeby wrócić do jasnego motywu.'
-    },
-    {
-        title: 'Raporty — gdzie znajdę?', category: 'Analityka',
-        keywords: ['raport', 'raporty', 'statystyki', 'analityka', 'analiza', 'przychody', 'zestawienie', 'podsumowanie', 'wyniki', 'gdzie raporty', 'gdzie statystyki'],
-        answer: 'Wszystkie raporty są w sekcji <b>Analiza</b> w lewym menu:<br>• <b>Dzień</b> — podsumowanie wybranego dnia<br>• <b>Miesiąc</b> — pełny raport miesięczny (zabiegi, kosmetyki, KPI, wykresy)<br>• <b>Rok</b> — zestawienie roczne<br>• <b>Pracownik</b> — wyniki konkretnej osoby<br>• <b>Analiza Zabiegu</b> — ranking pojedynczych zabiegów<br>• <b>Inteligentna Analiza</b> — automatyczne wnioski AI<br>• <b>Koszty</b> — wydatki salonu.<br><br>Bieżące podsumowanie dnia jest też na <b>Pulpicie</b> (główny widok po zalogowaniu).'
-    },
-    {
-        title: 'Raport dzienny — gdzie znajdę?', category: 'Analityka',
-        keywords: ['raport dzienny', 'podsumowanie dnia', 'utarg dzienny', 'co zarobilismy dzisiaj', 'sprzedaz dzisiaj', 'utarg dzis', 'ile dzisiaj', 'dzisiaj sprzedaz', 'sprzedaz dnia', 'rozliczenie dnia'],
-        answer: 'Masz dwa miejsca z raportem dziennym:<br>1. <b>Pulpit</b> (po zalogowaniu) — kafelek <b>Podsumowanie Dnia</b> z utargiem, liczbą klientów, podziałem na płatności i KPI<br>2. <b>Analiza → Dzień</b> — pełna lista transakcji dnia (zabiegi, kosmetyki, formy płatności, vouchery, zadatki).<br><br>Możesz wybrać dowolną datę z kalendarza — nie tylko dzisiaj.'
-    },
-    {
-        title: 'Sprzedaż kosmetyków — gdzie zobaczyć?', category: 'Analityka',
-        keywords: ['sprzedaz kosmetykow', 'sprzedaz kosmetyki', 'gdzie sprzedaz kosmetykow', 'raport kosmetykow', 'utarg kosmetykow', 'ile sprzedalam kosmetykow', 'historia kosmetykow', 'rozliczenie kosmetykow', 'analiza kosmetykow', 'co sie sprzedalo', 'kosmetyki sprzedaz', 'pokaz kosmetyki'],
-        answer: 'Sprzedaż kosmetyków znajdziesz w kilku miejscach:<br>• <b>Pulpit → Podsumowanie Dnia</b> — KPI „Sprzedaż Kosmetyków" (kwota + ilość sztuk dzisiaj)<br>• <b>Analiza → Miesiąc</b> → zwiń sekcję <b>💄 Analiza Kosmetyków</b> (przychód miesięczny, ranking Top 20, ilości)<br>• <b>Analiza → Rok</b> → sekcja <b>💄 Analiza Kosmetyków</b> (utarg roczny, ranking)<br>• <b>Sprzedaż → Historia</b> — lista wszystkich transakcji z filtrem typu „Kosmetyk"<br>• <b>Karta klienta</b> → zakładka <b>🛍️ Kosmetyki</b> — co konkretny klient kupował.'
-    },
-    {
-        title: 'Sprzedaż zabiegów / usług — gdzie zobaczyć?', category: 'Analityka',
-        keywords: ['sprzedaz zabiegow', 'sprzedaz uslug', 'utarg zabiegi', 'ranking zabiegow', 'top zabiegi', 'analiza zabiegu', 'jakie zabiegi sie sprzedaja', 'historia zabiegow', 'pokaz zabiegi', 'najpopularniejsze zabiegi', 'jakie zarobilam'],
-        answer: 'Raporty zabiegów (usług):<br>• <b>Analiza → Analiza Zabiegu</b> — ranking pojedynczych zabiegów (ile razy, kwota, średnia cena)<br>• <b>Analiza → Miesiąc</b> — bestseller miesiąca + KPI „Zabiegi vs Kosmetyki"<br>• <b>Analiza → Pracownik</b> — które zabiegi wykonała konkretna osoba<br>• <b>Sprzedaż → Historia</b> — lista wszystkich transakcji<br>• <b>Karta klienta</b> → historia zabiegów klienta.'
-    },
-    {
-        title: 'Ranking pracowników', category: 'Analityka',
-        keywords: ['ranking pracownikow', 'top pracownik', 'wyniki pracownikow', 'kto najwiecej zarobil', 'najlepszy pracownik', 'pracownicy ranking', 'porownanie pracownikow', 'targety pracownikow'],
-        answer: 'Wyniki pracowników są w <b>Analiza → Pracownik</b> — wybierasz osobę i widzisz: utarg, liczbę klientów, ranking jej zabiegów, średnią wartość transakcji.<br><br>Porównanie wszystkich w jednym miejscu: <b>Analiza → Wyniki i Cele</b> (też dostępne z menu) — z realizacją targetów %.'
-    },
-    {
-        title: 'Historia sprzedaży', category: 'Sprzedaż',
-        keywords: ['historia sprzedazy', 'historia transakcji', 'lista sprzedazy', 'wszystkie sprzedaze', 'zobacz transakcje', 'archiwum sprzedazy', 'dawne sprzedaze', 'cofnij sprzedaz', 'edytuj sprzedaz'],
-        answer: 'Pełna lista wszystkich transakcji jest w <b>Sprzedaż → Historia</b>. Możesz filtrować po dacie, kliencie, pracowniku i typie (Zabieg/Kosmetyk/Mix). Kliknięcie wiersza otwiera szczegóły — możesz edytować lub usunąć transakcję (uprawnienia zależą od roli).'
-    },
-    {
-        title: 'Co to są zadatki?', category: 'Sprzedaż',
-        keywords: ['co to zadatek', 'co to zadatki', 'czym sa zadatki', 'czym jest zadatek', 'definicja zadatku', 'wytlumacz zadatki', 'do czego zadatki', 'zadatek znaczenie', 'na co zadatek'],
-        answer: '<b>Zadatek</b> to kwota którą klient wpłaca <b>z góry</b> jako rezerwację wizyty lub gwarancję pojawienia się. Najczęściej:<br>• klient zostawia np. 50 zł zadatku przy umawianiu wizyty<br>• kwota „czeka" w systemie do dnia wizyty<br>• w dniu wizyty zadatek <b>zalicza się na poczet płatności</b> (klient dopłaca tylko resztę)<br><br>Jeśli klient nie pojawi się — zadatek może <b>przepaść</b> (oznaczasz „usunięty") albo <b>zostać zwrócony</b> (oznaczasz „zwrócony").<br><br>Zadatki obsłużysz w sekcji <b>Sprzedaż → Spis Zadatków</b> — patrz wpis „Spis zadatków".'
-    },
-    {
-        title: 'Spis zadatków', category: 'Sprzedaż',
-        keywords: ['spis zadatkow', 'lista zadatkow', 'gdzie zadatki', 'pokaz zadatki', 'aktywne zadatki', 'rozliczenie zadatkow', 'wykorzystany zadatek', 'zwrocony zadatek', 'klient wplacil zadatek'],
-        answer: 'Wszystkie zadatki znajdziesz w <b>Sprzedaż → Spis Zadatków</b>. Tabela pokazuje: kto wpłacił, kwotę, datę, status (aktywny / wykorzystany / zwrócony / usunięty).<br><br>Zadatek wykorzystujesz przy kasowaniu — wybierając go jako częściową lub pełną płatność (forma „Zadatek" lub „Mix" w rejestracji sprzedaży).'
-    },
-    {
-        title: 'Co to jest voucher?', category: 'Vouchery',
-        keywords: ['co to voucher', 'czym jest voucher', 'definicja vouchera', 'wytlumacz voucher', 'co to bon', 'czym jest bon podarunkowy', 'jak dziala voucher', 'do czego voucher'],
-        answer: '<b>Voucher</b> (bon podarunkowy) to przedpłacona forma płatności o określonej wartości — np. klient kupuje voucher na 200 zł i daje go w prezencie, a obdarowana osoba realizuje go u Ciebie w salonie zamiast płacić gotówką.<br><br>Różnica względem <b>zadatku</b>: zadatek jest przypisany do konkretnego klienta na konkretną wizytę. Voucher jest „bonem na okaziciela" — może go wykorzystać każdy kto poda kod.<br><br>Vouchery zarządzasz w sekcji <b>Vouchery</b> w lewym menu (tworzenie, sprawdzanie salda, realizacja).'
-    },
-    {
-        title: 'Zabieg vs Kosmetyk — różnica', category: 'Sprzedaż',
-        keywords: ['roznica zabieg kosmetyk', 'czym sie rozni zabieg od kosmetyku', 'zabieg czy kosmetyk', 'co wybrac zabieg czy kosmetyk', 'kategorie sprzedazy', 'typ pozycji'],
-        answer: '<b>Zabieg (usługa)</b> to praca wykonana w salonie (np. manicure, masaż, depilacja). Nie ma stanu magazynowego, jest definiowany w <b>Usługi</b>. Sprzedaż zabiegu nie wpływa na magazyn.<br><br><b>Kosmetyk (produkt)</b> to fizyczny towar sprzedawany klientowi (np. krem, szampon). Ma stan magazynowy w <b>Magazyn</b>, sprzedaż kosmetyku <b>automatycznie odejmuje stan</b> (FIFO — z najstarszej partii).<br><br>Przy jednej transakcji możesz dodać i zabiegi, i kosmetyki — system rozliczy oba typy osobno w raportach.'
-    },
-    {
-        title: 'FIFO — co to znaczy?', category: 'Magazyn',
-        keywords: ['fifo', 'co to fifo', 'czym jest fifo', 'pierwsze przyszlo', 'partie magazynu', 'po co partie', 'najstarsza partia'],
-        answer: '<b>FIFO</b> (<i>First In, First Out</i> — „pierwsze weszło, pierwsze wychodzi") to zasada której używa Estelio do rozliczania magazynu. Gdy sprzedasz kosmetyk, system odejmie ilość <b>z najstarszej partii</b> (tej która przyszła pierwsza).<br><br>Dzięki temu:<br>• cena zakupu w raportach jest poprawna (bo wiadomo z której partii poszedł produkt)<br>• terminy ważności rotują naturalnie<br>• można śledzić marżę per partia.<br><br>Partie widzisz w <b>Magazyn → Stan Magazynowy</b> po rozwinięciu produktu.'
-    },
-    {
-        title: 'Jak używać voucherów?', category: 'Vouchery',
-        keywords: ['voucher', 'bon', 'bon podarunkowy', 'karta podarunkowa', 'voucher prezentowy'],
-        answer: 'Vouchery (bony podarunkowe) zarządzasz w sekcji <b>Vouchery</b>. Możesz tworzyć nowe bony, sprawdzać saldo i realizować je przy kasowaniu wizyty.'
-    },
-    {
-        title: 'Jak zresetować hasło?', category: 'Ustawienia',
-        keywords: ['zmien haslo', 'reset hasla', 'zapomnialem hasla', 'odzyskaj haslo', 'haslo wlasciciela'],
-        answer: 'Hasło właściciela możesz zresetować wchodząc na stronę logowania i klikając <b>Zapomniałem hasła</b>. Na Twój adres e-mail zostanie wysłany link do ustawienia nowego hasła (ważny 1 godzinę).'
-    },
-    {
-        title: 'Faktura VAT — Fakturownia', category: 'Sprzedaż',
-        keywords: ['faktura', 'faktura vat', 'fakturownia', 'wystaw fakture', 'rachunek dla klienta', 'paragon', 'numer faktury'],
-        answer: 'Faktury VAT wystawiasz przez integrację z <b>Fakturownią</b>. Przy transakcji w <b>Sprzedaż → Dodanie Sprzedaży</b> zaznacz „Wystaw fakturę" — system wyśle dane do Fakturowni i utworzy fakturę.<br><br>Dane firmy klienta pobierane są z jego karty (NIP, adres). Konto Fakturowni konfiguruje admin w panelu administracyjnym.'
-    },
-    {
-        title: 'Jak zarządzać subskrypcją?', category: 'Ustawienia',
-        keywords: ['subskrypcja', 'platnosc', 'abonament', 'odnowienie', 'platnosc miesięczna', 'faktura estelio', 'anuluj'],
-        answer: 'Twoja subskrypcja Estelio jest odnawiana automatycznie co miesiąc. W razie pytań o płatność lub anulowanie — napisz do nas: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.'
-    },
-    {
-        title: 'Płatność mieszana (mix) — gotówka + karta', category: 'Sprzedaż',
-        keywords: ['platnosc mix', 'platnosc mieszana', 'czesc gotowka czesc karta', 'podziel platnosc', 'rozbij platnosc', 'dwie formy platnosci', 'gotowka i karta'],
-        answer: 'Przy kasowaniu w sekcji <b>Sprzedaż → Dodanie Sprzedaży</b> wybierz formę płatności <b>Mix</b>. Wpisz kwotę gotówki, karty, vouchera i/lub zadatku — system sam sprawdzi czy suma się zgadza.'
-    },
-    {
-        title: 'Klient odwołał lub nie przyszedł — co z zadatkiem?', category: 'Sprzedaż',
-        keywords: ['klient nie przyszedl', 'nieobecnosc', 'brak pojawienia', 'no show', 'odwolanie', 'anulowana wizyta', 'klient odwolal', 'zadatek przepadl', 'zwrot zadatku'],
-        answer: 'Estelio nie ma kalendarza wizyt — system rejestruje sprzedaż w momencie kiedy klient już przyszedł. Jeśli klient nie pojawił się i miał wpłacony zadatek:<br>• <b>Sprzedaż → Spis Zadatków</b> → otwórz zadatek → możesz oznaczyć jako <b>zwrócony</b> (jeśli zwracasz pieniądze) lub <b>usunąć</b> (jeśli przepadł).<br><br>Jeśli salon prowadzi zewnętrzny kalendarz (np. Booksy / kalendarz Google) — zmiany rezerwacji robisz tam.'
-    },
-    {
-        title: 'Problem z logowaniem', category: 'Ogólne',
-        keywords: ['logowanie', 'nie moge sie zalogowac', 'blad logowania', 'problem z logowaniem'],
-        answer: 'Jeśli masz problem z logowaniem:<br>• Sprawdź czy login i hasło są wpisane poprawnie<br>• Skorzystaj z opcji <b>Zapomniałem hasła</b> na stronie logowania<br>• Jeśli problem nadal się pojawia, napisz: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>'
-    },
-    {
-        title: 'Jak eksportować dane?', category: 'Analityka',
-        keywords: ['eksport', 'pobierz dane', 'csv', 'excel', 'eksportuj'],
-        answer: 'Dane możesz eksportować do pliku CSV/Excel z sekcji <b>Analityka</b> lub <b>Klienci</b> — kliknij ikonę pobierania (strzałka w dół) widoczną przy tabeli.'
-    },
-    {
-        title: 'Czy Estelio ma kalendarz wizyt?', category: 'Ogólne',
-        keywords: ['kalendarz', 'harmonogram', 'grafik', 'plan dnia', 'widok tygodnia', 'czy jest kalendarz', 'rezerwacja online', 'booksy'],
-        answer: 'Obecna wersja Estelio <b>nie ma własnego kalendarza wizyt</b> — system skupia się na sprzedaży, magazynie i analizie. Większość salonów prowadzi rezerwacje w zewnętrznym narzędziu (np. Booksy, Versum, kalendarz Google) i rejestruje wykonaną wizytę w Estelio jako sprzedaż.<br><br>Jeśli zależy Ci na wbudowanym kalendarzu — napisz na <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>, zbieramy zgłoszenia funkcji.'
-    },
-    {
-        title: 'Jak dodać kolejny salon?', category: 'Ogólne',
-        keywords: ['wiele salonow', 'oddzialy', 'filial', 'inny salon', 'dodaj salon'],
-        answer: 'Obsługa wielu oddziałów jest dostępna w planie rozszerzonym. Aby dodać kolejny salon, skontaktuj się z nami: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> — podaj nazwę i dane nowego lokalu.'
-    },
-    {
-        title: 'Kontakt i pomoc techniczna', category: 'Ogólne',
-        keywords: ['kontakt', 'pomoc', 'support', 'blad', 'problem', 'nie dziala', 'awaria', 'zgloszenie'],
-        answer: 'W razie problemów technicznych lub pytań pisz do nas:<br><a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a><br><br>Staramy się odpowiadać w ciągu kilku godzin w dni robocze. Opisz dokładnie, co się dzieje, i podaj nazwę swojego salonu — to przyspieszy pomoc.'
-    }
-];
+const EST_KB = [];
 
 /* ----------------------------------------------------------
    ŹRÓDŁO WIEDZY: PRZEWODNIK PRACOWNIKA (parsowany z HTML)
@@ -23653,7 +23473,9 @@ function estGuideBuildSubAnswer(h3) {
 
 async function estLoadGuide() {
     try {
-        const r = await fetch('/Estelio_Przewodnik_Pracownik.html', { cache: 'no-cache' });
+        // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
+        const v = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+        const r = await fetch(`/Estelio_Przewodnik_Pracownik.html?v=${v}`, { cache: 'no-cache' });
         if (!r.ok) return;
         const html = await r.text();
         const doc = new DOMParser().parseFromString(html, 'text/html');
