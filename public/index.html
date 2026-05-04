@@ -5393,10 +5393,40 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     <label>Cena domyślna (PLN):</label>
     <input type="number" id="def_cena" step="0.01" placeholder="0.00">
 </div>
+<div style="margin-top:10px; grid-column: span 2;">
+    <label>Typ zabiegu:</label>
+    <select id="def_typ_zabiegu" style="width:100%;">
+        <option value="">— (nie przypisany) —</option>
+    </select>
+    <div style="font-size:12px; color:var(--primary); cursor:pointer; margin-top:5px;" onclick="otworzModalNowyTyp()">+ Dodaj nowy typ</div>
+</div>
                         </div>
                         <button type="submit" id="btn-zabieg-submit" class="btn-primary">Dodaj</button>
                         <button type="button" id="btn-zabieg-cancel" onclick="anulujEdycjeZabiegu()" style="display:none; width:100%; margin-top:5px; background:#e5e7eb; border:none; padding:10px; font-weight:bold; cursor:pointer;">Anuluj edycję</button>
                     </form>
+                </div>
+
+                <!-- Modal: dodawanie nowego typu zabiegu -->
+                <div id="modal-nowy-typ" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                    <div style="background:#fff; border-radius:12px; padding:24px; width:90%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        <h3 style="margin:0 0 16px; color:#1f2937;">Nowy typ zabiegu</h3>
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Nazwa:</label>
+                            <input type="text" id="nowy_typ_nazwa" placeholder="np. trychologia" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Ikona (emoji):</label>
+                            <input type="text" id="nowy_typ_ikona" placeholder="🌿" maxlength="4" style="width:80px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:18px; text-align:center;">
+                        </div>
+                        <div style="margin-bottom:16px;">
+                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Kolor:</label>
+                            <input type="color" id="nowy_typ_kolor" value="#64748b" style="width:80px; height:40px; padding:2px; border:1px solid #e2e8f0; border-radius:6px;">
+                        </div>
+                        <div style="display:flex; gap:8px; justify-content:flex-end;">
+                            <button type="button" onclick="zamknijModalNowyTyp()" style="padding:10px 16px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Anuluj</button>
+                            <button type="button" onclick="zapiszNowyTyp()" class="btn-primary" style="padding:10px 16px;">Dodaj typ</button>
+                        </div>
+                    </div>
                 </div>
               <div class="card" style="margin-top:20px;">
     <h3>Lista zabiegów:</h3>
@@ -5404,10 +5434,11 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
         <table style="width:100%">
             <thead>
                 <tr>
-                    <th style="width: 30%;">Kategoria</th>
-                    <th style="width: 30%;">Wariant</th>
-                    <th style="width: 20%;">Cena (PLN)</th>
-                    <th style="width: 20%; text-align: right;">Akcja</th>
+                    <th style="width: 25%;">Kategoria</th>
+                    <th style="width: 25%;">Wariant</th>
+                    <th style="width: 15%;">Cena (PLN)</th>
+                    <th style="width: 20%;">Typ</th>
+                    <th style="width: 15%; text-align: right;">Akcja</th>
                 </tr>
             </thead>
             <tbody id="tabela-zabiegow-body"></tbody>
@@ -11648,7 +11679,7 @@ function pokaz(id, b) {
         else pobierzDane();
     }
     if (id === 'podsumowanie') { if (typeof zaladujPodsumowanieDnia === "function") zaladujPodsumowanieDnia(); }
-    if (id === 'setup-pracownicy' || id === 'setup-zabiegi') pobierzSlownikSprzedazy();
+    if (id === 'setup-pracownicy' || id === 'setup-zabiegi') { pobierzSlownikSprzedazy(); if (id === 'setup-zabiegi' && typeof loadTypyZabiegow === 'function') loadTypyZabiegow(); }
     if (id === 'logi') pobierzLogi();
     if (id === 'historia') pobierzHistorie();
     if (id === 'sprzedaz') { odswiezSprzedaz(); pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
@@ -11803,7 +11834,7 @@ function pokaz(id, b) {
         else pobierzDane();
     }
     if (id === 'podsumowanie') { if (typeof zaladujPodsumowanieDnia === "function") zaladujPodsumowanieDnia(); }
-    if (id === 'setup-pracownicy' || id === 'setup-zabiegi') pobierzSlownikSprzedazy();
+    if (id === 'setup-pracownicy' || id === 'setup-zabiegi') { pobierzSlownikSprzedazy(); if (id === 'setup-zabiegi' && typeof loadTypyZabiegow === 'function') loadTypyZabiegow(); }
     if (id === 'logi') pobierzLogi();
     if (id === 'historia') pobierzHistorie();
     if (id === 'sprzedaz') { odswiezSprzedaz(); pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
@@ -12627,6 +12658,10 @@ function dodajDefinicje(e, typ) {
         // --- NOWOŚĆ: Pobieranie ceny ---
         p.cena = document.getElementById('def_cena').value || "";
         if(isEdit) p.new_cena = p.cena;
+
+        // Typ zabiegu (opcjonalny)
+        const typSel = document.getElementById('def_typ_zabiegu');
+        p.typ_zabiegu = typSel ? typSel.value : '';
 
         if(isEdit) {
             p.old_kategoria = document.getElementById('edit_old_kat').value;
@@ -13946,21 +13981,35 @@ function renderTabelaZabiegow(zabiegi) {
     const t = document.getElementById('tabela-zabiegow-body');
     if (!t) return;
     t.innerHTML = "";
-    
+
     if (!zabiegi || zabiegi.length === 0) {
-        t.innerHTML = "<tr><td colspan='4' style='text-align:center; padding:20px; color:#888;'>Brak zdefiniowanych zabiegów.</td></tr>";
+        t.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:#888;'>Brak zdefiniowanych zabiegów.</td></tr>";
         return;
     }
-    
+
+    // Mapa nazwa typu → {ikona, kolor} — z cache typów zabiegów
+    const typyMap = {};
+    (window.__typyZabiegow || []).forEach(t => {
+        typyMap[String(t.nazwa).toLowerCase()] = t;
+    });
+
     zabiegi.forEach(z => {
         const k = encodeURIComponent(z.kategoria);
         const w = encodeURIComponent(z.wariant);
-        const rawPrice = z.cena || ""; 
-        
+        const rawPrice = z.cena || "";
+        const typZab = z.typ_zabiegu ? String(z.typ_zabiegu).toLowerCase() : "";
+
         // Formatowanie ceny
         let displayPrice = "-";
         if (z.cena !== "" && z.cena !== undefined) {
             displayPrice = parseFloat(z.cena).toFixed(2) + " zł";
+        }
+
+        // Render badge typu (z ikoną i kolorem) lub myślnik
+        let typBadge = '<span style="color:#9ca3af; font-style:italic;">—</span>';
+        if (typZab) {
+            const meta = typyMap[typZab] || { ikona: '', kolor: '#64748b' };
+            typBadge = `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:${meta.kolor}22; color:${meta.kolor}; font-size:12px; font-weight:600;">${meta.ikona || ''} ${typZab}</span>`;
         }
 
         t.innerHTML += `
@@ -13968,8 +14017,9 @@ function renderTabelaZabiegow(zabiegi) {
                 <td style="padding:10px;"><strong>${z.kategoria}</strong></td>
                 <td style="padding:10px;">${z.wariant || '-'}</td>
                 <td style="padding:10px; font-weight:bold; color:var(--primary);">${displayPrice}</td>
+                <td style="padding:10px;">${typBadge}</td>
                 <td style="padding:10px; text-align: right;">
-                    <button class="btn-edit" onclick="edytujZabiegUI('${k}', '${w}', '${rawPrice}')" style="margin-right:5px; width:30px; height:30px;">✎</button>
+                    <button class="btn-edit" onclick="edytujZabiegUI('${k}', '${w}', '${rawPrice}', '${typZab}')" style="margin-right:5px; width:30px; height:30px;">✎</button>
                     <button class="btn-delete" onclick="usunZabiegUI('${k}', '${w}')" style="margin:0; width:30px; height:30px;">×</button>
                 </td>
             </tr>
@@ -13996,10 +14046,10 @@ function renderTabelaZabiegow(zabiegi) {
             }
         }
 
-        function edytujZabiegUI(kategoria, wariant, cena) {
+        function edytujZabiegUI(kategoria, wariant, cena, typZabiegu) {
     const k = decodeURIComponent(kategoria);
     const w = decodeURIComponent(wariant);
-    
+
     // Ustaw kategorię (obsługa selecta lub inputa)
     const sel = document.getElementById('def_kat_select');
     let found = false;
@@ -14016,20 +14066,24 @@ function renderTabelaZabiegow(zabiegi) {
     } else {
         toggleDefKat(false);
     }
-    
+
     // Ustaw resztę pól
     document.getElementById('def_war').value = w;
     document.getElementById('def_cena').value = cena; // Cena trafia do inputa
-    
+
+    // Ustaw typ zabiegu (jeśli przekazany)
+    const typSel = document.getElementById('def_typ_zabiegu');
+    if (typSel) typSel.value = typZabiegu || '';
+
     // Ustaw ukryte pola (do identyfikacji rekordu)
     document.getElementById('edit_old_kat').value = k;
     document.getElementById('edit_old_war').value = w;
-    
+
     // Zmień wygląd przycisku
     document.getElementById('btn-zabieg-submit').innerText = "Zapisz zmiany";
     document.getElementById('btn-zabieg-submit').style.background = "#f59e0b";
     document.getElementById('btn-zabieg-cancel').style.display = "block";
-    
+
     document.getElementById('form-zabieg').scrollIntoView({behavior: "smooth"});
 }
 
@@ -14037,10 +14091,88 @@ function renderTabelaZabiegow(zabiegi) {
             document.getElementById('form-zabieg').reset();
             document.getElementById('edit_old_kat').value = "";
             document.getElementById('edit_old_war').value = "";
+            const typSel = document.getElementById('def_typ_zabiegu');
+            if (typSel) typSel.value = '';
             document.getElementById('btn-zabieg-submit').innerText = "Dodaj";
             document.getElementById('btn-zabieg-submit').style.background = "var(--primary)";
             document.getElementById('btn-zabieg-cancel').style.display = "none";
             toggleDefKat(false);
+        }
+
+        // ─── TYPY ZABIEGÓW (twarz/ciało/epilacja/...) ─────────────────
+        // Cache globalny — odświeżany przy wejściu do Kreatora Zabiegów.
+        window.__typyZabiegow = window.__typyZabiegow || [];
+
+        function loadTypyZabiegow(callback) {
+            const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+            const session_token = localStorage.getItem('boczki_session_token') || '';
+            if (!tenant_id || !session_token) { if (callback) callback([]); return; }
+            fetch(`/api/typy-zabiegow?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`)
+                .then(r => r.json())
+                .then(d => {
+                    if (d.status === 'ok' && Array.isArray(d.data)) {
+                        window.__typyZabiegow = d.data;
+                        wypelnijDropdownTypow();
+                        if (callback) callback(d.data);
+                    } else {
+                        if (callback) callback([]);
+                    }
+                })
+                .catch(() => { if (callback) callback([]); });
+        }
+
+        function wypelnijDropdownTypow() {
+            const sel = document.getElementById('def_typ_zabiegu');
+            if (!sel) return;
+            const aktualnaWartosc = sel.value;
+            sel.innerHTML = '<option value="">— (nie przypisany) —</option>';
+            (window.__typyZabiegow || []).forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.nazwa;
+                opt.textContent = `${t.ikona || ''} ${t.nazwa}`.trim();
+                sel.appendChild(opt);
+            });
+            sel.value = aktualnaWartosc;
+        }
+
+        function otworzModalNowyTyp() {
+            document.getElementById('nowy_typ_nazwa').value = '';
+            document.getElementById('nowy_typ_ikona').value = '';
+            document.getElementById('nowy_typ_kolor').value = '#64748b';
+            document.getElementById('modal-nowy-typ').style.display = 'flex';
+            document.getElementById('nowy_typ_nazwa').focus();
+        }
+
+        function zamknijModalNowyTyp() {
+            document.getElementById('modal-nowy-typ').style.display = 'none';
+        }
+
+        function zapiszNowyTyp() {
+            const nazwa = String(document.getElementById('nowy_typ_nazwa').value || '').trim().toLowerCase();
+            const ikona = String(document.getElementById('nowy_typ_ikona').value || '').trim();
+            const kolor = String(document.getElementById('nowy_typ_kolor').value || '#64748b').trim();
+            if (!nazwa) { alert('Nazwa typu jest wymagana.'); return; }
+            const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+            const session_token = localStorage.getItem('boczki_session_token') || '';
+            fetch('/api/typy-zabiegow', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tenant_id, session_token, nazwa, ikona, kolor, kolejnosc: 99 })
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'ok') {
+                    zamknijModalNowyTyp();
+                    loadTypyZabiegow(() => {
+                        // Po załadowaniu — automatycznie zaznacz nowo dodany typ w dropdownie głównego formularza
+                        const sel = document.getElementById('def_typ_zabiegu');
+                        if (sel) sel.value = nazwa;
+                    });
+                } else {
+                    alert(d.message || 'Błąd zapisu typu.');
+                }
+            })
+            .catch(err => alert('Błąd: ' + err.message));
         }
 
         // --- NOWE FUNKCJE DO URODZIN ---

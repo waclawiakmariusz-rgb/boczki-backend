@@ -188,9 +188,9 @@ module.exports = (db) => {
     } else if (action === 'sales_dictionary') {
       // Pracownicy + Uslugi
       db.query(`SELECT imie FROM Pracownicy WHERE tenant_id = ? ORDER BY imie`, [tenant_id], (err1, pracownicy) => {
-        db.query(`SELECT kategoria, wariant, cena FROM Uslugi WHERE tenant_id = ? ORDER BY kategoria, wariant`, [tenant_id], (err2, uslugi) => {
+        db.query(`SELECT kategoria, wariant, cena, typ_zabiegu FROM Uslugi WHERE tenant_id = ? ORDER BY kategoria, wariant`, [tenant_id], (err2, uslugi) => {
           const pr = (pracownicy || []).map(r => r.imie).filter(Boolean);
-          const zb = (uslugi || []).map(r => ({ kategoria: r.kategoria, wariant: r.wariant, cena: r.cena }));
+          const zb = (uslugi || []).map(r => ({ kategoria: r.kategoria, wariant: r.wariant, cena: r.cena, typ_zabiegu: r.typ_zabiegu || null }));
           return res.json({ pracownicy: pr.sort(), zabiegi: zb });
         });
       });
