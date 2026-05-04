@@ -2456,6 +2456,9 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 .zd-chip.zd-chip-active:hover { background:#db2777 !important; }
 /* widget Zadania na Pulpicie — Estelio premium look */
 #ds-zadania-section { background:rgba(255,255,255,.95); border:1px solid #f1dfe7; border-radius:22px; box-shadow:0 18px 45px rgba(65,31,47,.08); }
+.ds-zd-pager-btn { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:12px; color:#475569; transition:.15s; }
+.ds-zd-pager-btn:not(:disabled):hover { background:#f1f5f9; border-color:#cbd5e1; }
+#ds-zadania-search:focus { border-color:#ec4899; box-shadow:0 0 0 3px rgba(236,63,145,0.1); }
 #ds-zadania-section .ds-section-head { padding-bottom:14px; border-bottom:1px solid #f1e6eb; margin-bottom:14px; }
 #ds-zadania-section .ds-section-head h3 { font-size:17px; letter-spacing:-.01em; display:flex; align-items:center; gap:9px; }
 #ds-zadania-add-btn { background:linear-gradient(135deg, #f74ca0, #df247e); border:none; padding:11px 18px; border-radius:13px; font-weight:700; box-shadow:0 10px 22px rgba(236,63,145,.22); transition:all .15s; }
@@ -5637,6 +5640,7 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
         <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span>
       </h3>
       <div style="display:flex; align-items:center; gap:12px;">
+        <input id="ds-zadania-search" onclick="event.stopPropagation();" oninput="event.stopPropagation(); ds_zd_setSearch(this.value);" placeholder="🔍 Szukaj..." style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:8px; font-size:12px; outline:none; min-width:160px; background:#fff;">
         <span id="ds-zadania-summary" style="font-size:12px; color:#64748b; font-weight:600;"></span>
         <button id="ds-zadania-add-btn" onclick="event.stopPropagation(); zd_addOpen();" style="display:none; color:#fff; cursor:pointer; font-size:13px; font-family:inherit;">+ Nowe zadanie</button>
       </div>
@@ -9350,10 +9354,40 @@ function ds_zd_renderTabs() {
 
 function ds_zd_setTab(katKey) {
     ds_zd_activeTab = katKey;
+    // Reset paginacji per grupa — zmiana tab'a może mieć inną liczbę zadań w grupach
+    ds_zd_pageInGroup = { pilne: 0, dzis: 0, przyszle: 0, bez: 0 };
     document.querySelectorAll('.ds-zd-tab').forEach(b => b.classList.remove('active'));
     const all = document.querySelectorAll('.ds-zd-tab');
     // Re-render dla pewności (badges mogą się zmienić po complete)
     ds_zd_renderTabs();
+}
+
+// Stan wyszukiwarki + paginacji widget'u zadań na Pulpicie
+let ds_zd_search = '';
+let ds_zd_pageInGroup = { pilne: 0, dzis: 0, przyszle: 0, bez: 0 };
+const DS_ZD_PAGE_SIZE = 4;
+
+function ds_zd_setSearch(query) {
+    ds_zd_search = String(query || '').trim().toLowerCase();
+    ds_zd_pageInGroup = { pilne: 0, dzis: 0, przyszle: 0, bez: 0 }; // reset stron przy zmianie wyszukiwania
+    ds_zd_renderList();
+}
+
+function ds_zd_setGroupPage(grupa, page) {
+    if (ds_zd_pageInGroup[grupa] !== undefined) {
+        ds_zd_pageInGroup[grupa] = Math.max(0, page);
+        ds_zd_renderList();
+    }
+}
+
+function ds_zd_matchesSearch(z, q) {
+    if (!q) return true;
+    const fields = [
+        z.tytul, z.opis, z.utworzone_przez, z.przypisane_do,
+        z.klient_nazwa,
+        ...((Array.isArray(z.klienci) ? z.klienci : []).map(k => k.nazwa))
+    ].filter(Boolean).map(s => String(s).toLowerCase()).join(' | ');
+    return fields.includes(q);
 }
 
 function ds_zd_renderList() {
@@ -9364,14 +9398,20 @@ function ds_zd_renderList() {
     const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
     const isPraktykantka = (myRola === 'praktykantka');
     const myImieFilter = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
-    const filtered = (ds_zd_activeTab === 'MOJE')
+    let filtered = (ds_zd_activeTab === 'MOJE')
         ? all.filter(z => myImieFilter && String(z.utworzone_przez || '').trim().toLowerCase() === myImieFilter)
         : all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
 
+    // Filtr wyszukiwania — po tytule/opisie/klientach/przypisaniu/utworzonym
+    if (ds_zd_search) {
+        filtered = filtered.filter(z => ds_zd_matchesSearch(z, ds_zd_search));
+    }
+
     if (!filtered.length) {
-        const emptyMsg = (ds_zd_activeTab === 'MOJE')
-            ? 'Nie utworzyłeś jeszcze żadnych zadań'
-            : 'Brak zadań w tej kategorii';
+        let emptyMsg;
+        if (ds_zd_search) emptyMsg = `Brak zadań pasujących do „${ds_zd_search}"`;
+        else if (ds_zd_activeTab === 'MOJE') emptyMsg = 'Nie utworzyłeś jeszcze żadnych zadań';
+        else emptyMsg = 'Brak zadań w tej kategorii';
         list.innerHTML = `<div style="padding:24px 0; text-align:center; color:#94a3b8; font-size:13px;">${emptyMsg}</div>`;
         return;
     }
@@ -9394,19 +9434,34 @@ function ds_zd_renderList() {
         groups.dzis.items.push(z);
     });
 
-    const KAT = {
-        MAGAZYN:{i:'📦',l:'Magazyn'}, KOSMETYK:{i:'💄',l:'Kosmetyk'}, KLIENT:{i:'👤',l:'Klient'},
-        SPRZEDAZ:{i:'💰',l:'Sprzedaż'}, INNE:{i:'📋',l:'Inne'}
-    };
     const now = Date.now();
 
     let html = '';
-    Object.values(groups).forEach(g => {
+    Object.entries(groups).forEach(([key, g]) => {
         if (!g.items.length) return;
+        const total = g.items.length;
+        const pages = Math.max(1, Math.ceil(total / DS_ZD_PAGE_SIZE));
+        // Klamper strony — po wyszukiwaniu lub zmianie tab'a strona może być out of range
+        if (ds_zd_pageInGroup[key] >= pages) ds_zd_pageInGroup[key] = pages - 1;
+        const page = ds_zd_pageInGroup[key] || 0;
+        const slice = g.items.slice(page * DS_ZD_PAGE_SIZE, page * DS_ZD_PAGE_SIZE + DS_ZD_PAGE_SIZE);
+
+        // Kontrolki paginacji — pokazujemy tylko gdy >1 strona
+        let pager = '';
+        if (pages > 1) {
+            const prevDisabled = page === 0 ? 'disabled style="opacity:.4; cursor:not-allowed;"' : 'style="cursor:pointer;"';
+            const nextDisabled = page >= pages - 1 ? 'disabled style="opacity:.4; cursor:not-allowed;"' : 'style="cursor:pointer;"';
+            pager = `<div style="display:flex; align-items:center; justify-content:center; gap:10px; padding:6px 0 4px; font-size:12px; color:#64748b;">
+                <button onclick="ds_zd_setGroupPage('${key}', ${page - 1})" ${prevDisabled} class="ds-zd-pager-btn">‹ Poprzednia</button>
+                <span style="font-weight:600;">${page + 1} / ${pages}</span>
+                <button onclick="ds_zd_setGroupPage('${key}', ${page + 1})" ${nextDisabled} class="ds-zd-pager-btn">Następna ›</button>
+            </div>`;
+        }
+
         html += `<div class="ds-zd-group">
-            <div class="ds-zd-group-title ${g.cls}">${g.title} <small>(${g.items.length})</small></div>
-            ${g.items.slice(0, 5).map(z => ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now)).join('')}
-            ${g.items.length > 5 ? `<div style="text-align:center; color:#94a3b8; font-size:11px; padding:4px 0;">…i ${g.items.length-5} więcej</div>` : ''}
+            <div class="ds-zd-group-title ${g.cls}">${g.title} <small>(${total})</small></div>
+            ${slice.map(z => ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now)).join('')}
+            ${pager}
         </div>`;
     });
 
