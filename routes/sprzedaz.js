@@ -246,13 +246,35 @@ module.exports = (db) => {
       try { _kwotaAdd = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
       const doInsert = () => {
+        // Snapshot typu zabiegu — best-effort lookup w Uslugi.
+        // Próby (kolejno): exact CONCAT(kategoria,' ',wariant), exact kategoria, prefix.
+        // Dla Kosmetyków NULL (osobny box w profilu).
+        const insertWithTyp = (typZab) => {
+          db.query(
+            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?)`,
+            [uniqueId, tenant_id, now, d.klient, d.zabieg_nazwa, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${d.zabieg_nazwa} | ${d.kwota} zł`);
+              return res.json({ status: 'success', message: 'Sprzedaż zarejestrowana!' });
+            }
+          );
+        };
+        if (d.typ_transakcji === 'Kosmetyk') {
+          return insertWithTyp(null);
+        }
+        const nazwa = String(d.zabieg_nazwa || '').trim();
         db.query(
-          `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?)`,
-          [uniqueId, tenant_id, now, d.klient, d.zabieg_nazwa, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || ''],
-          (err) => {
-            if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${d.zabieg_nazwa} | ${d.kwota} zł`);
-            return res.json({ status: 'success', message: 'Sprzedaż zarejestrowana!' });
+          `SELECT typ_zabiegu FROM Uslugi
+             WHERE tenant_id = ?
+               AND (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)
+                    OR TRIM(kategoria) = TRIM(?))
+             ORDER BY (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)) DESC
+             LIMIT 1`,
+          [tenant_id, nazwa, nazwa, nazwa],
+          (errL, rowsL) => {
+            const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
+            insertWithTyp(typZab);
           }
         );
       };
@@ -331,11 +353,26 @@ module.exports = (db) => {
           let _kwotaPoz;
           try { _kwotaPoz = parseKwota(poz.kwota, 'kwota pozycji'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
+          // Snapshot typu zabiegu — lookup w Uslugi po (kategoria, wariant).
+          // Dla Kosmetyków typ_zabiegu pozostaje NULL (mają osobny box w profilu klienta).
           const doInsertPoz = () => {
+            const insertWithTyp = (typZab) => {
+              db.query(
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab],
+                nextPoz
+              );
+            };
+            if (poz.typ === 'Kosmetyk') {
+              return insertWithTyp(null);
+            }
             db.query(
-              `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?)`,
-              [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog],
-              nextPoz
+              `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?) LIMIT 1`,
+              [tenant_id, poz.kategoria || '', poz.wariant || ''],
+              (errL, rowsL) => {
+                const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
+                insertWithTyp(typZab);
+              }
             );
           };
 
@@ -407,12 +444,18 @@ module.exports = (db) => {
           sprawdzDostepnoscNowego((checkErr) => {
             if (checkErr) return res.json({ status: 'error', message: checkErr.message });
 
-            db.query(
-              `UPDATE Sprzedaz SET klient = ?, zabieg = ?, sprzedawca = ?, kwota = ?, komentarz = ?, szczegoly = ?, platnosc = ?, id_klienta = ? WHERE tenant_id = ? AND id = ?`,
-              [d.klient, d.zabieg_nazwa, newSprzedawca, _kwotaEdit, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', tenant_id, d.id],
-              (err2) => {
-                if (err2) return res.json({ status: 'error', message: err2.message });
-                zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
+            // Re-lookup typu zabiegu jeśli zmieniła się nazwa zabiegu (snapshot)
+            const updateSale = (typZab) => {
+              const fields = ['klient = ?', 'zabieg = ?', 'sprzedawca = ?', 'kwota = ?', 'komentarz = ?', 'szczegoly = ?', 'platnosc = ?', 'id_klienta = ?'];
+              const vals = [d.klient, d.zabieg_nazwa, newSprzedawca, _kwotaEdit, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || ''];
+              if (typZab !== undefined) { fields.push('typ_zabiegu = ?'); vals.push(typZab); }
+              vals.push(tenant_id, d.id);
+              db.query(
+                `UPDATE Sprzedaz SET ${fields.join(', ')} WHERE tenant_id = ? AND id = ?`,
+                vals,
+                (err2) => {
+                  if (err2) return res.json({ status: 'error', message: err2.message });
+                  zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
 
                 // Korekta magazynu — po pomyślnym UPDATE
                 const finish = () => res.json({ status: 'success', message: 'Zaktualizowano transakcję!' });
@@ -444,6 +487,32 @@ module.exports = (db) => {
                 }
               }
             );
+            };
+
+            // Wywołanie updateSale: jeśli zmieniła się nazwa zabiegu — re-lookup typu, inaczej zostaw bez zmian
+            if (String(old.zabieg) !== String(d.zabieg_nazwa)) {
+              if (nowy !== null) {
+                // Kosmetyk → typ_zabiegu = NULL (osobny box w profilu klienta)
+                updateSale(null);
+              } else {
+                const nazwa = String(d.zabieg_nazwa || '').trim();
+                db.query(
+                  `SELECT typ_zabiegu FROM Uslugi
+                     WHERE tenant_id = ?
+                       AND (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)
+                            OR TRIM(kategoria) = TRIM(?))
+                     ORDER BY (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)) DESC
+                     LIMIT 1`,
+                  [tenant_id, nazwa, nazwa, nazwa],
+                  (errL, rowsL) => {
+                    const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
+                    updateSale(typZab);
+                  }
+                );
+              }
+            } else {
+              updateSale(undefined); // typ_zabiegu nie zmieniany
+            }
           });
         }
       );
@@ -555,11 +624,12 @@ module.exports = (db) => {
         });
       } else {
         const id = randomUUID();
-        db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena) VALUES (?, ?, ?, ?, ?)`,
-          [id, tenant_id, d.kategoria, d.wariant, d.cena ? parseNumOpt(d.cena) : null],
+        const typZabiegu = d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null;
+        db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?)`,
+          [id, tenant_id, d.kategoria, d.wariant, d.cena ? parseNumOpt(d.cena) : null, typZabiegu],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)`);
+            zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)${typZabiegu ? ' [typ: ' + typZabiegu + ']' : ''}`);
             return res.json({ status: 'success', message: 'Dodano pomyślnie!' });
           }
         );
@@ -600,9 +670,17 @@ module.exports = (db) => {
 
     // --- EDIT_SERVICE ---
     } else if (action === 'edit_service') {
+      // typ_zabiegu opcjonalny — jeśli klient go nie wysłał, zostaw bez zmian
+      const fields = ['kategoria = ?', 'wariant = ?', 'cena = ?'];
+      const vals = [d.new_kategoria, d.new_wariant, d.new_cena ? parseFloat(d.new_cena) : null];
+      if (d.typ_zabiegu !== undefined) {
+        fields.push('typ_zabiegu = ?');
+        vals.push(d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null);
+      }
+      vals.push(tenant_id, d.old_kategoria, d.old_wariant);
       db.query(
-        `UPDATE Uslugi SET kategoria = ?, wariant = ?, cena = ? WHERE tenant_id = ? AND TRIM(kategoria) = ? AND TRIM(wariant) = ? LIMIT 1`,
-        [d.new_kategoria, d.new_wariant, d.new_cena ? parseFloat(d.new_cena) : null, tenant_id, d.old_kategoria, d.old_wariant],
+        `UPDATE Uslugi SET ${fields.join(', ')} WHERE tenant_id = ? AND TRIM(kategoria) = ? AND TRIM(wariant) = ? LIMIT 1`,
+        vals,
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'EDYCJA ZABIEGU', d.pracownik, d.new_kategoria);
