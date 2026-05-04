@@ -22843,11 +22843,11 @@ initTheme();
                 <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
                     <div>
                         <label style="font-size:12px; font-weight:bold; color:#be185d;">Nazwisko:</label>
-                        <input type="text" id="bm_nazwisko" required class="modern-form-control" style="background:white;">
+                        <input type="text" id="bm_nazwisko" required readonly class="modern-form-control" style="background:#f1f5f9; cursor:not-allowed; color:#475569;" tabindex="-1">
                     </div>
                     <div>
                         <label style="font-size:12px; font-weight:bold; color:#be185d;">Imię:</label>
-                        <input type="text" id="bm_imie" required class="modern-form-control" style="background:white;">
+                        <input type="text" id="bm_imie" required readonly class="modern-form-control" style="background:#f1f5f9; cursor:not-allowed; color:#475569;" tabindex="-1">
                     </div>
                 </div>
             </div>
@@ -22857,35 +22857,12 @@ initTheme();
                 <input type="date" id="bm_data" required class="modern-form-control" style="font-size:15px; padding:10px;">
             </div>
 
-            <div style="margin-bottom:20px;">
-                <label style="font-weight:bold; font-size:13px; display:block; margin-bottom: 5px;">📞 Telefon:</label>
-                <input type="text" id="bm_telefon" class="modern-form-control" placeholder="np. 500 123 456">
-            </div>
-
-            <div style="background:#f8fafc; padding:15px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:20px;">
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
-                    <div>
-                        <label style="font-size:12px; font-weight:bold; color:#475569;">Zgoda SMS:</label>
-                        <select id="bm_sms" class="modern-form-control">
-                            <option value="tak">TAK</option>
-                            <option value="nie">NIE</option>
-                            <option value="">brak</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold; color:#475569;">Zgoda Tel:</label>
-                        <select id="bm_tel" class="modern-form-control">
-                            <option value="tak">TAK</option>
-                            <option value="nie">NIE</option>
-                            <option value="brak">brak</option>
-                        </select>
-                    </div>
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:bold; color:#475569;">Komentarz:</label>
-                    <input type="text" id="bm_komentarz" class="modern-form-control" placeholder="np. dzwonić po 16:00">
-                </div>
-            </div>
+            <!-- Pola telefonu / zgód / komentarza usunięte 2026-05-04 (decyzja user'a — modal urodzin
+                 ma być prosty, te dane są w innych miejscach: karta klienta, sekcja Urodziny). -->
+            <input type="hidden" id="bm_telefon" value="">
+            <input type="hidden" id="bm_sms" value="">
+            <input type="hidden" id="bm_tel" value="">
+            <input type="hidden" id="bm_komentarz" value="">
 
             <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #f1f5f9; padding-top:15px;">
                 <button type="button" onclick="document.getElementById('birthday-modal-overlay').style.display='none'" style="padding:10px 20px; border-radius:8px; border:1px solid #ddd; background:white; cursor:pointer;">Anuluj</button>
