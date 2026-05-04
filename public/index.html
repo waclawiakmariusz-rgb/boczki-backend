@@ -2621,10 +2621,22 @@ body.dark-mode .ds-zd-more-popover button:hover { background:#0f172a !important;
 body.dark-mode .ds-zd-pager-btn { background:#0f172a !important; border-color:#334155 !important; color:#cbd5e1 !important; }
 body.dark-mode .ds-zd-pager-btn:not(:disabled):hover { background:#1e293b !important; border-color:#475569 !important; color:#f1f5f9 !important; }
 
-/* Stopka „Zlecone przeze mnie" — separator i tekst */
+/* Stopka „Zlecone przeze mnie" — bursztyn dark variant */
 body.dark-mode #ds-zadania-zlecone-wrap { border-top-color:#334155 !important; }
-body.dark-mode #ds-zadania-zlecone-wrap summary { color:#cbd5e1 !important; }
-body.dark-mode #ds-zadania-zlecone-count { color:#94a3b8 !important; }
+body.dark-mode #ds-zadania-zlecone-wrap > summary {
+    background:linear-gradient(135deg, #3a2c0f 0%, #4a3416 100%) !important;
+    color:#fbbf24 !important;
+    border:1px solid #7c5e1f !important;
+}
+body.dark-mode #ds-zadania-zlecone-wrap > summary:hover {
+    box-shadow:0 4px 14px rgba(251,191,36,.18) !important;
+}
+body.dark-mode #ds-zadania-zlecone-list {
+    background:#1a1505 !important;
+    border-color:#7c5e1f !important;
+    color:#e2e8f0 !important;
+}
+body.dark-mode #ds-zadania-zlecone-count { color:#fde68a !important; }
 
 /* Pille klient / przypisany */
 body.dark-mode #ds-zadania-section .pill { background:#0f172a !important; color:#cbd5e1 !important; border-color:#334155 !important; }
