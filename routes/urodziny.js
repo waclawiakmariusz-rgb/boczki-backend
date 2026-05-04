@@ -129,7 +129,7 @@ module.exports = (db) => {
         if (found) { pending--; return; }
         const tbl = getMonthTable(miesiac);
         db.query(
-          `SELECT imie, nazwisko, data_urodzin FROM ${tbl} WHERE tenant_id = ?`,
+          `SELECT id, imie, nazwisko, data_urodzin, nr_telefonu, sms, telefon, komentarz FROM ${tbl} WHERE tenant_id = ?`,
           [tenant_id],
           (err, rows) => {
             if (!found && !err && rows) {
@@ -139,7 +139,18 @@ module.exports = (db) => {
                 const wBazie2 = (imie + nazw).toLowerCase().replace(/\s/g, '');
                 if (wBazie1 === szukany || wBazie2 === szukany) {
                   found = true;
-                  return res.json({ znaleziona: true, data: formatDDMM(r.data_urodzin), miesiac });
+                  return res.json({
+                    znaleziona: true,
+                    id: r.id,
+                    miesiac,
+                    data: formatDDMM(r.data_urodzin),
+                    imie: r.imie,
+                    nazwisko: r.nazwisko,
+                    telefon: r.nr_telefonu || '',
+                    sms: r.sms || '',
+                    zgoda_tel: r.telefon || '',
+                    komentarz: r.komentarz || ''
+                  });
                 }
               }
             }
@@ -180,6 +191,59 @@ module.exports = (db) => {
           return res.json({ status: 'success', message: 'Dodano klienta do miesiąca: ' + miesiac });
         }
       );
+
+    } else if (action === 'edit_birthday') {
+      // Edycja istniejącego wpisu urodzinowego (z poziomu profilu klienta).
+      // Trudność: jeśli zmieniono MIESIĄC daty, trzeba przenieść wpis do innej tabeli.
+      // body: { tenant_id, id, stary_miesiac, data_ur (YYYY-MM-DD), imie, nazwisko, telefon, sms, zgoda_tel, komentarz }
+      const id = d.id;
+      const staryMiesiac = d.stary_miesiac;
+      if (!id || !staryMiesiac) return res.json({ status: 'error', message: 'Brak id lub stary_miesiac' });
+
+      const parts = String(d.data_ur || '').split('-');
+      if (parts.length !== 3) return res.json({ status: 'error', message: 'Błędny format daty (oczekiwane YYYY-MM-DD)' });
+      const nowyMiesiacIndex = parseInt(parts[1], 10) - 1;
+      const nowyMiesiac = NAZWY_MIESIECY[nowyMiesiacIndex];
+      if (!nowyMiesiac) return res.json({ status: 'error', message: 'Nieprawidłowy miesiąc nowej daty' });
+
+      const tblStary = getMonthTable(staryMiesiac);
+      const tblNowy  = getMonthTable(nowyMiesiac);
+      if (!tblStary || !tblNowy) return res.json({ status: 'error', message: 'Nieznana tabela miesiąca' });
+
+      const dzienMiesiac = `${parts[2]}.${parts[1]}`;
+
+      if (staryMiesiac === nowyMiesiac) {
+        // Ten sam miesiąc — UPDATE
+        db.query(
+          `UPDATE ${tblStary} SET nazwisko = ?, imie = ?, data_urodzin = ?, nr_telefonu = ?, sms = ?, telefon = ?, komentarz = ?
+           WHERE tenant_id = ? AND id = ?`,
+          [d.nazwisko || '', d.imie || '', dzienMiesiac, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || '', tenant_id, id],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', message: 'Zaktualizowano datę urodzin.' });
+          }
+        );
+      } else {
+        // Zmiana miesiąca — DELETE z starej + INSERT do nowej (zachowaj id)
+        db.query(
+          `INSERT INTO ${tblNowy} (id, tenant_id, nazwisko, imie, data_urodzin, nr_telefonu, sms, telefon, komentarz) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [id, tenant_id, d.nazwisko || '', d.imie || '', dzienMiesiac, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || ''],
+          (errIns) => {
+            if (errIns) return res.json({ status: 'error', message: 'Błąd INSERT do ' + nowyMiesiac + ': ' + errIns.message });
+            db.query(
+              `DELETE FROM ${tblStary} WHERE tenant_id = ? AND id = ?`,
+              [tenant_id, id],
+              (errDel) => {
+                if (errDel) {
+                  // Nie udało się usunąć ze starej — duplikat. Lepiej zwrócić błąd niż zostawić w 2 miesiącach.
+                  return res.json({ status: 'error', message: 'Wpis dodany do ' + nowyMiesiac + ' ale nie usunięto z ' + staryMiesiac + ' — sprawdź ręcznie. Błąd: ' + errDel.message });
+                }
+                return res.json({ status: 'success', message: 'Przeniesiono z ' + staryMiesiac + ' do ' + nowyMiesiac + '.' });
+              }
+            );
+          }
+        );
+      }
 
     } else if (action === 'update_birthday_status') {
       const tbl = getMonthTable(d.miesiac);

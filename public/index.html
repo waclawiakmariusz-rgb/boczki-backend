@@ -10729,11 +10729,11 @@ function filtrujZadatkiPoKliencie(nazwisko) {
 /// Urodziny
 // --- OBSŁUGA URODZIN Z POZIOMU PROFILU ---
 
-function otworzModalUrodzinZProfilu() {
+function otworzModalUrodzinZProfilu(editMode) {
     // 1. Pobierz nazwę z nagłówka profilu
     const headerEl = document.getElementById('profil-naglowek');
     let pelnaNazwa = "";
-    
+
     const h1 = headerEl.querySelector('h1');
     if (h1) {
         pelnaNazwa = h1.innerText.trim();
@@ -10742,11 +10742,9 @@ function otworzModalUrodzinZProfilu() {
     }
 
     // 2. Automatyczny podział na Imię i Nazwisko
-    // Zakładamy format "Imię Nazwisko" (Ala Wacławiak)
     const czesci = pelnaNazwa.split(" ");
     let imie = "";
     let nazwisko = "";
-
     if (czesci.length >= 2) {
         imie = czesci[0];
         nazwisko = czesci.slice(1).join(" ");
@@ -10754,14 +10752,39 @@ function otworzModalUrodzinZProfilu() {
         nazwisko = pelnaNazwa;
     }
 
-    // 3. Wypełnij formularz
-    document.getElementById('bm_imie').value = imie;
-    document.getElementById('bm_nazwisko').value = nazwisko;
-    document.getElementById('bm_data').value = "";
-    document.getElementById('bm_telefon').value = "";
-    document.getElementById('bm_sms').value = "tak";
-    document.getElementById('bm_tel').value = "tak";
-    document.getElementById('bm_komentarz').value = "";
+    // 3. Wypełnij formularz — w trybie edycji wczytaj zachowany obiekt urodzin
+    const ur = (editMode && window.__profilUrodziny) ? window.__profilUrodziny : null;
+    window.__profilUrodzinyEditMode = !!ur;
+
+    document.getElementById('bm_imie').value      = ur ? (ur.imie || imie) : imie;
+    document.getElementById('bm_nazwisko').value  = ur ? (ur.nazwisko || nazwisko) : nazwisko;
+    document.getElementById('bm_telefon').value   = ur ? (ur.telefon || '') : '';
+    document.getElementById('bm_sms').value       = ur ? (ur.sms || 'tak') : 'tak';
+    document.getElementById('bm_tel').value       = ur ? (ur.zgoda_tel || 'tak') : 'tak';
+    document.getElementById('bm_komentarz').value = ur ? (ur.komentarz || '') : '';
+
+    // Konwersja DD.MM (z bazy) → YYYY-MM-DD (input type=date wymaga ISO)
+    if (ur && ur.data) {
+        const m = String(ur.data).match(/^(\d{1,2})\.(\d{1,2})$/);
+        if (m) {
+            const dd = m[1].padStart(2, '0');
+            const mm = m[2].padStart(2, '0');
+            // Brak roku w bazie — używamy bieżącego roku jako placeholdera (input type=date wymaga YYYY).
+            // Rok zostaje pominięty przy zapisie do bazy (przechowujemy tylko DD.MM).
+            const yyyy = new Date().getFullYear();
+            document.getElementById('bm_data').value = `${yyyy}-${mm}-${dd}`;
+        } else {
+            document.getElementById('bm_data').value = '';
+        }
+    } else {
+        document.getElementById('bm_data').value = '';
+    }
+
+    // Tytuł modalu i przycisk submit — odróżnij dodawanie od edycji
+    const modalTitle = document.querySelector('#birthday-modal-overlay h2');
+    if (modalTitle) modalTitle.innerText = ur ? '✎ Edytuj datę urodzin' : '➕ Dodaj urodziny';
+    const submitBtn = document.querySelector('#birthday-modal-overlay button[type="submit"]');
+    if (submitBtn) submitBtn.innerText = ur ? 'Zapisz zmiany' : 'Dodaj';
 
     // 4. Pokaż okno
     document.getElementById('birthday-modal-overlay').style.display = 'flex';
@@ -10769,10 +10792,12 @@ function otworzModalUrodzinZProfilu() {
 
 function zapiszUrodzinyZProfilu(e) {
     e.preventDefault();
-    
+
+    const editMode = !!window.__profilUrodzinyEditMode && window.__profilUrodziny;
+
     // Pobranie danych z formularza
     const payload = {
-        action: 'add_birthday', // To wywoła Twoją funkcję backendową
+        action: editMode ? 'edit_birthday' : 'add_birthday',
         imie: document.getElementById('bm_imie').value,
         nazwisko: document.getElementById('bm_nazwisko').value,
         data_ur: document.getElementById('bm_data').value,
@@ -10781,6 +10806,12 @@ function zapiszUrodzinyZProfilu(e) {
         zgoda_tel: document.getElementById('bm_tel').value,
         komentarz: document.getElementById('bm_komentarz').value
     };
+
+    // Tryb edycji wymaga id i starego miesiąca (do potencjalnego przeniesienia między tabelami)
+    if (editMode) {
+        payload.id = window.__profilUrodziny.id;
+        payload.stary_miesiac = window.__profilUrodziny.miesiac;
+    }
 
     if(!payload.data_ur) { alert("Data urodzenia jest wymagana!"); return; }
 
@@ -10903,8 +10934,11 @@ function otworzProfil(idKlienta) {
                     }
                 }
             } catch (e) {}
-            metaDiv.innerHTML = `<span style="font-size:13px; color:#475569;">🎂 ${data.urodziny.data}</span>${alertUrodzinowy}`;
+            // Zachowaj cały obiekt urodzin globalnie — potrzebny do edycji daty
+            window.__profilUrodziny = data.urodziny;
+            metaDiv.innerHTML = `<span style="font-size:13px; color:#475569;">🎂 ${data.urodziny.data}</span>${alertUrodzinowy} <button onclick="otworzModalUrodzinZProfilu(true)" title="Edytuj datę urodzin" style="background:none; border:none; color:#db2777; cursor:pointer; padding:2px 6px; font-size:13px; margin-left:4px;">✎</button>`;
         } else {
+            window.__profilUrodziny = null;
             metaDiv.innerHTML = `<span style="color:#94a3b8; font-size:12px;">Brak daty urodzin.</span> <button onclick="otworzModalUrodzinZProfilu()" style="background:#db2777; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:11px; cursor:pointer; margin-left:6px;">➕ Dodaj</button>`;
         }
 
