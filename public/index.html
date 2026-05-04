@@ -8427,26 +8427,28 @@ let wciecieLogow = "";
         }
 
         // 3. WYSYŁKA I DIAGNOSTYKA ODPOWIEDZI
+        // Whitelist akcji zapisu — toast pokazuje się TYLKO dla nich.
+        // Wyciągnięte na poziom funkcji żeby było dostępne w obu catch'ach (JSON parse + connection error).
+        const pokazBlad = ['login', 'verify_pin', 'manage_deposit', 'add_sale', 'edit_sale',
+            'add_client', 'save_rodo', 'add_birthday', 'edit_birthday', 'save_retention', 'save_client_memo'];
+
         try {
             const response = await oldFetch(...args);
             const clone = response.clone();
-            
+
             // CZYTAMY JAKO TEKST, żeby w razie awarii serwera zobaczyć co dokładnie wypluł
-            const textResponse = await clone.text(); 
+            const textResponse = await clone.text();
 
             try {
                 // Próbujemy zamienić odpowiedź na JSON
                 const data = JSON.parse(textResponse);
-                
+
                 // Jeśli serwer sam zgłasza błąd logiczny
                 if (data.status === 'error' || data.error) {
                     const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
 
                     console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, komunikat);
 
-                    // Akcje które zawsze pokazują błąd użytkownikowi
-                    const pokazBlad = ['login', 'verify_pin', 'manage_deposit', 'add_sale', 'edit_sale',
-                        'add_client', 'save_rodo', 'add_birthday', 'save_retention', 'save_client_memo'];
                     if (pokazBlad.includes(akcja)) {
                         pokazPowiadomienie('error', 'Nie udało się', komunikat);
                     }
@@ -8464,10 +8466,13 @@ let wciecieLogow = "";
                 console.warn("Serwer nie zwrócił JSON. Generowanie bezpiecznego fallbacku.");
                 console.groupEnd();
 
-                // Pokaż przyjazne powiadomienie tylko dla akcji zapisu (nie przy ładowaniu danych w tle)
-                const czyAkcjaZapisu = !akcja.startsWith('get_') && !akcja.startsWith('an_') &&
-                    !akcja.startsWith('akon_') && akcja !== 'sales_dictionary' && akcja !== 'read';
-                if (czyAkcjaZapisu) {
+                // Pokaż przyjazne powiadomienie TYLKO dla krytycznych akcji zapisu (whitelist).
+                // 2026-05-04: zmiana z blacklist'y (wszystko oprócz get_/an_/akon_) na whitelist —
+                // poprzednia logika triggerowała toast dla każdej inicjalnej akcji startowej (typu
+                // birthdays, upcoming_birthdays, ratunek_sale itd.) i blokowała UI przy starcie
+                // gdy choć jeden endpoint zwrócił HTML zamiast JSON. Teraz toast tylko dla rzeczy
+                // które user świadomie wykonuje i których brak zapisu jest realnym problemem.
+                if (pokazBlad.includes(akcja)) {
                     pokazPowiadomienie('warning', 'Chwilowy problem z serwerem',
                         'Dane mogą nie zostać zapisane. Odśwież stronę jeśli problem się powtarza.');
                 }
@@ -8479,10 +8484,9 @@ let wciecieLogow = "";
         } catch (err) {
             console.error(`🔌 BŁĄD POŁĄCZENIA [Akcja: ${akcja}]:`, err);
 
-            // Pokaż powiadomienie o braku połączenia tylko dla akcji zapisu
-            const czyAkcjaZapisuNet = !akcja.startsWith('get_') && !akcja.startsWith('an_') &&
-                !akcja.startsWith('akon_') && akcja !== 'sales_dictionary' && akcja !== 'read';
-            if (czyAkcjaZapisuNet) {
+            // Toast tylko dla krytycznych akcji zapisu (whitelist) — nie spamujemy user'a
+            // gdy initial load akcji w tle (np. birthdays, upcoming_birthdays) pada.
+            if (pokazBlad.includes(akcja)) {
                 pokazPowiadomienie('error', 'Brak połączenia z serwerem',
                     'Sprawdź internet i spróbuj ponownie. Dane nie zostały zapisane.');
             }
