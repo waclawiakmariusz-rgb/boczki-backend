@@ -5890,14 +5890,10 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
                             <input type="text" id="profil-history-search" onkeyup="_db('ph',filtrujHistorieWProfilu)" placeholder="🔍 Szukaj w historii zabiegów..." style="width:100%; padding:9px 10px 9px 34px; border:1px solid #efe5e8; border-radius:8px; font-size:13px; box-sizing:border-box;">
                             <span style="position:absolute; left:24px; top:50%; transform:translateY(-50%); opacity:0.4; pointer-events:none;">🔎</span>
                         </div>
-                        <details class="history-group group-twarz" open>
-                            <summary class="history-summary"><div class="summary-title txt-twarz">💆‍♀️ Twarz <span id="cnt-twarz" class="count-badge">0 poz.</span></div></summary>
-                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-twarz"></tbody></table></div>
-                        </details>
-                        <details class="history-group group-cialo">
-                            <summary class="history-summary"><div class="summary-title txt-cialo">🧘‍♀️ Ciało <span id="cnt-cialo" class="count-badge">0 poz.</span></div></summary>
-                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-cialo"></tbody></table></div>
-                        </details>
+                        <!-- Dynamiczne boxy per typ zabiegu — generowane przez renderujGrupyTypow() w przetwarzajHistorieKlienta. -->
+                        <!-- Każdy typ (twarz, ciało, epilacja, medycyna, paznokcie, podologia, masaże, własne) ma osobny <details>. -->
+                        <!-- Boxy puste są UKRYWANE (decyzja user'a 2026-05-04). -->
+                        <div id="dynamiczne-typy-zabiegow"></div>
                         <details class="history-group" style="border-left:5px solid #991b1b !important;">
                             <summary class="history-summary"><div class="summary-title" style="color:#991b1b;">📉 Utracone zadatki <span id="cnt-utracone" class="count-badge" style="background:#fee2e2;color:#991b1b;">0 poz.</span></div></summary>
                             <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-utracone"></tbody></table></div>
@@ -10870,9 +10866,11 @@ function otworzProfil(idKlienta) {
     const metaDiv = document.getElementById('profil-meta');
     if(metaDiv) metaDiv.innerHTML = '<span style="color:#94a3b8; font-size:13px;">⏳ Ładowanie...</span>';
     
-    document.getElementById('tabela-twarz').innerHTML = "";
-    document.getElementById('tabela-cialo').innerHTML = "";
-    document.getElementById('tabela-kosmetyki').innerHTML = "";
+    // Reset dynamicznych boxów typów + tabeli kosmetyków
+    const _dyn = document.getElementById('dynamiczne-typy-zabiegow');
+    if (_dyn) _dyn.innerHTML = "";
+    const _kosm = document.getElementById('tabela-kosmetyki');
+    if (_kosm) _kosm.innerHTML = "";
 
     // 3. JEDNO POTĘŻNE ZAPYTANIE DO SERWERA
     const payload = JSON.stringify({id: klientObj.id, nazwa: nazwaKlienta});
@@ -11218,18 +11216,18 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
     }
     
     // 3. Przygotowanie tabel
-    const tTwarz = document.getElementById('tabela-twarz');
-    const tCialo = document.getElementById('tabela-cialo');
+    // Tab Wizyty — wszystkie boxy zabiegów (twarz/ciało/...) generujemy DYNAMICZNIE w #dynamiczne-typy-zabiegow.
+    // Tab Produkty — Kosmetyki nadal mają stały <tbody id="tabela-kosmetyki"> w HTML.
+    const containerTypow = document.getElementById('dynamiczne-typy-zabiegow');
     const tKosm = document.getElementById('tabela-kosmetyki');
 
-    // Liczniki
-    let cTwarz = 0, cCialo = 0, cKosm = 0;
+    let cKosm = 0;
+    if (tKosm) tKosm.innerHTML = "";
+    if (containerTypow) containerTypow.innerHTML = "";
 
-    tTwarz.innerHTML = ""; tCialo.innerHTML = ""; tKosm.innerHTML = "";
-
-    // Podczas wyszukiwania — otwórz wszystkie akordeony żeby wyniki były widoczne
-    if (fraza) {
-        document.querySelectorAll('#tab-profil-wizyty details.history-group').forEach(d => d.open = true);
+    // Lazy-load typów zabiegów (cache globalny window.__typyZabiegow)
+    if ((!window.__typyZabiegow || !window.__typyZabiegow.length) && typeof loadTypyZabiegow === 'function') {
+        loadTypyZabiegow();
     }
 
     // Sortowanie
@@ -11237,18 +11235,20 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
     // Jeśli szukamy i nic nie ma
     if (transakcje.length === 0 && fraza !== "") {
-        const info = `<tr><td colspan="5" style="text-align:center; padding:15px; color:#999;">Brak wyników dla: "<b>${frazaSzukania}</b>"</td></tr>`;
-        tTwarz.innerHTML = info;
-        tCialo.innerHTML = info;
-        tKosm.innerHTML = info;
+        const info = `<div style="padding:18px; text-align:center; color:#999; background:#fff; border-radius:18px; border:1px solid #efe5e8;">Brak wyników dla: "<b>${frazaSzukania}</b>"</div>`;
+        if (containerTypow) containerTypow.innerHTML = info;
+        if (tKosm) tKosm.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:15px; color:#999;">Brak wyników dla: "<b>${frazaSzukania}</b>"</td></tr>`;
         return;
     }
 
+    // Grupy zabiegów per typ (z snapshotu w bazie lub fallback po nazwie)
+    const groupedByType = {}; // { typ → [htmlRow, ...] }
+
     transakcje.forEach(t => {
-        const nazwaZabiegu = t.zabieg.toLowerCase();
+        const nazwaZabiegu = String(t.zabieg || '').toLowerCase();
         const kwota = parseFloat(t.kwota).toFixed(2) + " zł";
         let platnosc = t.platnosc || "-";
-        
+
         let stylPlatnosci = "font-size:13px; color:#555;";
         if(platnosc === 'Mix') {
             platnosc = "🔀 Mix";
@@ -11263,11 +11263,11 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
         }
 
         // HTML Wiersza (z komentarzem pod spodem)
-        let glownyWierszStyl = "border-bottom:1px solid #f1f5f9;"; 
+        let glownyWierszStyl = "border-bottom:1px solid #f1f5f9;";
         let wierszKomentarza = "";
 
         if (t.komentarz && t.komentarz.trim() !== "") {
-            glownyWierszStyl = "border:none;"; 
+            glownyWierszStyl = "border:none;";
             wierszKomentarza = `
                 <tr style="border-bottom:1px solid #f1f5f9;">
                     <td colspan="5" style="padding: 0 10px 15px 10px; color:#64748b; font-size:13px; font-style:italic;">
@@ -11288,31 +11288,74 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
             ${wierszKomentarza}
         `;
 
-        // Rozdzielanie
+        // Rozdzielanie:
+        // 1. Kosmetyki → osobny tab (jak dotąd, klasyfikacja po nazwie/szczegóły 'szt')
+        // 2. Reszta → grupowanie po t.typ_zabiegu (snapshot z bazy)
+        // 3. Fallback gdy typ_zabiegu jest NULL (przed migracją lub edge case)
         if (nazwaZabiegu.includes("kosmetyk") || (t.szczegoly && String(t.szczegoly).includes("szt"))) {
-            tKosm.innerHTML += html;
-            cKosm++;
+            if (tKosm) { tKosm.innerHTML += html; cKosm++; }
+            return;
         }
-        else if (typeof ZABIEGI_TWARZ !== 'undefined' && ZABIEGI_TWARZ.some(f => nazwaZabiegu.includes(f))) {
-            tTwarz.innerHTML += html;
-            cTwarz++;
+
+        let typ = (t.typ_zabiegu && String(t.typ_zabiegu).trim().toLowerCase()) || null;
+        if (!typ) {
+            // Fallback do legacy heurystyki (twarz/ciało) — gdy migracja nie była uruchomiona
+            if (typeof ZABIEGI_TWARZ !== 'undefined' && ZABIEGI_TWARZ.some(f => nazwaZabiegu.includes(f))) {
+                typ = 'twarz';
+            } else {
+                typ = 'ciało';
+            }
         }
-        else {
-            tCialo.innerHTML += html;
-            cCialo++;
-        }
+        if (!groupedByType[typ]) groupedByType[typ] = [];
+        groupedByType[typ].push(html);
     });
 
-    // 4. Aktualizacja Liczników
-    document.getElementById('cnt-twarz').innerText = cTwarz + " poz.";
-    document.getElementById('cnt-cialo').innerText = cCialo + " poz.";
-    document.getElementById('cnt-kosm').innerText = cKosm + " poz.";
+    // Renderuj dynamiczne grupy typów (ukrywając puste)
+    const typyMap = {};
+    (window.__typyZabiegow || []).forEach(t => {
+        typyMap[String(t.nazwa).toLowerCase()] = t;
+    });
+    // Kolejność: najpierw typy z bazy (po `kolejnosc`), potem nieznane (z fallbacku)
+    const znaneTypy = (window.__typyZabiegow || []).map(t => String(t.nazwa).toLowerCase());
+    const nieznane = Object.keys(groupedByType).filter(k => !znaneTypy.includes(k));
+    const kolejnoscRender = [...znaneTypy.filter(k => groupedByType[k]), ...nieznane];
+
+    if (containerTypow) {
+        const kolory = ['#ec4899', '#3b82f6', '#f59e0b', '#ef4444', '#a855f7', '#14b8a6', '#84cc16', '#64748b'];
+        const html = kolejnoscRender.map((typ, i) => {
+            const wiersze = groupedByType[typ];
+            if (!wiersze || !wiersze.length) return ''; // ukryj puste — zgodnie z decyzją usera
+            const meta = typyMap[typ] || { ikona: '', kolor: kolory[i % kolory.length] };
+            const ikona = meta.ikona || '';
+            const kolor = meta.kolor || '#64748b';
+            const tytul = typ.charAt(0).toUpperCase() + typ.slice(1);
+            const otwarty = (i === 0 || fraza) ? ' open' : '';
+            return `<details class="history-group"${otwarty} style="border-left:5px solid ${kolor} !important;">
+                <summary class="history-summary">
+                    <div class="summary-title" style="color:${kolor};">
+                        ${ikona} ${tytul}
+                        <span class="count-badge" style="background:${kolor}22; color:${kolor};">${wiersze.length} poz.</span>
+                    </div>
+                </summary>
+                <div class="table-container">
+                    <table class="modern-table">
+                        <thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead>
+                        <tbody>${wiersze.join('')}</tbody>
+                    </table>
+                </div>
+            </details>`;
+        }).join('');
+        containerTypow.innerHTML = html ||
+            `<div style="padding:18px; text-align:center; color:#999; background:#fff; border-radius:18px; border:1px solid #efe5e8;">Brak zabiegów w historii.</div>`;
+    }
+
+    // Aktualizacja licznika kosmetyków (tab Produkty — zostaje statyczny)
+    const cntKosm = document.getElementById('cnt-kosm');
+    if (cntKosm) cntKosm.innerText = cKosm + " poz.";
 
     // Obsługa pustych (gdy nie szukamy)
     if (fraza === "") {
-        if (cTwarz === 0) tTwarz.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zabiegów.</td></tr>";
-        if (cCialo === 0) tCialo.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zabiegów.</td></tr>";
-        if (cKosm === 0) tKosm.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
+        if (cKosm === 0 && tKosm) tKosm.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
 
         // Liczba wizyt — wykluczamy rekordy z platnosc='Portfel' żeby nie liczyć
         // tej samej wizyty podwójnie (gdy klient płaci część zadatkiem,
