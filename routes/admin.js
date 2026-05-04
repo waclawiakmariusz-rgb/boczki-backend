@@ -6,6 +6,7 @@ const { randomUUID } = require('crypto');
 const bcrypt = require('bcrypt');
 const { rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
 const { cloneBoczkiToDemo } = require('../scripts/clone_to_demo_lib');
+const { migracjaTenanta: migracjaTypyZabiegow, listaTenantow: listaTenantowDoMigracji } = require('../scripts/migrate_typy_lib');
 
 const BCRYPT_ROUNDS = 10;
 
@@ -112,6 +113,44 @@ module.exports = (db) => {
     } catch (err) {
       console.error('[admin/clone_demo] EXCEPTION:', err.message);
       return res.json({ status: 'error', message: err.message, log: [err.stack] });
+    }
+  });
+
+  // ── Migracja typów zabiegów (panel admina) ──────────────────────
+  // GET /api/admin/typy-zabiegow/tenanty — lista tenantów do dropdown'a
+  router.get('/admin/typy-zabiegow/tenanty', requireAdmin, async (req, res) => {
+    try {
+      const tenanty = await listaTenantowDoMigracji(db);
+      return res.json({ status: 'ok', tenanty });
+    } catch (err) {
+      return res.json({ status: 'error', message: err.message });
+    }
+  });
+
+  // POST /api/admin/typy-zabiegow/migracja — uruchomienie migracji per tenant
+  // body: { tenant_id (lub 'all'), apply: bool }
+  router.post('/admin/typy-zabiegow/migracja', requireAdmin, async (req, res) => {
+    if (req.setTimeout) req.setTimeout(0);
+    if (res.setTimeout) res.setTimeout(0);
+    try {
+      const tenant = String(req.body?.tenant_id || '').trim();
+      const apply  = !!req.body?.apply;
+      if (!tenant) return res.json({ status: 'error', message: 'Wybierz tenant_id lub "all".' });
+
+      const lista = (tenant === 'all') ? await listaTenantowDoMigracji(db) : [tenant];
+      const raporty = [];
+      for (const tid of lista) {
+        try {
+          const r = await migracjaTypyZabiegow(db, tid, { apply });
+          raporty.push(r);
+        } catch (e) {
+          raporty.push({ tenant_id: tid, error: e.message });
+        }
+      }
+      return res.json({ status: 'ok', apply, raporty });
+    } catch (err) {
+      console.error('[admin/typy-zabiegow/migracja] EXCEPTION:', err.message);
+      return res.json({ status: 'error', message: err.message });
     }
   });
 

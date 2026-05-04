@@ -406,6 +406,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <button class="tab-btn" onclick="showTab('tab-predef'); predef_init();">💅 Predef. usługi</button>
       <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
       <button class="tab-btn" onclick="showTab('tab-demo')">🎬 Demo</button>
+      <button class="tab-btn" onclick="showTab('tab-typy-migracja'); typyMigracja_init();">🏷️ Migracja typów</button>
     </div>
 
     <!-- Tab: Lista salonów -->
@@ -459,6 +460,54 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
           </div>
           <div id="demo-result-credentials" style="background:#fff; border:1px solid #d1fae5; border-radius:10px; padding:16px 20px; font-size:13.5px; color:#1f2937; line-height:1.8;"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- Tab: Migracja typów zabiegów -->
+    <div id="tab-typy-migracja" class="tab-panel">
+      <div style="max-width:860px; margin:0 auto;">
+        <h3 style="margin-bottom:6px;">🏷️ Migracja typów zabiegów</h3>
+        <p style="color:var(--taupe); font-size:13.5px; margin-bottom:20px; line-height:1.6;">
+          Wypełnia kolumny <code>typ_zabiegu</code> w tabelach <code>Uslugi</code> (cennik) i <code>Sprzedaz</code> (historia)
+          na podstawie heurystyk po nazwie. Dotyczy istniejących danych — nowe sprzedaże od commit 1 zapisują typ
+          automatycznie.
+        </p>
+
+        <div style="background:#fff8e7; border:1px solid #f5cf66; border-radius:12px; padding:18px 22px; margin-bottom:20px;">
+          <strong style="color:#92400e;">⚠ Workflow:</strong>
+          <ol style="margin:10px 0 0; padding-left:20px; color:#78350f; font-size:13.5px;">
+            <li><b>Najpierw DRY-RUN</b> — bezpieczne, nic nie zapisuje, pokazuje raport per typ</li>
+            <li>Sprawdź czy liczby pasują do intuicji (np. czy zabiegi twarzy faktycznie są w „twarz")</li>
+            <li><b>BACKUP SQL</b> w phpMyAdmin (eksport tabel Uslugi + Sprzedaz dla wybranego tenanta)</li>
+            <li>Dopiero wtedy <b>APPLY</b> — zapis do bazy</li>
+            <li>Powtórz dla kolejnych tenantów</li>
+          </ol>
+        </div>
+
+        <div class="gen-card" style="margin-bottom:20px;">
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
+            <label style="font-weight:600; color:#1f2937;">Tenant:</label>
+            <select id="typy-migracja-tenant" style="padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; min-width:280px; font-size:14px;">
+              <option value="">— wybierz —</option>
+              <option value="all">🌐 Wszyscy tenanci</option>
+            </select>
+          </div>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <button id="btn-typy-dryrun" onclick="typyMigracja_run(false)" style="background:#3b82f6; color:#fff; border:none; padding:12px 22px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">
+              🔍 Dry-run (raport)
+            </button>
+            <button id="btn-typy-apply" onclick="typyMigracja_run(true)" style="background:#dc2626; color:#fff; border:none; padding:12px 22px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">
+              ⚙️ APPLY (zapis do bazy)
+            </button>
+          </div>
+        </div>
+
+        <div id="typy-migracja-progress" style="display:none; padding:14px 18px; background:#dbeafe; border:1px solid #93c5fd; border-radius:10px; margin-bottom:16px; color:#1e40af; font-weight:600;">
+          ⏳ Migracja w toku... (może potrwać kilkadziesiąt sekund dla dużych baz)
+        </div>
+
+        <div id="typy-migracja-result" style="display:none;"></div>
       </div>
     </div>
 
@@ -1134,6 +1183,108 @@ async function cloneDemo(force) {
     document.getElementById('btn-demo-clone').disabled = false;
     document.getElementById('btn-demo-force').disabled = false;
     document.getElementById('demo-progress-status').innerHTML = '✗ <span style="color:#dc2626;">Błąd połączenia: ' + err.message + '</span>';
+  }
+}
+
+// ═══════════════════════════════════════════════
+// MIGRACJA TYPÓW ZABIEGÓW
+// ═══════════════════════════════════════════════
+let typyMigracjaInited = false;
+async function typyMigracja_init() {
+  if (typyMigracjaInited) return;
+  typyMigracjaInited = true;
+  try {
+    const r = await fetch(`${API}/admin/typy-zabiegow/tenanty`, { headers: { 'X-Admin-Token': adminToken } });
+    const d = await r.json();
+    if (d.status === 'ok' && Array.isArray(d.tenanty)) {
+      const sel = document.getElementById('typy-migracja-tenant');
+      d.tenanty.forEach(t => {
+        const opt = document.createElement('option');
+        opt.value = t;
+        opt.textContent = t;
+        sel.appendChild(opt);
+      });
+    }
+  } catch (e) {
+    console.warn('typyMigracja_init:', e);
+  }
+}
+
+async function typyMigracja_run(apply) {
+  const tenant = document.getElementById('typy-migracja-tenant').value;
+  if (!tenant) { alert('Wybierz tenant z listy.'); return; }
+  if (apply) {
+    const tlabel = (tenant === 'all') ? 'WSZYSTKICH tenantów' : `tenanta „${tenant}"`;
+    if (!confirm(`UWAGA: zapis do bazy dla ${tlabel}.\n\nCzy zrobiłeś już backup SQL tabel Uslugi i Sprzedaz?\n\nKliknij OK żeby kontynuować.`)) return;
+  }
+
+  const progress = document.getElementById('typy-migracja-progress');
+  const result = document.getElementById('typy-migracja-result');
+  document.getElementById('btn-typy-dryrun').disabled = true;
+  document.getElementById('btn-typy-apply').disabled = true;
+  progress.style.display = 'block';
+  result.style.display = 'none';
+  result.innerHTML = '';
+
+  try {
+    const r = await fetch(`${API}/admin/typy-zabiegow/migracja`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ tenant_id: tenant, apply })
+    });
+    const d = await r.json();
+    progress.style.display = 'none';
+    document.getElementById('btn-typy-dryrun').disabled = false;
+    document.getElementById('btn-typy-apply').disabled = false;
+
+    if (d.status !== 'ok') {
+      result.style.display = 'block';
+      result.innerHTML = `<div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; padding:14px 18px; color:#991b1b;">✗ Błąd: ${d.message || 'nieznany'}</div>`;
+      return;
+    }
+
+    // Render raportu
+    const trybLabel = d.apply ? '⚙️ <span style="color:#059669;">APPLY (zapisano do bazy)</span>' : '🔍 <span style="color:#1e40af;">DRY-RUN (bez zmian)</span>';
+    let html = `<div style="background:${d.apply ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${d.apply ? '#86efac' : '#93c5fd'}; border-radius:10px; padding:14px 18px; margin-bottom:16px;"><strong>${trybLabel}</strong></div>`;
+
+    (d.raporty || []).forEach(r => {
+      if (r.error) {
+        html += `<div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; padding:14px 18px; margin-bottom:12px;"><strong style="color:#991b1b;">✗ ${r.tenant_id}</strong><br><span style="color:#7f1d1d; font-size:13px;">${r.error}</span></div>`;
+        return;
+      }
+      const usPerTyp = Object.entries(r.uslugi.perTyp).sort((a,b) => b[1]-a[1]);
+      const spPerTyp = Object.entries(r.sprzedaz.perTyp).sort((a,b) => b[1]-a[1]);
+      html += `<div class="gen-card" style="margin-bottom:14px;">
+        <h4 style="margin:0 0 10px; color:#1f2937;">${r.tenant_id}</h4>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:18px;">
+          <div>
+            <div style="font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">📋 Uslugi (cennik)</div>
+            <div style="font-size:20px; font-weight:800; color:var(--primary); margin-bottom:8px;">${r.uslugi.total} <span style="font-size:13px; color:#64748b;">rekordów</span></div>
+            ${usPerTyp.map(([typ, n]) => `<div style="font-size:13px; padding:3px 0;"><span style="display:inline-block; min-width:160px;">${typ}</span><b>${n}</b></div>`).join('') || '<div style="color:#9ca3af; font-style:italic; font-size:13px;">Brak</div>'}
+          </div>
+          <div>
+            <div style="font-size:12px; color:#64748b; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">💰 Sprzedaz (historia)</div>
+            <div style="font-size:20px; font-weight:800; color:var(--primary); margin-bottom:8px;">${r.sprzedaz.total} <span style="font-size:13px; color:#64748b;">rekordów</span></div>
+            ${spPerTyp.map(([typ, n]) => `<div style="font-size:13px; padding:3px 0;"><span style="display:inline-block; min-width:160px;">${typ}</span><b>${n}</b></div>`).join('') || '<div style="color:#9ca3af; font-style:italic; font-size:13px;">Brak</div>'}
+          </div>
+        </div>
+      </div>`;
+    });
+
+    if (!d.apply) {
+      html += `<div style="background:#fef3c7; border:1px solid #fbbf24; border-radius:10px; padding:14px 18px; margin-top:16px; color:#78350f;">
+        ⚠ <strong>To był DRY-RUN.</strong> Aby zapisać zmiany, zrób backup SQL tabel <code>Uslugi</code> i <code>Sprzedaz</code>, a potem kliknij <b>APPLY</b>.
+      </div>`;
+    }
+
+    result.style.display = 'block';
+    result.innerHTML = html;
+  } catch (err) {
+    progress.style.display = 'none';
+    document.getElementById('btn-typy-dryrun').disabled = false;
+    document.getElementById('btn-typy-apply').disabled = false;
+    result.style.display = 'block';
+    result.innerHTML = `<div style="background:#fef2f2; border:1px solid #fca5a5; border-radius:10px; padding:14px 18px; color:#991b1b;">✗ Błąd połączenia: ${err.message}</div>`;
   }
 }
 
