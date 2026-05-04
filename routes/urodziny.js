@@ -181,11 +181,13 @@ module.exports = (db) => {
       const miesiac = NAZWY_MIESIECY[miesiacIndex];
       if (!miesiac) return res.json({ status: 'error', message: 'Nieprawidłowy miesiąc' });
       const tbl = getMonthTable(miesiac);
-      const dzienMiesiac = `${parts[2]}.${parts[1]}`;
+      // Kolumna data_urodzin jest typu DATE — zapisujemy pełne YYYY-MM-DD,
+      // inaczej MySQL parsuje "DD.MM" jako 0000-00-00 (bug widoczny dopiero przy odczycie).
+      const dataIso = parts.join('-');
       const id = randomUUID();
       db.query(
         `INSERT INTO ${tbl} (id, tenant_id, nazwisko, imie, data_urodzin, nr_telefonu, sms, telefon, komentarz) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, tenant_id, d.nazwisko, d.imie, dzienMiesiac, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || ''],
+        [id, tenant_id, d.nazwisko, d.imie, dataIso, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || ''],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success', message: 'Dodano klienta do miesiąca: ' + miesiac });
@@ -210,14 +212,15 @@ module.exports = (db) => {
       const tblNowy  = getMonthTable(nowyMiesiac);
       if (!tblStary || !tblNowy) return res.json({ status: 'error', message: 'Nieznana tabela miesiąca' });
 
-      const dzienMiesiac = `${parts[2]}.${parts[1]}`;
+      // Kolumna data_urodzin jest typu DATE — zapisujemy ISO (YYYY-MM-DD), nie DD.MM
+      const dataIso = parts.join('-');
 
       if (staryMiesiac === nowyMiesiac) {
         // Ten sam miesiąc — UPDATE
         db.query(
           `UPDATE ${tblStary} SET nazwisko = ?, imie = ?, data_urodzin = ?, nr_telefonu = ?, sms = ?, telefon = ?, komentarz = ?
            WHERE tenant_id = ? AND id = ?`,
-          [d.nazwisko || '', d.imie || '', dzienMiesiac, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || '', tenant_id, id],
+          [d.nazwisko || '', d.imie || '', dataIso, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || '', tenant_id, id],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             return res.json({ status: 'success', message: 'Zaktualizowano datę urodzin.' });
@@ -227,7 +230,7 @@ module.exports = (db) => {
         // Zmiana miesiąca — DELETE z starej + INSERT do nowej (zachowaj id)
         db.query(
           `INSERT INTO ${tblNowy} (id, tenant_id, nazwisko, imie, data_urodzin, nr_telefonu, sms, telefon, komentarz) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [id, tenant_id, d.nazwisko || '', d.imie || '', dzienMiesiac, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || ''],
+          [id, tenant_id, d.nazwisko || '', d.imie || '', dataIso, d.telefon || '', d.sms || '', d.zgoda_tel || '', d.komentarz || ''],
           (errIns) => {
             if (errIns) return res.json({ status: 'error', message: 'Błąd INSERT do ' + nowyMiesiac + ': ' + errIns.message });
             db.query(
