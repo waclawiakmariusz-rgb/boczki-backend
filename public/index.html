@@ -11655,21 +11655,22 @@ function pokaz(id, b) {
 } */
 /*
 function pokaz(id, b) {
-    // --- 0. RBAC GUARD — Analiza tylko dla admin/megaadmin/manager ---
+    // --- 0. RBAC GUARD — menu Analiza tylko dla admin/megaadmin/manager ---
     // Defense in depth: nawet jeśli sidebar ukryty, ktoś może wywołać pokaz()
     // bezpośrednio (link, console, kod widgetu). Twarda blokada na froncie.
+    // 2026-05-04: usunięto rap_magazyn / rap_report — to moduł Magazyn, nie Analiza,
+    // recepcja musi widzieć stan kosmetyków przed sprzedażą.
     const __ANALIZA_RESTRICTED = new Set([
         'summary', 'monthly_report', 'dashboard',
         'yearly', 'costs', 'treatment_analysis', 'bi', 'zadania',
         'analiza-konsultacji', 'odprawa',
-        'widok-pracownicy-targety', 'widok-targety',
-        'rap_magazyn', 'rap_report'
+        'widok-pracownicy-targety', 'widok-targety'
     ]);
     if (__ANALIZA_RESTRICTED.has(id)) {
         const __rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
         if (!['admin', 'megaadmin', 'manager'].includes(__rola)) {
             console.warn('[RBAC] Zablokowano dostęp do', id, '— rola:', __rola);
-            alert('Brak uprawnień. Sekcje analityczne są dostępne tylko dla administratora i managera.');
+            alert('Brak uprawnień. Menu Analiza jest dostępne tylko dla administratora i managera.');
             return;
         }
     }
@@ -11804,21 +11805,22 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
 } */
 
 function pokaz(id, b) {
-    // --- 0. RBAC GUARD — Analiza tylko dla admin/megaadmin/manager ---
+    // --- 0. RBAC GUARD — menu Analiza tylko dla admin/megaadmin/manager ---
     // Defense in depth: nawet jeśli sidebar ukryty, ktoś może wywołać pokaz()
     // bezpośrednio (link, console, kod widgetu). Twarda blokada na froncie.
+    // 2026-05-04: usunięto rap_magazyn / rap_report — to moduł Magazyn, nie Analiza,
+    // recepcja musi widzieć stan kosmetyków przed sprzedażą.
     const __ANALIZA_RESTRICTED = new Set([
         'summary', 'monthly_report', 'dashboard',
         'yearly', 'costs', 'treatment_analysis', 'bi', 'zadania',
         'analiza-konsultacji', 'odprawa',
-        'widok-pracownicy-targety', 'widok-targety',
-        'rap_magazyn', 'rap_report'
+        'widok-pracownicy-targety', 'widok-targety'
     ]);
     if (__ANALIZA_RESTRICTED.has(id)) {
         const __rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
         if (!['admin', 'megaadmin', 'manager'].includes(__rola)) {
             console.warn('[RBAC] Zablokowano dostęp do', id, '— rola:', __rola);
-            alert('Brak uprawnień. Sekcje analityczne są dostępne tylko dla administratora i managera.');
+            alert('Brak uprawnień. Menu Analiza jest dostępne tylko dla administratora i managera.');
             return;
         }
     }
