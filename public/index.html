@@ -10930,7 +10930,7 @@ function otworzModalUrodzinZProfilu(editMode) {
     document.getElementById('birthday-modal-overlay').style.display = 'flex';
 }
 
-function zapiszUrodzinyZProfilu(e) {
+async function zapiszUrodzinyZProfilu(e) {
     e.preventDefault();
 
     const editMode = !!window.__profilUrodzinyEditMode && window.__profilUrodziny;
@@ -10947,13 +10947,32 @@ function zapiszUrodzinyZProfilu(e) {
         komentarz: document.getElementById('bm_komentarz').value
     };
 
-    // Tryb edycji wymaga id i starego miesiąca (do potencjalnego przeniesienia między tabelami)
+    if(!payload.data_ur) { alert("Data urodzenia jest wymagana!"); return; }
+
+    // Tryb edycji wymaga id i starego miesiąca (do potencjalnego przeniesienia między tabelami).
+    // Fallback: jeśli stary backend get_client_profile_data jeszcze nie wzbogacony (Node nie pullnął/
+    // nie restartowany), dociąga dane z osobnego endpointu get_client_birthday który JUŻ jest aktywny.
     if (editMode) {
+        if (!window.__profilUrodziny.id || !window.__profilUrodziny.miesiac) {
+            const klientNazwa = `${payload.imie} ${payload.nazwisko}`.trim();
+            try {
+                const r = await fetch(API_URL + '?action=get_client_birthday&klient=' + encodeURIComponent(klientNazwa));
+                const d = await r.json();
+                if (d && d.znaleziona && d.id && d.miesiac) {
+                    window.__profilUrodziny.id = d.id;
+                    window.__profilUrodziny.miesiac = d.miesiac;
+                } else {
+                    alert('Nie udało się odczytać aktualnego wpisu urodzin (id/miesiąc). Odśwież profil i spróbuj ponownie.');
+                    return;
+                }
+            } catch (err) {
+                alert('Błąd pobierania aktualnych danych urodzin: ' + (err.message || err));
+                return;
+            }
+        }
         payload.id = window.__profilUrodziny.id;
         payload.stary_miesiac = window.__profilUrodziny.miesiac;
     }
-
-    if(!payload.data_ur) { alert("Data urodzenia jest wymagana!"); return; }
 
     const btn = e.target.querySelector('button[type="submit"]');
     const oldText = btn.innerText;

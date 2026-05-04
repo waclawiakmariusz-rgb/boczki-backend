@@ -107,14 +107,31 @@ module.exports = (db) => {
             };
             MIESIACE.forEach(miesiac => {
               if (bdFound) { bdPending--; return; }
-              db.query(`SELECT imie, nazwisko, data_urodzin FROM \`${miesiac}\` WHERE tenant_id = ?`, [tenant_id], (bdErr, bdRows) => {
+              // Pobieramy też id + telefon/sms/zgoda/komentarz — potrzebne do edycji daty urodzin z profilu klienta
+              db.query(`SELECT id, imie, nazwisko, data_urodzin, nr_telefonu, sms, telefon, komentarz FROM \`${miesiac}\` WHERE tenant_id = ?`, [tenant_id], (bdErr, bdRows) => {
                 if (!bdFound && !bdErr && bdRows) {
                   for (const r of bdRows) {
                     const n = String(r.nazwisko || ''), im = String(r.imie || '');
                     if ((n + im).toLowerCase().replace(/\s/g, '') === szukany ||
                         (im + n).toLowerCase().replace(/\s/g, '') === szukany) {
                       bdFound = true;
-                      return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, urodziny: { znaleziona: true, data: formatDDMM(r.data_urodzin), miesiac } });
+                      return res.json({
+                        portfel: { saldo, historia },
+                        memo,
+                        retencja: retencjaData,
+                        urodziny: {
+                          znaleziona: true,
+                          id: r.id,
+                          miesiac,
+                          data: formatDDMM(r.data_urodzin),
+                          imie: r.imie,
+                          nazwisko: r.nazwisko,
+                          telefon: r.nr_telefonu || '',
+                          sms: r.sms || '',
+                          zgoda_tel: r.telefon || '',
+                          komentarz: r.komentarz || ''
+                        }
+                      });
                     }
                   }
                 }
