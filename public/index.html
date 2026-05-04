@@ -5406,24 +5406,38 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
                     </form>
                 </div>
 
-                <!-- Modal: dodawanie nowego typu zabiegu -->
+                <!-- Modal: zarządzanie typami zabiegów (dodawanie + usuwanie) -->
                 <div id="modal-nowy-typ" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
-                    <div style="background:#fff; border-radius:12px; padding:24px; width:90%; max-width:420px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-                        <h3 style="margin:0 0 16px; color:#1f2937;">Nowy typ zabiegu</h3>
+                    <div style="background:#fff; border-radius:12px; padding:24px; width:90%; max-width:480px; max-height:85vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+                        <h3 style="margin:0 0 16px; color:#1f2937;">Zarządzaj typami zabiegów</h3>
+
+                        <!-- Lista istniejących typów -->
+                        <div style="margin-bottom:18px;">
+                            <div style="font-size:13px; font-weight:600; color:#475569; margin-bottom:8px;">Istniejące typy:</div>
+                            <div id="lista-typow-zabiegow" style="display:flex; flex-direction:column; gap:6px; max-height:240px; overflow-y:auto;">
+                                <!-- generowane przez renderListaTypowWModalu() -->
+                            </div>
+                        </div>
+
+                        <hr style="border:none; border-top:1px solid #e2e8f0; margin:12px 0;">
+
+                        <div style="font-size:13px; font-weight:600; color:#475569; margin-bottom:8px;">+ Dodaj nowy typ:</div>
                         <div style="margin-bottom:12px;">
-                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Nazwa:</label>
+                            <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#64748b;">Nazwa:</label>
                             <input type="text" id="nowy_typ_nazwa" placeholder="np. trychologia" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px;">
                         </div>
-                        <div style="margin-bottom:12px;">
-                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Ikona (emoji):</label>
-                            <input type="text" id="nowy_typ_ikona" placeholder="🌿" maxlength="4" style="width:80px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:18px; text-align:center;">
-                        </div>
-                        <div style="margin-bottom:16px;">
-                            <label style="display:block; font-size:13px; font-weight:600; margin-bottom:4px;">Kolor:</label>
-                            <input type="color" id="nowy_typ_kolor" value="#64748b" style="width:80px; height:40px; padding:2px; border:1px solid #e2e8f0; border-radius:6px;">
+                        <div style="margin-bottom:12px; display:flex; gap:12px;">
+                            <div>
+                                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#64748b;">Ikona:</label>
+                                <input type="text" id="nowy_typ_ikona" placeholder="🌿" maxlength="4" style="width:80px; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:18px; text-align:center;">
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px; color:#64748b;">Kolor:</label>
+                                <input type="color" id="nowy_typ_kolor" value="#64748b" style="width:80px; height:40px; padding:2px; border:1px solid #e2e8f0; border-radius:6px;">
+                            </div>
                         </div>
                         <div style="display:flex; gap:8px; justify-content:flex-end;">
-                            <button type="button" onclick="zamknijModalNowyTyp()" style="padding:10px 16px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Anuluj</button>
+                            <button type="button" onclick="zamknijModalNowyTyp()" style="padding:10px 16px; background:#e5e7eb; border:none; border-radius:6px; cursor:pointer;">Zamknij</button>
                             <button type="button" onclick="zapiszNowyTyp()" class="btn-primary" style="padding:10px 16px;">Dodaj typ</button>
                         </div>
                     </div>
@@ -14140,7 +14154,53 @@ function renderTabelaZabiegow(zabiegi) {
             document.getElementById('nowy_typ_ikona').value = '';
             document.getElementById('nowy_typ_kolor').value = '#64748b';
             document.getElementById('modal-nowy-typ').style.display = 'flex';
+            renderListaTypowWModalu();
             document.getElementById('nowy_typ_nazwa').focus();
+        }
+
+        function renderListaTypowWModalu() {
+            const box = document.getElementById('lista-typow-zabiegow');
+            if (!box) return;
+            const typy = window.__typyZabiegow || [];
+            if (!typy.length) {
+                box.innerHTML = '<div style="color:#9ca3af; font-style:italic; font-size:13px;">Brak zdefiniowanych typów.</div>';
+                return;
+            }
+            box.innerHTML = typy.map(t => {
+                const ikona = t.ikona || '';
+                const kolor = t.kolor || '#64748b';
+                return `
+                    <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; background:${kolor}11;">
+                        <span style="display:inline-flex; align-items:center; gap:8px; font-weight:600; color:${kolor};">
+                            <span style="font-size:18px;">${ikona}</span>
+                            <span>${t.nazwa}</span>
+                        </span>
+                        <button type="button" onclick="usunTyp(${t.id}, '${String(t.nazwa).replace(/'/g, "\\'")}')" title="Usuń typ" style="background:none; border:none; color:#dc2626; font-size:18px; cursor:pointer; padding:4px 8px; border-radius:4px;">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function usunTyp(id, nazwa) {
+            if (!confirm(`Czy na pewno usunąć typ „${nazwa}"?\n\nUWAGA: jeśli któryś zabieg w cenniku ma przypisany ten typ, usunięcie zostanie zablokowane — najpierw zmień im typ.`)) return;
+            const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+            const session_token = localStorage.getItem('boczki_session_token') || '';
+            fetch(`/api/typy-zabiegow/${id}?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`, {
+                method: 'DELETE'
+            })
+            .then(r => r.json())
+            .then(d => {
+                if (d.status === 'ok') {
+                    loadTypyZabiegow(() => {
+                        renderListaTypowWModalu();
+                        // Przerysuj też tabelę zabiegów żeby badge zniknął jeśli była ostatnia referencja
+                        if (typeof pobierzSlownikSprzedazy === 'function') pobierzSlownikSprzedazy();
+                    });
+                } else {
+                    alert(d.message || 'Nie udało się usunąć typu.');
+                }
+            })
+            .catch(err => alert('Błąd: ' + err.message));
         }
 
         function zamknijModalNowyTyp() {
@@ -14162,9 +14222,13 @@ function renderTabelaZabiegow(zabiegi) {
             .then(r => r.json())
             .then(d => {
                 if (d.status === 'ok') {
-                    zamknijModalNowyTyp();
+                    // Wyczyść formularz dodawania, ale modal zostaje otwarty żeby user mógł dodać kolejne lub usunąć
+                    document.getElementById('nowy_typ_nazwa').value = '';
+                    document.getElementById('nowy_typ_ikona').value = '';
+                    document.getElementById('nowy_typ_kolor').value = '#64748b';
                     loadTypyZabiegow(() => {
-                        // Po załadowaniu — automatycznie zaznacz nowo dodany typ w dropdownie głównego formularza
+                        renderListaTypowWModalu();
+                        // Automatycznie zaznacz nowo dodany typ w dropdownie głównego formularza
                         const sel = document.getElementById('def_typ_zabiegu');
                         if (sel) sel.value = nazwa;
                     });
