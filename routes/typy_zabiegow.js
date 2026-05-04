@@ -13,7 +13,7 @@
 // rekordów. Migracja jednorazowa wypełnia kolumny dla danych sprzed tej daty.
 
 const express = require('express');
-const { validateTenantAccess } = require('./sessions');
+// Walidacja sesji odbywa się w globalnym middleware (server.js). Tutaj tylko sanity tenant_id.
 
 const DEFAULT_TYPY = [
   { nazwa: 'twarz',                ikona: '💆‍♀️', kolor: '#ec4899', kolejnosc: 1 },
@@ -25,17 +25,13 @@ const DEFAULT_TYPY = [
   { nazwa: 'masaże',               ikona: '👐',   kolor: '#84cc16', kolejnosc: 7 },
 ];
 
+// Soft auth — wymagamy tylko tenant_id (jak inne endpointy CRUD typu add_sales_def
+// itd.). Twarda walidacja sesji odbywa się w globalnym middleware w server.js
+// gdy ENFORCE_SESSION=true. Tutaj tylko sanity check że tenant_id istnieje.
 function auth(req, res) {
   const tenant_id = req.query.tenant_id || req.body?.tenant_id;
-  const token     = req.query.session_token || req.body?.session_token ||
-                    req.headers['x-session-token'];
-  if (!tenant_id || !token) {
-    res.status(401).json({ status: 'error', message: 'Brak autoryzacji.' });
-    return null;
-  }
-  const v = validateTenantAccess(token, tenant_id);
-  if (!v.valid) {
-    res.status(401).json({ status: 'error', message: 'Sesja wygasła.' });
+  if (!tenant_id) {
+    res.status(400).json({ status: 'error', message: 'Brak tenant_id.' });
     return null;
   }
   return tenant_id;
