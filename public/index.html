@@ -19421,23 +19421,23 @@ if (inputNazwaCheck) {
 
                 const tytulEsc = String(r.tytul || '').replace(/'/g, "&#39;");
                 let actions = '';
+                // Reguła: 🗑 Permanentne usunięcie TYLKO w tab Zarchiwizowane.
+                // Aktywne/Wykonane mogą tylko archiwizować (📦) — workflow:
+                //   Aktywne → Wykonane/Archiwum → (dopiero w archiwum) → DELETE permanentny
                 if (r.status === 'AKTYWNE') {
                     actions = `
                         <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_editOpen('${r.id}')" title="Edytuj">✏️</button>
                         <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj">📦</button>
-                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;
                 } else if (r.status === 'WYKONANE') {
-                    // Wykonane: można przywrócić do aktywnych, archiwizować, usunąć permanentnie
                     actions = `
                         <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
                         <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj (status: zarchiwizowane)">📦</button>
-                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="USUŃ PERMANENTNIE z bazy (nieodwracalne!)" style="color:#dc2626;">🗑</button>
                     `;
                 } else {
-                    // Zarchiwizowane: można tylko przywrócić lub usunąć (archiwum to już końcowy stan)
+                    // Zarchiwizowane — JEDYNE miejsce gdzie można fizycznie usunąć rekord z bazy
                     actions = `
                         <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
