@@ -9210,6 +9210,17 @@ function ds_loadZadania(rola, imie) {
     const countEl = document.getElementById('ds-zadania-count');
     if (!sec || !list) return;
 
+    // Single-flight guard — zapobiega zalewowi fetchy przy szybkich rerenderowaniach
+    // (Pulpit, otwieranie/zamykanie modali, archive→reload). Drugi call w trakcie 1.→ignore.
+    if (window.__ds_zd_loading) return;
+    // Throttle 5s — kolejny load w ciągu 5s od ostatniego sukcesu wykorzystuje cache
+    if (window.__ds_zd_lastLoadedAt && (Date.now() - window.__ds_zd_lastLoadedAt) < 5000) {
+        // Cache świeży — pomijaj fetch, tylko re-render z window.__ds_zd_all
+        if (window.__ds_zd_all && typeof ds_zd_renderTabs === 'function') ds_zd_renderTabs();
+        return;
+    }
+    window.__ds_zd_loading = true;
+
     const r = String(rola || '').toLowerCase().trim();
     const isManager = ['admin', 'megaadmin', 'manager'].includes(r);
     const isRecepcja = (r === 'recepcja');
@@ -9243,10 +9254,20 @@ function ds_loadZadania(rola, imie) {
         const all = res.data || [];
         if (countEl) countEl.textContent = all.length ? `(${all.length})` : '';
         window.__ds_zd_all = all;
-        window.__ds_zd_isRecepcja = isReceiver;  // recepcja LUB praktykantka — wszyscy widzą "✓ Wykonane"
+        window.__ds_zd_isRecepcja = isReceiver;
+        window.__ds_zd_lastLoadedAt = Date.now();
         ds_zd_renderTabs();
+        // Sidebar badge — bez osobnego fetcha (reuse cache __ds_zd_all)
+        const badge = document.getElementById('sidebar-zadania-badge');
+        if (badge && isManager) {
+            const n = all.length;
+            if (n > 0) { badge.textContent = String(n); badge.style.display = ''; }
+            else { badge.style.display = 'none'; }
+        }
     }).catch(e => {
         list.innerHTML = `<div style="color:#dc2626; font-size:13px; padding:8px 0;">Błąd: ${escHtml(e.message||'')}</div>`;
+    }).finally(() => {
+        window.__ds_zd_loading = false;
     });
 
     // Drugi widok: zadania zlecone przeze mnie (recepcja+manager+admin; praktykantka i tak nie zleca)
@@ -9696,28 +9717,30 @@ function ds_zadanieComplete(id) {
 function zd_refreshSidebarBadge() {
     const badge = document.getElementById('sidebar-zadania-badge');
     if (!badge) return;
-    const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
-    const sToken = localStorage.getItem('boczki_session_token') || '';
     const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
     if (!['admin','megaadmin','manager'].includes(rola)) { badge.style.display = 'none'; return; }
-    if (!tenant_id) { badge.style.display = 'none'; return; }
-    fetch(API_URL + '/zadania', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-session-token': sToken },
-        body: JSON.stringify({ action: 'list', status: 'AKTYWNE', tenant_id })
-    }).then(r => r.json()).then(res => {
-        if (res.status !== 'success') { badge.style.display = 'none'; return; }
-        const n = (res.data || []).length;
+
+    // Reuse cache window.__ds_zd_all (świeży po ds_loadZadania, max 5min stary).
+    // Eliminuje duplikat fetcha — wcześniej każde wywołanie strzelało osobny request
+    // do /api/zadania identyczny z ds_loadZadania.
+    if (window.__ds_zd_all && window.__ds_zd_lastLoadedAt && (Date.now() - window.__ds_zd_lastLoadedAt) < 300000) {
+        const n = window.__ds_zd_all.length;
         if (n > 0) { badge.textContent = String(n); badge.style.display = ''; }
         else { badge.style.display = 'none'; }
-    }).catch(() => { badge.style.display = 'none'; });
+        return;
+    }
+    // Cache stary — wywołaj pełen ds_loadZadania (single-flight guard zabezpieczy przed flood'em)
+    const imie = localStorage.getItem('boczki_pracownik_imie') || '';
+    if (typeof ds_loadZadania === 'function' && imie) ds_loadZadania(rola, imie);
 }
 
-// Auto-odświeżanie co 60s gdy aplikacja zalogowana
+// Auto-odświeżanie co 5 minut gdy aplikacja zalogowana
+// (było 60s — 6× więcej requestów do /api/zadania, niepotrzebne dla widget'u który się
+// rzadko zmienia. 5 min = wystarczy świeżość, mniej obciążenia serwera + przeglądarki).
 if (typeof window.__zdBadgeInterval === 'undefined') {
     window.__zdBadgeInterval = setInterval(() => {
         if (localStorage.getItem('boczki_pracownik_imie')) zd_refreshSidebarBadge();
-    }, 60000);
+    }, 300000);
 }
 
 // ═══════════════════════════════════════════
