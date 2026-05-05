@@ -12185,17 +12185,19 @@ function pokaz(id, b) {
 	  
 	  function initApp() {
     console.log("🚀 Logowanie udane. Pobieram dane startowe...");
-    
-    // Teraz dopiero pobieramy dane z serwera:
-    pobierzDane();             // Magazyn
-    pobierzSlownik();          // Słownik firm/modeli
-    pobierzSlownikSprzedazy(); // Pracownicy, Zabiegi
-    zaladujRabaty();           // <--- PRZENIESIONE TUTAJ (Rabaty)
-    
-	
-	an_uruchomAplikacje();     // Budzi moduł analityczny i pobiera wykresy
+
+    // ── KRYTYCZNE — ładowane od razu (potrzebne przy pierwszym widoku) ──
+    pobierzDane();             // Magazyn (ds-kpi-section + Stan Magazynowy)
+    pobierzSlownikSprzedazy(); // Pracownicy + Zabiegi + cennik (potrzebne dla sprzedaży)
+
+    // ── DEFER — non-critical, dosypuje się w tle żeby user szybciej zobaczył UI ──
+    // Słownik firm/modeli — używany tylko w sekcji Magazyn → Przyjęcie towaru
+    setTimeout(() => { if (typeof pobierzSlownik === 'function') pobierzSlownik(); }, 800);
+    // Rabaty — używane przy sprzedaży, nie od razu po logowaniu
+    setTimeout(() => { if (typeof zaladujRabaty === 'function') zaladujRabaty(); }, 1200);
+    // Moduł analityczny — pobiera get_months, nie potrzebny przed wejściem w Analiza
+    setTimeout(() => { if (typeof an_uruchomAplikacje === 'function') an_uruchomAplikacje(); }, 1800);
     // Klienci pobiorą się automatycznie, gdy otworzy się zakładka 'sprzedaz'
-    // (funkcja 'zaloguj' wywołuje 'pokaz("sprzedaz")', a to wywołuje ładowanie klientów)
 }
 
         // --- OBSŁUGA HISTORII I KARTOTEKI ---
@@ -24324,8 +24326,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return false;
     };
 
-    // (1) Eager — gdy DOM już ma appContainer pokazany (re-login, hot-reload)
-    tryLoadGuide();
+    // (1) Eager z defer 2.5s — Esti potrzebny dopiero przy otwarciu widget'u (nie przy logowaniu).
+    // 100KB HTML + DOMParser na main thread może blokować — odraczamy żeby user szybciej zobaczył UI.
+    setTimeout(() => { tryLoadGuide(); }, 2500);
 
     // (2) MutationObserver — gdy user dopiero zaloguje się po init
     if (!estGuideLoaded && appContainer) {
