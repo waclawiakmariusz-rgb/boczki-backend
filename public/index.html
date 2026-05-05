@@ -9841,13 +9841,45 @@ function zaladujPulpit() {
     });
 
     // ── Wymaga uwagi: niski stan + zadatki + urodziny + brak dokumentów ──
+    // Optymalizacja 2026-05-05: cache 60s + defer 800ms (4 ciężkie fetche jednocześnie
+    // blokowały UI; user widział „...". Teraz pulpit renderuje się od razu, sekcja
+    // Wymaga uwagi dosypuje się chwilę później). Cache w window — przy szybkich
+    // nawigacjach Pulpit↔inne nie hammeruje serwera.
+    const cntElPlaceholder = document.getElementById('ds-uwaga-count');
+    const listElPlaceholder = document.getElementById('ds-attention-list');
+    if (cntElPlaceholder) cntElPlaceholder.textContent = '…';
+    if (listElPlaceholder && !listElPlaceholder.innerHTML.trim()) {
+        listElPlaceholder.innerHTML = '<div style="color:#94a3b8;font-size:13px;padding:12px 0;">Sprawdzam…</div>';
+    }
+
+    // Cache window (TTL 60s) — drugi raz Pulpit otwarty = zero fetchy
+    if (window.__ds_uwaga_cache && (Date.now() - window.__ds_uwaga_cache.t) < 60000) {
+        // Re-render z cache, bez fetchy
+        setTimeout(() => __ds_renderUwaga(window.__ds_uwaga_cache.data), 50);
+        return;
+    }
+
+    // Defer 800ms — dajemy czas main thread'owi narysować pulpit, dopiero potem ciężkie fetche
+    setTimeout(() => {
     Promise.all([
         fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'rap_getInventory' }) }).then(r=>r.json()).catch(()=>({status:'error',data:[]})),
         fetch(API_URL + '?action=get_all_deposits').then(r=>r.json()).catch(()=>[]),
         fetch(API_URL + '?action=upcoming_birthdays').then(r=>r.json()).catch(()=>({lista:[]})),
         fetch(API_URL + '?action=get_clients').then(r=>r.json()).catch(()=>({klienci:[]}))
     ]).then(([inv, deposits, urodziny, clientsResp]) => {
-        const items = [];
+        window.__ds_uwaga_cache = { t: Date.now(), data: { inv, deposits, urodziny, clientsResp } };
+        __ds_renderUwaga({ inv, deposits, urodziny, clientsResp });
+    });
+    }, 800);
+}
+
+function __ds_renderUwaga(payload) {
+    const { inv, deposits, urodziny, clientsResp } = payload;
+    const fmtPLN = v => {
+        const n = parseFloat(v) || 0;
+        return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+    };
+    const items = [];
 
         const invData = (inv && inv.data) ? inv.data : [];
         const lowStock = invData.filter(row => {
@@ -9921,7 +9953,6 @@ function zaladujPulpit() {
                 ).join('');
             }
         }
-    });
 }
 
 
