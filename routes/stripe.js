@@ -12,14 +12,18 @@ try {
   console.warn('[stripe] Stripe SDK niedostępny:', e.message);
 }
 
-let wyslijLinkRejestracji, powiadomAdmina;
+let wyslijLinkRejestracji, powiadomAdmina, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment;
 try {
   const mailer = require('./mailer');
   wyslijLinkRejestracji = mailer.wyslijLinkRejestracji;
   powiadomAdmina = mailer.powiadomAdmina;
+  wyslijOstrzezenieOPlatnosci = mailer.wyslijOstrzezenieOPlatnosci;
+  powiadomAdminaOFailedPayment = mailer.powiadomAdminaOFailedPayment;
 } catch (e) {
   wyslijLinkRejestracji = async () => { throw new Error('Mailer nie skonfigurowany.'); };
   powiadomAdmina = async () => {};
+  wyslijOstrzezenieOPlatnosci = async () => {};
+  powiadomAdminaOFailedPayment = async () => {};
 }
 
 let wystawFakture;
@@ -37,6 +41,17 @@ const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Est
 const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
 
 module.exports = (db) => {
+
+  // Idempotentna migracja: kolumna data_grace_until — koniec okresu łaski
+  // dla salonów ze status='opóźniony' (po nieudanej płatności Stripe).
+  db.query(
+    `ALTER TABLE Licencje ADD COLUMN data_grace_until DATETIME NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[stripe] ALTER Licencje data_grace_until:', err.message);
+      }
+    }
+  );
 
   // ─── POST /api/stripe/create-checkout ────────────────────────
   // Tworzy sesję płatności Stripe i przekierowuje klienta
@@ -193,7 +208,7 @@ module.exports = (db) => {
       );
     }
 
-    // ─── invoice.paid — przedłuż licencję o miesiąc ─────────────
+    // ─── invoice.paid — przedłuż licencję o miesiąc + wyzeruj grace ──
     if (event.type === 'invoice.paid') {
       const invoice = event.data.object;
       const customerEmail = invoice.customer_email;
@@ -201,12 +216,51 @@ module.exports = (db) => {
         db.query(
           `UPDATE Licencje
            SET data_waznosci = DATE_ADD(GREATEST(IFNULL(data_waznosci, NOW()), NOW()), INTERVAL 1 MONTH),
-               status = 'aktywny'
+               status = 'aktywny',
+               data_grace_until = NULL
            WHERE email = ? LIMIT 1`,
           [customerEmail],
           (err, result) => {
             if (err) console.error('[stripe webhook] Błąd przedłużenia licencji:', err.message);
             else console.log(`[stripe webhook] Licencja przedłużona dla: ${customerEmail} (${result.affectedRows} rekord)`);
+          }
+        );
+      }
+    }
+
+    // ─── invoice.payment_failed — zaznacz opóźnienie + 7 dni grace + emaile ──
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object;
+      const customerEmail = invoice.customer_email;
+      const kwota = invoice.amount_due
+        ? (invoice.amount_due / 100).toFixed(2) + ' ' + (invoice.currency || 'pln').toUpperCase()
+        : null;
+      if (customerEmail) {
+        db.query(
+          `UPDATE Licencje
+           SET status = 'opóźniony',
+               data_grace_until = DATE_ADD(NOW(), INTERVAL 7 DAY)
+           WHERE email = ? LIMIT 1`,
+          [customerEmail],
+          (err, result) => {
+            if (err) {
+              console.error('[stripe webhook] Błąd ustawienia opóźnienia:', err.message);
+              return;
+            }
+            console.log(`[stripe webhook] Status 'opóźniony' + 7 dni grace dla: ${customerEmail} (${result.affectedRows} rekord)`);
+            // Pobierz nazwę salonu i wyślij email do klienta + admina
+            db.query(
+              `SELECT nazwa_salonu, data_grace_until FROM Licencje WHERE email = ? LIMIT 1`,
+              [customerEmail],
+              (e, rows) => {
+                const nazwa_salonu = (rows && rows[0] && rows[0].nazwa_salonu) || '';
+                const data_grace_until = (rows && rows[0] && rows[0].data_grace_until) || null;
+                wyslijOstrzezenieOPlatnosci({ email: customerEmail, nazwa_salonu, data_grace_until })
+                  .catch(err => console.error('[stripe webhook] Email do klienta error:', err.message));
+                powiadomAdminaOFailedPayment({ email: customerEmail, nazwa_salonu, kwota })
+                  .catch(err => console.error('[stripe webhook] Email do admina error:', err.message));
+              }
+            );
           }
         );
       }
