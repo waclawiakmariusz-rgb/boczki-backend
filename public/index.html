@@ -19428,11 +19428,20 @@ if (inputNazwaCheck) {
                         <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj">📦</button>
                         <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
                     `;
-                } else {
+                } else if (r.status === 'WYKONANE') {
+                    // Wykonane: można przywrócić do aktywnych, archiwizować, usunąć permanentnie
                     actions = `
                         <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
                         <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
-                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="Usuń" style="color:#dc2626;">🗑</button>
+                        <button class="zd-row-action" onclick="zd_archive('${r.id}')" title="Archiwizuj (status: zarchiwizowane)">📦</button>
+                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="USUŃ PERMANENTNIE z bazy (nieodwracalne!)" style="color:#dc2626;">🗑</button>
+                    `;
+                } else {
+                    // Zarchiwizowane: można tylko przywrócić lub usunąć (archiwum to już końcowy stan)
+                    actions = `
+                        <button class="zd-row-action" onclick="zd_openComments('${r.id}', '${escHtml(tytulEsc)}')" title="Komentarze">💬${r.komentarzy ? ' ' + r.komentarzy : ''}</button>
+                        <button class="zd-row-action" onclick="zd_restore('${r.id}')" title="Przywróć do aktywnych">↩️ Przywróć</button>
+                        <button class="zd-row-action" onclick="zd_delete('${r.id}')" title="USUŃ PERMANENTNIE z bazy (nieodwracalne!)" style="color:#dc2626;">🗑</button>
                     `;
                 }
 
@@ -19589,7 +19598,21 @@ if (inputNazwaCheck) {
         }
 
         function zd_delete(id) {
-            if (!confirm('Usunąć zadanie na stałe? Operacja nieodwracalna.')) return;
+            // Mocny confirm — usunięcie jest fizyczne (DELETE FROM Zadania), bez backupu nie do odzyskania.
+            // Często mylone z „📦 Archiwizuj" które tylko zmienia status.
+            const zadanie = (window.zd_data || []).find(z => z.id === id);
+            const tytul = zadanie ? zadanie.tytul : '(nieznane)';
+            const krok1 = confirm(
+                '⚠️ UWAGA — USUWANIE PERMANENTNE\n\n' +
+                'Zadanie: „' + tytul + '"\n\n' +
+                'Zostanie FIZYCZNIE wymazane z bazy danych. ' +
+                'NIE da się go już przywrócić bez backupu SQL.\n\n' +
+                'Jeśli chcesz schować zadanie z listy aktywnych — użyj „📦 Archiwizuj" zamiast tego.\n\n' +
+                'Kontynuować usuwanie?'
+            );
+            if (!krok1) return;
+            const krok2 = confirm('Ostatnia szansa — naprawdę usunąć „' + tytul + '" na stałe?');
+            if (!krok2) return;
             zd_apiCall({ action: 'delete', id })
                 .then(res => { if (res.status !== 'success') alert(res.message || 'Błąd'); zd_loadList(); });
         }
