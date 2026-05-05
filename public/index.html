@@ -8843,15 +8843,38 @@ function zapiszDefinicjeRabatu() {
     const p=document.getElementById('password').value; 
     
     fetch(API_URL, { method:"POST", body:JSON.stringify({action:'login',login:l,haslo:p}) })
-    .then(r=>r.json()).then(d=>{ 
+    .then(r=>r.json()).then(d=>{
         if(d.status==='success'){
             localStorage.setItem('boczki_user', d.role);
             localStorage.setItem('boczki_tenant_id', d.tenant_id);
             if (d.session_token) localStorage.setItem('boczki_session_token', d.session_token);
+            // Ostrzeżenie o opóźnionej płatności (status='opóźniony', grace nie minął)
+            if (d.warningPlatnosc) {
+                localStorage.setItem('boczki_warning_platnosc', d.warningPlatnosc);
+            } else {
+                localStorage.removeItem('boczki_warning_platnosc');
+            }
             zaloguj(d.role);
-        } 
+        }
         else { alert("Błąd: " + d.message); }
     }).catch(err => alert("Błąd serwera: " + err));
+}
+
+// Banner ostrzegawczy o opóźnionej płatności (po zalogowaniu, gdy grace period aktywny)
+function pokazBannerPlatnosci() {
+    const msg = localStorage.getItem('boczki_warning_platnosc');
+    if (!msg) return;
+    if (document.getElementById('platnosc-banner')) return; // już pokazany
+    const banner = document.createElement('div');
+    banner.id = 'platnosc-banner';
+    banner.style.cssText = 'position:fixed; top:0; left:0; right:0; z-index:9998; background:linear-gradient(90deg, #dc2626 0%, #b91c1c 100%); color:#fff; padding:10px 20px; text-align:center; font-size:13.5px; font-weight:600; box-shadow:0 4px 12px rgba(0,0,0,0.2); display:flex; align-items:center; justify-content:center; gap:14px;';
+    banner.innerHTML = `
+        <span>⚠️ ${msg}</span>
+        <a href="/billing.html" target="_blank" style="background:#fff; color:#b91c1c; padding:6px 14px; border-radius:6px; text-decoration:none; font-weight:700;">💳 Zaktualizuj płatność</a>
+        <button onclick="document.getElementById('platnosc-banner').remove(); document.body.style.paddingTop='';" style="background:transparent; border:1px solid rgba(255,255,255,0.5); color:#fff; padding:5px 10px; border-radius:6px; cursor:pointer; font-size:12px;">×</button>
+    `;
+    document.body.appendChild(banner);
+    document.body.style.paddingTop = '40px'; // żeby banner nie zasłaniał top menu
 }
 
 // ─── RESET HASŁA ─────────────────────────────────────────────
@@ -12228,6 +12251,8 @@ function pokaz(id, b) {
     setTimeout(() => { if (typeof zaladujRabaty === 'function') zaladujRabaty(); }, 1200);
     // Moduł analityczny — pobiera get_months, nie potrzebny przed wejściem w Analiza
     setTimeout(() => { if (typeof an_uruchomAplikacje === 'function') an_uruchomAplikacje(); }, 1800);
+    // Banner ostrzegawczy o opóźnionej płatności (status='opóźniony') — z localStorage po logowaniu
+    setTimeout(() => { if (typeof pokazBannerPlatnosci === 'function') pokazBannerPlatnosci(); }, 500);
     // Klienci pobiorą się automatycznie, gdy otworzy się zakładka 'sprzedaz'
 }
 

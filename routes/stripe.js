@@ -42,13 +42,22 @@ const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
 
 module.exports = (db) => {
 
-  // Idempotentna migracja: kolumna data_grace_until — koniec okresu łaski
-  // dla salonów ze status='opóźniony' (po nieudanej płatności Stripe).
+  // Idempotentne migracje:
+  // • data_grace_until — koniec okresu łaski po nieudanej płatności
+  // • stripe_customer_id — id klienta Stripe (cus_xxx), potrzebne dla Customer Portal
   db.query(
     `ALTER TABLE Licencje ADD COLUMN data_grace_until DATETIME NULL`,
     (err) => {
       if (err && !/Duplicate column/i.test(err.message)) {
         console.error('[stripe] ALTER Licencje data_grace_until:', err.message);
+      }
+    }
+  );
+  db.query(
+    `ALTER TABLE Licencje ADD COLUMN stripe_customer_id VARCHAR(100) NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[stripe] ALTER Licencje stripe_customer_id:', err.message);
       }
     }
   );
@@ -208,18 +217,20 @@ module.exports = (db) => {
       );
     }
 
-    // ─── invoice.paid — przedłuż licencję o miesiąc + wyzeruj grace ──
+    // ─── invoice.paid — przedłuż licencję o miesiąc + wyzeruj grace + zapisz customer_id ──
     if (event.type === 'invoice.paid') {
       const invoice = event.data.object;
       const customerEmail = invoice.customer_email;
+      const customerId = invoice.customer || null; // cus_xxxxxxxxx
       if (customerEmail) {
         db.query(
           `UPDATE Licencje
            SET data_waznosci = DATE_ADD(GREATEST(IFNULL(data_waznosci, NOW()), NOW()), INTERVAL 1 MONTH),
                status = 'aktywny',
-               data_grace_until = NULL
+               data_grace_until = NULL,
+               stripe_customer_id = COALESCE(stripe_customer_id, ?)
            WHERE email = ? LIMIT 1`,
-          [customerEmail],
+          [customerId, customerEmail],
           (err, result) => {
             if (err) console.error('[stripe webhook] Błąd przedłużenia licencji:', err.message);
             else console.log(`[stripe webhook] Licencja przedłużona dla: ${customerEmail} (${result.affectedRows} rekord)`);
@@ -232,6 +243,7 @@ module.exports = (db) => {
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object;
       const customerEmail = invoice.customer_email;
+      const customerId = invoice.customer || null;
       const kwota = invoice.amount_due
         ? (invoice.amount_due / 100).toFixed(2) + ' ' + (invoice.currency || 'pln').toUpperCase()
         : null;
@@ -239,9 +251,10 @@ module.exports = (db) => {
         db.query(
           `UPDATE Licencje
            SET status = 'opóźniony',
-               data_grace_until = DATE_ADD(NOW(), INTERVAL 7 DAY)
+               data_grace_until = DATE_ADD(NOW(), INTERVAL 7 DAY),
+               stripe_customer_id = COALESCE(stripe_customer_id, ?)
            WHERE email = ? LIMIT 1`,
-          [customerEmail],
+          [customerId, customerEmail],
           (err, result) => {
             if (err) {
               console.error('[stripe webhook] Błąd ustawienia opóźnienia:', err.message);

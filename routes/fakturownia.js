@@ -115,4 +115,51 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
   });
 }
 
-module.exports = { wystawFakture };
+/**
+ * Pobiera listę faktur klienta (po emailu nabywcy).
+ * @param {string} email - email klienta którego faktury chcemy zobaczyć
+ * @returns {Promise<Array>} - lista faktur z polami: id, numer, data, kwota_brutto, status, link_pdf
+ */
+async function pobierzFaktury(email) {
+  const token     = TOKEN();
+  const subdomain = SUBDOMAIN();
+  if (!token || !subdomain) throw new Error('Brak konfiguracji Fakturownia.');
+  if (!email) return [];
+
+  return new Promise((resolve, reject) => {
+    const path = `/invoices.json?api_token=${encodeURIComponent(token)}&buyer_email=${encodeURIComponent(email)}&period=last_2_years`;
+    const opts = {
+      hostname: `${subdomain}.fakturownia.pl`,
+      path,
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    };
+    const req = https.request(opts, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode < 200 || res.statusCode >= 300) {
+          return reject(new Error(`Fakturownia GET invoices HTTP ${res.statusCode}: ${data.slice(0, 200)}`));
+        }
+        try {
+          const json = JSON.parse(data);
+          const lista = (Array.isArray(json) ? json : []).map(f => ({
+            id:           f.id,
+            numer:        f.number || '',
+            data:         f.issue_date || f.sell_date || '',
+            kwota_brutto: f.price_gross_with_discount || f.price_gross || '0.00',
+            status:       f.status || '',
+            link_pdf:     f.view_url ? f.view_url + '.pdf' : null,
+          }));
+          resolve(lista);
+        } catch (e) {
+          reject(new Error('Fakturownia parse error: ' + data.slice(0, 200)));
+        }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+module.exports = { wystawFakture, pobierzFaktury };

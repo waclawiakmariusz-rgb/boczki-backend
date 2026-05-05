@@ -491,25 +491,25 @@
     <!-- Faktury -->
     <div class="invoices-card">
       <h3>🧾 Historia faktur</h3>
-      <div class="invoices-placeholder">
-        <div class="ph-icon">📄</div>
-        <p>
-          Twoje faktury VAT pojawią się tutaj automatycznie<br>
-          po każdej opłaconej płatności.<br>
-          <span style="font-size:.8rem; margin-top:6px; display:block; opacity:.7;">
-            Faktury są również wysyłane mailem na Twój adres e-mail po każdej płatności.
-          </span>
-        </p>
+      <div id="invoices-content">
+        <div class="invoices-placeholder">
+          <div class="ph-icon">📄</div>
+          <p>Pobieram faktury…</p>
+        </div>
       </div>
     </div>
 
-    <!-- Anulowanie -->
+    <!-- Zarządzanie płatnością — Stripe Customer Portal -->
     <div class="cancel-card">
       <div class="cancel-info">
-        <h4>Anulowanie subskrypcji</h4>
-        <p>Chcesz zrezygnować z Estelio? Możesz anulować w dowolnym momencie.<br>Dostęp pozostaje aktywny do końca opłaconego okresu.</p>
+        <h4>💳 Zarządzaj płatnością i subskrypcją</h4>
+        <p>
+          W panelu Stripe możesz: <strong>zaktualizować kartę</strong> (gdy karta wygasa lub się zmieniła),
+          pobrać historię paragonów Stripe, anulować subskrypcję.<br>
+          Dostęp pozostaje aktywny do końca opłaconego okresu.
+        </p>
       </div>
-      <button class="btn-cancel" onclick="anulujSubskrypcje()">Anuluj subskrypcję</button>
+      <button class="btn-cancel" onclick="otworzPortalStripe()" style="background:#6366f1;">💳 Otwórz panel Stripe</button>
     </div>
 
   </main>
@@ -565,6 +565,7 @@
       localStorage.setItem(TOKEN_KEY, d.token);
       pokażDashboard(d.salon);
       wczytajInfo();
+      wczytajFaktury();
     } catch {
       err.textContent = 'Błąd połączenia z serwerem.';
       err.style.display = 'block';
@@ -634,10 +635,52 @@
     document.getElementById('dc-miasto').textContent  = s.miasto  || '—';
   }
 
-  // ── Anulowanie ─────────────────────────────────────────────────
-  function anulujSubskrypcje() {
-    // Stripe Customer Portal — zostanie podpięty gdy Stripe będzie aktywny
-    alert('Aby anulować subskrypcję, napisz na kontakt@estelio.com.pl\n\nWkrótce udostępnimy samodzielne anulowanie bezpośrednio w tym panelu.');
+  // ── Stripe Customer Portal (anulowanie + update karty + pobranie paragonów) ──
+  async function otworzPortalStripe() {
+    try {
+      const r = await fetch('/api/billing/portal-session', {
+        method: 'POST',
+        headers: apiHeaders()
+      });
+      const d = await r.json();
+      if (d.status === 'success' && d.url) {
+        window.location.href = d.url; // przekieruj do Stripe Customer Portal
+      } else {
+        alert(d.message || 'Nie udało się otworzyć panelu Stripe.');
+      }
+    } catch (e) {
+      alert('Błąd: ' + e.message);
+    }
+  }
+
+  // ── Historia faktur z Fakturownia.pl ─────────────────────────────
+  async function wczytajFaktury() {
+    const box = document.getElementById('invoices-content');
+    if (!box) return;
+    try {
+      const r = await fetch('/api/billing/invoices', { headers: apiHeaders() });
+      const d = await r.json();
+      if (d.status !== 'success') {
+        box.innerHTML = '<div class="invoices-placeholder"><div class="ph-icon">⚠️</div><p>Nie udało się pobrać faktur.<br><span style="font-size:.8rem;">' + (d.message || '') + '</span></p></div>';
+        return;
+      }
+      const faktury = d.faktury || [];
+      if (!faktury.length) {
+        box.innerHTML = '<div class="invoices-placeholder"><div class="ph-icon">📄</div><p>Brak faktur.<br><span style="font-size:.8rem; opacity:.7;">Pierwsza faktura pojawi się po opłaconej płatności.</span></p></div>';
+        return;
+      }
+      let html = '<table style="width:100%; border-collapse:collapse; font-size:.9rem;"><thead><tr style="border-bottom:1px solid #ede6d8;"><th style="text-align:left; padding:10px 8px; color:#7a6e66; font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px;">Numer</th><th style="text-align:left; padding:10px 8px; color:#7a6e66; font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px;">Data</th><th style="text-align:right; padding:10px 8px; color:#7a6e66; font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px;">Kwota</th><th style="text-align:center; padding:10px 8px; color:#7a6e66; font-weight:600; font-size:.8rem; text-transform:uppercase; letter-spacing:.5px;">PDF</th></tr></thead><tbody>';
+      faktury.forEach(f => {
+        const dataStr = f.data ? new Date(f.data).toLocaleDateString('pl-PL') : '—';
+        const kwota = parseFloat(f.kwota_brutto || 0).toFixed(2) + ' zł';
+        const pdf = f.link_pdf ? `<a href="${f.link_pdf}" target="_blank" style="color:var(--rose); text-decoration:none; font-weight:600;">📥 Pobierz</a>` : '<span style="color:#a89e96;">—</span>';
+        html += `<tr style="border-bottom:1px solid #f4efe6;"><td style="padding:10px 8px; font-weight:600;">${f.numer || '—'}</td><td style="padding:10px 8px;">${dataStr}</td><td style="padding:10px 8px; text-align:right; font-weight:600;">${kwota}</td><td style="padding:10px 8px; text-align:center;">${pdf}</td></tr>`;
+      });
+      html += '</tbody></table>';
+      box.innerHTML = html;
+    } catch (e) {
+      box.innerHTML = '<div class="invoices-placeholder"><div class="ph-icon">⚠️</div><p>Błąd: ' + e.message + '</p></div>';
+    }
   }
 
   // ── Start ──────────────────────────────────────────────────────
@@ -646,6 +689,7 @@
     if (token) {
       pokażDashboard(null);
       wczytajInfo();
+      wczytajFaktury();
     }
   })();
 </script>
