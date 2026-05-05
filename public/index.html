@@ -7159,6 +7159,7 @@ ANALIZA MANAGER
                     <th data-sort="tytul" onclick="zd_sort('tytul')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Tytuł <span class="zd-sort-arr"></span></th>
                     <th style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em;">Opis</th>
                     <th data-sort="przypisane_do" onclick="zd_sort('przypisane_do')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Przypisane do <span class="zd-sort-arr"></span></th>
+                    <th data-sort="data_wykonania" onclick="zd_sort('data_wykonania')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Wykonanie <span class="zd-sort-arr"></span></th>
                     <th data-sort="deadline" onclick="zd_sort('deadline')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Deadline <span class="zd-sort-arr">▲</span></th>
                     <th data-sort="status" onclick="zd_sort('status')" style="padding:12px 14px; text-align:left; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em; cursor:pointer; user-select:none;">Status <span class="zd-sort-arr"></span></th>
                     <th style="padding:12px 14px; text-align:right; font-size:11px; font-weight:800; color:#94a3b8; text-transform:uppercase; letter-spacing:.06em;">Akcje</th>
@@ -19357,7 +19358,7 @@ if (inputNazwaCheck) {
             const PRI_RANK = { PILNY: 0, WAZNY: 1, NORMALNY: 2 };
             rows.sort((a, b) => {
                 let va = a[zd_sortBy] || ''; let vb = b[zd_sortBy] || '';
-                if (zd_sortBy === 'deadline') {
+                if (zd_sortBy === 'deadline' || zd_sortBy === 'data_wykonania') {
                     va = va ? new Date(va).getTime() : Infinity;
                     vb = vb ? new Date(vb).getTime() : Infinity;
                 } else if (zd_sortBy === 'priorytet') {
@@ -19377,7 +19378,7 @@ if (inputNazwaCheck) {
             });
 
             if (!rows.length) {
-                tbody.innerHTML = '<tr><td colspan="8" style="padding:30px; text-align:center; color:#94a3b8;">Brak zadań w tej kategorii</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="padding:30px; text-align:center; color:#94a3b8;">Brak zadań w tej kategorii</td></tr>';
                 return;
             }
 
@@ -19445,6 +19446,15 @@ if (inputNazwaCheck) {
                       ).join('') + '</div>'
                     : '';
 
+                // Komórka „Wykonanie" — kto i kiedy kliknął ✓ Zrobione (lub ↩ Przywrócił z archiwum)
+                let wykonanieCell = '<span style="color:#cbd5e1;">—</span>';
+                if (r.data_wykonania) {
+                    const dw = new Date(r.data_wykonania);
+                    const dataStr = dw.toLocaleDateString('pl-PL') + ' ' + String(dw.getHours()).padStart(2,'0') + ':' + String(dw.getMinutes()).padStart(2,'0');
+                    const ktoStr = r.wykonane_przez ? escHtml(r.wykonane_przez) : '<i style="color:#94a3b8;">—</i>';
+                    wykonanieCell = `<div style="font-weight:600; color:#1e40af;">${ktoStr}</div><div style="color:#64748b; font-size:11px; margin-top:2px;">${dataStr}</div>`;
+                }
+
                 return `<tr style="border-bottom:1px solid #f1f5f9; ${rowBorderLeft} ${overdue ? 'background:#fef2f2;' : ''}">
                     <td style="padding:12px 14px; text-align:center;">${priCell}</td>
                     <td style="padding:12px 14px; white-space:nowrap;">${katBadge}</td>
@@ -19455,6 +19465,7 @@ if (inputNazwaCheck) {
                     </td>
                     <td style="padding:12px 14px; color:#475569; font-size:12px; max-width:260px;">${opisCell}</td>
                     <td style="padding:12px 14px; color:#334155; font-weight:600; white-space:nowrap;">${escHtml(r.przypisane_do)}</td>
+                    <td style="padding:12px 14px; white-space:nowrap;">${wykonanieCell}</td>
                     <td style="padding:12px 14px; color:${overdue ? '#dc2626' : '#475569'}; font-weight:600; white-space:nowrap;">${deadlineStr}</td>
                     <td style="padding:12px 14px; white-space:nowrap;">${statusBadge}</td>
                     <td style="padding:12px 14px; text-align:right; white-space:nowrap;">${actions}</td>
