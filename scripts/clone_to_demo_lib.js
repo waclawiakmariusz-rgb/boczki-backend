@@ -271,10 +271,9 @@ async function cloneBoczkiToDemo(db, opts = {}) {
     await q(db, 'INSERT INTO `Pracownicy` (`id`, `tenant_id`, `imie`) VALUES (?, ?, ?)', [randomUUID(), DEMO_TENANT, p.imie]);
   }
 
-  logLine('▸ INSERT Użytkownicy (PIN-y bcrypt)...');
+  logLine('▸ INSERT Użytkownicy (PIN-y plaintext — Estelio porównuje plain w routes/users.js)...');
   for (const p of DEMO_PRACOWNICY) {
-    const hashed = await bcrypt.hash(p.pin, 10);
-    await q(db, 'INSERT INTO `Użytkownicy` (`id`, `tenant_id`, `imie_login`, `haslo_pin`, `rola`) VALUES (?, ?, ?, ?, ?)', [randomUUID(), DEMO_TENANT, p.imie, hashed, p.rola]);
+    await q(db, 'INSERT INTO `Użytkownicy` (`id`, `tenant_id`, `imie_login`, `haslo_pin`, `rola`) VALUES (?, ?, ?, ?, ?)', [randomUUID(), DEMO_TENANT, p.imie, p.pin, p.rola]);
   }
 
   // 6. LICENCJA DEMO
