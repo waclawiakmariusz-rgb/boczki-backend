@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1); // Hostinger używa reverse proxy — bez tego rate-limit nie działa poprawnie
-const { validateTenantAccess } = require('./routes/sessions');
+const { validateTenantAccess, initSessions } = require('./routes/sessions');
 
 // ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
 const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
@@ -594,6 +594,12 @@ if (!fs.existsSync(UPLOADS_ROOT)) {
 // ==========================================
 // MIGRACJE AUTOMATYCZNE
 // ==========================================
+
+// Sesje pracowników — persist w bazie (tabela `Sesje`) + memory cache.
+// Wcześniej sesje były tylko w pamięci procesu — restart Node wylogowywał wszystkich
+// i unieważniał linki do PDF (RODO/regulamin). Od 2026-05-06 sesje przeżywają restart.
+initSessions(db);
+
 db.query(`
     CREATE TABLE IF NOT EXISTS Koszty_Kategorie (
         id            VARCHAR(36)  NOT NULL PRIMARY KEY,

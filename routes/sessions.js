@@ -1,24 +1,94 @@
 // routes/sessions.js
 // Server-side session store + rate limiter dla logowania
-// Nie wymaga żadnych nowych paczek — crypto jest wbudowane w Node.js
+//
+// Sesje są persistowane w MySQL (tabela `Sesje`) z dodatkowym memory-cache.
+// Cache zapewnia synchroniczne API (`getSession` zwraca obiekt, nie Promise),
+// więc callsite (auth.js, users.js, dokumenty.js, helpkb.js, server.js) NIE
+// wymagają zmian. Persist gwarantuje że restart Node nie wylogowuje
+// pracowników i nie unieważnia linków do PDF (RODO/regulamin).
+//
+// Init wywoływany z server.js po utworzeniu pool DB:
+//   const { initSessions } = require('./routes/sessions');
+//   initSessions(db);
 
 const { randomUUID } = require('crypto');
 
 // ─── SESSION STORE ────────────────────────────────────────────
 const SESSION_TTL = 8 * 60 * 60 * 1000; // 8 godzin
 const sessions = new Map(); // token -> { tenant_id, login, expires }
+let _db = null; // ustawiany przez initSessions() — fire-and-forget INSERT/DELETE
 
-// Sprzątanie wygasłych sesji co 30 minut
+// ─── PERSIST (write-through do tabeli `Sesje`) ────────────────
+function persistInsert(token, tenant_id, login, expiresMs) {
+  if (!_db) return;
+  _db.query(
+    'INSERT INTO `Sesje` (`token`, `tenant_id`, `login`, `expires`) VALUES (?, ?, ?, FROM_UNIXTIME(?))',
+    [token, tenant_id, login || null, Math.floor(expiresMs / 1000)],
+    (err) => { if (err) console.error('[sessions persist INSERT]', err.message); }
+  );
+}
+function persistDelete(token) {
+  if (!_db) return;
+  _db.query('DELETE FROM `Sesje` WHERE `token` = ?', [token],
+    (err) => { if (err) console.error('[sessions persist DELETE]', err.message); }
+  );
+}
+
+// ─── INIT — tworzy tabelę, czyści wygasłe, preloaduje aktywne do pamięci ──
+function initSessions(db) {
+  _db = db;
+  db.query(`
+    CREATE TABLE IF NOT EXISTS \`Sesje\` (
+      \`token\`      VARCHAR(40) NOT NULL PRIMARY KEY,
+      \`tenant_id\`  VARCHAR(64) NOT NULL,
+      \`login\`      VARCHAR(100) DEFAULT NULL,
+      \`expires\`    DATETIME NOT NULL,
+      \`created_at\` DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY \`idx_sesje_tenant\` (\`tenant_id\`),
+      KEY \`idx_sesje_expires\` (\`expires\`)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+  `, (err) => {
+    if (err) { console.error('[migration] Sesje:', err.message); return; }
+    console.log('[migration] Sesje OK');
+    // Wyczyść wygasłe na starcie
+    db.query('DELETE FROM `Sesje` WHERE `expires` < NOW()', (e) => {
+      if (e) console.error('[sessions cleanup at start]', e.message);
+    });
+    // Preload aktywnych do pamięci — synchroniczne API getSession() polega na cache
+    db.query(
+      'SELECT `token`, `tenant_id`, `login`, UNIX_TIMESTAMP(`expires`) AS expires_unix FROM `Sesje` WHERE `expires` > NOW()',
+      (err2, rows) => {
+        if (err2) { console.error('[sessions preload]', err2.message); return; }
+        for (const r of rows || []) {
+          sessions.set(r.token, {
+            tenant_id: r.tenant_id,
+            login: r.login,
+            expires: Number(r.expires_unix) * 1000,
+          });
+        }
+        console.log(`[sessions preload] załadowano ${sessions.size} aktywnych sesji z bazy`);
+      }
+    );
+  });
+}
+
+// Sprzątanie wygasłych sesji co 30 minut — pamięć + baza
 setInterval(() => {
   const now = Date.now();
   for (const [token, s] of sessions.entries()) {
     if (now > s.expires) sessions.delete(token);
   }
+  if (_db) {
+    _db.query('DELETE FROM `Sesje` WHERE `expires` < NOW()',
+      (err) => { if (err) console.error('[sessions cleanup interval]', err.message); });
+  }
 }, 30 * 60 * 1000);
 
 function createSession(tenant_id, login) {
   const token = randomUUID();
-  sessions.set(token, { tenant_id, login, expires: Date.now() + SESSION_TTL });
+  const expires = Date.now() + SESSION_TTL;
+  sessions.set(token, { tenant_id, login, expires });
+  persistInsert(token, tenant_id, login, expires);
   return token;
 }
 
@@ -26,12 +96,17 @@ function getSession(token) {
   if (!token) return null;
   const s = sessions.get(token);
   if (!s) return null;
-  if (Date.now() > s.expires) { sessions.delete(token); return null; }
+  if (Date.now() > s.expires) {
+    sessions.delete(token);
+    persistDelete(token);
+    return null;
+  }
   return s;
 }
 
 function deleteSession(token) {
   sessions.delete(token);
+  persistDelete(token);
 }
 
 // Sprawdź czy token pasuje do żądanego tenant_id
@@ -136,6 +211,7 @@ function recordSuccessPin(req) {
 }
 
 module.exports = {
+  initSessions,
   createSession,
   getSession,
   deleteSession,
