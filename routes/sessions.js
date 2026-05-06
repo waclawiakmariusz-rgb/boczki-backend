@@ -86,12 +86,64 @@ function recordSuccessLogin(req) {
   loginAttempts.delete(ip);
 }
 
+// ─── RATE LIMITER PIN ──────────────────────────────────────────
+// Osobny licznik dla PIN-ów pracowników (verify_pin).
+// PIN to 4-6 cyfr — bez rate limitu można brute force'ować w &lt;100 sekund.
+// Klucz to (ip + tenant_id + imie) — żeby nie blokować całego IP gdy
+// jeden pracownik wpisze zły PIN, ale blokować konkretny atak.
+const PIN_WINDOW_MS = 5 * 60 * 1000; // 5 minut
+const PIN_MAX_TRIES = 10;
+const pinAttempts = new Map(); // (ip+tenant+imie) -> { count, resetAt }
+
+function pinKey(req) {
+  const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+  const tenant = String(req.body?.tenant_id || '').trim();
+  const imie = String(req.body?.imie || '').trim().toLowerCase();
+  return `${ip}|${tenant}|${imie}`;
+}
+
+function rateLimitPin(req, res, next) {
+  // Tylko gdy faktycznie verify_pin
+  if (req.body?.action !== 'verify_pin') return next();
+  const key = pinKey(req);
+  const now = Date.now();
+  let record = pinAttempts.get(key);
+  if (record && now > record.resetAt) {
+    pinAttempts.delete(key);
+    record = null;
+  }
+  if (record && record.count >= PIN_MAX_TRIES) {
+    const pozostalo = Math.ceil((record.resetAt - now) / 60000);
+    return res.status(429).json({
+      status: 'error',
+      message: `Za dużo nieudanych prób PIN. Spróbuj za ${pozostalo} min.`,
+    });
+  }
+  next();
+}
+
+function recordFailedPin(req) {
+  const key = pinKey(req);
+  const now = Date.now();
+  const record = pinAttempts.get(key) || { count: 0, resetAt: now + PIN_WINDOW_MS };
+  record.count++;
+  pinAttempts.set(key, record);
+}
+
+function recordSuccessPin(req) {
+  const key = pinKey(req);
+  pinAttempts.delete(key);
+}
+
 module.exports = {
   createSession,
   getSession,
   deleteSession,
   validateTenantAccess,
   rateLimitLogin,
+  rateLimitPin,
+  recordFailedPin,
+  recordSuccessPin,
   recordFailedLogin,
   recordSuccessLogin,
 };

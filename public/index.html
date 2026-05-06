@@ -23312,13 +23312,17 @@ function dokumentPokazDone(prefix, url) {
   const done = document.getElementById(`${prefix}-upload-done`);
   done.style.display = 'flex';
 
-  // Ustaw link podglądu z tenant_id
+  // Ustaw link podglądu z tenant_id + session_token (od 2026-05-06 GET /api/dokumenty
+  // weryfikuje sesję żeby uniemożliwić IDOR — link bez tokenu zwraca 403)
   const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+  const session_token = localStorage.getItem('boczki_session_token') || '';
   const previewId = prefix === 'con' ? 'btn-preview-con' : 'btn-preview-pdf';
   const previewEl = document.getElementById(previewId);
   if (previewEl) {
-    // Lokalne URL wymagają tenant_id w query, Google Drive linki zostawiamy bez zmian
-    const href = url.startsWith('/api/') ? `${url}?tenant_id=${tenant_id}` : url;
+    // Lokalne URL wymagają tenant_id + session_token, Google Drive linki zostawiamy bez zmian
+    const href = url.startsWith('/api/')
+      ? `${url}?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`
+      : url;
     previewEl.href = href;
   }
 }

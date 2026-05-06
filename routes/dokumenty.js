@@ -10,12 +10,29 @@ const path    = require('path');
 const fs      = require('fs');
 const { randomUUID } = require('crypto');
 const { PDFDocument } = require('pdf-lib');
+const { validateTenantAccess } = require('./sessions');
 
 // ─── Katalog uploads ──────────────────────────────────────────
 const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 
+// Walidacja tenant_id — chroni przed path traversal (np. ../../etc).
+// Format: małe/duże litery, cyfry, myślniki — pasuje do slug'ów (boczki-salon-glowny-001).
+const TENANT_ID_REGEX = /^[a-zA-Z0-9_-]+$/;
+
+function isValidTenantId(tid) {
+  return typeof tid === 'string' && tid.length > 0 && tid.length < 100 && TENANT_ID_REGEX.test(tid);
+}
+
 function tenantDir(tenant_id) {
+  if (!isValidTenantId(tenant_id)) throw new Error('Nieprawidłowy tenant_id');
   const dir = path.join(UPLOADS_ROOT, tenant_id);
+  // Defense in depth — sprawdź że końcowy path jest WEWNĄTRZ UPLOADS_ROOT
+  // (zabezpiecza nawet gdyby regex przepuścił coś dziwnego)
+  const resolved = path.resolve(dir);
+  const rootResolved = path.resolve(UPLOADS_ROOT);
+  if (!resolved.startsWith(rootResolved + path.sep) && resolved !== rootResolved) {
+    throw new Error('Path traversal wykryty');
+  }
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   return dir;
 }
@@ -69,6 +86,22 @@ module.exports = (db) => {
   async function handleUpload(req, res) {
     const tenant_id = req.body.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id.' });
+
+    // Walidacja formatu tenant_id (chroni przed path traversal)
+    if (!isValidTenantId(tenant_id)) {
+      return res.status(400).json({ status: 'error', message: 'Nieprawidłowy format tenant_id.' });
+    }
+
+    // Walidacja sesji — czy session token uprawnia do TEGO tenanta
+    const sessionToken = req.headers['x-session-token'] || req.body.session_token;
+    if (sessionToken) {
+      const v = validateTenantAccess(sessionToken, tenant_id);
+      if (!v.valid) {
+        return res.status(403).json({ status: 'error', message: 'Brak dostępu do tego tenanta.' });
+      }
+    }
+    // Jeśli brak tokenu — middleware globalny w server.js zadba o ENFORCE_SESSION
+
     if (!req.files || req.files.length === 0) {
       return res.json({ status: 'error', message: 'Nie przesłano żadnego pliku.' });
     }
@@ -104,23 +137,45 @@ module.exports = (db) => {
   }
 
   // ── GET /api/dokumenty/:tenant_id/:filename ─────────────────
-  // Serwuje plik PDF — dostęp tylko dla właściwego tenanta
-  // tenant_id przekazywany jako query param: ?tenant_id=...
+  // Serwuje plik PDF — dostęp tylko dla zalogowanego tenanta którego pasuje
+  // session token. Wcześniejsza wersja (przed 2026-05-06) sprawdzała tylko
+  // tenant_id z URL vs query (oba klient-kontrolowane) — IDOR risk.
   router.get('/dokumenty/:tenant_id/:filename', (req, res) => {
     const { tenant_id, filename } = req.params;
-    const requested_tenant = req.query.tenant_id;
 
-    // Kontrola dostępu — tenant może widzieć tylko swoje pliki
-    if (!requested_tenant || requested_tenant !== tenant_id) {
-      return res.status(403).json({ status: 'error', message: 'Brak dostępu.' });
+    // Walidacja formatu tenant_id (chroni przed path traversal)
+    if (!isValidTenantId(tenant_id)) {
+      return res.status(400).json({ status: 'error', message: 'Nieprawidłowy tenant_id.' });
     }
 
-    // Zabezpieczenie przed path traversal
+    // Walidacja sesji — token musi uprawniać do TEGO tenanta
+    const sessionToken = req.headers['x-session-token']
+      || req.query.session_token  // fallback dla otwierania PDF z linku w nowej karcie
+      || req.cookies?.session_token;
+    if (!sessionToken) {
+      return res.status(403).json({ status: 'error', message: 'Brak autoryzacji — zaloguj się.' });
+    }
+    const v = validateTenantAccess(sessionToken, tenant_id);
+    if (!v.valid) {
+      return res.status(403).json({
+        status: 'error',
+        message: v.reason === 'expired' ? 'Sesja wygasła — zaloguj się ponownie.' : 'Brak dostępu do tego pliku.'
+      });
+    }
+
+    // Zabezpieczenie przed path traversal w nazwie pliku
     if (!/^[a-f0-9-]+\.pdf$/i.test(filename)) {
       return res.status(400).json({ status: 'error', message: 'Nieprawidłowa nazwa pliku.' });
     }
 
     const filepath = path.join(UPLOADS_ROOT, tenant_id, filename);
+    // Defense in depth — sprawdź że ścieżka jest WEWNĄTRZ UPLOADS_ROOT
+    const resolved = path.resolve(filepath);
+    const rootResolved = path.resolve(UPLOADS_ROOT);
+    if (!resolved.startsWith(rootResolved + path.sep)) {
+      return res.status(400).json({ status: 'error', message: 'Nieprawidłowa ścieżka.' });
+    }
+
     if (!fs.existsSync(filepath)) {
       return res.status(404).json({ status: 'error', message: 'Plik nie istnieje.' });
     }
