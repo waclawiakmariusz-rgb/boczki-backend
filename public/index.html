@@ -7185,10 +7185,14 @@ ANALIZA MANAGER
         <input id="leady-nazwa" placeholder="np. Agencja XYZ — kampania majowa" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
 
         <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Link do arkusza (Google Sheets / CSV) <span style="color:#dc2626;">*</span></label>
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
+        <div style="display:flex; gap:8px; margin-bottom:8px;">
             <input id="leady-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
             <button onclick="leady_pobierzPreview()" style="background:#0ea5e9; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; white-space:nowrap;">🔍 Sprawdź</button>
         </div>
+
+        <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">GID arkusza <span style="color:#94a3b8; font-weight:400;">(opcjonalnie — jeśli plik ma kilka zakładek)</span></label>
+        <input id="leady-gid" placeholder="np. 1234567890 — pozostaw puste żeby wziąć z URL" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:6px; outline:none;">
+        <div style="font-size:11px; color:#64748b; margin-bottom:12px;">💡 GID znajdziesz w URL po przełączeniu na konkretną zakładkę: <code>...edit#gid=<b>1234567890</b></code>. Jeśli wkleisz cały URL z <code>#gid=</code>, możesz pole zostawić puste.</div>
 
         <div id="leady-preview-wrap" style="display:none;">
             <div style="margin:14px 0 8px; font-weight:700; color:#475569; font-size:13px;">Mapowanie kolumn — przypisz nagłówki z arkusza do pól w Estelio:</div>
@@ -7217,7 +7221,7 @@ ANALIZA MANAGER
             </select>
 
             <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:14px;">
-                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px;">Podgląd pierwszych wierszy (<span id="leady-preview-cnt"></span> wierszy w arkuszu):</div>
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px;">Podgląd pierwszych wierszy (<span id="leady-preview-cnt"></span> wierszy w arkuszu) — <span style="color:#0ea5e9;">pobrano arkusz GID=<span id="leady-preview-gid">?</span></span>:</div>
                 <div id="leady-preview-table" style="overflow-x:auto; font-size:11.5px;"></div>
             </div>
 
@@ -20155,6 +20159,7 @@ if (inputNazwaCheck) {
         function leady_dodajZrodloOpen() {
             document.getElementById('leady-nazwa').value = '';
             document.getElementById('leady-url').value = '';
+            document.getElementById('leady-gid').value = '';
             document.getElementById('leady-preview-wrap').style.display = 'none';
             document.getElementById('leady-preview-error').style.display = 'none';
             document.getElementById('leady-modal-zrodlo').style.display = 'flex';
@@ -20162,6 +20167,7 @@ if (inputNazwaCheck) {
 
         function leady_pobierzPreview() {
             const url = document.getElementById('leady-url').value.trim();
+            const gid = document.getElementById('leady-gid').value.trim();
             const errBox = document.getElementById('leady-preview-error');
             errBox.style.display = 'none';
             if (!url) { errBox.textContent = 'Wklej link do arkusza.'; errBox.style.display = 'block'; return; }
@@ -20171,7 +20177,7 @@ if (inputNazwaCheck) {
             errBox.style.background = '#dbeafe'; errBox.style.color = '#1e40af';
             errBox.style.display = 'block';
 
-            leady_apiCall({ action: 'import_preview', url }).then(res => {
+            leady_apiCall({ action: 'import_preview', url, gid }).then(res => {
                 if (res.status !== 'success') {
                     errBox.textContent = res.message || 'Błąd pobierania';
                     errBox.style.background = '#fee2e2'; errBox.style.color = '#991b1b';
@@ -20179,6 +20185,8 @@ if (inputNazwaCheck) {
                     return;
                 }
                 errBox.style.display = 'none';
+                // Zapisz info o pobranym GID — żeby user widział który arkusz został wczytany
+                window._leady_lastGidUsed = res.gid_used || '0';
                 const headers = res.headers || [];
                 // Auto-detekcja kolumn po wzorcach (kolejność = priorytet — bardziej specyficzne pierwsze)
                 const wzorce = {
@@ -20225,6 +20233,8 @@ if (inputNazwaCheck) {
                     tab.innerHTML = '<div style="color:#94a3b8;">Arkusz pusty</div>';
                 }
                 document.getElementById('leady-preview-cnt').textContent = res.rows_count || 0;
+                const gidEl = document.getElementById('leady-preview-gid');
+                if (gidEl) gidEl.textContent = res.gid_used || '0';
                 previewWrap.style.display = 'block';
             });
         }
@@ -20232,6 +20242,7 @@ if (inputNazwaCheck) {
         function leady_zapiszZrodlo() {
             const nazwa = document.getElementById('leady-nazwa').value.trim();
             const url = document.getElementById('leady-url').value.trim();
+            const gid = document.getElementById('leady-gid').value.trim();
             const klucz_dedup = document.getElementById('leady-dedup').value;
             if (!nazwa) { alert('Podaj nazwę źródła'); return; }
             if (!url) { alert('Podaj link do arkusza'); return; }
@@ -20244,7 +20255,7 @@ if (inputNazwaCheck) {
                 alert('Zmapuj co najmniej telefon LUB email — bez tego deduplikacja nie zadziała.');
                 return;
             }
-            leady_apiCall({ action: 'import_zapisz', nazwa, url, mapowanie, klucz_dedup }).then(res => {
+            leady_apiCall({ action: 'import_zapisz', nazwa, url, gid, mapowanie, klucz_dedup }).then(res => {
                 if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
                 document.getElementById('leady-modal-zrodlo').style.display = 'none';
                 const msg = res.error

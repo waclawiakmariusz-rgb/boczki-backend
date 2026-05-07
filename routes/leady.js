@@ -93,13 +93,24 @@ module.exports = (db) => {
   // ─── HELPERY ─────────────────────────────────────────────────
 
   // Konwertuj URL Google Sheets na endpoint export CSV (działa dla "Każdy z linkiem")
-  function googleSheetsToCsvUrl(url) {
+  // gidOverride (opcjonalny string/number) ma priorytet nad GID-em z URL.
+  function googleSheetsToCsvUrl(url, gidOverride) {
     const m = url.match(/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
     if (!m) return url; // nie Google Sheets — zostaw tak jak jest (może być direct CSV)
     const id = m[1];
-    const gidMatch = url.match(/[#&?]gid=(\d+)/);
-    const gid = gidMatch ? gidMatch[1] : '0';
+    let gid;
+    if (gidOverride !== null && gidOverride !== undefined && String(gidOverride).trim() !== '') {
+      gid = String(gidOverride).replace(/[^\d]/g, '') || '0';
+    } else {
+      const gidMatch = url.match(/[#&?]gid=(\d+)/);
+      gid = gidMatch ? gidMatch[1] : '0';
+    }
     return `https://docs.google.com/spreadsheets/d/${id}/export?format=csv&gid=${gid}`;
+  }
+
+  function wyciagnijGid(url) {
+    const m = url.match(/[#&?]gid=(\d+)/);
+    return m ? m[1] : '0';
   }
 
   function parseCSV(text) {
@@ -114,8 +125,8 @@ module.exports = (db) => {
     });
   }
 
-  async function pobierzCSV(url) {
-    const csvUrl = googleSheetsToCsvUrl(url);
+  async function pobierzCSV(url, gidOverride) {
+    const csvUrl = googleSheetsToCsvUrl(url, gidOverride);
     const res = await fetch(csvUrl, { redirect: 'follow' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const ct = res.headers.get('content-type') || '';
@@ -123,7 +134,9 @@ module.exports = (db) => {
       throw new Error('Arkusz prawdopodobnie nie jest publiczny — udostępnij "Każdy z linkiem".');
     }
     const text = await res.text();
-    return parseCSV(text);
+    const result = await parseCSV(text);
+    result.csv_url_used = csvUrl;
+    return result;
   }
 
   function parseDataZgloszenia(s) {
@@ -235,6 +248,7 @@ module.exports = (db) => {
 
     let result;
     try {
+      // imp.url już zawiera GID (zapisany w import_zapisz z gidOverride albo z hash URL'a)
       result = await pobierzCSV(imp.url);
     } catch (err) {
       const msg = 'BLAD: ' + err.message;
@@ -390,14 +404,18 @@ module.exports = (db) => {
 
     } else if (action === 'import_preview') {
       const url = String(d.url || '').trim();
+      const gidOverride = d.gid !== undefined ? String(d.gid).trim() : null;
       if (!url) return res.json({ status: 'error', message: 'Brak url' });
       try {
-        const result = await pobierzCSV(url);
+        const result = await pobierzCSV(url, gidOverride);
+        const gidUsed = (gidOverride && gidOverride !== '') ? gidOverride.replace(/[^\d]/g, '') : wyciagnijGid(url);
         return res.json({
           status: 'success',
           headers: result.headers,
           preview: result.rows.slice(0, 5),
-          rows_count: result.rows.length
+          rows_count: result.rows.length,
+          gid_used: gidUsed,
+          csv_url_used: result.csv_url_used
         });
       } catch (err) {
         return res.json({ status: 'error', message: 'Nie udało się pobrać arkusza: ' + err.message });
@@ -406,7 +424,12 @@ module.exports = (db) => {
     } else if (action === 'import_zapisz') {
       const id = randomUUID();
       const nazwa = String(d.nazwa || 'Bez nazwy').slice(0, 150);
-      const url = String(d.url || '');
+      const urlRaw = String(d.url || '');
+      const gidOverride = d.gid !== undefined ? String(d.gid).trim() : null;
+      // Zapisujemy URL bezpośrednio jako CSV-export endpoint — eliminuje to ryzyko
+      // że ktoś (cron/sync) zinterpretuje URL inaczej niż preview (np. weźmie pierwszy
+      // arkusz zamiast wybranego). Po zapisie URL = gotowy do fetch'a.
+      const url = googleSheetsToCsvUrl(urlRaw, gidOverride);
       const mapowanie = JSON.stringify(d.mapowanie || {});
       const klucz_dedup = ALLOWED_DEDUP.includes(d.klucz_dedup) ? d.klucz_dedup : 'telefon';
       db.query('INSERT INTO Lead_Importy (id, tenant_id, nazwa, url, mapowanie, klucz_dedup, aktywny) VALUES (?, ?, ?, ?, ?, ?, 1)',
