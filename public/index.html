@@ -4771,6 +4771,19 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 .ds-action-btn { min-width:76px; height:36px; border:0; border-radius:10px; background:#fdeff4; color:#e45588; font-weight:700; font-size:13px; padding:0 12px; cursor:pointer; white-space:nowrap; }
 .ds-pink-link { color:#eb5087; text-decoration:none; font-weight:700; font-size:14px; cursor:pointer; }
 .ds-bottom-grid { display:grid; grid-template-columns:1fr 310px; gap:16px; }
+.ds-bottom-grid.no-transactions { grid-template-columns: 1fr; }
+.ds-qa-grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:12px; }
+.ds-qa-tile { background:#fff7fb; border:1px solid #fce7f3; border-radius:14px; padding:18px 12px; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:8px; transition:transform .15s, background .15s; text-align:center; }
+.ds-qa-tile:hover { background:#fce7f3; transform:translateY(-2px); }
+.ds-qa-icon { font-size:28px; line-height:1; }
+.ds-qa-label { font-size:13px; font-weight:700; color:#475569; }
+.ds-qa-sub { font-size:11px; color:#94a3b8; }
+@media(max-width:900px){ .ds-qa-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width:580px){ .ds-qa-grid { grid-template-columns: 1fr; } }
+body.dark-mode .ds-qa-tile { background:#2a2233; border-color:#3d2f44; }
+body.dark-mode .ds-qa-tile:hover { background:#3d2f44; }
+body.dark-mode .ds-qa-label { color:#e5d4ec; }
+body.dark-mode .ds-qa-sub { color:#9b8fa3; }
 .ds-table-card, .ds-actions-card { background:white; border:1px solid #eee5e9; border-radius:22px; box-shadow:0 10px 28px rgba(39,31,52,.04); padding:16px 18px 12px; }
 .ds-table-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
 .ds-table-head h4 { margin:0; font-size:18px; font-weight:700; letter-spacing:-.02em; }
@@ -5789,9 +5802,11 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     </div>
   </div>
 
-  <!-- Ostatnie transakcje + Co możesz zrobić -->
-  <div class="ds-bottom-grid">
-    <div class="ds-table-card">
+  <!-- Akcje (przebudowany 2026-05-07: lekki box bez fetchy, "Ostatnie transakcje" tymczasowo wyłączone) -->
+  <div class="ds-bottom-grid no-transactions">
+    <!-- Box "Ostatnie transakcje" — tymczasowo wyłączony dla wydajności startu.
+         Aby przywrócić: usuń style="display:none;" i zmień DS_TRANSACTIONS_ENABLED w JS na true. -->
+    <div class="ds-table-card" id="ds-transactions-card" style="display:none;">
       <div class="ds-table-head">
         <h4>Ostatnie transakcje (dziś)</h4>
         <span class="ds-pink-link" onclick="pokaz('historia',null)">Zobacz wszystkie →</span>
@@ -5803,32 +5818,28 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
 
     <div class="ds-actions-card">
       <div class="ds-card-title-row">
-        <h3 class="ds-card-title">💡 Co możesz zrobić teraz?</h3>
+        <h3 class="ds-card-title">🚀 Akcje dnia</h3>
       </div>
-      <div class="ds-action-list">
-        <div class="ds-action-item">
-          <div class="ds-round-icon">🎁</div>
-          <div>
-            <div class="ds-item-title">Zaproponuj zabieg</div>
-            <div class="ds-item-sub">Sprawdź klientki gotowe na kolejną wizytę.</div>
-          </div>
-          <button class="ds-action-btn" onclick="pokaz('retencja',null)">Sprawdź</button>
+      <div class="ds-qa-grid">
+        <div class="ds-qa-tile" onclick="otworzPopupNowyKlient()">
+          <div class="ds-qa-icon">👤</div>
+          <div class="ds-qa-label">Nowy klient</div>
+          <div class="ds-qa-sub">Dodaj kartotekę</div>
         </div>
-        <div class="ds-action-item">
-          <div class="ds-round-icon">👤</div>
-          <div>
-            <div class="ds-item-title">Dodaj nową klientkę</div>
-            <div class="ds-item-sub">Szybko dodaj i umów kolejną wizytę.</div>
-          </div>
-          <button class="ds-action-btn" onclick="otworzPopupNowyKlient()">Dodaj</button>
+        <div class="ds-qa-tile" onclick="pokaz('sprzedaz',null)">
+          <div class="ds-qa-icon">💰</div>
+          <div class="ds-qa-label">Nowa sprzedaż</div>
+          <div class="ds-qa-sub">Zarejestruj usługę</div>
         </div>
-        <div class="ds-action-item">
-          <div class="ds-round-icon orange">📅</div>
-          <div>
-            <div class="ds-item-title">Podsumowanie dnia</div>
-            <div class="ds-item-sub">Sprawdź dzisiejsze wyniki sprzedaży.</div>
-          </div>
-          <button class="ds-action-btn" onclick="pokaz('podsumowanie',null)">Otwórz</button>
+        <div class="ds-qa-tile" onclick="pokaz('retencja',null)">
+          <div class="ds-qa-icon">🎯</div>
+          <div class="ds-qa-label">Retencja</div>
+          <div class="ds-qa-sub">Klientki do kontaktu</div>
+        </div>
+        <div class="ds-qa-tile" onclick="pokaz('podsumowanie',null)">
+          <div class="ds-qa-icon">📅</div>
+          <div class="ds-qa-label">Podsumowanie dnia</div>
+          <div class="ds-qa-sub">Wyniki sprzedaży</div>
         </div>
       </div>
     </div>
@@ -9960,6 +9971,12 @@ if (typeof window.__zdBadgeInterval === 'undefined') {
 // zadatki, urodziny, brak dokumentów). Wyłączone 2026-05-07 dla testu wydajności startu.
 const DS_UWAGA_ENABLED = false;
 
+// FEATURE FLAG — render tabeli "Ostatnie transakcje (dziś)" na Pulpicie.
+// KPI (sprzedaż/transakcje/klienci/średnia) korzystają z tego samego fetcha get_daily_summary,
+// więc fetch zostaje. Wyłączone tylko renderowanie tabeli — eliminuje DOM/parsowanie ~50 wierszy
+// dla wydajności startu. 2026-05-07: wyłączone tymczasowo (do przeprojektowania).
+const DS_TRANSACTIONS_ENABLED = false;
+
 function zaladujPulpit() {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
@@ -10018,7 +10035,7 @@ function zaladujPulpit() {
         if (qs('ds-kpi-srednia')) qs('ds-kpi-srednia').textContent = widoczne.length ? fmtPLN(avg) : '—';
 
         const tbl = document.getElementById('ds-transactions-table');
-        if (tbl) {
+        if (DS_TRANSACTIONS_ENABLED && tbl) {
             const last5 = widoczne.slice(0, 5);
             if (last5.length === 0) {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
