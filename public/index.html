@@ -5802,8 +5802,10 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     </div>
   </div>
 
-  <!-- Akcje (przebudowany 2026-05-07: lekki box bez fetchy, "Ostatnie transakcje" tymczasowo wyłączone) -->
-  <div class="ds-bottom-grid no-transactions">
+  <!-- Akcje (przebudowany 2026-05-07: lekki box bez fetchy, "Ostatnie transakcje" tymczasowo wyłączone)
+       2026-05-07 wieczór: cała sekcja ukryta — user prosił schować Akcje dnia. Box "Ostatnie transakcje"
+       też zostaje ukryty (był wcześniej). Aby przywrócić — usuń style="display:none" z bottom-grid. -->
+  <div class="ds-bottom-grid no-transactions" style="display:none;">
     <!-- Box "Ostatnie transakcje" — tymczasowo wyłączony dla wydajności startu.
          Aby przywrócić: usuń style="display:none;" i zmień DS_TRANSACTIONS_ENABLED w JS na true. -->
     <div class="ds-table-card" id="ds-transactions-card" style="display:none;">
