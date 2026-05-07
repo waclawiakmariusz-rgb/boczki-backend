@@ -9272,18 +9272,34 @@ function ds_loadZadania(rola, imie) {
         ? { action: 'list', status: 'AKTYWNE', tenant_id }
         : { action: 'moje', osoba: imie || '', rola: r, tenant_id };
 
-    fetch(API_URL + '/zadania', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-session-token': sToken },
-        body: JSON.stringify(payload)
-    }).then(r => r.json()).then(res => {
+    // Pobieramy równolegle: instancje (do widoku tab'ów kategorii) + szablony cykliczne (tab "Cykliczne")
+    // Receiver widzi tylko szablony przypisane do niego/jego roli — filtr w frontendzie.
+    const szablonyPayload = { action: 'list', tylko_szablony: true, status: 'AKTYWNE', tenant_id };
+    const opts = { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': sToken } };
+    Promise.all([
+        fetch(API_URL + '/zadania', { ...opts, body: JSON.stringify(payload) }).then(r => r.json()),
+        fetch(API_URL + '/zadania', { ...opts, body: JSON.stringify(szablonyPayload) }).then(r => r.json()),
+    ]).then(([res, resSz]) => {
         if (res.status !== 'success') {
             list.innerHTML = `<div style="color:#dc2626; font-size:13px; padding:8px 0;">Błąd: ${escHtml(res.message || '')}</div>`;
             return;
         }
         const all = res.data || [];
+        // Szablony — filtruj po przypisaniu jeśli receiver
+        let szablony = (resSz && resSz.status === 'success') ? (resSz.data || []) : [];
+        if (!isManager) {
+            const imieLow = String(imie || '').toLowerCase().trim();
+            szablony = szablony.filter(s => {
+                const p = String(s.przypisane_do || '').toLowerCase().trim();
+                if (p === imieLow) return true;
+                if (r === 'recepcja' && p === 'recepcja') return true;
+                if (r === 'praktykantka' && p === 'praktykantka') return true;
+                return false;
+            });
+        }
         if (countEl) countEl.textContent = all.length ? `(${all.length})` : '';
         window.__ds_zd_all = all;
+        window.__ds_zd_szablony = szablony;
         window.__ds_zd_isRecepcja = isReceiver;
         window.__ds_zd_lastLoadedAt = Date.now();
         ds_zd_renderTabs();
@@ -9448,14 +9464,17 @@ function ds_zd_renderTabs() {
         </div>`;
     }
 
-    // 5 kategorii + tab "Moje" (zadania utworzone przeze mnie — niezależnie od kategorii)
+    // 5 kategorii + tab "Moje" + tab "Cykliczne" (szablony cykliczne — podgląd/edycja).
+    // Instancje cyklicznych zadań pojawiają się w swojej kategorii (np. MAGAZYN), tab CYKLICZNE
+    // pokazuje tylko szablony — czyli definicje "co kiedy ma się powtarzać".
     const TABS = [
-        { key: 'KLIENT',   icon: '👤', label: 'Klient' },
-        { key: 'MAGAZYN',  icon: '📦', label: 'Magazyn' },
-        { key: 'KOSMETYK', icon: '💄', label: 'Kosmetyk' },
-        { key: 'SPRZEDAZ', icon: '💰', label: 'Sprzedaż' },
-        { key: 'INNE',     icon: '📋', label: 'Inne' },
-        { key: 'MOJE',     icon: '✏️', label: 'Moje' }
+        { key: 'KLIENT',    icon: '👤', label: 'Klient' },
+        { key: 'MAGAZYN',   icon: '📦', label: 'Magazyn' },
+        { key: 'KOSMETYK',  icon: '💄', label: 'Kosmetyk' },
+        { key: 'SPRZEDAZ',  icon: '💰', label: 'Sprzedaż' },
+        { key: 'INNE',      icon: '📋', label: 'Inne' },
+        { key: 'MOJE',      icon: '✏️', label: 'Moje' },
+        { key: 'CYKLICZNE', icon: '🔁', label: 'Cykliczne' }
     ];
     const myImieTab = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
     const counts = {};
@@ -9468,10 +9487,13 @@ function ds_zd_renderTabs() {
             counts.MOJE++;
         }
     });
+    // Cykliczne — liczba szablonów (osobna lista __ds_zd_szablony)
+    counts.CYKLICZNE = (window.__ds_zd_szablony || []).length;
 
     if (!ds_zd_activeTab || counts[ds_zd_activeTab] === undefined) {
-        // Wybierz domyślny — preferuj największą kategorię (pomijając MOJE żeby nie skoczyć na nią automatycznie)
-        ds_zd_activeTab = TABS.filter(t => t.key !== 'MOJE').reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
+        // Wybierz domyślny — preferuj największą kategorię (pomijając MOJE/CYKLICZNE)
+        ds_zd_activeTab = TABS.filter(t => t.key !== 'MOJE' && t.key !== 'CYKLICZNE')
+            .reduce((best, t) => counts[t.key] > counts[best] ? t.key : best, 'KLIENT');
     }
 
     tabsBox.innerHTML = TABS.map(t => {
@@ -9531,9 +9553,15 @@ function ds_zd_renderList() {
     const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
     const isPraktykantka = (myRola === 'praktykantka');
     const myImieFilter = String(localStorage.getItem('boczki_pracownik_imie') || '').trim().toLowerCase();
-    let filtered = (ds_zd_activeTab === 'MOJE')
-        ? all.filter(z => myImieFilter && String(z.utworzone_przez || '').trim().toLowerCase() === myImieFilter)
-        : all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
+    let filtered;
+    if (ds_zd_activeTab === 'CYKLICZNE') {
+        // Tab "Cykliczne" — pokazujemy szablony (definicje), NIE instancje
+        filtered = (window.__ds_zd_szablony || []).slice();
+    } else if (ds_zd_activeTab === 'MOJE') {
+        filtered = all.filter(z => myImieFilter && String(z.utworzone_przez || '').trim().toLowerCase() === myImieFilter);
+    } else {
+        filtered = all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
+    }
 
     // Filtr wyszukiwania — po tytule/opisie/klientach/przypisaniu/utworzonym
     if (ds_zd_search) {
@@ -9544,8 +9572,18 @@ function ds_zd_renderList() {
         let emptyMsg;
         if (ds_zd_search) emptyMsg = `Brak zadań pasujących do „${ds_zd_search}"`;
         else if (ds_zd_activeTab === 'MOJE') emptyMsg = 'Nie utworzyłeś jeszcze żadnych zadań';
+        else if (ds_zd_activeTab === 'CYKLICZNE') emptyMsg = 'Brak zadań cyklicznych — utwórz nowe z opcją „Powtarzaj"';
         else emptyMsg = 'Brak zadań w tej kategorii';
         list.innerHTML = `<div style="padding:24px 0; text-align:center; color:#94a3b8; font-size:13px;">${emptyMsg}</div>`;
+        return;
+    }
+
+    // Tab CYKLICZNE — szablony renderujemy bez grupowania po deadline
+    // (deadline szablonu to "kotwica godziny", nie konkretna data → grouping by zafałszowywał)
+    if (ds_zd_activeTab === 'CYKLICZNE') {
+        const nowC = Date.now();
+        const cards = filtered.map(z => ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, nowC)).join('');
+        list.innerHTML = `<div class="ds-zd-group"><div class="ds-zd-group-title">🔁 Cykliczne — szablony powtarzających się zadań</div>${cards}</div>`;
         return;
     }
 
@@ -9620,6 +9658,20 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
     ).join('');
     const przypisanyPill = !isReceiver && z.przypisane_do
         ? `<span class="pill" style="background:#fff3f8;">${escHtml(z.przypisane_do)}</span>` : '';
+    // Badge cyklu — pokazujemy na szablonie i instancjach cyklicznych
+    let cyklPill = '';
+    if (z.is_szablon || z.parent_powtarzajacy_id) {
+        const co = parseInt(z.powtarzaj_co, 10) || 1;
+        const dni = ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'];
+        let opis = 'cykl';
+        if (z.powtarzaj === 'CODZIENNIE') opis = 'codziennie';
+        else if (z.powtarzaj === 'TYGODNIOWO') opis = (co === 1 ? 'co tydzień' : `co ${co} tyg.`) + ' (' + (dni[Number(z.powtarzaj_dzien)-1] || '?') + ')';
+        else if (z.powtarzaj === 'MIESIECZNIE') {
+            const dzM = Number(z.powtarzaj_dzien) === 99 ? 'ostatni dzień' : (z.powtarzaj_dzien + '.');
+            opis = (co === 1 ? 'co miesiąc' : `co ${co} mies.`) + ' (' + dzM + ')';
+        }
+        cyklPill = `<span class="pill" style="background:#fef3c7; color:#92400e;" title="Zadanie cykliczne">🔁 ${escHtml(opis)}</span>`;
+    }
     // RBAC menu ⋮: manager/admin zawsze; recepcja TYLKO dla zadań które sama utworzyła;
     // praktykantka nigdy. Sprawdzamy po imieniu zalogowanego vs z.utworzone_przez.
     const myRolaLocal = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
@@ -9628,7 +9680,9 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
     const utworzylJa = z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === myImieLocal;
     const mozeMore = isManagerLocal || (myRolaLocal === 'recepcja' && utworzylJa);
     // Akcje — recepcja+praktykantka mają ✓ Zrobione, ⋮ menu wg powyższego RBAC
-    const doneBtn = isReceiver
+    // Dla szablonów cyklicznych nie pokazujemy "Zrobione" — to definicja, nie wystąpienie
+    const isSzablonCard = !!z.is_szablon;
+    const doneBtn = (isReceiver && !isSzablonCard)
         ? `<button class="ds-zd-action-done" onclick="event.stopPropagation(); ds_zadanieComplete('${z.id}')">✓ Zrobione</button>`
         : '';
     const moreBtn = mozeMore
@@ -9648,7 +9702,8 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
                     <div class="ds-zd-task-meta">
                         <span class="pill" style="background:${z.kategoria==='KLIENT'?'#dbeafe':z.kategoria==='MAGAZYN'?'#fef3c7':z.kategoria==='KOSMETYK'?'#fce7f3':z.kategoria==='SPRZEDAZ'?'#dcfce7':'#f1f5f9'}; color:${z.kategoria==='KLIENT'?'#1e40af':z.kategoria==='MAGAZYN'?'#92400e':z.kategoria==='KOSMETYK'?'#9d174d':z.kategoria==='SPRZEDAZ'?'#166534':'#475569'};">${k.i} ${k.l}</span>
                         ${przypisanyPill}
-                        ${deadlineStr ? `<span class="${overdue?'overdue':''}">📅 ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : ''}
+                        ${cyklPill}
+                        ${deadlineStr && !z.is_szablon ? `<span class="${overdue?'overdue':''}">📅 ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : ''}
                         ${klientPill}
                     </div>
                 </div>
@@ -19735,14 +19790,30 @@ if (inputNazwaCheck) {
                 : { action: 'add', ...base, utworzone_przez: myImie };
 
             zd_apiCall(payload).then(res => {
-                if (res.status !== 'success') { alert(res.message || 'Błąd zapisu'); return; }
+                if (res.status !== 'success') {
+                    if (typeof pokazPowiadomienie === 'function') {
+                        pokazPowiadomienie('error', 'Nie udało się zapisać', res.message || 'Spróbuj ponownie.');
+                    } else {
+                        alert(res.message || 'Błąd zapisu');
+                    }
+                    return;
+                }
                 zd_modalClose();
+                if (typeof pokazPowiadomienie === 'function') {
+                    pokazPowiadomienie(
+                        'success',
+                        id ? '✏️ Zadanie zaktualizowane' : '✅ Zadanie dodane',
+                        tytul.length > 60 ? tytul.slice(0, 60) + '…' : tytul
+                    );
+                }
                 zd_loadList();
                 zd_refreshSidebarBadge();
                 // Jeśli widget Pulpitu jest widoczny — odśwież go też
                 if (typeof ds_loadZadania === 'function') {
                     const rola = localStorage.getItem('boczki_pracownik_rola') || '';
                     const imie = localStorage.getItem('boczki_pracownik_imie') || '';
+                    // Wymuś świeży fetch — domyślnie throttle 5s blokuje, ale po add chcemy widzieć od razu
+                    window.__ds_zd_lastLoadedAt = 0;
                     ds_loadZadania(rola, imie);
                 }
             });
