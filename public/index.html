@@ -2454,6 +2454,8 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 .zd-chip:hover { background:#f8fafc !important; border-color:#cbd5e1 !important; }
 .zd-chip.zd-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
 .zd-chip.zd-chip-active:hover { background:#db2777 !important; }
+.leady-chip.leady-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
+.leady-chip.leady-chip-active:hover { background:#db2777 !important; }
 /* widget Zadania na Pulpicie — Estelio premium look */
 #ds-zadania-section { background:rgba(255,255,255,.95); border:1px solid #f1dfe7; border-radius:22px; box-shadow:0 18px 45px rgba(65,31,47,.08); }
 .ds-zd-pager-btn { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:12px; color:#475569; transition:.15s; }
@@ -4290,6 +4292,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                     <ul id="sub-clients" class="nav-submenu">
                         <li><button onclick="pokaz('urodziny', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/></svg>Urodziny</span></button></li>
 						<li><button onclick="pokaz('klient-profil', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Klienci</span></button></li>
+						<li id="nav-leady"><button onclick="pokaz('leady', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Leady</span></button></li>
 						<li><button onclick="otworzPopupNowyKlient()" style="color:#34d399; font-weight:bold;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>Dodaj Klienta</span></button></li>
                     </ul>
                 </li>
@@ -7128,6 +7131,105 @@ ANALIZA MANAGER
                 </table>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════════════════╗
+     ║  LEADY — potencjalni klienci z agencji marketingowych ║
+     ║  Import z Google Sheets / publicznych arkuszy CSV     ║
+     ╚══════════════════════════════════════════════════════╝ -->
+<div id="leady" class="section" style="padding-bottom:50px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <div>
+            <h1 style="margin:0; font-size:24px;">📋 Leady</h1>
+            <span style="color:#6b7280; font-size:14px;">Potencjalni klienci z agencji marketingowych — import z Google Sheets</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button onclick="leady_dodajZrodloOpen()" style="background:#ec4899; color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px;">+ Nowe źródło</button>
+            <button onclick="leady_setStatus('IMPORTY', null)" style="background:#fff; color:#475569; border:1px solid #e2e8f0; padding:10px 18px; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px;">📥 Źródła</button>
+        </div>
+    </div>
+
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
+        <button class="leady-chip leady-chip-active" data-status="nowy" onclick="leady_setStatus('nowy', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">🆕 Nowi <span id="leady-cnt-nowy" style="opacity:.7;"></span></button>
+        <button class="leady-chip" data-status="kontakt" onclick="leady_setStatus('kontakt', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📞 Skontaktowane <span id="leady-cnt-kontakt" style="opacity:.7;"></span></button>
+        <button class="leady-chip" data-status="umowiony" onclick="leady_setStatus('umowiony', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📅 Umówione <span id="leady-cnt-umowiony" style="opacity:.7;"></span></button>
+        <button class="leady-chip" data-status="klient" onclick="leady_setStatus('klient', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">⭐ Klienci <span id="leady-cnt-klient" style="opacity:.7;"></span></button>
+        <button class="leady-chip" data-status="odrzucony" onclick="leady_setStatus('odrzucony', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">❌ Odrzuceni <span id="leady-cnt-odrzucony" style="opacity:.7;"></span></button>
+        <button class="leady-chip" data-status="" onclick="leady_setStatus('', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📋 Wszystkie</button>
+        <input id="leady-search" oninput="leady_render()" placeholder="🔍 Wyszukaj po imieniu, telefonie, emailu, notatce..." style="flex:1; min-width:200px; padding:8px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none;">
+    </div>
+
+    <div id="leady-list-wrap"></div>
+</div>
+
+<!-- Modal: dodaj źródło / mapowanie kolumn -->
+<div id="leady-modal-zrodlo" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:flex-start; backdrop-filter:blur(3px); overflow-y:auto; padding:30px 0;">
+    <div style="background:#fff; padding:28px; border-radius:16px; width:90%; max-width:680px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+            <h3 style="margin:0; font-size:18px;">📥 Nowe źródło leadów</h3>
+            <button onclick="document.getElementById('leady-modal-zrodlo').style.display='none'" style="background:none; border:none; font-size:26px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+
+        <div style="background:#fef9c3; border-left:4px solid #facc15; padding:10px 14px; border-radius:6px; font-size:12.5px; color:#713f12; margin-bottom:14px;">
+            <strong>Wskazówka:</strong> arkusz Google Sheets musi być udostępniony "Każdy z linkiem" (przeglądający). Inaczej Estelio nie pobierze danych.
+        </div>
+
+        <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Nazwa źródła (np. agencja, kampania)</label>
+        <input id="leady-nazwa" placeholder="np. Agencja XYZ — kampania majowa" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
+
+        <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Link do arkusza (Google Sheets / CSV) <span style="color:#dc2626;">*</span></label>
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input id="leady-url" placeholder="https://docs.google.com/spreadsheets/d/..." style="flex:1; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
+            <button onclick="leady_pobierzPreview()" style="background:#0ea5e9; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; white-space:nowrap;">🔍 Sprawdź</button>
+        </div>
+
+        <div id="leady-preview-wrap" style="display:none;">
+            <div style="margin:14px 0 8px; font-weight:700; color:#475569; font-size:13px;">Mapowanie kolumn — przypisz nagłówki z arkusza do pól w Estelio:</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:8px;">
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Imię (lub całość)</label><select id="leady-map-imie" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Nazwisko (jeśli osobno)</label><select id="leady-map-nazwisko" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Telefon</label><select id="leady-map-telefon" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Email</label><select id="leady-map-email" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Notatka / treść</label><select id="leady-map-notatka" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Data zgłoszenia</label><select id="leady-map-data_zgloszenia" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Kampania</label><select id="leady-map-kampania" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Zabieg / pakiet</label><select id="leady-map-zabieg" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Wartość sprzedaży</label><select id="leady-map-wartosc_sprzedazy" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Data wizyty</label><select id="leady-map-data_wizyty" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Liczba połączeń</label><select id="leady-map-liczba_polaczen" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Wysłany SMS (tak/nie)</label><select id="leady-map-wyslany_sms" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+                <div><label style="font-size:11px; font-weight:700; color:#64748b;">Zadatek (kwota lub tak/nie)</label><select id="leady-map-zadatek_kwota" class="leady-map-select" style="width:100%; padding:8px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></select></div>
+            </div>
+            <div style="font-size:11px; color:#64748b; margin-bottom:10px;">💡 Pola których nie zmapujesz są zachowywane w pełnej formie i widoczne w karcie leada w sekcji „Pełne dane z arkusza".</div>
+
+            <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Klucz unikalności (deduplikacja)</label>
+            <select id="leady-dedup" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:14px;">
+                <option value="telefon">📞 Telefon (zalecane)</option>
+                <option value="email">✉️ Email</option>
+                <option value="telefon_lub_email">📞 lub ✉️ — albo telefon, albo email</option>
+            </select>
+
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px; margin-bottom:14px;">
+                <div style="font-size:11px; font-weight:700; color:#64748b; margin-bottom:6px;">Podgląd pierwszych wierszy (<span id="leady-preview-cnt"></span> wierszy w arkuszu):</div>
+                <div id="leady-preview-table" style="overflow-x:auto; font-size:11.5px;"></div>
+            </div>
+
+            <button onclick="leady_zapiszZrodlo()" style="width:100%; background:#10b981; color:white; border:none; padding:12px; border-radius:8px; font-weight:700; cursor:pointer; font-size:14px;">💾 Zapisz źródło i pobierz leady</button>
+        </div>
+
+        <div id="leady-preview-error" style="display:none; background:#fee2e2; color:#991b1b; padding:10px 14px; border-radius:6px; font-size:13px; margin-top:10px;"></div>
+    </div>
+</div>
+
+<!-- Modal: szczegóły leada -->
+<div id="leady-modal-szczegoly" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:flex-start; backdrop-filter:blur(3px); overflow-y:auto; padding:30px 0;">
+    <div style="background:#fff; padding:28px; border-radius:16px; width:90%; max-width:640px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
+            <h3 style="margin:0; font-size:18px;">📋 <span id="leady-szcz-tytul">Lead</span></h3>
+            <button onclick="document.getElementById('leady-modal-szczegoly').style.display='none'" style="background:none; border:none; font-size:26px; cursor:pointer; color:#94a3b8;">&times;</button>
+        </div>
+        <div id="leady-szcz-body"></div>
     </div>
 </div>
 
@@ -12104,6 +12206,7 @@ function pokaz(id, b) {
         zaladujKlientowDoKartoteki();
     }
     if (id === 'awaryjna-zmiana') pobierzAwaryjneTransakcje();
+    if (id === 'leady' && typeof leady_init === 'function') leady_init();
 
     // 🟢 TWARDE ODKRYCIE KREATORA (Tylko jak go klikniesz)
     if (id === 'kreator_dostepow') {
@@ -12260,6 +12363,7 @@ function pokaz(id, b) {
         zaladujKlientowDoKartoteki();
     }
     if (id === 'awaryjna-zmiana') pobierzAwaryjneTransakcje();
+    if (id === 'leady' && typeof leady_init === 'function') leady_init();
 
     // 🟢 TWARDE ODKRYCIE KREATORA (Tylko jak go klikniesz)
     if (id === 'kreator_dostepow') {
@@ -19878,6 +19982,460 @@ if (inputNazwaCheck) {
             if (!krok2) return;
             zd_apiCall({ action: 'delete', id })
                 .then(res => { if (res.status !== 'success') alert(res.message || 'Błąd'); zd_loadList(); });
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // LEADY — potencjalni klienci z agencji marketingowych
+        // ─────────────────────────────────────────────────────────────────
+        const LEADY_STATUSY = ['nowy','kontakt','umowiony','klient','odrzucony'];
+        let leady_state = { status: 'nowy', list: [] };
+
+        function leady_init() { leady_loadList(); }
+
+        function leady_apiCall(payload) {
+            const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+            return fetch(API_URL + '/leady', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+                body: JSON.stringify({ ...payload, tenant_id })
+            }).then(r => r.json());
+        }
+
+        function leady_setStatus(status, btn) {
+            leady_state.status = status;
+            document.querySelectorAll('.leady-chip').forEach(c => c.classList.remove('leady-chip-active'));
+            if (btn) btn.classList.add('leady-chip-active');
+            else {
+                const target = document.querySelector(`.leady-chip[data-status="${status}"]`);
+                if (target) target.classList.add('leady-chip-active');
+            }
+            if (status === 'IMPORTY') leady_renderImporty();
+            else leady_loadList();
+        }
+
+        function leady_loadList() {
+            const wrap = document.getElementById('leady-list-wrap');
+            if (!wrap) return;
+            wrap.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Ładowanie...</div>';
+            const payload = { action: 'list' };
+            if (leady_state.status && leady_state.status !== 'IMPORTY') payload.status = leady_state.status;
+            leady_apiCall(payload).then(res => {
+                if (res.status !== 'success') {
+                    wrap.innerHTML = `<div style="color:#dc2626; padding:20px;">${escHtml(res.message || 'Błąd')}</div>`;
+                    return;
+                }
+                leady_state.list = res.data || [];
+                leady_updateCounters();
+                leady_render();
+            });
+        }
+
+        function leady_updateCounters() {
+            // Pojedyncze zapytanie po wszystkich statusach żeby zaktualizować chipy
+            leady_apiCall({ action: 'list' }).then(res => {
+                if (res.status !== 'success') return;
+                const all = res.data || [];
+                const cnt = {};
+                LEADY_STATUSY.forEach(s => cnt[s] = 0);
+                all.forEach(l => { if (cnt[l.status] !== undefined) cnt[l.status]++; });
+                LEADY_STATUSY.forEach(s => {
+                    const el = document.getElementById('leady-cnt-' + s);
+                    if (el) el.textContent = cnt[s] > 0 ? `(${cnt[s]})` : '';
+                });
+            });
+        }
+
+        function leady_render() {
+            const wrap = document.getElementById('leady-list-wrap');
+            if (!wrap) return;
+            if (leady_state.status === 'IMPORTY') return leady_renderImporty();
+            const search = (document.getElementById('leady-search')?.value || '').toLowerCase().trim();
+            let list = leady_state.list;
+            if (search) {
+                list = list.filter(l =>
+                    String(l.imie||'').toLowerCase().includes(search) ||
+                    String(l.nazwisko||'').toLowerCase().includes(search) ||
+                    String(l.telefon||'').toLowerCase().includes(search) ||
+                    String(l.email||'').toLowerCase().includes(search) ||
+                    String(l.notatka||'').toLowerCase().includes(search)
+                );
+            }
+            if (!list.length) {
+                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Brak leadów do wyświetlenia. Dodaj nowe źródło żeby zaimportować pierwsze leady.</div>';
+                return;
+            }
+            const STATUS_BADGE = {
+                nowy:      { bg: '#dbeafe', col: '#1e40af', txt: '🆕 Nowy' },
+                kontakt:   { bg: '#fef3c7', col: '#92400e', txt: '📞 Skontakt.' },
+                umowiony:  { bg: '#dcfce7', col: '#166534', txt: '📅 Umówiony' },
+                klient:    { bg: '#fce7f3', col: '#9d174d', txt: '⭐ Klient' },
+                odrzucony: { bg: '#fee2e2', col: '#991b1b', txt: '❌ Odrzucony' }
+            };
+            wrap.innerHTML = `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                    <thead style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                        <tr>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Imię i nazwisko</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Telefon</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Email</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Źródło</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Status</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Dodano</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${list.map(l => {
+                            const s = STATUS_BADGE[l.status] || STATUS_BADGE.nowy;
+                            const dataD = l.data_dodania ? new Date(l.data_dodania).toLocaleDateString('pl-PL') : '';
+                            return `<tr style="border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="leady_otworzLeada('${l.id}')" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='transparent'">
+                                <td style="padding:12px; font-weight:600;">${escHtml(l.imie || '')} ${escHtml(l.nazwisko || '')}</td>
+                                <td style="padding:12px; color:#475569;">${escHtml(l.telefon || '—')}</td>
+                                <td style="padding:12px; color:#475569;">${escHtml(l.email || '—')}</td>
+                                <td style="padding:12px; color:#64748b; font-size:11.5px;">${escHtml(l.zrodlo || '—')}</td>
+                                <td style="padding:12px;"><span style="display:inline-block; padding:3px 9px; border-radius:6px; background:${s.bg}; color:${s.col}; font-weight:700; font-size:11px;">${s.txt}</span></td>
+                                <td style="padding:12px; color:#94a3b8; font-size:11.5px;">${dataD}</td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+
+        function leady_renderImporty() {
+            const wrap = document.getElementById('leady-list-wrap');
+            if (!wrap) return;
+            wrap.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Ładowanie źródeł...</div>';
+            leady_apiCall({ action: 'import_lista' }).then(res => {
+                const list = (res.status === 'success' ? (res.data || []) : []);
+                if (!list.length) {
+                    wrap.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Brak skonfigurowanych źródeł. Kliknij <b>+ Nowe źródło</b> żeby dodać pierwszy arkusz.</div>';
+                    return;
+                }
+                wrap.innerHTML = `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;">
+                    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                        <thead style="background:#f8fafc;">
+                            <tr>
+                                <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Nazwa</th>
+                                <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Status</th>
+                                <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Ostatnia synchr.</th>
+                                <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Wynik</th>
+                                <th style="padding:12px; text-align:right; font-size:11px; color:#94a3b8; text-transform:uppercase;">Akcje</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${list.map(i => {
+                                const aktywny = i.aktywny ? '<span style="color:#10b981; font-weight:700;">● Aktywny</span>' : '<span style="color:#94a3b8;">○ Wyłączony</span>';
+                                const sync = i.ostatnia_synchronizacja ? new Date(i.ostatnia_synchronizacja).toLocaleString('pl-PL') : '<i style="color:#94a3b8;">nigdy</i>';
+                                return `<tr style="border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:12px;"><b>${escHtml(i.nazwa)}</b><br><a href="${escHtml(i.url)}" target="_blank" style="font-size:11px; color:#0ea5e9;">otwórz arkusz →</a></td>
+                                    <td style="padding:12px;">${aktywny}</td>
+                                    <td style="padding:12px; color:#475569; font-size:11.5px;">${sync}</td>
+                                    <td style="padding:12px; color:#64748b; font-size:11.5px;">${escHtml(i.ostatni_status || '—')}</td>
+                                    <td style="padding:12px; text-align:right; white-space:nowrap;">
+                                        <button onclick="leady_syncImport('${i.id}')" style="background:#0ea5e9; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; margin-right:4px;">🔄 Odśwież</button>
+                                        <button onclick="leady_toggleImport('${i.id}', ${i.aktywny ? 0 : 1})" style="background:#f1f5f9; color:#475569; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; margin-right:4px;">${i.aktywny ? '⏸ Wyłącz' : '▶ Włącz'}</button>
+                                        <button onclick="leady_deleteImport('${i.id}')" style="background:#fee2e2; color:#991b1b; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px;">🗑</button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
+            });
+        }
+
+        function leady_dodajZrodloOpen() {
+            document.getElementById('leady-nazwa').value = '';
+            document.getElementById('leady-url').value = '';
+            document.getElementById('leady-preview-wrap').style.display = 'none';
+            document.getElementById('leady-preview-error').style.display = 'none';
+            document.getElementById('leady-modal-zrodlo').style.display = 'flex';
+        }
+
+        function leady_pobierzPreview() {
+            const url = document.getElementById('leady-url').value.trim();
+            const errBox = document.getElementById('leady-preview-error');
+            errBox.style.display = 'none';
+            if (!url) { errBox.textContent = 'Wklej link do arkusza.'; errBox.style.display = 'block'; return; }
+            const previewWrap = document.getElementById('leady-preview-wrap');
+            previewWrap.style.display = 'none';
+            errBox.textContent = '⏳ Pobieram arkusz...';
+            errBox.style.background = '#dbeafe'; errBox.style.color = '#1e40af';
+            errBox.style.display = 'block';
+
+            leady_apiCall({ action: 'import_preview', url }).then(res => {
+                if (res.status !== 'success') {
+                    errBox.textContent = res.message || 'Błąd pobierania';
+                    errBox.style.background = '#fee2e2'; errBox.style.color = '#991b1b';
+                    errBox.style.display = 'block';
+                    return;
+                }
+                errBox.style.display = 'none';
+                const headers = res.headers || [];
+                // Auto-detekcja kolumn po wzorcach (kolejność = priorytet — bardziej specyficzne pierwsze)
+                const wzorce = {
+                    imie:              ['imię i nazwisko','imie i nazwisko','imię','imie','first','name'],
+                    nazwisko:          ['nazwisko','last','surname'],
+                    telefon:           ['numer telefonu','telefon','tel ','phone','numer'],
+                    email:             ['e-mail','email','mail'],
+                    notatka:           ['informacje dodatkowe','notatk','komentarz','wiadom','treść','tresc','opis','message','notes'],
+                    data_zgloszenia:   ['data zgłoszenia','data zgloszenia','data dodania','timestamp','created','^data$'],
+                    kampania:          ['kampani','campaign','źródł','zrodl'],
+                    zabieg:            ['zabieg','pakiet','usłu','uslu','treatment'],
+                    wartosc_sprzedazy: ['wartość sprzed','wartosc sprzed','sprzedaż','sprzedaz','wartość','wartosc','revenue'],
+                    data_wizyty:       ['data wizyty','umówił','umowil','konsultacj','wizyt','proponowana'],
+                    liczba_polaczen:   ['liczba połącz','liczba polacz','połączeń','polaczen','calls','dzwon'],
+                    wyslany_sms:       ['sms','wysłany sms','wyslany sms'],
+                    zadatek_kwota:     ['zadatek','deposit','przedpł','przedpl']
+                };
+                const pola = ['imie','nazwisko','telefon','email','notatka','data_zgloszenia','kampania','zabieg','wartosc_sprzedazy','data_wizyty','liczba_polaczen','wyslany_sms','zadatek_kwota'];
+                const uzyte = new Set();
+                pola.forEach(p => {
+                    const sel = document.getElementById('leady-map-' + p);
+                    if (!sel) return;
+                    let opts = '<option value="">— pomiń —</option>';
+                    headers.forEach(h => { opts += `<option value="${escHtml(h)}">${escHtml(h)}</option>`; });
+                    sel.innerHTML = opts;
+                    // Match: pierwszy nagłówek pasujący do któregokolwiek wzorca i jeszcze nie użyty
+                    const matchHeader = headers.find(h => {
+                        if (uzyte.has(h)) return false;
+                        const hl = String(h).toLowerCase();
+                        return (wzorce[p] || []).some(w => {
+                            if (w.startsWith('^') && w.endsWith('$')) return hl === w.slice(1, -1);
+                            return hl.includes(w);
+                        });
+                    });
+                    if (matchHeader) { sel.value = matchHeader; uzyte.add(matchHeader); }
+                });
+                // Tabela podglądu
+                const tab = document.getElementById('leady-preview-table');
+                if (res.preview && res.preview.length) {
+                    const ths = headers.map(h => `<th style="padding:6px 8px; background:#e2e8f0; text-align:left; font-weight:700; white-space:nowrap;">${escHtml(h)}</th>`).join('');
+                    const trs = res.preview.map(row => '<tr>' + headers.map(h => `<td style="padding:6px 8px; border-top:1px solid #e2e8f0;">${escHtml(String(row[h] || '')).slice(0, 60)}</td>`).join('') + '</tr>').join('');
+                    tab.innerHTML = `<table style="width:100%; border-collapse:collapse;"><thead><tr>${ths}</tr></thead><tbody>${trs}</tbody></table>`;
+                } else {
+                    tab.innerHTML = '<div style="color:#94a3b8;">Arkusz pusty</div>';
+                }
+                document.getElementById('leady-preview-cnt').textContent = res.rows_count || 0;
+                previewWrap.style.display = 'block';
+            });
+        }
+
+        function leady_zapiszZrodlo() {
+            const nazwa = document.getElementById('leady-nazwa').value.trim();
+            const url = document.getElementById('leady-url').value.trim();
+            const klucz_dedup = document.getElementById('leady-dedup').value;
+            if (!nazwa) { alert('Podaj nazwę źródła'); return; }
+            if (!url) { alert('Podaj link do arkusza'); return; }
+            const mapowanie = {};
+            ['imie','nazwisko','telefon','email','notatka','data_zgloszenia','kampania','zabieg','wartosc_sprzedazy','data_wizyty','liczba_polaczen','wyslany_sms','zadatek_kwota'].forEach(p => {
+                const v = document.getElementById('leady-map-' + p).value;
+                if (v) mapowanie[p] = v;
+            });
+            if (!mapowanie.telefon && !mapowanie.email) {
+                alert('Zmapuj co najmniej telefon LUB email — bez tego deduplikacja nie zadziała.');
+                return;
+            }
+            leady_apiCall({ action: 'import_zapisz', nazwa, url, mapowanie, klucz_dedup }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                document.getElementById('leady-modal-zrodlo').style.display = 'none';
+                const msg = res.error
+                    ? `Źródło dodane, ale wystąpił błąd przy imporcie: ${res.error}`
+                    : `Zaimportowano ${res.dodano || 0} ${res.total ? '(z ' + res.total + ')' : ''} leadów`;
+                if (typeof pokazPowiadomienie === 'function') {
+                    pokazPowiadomienie(res.error ? 'warning' : 'success', '📥 Źródło dodane', msg);
+                } else alert(msg);
+                leady_loadList();
+            });
+        }
+
+        function leady_syncImport(id) {
+            if (typeof pokazPowiadomienie === 'function') pokazPowiadomienie('info', '🔄 Synchronizacja', 'Pobieram leady z arkusza...');
+            leady_apiCall({ action: 'sync', import_id: id }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                if (typeof pokazPowiadomienie === 'function') {
+                    pokazPowiadomienie('success', '✅ Gotowe', `Zaimportowano ${res.dodano || 0} nowych leadów ${res.total ? '(z ' + res.total + ' wierszy)' : ''}.`);
+                }
+                leady_renderImporty();
+            });
+        }
+
+        function leady_toggleImport(id, aktywny) {
+            leady_apiCall({ action: 'import_toggle', id, aktywny }).then(res => {
+                if (res.status !== 'success') alert(res.message || 'Błąd');
+                leady_renderImporty();
+            });
+        }
+
+        function leady_deleteImport(id) {
+            if (!confirm('Usunąć źródło? Leady zostają zachowane, ale arkusz nie będzie już synchronizowany.')) return;
+            leady_apiCall({ action: 'import_delete', id }).then(res => {
+                if (res.status !== 'success') alert(res.message || 'Błąd');
+                leady_renderImporty();
+            });
+        }
+
+        function leady_otworzLeada(id) {
+            leady_apiCall({ action: 'get', id }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                const l = res.data;
+                document.getElementById('leady-szcz-tytul').textContent = `${l.imie || ''} ${l.nazwisko || ''}`.trim() || '(bez imienia)';
+                const STATUS_BTN = [
+                    { v: 'nowy',      txt: '🆕 Nowy',         bg: '#dbeafe', col: '#1e40af' },
+                    { v: 'kontakt',   txt: '📞 Skontaktowany', bg: '#fef3c7', col: '#92400e' },
+                    { v: 'umowiony',  txt: '📅 Umówiony',      bg: '#dcfce7', col: '#166534' },
+                    { v: 'klient',    txt: '⭐ Klient',         bg: '#fce7f3', col: '#9d174d' },
+                    { v: 'odrzucony', txt: '❌ Odrzucony',      bg: '#fee2e2', col: '#991b1b' }
+                ];
+                const statusBtns = STATUS_BTN.map(b => {
+                    const active = b.v === l.status;
+                    return `<button onclick="leady_zmienStatus('${l.id}', '${b.v}')" style="padding:6px 10px; border-radius:6px; border:1px solid ${active ? b.col : '#e2e8f0'}; background:${active ? b.bg : '#fff'}; color:${active ? b.col : '#475569'}; font-weight:${active ? '700' : '500'}; cursor:pointer; font-size:11.5px;">${b.txt}</button>`;
+                }).join(' ');
+                const komentarze = (l.komentarze || []).map(k =>
+                    `<div style="background:#f8fafc; border-left:3px solid #ec4899; padding:8px 10px; margin-bottom:6px; border-radius:6px; font-size:12.5px;">
+                        <div style="display:flex; justify-content:space-between; color:#94a3b8; font-size:11px; margin-bottom:2px;"><b>${escHtml(k.autor || 'system')}</b><span>${new Date(k.data_utworzenia).toLocaleString('pl-PL')}</span></div>
+                        <div style="color:#334155;">${escHtml(k.tresc)}</div>
+                    </div>`
+                ).join('') || '<div style="color:#94a3b8; font-size:12px;">Brak komentarzy</div>';
+                // Pola dodatkowe z mapowania (kampania, zabieg, wartość, data wizyty) — pokazuj jeśli wypełnione
+                const dodatkowe = [];
+                if (l.kampania)          dodatkowe.push(`<b>📢 Kampania:</b> ${escHtml(l.kampania)}`);
+                if (l.zabieg)            dodatkowe.push(`<b>💆 Zabieg/pakiet:</b> ${escHtml(l.zabieg)}`);
+                if (l.wartosc_sprzedazy != null && l.wartosc_sprzedazy !== '') {
+                    dodatkowe.push(`<b>💰 Wartość:</b> ${parseFloat(l.wartosc_sprzedazy).toFixed(2)} zł`);
+                }
+                if (l.data_wizyty)       dodatkowe.push(`<b>📅 Data wizyty:</b> ${new Date(l.data_wizyty).toLocaleString('pl-PL')}`);
+                const dodatkoweHtml = dodatkowe.length
+                    ? `<div style="background:#fff7ed; border:1px solid #fed7aa; padding:10px 12px; border-radius:8px; font-size:12.5px; color:#7c2d12; margin-bottom:12px; line-height:1.7;">${dodatkowe.join('<br>')}</div>`
+                    : '';
+
+                // Pełne dane z arkusza (raw JSON) — wszystko czego mapowanie nie objęło też tu jest
+                let rawHtml = '';
+                if (l.dane_raw) {
+                    try {
+                        const raw = typeof l.dane_raw === 'string' ? JSON.parse(l.dane_raw) : l.dane_raw;
+                        const pary = Object.entries(raw).filter(([k, v]) => v !== '' && v != null);
+                        if (pary.length) {
+                            const wiersze = pary.map(([k, v]) =>
+                                `<tr><td style="padding:5px 8px; color:#64748b; font-weight:600; font-size:11.5px; vertical-align:top; white-space:nowrap;">${escHtml(k)}</td><td style="padding:5px 8px; color:#334155; font-size:12px;">${escHtml(String(v))}</td></tr>`
+                            ).join('');
+                            rawHtml = `<details style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-bottom:14px;">
+                                <summary style="cursor:pointer; font-weight:700; color:#475569; font-size:12.5px;">📊 Pełne dane z arkusza (${pary.length} kolumn)</summary>
+                                <table style="width:100%; border-collapse:collapse; margin-top:8px;"><tbody>${wiersze}</tbody></table>
+                            </details>`;
+                        }
+                    } catch (e) {}
+                }
+
+                const lp = parseInt(l.liczba_polaczen, 10) || 0;
+                const sms = !!l.wyslany_sms;
+                const zk = (l.zadatek_kwota != null && l.zadatek_kwota !== '') ? parseFloat(l.zadatek_kwota) : null;
+
+                document.getElementById('leady-szcz-body').innerHTML = `
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+                        <div><label style="font-size:11px; font-weight:700; color:#64748b;">Telefon</label><input id="leady-edit-telefon" value="${escHtml(l.telefon || '')}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></div>
+                        <div><label style="font-size:11px; font-weight:700; color:#64748b;">Email</label><input id="leady-edit-email" value="${escHtml(l.email || '')}" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;"></div>
+                    </div>
+                    <label style="font-size:11px; font-weight:700; color:#64748b;">Notatka</label>
+                    <textarea id="leady-edit-notatka" style="width:100%; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; min-height:60px; margin-bottom:8px; resize:vertical;">${escHtml(l.notatka || '')}</textarea>
+
+                    <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:8px; padding:12px; margin-bottom:14px;">
+                        <div style="font-weight:700; color:#1e40af; font-size:13px; margin-bottom:10px;">📞 Workflow recepcji</div>
+                        <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; margin-bottom:8px;">
+                            <label style="font-size:12px; font-weight:600; color:#475569;">Liczba połączeń:</label>
+                            <input id="leady-edit-liczba_polaczen" type="number" min="0" value="${lp}" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px; width:80px;">
+                            <button type="button" onclick="leady_inkrPolaczen()" style="background:#0ea5e9; color:white; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; white-space:nowrap;">+1 połączenie</button>
+                        </div>
+                        <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#475569; margin-bottom:8px; cursor:pointer;">
+                            <input id="leady-edit-wyslany_sms" type="checkbox" ${sms ? 'checked' : ''} style="width:16px; height:16px;">
+                            ✉️ Wysłany SMS
+                        </label>
+                        <div style="display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center;">
+                            <label style="font-size:12px; font-weight:600; color:#475569;">Zadatek (zł):</label>
+                            <input id="leady-edit-zadatek_kwota" type="number" step="0.01" min="0" value="${zk != null ? zk : ''}" placeholder="puste = niewpłacony" style="padding:6px 10px; border:1px solid #cbd5e1; border-radius:6px; font-size:13px;">
+                            <span style="font-size:11px; color:#64748b; white-space:nowrap;">${zk != null && zk > 0 ? '✅ wpłacony' : '⏳ brak'}</span>
+                        </div>
+                    </div>
+
+                    <button onclick="leady_zapiszEdit('${l.id}')" style="background:#10b981; color:white; border:none; padding:10px 18px; border-radius:8px; font-weight:700; cursor:pointer; font-size:13px; margin-bottom:14px; width:100%;">💾 Zapisz wszystkie zmiany</button>
+
+                    ${dodatkoweHtml}
+
+                    <div style="margin:14px 0 8px; font-weight:700; color:#475569; font-size:13px;">Status:</div>
+                    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px;">${statusBtns}</div>
+
+                    <div style="background:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:11.5px; color:#475569; margin-bottom:14px;">
+                        <b>Źródło:</b> ${escHtml(l.zrodlo || '—')}<br>
+                        <b>Dodany:</b> ${l.data_dodania ? new Date(l.data_dodania).toLocaleString('pl-PL') : '—'}<br>
+                        ${l.data_zgloszenia ? '<b>Data zgłoszenia:</b> ' + new Date(l.data_zgloszenia).toLocaleString('pl-PL') + '<br>' : ''}
+                        ${l.data_ostatniego_kontaktu ? '<b>Ostatni kontakt:</b> ' + new Date(l.data_ostatniego_kontaktu).toLocaleString('pl-PL') : ''}
+                    </div>
+
+                    ${rawHtml}
+
+                    <div style="margin:14px 0 8px; font-weight:700; color:#475569; font-size:13px;">📝 Komentarze (historia kontaktu):</div>
+                    ${komentarze}
+                    <div style="display:flex; gap:6px; margin-top:8px;">
+                        <input id="leady-komentarz-tresc" placeholder="np. 'Zadzwoniłam, oddzwoni jutro'" style="flex:1; padding:8px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px;">
+                        <button onclick="leady_dodajKomentarz('${l.id}')" style="background:#0ea5e9; color:white; border:none; padding:8px 14px; border-radius:6px; font-weight:700; cursor:pointer; font-size:12.5px;">+ Dodaj</button>
+                    </div>
+
+                    <div style="margin-top:18px; padding-top:12px; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between;">
+                        <button onclick="leady_usun('${l.id}')" style="background:#fff; color:#991b1b; border:1px solid #fecaca; padding:7px 14px; border-radius:6px; font-weight:600; cursor:pointer; font-size:12px;">🗑 Usuń lead</button>
+                    </div>
+                `;
+                document.getElementById('leady-modal-szczegoly').style.display = 'flex';
+            });
+        }
+
+        function leady_zmienStatus(id, status) {
+            leady_apiCall({ action: 'update_status', id, status }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                leady_otworzLeada(id);
+                leady_loadList();
+            });
+        }
+
+        function leady_zapiszEdit(id) {
+            const payload = {
+                action: 'update_pole', id,
+                telefon: document.getElementById('leady-edit-telefon').value.trim(),
+                email: document.getElementById('leady-edit-email').value.trim(),
+                notatka: document.getElementById('leady-edit-notatka').value.trim(),
+                liczba_polaczen: parseInt(document.getElementById('leady-edit-liczba_polaczen').value, 10) || 0,
+                wyslany_sms: document.getElementById('leady-edit-wyslany_sms').checked ? 1 : 0,
+                zadatek_kwota: document.getElementById('leady-edit-zadatek_kwota').value.trim() || null
+            };
+            leady_apiCall(payload).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                if (typeof pokazPowiadomienie === 'function') pokazPowiadomienie('success', '✏️ Zapisano', '');
+                leady_otworzLeada(id); // re-render karty z aktualnymi wartościami
+                leady_loadList();
+            });
+        }
+
+        function leady_inkrPolaczen() {
+            const inp = document.getElementById('leady-edit-liczba_polaczen');
+            if (inp) inp.value = (parseInt(inp.value, 10) || 0) + 1;
+        }
+
+        function leady_dodajKomentarz(id) {
+            const tresc = document.getElementById('leady-komentarz-tresc').value.trim();
+            if (!tresc) return;
+            const autor = localStorage.getItem('boczki_pracownik_imie') || '';
+            leady_apiCall({ action: 'add_komentarz', lead_id: id, autor, tresc }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                leady_otworzLeada(id);
+            });
+        }
+
+        function leady_usun(id) {
+            if (!confirm('Usunąć leada? Operacja jest permanentna.')) return;
+            leady_apiCall({ action: 'delete', id }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                document.getElementById('leady-modal-szczegoly').style.display = 'none';
+                leady_loadList();
+            });
         }
 
         /* ─────────────────────────────────────────────────────────────────
