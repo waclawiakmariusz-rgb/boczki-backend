@@ -318,7 +318,7 @@ module.exports = (db) => {
                         data_zgloszenia, data_dodania, data_ostatniego_kontaktu, id_klienta_konwersja
                  FROM Leady WHERE tenant_id = ?`;
       if (status && ALLOWED_STATUSY.includes(status)) { sql += ' AND status = ?'; params.push(status); }
-      sql += ' ORDER BY data_dodania DESC LIMIT 1000';
+      sql += ' ORDER BY data_dodania DESC LIMIT 5000';
       db.query(sql, params, (err, rows) => {
         if (err) return res.json({ status: 'error', message: err.message });
         res.json({ status: 'success', data: rows || [] });

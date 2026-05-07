@@ -2456,6 +2456,9 @@ body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
 .zd-chip.zd-chip-active:hover { background:#db2777 !important; }
 .leady-chip.leady-chip-active { background:#ec4899 !important; color:#fff !important; border-color:#ec4899 !important; }
 .leady-chip.leady-chip-active:hover { background:#db2777 !important; }
+.leady-pager-btn { background:#fff; color:#475569; border:1px solid #cbd5e1; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; }
+.leady-pager-btn:hover:not([disabled]) { background:#f1f5f9; }
+.leady-pager-btn[disabled] { opacity:.4; cursor:not-allowed; }
 /* widget Zadania na Pulpicie — Estelio premium look */
 #ds-zadania-section { background:rgba(255,255,255,.95); border:1px solid #f1dfe7; border-radius:22px; box-shadow:0 18px 45px rgba(65,31,47,.08); }
 .ds-zd-pager-btn { background:#fff; border:1px solid #e2e8f0; border-radius:8px; padding:4px 10px; font-size:12px; color:#475569; transition:.15s; }
@@ -7158,7 +7161,7 @@ ANALIZA MANAGER
         <button class="leady-chip" data-status="klient" onclick="leady_setStatus('klient', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">⭐ Klienci <span id="leady-cnt-klient" style="opacity:.7;"></span></button>
         <button class="leady-chip" data-status="odrzucony" onclick="leady_setStatus('odrzucony', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">❌ Odrzuceni <span id="leady-cnt-odrzucony" style="opacity:.7;"></span></button>
         <button class="leady-chip" data-status="" onclick="leady_setStatus('', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">📋 Wszystkie</button>
-        <input id="leady-search" oninput="leady_render()" placeholder="🔍 Wyszukaj po imieniu, telefonie, emailu, notatce..." style="flex:1; min-width:200px; padding:8px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none;">
+        <input id="leady-search" oninput="leady_state.page=0; leady_render()" placeholder="🔍 Wyszukaj po imieniu, telefonie, emailu, notatce..." style="flex:1; min-width:200px; padding:8px 14px; border:1px solid #e2e8f0; border-radius:10px; font-size:13px; outline:none;">
     </div>
 
     <div id="leady-list-wrap"></div>
@@ -19998,7 +20001,12 @@ if (inputNazwaCheck) {
         // LEADY — potencjalni klienci z agencji marketingowych
         // ─────────────────────────────────────────────────────────────────
         const LEADY_STATUSY = ['nowy','kontakt','umowiony','klient','odrzucony'];
-        let leady_state = { status: 'nowy', list: [] };
+        const LEADY_PAGE_SIZE = 50;
+        let leady_state = {
+            status: 'nowy', list: [],
+            sortKey: 'data_zgloszenia', sortDir: 'desc',
+            page: 0, filterMonth: ''
+        };
 
         function leady_init() { leady_loadList(); }
 
@@ -20013,6 +20021,10 @@ if (inputNazwaCheck) {
 
         function leady_setStatus(status, btn) {
             leady_state.status = status;
+            // Reset paginacji i filtra miesięcy przy zmianie zakładki — inaczej user
+            // mógłby trafić na pustą stronę 5 z 1 dla nowej listy
+            leady_state.page = 0;
+            leady_state.filterMonth = '';
             document.querySelectorAll('.leady-chip').forEach(c => c.classList.remove('leady-chip-active'));
             if (btn) btn.classList.add('leady-chip-active');
             else {
@@ -20059,21 +20071,67 @@ if (inputNazwaCheck) {
             const wrap = document.getElementById('leady-list-wrap');
             if (!wrap) return;
             if (leady_state.status === 'IMPORTY') return leady_renderImporty();
+
+            // Filtr search
             const search = (document.getElementById('leady-search')?.value || '').toLowerCase().trim();
-            let list = leady_state.list;
+            let list = leady_state.list.slice();
             if (search) {
                 list = list.filter(l =>
                     String(l.imie||'').toLowerCase().includes(search) ||
                     String(l.nazwisko||'').toLowerCase().includes(search) ||
                     String(l.telefon||'').toLowerCase().includes(search) ||
                     String(l.email||'').toLowerCase().includes(search) ||
-                    String(l.notatka||'').toLowerCase().includes(search)
+                    String(l.notatka||'').toLowerCase().includes(search) ||
+                    String(l.zrodlo||'').toLowerCase().includes(search)
                 );
             }
-            if (!list.length) {
-                wrap.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Brak leadów do wyświetlenia. Dodaj nowe źródło żeby zaimportować pierwsze leady.</div>';
-                return;
+            // Filtr miesiąc (YYYY-MM)
+            if (leady_state.filterMonth) {
+                list = list.filter(l => {
+                    const d = l.data_zgloszenia || l.data_dodania;
+                    if (!d) return false;
+                    return new Date(d).toISOString().slice(0, 7) === leady_state.filterMonth;
+                });
             }
+
+            // Sort
+            const sk = leady_state.sortKey, sd = leady_state.sortDir;
+            const dateKeys = ['data_zgloszenia','data_dodania','data_ostatniego_kontaktu','data_wizyty'];
+            list.sort((a, b) => {
+                const av = a[sk] ?? ''; const bv = b[sk] ?? '';
+                if (dateKeys.includes(sk)) {
+                    const at = av ? new Date(av).getTime() : 0;
+                    const bt = bv ? new Date(bv).getTime() : 0;
+                    return sd === 'asc' ? at - bt : bt - at;
+                }
+                const cmp = String(av).localeCompare(String(bv), 'pl', { sensitivity: 'base' });
+                return sd === 'asc' ? cmp : -cmp;
+            });
+
+            // Lista miesięcy z całej bazy (nie z filtra) — żeby dropdown pokazywał wszystkie dostępne
+            const months = {};
+            leady_state.list.forEach(l => {
+                const d = l.data_zgloszenia || l.data_dodania;
+                if (!d) return;
+                const m = new Date(d).toISOString().slice(0, 7);
+                if (m && m !== 'NaN-aN') months[m] = (months[m] || 0) + 1;
+            });
+            const monthsList = Object.entries(months).sort((a, b) => b[0].localeCompare(a[0]));
+            const NAZWY_M = ['','styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+            const monthsOpts = '<option value="">📅 Wszystkie miesiące</option>' + monthsList.map(([m, n]) => {
+                const [y, mm] = m.split('-');
+                const sel = leady_state.filterMonth === m ? ' selected' : '';
+                return `<option value="${m}"${sel}>${NAZWY_M[Number(mm)] || mm} ${y} (${n})</option>`;
+            }).join('');
+
+            // Paginacja
+            const total = list.length;
+            const totalPages = Math.max(1, Math.ceil(total / LEADY_PAGE_SIZE));
+            if (leady_state.page >= totalPages) leady_state.page = totalPages - 1;
+            if (leady_state.page < 0) leady_state.page = 0;
+            const sliced = list.slice(leady_state.page * LEADY_PAGE_SIZE, (leady_state.page + 1) * LEADY_PAGE_SIZE);
+            const arrow = (key) => sk === key ? (sd === 'asc' ? ' ▲' : ' ▼') : '';
+
             const STATUS_BADGE = {
                 nowy:      { bg: '#dbeafe', col: '#1e40af', txt: '🆕 Nowy' },
                 kontakt:   { bg: '#fef3c7', col: '#92400e', txt: '📞 Skontakt.' },
@@ -20081,36 +20139,85 @@ if (inputNazwaCheck) {
                 klient:    { bg: '#fce7f3', col: '#9d174d', txt: '⭐ Klient' },
                 odrzucony: { bg: '#fee2e2', col: '#991b1b', txt: '❌ Odrzucony' }
             };
-            wrap.innerHTML = `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;">
+
+            const monthBar = `<div style="display:flex; gap:10px; align-items:center; margin-bottom:10px; flex-wrap:wrap; font-size:13px;">
+                <select onchange="leady_setMonth(this.value)" style="padding:8px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; min-width:200px;">${monthsOpts}</select>
+                ${leady_state.filterMonth ? `<button onclick="leady_setMonth('')" style="background:#fef3c7; color:#92400e; border:1px solid #fde68a; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px;">✕ Wyczyść filtr miesiąca</button>` : ''}
+                <span style="color:#64748b; margin-left:auto;">Łącznie: <b>${leady_state.list.length}</b> ${(leady_state.list.length !== total) ? `• po filtrach: <b>${total}</b>` : ''}</span>
+            </div>`;
+
+            if (!total) {
+                wrap.innerHTML = monthBar + `<div style="padding:30px; text-align:center; color:#94a3b8; background:#fff; border:1px solid #e2e8f0; border-radius:14px;">Brak leadów do wyświetlenia${leady_state.filterMonth ? ' w wybranym miesiącu' : ''}.</div>`;
+                return;
+            }
+
+            const pager = totalPages > 1
+                ? `<div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-top:1px solid #e2e8f0; background:#fafafa; flex-wrap:wrap; gap:8px;">
+                    <div style="font-size:12px; color:#64748b;">Strona <b>${leady_state.page + 1}</b> z <b>${totalPages}</b> • ${sliced.length} / ${total} rekordów</div>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                        <button onclick="leady_setPage(0)" ${leady_state.page === 0 ? 'disabled' : ''} class="leady-pager-btn" title="Pierwsza">«</button>
+                        <button onclick="leady_setPage(${leady_state.page - 1})" ${leady_state.page === 0 ? 'disabled' : ''} class="leady-pager-btn">‹ Poprzednia</button>
+                        <input type="number" min="1" max="${totalPages}" value="${leady_state.page + 1}" onchange="leady_setPage(parseInt(this.value,10)-1)" style="width:60px; padding:6px 8px; text-align:center; border:1px solid #cbd5e1; border-radius:6px; font-size:12px;">
+                        <button onclick="leady_setPage(${leady_state.page + 1})" ${leady_state.page >= totalPages - 1 ? 'disabled' : ''} class="leady-pager-btn">Następna ›</button>
+                        <button onclick="leady_setPage(${totalPages - 1})" ${leady_state.page >= totalPages - 1 ? 'disabled' : ''} class="leady-pager-btn" title="Ostatnia">»</button>
+                    </div>
+                </div>`
+                : `<div style="padding:8px 14px; font-size:12px; color:#64748b; border-top:1px solid #e2e8f0; background:#fafafa;">${total} ${total === 1 ? 'rekord' : 'rekordów'}</div>`;
+
+            const thStyle = 'padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase; cursor:pointer; user-select:none; white-space:nowrap;';
+            wrap.innerHTML = monthBar + `<div style="background:#fff; border:1px solid #e2e8f0; border-radius:14px; overflow:hidden;">
+                <div style="overflow-x:auto;">
                 <table style="width:100%; border-collapse:collapse; font-size:13px;">
                     <thead style="background:#f8fafc; border-bottom:1px solid #e2e8f0;">
                         <tr>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Imię i nazwisko</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Telefon</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Email</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Źródło</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Status</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Data zgłoszenia</th>
+                            <th onclick="leady_setSort('imie')" style="${thStyle}">Imię i nazwisko${arrow('imie')}</th>
+                            <th onclick="leady_setSort('telefon')" style="${thStyle}">Telefon${arrow('telefon')}</th>
+                            <th onclick="leady_setSort('email')" style="${thStyle}">Email${arrow('email')}</th>
+                            <th onclick="leady_setSort('zrodlo')" style="${thStyle}">Źródło${arrow('zrodlo')}</th>
+                            <th onclick="leady_setSort('status')" style="${thStyle}">Status${arrow('status')}</th>
+                            <th onclick="leady_setSort('data_zgloszenia')" style="${thStyle}">Data zgłoszenia${arrow('data_zgloszenia')}</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${list.map(l => {
+                        ${sliced.map(l => {
                             const s = STATUS_BADGE[l.status] || STATUS_BADGE.nowy;
-                            // Pokaż datę zgłoszenia z arkusza (gdy mamy), inaczej datę dodania do bazy
                             const dataRaw = l.data_zgloszenia || l.data_dodania;
                             const dataD = dataRaw ? new Date(dataRaw).toLocaleDateString('pl-PL') : '';
+                            const imieFull = `${l.imie || ''} ${l.nazwisko || ''}`.trim();
                             return `<tr style="border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="leady_otworzLeada('${l.id}')" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='transparent'">
-                                <td style="padding:12px; font-weight:600;">${escHtml(l.imie || '')} ${escHtml(l.nazwisko || '')}</td>
-                                <td style="padding:12px; color:#475569;">${escHtml(l.telefon || '—')}</td>
+                                <td style="padding:12px; font-weight:600;">${escHtml(imieFull) || '<span style="color:#cbd5e1;">—</span>'}</td>
+                                <td style="padding:12px; color:#475569; white-space:nowrap;">${escHtml(l.telefon || '—')}</td>
                                 <td style="padding:12px; color:#475569;">${escHtml(l.email || '—')}</td>
                                 <td style="padding:12px; color:#64748b; font-size:11.5px;">${escHtml(l.zrodlo || '—')}</td>
                                 <td style="padding:12px;"><span style="display:inline-block; padding:3px 9px; border-radius:6px; background:${s.bg}; color:${s.col}; font-weight:700; font-size:11px;">${s.txt}</span></td>
-                                <td style="padding:12px; color:#94a3b8; font-size:11.5px;">${dataD}</td>
+                                <td style="padding:12px; color:#94a3b8; font-size:11.5px; white-space:nowrap;">${dataD}</td>
                             </tr>`;
                         }).join('')}
                     </tbody>
                 </table>
+                </div>
+                ${pager}
             </div>`;
+        }
+
+        function leady_setSort(key) {
+            if (leady_state.sortKey === key) {
+                leady_state.sortDir = leady_state.sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                leady_state.sortKey = key;
+                leady_state.sortDir = ['data_zgloszenia','data_dodania'].includes(key) ? 'desc' : 'asc';
+            }
+            leady_state.page = 0;
+            leady_render();
+        }
+        function leady_setPage(p) {
+            leady_state.page = Math.max(0, Math.min(parseInt(p, 10) || 0, 999));
+            leady_render();
+        }
+        function leady_setMonth(m) {
+            leady_state.filterMonth = m || '';
+            leady_state.page = 0;
+            leady_render();
         }
 
         function leady_renderImporty() {
