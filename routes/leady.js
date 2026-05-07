@@ -56,6 +56,16 @@ module.exports = (db) => {
   safeAlter('ALTER TABLE Leady ADD COLUMN zadatek_kwota DECIMAL(10,2) NULL', 'zadatek_kwota');
   safeAlter('ALTER TABLE Leady ADD INDEX idx_lead_tenant_kampania (tenant_id, kampania)', 'idx_kampania');
 
+  // Cleanup placeholder values w istniejących leadach (z importów przed naprawą placeholder'ów)
+  setTimeout(() => {
+    const placeholdersList = ['---','--','-','—','–','N/A','n/a','brak','none','null','nieaktualne'];
+    const inClause = placeholdersList.map(() => '?').join(',');
+    db.query(`UPDATE Leady SET nazwisko = '' WHERE nazwisko IN (${inClause})`, placeholdersList,
+      (e) => { if (e) console.error('[Leady cleanup nazwisko]', e.message); });
+    db.query(`UPDATE Leady SET email = '' WHERE email IN (${inClause}) OR email LIKE 'nie ma%'`, placeholdersList,
+      (e) => { if (e) console.error('[Leady cleanup email]', e.message); });
+  }, 1500);
+
   db.query(`CREATE TABLE IF NOT EXISTS Lead_Importy (
     id VARCHAR(36) PRIMARY KEY,
     tenant_id VARCHAR(64) NOT NULL,
@@ -131,6 +141,18 @@ module.exports = (db) => {
     return d.toISOString().slice(0, 19).replace('T', ' ');
   }
 
+  // Czy wartość to placeholder oznaczający "puste" (różne agencje używają różnych)
+  // np. "---", "—", "n/a", "brak", "nie ma w formularzu", "—" itd.
+  function isPlaceholder(v) {
+    if (v === null || v === undefined) return true;
+    const t = String(v).trim().toLowerCase();
+    if (t === '') return true;
+    if (['---','--','-','—','–','n/a','brak','nie ma','nie ma w formularzu','nieaktualne','none','null'].includes(t)) return true;
+    // "nie ma..." cokolwiek
+    if (t.startsWith('nie ma ')) return true;
+    return false;
+  }
+
   // Parser kwoty — akceptuje "1234,56", "1234.56", "1 234,56 zł", "1234"
   function parseKwota(s) {
     if (!s) return null;
@@ -156,7 +178,11 @@ module.exports = (db) => {
   }
 
   function mapujWiersz(row, mapowanie) {
-    const get = key => mapowanie[key] ? String(row[mapowanie[key]] || '').trim() : '';
+    // get(): pobiera wartość, normalizuje placeholder ("---", "—", "nie ma w formularzu", itd.) na pusty string
+    const get = key => {
+      const raw = mapowanie[key] ? String(row[mapowanie[key]] || '').trim() : '';
+      return isPlaceholder(raw) ? '' : raw;
+    };
 
     let imie = get('imie').slice(0, 100);
     let nazwisko = get('nazwisko').slice(0, 100);
@@ -179,10 +205,13 @@ module.exports = (db) => {
       zadatekKwota = 0; // wpłacony, kwota nieznana — recepcja uzupełni
     }
 
+    // Telefon — wyczyść z prefixu typu "Polska+48..." → "+48..."
+    const telefonRaw = get('telefon').replace(/[^\d+]/g, '').slice(0, 50);
+
     return {
       imie,
       nazwisko,
-      telefon: get('telefon').replace(/[^\d+]/g, '').slice(0, 50),
+      telefon: telefonRaw,
       email: get('email').toLowerCase().slice(0, 150),
       notatka: get('notatka').slice(0, 5000),
       kampania: get('kampania').slice(0, 150),

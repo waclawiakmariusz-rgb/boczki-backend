@@ -20080,13 +20080,15 @@ if (inputNazwaCheck) {
                             <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Email</th>
                             <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Źródło</th>
                             <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Status</th>
-                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Dodano</th>
+                            <th style="padding:12px; text-align:left; font-size:11px; color:#94a3b8; text-transform:uppercase;">Data zgłoszenia</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${list.map(l => {
                             const s = STATUS_BADGE[l.status] || STATUS_BADGE.nowy;
-                            const dataD = l.data_dodania ? new Date(l.data_dodania).toLocaleDateString('pl-PL') : '';
+                            // Pokaż datę zgłoszenia z arkusza (gdy mamy), inaczej datę dodania do bazy
+                            const dataRaw = l.data_zgloszenia || l.data_dodania;
+                            const dataD = dataRaw ? new Date(dataRaw).toLocaleDateString('pl-PL') : '';
                             return `<tr style="border-bottom:1px solid #f1f5f9; cursor:pointer;" onclick="leady_otworzLeada('${l.id}')" onmouseover="this.style.background='#fafafa'" onmouseout="this.style.background='transparent'">
                                 <td style="padding:12px; font-weight:600;">${escHtml(l.imie || '')} ${escHtml(l.nazwisko || '')}</td>
                                 <td style="padding:12px; color:#475569;">${escHtml(l.telefon || '—')}</td>
