@@ -19810,14 +19810,18 @@ if (inputNazwaCheck) {
                         tytul.length > 60 ? tytul.slice(0, 60) + '…' : tytul
                     );
                 }
-                zd_loadList();
+                // Odświeżaj TYLKO te widoki które są aktualnie widoczne — inaczej każdy
+                // save triggerował 4 fetche (zd_loadList + sidebar + 2× ds_loadZadania
+                // w Promise.all) niezależnie od miejsca w którym jest user, co przy
+                // wolniejszym połączeniu zawieszało stronę ("nie odpowiada").
+                const tbodyVisible = document.getElementById('zd-tbody');
+                if (tbodyVisible && tbodyVisible.offsetParent !== null) zd_loadList();
                 zd_refreshSidebarBadge();
-                // Jeśli widget Pulpitu jest widoczny — odśwież go też
-                if (typeof ds_loadZadania === 'function') {
+                const dsSection = document.getElementById('ds-zadania-section');
+                if (dsSection && dsSection.offsetParent !== null && typeof ds_loadZadania === 'function') {
                     const rola = localStorage.getItem('boczki_pracownik_rola') || '';
                     const imie = localStorage.getItem('boczki_pracownik_imie') || '';
-                    // Wymuś świeży fetch — domyślnie throttle 5s blokuje, ale po add chcemy widzieć od razu
-                    window.__ds_zd_lastLoadedAt = 0;
+                    window.__ds_zd_lastLoadedAt = 0; // wymuś świeży fetch (bypass throttle 5s)
                     ds_loadZadania(rola, imie);
                 }
             });
