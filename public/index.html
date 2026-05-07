@@ -5730,6 +5730,12 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     </div>
   </section>
 
+  <!-- Pasek urodzin: dziś + jutro. Lekki fetch (1-2 SELECT-y na tabelę miesiąca).
+       Ukryty domyślnie, JS pokaże tylko gdy ktoś faktycznie ma urodziny. -->
+  <div id="ds-urodziny-bar" style="display:none; background:linear-gradient(135deg,#fff7e6,#fff3e0); border:1px solid #fed7aa; border-radius:14px; padding:12px 16px; margin-bottom:16px; font-size:14px; cursor:pointer;" onclick="pokaz('urodziny',null)" title="Otwórz widok urodzin">
+    <span style="font-weight:700; color:#9a3412;">🎂 Urodziny</span><span id="ds-urodziny-content" style="color:#7c2d12;"></span>
+  </div>
+
   <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje -->
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
     <div class="ds-section-head" id="ds-zadania-head" onclick="ds_zd_toggleCollapse(event)" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
@@ -10072,6 +10078,28 @@ function zaladujPulpit() {
             const el = document.getElementById(id); if (el) el.textContent = '—';
         });
     });
+
+    // ── Pasek urodzin (dziś + jutro) — defer 600ms, lekki fetch ──
+    setTimeout(() => {
+        fetch(API_URL + '?action=upcoming_birthdays')
+            .then(r => r.json())
+            .then(data => {
+                const lista = (data && Array.isArray(data.lista)) ? data.lista : [];
+                const dzis = lista.filter(b => b.ile_dni === 0);
+                const jutro = lista.filter(b => b.ile_dni === 1);
+                if (!dzis.length && !jutro.length) return;
+                const fmt = ks => ks.map(k => `${k.imie || ''} ${k.nazwisko || ''}`.trim()).filter(Boolean).join(', ');
+                const parts = [];
+                if (dzis.length)  parts.push(` &nbsp;<b>Dziś:</b> ${escHtml(fmt(dzis))}`);
+                if (jutro.length) parts.push(` &nbsp;<b>Jutro:</b> ${escHtml(fmt(jutro))}`);
+                const bar = document.getElementById('ds-urodziny-bar');
+                const content = document.getElementById('ds-urodziny-content');
+                if (bar && content) {
+                    content.innerHTML = parts.join(' &nbsp;·');
+                    bar.style.display = 'block';
+                }
+            }).catch(() => {});
+    }, 600);
 
     // ── Wymaga uwagi: niski stan + zadatki + urodziny + brak dokumentów ──
     // Optymalizacja 2026-05-05: cache 60s + defer 800ms (4 ciężkie fetche jednocześnie
