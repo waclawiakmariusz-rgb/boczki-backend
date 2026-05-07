@@ -106,21 +106,22 @@ module.exports = (db) => {
   // Czy zlecający (rola_kto) może zlecić odbiorcy (target — imię lub rola string)?
   // Reguły:
   //  - praktykantka — nie może zlecać nikomu
-  //  - recepcja     — może: 'recepcja' (rola) + osoby z rolą recepcja/praktykantka
+  //  - recepcja     — może: recepcji, praktykantce, kosmetologowi (rola grupowa lub imiennie)
   //  - manager/admin/megaadmin — wszyscy
   // cb(true|false, errorMsg)
+  const RECEPCJA_DOZWOLONE_ROLE = ['recepcja', 'praktykantka', 'kosmetolog'];
   function sprawdzCzyMozeZlecic(tenant_id, rola_kto, target, cb) {
     if (!rola_kto) return cb(false, 'Nie udało się ustalić roli wykonującego');
     if (['admin','megaadmin','manager'].includes(rola_kto)) return cb(true);
     if (rola_kto === 'praktykantka') return cb(false, 'Praktykantka nie może zlecać zadań');
     if (rola_kto === 'recepcja') {
       const t = String(target || '').toLowerCase().trim();
-      if (t === 'recepcja' || t === 'praktykantka') return cb(true);
+      if (RECEPCJA_DOZWOLONE_ROLE.includes(t)) return cb(true);
       // Sprawdź rolę odbiorcy w bazie
       pobierzRoleUzytkownika(tenant_id, target, (rolaTarget) => {
         if (!rolaTarget) return cb(false, 'Nie znaleziono roli odbiorcy');
-        if (['recepcja', 'praktykantka'].includes(rolaTarget)) return cb(true);
-        return cb(false, 'Recepcja może zlecać tylko recepcji i praktykantce');
+        if (RECEPCJA_DOZWOLONE_ROLE.includes(rolaTarget)) return cb(true);
+        return cb(false, 'Recepcja może zlecać tylko recepcji, praktykantce i kosmetologom');
       });
       return;
     }
@@ -354,9 +355,10 @@ module.exports = (db) => {
       materializujWzorce(tenant_id, () => {
         const params = [tenant_id, osoba];
         let whereOsoba = `AND (przypisane_do = ?`;
-        // Recepcja widzi też zadania dla roli 'recepcja', praktykantka — dla 'praktykantka'
+        // Każda rola widzi też zadania na swoją rolę grupową (np. "recepcja" jako string)
         if (rolaOsoby === 'recepcja') { whereOsoba += ` OR LOWER(przypisane_do) = 'recepcja'`; }
         else if (rolaOsoby === 'praktykantka') { whereOsoba += ` OR LOWER(przypisane_do) = 'praktykantka'`; }
+        else if (rolaOsoby === 'kosmetolog') { whereOsoba += ` OR LOWER(przypisane_do) = 'kosmetolog'`; }
         whereOsoba += `)`;
         db.query(
           `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status,

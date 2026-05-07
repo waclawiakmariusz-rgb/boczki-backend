@@ -9255,8 +9255,8 @@ function ds_loadZadania(rola, imie) {
     const isManager = ['admin', 'megaadmin', 'manager'].includes(r);
     const isRecepcja = (r === 'recepcja');
     const isPraktykantka = (r === 'praktykantka');
-    const isReceiver = isRecepcja || isPraktykantka;
-    // Tylko praktykantka i wyżej widzi widget — kosmetolog itp. nie ma zadań
+    const isKosmetolog = (r === 'kosmetolog');
+    const isReceiver = isRecepcja || isPraktykantka || isKosmetolog;
     if (!isManager && !isReceiver) { sec.style.display = 'none'; return; }
     sec.style.display = '';
     if (titleEl) titleEl.textContent = isReceiver ? 'Twoje zadania' : 'Zadania zespołu';
@@ -9294,6 +9294,7 @@ function ds_loadZadania(rola, imie) {
                 if (p === imieLow) return true;
                 if (r === 'recepcja' && p === 'recepcja') return true;
                 if (r === 'praktykantka' && p === 'praktykantka') return true;
+                if (r === 'kosmetolog' && p === 'kosmetolog') return true;
                 return false;
             });
         }
@@ -19441,15 +19442,17 @@ if (inputNazwaCheck) {
                     });
                     opts += '</optgroup>';
                 } else if (isRecepcja) {
-                    // Role grupowe (recepcja+praktykantka) + osoby z rolą recepcja/praktykantka
+                    // Role grupowe (recepcja+praktykantka+kosmetolog) + osoby z tych ról
                     opts += '<optgroup label="Role grupowe">';
                     opts += '<option value="recepcja">📞 Recepcja (cała rola)</option>';
                     opts += '<option value="praktykantka">🌱 Praktykantka (cała rola)</option>';
+                    opts += '<option value="kosmetolog">💄 Kosmetolog (cała rola)</option>';
                     opts += '</optgroup>';
                     opts += '<optgroup label="Konkretni pracownicy">';
-                    users.filter(u => ['recepcja','praktykantka'].includes(String(u.rola||'').toLowerCase()))
+                    users.filter(u => ['recepcja','praktykantka','kosmetolog'].includes(String(u.rola||'').toLowerCase()))
                          .forEach(u => {
-                            const ico = String(u.rola||'').toLowerCase() === 'recepcja' ? '📞' : '🌱';
+                            const rolaLow = String(u.rola||'').toLowerCase();
+                            const ico = rolaLow === 'recepcja' ? '📞' : rolaLow === 'praktykantka' ? '🌱' : '💄';
                             opts += `<option value="${escHtml(u.imie)}">${ico} ${escHtml(u.imie)} (${escHtml(u.rola || '')})</option>`;
                          });
                     opts += '</optgroup>';
