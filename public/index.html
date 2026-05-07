@@ -19418,11 +19418,13 @@ if (inputNazwaCheck) {
                 }).catch(() => []);
         }
 
+        // UWAGA: zwraca Promise — zd_editOpen MUSI await'ować, inaczej późniejsze
+        // ustawienie sel.value zostanie nadpisane przez sel.innerHTML = opts po fetch'u.
         function zd_fillPracownicy() {
             const sel = document.getElementById('zd-przypisane');
-            if (!sel) return;
+            if (!sel) return Promise.resolve();
             const myRola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
-            zd_loadUsersWithRoles().then(users => {
+            return zd_loadUsersWithRoles().then(users => {
                 const isManager = ['admin','megaadmin','manager'].includes(myRola);
                 const isRecepcja = (myRola === 'recepcja');
                 let opts = '<option value="">— wybierz —</option>';
@@ -19705,7 +19707,9 @@ if (inputNazwaCheck) {
                     return;
                 }
             }
-            zd_fillPracownicy();
+            // KRYTYCZNE: czekamy aż lista pracowników/ról się załaduje, dopiero potem
+            // ustawimy sel.value. Inaczej sel.innerHTML = opts (po fetchu) nadpisze wybór.
+            await zd_fillPracownicy();
             // Banner — pokazuj tylko gdy edytujesz szablon
             const banner = document.getElementById('zd-edit-szablon-banner');
             if (banner) banner.style.display = (z.is_szablon || isInstancjaCykl) ? 'block' : 'none';
