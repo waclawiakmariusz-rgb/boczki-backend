@@ -495,22 +495,28 @@ module.exports = (db) => {
   });
 
   // ─── CRON: auto-sync co 1h ───────────────────────────────────
-  const SYNC_INTERVAL_MS = 60 * 60 * 1000;
-  setInterval(() => {
-    db.query('SELECT id, tenant_id, url, mapowanie, klucz_dedup, nazwa FROM Lead_Importy WHERE aktywny = 1', [], async (err, rows) => {
-      if (err) return console.error('[Leady cron]', err.message);
-      for (const r of rows || []) {
-        try {
-          const result = await syncImport(r.tenant_id, r);
-          if (result.dodano > 0 || result.error) {
-            console.log(`[Leady cron] tenant=${r.tenant_id} import=${r.id} dodano=${result.dodano}${result.error ? ' err:' + result.error : ''}`);
+  // 2026-05-07: WYŁĄCZONY — moduł Leady został zawieszony (zmień LEADY_CRON_ENABLED
+  // na true jeśli wraca w pełni). Endpoint API dalej działa, ale bez automatycznych
+  // synchronizacji nie hamerujemy arkuszy/agencji w tle.
+  const LEADY_CRON_ENABLED = false;
+  if (LEADY_CRON_ENABLED) {
+    const SYNC_INTERVAL_MS = 60 * 60 * 1000;
+    setInterval(() => {
+      db.query('SELECT id, tenant_id, url, mapowanie, klucz_dedup, nazwa FROM Lead_Importy WHERE aktywny = 1', [], async (err, rows) => {
+        if (err) return console.error('[Leady cron]', err.message);
+        for (const r of rows || []) {
+          try {
+            const result = await syncImport(r.tenant_id, r);
+            if (result.dodano > 0 || result.error) {
+              console.log(`[Leady cron] tenant=${r.tenant_id} import=${r.id} dodano=${result.dodano}${result.error ? ' err:' + result.error : ''}`);
+            }
+          } catch (e) {
+            console.error(`[Leady cron] tenant=${r.tenant_id} import=${r.id} ERROR:`, e.message);
           }
-        } catch (e) {
-          console.error(`[Leady cron] tenant=${r.tenant_id} import=${r.id} ERROR:`, e.message);
         }
-      }
-    });
-  }, SYNC_INTERVAL_MS);
+      });
+    }, SYNC_INTERVAL_MS);
+  }
 
   return router;
 };
