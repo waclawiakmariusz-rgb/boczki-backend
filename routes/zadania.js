@@ -14,21 +14,33 @@ module.exports = (db) => {
 
   // Czy dziś trzeba zmaterializować instancję wzorca?
   // CODZIENNIE: zawsze
-  // TYGODNIOWO: dzisiejszy dzień tygodnia (1=Pn..7=Nd) == powtarzaj_dzien
-  // MIESIECZNIE: dzisiejszy dzień miesiąca == powtarzaj_dzien (lub 99=ostatni dzień)
+  // TYGODNIOWO: dzień tygodnia pasuje + (liczba tygodni od utworzenia % powtarzaj_co === 0)
+  // MIESIECZNIE: dzień miesiąca pasuje + (liczba miesięcy od utworzenia % powtarzaj_co === 0)
+  // powtarzaj_co (interwał): 1 = co tydzień/miesiąc, 2 = co 2, 3 = co 3 itd.
   function czyMaterializowacDzis(wzorzec, dzis) {
     const typ = String(wzorzec.powtarzaj || 'NIE').toUpperCase();
+    const co = Math.max(1, parseInt(wzorzec.powtarzaj_co, 10) || 1);
     if (typ === 'CODZIENNIE') return true;
+    const utw = wzorzec.data_utworzenia ? new Date(wzorzec.data_utworzenia) : dzis;
     if (typ === 'TYGODNIOWO') {
       const dow = dzis.getDay() === 0 ? 7 : dzis.getDay(); // 1..7
-      return Number(wzorzec.powtarzaj_dzien) === dow;
+      if (Number(wzorzec.powtarzaj_dzien) !== dow) return false;
+      if (co === 1) return true;
+      // Liczba tygodni między datą utworzenia a dziś (po normalizacji do północy)
+      const a = new Date(utw.getFullYear(), utw.getMonth(), utw.getDate()).getTime();
+      const b = new Date(dzis.getFullYear(), dzis.getMonth(), dzis.getDate()).getTime();
+      const tygodnie = Math.floor((b - a) / (7 * 24 * 60 * 60 * 1000));
+      return tygodnie >= 0 && tygodnie % co === 0;
     }
     if (typ === 'MIESIECZNIE') {
       const dz = dzis.getDate();
       const ostatni = new Date(dzis.getFullYear(), dzis.getMonth() + 1, 0).getDate();
       const wpis = Number(wzorzec.powtarzaj_dzien);
-      if (wpis === 99) return dz === ostatni;
-      return wpis === dz;
+      const dzienOk = wpis === 99 ? (dz === ostatni) : (wpis === dz);
+      if (!dzienOk) return false;
+      if (co === 1) return true;
+      const miesiace = (dzis.getFullYear() - utw.getFullYear()) * 12 + (dzis.getMonth() - utw.getMonth());
+      return miesiace >= 0 && miesiace % co === 0;
     }
     return false;
   }
@@ -37,7 +49,7 @@ module.exports = (db) => {
   // sprawdź czy istnieje instancja na dziś — jeśli nie, utwórz.
   function materializujWzorce(tenant_id, cb) {
     db.query(
-      `SELECT * FROM Zadania WHERE tenant_id = ? AND is_szablon = 1`,
+      `SELECT * FROM Zadania WHERE tenant_id = ? AND is_szablon = 1 AND status = 'AKTYWNE'`,
       [tenant_id],
       (err, wzorce) => {
         if (err || !wzorce || !wzorce.length) return cb();
@@ -154,6 +166,7 @@ module.exports = (db) => {
       // Powtarzające się
       safeAlter(`ALTER TABLE Zadania ADD COLUMN powtarzaj ENUM('NIE','CODZIENNIE','TYGODNIOWO','MIESIECZNIE') DEFAULT 'NIE'`, 'powtarzaj');
       safeAlter(`ALTER TABLE Zadania ADD COLUMN powtarzaj_dzien INT NULL`, 'powtarzaj_dzien');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN powtarzaj_co INT DEFAULT 1`, 'powtarzaj_co');
       safeAlter(`ALTER TABLE Zadania ADD COLUMN parent_powtarzajacy_id VARCHAR(36) NULL`, 'parent_powtarzajacy_id');
       safeAlter(`ALTER TABLE Zadania ADD COLUMN is_szablon TINYINT(1) DEFAULT 0`, 'is_szablon');
       safeAlter(`ALTER TABLE Zadania ADD INDEX idx_szablon (tenant_id, is_szablon)`, 'idx_szablon');
@@ -250,6 +263,34 @@ module.exports = (db) => {
     );
   }
 
+  // Helper: znormalizuj i zwaliduj parametry powtarzania z payloadu.
+  // Zwraca { powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon, error }
+  // - TYGODNIOWO: dzień 1-7, interwał 1-12
+  // - MIESIECZNIE: dzień 1-31 lub 99 (ostatni), interwał 1-12
+  // - CODZIENNIE / NIE: dzień NULL, interwał 1
+  function normalizujPowtarzanie(d) {
+    const powtarzaj = ALLOWED_POWTARZAJ.includes(d.powtarzaj) ? d.powtarzaj : 'NIE';
+    let powtarzaj_dzien = null;
+    let powtarzaj_co = 1;
+    if (powtarzaj === 'TYGODNIOWO') {
+      const dz = parseInt(d.powtarzaj_dzien, 10);
+      if (!(dz >= 1 && dz <= 7)) return { error: 'Niepoprawny dzień tygodnia (1-7)' };
+      powtarzaj_dzien = dz;
+      const co = parseInt(d.powtarzaj_co, 10) || 1;
+      if (!(co >= 1 && co <= 12)) return { error: 'Niepoprawny interwał (co X tygodni: 1-12)' };
+      powtarzaj_co = co;
+    } else if (powtarzaj === 'MIESIECZNIE') {
+      const dz = parseInt(d.powtarzaj_dzien, 10);
+      if (!((dz >= 1 && dz <= 31) || dz === 99)) return { error: 'Niepoprawny dzień miesiąca (1-31 lub 99=ostatni)' };
+      powtarzaj_dzien = dz;
+      const co = parseInt(d.powtarzaj_co, 10) || 1;
+      if (!(co >= 1 && co <= 12)) return { error: 'Niepoprawny interwał (co X miesięcy: 1-12)' };
+      powtarzaj_co = co;
+    }
+    const isSzablon = (powtarzaj !== 'NIE') ? 1 : 0;
+    return { powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon };
+  }
+
   // Helper: parsuj klientów z payloadu (akceptuje array LUB stare pola id_klienta/klient_nazwa)
   function parseKlienciPayload(d) {
     if (Array.isArray(d.klienci)) {
@@ -276,7 +317,7 @@ module.exports = (db) => {
                         kategoria, priorytet, deadline, status,
                         data_wykonania, wykonane_przez, data_archiwizacji, kto_zarchiwizowal,
                         id_klienta, klient_nazwa,
-                        powtarzaj, powtarzaj_dzien, parent_powtarzajacy_id, is_szablon
+                        powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon
                  FROM Zadania WHERE tenant_id = ?`;
       // Filtr szablonu — domyślnie pomijamy szablony (instancje + jednorazowe)
       sql += tylkoSzablony ? ` AND is_szablon = 1` : ` AND is_szablon = 0`;
@@ -320,7 +361,7 @@ module.exports = (db) => {
         db.query(
           `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status,
                   kategoria, priorytet, id_klienta, klient_nazwa,
-                  powtarzaj, powtarzaj_dzien, parent_powtarzajacy_id
+                  powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id
              FROM Zadania
             WHERE tenant_id = ? AND status = 'AKTYWNE' AND is_szablon = 0
               ${whereOsoba}
@@ -335,6 +376,25 @@ module.exports = (db) => {
         );
       });
 
+    } else if (action === 'get') {
+      // Pobierz pojedyncze zadanie po id — bez filtra is_szablon, używane przy
+      // edycji instancji cyklicznej (frontend potrzebuje danych szablonu = parent).
+      const id = String(d.id || '').trim();
+      if (!id) return res.json({ status: 'error', message: 'Brak id' });
+      db.query(
+        `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis,
+                kategoria, priorytet, deadline, status,
+                id_klienta, klient_nazwa,
+                powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon
+           FROM Zadania WHERE tenant_id = ? AND id = ? LIMIT 1`,
+        [tenant_id, id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!rows.length) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
+          dolaczKlientow(tenant_id, rows, (rs) => res.json({ status: 'success', data: rs[0] }));
+        }
+      );
+
     } else if (action === 'add') {
       const tytul = String(d.tytul || '').trim();
       const opis = String(d.opis || '').trim();
@@ -346,11 +406,9 @@ module.exports = (db) => {
       const klienciList = parseKlienciPayload(d);
       const id_klienta = klienciList.length > 0 ? klienciList[0].id : null;
       const klient_nazwa = klienciList.length > 0 ? klienciList[0].nazwa.slice(0, 200) : null;
-      const powtarzaj = ALLOWED_POWTARZAJ.includes(d.powtarzaj) ? d.powtarzaj : 'NIE';
-      let powtarzaj_dzien = null;
-      if (powtarzaj === 'TYGODNIOWO') powtarzaj_dzien = parseInt(d.powtarzaj_dzien, 10) || 1;
-      if (powtarzaj === 'MIESIECZNIE') powtarzaj_dzien = parseInt(d.powtarzaj_dzien, 10) || 1;
-      const isSzablon = (powtarzaj !== 'NIE') ? 1 : 0;
+      const pwt = normalizujPowtarzanie(d);
+      if (pwt.error) return res.json({ status: 'error', message: pwt.error });
+      const { powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon } = pwt;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
       // RBAC: sprawdź czy wykonujący (utworzone_przez) ma prawo zlecić temu odbiorcy
@@ -359,9 +417,9 @@ module.exports = (db) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
           const id = randomUUID();
           db.query(
-            `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, is_szablon)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, ?, ?)`,
-            [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, isSzablon],
+            `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, is_szablon)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, ?, ?, ?)`,
+            [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
               // Zapisz wszystkich klientów (multi-klient)
@@ -387,6 +445,9 @@ module.exports = (db) => {
       const id_klienta = klienciListEdit.length > 0 ? klienciListEdit[0].id : null;
       const klient_nazwa = klienciListEdit.length > 0 ? klienciListEdit[0].nazwa.slice(0, 200) : null;
       const kto_edytuje = String(d.kto_edytuje || d.utworzone_przez || '').trim();
+      const pwtE = normalizujPowtarzanie(d);
+      if (pwtE.error) return res.json({ status: 'error', message: pwtE.error });
+      const { powtarzaj: ePowt, powtarzaj_dzien: ePowtDz, powtarzaj_co: ePowtCo, isSzablon: eIsSzablon } = pwtE;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
       // RBAC: sprawdź czy edytujący ma prawo zlecić tej osobie/roli
@@ -395,14 +456,18 @@ module.exports = (db) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
           db.query(
             `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
-                                id_klienta = ?, klient_nazwa = ?
+                                id_klienta = ?, klient_nazwa = ?,
+                                powtarzaj = ?, powtarzaj_dzien = ?, powtarzaj_co = ?, is_szablon = ?
              WHERE tenant_id = ? AND id = ?`,
-            [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa, tenant_id, id],
+            [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa,
+             ePowt, ePowtDz, ePowtCo, eIsSzablon, tenant_id, id],
             (err, result) => {
               if (err) return res.json({ status: 'error', message: err.message });
               if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
               setKlienciZadania(tenant_id, id, klienciListEdit, () => {
-                return res.json({ status: 'success' });
+                // Jeśli właśnie zmieniono na szablon (lub edytowano cykl) — odpal materializację
+                if (eIsSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success' }));
+                else res.json({ status: 'success' });
               });
             }
           );

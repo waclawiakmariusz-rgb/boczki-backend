@@ -7198,6 +7198,9 @@ ANALIZA MANAGER
         </div>
         <form onsubmit="event.preventDefault(); zd_save();">
             <input type="hidden" id="zd-edit-id" value="">
+            <div id="zd-edit-szablon-banner" style="display:none; background:linear-gradient(135deg,#fff7ed,#fff); border:1px solid #fdba74; color:#9a3412; padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:12.5px; font-weight:600;">
+                📆 Edytujesz całą serię cykliczną — zmiany dotyczą wszystkich przyszłych wystąpień.
+            </div>
 
             <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Tytuł <span style="color:#dc2626;">*</span></label>
             <input id="zd-tytul" required maxlength="255" oninput="zd_autoSuggest()" placeholder="np. Zadzwoń do klientki w sprawie..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
@@ -7241,7 +7244,7 @@ ANALIZA MANAGER
                 </div>
             </div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
                 <div>
                     <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powtarzaj</label>
                     <select id="zd-powtarzaj" onchange="zd_powtarzajChange()" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
@@ -7250,6 +7253,10 @@ ANALIZA MANAGER
                         <option value="TYGODNIOWO">📆 Co tydzień</option>
                         <option value="MIESIECZNIE">📅 Co miesiąc</option>
                     </select>
+                </div>
+                <div id="zd-powtarzaj-co-wrap" style="display:none;">
+                    <label id="zd-powtarzaj-co-label" style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Co ile</label>
+                    <select id="zd-powtarzaj-co" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;"></select>
                 </div>
                 <div id="zd-powtarzaj-dzien-wrap" style="display:none;">
                     <label id="zd-powtarzaj-dzien-label" style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Dzień</label>
@@ -19100,19 +19107,41 @@ if (inputNazwaCheck) {
             zd_loadList();
         }
 
-        // Pokaż/ukryj select dnia (tygodnia/miesiąca) i wypełnij opcje wg typu powtarzania
+        // Pokaż/ukryj selekt dnia + interwału ("co ile") i wypełnij opcje wg typu powtarzania
         function zd_powtarzajChange() {
             const typ = document.getElementById('zd-powtarzaj').value;
-            const wrap = document.getElementById('zd-powtarzaj-dzien-wrap');
+            const wrapDz = document.getElementById('zd-powtarzaj-dzien-wrap');
+            const wrapCo = document.getElementById('zd-powtarzaj-co-wrap');
             const sel = document.getElementById('zd-powtarzaj-dzien');
             const lbl = document.getElementById('zd-powtarzaj-dzien-label');
-            if (typ === 'NIE' || typ === 'CODZIENNIE') { wrap.style.display = 'none'; return; }
-            wrap.style.display = '';
+            const selCo = document.getElementById('zd-powtarzaj-co');
+            const lblCo = document.getElementById('zd-powtarzaj-co-label');
+            if (typ === 'NIE' || typ === 'CODZIENNIE') {
+                wrapDz.style.display = 'none';
+                wrapCo.style.display = 'none';
+                return;
+            }
+            wrapDz.style.display = '';
+            wrapCo.style.display = '';
+            // Opcje "co ile" — 1..12
+            let coOpts = '';
+            const jednostka = (typ === 'TYGODNIOWO') ? 'tydzień|tygodnie|tygodni' : 'miesiąc|miesiące|miesięcy';
+            const [j1, j24, j5] = jednostka.split('|');
+            for (let i = 1; i <= 12; i++) {
+                let etykieta;
+                if (i === 1) etykieta = `co ${j1}`;
+                else if (i >= 2 && i <= 4) etykieta = `co ${i} ${j24}`;
+                else etykieta = `co ${i} ${j5}`;
+                coOpts += `<option value="${i}">${etykieta}</option>`;
+            }
+            selCo.innerHTML = coOpts;
             if (typ === 'TYGODNIOWO') {
+                lblCo.textContent = 'Co ile tygodni';
                 lbl.textContent = 'Dzień tygodnia';
                 sel.innerHTML = ['Poniedziałek','Wtorek','Środa','Czwartek','Piątek','Sobota','Niedziela']
                     .map((n, i) => `<option value="${i+1}">${n}</option>`).join('');
             } else if (typ === 'MIESIECZNIE') {
+                lblCo.textContent = 'Co ile miesięcy';
                 lbl.textContent = 'Dzień miesiąca';
                 let opts = '';
                 for (let i = 1; i <= 28; i++) opts += `<option value="${i}">${i}</option>`;
@@ -19536,6 +19565,23 @@ if (inputNazwaCheck) {
                       ).join('') + '</div>'
                     : '';
 
+                // Badge cykliczności — pokazujemy zarówno na szablonach jak i ich instancjach
+                const isCykliczne = r.is_szablon || r.parent_powtarzajacy_id;
+                let cyklOpis = '';
+                if (isCykliczne) {
+                    const co = parseInt(r.powtarzaj_co, 10) || 1;
+                    const dni = ['Pn','Wt','Śr','Cz','Pt','Sb','Nd'];
+                    if (r.powtarzaj === 'CODZIENNIE') cyklOpis = 'codziennie';
+                    else if (r.powtarzaj === 'TYGODNIOWO') cyklOpis = (co === 1 ? 'co tydzień' : `co ${co} tyg.`) + ' (' + (dni[Number(r.powtarzaj_dzien)-1] || '?') + ')';
+                    else if (r.powtarzaj === 'MIESIECZNIE') {
+                        const dzM = Number(r.powtarzaj_dzien) === 99 ? 'ostatni dzień' : (r.powtarzaj_dzien + '.');
+                        cyklOpis = (co === 1 ? 'co miesiąc' : `co ${co} mies.`) + ' (' + dzM + ')';
+                    } else cyklOpis = 'cykl';
+                }
+                const cyklBadge = isCykliczne
+                    ? `<span style="display:inline-flex; align-items:center; gap:4px; margin-left:6px; padding:2px 8px; border-radius:5px; background:#fef3c7; color:#92400e; font-size:10.5px; font-weight:700;" title="Zadanie cykliczne">🔁 ${escHtml(cyklOpis)}</span>`
+                    : '';
+
                 // Komórka „Wykonanie" — kto i kiedy kliknął ✓ Zrobione (lub ↩ Przywrócił z archiwum)
                 let wykonanieCell = '<span style="color:#cbd5e1;">—</span>';
                 if (r.data_wykonania) {
@@ -19549,7 +19595,7 @@ if (inputNazwaCheck) {
                     <td style="padding:12px 14px; text-align:center;">${priCell}</td>
                     <td style="padding:12px 14px; white-space:nowrap;">${katBadge}</td>
                     <td style="padding:12px 14px; font-weight:600; color:#1f2430; max-width:220px;">
-                        ${escHtml(r.tytul)}
+                        ${escHtml(r.tytul)}${cyklBadge}
                         ${klientBadge}
                         ${overdue ? '<div style="font-size:10px; color:#dc2626; font-weight:700; margin-top:2px;">⚠️ PO TERMINIE</div>' : ''}
                     </td>
@@ -19569,6 +19615,8 @@ if (inputNazwaCheck) {
             // Zapewnij datalist klientów w polu 'Powiązany klient' — recepcja może
             // otworzyć modal z Pulpitu (bez wcześniejszej wizyty w sprzedaży/zadaniach)
             if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow();
+            const banner = document.getElementById('zd-edit-szablon-banner');
+            if (banner) banner.style.display = 'none';
             document.getElementById('zd-modal-title').textContent = 'Nowe zadanie';
             document.getElementById('zd-edit-id').value = '';
             document.getElementById('zd-tytul').value = '';
@@ -19579,16 +19627,34 @@ if (inputNazwaCheck) {
             document.getElementById('zd-priorytet').value = 'NORMALNY';
             document.getElementById('zd-powtarzaj').value = 'NIE';
             zd_powtarzajChange();
+            // Reset interwału na "1" (zd_powtarzajChange wypełnia opcje dopiero po wyborze typu)
             zd_clearKlient();
             const ov = document.getElementById('zd-modal-overlay');
             ov.style.display = 'flex';
         }
 
-        function zd_editOpen(id) {
-            const z = zd_data.find(r => r.id === id);
+        async function zd_editOpen(id) {
+            let z = zd_data.find(r => r.id === id);
             if (!z) return;
+            // Jeśli klikana pozycja to instancja cyklicznego (parent_powtarzajacy_id !== null) —
+            // edytujemy SZABLON (rodzica), nie instancję. Inaczej cyklu nie da się zmienić.
+            const isInstancjaCykl = !!z.parent_powtarzajacy_id;
+            if (isInstancjaCykl) {
+                const szablonId = z.parent_powtarzajacy_id;
+                const res = await zd_apiCall({ action: 'get', id: szablonId });
+                if (res.status === 'success' && res.data) {
+                    z = res.data; // dane szablonu (powtarzaj/powtarzaj_dzien/powtarzaj_co)
+                    id = szablonId; // edycja zapisze się na szablonie
+                } else {
+                    alert('Nie udało się załadować szablonu cyklicznego: ' + (res.message || ''));
+                    return;
+                }
+            }
             zd_fillPracownicy();
-            document.getElementById('zd-modal-title').textContent = 'Edytuj zadanie';
+            // Banner — pokazuj tylko gdy edytujesz szablon
+            const banner = document.getElementById('zd-edit-szablon-banner');
+            if (banner) banner.style.display = (z.is_szablon || isInstancjaCykl) ? 'block' : 'none';
+            document.getElementById('zd-modal-title').textContent = isInstancjaCykl ? 'Edytuj serię cykliczną' : 'Edytuj zadanie';
             document.getElementById('zd-edit-id').value = id;
             document.getElementById('zd-tytul').value = z.tytul || '';
             document.getElementById('zd-opis').value = z.opis || '';
@@ -19621,6 +19687,19 @@ if (inputNazwaCheck) {
             } else {
                 document.getElementById('zd-deadline').value = '';
             }
+            // Powtarzalność — wczytaj typ + odpal zd_powtarzajChange (wypełnia selekty),
+            // potem ustaw aktualne wartości "co ile" i "dzień". Bez tego edycja szablonu
+            // zawsze wracała do "Nie powtarzaj".
+            const typPowt = String(z.powtarzaj || 'NIE').toUpperCase();
+            document.getElementById('zd-powtarzaj').value = ['NIE','CODZIENNIE','TYGODNIOWO','MIESIECZNIE'].includes(typPowt) ? typPowt : 'NIE';
+            zd_powtarzajChange();
+            if (typPowt === 'TYGODNIOWO' || typPowt === 'MIESIECZNIE') {
+                const selCo = document.getElementById('zd-powtarzaj-co');
+                const co = parseInt(z.powtarzaj_co, 10) || 1;
+                if (selCo) selCo.value = String(co >= 1 && co <= 12 ? co : 1);
+                const selDz = document.getElementById('zd-powtarzaj-dzien');
+                if (selDz && z.powtarzaj_dzien != null) selDz.value = String(z.powtarzaj_dzien);
+            }
             document.getElementById('zd-modal-overlay').style.display = 'flex';
         }
 
@@ -19647,8 +19726,10 @@ if (inputNazwaCheck) {
             const powtarzaj = document.getElementById('zd-powtarzaj').value;
             const powtarzaj_dzien = (powtarzaj === 'TYGODNIOWO' || powtarzaj === 'MIESIECZNIE')
                 ? parseInt(document.getElementById('zd-powtarzaj-dzien').value, 10) : null;
+            const powtarzaj_co = (powtarzaj === 'TYGODNIOWO' || powtarzaj === 'MIESIECZNIE')
+                ? (parseInt(document.getElementById('zd-powtarzaj-co').value, 10) || 1) : 1;
             const myImie = localStorage.getItem('boczki_pracownik_imie') || '';
-            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, klienci, powtarzaj, powtarzaj_dzien };
+            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, klienci, powtarzaj, powtarzaj_dzien, powtarzaj_co };
             const payload = id
                 ? { action: 'edit', id, ...base, kto_edytuje: myImie }
                 : { action: 'add', ...base, utworzone_przez: myImie };
