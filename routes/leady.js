@@ -448,6 +448,24 @@ module.exports = (db) => {
         res.json({ status: 'success' });
       });
 
+    } else if (action === 'wyczysc_wszystkie') {
+      // Wyczyść wszystkie leady, komentarze i źródła importu dla tenanta.
+      // Używane gdy user chce zacząć od zera (np. zaimportował zły arkusz).
+      db.query('DELETE FROM Lead_Komentarze WHERE tenant_id = ?', [tenant_id], (e1) => {
+        if (e1) return res.json({ status: 'error', message: 'Komentarze: ' + e1.message });
+        db.query('DELETE FROM Leady WHERE tenant_id = ?', [tenant_id], (e2, r2) => {
+          if (e2) return res.json({ status: 'error', message: 'Leady: ' + e2.message });
+          db.query('DELETE FROM Lead_Importy WHERE tenant_id = ?', [tenant_id], (e3, r3) => {
+            if (e3) return res.json({ status: 'error', message: 'Importy: ' + e3.message });
+            res.json({
+              status: 'success',
+              usunieto_leadow: r2.affectedRows || 0,
+              usunieto_zrodel: r3.affectedRows || 0
+            });
+          });
+        });
+      });
+
     } else {
       res.json({ status: 'error', message: 'Nieznana akcja: ' + action });
     }

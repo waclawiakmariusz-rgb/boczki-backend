@@ -7147,6 +7147,7 @@ ANALIZA MANAGER
         <div style="display:flex; gap:8px;">
             <button onclick="leady_dodajZrodloOpen()" style="background:#ec4899; color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px;">+ Nowe źródło</button>
             <button onclick="leady_setStatus('IMPORTY', null)" style="background:#fff; color:#475569; border:1px solid #e2e8f0; padding:10px 18px; border-radius:10px; font-weight:600; cursor:pointer; font-size:14px;">📥 Źródła</button>
+            <button onclick="leady_wyczyscWszystkie()" style="background:#fff; color:#991b1b; border:1px solid #fecaca; padding:10px 14px; border-radius:10px; font-weight:600; cursor:pointer; font-size:13px;" title="Usuwa wszystkie leady, komentarze i źródła importu — start od zera">🗑 Wyczyść wszystko</button>
         </div>
     </div>
 
@@ -7172,7 +7173,12 @@ ANALIZA MANAGER
         </div>
 
         <div style="background:#fef9c3; border-left:4px solid #facc15; padding:10px 14px; border-radius:6px; font-size:12.5px; color:#713f12; margin-bottom:14px;">
-            <strong>Wskazówka:</strong> arkusz Google Sheets musi być udostępniony "Każdy z linkiem" (przeglądający). Inaczej Estelio nie pobierze danych.
+            <strong>Wskazówki:</strong>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+                <li>Arkusz musi być udostępniony „Każdy z linkiem" (przeglądający), inaczej Estelio nie pobierze danych.</li>
+                <li>Plik Google Sheets może mieć kilka arkuszy (zakładek u dołu) — <b>otwórz ten konkretny arkusz</b> z którego chcesz importować i wklej URL z paska adresu (zawiera <code>#gid=...</code>). System pobierze właśnie ten arkusz.</li>
+                <li>Bez <code>#gid=</code> w URL system pobiera <b>pierwszy arkusz</b> (domyślny).</li>
+            </ul>
         </div>
 
         <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Nazwa źródła (np. agencja, kampania)</label>
@@ -20437,6 +20443,32 @@ if (inputNazwaCheck) {
                 if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
                 document.getElementById('leady-modal-szczegoly').style.display = 'none';
                 leady_loadList();
+            });
+        }
+
+        function leady_wyczyscWszystkie() {
+            // Dwustopniowy confirm — operacja jest permanentna i dotyczy WSZYSTKICH leadów
+            const krok1 = confirm(
+                '⚠️ UWAGA — TWARDY RESET LEADÓW\n\n' +
+                'Zostaną PERMANENTNIE usunięte:\n' +
+                '  • wszystkie leady\n' +
+                '  • wszystkie komentarze (historia kontaktu)\n' +
+                '  • wszystkie źródła importu (linki do arkuszy)\n\n' +
+                'Operacji NIE DA SIĘ cofnąć. Po wyczyszczeniu dodasz źródła od nowa.\n\n' +
+                'Kontynuować?'
+            );
+            if (!krok1) return;
+            const krok2 = prompt('Aby potwierdzić, wpisz słowo: WYCZYŚĆ');
+            if (krok2 !== 'WYCZYŚĆ') { alert('Anulowano — słowo nie zgadza się.'); return; }
+
+            leady_apiCall({ action: 'wyczysc_wszystkie' }).then(res => {
+                if (res.status !== 'success') { alert(res.message || 'Błąd'); return; }
+                if (typeof pokazPowiadomienie === 'function') {
+                    pokazPowiadomienie('success', '🗑 Wyczyszczone',
+                        `Usunięto ${res.usunieto_leadow || 0} leadów i ${res.usunieto_zrodel || 0} źródeł importu.`);
+                }
+                leady_state.status = 'nowy';
+                leady_setStatus('nowy', document.querySelector('.leady-chip[data-status="nowy"]'));
             });
         }
 
