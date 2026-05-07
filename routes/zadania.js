@@ -77,7 +77,15 @@ module.exports = (db) => {
                   `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, parent_powtarzajacy_id, is_szablon)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, 0)`,
                   [newId, tenant_id, w.utworzone_przez, w.przypisane_do, w.tytul, w.opis, w.kategoria, w.priorytet, instDeadline, w.id_klienta, w.klient_nazwa, w.id],
-                  () => { if (--pending === 0) finish(); }
+                  () => {
+                    // Skopiuj multi-kategorie z szablonu do instancji (INSERT ... SELECT)
+                    db.query(
+                      `INSERT IGNORE INTO Zadania_Kategorie (id, tenant_id, id_zadania, kategoria)
+                       SELECT UUID(), tenant_id, ?, kategoria FROM Zadania_Kategorie WHERE tenant_id = ? AND id_zadania = ?`,
+                      [newId, tenant_id, w.id],
+                      () => { if (--pending === 0) finish(); }
+                    );
+                  }
                 );
               } else {
                 if (--pending === 0) finish();
@@ -204,6 +212,71 @@ module.exports = (db) => {
     (err) => { if (err) console.error('[Zadania_Klienci] CREATE TABLE error:', err.message); }
   );
 
+  // Tabela kategorii powiązanych z zadaniem (wiele-do-wielu).
+  // Zachowujemy też pole `kategoria` w `Zadania` (pierwsza kategoria = "główna")
+  // dla kompatybilności wstecznej (filtrów, sortowania, widget Pulpit).
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Zadania_Kategorie (
+       id VARCHAR(36) PRIMARY KEY,
+       tenant_id VARCHAR(64) NOT NULL,
+       id_zadania VARCHAR(36) NOT NULL,
+       kategoria ENUM('MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE') NOT NULL,
+       INDEX idx_zadania (tenant_id, id_zadania),
+       INDEX idx_kategoria (tenant_id, kategoria),
+       UNIQUE KEY uniq_zadanie_kategoria (id_zadania, kategoria)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => {
+      if (err) { console.error('[Zadania_Kategorie] CREATE TABLE error:', err.message); return; }
+      // Backfill jednorazowy — dla istniejących zadań skopiuj kolumnę kategoria do tabeli multi.
+      // INSERT IGNORE zapobiega duplikatom przy ponownym uruchomieniu.
+      setTimeout(() => {
+        db.query(
+          `INSERT IGNORE INTO Zadania_Kategorie (id, tenant_id, id_zadania, kategoria)
+           SELECT UUID(), tenant_id, id, kategoria FROM Zadania
+           WHERE kategoria IS NOT NULL
+             AND id NOT IN (SELECT id_zadania FROM Zadania_Kategorie)`,
+          (e) => { if (e) console.error('[Zadania_Kategorie backfill]', e.message); }
+        );
+      }, 2000);
+    }
+  );
+
+  // Helper: zapisz listę kategorii dla zadania (idempotentnie — DELETE + INSERT)
+  function setKategorieZadania(tenant_id, id_zadania, kategorie, cb) {
+    db.query(
+      `DELETE FROM Zadania_Kategorie WHERE tenant_id = ? AND id_zadania = ?`,
+      [tenant_id, id_zadania],
+      (err) => {
+        if (err) return cb(err);
+        const lista = Array.isArray(kategorie) ? kategorie.filter(k => ALLOWED_KATEGORIE.includes(k)) : [];
+        const dedup = [...new Set(lista)];
+        if (!dedup.length) return cb();
+        let pending = dedup.length;
+        let errFinal = null;
+        dedup.forEach(k => {
+          db.query(
+            `INSERT INTO Zadania_Kategorie (id, tenant_id, id_zadania, kategoria) VALUES (?, ?, ?, ?)`,
+            [randomUUID(), tenant_id, id_zadania, k],
+            (err2) => {
+              if (err2 && !errFinal) errFinal = err2;
+              if (--pending === 0) cb(errFinal);
+            }
+          );
+        });
+      }
+    );
+  }
+
+  // Helper: parsuj kategorie z payloadu (akceptuje array `kategorie` LUB stare pole `kategoria`)
+  function parseKategoriePayload(d) {
+    if (Array.isArray(d.kategorie)) {
+      const lista = d.kategorie.filter(k => ALLOWED_KATEGORIE.includes(k));
+      return [...new Set(lista)];
+    }
+    if (d.kategoria && ALLOWED_KATEGORIE.includes(d.kategoria)) return [d.kategoria];
+    return ['INNE'];
+  }
+
   // Helper: zapisz listę klientów dla zadania (idempotentnie — DELETE + INSERT)
   function setKlienciZadania(tenant_id, id_zadania, klienci, cb) {
     db.query(
@@ -229,7 +302,7 @@ module.exports = (db) => {
     );
   }
 
-  // Helper: dla listy zadań pobierz wszystkich klientów + liczbę komentarzy (jednym query każdy)
+  // Helper: dla listy zadań pobierz klientów + liczbę komentarzy + kategorie (multi)
   function dolaczKlientow(tenant_id, zadania, cb) {
     if (!zadania || !zadania.length) return cb(zadania);
     const ids = zadania.map(z => z.id);
@@ -237,7 +310,7 @@ module.exports = (db) => {
       `SELECT id_zadania, id_klienta, klient_nazwa FROM Zadania_Klienci WHERE tenant_id = ? AND id_zadania IN (?)`,
       [tenant_id, ids],
       (err, rows) => {
-        if (err) { console.error('[dolaczKlientow]', err.message); zadania.forEach(z => { z.klienci = []; z.komentarzy = 0; }); return cb(zadania); }
+        if (err) { console.error('[dolaczKlientow]', err.message); zadania.forEach(z => { z.klienci = []; z.komentarzy = 0; z.kategorie = z.kategoria ? [z.kategoria] : ['INNE']; }); return cb(zadania); }
         const map = {};
         (rows || []).forEach(r => {
           if (!map[r.id_zadania]) map[r.id_zadania] = [];
@@ -249,7 +322,7 @@ module.exports = (db) => {
             z.klienci = [{ id: z.id_klienta, nazwa: z.klient_nazwa }];
           }
         });
-        // Drugie zapytanie: liczba komentarzy per zadanie
+        // Komentarze + kategorie równolegle
         db.query(
           `SELECT id_zadania, COUNT(*) AS cnt FROM Zadania_Komentarze WHERE tenant_id = ? AND id_zadania IN (?) GROUP BY id_zadania`,
           [tenant_id, ids],
@@ -257,7 +330,24 @@ module.exports = (db) => {
             const cMap = {};
             if (!err2) (kRows || []).forEach(r => { cMap[r.id_zadania] = Number(r.cnt) || 0; });
             zadania.forEach(z => { z.komentarzy = cMap[z.id] || 0; });
-            cb(zadania);
+            // Kategorie multi
+            db.query(
+              `SELECT id_zadania, kategoria FROM Zadania_Kategorie WHERE tenant_id = ? AND id_zadania IN (?)`,
+              [tenant_id, ids],
+              (err3, katRows) => {
+                const kMap = {};
+                if (!err3) (katRows || []).forEach(r => {
+                  if (!kMap[r.id_zadania]) kMap[r.id_zadania] = [];
+                  kMap[r.id_zadania].push(r.kategoria);
+                });
+                zadania.forEach(z => {
+                  z.kategorie = kMap[z.id] || [];
+                  // Fallback: jeśli brak w tabeli (stare zadania), użyj kolumny kategoria z Zadania
+                  if (z.kategorie.length === 0 && z.kategoria) z.kategorie = [z.kategoria];
+                });
+                cb(zadania);
+              }
+            );
           }
         );
       }
@@ -403,7 +493,8 @@ module.exports = (db) => {
       const przypisane_do = String(d.przypisane_do || '').trim();
       const utworzone_przez = String(d.utworzone_przez || '').trim();
       const deadline = d.deadline || null;
-      const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
+      const kategorieList = parseKategoriePayload(d); // multi
+      const kategoria = kategorieList[0] || 'INNE';   // główna (pierwsza) — wstecznie kompatybilna
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
       const klienciList = parseKlienciPayload(d);
       const id_klienta = klienciList.length > 0 ? klienciList[0].id : null;
@@ -424,10 +515,12 @@ module.exports = (db) => {
             [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
-              // Zapisz wszystkich klientów (multi-klient)
-              setKlienciZadania(tenant_id, id, klienciList, () => {
-                if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
-                else res.json({ status: 'success', id });
+              // Zapisz multi-kategorie + multi-klienci
+              setKategorieZadania(tenant_id, id, kategorieList, () => {
+                setKlienciZadania(tenant_id, id, klienciList, () => {
+                  if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
+                  else res.json({ status: 'success', id });
+                });
               });
             }
           );
@@ -441,11 +534,12 @@ module.exports = (db) => {
       const opis = String(d.opis || '').trim();
       const przypisane_do = String(d.przypisane_do || '').trim();
       const deadline = d.deadline || null;
-      const kategoria = ALLOWED_KATEGORIE.includes(d.kategoria) ? d.kategoria : 'INNE';
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
       const klienciListEdit = parseKlienciPayload(d);
       const id_klienta = klienciListEdit.length > 0 ? klienciListEdit[0].id : null;
       const klient_nazwa = klienciListEdit.length > 0 ? klienciListEdit[0].nazwa.slice(0, 200) : null;
+      const kategorieListEdit = parseKategoriePayload(d);
+      const kategoriaEdit = kategorieListEdit[0] || 'INNE';
       const kto_edytuje = String(d.kto_edytuje || d.utworzone_przez || '').trim();
       const pwtE = normalizujPowtarzanie(d);
       if (pwtE.error) return res.json({ status: 'error', message: pwtE.error });
@@ -461,15 +555,16 @@ module.exports = (db) => {
                                 id_klienta = ?, klient_nazwa = ?,
                                 powtarzaj = ?, powtarzaj_dzien = ?, powtarzaj_co = ?, is_szablon = ?
              WHERE tenant_id = ? AND id = ?`,
-            [tytul, opis, przypisane_do, kategoria, priorytet, deadline, id_klienta, klient_nazwa,
+            [tytul, opis, przypisane_do, kategoriaEdit, priorytet, deadline, id_klienta, klient_nazwa,
              ePowt, ePowtDz, ePowtCo, eIsSzablon, tenant_id, id],
             (err, result) => {
               if (err) return res.json({ status: 'error', message: err.message });
               if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
-              setKlienciZadania(tenant_id, id, klienciListEdit, () => {
-                // Jeśli właśnie zmieniono na szablon (lub edytowano cykl) — odpal materializację
-                if (eIsSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success' }));
-                else res.json({ status: 'success' });
+              setKategorieZadania(tenant_id, id, kategorieListEdit, () => {
+                setKlienciZadania(tenant_id, id, klienciListEdit, () => {
+                  if (eIsSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success' }));
+                  else res.json({ status: 'success' });
+                });
               });
             }
           );

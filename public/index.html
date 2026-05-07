@@ -7326,25 +7326,17 @@ ANALIZA MANAGER
             <textarea id="zd-opis" rows="4" oninput="zd_autoSuggest()" placeholder="Szczegóły, instrukcje, kontekst..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:6px; outline:none; resize:vertical;"></textarea>
             <div id="zd-klient-suggest" style="margin-bottom:12px;"></div>
 
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-                <div>
-                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Kategoria</label>
-                    <select id="zd-kategoria" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
-                        <option value="INNE">📋 Inne / Ogólne</option>
-                        <option value="MAGAZYN">📦 Magazyn</option>
-                        <option value="KOSMETYK">💄 Kosmetyk</option>
-                        <option value="KLIENT">👤 Klient</option>
-                        <option value="SPRZEDAZ">💰 Sprzedaż</option>
-                    </select>
-                </div>
-                <div>
-                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Priorytet</label>
-                    <select id="zd-priorytet" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
-                        <option value="NORMALNY">▫️ Normalny</option>
-                        <option value="WAZNY">🟠 Ważny</option>
-                        <option value="PILNY">🔴 Pilny</option>
-                    </select>
-                </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Kategorie <span style="font-weight:400; color:#94a3b8;">(można wybrać więcej niż jedną)</span></label>
+                <div id="zd-kategorie-badges" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px; min-height:40px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"></div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Priorytet</label>
+                <select id="zd-priorytet" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
+                    <option value="NORMALNY">▫️ Normalny</option>
+                    <option value="WAZNY">🟠 Ważny</option>
+                    <option value="PILNY">🔴 Pilny</option>
+                </select>
             </div>
 
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
@@ -9598,8 +9590,11 @@ function ds_zd_renderTabs() {
     const counts = {};
     TABS.forEach(t => counts[t.key] = 0);
     all.forEach(z => {
-        const k = z.kategoria || 'INNE';
-        if (counts[k] !== undefined) counts[k]++; else counts.INNE++;
+        // Multi-kategorie — zadanie liczone w każdej z przypisanych kategorii
+        const kats = (Array.isArray(z.kategorie) && z.kategorie.length) ? z.kategorie : [z.kategoria || 'INNE'];
+        kats.forEach(k => {
+            if (counts[k] !== undefined) counts[k]++;
+        });
         // Tab "Moje" — niezależnie od kategorii, jeśli zadanie utworzyła osoba zalogowana
         if (myImieTab && z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === myImieTab) {
             counts.MOJE++;
@@ -9678,7 +9673,11 @@ function ds_zd_renderList() {
     } else if (ds_zd_activeTab === 'MOJE') {
         filtered = all.filter(z => myImieFilter && String(z.utworzone_przez || '').trim().toLowerCase() === myImieFilter);
     } else {
-        filtered = all.filter(z => (z.kategoria || 'INNE') === ds_zd_activeTab);
+        // Multi-kategorie — pokazuj zadanie w zakładce X jeśli ma X w swoich kategoriach
+        filtered = all.filter(z => {
+            const kats = (Array.isArray(z.kategorie) && z.kategorie.length) ? z.kategorie : [z.kategoria || 'INNE'];
+            return kats.includes(ds_zd_activeTab);
+        });
     }
 
     // Filtr wyszukiwania — po tytule/opisie/klientach/przypisaniu/utworzonym
@@ -9818,7 +9817,14 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
                 <div style="min-width:0; flex:1;">
                     <div class="ds-zd-task-title">${escHtml(z.tytul)}</div>
                     <div class="ds-zd-task-meta">
-                        <span class="pill" style="background:${z.kategoria==='KLIENT'?'#dbeafe':z.kategoria==='MAGAZYN'?'#fef3c7':z.kategoria==='KOSMETYK'?'#fce7f3':z.kategoria==='SPRZEDAZ'?'#dcfce7':'#f1f5f9'}; color:${z.kategoria==='KLIENT'?'#1e40af':z.kategoria==='MAGAZYN'?'#92400e':z.kategoria==='KOSMETYK'?'#9d174d':z.kategoria==='SPRZEDAZ'?'#166534':'#475569'};">${k.i} ${k.l}</span>
+                        ${(() => {
+                            const KAT_COLORS = { KLIENT:['#dbeafe','#1e40af','👤','Klient'], MAGAZYN:['#fef3c7','#92400e','📦','Magazyn'], KOSMETYK:['#fce7f3','#9d174d','💄','Kosmetyk'], SPRZEDAZ:['#dcfce7','#166534','💰','Sprzedaż'], INNE:['#f1f5f9','#475569','📋','Inne'] };
+                            const kats = (Array.isArray(z.kategorie) && z.kategorie.length) ? z.kategorie : [z.kategoria || 'INNE'];
+                            return kats.map(kk => {
+                                const c = KAT_COLORS[kk] || KAT_COLORS.INNE;
+                                return `<span class="pill" style="background:${c[0]}; color:${c[1]};">${c[2]} ${c[3]}</span>`;
+                            }).join(' ');
+                        })()}
                         ${przypisanyPill}
                         ${cyklPill}
                         ${deadlineStr && !z.is_szablon ? `<span class="${overdue?'overdue':''}">📅 ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : ''}
@@ -19381,6 +19387,65 @@ if (inputNazwaCheck) {
             });
         }
 
+        // ── MULTI-KATEGORIE w modalu zadania ──
+        const ZD_KATEGORIE_DEF = [
+            { v: 'KLIENT',   icon: '👤', label: 'Klient',   bg: '#dbeafe', col: '#1e40af' },
+            { v: 'MAGAZYN',  icon: '📦', label: 'Magazyn',  bg: '#fef3c7', col: '#92400e' },
+            { v: 'KOSMETYK', icon: '💄', label: 'Kosmetyk', bg: '#fce7f3', col: '#9d174d' },
+            { v: 'SPRZEDAZ', icon: '💰', label: 'Sprzedaż', bg: '#dcfce7', col: '#166534' },
+            { v: 'INNE',     icon: '📋', label: 'Inne',     bg: '#f1f5f9', col: '#475569' }
+        ];
+        let zd_kategorie = ['INNE'];
+
+        function zd_renderKategorieBadges() {
+            const wrap = document.getElementById('zd-kategorie-badges');
+            if (!wrap) return;
+            const wybrane = zd_kategorie.map((k, idx) => {
+                const def = ZD_KATEGORIE_DEF.find(d => d.v === k) || ZD_KATEGORIE_DEF[4];
+                return `<span style="display:inline-flex; align-items:center; gap:6px; padding:6px 12px; background:${def.bg}; color:${def.col}; border-radius:999px; font-size:12.5px; font-weight:700;">
+                    ${def.icon} ${def.label}
+                    <button type="button" onclick="zd_removeKategorie(${idx})" style="background:none; border:none; color:${def.col}; cursor:pointer; font-size:16px; line-height:1; padding:0; opacity:.7;" title="Usuń">&times;</button>
+                </span>`;
+            }).join('');
+            const dostepne = ZD_KATEGORIE_DEF.filter(d => !zd_kategorie.includes(d.v));
+            const dropdown = dostepne.length
+                ? `<div style="position:relative; display:inline-block;">
+                    <button type="button" onclick="zd_toggleKategoriePopup(event)" id="zd-kat-add-btn" style="background:#fff; color:#475569; border:1px dashed #cbd5e1; padding:6px 12px; border-radius:999px; cursor:pointer; font-size:12.5px; font-weight:600;">+ Dodaj kategorię</button>
+                    <div id="zd-kat-popup" style="display:none; position:absolute; top:100%; left:0; margin-top:4px; background:#fff; border:1px solid #e2e8f0; border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,.1); padding:4px; z-index:10001; min-width:160px;">
+                        ${dostepne.map(d => `<button type="button" onclick="zd_addKategorie('${d.v}')" style="display:block; width:100%; text-align:left; padding:8px 10px; border:none; background:none; cursor:pointer; font-size:13px; border-radius:6px;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='transparent'">${d.icon} ${d.label}</button>`).join('')}
+                    </div>
+                </div>`
+                : '';
+            wrap.innerHTML = wybrane + ' ' + dropdown;
+        }
+        function zd_toggleKategoriePopup(ev) {
+            ev.stopPropagation();
+            const pop = document.getElementById('zd-kat-popup');
+            if (!pop) return;
+            const wasOpen = pop.style.display === 'block';
+            pop.style.display = wasOpen ? 'none' : 'block';
+            if (!wasOpen) {
+                setTimeout(() => {
+                    const closeOnOut = (e) => {
+                        if (!pop.contains(e.target)) {
+                            pop.style.display = 'none';
+                            document.removeEventListener('click', closeOnOut);
+                        }
+                    };
+                    document.addEventListener('click', closeOnOut);
+                }, 50);
+            }
+        }
+        function zd_addKategorie(k) {
+            if (!zd_kategorie.includes(k)) zd_kategorie.push(k);
+            zd_renderKategorieBadges();
+        }
+        function zd_removeKategorie(idx) {
+            zd_kategorie.splice(idx, 1);
+            if (!zd_kategorie.length) zd_kategorie = ['INNE']; // domyślnie zawsze co najmniej jedna
+            zd_renderKategorieBadges();
+        }
+
         // Lista wybranych klientów dla edytowanego/tworzonego zadania (multi-klient)
         let zd_klienci = [];
 
@@ -19713,8 +19778,12 @@ if (inputNazwaCheck) {
                 else if (r.status === 'WYKONANE') statusBadge = '<span style="display:inline-block; padding:3px 9px; border-radius:6px; background:#dbeafe; color:#1e40af; font-size:11px; font-weight:700;">✅ Wykonane</span>';
                 else statusBadge = '<span style="display:inline-block; padding:3px 9px; border-radius:6px; background:#f1f5f9; color:#64748b; font-size:11px; font-weight:700;">📦 Archiwum</span>';
 
-                const kat = KAT_MAP[r.kategoria] || KAT_MAP.INNE;
-                const katBadge = `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; background:${kat.bg}; color:${kat.col}; font-size:11px; font-weight:700; white-space:nowrap;">${kat.icon} ${kat.label}</span>`;
+                // Multi-kategorie — pokaż wszystkie badge'y, fallback na pojedynczą kategorię
+                const katyArr = (Array.isArray(r.kategorie) && r.kategorie.length) ? r.kategorie : [r.kategoria || 'INNE'];
+                const katBadge = '<div style="display:flex; flex-wrap:wrap; gap:3px;">' + katyArr.map(kk => {
+                    const kdef = KAT_MAP[kk] || KAT_MAP.INNE;
+                    return `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:6px; background:${kdef.bg}; color:${kdef.col}; font-size:11px; font-weight:700; white-space:nowrap;">${kdef.icon} ${kdef.label}</span>`;
+                }).join('') + '</div>';
 
                 const pri = PRI_MAP[r.priorytet] || PRI_MAP.NORMALNY;
                 const priCell = (r.priorytet && r.priorytet !== 'NORMALNY')
@@ -19819,7 +19888,8 @@ if (inputNazwaCheck) {
             document.getElementById('zd-opis').value = '';
             document.getElementById('zd-przypisane').value = '';
             document.getElementById('zd-deadline').value = '';
-            document.getElementById('zd-kategoria').value = 'INNE';
+            zd_kategorie = ['INNE'];
+            zd_renderKategorieBadges();
             document.getElementById('zd-priorytet').value = 'NORMALNY';
             document.getElementById('zd-powtarzaj').value = 'NIE';
             zd_powtarzajChange();
@@ -19865,7 +19935,15 @@ if (inputNazwaCheck) {
                 sel.appendChild(opt);
             }
             sel.value = z.przypisane_do || '';
-            document.getElementById('zd-kategoria').value = z.kategoria || 'INNE';
+            // Multi-kategorie: użyj array z.kategorie, fallback do z.kategoria, fallback do INNE
+            if (Array.isArray(z.kategorie) && z.kategorie.length) {
+                zd_kategorie = z.kategorie.slice();
+            } else if (z.kategoria) {
+                zd_kategorie = [z.kategoria];
+            } else {
+                zd_kategorie = ['INNE'];
+            }
+            zd_renderKategorieBadges();
             document.getElementById('zd-priorytet').value = z.priorytet || 'NORMALNY';
             // Multi-klient: jeśli backend zwrócił z.klienci (array) — użyj go,
             // wpp fallback do starego z.id_klienta/klient_nazwa
@@ -19910,7 +19988,7 @@ if (inputNazwaCheck) {
             const tytul = document.getElementById('zd-tytul').value.trim();
             const opis = document.getElementById('zd-opis').value.trim();
             const przypisane_do = document.getElementById('zd-przypisane').value.trim();
-            const kategoria = document.getElementById('zd-kategoria').value;
+            const kategorie = zd_kategorie.slice(); // multi-kategorie
             const priorytet = document.getElementById('zd-priorytet').value;
             const deadlineLocal = document.getElementById('zd-deadline').value;
             const deadline = deadlineLocal ? deadlineLocal.replace('T', ' ') + ':00' : null;
@@ -19927,7 +20005,7 @@ if (inputNazwaCheck) {
             const powtarzaj_co = (powtarzaj === 'TYGODNIOWO' || powtarzaj === 'MIESIECZNIE')
                 ? (parseInt(document.getElementById('zd-powtarzaj-co').value, 10) || 1) : 1;
             const myImie = localStorage.getItem('boczki_pracownik_imie') || '';
-            const base = { tytul, opis, przypisane_do, kategoria, priorytet, deadline, klienci, powtarzaj, powtarzaj_dzien, powtarzaj_co };
+            const base = { tytul, opis, przypisane_do, kategorie, priorytet, deadline, klienci, powtarzaj, powtarzaj_dzien, powtarzaj_co };
             const payload = id
                 ? { action: 'edit', id, ...base, kto_edytuje: myImie }
                 : { action: 'add', ...base, utworzone_przez: myImie };
