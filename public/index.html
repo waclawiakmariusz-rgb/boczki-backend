@@ -4737,6 +4737,8 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 .ds-kpi-delta.up { color:#29b35f; }
 .ds-kpi-delta.down { color:#e35a78; }
 .ds-middle-grid { display:grid; grid-template-columns:1.08fr .92fr; gap:16px; margin-bottom:16px; }
+.ds-middle-grid.no-attention { grid-template-columns: 1fr; }
+.ds-quick-grid.full-row { grid-template-columns: repeat(6, 1fr); }
 .ds-sub-card { background:white; border:1px solid #eee5e9; border-radius:22px; box-shadow:0 10px 28px rgba(39,31,52,.04); padding:18px; }
 .ds-sub-card h4 { margin:0 0 16px; font-size:18px; font-weight:700; letter-spacing:-.02em; display:flex; align-items:center; justify-content:space-between; gap:10px; }
 .ds-quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
@@ -4778,9 +4780,9 @@ body.dark-mode #hkb-modal { background: #1e293b; }
 .ds-pay-pill.transfer { background:#efe7ff; color:#7c3aed; }
 .ds-pay-pill.blik { background:#f2f2f4; color:#616775; }
 .ds-pay-pill.other { background:#f3f4f6; color:#6b7280; }
-@media(max-width:1400px){ .ds-middle-grid,.ds-bottom-grid { grid-template-columns:1fr; } .ds-kpis { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:900px){ .ds-kpis { grid-template-columns:1fr 1fr; } .ds-quick-grid { grid-template-columns:repeat(2,1fr); } }
-@media(max-width:580px){ .ds-kpis { grid-template-columns:1fr; } .ds-quick-grid { grid-template-columns:1fr; } }
+@media(max-width:1400px){ .ds-middle-grid,.ds-bottom-grid { grid-template-columns:1fr; } .ds-kpis { grid-template-columns:repeat(2,1fr); } .ds-quick-grid.full-row { grid-template-columns:repeat(3,1fr); } }
+@media(max-width:900px){ .ds-kpis { grid-template-columns:1fr 1fr; } .ds-quick-grid, .ds-quick-grid.full-row { grid-template-columns:repeat(2,1fr); } }
+@media(max-width:580px){ .ds-kpis { grid-template-columns:1fr; } .ds-quick-grid, .ds-quick-grid.full-row { grid-template-columns:1fr; } }
 
 /* ── Pulpit (ds-) — DARK MODE ── */
 body.dark-mode .ds-hello h2,
@@ -9941,6 +9943,11 @@ function zaladujPulpit() {
         const ph = document.getElementById('ds-attention-list');
         const card = ph ? ph.closest('.ds-sub-card') : null;
         if (card) card.style.display = 'none';
+        // Szybki dostęp przejmuje całą szerokość — 1 kolumna w middle-grid, 6 kafli w wierszu
+        const middle = card ? card.parentElement : document.querySelector('.ds-middle-grid');
+        if (middle) middle.classList.add('no-attention');
+        const quick = middle ? middle.querySelector('.ds-quick-grid') : null;
+        if (quick) quick.classList.add('full-row');
         return;
     }
     const cntElPlaceholder = document.getElementById('ds-uwaga-count');
