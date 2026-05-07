@@ -9832,6 +9832,11 @@ if (typeof window.__zdBadgeInterval === 'undefined') {
 // ═══════════════════════════════════════════
 // PULPIT STARTOWY — ładowanie danych
 // ═══════════════════════════════════════════
+// FEATURE FLAG — testowe wyłączenie boxu "Wymaga uwagi" (4 ciężkie fetche na starcie).
+// Aby PRZYWRÓCIĆ box → zmień na true (przywraca licznik + listę alertów: niski stan,
+// zadatki, urodziny, brak dokumentów). Wyłączone 2026-05-07 dla testu wydajności startu.
+const DS_UWAGA_ENABLED = false;
+
 function zaladujPulpit() {
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
@@ -9931,6 +9936,13 @@ function zaladujPulpit() {
     // blokowały UI; user widział „...". Teraz pulpit renderuje się od razu, sekcja
     // Wymaga uwagi dosypuje się chwilę później). Cache w window — przy szybkich
     // nawigacjach Pulpit↔inne nie hammeruje serwera.
+    // Feature flag DS_UWAGA_ENABLED — gdy false, ukrywamy box i pomijamy fetche.
+    if (!DS_UWAGA_ENABLED) {
+        const ph = document.getElementById('ds-attention-list');
+        const card = ph ? ph.closest('.ds-sub-card') : null;
+        if (card) card.style.display = 'none';
+        return;
+    }
     const cntElPlaceholder = document.getElementById('ds-uwaga-count');
     const listElPlaceholder = document.getElementById('ds-attention-list');
     if (cntElPlaceholder) cntElPlaceholder.textContent = '…';
