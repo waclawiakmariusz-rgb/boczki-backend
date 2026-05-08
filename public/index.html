@@ -13005,7 +13005,120 @@ function edytujSprzedaz(rowStr) {
     document.getElementById('e_platnosc').value = r.platnosc;
     document.getElementById('e_komentarz').value = r.komentarz;
 
+    // Mix widget — wczytaj składowe gdy płatność jest Mix, inaczej ukryj
+    window.editMixRows = [];
+    window.editMixDirty = false;
+    if (r.platnosc === 'Mix') {
+        editMixWczytajZBackendu(r.id);
+    }
+    editMixToggleVisibility();
+
     document.getElementById('edit-modal-overlay').style.display = 'flex';
+}
+
+// ───── EDIT MIX WIDGET (edycja sprzedaży z platnosc='Mix') ─────
+const EDIT_MIX_METODY = (typeof MIX_METODY_DOSTEPNE !== 'undefined') ? MIX_METODY_DOSTEPNE : [
+    { v: 'Gotówka',  label: '💵 Gotówka' },
+    { v: 'Karta',    label: '💳 Karta' },
+    { v: 'Blik',     label: '📱 Blik' },
+    { v: 'MediRaty', label: '💸 MediRaty' },
+    { v: 'TubaPay',  label: '📅 TubaPay' },
+    { v: 'Przelew',  label: '🏦 Przelew' },
+    { v: 'booksy',   label: '🅱️ Booksy Pay' },
+    { v: 'TPay',     label: '🌐 TPay' }
+];
+
+function editMixToggleVisibility() {
+    const platnosc = document.getElementById('e_platnosc').value;
+    const widget = document.getElementById('e-mix-widget');
+    if (!widget) return;
+    if (platnosc === 'Mix') {
+        widget.style.display = 'block';
+        if (!Array.isArray(window.editMixRows) || window.editMixRows.length === 0) {
+            // Zmiana z innego typu na Mix — daj 2 domyślne wiersze do uzupełnienia
+            window.editMixRows = [
+                { method: 'Gotówka', amount: 0 },
+                { method: 'Karta',   amount: 0 }
+            ];
+            window.editMixDirty = true;
+        }
+        editMixRender();
+    } else {
+        widget.style.display = 'none';
+    }
+}
+
+function editMixWczytajZBackendu(saleId) {
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'get_sale_mix', id: saleId })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d && d.status === 'success' && Array.isArray(d.breakdown) && d.breakdown.length > 0) {
+            window.editMixRows = d.breakdown.map(b => ({ method: b.method || 'Gotówka', amount: parseFloat(b.amount) || 0 }));
+        } else {
+            window.editMixRows = [
+                { method: 'Gotówka', amount: 0 },
+                { method: 'Karta',   amount: 0 }
+            ];
+        }
+        window.editMixDirty = false;
+        editMixRender();
+    })
+    .catch(() => {
+        window.editMixRows = [{ method: 'Gotówka', amount: 0 }];
+        editMixRender();
+    });
+}
+
+function editMixRender() {
+    const wrap = document.getElementById('e-mix-rows-container');
+    if (!wrap) return;
+    const rows = window.editMixRows || [];
+    wrap.innerHTML = rows.map((row, idx) => `
+        <div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">
+            <select onchange="window.editMixRows[${idx}].method = this.value; window.editMixDirty = true; editMixPrzelicz();" style="flex:1.3; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; background:#fff;">
+                ${EDIT_MIX_METODY.map(m => `<option value="${m.v}" ${row.method === m.v ? 'selected' : ''}>${m.label}</option>`).join('')}
+            </select>
+            <input type="number" step="0.01" min="0" placeholder="0.00" value="${row.amount > 0 ? row.amount : ''}"
+                   oninput="window.editMixRows[${idx}].amount = parseFloat(this.value) || 0; window.editMixDirty = true; editMixPrzelicz();"
+                   style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; text-align:right; font-weight:600;">
+            <span style="font-size:11px; color:#6b7280;">zł</span>
+            <button type="button" onclick="editMixUsunLinie(${idx})" title="Usuń metodę"
+                    style="background:#fee2e2; color:#991b1b; border:none; padding:6px 9px; border-radius:4px; cursor:pointer; font-size:13px; line-height:1;">×</button>
+        </div>
+    `).join('');
+    editMixPrzelicz();
+}
+
+function editMixDodajLinie() {
+    if (!Array.isArray(window.editMixRows)) window.editMixRows = [];
+    if (window.editMixRows.length >= EDIT_MIX_METODY.length) return;
+    const uzyte = new Set(window.editMixRows.map(r => r.method));
+    const wolna = EDIT_MIX_METODY.find(m => !uzyte.has(m.v)) || EDIT_MIX_METODY[0];
+    window.editMixRows.push({ method: wolna.v, amount: 0 });
+    window.editMixDirty = true;
+    editMixRender();
+}
+
+function editMixUsunLinie(idx) {
+    window.editMixRows.splice(idx, 1);
+    if (window.editMixRows.length === 0) window.editMixRows.push({ method: 'Gotówka', amount: 0 });
+    window.editMixDirty = true;
+    editMixRender();
+}
+
+function editMixPrzelicz() {
+    const sum = (window.editMixRows || []).reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const target = parseFloat(document.getElementById('e_kwota').value) || 0;
+    const sumEl = document.getElementById('e-mix-sum');
+    const tgtEl = document.getElementById('e-mix-target');
+    if (sumEl) {
+        sumEl.innerText = sum.toFixed(2) + ' zł';
+        sumEl.style.color = Math.abs(sum - target) < 0.02 ? '#166534' : '#ef4444';
+    }
+    if (tgtEl) tgtEl.innerText = target.toFixed(2);
 }
 
 // --- SMART SEARCH DLA STANDARDOWEJ EDYCJI ---
@@ -13110,22 +13223,48 @@ function zapiszEdycjePopup(event) {
     btn.innerText = "⏳ Zapisywanie...";
     btn.disabled = true;
 
+    const platnoscNowa = document.getElementById('e_platnosc').value;
+    const kwotaNowa = parseFloat(document.getElementById('e_kwota').value) || 0;
+
+    // Walidacja mixu — gdy płatność = Mix i user modyfikował składowe, suma musi pasować do kwoty
+    let splitBreakdownPayload = undefined;
+    if (platnoscNowa === 'Mix' && Array.isArray(window.editMixRows) && window.editMixRows.length > 0) {
+        const valid = window.editMixRows.filter(r => (parseFloat(r.amount) || 0) > 0);
+        const sum = valid.reduce((s, r) => s + parseFloat(r.amount), 0);
+        // Walidacja tylko gdy user faktycznie modyfikował (window.editMixDirty) lub gdy zmienił z innego typu
+        if (window.editMixDirty) {
+            if (Math.abs(sum - kwotaNowa) >= 0.02) {
+                alert(`Suma składowych mixu (${sum.toFixed(2)} zł) nie zgadza się z kwotą sprzedaży (${kwotaNowa.toFixed(2)} zł). Popraw przed zapisem.`);
+                btn.innerText = oldText; btn.disabled = false;
+                return;
+            }
+            const metody = valid.map(r => r.method);
+            if (new Set(metody).size !== metody.length) {
+                alert("Ta sama metoda płatności występuje więcej niż raz w mixie. Połącz kwoty w jednej linii.");
+                btn.innerText = oldText; btn.disabled = false;
+                return;
+            }
+            splitBreakdownPayload = valid.map(r => ({ method: r.method, amount: parseFloat(r.amount) || 0 }));
+        }
+    }
+
     const dataToSend = {
-        action: 'edit_sale', 
+        action: 'edit_sale',
         id: document.getElementById('e_id').value,
         data: document.getElementById('e_data').value,
-        sprzedawca: document.getElementById('e_sprzedawca').value, // <--- Tutaj leci "Ola" (bo usunąłeś Julię z tagów)
-        
+        sprzedawca: document.getElementById('e_sprzedawca').value,
+
         klient: document.getElementById('e_klient').value,
         id_klienta: document.getElementById('e_id_klienta').value,
-        
+
         zabieg_nazwa: document.getElementById('e_nazwa').value,
         szczegoly: document.getElementById('e_szczegoly').value,
         kwota: document.getElementById('e_kwota').value,
-        platnosc: document.getElementById('e_platnosc').value,
+        platnosc: platnoscNowa,
         komentarz: document.getElementById('e_komentarz').value,
         pracownik: currentUser
     };
+    if (splitBreakdownPayload) dataToSend.split_breakdown = splitBreakdownPayload;
 
     fetch(API_URL, {
         method: 'POST',
@@ -23611,11 +23750,11 @@ initTheme();
             <div style="display:flex; gap:10px; margin-bottom:10px;">
                 <div style="flex:1;">
                     <label style="font-size:11px; color:#6b7280;">Kwota (PLN):</label>
-                    <input type="number" step="0.01" id="e_kwota" class="form-control" style="font-weight:bold; font-size:13px; padding:6px 8px;">
+                    <input type="number" step="0.01" id="e_kwota" oninput="if(typeof editMixPrzelicz==='function') editMixPrzelicz();" class="form-control" style="font-weight:bold; font-size:13px; padding:6px 8px;">
                 </div>
                 <div style="flex:1;">
                     <label style="font-size:11px; color:#d63384; font-weight:bold;">Płatność:</label>
-                    <select id="e_platnosc" class="form-control" style="border: 1px solid #ddd; font-size:12px; padding:6px 8px;">
+                    <select id="e_platnosc" class="form-control" onchange="editMixToggleVisibility()" style="border: 1px solid #ddd; font-size:12px; padding:6px 8px;">
                         <option value="Gotówka">💵 Gotówka</option>
                         <option value="Karta">💳 Karta</option>
                         <option value="Blik">📱 Blik</option>
@@ -23628,6 +23767,18 @@ initTheme();
                         <option value="Portfel">👛 Portfel</option>
                     </select>
                 </div>
+            </div>
+
+            <!-- Widget mix — pokazywany gdy płatność = Mix. State w window.editMixRows; render = editMixRender(). -->
+            <div id="e-mix-widget" style="display:none; background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:10px 12px; margin-bottom:12px;">
+                <div style="font-size:12px; font-weight:700; color:#9a3412; margin-bottom:8px;">🔀 Składowe płatności mix</div>
+                <div id="e-mix-rows-container"></div>
+                <button type="button" onclick="editMixDodajLinie()" style="margin-top:6px; background:#fff; color:#0ea5e9; border:1px dashed #0ea5e9; padding:6px 12px; border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; width:100%;">+ Dodaj metodę</button>
+                <div style="margin-top:8px; padding:6px 10px; background:#fff; border-radius:6px; font-size:12px; display:flex; justify-content:space-between;">
+                    <span style="color:#6b7280;">Suma składowych:</span>
+                    <strong id="e-mix-sum" style="color:#ef4444;">0.00 zł</strong>
+                </div>
+                <div style="font-size:10.5px; color:#9a3412; margin-top:4px;">💡 Suma musi być równa kwocie powyżej (<span id="e-mix-target">0.00</span> zł).</div>
             </div>
 
             <div style="margin-bottom:15px;">

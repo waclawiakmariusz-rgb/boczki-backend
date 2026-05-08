@@ -394,12 +394,31 @@ module.exports = (db) => {
       zapiszSplit(() => rozliczPortfele());
 
     // --- EDIT_SALE ---
+    } else if (action === 'get_sale_mix') {
+      // Zwraca rozbicie mixu dla danej sprzedaży (Platnosci powiązane przez prefix bazowego id).
+      // Używane w edit modal — przy otwieraniu sprzedaży z platnosc='Mix' frontend wczytuje
+      // aktualne składowe i pozwala je edytować.
+      const saleId = String(d.id || '').trim();
+      if (!saleId) return res.json({ status: 'error', message: 'Brak id' });
+      const baseMatch = saleId.match(/^(.+?)-\d+$/);
+      const baseId = baseMatch ? baseMatch[1] : (saleId.length >= 15 ? saleId.substring(0, 15) : saleId);
+      db.query(
+        `SELECT id, metoda_platnosci AS method, kwota AS amount FROM Platnosci
+         WHERE tenant_id = ? AND id LIKE ? AND COALESCE(status, '') != 'USUNIĘTY'
+         ORDER BY id`,
+        [tenant_id, baseId + '-SPLIT-%'],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          res.json({ status: 'success', baseId, breakdown: (rows || []).map(r => ({ method: r.method, amount: parseFloat(r.amount) || 0 })) });
+        }
+      );
+
     } else if (action === 'edit_sale') {
       let _kwotaEdit;
       try { _kwotaEdit = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
       db.query(
-        `SELECT klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, czy_rozliczone FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
+        `SELECT klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, czy_rozliczone, data_sprzedazy FROM Sprzedaz WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono transakcji o ID: ' + d.id });
@@ -460,8 +479,39 @@ module.exports = (db) => {
                   if (err2) return res.json({ status: 'error', message: err2.message });
                   zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
 
-                // Korekta magazynu — po pomyślnym UPDATE
-                const finish = () => res.json({ status: 'success', message: 'Zaktualizowano transakcję!' });
+                // Korekta magazynu + ewentualna aktualizacja mixu — po pomyślnym UPDATE
+                const aktualizujMix = (cb) => {
+                  // Tylko jeśli frontend przesłał świeży split_breakdown (user edytował składowe).
+                  if (!Array.isArray(d.split_breakdown) || d.platnosc !== 'Mix') return cb();
+                  const baseMatch = String(d.id).match(/^(.+?)-\d+$/);
+                  const baseId = baseMatch ? baseMatch[1] : (String(d.id).length >= 15 ? String(d.id).substring(0, 15) : String(d.id));
+                  // 1. DELETE stare split rows dla tego baseId
+                  db.query(
+                    `DELETE FROM Platnosci WHERE tenant_id = ? AND id LIKE ?`,
+                    [tenant_id, baseId + '-SPLIT-%'],
+                    (delErr) => {
+                      if (delErr) { console.error('[edit_sale split DELETE]', delErr.message); return cb(); }
+                      // 2. INSERT nowe split rows. Data = oryginalna data_sprzedazy (zachowuje raporty).
+                      const dataPl = old.data_sprzedazy ? new Date(old.data_sprzedazy) : new Date();
+                      let i = 0;
+                      const next = () => {
+                        if (i >= d.split_breakdown.length) return cb();
+                        const part = d.split_breakdown[i++];
+                        const splitId = `${baseId}-SPLIT-${i}`;
+                        db.query(
+                          `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, ?, ?, ?, ?, 'AKTYWNY')`,
+                          [splitId, tenant_id, dataPl, d.klient || '', part.method || '', parseFloat(part.amount) || 0],
+                          (insErr) => {
+                            if (insErr) console.error('[edit_sale split INSERT]', insErr.message);
+                            next();
+                          }
+                        );
+                      };
+                      next();
+                    }
+                  );
+                };
+                const finish = () => aktualizujMix(() => res.json({ status: 'success', message: 'Zaktualizowano transakcję!' }));
 
                 if (stary && nowy && stary.nazwa === nowy.nazwa) {
                   // Ten sam produkt, różnica ilości
