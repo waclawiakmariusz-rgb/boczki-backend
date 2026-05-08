@@ -11551,27 +11551,40 @@ function otworzOkienkoRODO(id, nazwa) {
 }
 
 
-function zapiszDaneRODO(e) {
+async function zapiszDaneRODO(e) {
     e.preventDefault();
     const id = document.getElementById('rodo_id').value;
     let nazwaRaw = document.getElementById('rodo-client-name').innerText;
-    const nazwa = nazwaRaw.replace(/\s*\(ID:.*$/, '').trim(); 
-    
+    const nazwa = nazwaRaw.replace(/\s*\(ID:.*$/, '').trim();
+
     // Obsługa Wizerunku
     let wizVal = document.querySelector('input[name="rodo_wizerunek"]:checked').value;
     if (wizVal === 'TAK') {
         const uwagi = document.getElementById('rodo_wizerunek_uwagi').value.trim();
-        if (uwagi) wizVal = uwagi; 
+        if (uwagi) wizVal = uwagi;
     }
-
-    // Pobieramy link PDF
-    const linkPdfVal = document.getElementById('rodo_link_pdf') ? document.getElementById('rodo_link_pdf').value : "";
-
-    // Pobieramy Email (NOWOŚĆ)
-    const emailVal = document.getElementById('rodo_email_kontaktowy') ? document.getElementById('rodo_email_kontaktowy').value.trim() : "";
 
     const btn = e.target.querySelector('button[type="submit"]');
     btn.innerText = "Zapisywanie..."; btn.disabled = true;
+
+    // GUARD: jeśli recepcja dodała zdjęcia ale zapomniała kliknąć "Wyślij i zapisz PDF",
+    // auto-uploaduj je teraz. W przeciwnym razie zgody zapisałyby się BEZ pliku PDF.
+    let linkPdfVal = document.getElementById('rodo_link_pdf') ? document.getElementById('rodo_link_pdf').value : "";
+    const niewyslane = (window._dok && _dok.rodo && _dok.rodo.files && _dok.rodo.files.length > 0);
+    if (niewyslane && !linkPdfVal) {
+        btn.innerText = "Wysyłam PDF...";
+        const ok = await dokumentWyslij('rodo');
+        if (!ok) {
+            alert("Nie udało się wysłać PDF z dokumentem RODO. Zgody NIE zostały zapisane — popraw pliki i spróbuj ponownie.");
+            btn.innerText = "💾 Zapisz Deklarację"; btn.disabled = false;
+            return;
+        }
+        linkPdfVal = document.getElementById('rodo_link_pdf').value || "";
+        btn.innerText = "Zapisywanie...";
+    }
+
+    // Pobieramy Email (NOWOŚĆ)
+    const emailVal = document.getElementById('rodo_email_kontaktowy') ? document.getElementById('rodo_email_kontaktowy').value.trim() : "";
 
     // Wysyłamy dane
     fetch(API_URL, {
@@ -11652,19 +11665,32 @@ function otworzEdycjeZgod(id, nazwa) {
     });
 }
 
-function zapiszEdycjeZgod(e) {
+async function zapiszEdycjeZgod(e) {
     e.preventDefault();
-    
+
     const id = document.getElementById('con_id').value;
     const nazwa = document.getElementById('consent-client-name').innerText;
-    
-    // Pobieramy link (jeśli istnieje pole)
-    const linkPdfVal = document.getElementById('con_link_pdf') ? document.getElementById('con_link_pdf').value : "";
 
     const btn = e.target.querySelector('button[type="submit"]');
     const staryTekst = btn.innerText;
-    btn.innerText = "Zapisywanie..."; 
+    btn.innerText = "Zapisywanie...";
     btn.disabled = true;
+
+    // GUARD: jeśli recepcja dodała zdjęcia ale zapomniała kliknąć "Wyślij i zapisz PDF",
+    // auto-uploaduj je teraz. W przeciwnym razie zgody zapisałyby się BEZ pliku PDF.
+    let linkPdfVal = document.getElementById('con_link_pdf') ? document.getElementById('con_link_pdf').value : "";
+    const niewyslane = (window._dok && _dok.con && _dok.con.files && _dok.con.files.length > 0);
+    if (niewyslane && !linkPdfVal) {
+        btn.innerText = "Wysyłam PDF...";
+        const ok = await dokumentWyslij('con');
+        if (!ok) {
+            alert("Nie udało się wysłać PDF z regulaminem. Zgody NIE zostały zapisane — popraw pliki i spróbuj ponownie.");
+            btn.innerText = staryTekst; btn.disabled = false;
+            return;
+        }
+        linkPdfVal = document.getElementById('con_link_pdf').value || "";
+        btn.innerText = "Zapisywanie...";
+    }
 
     fetch(API_URL, {
         method: "POST",
@@ -24259,14 +24285,16 @@ function dokumentAnuluj(prefix) {
 }
 
 // Wyślij pliki na serwer
+// Zwraca true jeśli upload się udał, false w razie błędu — używane też przez auto-upload
+// w zapiszDaneRODO/zapiszEdycjeZgod gdy recepcja zapomina kliknąć "Wyślij i zapisz PDF".
 async function dokumentWyslij(prefix) {
   const files = _dok[prefix].files;
-  if (!files.length) return;
+  if (!files.length) return false;
 
   const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
   if (!tenant_id) {
     pokazPowiadomienie('error', 'Błąd sesji', 'Brak tenant_id. Zaloguj się ponownie.');
-    return;
+    return false;
   }
 
   // UI — pokaż pasek postępu
@@ -24300,23 +24328,22 @@ async function dokumentWyslij(prefix) {
       pokazPowiadomienie('error', 'Błąd uploadu', d.message || 'Spróbuj ponownie.');
       progressWrap.style.display = 'none';
       sendBtn.disabled = false;
-      return;
+      return false;
     }
 
-    // Zapisz URL w ukrytym polu
+    // Zapisz URL w ukrytym polu (synchronicznie żeby był dostępny po await przez wywołującą funkcję)
     const hiddenId = prefix === 'con' ? 'con_link_pdf' : 'rodo_link_pdf';
     document.getElementById(hiddenId).value = d.url;
-
-    setTimeout(() => {
-      dokumentPokazDone(prefix, d.url);
-      pokazPowiadomienie('success', 'Dokument zapisany', `PDF z ${d.pages} str. gotowy. Kliknij Zapisz formularz.`);
-    }, 400);
+    dokumentPokazDone(prefix, d.url);
+    pokazPowiadomienie('success', 'Dokument zapisany', `PDF z ${d.pages} str. gotowy.`);
+    return true;
 
   } catch (e) {
     clearInterval(tick);
     pokazPowiadomienie('error', 'Błąd połączenia', 'Nie udało się wysłać pliku.');
     progressWrap.style.display = 'none';
     sendBtn.disabled = false;
+    return false;
   }
 }
 
