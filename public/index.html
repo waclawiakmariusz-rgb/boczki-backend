@@ -4285,6 +4285,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                     <button onclick="toggleMenu('sub-sales', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>Sprzedaż</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-sales" class="nav-submenu">
                         <li><button onclick="pokaz('sprzedaz', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>Dodanie Sprzedaży</span></button></li>
+                        <li><button onclick="pokaz('dzisiejsza-sprzedaz', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Dzisiejsza sprzedaż</span></button></li>
                         <li><button onclick="pokaz('historia', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>Historia</span></button></li>
 						<li><button onclick="pokaz('zadatki-lista', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>Spis Zadatków</span></button></li>
 						<li><button onclick="pokaz('podsumowanie', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>Podsumowanie</span></button></li>
@@ -5032,8 +5033,17 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
 		
     </div>
     
+    <!-- Box "Ostatnie transakcje (DZIŚ)" przeniesiony do osobnej zakładki "Dzisiejsza sprzedaż"
+         (2026-05-08) — w widoku Sprzedaż opóźniał dodawanie. Stare wywołanie odswiezSprzedaz()
+         w pokaz('sprzedaz') jest no-op gdy tbody nie istnieje (wywoła się dopiero w pokaz('dzisiejsza-sprzedaz')). -->
+</div>
+
+<div id="dzisiejsza-sprzedaz" class="section">
+    <div class="header">
+        <h1>✏️ Dzisiejsza sprzedaż</h1>
+        <button onclick="odswiezSprzedaz()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
+    </div>
     <div class="card">
-        <h3>Ostatnie transakcje (DZIŚ)</h3>
         <div class="table-container">
             <table style="width:100%">
                 <thead><tr><th>Data</th><th>Klient</th><th>Co</th><th>Kwota</th><th>Kto</th><th>Akcja</th></tr></thead>
@@ -12287,7 +12297,8 @@ function pokaz(id, b) {
     if (id === 'setup-pracownicy' || id === 'setup-zabiegi') { pobierzSlownikSprzedazy(); if (id === 'setup-zabiegi' && typeof loadTypyZabiegow === 'function') loadTypyZabiegow(); }
     if (id === 'logi') pobierzLogi();
     if (id === 'historia') pobierzHistorie();
-    if (id === 'sprzedaz') { odswiezSprzedaz(); pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
+    if (id === 'sprzedaz') { pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
+    if (id === 'dzisiejsza-sprzedaz') { odswiezSprzedaz(); }
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'klient-profil') {
@@ -12444,7 +12455,8 @@ function pokaz(id, b) {
     if (id === 'setup-pracownicy' || id === 'setup-zabiegi') { pobierzSlownikSprzedazy(); if (id === 'setup-zabiegi' && typeof loadTypyZabiegow === 'function') loadTypyZabiegow(); }
     if (id === 'logi') pobierzLogi();
     if (id === 'historia') pobierzHistorie();
-    if (id === 'sprzedaz') { odswiezSprzedaz(); pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
+    if (id === 'sprzedaz') { pobierzSlownikSprzedazy(); zaladujListeKlientow(); inicjalizujMultiSprzedaz(); }
+    if (id === 'dzisiejsza-sprzedaz') { odswiezSprzedaz(); }
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'klient-profil') {
