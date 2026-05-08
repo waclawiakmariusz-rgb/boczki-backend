@@ -13005,120 +13005,7 @@ function edytujSprzedaz(rowStr) {
     document.getElementById('e_platnosc').value = r.platnosc;
     document.getElementById('e_komentarz').value = r.komentarz;
 
-    // Mix widget — wczytaj składowe gdy płatność jest Mix, inaczej ukryj
-    window.editMixRows = [];
-    window.editMixDirty = false;
-    if (r.platnosc === 'Mix') {
-        editMixWczytajZBackendu(r.id);
-    }
-    editMixToggleVisibility();
-
     document.getElementById('edit-modal-overlay').style.display = 'flex';
-}
-
-// ───── EDIT MIX WIDGET (edycja sprzedaży z platnosc='Mix') ─────
-const EDIT_MIX_METODY = (typeof MIX_METODY_DOSTEPNE !== 'undefined') ? MIX_METODY_DOSTEPNE : [
-    { v: 'Gotówka',  label: '💵 Gotówka' },
-    { v: 'Karta',    label: '💳 Karta' },
-    { v: 'Blik',     label: '📱 Blik' },
-    { v: 'MediRaty', label: '💸 MediRaty' },
-    { v: 'TubaPay',  label: '📅 TubaPay' },
-    { v: 'Przelew',  label: '🏦 Przelew' },
-    { v: 'booksy',   label: '🅱️ Booksy Pay' },
-    { v: 'TPay',     label: '🌐 TPay' }
-];
-
-function editMixToggleVisibility() {
-    const platnosc = document.getElementById('e_platnosc').value;
-    const widget = document.getElementById('e-mix-widget');
-    if (!widget) return;
-    if (platnosc === 'Mix') {
-        widget.style.display = 'block';
-        if (!Array.isArray(window.editMixRows) || window.editMixRows.length === 0) {
-            // Zmiana z innego typu na Mix — daj 2 domyślne wiersze do uzupełnienia
-            window.editMixRows = [
-                { method: 'Gotówka', amount: 0 },
-                { method: 'Karta',   amount: 0 }
-            ];
-            window.editMixDirty = true;
-        }
-        editMixRender();
-    } else {
-        widget.style.display = 'none';
-    }
-}
-
-function editMixWczytajZBackendu(saleId) {
-    fetch(API_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: 'get_sale_mix', id: saleId })
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d && d.status === 'success' && Array.isArray(d.breakdown) && d.breakdown.length > 0) {
-            window.editMixRows = d.breakdown.map(b => ({ method: b.method || 'Gotówka', amount: parseFloat(b.amount) || 0 }));
-        } else {
-            window.editMixRows = [
-                { method: 'Gotówka', amount: 0 },
-                { method: 'Karta',   amount: 0 }
-            ];
-        }
-        window.editMixDirty = false;
-        editMixRender();
-    })
-    .catch(() => {
-        window.editMixRows = [{ method: 'Gotówka', amount: 0 }];
-        editMixRender();
-    });
-}
-
-function editMixRender() {
-    const wrap = document.getElementById('e-mix-rows-container');
-    if (!wrap) return;
-    const rows = window.editMixRows || [];
-    wrap.innerHTML = rows.map((row, idx) => `
-        <div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">
-            <select onchange="window.editMixRows[${idx}].method = this.value; window.editMixDirty = true; editMixPrzelicz();" style="flex:1.3; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; background:#fff;">
-                ${EDIT_MIX_METODY.map(m => `<option value="${m.v}" ${row.method === m.v ? 'selected' : ''}>${m.label}</option>`).join('')}
-            </select>
-            <input type="number" step="0.01" min="0" placeholder="0.00" value="${row.amount > 0 ? row.amount : ''}"
-                   oninput="window.editMixRows[${idx}].amount = parseFloat(this.value) || 0; window.editMixDirty = true; editMixPrzelicz();"
-                   style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; text-align:right; font-weight:600;">
-            <span style="font-size:11px; color:#6b7280;">zł</span>
-            <button type="button" onclick="editMixUsunLinie(${idx})" title="Usuń metodę"
-                    style="background:#fee2e2; color:#991b1b; border:none; padding:6px 9px; border-radius:4px; cursor:pointer; font-size:13px; line-height:1;">×</button>
-        </div>
-    `).join('');
-    editMixPrzelicz();
-}
-
-function editMixDodajLinie() {
-    if (!Array.isArray(window.editMixRows)) window.editMixRows = [];
-    if (window.editMixRows.length >= EDIT_MIX_METODY.length) return;
-    const uzyte = new Set(window.editMixRows.map(r => r.method));
-    const wolna = EDIT_MIX_METODY.find(m => !uzyte.has(m.v)) || EDIT_MIX_METODY[0];
-    window.editMixRows.push({ method: wolna.v, amount: 0 });
-    window.editMixDirty = true;
-    editMixRender();
-}
-
-function editMixUsunLinie(idx) {
-    window.editMixRows.splice(idx, 1);
-    if (window.editMixRows.length === 0) window.editMixRows.push({ method: 'Gotówka', amount: 0 });
-    window.editMixDirty = true;
-    editMixRender();
-}
-
-function editMixPrzelicz() {
-    const sum = (window.editMixRows || []).reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
-    const target = parseFloat(document.getElementById('e_kwota').value) || 0;
-    const sumEl = document.getElementById('e-mix-sum');
-    const tgtEl = document.getElementById('e-mix-target');
-    if (sumEl) {
-        sumEl.innerText = sum.toFixed(2) + ' zł';
-        sumEl.style.color = Math.abs(sum - target) < 0.02 ? '#166534' : '#ef4444';
-    }
-    if (tgtEl) tgtEl.innerText = target.toFixed(2);
 }
 
 // --- SMART SEARCH DLA STANDARDOWEJ EDYCJI ---
@@ -17737,7 +17624,123 @@ function edytujSprzedaz(rowStr) {
     document.getElementById('e_platnosc').value = r.platnosc;
     document.getElementById('e_komentarz').value = r.komentarz;
 
+    // Mix widget — wczytaj składowe gdy płatność jest Mix, inaczej ukryj
+    window.editMixRows = [];
+    window.editMixDirty = false;
+    if (r.platnosc === 'Mix') {
+        editMixWczytajZBackendu(r.id);
+    }
+    if (typeof editMixToggleVisibility === 'function') editMixToggleVisibility();
+
     document.getElementById('edit-modal-overlay').style.display = 'flex';
+}
+
+// ───── EDIT MIX WIDGET (edycja sprzedaży z platnosc='Mix') ─────
+const EDIT_MIX_METODY = [
+    { v: 'Gotówka',  label: '💵 Gotówka' },
+    { v: 'Karta',    label: '💳 Karta' },
+    { v: 'Blik',     label: '📱 Blik' },
+    { v: 'MediRaty', label: '💸 MediRaty' },
+    { v: 'TubaPay',  label: '📅 TubaPay' },
+    { v: 'Przelew',  label: '🏦 Przelew' },
+    { v: 'booksy',   label: '🅱️ Booksy Pay' },
+    { v: 'TPay',     label: '🌐 TPay' }
+];
+
+function editMixToggleVisibility() {
+    const platnoscEl = document.getElementById('e_platnosc');
+    const widget = document.getElementById('e-mix-widget');
+    if (!widget || !platnoscEl) return;
+    if (platnoscEl.value === 'Mix') {
+        widget.style.display = 'block';
+        if (!Array.isArray(window.editMixRows) || window.editMixRows.length === 0) {
+            window.editMixRows = [
+                { method: 'Gotówka', amount: 0 },
+                { method: 'Karta',   amount: 0 }
+            ];
+            window.editMixDirty = true;
+        }
+        editMixRender();
+    } else {
+        widget.style.display = 'none';
+    }
+}
+
+function editMixWczytajZBackendu(saleId) {
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'get_sale_mix', id: saleId })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d && d.status === 'success' && Array.isArray(d.breakdown) && d.breakdown.length > 0) {
+            window.editMixRows = d.breakdown.map(b => ({ method: b.method || 'Gotówka', amount: parseFloat(b.amount) || 0 }));
+        } else {
+            window.editMixRows = [
+                { method: 'Gotówka', amount: 0 },
+                { method: 'Karta',   amount: 0 }
+            ];
+        }
+        window.editMixDirty = false;
+        editMixRender();
+    })
+    .catch(() => {
+        window.editMixRows = [{ method: 'Gotówka', amount: 0 }];
+        editMixRender();
+    });
+}
+
+function editMixRender() {
+    const wrap = document.getElementById('e-mix-rows-container');
+    if (!wrap) return;
+    const rows = window.editMixRows || [];
+    let html = '';
+    for (let idx = 0; idx < rows.length; idx++) {
+        const row = rows[idx];
+        let opts = '';
+        for (const m of EDIT_MIX_METODY) {
+            const sel = (row.method === m.v) ? ' selected' : '';
+            opts += '<option value="' + m.v + '"' + sel + '>' + m.label + '</option>';
+        }
+        const amountVal = (row.amount > 0) ? row.amount : '';
+        html += '<div style="display:flex; gap:6px; margin-bottom:6px; align-items:center;">'
+              + '<select onchange="window.editMixRows[' + idx + '].method = this.value; window.editMixDirty = true; editMixPrzelicz();" style="flex:1.3; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; background:#fff;">' + opts + '</select>'
+              + '<input type="number" step="0.01" min="0" placeholder="0.00" value="' + amountVal + '" oninput="window.editMixRows[' + idx + '].amount = parseFloat(this.value) || 0; window.editMixDirty = true; editMixPrzelicz();" style="flex:1; padding:6px 8px; border:1px solid #d1d5db; border-radius:4px; font-size:12px; text-align:right; font-weight:600;">'
+              + '<span style="font-size:11px; color:#6b7280;">zł</span>'
+              + '<button type="button" onclick="editMixUsunLinie(' + idx + ')" title="Usuń metodę" style="background:#fee2e2; color:#991b1b; border:none; padding:6px 9px; border-radius:4px; cursor:pointer; font-size:13px; line-height:1;">×</button>'
+              + '</div>';
+    }
+    wrap.innerHTML = html;
+    editMixPrzelicz();
+}
+
+function editMixDodajLinie() {
+    if (!Array.isArray(window.editMixRows)) window.editMixRows = [];
+    if (window.editMixRows.length >= EDIT_MIX_METODY.length) return;
+    const uzyte = new Set(window.editMixRows.map(r => r.method));
+    const wolna = EDIT_MIX_METODY.find(m => !uzyte.has(m.v)) || EDIT_MIX_METODY[0];
+    window.editMixRows.push({ method: wolna.v, amount: 0 });
+    window.editMixDirty = true;
+    editMixRender();
+}
+
+function editMixUsunLinie(idx) {
+    window.editMixRows.splice(idx, 1);
+    if (window.editMixRows.length === 0) window.editMixRows.push({ method: 'Gotówka', amount: 0 });
+    window.editMixDirty = true;
+    editMixRender();
+}
+
+function editMixPrzelicz() {
+    const sum = (window.editMixRows || []).reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const target = parseFloat(document.getElementById('e_kwota').value) || 0;
+    const sumEl = document.getElementById('e-mix-sum');
+    const tgtEl = document.getElementById('e-mix-target');
+    if (sumEl) {
+        sumEl.innerText = sum.toFixed(2) + ' zł';
+        sumEl.style.color = Math.abs(sum - target) < 0.02 ? '#166534' : '#ef4444';
+    }
+    if (tgtEl) tgtEl.innerText = target.toFixed(2);
 }
 
 
