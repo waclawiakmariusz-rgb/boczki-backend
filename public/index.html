@@ -15505,17 +15505,66 @@ function finalizujSprzedazPoWalidacji(klient, idKlienta, sellers) {
     // Jeśli wszystko OK -> Wysyłamy
     realizujWysylke(payload);
 }
-// --- FUNKCJE OBSŁUGI OKNA MIX ---
+// --- FUNKCJE OBSŁUGI OKNA MIX (dynamiczne linie zamiast 3 sztywnych pól, 2026-05-08) ---
+const MIX_METODY_DOSTEPNE = [
+    { v: 'Gotówka',  label: '💵 Gotówka' },
+    { v: 'Karta',    label: '💳 Karta' },
+    { v: 'Blik',     label: '📱 Blik' },
+    { v: 'MediRaty', label: '💸 MediRaty' },
+    { v: 'TubaPay',  label: '📅 TubaPay' },
+    { v: 'Przelew',  label: '🏦 Przelew' },
+    { v: 'booksy',   label: '🅱️ Booksy Pay' },
+    { v: 'TPay',     label: '🌐 TPay' }
+];
+let splitMixRows = []; // stan: [{ method: 'Gotówka', amount: 100.50 }, ...]
+
+function renderSplitRows() {
+    const wrap = document.getElementById('split-rows-container');
+    if (!wrap) return;
+    wrap.innerHTML = splitMixRows.map((row, idx) => `
+        <div style="display:flex; gap:8px; margin-bottom:8px; align-items:center;">
+            <select onchange="splitMixRows[${idx}].method = this.value; przeliczReszteSplit();" style="flex:1.3; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; background:#fff;">
+                ${MIX_METODY_DOSTEPNE.map(m => `<option value="${m.v}" ${row.method === m.v ? 'selected' : ''}>${m.label}</option>`).join('')}
+            </select>
+            <input type="number" step="0.01" min="0" placeholder="0.00" value="${row.amount > 0 ? row.amount : ''}"
+                   oninput="splitMixRows[${idx}].amount = parseFloat(this.value) || 0; przeliczReszteSplit();"
+                   style="flex:1; padding:9px 10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px; text-align:right; font-weight:600;">
+            <span style="font-size:12px; color:#6b7280;">zł</span>
+            <button type="button" onclick="usunLinieMix(${idx})" title="Usuń metodę"
+                    style="background:#fee2e2; color:#991b1b; border:none; padding:8px 11px; border-radius:6px; cursor:pointer; font-size:14px; line-height:1;">×</button>
+        </div>
+    `).join('');
+}
+
+function dodajLinieMix() {
+    if (splitMixRows.length >= MIX_METODY_DOSTEPNE.length) return; // max = liczba dostępnych metod
+    // Wybierz pierwszą metodę nieużytą jeszcze
+    const uzyte = new Set(splitMixRows.map(r => r.method));
+    const wolna = MIX_METODY_DOSTEPNE.find(m => !uzyte.has(m.v)) || MIX_METODY_DOSTEPNE[0];
+    splitMixRows.push({ method: wolna.v, amount: 0 });
+    renderSplitRows();
+    przeliczReszteSplit();
+}
+
+function usunLinieMix(idx) {
+    splitMixRows.splice(idx, 1);
+    if (splitMixRows.length === 0) splitMixRows.push({ method: 'Gotówka', amount: 0 });
+    renderSplitRows();
+    przeliczReszteSplit();
+}
+
 function otworzOknoSplit(total, payload) {
     splitTotalAmount = total;
     splitPendingPayload = payload;
 
     document.getElementById('split-total-display').innerText = total.toFixed(2) + " zł";
-    // Reset pól
-    document.getElementById('split-cash').value = "";
-    document.getElementById('split-card').value = "";
-    document.getElementById('split-other').value = "";
-    
+    // Domyślnie 2 najpopularniejsze linie — Gotówka + Karta (kwoty 0, user uzupełnia)
+    splitMixRows = [
+        { method: 'Gotówka', amount: 0 },
+        { method: 'Karta',   amount: 0 }
+    ];
+    renderSplitRows();
+
     document.getElementById('split-payment-modal').style.display = 'flex';
     przeliczReszteSplit();
 }
@@ -15525,46 +15574,45 @@ function zamknijOknoSplit() {
 }
 
 function przeliczReszteSplit() {
-    const c = parseFloat(document.getElementById('split-cash').value) || 0;
-    const k = parseFloat(document.getElementById('split-card').value) || 0;
-    const o = parseFloat(document.getElementById('split-other').value) || 0;
-    
-    const sum = c + k + o;
+    const sum = splitMixRows.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
     const diff = splitTotalAmount - sum;
-    
     const sumEl = document.getElementById('split-current-sum');
     const btn = document.getElementById('btn-confirm-split');
-
     sumEl.innerText = sum.toFixed(2) + " zł";
-    
-    // Pozwalamy na zatwierdzenie tylko gdy suma się zgadza (margines błędu 1 grosz)
+
     if (Math.abs(diff) < 0.02) {
-        sumEl.style.color = "#166534"; // Zielony
+        sumEl.style.color = "#166534";
         btn.disabled = false;
         btn.style.background = "#10b981";
         btn.style.cursor = "pointer";
         btn.innerText = "ZATWIERDŹ I SPRZEDAJ";
-    } else {
-        sumEl.style.color = "#ef4444"; // Czerwony
+    } else if (diff > 0) {
+        sumEl.style.color = "#ef4444";
         btn.disabled = true;
         btn.style.background = "#9ca3af";
         btn.style.cursor = "not-allowed";
         btn.innerText = `Brakuje: ${diff.toFixed(2)} zł`;
+    } else {
+        sumEl.style.color = "#ef4444";
+        btn.disabled = true;
+        btn.style.background = "#9ca3af";
+        btn.style.cursor = "not-allowed";
+        btn.innerText = `Nadwyżka: ${Math.abs(diff).toFixed(2)} zł`;
     }
 }
 
 function zatwierdzSplit() {
-    const c = parseFloat(document.getElementById('split-cash').value) || 0;
-    const k = parseFloat(document.getElementById('split-card').value) || 0;
-    const o = parseFloat(document.getElementById('split-other').value) || 0;
-
-    // Dodajemy rozbicie do danych wysyłanych na serwer
-    splitPendingPayload.split_breakdown = [
-        { method: 'Gotówka', amount: c },
-        { method: 'Karta', amount: k },
-        { method: 'MediRaty', amount: o }
-    ].filter(x => x.amount > 0); // Wysyłamy tylko niezerowe
-
+    const valid = splitMixRows.filter(r => (parseFloat(r.amount) || 0) > 0);
+    // Walidacja: ta sama metoda nie może być wpisana dwa razy
+    const metody = valid.map(r => r.method);
+    if (new Set(metody).size !== metody.length) {
+        alert("Ta sama metoda płatności została wpisana wiele razy. Połącz kwoty w jednej linii.");
+        return;
+    }
+    splitPendingPayload.split_breakdown = valid.map(r => ({
+        method: r.method,
+        amount: parseFloat(r.amount) || 0
+    }));
     zamknijOknoSplit();
     realizujWysylke(splitPendingPayload);
 }
@@ -23694,28 +23742,19 @@ initTheme();
 </div>
 
 <div id="split-payment-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
-    <div style="background:white; padding:25px; border-radius:12px; width:400px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <div style="background:white; padding:25px; border-radius:12px; width:480px; max-width:95%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
         <h3 style="margin-top:0; color:#374151;">🔀 Rozdziel płatność (Mix)</h3>
         <p style="color:#6b7280; font-size:14px;">Kwota do rozliczenia: <strong id="split-total-display" style="color:#111; font-size:16px;">0.00 zł</strong></p>
-        
-        <div style="margin-top:15px;">
-            <label style="font-size:12px; font-weight:bold;">💵 Gotówka:</label>
-            <input type="number" id="split-cash" class="form-control" placeholder="0" oninput="przeliczReszteSplit()">
-        </div>
-        <div style="margin-top:10px;">
-            <label style="font-size:12px; font-weight:bold;">💳 Karta / Blik:</label>
-            <input type="number" id="split-card" class="form-control" placeholder="0" oninput="przeliczReszteSplit()">
-        </div>
-        <div style="margin-top:10px;">
-            <label style="font-size:12px; font-weight:bold;">🏦 MediRaty / Przelew:</label>
-            <input type="number" id="split-other" class="form-control" placeholder="0" oninput="przeliczReszteSplit()">
-        </div>
+
+        <div id="split-rows-container" style="margin-top:15px;"></div>
+
+        <button type="button" onclick="dodajLinieMix()" style="margin-top:10px; background:#fff; color:#0ea5e9; border:1px dashed #0ea5e9; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600; width:100%;">+ Dodaj metodę płatności</button>
 
         <div style="margin-top:20px; padding:10px; background:#f3f4f6; border-radius:6px; font-size:14px; display:flex; justify-content:space-between;">
             <span>Suma wpisana:</span>
             <strong id="split-current-sum" style="color:#ef4444;">0.00 zł</strong>
         </div>
-        
+
         <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:10px;">
             <button onclick="zamknijOknoSplit()" style="padding:8px 16px; border:1px solid #d1d5db; background:white; border-radius:6px; cursor:pointer;">Anuluj</button>
             <button id="btn-confirm-split" onclick="zatwierdzSplit()" disabled
