@@ -12842,84 +12842,91 @@ function zamknijPopupAwaryjny() {
 		
 // --- ZOPTYMALIZOWANA: POBIERA TYLKO GDY TRZEBA ---
 function pobierzSlownikSprzedazy(wymus) {
-		// Cache TTL 5min — drugie wejście do widoku w tym oknie czasowym nie hammeruje serwera
+		// 1. Cache w pamięci (window) — instant, TTL 5min
 		if (!wymus && window.salesDictCache && window.salesDictCacheAt && (Date.now() - window.salesDictCacheAt) < 300000) {
-			console.log("⚡ Słownik sprzedaży z cache (TTL 5min)");
-			return; // dane już w salesDictCache, nic nie trzeba odświeżać
+			console.log("⚡ Słownik sprzedaży z cache (window, TTL 5min)");
+			return;
+		}
+		// 2. Cache w sessionStorage (TTL 10min) — przeżywa F5
+		if (!wymus) {
+			try {
+				const cached = sessionStorage.getItem('boczki_sales_dict_cache');
+				const cachedAt = parseInt(sessionStorage.getItem('boczki_sales_dict_cache_at') || '0', 10);
+				if (cached && (Date.now() - cachedAt) < 600000) {
+					const d = JSON.parse(cached);
+					salesDictCache = d;
+					window.salesDictCache = d;
+					window.salesDictCacheAt = cachedAt;
+					console.log("⚡ Słownik sprzedaży z sessionStorage");
+					// Render UI elementów (jeśli widoczne) — z dotychczasowej logiki callback'a
+					_renderSalesDictUI(d);
+					return;
+				}
+			} catch (e) { /* cache uszkodzony — pobierz świeżo */ }
 		}
 		if(window.blokadaSlownika) return; window.blokadaSlownika = true; setTimeout(() => window.blokadaSlownika = false, 2000);
 		console.log("🔄 Pobieram słownik sprzedaży...");
 		fetch(API_URL + "?action=sales_dictionary").then(r => r.json()).then(d => {
         window.salesDictCacheAt = Date.now();
+        try {
+            sessionStorage.setItem('boczki_sales_dict_cache', JSON.stringify(d));
+            sessionStorage.setItem('boczki_sales_dict_cache_at', String(Date.now()));
+        } catch (e) { /* limit przekroczony */ }
         console.log("✅ Słownik sprzedaży pobrany. Zabiegów:", d.zabiegi.length);
         
-        // 1. Zapisujemy dane w pamięci
         salesDictCache = d;
-
-        // 2. Obsługa wyboru Sprzedawców
-        const grid = document.getElementById('seller-grid');
-        if (grid && !document.getElementById('edit_sale_id').value) {
-            let htmlGrid = "";
-            d.pracownicy.forEach(p => {
-                htmlGrid += `<div class="seller-chip" onclick="toggleSeller(this)"><input type="checkbox" value="${p}" name="seller"> ${p}</div>`;
-            });
-            grid.innerHTML = htmlGrid; 
-        }
-        
-        // 3. Obsługa Listy Pracowników w Kreatorze
-        const listPrac = document.getElementById('pracownicy-list');
-        if (listPrac) {
-            let htmlList = "";
-            d.pracownicy.forEach(p => {
-                htmlList += `
-                <li style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
-                    <span style="font-weight:500;">${p}</span> 
-                    <button class="btn-delete-small" onclick="usunPracownika('${p}')" style="cursor:pointer; color:red; border:none; background:none; font-weight:bold; font-size:18px;">×</button>
-                </li>`;
-            });
-            listPrac.innerHTML = htmlList; 
-        }
-
-        // 4. Obsługa Kategorii Zabiegów (Kreator)
-        const zabiegiKat = [...new Set(d.zabiegi.map(z => z.kategoria))].sort();
-        const selOld = document.getElementById('s_kat_zabiegu');
-        const selCreator = document.getElementById('def_kat_select');
-
-        let opcjeHtml = "<option value=''>-- Wybierz --</option>";
-        let opcjeCreatorHtml = "<option value=''>Wybierz...</option><option value='NEW'>-- Dodaj nową --</option>";
-
-        zabiegiKat.forEach(k => {
-            opcjeHtml += `<option>${k}</option>`;
-            opcjeCreatorHtml += `<option>${k}</option>`;
-        });
-
-        if (selOld) selOld.innerHTML = opcjeHtml;
-        if (selCreator) selCreator.innerHTML = opcjeCreatorHtml;
-
-        // --- 5. RATUNEK: ODŚWIEŻANIE LIST W TABELI SPRZEDAŻY ---
-        // Szukamy wszystkich list kategorii w tabeli i wypełniamy je, jeśli są puste
-        const selectyWTabeli = document.querySelectorAll('.item-cat');
-        if (selectyWTabeli.length > 0) {
-            let opcjeTabela = '<option value="">-- Wybierz kategorię --</option>';
-            zabiegiKat.forEach(k => { opcjeTabela += `<option value="${k}">${k}</option>`; });
-            
-            selectyWTabeli.forEach(sel => {
-                // Aktualizujemy tylko jeśli lista jest pusta (ma tylko "-- Wybierz --")
-                if (sel.options.length <= 1) {
-                    const wybranaWartosc = sel.value; // Zapamiętujemy co było wybrane (na wszelki wypadek)
-                    sel.innerHTML = opcjeTabela;
-                    sel.value = wybranaWartosc;
-                }
-            });
-            console.log("✅ Odświeżono listy zabiegów w tabeli sprzedaży.");
-        }
-
-        // 6. Odświeżamy tabelę zabiegów w adminie
-        if (typeof renderTabelaZabiegow === "function") {
-            renderTabelaZabiegow(d.zabiegi);
-        }
+        window.salesDictCache = d;
+        _renderSalesDictUI(d);
     })
     .catch(err => console.error("❌ Błąd pobierania słownika:", err));
+}
+
+// Wyodrębniona funkcja renderująca UI z danych słownika sprzedaży —
+// używana zarówno z fetcha jak i z cache (sessionStorage / window).
+function _renderSalesDictUI(d) {
+    if (!d || !d.zabiegi) return;
+    // Sprzedawcy
+    const grid = document.getElementById('seller-grid');
+    if (grid && !document.getElementById('edit_sale_id').value) {
+        let htmlGrid = "";
+        d.pracownicy.forEach(p => {
+            htmlGrid += `<div class="seller-chip" onclick="toggleSeller(this)"><input type="checkbox" value="${p}" name="seller"> ${p}</div>`;
+        });
+        grid.innerHTML = htmlGrid;
+    }
+    // Lista pracowników w kreatorze
+    const listPrac = document.getElementById('pracownicy-list');
+    if (listPrac) {
+        let htmlList = "";
+        d.pracownicy.forEach(p => {
+            htmlList += `<li style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:500;">${p}</span> <button class="btn-delete-small" onclick="usunPracownika('${p}')" style="cursor:pointer; color:red; border:none; background:none; font-weight:bold; font-size:18px;">×</button></li>`;
+        });
+        listPrac.innerHTML = htmlList;
+    }
+    // Kategorie zabiegów (Kreator)
+    const zabiegiKat = [...new Set(d.zabiegi.map(z => z.kategoria))].sort();
+    const selOld = document.getElementById('s_kat_zabiegu');
+    const selCreator = document.getElementById('def_kat_select');
+    let opcjeHtml = "<option value=''>-- Wybierz --</option>";
+    let opcjeCreatorHtml = "<option value=''>Wybierz...</option><option value='NEW'>-- Dodaj nową --</option>";
+    zabiegiKat.forEach(k => { opcjeHtml += `<option>${k}</option>`; opcjeCreatorHtml += `<option>${k}</option>`; });
+    if (selOld) selOld.innerHTML = opcjeHtml;
+    if (selCreator) selCreator.innerHTML = opcjeCreatorHtml;
+    // Listy zabiegów w tabeli sprzedaży (multi-row)
+    const selectyWTabeli = document.querySelectorAll('.item-cat');
+    if (selectyWTabeli.length > 0) {
+        let opcjeTabela = '<option value="">-- Wybierz kategorię --</option>';
+        zabiegiKat.forEach(k => { opcjeTabela += `<option value="${k}">${k}</option>`; });
+        selectyWTabeli.forEach(sel => {
+            if (sel.options.length <= 1) {
+                const wybranaWartosc = sel.value;
+                sel.innerHTML = opcjeTabela;
+                sel.value = wybranaWartosc;
+            }
+        });
+    }
+    // Tabela zabiegów w adminie
+    if (typeof renderTabelaZabiegow === "function") renderTabelaZabiegow(d.zabiegi);
 }
 
         function zaladujWariantyZabiegu() {
@@ -13235,7 +13242,7 @@ document.addEventListener('keydown', function(event) {
         function anulujEdycje() { document.getElementById('edit_sale_id').value = ""; document.getElementById('btn-sell-submit').innerText = "Zarejestruj"; document.getElementById('btn-sell-submit').style.background = "var(--primary)"; document.getElementById('btn-sell-cancel').style.display = "none"; document.querySelector('#sprzedaz form').reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); }
         //function odswiezSprzedaz() { pobierzSlownikSprzedazy(); fetch(API_URL + "?action=sales_history").then(r => r.json()).then(d => { const t = document.getElementById('sales-history-body'); t.innerHTML = ""; const today = new Date().toLocaleDateString(); d.forEach(r => { let salesDate = new Date(r.data).toLocaleDateString(); if(salesDate === today) { let time = new Date(r.data).toLocaleTimeString().slice(0,5); let details = r.szczegoly ? ` (${r.szczegoly})` : ''; const rowStr = encodeURIComponent(JSON.stringify(r)); t.innerHTML += `<tr><td>${time}</td><td>${r.klient}</td><td>${r.zabieg}${details}</td><td><b style="color:var(--primary)">${r.kwota} zł</b></td><td>${r.sprzedawca}</td><td style="display:flex;gap:5px;"><button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button><button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button></td></tr>`; } }); }); }
         function ukryjSprzedaz(id) { if(confirm("Ukryć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_sale', id, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); odswiezSprzedaz(true);}); }
-        function usunPracownika(imie) { if(confirm("Usunąć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy();}); }
+        function usunPracownika(imie) { if(confirm("Usunąć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy(true);}); }
         function toggleDefKat(force) { const s=document.getElementById('def_kat_select'), i=document.getElementById('def_kat_input'); if(force || s.value==='NEW'){s.style.display='none';i.style.display='block';i.value='';} else {i.style.display='none';s.style.display='block';} }
 
 
@@ -13334,12 +13341,12 @@ function dodajDefinicje(e, typ) {
         }
     } 
     
-    fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{ 
-        alert(d.message); 
-        pobierzSlownikSprzedazy(); 
-        if(typ==='Pracownik') document.getElementById('def_prac').value=''; 
-        else anulujEdycjeZabiegu(); 
-    }); 
+    fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
+        alert(d.message);
+        pobierzSlownikSprzedazy(true);
+        if(typ==='Pracownik') document.getElementById('def_prac').value='';
+        else anulujEdycjeZabiegu();
+    });
 }
 
        // function pobierzLogi() { fetch(API_URL + "?action=get_system_logs").then(r=>r.json()).then(d => { const t = document.getElementById('logs-list'); t.innerHTML = ""; d.forEach(l => t.innerHTML += `<tr><td>${new Date(l.data).toLocaleString()}</td><td>${l.kto}</td><td><b>${l.akcja}</b></td><td>${l.opis}</td></tr>`); }); }
@@ -14706,7 +14713,7 @@ function renderTabelaZabiegow(zabiegi) {
                     })
                 }).then(r => r.json()).then(d => {
                     alert(d.message);
-                    pobierzSlownikSprzedazy(); // Odśwież listę
+                    pobierzSlownikSprzedazy(true); // Odśwież listę po modyfikacji
                 });
             }
         }
@@ -14902,18 +14909,48 @@ function renderTabelaZabiegow(zabiegi) {
 
 
 function zaladujListeKlientow(wymus = false) {
+    // Wymuszony refresh — czyść stary cache (w pamięci + sessionStorage)
+    if (wymus) {
+        try {
+            sessionStorage.removeItem('boczki_clients_cache');
+            sessionStorage.removeItem('boczki_clients_cache_at');
+        } catch (e) {}
+    }
+    // 1. Cache w pamięci (window) — instant
     if (!wymus && window.wszyscyKlienciDane && window.wszyscyKlienciDane.length > 0) {
-        console.log("⚡ Używam listy klientów z pamięci podręcznej.");
-        zaktualizujDataliste(window.wszyscyKlienciDane); 
-        return; 
+        zaktualizujDataliste(window.wszyscyKlienciDane);
+        return;
+    }
+    // 2. Cache w sessionStorage (TTL 10min) — przeżywa F5/nawigacje
+    if (!wymus) {
+        try {
+            const cached = sessionStorage.getItem('boczki_clients_cache');
+            const cachedAt = parseInt(sessionStorage.getItem('boczki_clients_cache_at') || '0', 10);
+            if (cached && (Date.now() - cachedAt) < 600000) {
+                const data = JSON.parse(cached);
+                window.wszyscyKlienciDane = data.klienci;
+                window.aktywneZadatkiGlobalne = data.zadatki || [];
+                console.log("⚡ Klienci z sessionStorage (TTL 10min):", data.klienci.length);
+                zaktualizujDataliste(data.klienci);
+                return;
+            }
+        } catch (e) { /* cache uszkodzony — pobieramy świeżo */ }
     }
 
-    console.log("⬇️ Pobieram świeżą listę klientów i portfeli z serwera...");
+    console.log("⬇️ Pobieram świeżą listę klientów z serwera...");
     fetch(API_URL + "?action=get_clients")
         .then(r => r.json())
         .then(data => {
-            window.wszyscyKlienciDane = data.klienci; 
-            window.aktywneZadatkiGlobalne = data.zadatki; // Globalny cache portfeli
+            window.wszyscyKlienciDane = data.klienci;
+            window.aktywneZadatkiGlobalne = data.zadatki;
+            // Zapisz w sessionStorage — przy F5 nie hammeruj serwera ponownie
+            try {
+                sessionStorage.setItem('boczki_clients_cache', JSON.stringify(data));
+                sessionStorage.setItem('boczki_clients_cache_at', String(Date.now()));
+            } catch (e) {
+                // Limit 5MB sessionStorage przekroczony (mega salon) — to nie błąd, działa bez cache
+                console.warn("Cache klientów za duży dla sessionStorage, działam bez niego");
+            }
             console.log(`✅ Załadowano: ${data.klienci.length} klientów i ${data.zadatki.length} aktywnych zadatków`);
             zaktualizujDataliste(data.klienci);
         })
@@ -16489,17 +16526,18 @@ function zapiszNowegoKlienta(e) {
     .then(d => {
         if(d.status === 'success') {
             document.getElementById('new-client-overlay').style.display = 'none';
-            alert(d.message); 
+            alert(d.message);
             zaladujKlientowDoKartoteki();
+            zaladujListeKlientow(true); // Invaliduj cache datalist (sessionStorage + window) — nowy klient powinien być widoczny od razu
             setTimeout(() => { if (d.new_id) otworzProfil(d.new_id); }, 1000);
         } else {
             alert("Błąd: " + d.message);
         }
     })
     .catch(err => alert("Błąd sieci: " + err))
-    .finally(() => { 
-        btn.innerText = staryTekst; 
-        btn.disabled = false; 
+    .finally(() => {
+        btn.innerText = staryTekst;
+        btn.disabled = false;
     });
 }
 
@@ -17450,8 +17488,9 @@ function zapiszEdycjeKlienta(e) {
     .then(d => {
         alert(d.message);
         zamknijEdycjeKlienta();
+        zaladujListeKlientow(true); // Invaliduj cache (zmiana nazwiska/telefonu)
         // Odświeżamy profil
-        otworzProfil(id); 
+        otworzProfil(id);
         // Odświeżamy listę klientów w tle, żeby wyszukiwarka widziała nowe nazwisko
         pobierzDane(); 
     })
