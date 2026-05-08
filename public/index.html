@@ -12841,10 +12841,16 @@ function zamknijPopupAwaryjny() {
         
 		
 // --- ZOPTYMALIZOWANA: POBIERA TYLKO GDY TRZEBA ---
-function pobierzSlownikSprzedazy() {
+function pobierzSlownikSprzedazy(wymus) {
+		// Cache TTL 5min — drugie wejście do widoku w tym oknie czasowym nie hammeruje serwera
+		if (!wymus && window.salesDictCache && window.salesDictCacheAt && (Date.now() - window.salesDictCacheAt) < 300000) {
+			console.log("⚡ Słownik sprzedaży z cache (TTL 5min)");
+			return; // dane już w salesDictCache, nic nie trzeba odświeżać
+		}
 		if(window.blokadaSlownika) return; window.blokadaSlownika = true; setTimeout(() => window.blokadaSlownika = false, 2000);
 		console.log("🔄 Pobieram słownik sprzedaży...");
 		fetch(API_URL + "?action=sales_dictionary").then(r => r.json()).then(d => {
+        window.salesDictCacheAt = Date.now();
         console.log("✅ Słownik sprzedaży pobrany. Zabiegów:", d.zabiegi.length);
         
         // 1. Zapisujemy dane w pamięci
@@ -13236,51 +13242,42 @@ document.addEventListener('keydown', function(event) {
 
 
 
-function odswiezSprzedaz() { 
-    pobierzSlownikSprzedazy(); 
-    
+function odswiezSprzedaz() {
+    pobierzSlownikSprzedazy();
+
     fetch(API_URL + "?action=sales_history")
     .then(r => r.json())
-    .then(d => { 
-        const t = document.getElementById('sales-history-body'); 
+    .then(d => {
+        const t = document.getElementById('sales-history-body');
         if(!t) return;
-        
-        t.innerHTML = ""; 
-        const today = new Date().toLocaleDateString(); 
-        
-        d.forEach(r => { 
-            let salesDate = new Date(r.data).toLocaleDateString(); 
-            if(salesDate === today) {
-                let time = r.czas || new Date(r.data).toLocaleTimeString().slice(0,5);
-                let details = r.szczegoly ? ` (${r.szczegoly})` : ''; 
-                const rowStr = encodeURIComponent(JSON.stringify(r)); 
-                
-                // --- NOWA LOGIKA LINKU DO PROFILU (PO ID) ---
-                // Sprawdzamy czy rekord ma ID_Klienta (pobrane z backendu)
-                const idKlienta = r.id_klienta ? r.id_klienta : 0;
-                let klientHtml = r.klient;
 
-                // Jeśli mamy ID, robimy link otwierający profil
-                if (idKlienta && idKlienta != 0) {
-                    klientHtml = `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${idKlienta}'), 100);">${r.klient}</span>`;
-                }
-                // -------------------------------------------
-
-                t.innerHTML += `
-                <tr>
-                    <td>${time}</td>
-                    <td>${klientHtml}</td>
-                    <td>${r.zabieg}${details}</td>
-                    <td><b style="color:var(--primary)">${parseFloat(r.kwota).toFixed(2)} zł</b></td>
-                    <td>${r.sprzedawca}</td>
-                    <td style="display:flex;gap:5px;">
-                        <button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button>
-                        <button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button>
-                    </td>
-                </tr>`; 
-            } 
-        }); 
-    }); 
+        // Buduj cały HTML tabeli jako jeden string i wstaw RAZ — innerHTML+= w pętli
+        // powodował reparseHTML dla każdego wiersza i zawieszał main thread.
+        // Backend już filtruje po dacie (DATE = today, LIMIT 50), więc frontend filter też
+        // pomijamy — był reduntny i kosztowny dla parsowania new Date() per wiersz.
+        const rows = Array.isArray(d) ? d : [];
+        const html = rows.map(r => {
+            const time = r.czas || new Date(r.data).toLocaleTimeString().slice(0,5);
+            const details = r.szczegoly ? ' (' + r.szczegoly + ')' : '';
+            const rowStr = encodeURIComponent(JSON.stringify(r));
+            const idKlienta = r.id_klienta ? r.id_klienta : 0;
+            const klientHtml = (idKlienta && idKlienta != 0)
+                ? `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${idKlienta}'), 100);">${r.klient}</span>`
+                : r.klient;
+            return `<tr>
+                <td>${time}</td>
+                <td>${klientHtml}</td>
+                <td>${r.zabieg}${details}</td>
+                <td><b style="color:var(--primary)">${parseFloat(r.kwota).toFixed(2)} zł</b></td>
+                <td>${r.sprzedawca}</td>
+                <td style="display:flex;gap:5px;">
+                    <button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button>
+                    <button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button>
+                </td>
+            </tr>`;
+        }).join('');
+        t.innerHTML = html || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Brak transakcji dzisiaj</td></tr>';
+    });
 }      
  
 
