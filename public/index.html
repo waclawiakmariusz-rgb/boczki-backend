@@ -24320,6 +24320,26 @@ async function dokumentWyslij(prefix) {
   }
 }
 
+// Helper: otwórz dokument PDF z aktualnym tokenem sesji (świeży z localStorage przy każdym kliku).
+// Wcześniej token był wpisywany sztywno do <a href> przy renderze widgetu — kiedy sesja wygasała
+// LUB user nie odświeżał karty klienta przez kilka godzin, link prowadził na 403 "Sesja wygasła".
+// Teraz dynamiczne pobieranie eliminuje 100% problemu — dopóki user jest zalogowany, link działa.
+function otworzDokumentPdf(baseUrl, ev) {
+  if (ev) ev.preventDefault();
+  if (!baseUrl) return false;
+  // Google Drive / inne zewnętrzne linki — otwórz bez modyfikacji
+  if (!baseUrl.startsWith('/api/')) {
+    window.open(baseUrl, '_blank', 'noopener');
+    return false;
+  }
+  const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+  const session_token = localStorage.getItem('boczki_session_token') || '';
+  const sep = baseUrl.includes('?') ? '&' : '?';
+  const fullUrl = `${baseUrl}${sep}tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`;
+  window.open(fullUrl, '_blank', 'noopener');
+  return false;
+}
+
 // Pokaż stan "dokument zapisany"
 function dokumentPokazDone(prefix, url) {
   _dok[prefix].files = [];
@@ -24329,18 +24349,13 @@ function dokumentPokazDone(prefix, url) {
   const done = document.getElementById(`${prefix}-upload-done`);
   done.style.display = 'flex';
 
-  // Ustaw link podglądu z tenant_id + session_token (od 2026-05-06 GET /api/dokumenty
-  // weryfikuje sesję żeby uniemożliwić IDOR — link bez tokenu zwraca 403)
-  const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
-  const session_token = localStorage.getItem('boczki_session_token') || '';
   const previewId = prefix === 'con' ? 'btn-preview-con' : 'btn-preview-pdf';
   const previewEl = document.getElementById(previewId);
   if (previewEl) {
-    // Lokalne URL wymagają tenant_id + session_token, Google Drive linki zostawiamy bez zmian
-    const href = url.startsWith('/api/')
-      ? `${url}?tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`
-      : url;
-    previewEl.href = href;
+    // Bazowy URL (bez tokenu) zapisany w data-url. Onclick dorzuca świeży token przy każdym kliku.
+    previewEl.dataset.baseUrl = url;
+    previewEl.href = url; // fallback dla "Otwórz w nowej karcie" (PPM) — będzie 403, ale to graceful
+    previewEl.onclick = function (e) { return otworzDokumentPdf(this.dataset.baseUrl || url, e); };
   }
 }
 
