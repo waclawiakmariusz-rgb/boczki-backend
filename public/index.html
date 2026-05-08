@@ -5041,7 +5041,7 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
 <div id="dzisiejsza-sprzedaz" class="section">
     <div class="header">
         <h1>✏️ Dzisiejsza sprzedaż</h1>
-        <button onclick="odswiezSprzedaz()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
+        <button onclick="odswiezSprzedaz(true)" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
     <div class="card">
         <div class="table-container">
@@ -12975,7 +12975,7 @@ function ustawCeneZabiegu(kat, war) {
             if (typSprzedazy === 'Zabieg') { const k = document.getElementById('s_kat_zabiegu').value, w = document.getElementById('s_wariant_zabiegu').value; if(!k || !w) { alert("Uzupełnij zabieg!"); return; } nazwa = k; szcz = w; } 
             else { const p = document.getElementById('s_produkt_magazyn').value; if(!p) { alert("Wybierz produkt!"); return; } nazwa = "Kosmetyk: " + p; szcz = document.getElementById('s_ilosc_produktow').value + " szt."; }
             const p = { action: editId ? 'edit_sale' : 'add_sale', id: editId, typ_transakcji:typSprzedazy, sprzedawca:sellers, klient:document.getElementById('s_klient').value, zabieg_nazwa:nazwa, szczegoly:szcz, kwota:normNum(document.getElementById('s_kwota').value), komentarz:document.getElementById('s_komentarz').value, produkt_nazwa:document.getElementById('s_produkt_magazyn').value, ilosc_sztuk:normNum(document.getElementById('s_ilosc_produktow').value), pracownik: currentUser };
-            fetch(API_URL, { method: "POST", body: JSON.stringify(p) }).then(r => r.json()).then(d => { alert(d.message); anulujEdycje(); e.target.reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); odswiezSprzedaz(); if(typSprzedazy==='Kosmetyk') pobierzDane(); });
+            fetch(API_URL, { method: "POST", body: JSON.stringify(p) }).then(r => r.json()).then(d => { alert(d.message); anulujEdycje(); e.target.reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); odswiezSprzedaz(true); if(typSprzedazy==='Kosmetyk') pobierzDane(); });
         }
        // --- OBSŁUGA POPUPA EDYCJI ---
 
@@ -13234,7 +13234,7 @@ document.addEventListener('keydown', function(event) {
 });
         function anulujEdycje() { document.getElementById('edit_sale_id').value = ""; document.getElementById('btn-sell-submit').innerText = "Zarejestruj"; document.getElementById('btn-sell-submit').style.background = "var(--primary)"; document.getElementById('btn-sell-cancel').style.display = "none"; document.querySelector('#sprzedaz form').reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); }
         //function odswiezSprzedaz() { pobierzSlownikSprzedazy(); fetch(API_URL + "?action=sales_history").then(r => r.json()).then(d => { const t = document.getElementById('sales-history-body'); t.innerHTML = ""; const today = new Date().toLocaleDateString(); d.forEach(r => { let salesDate = new Date(r.data).toLocaleDateString(); if(salesDate === today) { let time = new Date(r.data).toLocaleTimeString().slice(0,5); let details = r.szczegoly ? ` (${r.szczegoly})` : ''; const rowStr = encodeURIComponent(JSON.stringify(r)); t.innerHTML += `<tr><td>${time}</td><td>${r.klient}</td><td>${r.zabieg}${details}</td><td><b style="color:var(--primary)">${r.kwota} zł</b></td><td>${r.sprzedawca}</td><td style="display:flex;gap:5px;"><button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button><button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button></td></tr>`; } }); }); }
-        function ukryjSprzedaz(id) { if(confirm("Ukryć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_sale', id, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); odswiezSprzedaz();}); }
+        function ukryjSprzedaz(id) { if(confirm("Ukryć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_sale', id, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); odswiezSprzedaz(true);}); }
         function usunPracownika(imie) { if(confirm("Usunąć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy();}); }
         function toggleDefKat(force) { const s=document.getElementById('def_kat_select'), i=document.getElementById('def_kat_input'); if(force || s.value==='NEW'){s.style.display='none';i.style.display='block';i.value='';} else {i.style.display='none';s.style.display='block';} }
 
@@ -13242,41 +13242,59 @@ document.addEventListener('keydown', function(event) {
 
 
 
-function odswiezSprzedaz() {
-    pobierzSlownikSprzedazy();
+function _renderSalesHistoryRows(rows) {
+    const t = document.getElementById('sales-history-body');
+    if (!t) return;
+    const html = (rows || []).map(r => {
+        const time = r.czas || new Date(r.data).toLocaleTimeString().slice(0,5);
+        const details = r.szczegoly ? ' (' + r.szczegoly + ')' : '';
+        const rowStr = encodeURIComponent(JSON.stringify(r));
+        const idKlienta = r.id_klienta ? r.id_klienta : 0;
+        const klientHtml = (idKlienta && idKlienta != 0)
+            ? `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${idKlienta}'), 100);">${r.klient}</span>`
+            : r.klient;
+        return `<tr>
+            <td>${time}</td>
+            <td>${klientHtml}</td>
+            <td>${r.zabieg}${details}</td>
+            <td><b style="color:var(--primary)">${parseFloat(r.kwota).toFixed(2)} zł</b></td>
+            <td>${r.sprzedawca}</td>
+            <td style="display:flex;gap:5px;">
+                <button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button>
+                <button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button>
+            </td>
+        </tr>`;
+    }).join('');
+    t.innerHTML = html || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Brak transakcji dzisiaj</td></tr>';
+}
+
+function odswiezSprzedaz(wymus) {
+    const t = document.getElementById('sales-history-body');
+    // 1. Cache TTL 30s — drugie wejście do widoku w tym oknie pokazuje natychmiast
+    //    (ważne, bo user przełącza Sprzedaż↔Dzisiejsza często; bez cache każde wejście
+    //    czekało na nowy fetch i blokowało UI).
+    if (!wymus && window._salesHistCache && window._salesHistCacheAt && (Date.now() - window._salesHistCacheAt) < 30000) {
+        if (t) _renderSalesHistoryRows(window._salesHistCache);
+        return;
+    }
+    // 2. Pokaż loader natychmiast — user widzi że coś się dzieje, nie pustą tabelę
+    if (t) t.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">⏳ Ładowanie...</td></tr>';
+
+    // 3. Słownik sprzedaży NIE jest potrzebny do renderowania tabeli — był wcześniej
+    //    wywoływany w tym miejscu bezwarunkowo, marnując ~200-500ms na każde wejście.
+    //    Jeśli ktoś otworzy edycję wiersza i słownik nie jest jeszcze załadowany,
+    //    pokaz('sprzedaz') i tak go pobierze przy najbliższej okazji.
 
     fetch(API_URL + "?action=sales_history")
     .then(r => r.json())
     .then(d => {
-        const t = document.getElementById('sales-history-body');
-        if(!t) return;
-
-        // Buduj cały HTML tabeli jako jeden string i wstaw RAZ — innerHTML+= w pętli
-        // powodował reparseHTML dla każdego wiersza i zawieszał main thread.
-        // Backend już filtruje po dacie (DATE = today, LIMIT 50), więc frontend filter też
-        // pomijamy — był reduntny i kosztowny dla parsowania new Date() per wiersz.
         const rows = Array.isArray(d) ? d : [];
-        const html = rows.map(r => {
-            const time = r.czas || new Date(r.data).toLocaleTimeString().slice(0,5);
-            const details = r.szczegoly ? ' (' + r.szczegoly + ')' : '';
-            const rowStr = encodeURIComponent(JSON.stringify(r));
-            const idKlienta = r.id_klienta ? r.id_klienta : 0;
-            const klientHtml = (idKlienta && idKlienta != 0)
-                ? `<span class="client-link" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${idKlienta}'), 100);">${r.klient}</span>`
-                : r.klient;
-            return `<tr>
-                <td>${time}</td>
-                <td>${klientHtml}</td>
-                <td>${r.zabieg}${details}</td>
-                <td><b style="color:var(--primary)">${parseFloat(r.kwota).toFixed(2)} zł</b></td>
-                <td>${r.sprzedawca}</td>
-                <td style="display:flex;gap:5px;">
-                    <button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button>
-                    <button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button>
-                </td>
-            </tr>`;
-        }).join('');
-        t.innerHTML = html || '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:20px;">Brak transakcji dzisiaj</td></tr>';
+        window._salesHistCache = rows;
+        window._salesHistCacheAt = Date.now();
+        _renderSalesHistoryRows(rows);
+    })
+    .catch(() => {
+        if (t) t.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#dc2626; padding:20px;">Błąd ładowania transakcji</td></tr>';
     });
 }      
  
@@ -15677,8 +15695,8 @@ function realizujWysylke(payload) {
             document.querySelectorAll('.seller-chip.selected').forEach(c => { 
                 c.classList.remove('selected'); c.querySelector('input').checked = false; 
             });
-            inicjalizujMultiSprzedaz(); 
-            odswiezSprzedaz(); 
+            inicjalizujMultiSprzedaz();
+            odswiezSprzedaz(true);
             pobierzDane(); // Opcjonalnie do magazynu
             
             // Czyścimy zielony pasek
