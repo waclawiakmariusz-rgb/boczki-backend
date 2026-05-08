@@ -395,13 +395,28 @@ module.exports = (db) => {
 
     // --- EDIT_SALE ---
     } else if (action === 'get_sale_mix') {
-      // Zwraca rozbicie mixu dla danej sprzedaży (Platnosci powiązane przez prefix bazowego id).
-      // Używane w edit modal — przy otwieraniu sprzedaży z platnosc='Mix' frontend wczytuje
-      // aktualne składowe i pozwala je edytować.
+      // Zwraca rozbicie mixu dla danej sprzedaży.
+      // Strategia:
+      //  1) Prefix bazowego id sprzedaży → Platnosci.id LIKE 'BASE-SPLIT-%'.
+      //  2) Fallback gdy prefix nie znajduje (stara sprzedaż / inny format ID):
+      //     po klient + DATE(data_sprzedazy) = DATE(data_platnosci).
       const saleId = String(d.id || '').trim();
       if (!saleId) return res.json({ status: 'error', message: 'Brak id' });
       const baseMatch = saleId.match(/^(.+?)-\d+$/);
       const baseId = baseMatch ? baseMatch[1] : (saleId.length >= 15 ? saleId.substring(0, 15) : saleId);
+
+      const zwroc = (matchedBy, rows, kwotaSprzedazy) => {
+        const breakdown = (rows || []).map(r => ({ method: r.method, amount: parseFloat(r.amount) || 0 }));
+        res.json({
+          status: 'success',
+          baseId,
+          matched_by: matchedBy,
+          kwota_sprzedazy: kwotaSprzedazy != null ? Number(kwotaSprzedazy) : null,
+          breakdown
+        });
+      };
+
+      // 1) prefix
       db.query(
         `SELECT id, metoda_platnosci AS method, kwota AS amount FROM Platnosci
          WHERE tenant_id = ? AND id LIKE ? AND COALESCE(status, '') != 'USUNIĘTY'
@@ -409,7 +424,29 @@ module.exports = (db) => {
         [tenant_id, baseId + '-SPLIT-%'],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
-          res.json({ status: 'success', baseId, breakdown: (rows || []).map(r => ({ method: r.method, amount: parseFloat(r.amount) || 0 })) });
+          if (rows && rows.length > 0) return zwroc('prefix', rows, null);
+
+          // 2) fallback: pobierz klient+data_sprzedazy ze Sprzedazy, potem szukaj Platnosci po nich
+          db.query(
+            `SELECT klient, kwota, DATE(data_sprzedazy) AS data_dnia FROM Sprzedaz WHERE tenant_id = ? AND id = ? LIMIT 1`,
+            [tenant_id, saleId],
+            (err2, sRows) => {
+              if (err2 || !sRows || !sRows.length) return zwroc('none', [], null);
+              const old = sRows[0];
+              db.query(
+                `SELECT id, metoda_platnosci AS method, kwota AS amount FROM Platnosci
+                 WHERE tenant_id = ? AND klient = ? AND DATE(data_platnosci) = ?
+                   AND COALESCE(status, '') != 'USUNIĘTY'
+                 ORDER BY id`,
+                [tenant_id, old.klient, old.data_dnia],
+                (err3, fbRows) => {
+                  if (err3) return zwroc('none', [], old.kwota);
+                  if (fbRows && fbRows.length > 0) return zwroc('klient_data', fbRows, old.kwota);
+                  return zwroc('none', [], old.kwota);
+                }
+              );
+            }
+          );
         }
       );
 

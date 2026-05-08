@@ -17667,6 +17667,10 @@ function editMixToggleVisibility() {
 }
 
 function editMixWczytajZBackendu(saleId) {
+    // Cleanup poprzedniego fallback-info gdy modal otwierany ponownie
+    const oldInfo = document.getElementById('e-mix-info-fallback');
+    if (oldInfo) oldInfo.remove();
+
     fetch(API_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'get_sale_mix', id: saleId })
@@ -17675,17 +17679,28 @@ function editMixWczytajZBackendu(saleId) {
     .then(d => {
         if (d && d.status === 'success' && Array.isArray(d.breakdown) && d.breakdown.length > 0) {
             window.editMixRows = d.breakdown.map(b => ({ method: b.method || 'Gotówka', amount: parseFloat(b.amount) || 0 }));
+            window.editMixDirty = false;
         } else {
-            window.editMixRows = [
-                { method: 'Gotówka', amount: 0 },
-                { method: 'Karta',   amount: 0 }
-            ];
+            // Brak składowych w bazie (stara sprzedaż / inny format) — pre-wypełnij 1 wierszem
+            // aktualną kwotą sprzedaży, oznaczonym domyślnie jako Gotówka. User skoryguje.
+            const kwotaTransakcji = (d && d.kwota_sprzedazy != null) ? Number(d.kwota_sprzedazy) : (parseFloat(document.getElementById('e_kwota').value) || 0);
+            window.editMixRows = [{ method: 'Gotówka', amount: kwotaTransakcji }];
+            window.editMixDirty = true; // bo to są wartości "wymyślone" przez frontend, nie z bazy — przy zapisie wyślemy split_breakdown
+            // Pokaż user'owi że stworzyliśmy domyślny wpis
+            const wrap = document.getElementById('e-mix-rows-container');
+            if (wrap) {
+                const info = document.createElement('div');
+                info.id = 'e-mix-info-fallback';
+                info.style.cssText = 'background:#fef3c7; border:1px solid #fcd34d; padding:8px 10px; border-radius:6px; font-size:11.5px; color:#78350f; margin-bottom:8px;';
+                info.innerHTML = '⚠️ Nie znaleziono składowych w bazie (stary mix). Domyślnie ustawiono <b>Gotówka</b> = pełna kwota — popraw przed zapisem.';
+                wrap.parentNode.insertBefore(info, wrap);
+            }
         }
-        window.editMixDirty = false;
         editMixRender();
     })
     .catch(() => {
-        window.editMixRows = [{ method: 'Gotówka', amount: 0 }];
+        window.editMixRows = [{ method: 'Gotówka', amount: parseFloat(document.getElementById('e_kwota').value) || 0 }];
+        window.editMixDirty = true;
         editMixRender();
     });
 }
