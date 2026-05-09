@@ -4,90 +4,61 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Brak dostępu — Estelio</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
         body {
             font-family: 'Poppins', sans-serif;
             background: #fdf8f5;
-            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 24px;
         }
-        .card {
-            background: white;
-            border-radius: 32px;
-            padding: 56px 48px;
-            text-align: center;
-            max-width: 480px;
+        .grafika {
+            flex: 1;
             width: 100%;
-            box-shadow: 0 20px 60px rgba(255,117,140,0.1), 0 4px 20px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
         }
-        .emoji-wrap {
-            margin: 0 auto 28px;
-        }
-        .emoji-wrap img {
-            max-width: 280px;
-            width: 100%;
+        .grafika img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
             height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-        h1 {
-            font-size: 72px;
-            font-weight: 800;
-            background: linear-gradient(135deg, #ff758c, #ff7eb3);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            line-height: 1;
-            margin-bottom: 8px;
-        }
-        h2 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 12px;
-        }
-        p {
-            font-size: 14px;
-            color: #6b7280;
-            line-height: 1.7;
-            margin-bottom: 36px;
+            object-fit: contain;
         }
         .btn {
+            margin-top: 32px;
             display: inline-block;
             background: linear-gradient(135deg, #ff758c, #ff7eb3);
             color: white;
             text-decoration: none;
-            padding: 14px 32px;
+            padding: 16px 44px;
             border-radius: 16px;
             font-weight: 600;
-            font-size: 14px;
-            box-shadow: 0 8px 20px rgba(255,117,140,0.35);
+            font-size: 15px;
+            box-shadow: 0 8px 24px rgba(255,117,140,0.4);
             transition: transform 0.2s, box-shadow 0.2s;
         }
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 28px rgba(255,117,140,0.45);
+            box-shadow: 0 12px 32px rgba(255,117,140,0.5);
         }
         .footer {
-            margin-top: 32px;
+            margin-top: 18px;
             font-size: 12px;
             color: #a0aec0;
         }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="emoji-wrap"><img src="/nieistnieje.png" alt="Brak dostępu"></div>
-        <h1>403</h1>
-        <h2>Brak dostępu</h2>
-        <p>Nie masz uprawnień do tej strony.<br>Spróbuj zalogować się ponownie albo wróć do panelu.</p>
-        <a href="/zaloguj" class="btn">← Zaloguj się ponownie</a>
-        <div class="footer">Estelio &middot; System zarządzania salonem</div>
-    </div>
+    <div class="grafika"><img src="/nieistnieje.png" alt="Brak dostępu"></div>
+    <a href="/zaloguj" class="btn">← Zaloguj się ponownie</a>
+    <div class="footer">Estelio &middot; System zarządzania salonem</div>
 </body>
 </html>
