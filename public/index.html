@@ -20113,10 +20113,26 @@ if (inputNazwaCheck) {
             document.getElementById('zd-add-magazyn-btn').style.display = 'none';
             const inp = document.getElementById('zd-magazyn-search');
             if (inp) { inp.value = ''; inp.focus(); }
-            // LAZY: jeśli daneCache jeszcze nie ma — pobierz w tle (nie blokuje wpisywania customu).
-            if ((!window.daneCache || !window.daneCache.length) && typeof pobierzDane === 'function') {
-                pobierzDane(false);
-            }
+            // Lazy-load magazynu — pobierz w tle jeśli pusty (helper zwraca Promise)
+            if (!Array.isArray(window.daneCache) || !window.daneCache.length) zd_magEnsureCache();
+        }
+        // Helper: zapewnia że window.daneCache jest załadowany. Zwraca Promise<array>.
+        // Sam wywołuje fetch żeby było await'owalne (pobierzDane nic nie zwraca).
+        let _zd_magCachePromise = null;
+        function zd_magEnsureCache() {
+            if (Array.isArray(window.daneCache) && window.daneCache.length) return Promise.resolve(window.daneCache);
+            if (_zd_magCachePromise) return _zd_magCachePromise;
+            _zd_magCachePromise = fetch(API_URL + '?action=read')
+                .then(r => r.json())
+                .then(d => {
+                    const arr = Array.isArray(d) ? d : [];
+                    arr.sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
+                    window.daneCache = arr;
+                    return arr;
+                })
+                .catch(() => [])
+                .finally(() => { _zd_magCachePromise = null; });
+            return _zd_magCachePromise;
         }
         function zd_magHideSearch() {
             document.getElementById('zd-magazyn-search-wrap').style.display = 'none';
@@ -20128,8 +20144,19 @@ if (inputNazwaCheck) {
             const q = String(document.getElementById('zd-magazyn-search').value || '').toLowerCase().trim();
             const resultsDiv = document.getElementById('zd-magazyn-results');
             if (!resultsDiv) return;
-            const cache = Array.isArray(window.daneCache) ? window.daneCache : [];
             if (q.length < 1) { resultsDiv.style.display = 'none'; resultsDiv.innerHTML = ''; return; }
+            const cache = Array.isArray(window.daneCache) ? window.daneCache : [];
+            if (!cache.length) {
+                // Cache jeszcze nie załadowany — pokaż loader, retry po pobraniu.
+                resultsDiv.innerHTML = '<div style="padding:10px 12px; color:#94a3b8; font-size:12px;">⏳ Ładuję magazyn...</div>';
+                resultsDiv.style.display = 'block';
+                zd_magEnsureCache().then(() => {
+                    // Powtórz tylko jeśli search wciąż otwarty z tą samą frazą
+                    const inp = document.getElementById('zd-magazyn-search');
+                    if (inp && String(inp.value || '').toLowerCase().trim() === q) zd_magSearchInput();
+                });
+                return;
+            }
             // Unikalne nazwy (cache trzyma osobne wpisy per partia/data ważności)
             const widziane = new Set();
             const dopasowane = [];
