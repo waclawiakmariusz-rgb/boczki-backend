@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coś poszło nie tak — Estelio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #fdf8f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+        .grafika {
+            flex: 1;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
+        }
+        .grafika img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .actions {
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff758c, #ff7eb3);
+            color: white;
+            text-decoration: none;
+            padding: 16px 44px;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 15px;
+            box-shadow: 0 8px 24px rgba(255,117,140,0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 32px rgba(255,117,140,0.5);
+        }
+        .link-back {
+            font-size: 13px;
+            color: #94a3b8;
+            text-decoration: none;
+        }
+        .link-back:hover { color: #64748b; }
+        .footer {
+            margin-top: 18px;
+            font-size: 12px;
+            color: #a0aec0;
+        }
+    </style>
+</head>
+<body>
+    <div class="grafika"><img src="/500.png" alt="Coś poszło nie tak"></div>
+    <div class="actions">
+        <button class="btn" onclick="location.reload()">🔄 Odśwież stronę</button>
+        <a href="/" class="link-back">← Wróć do panelu</a>
+    </div>
+    <div class="footer">Estelio &middot; System zarządzania salonem</div>
+</body>
+</html>

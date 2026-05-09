@@ -563,16 +563,18 @@ app.use((req, res, next) => {
 
 // ==========================================
 // GLOBALNY HANDLER BŁĘDÓW EXPRESS
-// Przechwytuje wszystkie nieobsłużone wyjątki z routes i middleware.
-// Zamiast HTML 500, zwraca czysty JSON { status: 'error' }.
+// API zwraca JSON, strony HTML zwracają branded 500.html
 // ==========================================
 app.use((err, req, res, next) => {
     console.error('[SERWER ERROR]', req.method, req.url, '→', err.message);
     if (res.headersSent) return next(err);
-    res.status(500).json({
-        status: 'error',
-        message: 'Nieoczekiwany błąd serwera. Spróbuj ponownie za chwilę.',
-    });
+    if (req.path.startsWith('/api/')) {
+        return res.status(500).json({
+            status: 'error',
+            message: 'Nieoczekiwany błąd serwera. Spróbuj ponownie za chwilę.',
+        });
+    }
+    res.status(500).sendFile(path.join(__dirname, 'public', '500.html'));
 });
 
 // Zabezpieczenie przed crashem procesu (Node nie padnie przy nieobsłużonym błędzie)
