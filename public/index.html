@@ -20116,22 +20116,55 @@ if (inputNazwaCheck) {
             // Lazy-load magazynu — pobierz w tle jeśli pusty (helper zwraca Promise)
             if (!Array.isArray(window.daneCache) || !window.daneCache.length) zd_magEnsureCache();
         }
-        // Helper: zapewnia że window.daneCache jest załadowany. Zwraca Promise<array>.
-        // Sam wywołuje fetch żeby było await'owalne (pobierzDane nic nie zwraca).
+        // Helper: zapewnia że obie listy magazynowe są załadowane.
+        // Łączy "klasyczny" Magazyn (window.daneCache, GET ?action=read)
+        // oraz "Raport_Magazyn" (window.zd_raport_cache, POST rap_getInventory).
+        // Zwraca Promise<array> — zunifikowane wpisy {nazwa, kategoria, ilosc, source}.
         let _zd_magCachePromise = null;
         function zd_magEnsureCache() {
-            if (Array.isArray(window.daneCache) && window.daneCache.length) return Promise.resolve(window.daneCache);
+            if (Array.isArray(window.zd_mag_unified) && window.zd_mag_unified.length) return Promise.resolve(window.zd_mag_unified);
             if (_zd_magCachePromise) return _zd_magCachePromise;
-            _zd_magCachePromise = fetch(API_URL + '?action=read')
-                .then(r => r.json())
-                .then(d => {
-                    const arr = Array.isArray(d) ? d : [];
-                    arr.sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
-                    window.daneCache = arr;
-                    return arr;
-                })
-                .catch(() => [])
-                .finally(() => { _zd_magCachePromise = null; });
+            const tenantId = localStorage.getItem('boczki_tenant_id') || '';
+            const fetchMagazyn = (Array.isArray(window.daneCache) && window.daneCache.length)
+                ? Promise.resolve(window.daneCache)
+                : fetch(API_URL + '?action=read').then(r => r.json()).catch(() => [])
+                    .then(d => {
+                        const arr = Array.isArray(d) ? d : [];
+                        arr.sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
+                        window.daneCache = arr;
+                        return arr;
+                    });
+            const fetchRaport = Array.isArray(window.zd_raport_cache)
+                ? Promise.resolve(window.zd_raport_cache)
+                : fetch(API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ action: 'rap_getInventory', tenant_id: tenantId })
+                    }).then(r => r.json()).catch(() => ({status:'error',data:[]}))
+                    .then(res => {
+                        const data = (res && (res.status === 'success' || res.success) && Array.isArray(res.data)) ? res.data : [];
+                        // Format z routes/raport.js: [id, kategoria, nazwa, ilosc, min, jednostka, ...]
+                        const arr = data.map(row => ({
+                            nazwa: String(row[2] || '').trim(),
+                            kategoria: String(row[1] || '').trim(),
+                            ilosc: row[3],
+                            source: 'raport'
+                        })).filter(r => r.nazwa);
+                        window.zd_raport_cache = arr;
+                        return arr;
+                    });
+            _zd_magCachePromise = Promise.all([fetchMagazyn, fetchRaport]).then(([mag, rap]) => {
+                const unified = [];
+                mag.forEach(p => unified.push({
+                    nazwa: String(p.nazwa || '').trim(),
+                    kategoria: p.kategoria || '',
+                    ilosc: p.ilosc,
+                    source: 'magazyn'
+                }));
+                rap.forEach(p => unified.push(p));
+                window.zd_mag_unified = unified.filter(p => p.nazwa);
+                return window.zd_mag_unified;
+            }).finally(() => { _zd_magCachePromise = null; });
             return _zd_magCachePromise;
         }
         function zd_magHideSearch() {
@@ -20145,19 +20178,18 @@ if (inputNazwaCheck) {
             const resultsDiv = document.getElementById('zd-magazyn-results');
             if (!resultsDiv) return;
             if (q.length < 1) { resultsDiv.style.display = 'none'; resultsDiv.innerHTML = ''; return; }
-            const cache = Array.isArray(window.daneCache) ? window.daneCache : [];
+            const cache = Array.isArray(window.zd_mag_unified) ? window.zd_mag_unified : [];
             if (!cache.length) {
-                // Cache jeszcze nie załadowany — pokaż loader, retry po pobraniu.
+                // Cache jeszcze nie załadowany (jedna lub obie listy) — pokaż loader, retry po pobraniu.
                 resultsDiv.innerHTML = '<div style="padding:10px 12px; color:#94a3b8; font-size:12px;">⏳ Ładuję magazyn...</div>';
                 resultsDiv.style.display = 'block';
                 zd_magEnsureCache().then(() => {
-                    // Powtórz tylko jeśli search wciąż otwarty z tą samą frazą
                     const inp = document.getElementById('zd-magazyn-search');
                     if (inp && String(inp.value || '').toLowerCase().trim() === q) zd_magSearchInput();
                 });
                 return;
             }
-            // Unikalne nazwy (cache trzyma osobne wpisy per partia/data ważności)
+            // Unikalne nazwy (Magazyn klasyczny trzyma osobne wpisy per partia/data ważności)
             const widziane = new Set();
             const dopasowane = [];
             for (const p of cache) {
@@ -20181,7 +20213,9 @@ if (inputNazwaCheck) {
             final.forEach(p => {
                 const div = document.createElement('div');
                 div.style.cssText = 'padding:9px 12px; border-bottom:1px solid #f1f5f9; cursor:pointer; font-size:13px;';
-                const ico = String(p.kategoria || '').toLowerCase().includes('detal') ? '💄' : '📦';
+                // Ikona po źródle: Magazyn klasyczny (Detal/Magazyn) → 💄/📦; Raport → 📋
+                const ico = p.source === 'raport' ? '📋'
+                          : (String(p.kategoria || '').toLowerCase().includes('detal') ? '💄' : '📦');
                 const ilosc = (p.ilosc != null && p.ilosc !== '') ? Number(p.ilosc) : null;
                 const dost = ilosc != null ? `<span style="color:#94a3b8; font-size:11px; float:right;">Dostępne: ${ilosc}</span>` : '';
                 div.innerHTML = `${ico} <b>${escHtml(p.nazwa)}</b> ${p.kategoria ? '<span style="color:#94a3b8; font-size:11px;">('+escHtml(p.kategoria)+')</span>' : ''} ${dost}`;
@@ -20196,8 +20230,8 @@ if (inputNazwaCheck) {
             ev.preventDefault();
             const q = String(document.getElementById('zd-magazyn-search').value || '').trim();
             if (!q) return;
-            // Jeśli w wynikach jest dokładne dopasowanie — wybierz je. Inaczej dodaj custom.
-            const cache = Array.isArray(window.daneCache) ? window.daneCache : [];
+            // Szukaj dokładnego dopasowania w obu źródłach (Magazyn + Raport_Magazyn)
+            const cache = Array.isArray(window.zd_mag_unified) ? window.zd_mag_unified : [];
             const dopas = cache.find(p => String(p.nazwa || '').toLowerCase() === q.toLowerCase());
             if (dopas) zd_magAddPozycja(dopas.nazwa, dopas.kategoria || null);
             else zd_magAddPozycja(q, null);
