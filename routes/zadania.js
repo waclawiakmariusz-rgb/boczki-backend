@@ -83,7 +83,23 @@ module.exports = (db) => {
                       `INSERT IGNORE INTO Zadania_Kategorie (id, tenant_id, id_zadania, kategoria)
                        SELECT UUID(), tenant_id, ?, kategoria FROM Zadania_Kategorie WHERE tenant_id = ? AND id_zadania = ?`,
                       [newId, tenant_id, w.id],
-                      () => { if (--pending === 0) finish(); }
+                      () => {
+                        // Skopiuj listę przypisanych
+                        db.query(
+                          `INSERT IGNORE INTO Zadania_Przypisani (id, tenant_id, id_zadania, przypisany)
+                           SELECT UUID(), tenant_id, ?, przypisany FROM Zadania_Przypisani WHERE tenant_id = ? AND id_zadania = ?`,
+                          [newId, tenant_id, w.id],
+                          () => {
+                            // Skopiuj pozycje magazynu/kosmetyków
+                            db.query(
+                              `INSERT INTO Zadania_Magazyn (id, tenant_id, id_zadania, nazwa_produktu, kategoria)
+                               SELECT UUID(), tenant_id, ?, nazwa_produktu, kategoria FROM Zadania_Magazyn WHERE tenant_id = ? AND id_zadania = ?`,
+                              [newId, tenant_id, w.id],
+                              () => { if (--pending === 0) finish(); }
+                            );
+                          }
+                        );
+                      }
                     );
                   }
                 );
@@ -135,6 +151,21 @@ module.exports = (db) => {
     }
     // Inne role (np. kosmetolog) — domyślnie nie pozwalamy zlecać
     return cb(false, 'Brak uprawnień do zlecania zadań');
+  }
+
+  // RBAC dla LISTY odbiorców — zwróć ok dopiero jeśli każdy target przechodzi.
+  function sprawdzCzyMozeZlecicWielu(tenant_id, rola_kto, targets, cb) {
+    if (!Array.isArray(targets) || !targets.length) return cb(false, 'Brak odbiorców');
+    let i = 0;
+    const next = () => {
+      if (i >= targets.length) return cb(true);
+      sprawdzCzyMozeZlecic(tenant_id, rola_kto, targets[i], (mozna, msg) => {
+        if (!mozna) return cb(false, msg);
+        i++;
+        next();
+      });
+    };
+    next();
   }
 
   // Auto-tworzenie tabeli przy starcie modułu + idempotentna migracja kolumn
@@ -241,6 +272,121 @@ module.exports = (db) => {
     }
   );
 
+  // Tabela: wielu przypisanych do jednego zadania (osoby + role grupowe).
+  // Pole Zadania.przypisane_do zostaje jako "główny" (pierwszy z listy)
+  // dla wstecznej kompatybilności z filtrami widoków pre-multi.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Zadania_Przypisani (
+       id VARCHAR(36) PRIMARY KEY,
+       tenant_id VARCHAR(64) NOT NULL,
+       id_zadania VARCHAR(36) NOT NULL,
+       przypisany VARCHAR(100) NOT NULL,
+       INDEX idx_zadania (tenant_id, id_zadania),
+       INDEX idx_przypisany (tenant_id, przypisany),
+       UNIQUE KEY uniq_zadanie_przypisany (id_zadania, przypisany)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => {
+      if (err) { console.error('[Zadania_Przypisani] CREATE TABLE error:', err.message); return; }
+      // Backfill — istniejące zadania (pole przypisane_do) → wpis w nowej tabeli
+      setTimeout(() => {
+        db.query(
+          `INSERT IGNORE INTO Zadania_Przypisani (id, tenant_id, id_zadania, przypisany)
+           SELECT UUID(), tenant_id, id, przypisane_do FROM Zadania
+           WHERE przypisane_do IS NOT NULL AND przypisane_do != ''
+             AND id NOT IN (SELECT id_zadania FROM Zadania_Przypisani)`,
+          (e) => { if (e) console.error('[Zadania_Przypisani backfill]', e.message); }
+        );
+      }, 2500);
+    }
+  );
+
+  // Tabela: pozycje magazynu/kosmetyków powiązane z zadaniem.
+  // Trzymamy nazwa_produktu (snapshot) i opcjonalnie kategoria — produkty mogą być
+  // usuwane z magazynu, ale powiązanie z zadaniem zostaje.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Zadania_Magazyn (
+       id VARCHAR(36) PRIMARY KEY,
+       tenant_id VARCHAR(64) NOT NULL,
+       id_zadania VARCHAR(36) NOT NULL,
+       nazwa_produktu VARCHAR(255) NOT NULL,
+       kategoria VARCHAR(100) DEFAULT NULL,
+       INDEX idx_zadania (tenant_id, id_zadania),
+       INDEX idx_produkt (tenant_id, nazwa_produktu)
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => { if (err) console.error('[Zadania_Magazyn] CREATE TABLE error:', err.message); }
+  );
+
+  // Helper: zapisz listę przypisanych do zadania (idempotentnie — DELETE + INSERT)
+  function setPrzypisaniZadania(tenant_id, id_zadania, przypisani, cb) {
+    db.query(
+      `DELETE FROM Zadania_Przypisani WHERE tenant_id = ? AND id_zadania = ?`,
+      [tenant_id, id_zadania],
+      (err) => {
+        if (err) return cb(err);
+        const lista = Array.isArray(przypisani) ? przypisani.map(x => String(x || '').trim()).filter(Boolean) : [];
+        const dedup = [...new Set(lista)];
+        if (!dedup.length) return cb();
+        let pending = dedup.length;
+        let errFinal = null;
+        dedup.forEach(p => {
+          db.query(
+            `INSERT INTO Zadania_Przypisani (id, tenant_id, id_zadania, przypisany) VALUES (?, ?, ?, ?)`,
+            [randomUUID(), tenant_id, id_zadania, p.slice(0, 100)],
+            (err2) => {
+              if (err2 && !errFinal) errFinal = err2;
+              if (--pending === 0) cb(errFinal);
+            }
+          );
+        });
+      }
+    );
+  }
+
+  // Helper: zapisz listę pozycji magazynu (idempotentnie)
+  function setMagazynZadania(tenant_id, id_zadania, pozycje, cb) {
+    db.query(
+      `DELETE FROM Zadania_Magazyn WHERE tenant_id = ? AND id_zadania = ?`,
+      [tenant_id, id_zadania],
+      (err) => {
+        if (err) return cb(err);
+        const lista = Array.isArray(pozycje) ? pozycje.filter(p => p && p.nazwa_produktu) : [];
+        if (!lista.length) return cb();
+        let pending = lista.length;
+        let errFinal = null;
+        lista.forEach(p => {
+          db.query(
+            `INSERT INTO Zadania_Magazyn (id, tenant_id, id_zadania, nazwa_produktu, kategoria) VALUES (?, ?, ?, ?, ?)`,
+            [randomUUID(), tenant_id, id_zadania, String(p.nazwa_produktu).trim().slice(0, 255), p.kategoria ? String(p.kategoria).trim().slice(0, 100) : null],
+            (err2) => {
+              if (err2 && !errFinal) errFinal = err2;
+              if (--pending === 0) cb(errFinal);
+            }
+          );
+        });
+      }
+    );
+  }
+
+  // Helper: parsuj listę przypisanych z payloadu (akceptuje array `przypisani` LUB stary string `przypisane_do`)
+  function parsePrzypisaniPayload(d) {
+    if (Array.isArray(d.przypisani)) {
+      const lista = d.przypisani.map(x => String(x || '').trim()).filter(Boolean);
+      return [...new Set(lista)];
+    }
+    if (d.przypisane_do && String(d.przypisane_do).trim()) {
+      return [String(d.przypisane_do).trim()];
+    }
+    return [];
+  }
+
+  // Helper: parsuj listę pozycji magazynu z payloadu
+  function parseMagazynPayload(d) {
+    if (!Array.isArray(d.magazyn_pozycje)) return [];
+    return d.magazyn_pozycje
+      .filter(p => p && p.nazwa_produktu)
+      .map(p => ({ nazwa_produktu: String(p.nazwa_produktu).trim(), kategoria: p.kategoria ? String(p.kategoria).trim() : null }));
+  }
+
   // Helper: zapisz listę kategorii dla zadania (idempotentnie — DELETE + INSERT)
   function setKategorieZadania(tenant_id, id_zadania, kategorie, cb) {
     db.query(
@@ -345,7 +491,36 @@ module.exports = (db) => {
                   // Fallback: jeśli brak w tabeli (stare zadania), użyj kolumny kategoria z Zadania
                   if (z.kategorie.length === 0 && z.kategoria) z.kategorie = [z.kategoria];
                 });
-                cb(zadania);
+                // Przypisani (multi) — fallback do kolumny przypisane_do dla starych zadań
+                db.query(
+                  `SELECT id_zadania, przypisany FROM Zadania_Przypisani WHERE tenant_id = ? AND id_zadania IN (?)`,
+                  [tenant_id, ids],
+                  (err4, prRows) => {
+                    const pMap = {};
+                    if (!err4) (prRows || []).forEach(r => {
+                      if (!pMap[r.id_zadania]) pMap[r.id_zadania] = [];
+                      pMap[r.id_zadania].push(r.przypisany);
+                    });
+                    zadania.forEach(z => {
+                      z.przypisani = pMap[z.id] || [];
+                      if (z.przypisani.length === 0 && z.przypisane_do) z.przypisani = [z.przypisane_do];
+                    });
+                    // Pozycje magazynu/kosmetyków powiązane z zadaniem
+                    db.query(
+                      `SELECT id_zadania, nazwa_produktu, kategoria FROM Zadania_Magazyn WHERE tenant_id = ? AND id_zadania IN (?)`,
+                      [tenant_id, ids],
+                      (err5, mgRows) => {
+                        const mMap = {};
+                        if (!err5) (mgRows || []).forEach(r => {
+                          if (!mMap[r.id_zadania]) mMap[r.id_zadania] = [];
+                          mMap[r.id_zadania].push({ nazwa_produktu: r.nazwa_produktu, kategoria: r.kategoria });
+                        });
+                        zadania.forEach(z => { z.magazyn_pozycje = mMap[z.id] || []; });
+                        cb(zadania);
+                      }
+                    );
+                  }
+                );
               }
             );
           }
@@ -443,22 +618,35 @@ module.exports = (db) => {
       if (!osoba) return res.json({ status: 'error', message: 'Brak osoby' });
       // Materializacja wzorców (jeśli osoba ma przypisane szablony cykliczne)
       materializujWzorce(tenant_id, () => {
-        const params = [tenant_id, osoba];
-        let whereOsoba = `AND (przypisane_do = ?`;
-        // Każda rola widzi też zadania na swoją rolę grupową (np. "recepcja" jako string)
-        if (rolaOsoby === 'recepcja') { whereOsoba += ` OR LOWER(przypisane_do) = 'recepcja'`; }
-        else if (rolaOsoby === 'praktykantka') { whereOsoba += ` OR LOWER(przypisane_do) = 'praktykantka'`; }
-        else if (rolaOsoby === 'kosmetolog') { whereOsoba += ` OR LOWER(przypisane_do) = 'kosmetolog'`; }
-        whereOsoba += `)`;
+        // Zadanie pasuje gdy:
+        //  - stara kolumna przypisane_do = osoba lub odpowiada roli grupowej, LUB
+        //  - id zadania jest w Zadania_Przypisani z wpisem dla osoby/roli
+        let whereOsobaStary = `(przypisane_do = ?`;
+        let whereSubPrzypisani = `(przypisany = ?`;
+        if (rolaOsoby === 'recepcja') {
+          whereOsobaStary += ` OR LOWER(przypisane_do) = 'recepcja'`;
+          whereSubPrzypisani += ` OR LOWER(przypisany) = 'recepcja'`;
+        } else if (rolaOsoby === 'praktykantka') {
+          whereOsobaStary += ` OR LOWER(przypisane_do) = 'praktykantka'`;
+          whereSubPrzypisani += ` OR LOWER(przypisany) = 'praktykantka'`;
+        } else if (rolaOsoby === 'kosmetolog') {
+          whereOsobaStary += ` OR LOWER(przypisane_do) = 'kosmetolog'`;
+          whereSubPrzypisani += ` OR LOWER(przypisany) = 'kosmetolog'`;
+        }
+        whereOsobaStary += `)`;
+        whereSubPrzypisani += `)`;
         db.query(
-          `SELECT id, data_utworzenia, utworzone_przez, tytul, opis, deadline, status,
+          `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis, deadline, status,
                   kategoria, priorytet, id_klienta, klient_nazwa,
                   powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id
              FROM Zadania
             WHERE tenant_id = ? AND status = 'AKTYWNE' AND is_szablon = 0
-              ${whereOsoba}
+              AND (
+                ${whereOsobaStary}
+                OR id IN (SELECT id_zadania FROM Zadania_Przypisani WHERE tenant_id = ? AND ${whereSubPrzypisani})
+              )
             ORDER BY FIELD(priorytet,'PILNY','WAZNY','NORMALNY'), (deadline IS NULL), deadline ASC`,
-          params,
+          [tenant_id, osoba, tenant_id, osoba],
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
             dolaczKlientow(tenant_id, rows || [], (zZKlientami) => {
@@ -490,7 +678,6 @@ module.exports = (db) => {
     } else if (action === 'add') {
       const tytul = String(d.tytul || '').trim();
       const opis = String(d.opis || '').trim();
-      const przypisane_do = String(d.przypisane_do || '').trim();
       const utworzone_przez = String(d.utworzone_przez || '').trim();
       const deadline = d.deadline || null;
       const kategorieList = parseKategoriePayload(d); // multi
@@ -499,14 +686,17 @@ module.exports = (db) => {
       const klienciList = parseKlienciPayload(d);
       const id_klienta = klienciList.length > 0 ? klienciList[0].id : null;
       const klient_nazwa = klienciList.length > 0 ? klienciList[0].nazwa.slice(0, 200) : null;
+      const przypisaniList = parsePrzypisaniPayload(d);
+      const przypisane_do = przypisaniList[0] || ''; // główny — wstecznie kompat (kolumna w Zadania)
+      const magazynList = parseMagazynPayload(d);
       const pwt = normalizujPowtarzanie(d);
       if (pwt.error) return res.json({ status: 'error', message: pwt.error });
       const { powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon } = pwt;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
-      if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
-      // RBAC: sprawdź czy wykonujący (utworzone_przez) ma prawo zlecić temu odbiorcy
+      if (!przypisaniList.length) return res.json({ status: 'error', message: 'Wskaż przynajmniej jedną osobę lub rolę' });
+      // RBAC: sprawdź czy wykonujący ma prawo zlecić KAŻDEMU odbiorcy z listy
       pobierzRoleUzytkownika(tenant_id, utworzone_przez, (rolaKto) => {
-        sprawdzCzyMozeZlecic(tenant_id, rolaKto, przypisane_do, (mozna, msg) => {
+        sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, przypisaniList, (mozna, msg) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
           const id = randomUUID();
           db.query(
@@ -515,11 +705,15 @@ module.exports = (db) => {
             [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
-              // Zapisz multi-kategorie + multi-klienci
+              // Zapisz multi: kategorie + klienci + przypisani + magazyn
               setKategorieZadania(tenant_id, id, kategorieList, () => {
                 setKlienciZadania(tenant_id, id, klienciList, () => {
-                  if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
-                  else res.json({ status: 'success', id });
+                  setPrzypisaniZadania(tenant_id, id, przypisaniList, () => {
+                    setMagazynZadania(tenant_id, id, magazynList, () => {
+                      if (isSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success', id }));
+                      else res.json({ status: 'success', id });
+                    });
+                  });
                 });
               });
             }
@@ -532,7 +726,6 @@ module.exports = (db) => {
       if (!id) return res.json({ status: 'error', message: 'Brak id' });
       const tytul = String(d.tytul || '').trim();
       const opis = String(d.opis || '').trim();
-      const przypisane_do = String(d.przypisane_do || '').trim();
       const deadline = d.deadline || null;
       const priorytet = ALLOWED_PRIORYTETY.includes(d.priorytet) ? d.priorytet : 'NORMALNY';
       const klienciListEdit = parseKlienciPayload(d);
@@ -540,15 +733,17 @@ module.exports = (db) => {
       const klient_nazwa = klienciListEdit.length > 0 ? klienciListEdit[0].nazwa.slice(0, 200) : null;
       const kategorieListEdit = parseKategoriePayload(d);
       const kategoriaEdit = kategorieListEdit[0] || 'INNE';
+      const przypisaniListEdit = parsePrzypisaniPayload(d);
+      const przypisane_do = przypisaniListEdit[0] || '';
+      const magazynListEdit = parseMagazynPayload(d);
       const kto_edytuje = String(d.kto_edytuje || d.utworzone_przez || '').trim();
       const pwtE = normalizujPowtarzanie(d);
       if (pwtE.error) return res.json({ status: 'error', message: pwtE.error });
       const { powtarzaj: ePowt, powtarzaj_dzien: ePowtDz, powtarzaj_co: ePowtCo, isSzablon: eIsSzablon } = pwtE;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
-      if (!przypisane_do) return res.json({ status: 'error', message: 'Wskaż osobę lub rolę' });
-      // RBAC: sprawdź czy edytujący ma prawo zlecić tej osobie/roli
+      if (!przypisaniListEdit.length) return res.json({ status: 'error', message: 'Wskaż przynajmniej jedną osobę lub rolę' });
       pobierzRoleUzytkownika(tenant_id, kto_edytuje, (rolaKto) => {
-        sprawdzCzyMozeZlecic(tenant_id, rolaKto, przypisane_do, (mozna, msg) => {
+        sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, przypisaniListEdit, (mozna, msg) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
           db.query(
             `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
@@ -562,8 +757,12 @@ module.exports = (db) => {
               if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
               setKategorieZadania(tenant_id, id, kategorieListEdit, () => {
                 setKlienciZadania(tenant_id, id, klienciListEdit, () => {
-                  if (eIsSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success' }));
-                  else res.json({ status: 'success' });
+                  setPrzypisaniZadania(tenant_id, id, przypisaniListEdit, () => {
+                    setMagazynZadania(tenant_id, id, magazynListEdit, () => {
+                      if (eIsSzablon) materializujWzorce(tenant_id, () => res.json({ status: 'success' }));
+                      else res.json({ status: 'success' });
+                    });
+                  });
                 });
               });
             }
