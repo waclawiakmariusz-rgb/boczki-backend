@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1); // Hostinger używa reverse proxy — bez tego rate-limit nie działa poprawnie
-const { validateTenantAccess } = require('./routes/sessions');
+const { validateTenantAccess, initSessions } = require('./routes/sessions');
 
 // ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
 const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
@@ -17,6 +17,7 @@ app.use(cors({
     const allowed = [
       'https://estelio.com.pl',
       'https://www.estelio.com.pl',
+      'https://dev.estelio.com.pl',
     ];
     if (
       !origin ||
@@ -230,8 +231,7 @@ function env(key) {
 }
 
 // Konfiguracja puli połączeń z bazą MySQL
-const db = mysql.createPool({
-    host: env('DB_HOST'),
+const dbConfig = {
     user: env('DB_USER'),
     password: env('DB_PASSWORD'),
     database: env('DB_NAME'),
@@ -242,7 +242,13 @@ const db = mysql.createPool({
     dateStrings: true,
     enableKeepAlive: true,
     keepAliveInitialDelay: 30000
-});
+};
+if (process.env.DB_SOCKET) {
+    dbConfig.socketPath = process.env.DB_SOCKET;
+} else {
+    dbConfig.host = env('DB_HOST');
+}
+const db = mysql.createPool(dbConfig);
 
 db.getConnection((err, connection) => {
     if (err) {
@@ -284,6 +290,9 @@ const billingRoutes    = require('./routes/billing')(db);
 const blogRoutes       = require('./routes/blog')(db);
 const predefRoutes     = require('./routes/predef')(db);
 const kosztPlanRoutes  = require('./routes/koszty_plan')(db);
+const zadaniaRoutes    = require('./routes/zadania')(db);
+const typyZabiegowRoutes = require('./routes/typy_zabiegow')(db);
+const leadyRoutes      = require('./routes/leady')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -310,6 +319,9 @@ app.use('/api', billingRoutes);
 app.use('/api', blogRoutes);
 app.use('/api', predefRoutes);
 app.use('/api', kosztPlanRoutes);
+app.use('/api', zadaniaRoutes);
+app.use('/api', typyZabiegowRoutes);
+app.use('/api', leadyRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -492,7 +504,7 @@ app.post('/api', (req, res) => {
     const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service'];
     const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule'];
     const rodoActions = ['save_rodo', 'update_consents'];
-    const urodzinyActions = ['add_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
+    const urodzinyActions = ['add_birthday', 'edit_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
     const retencjaActions = ['save_retention'];
     const analitykaActions = ['get_months', 'an_get_months', 'get_daily_summary', 'an_get_daily_summary', 'get_monthly_details', 'an_get_monthly_details', 'save_monthly_cost', 'an_save_monthly_cost', 'get_costs_list', 'an_get_costs_list', 'get_stats', 'an_get_stats', 'get_yearly_summary', 'an_get_yearly_summary', 'get_treatment_analysis', 'an_get_treatment_analysis', 'get_bi_data', 'an_get_bi_data'];
     const konsultacjeActions = ['kon_save_result', 'kon_update_result', 'kon_add_consultant', 'kon_delete_consultant', 'kon_save_campaign', 'kon_toggle_campaign', 'akon_get_months', 'akon_get_stats', 'akon_get_daily_summary', 'akon_get_monthly_details', 'akon_get_monthly_list', 'akon_get_consultants', 'odp_getReportData'];
@@ -584,6 +596,12 @@ if (!fs.existsSync(UPLOADS_ROOT)) {
 // ==========================================
 // MIGRACJE AUTOMATYCZNE
 // ==========================================
+
+// Sesje pracowników — persist w bazie (tabela `Sesje`) + memory cache.
+// Wcześniej sesje były tylko w pamięci procesu — restart Node wylogowywał wszystkich
+// i unieważniał linki do PDF (RODO/regulamin). Od 2026-05-06 sesje przeżywają restart.
+initSessions(db);
+
 db.query(`
     CREATE TABLE IF NOT EXISTS Koszty_Kategorie (
         id            VARCHAR(36)  NOT NULL PRIMARY KEY,

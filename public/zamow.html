@@ -39,16 +39,17 @@
   /* ── NAV ── */
   nav {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 22px 60px;
+    padding: 14px 60px;
     border-bottom: 1px solid var(--border);
     background: var(--cream);
     position: sticky; top: 0; z-index: 100;
   }
   .logo {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 1.6rem; font-weight: 500;
-    letter-spacing: .01em; color: var(--dark);
+    display: inline-flex; align-items: center;
     text-decoration: none;
+  }
+  .logo img {
+    height: 64px; width: auto; display: block;
   }
   nav ul { display: flex; gap: 36px; list-style: none; }
   nav ul a {
@@ -843,7 +844,7 @@
 
 <!-- NAV -->
 <nav style="position:relative;">
-  <a class="logo" href="#">Estelio</a>
+  <a class="logo" href="#"><img src="img/estelio-logo.png" alt="Estelio"></a>
   <ul>
     <li><a href="#funkcje">Funkcje</a></li>
     <li><a href="#opinie">Opinie</a></li>

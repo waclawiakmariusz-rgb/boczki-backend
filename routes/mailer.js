@@ -285,4 +285,67 @@ async function wyslijKontakt({ imie, email, typ, wiadomosc }) {
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt };
+// ─── Wyślij ostrzeżenie o nieudanej płatności (do klienta) ────
+async function wyslijOstrzezenieOPlatnosci({ email, nazwa_salonu, data_grace_until }) {
+  if (!email) return;
+  const transporter = createTransport();
+  const dataStr = data_grace_until
+    ? new Date(data_grace_until).toLocaleDateString('pl-PL')
+    : 'wkrótce';
+  return transporter.sendMail({
+    from: FROM(),
+    to: email,
+    subject: '⚠️ Nieudana płatność — Estelio',
+    html: emailWrapper('💳', 'Problem z płatnością', 'Subskrypcja Estelio', `
+      <h2 style="margin:0 0 14px; font-size:20px; color:#1c1a18;">Witaj!</h2>
+      <p style="font-size:14px; color:#2c2420; line-height:1.7;">
+        Stripe nie był w stanie pobrać miesięcznej opłaty za salon
+        <strong>${nazwa_salonu || 'Twój salon'}</strong>. Najczęstsze przyczyny:
+      </p>
+      <ul style="font-size:14px; color:#2c2420; line-height:1.8; padding-left:18px;">
+        <li>Wygasła karta płatnicza</li>
+        <li>Brak środków na koncie</li>
+        <li>Bank zablokował transakcję cykliczną</li>
+      </ul>
+      <p style="font-size:14px; color:#2c2420; line-height:1.7;">
+        <strong>Salon nadal działa</strong> — masz czas do <strong>${dataStr}</strong>
+        żeby odnowić płatność. Po tej dacie logowanie zostanie zablokowane do czasu
+        opłacenia subskrypcji.
+      </p>
+      <p style="font-size:14px; color:#2c2420; line-height:1.7;">
+        Aby ponowić płatność: zaloguj się do panelu rozliczeniowego (link który wysłaliśmy
+        po rejestracji) i zaktualizuj kartę. Stripe automatycznie ponowi próbę.
+      </p>
+      ${emailBtn(`${APP_URL()}/billing.html`, 'Otwórz panel rozliczeniowy →')}
+      <p style="font-size:13px; color:#7a6e66; margin-top:24px;">
+        Pytania? Odpisz na ten email lub napisz na <a href="mailto:kontakt@estelio.com.pl" style="color:#b87080;">kontakt@estelio.com.pl</a>.
+      </p>
+    `)
+  });
+}
+
+// ─── Powiadom admina o nieudanej płatności klienta ────────────
+async function powiadomAdminaOFailedPayment({ email, nazwa_salonu, kwota }) {
+  const transporter = createTransport();
+  return transporter.sendMail({
+    from: FROM(),
+    to: ADMIN_EMAIL(),
+    subject: `⚠️ Nieudana płatność: ${nazwa_salonu || email}`,
+    html: emailWrapper('🚨', 'Nieudana płatność', 'Powiadomienie admina', `
+      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">Stripe webhook: invoice.payment_failed</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:14px;">
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6; width:140px;">Salon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><strong>${nazwa_salonu || '(nieznany)'}</strong></td></tr>
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Email klienta:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><a href="mailto:${email}" style="color:#b87080;">${email}</a></td></tr>
+        ${kwota ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Kwota:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${kwota}</td></tr>` : ''}
+        <tr><td style="padding:8px 0; color:#7a6e66;">Status klienta:</td><td style="padding:8px 0; color:#dc2626; font-weight:700;">opóźniony (grace 7 dni)</td></tr>
+      </table>
+      <p style="font-size:13px; color:#7a6e66; margin-top:20px;">
+        Klient został automatycznie powiadomiony emailem. Po 7 dniach (jeśli płatność nie przejdzie),
+        logowanie do salonu zostanie zablokowane. Stripe ponowi próbę pobrania kilkukrotnie.
+      </p>
+      ${emailBtn('https://dashboard.stripe.com/payments', 'Otwórz Stripe Dashboard →')}
+    `)
+  });
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment };

@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { createSession, rateLimitPin, recordFailedPin, recordSuccessPin } = require('./sessions');
 
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
@@ -41,7 +42,7 @@ module.exports = (db) => {
   });
 
   // POST /users
-  router.post('/users', (req, res) => {
+  router.post('/users', rateLimitPin, (req, res) => {
     const d = req.body;
     const tenant_id = d.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
@@ -52,11 +53,17 @@ module.exports = (db) => {
         `SELECT imie_login, haslo_pin, rola FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?)`,
         [tenant_id, d.imie],
         (err, rows) => {
-          if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono użytkownika.' });
+          if (err || !rows.length) {
+            recordFailedPin(req);
+            return res.json({ status: 'error', message: 'Nie znaleziono użytkownika.' });
+          }
           const user = rows[0];
           if (String(user.haslo_pin).trim() === String(d.pin).trim()) {
-            return res.json({ status: 'success', rola: user.rola });
+            recordSuccessPin(req);
+            const session_token = createSession(tenant_id, d.imie);
+            return res.json({ status: 'success', rola: user.rola, session_token });
           }
+          recordFailedPin(req);
           return res.json({ status: 'error', message: 'Błędny PIN!' });
         }
       );

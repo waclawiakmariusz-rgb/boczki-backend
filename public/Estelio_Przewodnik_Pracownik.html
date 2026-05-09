@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik dla pracownika</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-50: #fff5f9;
+    --pink-100: #ffe9f2;
+    --pink-200: #ffd0e3;
+    --pink-300: #ffacc9;
+    --pink-400: #ff7eb0;
+    --pink-500: #ec3f91;
+    --pink-600: #df247e;
+    --pink-700: #be1264;
+    --pink-glow: rgba(236, 63, 145, 0.15);
+    --gold: #d4a574;
+    --gold-soft: #fef3e6;
+    --bg: #fffaf9;
+    --text: #1a0e1a;
+    --text-soft: #4a3848;
+    --muted: #8a7a85;
+    --line: #f5dde7;
+    --line-soft: #fbe9f0;
+    --card: #ffffff;
+    --green: #18bf7b;
+    --green-soft: #e0f7ec;
+    --orange: #ff961f;
+    --orange-soft: #fef3e6;
+    --red: #dc2626;
+    --red-soft: #fef2f2;
+    --shadow-soft: 0 4px 20px rgba(193, 60, 110, 0.05);
+    --shadow-medium: 0 16px 40px rgba(193, 60, 110, 0.08);
+    --shadow-pink: 0 18px 45px rgba(236, 63, 145, 0.22);
+    --serif: "Playfair Display", serif;
+    --sans: "Poppins", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── LAYOUT ── */
+  .app { display: grid; grid-template-columns: 290px 1fr; min-height: 100vh; max-width: 1500px; margin: 0 auto; background: #fff; box-shadow: 0 0 100px rgba(193, 60, 110, 0.04); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { background: linear-gradient(180deg, #ffffff 0%, var(--pink-50) 100%); border-right: 1px solid var(--line-soft); padding: 38px 26px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--pink-200); border-radius: 3px; }
+
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 6px 30px; border-bottom: 1px solid var(--line-soft); margin-bottom: 26px; }
+  .brand-mark { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; display: grid; place-items: center; font-size: 24px; box-shadow: var(--shadow-pink); }
+  .brand-text strong { display: block; font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .brand-text span { display: block; font-size: 9.5px; color: var(--pink-600); letter-spacing: 2.5px; text-transform: uppercase; font-weight: 600; margin-top: 1px; }
+
+  .nav-section { margin-bottom: 22px; }
+  .nav-section-title { font-size: 10.5px; font-weight: 800; color: var(--pink-600); text-transform: uppercase; letter-spacing: 2px; padding: 0 12px; margin-bottom: 10px; opacity: 0.8; }
+  .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; color: var(--text-soft); text-decoration: none; font-weight: 500; font-size: 13.5px; transition: all 0.2s; margin-bottom: 2px; }
+  .nav-link:hover { background: var(--pink-100); color: var(--pink-600); transform: translateX(3px); }
+  .nav-link .num { font-size: 11px; font-weight: 700; color: var(--pink-300); min-width: 24px; }
+  .nav-link:hover .num { color: var(--pink-500); }
+
+  /* ── MAIN ── */
+  .main { padding: 56px 64px 100px; max-width: 1100px; }
+
+  /* ── HERO ── */
+  .hero { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 50%, var(--pink-100) 100%); border: 1px solid var(--pink-200); border-radius: 32px; padding: 60px 56px; margin-bottom: 40px; position: relative; overflow: hidden; box-shadow: var(--shadow-soft); }
+  .hero::before { content: ""; position: absolute; top: -120px; right: -120px; width: 360px; height: 360px; background: radial-gradient(circle, var(--pink-glow) 0%, transparent 65%); border-radius: 50%; }
+  .hero::after { content: ""; position: absolute; bottom: -100px; left: -50px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(212, 165, 116, 0.08) 0%, transparent 65%); border-radius: 50%; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); color: var(--pink-600); padding: 9px 18px; border: 1px solid var(--pink-200); border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; position: relative; }
+  .hero-badge::before { content: ""; width: 8px; height: 8px; background: var(--pink-500); border-radius: 50%; box-shadow: 0 0 0 4px var(--pink-100); animation: pulse 2.5s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
+  .hero h1 { font-family: var(--serif); margin: 0 0 16px; font-size: 56px; font-weight: 800; letter-spacing: -1.8px; line-height: 1.05; color: var(--text); position: relative; }
+  .hero h1 em { font-style: italic; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { margin: 0; font-size: 17px; color: var(--text-soft); max-width: 680px; line-height: 1.75; position: relative; }
+  .hero-meta { display: flex; gap: 26px; margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--pink-200); position: relative; }
+  .hero-meta-item strong { display: block; font-size: 22px; color: var(--pink-600); font-weight: 800; }
+  .hero-meta-item span { display: block; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 3px; }
+
+  /* ── KARTY ── */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 48px 52px; margin-bottom: 28px; box-shadow: var(--shadow-soft); transition: all 0.3s; scroll-margin-top: 30px; position: relative; overflow: hidden; }
+  .card:hover { box-shadow: var(--shadow-medium); }
+  .card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--pink-500) 0%, var(--pink-300) 100%); opacity: 0; transition: opacity 0.3s; }
+  .card:hover::before { opacity: 1; }
+
+  .card-header { display: flex; align-items: flex-start; gap: 22px; margin-bottom: 24px; }
+  .card-icon { width: 60px; height: 60px; border-radius: 18px; background: linear-gradient(135deg, var(--pink-100) 0%, #fff 100%); border: 1px solid var(--pink-200); color: var(--pink-600); display: grid; place-items: center; font-size: 28px; flex-shrink: 0; }
+  .card-header-text h2 { margin: 0 0 6px; }
+  .card-header-text .subtitle { font-size: 12px; color: var(--pink-500); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  h2 { font-family: var(--serif); margin: 0 0 22px; font-size: 34px; font-weight: 700; letter-spacing: -0.8px; color: var(--text); line-height: 1.15; }
+  h3 { margin: 32px 0 14px; font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  h3::before { content: "✦"; color: var(--pink-400); margin-right: 8px; font-size: 14px; vertical-align: middle; }
+  h4 { margin: 22px 0 10px; font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1.5px; }
+  p { margin: 12px 0 18px; color: var(--text-soft); }
+  .lead { font-size: 16.5px; color: var(--text-soft); margin-bottom: 26px; line-height: 1.65; }
+  ul, ol { padding-left: 24px; }
+  ul li, ol li { margin-bottom: 9px; color: var(--text-soft); }
+  ul li::marker, ol li::marker { color: var(--pink-500); font-weight: 700; }
+
+  /* ── SCENARIUSZE ── */
+  .scenario { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--pink-200); border-radius: 18px; padding: 26px 30px; margin: 24px 0; position: relative; }
+  .scenario-label { display: inline-flex; align-items: center; gap: 8px; background: var(--pink-500); color: #fff; padding: 5px 14px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .scenario-label::before { content: "🎬"; }
+  .scenario h4 { color: var(--text); text-transform: none; letter-spacing: normal; font-size: 17px; margin: 0 0 10px; font-family: var(--serif); font-weight: 700; }
+  .scenario-body { color: var(--text-soft); font-size: 14.5px; line-height: 1.7; }
+  .scenario-body p { margin: 8px 0; }
+  .scenario-dialog { background: rgba(255,255,255,0.7); border-left: 3px solid var(--pink-400); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 12px 0; font-style: italic; font-size: 14px; color: var(--text-soft); }
+  .scenario-dialog::before { content: "💬 "; font-style: normal; }
+  .scenario-result { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 0 10px 10px 0; font-size: 14px; color: #166534; font-weight: 600; margin-top: 14px; }
+  .scenario-result::before { content: "✓"; font-size: 18px; }
+
+  /* ── KROKI ── */
+  .step { display: grid; grid-template-columns: 60px 1fr; gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--line-soft); }
+  .step:last-child { border-bottom: none; }
+  .step .num { width: 48px; height: 48px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; border-radius: 16px; display: grid; place-items: center; font-weight: 700; font-size: 17px; box-shadow: var(--shadow-pink); flex-shrink: 0; font-family: var(--serif); }
+  .step strong { display: block; font-size: 16.5px; margin-bottom: 7px; color: var(--text); font-weight: 700; }
+  .step span { color: var(--text-soft); font-size: 14.5px; line-height: 1.65; }
+  .step span code { background: var(--pink-50); color: var(--pink-700); padding: 2px 8px; border-radius: 6px; font-size: 12.5px; font-family: var(--sans); font-weight: 600; }
+
+  /* ── RAMKI ── */
+  .tip { background: linear-gradient(135deg, var(--pink-50) 0%, #fff 100%); border-left: 3px solid var(--pink-500); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: var(--text-soft); }
+  .tip strong { color: var(--pink-600); font-weight: 700; }
+  .warning { background: linear-gradient(135deg, var(--orange-soft) 0%, #fff 100%); border-left: 3px solid var(--orange); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #78350f; }
+  .warning strong { color: #c2410c; font-weight: 700; }
+  .danger { background: linear-gradient(135deg, var(--red-soft) 0%, #fff 100%); border-left: 3px solid var(--red); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #7f1d1d; }
+  .danger strong { color: #991b1b; font-weight: 700; }
+  .info { background: linear-gradient(135deg, #f0f7ff 0%, #fff 100%); border-left: 3px solid #0284c7; padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #075985; }
+  .info strong { color: #0369a1; font-weight: 700; }
+
+  /* ── KAFELKI ── */
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin: 22px 0; }
+  .feature { background: linear-gradient(180deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--line-soft); border-radius: 18px; padding: 24px; transition: all 0.25s; }
+  .feature:hover { border-color: var(--pink-300); transform: translateY(-3px); box-shadow: var(--shadow-medium); }
+  .feature-icon { font-size: 28px; margin-bottom: 12px; }
+  .feature strong { display: block; font-size: 15px; margin-bottom: 7px; color: var(--text); font-weight: 700; }
+  .feature span { font-size: 13.5px; color: var(--muted); line-height: 1.65; }
+
+  /* ── TABELE ── */
+  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 14px; border: 1px solid var(--line-soft); border-radius: 14px; overflow: hidden; }
+  table th { background: linear-gradient(180deg, var(--pink-50) 0%, var(--pink-100) 100%); color: var(--pink-700); text-align: left; padding: 16px 20px; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; }
+  table td { padding: 16px 20px; border-top: 1px solid var(--line-soft); color: var(--text-soft); }
+
+  /* ── DIALOG SAMPLE ── */
+  .sample-call { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 18px 0; }
+  .sample-line { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .sample-line:last-child { margin-bottom: 0; }
+  .sample-who { font-size: 11px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1px; min-width: 80px; padding-top: 2px; }
+  .sample-text { flex: 1; font-size: 14px; color: var(--text-soft); font-style: italic; line-height: 1.6; }
+
+  /* ── ROZDZIELACZ ── */
+  .divider { display: flex; align-items: center; gap: 22px; margin: 60px 0 34px; }
+  .divider .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent 0%, var(--pink-200) 50%, transparent 100%); }
+  .divider .label { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 3px; padding: 10px 22px; background: var(--card); border: 1px solid var(--pink-200); border-radius: 999px; }
+
+  /* ── FOOTER ── */
+  .footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 70px; padding: 40px 0 20px; border-top: 1px solid var(--line-soft); }
+  .footer .ornament { font-family: var(--serif); font-size: 30px; color: var(--pink-400); margin-bottom: 16px; }
+  .footer strong { color: var(--pink-600); font-weight: 700; }
+  .footer p { margin: 6px 0; color: var(--muted); }
+
+  /* ── MOBILE ── */
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line-soft); }
+    .nav-section { display: inline-block; vertical-align: top; margin-right: 26px; }
+    .main { padding: 32px 24px; }
+    .hero { padding: 36px 28px; }
+    .hero h1 { font-size: 36px; }
+    .card { padding: 32px 24px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 1fr; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">✦</div>
+      <div class="brand-text">
+        <strong>Estelio</strong>
+        <span>Beauty Management</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Pierwsze kroki</div>
+      <a class="nav-link" href="#logowanie"><span class="num">01</span> Logowanie</a>
+      <a class="nav-link" href="#pulpit"><span class="num">02</span> Pulpit</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Sprzedaż</div>
+      <a class="nav-link" href="#sprzedaz"><span class="num">03</span> Sprzedaż</a>
+      <a class="nav-link" href="#zadatki"><span class="num">04</span> Zadatki</a>
+      <a class="nav-link" href="#kosmetyki"><span class="num">05</span> Kosmetyki</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Klienci</div>
+      <a class="nav-link" href="#klienci"><span class="num">06</span> Kartoteka</a>
+      <a class="nav-link" href="#urodziny"><span class="num">07</span> Urodziny</a>
+      <a class="nav-link" href="#dokumenty"><span class="num">08</span> RODO</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Magazyn</div>
+      <a class="nav-link" href="#magazyn"><span class="num">09</span> Stan magazynu</a>
+      <a class="nav-link" href="#inwentaryzacja"><span class="num">10</span> Inwentaryzacja</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Codzienność</div>
+      <a class="nav-link" href="#zadania"><span class="num">11</span> Zadania</a>
+      <a class="nav-link" href="#konsultacje"><span class="num">12</span> Konsultacje</a>
+      <a class="nav-link" href="#zebranie"><span class="num">13</span> Zebranie</a>
+      <a class="nav-link" href="#retencja"><span class="num">14</span> Retencja</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">Pomoc</div>
+      <a class="nav-link" href="#wskazowki"><span class="num">15</span> Wskazówki</a>
+      <a class="nav-link" href="#faq"><span class="num">16</span> FAQ</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="hero">
+      <span class="hero-badge">Przewodnik dla pracownika</span>
+      <h1>Witaj w <em>Estelio</em></h1>
+      <p>Wszystko, co musisz wiedzieć żeby sprawnie pracować w salonie. Z prawdziwymi sytuacjami, dialogami z klientkami, konkretnymi krokami. Po przeczytaniu nie będziesz miała wątpliwości "jak to się robi" w żadnej z 16 sekcji systemu.</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><strong>16</strong><span>Modułów</span></div>
+        <div class="hero-meta-item"><strong>50+</strong><span>Scenariuszy</span></div>
+        <div class="hero-meta-item"><strong>30 min</strong><span>Czasu czytania</span></div>
+      </div>
+    </div>
+
+    <!-- LOGOWANIE -->
+    <section class="card" id="logowanie">
+      <div class="card-header">
+        <div class="card-icon">🔐</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 01 · Pierwsze logowanie</div>
+          <h2>Logowanie i pierwsze kroki</h2>
+        </div>
+      </div>
+      <p class="lead">Każdy pracownik ma swój 4-cyfrowy PIN. Po wybraniu siebie z ekranu i wpisaniu PIN-u system rozpozna kim jesteś i pokaże tylko te narzędzia, których potrzebujesz.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Pierwszy dzień Marty</span>
+        <h4>Marta wchodzi do salonu na 9:00, jej pierwsza zmiana</h4>
+        <div class="scenario-body">
+          <p>Manager Patrycja wcześniej założyła Marcie konto z PIN-em <code style="background:var(--pink-50); padding:2px 8px; border-radius:6px;">2580</code> i rolą "Recepcja". Marta podchodzi do komputera salonu, otwiera przeglądarkę, wpisuje <em>twojsalon.estelio.com.pl</em>.</p>
+          <p>Ekran pokazuje listę pracowników w kafelkach. Marta widzi swoją kafelkę z imieniem i podpisem "Recepcja". Klika.</p>
+          <p>Wyświetla się ekran z czterema kropkami do wpisania PIN-u. Marta wpisuje 2580.</p>
+          <div class="scenario-result">Patrycja widzi powitanie "Dzień dobry, Marta! 👋" i Pulpit. Już pracuje.</div>
+        </div>
+      </div>
+
+      <h3>Standardowa procedura logowania</h3>
+
+      <div class="step"><div class="num">1</div><div><strong>Wejdź na adres aplikacji</strong><span>Otwórz przeglądarkę i wpisz adres Estelio swojego salonu (np. <code>twojsalon.estelio.com.pl</code>). Strona logowania pokaże listę pracowników. Zalecane przeglądarki: <strong>Chrome</strong>, <strong>Firefox</strong>, <strong>Edge</strong>. Safari też działa, ale na Macu.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Kliknij swoją kafelkę</strong><span>Każdy pracownik ma kafelek z imieniem i rolą. Kafelki są posortowane wg ról — najpierw recepcja, potem kosmetolodzy, potem praktykantki. Klik = przechodzisz do ekranu PIN.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Wpisz swój 4-cyfrowy PIN</strong><span>PIN ustawia administrator (zwykle właściciel salonu lub manager). Po 5 błędnych próbach z tego samego urządzenia będzie chwilowa blokada (rate limit) — bezpieczeństwo. Jeśli nie pamiętasz, daj znać managerowi — on zresetuje.</span></div></div>
+      <div class="step"><div class="num">4</div><div><strong>Witaj w systemie!</strong><span>Pojawi się Pulpit. Po lewej masz menu, w środku — informacje na dziś. U góry widzisz swoje imię + rolę: <code>👤 Marta (Recepcja)</code>.</span></div></div>
+
+      <h3>Wylogowanie</h3>
+      <p>U dołu lewego menu czerwony przycisk <strong>🔒 Wyloguj się</strong>. Klikasz przed odejściem od komputera. Sesja trwa maksymalnie kilka godzin, potem i tak Cię wyrzuca, ale lepiej wylogować się ręcznie.</p>
+
+      <div class="warning"><strong>Bezpieczeństwo:</strong> NIGDY nie udostępniaj swojego PIN-u innym pracownikom. Każdy ruch w systemie (sprzedaż, edycja, usunięcie) jest logowany do konkretnego konta. Jeśli ktoś użyje Twojego PIN-u i coś popsuje — w logach widać Ciebie. Lepsza praktyka: każdy ma swoje konto.</div>
+
+      <div class="tip"><strong>💡 Wskazówka:</strong> jeśli zapomnisz wylogować się przed wyjściem, manager może to zrobić zdalnie z poziomu administracji.</div>
+    </section>
+
+    <!-- PULPIT -->
+    <section class="card" id="pulpit">
+      <div class="card-header">
+        <div class="card-icon">🏠</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 02 · Twój ekran startowy</div>
+          <h2>Pulpit — co widzisz po zalogowaniu</h2>
+        </div>
+      </div>
+      <p class="lead">Pulpit to Twój ekran dowodzenia. Wszystko, co dzieje się "tu i teraz", zebrane w jednym widoku. Zaprojektowany żebyś po 5 sekundach wiedziała: co się działo, co Cię czeka, co masz robić.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Marta o 9:00</span>
+        <h4>Co widzi Marta gdy zaloguje się rano</h4>
+        <div class="scenario-body">
+          <p><strong>Pulpit ma 5 sekcji ułożonych od góry:</strong></p>
+          <p><strong>1. "Dzień dobry, Marta! 👋"</strong> + zegar aktualizacji</p>
+          <p><strong>2. "📊 Na dziś"</strong> — kafelki KPI ale Marta jako recepcja TEGO NIE WIDZI (to widzi tylko manager/admin). Sekcja ukryta.</p>
+          <p><strong>3. "📋 Twoje zadania"</strong> — banner pokazuje "Masz 3 zadania na dziś, 1 wymaga pilnego działania". Patrycja zostawiła Marcie zadanie "Zadzwoń do Pani Kowalskiej w sprawie ratacji" z priorytetem PILNY i terminem na dziś 14:00. Plus "Sprawdź stan kremów Vagheggi" (zwykłe).</p>
+          <p><strong>4. "⚡ Szybki dostęp"</strong> — 6 kafelków-skrótów. Marta widzi: Dodaj sprzedaż / Dodaj klienta / Spis zadatków / Stan magazynu / Historia sprzedaży / Podsumowanie dnia.</p>
+          <p><strong>5. "⚠️ Wymaga uwagi"</strong> — alert: "95 produktów ma niski stan magazynowy", "9 zbliżających się urodzin (2 dziś!)", "87 klientów bez kompletu RODO".</p>
+          <div class="scenario-result">Marta wie: 1) zadzwonić do Pani Kowalskiej, 2) zadzwonić do 2 jubilatek, 3) sprawdzić kremy. Plan dnia gotowy w 10 sekund.</div>
+        </div>
+      </div>
+
+      <h3>Sekcja "📊 Na dziś" (tylko admin/manager)</h3>
+      <p>Cztery kafelki z liczbami:</p>
+      <ul>
+        <li><strong>Sprzedaż dzisiaj</strong> — np. 4 580 zł (suma wszystkich sfinalizowanych transakcji)</li>
+        <li><strong>Transakcji</strong> — np. 12 (uwzględnia mix jako 1, ignoruje system/ręczne)</li>
+        <li><strong>Klientów dzisiaj</strong> — np. 9 (unikalni klienci, którzy odwiedzili)</li>
+        <li><strong>Średnia wartość transakcji</strong> — np. 381 zł (sprzedaż ÷ liczba transakcji)</li>
+      </ul>
+      <p><strong>Recepcja, kosmetolog, praktykantka — tej sekcji NIE widzą.</strong> Ochrona — to liczby zarządcze, dla managera/admina.</p>
+
+      <h3>Sekcja "📋 Twoje zadania"</h3>
+      <p>Widget zadań — opisany szczegółowo w sekcji <strong>11. Zadania</strong>. Tu krótko:</p>
+      <ul>
+        <li>Banner "Masz X zadań na dziś, Y pilnych" — dynamiczny licznik</li>
+        <li>5 zakładek: Klient · Magazyn · Kosmetyk · Sprzedaż · Inne</li>
+        <li>Lista pogrupowana: ❗ Pilne, 🕘 Na dziś, 📅 Zaplanowane, 🗒 Bez terminu</li>
+        <li>Przycisk "+ Nowe zadanie" — jeśli Twoja rola pozwala (recepcja+)</li>
+      </ul>
+
+      <h3>Sekcja "⚡ Szybki dostęp"</h3>
+      <p>6 kafelków-skrótów do najczęściej używanych ekranów:</p>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">＋</div><strong>Dodaj sprzedaż</strong><span>Otwiera formularz sprzedaży — najczęstsza akcja</span></div>
+        <div class="feature"><div class="feature-icon">👤</div><strong>Dodaj klienta</strong><span>Modal nowego klienta — 30 sekund i jest w bazie</span></div>
+        <div class="feature"><div class="feature-icon">💳</div><strong>Spis zadatków</strong><span>Lista aktywnych portfeli klientów</span></div>
+        <div class="feature"><div class="feature-icon">📦</div><strong>Stan magazynu</strong><span>Co jest, czego brakuje, co po dacie</span></div>
+        <div class="feature"><div class="feature-icon">📜</div><strong>Historia sprzedaży</strong><span>Pełna lista transakcji z filtrami</span></div>
+        <div class="feature"><div class="feature-icon">🗓</div><strong>Podsumowanie dnia</strong><span>Pełen raport — kasowo i analitycznie</span></div>
+      </div>
+
+      <h3>Sekcja "⚠️ Wymaga uwagi"</h3>
+      <p>Alerty ze wszystkich modułów:</p>
+      <ul>
+        <li><strong>Niski stan magazynu</strong> — produkty poniżej minimum (np. "95 produktów wymaga uzupełnienia")</li>
+        <li><strong>Zbliżające się urodziny</strong> — w tym tygodniu (z wyróżnieniem: "2 osoby mają urodziny dziś")</li>
+        <li><strong>Klienci bez kompletu RODO</strong> — liczba klientów którym brakuje zgody/regulaminu</li>
+      </ul>
+      <p>Klikasz na alert = przechodzisz do odpowiedniej sekcji, gdzie możesz to ogarnąć.</p>
+
+      <h3>Sekcja "💳 Ostatnie transakcje (dziś)"</h3>
+      <p>Skrótowy podgląd ostatnich 5-10 transakcji dnia. Pełną listę masz w "Historii sprzedaży".</p>
+
+      <h3>Sekcja "💡 Co możesz zrobić teraz?"</h3>
+      <p>Trzy proaktywne propozycje:</p>
+      <ul>
+        <li><strong>🎁 Zaproponuj zabieg</strong> — sprawdź klientki z modułu Retencji i zaproponuj kolejną wizytę</li>
+        <li><strong>👤 Dodaj nową klientkę</strong> — jeśli ktoś przyjdzie, lepiej z przygotowaną kartą</li>
+        <li><strong>🧮 Podsumowanie dnia</strong> — zobacz wyniki na dziś (manager+) lub po prostu sprawdź transakcje</li>
+      </ul>
+
+      <div class="tip"><strong>💡 Praktyka:</strong> trenuj w sobie odruch "po zalogowaniu — Pulpit". Pulpit jest punktem kontroli — cokolwiek robisz, zaczynaj od niego, żeby wyłapać alerty zanim klientka cię o coś poprosi.</div>
+    </section>
+
+    <!-- SPRZEDAŻ -->
+    <section class="card" id="sprzedaz">
+      <div class="card-header">
+        <div class="card-icon">💰</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 03 · Najważniejsza akcja</div>
+          <h2>Sprzedaż — jak wpisać transakcję</h2>
+        </div>
+      </div>
+      <p class="lead">Najczęstsza rzecz, którą robisz w Estelio. Po zabiegu lub zakupie kosmetyku wpisujesz: ile, kto wykonał, jaką metodą zapłacił, kto był klientem. System sam zaktualizuje magazyn (jeśli to kosmetyk), saldo zadatków (jeśli płatność z portfela) i statystyki.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Anna kupuje endermologię + krem</span>
+        <h4>Pani Anna Nowak po endermologii bierze do tego krem Vagheggi</h4>
+        <div class="scenario-body">
+          <p>Pani Anna kończy zabieg endermologii (350 zł, wykonany przez Julię). Dodatkowo bierze krem Vagheggi do twarzy (180 zł). Razem: 530 zł, płatność blikiem.</p>
+          <p>Marta wchodzi w "Sprzedaż" w lewym menu. Otwiera się formularz multi-sprzedaży — może dodać kilka pozycji w jednej transakcji.</p>
+          <p><strong>Krok 1:</strong> Klikasz kafelek "Julia" jako sprzedawca (zabieg).</p>
+          <p><strong>Krok 2:</strong> Wpisuje "Anna Nowak" w polu klienta — pojawia się podpowiedź, klika.</p>
+          <p><strong>Krok 3:</strong> Pierwsza pozycja: zabieg "Endermologia Infinity Brzuch" — cena podpowiada się 350 zł.</p>
+          <p><strong>Krok 4:</strong> Klika "+ Dodaj pozycję". Druga pozycja: "Vagheggi twarz - krem" — cena 180 zł.</p>
+          <p><strong>Krok 5:</strong> Metoda płatności: <code>📱 Blik</code>.</p>
+          <p><strong>Krok 6:</strong> Klika "Dodaj sprzedaż".</p>
+          <div class="scenario-result">2 pozycje zapisane. Magazyn Vagheggi -1 sztuka. Pani Anna w "Łącznie wydano" zwiększa się o 530 zł. Statystyki Julii rosną. Zajęło to Marcie 90 sekund.</div>
+        </div>
+      </div>
+
+      <h3>Standardowa procedura sprzedaży</h3>
+
+      <div class="step"><div class="num">1</div><div><strong>Wybierz sprzedawcę (sprzedawców)</strong><span>Klikasz kafelek z imieniem osoby, która wykonała zabieg lub obsłużyła sprzedaż. <strong>Możesz zaznaczyć więcej niż jedną osobę</strong> — wtedy kwota podzieli się równo między nich w statystykach. Przykład: Julia + Dominika robiły razem zabieg za 400 zł — każda ma w statystykach 200 zł.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Wpisz lub wybierz klienta</strong><span>Pole "Imię i nazwisko klienta" — jak wpiszesz fragment, pokazują się podpowiedzi z bazy. Wpisujesz "Now" → widzisz "Anna Nowak", "Maria Nowicka", "Jan Nowak". Klikasz właściwą.<br><br>Jeśli to <strong>nowa klientka</strong> — najpierw dodaj ją w Klienci → Dodaj klientkę (tu zostawisz formularz sprzedaży na chwilę), potem wracaj do Sprzedaży i wybierz ją z listy.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Wybierz zabieg/produkt z listy rozwijanej</strong><span>Z dropdownu "Zabieg" znajdź właściwą pozycję. Lista jest ułożona alfabetycznie. Cena podpowiada się <strong>automatycznie z cennika</strong> — możesz ją skorygować ręcznie jeśli np. dajesz rabat ("Dla stałej klientki -10%").</span></div></div>
+      <div class="step"><div class="num">4</div><div><strong>(Opcjonalnie) Dodaj kolejne pozycje</strong><span>Przycisk "+ Dodaj kolejną pozycję" — możesz wrzucić zabieg + krem + bon w jedną transakcję. Wszystko będzie miało jednego klienta i ten sam rachunek.</span></div></div>
+      <div class="step"><div class="num">5</div><div><strong>Wybierz metodę płatności</strong><span>Z listy: <code>💵 Gotówka</code> · <code>💳 Karta</code> · <code>📱 Blik</code> · <code>🏦 Przelew</code> · <code>💸 MediRaty</code> · <code>📅 TubaPay (0% raty)</code> · <code>🔀 Mix</code> · <code>🅱️ Booksy</code> · <code>🌐 TPay</code> · <code>👛 Portfel/Zadatek</code>.</span></div></div>
+      <div class="step"><div class="num">6</div><div><strong>Komentarz (opcjonalnie)</strong><span>Pole "Komentarz" — jeśli coś warto zapamiętać. Np. "Zabieg promo w cenie 250 zł zamiast 350" albo "Klientka oddała tester".</span></div></div>
+      <div class="step"><div class="num">7</div><div><strong>Kliknij "Dodaj sprzedaż"</strong><span>Transakcja wpada do bazy. Magazyn (jeśli to kosmetyk) — automatycznie zmniejszony. Saldo zadatku (jeśli płatność z portfela) — odpowiednio aktualizowane. Statystyki sprzedawców — odświeżone.</span></div></div>
+
+      <h3>Płatność typu Mix</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Klientka płaci na 3 sposoby</span>
+        <h4>Pani Maria zostawia 700 zł w 3 metodach</h4>
+        <div class="scenario-body">
+          <p>Pani Maria dostała pakiet 5 zabiegów za 700 zł. Ma w portfelu 100 zł zadatku, 200 zł chce dać kartą, 50 zł gotówką, a resztę 350 zł na MediRaty.</p>
+          <p>Marta wybiera metodę <code>🔀 Mix</code>. Otwiera się okienko "Rozdziel płatność".</p>
+          <p>Wpisuje:</p>
+          <ul>
+            <li>Gotówka: <code>50</code></li>
+            <li>Karta: <code>200</code></li>
+            <li>MediRaty / Przelew / inne: <code>350</code></li>
+          </ul>
+          <p>System automatycznie sprawdza, że suma to 600 zł — brakuje 100. Marta dodaje pozycję "Wykorzystanie zadatku 100 zł" (w innym polu lub przez Portfel — szczegóły w dziale Zadatki).</p>
+          <div class="scenario-result">Każda metoda zapisała się osobno w statystykach. Klientka odeszła zadowolona, bo wykorzystała zadatek + zapłaciła resztę swobodnie.</div>
+        </div>
+      </div>
+
+      <p>Wybierasz <strong>🔀 Mix</strong> i otwiera się okienko, gdzie wpisujesz kwoty częściowe. System sam sprawdzi, czy się sumują do całości.</p>
+
+      <h3>Wykorzystanie portfela / zadatku</h3>
+      <p>Klientka wpłaciła wcześniej zadatek? Wybierz metodę <strong>👛 Portfel</strong> lub <strong>👛 Zadatek</strong>. System pokaże dostępną kwotę przy nazwisku klientki i zaktualizuje saldo po sprzedaży.</p>
+
+      <div class="warning"><strong>Pamiętaj:</strong> jeśli klient płaci kartą i jeszcze coś dorzuca w innej formie — to NIE jest dwie sprzedaże, tylko jedna z metodą Mix. Inaczej system pokaże 2 transakcje w statystykach (zafałszowuje średnią paragonu i statystyki sprzedawców).</div>
+
+      <h3>Edycja / usunięcie pomyłkowej sprzedaży</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Pomyłka recepcji</span>
+        <h4>Marta zła wpisała kwotę — zamiast 350 wpisała 35</h4>
+        <div class="scenario-body">
+          <p>Marta zauważyła pomyłkę pół godziny później. Wchodzi w "Historia sprzedaży" w menu Sprzedaży. Znajduje swoją transakcję na liście. Klika "Edytuj" przy wierszu.</p>
+          <p>Otwiera się modal — Marta poprawia kwotę na 350 zł. Klika "Zapisz".</p>
+          <div class="scenario-result">Sprzedaż zaktualizowana. W logach jest wpis: "Marta zmieniła kwotę z 35 na 350" + data, godzina. Manager widzi historię edycji.</div>
+        </div>
+      </div>
+
+      <p>Wszystkie edycje są <strong>logowane</strong> — manager widzi w "Dzienniku zdarzeń" co kto poprawił. Nie bój się robić korekt — lepiej skorygować niż zostawić błąd.</p>
+
+      <div class="tip"><strong>💡 Złota zasada:</strong> jeśli nie jesteś pewna jak wpisać sprzedaż (np. dziwna kombinacja płatności), wpisz najpierw bezpiecznie najprostszą wersję, potem skoryguj. Lepiej mieć poprawioną sprzedaż niż w ogóle żadnej.</div>
+    </section>
+
+    <!-- ZADATKI -->
+    <section class="card" id="zadatki">
+      <div class="card-header">
+        <div class="card-icon">👛</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 04 · Pieniądze "na koncie"</div>
+          <h2>Zadatki i portfel klienta</h2>
+        </div>
+      </div>
+      <p class="lead">Klientka wpłaciła zaliczkę przed zabiegiem? Kupiła pakiet 5 zabiegów z góry? Dostała bon na urodziny? Zostawiła "kasę na koncie" do wykorzystania? To wszystko zadatki / portfel. System pilnuje, ile każda klientka ma do wykorzystania.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Pakiet endermologii — wpłata</span>
+        <h4>Pani Kasia kupuje pakiet 5 zabiegów Endermologii za 1500 zł</h4>
+        <div class="scenario-body">
+          <p>Pani Kasia decyduje się na pakiet — dostała 200 zł rabatu, więc zamiast 1700 zł zapłaci 1500 zł. Płaci kartą, ale chce mieć zabiegi na koncie żeby umawiać się elastycznie.</p>
+          <p>Marta wchodzi w "Sprzedaż" → przycisk pomarańczowy <strong>"+ Wpłata zadatku"</strong>.</p>
+          <p>W formularzu wpisuje:</p>
+          <ul>
+            <li>Klientka: <code>Pani Kasia Wiśniewska</code></li>
+            <li>Kwota: <code>1500</code></li>
+            <li>Metoda: <code>💳 Karta</code></li>
+            <li>Cel: <code>Pakiet 5x Endermologia Infinity (rabat -200 zł)</code></li>
+            <li>Pracownik: <code>Marta</code></li>
+          </ul>
+          <p>Klika "Zatwierdź wpłatę".</p>
+          <div class="scenario-result">Pani Kasia ma 1500 zł w portfelu. Przy każdym kolejnym zabiegu Marta wybierze metodę "Portfel" i odejmie cenę zabiegu z salda. System pilnuje, ile zostało.</div>
+        </div>
+      </div>
+
+      <h3>Wpisanie zadatku / wpłaty na portfel</h3>
+      <p>Wchodzisz w <strong>Sprzedaż → Wpłata zadatku</strong> (zwykle pomarańczowy przycisk). Wypełniasz:</p>
+      <ul>
+        <li><strong>Klientkę</strong> z bazy (jak nowa — najpierw dodaj w Klienci)</li>
+        <li><strong>Kwotę</strong> wpłacaną</li>
+        <li><strong>Metodę płatności</strong> — Gotówka/Karta/Blik/Przelew/...</li>
+        <li><strong>Cel zadatku</strong> (opcjonalnie, ale zalecane) — np. "Pakiet 5x endermologia", "Zaliczka na zabieg 30.05", "Bon urodzinowy 200 zł"</li>
+        <li><strong>Pracownika</strong> obsługującego (kto przyjmował wpłatę)</li>
+      </ul>
+
+      <h3>Sprawdzanie salda klientki</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Klientka pyta ile ma na koncie</span>
+        <h4>Telefon: "Marta, ile mi zostało po ostatnim zabiegu?"</h4>
+        <div class="scenario-body">
+          <p>Marta otwiera <strong>Klienci → Klienci</strong>, wpisuje "Wiśniewska", klika profil Pani Kasi.</p>
+          <p>W profilu w sekcji "Saldo portfela" widzi: <code style="background:var(--green-soft); color:#166534; padding:3px 10px; border-radius:6px; font-weight:700;">900 zł</code> z notatką "Pakiet 5x Endermologia (1500 zł, użyto 600 zł)".</p>
+          <p>Marta sprawdza listę wykorzystania — Pani Kasia była już 2 razy (po 300 zł), zostały 3 zabiegi.</p>
+          <div class="scenario-result">Marta odpowiada: "Pani Kasiu, ma Pani jeszcze 900 zł, czyli 3 zabiegi z pakietu. Najbliższy termin?"</div>
+        </div>
+      </div>
+
+      <p>Można też sprawdzić w <strong>Sprzedaż → Spis zadatków</strong> — lista wszystkich aktywnych portfeli, ułożona po klientach lub kwocie.</p>
+
+      <h3>Wykorzystanie zadatku przy sprzedaży</h3>
+      <p>Przy zwykłej sprzedaży, w polu "Metoda płatności" wybierasz <strong>👛 Portfel</strong>. System sprawdzi saldo i:</p>
+      <ul>
+        <li>Jeśli wystarczy — zmniejszy saldo o cenę zabiegu</li>
+        <li>Jeśli nie wystarczy — pokaże ostrzeżenie i zaproponuje płatność Mix (Portfel + reszta inną metodą)</li>
+      </ul>
+
+      <h3>Statusy zadatków</h3>
+      <table>
+        <thead><tr><th>Status</th><th>Co znaczy</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AKTYWNY</strong></td><td>Klientka ma kasę do wykorzystania</td></tr>
+          <tr><td><strong>WYKORZYSTANY</strong></td><td>Saldo wyzerowane (zużyte przez sprzedaże)</td></tr>
+          <tr><td><strong>USUNIĘTY</strong></td><td>Zadatek zwrócony / pomyłka — pomijany w statystykach (rekord zostaje dla audytu)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Zwrot zadatku</h3>
+      <div class="scenario">
+        <span class="scenario-label">Klientka rezygnuje z pakietu</span>
+        <h4>Pani Anna prosi o zwrot 500 zł zadatku</h4>
+        <div class="scenario-body">
+          <p>Pani Anna wpłaciła 500 zł zaliczki na pakiet, ale zmieniła decyzję — przeprowadza się.</p>
+          <p>To sytuacja, którą trzeba zgłosić managerowi. Marta zgłasza: "Patrycja, Pani Anna chce zwrot 500 zł, OK?". Manager Patrycja decyduje, robi zwrot fizyczny (gotówka albo przelew), a w systemie oznacza zadatek jako USUNIĘTY z komentarzem "Zwrot na życzenie klientki".</p>
+          <div class="scenario-result">Zadatek zostaje w bazie ze statusem USUNIĘTY (audyt), pieniądze są zwrócone klientce, statystyki nie zawierają tego.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>💡 Dobra praktyka:</strong> w polu "Cel zadatku" wpisuj konkretnie. Zamiast "zaliczka" pisz "Zaliczka na zabieg 30.05 - Endermologia". Łatwiej później rozliczyć z klientką jeśli będą wątpliwości "co to za 200 zł?".</div>
+
+      <div class="warning"><strong>Uwaga z Mix:</strong> jeśli klientka płaci pakietem (z portfela) za zabieg który kosztuje 250 zł, ale chce dopłacić 50 zł kartą bo zabieg wzrósł — wybierz Mix i rozdziel: Portfel 250, Karta 50. Inaczej saldo się nie zgodzi.</div>
+    </section>
+
+    <!-- KOSMETYKI -->
+    <section class="card" id="kosmetyki">
+      <div class="card-header">
+        <div class="card-icon">💄</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 05 · Sprzedaż detaliczna</div>
+          <h2>Kosmetyki — sprzedaż produktu do domu</h2>
+        </div>
+      </div>
+      <p class="lead">Klientka kupuje krem, peeling, serum do domu? To wciąż zwykła sprzedaż w Estelio, ale z kategorii "Kosmetyk". System automatycznie zmniejszy stan magazynu i policzy do statystyk kosmetyków (osobno od zabiegów).</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Po zabiegu — krem do domu</span>
+        <h4>Pani Beata po endermologii bierze 2 słoiki kremu Vagheggi po 180 zł</h4>
+        <div class="scenario-body">
+          <p>Po skończonym zabiegu Julia mówi: "Pani Beato, zalecam ten krem do domu — wzmacnia efekty endermologii". Pani Beata bierze 2 słoiki.</p>
+          <p>Marta wpisuje sprzedaż:</p>
+          <ul>
+            <li>Sprzedawca: <code>Marta</code> (recepcjonistka, jako sprzedawca kosmetyku)</li>
+            <li>Klient: <code>Beata Wójcik</code></li>
+            <li>Zabieg/produkt: <code>Vagheggi twarz - krem nawilżający</code></li>
+            <li>Szczegóły: <code>2 szt.</code> (WAŻNE — wpisz precyzyjnie!)</li>
+            <li>Kwota: <code>360 zł</code> (180 × 2)</li>
+            <li>Metoda: <code>💳 Karta</code></li>
+          </ul>
+          <p>Klika "Dodaj sprzedaż".</p>
+          <div class="scenario-result">Magazyn Vagheggi zmniejszył się o 2 sztuki automatycznie. Pani Beata w "Łącznie wydano" ma +360 zł. W statystykach Marty rośnie kategoria "Kosmetyki" (osobno od zabiegów). Manager widzi to w Analizie Pracownika.</div>
+        </div>
+      </div>
+
+      <h3>Co specyficzne dla kosmetyków</h3>
+      <ul>
+        <li><strong>Stan magazynu zmniejszy się automatycznie</strong> po zatwierdzeniu sprzedaży — nie musisz nic robić ręcznie w magazynie</li>
+        <li><strong>Cena podpowie się z cennika</strong> magazynowego (cena brutto na produkcie)</li>
+        <li><strong>Liczba sztuk</strong> — wpisz precyzyjnie w polu "Szczegóły" lub "Komentarz" (np. "2 szt." jeśli klientka bierze dwa kremy). System sczyta to z formatu "2 szt." lub "1,5 szt."</li>
+        <li><strong>Po sprzedaży</strong> sprawdź w magazynie czy stan jest poprawny — szczególnie przy nowych produktach</li>
+      </ul>
+
+      <h3>Sprzedaż 0,5 szt. (np. próbka albo połowa)</h3>
+      <p>Zdarza się że sprzedajesz pół opakowania (np. ampułki w mniejszej liczbie). Wpisz w "Szczegóły": <code>0,5 szt.</code>. System odejmie 0,5 z magazynu.</p>
+
+      <h3>Zwrot kosmetyku</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Klientka oddaje krem (alergia)</span>
+        <h4>Pani Karolina oddaje krem — alergia na składnik</h4>
+        <div class="scenario-body">
+          <p>Pani Karolina przyniosła krem (kupiony 3 dni temu, otwarty raz). Mówi że jest uczulona na składnik. Salonowy regulamin przewiduje zwrot przy reakcji alergicznej.</p>
+          <p>Marta zgłasza managerowi: "Patrycja, Pani Karolina chce zwrot kremu Vagheggi 180 zł, alergia."</p>
+          <p>Manager Patrycja:</p>
+          <ol>
+            <li>Zwraca pieniądze klientce</li>
+            <li>W systemie: idzie do "Historia sprzedaży", znajduje pierwotną transakcję, klika "Edytuj" → komentarz "ZWROT - alergia, krem usunięty z magazynu"</li>
+            <li>Albo woli ją oznaczyć jako USUNIĘTĄ i ręcznie skoryguje magazyn (zwiększa stan o 1)</li>
+          </ol>
+          <div class="scenario-result">Pani Karolina ma swoje pieniądze. Magazyn jest zaktualizowany (+1 słoik, ale otwarty). Manager dodaje notatkę w profilu klientki "alergia na składnik X — nie sprzedawać tego kremu".</div>
+        </div>
+      </div>
+
+      <p>Zwroty są <strong>rzadkie</strong> — w razie wątpliwości zawsze zgłoś managerowi. Salon ma swój regulamin zwrotów (zwykle: nieotwierany produkt + paragon w 14 dni).</p>
+
+      <div class="tip"><strong>💡 Sprzedaż wielu kosmetyków na raz:</strong> klientka bierze krem + serum + peeling? Dodaj 3 pozycje w jednej sprzedaży (przycisk "+ Dodaj kolejną pozycję"). Płatność jedna, ale system widzi 3 produkty i zmniejsza 3 stany magazynowe.</div>
+    </section>
+
+    <!-- KLIENCI -->
+    <section class="card" id="klienci">
+      <div class="card-header">
+        <div class="card-icon">👥</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 06 · Twoja baza wiedzy</div>
+          <h2>Klienci — kartoteka i profil</h2>
+        </div>
+      </div>
+      <p class="lead">Każda klientka ma swój profil ze wszystkim: dane kontaktowe, historia wizyt, dokumenty RODO, zadatki, notatki. To Twoja "encyklopedia klientek" — przed każdym zabiegiem zerknij, żeby przypomnieć sobie szczegóły.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Pani Anna dzwoni</span>
+        <h4>Telefon o 11:30: "Pani Marto, czy mogę przyjść jutro o 14?"</h4>
+        <div class="scenario-body">
+          <p>Marta odbiera, ale nie pamięta od razu Pani Anny. Otwiera <strong>Klienci → Klienci</strong>, wpisuje "Anna" w wyszukiwarce.</p>
+          <p>Pojawia się 5 Ann. Marta wybiera "Anna Nowak (ID 234)".</p>
+          <p>W profilu widzi:</p>
+          <ul>
+            <li>Telefon, email, adres</li>
+            <li>Data urodzenia: 15.06.1985</li>
+            <li>Łącznie wydano: 4 580 zł</li>
+            <li>Saldo portfela: 250 zł</li>
+            <li>Historia wizyt: ostatnia 3 tygodnie temu (Endermologia)</li>
+            <li>Notatka: "Lubi rumiankową herbatę. Nie sprzedawać retinolu (alergia)."</li>
+          </ul>
+          <div class="scenario-result">Marta odpowiada: "Pani Aniu, oczywiście! Mam 14:00 wolne. Czy znów Endermologia? Mam 250 zł na Pani koncie z poprzedniego pakietu — wystarczy na pełny zabieg."</div>
+        </div>
+      </div>
+
+      <h3>Wejście do kartoteki</h3>
+      <p>Menu po lewej → <strong>Klienci → Klienci</strong>. Lista wszystkich osób w bazie. U góry wyszukiwarka — wpisz fragment imienia, nazwiska, telefonu lub ID. System filtruje na żywo.</p>
+
+      <h3>Co znajdziesz w profilu klientki</h3>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">📋</div><strong>Dane podstawowe</strong><span>Imię, nazwisko, telefon, email, data urodzenia, adres, ID</span></div>
+        <div class="feature"><div class="feature-icon">💰</div><strong>Łącznie wydano</strong><span>Suma wszystkich transakcji historycznie (sprzedaż + portfel)</span></div>
+        <div class="feature"><div class="feature-icon">👛</div><strong>Saldo portfela</strong><span>Ile zadatku ma do wykorzystania, z opisem celu</span></div>
+        <div class="feature"><div class="feature-icon">📅</div><strong>Historia wizyt</strong><span>Wszystkie zabiegi/zakupy chronologicznie z kwotami</span></div>
+        <div class="feature"><div class="feature-icon">🛡️</div><strong>Dokumenty RODO</strong><span>Które zgody zostały podpisane, pliki załączone</span></div>
+        <div class="feature"><div class="feature-icon">📝</div><strong>Notatki</strong><span>Twoje uwagi: alergie, preferencje, ważne info</span></div>
+      </div>
+
+      <h3>Dodawanie nowego klienta</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Nowa klientka — pierwsza wizyta</span>
+        <h4>Do salonu wchodzi nowa klientka, polecona przez znajomą</h4>
+        <div class="scenario-body">
+          <p>Marta przyjmuje zlecenie konsultacji. Pyta klientkę o dane:</p>
+          <p>Otwiera <strong>Klienci → Dodaj klienta</strong>. Wypełnia:</p>
+          <ul>
+            <li>Imię: <code>Magdalena</code></li>
+            <li>Nazwisko: <code>Kwiatkowska</code></li>
+            <li>Telefon: <code>+48 502 123 456</code></li>
+            <li>Email: <code>m.kwiatkowska@gmail.com</code></li>
+            <li>Data urodzenia: <code>22.03.1990</code></li>
+            <li>Adres: <code>ul. Kwiatowa 12, Warszawa</code></li>
+          </ul>
+          <p>Klika "Zapisz". System nadaje ID 487.</p>
+          <p>Marta od razu daje Pani Magdalenie do podpisania zgodę RODO i regulamin (papierowo). Po podpisaniu zaznacza w profilu Magdaleny "RODO podpisana", "Regulamin podpisany".</p>
+          <div class="scenario-result">Pani Magdalena jest w bazie. Marta od razu może umówić ją na konsultację, sprzedać produkt, zarejestrować przyszłą wizytę. Manager nie martwi się że ktoś nowy "umknął".</div>
+        </div>
+      </div>
+
+      <p>W formularzu nowego klienta:</p>
+      <ul>
+        <li><strong>Imię + Nazwisko</strong> — wymagane</li>
+        <li><strong>Telefon</strong> — bardzo zalecane (urodziny, retencja, kontakt)</li>
+        <li><strong>Email</strong> — opcjonalne, przydatne do mailingów</li>
+        <li><strong>Data urodzenia</strong> — opcjonalne, ale aktywuje moduł urodzin</li>
+        <li><strong>Adres</strong> — jeśli klient chce fakturę albo ma być wysyłany kosmetyk pocztą</li>
+      </ul>
+
+      <p>System automatycznie nada ID. Po dodaniu od razu możesz nową klientkę używać w sprzedaży.</p>
+
+      <h3>Edycja danych klientki</h3>
+      <p>W kartotece kliknij imię → otwiera się profil → przycisk "Edytuj dane". Zmień, co trzeba, zapisz. Wszystkie zmiany są logowane.</p>
+
+      <h3>Notatki — najlepszy schowek na info</h3>
+      <p>Pole "Notatki" w profilu — pisz wszystko ważne:</p>
+      <ul>
+        <li><strong>Alergie:</strong> "uczulona na retinol", "alergia na olejek z drzewa herbacianego"</li>
+        <li><strong>Preferencje:</strong> "lubi muzykę spokojną", "nie pije czarnej herbaty"</li>
+        <li><strong>Sytuacje rodzinne:</strong> "ma dzieci, czasem trzeba przesunąć wizytę", "męża pracuje za granicą — mało elastyczna"</li>
+        <li><strong>Ważne info:</strong> "raz odmówiła konsultacji za 100 zł — mówić zniżkowo"</li>
+      </ul>
+
+      <div class="warning"><strong>Uwaga:</strong> usuwanie klientki to ostateczność. Jeśli klientka prosi o "zapomnienie" w ramach RODO — zgłoś to managerowi, jest osobna procedura która chroni historię finansową (zostaje anonimowa "Klient #1234" przy zachowaniu liczb sprzedaży, bo prawo podatkowe wymaga 5 lat).</div>
+
+      <div class="tip"><strong>💡 Procedura przy nowej klientce:</strong> 1) Dodaj do bazy. 2) Daj do podpisania RODO + regulamin. 3) Wpisz krótko w notatkach skąd ją masz ("polecenie od Pani Anny"). 4) Pierwsza wizyta: konsultacja w Konsultacjach.</div>
+    </section>
+
+    <!-- URODZINY -->
+    <section class="card" id="urodziny">
+      <div class="card-header">
+        <div class="card-icon">🎂</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 07 · Personalna troska</div>
+          <h2>Urodziny klientów</h2>
+        </div>
+      </div>
+      <p class="lead">System sam pilnuje, kto ma urodziny — wystarczy mieć datę urodzenia w profilu. Twoja praca: zadzwonić, złożyć życzenia, zaproponować rabat lub bon. Mała czynność, wielki efekt na lojalność klientek.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Poniedziałek 9:30 — przegląd urodzin</span>
+        <h4>Marta zaczyna tydzień od sprawdzenia kto obchodzi urodziny</h4>
+        <div class="scenario-body">
+          <p>Marta wchodzi w <strong>Klienci → Urodziny</strong>. System pokazuje 3 sekcje:</p>
+          <ul>
+            <li><strong>DZIŚ (poniedziałek 12.05):</strong> Anna Kowalska (35 lat), Maria Wójcik (28 lat)</li>
+            <li><strong>W tym tygodniu (do niedzieli):</strong> 4 osoby</li>
+            <li><strong>W tym miesiącu:</strong> 14 osób</li>
+          </ul>
+          <p>Marta zaczyna od dzisiejszych. Klika telefon przy Annie Kowalskiej. Numer się kopiuje. Marta dzwoni:</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Aniu, dzień dobry! Marta z salonu Estelio. Z okazji urodzin chciałam Pani złożyć życzenia — wszystkiego najlepszego!</div></div>
+            <div class="sample-line"><div class="sample-who">Anna:</div><div class="sample-text">O dziękuję, jak miło! Zaskoczyłaście mnie!</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Mamy też dla Pani niespodziankę — 15% rabatu na kolejny zabieg ważny do końca miesiąca. Mogę umówić Panią na coś?</div></div>
+            <div class="sample-line"><div class="sample-who">Anna:</div><div class="sample-text">Faktycznie planowałam Endermologię, mogę w czwartek?</div></div>
+          </div>
+          <p>Marta dodaje komentarz w urodzinach: "Oddzwoniono, życzenia złożone. Umówiona na czwartek 14:00 - 15% rabat ze względu na urodziny."</p>
+          <div class="scenario-result">Anna jest zaopiekowana, ma rabat, jest umówiona. Salon zyskuje wizytę i lojalność. To 5 minut Marty zamienione w 350 zł sprzedaży.</div>
+        </div>
+      </div>
+
+      <h3>Co pokazuje sekcja Urodziny</h3>
+      <ul>
+        <li><strong>Dziś</strong> — kto ma urodziny dzisiaj. Zadzwoń!</li>
+        <li><strong>W tym tygodniu</strong> — kto będzie miał, możesz przygotować się</li>
+        <li><strong>W tym miesiącu</strong> — pełen przegląd</li>
+      </ul>
+
+      <p>Przy każdym wpisie:</p>
+      <ul>
+        <li>Imię + wiek (Pani Anna, 35 lat)</li>
+        <li>Telefon — klikalny, kopiuje się lub dzwoni (zależnie od urządzenia)</li>
+        <li>Ostatnia wizyta — wiesz, czy klientka jest "ciepła" czy "śpiąca"</li>
+        <li>Łącznie wydano — wiesz, jaka skala jubilatki</li>
+        <li>Komentarz — to co wpisała poprzednia recepcja</li>
+      </ul>
+
+      <h3>Procedura urodzinowa salonu</h3>
+      <ol>
+        <li><strong>Sprawdź</strong> w urodzinach kto ma dziś</li>
+        <li><strong>Zadzwoń</strong> — życzenia + propozycja</li>
+        <li><strong>Zaproponuj</strong>:
+          <ul>
+            <li>Jubilatki "ciepłe" (były niedawno) — 10-15% rabat na kolejny zabieg</li>
+            <li>Jubilatki "śpiące" (>3 miesiące) — bon 100-200 zł na powrót</li>
+            <li>VIP-y (wydały >3000 zł) — większy gest, np. zabieg w prezencie albo pakiet</li>
+          </ul>
+        </li>
+        <li><strong>Zaznacz w komentarzu</strong> — co zaproponowałaś, jaka odpowiedź</li>
+      </ol>
+
+      <h3>Kiedy NIE dzwonić</h3>
+      <p>Salon ma swoje zasady, ale ogólne:</p>
+      <ul>
+        <li>Klientki które wyraźnie poprosiły "bez kontaktu" (zaznaczone w notatkach)</li>
+        <li>Klientki bez podpisanej zgody marketingowej (RODO)</li>
+        <li>Klientki problematyczne (oznaczone przez managera)</li>
+      </ul>
+
+      <div class="tip"><strong>💡 Praktyka:</strong> w niedzielę wieczorem przeglądnij urodziny na cały tydzień — przygotuj się jakie rabaty/bony zaproponujesz konkretnym klientkom. Manager z radością widzi takie planowanie.</div>
+
+      <div class="warning"><strong>Pamiętaj:</strong> dzwoniąc, NIE mów "z okazji urodzin daję pani rabat" tylko "dla pani jako stałej klientki mamy specjalną propozycję". Klientki nie chcą być traktowane "rabatowo", chcą się czuć ważne.</div>
+    </section>
+
+    <!-- DOKUMENTY/RODO -->
+    <section class="card" id="dokumenty">
+      <div class="card-header">
+        <div class="card-icon">🛡️</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 08 · Wymóg prawny</div>
+          <h2>Dokumenty RODO i regulamin</h2>
+        </div>
+      </div>
+      <p class="lead">RODO to nie biurokracja — to ochrona klientki i Twojego salonu. Estelio pilnuje, kto co podpisał, alarmuje gdy brakuje, ułatwia procedurę "prawa do zapomnienia". Twoja rola: przy pierwszej wizycie dać do podpisu, zaznaczyć w systemie.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Nowa klientka — pełna procedura RODO</span>
+        <h4>Pani Magdalena przyszła na konsultację po raz pierwszy</h4>
+        <div class="scenario-body">
+          <p>Marta po dodaniu Magdaleny do bazy mówi:</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Magdaleno, zanim zaczniemy konsultację, muszę poprosić o podpisanie kilku dokumentów — to standard w branży kosmetologicznej.</div></div>
+            <div class="sample-line"><div class="sample-who">Magdalena:</div><div class="sample-text">Oczywiście, co to za papiery?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Trzy: zgoda RODO na przetwarzanie danych, regulamin salonu, i zgoda na zabiegi (po konsultacji jak ustalimy plan). Wszystko standardowe, klientki podpisują u każdego kosmetologa.</div></div>
+          </div>
+          <p>Marta drukuje dokumenty z systemu (Estelio ma szablony). Magdalena podpisuje. Marta:</p>
+          <ol>
+            <li>Skanuje dokumenty (lub robi zdjęcia telefonem)</li>
+            <li>Otwiera profil Magdaleny w Estelio</li>
+            <li>W sekcji "Dokumenty RODO" wybiera "Załącz plik" → wgrywa skany</li>
+            <li>Zaznacza checkboxy: ✓ RODO podpisana, ✓ Regulamin podpisany</li>
+          </ol>
+          <div class="scenario-result">Magdalena ma komplet dokumentów. Manager spał spokojnie — w razie kontroli RODO masz dowody. Klientka czuje że to profesjonalny salon.</div>
+        </div>
+      </div>
+
+      <h3>Co klientka podpisuje przy pierwszej wizycie</h3>
+      <ul>
+        <li><strong>Zgoda na przetwarzanie danych osobowych (RODO)</strong> — podstawowa, wymagana</li>
+        <li><strong>Regulamin salonu</strong> — zasady wizyt, odwoływania, zwrotów</li>
+        <li><strong>Zgoda marketingowa</strong> (opcjonalnie) — czy mogą do niej dzwonić z propozycjami, urodzinami</li>
+        <li><strong>Zgoda na zabieg konkretny</strong> (przy zabiegach inwazyjnych) — np. mezoterapia, peeling chemiczny</li>
+      </ul>
+
+      <h3>Sprawdzanie kompletności dokumentów</h3>
+      <p>W profilu klientki widzisz, które zgody są podpisane (lista z checkboxami). W "<strong>Wymaga uwagi</strong>" na Pulpicie pojawia się alert "<em>X klientów bez kompletu dokumentów</em>" — kliknięcie pokaże listę.</p>
+
+      <h3>Klientka prosi o "zapomnienie"</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Prawo do zapomnienia — RODO</span>
+        <h4>Pani Karolina prosi o usunięcie wszystkich danych</h4>
+        <div class="scenario-body">
+          <p>Pani Karolina dzwoni: "Proszę o usunięcie moich wszystkich danych z państwa systemu". Powołuje się na RODO. To jest jej prawo — masz 30 dni na wykonanie.</p>
+          <p>Marta zgłasza managerowi Patrycji. Patrycja:</p>
+          <ol>
+            <li>Otwiera profil Pani Karoliny w Estelio</li>
+            <li>Klika "RODO usuń" / "Anonimizuj"</li>
+            <li>System zamienia: imię + nazwisko + telefon + email + adres → "Klient #487" / pole puste</li>
+            <li>Historia finansowa (kwoty wydane, daty) zostaje — bo prawo podatkowe wymaga 5 lat</li>
+          </ol>
+          <p>Patrycja informuje Karolinę pisemnie (mail) że zlecenie wykonane.</p>
+          <div class="scenario-result">Pani Karolina ma usunięte dane osobowe. Salon ma zachowaną historię finansową dla US. Wszyscy zadowoleni, prawo zachowane.</div>
+        </div>
+      </div>
+
+      <h3>Co system pomaga z RODO</h3>
+      <ul>
+        <li>Liczy klientki bez kompletnych zgód i pokazuje w Pulpicie</li>
+        <li>Pozwala wprowadzić skan/fotkę dokumentu (załącznik do profilu)</li>
+        <li>Zaznacza w profilu, które zgody są podpisane</li>
+        <li>Zapewnia procedurę "prawa do zapomnienia" zachowując historię finansową</li>
+      </ul>
+
+      <div class="info"><strong>Dlaczego to ważne:</strong> kontrola RODO może wpaść na każdy salon. Brak podpisanych zgód = kara do 4% rocznych przychodów. Estelio chroni Cię — daje narzędzie i alerty.</div>
+    </section>
+
+    <!-- MAGAZYN -->
+    <section class="card" id="magazyn">
+      <div class="card-header">
+        <div class="card-icon">📦</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 09 · Stan i zamówienia</div>
+          <h2>Magazyn — pilnowanie zapasów</h2>
+        </div>
+      </div>
+      <p class="lead">Wszystkie produkty (kosmetyki, akcesoria) są w magazynie. System pilnuje stanów, alarmuje gdy coś się kończy lub kończy ważność, mówi co zamówić. Twoja rola: sprawdzać alerty, dodawać nowe dostawy, robić cykliczne inwentaryzacje.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Nowa dostawa — Vagheggi</span>
+        <h4>Wczoraj przyszedł karton kremów Vagheggi — 12 słoików</h4>
+        <div class="scenario-body">
+          <p>Marta wchodzi w <strong>Magazyn → Stan magazynowy</strong>. Znajduje pozycję "Vagheggi twarz - krem nawilżający". Stan obecny: 2 sztuki (poprzednia dostawa się skończyła).</p>
+          <p>Klika ✏️ przy produkcie. Otwiera się modal edycji:</p>
+          <ul>
+            <li>Aktualna ilość: <code>2</code> → zmienia na <code>14</code> (2 + 12 nowych)</li>
+            <li>Cena netto: <code>120</code> (bez zmian, jeśli się nie zmieniła)</li>
+            <li>Cena brutto: <code>180</code> (bez zmian)</li>
+            <li>Data ważności: <code>2027-12-31</code> (z nowej dostawy, jeśli różna)</li>
+          </ul>
+          <p>Klika "Zapisz".</p>
+          <div class="scenario-result">Stan kremów wzrósł z 2 do 14. Alert "niski stan" zniknął. W logach jest wpis "Marta zwiększyła stan z 2 do 14 (dostawa)". Manager widzi.</div>
+        </div>
+      </div>
+
+      <h3>Stan magazynowy — co widzisz</h3>
+      <p>Menu → <strong>Magazyn → Stan magazynowy</strong>. Lista produktów z kolumnami:</p>
+      <table>
+        <thead><tr><th>Kolumna</th><th>Co znaczy</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Nazwa produktu</strong></td><td>Pełna nazwa kosmetyku</td></tr>
+          <tr><td><strong>Ilość</strong></td><td>Aktualna na półce (kolory: zielona = OK, żółta = niski, czerwona = brak)</td></tr>
+          <tr><td><strong>Cena netto</strong></td><td>Bez VAT (dla obliczania marży)</td></tr>
+          <tr><td><strong>Cena brutto</strong></td><td>Z VAT (cena sprzedaży klientowi)</td></tr>
+          <tr><td><strong>Data ważności</strong></td><td>Czerwona = po dacie, żółta = blisko, normalna = OK</td></tr>
+          <tr><td><strong>Akcje</strong></td><td>✏️ Edytuj, opcjonalnie 🗑 Usuń (manager)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Dodanie nowego produktu (nowy artykuł w cenniku)</h3>
+      <p>Przycisk "+ Dodaj produkt". Wypełnij:</p>
+      <ul>
+        <li>Nazwa produktu (np. "Vagheggi serum nawilżające 30ml")</li>
+        <li>Ilość początkowa (np. 6)</li>
+        <li>Cena netto (np. 80)</li>
+        <li>Cena brutto (np. 120)</li>
+        <li>Data ważności (np. 2027-06-30)</li>
+      </ul>
+      <p>Klika "Dodaj". Produkt pojawia się w stanie magazynowym i w liście rozwijanej przy sprzedaży.</p>
+
+      <h3>Edycja produktu — zmiana stanu</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Wzięcie własne pracownika</span>
+        <h4>Julia bierze tester kremu dla siebie</h4>
+        <div class="scenario-body">
+          <p>Julia testuje krem Vagheggi (nowość) na sobie żeby móc polecać klientkom. Bierze 1 słoik (180 zł).</p>
+          <p>Marta jako recepcjonistka aktualizuje magazyn:</p>
+          <ol>
+            <li>Wchodzi w "Stan magazynowy"</li>
+            <li>Klika ✏️ przy Vagheggi krem</li>
+            <li>Zmniejsza stan z 14 na 13</li>
+            <li><strong>System WYMAGA podania powodu</strong> (bo to zmniejszenie nie przez sprzedaż)</li>
+            <li>Marta wpisuje: <code>"Julia - tester do polecania klientkom (zatwierdzone przez Patrycję)"</code></li>
+            <li>Zapisuje</li>
+          </ol>
+          <div class="scenario-result">Magazyn zaktualizowany. W logach: "Marta zmniejszyła Vagheggi krem z 14 do 13 — POWÓD: Julia tester (zatwierdzone)". Manager widzi i wie że to nie pomyłka, nie kradzież, tylko wzięcie z autoryzacją.</div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>Bardzo ważne:</strong> jeśli zmniejszasz stan produktu (poza sprzedażą która robi to automatycznie) — system <strong>wymaga podania powodu</strong>. To audyt — żeby manager wiedział, dlaczego stan spadł. Przykładowe powody:</div>
+      <ul>
+        <li>"Tester pracownika" (z autoryzacją managera)</li>
+        <li>"Zepsute opakowanie - wyrzucono"</li>
+        <li>"Pomyłka inwentaryzacyjna - korekta"</li>
+        <li>"Darowizna na akcję marketingową"</li>
+        <li>"Próbka dla klientki (gratis)"</li>
+        <li>"Po dacie ważności - zutylizowano"</li>
+      </ul>
+
+      <h3>Co zamówić — automatyczna lista</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Czwartek = przegląd zamówień</span>
+        <h4>Marta sprawdza co trzeba zamówić u dostawców</h4>
+        <div class="scenario-body">
+          <p>Menu → <strong>Magazyn → Co zamówić</strong>. System pokazuje:</p>
+          <ul>
+            <li>Vagheggi krem nawilżający — stan: 2 (niski!) → sugerowane: 12 sztuk</li>
+            <li>Endermologia preparat — stan: 1 (krytyczny!) → sugerowane: 5 sztuk</li>
+            <li>Karboksyterapia płyn — data ważności za 30 dni → sugerowane: nie zamawiać, zużyć obecne</li>
+          </ul>
+          <p>Marta wysyła email do dostawcy Vagheggi: "Proszę o 12 słoików kremu nawilżającego, zamówienie standardowe".</p>
+          <div class="scenario-result">Zamówienie wysłane. Marta dodaje zadanie "Sprawdź czy dostawa Vagheggi przyszła w piątek" do Zadań na piątek.</div>
+        </div>
+      </div>
+
+      <h3>Historia ruchu</h3>
+      <p>Menu → <strong>Magazyn → Historia</strong>. Cała historia zmian stanów — kto, kiedy, co dodał/usunął, z jakim powodem. Manager używa tego do kontroli.</p>
+
+      <div class="tip"><strong>💡 Praktyka:</strong> sprawdzaj "Co zamówić" raz w tygodniu (np. czwartek rano). Wystarczy 5 minut żeby uniknąć "skończył się krem na zabiegu" za miesiąc.</div>
+    </section>
+
+    <!-- INWENTARYZACJA -->
+    <section class="card" id="inwentaryzacja">
+      <div class="card-header">
+        <div class="card-icon">🧮</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 10 · Cykliczny audyt</div>
+          <h2>Inwentaryzacja</h2>
+        </div>
+      </div>
+      <p class="lead">Cyklicznie (raz w miesiącu, na koniec roku) sprawdzasz, czy stan systemu zgadza się z tym co fizycznie jest na półkach. To kluczowe — bez inwentaryzacji nie wiadomo czy ktoś coś bierze "po cichu", czy systemowe pomyłki rosną.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Miesięczna inwentaryzacja</span>
+        <h4>Ostatni piątek miesiąca, 16:00 — Marta i Julia robią inwentaryzację</h4>
+        <div class="scenario-body">
+          <p>Po zamknięciu salonu Marta z Julią siadają z tabletem do inwentaryzacji.</p>
+          <p>Plan: Julia <strong>liczy fizycznie</strong> (przegląda półki, otwiera szufladki), Marta <strong>wpisuje</strong> w tablet.</p>
+          <p>Menu → <strong>Magazyn → Inwentaryzacja</strong>. Lista wszystkich 124 produktów.</p>
+          <p>Procedura per produkt:</p>
+          <ol>
+            <li>Julia bierze produkt z półki, czyta nazwę, liczy sztuki</li>
+            <li>Marta wpisuje liczbę w polu "Faktyczna ilość"</li>
+            <li>System pokazuje: <strong>system: 14 / faktycznie: 13</strong> → pole zielone gdy zgadza się, czerwone gdy różnica</li>
+          </ol>
+          <p>Po 90 minutach, 124 produkty sprawdzone. Wyniki:</p>
+          <ul>
+            <li>120 produktów się zgadzało ✓</li>
+            <li>3 produkty miały mniej niż w systemie (sumaryczna różnica: -3 sztuki)</li>
+            <li>1 produkt miał o 1 więcej (pewnie ktoś nie wpisał ostatniej dostawy)</li>
+          </ul>
+          <p>Marta klika "Zatwierdź inwentaryzację". System koryguje stany na faktyczne.</p>
+          <div class="scenario-result">Magazyn zsynchronizowany z rzeczywistością. W logach jest pełen raport różnic. Manager Patrycja po weekendzie sprawdza raport — zauważa, że krem do rąk minus 2 = warto zapytać kosmetologów czy ktoś nie zapomniał wpisać sprzedaży.</div>
+        </div>
+      </div>
+
+      <h3>Procedura inwentaryzacji</h3>
+      <ol>
+        <li>Wybierz dzień — <strong>po zamknięciu salonu</strong>, najlepiej koniec miesiąca</li>
+        <li>Wejdź w <strong>Magazyn → Inwentaryzacja</strong></li>
+        <li>Lista wszystkich produktów z kolumną "Faktyczna ilość"</li>
+        <li>Idź po kolei z koleżanką (jedna liczy, druga wpisuje)</li>
+        <li>System na bieżąco pokazuje różnice</li>
+        <li>Po skończeniu kliknij "Zatwierdź"</li>
+        <li>System zapisuje korektę i raport różnic</li>
+      </ol>
+
+      <div class="tip"><strong>💡 Dobra praktyka:</strong> rób inwentaryzację we DWIE osoby — recepcja+kosmetolog. Jedna liczy fizycznie, druga wpisuje. Mniej pomyłek, szybciej, sprawiedliwiej (nikt nie pisze "sam swoje liczby").</div>
+
+      <h3>Po inwentaryzacji — analiza różnic</h3>
+      <p>Manager Patrycja wieczorem przegląda raport. Częste przyczyny różnic:</p>
+      <ul>
+        <li><strong>Sprzedaż nie wpisana</strong> — kosmetolog dał klientce produkt ale nie zarejestrował</li>
+        <li><strong>Tester pracownika bez wpisu</strong> — ktoś wziął i zapomniał</li>
+        <li><strong>Pomyłka inwentaryzacyjna z poprzedniego razu</strong></li>
+        <li><strong>Zniknięcie</strong> — niestety czasem się zdarza, manager bada dalej</li>
+      </ul>
+
+      <div class="warning"><strong>Bezpieczeństwo:</strong> nigdy nie zatwierdzaj inwentaryzacji "z głowy" bez fizycznego liczenia. To jest cały sens audytu — różnice są informacją, nie problemem do schowania.</div>
+    </section>
+
+    <!-- ZADANIA -->
+    <section class="card" id="zadania">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 11 · Esteliowy ToDoist</div>
+          <h2>Zadania zespołu</h2>
+        </div>
+      </div>
+      <p class="lead">Manager zostawił Ci zadanie? Chcesz zostawić notatkę drugiej recepcjonistce? Praktykantka ma listę "do zrobienia"? Wszystko tutaj — wbudowane w Pulpit, z kategoriami, priorytetami, deadline'ami, komentarzami.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Manager zlecił zadanie z klientem</span>
+        <h4>Patrycja zostawiła Marcie zadanie "Zadzwoń do Pani Kowalskiej"</h4>
+        <div class="scenario-body">
+          <p>Patrycja (manager) wieczorem przed wyjściem zauważyła że Pani Kowalska napisała w wiadomościach że chce odwołać piątkową wizytę. Tworzy zadanie:</p>
+          <ul>
+            <li>Tytuł: <code>Zadzwoń do Pani Kowalskiej w sprawie ratacji</code></li>
+            <li>Opis: <code>Napisała w wiadomościach że nie może w piątek 14:00. Spróbuj umówić na inny termin albo na sobotę. Numer w profilu.</code></li>
+            <li>Kategoria: <code>👤 Klient</code></li>
+            <li>Priorytet: <code>🔴 Pilny</code></li>
+            <li>Przypisane do: <code>Marta</code></li>
+            <li>Deadline: <code>jutro 14:00</code></li>
+            <li>Powiązany klient: <code>Anna Kowalska (ID 234)</code> — wpisuje "Kowalska", klika z dropdownu</li>
+          </ul>
+          <p>Klika "Zapisz". Zadanie pojawia się natychmiast.</p>
+          <p>Następnego dnia Marta loguje się o 9:00, widzi Pulpit. Banner pokazuje "Masz 3 zadania na dziś, 1 wymaga pilnego działania". W zakładce 👤 Klient widzi zadanie z czerwonym paskiem (priorytet pilny).</p>
+          <p>Marta klika kafelkę zadania → rozwija się opis. Klika niebieski badge "👤 Anna Kowalska →" → otwiera się profil klientki. Marta widzi telefon, dzwoni.</p>
+          <p>Po telefonie wraca do zadania, klika ⋮ → "Komentarze" → wpisuje: "Oddzwoniono. Klientka umówiona na sobotę 11:00 zamiast piątku. Powtórzono komentarz w sprzedaży."</p>
+          <p>Klika "✓ Zrobione". Wiersz fade-out, zielona ikona. Po sekundzie znika z aktywnych.</p>
+          <div class="scenario-result">Zadanie zamknięte z komentarzem. Patrycja (manager) widzi w "Zlecone przeze mnie" że Marta zrealizowała. Klientka jest umówiona. Komunikacja w salonie zachowana.</div>
+        </div>
+      </div>
+
+      <h3>Gdzie znajdziesz zadania?</h3>
+      <p>Na <strong>Pulpicie</strong>, zaraz pod sekcją "Na dziś". Widget nazywa się <em>"Twoje zadania"</em> (recepcja/praktykantka) lub <em>"Zadania zespołu"</em> (manager/admin).</p>
+
+      <h3>Co widzisz w widget'cie</h3>
+      <ul>
+        <li><strong>Banner</strong> — "🎯 Masz X zadań na dziś, Y wymagają pilnego działania" (różowy, z ikoną)</li>
+        <li><strong>Przycisk "+ Nowe zadanie"</strong> w prawym górnym rogu (jeśli masz uprawnienia)</li>
+        <li><strong>5 zakładek kategorii</strong>: Klient · Magazyn · Kosmetyk · Sprzedaż · Inne (z liczbą zadań na każdej)</li>
+        <li><strong>Lista pogrupowana</strong>: ❗ Pilne · 🕘 Na dziś · 📅 Zaplanowane · 🗒 Bez terminu</li>
+        <li><strong>Kolorowy pasek</strong> po lewej każdego wiersza: różowy (normalny), pomarańczowy (ważny), czerwony (pilny)</li>
+        <li><strong>"📤 Zlecone przeze mnie"</strong> — sekcja pod listą (rozwijana), pokazuje co JA wysłałam</li>
+      </ul>
+
+      <h3>Co możesz zrobić — wg roli</h3>
+
+      <h4>Recepcja</h4>
+      <ul>
+        <li>Tworzyć zadania dla siebie (notatki własne — "zadzwoń do dostawcy o 12")</li>
+        <li>Tworzyć zadania dla drugiej recepcjonistki ("Ania, sprawdź zamówienia w piątek")</li>
+        <li>Tworzyć zadania dla praktykantek (jednej osoby lub całej roli "Praktykantka")</li>
+        <li>Edytować, archiwizować, usuwać własne zadania (przez ⋮)</li>
+        <li>Oznaczać zadania jako "✓ Zrobione"</li>
+        <li>Dodawać komentarze pod zadaniem (chat)</li>
+      </ul>
+
+      <h4>Praktykantka</h4>
+      <ul>
+        <li>NIE tworzy zadań — tylko wykonuje</li>
+        <li>Widzi swoje zadania (przypisane jej imiennie + na rolę "Praktykantka")</li>
+        <li>Oznacza "✓ Zrobione"</li>
+        <li>Może dodać komentarz (np. "zrobione, ale brakowało jednego elementu — zostawiam managerowi")</li>
+      </ul>
+
+      <h3>Tworzenie zadania (recepcja+)</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Marta tworzy notatkę dla siebie</span>
+        <h4>"Zadzwoń do dostawcy w piątek o 11" — żeby nie zapomnieć</h4>
+        <div class="scenario-body">
+          <p>Marta klika "+ Nowe zadanie" w widget'cie:</p>
+          <ul>
+            <li>Tytuł: <code>Zadzwoń do dostawcy Vagheggi</code></li>
+            <li>Opis: <code>Sprawdź czy dostawa kremów przyszła. Jak nie — pytaj kiedy. Mamy mało.</code></li>
+            <li>Kategoria: <code>📦 Magazyn</code></li>
+            <li>Priorytet: <code>🟠 Ważny</code></li>
+            <li>Powtarzaj: <code>🚫 Nie powtarzaj</code> (jednorazowe)</li>
+            <li>Przypisz do: <code>Marta</code> (sama sobie)</li>
+            <li>Deadline: <code>2026-05-08 11:00</code> (piątek 11:00)</li>
+          </ul>
+          <p>Klika "Zapisz". Zadanie znika z modalu, pojawia się na liście w zakładce 📦 Magazyn.</p>
+          <div class="scenario-result">W piątek o 9:00 banner przypomni: "Masz zadanie na dziś". Marta zadzwoni w południe. Po telefonie odhaczy "✓ Zrobione".</div>
+        </div>
+      </div>
+
+      <h3>Pola modalu "Nowe zadanie"</h3>
+      <table>
+        <thead><tr><th>Pole</th><th>Co wpisać</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Tytuł</strong></td><td>Krótkie, konkretne ("Zadzwoń do X w sprawie Y"). Wymagane.</td></tr>
+          <tr><td><strong>Opis</strong></td><td>Szczegóły, kontekst. Tu możesz pisać dłużej.</td></tr>
+          <tr><td><strong>Kategoria</strong></td><td>📋 Inne / 📦 Magazyn / 💄 Kosmetyk / 👤 Klient / 💰 Sprzedaż</td></tr>
+          <tr><td><strong>Priorytet</strong></td><td>▫️ Normalny / 🟠 Ważny / 🔴 Pilny</td></tr>
+          <tr><td><strong>Powtarzaj</strong></td><td>🚫 Nie / 🌞 Codziennie / 📆 Co tydzień / 📅 Co miesiąc</td></tr>
+          <tr><td><strong>Dzień</strong> (jeśli powtarza)</td><td>Tygodnia (Pn-Nd) lub miesiąca (1-28 lub "ostatni dzień")</td></tr>
+          <tr><td><strong>Przypisz do</strong></td><td>Imię osoby LUB rola grupowa (📞 Recepcja, 🌱 Praktykantka). Wymagane.</td></tr>
+          <tr><td><strong>Deadline</strong></td><td>Data i godzina (datetime)</td></tr>
+          <tr><td><strong>Powiązany klient</strong></td><td>Wpisz fragment nazwiska, kliknij z listy. Opcjonalnie.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Powtarzające się zadania</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Codzienne zadanie zespołu</span>
+        <h4>"Codziennie o 18:00 sprawdź czy klientki na jutro są umówione"</h4>
+        <div class="scenario-body">
+          <p>Patrycja tworzy zadanie:</p>
+          <ul>
+            <li>Tytuł: <code>Sprawdź jutro — kto umówiony</code></li>
+            <li>Powtarzaj: <code>🌞 Codziennie</code></li>
+            <li>Przypisz do: <code>📞 Recepcja (cała rola)</code></li>
+            <li>Deadline: <code>18:00</code> (godzina, data się generuje)</li>
+          </ul>
+          <p>Klika "Zapisz". System tworzy szablon. Każdego dnia o północy generuje nową instancję zadania na ten dzień.</p>
+          <p>Zarówno Marta jak i druga recepcjonistka Ania widzą codziennie to zadanie u siebie — kto pierwszy odhaczy, znika z listy obu.</p>
+          <div class="scenario-result">Mała codzienna procedura nie wymaga już codziennego pisania kartki. System sam pamięta. Po roku Patrycja widzi w archiwum 365 wykonanych zadań — pełna historia ślademu.</div>
+        </div>
+      </div>
+
+      <h3>Komentarze pod zadaniem</h3>
+
+      <div class="scenario">
+        <span class="scenario-label">Recepcjonistki rozmawiają w wątku</span>
+        <h4>Marta zostawia uwagę dla Ani po wykonaniu zadania</h4>
+        <div class="scenario-body">
+          <p>Po telefonie do Pani Kowalskiej, Marta rozwija zadanie, klika "💬 Komentarze". Otwiera się chat.</p>
+          <p>Marta wpisuje: <em>"Pani Kowalska umówiona na sobotę 11:00 ale prosi żeby ją PRZYPOMNIEĆ smsem w piątek wieczorem. Ania, możesz wysłać?"</em>. Klika "Wyślij".</p>
+          <p>Komentarz pojawia się w bańce na prawo (bo to Marta = obecnie zalogowany użytkownik).</p>
+          <p>Następnego dnia Ania (druga recepcjonistka) wchodzi, widzi w zadaniach. Klika komentarze. Czyta. Odpowiada: <em>"OK, wyślę w piątek po 17:00. Dzięki."</em></p>
+          <div class="scenario-result">Cała wymiana jest pod konkretnym zadaniem — nie trzeba szukać po SMS-ach, mailach. Manager też widzi cały wątek.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>💡 Wskazówka:</strong> jeśli wpiszesz w tytule lub opisie nazwisko klientki która jest w bazie, system <strong>sam zaproponuje powiązanie z jej profilem</strong>. Klikasz chip "+ Imię Nazwisko" i gotowe — zadanie ma link do profilu, jednym klikiem otwierasz historię klientki.</div>
+
+      <div class="info"><strong>Dlaczego to działa:</strong> przed Estelio takie informacje były na karteczkach, w SMS-ach, w mailach, czasem zapisane na lustrze. Dziś — wszystko w jednym miejscu, z historią, z deadline'em, z osobą odpowiedzialną. Nic się nie gubi.</div>
+    </section>
+
+    <!-- KONSULTACJE -->
+    <section class="card" id="konsultacje">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 12 · Wywiad i plan</div>
+          <h2>Konsultacje</h2>
+        </div>
+      </div>
+      <p class="lead">Każda klientka przed pierwszym zabiegiem (lub przed nową serią) ma konsultację — wywiad, ocena stanu skóry/ciała, plan zabiegów. Estelio przechowuje to w formie strukturyzowanej, żeby kosmetologowie i manager mogli wracać do historii.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Pierwsza konsultacja Pani Magdaleny</span>
+        <h4>Julia przeprowadza wywiad z nową klientką</h4>
+        <div class="scenario-body">
+          <p>Pani Magdalena, nowa klientka, przyszła na konsultację za 100 zł (lub gratis, zależnie od salonu).</p>
+          <p>Julia siada z nią przy biurku i otwiera w Estelio: <strong>Konsultacje → Raportowanie</strong>. Wybiera klientkę "Magdalena Kwiatkowska".</p>
+          <p>Wypełnia formularz:</p>
+          <ul>
+            <li><strong>Główny problem / cel klientki:</strong> "Zwiotczała skóra brzucha po porodzie. Cel: ujędrnienie."</li>
+            <li><strong>Stan skóry:</strong> "Skóra normalna z tendencją do suchości. Brak rozstępów świeżych. Lekkie zwiotczenie skóry brzucha."</li>
+            <li><strong>Stan ciała:</strong> "Brak nadwagi. Tkanka tłuszczowa OK. Mięśnie wymagają wzmocnienia."</li>
+            <li><strong>Przeciwwskazania:</strong> "Brak. Klientka nie jest w ciąży, nie karmi. Bez chorób przewlekłych. Bez metalu w ciele."</li>
+            <li><strong>Zaproponowane zabiegi:</strong> "Pakiet 6x Endermologia Infinity Brzuch (raz w tygodniu) + Karboksyterapia x3. Krem Vagheggi do domu."</li>
+            <li><strong>Notatki kosmetologa:</strong> "Klientka motywowana. Realne oczekiwania. Polecam pakiet z rabatem."</li>
+          </ul>
+          <p>Klika "Zapisz". Konsultacja jest w historii klientki.</p>
+          <div class="scenario-result">Pani Magdalena zna plan, kosztorys, pakiet. Julia ma wszystko zapisane na przyszłość. Marta widząc profil Magdaleny wie, jakie zabiegi proponować przy kolejnych wizytach.</div>
+        </div>
+      </div>
+
+      <h3>Trzy widoki Konsultacji</h3>
+
+      <h4>Raportowanie</h4>
+      <p>Menu → <strong>Konsultacje → Raportowanie</strong>. Tu kosmetolog wprowadza nową konsultację dla wybranej klientki. Formularz strukturyzowany — system salonu ma swoje pola, ustawione przez managera.</p>
+
+      <h4>Historia</h4>
+      <p>Menu → <strong>Konsultacje → Historia</strong>. Wszystkie konsultacje wszystkich klientek chronologicznie. Filtry: po klientce, po kosmetologu, po dacie.</p>
+
+      <h4>Panel admin (manager)</h4>
+      <p>Manager konfiguruje formularze konsultacji — jakie pola, jakie kategorie problemów, jakie pytania. To Patrycja zobaczy, nie pracownicy.</p>
+
+      <div class="tip"><strong>💡 Praktyka:</strong> przed każdym zabiegiem zerknij w historię konsultacji klientki — przypomni Ci się jaki ma problem, czego nie znosi, co się sprawdziło. Klientka czuje że jesteś profesjonalistą.</div>
+    </section>
+
+    <!-- ZEBRANIE -->
+    <section class="card" id="zebranie">
+      <div class="card-header">
+        <div class="card-icon">📢</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 13 · Spotkania zespołu</div>
+          <h2>Zebranie / Odprawa</h2>
+        </div>
+      </div>
+      <p class="lead">Codzienne lub tygodniowe zebrania zespołu. System pomaga je prowadzić — zamiast pisać kartki z porządkiem dziennym, otwierasz "Zebranie" i wszyscy widzą to samo na swoich ekranach.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Poniedziałkowa odprawa o 9:00</span>
+        <h4>Patrycja prowadzi 10-minutową odprawę zespołu</h4>
+        <div class="scenario-body">
+          <p>Wszyscy (Patrycja jako manager + Marta i Ania recepcja + 3 kosmetolożki + 9 praktykantek = 15 osób) zalogowali się i otworzyli na swoich tabletach <strong>Zebranie</strong>.</p>
+          <p>Wszyscy widzą to samo:</p>
+          <ul>
+            <li><strong>Wczoraj (niedziela)</strong> — sprzedaż 2 380 zł, 8 transakcji, 7 klientek</li>
+            <li><strong>Top 3 sprzedawców tygodnia</strong>: Julia 8 200 zł, Dominika R 6 100 zł, Marta 4 800 zł</li>
+            <li><strong>Klientki ważne na ten tydzień</strong>: 4 urodziny, 12 z modułu retencji, 7 bez kompletu RODO</li>
+            <li><strong>Top zabiegi tygodnia</strong>: Endermologia (15x), Karboksyterapia (8x), Vagheggi twarz (6x)</li>
+            <li><strong>Notatka managera</strong>: "Brawo dla Julii za rekord! W tym tygodniu pchamy Vagheggi — promocja -10%."</li>
+          </ul>
+          <p>Patrycja komentuje:</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Wczoraj było słabsze, niedziela jak zwykle. Ten tydzień — celujemy w 10 000 zł sprzedaży. Mamy 12 klientek z retencji do oddzwonienia, Marta i Ania, podzielcie się i każda dzwoni do 6.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Zrobione, ja biorę pierwsze 6 z listy.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Promocja Vagheggi -10% — kosmetolożki, każda klientka po endermologii powinna usłyszeć propozycję kremu. Wymierne — kogo nie zarekomendowała, opowiada na piątkowej odprawie czemu.</div></div>
+          </div>
+          <p>Patrycja dopisuje notatkę "Tydzień Vagheggi promo, target 10 000 sprzedaży, retencja podzielona Marta/Ania". Klika "Zapisz notatki".</p>
+          <div class="scenario-result">10 minut zebranie. Każda osoba wie co robić. Notatka jest zapisana — w piątek można sprawdzić co się udało. Zero kartek, zero zapomnianego.</div>
+        </div>
+      </div>
+
+      <h3>Co widzisz w "Zebranie"</h3>
+      <ul>
+        <li><strong>Statystyki dnia poprzedniego / tygodnia</strong> — sprzedaż, transakcje, klienci</li>
+        <li><strong>Ranking pracowników</strong> — top 3 lub top 5 sprzedawców</li>
+        <li><strong>Klientki wymagające uwagi</strong>:
+          <ul>
+            <li>Urodziny w tym tygodniu</li>
+            <li>Lista retencji (kto powinien być oddzwoniony)</li>
+            <li>Klientki bez kompletu RODO</li>
+          </ul>
+        </li>
+        <li><strong>Top zabiegi i kosmetyki tygodnia</strong></li>
+        <li><strong>Notatki dla zespołu</strong> — manager wpisuje, wszystkie role widzą</li>
+      </ul>
+
+      <h3>Praktyka odpraw — formaty</h3>
+      <ul>
+        <li><strong>Poranna 10-15 min</strong> — co wczoraj, co dziś, kto co robi</li>
+        <li><strong>Tygodniowa 30 min</strong> — bilans tygodnia, plan na nowy, problemy, propozycje</li>
+        <li><strong>Miesięczna 60 min</strong> — wyniki finansowe, targety, zmiany w salonie, edukacja</li>
+      </ul>
+
+      <div class="tip"><strong>💡 Wskazówka:</strong> nie traktuj odprawy jako "obowiązku biurokratycznego". To okazja by zespół czuł się zsynchronizowany. Daj każdej osobie głos — co u niej, co potrzebuje, co działa.</div>
+    </section>
+
+    <!-- RETENCJA -->
+    <section class="card" id="retencja">
+      <div class="card-header">
+        <div class="card-icon">📞</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 14 · Powracające klientki</div>
+          <h2>Moduł Retencji</h2>
+        </div>
+      </div>
+      <p class="lead">Klientki które dawno nie były — system pokazuje listę, sortuje wg ważności, daje narzędzia. Twoja praca: regularnie dzwoń. To jeden z najważniejszych elementów dochodu salonu — pozyskanie nowej klientki kosztuje 5x więcej niż utrzymanie obecnej.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Wtorkowy poranek — telefoniczny blok</span>
+        <h4>Marta dzwoni do 8 klientek z listy retencji</h4>
+        <div class="scenario-body">
+          <p>Wtorek 9:30. Klientek mało (przedpołudnie wtorku to zwykle spokojny czas). Marta otwiera <strong>Moduł Retencji</strong>. System pokazuje listę:</p>
+          <ul>
+            <li><strong>Pani Aleksandra Kowalska</strong> — 89 dni od ostatniej wizyty, łącznie wydała 4 200 zł, 12 wizyt</li>
+            <li><strong>Pani Joanna Wójcik</strong> — 102 dni, 2 800 zł, 8 wizyt</li>
+            <li><strong>Pani Karolina Nowak</strong> — 64 dni, 1 200 zł, 4 wizyty</li>
+            <li>... 15 kolejnych ...</li>
+          </ul>
+          <p>Marta zaczyna od top 3 najbardziej "VIP" (najwyższa kwota). Dzwoni do Pani Aleksandry:</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Aleksandro, dzień dobry, Marta z salonu Estelio. Dawno Pani u nas nie była — chciałam przypomnieć, jak Pani się czuje?</div></div>
+            <div class="sample-line"><div class="sample-who">Aleksandra:</div><div class="sample-text">A faktycznie — mam ostatnio mało czasu. Cieszę się że pani dzwoni!</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Mamy nowość Vagheggi z 10% rabatem dla stałych klientek. Plus pamiętam że ostatnia endermologia świetnie się Pani podobała. Mamy wolne w czwartek 14:00 lub piątek 10:00?</div></div>
+            <div class="sample-line"><div class="sample-who">Aleksandra:</div><div class="sample-text">Czwartek 14:00 niech będzie!</div></div>
+          </div>
+          <p>Marta umawia ją w systemie (sprzedaż przyszła) i w retencji oznacza: ✓ Umówiona / Komentarz: "Czwartek 14:00 - endermologia + zaproponowałam krem Vagheggi promo".</p>
+          <p>Po godzinie Marta zadzwoniła do 8 klientek. Wyniki:</p>
+          <ul>
+            <li>4 umówione</li>
+            <li>2 nie odebrały (oddzwonić jutro)</li>
+            <li>1 na wakacjach do końca miesiąca (oddzwonić w czerwcu)</li>
+            <li>1 nie chce wracać (zaznaczyła w komentarzu "klientka prosi o spokój")</li>
+          </ul>
+          <div class="scenario-result">8 telefonów. 4 wizyty umówione. Średnio 350 zł za wizytę = 1 400 zł nowej sprzedaży za godzinę pracy. Marta wraca do innych zadań.</div>
+        </div>
+      </div>
+
+      <h3>Algorytm B+C — jak system sortuje</h3>
+      <p>Klientki segmentowane są po dwóch wymiarach:</p>
+      <ul>
+        <li><strong>B</strong> (Body — ciało): czas od ostatniej wizyty (60/90/180+ dni)</li>
+        <li><strong>C</strong> (Cash — kasa): łączna kwota wydana, średnia transakcja</li>
+      </ul>
+      <p>System sortuje klientki najpierw po C (ile wydały) potem po B (jak dawno). Dlatego top listy to <strong>VIP-ki które dawno nie były</strong> — najbardziej priorytetowe do oddzwonienia.</p>
+
+      <h3>Workflow recepcji — najlepsza praktyka</h3>
+      <ol>
+        <li><strong>Stała godzina raz w tygodniu</strong> (np. wtorek 9:30, czwartek 14:00) — gdy salon jest spokojny</li>
+        <li>Otwiera "Moduł Retencji"</li>
+        <li>Bierze top 10 klientek z listy</li>
+        <li>Każdą po kolei: dzwoni, składa propozycję, zaznacza wynik</li>
+        <li>Wyniki: <strong>umówiona / nie odebrała / nie chce / oddzwonić w X</strong></li>
+        <li>Komentarz: co powiedziała, jaką proponowała propozycję, kiedy oddzwonić</li>
+      </ol>
+
+      <h3>Co możesz zaznaczyć przy klientce</h3>
+      <ul>
+        <li><strong>✓ Umówiona</strong> — udało się umówić (+ termin w komentarzu)</li>
+        <li><strong>📵 Nie odebrała</strong> — brak kontaktu, oddzwonić w X dni</li>
+        <li><strong>🚫 Nie chce wracać</strong> — klientka prosi o spokój, NIE dzwonić</li>
+        <li><strong>⏰ Oddzwonić X.X.</strong> — klientka prosi o telefon w konkretnym terminie</li>
+      </ul>
+
+      <h3>Sleeping VIPs — najlepsza lista</h3>
+      <p>System wyróżnia osobno tzw. <strong>Sleeping VIPs</strong>:</p>
+      <ul>
+        <li>Były w salonie ≥2 razy</li>
+        <li>Wydały łącznie ≥500 zł</li>
+        <li>Nie były >90 dni</li>
+      </ul>
+      <p>To Twoja "lista marząco" — klientki sprawdzone, dające pieniądze, które tylko trzeba sprowadzić. Jak coś — zaczynaj od nich.</p>
+
+      <div class="tip"><strong>💡 Skuteczne propozycje:</strong>
+        <ul>
+          <li>Nowość ("Wprowadziliśmy nowy zabieg X — myślałam o Pani")</li>
+          <li>Rabat lojalnościowy ("Dla Pani jako stałej klientki -10%")</li>
+          <li>Bon (jeśli VIP) ("Mam dla Pani bon na 200 zł na powitanie")</li>
+          <li>Pakiet (jeśli kupowała kilka) ("Mamy pakiet 5x z rabatem")</li>
+        </ul>
+      </div>
+
+      <div class="warning"><strong>Ważne:</strong> NIE dzwoń do klientek ze statusu "🚫 Nie chce wracać". Manager monitoruje, czy lista nie jest spamowana. Klientki które wyraźnie powiedziały "spokój" — szanuj ich decyzję.</div>
+    </section>
+
+    <!-- WSKAZÓWKI -->
+    <section class="card" id="wskazowki">
+      <div class="card-header">
+        <div class="card-icon">🎓</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 15 · Drobiazgi które ułatwiają</div>
+          <h2>Wskazówki techniczne</h2>
+        </div>
+      </div>
+      <p class="lead">Drobne ustawienia i triki które ułatwiają pracę. Większość zauważysz dopiero po tygodniu używania — warto poznać od razu.</p>
+
+      <h3>Dark Mode</h3>
+      <p>U dołu lewego menu jest przycisk <strong>"☾ Dark Mode"</strong>. Klik = przełącza na tryb ciemny. Mniej zmęczone oczy wieczorem, gdy salon jest mniej oświetlony, oczy bardziej zmęczone od dnia. Ustawienie zapamięta się dla Twojej przeglądarki — nie musisz włączać przy każdym logowaniu.</p>
+
+      <h3>Hard refresh — gdy coś dziwnie wygląda</h3>
+      <p>Czasem po aktualizacji systemu trzeba odświeżyć stronę pełnym przeładowaniem (przeglądarka cache'uje stare pliki):</p>
+      <ul>
+        <li><strong>Windows / Linux:</strong> <code>Ctrl + Shift + R</code></li>
+        <li><strong>Mac:</strong> <code>⌘ + Shift + R</code></li>
+      </ul>
+      <p>Wtedy wyłapywane są najświeższe wersje plików. Standardowe F5 czasem nie wystarczy.</p>
+
+      <h3>Skróty przeglądarki</h3>
+      <table>
+        <thead><tr><th>Skrót</th><th>Co robi</th></tr></thead>
+        <tbody>
+          <tr><td><code>F5</code></td><td>Zwykłe odświeżenie</td></tr>
+          <tr><td><code>Ctrl + Shift + R</code></td><td>Pełne odświeżenie z czyszczeniem cache</td></tr>
+          <tr><td><code>Ctrl + +</code></td><td>Zwiększ rozmiar tekstu</td></tr>
+          <tr><td><code>Ctrl + -</code></td><td>Zmniejsz</td></tr>
+          <tr><td><code>Ctrl + 0</code></td><td>Reset rozmiaru</td></tr>
+          <tr><td><code>F11</code></td><td>Tryb pełnoekranowy</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Praca na tablecie / telefonie</h3>
+      <p>Estelio działa na tablecie i telefonie. Większość czynności (sprzedaż, klienci, zadania) działa OK na tablecie. Na telefonie też, ale małe pola = łatwo o pomyłkę. Zalecane:</p>
+      <ul>
+        <li><strong>Komputer / laptop</strong> — domyślne</li>
+        <li><strong>Tablet</strong> — przy ladzie, dla recepcji</li>
+        <li><strong>Telefon</strong> — szybki podgląd, np. zerknąć kogo masz na jutro</li>
+      </ul>
+
+      <h3>Co robić jak system "się zawiesi"</h3>
+      <ol>
+        <li>Odśwież stronę (F5)</li>
+        <li>Jeśli dalej — hard refresh (Ctrl+Shift+R)</li>
+        <li>Jeśli dalej — sprawdź internet w salonie (zalogować się można?)</li>
+        <li>Jeśli dalej — zgłoś managerowi, on zgłosi do twórców</li>
+      </ol>
+
+      <div class="tip"><strong>💡 Drobiazg:</strong> w dropdown'ie pracowników, klientów, produktów — używaj wpisywania zamiast przewijania. Wpisz 2 litery, lista się skróci. Szybciej niż scroll.</div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="card" id="faq">
+      <div class="card-header">
+        <div class="card-icon">❓</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 16 · Najczęstsze pytania</div>
+          <h2>FAQ — co zrobić gdy...</h2>
+        </div>
+      </div>
+
+      <h3>Wpisałam pomyłkową sprzedaż — co teraz?</h3>
+      <p>Wejdź w "Historię sprzedaży", znajdź transakcję, kliknij "Edytuj" lub "Usuń". Każda zmiana jest logowana — manager widzi historię edycji. Nie bój się korygować, lepiej poprawić niż zostawić błąd.</p>
+
+      <h3>Klientka nie pojawia się w wyszukiwarce, choć była dziś</h3>
+      <p>Może została wpisana z literówką (np. "Kowal" zamiast "Kowalska"). Spróbuj wyszukać po telefonie albo ID. Jeśli faktycznie nie ma — dodaj jako nową, zaznacz w notatkach "wcześniej była — dodano dane".</p>
+
+      <h3>System się zawiesił/wolno działa</h3>
+      <p>Najpierw odśwież stronę (F5). Jeśli dalej, hard refresh (Ctrl+Shift+R). Jeśli dalej, zgłoś managerowi — może być chwilowa awaria serwera albo internetu w salonie.</p>
+
+      <h3>Nie pamiętam swojego PIN-u</h3>
+      <p>Manager/admin może go zresetować w sekcji Administracja → Kreator dostępów. NIE używaj cudzego PIN-u (każdy ruch jest logowany do konkretnego konta).</p>
+
+      <h3>Czy mogę używać Estelio na telefonie?</h3>
+      <p>Tak — system jest responsywny. Większość czynności działa, ale na ekranie laptopa/tabletu jest wygodniej. Najlepsze do szybkich sprawdzeń (kto na jutro, ile wydała Pani Anna).</p>
+
+      <h3>Co robić jak zauważę błąd albo brakującą funkcję?</h3>
+      <p>Zgłoś managerowi — może to przekazać do twórców systemu (Estelio jest stale rozwijane). Konkretne zgłoszenia są mile widziane.</p>
+
+      <h3>Klientka prosi o paragon / fakturę</h3>
+      <p>Estelio nie generuje paragonów (kasa fiskalna salonu robi to osobno). Faktury — manager wystawia w odrębnym systemie (np. Fakturownia).</p>
+
+      <h3>Wpisałam zadatek na złą klientkę</h3>
+      <p>Otwórz "Spis zadatków", znajdź pomyłkowy wpis, edytuj klientkę. Albo zgłoś managerowi, on może oznaczyć stary jako USUNIĘTY i wpisać nowy poprawny.</p>
+
+      <h3>Klientka straciła swoją kartę lojalnościową — czy mogę odtworzyć?</h3>
+      <p>Estelio nie używa fizycznych kart. "Karta" klientki to jej profil w systemie. Po prostu sprawdź w wyszukiwarce, dane są zapisane.</p>
+
+      <h3>Mam wpisać sprzedaż w niedzielę gdy salon zamknięty</h3>
+      <p>Możesz logować się z domu (Estelio działa online). Ale UWAGA — wpisana sprzedaż będzie miała datę faktyczną wpisu. Jeśli musisz dorobić sprzedaż z piątku, w komentarzu zaznacz "Wpisane z opóźnieniem - faktyczna data 2026-05-09".</p>
+
+      <h3>Praktykantka chce dodać klientkę — może?</h3>
+      <p>Tak — praktykantka ma uprawnienia tylko do magazynu/podstawowych rzeczy, ale dodawanie klientów jest zwykle dostępne dla recepcji+. Sprawdź w swoim salonie z managerem.</p>
+
+      <h3>System pokazuje "Brak uprawnień" — dlaczego?</h3>
+      <p>Próbujesz wejść w sekcję która jest tylko dla manager/admina (np. Analiza). To ochrona — Twoja rola nie ma dostępu. Jeśli uważasz że to błąd, daj znać managerowi.</p>
+    </section>
+
+    <div class="footer">
+      <div class="ornament">✦ ✦ ✦</div>
+      <p><strong>Estelio</strong> — Beauty Management System</p>
+      <p>Przewodnik dla pracownika · Maj 2026</p>
+      <p style="margin-top:14px; font-style:italic;">Powodzenia! Jeśli czegoś nie wiesz — pytaj. Lepiej zapytać 10 razy niż raz coś popsuć.</p>
+    </div>
+
+  </main>
+
+</div>
+
+</body>
+</html>

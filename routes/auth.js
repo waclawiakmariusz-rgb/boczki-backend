@@ -35,7 +35,7 @@ module.exports = (db) => {
       return res.json({ status: 'error', message: 'Podaj login i hasło.' });
     }
 
-    const sql = `SELECT login, haslo, rola, id_bazy, status FROM Licencje WHERE LOWER(TRIM(login)) = LOWER(TRIM(?)) LIMIT 1`;
+    const sql = `SELECT login, haslo, rola, id_bazy, status, nazwa_salonu, email, data_grace_until FROM Licencje WHERE LOWER(TRIM(login)) = LOWER(TRIM(?)) LIMIT 1`;
     db.query(sql, [login.trim()], async (err, rows) => {
       if (err) return res.json({ status: 'error', message: 'Błąd bazy danych.' });
       if (!rows || rows.length === 0) {
@@ -70,13 +70,29 @@ module.exports = (db) => {
         recordFailedLogin(req);
         return res.json({ status: 'error', message: 'Błędny login lub hasło.' });
       }
-      if (user.status && user.status.toLowerCase() !== 'aktywny') {
+      // Status check z grace period dla 'opóźniony' (klient z nieudaną płatnością Stripe).
+      // Reguły:
+      //   aktywny                              → pełny dostęp
+      //   opóźniony + data_grace_until > NOW() → dostęp + ostrzeżenie w UI (banner)
+      //   opóźniony + grace minęło             → blokada
+      //   nieaktywny / wygasły / wstrzymany    → blokada
+      const status = (user.status || 'aktywny').toLowerCase();
+      let warningPlatnosc = null;
+      if (status === 'opóźniony') {
+        const graceMs = user.data_grace_until ? new Date(user.data_grace_until).getTime() : 0;
+        if (graceMs > Date.now()) {
+          const dni = Math.ceil((graceMs - Date.now()) / (24*60*60*1000));
+          warningPlatnosc = `Opóźnienie w płatności. Salon zostanie wstrzymany za ${dni} ${dni===1?'dzień':'dni'} jeśli nie odnowisz subskrypcji.`;
+        } else {
+          return res.json({ status: 'error', message: 'Subskrypcja wygasła z powodu nieudanej płatności. Skontaktuj się: kontakt@estelio.com.pl' });
+        }
+      } else if (status !== 'aktywny') {
         return res.json({ status: 'error', message: 'Licencja nieaktywna.' });
       }
 
       recordSuccessLogin(req);
       const session_token = createSession(user.id_bazy, user.login);
-      return res.json({ status: 'success', role: user.rola, tenant_id: user.id_bazy, session_token });
+      return res.json({ status: 'success', role: user.rola, tenant_id: user.id_bazy, session_token, warningPlatnosc });
     });
   });
 

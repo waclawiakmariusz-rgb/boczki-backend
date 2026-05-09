@@ -30,6 +30,7 @@ module.exports = (db) => {
     if (s.includes('gotówka') || s.includes('gotowka')) return 'Gotówka';
     if (s.includes('karta') || s.includes('terminal')) return 'Karta';
     if (s.includes('przelew') || s.includes('tpay')) return 'Przelew';
+    if (s.includes('tubapay') || s.includes('tuba')) return 'TubaPay';
     if (s.includes('mediraty') || s.includes('raty')) return 'MediRaty';
     return 'Inne';
   };
@@ -240,11 +241,11 @@ module.exports = (db) => {
       const selectedMonth = d.month;
       // Sprzedaż główna
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
         [tenant_id, selectedMonth],
         (err1, sprzedaz) => {
           db.query(
-            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ?`,
+            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
             [tenant_id, selectedMonth],
             (err2, zadatki) => {
               let stats = {
@@ -254,91 +255,228 @@ module.exports = (db) => {
               };
               let empTemp = {};
 
-              const TYLKO_ZABIEGI = ['Endermologia Infinity', 'Arosha', 'Ceremonia Purles', 'Depilacja woskiem', 'Endermologia Alliance', 'Karboksyterapia', 'Kriolipoliza', 'Lipoliza iniekcyjna', 'Masaż', 'Meltivio', 'Mezoterapia Igłowa', 'Mezoterapia mikroigłowa', 'Modelowanie Ust', 'Peeling Cypryjski', 'Presoterapia', 'Storz', 'Stymulatory Tkankowe', 'Thermogenique', 'Żelazko', 'Oprawa Oka', 'Oczyszczanie wodorowe', 'Alma SpaDeep', 'Adipologie', 'Infuzja tlenowa', 'Zaffiro twarz', 'Zaffiro dłonie', 'Zaffiro ciało', 'Masaż Kobido', 'Peeling chemiczny', 'Koktajl Monako', 'Rytuał Flerage z endermologią twarzy', 'Vagheggi ciało', 'Vagheggi twarz', 'Mezoterapia igłowa stymulatorem', 'Ultradźwięki', 'Pielęgnacja', 'Pixel RF'];
+              // Helper: wyciąga liczbę sztuk z `szczegoly` (np. "5 szt." -> 5, "1,5 szt." -> 1.5)
+              const parsujIloscSzt = (szczegoly) => {
+                const m = String(szczegoly || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+                return m ? parseFloat(m[1].replace(',', '.')) : 1;
+              };
 
-              const processRow = (amount, zabieg, klient, sprzedawca, platnosc, dateObj) => {
+              const initEmp = (person) => ({
+                name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0,
+                transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {},
+                _topReceipts: new Set(),       // dedup Top 5 po (baseId, zabieg)
+                wykonaneZabiegi: new Set()     // dla worstTreatments: klucz "kategoria||wariant"
+              });
+
+              const processRow = (amount, zabieg, klient, sprzedawca, platnosc, dateObj, id, szczegoly) => {
                 const platL = String(platnosc || '').toLowerCase();
-                if (platL.includes('portfel') || platL.includes('ręczne') || platL.includes('reczne') || platL.includes('system')) return;
+                // Korekty (ręczne / system) — pomijamy całkowicie
+                if (platL.includes('ręczne') || platL.includes('reczne') || platL.includes('system')) return;
+                // Portfel: pomijamy w sumach finansowych (zadatek już zaliczony przy wpłacie),
+                // ALE liczymy do Top 5 / wykonaneZabiegi / qty_kosmetyki (faktyczna sprzedaż fizyczna).
+                const isPortfel = (platL === 'portfel');
                 const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
-                if (amount === 0 && !isKosmetyk) return;
-                stats.totalRevenue += amount; stats.count++;
-                if (isKosmetyk) stats.categorySplit['Kosmetyki'] += amount;
-                else stats.categorySplit['Zabiegi'] += amount;
+                if (amount === 0 && !isKosmetyk && !isPortfel) return;
+
+                // baseId — multi-sale ma format "<base>-<n>"; single-sale = całe id
+                const idStr = String(id || '');
+                const baseId = idStr.includes('-') ? idStr.split('-').slice(0, -1).join('-') || idStr : idStr;
+                const ilosc = isKosmetyk ? parsujIloscSzt(szczegoly) : 1;
+
+                if (!isPortfel) {
+                  stats.totalRevenue += amount; stats.count++;
+                  if (isKosmetyk) stats.categorySplit['Kosmetyki'] += amount;
+                  else stats.categorySplit['Zabiegi'] += amount;
+                }
 
                 const rawSellers = String(sprzedawca || '').trim();
-                if (rawSellers) {
-                  const sellers = rawSellers.split(',').map(s => s.trim()).filter(Boolean);
-                  const count = sellers.length;
-                  if (count > 0) {
-                    const splitAmount = amount / count;
-                    sellers.forEach(person => {
-                      if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
-                      const e = empTemp[person];
-                      e.total += splitAmount; e.transakcje += (1 / count);
-                      if (isKosmetyk) { e.kosmetyki += splitAmount; e.qty_kosmetyki += (1 / count); } else { e.zabiegi += splitAmount; }
-                      if (!e.top[zabieg]) e.top[zabieg] = 0; e.top[zabieg] += (1 / count);
-                      if (dateObj) {
-                        const day = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
-                        e.transactionsList.push({ service: zabieg, val: splitAmount, date: day });
-                        const receiptKey = `${day}_${klient.toUpperCase()}`;
-                        if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
-                        e.virtualReceipts[receiptKey].total += splitAmount;
-                        e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, '').trim());
-                      }
-                    });
+                if (!rawSellers) return;
+                const sellers = rawSellers.split(',').map(s => s.trim()).filter(Boolean);
+                const count = sellers.length;
+                if (count === 0) return;
+                const splitAmount = amount / count;
+
+                sellers.forEach(person => {
+                  if (!empTemp[person]) empTemp[person] = initEmp(person);
+                  const e = empTemp[person];
+
+                  // REGUŁA 1 (Magda): kosmetyki NIE liczą do total/zabiegi/transakcje
+                  // pracownika — Magda traktuje je osobno (zakładka "Kosmetyki" + helpery
+                  // sprzedazBezKosmetykow). Kwota i ilość kosmetyków pozostają w
+                  // dedykowanych KPI (e.kosmetyki, e.qty_kosmetyki, e.top).
+                  if (!isPortfel && !isKosmetyk) {
+                    e.total += splitAmount;
+                    e.transakcje += (1 / count);
+                    e.zabiegi += splitAmount;
+
+                    if (dateObj) {
+                      const day = `${String(dateObj.getDate()).padStart(2, '0')}.${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
+                      e.transactionsList.push({ service: zabieg, val: splitAmount, date: day });
+                      const receiptKey = `${day}_${klient.toUpperCase()}`;
+                      if (!e.virtualReceipts[receiptKey]) e.virtualReceipts[receiptKey] = { client: klient, date: day, total: 0, items: [] };
+                      e.virtualReceipts[receiptKey].total += splitAmount;
+                      e.virtualReceipts[receiptKey].items.push(zabieg.replace(/(?:\s|-)*dopłata$/i, '').trim());
+                    }
                   }
-                }
+
+                  // Wartość kosmetyków per pracownik — osobne KPI (nie wlicza się do total)
+                  if (!isPortfel && isKosmetyk) {
+                    e.kosmetyki += splitAmount;
+                  }
+
+                  // qty_kosmetyki — fizyczna ilość sprzedanych sztuk, niezależnie od metody
+                  if (isKosmetyk) {
+                    e.qty_kosmetyki += (ilosc / count);
+                  }
+
+                  // Top 5 — uwzględnia Portfel; dedup po (baseId, zabieg) eliminuje
+                  // podwójne liczenie tego samego zabiegu rozbitego na pozycje multi-sale
+                  const topKey = `${baseId}|${zabieg}`;
+                  if (!e._topReceipts.has(topKey)) {
+                    e._topReceipts.add(topKey);
+                    if (!e.top[zabieg]) e.top[zabieg] = 0;
+                    e.top[zabieg] += isKosmetyk ? ilosc : 1;
+                  }
+
+                  // wykonaneZabiegi — dla worstTreatments (tylko zabiegi, nie kosmetyki).
+                  // Klucz "kategoria||wariant" pasuje do struktury tabeli Uslugi.
+                  if (!isKosmetyk) {
+                    const wariant = String(szczegoly || '').trim();
+                    e.wykonaneZabiegi.add(`${zabieg}||${wariant}`);
+                  }
+
+                  // Debug log per pracownik per dzień — diagnostyka rozbieżności z Magdą
+                  if (dateObj) {
+                    const dataStr = `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+                    let liczone, kategoria;
+                    if (isKosmetyk) {
+                      liczone = '→ KOSMETYK (osobno, nie do total)';
+                      kategoria = 'KOSMETYK';
+                    } else if (isPortfel) {
+                      liczone = '→ ✗ pomijane (Portfel)';
+                      kategoria = 'PORTFEL';
+                    } else {
+                      liczone = `→ ✓ +${splitAmount.toFixed(2)} do total`;
+                      kategoria = 'SPRZEDAŻ';
+                    }
+                    stats.debugLog.push(
+                      `${dataStr} | ${person.padEnd(12)} | ${kategoria.padEnd(10)} | ${zabieg.substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(platnosc || '').padEnd(8)} | ${liczone}`
+                    );
+                  }
+                });
               };
 
               (sprzedaz || []).forEach(row => {
-                processRow(parseAmount(row.kwota), String(row.zabieg || '').trim(), String(row.klient || '').trim(), row.sprzedawca, row.platnosc, new Date(row.data_sprzedazy));
+                processRow(
+                  parseAmount(row.kwota),
+                  String(row.zabieg || '').trim(),
+                  String(row.klient || '').trim(),
+                  row.sprzedawca,
+                  row.platnosc,
+                  new Date(row.data_sprzedazy),
+                  row.id,
+                  row.szczegoly
+                );
               });
 
               (zadatki || []).forEach(row => {
                 const status = String(row.status || '').toUpperCase();
                 const typ = String(row.typ || '').toUpperCase();
                 const metoda = String(row.metoda || '').toLowerCase();
-                if (status === 'USUNIĘTY' || status === 'SCALONY' || typ !== 'WPŁATA') return;
+                if ((status !== 'AKTYWNY' && status !== '') || typ !== 'WPŁATA') return;
                 if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                 const amount = parseAmount(row.kwota);
                 if (amount === 0) return;
-                stats.totalRevenue += amount; stats.count++;
-                stats.categorySplit['Zabiegi'] += amount;
+
                 const sellers = String(row.pracownicy || '').split(',').map(s => s.trim()).filter(Boolean);
                 const count = sellers.length;
-                if (count > 0) {
-                  const splitAmount = amount / count;
-                  sellers.forEach(person => {
-                    if (!empTemp[person]) empTemp[person] = { name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0, transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {} };
-                    const e = empTemp[person];
-                    e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
-                    if (!e.top['Wpłata Zadatku']) e.top['Wpłata Zadatku'] = 0; e.top['Wpłata Zadatku'] += (1 / count);
-                    e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
-                  });
-                }
+                if (count === 0) return;
+
+                // REGUŁA 2: zadatki gdzie liczba pracowników >= 4 są pomijane
+                // per pracownik. Tak duża liczba osób na jednym zadatku zwykle
+                // oznacza wpis grupowy (konsultacja reklamowa / Booksy reception /
+                // wpłata online) — nie zaliczany indywidualnie pracownikom.
+                // W typowym salonie (1-2 osoby na transakcję) reguła nigdy się
+                // nie aktywuje. Próg jest celowo wysoki (4) żeby nie kolidował
+                // z normalnymi wpisami zespołowymi (3 osoby).
+                // Potwierdzone na danych Boczki: 02.03, 09.03, 02.04 — Magda
+                // pomijała wszystkie zadatki z 4+ osobami.
+                const dateObjZ = row.data_wplaty ? new Date(row.data_wplaty) : null;
+                const dataStrZ = dateObjZ
+                  ? `${dateObjZ.getFullYear()}-${String(dateObjZ.getMonth()+1).padStart(2,'0')}-${String(dateObjZ.getDate()).padStart(2,'0')}`
+                  : '????-??-??';
+
+                stats.totalRevenue += amount; stats.count++;
+                stats.categorySplit['Zabiegi'] += amount;
+                const splitAmount = amount / count;
+                sellers.forEach(person => {
+                  if (!empTemp[person]) empTemp[person] = initEmp(person);
+                  const e = empTemp[person];
+                  e.total += splitAmount; e.transakcje += (1 / count); e.zabiegi += splitAmount;
+                  // Wpłata zadatku NIE liczy się do Top 5 zabiegów (to nie jest zabieg).
+                  // Pozostaje w transactionsList dla pełnej historii pracownika.
+                  e.transactionsList.push({ service: 'Zadatek: ' + String(row.cel || ''), val: splitAmount, date: '' });
+
+                  // Debug log dla zadatku
+                  stats.debugLog.push(
+                    `${dataStrZ} | ${person.padEnd(12)} | ZADATEK    | ${String(row.cel || row.klient || '').substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(row.metoda || '').padEnd(8)} | → ✓ +${splitAmount.toFixed(2)} do total`
+                  );
+                });
               });
 
-              for (let person in empTemp) {
-                const e = empTemp[person];
-                const zeroSales = [];
-                TYLKO_ZABIEGI.forEach(service => {
-                  let cnt = 0;
-                  for (const [sn, sc] of Object.entries(e.top)) { if (sn.includes(service)) cnt += sc; }
-                  if (cnt === 0) zeroSales.push(service);
-                });
-                e.worstTreatments = zeroSales;
-                const receiptsArr = Object.values(e.virtualReceipts).sort((a, b) => b.total - a.total);
-                if (receiptsArr.length > 0) {
-                  const best = receiptsArr[0];
-                  const uniqueItems = [...new Set(best.items)];
-                  e.bestReceipt = { client: best.client, date: best.date, val: best.total, services: uniqueItems.join(' + ') };
-                }
-                delete e.virtualReceipts;
-              }
+              // Pobierz pełną listę zabiegów z tabeli Uslugi — dla worstTreatments
+              db.query(
+                `SELECT kategoria, wariant FROM Uslugi WHERE tenant_id = ?`,
+                [tenant_id],
+                (errU, uslugi) => {
+                  const wszystkieUslugi = (uslugi || [])
+                    .map(u => ({
+                      kategoria: String(u.kategoria || '').trim(),
+                      wariant: String(u.wariant || '').trim()
+                    }))
+                    .filter(u => u.kategoria);
 
-              stats.employeeDetails = empTemp;
-              stats.rankingPracownikow = Object.values(empTemp).sort((a, b) => b.total - a.total);
-              return res.json({ status: 'success', data: stats });
+                  for (let person in empTemp) {
+                    const e = empTemp[person];
+                    // worstTreatments — pozycje z Uslugi NIE wykonane przez tego pracownika
+                    const zeroSales = [];
+                    wszystkieUslugi.forEach(u => {
+                      const klucz = `${u.kategoria}||${u.wariant}`;
+                      if (!e.wykonaneZabiegi.has(klucz)) {
+                        zeroSales.push(u.wariant ? `${u.kategoria} — ${u.wariant}` : u.kategoria);
+                      }
+                    });
+                    e.worstTreatments = zeroSales;
+
+                    // bestReceipt (Złoty paragon) — bez zmian, działa OK
+                    const receiptsArr = Object.values(e.virtualReceipts).sort((a, b) => b.total - a.total);
+                    if (receiptsArr.length > 0) {
+                      const best = receiptsArr[0];
+                      const uniqueItems = [...new Set(best.items)];
+                      e.bestReceipt = { client: best.client, date: best.date, val: best.total, services: uniqueItems.join(' + ') };
+                    }
+
+                    // Cleanup pól pomocniczych — nie wysyłamy ich do frontendu
+                    delete e.virtualReceipts;
+                    delete e._topReceipts;
+                    delete e.wykonaneZabiegi;
+                  }
+
+                  // Podsumowanie miesięczne per pracownik na końcu logu
+                  // (sortowanie aktualnie chronologiczne — sumy zostaną na końcu)
+                  stats.debugLog.push('────────── SUMY MIESIĘCZNE ──────────');
+                  for (let person in empTemp) {
+                    const e = empTemp[person];
+                    stats.debugLog.push(
+                      `ZZZ-SUM | ${person.padEnd(12)} | total=${e.total.toFixed(2)} zł | zabiegi=${e.zabiegi.toFixed(2)} | kosmetyki=${e.kosmetyki.toFixed(2)} (${e.qty_kosmetyki.toFixed(0)} szt.) | transakcji=${e.transakcje.toFixed(1)}`
+                    );
+                  }
+
+                  stats.employeeDetails = empTemp;
+                  stats.rankingPracownikow = Object.values(empTemp).sort((a, b) => b.total - a.total);
+                  return res.json({ status: 'success', data: stats });
+                }
+              );
             }
           );
         }
@@ -352,9 +490,11 @@ module.exports = (db) => {
       pobierzKoszt(tenant_id, targetMonth, (costs) => {
         let report = {
           total: 0, costs, profit: 0,
-          payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 },
+          payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 },
           daily: {}, topTreatments: {}, worstTreatments: [], topEmployees: {},
-          chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: []
+          chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: [],
+          _mediRatyClients: new Set(),
+          _tubaPayClients: new Set()
         };
 
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
@@ -383,7 +523,9 @@ module.exports = (db) => {
                 const day = String(dateObj.getDate()).padStart(2, '0');
                 const method = classifyPayment(row.platnosc);
                 report.total += amount; report.payments[method] += amount;
-                if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
+                if (method === 'TubaPay' && row.klient) report._tubaPayClients.add(String(row.klient).trim().toLowerCase());
+                if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                 report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                 const rawSellers = String(row.sprzedawca || '');
                 if (rawSellers) {
@@ -413,7 +555,9 @@ module.exports = (db) => {
                     const method = classifyPayment(metoda);
                     const day = String(dateObj.getDate()).padStart(2, '0');
                     report.total += amount; report.payments[method] += amount;
-                    if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                    if (method === 'MediRaty' && row.klient) report._mediRatyClients.add(String(row.klient).trim().toLowerCase());
+                    if (method === 'TubaPay' && row.klient) report._tubaPayClients.add(String(row.klient).trim().toLowerCase());
+                    if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                     report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                   }
                   if (compareMonth && m === compareMonth) report.compareTotal += amount;
@@ -436,7 +580,7 @@ module.exports = (db) => {
                         const method = classifyPayment(metoda);
                         const day = String(dateObj.getDate()).padStart(2, '0');
                         report.total += amount; report.payments[method] += amount;
-                        if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, Inne: 0 } };
+                        if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                         report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                       }
                       if (compareMonth && m === compareMonth) report.compareTotal += amount;
@@ -455,6 +599,10 @@ module.exports = (db) => {
                     sortedDays.forEach(day => { report.daysLabels.push(day); report.chartValues.push(report.daily[day].total); });
                     report.topTreatments = Object.entries(report.topTreatments).sort((a, b) => b[1] - a[1]).slice(0, 6);
                     report.topEmployees = Object.entries(report.topEmployees).sort((a, b) => b[1] - a[1]).slice(0, 4);
+                    report.mediRatyCount = report._mediRatyClients.size;
+                    report.tubaPayCount = report._tubaPayClients.size;
+                    delete report._mediRatyClients;
+                    delete report._tubaPayClients;
 
                     return res.json({ status: 'success', data: report });
                   }
