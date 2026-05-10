@@ -14,6 +14,7 @@
       --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
     }
     body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
+
     header {
       background: linear-gradient(135deg, #1c1a18, #2a2420);
       padding: 24px 40px;
@@ -29,6 +30,7 @@
       text-decoration: none; transition: color .2s;
     }
     header a.back:hover { color: #fff; }
+
     .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
     .doc-eyebrow {
       font-size: .7rem; font-weight: 600; letter-spacing: .2em;
@@ -36,41 +38,33 @@
     }
     h1 {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem; font-weight: 600;
+      font-size: 2.4rem; font-weight: 600; color: var(--dark);
       margin-bottom: 8px; line-height: 1.2;
     }
     .doc-meta {
       font-size: .8rem; color: var(--muted); margin-bottom: 48px;
       padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
     }
-    .draft-box {
-      background: #fff8e6; border: 1px dashed var(--gold);
-      border-radius: 4px; padding: 32px;
-      text-align: center;
-    }
-    .draft-box h2 {
+
+    h2 {
       font-family: 'Cormorant Garamond', serif;
-      font-size: 1.5rem; font-weight: 600; color: #7a5c00;
-      margin-bottom: 12px;
+      font-size: 1.35rem; font-weight: 600; color: var(--dark);
+      margin: 40px 0 12px;
     }
-    .draft-box p {
-      font-size: .92rem; color: #7a5c00; margin-bottom: 12px;
-    }
-    .draft-box a {
-      color: var(--rose); font-weight: 600; text-decoration: none;
-    }
-    .meta-info {
-      margin-top: 32px; padding: 20px; background: #fff;
-      border: 1px solid var(--border); border-radius: 4px;
-      font-size: .88rem; color: var(--muted);
-    }
-    .meta-info strong { color: var(--dark); }
+    p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
+    ul, ol { margin: 8px 0 14px 20px; }
+    li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
+    strong { color: var(--dark); }
+    a { color: var(--rose); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
     footer {
       background: var(--cream2); border-top: 1px solid var(--border);
       padding: 20px 40px; text-align: center;
       font-size: .75rem; color: var(--muted);
     }
     footer a { color: var(--rose); text-decoration: none; }
+
     @media (max-width: 600px) {
       .container { padding: 36px 20px 60px; }
       header { padding: 18px 20px; }
@@ -88,30 +82,54 @@
 <div class="container">
 
   <div class="doc-eyebrow">Dokument prawny</div>
-  <h1>Polityka cookies</h1>
-  <div class="doc-meta">Status: <strong>w przygotowaniu</strong></div>
+  <h1>Polityka cookies Estelio</h1>
+  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0</div>
 
-  <div class="draft-box">
-    <h2>Dokument w przygotowaniu</h2>
-    <p>Pełna polityka cookies — z opisem każdego pliku, jego celu i czasu ważności — jest aktualnie weryfikowana przez prawnika.</p>
-    <p>Pełna treść zostanie opublikowana wkrótce.</p>
-    <p style="margin-top:20px;">Pytania? Napisz na <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
-  </div>
+  <h2>1. Czym są cookies</h2>
+  <p>Cookies to niewielkie pliki zapisywane w przeglądarce użytkownika. Podobne technologie to m.in. <code>localStorage</code> i <code>sessionStorage</code>.</p>
 
-  <div class="meta-info">
-    <p><strong>Czego dotyczy ten dokument?</strong></p>
-    <p style="margin-top:8px;">Polityka cookies opisuje pliki cookies używane na <strong>estelio.com.pl</strong> i w aplikacji Estelio. Wskazuje, które są niezbędne do działania, a które wymagają twojej zgody.</p>
-    <p style="margin-top:8px;">Zgodnie z prawem telekomunikacyjnym i RODO, niektóre cookies wymagają wyraźnej zgody użytkownika przed ich zapisaniem.</p>
-  </div>
+  <h2>2. Do czego używamy cookies i podobnych technologii</h2>
+  <p>Estelio może używać cookies i podobnych technologii w celu:</p>
+  <ul>
+    <li>prawidłowego działania strony,</li>
+    <li>utrzymania sesji logowania,</li>
+    <li>zapewnienia bezpieczeństwa,</li>
+    <li>zapamiętania ustawień użytkownika,</li>
+    <li>obsługi panelu i funkcji systemu.</li>
+  </ul>
+
+  <h2>3. Cookies niezbędne</h2>
+  <p>Cookies niezbędne są konieczne do działania strony lub aplikacji. Bez nich logowanie, sesja użytkownika lub podstawowe funkcje systemu mogą nie działać prawidłowo.</p>
+  <p>Do takich technologii mogą należeć:</p>
+  <ul>
+    <li>token sesji,</li>
+    <li>identyfikator zalogowanego użytkownika,</li>
+    <li>ustawienia techniczne aplikacji,</li>
+    <li>informacje zabezpieczające sesję.</li>
+  </ul>
+
+  <h2>4. LocalStorage i sessionStorage</h2>
+  <p>Aplikacja Estelio może używać <code>localStorage</code> lub <code>sessionStorage</code> do przechowywania danych potrzebnych do działania aplikacji, np. tokenu sesji lub ustawień interfejsu.</p>
+  <p>Dane te są przechowywane w przeglądarce użytkownika i mogą zostać usunięte przez wyczyszczenie danych przeglądarki.</p>
+
+  <h2>5. Cookies analityczne i reklamowe</h2>
+  <p>Na moment przygotowania tej wersji dokumentu Estelio nie zakłada używania cookies reklamowych ani analitycznych.</p>
+  <p>Jeżeli w przyszłości zostaną wdrożone narzędzia analityczne lub reklamowe, np. Google Analytics, Meta Pixel lub inne podobne rozwiązania, Polityka cookies zostanie zaktualizowana, a użytkownik otrzyma odpowiednią informację i możliwość zarządzania zgodami, jeżeli będzie to wymagane.</p>
+
+  <h2>6. Zarządzanie cookies</h2>
+  <p>Użytkownik może zarządzać cookies w ustawieniach swojej przeglądarki. Może je blokować lub usuwać, ale może to spowodować nieprawidłowe działanie strony lub aplikacji Estelio.</p>
+
+  <h2>7. Zmiany Polityki cookies</h2>
+  <p>Polityka cookies może być zmieniana w przypadku zmian technologicznych, prawnych lub wdrożenia nowych narzędzi.</p>
 
 </div>
 
 <footer>
-  © 2026 Estelio &middot;
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> &middot;
+  © Estelio &middot;
   <a href="/dokumentacja.html">Dokumentacja</a> &middot;
   <a href="/regulamin.html">Regulamin</a> &middot;
-  <a href="/polityka-prywatnosci.html">Polityka prywatności</a>
+  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
 </footer>
 
 </body>
