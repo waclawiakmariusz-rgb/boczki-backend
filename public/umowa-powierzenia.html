@@ -3,91 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Umowa powierzenia przetwarzania danych (DPA) — Estelio</title>
+  <title>Umowa powierzenia przetwarzania (DPA) — Estelio</title>
+  <meta name="description" content="Umowa powierzenia przetwarzania danych zgodna z art. 28 RODO. Warunki współpracy między salonem (administratorem) a Estelio (podmiotem przetwarzającym) w zakresie danych klientek salonu.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
-      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
-    }
+    :root { --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e; --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce; --warn-bg: #fdf2f2; --warn-border: #c97078; --warn-ink: #8a3a4a; }
     body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
-
-    header {
-      background: linear-gradient(135deg, #1c1a18, #2a2420);
-      padding: 24px 40px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    header a.logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem; font-weight: 600; color: var(--gold);
-      text-decoration: none; letter-spacing: .06em;
-    }
-    header a.back {
-      font-size: .82rem; color: rgba(255,255,255,.55);
-      text-decoration: none; transition: color .2s;
-    }
+    header { background: linear-gradient(135deg, #1c1a18, #2a2420); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--gold); text-decoration: none; letter-spacing: .06em; }
+    header a.back { font-size: .82rem; color: rgba(255,255,255,.55); text-decoration: none; transition: color .2s; }
     header a.back:hover { color: #fff; }
-
     .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
-    .doc-eyebrow {
-      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
-    }
-    h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem; font-weight: 600; color: var(--dark);
-      margin-bottom: 8px; line-height: 1.2;
-    }
-    .doc-meta {
-      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
-      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
-    }
-
-    h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.35rem; font-weight: 600; color: var(--dark);
-      margin: 40px 0 12px;
-    }
+    .doc-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 600; color: var(--dark); margin-bottom: 8px; line-height: 1.2; }
+    .doc-meta { font-size: .8rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .04em; text-transform: uppercase; }
+    .doc-meta strong { color: var(--dark); font-weight: 600; }
+    .doc-meta .dot { color: var(--gold); margin: 0 8px; }
+    .divider { border: 0; border-top: 1px solid var(--cream2); margin: 32px 0; }
+    h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.55rem; font-weight: 600; color: #5a3a40; margin: 40px 0 12px; }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--dark); margin: 26px 0 10px; }
     p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
     ul, ol { margin: 8px 0 14px 20px; }
     li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
     strong { color: var(--dark); }
     a { color: var(--rose); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    table {
-      width: 100%; border-collapse: collapse;
-      margin: 14px 0; font-size: .88rem;
-      background: #fff; border-radius: 4px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    th, td {
-      padding: 10px 12px; text-align: left;
-      border-bottom: 1px solid var(--border); vertical-align: top;
-    }
-    th {
-      background: var(--cream2); font-weight: 600; color: var(--dark);
-      font-size: .82rem; letter-spacing: .02em;
-    }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 3px; font-size: 88%; }
+    blockquote { margin: 14px 0; padding: 14px 20px; background: #fff; border-left: 3px solid var(--gold); border-radius: 4px; font-size: .9rem; color: var(--dark); }
+    blockquote p { margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .88rem; background: #fff; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--cream2); font-weight: 600; color: var(--dark); font-size: .82rem; }
     tr:last-child td { border-bottom: 0; }
-
-    footer {
-      background: var(--cream2); border-top: 1px solid var(--border);
-      padding: 20px 40px; text-align: center;
-      font-size: .75rem; color: var(--muted);
-    }
+    .summary-box { margin: 24px 0; padding: 22px 26px; background: var(--cream2); border-left: 4px solid var(--gold); border-radius: 4px; }
+    .summary-box .label { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.1rem; font-weight: 600; color: var(--dark); display: block; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: .94rem; }
+    .warning-box { margin: 14px 0; padding: 14px 18px; background: var(--warn-bg); border-left: 4px solid var(--warn-border); border-radius: 4px; }
+    .warning-box .label { font-weight: 600; color: var(--warn-ink); }
+    .warning-box p { margin: 0; font-size: .9rem; }
+    .section-divider { border: 0; border-top: 1px solid var(--cream2); margin: 40px 0; }
+    footer { background: var(--cream2); border-top: 1px solid var(--border); padding: 28px 40px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--rose); text-decoration: none; }
-
-    @media (max-width: 600px) {
-      .container { padding: 36px 20px 60px; }
-      header { padding: 18px 20px; }
-      h1 { font-size: 1.9rem; }
-      table { font-size: .8rem; }
-      th, td { padding: 8px; }
-    }
+    footer .firma { color: var(--dark); margin-bottom: 6px; }
+    footer .links { margin-top: 10px; }
+    @media (max-width: 600px) { .container { padding: 36px 20px 60px; } header { padding: 18px 20px; } h1 { font-size: 1.9rem; } table { font-size: .8rem; } th, td { padding: 8px; } }
   </style>
 </head>
 <body>
@@ -100,34 +62,101 @@
 <div class="container">
 
   <div class="doc-eyebrow">Załącznik nr 1 do Regulaminu</div>
-  <h1>Umowa powierzenia przetwarzania danych osobowych</h1>
-  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 2.1</div>
+  <h1>Umowa powierzenia przetwarzania danych (DPA)</h1>
+  <div class="doc-meta">Wersja <strong>2.1</strong><span class="dot">•</span>Obowiązuje od <strong>10 maja 2026</strong></div>
 
-  <h2>§1. Strony i charakter umowy</h2>
-  <p>1. Niniejsza umowa powierzenia zostaje zawarta pomiędzy Klientem korzystającym z systemu Estelio jako administratorem danych a Fotolinea Mariusz Wacławiak jako podmiotem przetwarzającym.</p>
-  <p>2. Umowa zostaje zawarta w związku z korzystaniem przez Klienta z systemu Estelio.</p>
-  <p>3. Akceptacja Regulaminu oznacza zawarcie niniejszej umowy powierzenia, jeżeli Klient wprowadza do systemu dane osobowe osób trzecich.</p>
+  <hr class="divider">
 
-  <h2>§2. Przedmiot powierzenia</h2>
-  <p>1. Klient powierza Estelio przetwarzanie danych osobowych w zakresie niezbędnym do świadczenia usługi dostępu do systemu Estelio.</p>
-  <p>2. Przetwarzanie odbywa się w celu umożliwienia Klientowi korzystania z systemu, przechowywania danych, obsługi funkcji systemu, wykonywania kopii zapasowych, zapewnienia bezpieczeństwa, wsparcia technicznego oraz utrzymania systemu.</p>
+  <div class="summary-box">
+    <span class="label">W skrócie</span>
+    <p>Ta umowa reguluje, na jakich zasadach Estelio przetwarza dane klientek i pracowników salonu, które salon wprowadza do systemu. Salon pozostaje administratorem tych danych — Estelio działa wyłącznie na polecenie salonu, jako podmiot przetwarzający w rozumieniu art. 28 RODO. Akceptacja Regulaminu Estelio oznacza zawarcie tej umowy.</p>
+  </div>
 
-  <h2>§3. Czas trwania przetwarzania</h2>
-  <p>1. Przetwarzanie danych trwa przez okres obowiązywania umowy o korzystanie z Estelio.</p>
-  <p>2. Po zakończeniu umowy dane mogą być przetwarzane przez okres niezbędny do umożliwienia eksportu danych, usunięcia danych, rozliczenia usług, obsługi zgłoszeń, bezpieczeństwa, backupów technicznych oraz ewentualnej obrony roszczeń.</p>
+  <h2>1. Strony umowy i jej charakter</h2>
+  <h3>1.1.</h3>
+  <p>Niniejsza umowa powierzenia przetwarzania danych osobowych — zwana dalej <strong>DPA</strong> — zostaje zawarta pomiędzy:</p>
+  <ul>
+    <li><strong>Klientem korzystającym z systemu Estelio</strong> — występującym w roli <strong>administratora danych</strong>,</li>
+    <li><strong>Fotolinea Mariusz Wacławiak</strong> (Estelio) — występującym w roli <strong>podmiotu przetwarzającego</strong>.</li>
+  </ul>
+  <h3>1.2.</h3>
+  <p>DPA zostaje zawarta w związku z korzystaniem przez Klienta z systemu Estelio.</p>
+  <h3>1.3.</h3>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Akceptacja <a href="/regulamin.html">Regulaminu</a> Estelio oznacza zawarcie niniejszej DPA, jeżeli Klient wprowadza do systemu dane osobowe osób trzecich (klientek, pracowników, kontrahentów).</p>
+  </div>
 
-  <h2>§4. Charakter i cel przetwarzania</h2>
-  <p>1. Przetwarzanie ma charakter zautomatyzowany i elektroniczny.</p>
-  <p>2. Dane mogą być przechowywane, utrwalane, porządkowane, przeglądane, pobierane, eksportowane, modyfikowane, usuwane, anonimizowane oraz zabezpieczane w zakresie niezbędnym do działania systemu.</p>
-  <p>3. Estelio nie przetwarza danych powierzonych w celach własnych, z wyjątkiem działań technicznych, bezpieczeństwa, rozliczalności, obsługi zgłoszeń, utrzymania i rozwoju systemu w zakresie dozwolonym prawem.</p>
+  <hr class="section-divider">
 
-  <h2>§5. Kategorie osób, których dane dotyczą</h2>
+  <h2>2. Czego dotyczy powierzenie</h2>
+  <h3>2.1.</h3>
+  <p>Klient powierza Estelio przetwarzanie danych osobowych w zakresie niezbędnym do świadczenia usługi dostępu do systemu.</p>
+  <h3>2.2.</h3>
+  <p>Przetwarzanie odbywa się w celu:</p>
+  <ul>
+    <li>umożliwienia Klientowi korzystania z systemu,</li>
+    <li>przechowywania danych,</li>
+    <li>obsługi funkcji systemu,</li>
+    <li>wykonywania kopii zapasowych,</li>
+    <li>zapewnienia bezpieczeństwa,</li>
+    <li>udzielania wsparcia technicznego,</li>
+    <li>utrzymania i rozwoju systemu.</li>
+  </ul>
+
+  <hr class="section-divider">
+
+  <h2>3. Jak długo trwa powierzenie</h2>
+  <h3>3.1.</h3>
+  <p>Przetwarzanie danych trwa przez <strong>cały okres obowiązywania umowy</strong> o korzystanie z Estelio.</p>
+  <h3>3.2.</h3>
+  <p>Po zakończeniu umowy dane mogą być przetwarzane jeszcze przez okres niezbędny do:</p>
+  <ul>
+    <li>umożliwienia Klientowi eksportu danych,</li>
+    <li>usunięcia danych zgodnie z procedurami,</li>
+    <li>rozliczenia usług,</li>
+    <li>obsługi zgłoszeń,</li>
+    <li>zapewnienia bezpieczeństwa,</li>
+    <li>przechowywania w kopiach zapasowych (max 90 dni od ostatniej kopii),</li>
+    <li>ewentualnej obrony przed roszczeniami.</li>
+  </ul>
+
+  <hr class="section-divider">
+
+  <h2>4. Charakter i sposób przetwarzania</h2>
+  <h3>4.1.</h3>
+  <p>Przetwarzanie ma charakter <strong>zautomatyzowany i elektroniczny</strong> — odbywa się w infrastrukturze IT Estelio.</p>
+  <h3>4.2.</h3>
+  <p>W ramach przetwarzania dane mogą być:</p>
+  <ul>
+    <li>przechowywane,</li>
+    <li>utrwalane,</li>
+    <li>porządkowane,</li>
+    <li>przeglądane,</li>
+    <li>pobierane i eksportowane,</li>
+    <li>modyfikowane,</li>
+    <li>usuwane lub anonimizowane,</li>
+    <li>zabezpieczane.</li>
+  </ul>
+  <p>Wszystko to wyłącznie w zakresie niezbędnym do działania systemu.</p>
+  <h3>4.3.</h3>
+  <p>Estelio <strong>nie przetwarza danych powierzonych w celach własnych</strong>, z wyjątkiem:</p>
+  <ul>
+    <li>działań technicznych niezbędnych dla bezpieczeństwa,</li>
+    <li>rozliczalności wymaganej przez RODO,</li>
+    <li>obsługi zgłoszeń od Klienta,</li>
+    <li>utrzymania i rozwoju systemu,</li>
+    <li>innych działań w zakresie dozwolonym przez przepisy prawa.</li>
+  </ul>
+
+  <hr class="section-divider">
+
+  <h2>5. Czyje dane są przetwarzane</h2>
   <p>Powierzone dane mogą dotyczyć w szczególności:</p>
   <ul>
-    <li>klientek i klientów salonu,</li>
-    <li>potencjalnych klientek i klientów salonu,</li>
+    <li>klientek i klientów salonu (aktualnych i potencjalnych),</li>
     <li>pracowników salonu,</li>
-    <li>współpracowników salonu,</li>
+    <li>współpracowników salonu (np. kontraktorów),</li>
     <li>managerów,</li>
     <li>recepcji,</li>
     <li>kosmetologów,</li>
@@ -135,149 +164,271 @@
     <li>dostawców lub kontrahentów, jeżeli Klient wprowadzi ich dane do systemu.</li>
   </ul>
 
-  <h2>§6. Kategorie danych osobowych</h2>
-  <p>Powierzone dane mogą obejmować w szczególności:</p>
+  <hr class="section-divider">
+
+  <h2>6. Jakie dane są przetwarzane</h2>
+  <p>Powierzone dane mogą obejmować:</p>
+
+  <h3>Dane podstawowe</h3>
   <ul>
     <li>imię i nazwisko,</li>
     <li>numer telefonu,</li>
     <li>adres e-mail,</li>
-    <li>adres,</li>
-    <li>datę urodzenia,</li>
-    <li>dane dotyczące historii wizyt, zakupów, zabiegów i sprzedaży,</li>
-    <li>dane o zadatkach, portfelach klienta i płatnościach,</li>
+    <li>adres pocztowy,</li>
+    <li>data urodzenia.</li>
+  </ul>
+
+  <h3>Dane operacyjne salonu</h3>
+  <ul>
+    <li>historia wizyt, zakupów, zabiegów i sprzedaży,</li>
+    <li>informacje o zadatkach, portfelach klientów i płatnościach,</li>
     <li>notatki w profilu klienta,</li>
-    <li>informacje o preferencjach i ulubionych zabiegach,</li>
-    <li>informacje o dokumentacji, zgodach i regulaminach,</li>
+    <li>preferencje i ulubione zabiegi,</li>
+    <li>dokumentacja, zgody i regulaminy,</li>
     <li>pliki PDF i inne załączniki,</li>
-    <li>dane dotyczące konsultacji,</li>
-    <li>dane dotyczące przeciwwskazań, zaleceń lub informacji podanych przez klienta salonu,</li>
-    <li>dane pracowników dotyczące roli, zadań, aktywności w systemie, wyników, celów, premii i komentarzy,</li>
+    <li>dane konsultacji,</li>
+    <li>przeciwwskazania i zalecenia.</li>
+  </ul>
+
+  <h3>Dane pracownicze</h3>
+  <ul>
+    <li>rola i uprawnienia,</li>
+    <li>zadania i komentarze,</li>
+    <li>aktywność w systemie,</li>
+    <li>wyniki, cele, premie.</li>
+  </ul>
+
+  <h3>Dane techniczne</h3>
+  <ul>
     <li>logi i rejestr zdarzeń,</li>
     <li>inne dane wprowadzone przez Klienta lub jego Użytkowników.</li>
   </ul>
 
-  <h2>§7. Dane szczególnych kategorii</h2>
-  <p>1. Estelio nie wymaga wprowadzania danych szczególnych kategorii, o których mowa w art. 9 RODO.</p>
-  <p>2. Klient przyjmuje do wiadomości, że w praktyce salon beauty może wprowadzać do systemu informacje dotyczące zdrowia, przeciwwskazań, stanu skóry, zabiegów, konsultacji lub dokumentacji.</p>
-  <p>3. Klient odpowiada za ocenę, czy dane wprowadzane do systemu obejmują dane szczególnych kategorii oraz za posiadanie właściwej podstawy prawnej ich przetwarzania.</p>
-  <p>4. Jeżeli Klient nie posiada podstawy prawnej do przetwarzania określonych danych, nie powinien wprowadzać ich do systemu.</p>
+  <hr class="section-divider">
 
-  <h2>§8. Obowiązki Klienta jako administratora</h2>
+  <h2>7. Dane szczególnych kategorii</h2>
+  <h3>7.1.</h3>
+  <p>Estelio <strong>nie wymaga</strong> wprowadzania danych szczególnych kategorii w rozumieniu art. 9 RODO.</p>
+  <h3>7.2.</h3>
+  <p>Klient przyjmuje do wiadomości, że w praktyce salon beauty może wpisać do systemu informacje dotyczące zdrowia, przeciwwskazań, stanu skóry, zabiegów, konsultacji lub dokumentacji.</p>
+  <h3>7.3.</h3>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Klient odpowiada za samodzielną ocenę, czy wprowadzane dane są danymi szczególnych kategorii oraz za posiadanie właściwej podstawy prawnej ich przetwarzania (np. wyraźnej zgody klientki zgodnie z art. 9 ust. 2 lit. a RODO).</p>
+  </div>
+  <h3>7.4.</h3>
+  <p>Jeżeli Klient nie posiada podstawy prawnej do przetwarzania określonych danych — <strong>nie powinien wprowadzać ich do systemu</strong>.</p>
+
+  <hr class="section-divider">
+
+  <h2>8. Obowiązki Klienta jako administratora</h2>
   <p>Klient zobowiązuje się:</p>
-  <ul>
-    <li>przetwarzać dane zgodnie z prawem,</li>
-    <li>posiadać właściwe podstawy prawne przetwarzania,</li>
-    <li>spełnić obowiązek informacyjny wobec osób, których dane dotyczą,</li>
-    <li>zapewnić poprawność danych,</li>
-    <li>nadawać dostęp do systemu wyłącznie osobom upoważnionym,</li>
-    <li>odbierać dostęp osobom, które utraciły uprawnienia,</li>
-    <li>informować Estelio o szczególnych wymaganiach dotyczących przetwarzania danych, jeżeli są niezbędne,</li>
-    <li>obsługiwać żądania osób, których dane dotyczą, przy wsparciu Estelio w zakresie wynikającym z umowy.</li>
-  </ul>
+  <ol>
+    <li><strong>przetwarzać dane zgodnie z prawem</strong>,</li>
+    <li><strong>posiadać właściwe podstawy prawne</strong> każdego rodzaju przetwarzania,</li>
+    <li><strong>spełnić obowiązek informacyjny</strong> wobec osób, których dane dotyczą — czyli klientek, pracowników i innych osób (Estelio udostępnia <a href="/klauzula-rodo-dla-salonu.html">szablon klauzuli RODO dla klientek salonu</a>),</li>
+    <li><strong>zapewnić poprawność i aktualność danych</strong>,</li>
+    <li><strong>nadawać dostęp do systemu wyłącznie osobom upoważnionym</strong>,</li>
+    <li><strong>odbierać dostęp</strong> osobom, które utraciły uprawnienia (np. byłym pracownikom),</li>
+    <li><strong>informować Estelio</strong> o szczególnych wymaganiach dotyczących przetwarzania, jeżeli są niezbędne,</li>
+    <li><strong>obsługiwać żądania osób, których dane dotyczą</strong> — przy wsparciu Estelio w zakresie wynikającym z tej DPA.</li>
+  </ol>
 
-  <h2>§9. Obowiązki Estelio jako podmiotu przetwarzającego</h2>
+  <hr class="section-divider">
+
+  <h2>9. Obowiązki Estelio jako podmiotu przetwarzającego</h2>
   <p>Estelio zobowiązuje się:</p>
+  <ol>
+    <li><strong>przetwarzać dane wyłącznie na udokumentowane polecenie Klienta</strong> (akceptacja Regulaminu i samo korzystanie z systemu stanowi takie polecenie),</li>
+    <li><strong>zapewnić, by osoby upoważnione do przetwarzania danych były zobowiązane do poufności</strong>,</li>
+    <li><strong>stosować odpowiednie środki techniczne i organizacyjne</strong> ochrony danych (zob. punkt 10),</li>
+    <li><strong>pomagać Klientowi</strong> — w miarę możliwości technicznych — w realizacji praw osób, których dane dotyczą,</li>
+    <li><strong>wspierać Klienta</strong> w zakresie obowiązków dotyczących bezpieczeństwa danych, naruszeń i ocen skutków dla ochrony danych (DPIA), jeżeli mają zastosowanie,</li>
+    <li><strong>po zakończeniu umowy usunąć lub zwrócić dane</strong> zgodnie z <a href="/regulamin.html">Regulaminem</a> i decyzją Klienta — chyba że przepisy prawa wymagają ich dłuższego przechowywania,</li>
+    <li><strong>udostępniać Klientowi informacje</strong> niezbędne do wykazania spełnienia obowiązków wynikających z art. 28 RODO, w rozsądnym zakresie.</li>
+  </ol>
+
+  <hr class="section-divider">
+
+  <h2>10. Środki bezpieczeństwa</h2>
+  <p>Estelio stosuje środki bezpieczeństwa odpowiednie do charakteru przetwarzania:</p>
+
+  <h3>Bezpieczeństwo komunikacji</h3>
   <ul>
-    <li>przetwarzać dane wyłącznie na udokumentowane polecenie Klienta,</li>
-    <li>zapewnić, aby osoby upoważnione do przetwarzania danych zobowiązały się do poufności,</li>
-    <li>stosować odpowiednie środki techniczne i organizacyjne ochrony danych,</li>
-    <li>pomagać Klientowi, w miarę możliwości technicznych i organizacyjnych, w realizacji praw osób, których dane dotyczą,</li>
-    <li>pomagać Klientowi w zakresie obowiązków dotyczących bezpieczeństwa danych, naruszeń i oceny skutków dla ochrony danych, jeżeli ma to zastosowanie,</li>
-    <li>po zakończeniu umowy usunąć lub zwrócić dane zgodnie z Regulaminem i decyzją Klienta, chyba że przepisy prawa wymagają dalszego przechowywania określonych danych,</li>
-    <li>udostępniać Klientowi informacje niezbędne do wykazania spełnienia obowiązków wynikających z art. 28 RODO w rozsądnym zakresie.</li>
+    <li>HTTPS — całe połączenie szyfrowane,</li>
+    <li>tokeny sesji unieważniane po wylogowaniu lub bezczynności.</li>
   </ul>
 
-  <h2>§10. Środki bezpieczeństwa</h2>
-  <p>Estelio stosuje środki bezpieczeństwa odpowiednie do charakteru przetwarzania, w szczególności:</p>
+  <h3>Bezpieczeństwo dostępu</h3>
   <ul>
-    <li>HTTPS,</li>
     <li>hasła szyfrowane bcrypt,</li>
-    <li>kontrolę dostępu,</li>
     <li>role i uprawnienia użytkowników,</li>
-    <li>separację danych poszczególnych salonów,</li>
-    <li><code>tenant_id</code> dla każdego salonu,</li>
-    <li>filtrowanie zapytań po <code>tenant_id</code>,</li>
-    <li>pliki PDF poza katalogiem publicznym,</li>
-    <li>autoryzację dostępu do plików,</li>
-    <li>rejestr zdarzeń,</li>
-    <li>kopie zapasowe,</li>
-    <li>ograniczenie dostępu administracyjnego,</li>
-    <li>zabezpieczenia infrastruktury serwerowej,</li>
-    <li>procedury reagowania na incydenty.</li>
+    <li>ograniczenie dostępu administracyjnego.</li>
   </ul>
 
-  <h2>§11. Podprocesorzy</h2>
-  <p>1. Klient wyraża ogólną zgodę na korzystanie przez Estelio z podprocesorów, jeżeli jest to niezbędne do świadczenia usługi.</p>
-  <p>2. Aktualni podprocesorzy mogą obejmować:</p>
+  <h3>Bezpieczeństwo separacji danych</h3>
+  <ul>
+    <li>każdy salon ma własny <code>tenant_id</code>,</li>
+    <li>zapytania do bazy filtrowane po <code>tenant_id</code>,</li>
+    <li>pliki PDF przechowywane poza katalogiem publicznym,</li>
+    <li>autoryzacja wymagana do dostępu do plików.</li>
+  </ul>
+
+  <h3>Rozliczalność</h3>
+  <ul>
+    <li>rejestr zdarzeń (kto, kiedy, co zrobił),</li>
+    <li>procedury reagowania na incydenty,</li>
+    <li>kopie zapasowe wykonywane regularnie.</li>
+  </ul>
+
+  <h3>Infrastruktura</h3>
+  <ul>
+    <li>serwery i kopie zapasowe utrzymywane w Unii Europejskiej,</li>
+    <li>zabezpieczenia infrastruktury serwerowej.</li>
+  </ul>
+
+  <hr class="section-divider">
+
+  <h2>11. Podprocesorzy</h2>
+  <h3>11.1.</h3>
+  <p>Klient wyraża <strong>ogólną zgodę</strong> na korzystanie przez Estelio z podprocesorów, jeżeli jest to niezbędne do świadczenia usługi.</p>
+  <h3>11.2.</h3>
+  <p>Aktualna lista podprocesorów Estelio:</p>
   <table>
     <thead>
-      <tr><th>Podmiot</th><th>Cel</th><th>Dane</th><th>Lokalizacja</th></tr>
+      <tr><th>Podmiot</th><th>Cel</th><th>Zakres danych</th><th>Lokalizacja</th></tr>
     </thead>
     <tbody>
-      <tr><td>Hostinger</td><td>hosting serwera, bazy danych, SMTP, backupy</td><td>dane w systemie, e-maile</td><td>UE</td></tr>
+      <tr><td>Hostinger</td><td>hosting serwera, bazy danych, SMTP, kopie zapasowe</td><td>dane w systemie, e-maile</td><td>UE</td></tr>
       <tr><td>Stripe</td><td>płatności subskrypcyjne</td><td>dane płatnika, e-mail, dane karty po stronie Stripe</td><td>Irlandia / USA</td></tr>
-      <tr><td>Fakturownia.pl</td><td>fakturowanie</td><td>dane do faktury właściciela salonu</td><td>Polska</td></tr>
+      <tr><td>Fakturownia.pl</td><td>fakturowanie</td><td>dane do faktury Klienta</td><td>Polska</td></tr>
     </tbody>
   </table>
-  <p>3. Estelio zobowiązuje się korzystać z podprocesorów zapewniających odpowiedni poziom ochrony danych.</p>
-  <p>4. Estelio informuje Klienta o istotnych zmianach dotyczących podprocesorów w sposób przyjęty dla komunikacji z Klientem, np. e-mailowo, w systemie lub przez aktualizację listy podprocesorów.</p>
-  <p>5. Jeżeli Klient nie akceptuje nowego podprocesora, może zgłosić sprzeciw w terminie 14 dni od otrzymania informacji. W przypadku braku możliwości świadczenia usługi bez danego podprocesora strony mogą rozwiązać umowę.</p>
+  <h3>11.3.</h3>
+  <p>Estelio zobowiązuje się korzystać wyłącznie z podprocesorów, którzy zapewniają odpowiedni poziom ochrony danych — porównywalny z poziomem oczekiwanym od samego Estelio.</p>
+  <h3>11.4.</h3>
+  <p>Estelio informuje Klienta o <strong>istotnych zmianach</strong> dotyczących podprocesorów (dodanie nowego, zmiana zakresu) drogą e-mailową, komunikatem w systemie lub przez aktualizację listy podprocesorów na stronie.</p>
+  <h3>11.5.</h3>
+  <p>Jeżeli Klient nie akceptuje nowego podprocesora, może zgłosić sprzeciw w terminie <strong>14 dni</strong> od otrzymania informacji. W przypadku braku możliwości świadczenia usługi bez danego podprocesora, każda ze stron może rozwiązać umowę.</p>
 
-  <h2>§12. Naruszenia ochrony danych</h2>
-  <p>1. Estelio poinformuje Klienta o naruszeniu ochrony danych osobowych bez zbędnej zwłoki po jego stwierdzeniu, jeżeli naruszenie dotyczy danych powierzonych przez Klienta.</p>
-  <p>2. Informacja, w miarę dostępności, będzie obejmowała:</p>
+  <hr class="section-divider">
+
+  <h2>12. Naruszenia ochrony danych</h2>
+  <h3>12.1.</h3>
+  <p>Estelio informuje Klienta o naruszeniu ochrony danych osobowych <strong>bez zbędnej zwłoki</strong> po jego stwierdzeniu, jeżeli naruszenie dotyczy danych powierzonych przez Klienta.</p>
+  <h3>12.2.</h3>
+  <p>Informacja, w miarę dostępności, obejmuje:</p>
   <ul>
     <li>charakter naruszenia,</li>
     <li>kategorie i przybliżoną liczbę osób, których dane dotyczą,</li>
     <li>możliwe konsekwencje naruszenia,</li>
     <li>zastosowane lub proponowane środki zaradcze.</li>
   </ul>
-  <p>3. Klient jako administrator odpowiada za ocenę, czy naruszenie wymaga zgłoszenia do PUODO lub zawiadomienia osób, których dane dotyczą.</p>
-  <p>4. Estelio może wspierać Klienta w ocenie incydentu w zakresie informacji technicznych, które posiada.</p>
-  <p>5. W przypadku naruszenia obejmującego dane wielu salonów Estelio zawiadamia salony, których dane mogły zostać naruszone, bez zbędnej zwłoki po stwierdzeniu naruszenia.</p>
+  <h3>12.3.</h3>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Klient jako administrator odpowiada za samodzielną ocenę, czy naruszenie wymaga zgłoszenia do Prezesa UODO w terminie 72 godzin (art. 33 RODO) oraz czy konieczne jest zawiadomienie osób, których dane dotyczą (art. 34 RODO).</p>
+  </div>
+  <h3>12.4.</h3>
+  <p>Estelio wspiera Klienta w ocenie incydentu w zakresie informacji technicznych, którymi dysponuje.</p>
+  <h3>12.5.</h3>
+  <p>W przypadku naruszenia obejmującego dane wielu salonów, Estelio zawiadamia wszystkie salony, których dane mogły zostać naruszone, bez zbędnej zwłoki po stwierdzeniu naruszenia.</p>
 
-  <h2>§13. Realizacja praw osób, których dane dotyczą</h2>
-  <p>1. Jeżeli osoba, której dane dotyczą, zwróci się bezpośrednio do Estelio w sprawie danych wprowadzonych przez Klienta, Estelio może:</p>
+  <hr class="section-divider">
+
+  <h2>13. Realizacja praw osób, których dane dotyczą</h2>
+  <h3>13.1.</h3>
+  <p>Jeżeli osoba, której dane dotyczą (np. klientka salonu), zwróci się <strong>bezpośrednio do Estelio</strong> w sprawie danych wprowadzonych przez Klienta, Estelio może:</p>
   <ul>
-    <li>przekazać zgłoszenie Klientowi,</li>
-    <li>poinformować osobę, że administratorem danych jest salon,</li>
-    <li>udzielić wsparcia Klientowi w zakresie technicznej obsługi zgłoszenia.</li>
+    <li>przekazać zgłoszenie do Klienta (właściwego salonu),</li>
+    <li>poinformować osobę, że administratorem jej danych jest salon,</li>
+    <li>udzielić salonowi wsparcia w zakresie technicznej obsługi zgłoszenia.</li>
   </ul>
-  <p>2. Estelio nie podejmuje samodzielnych decyzji dotyczących usunięcia, sprostowania, ograniczenia lub wydania danych powierzonych, chyba że wynika to z polecenia Klienta, Regulaminu, prawa lub konieczności zapewnienia bezpieczeństwa.</p>
+  <h3>13.2.</h3>
+  <p>Estelio <strong>nie podejmuje samodzielnych decyzji</strong> dotyczących usunięcia, sprostowania, ograniczenia ani wydania danych powierzonych — chyba że wynika to z polecenia Klienta, Regulaminu, przepisów prawa lub konieczności zapewnienia bezpieczeństwa systemu.</p>
+  <p>Szczegółowa procedura obsługi takich żądań znajduje się w <a href="/procedura-rodo.html">Procedurze obsługi wniosków RODO</a>.</p>
 
-  <h2>§14. Usuwanie danych i soft-delete</h2>
-  <p>1. System może stosować mechanizmy usunięcia logicznego, anonimizacji lub usunięcia fizycznego, zależnie od funkcji i charakteru danych.</p>
-  <p>2. Jeżeli Klient usuwa dane osoby z systemu, Estelio wykonuje operację zgodnie z funkcjonalnością systemu oraz poleceniem Klienta.</p>
-  <p>3. Dane mogą pozostawać przez ograniczony czas w kopiach zapasowych lub logach technicznych, jeżeli jest to konieczne dla bezpieczeństwa, integralności systemu, rozliczalności lub odtworzenia danych.</p>
-  <p>4. Dokładny okres soft-delete i przechowywania w backupach powinien zostać zatwierdzony przez prawnika i opisany w dokumentacji technicznej.</p>
+  <hr class="section-divider">
 
-  <h2>§15. Wnioski organów publicznych</h2>
-  <p>1. Jeżeli Estelio otrzyma żądanie organu publicznego dotyczące danych powierzonych przez Klienta, oceni żądanie pod kątem formalnym i prawnym.</p>
-  <p>2. Jeżeli przepisy prawa na to pozwalają, Estelio poinformuje Klienta o takim żądaniu.</p>
-  <p>3. Estelio udostępni dane organowi publicznemu wyłącznie wtedy, gdy istnieje ku temu odpowiednia podstawa prawna.</p>
+  <h2>14. Usuwanie danych</h2>
+  <h3>14.1.</h3>
+  <p>System Estelio może stosować różne mechanizmy usuwania danych — usunięcie logiczne, anonimizację, usunięcie fizyczne — zależnie od typu danych i funkcji systemu.</p>
+  <h3>14.2.</h3>
+  <p>Gdy Klient usuwa dane osoby z systemu, Estelio wykonuje operację zgodnie z funkcjami systemu i poleceniem Klienta.</p>
+  <h3>14.3.</h3>
+  <p>Dane mogą pozostawać przez ograniczony czas w <strong>kopiach zapasowych lub logach technicznych</strong>, jeżeli jest to konieczne dla bezpieczeństwa, integralności systemu, rozliczalności lub odtworzenia danych.</p>
+  <div class="warning-box">
+    <span class="label">Maksymalny okres przechowywania:</span>
+    <p>Dane w kopiach zapasowych są przechowywane maksymalnie 90 dni od ostatniej kopii.</p>
+  </div>
 
-  <h2>§16. Audyt i informacje</h2>
-  <p>1. Estelio udostępnia Klientowi informacje niezbędne do wykazania zgodności z art. 28 RODO w rozsądnym zakresie.</p>
-  <p>2. Audyt nie może naruszać bezpieczeństwa systemu, tajemnicy przedsiębiorstwa, praw innych Klientów ani ciągłości działania Estelio.</p>
-  <p>3. Szczegółowe warunki audytu, jeżeli będzie konieczny, strony ustalą indywidualnie.</p>
+  <hr class="section-divider">
 
-  <h2>§17. Zakończenie powierzenia</h2>
-  <p>1. Po zakończeniu umowy Klient może zażądać eksportu danych w terminie określonym w <a href="/regulamin.html">Regulaminie</a>.</p>
-  <p>2. Po upływie terminu na eksport Estelio może usunąć lub zanonimizować dane powierzone, chyba że przepisy prawa wymagają dalszego przechowywania danych.</p>
-  <p>3. Kopie zapasowe mogą być przechowywane przez technicznie uzasadniony czas, po czym są nadpisywane lub usuwane zgodnie z cyklem backupów.</p>
+  <h2>15. Żądania organów publicznych</h2>
+  <h3>15.1.</h3>
+  <p>Jeżeli Estelio otrzyma żądanie organu publicznego dotyczące danych powierzonych przez Klienta:</p>
+  <ol>
+    <li><strong>oceni żądanie</strong> pod kątem formalnym i prawnym,</li>
+    <li><strong>poinformuje Klienta</strong> o takim żądaniu, jeżeli przepisy prawa na to pozwalają,</li>
+    <li><strong>udostępni dane wyłącznie</strong> w zakresie wymaganym przez prawo.</li>
+  </ol>
+  <h3>15.2.</h3>
+  <p>Estelio nigdy nie udostępnia danych „na zapas" ani bez podstawy prawnej.</p>
 
-  <h2>§18. Postanowienia końcowe</h2>
-  <p>1. Niniejsza umowa powierzenia stanowi integralną część <a href="/regulamin.html">Regulaminu</a>.</p>
-  <p>2. W razie sprzeczności między Regulaminem a niniejszą umową w zakresie powierzenia danych osobowych pierwszeństwo mają postanowienia niniejszej umowy.</p>
+  <hr class="section-divider">
+
+  <h2>16. Audyt i informacje</h2>
+  <h3>16.1.</h3>
+  <p>Estelio udostępnia Klientowi informacje niezbędne do wykazania zgodności z art. 28 RODO, w rozsądnym zakresie.</p>
+  <h3>16.2.</h3>
+  <p>Audyt nie może naruszać:</p>
+  <ul>
+    <li>bezpieczeństwa systemu,</li>
+    <li>tajemnicy przedsiębiorstwa,</li>
+    <li>praw innych Klientów,</li>
+    <li>ciągłości działania Estelio.</li>
+  </ul>
+  <h3>16.3.</h3>
+  <p>Szczegółowe warunki audytu — jeżeli będzie konieczny — strony ustalą indywidualnie.</p>
+
+  <hr class="section-divider">
+
+  <h2>17. Zakończenie powierzenia</h2>
+  <h3>17.1.</h3>
+  <p>Po zakończeniu umowy Klient może zażądać eksportu danych w terminie określonym w <a href="/regulamin.html">Regulaminie</a> (standardowo 30 dni).</p>
+  <h3>17.2.</h3>
+  <p>Po upływie terminu na eksport, Estelio może usunąć lub zanonimizować dane powierzone — chyba że przepisy prawa wymagają ich dalszego przechowywania.</p>
+  <h3>17.3.</h3>
+  <p>Kopie zapasowe są przechowywane przez technicznie uzasadniony czas (max 90 dni), po czym są nadpisywane lub usuwane zgodnie z cyklem backupów.</p>
+
+  <hr class="section-divider">
+
+  <h2>18. Postanowienia końcowe</h2>
+  <h3>18.1.</h3>
+  <p>Niniejsza DPA stanowi <strong>integralną część</strong> <a href="/regulamin.html">Regulaminu Estelio</a>.</p>
+  <h3>18.2.</h3>
+  <p>W razie sprzeczności między Regulaminem a niniejszą DPA w zakresie powierzenia danych osobowych, <strong>pierwszeństwo mają postanowienia tej umowy</strong>.</p>
+
+  <hr class="section-divider">
+
+  <h2>Kontakt w sprawach DPA</h2>
+  <p>Wszystkie pytania dotyczące powierzenia przetwarzania danych prosimy kierować na adres:</p>
+  <p><strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p>
 
 </div>
 
 <footer>
-  © Estelio &middot;
-  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
-  <a href="/regulamin.html">Regulamin</a> &middot;
-  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  <div class="firma">© 2026 Estelio &middot; Fotolinea Mariusz Wacławiak &middot; ul. Zefira 27/3, 80-180 Kowale &middot; NIP: 4660275573</div>
+  <div><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></div>
+  <div class="links">
+    <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+    <a href="/regulamin.html">Regulamin</a> &middot;
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> &middot;
+    <a href="/umowa-powierzenia.html">DPA</a> &middot;
+    <a href="/polityka-cookies.html">Polityka cookies</a> &middot;
+    <a href="/klauzula-rodo-dla-salonu.html">Klauzula RODO dla salonu</a> &middot;
+    <a href="/procedura-rodo.html">Procedura RODO</a>
+  </div>
 </footer>
 
 </body>

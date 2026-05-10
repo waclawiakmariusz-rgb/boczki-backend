@@ -3,91 +3,49 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Klauzula RODO dla klientki/klienta salonu — Estelio</title>
+  <title>Klauzula RODO dla klientek salonu — szablon — Estelio</title>
+  <meta name="description" content="Wzór klauzuli informacyjnej RODO do umieszczenia na karcie zabiegowej, w formularzu zgody lub regulaminie salonu beauty. Salon jako administrator danych klientek.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
-      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
-    }
+    :root { --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e; --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce; --warn-bg: #fdf2f2; --warn-border: #c97078; --warn-ink: #8a3a4a; }
     body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
-
-    header {
-      background: linear-gradient(135deg, #1c1a18, #2a2420);
-      padding: 24px 40px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    header a.logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem; font-weight: 600; color: var(--gold);
-      text-decoration: none; letter-spacing: .06em;
-    }
-    header a.back {
-      font-size: .82rem; color: rgba(255,255,255,.55);
-      text-decoration: none; transition: color .2s;
-    }
+    header { background: linear-gradient(135deg, #1c1a18, #2a2420); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--gold); text-decoration: none; letter-spacing: .06em; }
+    header a.back { font-size: .82rem; color: rgba(255,255,255,.55); text-decoration: none; transition: color .2s; }
     header a.back:hover { color: #fff; }
-
     .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
-    .doc-eyebrow {
-      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
-    }
-    h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem; font-weight: 600; color: var(--dark);
-      margin-bottom: 8px; line-height: 1.2;
-    }
-    .doc-meta {
-      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
-      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
-    }
-
-    h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.35rem; font-weight: 600; color: var(--dark);
-      margin: 40px 0 12px;
-    }
+    .doc-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 600; color: var(--dark); margin-bottom: 8px; line-height: 1.2; }
+    .doc-meta { font-size: .8rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .04em; text-transform: uppercase; }
+    .doc-meta strong { color: var(--dark); font-weight: 600; }
+    .doc-meta .dot { color: var(--gold); margin: 0 8px; }
+    .divider { border: 0; border-top: 1px solid var(--cream2); margin: 32px 0; }
+    h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.55rem; font-weight: 600; color: #5a3a40; margin: 40px 0 12px; }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--dark); margin: 28px 0 10px; }
     p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
     ul, ol { margin: 8px 0 14px 20px; }
     li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
     strong { color: var(--dark); }
-    blockquote {
-      margin: 14px 0;
-      padding: 14px 20px;
-      background: #fff;
-      border-left: 3px solid var(--gold);
-      border-radius: 4px;
-      font-size: .9rem;
-      color: var(--dark);
-    }
-    blockquote p { margin-bottom: 4px; }
     a { color: var(--rose); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    .info-banner {
-      margin-bottom: 32px; padding: 14px 18px;
-      background: #fff8e6; border: 1px dashed var(--gold);
-      border-radius: 4px;
-      font-size: .85rem; color: #7a5c00;
-    }
-    .info-banner strong { color: #5a4400; }
-
-    footer {
-      background: var(--cream2); border-top: 1px solid var(--border);
-      padding: 20px 40px; text-align: center;
-      font-size: .75rem; color: var(--muted);
-    }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 3px; font-size: 88%; }
+    blockquote { margin: 14px 0; padding: 14px 20px; background: #fff; border-left: 3px solid var(--gold); border-radius: 4px; font-size: .9rem; color: var(--dark); }
+    blockquote p { margin-bottom: 4px; }
+    .summary-box { margin: 24px 0; padding: 22px 26px; background: var(--cream2); border-left: 4px solid var(--gold); border-radius: 4px; }
+    .summary-box .label { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.1rem; font-weight: 600; color: var(--dark); display: block; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: .94rem; }
+    .warning-box { margin: 14px 0; padding: 14px 18px; background: var(--warn-bg); border-left: 4px solid var(--warn-border); border-radius: 4px; }
+    .warning-box .label { font-weight: 600; color: var(--warn-ink); }
+    .warning-box p { margin: 0; font-size: .9rem; }
+    .section-divider { border: 0; border-top: 1px solid var(--cream2); margin: 40px 0; }
+    footer { background: var(--cream2); border-top: 1px solid var(--border); padding: 28px 40px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--rose); text-decoration: none; }
-
-    @media (max-width: 600px) {
-      .container { padding: 36px 20px 60px; }
-      header { padding: 18px 20px; }
-      h1 { font-size: 1.9rem; }
-    }
+    footer .firma { color: var(--dark); margin-bottom: 6px; }
+    footer .links { margin-top: 10px; }
+    @media (max-width: 600px) { .container { padding: 36px 20px 60px; } header { padding: 18px 20px; } h1 { font-size: 1.9rem; } }
   </style>
 </head>
 <body>
@@ -99,14 +57,41 @@
 
 <div class="container">
 
-  <div class="doc-eyebrow">Wzór dla salonu</div>
-  <h1>Klauzula informacyjna dla klientki/klienta salonu</h1>
-  <div class="doc-meta">Wzór do wykorzystania przez salon &nbsp;·&nbsp; Wersja: 1.0</div>
+  <div class="doc-eyebrow">Szablon dla salonów</div>
+  <h1>Klauzula informacyjna RODO dla klientek salonu</h1>
+  <div class="doc-meta">Wersja <strong>1.0</strong><span class="dot">•</span>Obowiązuje od <strong>10 maja 2026</strong></div>
 
-  <div class="info-banner">
-    <strong>Uwaga:</strong> Niniejszy dokument jest szablonem, który salon może wkleić do swojej karty zabiegowej, dokumentacji, formularza zgody lub regulaminu. Należy go dostosować do danych konkretnego salonu poprzez uzupełnienie pól oznaczonych <code>[w nawiasach kwadratowych]</code>.
+  <hr class="divider">
+
+  <div class="summary-box">
+    <span class="label">W skrócie</span>
+    <p>To gotowy szablon, który można wkleić do swojej karty zabiegowej, formularza zgody lub regulaminu salonu. Wystarczy wypełnić pola w nawiasach kwadratowych własnymi danymi.</p>
   </div>
 
+  <h2>Jak korzystać z tego szablonu</h2>
+  <ol>
+    <li><strong>Skopiuj treść klauzuli</strong> poniżej (od „Klauzula informacyjna" do końca dokumentu).</li>
+    <li><strong>Uzupełnij wszystkie pola w nawiasach kwadratowych</strong> własnymi danymi salonu.</li>
+    <li><strong>Umieść klauzulę</strong> w jednym z miejsc:
+      <ul>
+        <li>w karcie zabiegowej,</li>
+        <li>w formularzu pierwszej wizyty,</li>
+        <li>w regulaminie salonu,</li>
+        <li>na dole strony internetowej salonu,</li>
+        <li>w treści wiadomości potwierdzających wizytę.</li>
+      </ul>
+    </li>
+    <li><strong>Zadbaj o moment zapoznania</strong> — klientka powinna mieć możliwość przeczytania klauzuli przed podaniem danych.</li>
+  </ol>
+
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Ten szablon to punkt wyjścia. Jeżeli prowadzą Państwo szczególne zabiegi (na przykład medycynę estetyczną pod nadzorem lekarza), klauzula może wymagać rozszerzenia. W razie wątpliwości warto skonsultować się z prawnikiem.</p>
+  </div>
+
+  <hr class="section-divider">
+
+  <h2>Klauzula informacyjna dla klientki/klienta salonu</h2>
   <p>Zgodnie z art. 13 RODO informujemy, że administratorem Pani/Pana danych osobowych jest:</p>
   <blockquote>
     <p><strong>[nazwa salonu]</strong></p>
@@ -116,7 +101,7 @@
     <p>[telefon]</p>
   </blockquote>
 
-  <h2>1. Jakie dane przetwarzamy</h2>
+  <h3>1. Jakie dane przetwarzamy</h3>
   <p>Możemy przetwarzać następujące dane:</p>
   <ul>
     <li>imię i nazwisko,</li>
@@ -132,70 +117,99 @@
     <li>inne dane przekazane przez Panią/Pana w związku z korzystaniem z usług salonu.</li>
   </ul>
 
-  <h2>2. Cele przetwarzania danych</h2>
-  <p>Dane przetwarzamy w celu:</p>
+  <h3>2. W jakim celu przetwarzamy dane</h3>
+  <p>Pani/Pana dane przetwarzamy w celu:</p>
   <ul>
     <li>umówienia i realizacji wizyty,</li>
-    <li>wykonania usługi kosmetologicznej/kosmetycznej,</li>
+    <li>wykonania usługi kosmetologicznej lub kosmetycznej,</li>
     <li>prowadzenia dokumentacji zabiegowej,</li>
-    <li>kontaktu w sprawie wizyty,</li>
+    <li>kontaktu w sprawie wizyty (potwierdzenie, przypomnienie, zmiana),</li>
     <li>obsługi płatności, zadatków i pakietów,</li>
-    <li>realizacji obowiązków prawnych,</li>
+    <li>realizacji obowiązków prawnych (np. księgowych),</li>
     <li>ochrony przed roszczeniami,</li>
-    <li>kontaktu marketingowego, jeżeli wyrazi Pani/Pan zgodę.</li>
+    <li>kontaktu marketingowego — wyłącznie po wyrażeniu przez Panią/Pana zgody.</li>
   </ul>
 
-  <h2>3. Podstawy prawne</h2>
-  <p>Dane przetwarzamy na podstawie:</p>
+  <h3>3. Na jakiej podstawie prawnej</h3>
+  <p>Pani/Pana dane przetwarzamy na podstawie:</p>
   <ul>
-    <li>art. 6 ust. 1 lit. b RODO — wykonanie umowy lub działania przed jej zawarciem,</li>
-    <li>art. 6 ust. 1 lit. c RODO — obowiązki prawne,</li>
-    <li>art. 6 ust. 1 lit. f RODO — prawnie uzasadniony interes salonu, np. kontakt, organizacja pracy, obrona roszczeń,</li>
-    <li>art. 6 ust. 1 lit. a RODO — zgoda, np. marketing,</li>
-    <li>art. 9 ust. 2 lit. a RODO — wyraźna zgoda, jeżeli przetwarzane są dane szczególnych kategorii, np. informacje o zdrowiu lub przeciwwskazaniach.</li>
+    <li><strong>art. 6 ust. 1 lit. b RODO</strong> — wykonanie umowy lub działania przed jej zawarciem (czyli rezerwacja, wizyta, świadczenie usługi),</li>
+    <li><strong>art. 6 ust. 1 lit. c RODO</strong> — obowiązki prawne nałożone na nas (np. księgowe, podatkowe),</li>
+    <li><strong>art. 6 ust. 1 lit. f RODO</strong> — prawnie uzasadniony interes salonu, na przykład organizacja pracy lub obrona przed roszczeniami,</li>
+    <li><strong>art. 6 ust. 1 lit. a RODO</strong> — Pani/Pana zgoda, na przykład na kontakt marketingowy,</li>
+    <li><strong>art. 9 ust. 2 lit. a RODO</strong> — wyraźna zgoda, jeżeli przetwarzamy dane szczególnych kategorii, takie jak informacje o zdrowiu lub przeciwwskazaniach.</li>
   </ul>
 
-  <h2>4. Odbiorcy danych</h2>
-  <p>Dane mogą być przekazywane podmiotom wspierającym salon, w szczególności:</p>
+  <h3>4. Komu przekazujemy dane</h3>
+  <p>Pani/Pana dane mogą być przekazywane podmiotom, które wspierają nas w prowadzeniu salonu:</p>
   <ul>
-    <li>dostawcy systemu Estelio,</li>
+    <li>dostawcy systemu <strong>Estelio</strong>, w którym prowadzimy ewidencję klientek i wizyt,</li>
     <li>podmiotom świadczącym usługi IT,</li>
-    <li>księgowości,</li>
+    <li>biuru księgowemu,</li>
     <li>operatorom płatności,</li>
     <li>podmiotom uprawnionym na podstawie przepisów prawa.</li>
   </ul>
-  <p>Dane wprowadzone do systemu Estelio są przechowywane przez dostawcę systemu jako podmiot przetwarzający dane w imieniu salonu.</p>
+  <p>Dane wprowadzone do systemu Estelio są przechowywane przez dostawcę systemu jako podmiot przetwarzający dane w naszym imieniu, na podstawie umowy powierzenia przetwarzania danych zgodnej z art. 28 RODO.</p>
 
-  <h2>5. Okres przechowywania danych</h2>
-  <p>Dane przechowujemy przez okres potrzebny do realizacji usług, obsługi klienta, rozliczeń, obowiązków prawnych oraz ochrony przed roszczeniami.</p>
-  <p>Dane przetwarzane na podstawie zgody przechowujemy do czasu wycofania zgody, chyba że istnieje inna podstawa prawna dalszego przetwarzania.</p>
-
-  <h2>6. Prawa osoby, której dane dotyczą</h2>
-  <p>Przysługuje Pani/Panu prawo:</p>
+  <h3>5. Jak długo przechowujemy dane</h3>
+  <p>Pani/Pana dane przechowujemy przez okres niezbędny do:</p>
   <ul>
-    <li>dostępu do danych,</li>
-    <li>sprostowania danych,</li>
-    <li>usunięcia danych,</li>
-    <li>ograniczenia przetwarzania,</li>
-    <li>przenoszenia danych,</li>
-    <li>sprzeciwu,</li>
-    <li>cofnięcia zgody,</li>
-    <li>wniesienia skargi do Prezesa Urzędu Ochrony Danych Osobowych.</li>
+    <li>realizacji usług,</li>
+    <li>obsługi rozliczeń i obowiązków księgowych,</li>
+    <li>ochrony przed roszczeniami.</li>
   </ul>
-  <p>Aby skorzystać z praw, prosimy o kontakt z salonem:</p>
+  <p>Dane przetwarzane na podstawie zgody (np. marketingowe) przechowujemy do czasu wycofania tej zgody, chyba że istnieje inna podstawa prawna ich dalszego przetwarzania.</p>
+
+  <h3>6. Pani/Pana prawa</h3>
+  <p>Przysługują Pani/Panu następujące prawa:</p>
+  <ul>
+    <li><strong>prawo dostępu</strong> do danych — może Pani/Pan zapytać, jakie dane o Pani/Panu przetwarzamy,</li>
+    <li><strong>prawo do sprostowania</strong> — jeśli dane są nieprawidłowe, można je poprawić,</li>
+    <li><strong>prawo do usunięcia</strong> — w niektórych przypadkach można wnioskować o usunięcie danych,</li>
+    <li><strong>prawo do ograniczenia przetwarzania</strong>,</li>
+    <li><strong>prawo do przenoszenia danych</strong> — może Pani/Pan otrzymać swoje dane w formacie umożliwiającym przeniesienie ich do innego administratora,</li>
+    <li><strong>prawo do sprzeciwu</strong> wobec przetwarzania,</li>
+    <li><strong>prawo do cofnięcia zgody</strong> w dowolnym momencie — bez wpływu na przetwarzanie sprzed cofnięcia,</li>
+    <li><strong>prawo do skargi</strong> — może Pani/Pan złożyć skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa, www.uodo.gov.pl).</li>
+  </ul>
+  <p>Aby skorzystać z któregokolwiek z praw, prosimy o kontakt:</p>
   <blockquote><p><strong>[e-mail salonu]</strong></p></blockquote>
 
-  <h2>7. Dobrowolność podania danych</h2>
-  <p>Podanie danych jest dobrowolne, ale może być konieczne do umówienia wizyty, wykonania usługi, prowadzenia dokumentacji lub spełnienia wymogów bezpieczeństwa zabiegowego.</p>
+  <h3>7. Czy podanie danych jest obowiązkowe</h3>
+  <p>Podanie danych jest <strong>dobrowolne</strong>, ale w niektórych sytuacjach niezbędne:</p>
+  <ul>
+    <li>aby umówić wizytę — potrzebujemy imienia i numeru telefonu,</li>
+    <li>aby wykonać zabieg bezpiecznie — potrzebujemy informacji o przeciwwskazaniach,</li>
+    <li>aby prowadzić wymaganą dokumentację — potrzebujemy podstawowych danych identyfikujących.</li>
+  </ul>
+  <p>Bez tych danych wykonanie usługi może nie być możliwe.</p>
+
+  <hr class="section-divider">
+
+  <h2>Uwagi końcowe dla salonu</h2>
+
+  <div class="warning-box">
+    <span class="label">Pamiętaj:</span>
+    <p>Akceptacja Regulaminu Estelio oznacza zawarcie z nami umowy powierzenia przetwarzania danych (DPA). Salon pozostaje administratorem danych swoich klientek — Estelio działa wyłącznie jako podmiot przetwarzający, na Pani/Pana polecenie.</p>
+  </div>
+
+  <p>W razie pytań dotyczących obsługi RODO w systemie Estelio — eksportu danych klientki, usunięcia profilu, obsługi żądań od klientek — prosimy o kontakt:</p>
+  <p><strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p>
 
 </div>
 
 <footer>
-  © Estelio &middot;
-  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
-  <a href="/regulamin.html">Regulamin</a> &middot;
-  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  <div class="firma">© 2026 Estelio &middot; Fotolinea Mariusz Wacławiak &middot; ul. Zefira 27/3, 80-180 Kowale &middot; NIP: 4660275573</div>
+  <div><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></div>
+  <div class="links">
+    <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+    <a href="/regulamin.html">Regulamin</a> &middot;
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> &middot;
+    <a href="/umowa-powierzenia.html">DPA</a> &middot;
+    <a href="/polityka-cookies.html">Polityka cookies</a> &middot;
+    <a href="/klauzula-rodo-dla-salonu.html">Klauzula RODO dla salonu</a> &middot;
+    <a href="/procedura-rodo.html">Procedura RODO</a>
+  </div>
 </footer>
 
 </body>
