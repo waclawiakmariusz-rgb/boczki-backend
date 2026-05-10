@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Polityka cookies — Estelio</title>
+  <meta name="description" content="Opis plików cookies oraz technologii localStorage i sessionStorage używanych na estelio.com.pl. Aktualnie wykorzystywane są wyłącznie cookies niezbędne do działania systemu.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -12,59 +13,38 @@
     :root {
       --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
       --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+      --warn-bg: #fdf2f2; --warn-border: #c97078; --warn-ink: #8a3a4a;
     }
     body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
-
-    header {
-      background: linear-gradient(135deg, #1c1a18, #2a2420);
-      padding: 24px 40px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    header a.logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem; font-weight: 600; color: var(--gold);
-      text-decoration: none; letter-spacing: .06em;
-    }
-    header a.back {
-      font-size: .82rem; color: rgba(255,255,255,.55);
-      text-decoration: none; transition: color .2s;
-    }
+    header { background: linear-gradient(135deg, #1c1a18, #2a2420); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--gold); text-decoration: none; letter-spacing: .06em; }
+    header a.back { font-size: .82rem; color: rgba(255,255,255,.55); text-decoration: none; transition: color .2s; }
     header a.back:hover { color: #fff; }
-
     .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
-    .doc-eyebrow {
-      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
-    }
-    h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem; font-weight: 600; color: var(--dark);
-      margin-bottom: 8px; line-height: 1.2;
-    }
-    .doc-meta {
-      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
-      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
-    }
-
-    h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.35rem; font-weight: 600; color: var(--dark);
-      margin: 40px 0 12px;
-    }
+    .doc-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 600; color: var(--dark); margin-bottom: 8px; line-height: 1.2; }
+    .doc-meta { font-size: .8rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .04em; text-transform: uppercase; }
+    .doc-meta strong { color: var(--dark); font-weight: 600; }
+    .doc-meta .dot { color: var(--gold); margin: 0 8px; }
+    .divider { border: 0; border-top: 1px solid var(--cream2); margin: 32px 0; }
+    h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.55rem; font-weight: 600; color: #5a3a40; margin: 40px 0 12px; }
     p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
     ul, ol { margin: 8px 0 14px 20px; }
     li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
     strong { color: var(--dark); }
     a { color: var(--rose); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    footer {
-      background: var(--cream2); border-top: 1px solid var(--border);
-      padding: 20px 40px; text-align: center;
-      font-size: .75rem; color: var(--muted);
-    }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 3px; font-size: 88%; }
+    .summary-box { margin: 24px 0; padding: 22px 26px; background: var(--cream2); border-left: 4px solid var(--gold); border-radius: 4px; }
+    .summary-box .label { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.1rem; font-weight: 600; color: var(--dark); display: block; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: .94rem; }
+    .warning-box { margin: 14px 0; padding: 14px 18px; background: var(--warn-bg); border-left: 4px solid var(--warn-border); border-radius: 4px; }
+    .warning-box .label { font-weight: 600; color: var(--warn-ink); }
+    .warning-box p { margin: 0; font-size: .9rem; }
+    footer { background: var(--cream2); border-top: 1px solid var(--border); padding: 28px 40px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--rose); text-decoration: none; }
-
+    footer .firma { color: var(--dark); margin-bottom: 6px; }
+    footer .links { margin-top: 10px; }
     @media (max-width: 600px) {
       .container { padding: 36px 20px 60px; }
       header { padding: 18px 20px; }
@@ -83,53 +63,95 @@
 
   <div class="doc-eyebrow">Dokument prawny</div>
   <h1>Polityka cookies Estelio</h1>
-  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0</div>
+  <div class="doc-meta">Wersja <strong>1.0</strong><span class="dot">•</span>Obowiązuje od <strong>10 maja 2026</strong></div>
+
+  <hr class="divider">
+
+  <div class="summary-box">
+    <span class="label">W skrócie</span>
+    <p>Estelio używa wyłącznie tych plików cookies, które są niezbędne do działania strony i systemu. Nie śledzimy Pani/Pana w celach reklamowych ani analitycznych.</p>
+  </div>
 
   <h2>1. Czym są cookies</h2>
-  <p>Cookies to niewielkie pliki zapisywane w przeglądarce użytkownika. Podobne technologie to m.in. <code>localStorage</code> i <code>sessionStorage</code>.</p>
+  <p>Cookies to niewielkie pliki, które strona zapisuje w Pani/Pana przeglądarce. Pomagają zapamiętać podstawowe informacje, na przykład że jest Pani/Pan zalogowana.</p>
+  <p>Obok cookies używamy też podobnych technologii — <strong>localStorage</strong> i <strong>sessionStorage</strong> — które działają na podobnej zasadzie, ale przechowują dane bezpośrednio w przeglądarce.</p>
 
-  <h2>2. Do czego używamy cookies i podobnych technologii</h2>
-  <p>Estelio może używać cookies i podobnych technologii w celu:</p>
+  <h2>2. Po co je używamy</h2>
+  <p>W Estelio cookies i podobne technologie służą do:</p>
   <ul>
     <li>prawidłowego działania strony,</li>
-    <li>utrzymania sesji logowania,</li>
+    <li>utrzymania sesji po zalogowaniu,</li>
     <li>zapewnienia bezpieczeństwa,</li>
-    <li>zapamiętania ustawień użytkownika,</li>
-    <li>obsługi panelu i funkcji systemu.</li>
+    <li>zapamiętania ustawień interfejsu,</li>
+    <li>obsługi panelu rozliczeniowego i funkcji systemu.</li>
   </ul>
+  <p>Innymi słowy: bez tych plików nie mogliby Państwo zalogować się do Estelio i z niego korzystać.</p>
 
   <h2>3. Cookies niezbędne</h2>
-  <p>Cookies niezbędne są konieczne do działania strony lub aplikacji. Bez nich logowanie, sesja użytkownika lub podstawowe funkcje systemu mogą nie działać prawidłowo.</p>
-  <p>Do takich technologii mogą należeć:</p>
+  <p>Te cookies są konieczne, aby strona i aplikacja w ogóle działały. Bez nich logowanie, sesja użytkownika i podstawowe funkcje systemu nie zadziałają.</p>
+  <p>Do tej kategorii należą między innymi:</p>
   <ul>
-    <li>token sesji,</li>
-    <li>identyfikator zalogowanego użytkownika,</li>
-    <li>ustawienia techniczne aplikacji,</li>
-    <li>informacje zabezpieczające sesję.</li>
+    <li><strong>token sesji</strong> — żebyśmy wiedzieli, że jest Pani/Pan zalogowana,</li>
+    <li><strong>identyfikator zalogowanego użytkownika</strong>,</li>
+    <li><strong>ustawienia techniczne aplikacji</strong>,</li>
+    <li><strong>informacje zabezpieczające sesję</strong> przed przejęciem.</li>
   </ul>
+  <p>Cookies niezbędne nie wymagają Pani/Pana zgody — są warunkiem korzystania z usługi.</p>
 
-  <h2>4. LocalStorage i sessionStorage</h2>
-  <p>Aplikacja Estelio może używać <code>localStorage</code> lub <code>sessionStorage</code> do przechowywania danych potrzebnych do działania aplikacji, np. tokenu sesji lub ustawień interfejsu.</p>
-  <p>Dane te są przechowywane w przeglądarce użytkownika i mogą zostać usunięte przez wyczyszczenie danych przeglądarki.</p>
+  <h2>4. localStorage i sessionStorage</h2>
+  <p>Aplikacja Estelio używa też mechanizmów <strong>localStorage</strong> i <strong>sessionStorage</strong>, które przechowują dane bezpośrednio w przeglądarce. Wykorzystujemy je głównie do tokenu sesji oraz drobnych ustawień interfejsu.</p>
+  <p>Może Pani/Pan w każdej chwili usunąć te dane, czyszcząc dane przeglądarki w jej ustawieniach.</p>
 
   <h2>5. Cookies analityczne i reklamowe</h2>
-  <p>Na moment przygotowania tej wersji dokumentu Estelio nie zakłada używania cookies reklamowych ani analitycznych.</p>
-  <p>Jeżeli w przyszłości zostaną wdrożone narzędzia analityczne lub reklamowe, np. Google Analytics, Meta Pixel lub inne podobne rozwiązania, Polityka cookies zostanie zaktualizowana, a użytkownik otrzyma odpowiednią informację i możliwość zarządzania zgodami, jeżeli będzie to wymagane.</p>
 
-  <h2>6. Zarządzanie cookies</h2>
-  <p>Użytkownik może zarządzać cookies w ustawieniach swojej przeglądarki. Może je blokować lub usuwać, ale może to spowodować nieprawidłowe działanie strony lub aplikacji Estelio.</p>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Aktualnie Estelio nie wykorzystuje żadnych cookies analitycznych ani reklamowych. Nie korzystamy z Google Analytics, Meta Pixela ani podobnych narzędzi.</p>
+  </div>
 
-  <h2>7. Zmiany Polityki cookies</h2>
-  <p>Polityka cookies może być zmieniana w przypadku zmian technologicznych, prawnych lub wdrożenia nowych narzędzi.</p>
+  <p>Jeżeli kiedyś zdecydujemy się wdrożyć takie narzędzia, zaktualizujemy tę Politykę cookies oraz wyświetlimy Pani/Panu odpowiedni komunikat z możliwością wyrażenia lub odmowy zgody — tak jak wymagają tego przepisy.</p>
+
+  <h2>6. Jak zarządzać cookies</h2>
+  <p>Może Pani/Pan zarządzać cookies w ustawieniach swojej przeglądarki:</p>
+  <ul>
+    <li>zablokować cookies w całości lub wybiórczo,</li>
+    <li>usunąć już zapisane cookies,</li>
+    <li>ustawić, by przeglądarka pytała przed zapisaniem każdego pliku.</li>
+  </ul>
+
+  <div class="warning-box">
+    <span class="label">Uwaga:</span>
+    <p>Zablokowanie cookies niezbędnych spowoduje, że nie będą Państwo mogli korzystać z Estelio — niektóre funkcje przestaną działać prawidłowo.</p>
+  </div>
+
+  <h2>7. Zmiany w Polityce cookies</h2>
+  <p>Tę Politykę możemy zmieniać w przypadku:</p>
+  <ul>
+    <li>aktualizacji technologicznych,</li>
+    <li>zmian w przepisach prawa,</li>
+    <li>wdrożenia nowych narzędzi (np. analityki).</li>
+  </ul>
+  <p>O istotnych zmianach poinformujemy Państwa drogą e-mailową lub komunikatem na stronie.</p>
+
+  <h2>8. Kontakt</h2>
+  <p>W sprawach dotyczących cookies można kontaktować się z nami pod adresem:</p>
+  <p><strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p>
+  <p>Pełne dane administratora znajdują się w <a href="/polityka-prywatnosci.html">Polityce prywatności</a>.</p>
 
 </div>
 
 <footer>
-  © Estelio &middot;
-  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
-  <a href="/regulamin.html">Regulamin</a> &middot;
-  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  <div class="firma">© 2026 Estelio &middot; Fotolinea Mariusz Wacławiak &middot; ul. Zefira 27/3, 80-180 Kowale &middot; NIP: 4660275573</div>
+  <div><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></div>
+  <div class="links">
+    <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+    <a href="/regulamin.html">Regulamin</a> &middot;
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> &middot;
+    <a href="/umowa-powierzenia.html">DPA</a> &middot;
+    <a href="/polityka-cookies.html">Polityka cookies</a> &middot;
+    <a href="/klauzula-rodo-dla-salonu.html">Klauzula RODO dla salonu</a> &middot;
+    <a href="/procedura-rodo.html">Procedura RODO</a>
+  </div>
 </footer>
 
 </body>

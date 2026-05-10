@@ -4,104 +4,52 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Polityka prywatności — Estelio</title>
+  <meta name="description" content="Zasady przetwarzania danych osobowych w systemie Estelio. Jak chronimy dane Klientów Estelio i klientek salonów, Pani/Pana prawa wynikające z RODO oraz informacje o stosowanych zabezpieczeniach.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
-      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
-    }
+    :root { --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e; --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce; --warn-bg: #fdf2f2; --warn-border: #c97078; --warn-ink: #8a3a4a; }
     body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
-
-    header {
-      background: linear-gradient(135deg, #1c1a18, #2a2420);
-      padding: 24px 40px;
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    header a.logo {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.6rem; font-weight: 600; color: var(--gold);
-      text-decoration: none; letter-spacing: .06em;
-    }
-    header a.back {
-      font-size: .82rem; color: rgba(255,255,255,.55);
-      text-decoration: none; transition: color .2s;
-    }
+    header { background: linear-gradient(135deg, #1c1a18, #2a2420); padding: 24px 40px; display: flex; align-items: center; justify-content: space-between; }
+    header a.logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--gold); text-decoration: none; letter-spacing: .06em; }
+    header a.back { font-size: .82rem; color: rgba(255,255,255,.55); text-decoration: none; transition: color .2s; }
     header a.back:hover { color: #fff; }
-
     .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
-    .doc-eyebrow {
-      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
-    }
-    h1 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 2.4rem; font-weight: 600; color: var(--dark);
-      margin-bottom: 8px; line-height: 1.2;
-    }
-    .doc-meta {
-      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
-      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
-    }
-
-    h2 {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 1.35rem; font-weight: 600; color: var(--dark);
-      margin: 40px 0 12px;
-    }
-    h3 {
-      font-size: .95rem; font-weight: 600; color: var(--dark);
-      margin: 24px 0 8px;
-    }
+    .doc-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.4rem; font-weight: 600; color: var(--dark); margin-bottom: 8px; line-height: 1.2; }
+    .doc-meta { font-size: .8rem; color: var(--muted); margin-bottom: 8px; letter-spacing: .04em; text-transform: uppercase; }
+    .doc-meta strong { color: var(--dark); font-weight: 600; }
+    .doc-meta .dot { color: var(--gold); margin: 0 8px; }
+    .divider { border: 0; border-top: 1px solid var(--cream2); margin: 32px 0; }
+    h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.55rem; font-weight: 600; color: #5a3a40; margin: 40px 0 12px; }
+    h3 { font-size: 1rem; font-weight: 600; color: var(--dark); margin: 26px 0 10px; }
+    h4 { font-size: .95rem; font-weight: 600; color: var(--dark); margin: 20px 0 8px; }
     p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
     ul, ol { margin: 8px 0 14px 20px; }
     li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
     strong { color: var(--dark); }
-    blockquote {
-      margin: 14px 0;
-      padding: 14px 20px;
-      background: #fff;
-      border-left: 3px solid var(--gold);
-      border-radius: 4px;
-      font-size: .9rem;
-      color: var(--dark);
-    }
-    blockquote p { margin-bottom: 4px; }
     a { color: var(--rose); text-decoration: none; }
     a:hover { text-decoration: underline; }
-
-    table {
-      width: 100%; border-collapse: collapse;
-      margin: 14px 0; font-size: .88rem;
-      background: #fff; border-radius: 4px; overflow: hidden;
-      border: 1px solid var(--border);
-    }
-    th, td {
-      padding: 10px 12px; text-align: left;
-      border-bottom: 1px solid var(--border); vertical-align: top;
-    }
-    th {
-      background: var(--cream2); font-weight: 600; color: var(--dark);
-      font-size: .82rem; letter-spacing: .02em;
-    }
+    code { background: #f1f5f9; padding: 1px 6px; border-radius: 3px; font-size: 88%; }
+    blockquote { margin: 14px 0; padding: 14px 20px; background: #fff; border-left: 3px solid var(--gold); border-radius: 4px; font-size: .9rem; color: var(--dark); }
+    blockquote p { margin-bottom: 4px; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .88rem; background: #fff; border-radius: 4px; overflow: hidden; border: 1px solid var(--border); }
+    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--border); vertical-align: top; }
+    th { background: var(--cream2); font-weight: 600; color: var(--dark); font-size: .82rem; }
     tr:last-child td { border-bottom: 0; }
-
-    footer {
-      background: var(--cream2); border-top: 1px solid var(--border);
-      padding: 20px 40px; text-align: center;
-      font-size: .75rem; color: var(--muted);
-    }
+    .summary-box { margin: 24px 0; padding: 22px 26px; background: var(--cream2); border-left: 4px solid var(--gold); border-radius: 4px; }
+    .summary-box .label { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.1rem; font-weight: 600; color: var(--dark); display: block; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: .94rem; }
+    .warning-box { margin: 14px 0; padding: 14px 18px; background: var(--warn-bg); border-left: 4px solid var(--warn-border); border-radius: 4px; }
+    .warning-box .label { font-weight: 600; color: var(--warn-ink); }
+    .warning-box p { margin: 0; font-size: .9rem; }
+    footer { background: var(--cream2); border-top: 1px solid var(--border); padding: 28px 40px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
     footer a { color: var(--rose); text-decoration: none; }
-
-    @media (max-width: 600px) {
-      .container { padding: 36px 20px 60px; }
-      header { padding: 18px 20px; }
-      h1 { font-size: 1.9rem; }
-      table { font-size: .8rem; }
-      th, td { padding: 8px; }
-    }
+    footer .firma { color: var(--dark); margin-bottom: 6px; }
+    footer .links { margin-top: 10px; }
+    @media (max-width: 600px) { .container { padding: 36px 20px 60px; } header { padding: 18px 20px; } h1 { font-size: 1.9rem; } table { font-size: .8rem; } th, td { padding: 8px; } }
   </style>
 </head>
 <body>
@@ -114,249 +62,299 @@
 <div class="container">
 
   <div class="doc-eyebrow">Dokument prawny</div>
-  <h1>Polityka Prywatności Estelio</h1>
-  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 2.1</div>
+  <h1>Polityka prywatności Estelio</h1>
+  <div class="doc-meta">Wersja <strong>2.1</strong><span class="dot">•</span>Obowiązuje od <strong>10 maja 2026</strong></div>
 
-  <h2>1. Informacje ogólne</h2>
-  <p>Niniejsza Polityka Prywatności opisuje zasady przetwarzania danych osobowych w związku z korzystaniem ze strony internetowej oraz systemu Estelio dostępnego pod adresem:</p>
-  <blockquote><p><strong>www.estelio.com.pl</strong></p></blockquote>
-  <p>Estelio to internetowy system dla salonów beauty, działający w modelu subskrypcyjnym. System pomaga porządkować codzienną pracę salonu, w szczególności sprzedaż, klientów, zadania, zadatki, magazyn, konsultacje, dokumentację, raporty, wyniki zespołu i rejestr zdarzeń.</p>
+  <hr class="divider">
+
+  <div class="summary-box">
+    <span class="label">W skrócie</span>
+    <p>Estelio chroni Pani/Pana dane na trzech poziomach — danych konta, danych pracowników wprowadzanych przez salon i danych klientek salonu. Stosujemy szyfrowanie, izolację danych między salonami, kopie zapasowe oraz pełną zgodność z RODO. Nie sprzedajemy danych nikomu.</p>
+  </div>
+
+  <h2>1. O tej Polityce</h2>
+  <p>Ta Polityka opisuje, jak Estelio przetwarza dane osobowe — Pani/Pana dane jako Klienta, dane osób korzystających ze strony oraz dane wprowadzane przez salony do systemu.</p>
   <p>Polityka obejmuje:</p>
   <ul>
-    <li>dane osób korzystających ze strony Estelio,</li>
-    <li>dane właścicieli salonów i firm korzystających z Estelio,</li>
-    <li>dane osób kontaktujących się z Estelio,</li>
+    <li>osoby odwiedzające stronę <strong>www.estelio.com.pl</strong>,</li>
+    <li>właścicieli salonów i firm korzystających z Estelio,</li>
+    <li>osoby, które kontaktują się z nami w jakiejkolwiek sprawie,</li>
     <li>informacje o danych wprowadzanych do systemu przez salony.</li>
   </ul>
+  <p>System Estelio dostępny jest pod adresem <strong>www.estelio.com.pl</strong>.</p>
 
-  <h2>2. Administrator danych</h2>
-  <p>Administratorem danych osobowych w zakresie danych Klientów Estelio, osób kontaktujących się z Estelio oraz osób korzystających ze strony internetowej jest:</p>
+  <h2>2. Kto jest administratorem danych</h2>
+  <p>Administratorem Pani/Pana danych jest:</p>
   <blockquote>
     <p><strong>Fotolinea Mariusz Wacławiak</strong></p>
     <p>ul. Zefira 27/3, 80-180 Kowale</p>
     <p>NIP: 4660275573</p>
     <p>e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></p>
   </blockquote>
-  <p>Dalej w dokumencie Administrator może być określany jako „Estelio", „Usługodawca" lub „Administrator".</p>
-  <p>Administrator nie wyznaczył Inspektora Ochrony Danych. We wszystkich sprawach związanych z ochroną danych osobowych można kontaktować się pod adresem e-mail wskazanym powyżej.</p>
+  <p>W tym dokumencie nazywamy się również <strong>Estelio</strong>, <strong>Usługodawcą</strong> lub <strong>Administratorem</strong>.</p>
+  <p>Nie wyznaczyliśmy Inspektora Ochrony Danych. We wszystkich sprawach dotyczących ochrony danych proszę kierować pytania na adres e-mail powyżej.</p>
 
-  <h2>3. Estelio jako administrator i jako podmiot przetwarzający</h2>
-  <p>W Estelio występują trzy poziomy danych.</p>
+  <h2>3. Trzy poziomy danych w Estelio</h2>
+  <p>To jeden z najważniejszych punktów tej Polityki. W Estelio występują <strong>trzy różne kategorie danych</strong>, a od tego, której dotyczy sprawa, zależy kto jest administratorem.</p>
 
   <h3>3.1. Dane konta Estelio</h3>
-  <p>Są to dane właściciela salonu lub firmy korzystającej z systemu, np. imię, nazwisko, nazwa firmy, NIP, e-mail, telefon, dane płatności, dane do faktury, dane logowania.</p>
-  <p>W tym zakresie administratorem danych jest Estelio.</p>
+  <p>To dane właściciela salonu lub firmy, która korzysta z systemu — imię, nazwisko, nazwa firmy, NIP, e-mail, telefon, dane do faktury, dane logowania.</p>
+  <p><strong>Tutaj administratorem jest Estelio.</strong></p>
 
   <h3>3.2. Dane pracowników salonu</h3>
-  <p>Są to dane osób, które salon dodaje do systemu, np. recepcji, kosmetologów, managerów, pracowników i współpracowników. Mogą obejmować imię, rolę, login, PIN, uprawnienia, zadania, komentarze, aktywność w systemie, wyniki sprzedażowe, cele, premie i rejestr zdarzeń.</p>
-  <p>W tym zakresie administratorem danych jest salon, a Estelio działa jako podmiot przetwarzający.</p>
+  <p>To dane osób, które salon dodaje do systemu jako swoich Użytkowników — recepcji, kosmetologów, managerów. Mogą obejmować imię, rolę, login, PIN, uprawnienia, zadania, wyniki sprzedażowe, premie i rejestr zdarzeń.</p>
+  <p><strong>Administratorem tych danych jest salon. Estelio działa wyłącznie jako podmiot przetwarzający.</strong></p>
 
   <h3>3.3. Dane klientek i klientów salonu</h3>
-  <p>Są to dane osób korzystających z usług salonu, np. imię, nazwisko, telefon, data urodzenia, historia zabiegów, historia zakupów, zadatki, zgody RODO, pliki PDF z dokumentacją, notatki, konsultacje, preferencje, przeciwwskazania i inne informacje wprowadzone przez salon.</p>
-  <p>W tym zakresie administratorem danych jest salon, a Estelio działa jako podmiot przetwarzający w rozumieniu art. 28 RODO.</p>
-  <p>Oznacza to, że salon odpowiada za legalność pozyskania danych, spełnienie obowiązku informacyjnego wobec swoich klientek, klientów i pracowników oraz za obsługę ich praw wynikających z RODO.</p>
-  <p>Zasady powierzenia przetwarzania danych pomiędzy salonem a Estelio reguluje odrębna <a href="/umowa-powierzenia.html">umowa powierzenia przetwarzania danych (DPA)</a>, zawierana z każdym salonem korzystającym z systemu.</p>
+  <p>To dane osób, które korzystają z usług salonu — imię, nazwisko, telefon, data urodzenia, historia zabiegów, zgody, dokumentacja, konsultacje, przeciwwskazania.</p>
+  <p><strong>Administratorem tych danych jest salon. Estelio działa jako podmiot przetwarzający w rozumieniu art. 28 RODO.</strong></p>
+
+  <div class="warning-box">
+    <span class="label">Co to oznacza:</span>
+    <p>Salon odpowiada za legalność pozyskania danych klientek, za spełnienie obowiązku informacyjnego oraz za obsługę żądań RODO od swoich klientek. Estelio jest narzędziem, które te dane przechowuje i obsługuje na polecenie salonu.</p>
+  </div>
+
+  <p>Zasady tego współpracowania reguluje <a href="/umowa-powierzenia.html">Umowa powierzenia przetwarzania danych (DPA)</a>, zawierana automatycznie z każdym salonem przy akceptacji Regulaminu.</p>
 
   <h2>4. Jakie dane przetwarzamy jako administrator</h2>
-  <p>Jako administrator możemy przetwarzać następujące dane:</p>
+  <p>Jako Administrator (czyli w obszarze danych konta Klienta i osób kontaktujących się z nami) przetwarzamy następujące dane:</p>
   <ul>
     <li>imię i nazwisko,</li>
     <li>nazwa firmy,</li>
     <li>NIP,</li>
     <li>adres firmy lub adres do faktury,</li>
-    <li>adres e-mail,</li>
-    <li>numer telefonu,</li>
+    <li>e-mail i telefon,</li>
     <li>miasto,</li>
-    <li>dane logowania,</li>
-    <li>hasło w postaci zaszyfrowanej,</li>
-    <li>informacje o wybranym planie i subskrypcji,</li>
-    <li>status płatności,</li>
-    <li>identyfikatory płatności,</li>
-    <li>dane potrzebne do wystawienia faktury,</li>
-    <li>historia kontaktu,</li>
-    <li>treść wiadomości i zgłoszeń,</li>
+    <li>dane logowania (login, hasło — przechowywane w postaci zaszyfrowanej),</li>
+    <li>informacje o wybranym planie subskrypcji,</li>
+    <li>status płatności i identyfikatory płatności,</li>
+    <li>historia kontaktu i treść wiadomości,</li>
     <li>dane techniczne: adres IP, data i godzina logowania, rodzaj urządzenia, przeglądarka, logi techniczne,</li>
-    <li>informacje o działaniach w systemie, jeżeli są niezbędne dla bezpieczeństwa, rozliczalności lub obsługi zgłoszeń.</li>
+    <li>informacje o działaniach w systemie (gdy są niezbędne dla bezpieczeństwa).</li>
   </ul>
-  <p>Estelio nie przechowuje pełnych numerów kart płatniczych. Dane kart obsługuje operator płatności Stripe.</p>
+
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Estelio <strong>nie przechowuje pełnych numerów kart płatniczych</strong>. Dane kart obsługuje wyłącznie operator płatności Stripe.</p>
+  </div>
 
   <h2>5. Dane wprowadzane przez salony do systemu</h2>
-  <p>Salon korzystający z Estelio może wprowadzać do systemu dane związane z prowadzeniem działalności beauty, w szczególności:</p>
+  <p>Salon korzystający z Estelio może wprowadzać do systemu różne dane związane z prowadzeniem działalności beauty. W szczególności:</p>
   <ul>
     <li>dane klientek i klientów salonu,</li>
-    <li>dane pracowników i współpracowników salonu,</li>
-    <li>dane sprzedażowe,</li>
-    <li>dane o zadatkach i portfelach klienta,</li>
+    <li>dane pracowników i współpracowników,</li>
+    <li>dane sprzedażowe i historię transakcji,</li>
+    <li>informacje o zadatkach i portfelach klientów,</li>
     <li>historię zabiegów i zakupów,</li>
-    <li>pliki zgód i dokumentacji,</li>
-    <li>konsultacje,</li>
+    <li>pliki zgód i dokumentacji zabiegowej,</li>
+    <li>wyniki konsultacji,</li>
     <li>przeciwwskazania i zalecenia,</li>
-    <li>notatki,</li>
+    <li>notatki o klientkach,</li>
     <li>dane magazynowe,</li>
     <li>zadania i komentarze,</li>
-    <li>wyniki, targety, premie i raporty.</li>
+    <li>wyniki, cele, premie pracowników i raporty.</li>
   </ul>
-  <p>Estelio przetwarza te dane na polecenie salonu i w zakresie potrzebnym do działania systemu.</p>
+  <p>Te dane przetwarzamy <strong>wyłącznie na polecenie salonu</strong> i w zakresie potrzebnym do działania systemu.</p>
 
-  <h2>6. Cele i podstawy prawne przetwarzania danych</h2>
+  <h2>6. W jakim celu i na jakiej podstawie przetwarzamy dane</h2>
 
-  <h3>6.1. Zawarcie i wykonanie umowy</h3>
-  <p>Przetwarzamy dane w celu założenia konta, świadczenia dostępu do systemu, obsługi subskrypcji, kontaktu technicznego i organizacyjnego.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. b RODO.</p>
+  <h3>6.1. Aby świadczyć usługę</h3>
+  <p>Przetwarzamy dane, żeby założyć Pani/Panu konto, dać dostęp do systemu, obsługiwać subskrypcję i kontakt techniczny.</p>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. b RODO (wykonanie umowy).</p>
 
-  <h3>6.2. Rozliczenia i obowiązki prawne</h3>
-  <p>Przetwarzamy dane w celu wystawiania faktur, prowadzenia dokumentacji księgowej i podatkowej oraz realizacji obowiązków wynikających z prawa.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. c RODO.</p>
+  <h3>6.2. Aby spełnić obowiązki prawne</h3>
+  <p>Wystawiamy faktury, prowadzimy dokumentację księgową i podatkową — to wymóg prawa.</p>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. c RODO (obowiązek prawny).</p>
 
-  <h3>6.3. Bezpieczeństwo systemu</h3>
-  <p>Przetwarzamy dane techniczne, logi i rejestr zdarzeń w celu zapewnienia bezpieczeństwa, wykrywania błędów, zapobiegania nadużyciom, ochrony danych oraz rozliczalności działań.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. f RODO.</p>
+  <h3>6.3. Aby zapewnić bezpieczeństwo</h3>
+  <p>Przetwarzamy dane techniczne i logi, żeby wykrywać błędy, zapobiegać nadużyciom i chronić dane wszystkich naszych Klientów.</p>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. f RODO (prawnie uzasadniony interes).</p>
 
-  <h3>6.4. Obsługa zgłoszeń i reklamacji</h3>
-  <p>Przetwarzamy dane w celu odpowiedzi na wiadomości, obsługi zgłoszeń technicznych, reklamacji i korespondencji.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. b, c lub f RODO, zależnie od charakteru sprawy.</p>
+  <h3>6.4. Aby obsługiwać zgłoszenia i reklamacje</h3>
+  <p>Gdy pisze Pani/Pan do nas z pytaniem lub problemem, musimy przetworzyć Pani/Pana dane, żeby odpowiedzieć.</p>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. b, c lub f RODO — w zależności od charakteru sprawy.</p>
 
-  <h3>6.5. Dochodzenie lub obrona roszczeń</h3>
-  <p>Przetwarzamy dane w celu ustalenia, dochodzenia lub obrony roszczeń.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. f RODO.</p>
+  <h3>6.5. Aby chronić nasze prawa</h3>
+  <p>W razie sporu lub roszczenia musimy mieć możliwość ustalenia faktów i obrony.</p>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. f RODO.</p>
 
   <h3>6.6. Marketing własny Estelio</h3>
-  <p>Możemy kontaktować się z osobami zainteresowanymi Estelio w celu przedstawienia informacji o systemie, promocjach, zmianach lub nowych funkcjach.</p>
-  <p>Wysyłka informacji handlowych drogą elektroniczną oraz kontakt telefoniczny w celach marketingowych odbywa się wyłącznie po uzyskaniu odrębnej zgody, zgodnie z ustawą o świadczeniu usług drogą elektroniczną oraz ustawą Prawo telekomunikacyjne.</p>
-  <p>Marketing kierowany do dotychczasowych Klientów Estelio, dotyczący produktów i usług podobnych do tych już świadczonych, może odbywać się na podstawie prawnie uzasadnionego interesu Administratora.</p>
-  <p>Podstawa prawna: art. 6 ust. 1 lit. a lub f RODO.</p>
-
-  <h2>7. Okres przechowywania danych</h2>
-  <p>Dane przechowujemy przez okres niezbędny do realizacji celów, dla których zostały zebrane.</p>
+  <p>Czasami chcemy poinformować Panią/Pana o nowych funkcjach Estelio, promocjach lub zmianach w systemie.</p>
   <ul>
-    <li><strong>Dane konta Klienta</strong> — przez czas trwania umowy oraz przez okres do 3 lat po jej zakończeniu, w celu obsługi rozliczeń, reklamacji oraz obrony przed roszczeniami.</li>
-    <li><strong>Dane fakturowe</strong> — przez okres 5 lat liczonych od końca roku kalendarzowego, w którym powstał obowiązek podatkowy, zgodnie z przepisami prawa podatkowego i rachunkowego.</li>
-    <li><strong>Dane zgłoszeń i korespondencji</strong> — przez okres potrzebny do obsługi sprawy, a po jej zakończeniu przez okres do 3 lat w celu obrony przed roszczeniami.</li>
-    <li><strong>Logi techniczne i bezpieczeństwa</strong> — przez okres do 12 miesięcy, chyba że dłuższy okres jest niezbędny dla zapewnienia bezpieczeństwa lub rozliczalności działań.</li>
-    <li><strong>Dane wprowadzone przez salon do systemu</strong> — przez czas trwania aktywnej subskrypcji oraz przez okres 30 dni po jej zakończeniu, w celu umożliwienia eksportu danych przez salon. Po upływie tego okresu dane są trwale usuwane, zgodnie z zapisami Regulaminu i umowy powierzenia przetwarzania danych.</li>
-    <li><strong>Kopie zapasowe</strong> — przez technicznie uzasadniony czas wynikający z cyklu backupów, nie dłużej niż 90 dni od ostatniej kopii.</li>
+    <li><strong>Wysyłka informacji handlowych e-mailem</strong> oraz <strong>kontakt telefoniczny w celach marketingowych</strong> odbywa się wyłącznie po Pani/Pana <strong>wyraźnej zgodzie</strong>.</li>
+    <li><strong>Marketing kierowany do dotychczasowych Klientów Estelio</strong>, dotyczący produktów podobnych do już świadczonych, może odbywać się na podstawie prawnie uzasadnionego interesu — z prawem do wyrażenia sprzeciwu w każdej chwili.</li>
   </ul>
+  <p><strong>Podstawa prawna:</strong> art. 6 ust. 1 lit. a lub f RODO.</p>
 
-  <h2>8. Odbiorcy danych i podprocesorzy</h2>
-  <p>Dane mogą być przekazywane podmiotom, które pomagają nam świadczyć usługę Estelio.</p>
-  <p>Aktualnie mogą to być w szczególności:</p>
+  <h2>7. Jak długo przechowujemy dane</h2>
+  <p>Każdy rodzaj danych ma własny okres przechowywania:</p>
+  <table>
+    <thead>
+      <tr><th>Rodzaj danych</th><th>Okres przechowywania</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Dane konta Klienta</td><td>Czas trwania umowy + do 3 lat po jej zakończeniu (obrona przed roszczeniami)</td></tr>
+      <tr><td>Dane fakturowe</td><td>5 lat od końca roku podatkowego (wymóg ustawy)</td></tr>
+      <tr><td>Dane zgłoszeń i korespondencji</td><td>Do 3 lat po zakończeniu sprawy</td></tr>
+      <tr><td>Logi techniczne i bezpieczeństwa</td><td>Do 12 miesięcy</td></tr>
+      <tr><td>Dane wprowadzone przez salon do systemu</td><td>Czas trwania subskrypcji + 30 dni na eksport</td></tr>
+      <tr><td>Kopie zapasowe</td><td>Maksymalnie 90 dni od ostatniej kopii</td></tr>
+    </tbody>
+  </table>
+  <p>Po upływie tych okresów dane są usuwane lub anonimizowane, chyba że przepisy prawa wymagają dłuższego przechowywania.</p>
+
+  <h2>8. Komu przekazujemy dane</h2>
+  <p>Aby świadczyć Estelio, korzystamy z usług kilku wyspecjalizowanych dostawców (tzw. podprocesorów). Każdy z nich pomaga nam w konkretnym zakresie:</p>
   <table>
     <thead>
       <tr><th>Podmiot</th><th>Cel</th><th>Zakres danych</th><th>Lokalizacja</th></tr>
     </thead>
     <tbody>
-      <tr><td>Hostinger</td><td>hosting serwera, bazy danych i infrastruktury</td><td>dane przechowywane w systemie</td><td>UE, w tym Polska/Litwa</td></tr>
-      <tr><td>Stripe</td><td>obsługa płatności subskrypcyjnych</td><td>dane płatnika, e-mail, identyfikatory płatności, dane karty przetwarzane przez Stripe</td><td>Irlandia / USA, z zabezpieczeniami transferu</td></tr>
-      <tr><td>Fakturownia.pl</td><td>wystawianie faktur</td><td>dane do faktury właściciela salonu, NIP, e-mail, kwota</td><td>Polska</td></tr>
-      <tr><td>SMTP Hostinger</td><td>wysyłka wiadomości e-mail</td><td>adres e-mail odbiorcy i treść wiadomości</td><td>UE</td></tr>
+      <tr><td>Hostinger</td><td>hosting serwera, bazy danych, kopie zapasowe</td><td>dane przechowywane w systemie</td><td>UE (Polska/Litwa)</td></tr>
+      <tr><td>Stripe</td><td>obsługa płatności subskrypcyjnych</td><td>dane płatnika, e-mail, identyfikatory płatności, dane karty po stronie Stripe</td><td>Irlandia / USA</td></tr>
+      <tr><td>Fakturownia.pl</td><td>wystawianie faktur</td><td>dane do faktury Klienta, NIP, e-mail</td><td>Polska</td></tr>
+      <tr><td>SMTP Hostinger</td><td>wysyłka wiadomości e-mail</td><td>adres e-mail odbiorcy, treść wiadomości</td><td>UE</td></tr>
     </tbody>
   </table>
-  <p>Aktualna lista podprocesorów jest dostępna na żądanie skierowane na adres <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
-  <p>Dane nie są sprzedawane podmiotom trzecim.</p>
+  <p>Aktualna lista podprocesorów jest zawsze dostępna na żądanie pod adresem <a href="mailto:kontakt@estelio.com.pl"><strong>kontakt@estelio.com.pl</strong></a>.</p>
 
-  <h2>9. Przekazywanie danych poza EOG</h2>
-  <p>Dążymy do tego, aby dane były przechowywane i przetwarzane na terenie Europejskiego Obszaru Gospodarczego.</p>
-  <p>Niektórzy dostawcy, w szczególności operator płatności Stripe, mogą przetwarzać dane także poza EOG. W takim przypadku przekazanie danych odbywa się na podstawie mechanizmów przewidzianych przez RODO, w szczególności:</p>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Pani/Pana dane <strong>nie są sprzedawane</strong> żadnym podmiotom trzecim.</p>
+  </div>
+
+  <h2>9. Czy przekazujemy dane poza Unię Europejską</h2>
+  <p>Staramy się, żeby wszystkie dane były przechowywane i przetwarzane na terenie Unii Europejskiej.</p>
+  <p>Niektórzy dostawcy (w szczególności Stripe) mogą przetwarzać dane także poza UE. W takiej sytuacji przekazanie odbywa się zawsze na podstawie mechanizmów przewidzianych przez RODO:</p>
   <ul>
     <li>decyzji Komisji Europejskiej stwierdzającej odpowiedni stopień ochrony,</li>
-    <li>ram EU-U.S. Data Privacy Framework,</li>
-    <li>standardowych klauzul umownych przyjętych przez Komisję Europejską,</li>
-    <li>innych odpowiednich zabezpieczeń przewidzianych przez przepisy RODO.</li>
+    <li>ram <strong>EU-U.S. Data Privacy Framework</strong>,</li>
+    <li>standardowych klauzul umownych (SCC),</li>
+    <li>innych odpowiednich zabezpieczeń przewidzianych przez RODO.</li>
   </ul>
 
-  <h2>10. Bezpieczeństwo danych</h2>
-  <p>Stosujemy środki techniczne i organizacyjne mające chronić dane. W szczególności:</p>
+  <h2>10. Jak chronimy Pani/Pana dane</h2>
+  <p>Stosujemy zarówno środki techniczne, jak i organizacyjne. W szczególności:</p>
   <ul>
-    <li>połączenie z systemem odbywa się przez HTTPS,</li>
-    <li>hasła są przechowywane w postaci zaszyfrowanej z użyciem bcrypt,</li>
-    <li>system działa w modelu izolacji danych między salonami,</li>
-    <li>każdy salon posiada własny identyfikator <code>tenant_id</code>,</li>
-    <li>zapytania do bazy są filtrowane po identyfikatorze salonu,</li>
-    <li>pliki PDF z dokumentacją są przechowywane poza publicznym dostępem,</li>
-    <li>dostęp do plików wymaga autoryzacji,</li>
-    <li>użytkownicy mają role i uprawnienia,</li>
-    <li>system zapisuje wybrane zdarzenia w rejestrze zdarzeń,</li>
-    <li>sesje wymagają tokenu zapisanego w bazie,</li>
-    <li>po wylogowaniu lub bezczynności token może zostać unieważniony,</li>
-    <li>wykonywane są kopie zapasowe,</li>
-    <li>serwer i backupy są utrzymywane w UE,</li>
-    <li>dostęp administracyjny jest ograniczony.</li>
+    <li><strong>HTTPS</strong> — całe połączenie z systemem jest szyfrowane,</li>
+    <li><strong>bcrypt</strong> — hasła przechowujemy w postaci zaszyfrowanej, nie jako zwykły tekst,</li>
+    <li><strong>izolacja danych między salonami</strong> — każdy salon ma własny <code>tenant_id</code>, a zapytania do bazy są filtrowane po nim,</li>
+    <li><strong>pliki PDF poza katalogiem publicznym</strong> — dokumentacja jest dostępna wyłącznie po autoryzacji,</li>
+    <li><strong>role i uprawnienia użytkowników</strong> — każdy widzi tylko to, na co ma pozwolenie,</li>
+    <li><strong>rejestr zdarzeń</strong> — wybrane operacje są logowane (logowania, edycje, usunięcia),</li>
+    <li><strong>tokeny sesji</strong> — przechowywane w bazie, unieważniane po wylogowaniu lub bezczynności,</li>
+    <li><strong>kopie zapasowe</strong> — wykonywane regularnie, przechowywane w UE,</li>
+    <li><strong>ograniczenie dostępu administracyjnego</strong> — tylko upoważnione osoby mają dostęp do infrastruktury.</li>
   </ul>
-  <p>Klient powinien również dbać o bezpieczeństwo po swojej stronie: chronić hasła i PIN-y, nie udostępniać kont, odbierać dostępy byłym pracownikom i nadawać uprawnienia zgodnie z zakresem obowiązków.</p>
+
+  <div class="warning-box">
+    <span class="label">Co to oznacza dla Pani/Pana:</span>
+    <p>Pani/Pana dane są technicznie odseparowane od danych innych salonów. Nawet w przypadku awarii lub błędu po naszej stronie, ryzyko, że ktokolwiek zobaczy nie swoje dane, jest minimalizowane na poziomie architektury systemu.</p>
+  </div>
+
+  <p>Po Pani/Pana stronie warto:</p>
+  <ul>
+    <li>chronić hasła i PIN-y,</li>
+    <li>nie udostępniać konta innym osobom,</li>
+    <li>odbierać dostępy byłym pracownikom,</li>
+    <li>nadawać uprawnienia zgodnie z zakresem obowiązków.</li>
+  </ul>
 
   <h2>11. Cookies i pamięć przeglądarki</h2>
-  <p>Strona oraz aplikacja Estelio mogą używać plików cookies oraz podobnych technologii w celu prawidłowego działania strony i systemu.</p>
-  <p>W szczególności wykorzystywane są:</p>
+  <p>Strona oraz aplikacja Estelio używają plików cookies oraz podobnych technologii (localStorage, sessionStorage), żeby działać prawidłowo.</p>
+  <p>Wykorzystywane są:</p>
   <ul>
-    <li><strong>Cookies niezbędne</strong> — konieczne do prawidłowego działania strony i systemu, w tym do utrzymania sesji użytkownika i zapewnienia bezpieczeństwa. Te cookies nie wymagają zgody użytkownika.</li>
-    <li><strong>Cookies funkcjonalne</strong> — pozwalające zapamiętać preferencje użytkownika, np. język lub układ interfejsu.</li>
-    <li><strong>Cookies analityczne</strong> — wykorzystywane do badania sposobu korzystania ze strony, w celu jej ulepszania. Stosowane wyłącznie po uzyskaniu zgody użytkownika.</li>
+    <li><strong>cookies niezbędne</strong> — konieczne do działania strony i logowania,</li>
+    <li><strong>cookies funkcjonalne</strong> — zapamiętujące Pani/Pana preferencje,</li>
+    <li><strong>cookies analityczne</strong> — wyłącznie po wyrażeniu zgody (aktualnie nie używamy).</li>
   </ul>
-  <p>Aplikacja Estelio może używać sessionStorage lub localStorage w przeglądarce, w szczególności do przechowywania informacji potrzebnych do działania sesji użytkownika.</p>
-  <p>Użytkownik może zarządzać cookies poprzez ustawienia swojej przeglądarki, w tym blokować lub usuwać pliki cookies. Wyłączenie cookies niezbędnych może uniemożliwić prawidłowe korzystanie z systemu.</p>
-  <p>Pełna informacja o cookies dostępna jest w <a href="/polityka-cookies.html">Polityce cookies</a>.</p>
+  <p>Szczegóły znajdują się w <a href="/polityka-cookies.html">Polityce cookies</a>.</p>
 
-  <h2>12. Prawa osób, których dane dotyczą</h2>
-  <p>Osobom, których dane przetwarzamy jako administrator, przysługują prawa wynikające z RODO, w szczególności:</p>
+  <h2>12. Pani/Pana prawa</h2>
+  <p>Jako osoba, której dane przetwarzamy, ma Pani/Pan prawo do:</p>
   <ul>
-    <li>prawo dostępu do danych (art. 15 RODO),</li>
-    <li>prawo sprostowania danych (art. 16 RODO),</li>
-    <li>prawo usunięcia danych (art. 17 RODO),</li>
-    <li>prawo ograniczenia przetwarzania (art. 18 RODO),</li>
-    <li>prawo przenoszenia danych (art. 20 RODO),</li>
-    <li>prawo sprzeciwu wobec przetwarzania (art. 21 RODO),</li>
-    <li>prawo cofnięcia zgody w dowolnym momencie, bez wpływu na zgodność z prawem przetwarzania dokonanego przed jej cofnięciem,</li>
-    <li>prawo wniesienia skargi do organu nadzorczego, którym w Polsce jest:</li>
+    <li><strong>dostępu do danych</strong> (art. 15 RODO) — zapytać, jakie dane przetwarzamy,</li>
+    <li><strong>sprostowania</strong> (art. 16) — poprawić nieprawidłowe dane,</li>
+    <li><strong>usunięcia</strong> (art. 17) — w określonych przypadkach,</li>
+    <li><strong>ograniczenia przetwarzania</strong> (art. 18),</li>
+    <li><strong>przenoszenia danych</strong> (art. 20) — otrzymać dane w formacie umożliwiającym przeniesienie do innego podmiotu,</li>
+    <li><strong>sprzeciwu</strong> (art. 21) — wobec przetwarzania na podstawie prawnie uzasadnionego interesu,</li>
+    <li><strong>cofnięcia zgody</strong> w dowolnym momencie — bez wpływu na zgodność z prawem przetwarzania sprzed cofnięcia,</li>
+    <li><strong>wniesienia skargi</strong> do Prezesa Urzędu Ochrony Danych Osobowych:</li>
   </ul>
   <blockquote>
     <p><strong>Prezes Urzędu Ochrony Danych Osobowych</strong></p>
     <p>ul. Stawki 2, 00-193 Warszawa</p>
     <p><a href="https://www.uodo.gov.pl" target="_blank" rel="noopener">www.uodo.gov.pl</a></p>
   </blockquote>
-  <p>Żądania związane z realizacją powyższych praw można zgłaszać na adres:</p>
-  <blockquote><p><strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p></blockquote>
-  <p>Na żądanie odpowiadamy bez zbędnej zwłoki, najpóźniej w ciągu miesiąca od jego otrzymania. W szczególnie złożonych przypadkach termin ten może zostać przedłużony o kolejne dwa miesiące, o czym osobę zgłaszającą informujemy w terminie miesiąca od otrzymania żądania.</p>
-  <p>W celu weryfikacji tożsamości osoby zgłaszającej żądanie możemy poprosić o podanie dodatkowych informacji pozwalających zidentyfikować zgłaszającego.</p>
-  <p>Jeżeli zgłoszenie dotyczy danych klientki salonu lub pracownika salonu wprowadzonych do systemu przez salon, administratorem tych danych jest salon. W takim przypadku Estelio może przekazać zgłoszenie właściwemu salonowi albo poinformować osobę, że powinna skontaktować się bezpośrednio z salonem.</p>
+
+  <h3>Jak skorzystać z tych praw</h3>
+  <p>Wystarczy napisać na adres <strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong>.</p>
+  <p>Odpowiadamy bez zbędnej zwłoki, najpóźniej w ciągu <strong>miesiąca</strong> od otrzymania żądania. W szczególnie złożonych przypadkach termin ten może zostać przedłużony o kolejne dwa miesiące — wtedy poinformujemy Panią/Pana o przedłużeniu w pierwszym miesiącu.</p>
+  <p>W celu weryfikacji tożsamości osoby zgłaszającej żądanie możemy poprosić o dodatkowe informacje pozwalające jednoznacznie Panią/Pana zidentyfikować.</p>
+
+  <div class="warning-box">
+    <span class="label">Ważne dla klientek salonu:</span>
+    <p>Jeżeli zgłoszenie dotyczy Pani danych jako klientki konkretnego salonu, administratorem Pani danych jest salon, nie Estelio. W takim przypadku przekażemy zgłoszenie do salonu albo poinformujemy Panią, jak skontaktować się z nim bezpośrednio.</p>
+  </div>
 
   <h2>13. Dane szczególnych kategorii</h2>
-  <p>Estelio nie wymaga od salonu wprowadzania danych szczególnych kategorii, ale w praktyce salon może wpisać do systemu informacje dotyczące przeciwwskazań, konsultacji, zabiegów, dokumentacji lub zdrowia.</p>
-  <p>Za ocenę, czy dane mają charakter danych szczególnych kategorii w rozumieniu art. 9 RODO, oraz za posiadanie podstawy prawnej ich przetwarzania odpowiada salon jako administrator danych.</p>
+  <p>Estelio nie wymaga od salonu wprowadzania danych szczególnych kategorii (zdrowie, przeciwwskazania). W praktyce salon beauty może jednak wpisać do systemu informacje dotyczące przeciwwskazań, konsultacji, zabiegów lub stanu skóry.</p>
+  <p>Za ocenę, czy takie dane mają charakter danych szczególnych kategorii w rozumieniu art. 9 RODO, oraz za posiadanie podstawy prawnej ich przetwarzania <strong>odpowiada salon jako administrator</strong>.</p>
 
   <h2>14. Dane dzieci</h2>
-  <p>Estelio nie jest przeznaczone do samodzielnego korzystania przez dzieci. Jeżeli salon wprowadza do systemu dane osoby małoletniej, odpowiada za posiadanie odpowiedniej podstawy prawnej i spełnienie obowiązków informacyjnych wobec osoby małoletniej lub jej przedstawiciela ustawowego.</p>
+  <p>Estelio nie jest przeznaczone do samodzielnego korzystania przez dzieci. Jeżeli salon wprowadza do systemu dane osoby małoletniej, odpowiada za posiadanie odpowiedniej podstawy prawnej i spełnienie obowiązków informacyjnych wobec dziecka lub jego przedstawiciela ustawowego.</p>
 
-  <h2>15. Zautomatyzowane podejmowanie decyzji i profilowanie</h2>
-  <p>Estelio może prezentować raporty, rankingi, analizy sprzedażowe, retencyjne, konsultacyjne, pracownicze i magazynowe.</p>
-  <p>Estelio nie podejmuje wobec Klientów Estelio decyzji wywołujących skutki prawne lub w podobny sposób istotnie na nich wpływających w sposób wyłącznie zautomatyzowany w rozumieniu art. 22 RODO.</p>
-  <p>Salon powinien samodzielnie ocenić, czy sposób wykorzystywania raportów, rankingów, targetów i danych pracowniczych wymaga dodatkowych obowiązków informacyjnych wobec pracowników lub współpracowników.</p>
+  <h2>15. Zautomatyzowane decyzje i profilowanie</h2>
+  <p>Estelio może prezentować raporty, rankingi i analizy — sprzedażowe, retencyjne, konsultacyjne, pracownicze, magazynowe.</p>
 
-  <h2>16. Naruszenia ochrony danych</h2>
-  <p>W przypadku stwierdzenia naruszenia ochrony danych osobowych, w odniesieniu do których Estelio jest administratorem, naruszenie zostaje zgłoszone Prezesowi Urzędu Ochrony Danych Osobowych nie później niż w ciągu 72 godzin od jego stwierdzenia, chyba że jest mało prawdopodobne, by naruszenie skutkowało ryzykiem dla praw lub wolności osób fizycznych, zgodnie z art. 33 RODO.</p>
-  <p>Jeżeli naruszenie może powodować wysokie ryzyko dla praw lub wolności osób fizycznych, osoby których dane dotyczą zostają poinformowane bez zbędnej zwłoki, zgodnie z art. 34 RODO.</p>
-  <p>W przypadku naruszenia ochrony danych, w odniesieniu do których Estelio działa jako podmiot przetwarzający, salon zostaje poinformowany bez zbędnej zwłoki, zgodnie z art. 33 ust. 2 RODO oraz zapisami umowy powierzenia przetwarzania danych.</p>
+  <div class="warning-box">
+    <span class="label">Ważne:</span>
+    <p>Estelio <strong>nie podejmuje wobec Klientów decyzji wywołujących skutki prawne lub w podobny sposób istotnie na nich wpływających w sposób wyłącznie zautomatyzowany</strong> w rozumieniu art. 22 RODO.</p>
+  </div>
 
-  <h2>17. Zmiany Polityki Prywatności</h2>
-  <p>Polityka może być zmieniana w przypadku zmian w systemie, przepisach prawa, dostawcach usług lub sposobie przetwarzania danych.</p>
-  <p>O istotnych zmianach Klienci zostaną poinformowani drogą elektroniczną na adres e-mail przypisany do konta lub komunikatem w systemie, z odpowiednim wyprzedzeniem przed wejściem zmian w życie.</p>
+  <p>Salon powinien jednak samodzielnie ocenić, czy sposób wykorzystywania raportów, rankingów i targetów wymaga dodatkowych obowiązków informacyjnych wobec pracowników.</p>
+
+  <h2>16. Co robimy w razie naruszenia ochrony danych</h2>
+  <p>Jeżeli stwierdzimy naruszenie ochrony danych, w którym Estelio jest administratorem, zgłaszamy je Prezesowi UODO <strong>w ciągu 72 godzin</strong> od stwierdzenia naruszenia (zgodnie z art. 33 RODO) — chyba że jest mało prawdopodobne, by skutkowało ryzykiem dla praw lub wolności osób fizycznych.</p>
+  <p>Jeżeli naruszenie może powodować <strong>wysokie ryzyko</strong>, informujemy o tym także bezpośrednio osoby, których dane dotyczą (art. 34 RODO).</p>
+  <p>W przypadku naruszenia danych powierzonych przez salon (gdzie my jesteśmy podmiotem przetwarzającym) informujemy salon bez zbędnej zwłoki, zgodnie z art. 33 ust. 2 RODO oraz <a href="/umowa-powierzenia.html">Umową powierzenia (DPA)</a>.</p>
+  <p>Szczegółowy opis tego, jak reagujemy na incydenty, znajduje się w <a href="/procedura-rodo.html">Procedurze obsługi wniosków RODO i incydentów</a>.</p>
+
+  <h2>17. Zmiany w Polityce prywatności</h2>
+  <p>Tę Politykę możemy zmieniać w przypadku:</p>
+  <ul>
+    <li>zmian w systemie Estelio,</li>
+    <li>zmian w przepisach prawa,</li>
+    <li>zmian dostawców usług,</li>
+    <li>zmian w sposobie przetwarzania danych.</li>
+  </ul>
+  <p>O istotnych zmianach informujemy Państwa drogą e-mailową lub komunikatem w systemie, <strong>z odpowiednim wyprzedzeniem przed wejściem zmian w życie</strong>.</p>
+  <p>Poprzednie wersje Polityki dostępne są w archiwum na stronie <a href="/dokumentacja.html">Dokumentacja</a>.</p>
 
   <h2>18. Kontakt</h2>
   <p>W sprawach dotyczących danych osobowych można kontaktować się pod adresem:</p>
   <blockquote>
     <p><strong>Fotolinea Mariusz Wacławiak</strong></p>
     <p>ul. Zefira 27/3, 80-180 Kowale</p>
-    <p>e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></p>
+    <p>e-mail: <strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p>
   </blockquote>
-  <p>Korespondencja kierowana drogą elektroniczną na adres <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> jest preferowaną formą kontaktu i pozwala na najszybsze rozpatrzenie sprawy.</p>
+  <p>Najszybszą formą kontaktu jest e-mail — sprawy zgłoszone tą drogą rozpatrujemy najczęściej w ciągu 3 dni roboczych.</p>
 
 </div>
 
 <footer>
-  © Estelio &middot;
-  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
-  <a href="/regulamin.html">Regulamin</a> &middot;
-  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
-  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  <div class="firma">© 2026 Estelio &middot; Fotolinea Mariusz Wacławiak &middot; ul. Zefira 27/3, 80-180 Kowale &middot; NIP: 4660275573</div>
+  <div><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></div>
+  <div class="links">
+    <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+    <a href="/regulamin.html">Regulamin</a> &middot;
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> &middot;
+    <a href="/umowa-powierzenia.html">DPA</a> &middot;
+    <a href="/polityka-cookies.html">Polityka cookies</a> &middot;
+    <a href="/klauzula-rodo-dla-salonu.html">Klauzula RODO dla salonu</a> &middot;
+    <a href="/procedura-rodo.html">Procedura RODO</a>
+  </div>
 </footer>
 
 </body>
