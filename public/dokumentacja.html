@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dokumentacja prawna — Estelio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
+      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.7; }
+
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; color: var(--gold);
+      text-decoration: none; letter-spacing: .06em;
+    }
+    header a.back {
+      font-size: .82rem; color: rgba(255,255,255,.55);
+      text-decoration: none; transition: color .2s;
+    }
+    header a.back:hover { color: #fff; }
+
+    .container { max-width: 880px; margin: 0 auto; padding: 56px 40px 80px; }
+    .doc-eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem; font-weight: 600;
+      margin-bottom: 12px; line-height: 1.2;
+    }
+    .lead {
+      font-size: 1rem; color: var(--muted); margin-bottom: 48px;
+      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
+    }
+
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 18px;
+    }
+    .doc-card {
+      background: #fff; border: 1px solid var(--border); border-radius: 4px;
+      padding: 24px; text-decoration: none; color: inherit;
+      transition: border-color .2s, box-shadow .2s, transform .2s;
+      display: flex; flex-direction: column;
+    }
+    .doc-card:hover {
+      border-color: var(--gold);
+      box-shadow: 0 4px 16px rgba(184,112,128,.08);
+      transform: translateY(-1px);
+    }
+    .doc-card h3 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.3rem; font-weight: 600; margin-bottom: 8px; color: var(--dark);
+    }
+    .doc-card p {
+      font-size: .88rem; color: var(--muted); line-height: 1.6;
+      flex: 1; margin-bottom: 14px;
+    }
+    .doc-card .badge {
+      display: inline-block; padding: 3px 10px; border-radius: 999px;
+      font-size: .68rem; font-weight: 600; letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .badge-active { background: #f0f7e8; color: #5a7a3a; border: 1px solid #c8d8b0; }
+    .badge-draft  { background: #fff8e6; color: #7a5c00; border: 1px solid var(--gold); }
+
+    footer {
+      background: var(--cream2); border-top: 1px solid var(--border);
+      padding: 20px 40px; text-align: center;
+      font-size: .75rem; color: var(--muted);
+    }
+    footer a { color: var(--rose); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 36px 20px 60px; }
+      header { padding: 18px 20px; }
+      h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="back" href="/zamow.html">← Wróć do strony głównej</a>
+</header>
+
+<div class="container">
+
+  <div class="doc-eyebrow">Dokumentacja</div>
+  <h1>Dokumenty prawne</h1>
+  <p class="lead">Wszystkie dokumenty regulujące korzystanie z Estelio. Salony, prawnicy i klienci znajdą tu komplet umów, polityk i klauzul informacyjnych.</p>
+
+  <div class="doc-grid">
+
+    <a class="doc-card" href="/regulamin.html">
+      <span class="badge badge-active" style="align-self:flex-start; margin-bottom:12px;">Aktywny</span>
+      <h3>Regulamin świadczenia usług</h3>
+      <p>Warunki korzystania z systemu Estelio — umowa B2B między Estelio a salonem. Subskrypcja, płatności, dostępność, reklamacje.</p>
+    </a>
+
+    <a class="doc-card" href="/polityka-prywatnosci.html">
+      <span class="badge badge-active" style="align-self:flex-start; margin-bottom:12px;">Aktywny</span>
+      <h3>Polityka prywatności</h3>
+      <p>Jak przetwarzamy dane osób odwiedzających estelio.com.pl, jakie cookies używamy, jakie są twoje prawa według RODO.</p>
+    </a>
+
+    <a class="doc-card" href="/umowa-powierzenia.html">
+      <span class="badge badge-draft" style="align-self:flex-start; margin-bottom:12px;">W przygotowaniu</span>
+      <h3>Umowa powierzenia przetwarzania (DPA)</h3>
+      <p>Umowa między salonem (administrator danych) a Estelio (procesor) — wymagana przez RODO art. 28 dla danych klientek salonu.</p>
+    </a>
+
+    <a class="doc-card" href="/polityka-cookies.html">
+      <span class="badge badge-draft" style="align-self:flex-start; margin-bottom:12px;">W przygotowaniu</span>
+      <h3>Polityka cookies</h3>
+      <p>Szczegółowy opis plików cookies używanych na estelio.com.pl — niezbędne, analityczne, marketingowe.</p>
+    </a>
+
+    <a class="doc-card" href="/klauzula-rodo-dla-salonu.html">
+      <span class="badge badge-draft" style="align-self:flex-start; margin-bottom:12px;">W przygotowaniu</span>
+      <h3>Klauzula RODO dla klientek salonu</h3>
+      <p>Wzór klauzuli informacyjnej do umieszczenia na karcie zabiegowej w salonie. Salon jest administratorem danych swoich klientek.</p>
+    </a>
+
+  </div>
+
+</div>
+
+<footer>
+  © 2026 Estelio &middot;
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> &middot;
+  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+  <a href="/regulamin.html">Regulamin</a> &middot;
+  <a href="/polityka-prywatnosci.html">Polityka prywatności</a>
+</footer>
+
+</body>
+</html>

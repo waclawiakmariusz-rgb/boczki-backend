@@ -31,10 +31,7 @@
     }
     header a.back:hover { color: #fff; }
 
-    .container {
-      max-width: 780px; margin: 0 auto;
-      padding: 56px 40px 80px;
-    }
+    .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
     .doc-eyebrow {
       font-size: .7rem; font-weight: 600; letter-spacing: .2em;
       text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
@@ -62,12 +59,25 @@
     ul, ol { margin: 8px 0 14px 20px; }
     li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
     strong { color: var(--dark); }
-
-    .placeholder {
-      background: #fff8e6; border: 1px dashed var(--gold);
-      border-radius: 4px; padding: 1px 6px;
-      font-weight: 600; color: #7a5c00; font-size: .88rem;
+    blockquote {
+      margin: 14px 0;
+      padding: 14px 20px;
+      background: #fff;
+      border-left: 3px solid var(--gold);
+      border-radius: 4px;
+      font-size: .9rem;
+      color: var(--dark);
     }
+    blockquote p { margin-bottom: 4px; }
+    a { color: var(--rose); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .annex-note {
+      margin-top: 48px; padding: 20px;
+      background: var(--cream2); border: 1px solid var(--border); border-radius: 4px;
+      font-size: .88rem; color: var(--muted);
+    }
+    .annex-note strong { color: var(--dark); }
 
     footer {
       background: var(--cream2); border-top: 1px solid var(--border);
@@ -87,71 +97,266 @@
 
 <header>
   <a class="logo" href="/zamow.html">Estelio</a>
-  <a class="back" href="/zamow.html">← Wróć do strony głównej</a>
+  <a class="back" href="/dokumentacja.html">← Wróć do dokumentacji</a>
 </header>
 
 <div class="container">
 
   <div class="doc-eyebrow">Dokument prawny</div>
-  <h1>Regulamin świadczenia usług</h1>
-  <div class="doc-meta">Obowiązuje od: <strong>1 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0</div>
+  <h1>Regulamin świadczenia usług Estelio</h1>
+  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 2.1</div>
 
   <h2>§1. Postanowienia ogólne</h2>
-  <p>1. Niniejszy regulamin określa zasady świadczenia usługi dostępu do systemu Estelio — oprogramowania do zarządzania salonem kosmetycznym w modelu SaaS (Software as a Service).</p>
-  <p>2. Usługodawcą jest: <strong>Fotolinea Mariusz Wacławiak</strong>, ul. Zefira 27/3, 80-180 Kowale, NIP: 4660275573, e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
-  <p>3. Usługobiorcą (dalej: Klient) jest osoba fizyczna prowadząca działalność gospodarczą lub osoba prawna, która zawarła umowę o świadczenie usług Estelio.</p>
-  <p>4. Korzystanie z usługi oznacza akceptację niniejszego regulaminu.</p>
+  <p>1. Niniejszy Regulamin określa zasady korzystania z systemu Estelio dostępnego pod adresem www.estelio.com.pl lub w innej domenie/subdomenie udostępnionej Klientowi.</p>
+  <p>2. Usługodawcą jest:</p>
+  <blockquote>
+    <p><strong>Fotolinea Mariusz Wacławiak</strong></p>
+    <p>ul. Zefira 27/3, 80-180 Kowale</p>
+    <p>NIP: 4660275573</p>
+    <p>e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></p>
+  </blockquote>
+  <p>3. Estelio jest aplikacją webową w modelu SaaS, czyli oprogramowaniem udostępnianym online, bez konieczności instalowania go na komputerze Klienta.</p>
+  <p>4. Klientem może być przedsiębiorca, osoba fizyczna prowadząca działalność gospodarczą, osoba prawna lub inna jednostka organizacyjna korzystająca z systemu w związku z prowadzoną działalnością, w szczególności salon beauty.</p>
+  <p>5. Regulamin jest regulaminem świadczenia usług drogą elektroniczną w rozumieniu ustawy z dnia 18 lipca 2002 r. o świadczeniu usług drogą elektroniczną.</p>
+  <p>6. Korzystanie z Estelio oznacza akceptację Regulaminu, <a href="/polityka-prywatnosci.html">Polityki Prywatności</a>, <a href="/polityka-cookies.html">Polityki cookies</a> oraz — jeżeli Klient wprowadza do systemu dane osobowe osób trzecich — <a href="/umowa-powierzenia.html">Umowy powierzenia przetwarzania danych osobowych</a>.</p>
 
-  <h2>§2. Przedmiot usługi</h2>
-  <p>1. Estelio to aplikacja webowa umożliwiająca zarządzanie salonem kosmetycznym, w tym: ewidencję klientów, sprzedaż, magazyn, rozliczenia pracowników i analitykę.</p>
-  <p>2. Usługa świadczona jest w modelu subskrypcyjnym — Klient uzyskuje dostęp do systemu na czas obowiązywania aktywnej subskrypcji.</p>
-  <p>3. Dostęp do systemu możliwy jest przez przeglądarkę internetową bez konieczności instalacji oprogramowania.</p>
+  <h2>§2. Definicje</h2>
+  <ul>
+    <li><strong>Estelio / System</strong> — aplikacja online służąca do organizacji i zarządzania zapleczem salonu beauty.</li>
+    <li><strong>Usługodawca</strong> — Fotolinea Mariusz Wacławiak.</li>
+    <li><strong>Klient</strong> — przedsiębiorca lub podmiot korzystający z Estelio.</li>
+    <li><strong>Salon</strong> — jednostka organizacyjna Klienta, dla której uruchomiony jest dostęp do Estelio.</li>
+    <li><strong>Użytkownik</strong> — osoba korzystająca z systemu w imieniu Klienta, np. właściciel, manager, recepcja, kosmetolog, pracownik lub współpracownik.</li>
+    <li><strong>Konto</strong> — dostęp Klienta do systemu Estelio.</li>
+    <li><strong>Subskrypcja</strong> — odpłatny, odnawialny dostęp do systemu.</li>
+    <li><strong>Okres rozliczeniowy</strong> — okres, za który pobierana jest opłata.</li>
+    <li><strong>Dane Klienta</strong> — dane wprowadzone przez Klienta lub jego Użytkowników do systemu.</li>
+    <li><strong>Panel rozliczeniowy</strong> — miejsce zarządzania płatnością, kartą i subskrypcją w ramach systemu.</li>
+    <li><strong>DPA / Umowa powierzenia</strong> — umowa powierzenia przetwarzania danych osobowych stanowiąca załącznik do Regulaminu.</li>
+  </ul>
 
-  <h2>§3. Zawarcie umowy i rejestracja</h2>
-  <p>1. Umowa zostaje zawarta z chwilą pomyślnego opłacenia pierwszej subskrypcji i dokończenia procesu rejestracji przez Klienta.</p>
-  <p>2. Klient zobowiązany jest podać prawdziwe dane podczas rejestracji.</p>
-  <p>3. Klient ponosi odpowiedzialność za bezpieczeństwo danych dostępowych do swojego konta.</p>
+  <h2>§3. Czym jest Estelio</h2>
+  <p>1. Estelio jest systemem wspierającym codzienne zarządzanie salonem beauty.</p>
+  <p>2. System może obejmować w szczególności funkcje dotyczące:</p>
+  <ul>
+    <li>sprzedaży, multisprzedaży, płatności mieszanych,</li>
+    <li>zadatków i portfeli klientek, historii sprzedaży, rejestru zdarzeń,</li>
+    <li>CRM klientek, historii zabiegów i zakupów, urodzin klientek,</li>
+    <li>dokumentacji, magazynu, stanów kosmetyków,</li>
+    <li>zadań i przypomnień, pracy recepcji, konsultacji, analizy konsultacji,</li>
+    <li>raportów dla agencji,</li>
+    <li>wyników pracowników, rankingów, celów i premii, zebrań,</li>
+    <li>analizy zabiegów, analizy koszyka, średniej wartości paragonu,</li>
+    <li>śpiących VIP-ów, retencji klientek, raportów i rentowności.</li>
+  </ul>
+  <p>3. Zakres funkcji może zależeć od aktualnej wersji systemu, planu, etapu wdrożenia lub indywidualnych ustaleń z Klientem.</p>
+  <p>4. Estelio nie jest kalendarzem wizyt i nie zastępuje systemów rezerwacyjnych takich jak Booksy, Versum lub inne kalendarze. Estelio porządkuje zaplecze salonu: sprzedaż, zadania, klientki, magazyn, zadatki, dokumenty, konsultacje, raporty i rejestr zdarzeń.</p>
+  <p>5. Estelio nie jest kasą fiskalną, systemem księgowym, systemem medycznym ani narzędziem do udzielania porad prawnych, podatkowych, medycznych lub księgowych.</p>
 
-  <h2>§4. Subskrypcja i płatności</h2>
-  <p>1. Opłata za dostęp wynosi <strong>49 zł brutto miesięcznie</strong> za jeden salon.</p>
-  <p>2. Płatność pobierana jest cyklicznie co 30 dni z karty płatniczej Klienta za pośrednictwem operatora płatności Stripe.</p>
-  <p>3. W przypadku nieudanej płatności Stripe podejmuje kolejne próby pobrania. Brak płatności skutkuje zawieszeniem dostępu do systemu.</p>
-  <p>4. Klient otrzymuje fakturę VAT na adres e-mail podany podczas rejestracji po każdej zrealizowanej płatności.</p>
-  <p>5. Cena może ulec zmianie. O zmianie Klient zostanie poinformowany na 30 dni przed jej wejściem w życie.</p>
+  <h2>§4. Wymagania techniczne</h2>
+  <p>1. Do korzystania z Estelio potrzebne są:</p>
+  <ul>
+    <li>urządzenie z dostępem do internetu,</li>
+    <li>aktualna przeglądarka internetowa,</li>
+    <li>aktywne konto,</li>
+    <li>poprawnie skonfigurowany dostęp dla Użytkownika.</li>
+  </ul>
+  <p>2. Zalecane jest korzystanie z aktualnych wersji przeglądarek Chrome, Edge, Firefox lub Safari.</p>
+  <p>3. Klient odpowiada za zapewnienie sprzętu, internetu, przeglądarki i warunków technicznych po swojej stronie.</p>
 
-  <h2>§5. Anulowanie i rozwiązanie umowy</h2>
-  <p>1. Klient może anulować subskrypcję w dowolnym momencie przez panel rozliczeniowy (<a href="/billing.html">billing.html</a>) lub kontaktując się mailowo.</p>
-  <p>2. Po anulowaniu dostęp pozostaje aktywny do końca opłaconego okresu rozliczeniowego.</p>
-  <p>3. Usługodawca może rozwiązać umowę ze skutkiem natychmiastowym w przypadku naruszenia przez Klienta postanowień regulaminu.</p>
+  <h2>§5. Rejestracja i zawarcie umowy</h2>
+  <p>1. Umowa zostaje zawarta z chwilą:</p>
+  <ul>
+    <li>utworzenia konta Klienta,</li>
+    <li>zaakceptowania Regulaminu,</li>
+    <li>opłacenia pierwszej subskrypcji albo uruchomienia dostępu próbnego, jeżeli taki został udostępniony.</li>
+  </ul>
+  <p>2. W procesie rejestracji Klient ma możliwość zapoznania się z Regulaminem, Polityką Prywatności, Polityką cookies oraz DPA przed dokonaniem płatności albo najpóźniej przed rozpoczęciem korzystania z systemu.</p>
+  <p>3. Klient zobowiązuje się podać prawdziwe, aktualne i kompletne dane.</p>
+  <p>4. Klient odpowiada za aktualizację danych, w szczególności danych do faktury, adresu e-mail i danych kontaktowych.</p>
 
-  <h2>§6. Dane i prywatność</h2>
-  <p>1. Dane wprowadzone przez Klienta do systemu (dane klientów salonu, pracowników, sprzedaży) stanowią własność Klienta.</p>
-  <p>2. Usługodawca przetwarza dane zgodnie z <a href="/polityka-prywatnosci.html">Polityką Prywatności</a> i obowiązującymi przepisami RODO.</p>
-  <p>3. Dane są przechowywane na serwerach zlokalizowanych w Unii Europejskiej.</p>
-  <p>4. W przypadku rozwiązania umowy Klient może zażądać eksportu lub usunięcia swoich danych w ciągu 30 dni.</p>
+  <h2>§6. Prawo odstąpienia i charakter B2B</h2>
+  <p>1. Estelio jest kierowane do przedsiębiorców i podmiotów korzystających z systemu w związku z prowadzoną działalnością gospodarczą.</p>
+  <p>2. Jeżeli Klient zawiera umowę jako przedsiębiorca na prawach konsumenta w rozumieniu art. 38a ustawy z dnia 30 maja 2014 r. o prawach konsumenta, zastosowanie mogą mieć szczególne przepisy dotyczące odstąpienia od umowy zawieranej na odległość.</p>
+  <p>3. W przypadku zastosowania prawa odstąpienia szczegółowa informacja zostanie przekazana Klientowi przed zawarciem umowy, wraz z formularzem odstąpienia.</p>
+  <p>4. Jeżeli Klient żąda rozpoczęcia świadczenia usługi przed upływem terminu odstąpienia, składa odpowiednie oświadczenie zgodne z przepisami prawa. W takim przypadku Klient zachowuje prawo odstąpienia, a w razie skorzystania z niego zobowiązany jest zapłacić za świadczenia spełnione do chwili odstąpienia.</p>
 
-  <h2>§7. Dostępność i odpowiedzialność</h2>
-  <p>1. Usługodawca dąży do zapewnienia dostępności systemu na poziomie 99% w skali miesiąca, z wyłączeniem planowanych przerw konserwacyjnych.</p>
-  <p>2. Usługodawca nie ponosi odpowiedzialności za straty wynikające z przerw w działaniu systemu spowodowanych przyczynami niezależnymi (awaria infrastruktury, siła wyższa).</p>
-  <p>3. Usługodawca nie ponosi odpowiedzialności za działania Klienta ani dane wprowadzone do systemu przez Klienta.</p>
+  <h2>§7. Konta Użytkowników i uprawnienia</h2>
+  <p>1. Klient może tworzyć dostęp dla swoich Użytkowników, np. właściciela, managera, recepcji, kosmetologów, pracowników lub współpracowników.</p>
+  <p>2. Klient odpowiada za:</p>
+  <ul>
+    <li>nadawanie właściwych uprawnień,</li>
+    <li>odbieranie dostępu osobom, które zakończyły współpracę,</li>
+    <li>ochronę haseł, PIN-ów i danych logowania,</li>
+    <li>zapewnienie, że Użytkownicy korzystają z systemu zgodnie z prawem i Regulaminem.</li>
+  </ul>
+  <p>3. Każdy Użytkownik powinien korzystać z własnego konta, loginu, hasła lub PIN-u.</p>
+  <p>4. Udostępnianie danych dostępowych innym osobom jest niedozwolone.</p>
+  <p>5. Estelio może zapisywać działania Użytkowników w rejestrze zdarzeń, w szczególności informacje o logowaniach, sprzedaży, edycjach, usunięciach, zmianach danych, pobraniu plików i innych czynnościach w systemie.</p>
+  <p>6. Rejestr zdarzeń służy bezpieczeństwu, kontroli, rozliczalności i ochronie danych.</p>
 
-  <h2>§8. Reklamacje</h2>
-  <p>1. Reklamacje należy składać na adres e-mail: <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>
-  <p>2. Reklamacja powinna zawierać: opis problemu, datę wystąpienia oraz dane kontaktowe Klienta.</p>
-  <p>3. Usługodawca rozpatruje reklamacje w terminie 14 dni roboczych.</p>
+  <h2>§8. Subskrypcja i płatności</h2>
+  <p>1. Dostęp do Estelio jest świadczony w modelu subskrypcyjnym.</p>
+  <p>2. Podstawowa cena dostępu wynosi <strong>49 zł brutto miesięcznie</strong> za jeden salon, chyba że strony uzgodniły inaczej lub na stronie Estelio wskazano inną aktualną cenę albo plan.</p>
+  <p>3. Płatność pobierana jest cyklicznie co 30 dni, za pośrednictwem operatora płatności Stripe lub innego operatora wskazanego przez Usługodawcę.</p>
+  <p>4. Klient wyraża zgodę na cykliczne pobieranie opłaty za subskrypcję z wybranej metody płatności.</p>
+  <p>5. Po skutecznej płatności Klient otrzymuje fakturę lub dokument sprzedaży na adres e-mail przypisany do konta albo ma dostęp do dokumentu w panelu rozliczeniowym.</p>
+  <p>6. Jeżeli płatność nie powiedzie się, operator płatności może ponowić próbę pobrania środków.</p>
+  <p>7. W przypadku braku skutecznej płatności dostęp do systemu może zostać ograniczony, zawieszony lub zablokowany po upływie okresu dodatkowego wskazanego w systemie albo komunikacji e-mail.</p>
+  <p>8. Po wygaśnięciu subskrypcji Klient może zobaczyć ekran informujący o wygaśnięciu dostępu wraz z linkiem do panelu rozliczeniowego, gdzie może uregulować płatność.</p>
+  <p>9. Usługodawca może czasowo umożliwić dostęp po nieudanej płatności, aby Klient mógł uregulować należność, jednak nie jest do tego zobowiązany.</p>
 
-  <h2>§9. Postanowienia końcowe</h2>
+  <h2>§9. Zmiana ceny</h2>
+  <p>1. Usługodawca może zmienić cenę subskrypcji.</p>
+  <p>2. O zmianie ceny Klient zostanie poinformowany z co najmniej 30-dniowym wyprzedzeniem drogą e-mailową lub komunikatem w systemie.</p>
+  <p>3. Jeżeli Klient nie akceptuje nowej ceny, może anulować subskrypcję przed wejściem zmiany w życie.</p>
+  <p>4. Brak anulowania subskrypcji i dalsze korzystanie z systemu po wejściu zmiany w życie oznacza akceptację nowej ceny.</p>
+
+  <h2>§10. Anulowanie subskrypcji</h2>
+  <p>1. Klient może anulować subskrypcję w dowolnym momencie:</p>
+  <ul>
+    <li>przez <a href="/billing.html">panel rozliczeniowy</a>,</li>
+    <li>kontaktując się mailowo pod adresem <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>,</li>
+    <li>w inny sposób udostępniony przez Estelio.</li>
+  </ul>
+  <p>2. Po anulowaniu subskrypcji dostęp pozostaje aktywny do końca opłaconego okresu rozliczeniowego.</p>
+  <p>3. Aby uniknąć pobrania kolejnej opłaty, anulowanie powinno nastąpić przed rozpoczęciem kolejnego okresu rozliczeniowego. Zalecane jest anulowanie najpóźniej dzień przed planowanym odnowieniem subskrypcji.</p>
+  <p>4. Anulowanie subskrypcji nie powoduje automatycznego zwrotu opłaty za rozpoczęty okres rozliczeniowy, chyba że bezwzględnie obowiązujące przepisy prawa stanowią inaczej.</p>
+
+  <h2>§11. Dostęp do danych po zakończeniu subskrypcji</h2>
+  <p>1. Dane wprowadzone przez Klienta do systemu pozostają własnością Klienta.</p>
+  <p>2. Po zakończeniu umowy lub subskrypcji Klient może zażądać eksportu danych w terminie 30 dni od zakończenia dostępu, chyba że strony ustalą dłuższy termin.</p>
+  <p>3. Po upływie okresu na eksport danych Usługodawca może usunąć lub zanonimizować dane Klienta, z zastrzeżeniem danych, które muszą być przechowywane z uwagi na przepisy prawa, rozliczenia, bezpieczeństwo, backupy techniczne lub obronę roszczeń.</p>
+  <p>4. Eksport danych może być wykonany w formacie technicznie dostępnym w systemie, np. CSV, XLSX, JSON, PDF lub innym uzgodnionym formacie.</p>
+  <p>5. Estelio nie odpowiada za skutki niepobrania danych przez Klienta w przewidzianym terminie.</p>
+
+  <h2>§12. Obowiązki Klienta</h2>
+  <p>1. Klient zobowiązuje się korzystać z Estelio zgodnie z prawem, Regulaminem, dobrymi obyczajami i przeznaczeniem systemu.</p>
+  <p>2. Klient zobowiązuje się w szczególności:</p>
+  <ul>
+    <li>wprowadzać do systemu dane zgodnie z prawem,</li>
+    <li>posiadać podstawy prawne przetwarzania danych osób, których dane wprowadza do systemu,</li>
+    <li>spełniać obowiązki informacyjne wobec swoich klientek, klientów, pracowników i współpracowników,</li>
+    <li>nie wprowadzać treści bezprawnych,</li>
+    <li>nie naruszać praw osób trzecich,</li>
+    <li>chronić dostęp do systemu,</li>
+    <li>nie próbować uzyskać dostępu do danych innych salonów,</li>
+    <li>nie udostępniać konta osobom nieuprawnionym.</li>
+  </ul>
+  <p>3. Klient ponosi odpowiedzialność za dane, treści i informacje wprowadzone do systemu przez siebie oraz swoich Użytkowników.</p>
+  <p>4. Klient powinien regularnie weryfikować poprawność danych, uprawnień i kont Użytkowników.</p>
+
+  <h2>§13. Dane osobowe i powierzenie przetwarzania</h2>
+  <p>1. Zasady przetwarzania danych osobowych opisuje <a href="/polityka-prywatnosci.html">Polityka Prywatności Estelio</a>.</p>
+  <p>2. W zakresie danych wprowadzanych przez Klienta do systemu, w szczególności danych klientek i klientów salonu, pracowników, współpracowników, sprzedaży, konsultacji, dokumentacji, zadań i raportów, Klient jest administratorem danych.</p>
+  <p>3. W zakresie, w jakim Estelio przetwarza dane osobowe w imieniu Klienta, Usługodawca działa jako podmiot przetwarzający w rozumieniu art. 28 RODO.</p>
+  <p>4. <a href="/umowa-powierzenia.html">Umowa powierzenia przetwarzania danych osobowych</a> stanowi Załącznik nr 1 do Regulaminu.</p>
+  <p>5. Akceptacja Regulaminu oznacza zawarcie DPA, jeżeli Klient wprowadza do systemu dane osobowe osób trzecich.</p>
+  <p>6. Estelio rekomenduje, aby Klient wdrożył własną klauzulę informacyjną RODO dla klientek i klientów salonu oraz dla pracowników i współpracowników. <a href="/klauzula-rodo-dla-salonu.html">Przykładowy szablon</a> może zostać udostępniony przez Estelio.</p>
+
+  <h2>§14. Dostępność systemu i prace techniczne</h2>
+  <p>1. Usługodawca dokłada starań, aby system działał stabilnie i był dostępny dla Klientów.</p>
+  <p>2. Usługodawca dąży do zapewnienia dostępności systemu na poziomie 99% w skali miesiąca, z wyłączeniem planowanych przerw technicznych, prac konserwacyjnych, aktualizacji, awarii niezależnych od Usługodawcy oraz działania siły wyższej.</p>
+  <p>3. Prace techniczne mogą powodować czasowe ograniczenie dostępu do systemu.</p>
+  <p>4. W miarę możliwości Usługodawca informuje o planowanych przerwach technicznych z wyprzedzeniem.</p>
+  <p>5. Usługodawca może rozwijać system, zmieniać interfejs, dodawać, modyfikować lub usuwać funkcje, jeżeli jest to uzasadnione rozwojem systemu, bezpieczeństwem, zmianą technologii lub zmianą przepisów prawa.</p>
+
+  <h2>§15. Odpowiedzialność</h2>
+  <p>1. Estelio jest narzędziem wspierającym organizację pracy salonu, ale nie zastępuje decyzji właściciela, managera, księgowego, prawnika, lekarza, kosmetologa lub innego specjalisty.</p>
+  <p>2. Usługodawca nie odpowiada za:</p>
+  <ul>
+    <li>dane wprowadzone przez Klienta lub Użytkowników,</li>
+    <li>decyzje biznesowe podjęte przez Klienta na podstawie danych z systemu,</li>
+    <li>brak poprawnego uzupełniania danych przez Klienta,</li>
+    <li>działania lub zaniechania Użytkowników,</li>
+    <li>błędy wynikające z nieprawidłowego korzystania z systemu,</li>
+    <li>awarie internetu, sprzętu, przeglądarki lub systemów zewnętrznych po stronie Klienta,</li>
+    <li>niedostępność systemu spowodowaną przyczynami niezależnymi,</li>
+    <li>działanie dostawców zewnętrznych, o ile awaria nie wynika z winy Usługodawcy.</li>
+  </ul>
+  <p>3. Usługodawca nie gwarantuje osiągnięcia przez Klienta określonych wyników sprzedażowych, finansowych, marketingowych lub organizacyjnych.</p>
+  <p>4. Odpowiedzialność Usługodawcy, o ile przepisy prawa pozwalają na jej ograniczenie, jest ograniczona do wysokości opłat zapłaconych przez Klienta za ostatnie 3 miesiące korzystania z systemu. Ograniczenie nie ma zastosowania w przypadkach, w których zgodnie z bezwzględnie obowiązującymi przepisami prawa nie można wyłączyć lub ograniczyć odpowiedzialności.</p>
+
+  <h2>§16. Zakazane działania</h2>
+  <p>Klientowi i Użytkownikom zabrania się:</p>
+  <ul>
+    <li>korzystania z systemu w sposób sprzeczny z prawem,</li>
+    <li>wprowadzania danych pozyskanych bez podstawy prawnej,</li>
+    <li>naruszania praw osób trzecich,</li>
+    <li>prób omijania zabezpieczeń,</li>
+    <li>testowania bezpieczeństwa systemu bez zgody Usługodawcy,</li>
+    <li>kopiowania, odtwarzania, modyfikowania lub rozpowszechniania kodu systemu,</li>
+    <li>udostępniania systemu podmiotom trzecim bez zgody Usługodawcy,</li>
+    <li>korzystania z systemu w celu tworzenia produktu konkurencyjnego,</li>
+    <li>wprowadzania wirusów, złośliwego oprogramowania lub działań obciążających infrastrukturę,</li>
+    <li>podejmowania działań mogących naruszyć bezpieczeństwo danych innych Klientów.</li>
+  </ul>
+
+  <h2>§17. Zawieszenie lub rozwiązanie umowy przez Usługodawcę</h2>
+  <p>1. Usługodawca może zawiesić dostęp do systemu lub rozwiązać umowę ze skutkiem natychmiastowym, jeżeli Klient:</p>
+  <ul>
+    <li>narusza Regulamin,</li>
+    <li>zalega z płatnością,</li>
+    <li>używa systemu niezgodnie z prawem,</li>
+    <li>narusza bezpieczeństwo systemu,</li>
+    <li>podejmuje próbę dostępu do danych innych Klientów,</li>
+    <li>udostępnia system osobom nieuprawnionym,</li>
+    <li>wykorzystuje system do działań bezprawnych lub szkodliwych.</li>
+  </ul>
+  <p>2. W miarę możliwości Usługodawca wezwie Klienta do usunięcia naruszenia przed rozwiązaniem umowy, chyba że naruszenie jest poważne lub zagraża bezpieczeństwu systemu, danych lub prawom innych osób.</p>
+
+  <h2>§18. Reklamacje i zgłoszenia techniczne</h2>
+  <p>1. Reklamacje i zgłoszenia techniczne należy przesyłać na adres:</p>
+  <blockquote><p><strong><a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a></strong></p></blockquote>
+  <p>2. Zgłoszenie powinno zawierać:</p>
+  <ul>
+    <li>dane Klienta,</li>
+    <li>opis problemu,</li>
+    <li>datę i godzinę wystąpienia problemu,</li>
+    <li>zrzuty ekranu lub dodatkowe informacje,</li>
+    <li>dane kontaktowe osoby zgłaszającej.</li>
+  </ul>
+  <p>3. Usługodawca rozpatruje reklamacje w terminie 14 dni roboczych od otrzymania kompletnego zgłoszenia.</p>
+
+  <h2>§19. Własność intelektualna</h2>
+  <p>1. Estelio, jego kod, interfejs, układ, nazwa, identyfikacja wizualna, dokumentacja, elementy graficzne i funkcjonalne stanowią własność Usługodawcy lub podmiotów, z którymi Usługodawca zawarł odpowiednie umowy.</p>
+  <p>2. Klient otrzymuje niewyłączny, niezbywalny dostęp do korzystania z systemu przez czas trwania aktywnej subskrypcji.</p>
+  <p>3. Klient nie nabywa praw autorskich do systemu.</p>
+  <p>4. Zabronione jest kopiowanie, rozpowszechnianie, modyfikowanie, odtwarzanie, dekompilowanie lub wykorzystywanie systemu poza zakresem przewidzianym Regulaminem.</p>
+
+  <h2>§20. Zmiany Regulaminu</h2>
+  <p>1. Usługodawca może zmienić Regulamin w szczególności w przypadku:</p>
+  <ul>
+    <li>zmian w systemie,</li>
+    <li>dodania nowych funkcji,</li>
+    <li>zmiany modelu płatności,</li>
+    <li>zmiany przepisów prawa,</li>
+    <li>zmiany dostawców usług,</li>
+    <li>potrzeby doprecyzowania zasad korzystania z systemu,</li>
+    <li>względów bezpieczeństwa.</li>
+  </ul>
+  <p>2. O istotnych zmianach Regulaminu Klient zostanie poinformowany z co najmniej 14-dniowym wyprzedzeniem, a w przypadku zmian cen — z co najmniej 30-dniowym wyprzedzeniem.</p>
+  <p>3. Jeżeli Klient nie akceptuje zmian, może rozwiązać umowę lub anulować subskrypcję przed wejściem zmian w życie.</p>
+  <p>4. Dalsze korzystanie z systemu po wejściu zmian w życie oznacza akceptację zmienionego Regulaminu.</p>
+
+  <h2>§21. Postanowienia końcowe</h2>
   <p>1. Regulamin podlega prawu polskiemu.</p>
-  <p>2. Wszelkie spory rozstrzygane będą przez sąd właściwy dla siedziby Usługodawcy.</p>
-  <p>3. Usługodawca zastrzega prawo do zmiany regulaminu z zachowaniem 30-dniowego okresu wypowiedzenia.</p>
-  <p>4. W sprawach nieuregulowanych niniejszym regulaminem zastosowanie mają przepisy Kodeksu Cywilnego oraz ustawy o świadczeniu usług drogą elektroniczną.</p>
+  <p>2. W sprawach nieuregulowanych Regulaminem zastosowanie mają powszechnie obowiązujące przepisy prawa polskiego.</p>
+  <p>3. Spory między Usługodawcą a Klientem będą rozstrzygane przez sąd właściwy dla siedziby Usługodawcy, o ile bezwzględnie obowiązujące przepisy prawa nie stanowią inaczej.</p>
+  <p>4. Załączniki stanowią integralną część Regulaminu.</p>
+
+  <div class="annex-note">
+    <p><strong>Załącznik nr 1</strong> — <a href="/umowa-powierzenia.html">Umowa powierzenia przetwarzania danych osobowych (DPA)</a></p>
+    <p style="margin-top:8px;">Pełny komplet dokumentów prawnych Estelio dostępny jest w sekcji <a href="/dokumentacja.html">Dokumentacja</a>.</p>
+  </div>
 
 </div>
 
 <footer>
-  © Estelio ·
-  <a href="/regulamin.html">Regulamin</a> ·
-  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> ·
+  © Estelio &middot;
+  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+  <a href="/regulamin.html">Regulamin</a> &middot;
+  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
   <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
 </footer>
 
