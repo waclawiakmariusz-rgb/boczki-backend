@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subskrypcja wygasła — Estelio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
+      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+    }
+    html, body { height: 100%; }
+    body {
+      font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark);
+      line-height: 1.7; display: flex; flex-direction: column;
+    }
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; color: var(--gold);
+      text-decoration: none; letter-spacing: .06em;
+    }
+    header a.back {
+      font-size: .82rem; color: rgba(255,255,255,.55);
+      text-decoration: none; transition: color .2s;
+    }
+    header a.back:hover { color: #fff; }
+    main {
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      padding: 40px 24px;
+    }
+    .card {
+      max-width: 560px; width: 100%;
+      background: #fff; border: 1px solid var(--border); border-radius: 8px;
+      padding: 56px 48px; text-align: center;
+      box-shadow: 0 4px 24px rgba(28,26,24,0.06);
+    }
+    .icon {
+      font-size: 48px; margin-bottom: 24px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2rem; font-weight: 600;
+      margin-bottom: 16px; line-height: 1.2;
+    }
+    .lead {
+      font-size: 1rem; color: var(--muted);
+      margin-bottom: 32px; line-height: 1.7;
+    }
+    .actions {
+      display: flex; flex-direction: column; gap: 12px;
+      align-items: center;
+    }
+    .btn-primary {
+      display: inline-block;
+      background: linear-gradient(135deg, var(--rose), #c98a96);
+      color: #fff; text-decoration: none;
+      padding: 16px 44px; border-radius: 4px;
+      font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: .95rem;
+      letter-spacing: .02em;
+      box-shadow: 0 4px 14px rgba(184,112,128,0.3);
+      transition: transform 0.2s, box-shadow 0.2s;
+      border: none; cursor: pointer;
+    }
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(184,112,128,0.4);
+    }
+    .link-secondary {
+      font-size: .85rem; color: var(--muted); text-decoration: none;
+    }
+    .link-secondary:hover { color: var(--dark); }
+    .info-box {
+      margin-top: 32px; padding: 16px 20px;
+      background: var(--cream2); border-radius: 4px;
+      font-size: .82rem; color: var(--muted); text-align: left;
+    }
+    .info-box strong { color: var(--dark); }
+    footer {
+      background: var(--cream2); border-top: 1px solid var(--border);
+      padding: 20px 40px; text-align: center;
+      font-size: .75rem; color: var(--muted);
+    }
+    footer a { color: var(--rose); text-decoration: none; }
+    @media (max-width: 600px) {
+      .card { padding: 40px 24px; }
+      h1 { font-size: 1.6rem; }
+      header { padding: 18px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="back" href="/zamow.html">← Strona główna</a>
+</header>
+
+<main>
+  <div class="card">
+    <div class="icon">⏰</div>
+    <h1>Twoja subskrypcja wygasła</h1>
+    <p class="lead">Aby przywrócić dostęp do systemu, opłać kolejną subskrypcję. Wszystkie dane salonu są bezpieczne i czekają na ciebie.</p>
+
+    <div class="actions">
+      <a href="/billing.html" class="btn-primary">Opłać subskrypcję</a>
+      <a href="mailto:kontakt@estelio.com.pl" class="link-secondary">Potrzebujesz pomocy? kontakt@estelio.com.pl</a>
+    </div>
+
+    <div class="info-box">
+      <p><strong>Co się dzieje z moimi danymi?</strong></p>
+      <p style="margin-top:6px;">Dane twojego salonu są przechowywane przez <strong>30 dni</strong> od wygaśnięcia subskrypcji. W tym czasie możesz w każdej chwili przywrócić dostęp opłacając zaległość — wszystko wróci tak jak było.</p>
+      <p style="margin-top:8px;">Po 30 dniach dane są automatycznie usuwane zgodnie z polityką prywatności.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  © 2026 Estelio &middot;
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> &middot;
+  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+  <a href="/regulamin.html">Regulamin</a> &middot;
+  <a href="/polityka-prywatnosci.html">Polityka prywatności</a>
+</footer>
+
+</body>
+</html>
