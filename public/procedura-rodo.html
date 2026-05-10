@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Procedura obsługi wniosków RODO i incydentów — Estelio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18; --rose: #b87080; --gold: #c9a96e;
+      --cream: #f4efe6; --cream2: #ede6d8; --muted: #7a6e66; --border: #e0d8ce;
+    }
+    body { font-family: 'DM Sans', sans-serif; background: var(--cream); color: var(--dark); line-height: 1.8; }
+
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem; font-weight: 600; color: var(--gold);
+      text-decoration: none; letter-spacing: .06em;
+    }
+    header a.back {
+      font-size: .82rem; color: rgba(255,255,255,.55);
+      text-decoration: none; transition: color .2s;
+    }
+    header a.back:hover { color: #fff; }
+
+    .container { max-width: 780px; margin: 0 auto; padding: 56px 40px 80px; }
+    .doc-eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .2em;
+      text-transform: uppercase; color: var(--gold); margin-bottom: 10px;
+    }
+    h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 2.4rem; font-weight: 600; color: var(--dark);
+      margin-bottom: 8px; line-height: 1.2;
+    }
+    .doc-meta {
+      font-size: .8rem; color: var(--muted); margin-bottom: 48px;
+      padding-bottom: 24px; border-bottom: 1px solid var(--cream2);
+    }
+
+    h2 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.35rem; font-weight: 600; color: var(--dark);
+      margin: 40px 0 12px;
+    }
+    p { font-size: .92rem; color: #3a3230; margin-bottom: 14px; }
+    ul, ol { margin: 8px 0 14px 20px; }
+    li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
+    strong { color: var(--dark); }
+    a { color: var(--rose); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    footer {
+      background: var(--cream2); border-top: 1px solid var(--border);
+      padding: 20px 40px; text-align: center;
+      font-size: .75rem; color: var(--muted);
+    }
+    footer a { color: var(--rose); text-decoration: none; }
+
+    @media (max-width: 600px) {
+      .container { padding: 36px 20px 60px; }
+      header { padding: 18px 20px; }
+      h1 { font-size: 1.9rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/zamow.html">Estelio</a>
+  <a class="back" href="/dokumentacja.html">← Wróć do dokumentacji</a>
+</header>
+
+<div class="container">
+
+  <div class="doc-eyebrow">Dokument wewnętrzny</div>
+  <h1>Procedura obsługi wniosków RODO i incydentów</h1>
+  <div class="doc-meta">Obowiązuje od: <strong>10 maja 2026 r.</strong> &nbsp;·&nbsp; Wersja: 1.0</div>
+
+  <h2>1. Cel procedury</h2>
+  <p>Procedura określa, co robi Estelio, gdy:</p>
+  <ul>
+    <li>osoba kontaktuje się w sprawie swoich danych,</li>
+    <li>salon prosi o eksport lub usunięcie danych,</li>
+    <li>dochodzi do incydentu bezpieczeństwa,</li>
+    <li>organ publiczny żąda danych.</li>
+  </ul>
+
+  <h2>2. Gdy pisze właściciel salonu</h2>
+  <p>Jeżeli zgłoszenie pochodzi od Klienta Estelio, należy:</p>
+  <ul>
+    <li>zweryfikować tożsamość osoby zgłaszającej,</li>
+    <li>ustalić, czy sprawa dotyczy danych konta Estelio czy danych wprowadzonych przez salon,</li>
+    <li>odpowiedzieć w terminie wynikającym z RODO lub przepisów właściwych dla sprawy,</li>
+    <li>zapisać zgłoszenie i sposób jego obsługi.</li>
+  </ul>
+
+  <h2>3. Gdy pisze klientka salonu</h2>
+  <p>Jeżeli pisze klientka salonu, np. „proszę o usunięcie moich danych", należy:</p>
+  <ul>
+    <li>ustalić, którego salonu dotyczy zgłoszenie,</li>
+    <li>nie podejmować samodzielnie decyzji o usunięciu lub wydaniu danych,</li>
+    <li>poinformować osobę, że administratorem danych jest salon,</li>
+    <li>przekazać zgłoszenie do salonu, jeżeli można go ustalić,</li>
+    <li>udzielić salonowi wsparcia technicznego, jeżeli salon poprosi o eksport, korektę, anonimizację lub usunięcie danych.</li>
+  </ul>
+
+  <h2>4. Eksport danych klientki salonu</h2>
+  <p>Jeżeli salon poprosi o eksport danych konkretnej klientki, Estelio może udostępnić dane w formacie technicznie dostępnym w systemie albo pomóc salonowi w ich pobraniu z panelu.</p>
+  <p>Zakres eksportu powinien obejmować dane dostępne w systemie, np. profil klientki, historię wizyt, historię sprzedaży, notatki, dokumentację i zgody.</p>
+
+  <h2>5. Usunięcie lub anonimizacja danych</h2>
+  <p>Jeżeli salon poleci usunięcie danych klientki, Estelio wykonuje operację zgodnie z funkcjami systemu.</p>
+  <p>Jeżeli dane muszą pozostać w określonym zakresie z powodu rozliczeń, bezpieczeństwa, logów, backupów lub obrony roszczeń, należy rozważyć anonimizację lub ograniczenie przetwarzania zamiast natychmiastowego usunięcia fizycznego.</p>
+  <p>Dokładne zasady retencji i soft-delete powinien zatwierdzić prawnik.</p>
+
+  <h2>6. Incydent bezpieczeństwa</h2>
+  <p>W przypadku podejrzenia naruszenia ochrony danych należy:</p>
+  <ul>
+    <li>zabezpieczyć system,</li>
+    <li>ustalić, co się stało,</li>
+    <li>ustalić zakres danych i salonów objętych incydentem,</li>
+    <li>zapisać datę i godzinę wykrycia incydentu,</li>
+    <li>ocenić ryzyko,</li>
+    <li>powiadomić salony, których dane dotyczą, bez zbędnej zwłoki,</li>
+    <li>przekazać salonom informacje potrzebne do wykonania ich obowiązków jako administratorów,</li>
+    <li>współpracować przy ocenie zgłoszenia do PUODO lub zawiadomienia osób, których dane dotyczą.</li>
+  </ul>
+
+  <h2>7. Termin 72 godzin</h2>
+  <p>W przypadku naruszenia ochrony danych termin 72 godzin powinien być liczony od momentu stwierdzenia naruszenia. Dokładne zasady i obowiązki zgłoszeniowe powinien potwierdzić prawnik.</p>
+
+  <h2>8. Żądanie policji, prokuratury lub innego organu</h2>
+  <p>Jeżeli Estelio otrzyma żądanie organu publicznego:</p>
+  <ul>
+    <li>należy zweryfikować formalną podstawę żądania,</li>
+    <li>ustalić, czy dane są danymi Estelio czy danymi powierzonymi przez salon,</li>
+    <li>jeżeli przepisy prawa pozwalają, poinformować salon,</li>
+    <li>udostępnić dane wyłącznie w zakresie wymaganym przez prawo,</li>
+    <li>zachować kopię żądania i odpowiedzi.</li>
+  </ul>
+
+  <h2>9. Rejestr zgłoszeń</h2>
+  <p>Estelio powinno prowadzić wewnętrzny rejestr zgłoszeń RODO i incydentów obejmujący:</p>
+  <ul>
+    <li>datę zgłoszenia,</li>
+    <li>osobę zgłaszającą,</li>
+    <li>salon, którego sprawa dotyczy,</li>
+    <li>zakres żądania,</li>
+    <li>podjęte działania,</li>
+    <li>datę odpowiedzi,</li>
+    <li>osobę odpowiedzialną po stronie Estelio,</li>
+    <li>notatki i załączniki.</li>
+  </ul>
+
+</div>
+
+<footer>
+  © Estelio &middot;
+  <a href="/dokumentacja.html">Dokumentacja</a> &middot;
+  <a href="/regulamin.html">Regulamin</a> &middot;
+  <a href="/polityka-prywatnosci.html">Polityka Prywatności</a> &middot;
+  <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+</footer>
+
+</body>
+</html>
