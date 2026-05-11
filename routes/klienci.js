@@ -63,11 +63,12 @@ module.exports = (db) => {
       let id = '', nazwa = '';
       try { const p = JSON.parse(parametr); id = String(p.id); nazwa = String(p.nazwa); } catch (e) { nazwa = String(parametr); }
 
-      // Portfel
+      // Portfel — gdy znamy id_klienta, identyfikujemy WYŁĄCZNIE po ID
+      // (zmiana imienia/nazwiska klientki nie rozłącza zadatków od profilu).
       const portfelQ = id
-        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND (id_klienta = ? OR LOWER(klient) = LOWER(?)) ORDER BY data_wplaty DESC`
+        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND id_klienta = ? ORDER BY data_wplaty DESC`
         : `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty DESC`;
-      const portfelParams = id ? [tenant_id, id, nazwa] : [tenant_id, nazwa];
+      const portfelParams = id ? [tenant_id, id] : [tenant_id, nazwa];
 
       db.query(portfelQ, portfelParams, (err1, zadatki) => {
         let saldo = 0;
@@ -150,10 +151,12 @@ module.exports = (db) => {
       let id = '', nazwa = '';
       try { const p = JSON.parse(parametr); id = String(p.id); nazwa = String(p.nazwa); } catch (e) { nazwa = String(parametr); }
 
+      // Gdy znamy id_klienta, identyfikujemy WYŁĄCZNIE po ID
+      // (zmiana imienia/nazwiska klientki nie rozłącza zadatków od profilu).
       const sql = id
-        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND (id_klienta = ? OR LOWER(klient) = LOWER(?)) ORDER BY data_wplaty DESC`
+        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND id_klienta = ? ORDER BY data_wplaty DESC`
         : `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty DESC`;
-      const params = id ? [tenant_id, id, nazwa] : [tenant_id, nazwa];
+      const params = id ? [tenant_id, id] : [tenant_id, nazwa];
 
       db.query(sql, params, (err, rows) => {
         if (err) return res.json({ saldo: 0, historia: [] });

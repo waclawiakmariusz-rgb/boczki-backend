@@ -97,10 +97,15 @@ module.exports = (db) => {
   }
 
   // Helper: rozlicz zadatek automatycznie
+  // Gdy znamy klientId, identyfikujemy WYŁĄCZNIE po ID (zmiana nazwiska nie rozłącza zadatków).
   function rozliczZadatekAutomatycznie(tenant_id, klientId, klientNazwa, kwotaDoPobrania, konkretneIdZadatku, pracownik, callback) {
+    const zadatekQ = klientId
+      ? `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND id_klienta = ? ORDER BY data_wplaty ASC`
+      : `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty ASC`;
+    const zadatekParams = klientId ? [tenant_id, klientId] : [tenant_id, klientNazwa || ''];
     db.query(
-      `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND (id_klienta = ? OR LOWER(klient) = LOWER(?)) ORDER BY data_wplaty ASC`,
-      [tenant_id, klientId || '', klientNazwa || ''],
+      zadatekQ,
+      zadatekParams,
       (err, rows) => {
         if (err || !rows.length) return callback && callback();
         let pozostalo = parseFloat(kwotaDoPobrania);
