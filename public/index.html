@@ -11345,11 +11345,8 @@ async function zapiszUrodzinyZProfilu(e) {
         document.getElementById('birthday-modal-overlay').style.display = 'none';
         
         // Odświeżamy profil, żeby od razu pokazało datę
-        const naglowek = document.getElementById('profil-naglowek').innerText;
-        let idKlienta = "";
-        const match = naglowek.match(/ID:\s*(\d+)/);
-        if(match) idKlienta = match[1];
-        
+        // (nagłówek po redesignie nie zawiera już "ID: x" — bierzemy z globala)
+        const idKlienta = window.aktualnyProfilKlientId || "";
         if(idKlienta) otworzProfil(idKlienta);
     })
     .catch(err => {
@@ -17294,19 +17291,11 @@ function wyslijZadatek(e) {
         return;
     }
 
+    // Bierzemy id z globala (po redesignie profilu nagłówek nie zawiera już "ID: x"
+    // i regex /ID:/ z innerText zwracał pusty string → zadatki zapisywały się z id_klienta=0).
     const headerEl = document.getElementById('profil-naglowek');
-    let nazwaKlienta = ""; let idKlienta = "";
-    const h1 = headerEl.querySelector('h1');
-    if (h1) {
-        nazwaKlienta = h1.innerText.trim();
-        const idMatch = headerEl.innerText.match(/ID:\s*(\d+)/);
-        if (idMatch) idKlienta = idMatch[1];
-    } else {
-        const text = headerEl.innerText;
-        const match = text.match(/\(ID:\s*(\d+)\)/);
-        if (match) { idKlienta = match[1]; nazwaKlienta = text.replace(match[0], '').trim(); } 
-        else { nazwaKlienta = text.trim(); }
-    }
+    let nazwaKlienta = (headerEl ? headerEl.innerText : '').trim();
+    let idKlienta = window.aktualnyProfilKlientId || "";
 
     const kwota = normNumOr0(document.getElementById('dep_kwota').value);
     let cel = document.getElementById('dep_cel').value;
