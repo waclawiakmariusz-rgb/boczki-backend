@@ -22491,10 +22491,11 @@ function kon_przeliczAutomatyke() {
 
 // ZAPIS WYNIKU DO BAZY
 function kon_zapiszWynik(e) {
-    e.preventDefault(); 
-    const btn = document.querySelector('#kon_raportowanie .kon_btn-primary'); 
-    btn.innerText="Zapisywanie..."; btn.disabled=true;
-    
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const btnLabel = btn ? btn.innerText : "💾 Zapisz wynik konsultacji";
+    if (btn) { btn.innerText="Zapisywanie..."; btn.disabled=true; }
+
     let nazwaAkcji = "-";
     let obszar = "-";
 
@@ -22504,12 +22505,12 @@ function kon_zapiszWynik(e) {
         obszar = obszarRadio ? obszarRadio.value : "Ciało";
         nazwaAkcji = "Konsultacja Standardowa";
     } else {
-        const kampaniaVal = document.getElementById('kon_k_kampania').value;
-        if(!kampaniaVal) { 
-            alert("Wybierz akcję z listy rozwijanej!"); 
-            btn.disabled=false; 
-            btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-            return; 
+        const kampaniaEl = document.getElementById('kon_k_kampania');
+        const kampaniaVal = kampaniaEl ? kampaniaEl.value : "";
+        if(!kampaniaVal) {
+            alert("Wybierz akcję z listy rozwijanej!");
+            if (btn) { btn.disabled=false; btn.innerText=btnLabel; }
+            return;
         }
         const camp = kon_campaignsData.find(c => String(c.id_row) === String(kampaniaVal));
         nazwaAkcji = camp ? camp.nazwa : "-";
@@ -22539,17 +22540,16 @@ function kon_zapiszWynik(e) {
     };
 
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
-        alert("✅ Zapisano pomyślnie!"); 
-        e.target.reset(); 
-        document.getElementById('kon_k_data').value=new Date().toISOString().split('T')[0]; 
-        kon_przelaczTryb('Normalna'); 
-        kon_pobierzWyniki(); 
-        btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-        btn.disabled=false;
+        alert("✅ Zapisano pomyślnie!");
+        e.target.reset();
+        const dataEl = document.getElementById('kon_k_data');
+        if (dataEl) dataEl.value = new Date().toISOString().split('T')[0];
+        kon_przelaczTryb('Normalna');
+        kon_pobierzWyniki();
+        if (btn) { btn.innerText=btnLabel; btn.disabled=false; }
     }).catch(err => {
         alert("Błąd zapisu: " + err);
-        btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-        btn.disabled=false;
+        if (btn) { btn.innerText=btnLabel; btn.disabled=false; }
     });
 }
 // Pobieranie listy zapisanych wyników z bazy (Arkusz: Konsultacje)
