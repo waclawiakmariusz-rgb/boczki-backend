@@ -5853,6 +5853,7 @@ function krSegSync(groupId, radio) {
 // === KR: wyliczanie KPI w hero z kon_rawData ===
 function krRenderKPI(data) {
   if(!Array.isArray(data)) return;
+  data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const now = new Date();
   const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   const curMonth = now.getMonth();
@@ -5908,6 +5909,7 @@ function krParseZabiegi(text) {
 
 // === KR: statystyki miesięczne ===
 function krRenderStats(data) {
+  if(Array.isArray(data)) data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const monthRecs = krFilterMonth(data);
   const total = monthRecs.length;
   const sumPakiety = monthRecs.reduce((s,r) => s + (parseFloat(r.kwota) || 0), 0);
@@ -5982,6 +5984,7 @@ function krRenderStats(data) {
 
 // === KR: ranking pracownic ===
 function krRenderRanking(data) {
+  if(Array.isArray(data)) data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const monthRecs = krFilterMonth(data);
   // Grupowanie po polu r.kto (pracownica która wykonała konsultację)
   const byKto = {};
@@ -22733,27 +22736,37 @@ function kon_renderujTabeleWycinek() {
     }
 
     wycinek.forEach(r => {
-        let badge = r.typ === "Reklama" 
+        let badge = r.typ === "Reklama"
             ? `<span class="kon_res-badge" style="background:#fff7ed; color:#9a3412; border:1px solid #ffedd5">REKLAMA</span>`
             : `<span class="kon_res-badge" style="background:#f0f9ff; color:#075985; border:1px solid #e0f2fe">NORMALNA</span>`;
-        
+
         let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${r.upsell} zł</span>` : "-";
         let zabiegi = (r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "");
-        
+
         let obszarInfo = r.obszar && r.obszar !== "-" ? `(${r.obszar})` : "";
         let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? r.typ_akcji : "";
 
+        const isArchive = String(r.status || '').toLowerCase() === 'archiwizacja';
+        const statusBadge = isArchive
+            ? ` <span class="kon_res-badge" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca">ARCHIWUM</span>`
+            : '';
+        const akcjaPrzycisk = isArchive
+            ? `<button class="kon_btn-sm" onclick="kon_setStatusKonsultacji('${r.id}','Aktywna')" title="Przywróć">↩️</button>`
+            : `<button class="kon_btn-sm" onclick="kon_setStatusKonsultacji('${r.id}','Archiwizacja')" title="Archiwizuj">📦</button>`;
+        const trStyle = isArchive ? ' style="opacity:0.55;"' : '';
+
         t.innerHTML += `
-            <tr>
+            <tr${trStyle}>
                 <td style="white-space:nowrap;">${r.data_display}</td>
-                <td><strong>${r.klient}</strong></td>
+                <td><strong>${r.klient}</strong>${statusBadge}</td>
                 <td>${badge}<br><small style="color:#6b7280; display:block; margin-top:4px;">${akcjaInfo} ${obszarInfo}</small></td>
                 <td><small>${zabiegi || "-"}</small></td>
                 <td><b style="color:var(--kon_primary)">${r.kwota} zł</b></td>
                 <td>${upsellText}</td>
                 <td>${r.kto}</td>
                 <td>
-                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')">✏️</button>
+                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')" title="Edytuj">✏️</button>
+                    ${akcjaPrzycisk}
                 </td>
             </tr>`;
     });
@@ -22778,6 +22791,31 @@ function kon_renderujTabeleWycinek() {
 function kon_zmienStrone(kierunek) {
     kon_obecnaStrona += kierunek;
     kon_renderujTabeleWycinek();
+}
+
+// Archiwizacja / przywracanie konsultacji — archiwum NIE jest podliczane w KPI/Stats/Rankingu
+function kon_setStatusKonsultacji(id, newStatus) {
+    const akcja = newStatus === 'Archiwizacja' ? 'zarchiwizować' : 'przywrócić jako aktywną';
+    if (!confirm(`Czy na pewno ${akcja} tę konsultację?`)) return;
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'kon_set_status',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id: id,
+            status: newStatus
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            kon_pobierzWyniki();
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd zapisu: ' + err));
 }
 
 // --- HISTORIA LOGÓW ---
