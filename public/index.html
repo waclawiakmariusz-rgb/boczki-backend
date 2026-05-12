@@ -5319,6 +5319,7 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
             <div class="kon_form-grid"><div><label>Ciało:</label><textarea id="kon_e_cialo" rows="2"></textarea></div><div><label>Twarz:</label><textarea id="kon_e_twarz" rows="2"></textarea></div></div>
             <div class="kon_form-grid">
                 <div><label>Kwota Pakietu:</label><input type="number" id="kon_e_kwota_pakiet" step="0.01" oninput="kon_przeliczAutomatykeEdycji()" required></div>
+                <div><label>Próg Rentowności:</label><input type="number" id="kon_e_prog" step="0.01" readonly style="background:#f3f4f6; color:#6b7280; font-weight:bold;"></div>
                 <div id="kon_e_container-upsell" style="display:none;"><label>Upsell:</label><input type="number" id="kon_e_upsell" step="0.01" readonly style="background:#f3f4f6;"></div>
             </div>
             <div style="margin-bottom:20px;"><label>Uwagi:</label><textarea id="kon_e_uwagi" rows="2"></textarea></div>
@@ -21958,14 +21959,21 @@ function kon_otworzEdycje(id) {
         document.getElementById('kon_e_typ_akcji').value = r.typ_akcji;
         document.getElementById('kon_e_kwota_reklama').value = r.kwota_reklama;
         document.getElementById('kon_e_upsell').value = r.upsell;
+        // Wczytaj próg z kon_campaignsData po nazwie typ_akcji (fallback do 1000)
+        const camp = kon_campaignsData.find(c => String(c.nazwa).trim() === String(r.typ_akcji).trim());
+        document.getElementById('kon_e_prog').value = camp ? camp.prog : 1000;
     } else {
-        document.getElementById('kon_e_kwota_reklama').value = r.kwota_reklama; 
+        document.getElementById('kon_e_kwota_reklama').value = r.kwota_reklama;
+        // Tryb Normalna — próg ustawia kon_przelaczTrybEdycji (1000), ale na wszelki wypadek:
+        if(!document.getElementById('kon_e_prog').value) document.getElementById('kon_e_prog').value = 1000;
     }
 
     document.getElementById('kon_e_cialo').value = r.zabiegi_cialo;
     document.getElementById('kon_e_twarz').value = r.zabiegi_twarz;
     document.getElementById('kon_e_kwota_pakiet').value = r.kwota;
     document.getElementById('kon_e_uwagi').value = r.uwagi;
+    // Po wczytaniu wszystkich wartości — przelicz upsell/koszt
+    kon_przeliczAutomatykeEdycji();
 }
 
 function kon_zamknijEdycje() { document.getElementById('kon_edit-modal').style.display = 'none'; }
@@ -21975,27 +21983,53 @@ function kon_przelaczTrybEdycji(tryb) {
     const detale = document.getElementById('kon_e_sekcja-reklama');
     const upsell = document.getElementById('kon_e_container-upsell');
     const lbl = document.getElementById('kon_e_label-koszt');
+    const prog = document.getElementById('kon_e_prog');
 
     if(tryb === 'Normalna') {
         panel.style.background = "#f8fafc";
         detale.style.display = 'none';
         upsell.style.display = 'none';
         lbl.innerText = "Koszt Konsultacji:";
+        // Próg dla Normalna = 1000 (analogicznie do kon_przelaczTryb)
+        if(prog) prog.value = 1000;
     } else {
         panel.style.background = "#fff7ed";
         detale.style.display = 'block';
         upsell.style.display = 'block';
         lbl.innerText = "Koszt Promocji:";
+        // Próg dla Reklama wczytany w kon_otworzEdycje z kon_campaignsData po typ_akcji
     }
 }
 
 function kon_przeliczAutomatykeEdycji() {
-    const isAd = document.querySelector('input[name="kon_e_zrodlo"]:checked').value === 'Reklama';
-    if(!isAd) return;
-    const pakiet = parseFloat(document.getElementById('kon_e_kwota_pakiet').value) || 0;
-    const promo = parseFloat(document.getElementById('kon_e_kwota_reklama').value) || 0;
-    let upsell = pakiet - promo; if(upsell < 0) upsell = 0;
-    document.getElementById('kon_e_upsell').value = upsell.toFixed(2);
+    // Analogicznie do kon_przeliczAutomatyke — PAKIET vs PRÓG RENTOWNOŚCI, nie vs koszt reklamy.
+    const zrodloEl = document.querySelector('input[name="kon_e_zrodlo"]:checked');
+    if(!zrodloEl) return;
+    const isAd = zrodloEl.value === 'Reklama';
+    const pakietVal = parseFloat(document.getElementById('kon_e_kwota_pakiet').value) || 0;
+    const progVal = parseFloat(document.getElementById('kon_e_prog').value) || 0;
+    const kosztEl = document.getElementById('kon_e_kwota_reklama');
+    if(!kosztEl) return;
+
+    // Cena bazowa do przywracania gdy pakiet < próg
+    let cenaBazowa = isAd ? (parseFloat(kosztEl.value) || 0) : 199;
+    if(isAd) {
+        const camp = kon_campaignsData.find(c => String(c.nazwa).trim() === String(document.getElementById('kon_e_typ_akcji').value).trim());
+        if(camp) cenaBazowa = Number(camp.cena) || cenaBazowa;
+    }
+
+    // Upsell = ile zarobiliśmy ponad próg
+    let upsell = pakietVal - progVal;
+    if(upsell < 0) upsell = 0;
+    const upsellInput = document.getElementById('kon_e_upsell');
+    if(upsellInput) upsellInput.value = upsell.toFixed(2);
+
+    // Darmowość konsultacji — w trybie Normalna, gdy pakiet >= próg, koszt = 0
+    if(!isAd && progVal > 0 && pakietVal >= progVal) {
+        kosztEl.value = 0;
+    } else if(!isAd) {
+        kosztEl.value = cenaBazowa;
+    }
 }
 
 function kon_zapiszEdycje(e) {
@@ -22005,9 +22039,13 @@ function kon_zapiszEdycje(e) {
     const getRadio = (n) => { const el=document.querySelector(`input[name="${n}"]:checked`); return el?el.value:"-"; };
     const isAd = getRadio('kon_e_zrodlo') === 'Reklama';
     const pakiet = parseFloat(document.getElementById('kon_e_kwota_pakiet').value) || 0;
+    const prog = parseFloat(document.getElementById('kon_e_prog').value) || 0;
     let koszt = parseFloat(document.getElementById('kon_e_kwota_reklama').value) || 0;
-    let upsell = isAd ? (parseFloat(document.getElementById('kon_e_upsell').value) || 0) : 0;
-    if (!isAd) koszt = (pakiet >= 1000) ? 0 : 150;
+    // Upsell = pakiet powyżej progu rentowności (a nie pakiet - koszt reklamy jak było wcześniej)
+    let upsell = pakiet - prog;
+    if(upsell < 0) upsell = 0;
+    // Dla Normalna — koszt 0 gdy pakiet >= próg, inaczej cena bazowa 199 (dynamiczna zamiast hardcoded 1000/150)
+    if (!isAd) koszt = (prog > 0 && pakiet >= prog) ? 0 : 199;
 
     const p = {
         action: 'kon_update_result',
