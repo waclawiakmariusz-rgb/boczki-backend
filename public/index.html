@@ -890,6 +890,93 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .kr-seg-option { padding: 10px 22px; background: none; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; font-family: inherit; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
 .kr-seg-option.active { background: #fff; color: var(--kr-rose); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
 
+/* Spotlight pole Kwota Pakietu — najważniejsze pole formularza */
+.kr-pakiet-spotlight {
+  margin-top: 18px;
+  padding: 22px 26px;
+  background: linear-gradient(135deg, #fff2f5 0%, #fff 100%);
+  border: 2px solid var(--kr-rose);
+  border-radius: 16px;
+  position: relative;
+  box-shadow: 0 4px 16px rgba(207,61,120,0.12);
+  animation: kr-pakiet-pulse 2.4s ease-in-out infinite;
+}
+.kr-pakiet-spotlight:focus-within {
+  animation: none;
+  box-shadow: 0 0 0 4px rgba(207,61,120,0.15);
+}
+.kr-pakiet-spotlight.kr-pakiet-filled {
+  animation: none;
+  background: #fff;
+  border-color: #15803d;
+  box-shadow: 0 4px 16px rgba(21,128,61,0.1);
+}
+.kr-pakiet-spotlight.kr-pakiet-filled .kr-pakiet-arrow,
+.kr-pakiet-spotlight.kr-pakiet-filled .kr-pakiet-hint { display: none; }
+@keyframes kr-pakiet-pulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(207,61,120,0.12); }
+  50% { box-shadow: 0 4px 24px rgba(207,61,120,0.32); }
+}
+.kr-pakiet-arrow {
+  position: absolute;
+  top: -16px;
+  left: 26px;
+  font-size: 28px;
+  animation: kr-arrow-bounce 1.6s ease-in-out infinite;
+}
+@keyframes kr-arrow-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(4px); }
+}
+.kr-pakiet-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--kr-rose);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 4px;
+}
+.kr-pakiet-hint {
+  font-size: 12.5px;
+  color: var(--kr-muted);
+  margin-bottom: 12px;
+}
+.kr-pakiet-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.kr-pakiet-input-wrap input {
+  width: 100%;
+  padding: 18px 60px 18px 22px !important;
+  font-size: 28px !important;
+  font-weight: 700 !important;
+  font-family: 'Cormorant Garamond', serif !important;
+  border: 1px solid var(--kr-rose-border) !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  color: var(--kr-ink) !important;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.kr-pakiet-input-wrap input:focus {
+  border-color: var(--kr-rose) !important;
+  box-shadow: 0 0 0 3px rgba(207,61,120,.15) !important;
+}
+.kr-pakiet-input-wrap input::placeholder {
+  color: #d1d5db;
+  font-weight: 400;
+}
+.kr-pakiet-currency {
+  position: absolute;
+  right: 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--kr-muted);
+  pointer-events: none;
+}
+
 .kr-upsell-banner { margin-top: 16px; padding: 14px 16px; background: linear-gradient(135deg, var(--kr-rose-bg), var(--kr-rose-soft)); border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
 .kr-upsell-label { font-size: 11px; font-weight: 700; color: var(--kr-rose); text-transform: uppercase; letter-spacing: .08em; }
 .kr-upsell-value { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--kr-rose); line-height: 1; }
@@ -5364,7 +5451,9 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
             <div class="kr-box-subtitle">Upsell wyliczany automatycznie z progu rentowności</div>
           </div>
         </div>
-        <div class="kr-form-grid kr-form-grid-3">
+
+        <!-- Pomocnicze pola (koszt + próg) w gridzie 2-kolumnowym -->
+        <div class="kr-form-grid">
           <div class="kr-field">
             <label>💰 Koszt konsultacji</label>
             <input type="number" id="kon_k_koszt" step="0.01" value="199" required>
@@ -5373,9 +5462,16 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
             <label>🎯 Próg rentowności</label>
             <input type="number" id="kon_k_prog" step="0.01" value="1000" readonly>
           </div>
-          <div class="kr-field kr-field-highlight">
-            <label>📦 Kwota pakietu</label>
-            <input type="number" id="kon_k_kwota_pakiet" step="0.01" oninput="kon_przeliczAutomatyke()" required>
+        </div>
+
+        <!-- KLUCZOWE POLE — wyróżnione na full-width z pulsem gdy puste -->
+        <div class="kr-pakiet-spotlight" id="kr-pakiet-spotlight">
+          <div class="kr-pakiet-arrow">👇</div>
+          <label class="kr-pakiet-label">📦 Kwota pakietu <span style="color:#dc2626;">*</span></label>
+          <div class="kr-pakiet-hint">Wpisz finalną kwotę, którą klient zapłacił za pakiet zabiegów</div>
+          <div class="kr-pakiet-input-wrap">
+            <input type="number" id="kon_k_kwota_pakiet" step="0.01" oninput="kon_przeliczAutomatyke()" placeholder="0,00" required>
+            <span class="kr-pakiet-currency">zł</span>
           </div>
         </div>
 
@@ -5724,12 +5820,25 @@ function krUpsellBadge() {
   if(v > 0) box.innerHTML = '<span class="kr-badge kr-badge-success">🎉 Sukces — powyżej progu</span>';
   else if(v === 0) box.innerHTML = '<span class="kr-badge kr-badge-norm">Brak upsella</span>';
 }
-// Wywołanie przy każdej zmianie pakietu/kosztu
+// Wywołanie przy każdej zmianie pakietu/kosztu + przełączenie pulsu na spotlight
+function krTogglePakietSpotlight() {
+  const pak = document.getElementById('kon_k_kwota_pakiet');
+  const spotlight = document.getElementById('kr-pakiet-spotlight');
+  if(!pak || !spotlight) return;
+  const val = parseFloat(pak.value) || 0;
+  if(val > 0) spotlight.classList.add('kr-pakiet-filled');
+  else spotlight.classList.remove('kr-pakiet-filled');
+}
 document.addEventListener('DOMContentLoaded', () => {
   const pak = document.getElementById('kon_k_kwota_pakiet');
-  if(pak) pak.addEventListener('input', () => setTimeout(krUpsellBadge, 50));
+  if(pak) pak.addEventListener('input', () => {
+    setTimeout(krUpsellBadge, 50);
+    krTogglePakietSpotlight();
+  });
   const koszt = document.getElementById('kon_k_koszt');
   if(koszt) koszt.addEventListener('input', () => setTimeout(krUpsellBadge, 50));
+  // Stan startowy spotlight (jeśli pole puste przy załadowaniu → pulse aktywny)
+  krTogglePakietSpotlight();
 });
 // === KR: ustaw tytuł hero na bieżący miesiąc ===
 (function(){
