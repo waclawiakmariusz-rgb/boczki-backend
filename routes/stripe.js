@@ -36,7 +36,7 @@ try {
 
 function stripQuotes(val) { return (val || '').replace(/^['"]|['"]$/g, ''); }
 const APP_URL        = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
-const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 4900;
+const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 7900;
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
 const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
 
