@@ -5461,6 +5461,38 @@ function krSegSync(groupId, radio) {
   group.querySelectorAll('.kr-seg-option').forEach(o => o.classList.remove('active'));
   if(radio && radio.parentElement) radio.parentElement.classList.add('active');
 }
+// === KR: wyliczanie KPI w hero z kon_rawData ===
+function krRenderKPI(data) {
+  if(!Array.isArray(data)) return;
+  const now = new Date();
+  const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
+  const curMonth = now.getMonth();
+  const curYear = now.getFullYear();
+
+  // Rekordy z bieżącego miesiąca
+  const monthRecs = data.filter(r => {
+    if(!r.data_konsultacji) return false;
+    const d = new Date(r.data_konsultacji);
+    return d.getMonth() === curMonth && d.getFullYear() === curYear;
+  });
+  // Rekordy z dzisiaj (po dacie, bez godziny)
+  const dzisRecs = data.filter(r => {
+    if(!r.data_konsultacji) return false;
+    return String(r.data_konsultacji).slice(0,10) === todayStr;
+  });
+
+  const dzisCount = dzisRecs.length;
+  const totalCount = monthRecs.length;
+  const upsellSum = monthRecs.reduce((s,r) => s + (parseFloat(r.upsell) || 0), 0);
+  const successCount = monthRecs.filter(r => (parseFloat(r.upsell) || 0) > 0).length;
+  const skutecznosc = totalCount > 0 ? Math.round(successCount/totalCount*100) : 0;
+
+  const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  setEl('kr-kpi-dzis', dzisCount);
+  setEl('kr-kpi-upsell', Math.round(upsellSum).toLocaleString('pl-PL') + ' zł');
+  setEl('kr-kpi-skuteczn', skutecznosc + '%');
+  setEl('kr-kpi-suma', totalCount);
+}
 // === KR: badge sukcesu/niepowodzenia upsella ===
 function krUpsellBadge() {
   const v = parseFloat(document.getElementById('kon_k_upsell')?.value) || 0;
@@ -21975,9 +22007,11 @@ function kon_pobierzWyniki() {
     fetch(API_URL + "?action=kon_read_results&tenant_id=" + localStorage.getItem('boczki_tenant_id'))
     .then(r => r.json())
     .then(d => {
-        kon_rawData = d; 
+        kon_rawData = d;
         //kon_renderujTabele(d);
 		kon_zainicjujTabele(d);
+        // KR redesign — podpięcie KPI w hero
+        if(typeof krRenderKPI === 'function') krRenderKPI(d);
     })
     .catch(err => console.error("Błąd pobierania wyników:", err));
 }
