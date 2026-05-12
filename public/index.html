@@ -5510,6 +5510,13 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
       </div>
     </div>
   </div>
+  <script>
+    // Subtitle dla rankingu — żeby było jasne co się sortuje
+    document.addEventListener('DOMContentLoaded', () => {
+      const sub = document.querySelector('#kr-panel-ranking .kr-box-subtitle');
+      if(sub) sub.textContent = 'Wg łącznej sumy kwot pakietów (kwota bazowa + upsell)';
+    });
+  </script>
 
 </div>
 
@@ -5668,10 +5675,12 @@ function krRenderRanking(data) {
     const k = String(r.kto || '').trim() || 'Nieznany';
     if(!byKto[k]) byKto[k] = { name: k, upsell: 0, count: 0, sumPakiet: 0 };
     byKto[k].upsell += parseFloat(r.upsell) || 0;
+    // r.kwota = pełna kwota pakietu (zawiera "bazę" + upsell, czyli całość zarobku)
     byKto[k].sumPakiet += parseFloat(r.kwota) || 0;
     byKto[k].count++;
   });
-  const ranking = Object.values(byKto).sort((a,b) => b.upsell - a.upsell);
+  // Sortowanie wg łącznej sumy pakietów (kwota bazowa + upsell)
+  const ranking = Object.values(byKto).sort((a,b) => b.sumPakiet - a.sumPakiet);
 
   // Eyebrow z nazwą miesiąca
   const miesiace = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
@@ -5685,12 +5694,13 @@ function krRenderRanking(data) {
     list.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:30px;">Brak danych w tym miesiącu</div>';
     return;
   }
-  const max = ranking[0].upsell || 1;
+  const max = ranking[0].sumPakiet || 1;
   const medals = ['🥇','🥈','🥉'];
   list.innerHTML = ranking.map((p, i) => {
     const medalClass = i === 0 ? 'kr-rank-1' : i === 1 ? 'kr-rank-2' : i === 2 ? 'kr-rank-3' : 'kr-rank-other';
     const medalContent = i < 3 ? medals[i] : (i+1);
-    const barWidth = max > 0 ? Math.round(p.upsell / max * 100) : 0;
+    const barWidth = max > 0 ? Math.round(p.sumPakiet / max * 100) : 0;
+    const baza = p.sumPakiet - p.upsell;
     return `
       <div class="kr-rank-row">
         <div class="kr-rank-medal ${medalClass}">${medalContent}</div>
@@ -5699,8 +5709,8 @@ function krRenderRanking(data) {
           <div class="kr-rank-bar-wrap"><div class="kr-rank-bar" style="width:${barWidth}%;"></div></div>
         </div>
         <div class="kr-rank-stats">
-          <div class="kr-rank-amount">${krFmtZl(p.upsell)}</div>
-          <div class="kr-rank-sub">${p.count} konsultacji</div>
+          <div class="kr-rank-amount">${krFmtZl(p.sumPakiet)}</div>
+          <div class="kr-rank-sub">${p.count} konsultacji &middot; ${krFmtZl(baza)} baza + <span style="color:#15803d;">${krFmtZl(p.upsell)} upsell</span></div>
         </div>
       </div>`;
   }).join('');
