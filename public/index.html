@@ -902,6 +902,26 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .kr-placeholder { padding: 60px 20px; text-align: center; color: var(--kr-muted); }
 .kr-placeholder-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
 
+/* Ranking */
+.kr-rank-row { display: grid; grid-template-columns: 38px 1fr auto; gap: 14px; align-items: center; padding: 14px 16px; background: #fff; border: 1px solid var(--kr-border); border-radius: 12px; }
+.kr-rank-medal { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 14px; }
+.kr-rank-1 { background: linear-gradient(135deg, #fbbf24, #d97706); }
+.kr-rank-2 { background: linear-gradient(135deg, #d1d5db, #9ca3af); }
+.kr-rank-3 { background: linear-gradient(135deg, #fb923c, #c2410c); }
+.kr-rank-other { background: #f3f4f6; color: var(--kr-muted); }
+.kr-rank-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kr-rank-name { font-weight: 600; font-size: 14.5px; color: var(--kr-ink); }
+.kr-rank-bar-wrap { background: #f3f4f6; height: 8px; border-radius: 4px; overflow: hidden; width: 100%; max-width: 320px; }
+.kr-rank-bar { height: 100%; background: linear-gradient(90deg, var(--kr-rose), #e8568f); border-radius: 4px; transition: width .4s ease; }
+.kr-rank-stats { text-align: right; }
+.kr-rank-amount { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 1.3rem; color: var(--kr-ink); line-height: 1; }
+.kr-rank-sub { font-size: 11px; color: var(--kr-muted); margin-top: 4px; }
+
+/* Top zabiegi - lista */
+.kr-zabieg-row { display:flex; justify-content:space-between; align-items:center; padding-bottom:8px; border-bottom:1px solid var(--kr-border); font-size:13.5px; }
+.kr-zabieg-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.kr-zabieg-row strong { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; }
+
 /* Tabela wewnątrz nowego designu */
 #kon_raportowanie.kr-redesign .kon_res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 #kon_raportowanie.kr-redesign .kon_res-table th { text-align: left; color: var(--kr-muted); padding: 12px 10px; border-bottom: 2px solid #F1F5F9; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
@@ -5419,26 +5439,74 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     </div>
   </div>
 
-  <!-- ── PANEL: STATYSTYKI (placeholder, krok 3) ───────────────── -->
+  <!-- ── PANEL: STATYSTYKI ─────────────────────────────────────── -->
   <div id="kr-panel-statystyki" class="kr-panel">
-    <div class="kr-box">
-      <div class="kr-placeholder">
-        <div class="kr-placeholder-icon">📊</div>
-        <div style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:600; color:#374151; margin-bottom:6px;">Statystyki miesięczne</div>
-        <p>Suma pakietów, top zabiegi, rozkład źródeł, średnia wartość pakietu.</p>
-        <p style="margin-top:8px; font-size:12px;">Sekcja zostanie podpięta po teście wstępnym widoku.</p>
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 16px;" class="kr-stats-grid">
+
+      <div class="kr-box">
+        <div class="kr-box-eyebrow" id="kr-stats-miesiac-eyebrow">Miesiąc</div>
+        <div class="kr-box-title">Wynik finansowy</div>
+        <div id="kr-stats-finanse" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px;">
+          <div style="padding:14px; background:var(--kr-rose-bg); border-radius:10px;">
+            <div style="font-size:9.5px; font-weight:700; color:var(--kr-muted); text-transform:uppercase; letter-spacing:.04em;">Suma pakietów</div>
+            <div id="kr-stat-pakiety" style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600;">— zł</div>
+          </div>
+          <div style="padding:14px; background:#dcfce7; border-radius:10px;">
+            <div style="font-size:9.5px; font-weight:700; color:#15803d; text-transform:uppercase; letter-spacing:.04em;">Suma upsell</div>
+            <div id="kr-stat-upsell" style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600; color:#15803d;">— zł</div>
+          </div>
+          <div style="padding:14px; background:#f3f4f6; border-radius:10px;">
+            <div style="font-size:9.5px; font-weight:700; color:var(--kr-muted); text-transform:uppercase; letter-spacing:.04em;">Konsultacji</div>
+            <div id="kr-stat-count" style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600;">—</div>
+          </div>
+          <div style="padding:14px; background:#fef3c7; border-radius:10px;">
+            <div style="font-size:9.5px; font-weight:700; color:var(--kr-muted); text-transform:uppercase; letter-spacing:.04em;">Skuteczność</div>
+            <div id="kr-stat-skutecz" style="font-family:'Cormorant Garamond',serif; font-size:1.8rem; font-weight:600;">—</div>
+          </div>
+        </div>
       </div>
+
+      <div class="kr-box">
+        <div class="kr-box-eyebrow">Top zabiegi</div>
+        <div class="kr-box-title">Najczęściej wybierane</div>
+        <div id="kr-stats-zabiegi" style="display:flex; flex-direction:column; gap:10px; margin-top:18px;">
+          <div style="text-align:center; color:var(--kr-muted); padding:20px;">Ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="kr-box">
+        <div class="kr-box-eyebrow">Źródła</div>
+        <div class="kr-box-title">Reklama vs Normalna</div>
+        <div id="kr-stats-zrodla" style="margin-top:18px;">
+          <div style="text-align:center; color:var(--kr-muted); padding:20px;">Ładowanie...</div>
+        </div>
+      </div>
+
+      <div class="kr-box">
+        <div class="kr-box-eyebrow">Średnia</div>
+        <div class="kr-box-title">Wartość pakietu</div>
+        <div style="margin-top:18px; padding:14px; background:#fafbfc; border-radius:10px;">
+          <div style="font-size:9.5px; font-weight:700; color:var(--kr-muted); text-transform:uppercase; letter-spacing:.04em;">Średnia kwota pakietu</div>
+          <div id="kr-stat-srednia" style="font-family:'Cormorant Garamond',serif; font-size:2rem; font-weight:600; color:var(--kr-ink);">— zł</div>
+          <div id="kr-stat-srednia-sub" style="font-size:12px; color:var(--kr-muted); margin-top:6px;">w bieżącym miesiącu</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- ── PANEL: RANKING (placeholder, krok 3) ──────────────────── -->
+  <!-- ── PANEL: RANKING ────────────────────────────────────────── -->
   <div id="kr-panel-ranking" class="kr-panel">
     <div class="kr-box">
-      <div class="kr-placeholder">
-        <div class="kr-placeholder-icon">🏆</div>
-        <div style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:600; color:#374151; margin-bottom:6px;">Ranking pracownic</div>
-        <p>Wg sumy wygenerowanego upsella w bieżącym miesiącu.</p>
-        <p style="margin-top:8px; font-size:12px;">Sekcja zostanie podpięta po teście wstępnym widoku.</p>
+      <div class="kr-box-header">
+        <div>
+          <div class="kr-box-eyebrow" id="kr-ranking-miesiac">Bieżący miesiąc</div>
+          <div class="kr-box-title">Ranking pracownic</div>
+          <div class="kr-box-subtitle">Wg sumy wygenerowanego upsella</div>
+        </div>
+      </div>
+      <div id="kr-ranking-list" style="display:flex; flex-direction:column; gap:10px;">
+        <div style="text-align:center; color:var(--kr-muted); padding:20px;">Ładowanie...</div>
       </div>
     </div>
   </div>
@@ -5493,6 +5561,151 @@ function krRenderKPI(data) {
   setEl('kr-kpi-skuteczn', skutecznosc + '%');
   setEl('kr-kpi-suma', totalCount);
 }
+// === KR: helper — formatowanie kwoty ===
+function krFmtZl(v) { return Math.round(parseFloat(v)||0).toLocaleString('pl-PL') + ' zł'; }
+
+// === KR: filtruj rekordy bieżącego miesiąca ===
+function krFilterMonth(data) {
+  if(!Array.isArray(data)) return [];
+  const now = new Date();
+  const cm = now.getMonth(), cy = now.getFullYear();
+  return data.filter(r => {
+    if(!r.data_konsultacji) return false;
+    const d = new Date(r.data_konsultacji);
+    return d.getMonth() === cm && d.getFullYear() === cy;
+  });
+}
+
+// === KR: parsuj listę zabiegów (cialo + twarz) z rekordu na pojedyncze tokeny ===
+function krParseZabiegi(text) {
+  if(!text || typeof text !== 'string') return [];
+  // Split po separatorach typowych dla wpisów: przecinek, średnik, znak " i " (jako separator)
+  return text.split(/[,;]| i |\s*\+\s*/)
+    .map(t => t.trim().toLowerCase())
+    .filter(t => t.length > 2 && t.length < 60);
+}
+
+// === KR: statystyki miesięczne ===
+function krRenderStats(data) {
+  const monthRecs = krFilterMonth(data);
+  const total = monthRecs.length;
+  const sumPakiety = monthRecs.reduce((s,r) => s + (parseFloat(r.kwota) || 0), 0);
+  const sumUpsell = monthRecs.reduce((s,r) => s + (parseFloat(r.upsell) || 0), 0);
+  const succCount = monthRecs.filter(r => (parseFloat(r.upsell) || 0) > 0).length;
+  const skut = total > 0 ? Math.round(succCount/total*100) : 0;
+  const srednia = total > 0 ? sumPakiety / total : 0;
+
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  set('kr-stat-pakiety', krFmtZl(sumPakiety));
+  set('kr-stat-upsell', krFmtZl(sumUpsell));
+  set('kr-stat-count', String(total));
+  set('kr-stat-skutecz', skut + '%');
+  set('kr-stat-srednia', krFmtZl(srednia));
+
+  // Eyebrow z nazwą miesiąca
+  const miesiace = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  const now = new Date();
+  set('kr-stats-miesiac-eyebrow', miesiace[now.getMonth()] + ' ' + now.getFullYear());
+
+  // Top zabiegi (z zabiegi_cialo + zabiegi_twarz)
+  const counter = {};
+  monthRecs.forEach(r => {
+    const tokens = [].concat(krParseZabiegi(r.zabiegi_cialo), krParseZabiegi(r.zabiegi_twarz));
+    tokens.forEach(t => { counter[t] = (counter[t]||0) + 1; });
+  });
+  const top = Object.entries(counter).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const zabiegiBox = document.getElementById('kr-stats-zabiegi');
+  if(zabiegiBox) {
+    if(top.length === 0) {
+      zabiegiBox.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:20px;">Brak danych w tym miesiącu</div>';
+    } else {
+      zabiegiBox.innerHTML = top.map(([name, n]) =>
+        `<div class="kr-zabieg-row"><span>${name.charAt(0).toUpperCase() + name.slice(1)}</span><strong>${n}×</strong></div>`
+      ).join('');
+    }
+  }
+
+  // Rozkład źródeł (Normalna vs Reklama)
+  const norm = monthRecs.filter(r => (r.typ || r.zrodlo) !== 'Reklama').length;
+  const ad = monthRecs.filter(r => (r.typ || r.zrodlo) === 'Reklama').length;
+  const sum = norm + ad;
+  const normPct = sum > 0 ? Math.round(norm/sum*100) : 0;
+  const adPct = sum > 0 ? Math.round(ad/sum*100) : 0;
+  const zrodlaBox = document.getElementById('kr-stats-zrodla');
+  if(zrodlaBox) {
+    if(sum === 0) {
+      zrodlaBox.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:20px;">Brak danych</div>';
+    } else {
+      zrodlaBox.innerHTML = `
+        <div style="margin-bottom:14px;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:13px;">Normalne</span>
+            <strong>${norm} &middot; ${normPct}%</strong>
+          </div>
+          <div class="kr-rank-bar-wrap" style="max-width:100%;">
+            <div class="kr-rank-bar" style="width:${normPct}%; background:#a3a3a3;"></div>
+          </div>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span style="font-size:13px;">Z reklamy</span>
+            <strong>${ad} &middot; ${adPct}%</strong>
+          </div>
+          <div class="kr-rank-bar-wrap" style="max-width:100%;">
+            <div class="kr-rank-bar" style="width:${adPct}%;"></div>
+          </div>
+        </div>`;
+    }
+  }
+}
+
+// === KR: ranking pracownic ===
+function krRenderRanking(data) {
+  const monthRecs = krFilterMonth(data);
+  // Grupowanie po polu r.kto (pracownica która wykonała konsultację)
+  const byKto = {};
+  monthRecs.forEach(r => {
+    const k = String(r.kto || '').trim() || 'Nieznany';
+    if(!byKto[k]) byKto[k] = { name: k, upsell: 0, count: 0, sumPakiet: 0 };
+    byKto[k].upsell += parseFloat(r.upsell) || 0;
+    byKto[k].sumPakiet += parseFloat(r.kwota) || 0;
+    byKto[k].count++;
+  });
+  const ranking = Object.values(byKto).sort((a,b) => b.upsell - a.upsell);
+
+  // Eyebrow z nazwą miesiąca
+  const miesiace = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  const now = new Date();
+  const eb = document.getElementById('kr-ranking-miesiac');
+  if(eb) eb.textContent = miesiace[now.getMonth()] + ' ' + now.getFullYear();
+
+  const list = document.getElementById('kr-ranking-list');
+  if(!list) return;
+  if(ranking.length === 0) {
+    list.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:30px;">Brak danych w tym miesiącu</div>';
+    return;
+  }
+  const max = ranking[0].upsell || 1;
+  const medals = ['🥇','🥈','🥉'];
+  list.innerHTML = ranking.map((p, i) => {
+    const medalClass = i === 0 ? 'kr-rank-1' : i === 1 ? 'kr-rank-2' : i === 2 ? 'kr-rank-3' : 'kr-rank-other';
+    const medalContent = i < 3 ? medals[i] : (i+1);
+    const barWidth = max > 0 ? Math.round(p.upsell / max * 100) : 0;
+    return `
+      <div class="kr-rank-row">
+        <div class="kr-rank-medal ${medalClass}">${medalContent}</div>
+        <div class="kr-rank-info">
+          <div class="kr-rank-name">${p.name}</div>
+          <div class="kr-rank-bar-wrap"><div class="kr-rank-bar" style="width:${barWidth}%;"></div></div>
+        </div>
+        <div class="kr-rank-stats">
+          <div class="kr-rank-amount">${krFmtZl(p.upsell)}</div>
+          <div class="kr-rank-sub">${p.count} konsultacji</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
 // === KR: badge sukcesu/niepowodzenia upsella ===
 function krUpsellBadge() {
   const v = parseFloat(document.getElementById('kon_k_upsell')?.value) || 0;
@@ -22010,8 +22223,10 @@ function kon_pobierzWyniki() {
         kon_rawData = d;
         //kon_renderujTabele(d);
 		kon_zainicjujTabele(d);
-        // KR redesign — podpięcie KPI w hero
+        // KR redesign — podpięcie KPI w hero + statystyki + ranking
         if(typeof krRenderKPI === 'function') krRenderKPI(d);
+        if(typeof krRenderStats === 'function') krRenderStats(d);
+        if(typeof krRenderRanking === 'function') krRenderRanking(d);
     })
     .catch(err => console.error("Błąd pobierania wyników:", err));
 }
