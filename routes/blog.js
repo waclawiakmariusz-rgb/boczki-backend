@@ -202,7 +202,7 @@ function renderArticle(post) {
   <div class="article-cta">
     <h3>Wypróbuj Estelio</h3>
     <p>Dołącz do salonów, które już korzystają z systemu.</p>
-    <a href="/zamow.html#formularz">Zacznij za 49 zł / miesiąc →</a>
+    <a href="/zamow.html#formularz">Zacznij za 79 zł / miesiąc →</a>
   </div>
 </div>
 

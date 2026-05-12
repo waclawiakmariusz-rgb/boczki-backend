@@ -12,7 +12,7 @@ const SUBDOMAIN  = () => stripQuotes(process.env.FAKTUROWNIA_SUBDOMAIN);
 
 // Cena brutto w złotych (STRIPE_CENA_GROSZE w groszach → złote)
 function cenaBrutto() {
-  const grosze = parseInt(process.env.STRIPE_CENA_GROSZE || '4900');
+  const grosze = parseInt(process.env.STRIPE_CENA_GROSZE || '7900');
   return (grosze / 100).toFixed(2);
 }
 
