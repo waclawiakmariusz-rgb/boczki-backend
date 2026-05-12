@@ -329,123 +329,202 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 .pp-tab { position:relative; height:46px; background:none; border:none; display:inline-flex; align-items:center; gap:8px; color:#4d5363; font-weight:500; font-size:14px; padding:0 12px; cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-1px; white-space:nowrap; font-family:inherit; }
 .pp-tab:hover { color:#cf3d78; }
 .pp-tab.pp-tab-active { color:#cf3d78; font-weight:700; border-bottom-color:#e8568f; }
-/* PROFIL — GRID RWD */
-.pp-content-grid { display:grid; grid-template-columns:1fr 310px; gap:20px; align-items:start; }
-.pp-hero-top { background:#fff2f5; padding:28px 28px 22px; display:grid; grid-template-columns:120px 1fr 200px; gap:22px; align-items:center; border-bottom:1px solid #f3e3e8; }
-.pp-hero-stats { padding:18px 22px 22px; display:grid; grid-template-columns:repeat(3,1fr); gap:16px; background:#fff; }
-.pp-summary-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-.pp-right-col { display:grid; gap:18px; position:sticky; top:20px; }
-@media (max-width: 1400px) {
-  .pp-content-grid { grid-template-columns:1fr; }
-  .pp-right-col { position:static; grid-template-columns:1fr 1fr; gap:14px; }
+/* ==================================================================== */
+/* PROFIL KLIENTA — MOBILE-FIRST                                         */
+/* Default: flex column (mobile). Tablet 681px+ poszerza. Desktop 1001+  */
+/* przełącza na grid. Bez !important nakładek desktop→mobile.            */
+/* ==================================================================== */
+
+/* Globalne safety-nety mobile (overflow-x) */
+html, body { overflow-x: hidden; max-width: 100vw; }
+#app-container { overflow-x: hidden; }
+
+/* Layout — sekcja profilu */
+.pp-content-grid {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
 }
-@media (max-width: 1000px) {
-  .pp-hero-top { grid-template-columns:90px 1fr; padding:18px 16px 16px; gap:14px; }
-  .pp-hero-birthday { grid-column:1/-1; border-left:0 !important; padding-left:0 !important; border-top:1px solid #f3e3e8; padding-top:14px !important; min-height:0 !important; }
-  .pp-hero-stats { grid-template-columns:1fr 1fr; gap:10px; padding:14px 16px; }
-  .pp-summary-grid { grid-template-columns:1fr; }
-  .pp-right-col { grid-template-columns:1fr; }
+
+/* HERO TOP — domyślnie mobile column */
+.pp-hero-top {
+  background: #fff2f5;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+  border-bottom: 1px solid #f3e3e8;
+  box-sizing: border-box;
+  width: 100%;
 }
-@media (max-width: 680px) {
-  /* FORCE flex column zamiast grid — kompatybilność z agresywnymi inline'ami */
+.pp-hero-top > * { width: 100%; max-width: 100%; box-sizing: border-box; }
+.pp-avatar-lg { width: 72px !important; height: 72px !important; font-size: 28px !important; margin: 0 auto !important; }
+#profil-naglowek { font-size: 19px; line-height: 1.2; }
+#profil-id-row { font-size: 13px; }
+#profil-tel-row { font-size: 14px; }
+
+/* Imię + dane + actions blok — wycentrowany */
+.pp-hero-top > div:nth-child(2) { text-align: center; }
+.pp-hero-top > div:nth-child(2) > div:first-child { justify-content: center; }
+
+/* Przyciski REGULAMIN / ZGODY — flex row 50/50 */
+.pp-hero-actions {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+.pp-hero-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 50%;
+  font-size: 12px;
+  padding: 8px 6px;
+  min-height: 36px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Urodziny box — domyślnie pod blokiem imienia, bez bocznego borderu */
+.pp-hero-birthday {
+  border-left: 0;
+  padding-left: 0;
+  padding-top: 12px;
+  border-top: 1px solid #f3e3e8;
+  text-align: center;
+  min-height: 0;
+  font-size: 13px;
+}
+#profil-meta { font-size: 14px; }
+
+/* HERO STATS — mobile 1 kolumna */
+.pp-hero-stats {
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  background: #fff;
+}
+.pp-hero-stats > div { padding: 14px; border-radius: 14px; }
+.pp-hero-stats .wallet-amount,
+#wallet-balance, #profil-stat-wizyty, #profil-stat-wartosc { font-size: 19px; }
+
+/* SUMMARY + RIGHT COL — mobile 1 kolumna */
+.pp-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.pp-right-col {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+/* TABS — scroll horyzontalny gdy nie mieszczą się */
+.pp-tab { flex-shrink: 0; }
+
+/* ── TABLET 681px+ ─────────────────────────────────────────────── */
+@media (min-width: 681px) {
   .pp-hero-top {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    grid-template-columns: 1fr !important;
-    padding: 16px !important;
-    gap: 14px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
+    padding: 22px;
+    gap: 18px;
   }
-  .pp-hero-top > * { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
-  .pp-avatar-lg { margin: 0 auto !important; align-self: center !important; }
-  .pp-hero-actions { justify-content: center !important; flex-wrap: wrap; }
+  .pp-avatar-lg { width: 88px !important; height: 88px !important; font-size: 34px !important; }
+  #profil-naglowek { font-size: 22px; }
+  .pp-hero-actions button { font-size: 12.5px; padding: 8px 12px; }
   .pp-hero-stats {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 16px 20px;
+    gap: 14px;
   }
-  .pp-hero-birthday { border-left: 0 !important; padding-left: 0 !important; text-align: center !important; }
+  .pp-summary-grid { grid-template-columns: 1fr 1fr; gap: 14px; }
+  .pp-right-col { grid-template-columns: 1fr 1fr; gap: 14px; }
 }
 
-/* ── MOBILE FIX iPhone & wąskie ekrany (≤480px) v2 — agresywny ───── */
-@media (max-width: 480px) {
-  /* Safety net — nic nie wyjeżdża horyzontalnie */
-  html, body { overflow-x: hidden !important; max-width: 100vw; }
-  body, #app-container, .main-content { overflow-x: hidden !important; }
-  .main-content { padding: 16px 12px !important; max-width: 100vw; box-sizing: border-box; }
-  .section, #klient-profil { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
-  #klient-profil * { max-width: 100% !important; }
-  #klient-profil img, #klient-profil button, #klient-profil input { max-width: 100% !important; box-sizing: border-box !important; }
-
-  /* Profil — hero top (force flex column) */
-  .pp-hero-top {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    text-align: center !important;
-    padding: 14px !important;
-    gap: 12px !important;
+/* ── DESKTOP 1001px+ ───────────────────────────────────────────── */
+@media (min-width: 1001px) {
+  .pp-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 310px;
+    gap: 20px;
+    align-items: start;
   }
-  /* Avatar — wymuszony 72px + ID selector ma pierwszeństwo nad inline */
-  #profil-avatar.pp-avatar-lg,
-  .pp-avatar-lg { width: 72px !important; height: 72px !important; font-size: 28px !important; margin: 0 auto !important; }
-  #profil-naglowek { font-size: 18px !important; line-height: 1.2 !important; }
-  #profil-id-row { font-size: 13px !important; }
-  #profil-tel-row { font-size: 14px !important; }
-
-  /* Środkowy blok (imię + dane + actions) — 100% szerokości */
-  .pp-hero-top > div:nth-child(2) { width: 100% !important; text-align: center !important; }
-
-  /* Buttony REGULAMIN/ZGODY — flex 50/50, nigdy nie wystają */
+  .pp-hero-top {
+    display: grid;
+    grid-template-columns: 120px 1fr 200px;
+    padding: 28px 28px 22px;
+    gap: 22px;
+    align-items: center;
+    text-align: left;
+  }
+  .pp-hero-top > * { width: auto; }
+  .pp-avatar-lg { width: 108px !important; height: 108px !important; font-size: 42px !important; margin: 0 !important; }
+  .pp-hero-top > div:nth-child(2) { text-align: left; }
+  .pp-hero-top > div:nth-child(2) > div:first-child { justify-content: flex-start; }
   .pp-hero-actions {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 6px !important;
-    width: 100% !important;
-    justify-content: center !important;
-    flex-wrap: nowrap !important;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    width: auto;
   }
   .pp-hero-actions button {
-    flex: 1 1 0 !important;
-    min-width: 0 !important;
-    max-width: 50% !important;
-    font-size: 11.5px !important;
-    padding: 8px 4px !important;
-    min-height: 36px !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
+    flex: 0 0 auto;
+    max-width: none;
+    font-size: 13px;
+    padding: 7px 13px;
   }
-
-  /* Birthday box */
-  .pp-hero-birthday { padding-left: 0 !important; padding-top: 12px !important; font-size: 13px !important; text-align: center; min-height: 0 !important; }
-  .pp-hero-birthday > div:first-child { font-size: 13px !important; }
-  #profil-meta { font-size: 14px !important; }
-
-  /* Hero stats */
-  .pp-hero-stats { padding: 12px !important; gap: 8px !important; }
-  .pp-hero-stats > div { padding: 14px !important; border-radius: 14px !important; }
-  .pp-hero-stats .wallet-amount,
-  #wallet-balance, #profil-stat-wizyty, #profil-stat-wartosc { font-size: 19px !important; }
-
-  /* Tabs profilu — scroll z fade indicator */
-  .pp-tab { padding: 0 8px !important; font-size: 12.5px !important; height: 44px !important; gap: 4px !important; flex-shrink: 0 !important; }
-  /* Tab bar container — mniejszy padding, scrollowalny */
-  #klient-profil .pp-tab + .pp-tab,
-  div:has(> .pp-tab) {
-    -webkit-overflow-scrolling: touch !important;
+  .pp-hero-birthday {
+    border-left: 1px solid #e8d9df;
+    padding-left: 24px;
+    padding-top: 0;
+    border-top: 0;
+    text-align: left;
+    min-height: 64px;
+    font-size: 15px;
   }
-  /* Pad-right żeby ostatni tab nie był ucięty */
-  #klient-profil [class*="pp-tab"]:last-of-type { margin-right: 16px !important; }
+  #profil-meta { font-size: 16px; }
+  .pp-hero-stats {
+    padding: 18px 22px 22px;
+    gap: 16px;
+  }
+  .pp-summary-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .pp-right-col {
+    position: sticky;
+    top: 20px;
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-top: 0;
+  }
+}
+
+/* ── MOBILE <480 — modale fullscreen + dodatkowe paddingi ─────── */
+@media (max-width: 480px) {
+  .main-content { padding: 16px 12px !important; max-width: 100vw; box-sizing: border-box; }
+  .section, #klient-profil { width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
+  #klient-profil img, #klient-profil button, #klient-profil input { max-width: 100% !important; box-sizing: border-box !important; }
 
   /* Hero karta — kontener */
   #klient-profil > section > div { border-radius: 16px !important; }
 
-  /* ── MODALE — szersze, mniejsze paddingi ─────────────────────── */
+  /* Tabs profilu — kompaktowe */
+  .pp-tab { padding: 0 8px !important; font-size: 12.5px !important; height: 44px !important; gap: 4px !important; }
+  #klient-profil [class*="pp-tab"]:last-of-type { margin-right: 16px !important; }
+
+  /* Treść tabów profilu */
+  #klient-profil table { font-size: 12px !important; }
+  #klient-profil .table-container,
+  #klient-profil [style*="overflow"] { -webkit-overflow-scrolling: touch; }
+
+  /* MODALE — szersze, mniejsze paddingi */
   #consent-modal-overlay > div,
   #rodo-modal-overlay > div,
   #client-edit-modal-overlay > div,
@@ -467,7 +546,6 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
     overflow-y: auto !important;
     border-radius: 14px !important;
   }
-  /* Headery modali */
   #consent-modal-overlay h3,
   #rodo-modal-overlay h3,
   #client-edit-modal-overlay h3,
@@ -476,7 +554,6 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
   #deposit-overlay h3,
   #new-client-overlay h3 { font-size: 17px !important; line-height: 1.3 !important; }
 
-  /* Wewnętrzne boxy w modalu RODO — z paddingu 20-25 → 12 */
   #rodo-modal-overlay div[style*="padding: 20px"],
   #rodo-modal-overlay div[style*="padding:20px"],
   #rodo-modal-overlay div[style*="padding: 25px"],
@@ -484,29 +561,14 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
   #consent-modal-overlay div[style*="padding: 20px"],
   #consent-modal-overlay div[style*="padding:20px"] { padding: 12px !important; }
 
-  /* Inputy w modalach */
   #rodo-modal-overlay input,
   #rodo-modal-overlay select,
   #consent-modal-overlay input,
   #birthday-modal-overlay input,
   #client-edit-modal-overlay input { font-size: 14px !important; max-width: 100% !important; box-sizing: border-box !important; }
 
-  /* Buttony w modalach — pełna szerokość lub min 44px touch target */
   #rodo-modal-overlay button,
   #consent-modal-overlay button { font-size: 13px !important; }
-
-  /* Treść tabów profilu (Wizyty, Produkty, Zadatki, Dokumenty) */
-  #klient-profil .pp-summary-grid { grid-template-columns: 1fr !important; gap: 12px !important; }
-  #klient-profil table { font-size: 12px !important; }
-  #klient-profil .table-container,
-  #klient-profil [style*="overflow"] { -webkit-overflow-scrolling: touch; }
-}
-
-/* ── MOBILE FIX iPhone Pro Max & wąskie tablety (481-680px) ──────── */
-@media (min-width: 481px) and (max-width: 680px) {
-  .pp-avatar-lg { width: 88px !important; height: 88px !important; font-size: 34px !important; }
-  #profil-naglowek { font-size: 20px !important; }
-  .pp-hero-actions button { font-size: 12.5px !important; padding: 8px 12px !important; }
 }
 
 /* legacy */
