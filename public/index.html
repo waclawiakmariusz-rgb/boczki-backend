@@ -826,6 +826,110 @@ details.history-group[open] summary.history-summary::after { transform: rotate(1
 }
 
 /* ======================================================= */
+/* KONSULTACJE REDESIGN v2 (Estelio premium — wzór profilu klienta) */
+/* Prefix: kr-* — nie koliduje ze starymi klasami kon_*    */
+/* ======================================================= */
+:root {
+  --kr-ink: #1c1a18;
+  --kr-rose: #cf3d78;
+  --kr-rose-bg: #fff2f5;
+  --kr-rose-border: #f3e3e8;
+  --kr-rose-soft: #fce7f3;
+  --kr-gold: #c9a96e;
+  --kr-muted: #6b7280;
+  --kr-border: #e5e7eb;
+  --kr-bg: #fafbfc;
+}
+#kon_raportowanie.kr-redesign { background: var(--kr-bg); padding: 24px !important; font-family: 'DM Sans', sans-serif; }
+.kr-page-header { margin-bottom: 22px; }
+.kr-page-header h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--kr-ink); line-height: 1.1; margin-bottom: 4px; }
+.kr-page-header p { color: var(--kr-muted); font-size: 14px; margin: 0; }
+
+.kr-hero-card { background: #fff; border: 1px solid var(--kr-rose-border); border-radius: 18px; overflow: hidden; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.02); }
+.kr-hero-top { background: var(--kr-rose-bg); padding: 28px 28px 22px; display: grid; grid-template-columns: 90px 1fr 220px; gap: 22px; align-items: center; border-bottom: 1px solid var(--kr-rose-border); }
+.kr-hero-icon { width: 90px; height: 90px; background: linear-gradient(135deg, var(--kr-rose), #e8568f); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 38px; color: #fff; box-shadow: 0 8px 20px rgba(207,61,120,.25); }
+.kr-hero-info h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.8rem; font-weight: 600; color: var(--kr-ink); line-height: 1.1; margin-bottom: 4px; }
+.kr-hero-info p { color: var(--kr-muted); font-size: 13.5px; margin: 0; }
+.kr-hero-actions { display: flex; flex-direction: column; gap: 8px; }
+.kr-btn-primary { background: linear-gradient(135deg, var(--kr-rose), #e8568f); color: #fff; padding: 12px 22px; border-radius: 10px; border: none; font-weight: 600; font-size: 14px; cursor: pointer; transition: transform .2s, box-shadow .2s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; }
+.kr-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 16px rgba(207,61,120,.3); }
+.kr-btn-secondary { background: #fff; color: var(--kr-rose); border: 1px solid var(--kr-rose-border); padding: 9px 18px; border-radius: 10px; font-weight: 600; font-size: 13px; cursor: pointer; font-family: inherit; transition: background .2s; }
+.kr-btn-secondary:hover { background: var(--kr-rose-bg); }
+.kr-hero-stats { padding: 18px 22px 22px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; background: #fff; }
+.kr-stat-box { padding: 12px 14px; border: 1px solid var(--kr-border); border-radius: 12px; transition: border-color .2s, transform .2s; }
+.kr-stat-box:hover { border-color: var(--kr-rose-border); transform: translateY(-1px); }
+.kr-stat-label { font-size: 10.5px; font-weight: 700; color: var(--kr-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.kr-stat-value { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: var(--kr-ink); line-height: 1; }
+.kr-stat-sub { font-size: 11px; color: var(--kr-muted); margin-top: 4px; }
+.kr-stat-up { color: #15803d; font-weight: 600; }
+
+.kr-tabs-bar { background: #fff; border: 1px solid var(--kr-border); border-radius: 14px; padding: 4px 12px; margin-bottom: 20px; overflow-x: auto; white-space: nowrap; display: flex; gap: 4px; }
+.kr-tab { background: none; border: none; color: #4d5363; font-weight: 500; font-size: 14px; padding: 14px 16px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; font-family: inherit; transition: color .2s; display: inline-flex; align-items: center; gap: 8px; }
+.kr-tab:hover { color: var(--kr-rose); }
+.kr-tab.active { color: var(--kr-rose); font-weight: 700; border-bottom-color: var(--kr-rose); }
+.kr-tab-icon { font-size: 16px; }
+.kr-panel { display: none; }
+.kr-panel.active { display: block; }
+
+.kr-box { background: #fff; border: 1px solid var(--kr-border); border-radius: 14px; padding: 22px 24px; margin-bottom: 16px; }
+.kr-box-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 12px; }
+.kr-box-eyebrow { font-size: 10.5px; font-weight: 700; color: var(--kr-gold); text-transform: uppercase; letter-spacing: .12em; margin-bottom: 4px; }
+.kr-box-title { font-family: 'Cormorant Garamond', serif; font-size: 1.35rem; font-weight: 600; color: var(--kr-ink); line-height: 1.2; }
+.kr-box-subtitle { font-size: 13px; color: var(--kr-muted); margin-top: 2px; }
+
+.kr-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.kr-form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.kr-form-grid-1 { grid-template-columns: 1fr; }
+.kr-field label { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--kr-muted); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 6px; }
+.kr-field input, .kr-field select, .kr-field textarea { width: 100%; padding: 12px 14px; border: 1px solid var(--kr-border); border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; color: var(--kr-ink); outline: none; transition: border-color .15s, box-shadow .15s; }
+.kr-field input:focus, .kr-field select:focus, .kr-field textarea:focus { border-color: var(--kr-rose); box-shadow: 0 0 0 3px rgba(207,61,120,.1); }
+.kr-field-highlight input { border-color: var(--kr-rose-border); background: var(--kr-rose-bg); font-weight: 600; color: var(--kr-rose); font-size: 18px; }
+.kr-field-readonly input { background: #f9fafb; color: var(--kr-muted); cursor: not-allowed; }
+
+.kr-seg-control { display: inline-flex; background: #f3f4f6; border-radius: 10px; padding: 4px; gap: 2px; }
+.kr-seg-option { padding: 10px 22px; background: none; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; color: #6b7280; cursor: pointer; font-family: inherit; transition: all .2s; display: inline-flex; align-items: center; gap: 6px; }
+.kr-seg-option.active { background: #fff; color: var(--kr-rose); font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+
+.kr-upsell-banner { margin-top: 16px; padding: 14px 16px; background: linear-gradient(135deg, var(--kr-rose-bg), var(--kr-rose-soft)); border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.kr-upsell-label { font-size: 11px; font-weight: 700; color: var(--kr-rose); text-transform: uppercase; letter-spacing: .08em; }
+.kr-upsell-value { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; color: var(--kr-rose); line-height: 1; }
+.kr-badge { padding: 3px 9px; border-radius: 999px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; display: inline-block; }
+.kr-badge-success { background: #dcfce7; color: #15803d; }
+.kr-badge-fail { background: #fee2e2; color: #b91c1c; }
+.kr-badge-norm { background: #f1f5f9; color: #475569; }
+.kr-badge-ad { background: #fce7f3; color: var(--kr-rose); }
+
+.kr-placeholder { padding: 60px 20px; text-align: center; color: var(--kr-muted); }
+.kr-placeholder-icon { font-size: 48px; margin-bottom: 12px; opacity: .4; }
+
+/* Tabela wewnątrz nowego designu */
+#kon_raportowanie.kr-redesign .kon_res-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#kon_raportowanie.kr-redesign .kon_res-table th { text-align: left; color: var(--kr-muted); padding: 12px 10px; border-bottom: 2px solid #F1F5F9; font-weight: 600; text-transform: uppercase; font-size: 11px; letter-spacing: 0.5px; }
+#kon_raportowanie.kr-redesign .kon_res-table td { padding: 15px 10px; border-bottom: 1px solid #F1F5F9; vertical-align: middle; color: var(--kr-ink); }
+#kon_raportowanie.kr-redesign .kon_res-table tr:hover td { background-color: #F9FAFB; }
+
+@media (max-width: 1024px) {
+  .kr-hero-top { grid-template-columns: 80px 1fr; }
+  .kr-hero-actions { grid-column: 1/-1; flex-direction: row; }
+  .kr-hero-stats { grid-template-columns: repeat(2,1fr); }
+  .kr-form-grid, .kr-form-grid-3 { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 640px) {
+  #kon_raportowanie.kr-redesign { padding: 14px !important; }
+  .kr-page-header h1 { font-size: 1.6rem; }
+  .kr-hero-top { grid-template-columns: 1fr; text-align: center; padding: 18px 16px; gap: 12px; }
+  .kr-hero-icon { margin: 0 auto; width: 70px; height: 70px; font-size: 30px; }
+  .kr-hero-actions { flex-direction: column; }
+  .kr-hero-stats { grid-template-columns: 1fr 1fr; padding: 14px; }
+  .kr-stat-value { font-size: 1.3rem; }
+  .kr-box { padding: 16px; }
+  .kr-box-title { font-size: 1.15rem; }
+  .kr-form-grid, .kr-form-grid-3 { grid-template-columns: 1fr; }
+  .kr-seg-control { width: 100%; display: flex; }
+  .kr-seg-option { flex: 1; padding: 10px 8px; font-size: 13px; }
+}
+
+/* ======================================================= */
 /* 🌙 BEZPIECZNA NAKŁADKA DARK MODE (WYMUSZANA KLASĄ)      */
 /* ======================================================= */
 
@@ -5127,85 +5231,259 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
     </div>
 </div> -->
 
-<div id="kon_raportowanie" class="section" style="padding: 20px; overflow-y: auto;">
-    <div class="kon_header"><h1>Wyniki Konsultacji</h1></div>
-    
-    <div class="kon_card">
-        <form onsubmit="kon_zapiszWynik(event)">
-            <div class="kon_form-grid">
-                <div><label>Data Konsultacji:</label><input type="date" id="kon_k_data" required></div>
-                <div><label>Kto wykonał:</label><select id="kon_k_kto" class="kon_consultant-select" required><option value="">Ładowanie...</option></select></div>
-            </div>
-            <div class="kon_form-grid" style="grid-template-columns: 1fr;">
-                <div><label>Imię i Nazwisko Klienta:</label><input type="text" id="kon_k_imie" required></div>
-            </div>
-            
-            <div style="margin-bottom: 20px;">
-                <label>Typ Konsultacji (Źródło):</label>
-                <div class="kon_radio-group">
-                    <label class="kon_radio-label"><input type="radio" name="kon_zrodlo" value="Normalna" onclick="kon_przelaczTryb('Normalna')" checked> Normalna</label>
-                    <label class="kon_radio-label"><input type="radio" name="kon_zrodlo" value="Reklama" onclick="kon_przelaczTryb('Reklama')"> Z Reklamy / Promocji</label>
-                </div>
-            </div>
+<div id="kon_raportowanie" class="section kr-redesign" style="overflow-y: auto;">
 
-            <div id="kon_panel-finanse" style="background:#FDF2F8; padding:20px; border-radius:12px; border:1px solid #FBCFE8; margin-bottom:20px;">
-                
-                <div id="kon_widok_normalna" style="display: block;">
-                    <label style="color:var(--kon_primary); font-weight:800; font-size:14px;">Wybierz Obszar (Normalna):</label>
-                    <div class="kon_radio-group" style="background:white; padding:5px; margin-top:8px; border:1px solid var(--kon_primary);">
-                        <label class="kon_radio-label"><input type="radio" name="kon_n_obszar" value="Ciało" checked> Ciało</label>
-                        <label class="kon_radio-label"><input type="radio" name="kon_n_obszar" value="Twarz"> Twarz</label>
-                    </div>
-                </div>
+  <div class="kr-page-header">
+    <h1>Konsultacje</h1>
+    <p>Raportowanie wyników i analiza skuteczności</p>
+  </div>
 
-                <div id="kon_widok_reklama" style="display: none;">
-                    <label style="color:var(--kon_primary); font-weight:800; font-size:14px;">Wybierz Akcję Promocyjną:</label>
-                    <select id="kon_k_kampania" onchange="kon_wybranoKampanie()" style="border-color:var(--kon_primary); margin-top:8px; font-weight:bold;">
-                        <option value="">Wczytywanie akcji...</option>
-                    </select>
-                </div>
-
-                <div class="kon_form-grid" style="margin-top:15px; margin-bottom:0;">
-                    <div>
-                        <label>Koszt Konsultacji (PLN):</label>
-                        <input type="number" id="kon_k_koszt" step="0.01" value="199" style="background:#fff;" required>
-                    </div>
-                    <div>
-                        <label>Próg Sukcesu (Upsell od - PLN):</label>
-                        <input type="number" id="kon_k_prog" step="0.01" value="1000" readonly style="background:#f3f4f6; color:#6b7280; font-weight:bold;">
-                    </div>
-                </div>
-            </div>
-
-            <div class="kon_form-grid">
-                <div><label>Zabiegi CIAŁO:</label><textarea id="kon_k_cialo" rows="2"></textarea></div>
-                <div><label>Zabiegi TWARZ:</label><textarea id="kon_k_twarz" rows="2"></textarea></div>
-            </div>
-            
-            <div class="kon_form-grid">
-                <div><label>Kwota Pakietu (Finalna PLN):</label><input type="number" id="kon_k_kwota_pakiet" step="0.01" style="font-weight:bold; color:var(--kon_primary);" oninput="kon_przeliczAutomatyke()" required></div>
-                <div><label>Wygenerowany Upsell (PLN):</label><input type="number" id="kon_k_upsell" step="0.01" readonly style="background:#f3f4f6; font-weight:bold; color:#166534;"></div>
-            </div>
-            
-            <div style="margin-top:20px;"><label>Uwagi / Notatki z wywiadu:</label><textarea id="kon_k_uwagi" rows="2"></textarea></div>
-            <button type="submit" class="kon_btn-primary">💾 Zapisz Wynik Konsultacji</button>
-        </form>
+  <!-- HERO + KPI -->
+  <div class="kr-hero-card">
+    <div class="kr-hero-top">
+      <div class="kr-hero-icon">💬</div>
+      <div class="kr-hero-info">
+        <h2 id="kr-hero-miesiac">Bieżący miesiąc</h2>
+        <p id="kr-hero-podtytul">Statystyki na żywo</p>
+      </div>
+      <div class="kr-hero-actions">
+        <button class="kr-btn-primary" onclick="document.querySelector('.kr-tab[data-tab=dodaj]').click()">＋ Nowy wynik</button>
+        <button class="kr-btn-secondary" onclick="kon_pobierzWyniki()">🔄 Odśwież</button>
+      </div>
     </div>
-
-    <div class="kon_card">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <h3 style="margin:0;">Ostatnie wpisy z tego miesiąca</h3>
-            <button onclick="kon_pobierzWyniki()" class="kon_btn-refresh"><span>🔄</span> Odśwież</button>
-        </div>
-        <div style="overflow-x:auto">
-            <table class="kon_res-table">
-                <thead><tr><th>Data</th><th>Klient</th><th>Typ / Obszar</th><th>Zabiegi</th><th>Kwota</th><th>Upsell</th><th>Kto wykonał</th><th>Akcja</th></tr></thead>
-                <tbody id="kon_results-list"><tr><td colspan="8" style="text-align:center">Ładowanie...</td></tr></tbody>
-				
-            </table><div id="kon_pagination-controls"></div>
-        </div>
+    <div class="kr-hero-stats">
+      <div class="kr-stat-box"><div class="kr-stat-label">Dziś</div><div class="kr-stat-value" id="kr-kpi-dzis">—</div><div class="kr-stat-sub">konsultacje</div></div>
+      <div class="kr-stat-box"><div class="kr-stat-label">Suma upsell</div><div class="kr-stat-value" id="kr-kpi-upsell">—</div><div class="kr-stat-sub">w tym miesiącu</div></div>
+      <div class="kr-stat-box"><div class="kr-stat-label">Skuteczność</div><div class="kr-stat-value" id="kr-kpi-skuteczn">—</div><div class="kr-stat-sub">z upsellem</div></div>
+      <div class="kr-stat-box"><div class="kr-stat-label">Łącznie</div><div class="kr-stat-value" id="kr-kpi-suma">—</div><div class="kr-stat-sub">konsultacji w miesiącu</div></div>
     </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="kr-tabs-bar">
+    <button class="kr-tab active" data-tab="dodaj" onclick="krGoTab(this,'dodaj')"><span class="kr-tab-icon">＋</span> Dodaj wynik</button>
+    <button class="kr-tab" data-tab="historia" onclick="krGoTab(this,'historia')"><span class="kr-tab-icon">📋</span> Historia</button>
+    <button class="kr-tab" data-tab="statystyki" onclick="krGoTab(this,'statystyki')"><span class="kr-tab-icon">📊</span> Statystyki</button>
+    <button class="kr-tab" data-tab="ranking" onclick="krGoTab(this,'ranking')"><span class="kr-tab-icon">🏆</span> Ranking</button>
+  </div>
+
+  <!-- ── PANEL: DODAJ WYNIK ────────────────────────────────────── -->
+  <div id="kr-panel-dodaj" class="kr-panel active">
+    <form onsubmit="kon_zapiszWynik(event)">
+
+      <div class="kr-box">
+        <div class="kr-box-header">
+          <div>
+            <div class="kr-box-eyebrow">Krok 1</div>
+            <div class="kr-box-title">Klient i data</div>
+          </div>
+        </div>
+        <div class="kr-form-grid">
+          <div class="kr-field">
+            <label>📅 Data konsultacji</label>
+            <input type="date" id="kon_k_data" required>
+          </div>
+          <div class="kr-field">
+            <label>👤 Kto wykonał</label>
+            <select id="kon_k_kto" class="kon_consultant-select" required><option value="">Ładowanie...</option></select>
+          </div>
+        </div>
+        <div class="kr-form-grid kr-form-grid-1" style="margin-top:14px;">
+          <div class="kr-field">
+            <label>🙍‍♀️ Imię i nazwisko klientki</label>
+            <input type="text" id="kon_k_imie" placeholder="np. Anna Kowalska" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="kr-box">
+        <div class="kr-box-header">
+          <div>
+            <div class="kr-box-eyebrow">Krok 2</div>
+            <div class="kr-box-title">Typ konsultacji</div>
+          </div>
+          <div class="kr-seg-control" id="kr-seg-zrodlo">
+            <label class="kr-seg-option active" style="cursor:pointer;">
+              <input type="radio" name="kon_zrodlo" value="Normalna" onclick="kon_przelaczTryb('Normalna'); krSegSync('kr-seg-zrodlo', this);" checked style="display:none;"> Normalna
+            </label>
+            <label class="kr-seg-option" style="cursor:pointer;">
+              <input type="radio" name="kon_zrodlo" value="Reklama" onclick="kon_przelaczTryb('Reklama'); krSegSync('kr-seg-zrodlo', this);" style="display:none;"> Z reklamy / promocji
+            </label>
+          </div>
+        </div>
+
+        <div id="kon_widok_normalna" style="display: block;">
+          <div class="kr-field">
+            <label>🎯 Obszar konsultacji</label>
+            <div class="kr-seg-control" id="kr-seg-obszar" style="margin-top:2px;">
+              <label class="kr-seg-option active" style="cursor:pointer;">
+                <input type="radio" name="kon_n_obszar" value="Ciało" checked onclick="krSegSync('kr-seg-obszar', this);" style="display:none;"> Ciało
+              </label>
+              <label class="kr-seg-option" style="cursor:pointer;">
+                <input type="radio" name="kon_n_obszar" value="Twarz" onclick="krSegSync('kr-seg-obszar', this);" style="display:none;"> Twarz
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div id="kon_widok_reklama" style="display: none;">
+          <div class="kr-field">
+            <label>🎯 Akcja promocyjna</label>
+            <select id="kon_k_kampania" onchange="kon_wybranoKampanie()">
+              <option value="">Wczytywanie akcji...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="kr-box" id="kon_panel-finanse">
+        <div class="kr-box-header">
+          <div>
+            <div class="kr-box-eyebrow">Krok 3</div>
+            <div class="kr-box-title">Wynik finansowy</div>
+            <div class="kr-box-subtitle">Upsell wyliczany automatycznie z progu rentowności</div>
+          </div>
+        </div>
+        <div class="kr-form-grid kr-form-grid-3">
+          <div class="kr-field">
+            <label>💰 Koszt konsultacji</label>
+            <input type="number" id="kon_k_koszt" step="0.01" value="199" required>
+          </div>
+          <div class="kr-field kr-field-readonly">
+            <label>🎯 Próg rentowności</label>
+            <input type="number" id="kon_k_prog" step="0.01" value="1000" readonly>
+          </div>
+          <div class="kr-field kr-field-highlight">
+            <label>📦 Kwota pakietu</label>
+            <input type="number" id="kon_k_kwota_pakiet" step="0.01" oninput="kon_przeliczAutomatyke()" required>
+          </div>
+        </div>
+
+        <div class="kr-upsell-banner">
+          <div>
+            <div class="kr-upsell-label">Upsell wygenerowany</div>
+            <div class="kr-upsell-value"><input type="number" id="kon_k_upsell" step="0.01" readonly style="background:transparent; border:none; padding:0; font:inherit; color:inherit; width:auto; max-width:140px;"> zł</div>
+          </div>
+          <div id="kr-upsell-badge"></div>
+        </div>
+      </div>
+
+      <div class="kr-box">
+        <div class="kr-box-header">
+          <div>
+            <div class="kr-box-eyebrow">Notatki</div>
+            <div class="kr-box-title">Zabiegi i uwagi z wywiadu</div>
+          </div>
+        </div>
+        <div class="kr-form-grid">
+          <div class="kr-field">
+            <label>🧴 Zabiegi ciało</label>
+            <textarea id="kon_k_cialo" rows="3" placeholder="np. kriolipoliza 2 przyłożenia"></textarea>
+          </div>
+          <div class="kr-field">
+            <label>✨ Zabiegi twarz</label>
+            <textarea id="kon_k_twarz" rows="3" placeholder="np. mezoterapia mikroigłowa"></textarea>
+          </div>
+        </div>
+        <div class="kr-form-grid kr-form-grid-1" style="margin-top:14px;">
+          <div class="kr-field">
+            <label>📝 Uwagi / notatki</label>
+            <textarea id="kon_k_uwagi" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:10px;">
+        <button type="submit" class="kr-btn-primary">💾 Zapisz wynik konsultacji</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ── PANEL: HISTORIA (zachowana tabela kon_results-list) ───── -->
+  <div id="kr-panel-historia" class="kr-panel">
+    <div class="kr-box">
+      <div class="kr-box-header">
+        <div>
+          <div class="kr-box-eyebrow">Historia</div>
+          <div class="kr-box-title">Ostatnie wpisy z tego miesiąca</div>
+        </div>
+        <button class="kr-btn-secondary" onclick="kon_pobierzWyniki()">🔄 Odśwież</button>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="kon_res-table">
+          <thead><tr><th>Data</th><th>Klient</th><th>Typ / Obszar</th><th>Zabiegi</th><th>Kwota</th><th>Upsell</th><th>Kto wykonał</th><th>Akcja</th></tr></thead>
+          <tbody id="kon_results-list"><tr><td colspan="8" style="text-align:center; padding:30px; color:#9ca3af;">Ładowanie...</td></tr></tbody>
+        </table>
+        <div id="kon_pagination-controls"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: STATYSTYKI (placeholder, krok 3) ───────────────── -->
+  <div id="kr-panel-statystyki" class="kr-panel">
+    <div class="kr-box">
+      <div class="kr-placeholder">
+        <div class="kr-placeholder-icon">📊</div>
+        <div style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:600; color:#374151; margin-bottom:6px;">Statystyki miesięczne</div>
+        <p>Suma pakietów, top zabiegi, rozkład źródeł, średnia wartość pakietu.</p>
+        <p style="margin-top:8px; font-size:12px;">Sekcja zostanie podpięta po teście wstępnym widoku.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PANEL: RANKING (placeholder, krok 3) ──────────────────── -->
+  <div id="kr-panel-ranking" class="kr-panel">
+    <div class="kr-box">
+      <div class="kr-placeholder">
+        <div class="kr-placeholder-icon">🏆</div>
+        <div style="font-family:'Cormorant Garamond',serif; font-size:1.4rem; font-weight:600; color:#374151; margin-bottom:6px;">Ranking pracownic</div>
+        <p>Wg sumy wygenerowanego upsella w bieżącym miesiącu.</p>
+        <p style="margin-top:8px; font-size:12px;">Sekcja zostanie podpięta po teście wstępnym widoku.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
+
+<script>
+// === KR: przełączanie zakładek ===
+function krGoTab(btn, tab) {
+  document.querySelectorAll('#kon_raportowanie .kr-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#kon_raportowanie .kr-panel').forEach(p => p.classList.remove('active'));
+  const target = document.getElementById('kr-panel-' + tab);
+  if(target) target.classList.add('active');
+}
+// === KR: sync segment controla z radio (klikalność labelek) ===
+function krSegSync(groupId, radio) {
+  const group = document.getElementById(groupId);
+  if(!group) return;
+  group.querySelectorAll('.kr-seg-option').forEach(o => o.classList.remove('active'));
+  if(radio && radio.parentElement) radio.parentElement.classList.add('active');
+}
+// === KR: badge sukcesu/niepowodzenia upsella ===
+function krUpsellBadge() {
+  const v = parseFloat(document.getElementById('kon_k_upsell')?.value) || 0;
+  const box = document.getElementById('kr-upsell-badge');
+  if(!box) return;
+  if(v > 0) box.innerHTML = '<span class="kr-badge kr-badge-success">🎉 Sukces — powyżej progu</span>';
+  else if(v === 0) box.innerHTML = '<span class="kr-badge kr-badge-norm">Brak upsella</span>';
+}
+// Wywołanie przy każdej zmianie pakietu/kosztu
+document.addEventListener('DOMContentLoaded', () => {
+  const pak = document.getElementById('kon_k_kwota_pakiet');
+  if(pak) pak.addEventListener('input', () => setTimeout(krUpsellBadge, 50));
+  const koszt = document.getElementById('kon_k_koszt');
+  if(koszt) koszt.addEventListener('input', () => setTimeout(krUpsellBadge, 50));
+});
+// === KR: ustaw tytuł hero na bieżący miesiąc ===
+(function(){
+  const miesiace = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  const d = new Date();
+  const el = document.getElementById('kr-hero-miesiac');
+  if(el) el.textContent = miesiace[d.getMonth()] + ' ' + d.getFullYear();
+})();
+</script>
 
 <div id="kon_admin-panel" class="section" style="padding: 20px; overflow-y: auto;">
     <div class="kon_header"><h1>Zarządzanie (Admin)</h1></div>
