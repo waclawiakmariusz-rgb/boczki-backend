@@ -513,6 +513,22 @@ module.exports = (db) => {
               if (m === targetMonth) {
                 if (isKosmetyk) report.cosmeticsCount++;
                 else { if (!report.topTreatments[zabieg]) report.topTreatments[zabieg] = 0; report.topTreatments[zabieg]++; }
+
+                // Top Pracownicy — liczone jak utarg pracownika (Analiza/Pracownik):
+                // bierze TAKŻE wpisy 'mix' ze Sprzedaży, wyklucza portfel/ręczne/system.
+                if (!platnosc.includes('portfel') && !platnosc.includes('ręczne') && !platnosc.includes('reczne') && !platnosc.includes('system')) {
+                  const empAmt = parseAmount(row.kwota);
+                  if (empAmt > 0) {
+                    const empRaw = String(row.sprzedawca || '');
+                    if (empRaw) {
+                      const empSellers = empRaw.split(',').map(s => s.trim()).filter(Boolean);
+                      if (empSellers.length > 0) {
+                        const splitVal = empAmt / empSellers.length;
+                        empSellers.forEach(s => { if (!report.topEmployees[s]) report.topEmployees[s] = 0; report.topEmployees[s] += splitVal; });
+                      }
+                    }
+                  }
+                }
               }
 
               if (platnosc === 'mix' || platnosc.includes('portfel') || platnosc.includes('ręczne') || platnosc.includes('reczne') || platnosc.includes('system')) return;
@@ -527,15 +543,6 @@ module.exports = (db) => {
                 if (method === 'TubaPay' && row.klient) report._tubaPayClients.add(String(row.klient).trim().toLowerCase());
                 if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                 report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
-                const rawSellers = String(row.sprzedawca || '');
-                if (rawSellers) {
-                  const sellers = rawSellers.split(',').map(s => s.trim()).filter(Boolean);
-                  const count = sellers.length;
-                  if (count > 0) {
-                    const splitVal = amount / count;
-                    sellers.forEach(s => { if (!report.topEmployees[s]) report.topEmployees[s] = 0; report.topEmployees[s] += splitVal; });
-                  }
-                }
               }
               if (compareMonth && m === compareMonth) report.compareTotal += amount;
             });
@@ -570,7 +577,9 @@ module.exports = (db) => {
                   (err3, zadatki) => {
                     (zadatki || []).forEach(row => {
                       const status = String(row.status || '').toUpperCase();
-                      if (status === 'USUNIĘTY') return;
+                      if (status === 'USUNIĘTY' || status === 'SCALONY') return;
+                      const typ = String(row.typ || '').toUpperCase();
+                      if (typ !== 'WPŁATA') return;
                       const metoda = String(row.metoda || '').toLowerCase();
                       if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                       const dateObj = new Date(row.data_wplaty);
@@ -582,6 +591,18 @@ module.exports = (db) => {
                         report.total += amount; report.payments[method] += amount;
                         if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                         report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+
+                        // Top Pracownicy — Zadatki też liczą się do utargu pracownika (jak Analiza/Pracownik)
+                        if (amount > 0) {
+                          const empRaw = String(row.pracownicy || '');
+                          if (empRaw) {
+                            const empSellers = empRaw.split(',').map(s => s.trim()).filter(Boolean);
+                            if (empSellers.length > 0) {
+                              const splitVal = amount / empSellers.length;
+                              empSellers.forEach(s => { if (!report.topEmployees[s]) report.topEmployees[s] = 0; report.topEmployees[s] += splitVal; });
+                            }
+                          }
+                        }
                       }
                       if (compareMonth && m === compareMonth) report.compareTotal += amount;
                     });
