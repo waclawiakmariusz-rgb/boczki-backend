@@ -8904,6 +8904,10 @@ ANALIZA MANAGER
                         <button id="odp_btn_gen" onclick="odp_generate()" class="action-btn-light" style="background: #8b5cf6; color: white; border:none !important;">
                             ⚡ Generuj Dane
                         </button>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13px; color:var(--text-dark); padding:8px 14px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px;">
+                            <input type="checkbox" id="odp_hide_kwoty" onchange="odp_toggleKwoty(this.checked)" style="width:16px; height:16px; cursor:pointer;">
+                            <span>💰 Ukryj kwoty (do druku)</span>
+                        </label>
                     </div>
                 </div>
 
@@ -24630,29 +24634,45 @@ function odp_generate() {
     });
 }
 
+// Toggle "Ukryj kwoty" — przerysuj raport bez nowego fetcha (re-render z zapamiętanych danych)
+function odp_toggleKwoty(hide) {
+    if (!window._odp_lastData) return; // brak danych — nic nie ma do ukrycia
+    odp_renderReport(window._odp_lastData, window._odp_lastFrom, window._odp_lastTo);
+}
+
 function odp_renderReport(data, dFrom, dTo) {
+    // Zapamiętaj dane do toggle "Ukryj kwoty"
+    window._odp_lastData = data;
+    window._odp_lastFrom = dFrom;
+    window._odp_lastTo = dTo;
+
     // 🛡️ Funkcje ochronne
     const setText = (id, txt) => { const el = document.getElementById(id); if(el) el.innerText = txt; };
     const setHtml = (id, html) => { const el = document.getElementById(id); if(el) el.innerHTML = html; };
-    
+
     // 💰 FORMATOWANIE KWOT
     // Główne wskaźniki (wymuszamy dokładnie 2 miejsca po przecinku, np. 150,50 zł)
     const formatDec = (v) => (v || 0).toLocaleString('pl-PL', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' zł';
     // Rankingi (zaokrąglamy do pełnych złotych, ucinamy grosze, np. 39 245 zł)
     const formatWhole = (v) => Math.round(v || 0).toLocaleString('pl-PL') + ' zł';
 
+    // Toggle "Ukryj kwoty" — KPI top + Metody płatności pokazują '———' zamiast kwot
+    const hideEl = document.getElementById('odp_hide_kwoty');
+    const hide = hideEl && hideEl.checked;
+    const dec = (v) => hide ? '———' : formatDec(v);
+
     // Główne liczby
-    setText('odp_total_rev', formatDec(data.totalSales));
-    setText('odp_avg_ticket', formatDec(data.avgTicket));
+    setText('odp_total_rev', dec(data.totalSales));
+    setText('odp_avg_ticket', dec(data.avgTicket));
     setText('odp_trans_count', data.transactions || 0);
-    
+
     // Płatności i straty
-    setText('odp_pay_card', formatDec(data.card));
-    setText('odp_pay_cash', formatDec(data.cash));
-    setText('odp_pay_blik', formatDec(data.blik));
-    setText('odp_pay_raty', formatDec(data.raty));
-    setText('odp_pay_tubapay', formatDec(data.tubapay));
-    setText('odp_pay_inne', formatDec(data.inne));
+    setText('odp_pay_card', dec(data.card));
+    setText('odp_pay_cash', dec(data.cash));
+    setText('odp_pay_blik', dec(data.blik));
+    setText('odp_pay_raty', dec(data.raty));
+    setText('odp_pay_tubapay', dec(data.tubapay));
+    setText('odp_pay_inne', dec(data.inne));
     setText('odp_lost_money', formatDec(data.lostMoney));
     setText('odp_lost_count', (data.lostCount || 0) + " wizyt(y)");
 
