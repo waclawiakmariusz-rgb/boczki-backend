@@ -6765,7 +6765,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <!-- name + data + actions -->
                     <div>
-                        <div id="profil-ban-alarm" style="display:none; background:#fef2f2; border:2px solid #dc2626; color:#991b1b; padding:10px 14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px; cursor:pointer;" title="Kliknij żeby anulować flagę"></div>
+                        <div id="profil-ban-alarm" style="display:none; background:#fef2f2; border:2px solid #dc2626; color:#991b1b; padding:10px 14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                            <span id="profil-ban-alarm-text"></span>
+                            <button onclick="anulujBan()" style="background:#fff; color:#991b1b; border:1px solid #dc2626; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✅ Anuluj flagę</button>
+                        </div>
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
                             <div id="profil-naglowek" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;"></div>
                             <span id="profil-vip-badge" style="display:none; background:#ffd6e4; color:#b74673; border-radius:10px; padding:5px 11px; font-size:13px; font-weight:800;">VIP</span>
@@ -18618,11 +18621,11 @@ function aktualizujAlarmKlienta() {
     const badge = document.getElementById('profil-status-badge');
     if (!k || !alarm || !badge) return;
 
-    // Alarm BAN
+    // Alarm BAN — tekst + przycisk "Anuluj flagę" (wewnątrz HTML)
     if (k.ostrzezenie) {
-        alarm.style.display = 'block';
-        alarm.textContent = `⚠ NIE OBSŁUGIWAĆ — ${k.ostrzezenie}`;
-        alarm.onclick = anulujBan;
+        alarm.style.display = 'flex';
+        const txt = document.getElementById('profil-ban-alarm-text');
+        if (txt) txt.textContent = `⚠ NIE OBSŁUGIWAĆ — ${k.ostrzezenie}`;
     } else {
         alarm.style.display = 'none';
     }
