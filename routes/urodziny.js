@@ -35,6 +35,35 @@ const getMonthTable = (miesiac) => {
 
 module.exports = (db) => {
 
+  // Helper: zwraca Set kluczy "imie+nazwisko" (lowercase, bez spacji) klientów
+  // którzy są USUNIETY / ZANONIMIZOWANY / ZMARŁY. Tabele miesięczne urodzin nie
+  // mają id_klienta, więc dopasowujemy po imieniu+nazwisku.
+  function pobierzZablokowanychKlientow(tenant_id, callback) {
+    db.query(
+      `SELECT imie_nazwisko FROM Klienci WHERE tenant_id = ? AND (status IN ('USUNIETY','ZANONIMIZOWANY') OR zmarly = 1)`,
+      [tenant_id],
+      (err, rows) => {
+        const set = new Set();
+        if (!err && rows) {
+          rows.forEach(r => {
+            if (!r.imie_nazwisko) return;
+            const norm = String(r.imie_nazwisko).toLowerCase().replace(/\s/g, '');
+            if (norm) set.add(norm);
+          });
+        }
+        callback(set);
+      }
+    );
+  }
+
+  // Helper: czy wpis urodzinowy (imie+nazwisko) jest w secie zablokowanych
+  function jestZablokowany(blockSet, imie, nazwisko) {
+    if (!blockSet || blockSet.size === 0) return false;
+    const im = String(imie || '').toLowerCase().replace(/\s/g, '');
+    const nz = String(nazwisko || '').toLowerCase().replace(/\s/g, '');
+    return blockSet.has(im + nz) || blockSet.has(nz + im);
+  }
+
   // ==========================================
   // GET /urodziny
   // ==========================================
@@ -48,34 +77,37 @@ module.exports = (db) => {
       const tbl = getMonthTable(miesiac);
       if (!tbl) return res.json({ error: 'Nieznany miesiąc: ' + miesiac });
 
-      db.query(
-        `SELECT id, c_status, nazwisko, imie, data_urodzin, nr_telefonu, sms, telefon, komentarz FROM ${tbl} WHERE tenant_id = ? ORDER BY data_urodzin`,
-        [tenant_id],
-        (err, rows) => {
-          if (err) return res.json({ error: err.message });
-          const klienci = (rows || [])
-            .filter(r => r.nazwisko || r.imie)
-            .map((r, i) => {
-              const dataUr = formatDDMM(r.data_urodzin);
-              const dzienSort = parseDzien(r.data_urodzin);
-              return {
-                wiersz: i + 2,
-                id: r.id,
-                c_status: r.c_status,
-                nazwisko: r.nazwisko,
-                imie: r.imie,
-                data_ur: dataUr,       // zawsze "DD.MM"
-                dzien_sort: dzienSort < 0 ? 99 : dzienSort,
-                telefon: r.nr_telefonu,
-                sms: r.sms,
-                zgoda_tel: r.telefon,
-                komentarz: r.komentarz
-              };
-            })
-            .sort((a, b) => a.dzien_sort - b.dzien_sort);
-          return res.json({ miesiac, klienci });
-        }
-      );
+      pobierzZablokowanychKlientow(tenant_id, (blockSet) => {
+        db.query(
+          `SELECT id, c_status, nazwisko, imie, data_urodzin, nr_telefonu, sms, telefon, komentarz FROM ${tbl} WHERE tenant_id = ? ORDER BY data_urodzin`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ error: err.message });
+            const klienci = (rows || [])
+              .filter(r => r.nazwisko || r.imie)
+              .filter(r => !jestZablokowany(blockSet, r.imie, r.nazwisko))
+              .map((r, i) => {
+                const dataUr = formatDDMM(r.data_urodzin);
+                const dzienSort = parseDzien(r.data_urodzin);
+                return {
+                  wiersz: i + 2,
+                  id: r.id,
+                  c_status: r.c_status,
+                  nazwisko: r.nazwisko,
+                  imie: r.imie,
+                  data_ur: dataUr,       // zawsze "DD.MM"
+                  dzien_sort: dzienSort < 0 ? 99 : dzienSort,
+                  telefon: r.nr_telefonu,
+                  sms: r.sms,
+                  zgoda_tel: r.telefon,
+                  komentarz: r.komentarz
+                };
+              })
+              .sort((a, b) => a.dzien_sort - b.dzien_sort);
+            return res.json({ miesiac, klienci });
+          }
+        );
+      });
 
     } else if (action === 'upcoming_birthdays') {
       const today = new Date();
@@ -88,35 +120,38 @@ module.exports = (db) => {
       const monthsToCheck = [today.getMonth()];
       if (today.getDate() > 20) monthsToCheck.push((today.getMonth() + 1) % 12);
 
-      let pending = monthsToCheck.length;
-      if (pending === 0) return res.json({ lista: [] });
+      if (monthsToCheck.length === 0) return res.json({ lista: [] });
 
-      monthsToCheck.forEach(mi => {
-        const tbl = getMonthTable(NAZWY_MIESIECY[mi]);
-        db.query(
-          `SELECT imie, nazwisko, data_urodzin FROM ${tbl} WHERE tenant_id = ?`,
-          [tenant_id],
-          (err, rows) => {
-            if (!err && rows) {
-              rows.forEach(r => {
-                const dzien = parseDzien(r.data_urodzin);
-                if (dzien > 0) {
-                  const by = new Date(year, mi, dzien);
-                  by.setHours(0, 0, 0, 0);
-                  const diff = Math.ceil((by - today) / 86400000);
-                  if (diff >= 0 && diff <= RANGE_DAYS) {
-                    results.push({ imie: r.imie, nazwisko: r.nazwisko, dzien, miesiac: NAZWY_MIESIECY[mi], ile_dni: diff });
+      pobierzZablokowanychKlientow(tenant_id, (blockSet) => {
+        let pending = monthsToCheck.length;
+        monthsToCheck.forEach(mi => {
+          const tbl = getMonthTable(NAZWY_MIESIECY[mi]);
+          db.query(
+            `SELECT imie, nazwisko, data_urodzin FROM ${tbl} WHERE tenant_id = ?`,
+            [tenant_id],
+            (err, rows) => {
+              if (!err && rows) {
+                rows.forEach(r => {
+                  if (jestZablokowany(blockSet, r.imie, r.nazwisko)) return;
+                  const dzien = parseDzien(r.data_urodzin);
+                  if (dzien > 0) {
+                    const by = new Date(year, mi, dzien);
+                    by.setHours(0, 0, 0, 0);
+                    const diff = Math.ceil((by - today) / 86400000);
+                    if (diff >= 0 && diff <= RANGE_DAYS) {
+                      results.push({ imie: r.imie, nazwisko: r.nazwisko, dzien, miesiac: NAZWY_MIESIECY[mi], ile_dni: diff });
+                    }
                   }
-                }
-              });
+                });
+              }
+              pending--;
+              if (pending === 0) {
+                results.sort((a, b) => a.ile_dni - b.ile_dni);
+                return res.json({ lista: results });
+              }
             }
-            pending--;
-            if (pending === 0) {
-              results.sort((a, b) => a.ile_dni - b.ile_dni);
-              return res.json({ lista: results });
-            }
-          }
-        );
+          );
+        });
       });
 
     } else if (action === 'get_client_birthday') {
