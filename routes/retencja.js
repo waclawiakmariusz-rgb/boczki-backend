@@ -14,8 +14,16 @@ module.exports = (db) => {
     const tenant_id = req.query.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
 
+    // LEFT JOIN Klienci — wyklucz wpisy klientów USUNIETY/ZANONIMIZOWANY/ZMARLY.
+    // Wpisy bez id_klienta (stare) zostają widoczne (NULL JOIN przechodzi).
     db.query(
-      `SELECT data_kontaktu, id_klienta, klient, kategoria_filtr, status, notatka, pracownik FROM Retencja WHERE tenant_id = ? ORDER BY data_kontaktu DESC`,
+      `SELECT R.data_kontaktu, R.id_klienta, R.klient, R.kategoria_filtr, R.status, R.notatka, R.pracownik
+         FROM Retencja R
+         LEFT JOIN Klienci K ON K.tenant_id = R.tenant_id AND K.id_klienta = R.id_klienta
+        WHERE R.tenant_id = ?
+          AND (K.status IS NULL OR K.status = 'AKTYWNY')
+          AND (K.zmarly IS NULL OR K.zmarly = 0)
+        ORDER BY R.data_kontaktu DESC`,
       [tenant_id],
       (err, rows) => {
         if (err) return res.json([]);
