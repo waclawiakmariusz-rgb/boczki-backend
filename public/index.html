@@ -1450,6 +1450,19 @@ body.dark-mode #kon_admin-panel textarea:focus {
 body.dark-mode #kon_admin-panel .kon_badge-rekl { background: rgba(99,102,241,0.25) !important; color: #c7d2fe !important; }
 body.dark-mode #kon_admin-panel .kon_badge-norm { background: rgba(71,85,105,0.4) !important; color: #cbd5e1 !important; }
 
+/* ── Zakładka Statystyki — kafelki z hardcoded jasnymi tłami ──
+   Pakiety/Konsultacji/Skuteczność/Średnia mają jasne tła (#fff2f5, #f3f4f6,
+   #fef3c7, #fafbfc) — wymuszamy ciemny tekst żeby liczby były czytelne.
+   Suma upsell zostaje zielona (#15803d hardcoded). */
+body.dark-mode #kr-stats-finanse > div:nth-child(1) { background: #fff2f5 !important; }
+body.dark-mode #kr-stats-finanse > div > div:first-child { color: #6b7280 !important; }
+body.dark-mode #kr-stat-pakiety,
+body.dark-mode #kr-stat-count,
+body.dark-mode #kr-stat-skutecz { color: #1c1a18 !important; }
+body.dark-mode #kr-stat-srednia { color: #1c1a18 !important; }
+body.dark-mode #kr-stat-srednia-sub { color: #6b7280 !important; }
+body.dark-mode #kr-panel-statystyki .kr-box > div[style*="background:#fafbfc"] > div:first-child { color: #6b7280 !important; }
+
 /* ── Sekcja Analiza Konsultacji (#analiza-konsultacji) — tło ── */
 body.dark-mode #analiza-konsultacji { background: #0f172a !important; }
 
