@@ -8762,14 +8762,17 @@ ANALIZA MANAGER
                         </div>
                     </div>
 
-                    <div class="odp-zone odp-zone-blue" style="margin-bottom:20px;">
-                        <div class="odp-zone-title">🎯 Skuteczność Konsultacji i Upsell</div>
-                        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; text-align:center; margin-bottom:15px;">
-                            <div><div class="odp-label">Odbyte</div><div id="odp_kon_total" style="font-weight:900; font-size:16pt;">0</div></div>
-                            <div><div class="odp-label">Skuteczność</div><div id="odp_kon_rate" style="font-weight:900; font-size:16pt; color:#2563eb;">0%</div></div>
-                            <div><div class="odp-label">Dodatkowy Upsell</div><div id="odp_kon_upsell" style="font-weight:900; font-size:16pt;">0 zł</div></div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
+                        <div class="odp-zone odp-zone-blue" style="margin-bottom:0;">
+                            <div class="odp-zone-title">🎯 Top zabiegi (Konsultacje)</div>
+                            <div style="font-size:9pt; color:#64748b; margin-bottom:6px;">Najczęściej wybierane</div>
+                            <ul class="odp-list" id="odp_kon_top_zabiegi" style="font-size:10pt;"><li>Brak danych.</li></ul>
                         </div>
-                        <ul class="odp-list" id="odp_kon_emp_list" style="border-top:1px solid #dbeafe; padding-top:10px;"></ul>
+                        <div class="odp-zone" style="margin-bottom:0; background:#fef3c7; border-color:#fde68a;">
+                            <div class="odp-zone-title" style="color:#92400e;">🏆 Ranking (Konsultacje)</div>
+                            <div style="font-size:9pt; color:#92400e; margin-bottom:6px;">Wg łącznej sumy pakietów (baza + upsell)</div>
+                            <ul class="odp-list" id="odp_kon_ranking" style="font-size:10pt;"><li>Brak danych.</li></ul>
+                        </div>
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
@@ -8779,7 +8782,7 @@ ANALIZA MANAGER
                         </div>
                         <div class="odp-zone odp-zone-red" style="margin-bottom:0;">
                             <div class="odp-zone-title" style="color:#b91c1c;">💤 ŚPIĄCE ZABIEGI</div>
-                            <div id="odp_sleeping_items" style="font-size:9pt; color:#475569; line-height:1.4;">Brak danych.</div>
+                            <ul id="odp_sleeping_items" style="font-size:9pt; color:#475569; line-height:1.6; padding-left:20px; margin:8px 0; list-style:disc;"><li>Brak danych.</li></ul>
                         </div>
                     </div>
 
@@ -24427,44 +24430,61 @@ function odp_renderReport(data, dFrom, dTo) {
     setText('odp_lost_count', (data.lostCount || 0) + " wizyt(y)");
 
     // 🏆 RANKINGI (Tutaj używamy formatWhole - same pełne złotówki!)
-    setHtml('odp_emp_list', (data.topEmployees && data.topEmployees.length > 0) ? data.topEmployees.map(e => 
-        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${formatWhole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
-    
-    setHtml('odp_top_items_list', (data.topItems && data.topItems.length > 0) ? data.topItems.map(i => 
+    const _whole = (v) => hide ? '———' : formatWhole(v);
+    setHtml('odp_emp_list', (data.topEmployees && data.topEmployees.length > 0) ? data.topEmployees.map(e =>
+        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${_whole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
+
+    setHtml('odp_top_items_list', (data.topItems && data.topItems.length > 0) ? data.topItems.map(i =>
         `<li style="padding: 4px 0;">${i.name} <span style="float:right; color:#64748b; font-weight:bold;">${i.count} szt.</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
 
-    setHtml('odp_vip_list', (data.topClients && data.topClients.length > 0) ? data.topClients.map(c => 
+    setHtml('odp_vip_list', (data.topClients && data.topClients.length > 0) ? data.topClients.map(c =>
         `<span style="background:#334155; padding:6px 12px; border-radius:8px; font-size:9pt; border:1px solid #475569; color:#f8fafc;">
-            ${c.name}: <strong>${formatWhole(c.val)}</strong>
+            ${c.name}: <strong>${_whole(c.val)}</strong>
         </span>`).join('') : "<span style='color:#94a3b8;'>Brak klientów w tym okresie.</span>");
 
-    // Konsultacje
-    setText('odp_kon_total', data.konTotal || 0);
-    setText('odp_kon_rate', (data.konTotal > 0 ? Math.round((data.konSuccess / data.konTotal) * 100) : 0) + "%");
-    setText('odp_kon_upsell', formatDec(data.konUpsell));
+    // Konsultacje — Top zabiegi (parsowane z zabiegi_cialo + zabiegi_twarz)
+    setHtml('odp_kon_top_zabiegi', (data.topKonZabiegi && data.topKonZabiegi.length > 0) ? data.topKonZabiegi.map(z =>
+        `<li style="padding:4px 0; border-bottom:1px dashed #dbeafe;">
+            <strong>${z.name}</strong>
+            <span style="float:right; color:#64748b; font-weight:bold;">${z.count}×</span>
+        </li>`).join('') : '<li>Brak konsultacji w okresie.</li>');
 
-    setHtml('odp_kon_emp_list', (data.konEmpStats && data.konEmpStats.length > 0) ? data.konEmpStats.map(e => 
-        `<li style="padding: 4px 0; font-size:10pt;">${e.name}: <strong>${e.rate}%</strong> skut. (${e.success} pakietów z ${e.total} spotkań)</li>`).join('') : "<li>Brak przeprowadzonych konsultacji.</li>");
-    
+    // Konsultacje — Ranking pracowników (wg sumy pakietu = baza + upsell)
+    const _medals = ['🥇','🥈','🥉'];
+    const rankShown = (data.konRanking || []).slice(0, 5);
+    setHtml('odp_kon_ranking', rankShown.length > 0 ? rankShown.map((p, i) => {
+        const ico = i < 3 ? _medals[i] : `<span style="display:inline-block; width:16px; text-align:center; font-weight:700;">${i+1}.</span>`;
+        const sumP = hide ? '———' : formatWhole(p.sumPakiet);
+        const baza = hide ? '———' : formatWhole(p.baza);
+        const ups = hide ? '———' : formatWhole(p.sumUpsell);
+        return `<li style="padding:6px 0; border-bottom:1px solid #fde68a;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span>${ico} <strong>${p.name}</strong></span>
+                <strong style="color:#92400e;">${sumP}</strong>
+            </div>
+            <div style="font-size:8.5pt; color:#92400e; padding-left:22px;">${p.count} konsultacji · ${baza} baza + <span style="color:#15803d;">${ups} upsell</span></div>
+        </li>`;
+    }).join('') : '<li>Brak konsultacji w okresie.</li>');
+
     // Kosmetyki
-    // Kosmetyki (Ilość + Wartość w PLN)
     setText('odp_cosm_total', (data.cosmeticsTotal || 0) + ' szt.');
-    setHtml('odp_cosm_emp_list', (data.topCosmeticsEmp && data.topCosmeticsEmp.length > 0) ? data.topCosmeticsEmp.map(e => 
+    setHtml('odp_cosm_emp_list', (data.topCosmeticsEmp && data.topCosmeticsEmp.length > 0) ? data.topCosmeticsEmp.map(e =>
         `<li style="padding: 2px 0; border-bottom: 1px dashed #f5d0fe;">
-            <strong>${e.name}</strong> 
-            <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
+            <strong>${e.name}</strong>
+            <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${hide ? '———' : formatWhole(e.val)}</span>
         </li>`).join('') : "<li>Brak sprzedaży kosmetyków</li>");
 
-    // Śpiące zabiegi
+    // Śpiące zabiegi — lista z myślnikami, pokazujemy top 5
     let sleepHtml = "";
     if (data.sleepingItems && data.sleepingItems.length > 0) {
-        sleepHtml = data.sleepingItems.length > 15 
-            ? data.sleepingItems.slice(0, 15).join(', ') + " ...i " + (data.sleepingItems.length - 15) + " innych."
-            : data.sleepingItems.join(', ');
+        sleepHtml = data.sleepingItems.slice(0, 5).map(s => `<li>${s}</li>`).join('');
+        if (data.sleepingItems.length > 5) {
+            sleepHtml += `<li style="list-style:none; color:#94a3b8; font-style:italic; margin-left:-20px; padding-left:20px;">...i ${data.sleepingItems.length - 5} innych</li>`;
+        }
     } else {
-        sleepHtml = "Niesamowite! Wszystkie usługi sprzedane co najmniej raz!";
+        sleepHtml = "<li style='list-style:none;'>✨ Niesamowite! Wszystkie usługi sprzedane co najmniej raz!</li>";
     }
-    setText('odp_sleeping_items', sleepHtml);
+    setHtml('odp_sleeping_items', sleepHtml);
 
     // Stopka i daty
     setText('odp_display_dates', `ANALIZA OKRESU: ${dFrom} ➞ ${dTo}`);
