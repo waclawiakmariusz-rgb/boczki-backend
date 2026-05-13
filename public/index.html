@@ -2443,14 +2443,42 @@ body.dark-mode #an_rep-daily-table td {
 /* 🖨️ MAGIA WYDRUKU */
 @media print {
     @page { size: A4 portrait; margin: 1cm; }
+
+    /* Ukryj wszystko EXCEPT print-area */
     body * { visibility: hidden; }
     #odp-print-area, #odp-print-area * { visibility: visible; }
-    #odp-print-area { 
-        position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; 
-        box-shadow: none !important; padding: 0 !important; border-radius: 0 !important;
-        -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; 
+
+    /* Print-area w NORMALNYM flow (nie absolute) — pozwala przeglądarce paginować */
+    #odp-print-area {
+        position: static !important;
+        width: 100% !important; max-width: 100% !important;
+        margin: 0 !important; padding: 0 !important;
+        box-shadow: none !important; border-radius: 0 !important;
+        -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
     }
+
+    /* Kontenery rodziców muszą pozwolić na normalny flow + auto height (inaczej overflow:hidden ucina) */
+    html, body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
+    #app-container, .main-content, .section, #odprawa {
+        display: block !important; position: static !important;
+        height: auto !important; overflow: visible !important;
+        padding: 0 !important; margin: 0 !important; width: 100% !important;
+    }
+
     .odp-no-print { display: none !important; }
+
+    /* PAGE BREAK — boxy nie ucinają się w środku */
+    .odp-zone,
+    #odp-print-area > div,
+    .odp-box {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+    .odp-zone-title,
+    .odp-header { page-break-after: avoid; break-after: avoid; }
+
+    /* Tytuł boxa zawsze ze swoim contentem */
+    #odp-print-area ul, #odp-print-area li { page-break-inside: avoid; break-inside: avoid; }
 }
 
 /* Wymuszenia Dark Mode dla okna zebrania (by nie raziło) */
