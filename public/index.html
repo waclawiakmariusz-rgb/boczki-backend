@@ -4546,6 +4546,24 @@ body.dark-mode #odprawa div[style*="background:#1e293b"] [style*="color:#fbbf24"
     color: #fbbf24 !important;
 }
 
+/* Box VIP — nowy jasny fiolet (#faf5ff) — przyciemniony w dark mode */
+body.dark-mode #odp_vip_zone {
+    background: rgba(124, 58, 237, .15) !important;
+    border-color: rgba(124, 58, 237, .4) !important;
+}
+body.dark-mode #odp_vip_zone .odp-zone-title {
+    color: #c4b5fd !important;
+    border-bottom-color: rgba(124, 58, 237, .4) !important;
+}
+body.dark-mode #odprawa .odp-vip-chip {
+    background: rgba(124, 58, 237, .2) !important;
+    border-color: rgba(124, 58, 237, .45) !important;
+    color: #c4b5fd !important;
+}
+body.dark-mode #odprawa .odp-vip-chip strong {
+    color: #ddd6fe !important;
+}
+
 /* ══════════════════════════════════════════════
    DARK MODE — Konfigurator Targetów (#tgt-modal)
    Modal używa var(--bg-body, #fff) i var(--sidebar-bg, #f8fafc)
@@ -8776,8 +8794,8 @@ ANALIZA MANAGER
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
-                        <div class="odp-zone" style="margin-bottom:0; background:#1e293b; color:white; border:none;">
-                            <div class="odp-zone-title" style="color:#fbbf24; border-bottom-color:#334155;">👑 KLIEŃCI VIP</div>
+                        <div class="odp-zone" id="odp_vip_zone" style="margin-bottom:0; background:#faf5ff; border-color:#e9d5ff;">
+                            <div class="odp-zone-title" style="color:#7c3aed; border-bottom-color:#e9d5ff;">👑 KLIEŃCI VIP</div>
                             <div id="odp_vip_list" style="display:flex; flex-wrap:wrap; gap:8px; padding:10px 0;"></div>
                         </div>
                         <div class="odp-zone odp-zone-red" style="margin-bottom:0;">
@@ -24430,16 +24448,17 @@ function odp_renderReport(data, dFrom, dTo) {
     setText('odp_lost_count', (data.lostCount || 0) + " wizyt(y)");
 
     // 🏆 RANKINGI (Tutaj używamy formatWhole - same pełne złotówki!)
-    const _whole = (v) => hide ? '———' : formatWhole(v);
+    // Toggle 'Ukryj kwoty' NIE dotyczy rankingów (Top Pracownicy / VIP / Konsultacje / Kosmetyki)
+    // — to wewnętrzne wskaźniki wydajności, hide=true działa tylko dla KPI top + Metody Płatności
     setHtml('odp_emp_list', (data.topEmployees && data.topEmployees.length > 0) ? data.topEmployees.map(e =>
-        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${_whole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
+        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${formatWhole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
 
     setHtml('odp_top_items_list', (data.topItems && data.topItems.length > 0) ? data.topItems.map(i =>
         `<li style="padding: 4px 0;">${i.name} <span style="float:right; color:#64748b; font-weight:bold;">${i.count} szt.</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
 
     setHtml('odp_vip_list', (data.topClients && data.topClients.length > 0) ? data.topClients.map(c =>
-        `<span style="background:#334155; padding:6px 12px; border-radius:8px; font-size:9pt; border:1px solid #475569; color:#f8fafc;">
-            ${c.name}: <strong>${_whole(c.val)}</strong>
+        `<span class="odp-vip-chip" style="background:#fff; padding:6px 12px; border-radius:8px; font-size:9pt; border:1px solid #e9d5ff; color:#5b21b6;">
+            ${c.name}: <strong style="color:#7c3aed;">${formatWhole(c.val)}</strong>
         </span>`).join('') : "<span style='color:#94a3b8;'>Brak klientów w tym okresie.</span>");
 
     // Konsultacje — Top zabiegi (parsowane z zabiegi_cialo + zabiegi_twarz)
@@ -24454,9 +24473,9 @@ function odp_renderReport(data, dFrom, dTo) {
     const rankShown = (data.konRanking || []).slice(0, 5);
     setHtml('odp_kon_ranking', rankShown.length > 0 ? rankShown.map((p, i) => {
         const ico = i < 3 ? _medals[i] : `<span style="display:inline-block; width:16px; text-align:center; font-weight:700;">${i+1}.</span>`;
-        const sumP = hide ? '———' : formatWhole(p.sumPakiet);
-        const baza = hide ? '———' : formatWhole(p.baza);
-        const ups = hide ? '———' : formatWhole(p.sumUpsell);
+        const sumP = formatWhole(p.sumPakiet);
+        const baza = formatWhole(p.baza);
+        const ups = formatWhole(p.sumUpsell);
         return `<li style="padding:6px 0; border-bottom:1px solid #fde68a;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <span>${ico} <strong>${p.name}</strong></span>
@@ -24471,7 +24490,7 @@ function odp_renderReport(data, dFrom, dTo) {
     setHtml('odp_cosm_emp_list', (data.topCosmeticsEmp && data.topCosmeticsEmp.length > 0) ? data.topCosmeticsEmp.map(e =>
         `<li style="padding: 2px 0; border-bottom: 1px dashed #f5d0fe;">
             <strong>${e.name}</strong>
-            <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${hide ? '———' : formatWhole(e.val)}</span>
+            <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
         </li>`).join('') : "<li>Brak sprzedaży kosmetyków</li>");
 
     // Śpiące zabiegi — lista z myślnikami, pokazujemy top 5
