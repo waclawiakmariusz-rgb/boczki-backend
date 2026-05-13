@@ -411,14 +411,12 @@ module.exports = (db) => {
             if (amount === 0) return;
             const zabieg = String(row.zabieg || 'Inne').trim();
             const klient = String(row.klient || 'Nieznany').trim();
-            const methodCat = classifyPayment(platnosc);
-            result.totalSales += amount; result.transactions++; result[methodCat] += amount;
-            if (klient && klient.toLowerCase() !== 'nieznany') clientS[klient] = (clientS[klient] || 0) + amount;
-
             const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
             const sellers = String(row.sprzedawca || '').split(',').map(s => s.trim()).filter(Boolean);
             const count = sellers.length || 1;
 
+            // topClients / topEmployees / topItems / cosmetics — liczone z KAŻDEGO wpisu Sprzedaży (włącznie z mix)
+            if (klient && klient.toLowerCase() !== 'nieznany') clientS[klient] = (clientS[klient] || 0) + amount;
             if (isKosmetyk) {
               result.cosmeticsTotal++;
               sellers.forEach(p => { if (!empCosm[p]) empCosm[p] = { count: 0, val: 0 }; empCosm[p].count++; empCosm[p].val += amount / count; });
@@ -426,13 +424,33 @@ module.exports = (db) => {
               if (zabieg && zabieg !== 'Inne') { itemS[zabieg] = (itemS[zabieg] || 0) + 1; soldItemsSet.add(zabieg.toLowerCase()); }
               sellers.forEach(p => { empS[p] = (empS[p] || 0) + amount / count; });
             }
+
+            // Total + transactions + payment breakdown — POMIJAMY mix (sub-platnosci sa w tabeli Platnosci)
+            if (platnosc === 'mix') return;
+            const methodCat = classifyPayment(platnosc);
+            result.totalSales += amount; result.transactions++; result[methodCat] += amount;
           });
 
-          // 2. Zadatki
+          // 2. Platnosci (sub-platnosci dla wpisow Sprzedazy typu 'mix')
           db.query(
-            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ FROM Zadatki WHERE tenant_id = ? AND data_wplaty BETWEEN ? AND ?`,
+            `SELECT data_platnosci, metoda_platnosci, kwota, status FROM Platnosci WHERE tenant_id = ? AND DATE(data_platnosci) BETWEEN DATE(?) AND DATE(?) AND COALESCE(status, '') != 'USUNIĘTY'`,
             [tenant_id, dFrom, dTo],
-            (err2, zadatki) => {
+            (errP, platnosci) => {
+              (platnosci || []).forEach(row => {
+                const metoda = String(row.metoda_platnosci || '').toLowerCase();
+                if (metoda.includes('portfel') || metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
+                const amount = safeNum(row.kwota);
+                if (amount === 0) return;
+                const methodCat = classifyPayment(metoda);
+                result.totalSales += amount; result[methodCat] += amount;
+                // NIE inkrementujemy transactions — to subkomponent istniejacej transakcji mix-Sprzedaz
+              });
+
+              // 3. Zadatki
+              db.query(
+                `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ FROM Zadatki WHERE tenant_id = ? AND data_wplaty BETWEEN ? AND ?`,
+                [tenant_id, dFrom, dTo],
+                (err2, zadatki) => {
               (zadatki || []).forEach(row => {
                 const status = String(row.status || '').toUpperCase();
                 const typ = String(row.typ || '').toUpperCase();
@@ -494,6 +512,8 @@ module.exports = (db) => {
                   }
                 );
               });
+                }
+              );
             }
           );
         }
