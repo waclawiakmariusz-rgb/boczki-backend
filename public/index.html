@@ -2459,7 +2459,15 @@ body.dark-mode #an_rep-daily-table td {
 
     /* Kontenery rodziców muszą pozwolić na normalny flow + auto height (inaczej overflow:hidden ucina) */
     html, body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
-    #app-container, .main-content, .section, #odprawa {
+    #app-container, .main-content {
+        display: block !important; position: static !important;
+        height: auto !important; overflow: visible !important;
+        padding: 0 !important; margin: 0 !important; width: 100% !important;
+    }
+    /* WAŻNE: tylko #odprawa widoczne podczas druku — reszta sekcji ukryta
+       (mój poprzedni fix wymuszał display:block na .section, co pokazało magazyn+klientów+itd.) */
+    .section { display: none !important; }
+    #odprawa {
         display: block !important; position: static !important;
         height: auto !important; overflow: visible !important;
         padding: 0 !important; margin: 0 !important; width: 100% !important;
