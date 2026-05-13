@@ -483,9 +483,19 @@ module.exports = (db) => {
               // 3. Konsultacje
               getThresholdsMap(tenant_id, (thresholdsMap) => {
                 db.query(
-                  `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji BETWEEN ? AND ? AND (status = 'Aktywna' OR status IS NULL)`,
+                  `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal, zabiegi_cialo, zabiegi_twarz FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji BETWEEN ? AND ? AND (status = 'Aktywna' OR status IS NULL)`,
                   [tenant_id, dFrom, dTo],
                   (err3, konsultacje) => {
+                    // Helper: parsuj listę zabiegów do tokenów (jak krParseZabiegi we frontend)
+                    const parseZabiegi = (text) => {
+                      if (!text || typeof text !== 'string') return [];
+                      return text.split(/[,;]| i |\s*\+\s*/)
+                        .map(t => t.trim())
+                        .filter(t => t.length > 2 && t.length < 80);
+                    };
+                    const konZabiegiCounter = {};
+                    const konRanking = {}; // per pracownik: { count, sumPakiet, sumUpsell }
+
                     (konsultacje || []).forEach(row => {
                       const pakiet = safeNum(row.kwota_pakiet);
                       const upsell = safeNum(row.upsell);
@@ -498,7 +508,26 @@ module.exports = (db) => {
                       if (!empKon[pracownik]) empKon[pracownik] = { total: 0, success: 0 };
                       empKon[pracownik].total++;
                       if (isSuccess) empKon[pracownik].success++;
+
+                      // Top zabiegi z konsultacji — parsuj zabiegi_cialo + zabiegi_twarz
+                      const tokens = [].concat(parseZabiegi(row.zabiegi_cialo), parseZabiegi(row.zabiegi_twarz));
+                      tokens.forEach(t => { konZabiegiCounter[t] = (konZabiegiCounter[t] || 0) + 1; });
+
+                      // Ranking konsultacyjny per pracownik
+                      if (!konRanking[pracownik]) konRanking[pracownik] = { count: 0, sumPakiet: 0, sumUpsell: 0 };
+                      konRanking[pracownik].count++;
+                      konRanking[pracownik].sumPakiet += pakiet;
+                      konRanking[pracownik].sumUpsell += upsell;
                     });
+
+                    result.topKonZabiegi = Object.entries(konZabiegiCounter)
+                      .map(([name, count]) => ({ name, count }))
+                      .sort((a, b) => b.count - a.count)
+                      .slice(0, 5);
+
+                    result.konRanking = Object.entries(konRanking)
+                      .map(([name, v]) => ({ name, count: v.count, sumPakiet: v.sumPakiet, sumUpsell: v.sumUpsell, baza: v.sumPakiet - v.sumUpsell }))
+                      .sort((a, b) => b.sumPakiet - a.sumPakiet);
 
                     // 4. Usługi śpiące
                     db.query(`SELECT kategoria, wariant FROM Uslugi WHERE tenant_id = ?`, [tenant_id], (err4, uslugi) => {
