@@ -380,7 +380,7 @@ module.exports = (db) => {
 
       let result = {
         totalSales: 0, transactions: 0, avgTicket: 0,
-        cash: 0, card: 0, blik: 0, raty: 0, inne: 0,
+        cash: 0, card: 0, blik: 0, raty: 0, tubapay: 0, inne: 0,
         topEmployees: [], topItems: [], topClients: [],
         konTotal: 0, konSuccess: 0, konUpsell: 0, konEmpStats: [],
         sleepingItems: [], cosmeticsTotal: 0, topCosmeticsEmp: []
@@ -390,6 +390,8 @@ module.exports = (db) => {
         const ml = m.toLowerCase();
         if (ml.includes('kart') || ml.includes('terminal')) return 'card';
         if (ml.includes('blik')) return 'blik';
+        // WAŻNE: tubapay przed 'tpay' bo 'tubapay'.includes('tpay') === true
+        if (ml.includes('tubapay') || ml.includes('tuba')) return 'tubapay';
         if (ml.includes('raty') || ml.includes('medirat')) return 'raty';
         if (ml.includes('przelew') || ml.includes('tpay')) return 'inne';
         return 'cash';
