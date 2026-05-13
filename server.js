@@ -502,7 +502,7 @@ app.post('/api', (req, res) => {
     // Mapowanie akcji na route handlery
     const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry'];
     const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service'];
-    const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule'];
+    const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule', 'soft_delete_client', 'anonymize_client', 'mark_deceased', 'set_warning', 'clear_warning', 'restore_client'];
     const rodoActions = ['save_rodo', 'update_consents'];
     const urodzinyActions = ['add_birthday', 'edit_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
     const retencjaActions = ['save_retention'];

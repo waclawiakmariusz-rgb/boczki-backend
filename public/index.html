@@ -6945,6 +6945,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <h1>Kartoteka Klientów</h1>
             <div style="display:flex; gap:10px;">
                 <button onclick="otworzPopupNowyKlient()" class="btn-primary" style="width:auto; background:#10b981;">+ Nowy Klient</button>
+                <button onclick="togglePokazUsunietych()" id="btn-pokaz-usunietych" class="btn-primary" style="width:auto; background:#6b7280;">🗑️ Pokaż usuniętych</button>
                 <button onclick="zaladujKlientowDoKartoteki(true)" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
             </div>
         </div>
@@ -6979,10 +6980,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <!-- name + data + actions -->
                     <div>
+                        <div id="profil-ban-alarm" style="display:none; background:#fef2f2; border:2px solid #dc2626; color:#991b1b; padding:10px 14px; border-radius:10px; font-weight:700; font-size:14px; margin-bottom:10px; cursor:pointer;" title="Kliknij żeby anulować flagę"></div>
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
                             <div id="profil-naglowek" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;"></div>
                             <span id="profil-vip-badge" style="display:none; background:#ffd6e4; color:#b74673; border-radius:10px; padding:5px 11px; font-size:13px; font-weight:800;">VIP</span>
+                            <span id="profil-status-badge" style="display:none; padding:4px 10px; border-radius:8px; font-size:11px; font-weight:800; letter-spacing:.04em;"></span>
                             <button onclick="otworzEdycjeKlienta()" style="background:none; border:none; cursor:pointer; color:#5a5f70; font-size:15px; padding:2px;">✎</button>
+                            <div style="position:relative; display:inline-block;">
+                                <button onclick="toggleAkcjeKlienta(event)" id="profil-akcje-btn" style="background:none; border:1px solid #e2d5dc; border-radius:8px; cursor:pointer; color:#5a5f70; font-size:13px; padding:4px 10px; font-weight:600;">⋮ Akcje ▾</button>
+                                <div id="profil-akcje-menu" style="display:none; position:absolute; top:100%; left:0; margin-top:6px; background:#fff; border:1px solid #e2d5dc; border-radius:10px; box-shadow:0 8px 24px rgba(0,0,0,.12); min-width:240px; z-index:50; overflow:hidden;">
+                                    <button onclick="otworzModalSoftDelete()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#1f2430; border-bottom:1px solid #f3e8ed;">🗑️ Usuń duplikat</button>
+                                    <button onclick="otworzModalAnonimizacji()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#1f2430; border-bottom:1px solid #f3e8ed;">🔒 RODO — anonimizuj</button>
+                                    <button onclick="otworzModalZmarly()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#1f2430; border-bottom:1px solid #f3e8ed;">⚰️ Oznacz jako zmarłego</button>
+                                    <button onclick="otworzModalBan()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#b91c1c;">⚠️ Klient problematyczny</button>
+                                </div>
+                            </div>
                         </div>
                         <div style="display:grid; gap:6px; font-size:14px; color:#63697b; margin-bottom:12px;">
                             <div id="profil-id-row"></div>
@@ -11764,18 +11776,35 @@ function renderujKafelkiKlientow(data, kontener) {
                       ? `<div style="font-size:12px; color:#0f766e; margin-top:2px; display:flex; align-items:center;">📞 ${tel} ${ikony}</div>`
                       : (ikony ? `<div style="font-size:12px; color:#0f766e; margin-top:2px; display:flex; align-items:center;">${ikony}</div>` : "");
 
+        // Soft-delete: badge status + ostrzeżenie + przycisk Przywróć
+        const status = (typeof klient === 'object') ? String(klient.status || 'AKTYWNY').toUpperCase() : 'AKTYWNY';
+        const ostrz = (typeof klient === 'object') ? klient.ostrzezenie : null;
+        let statusBadge = '';
+        let prawaStrefa = `<div style="font-size:11px; font-weight:bold; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:10px;">ID: ${id} ➝</div>`;
+        let rowBg = 'white';
+        if (status === 'USUNIETY') {
+            statusBadge = klient.zmarly
+                ? `<span style="background:#1f2937; color:#fff; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; margin-left:8px;">⚰️ ZMARŁY</span>`
+                : `<span style="background:#fef2f2; color:#991b1b; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; margin-left:8px; border:1px solid #fecaca;">🗑️ USUNIĘTY</span>`;
+            prawaStrefa = `<button onclick="event.stopPropagation(); przywrocKlienta('${id}','${nazwa.replace(/'/g,"\\'")}')" style="background:#10b981; color:#fff; border:0; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:700; font-size:12px;">↩️ Przywróć</button>`;
+            rowBg = '#fafafa';
+        } else if (status === 'ZANONIMIZOWANY') {
+            statusBadge = `<span style="background:#7c2d12; color:#fff; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; margin-left:8px;">🔒 RODO</span>`;
+            prawaStrefa = `<div style="font-size:11px; color:#9ca3af; font-style:italic;">nieodwracalne</div>`;
+            rowBg = '#fafafa';
+        }
+        const ostrzBadge = ostrz ? `<span style="background:#fef2f2; color:#dc2626; padding:2px 8px; border-radius:6px; font-size:10px; font-weight:800; margin-left:8px; border:1px solid #dc2626;">⚠ BAN</span>` : '';
+
         return `
         <div onclick="otworzProfil('${id}')"
-             style="padding:15px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:white; transition:0.2s;"
+             style="padding:15px; border-bottom:1px solid #f1f5f9; cursor:pointer; display:flex; justify-content:space-between; align-items:center; background:${rowBg}; transition:0.2s;"
              onmouseover="this.style.background='#f8fafc'"
-             onmouseout="this.style.background='white'">
+             onmouseout="this.style.background='${rowBg}'">
             <div>
-                <strong style="color:#334155; font-size:15px; display:block;">${nazwa}</strong>
+                <strong style="color:#334155; font-size:15px; display:block;">${nazwa}${statusBadge}${ostrzBadge}</strong>
                 ${telefon}
             </div>
-            <div style="font-size:11px; font-weight:bold; color:#94a3b8; background:#f1f5f9; padding:4px 8px; border-radius:10px;">
-                ID: ${id} ➝
-            </div>
+            ${prawaStrefa}
         </div>`;
     }).join('');
 
@@ -12478,6 +12507,9 @@ function otworzProfil(idKlienta) {
     const telRow = document.getElementById('profil-tel-row');
     if (telRow) telRow.innerHTML = tel ? '📞 ' + tel : '<span style="color:#8c8fa1;">Brak telefonu</span>';
 
+    // Alarm BAN + badge statusu (USUNIETY/ZANONIMIZOWANY/ZMARLY)
+    if (typeof aktualizujAlarmKlienta === 'function') aktualizujAlarmKlienta();
+
     // Reset tabów do Podsumowanie
     przelaczTabProfilu('podsumowanie', document.querySelector('.pp-tab'));
 
@@ -13052,31 +13084,68 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
 function zaladujKlientowDoKartoteki(wymus = false) {
     const kontener = document.getElementById('lista-klientow-widok');
-    
+    const showDeleted = !!window._pokazUsunietych;
+
     // 1. Używamy zoptymalizowanej pamięci (żeby profil ładował się błyskawicznie)
-    if (!wymus && window.wszyscyKlienciDane && window.wszyscyKlienciDane.length > 0) {
+    if (!wymus && !showDeleted && window.wszyscyKlienciDane && window.wszyscyKlienciDane.length > 0) {
         console.log("⚡ Kartoteka: Używam danych z pamięci.");
         renderujKafelkiKlientow(window.wszyscyKlienciDane, kontener);
         return;
     }
 
-    console.log("⬇️ Kartoteka: Pobieram świeże dane...");
+    console.log("⬇️ Kartoteka: Pobieram świeże dane..." + (showDeleted ? ' (z usuniętymi)' : ''));
     if(kontener) kontener.innerHTML = '<div style="padding:20px;">⏳ Pobieranie listy...</div>';
 
-    fetch(API_URL + "?action=get_clients")
+    const url = API_URL + "?action=get_clients" + (showDeleted ? "&showDeleted=true" : "");
+    fetch(url)
     .then(r => r.json())
     .then(data => {
-        // --- NAPRAWA: Zapisujemy dane z nowej, podwójnej paczki ---
-        window.wszyscyKlienciDane = data.klienci; 
-        window.aktywneZadatkiGlobalne = data.zadatki; 
-        
+        // Pamięć główna trzymamy tylko z aktywnymi (żeby inne moduły nie widziały usuniętych)
+        if (!showDeleted) {
+            window.wszyscyKlienciDane = data.klienci;
+            window.aktywneZadatkiGlobalne = data.zadatki;
+        }
+
         renderujKafelkiKlientow(data.klienci, kontener);
-        zaktualizujDataliste(data.klienci); 
+        if (!showDeleted) zaktualizujDataliste(data.klienci);
     })
     .catch(err => {
         console.error("Błąd pobierania:", err);
         if(kontener) kontener.innerHTML = '<div style="color:red; padding:20px;">Błąd pobierania danych.</div>';
     });
+}
+
+function togglePokazUsunietych() {
+    window._pokazUsunietych = !window._pokazUsunietych;
+    const btn = document.getElementById('btn-pokaz-usunietych');
+    if (btn) {
+        btn.textContent = window._pokazUsunietych ? '👁️ Pokaż tylko aktywnych' : '🗑️ Pokaż usuniętych';
+        btn.style.background = window._pokazUsunietych ? '#dc2626' : '#6b7280';
+    }
+    zaladujKlientowDoKartoteki(true);
+}
+
+function przywrocKlienta(id, nazwa) {
+    if (!confirm(`Przywrócić klienta "${nazwa}" jako aktywnego?`)) return;
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'restore_client',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            alert('✅ Klient przywrócony');
+            zaladujKlientowDoKartoteki(true);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
 }
 
 function segregujHistorie(klient) {
@@ -18520,6 +18589,280 @@ function zarzadzajZadatkiem(idZadatku, typ) {
 }
 
 // edycja KLIENTA
+
+// ═══════════════════════ SOFT-DELETE / RODO / ZMARŁY / BAN ═══════════════════════
+
+function zamknijModal(id) {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+}
+
+function toggleAkcjeKlienta(e) {
+    if (e) e.stopPropagation();
+    const m = document.getElementById('profil-akcje-menu');
+    if (!m) return;
+    m.style.display = m.style.display === 'block' ? 'none' : 'block';
+}
+// Zamknij dropdown przy kliknięciu poza
+document.addEventListener('click', (e) => {
+    const m = document.getElementById('profil-akcje-menu');
+    const b = document.getElementById('profil-akcje-btn');
+    if (!m || !b) return;
+    if (m.style.display === 'block' && !m.contains(e.target) && e.target !== b) m.style.display = 'none';
+});
+
+function _aktualnyKlientImie() {
+    const id = window.aktualnyProfilKlientId || '';
+    let nazwa = window.aktualnyProfilKlientNazwa || '';
+    if (id && window.wszyscyKlienciDane) {
+        const k = window.wszyscyKlienciDane.find(x => String(x.id) === String(id));
+        if (k) nazwa = k.nazwa;
+    }
+    return { id, nazwa };
+}
+
+// 🗑️ Usuń duplikat
+function otworzModalSoftDelete() {
+    toggleAkcjeKlienta();
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!id) return alert('Brak otwartego profilu klienta');
+    document.getElementById('sd-soft-delete-imie').textContent = `${nazwa} (ID ${id})`;
+    const sel = document.getElementById('sd-soft-delete-powod');
+    sel.value = 'Duplikat';
+    document.getElementById('sd-soft-delete-powod-inne').style.display = 'none';
+    document.getElementById('sd-soft-delete-powod-inne').value = '';
+    sel.onchange = () => {
+        document.getElementById('sd-soft-delete-powod-inne').style.display = sel.value === 'Inne' ? 'block' : 'none';
+    };
+    document.getElementById('sd-soft-delete-overlay').style.display = 'flex';
+}
+
+function wykonajSoftDelete() {
+    const { id, nazwa } = _aktualnyKlientImie();
+    const sel = document.getElementById('sd-soft-delete-powod').value;
+    const inne = document.getElementById('sd-soft-delete-powod-inne').value.trim();
+    const powod = sel === 'Inne' ? (inne || 'Inne') : sel;
+    if (!confirm(`Usunąć profil "${nazwa}"?\nPowód: ${powod}\n\nAkcja przywracalna z logu.`)) return;
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'soft_delete_client',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id, powod
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            zamknijModal('sd-soft-delete-overlay');
+            alert('✅ Klient został oznaczony jako usunięty');
+            zamknijProfilKlienta && zamknijProfilKlienta();
+            zaladujKlientowDoKartoteki && zaladujKlientowDoKartoteki(true);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// 🔒 Anonimizacja RODO
+function otworzModalAnonimizacji() {
+    toggleAkcjeKlienta();
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!id) return alert('Brak otwartego profilu klienta');
+    document.getElementById('sd-anon-imie').textContent = `${nazwa} (ID ${id})`;
+    document.getElementById('sd-anon-powod').value = '';
+    document.getElementById('sd-anon-zadatek-box').style.display = 'none';
+    document.querySelectorAll('input[name="sd-anon-zadatek"]').forEach(r => r.checked = false);
+    document.getElementById('sd-anonimizacja-overlay').style.display = 'flex';
+}
+
+function wykonajAnonimizacje() {
+    const { id, nazwa } = _aktualnyKlientImie();
+    const powod = document.getElementById('sd-anon-powod').value.trim();
+    const zadatekRadio = document.querySelector('input[name="sd-anon-zadatek"]:checked');
+    const zadatek_action = zadatekRadio ? zadatekRadio.value : '';
+
+    const wizualnyBox = document.getElementById('sd-anon-zadatek-box');
+    const trzebaDecyzji = wizualnyBox.style.display === 'block';
+    if (trzebaDecyzji && !zadatek_action) {
+        return alert('Wybierz co zrobić z aktywnym zadatkiem.');
+    }
+
+    if (!confirm(`⚠ NIEODWRACALNE\n\nAnonimizować klienta "${nazwa}"?\nDane osobowe zostaną trwale usunięte.`)) return;
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'anonymize_client',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id, powod, zadatek_action
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'need_decision') {
+            // Pokaż box decyzji zadatku
+            document.getElementById('sd-anon-saldo').textContent = Number(d.saldo).toFixed(2);
+            document.getElementById('sd-anon-zadatek-box').style.display = 'block';
+            return;
+        }
+        if (d.status === 'success') {
+            zamknijModal('sd-anonimizacja-overlay');
+            alert(`✅ Klient został zanonimizowany.${d.zadatek_action ? '\nZadatek: ' + d.zadatek_action : ''}`);
+            zamknijProfilKlienta && zamknijProfilKlienta();
+            zaladujKlientowDoKartoteki && zaladujKlientowDoKartoteki(true);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// ⚰️ Zmarły
+function otworzModalZmarly() {
+    toggleAkcjeKlienta();
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!id) return alert('Brak otwartego profilu klienta');
+    document.getElementById('sd-zmarly-imie').textContent = `${nazwa} (ID ${id})`;
+    document.getElementById('sd-zmarly-data').value = '';
+    document.getElementById('sd-zmarly-overlay').style.display = 'flex';
+}
+
+function wykonajZmarly() {
+    const { id, nazwa } = _aktualnyKlientImie();
+    const dataZgonu = document.getElementById('sd-zmarly-data').value || null;
+    if (!confirm(`Oznaczyć klienta "${nazwa}" jako zmarłego?\n\nKlient zniknie z urodzin, retencji i marketingu.`)) return;
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'mark_deceased',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id, data_zgonu: dataZgonu
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            zamknijModal('sd-zmarly-overlay');
+            alert('✅ Klient został oznaczony jako zmarły');
+            zamknijProfilKlienta && zamknijProfilKlienta();
+            zaladujKlientowDoKartoteki && zaladujKlientowDoKartoteki(true);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// ⚠️ BAN (problematyczny)
+function otworzModalBan() {
+    toggleAkcjeKlienta();
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!id) return alert('Brak otwartego profilu klienta');
+    document.getElementById('sd-ban-imie').textContent = `${nazwa} (ID ${id})`;
+    document.getElementById('sd-ban-opis').value = '';
+    document.getElementById('sd-ban-overlay').style.display = 'flex';
+}
+
+function wykonajBan() {
+    const { id, nazwa } = _aktualnyKlientImie();
+    const opis = document.getElementById('sd-ban-opis').value.trim();
+    if (!opis) return alert('Opis powodu jest obowiązkowy.');
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'set_warning',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id, opis
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            zamknijModal('sd-ban-overlay');
+            alert('⚠️ Klient oznaczony jako problematyczny');
+            // Odśwież alarm w profilu
+            if (window.aktualnyProfilKlientNazwa) otworzProfil && otworzProfil(id);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// Anuluj BAN (klik na alarm w profilu)
+function anulujBan() {
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!confirm(`Anulować flagę "klient problematyczny" dla ${nazwa}?`)) return;
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'clear_warning',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            alert('✅ Flaga anulowana');
+            if (id) otworzProfil && otworzProfil(id);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// Wyświetlanie alarmu BAN i badge statusu — wywoływane przy otwarciu profilu
+function aktualizujAlarmKlienta() {
+    const id = window.aktualnyProfilKlientId;
+    if (!id || !window.wszyscyKlienciDane) return;
+    const k = window.wszyscyKlienciDane.find(x => String(x.id) === String(id));
+    const alarm = document.getElementById('profil-ban-alarm');
+    const badge = document.getElementById('profil-status-badge');
+    if (!k || !alarm || !badge) return;
+
+    // Alarm BAN
+    if (k.ostrzezenie) {
+        alarm.style.display = 'block';
+        alarm.textContent = `⚠ NIE OBSŁUGIWAĆ — ${k.ostrzezenie}`;
+        alarm.onclick = anulujBan;
+    } else {
+        alarm.style.display = 'none';
+    }
+
+    // Badge statusu (USUNIETY / ZANONIMIZOWANY / ZMARLY)
+    const st = String(k.status || 'AKTYWNY').toUpperCase();
+    if (k.zmarly) {
+        badge.style.display = 'inline-block';
+        badge.style.background = '#1f2937';
+        badge.style.color = '#fff';
+        badge.textContent = '⚰️ ZMARŁY';
+    } else if (st === 'USUNIETY') {
+        badge.style.display = 'inline-block';
+        badge.style.background = '#fef2f2';
+        badge.style.color = '#991b1b';
+        badge.textContent = '🗑️ USUNIĘTY';
+    } else if (st === 'ZANONIMIZOWANY') {
+        badge.style.display = 'inline-block';
+        badge.style.background = '#7c2d12';
+        badge.style.color = '#fff';
+        badge.textContent = '🔒 ZANONIMIZOWANY';
+    } else {
+        badge.style.display = 'none';
+    }
+}
 
 function otworzEdycjeKlienta() {
     const id = window.aktualnyProfilKlientId || "";
@@ -25720,6 +26063,85 @@ initTheme();
             </div>
         </form>
     </div>
+</div>
+
+<!-- ═════════════════════════ SOFT-DELETE / RODO / ZMARŁY / BAN ═════════════════════════ -->
+
+<!-- 🗑️ Modal: Usuń duplikat -->
+<div id="sd-soft-delete-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
+    <h3 style="margin-top:0; color:#1f2430;">🗑️ Usuń profil klienta</h3>
+    <p style="font-size:13px; color:#6b7280;">Profil zostanie oznaczony jako USUNIĘTY i zniknie z listy klientów. <strong>Akcja jest przywracalna</strong> z panelu logów.</p>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-soft-delete-imie">—</span></p>
+    <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Powód</label>
+    <select id="sd-soft-delete-powod" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;">
+      <option value="Duplikat">Duplikat</option>
+      <option value="Pomyłka">Pomyłka recepcji</option>
+      <option value="Klient prosił (nie RODO)">Klient prosił o usunięcie (nie RODO)</option>
+      <option value="Inne">Inne...</option>
+    </select>
+    <input type="text" id="sd-soft-delete-powod-inne" placeholder="Opisz powód" style="display:none; width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; margin-top:8px;">
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-soft-delete-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="wykonajSoftDelete()" style="padding:10px 20px; border:0; background:#dc2626; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">🗑️ Usuń</button>
+    </div>
+  </div>
+</div>
+
+<!-- 🔒 Modal: Anonimizacja RODO -->
+<div id="sd-anonimizacja-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:520px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto;">
+    <h3 style="margin-top:0; color:#7c2d12;">🔒 Anonimizacja RODO</h3>
+    <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px; border-radius:8px; font-size:13px; margin-bottom:14px;">
+      <strong>⚠ Akcja nieodwracalna.</strong> Dane osobowe zostaną usunięte z: Klienci, Rejestr RODO, Rejestr Oświadczeń, Memo. Dane księgowe (Sprzedaż, Zadatki) zostają zgodnie z art. 86 Ordynacji podatkowej (5 lat).
+    </div>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-anon-imie">—</span></p>
+    <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Numer sprawy / data żądania (opcjonalne)</label>
+    <input type="text" id="sd-anon-powod" placeholder="np. sprawa #12 / 2026-05-13" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; margin-bottom:14px;">
+
+    <!-- Sekcja zadatku (pokazuje się gdy backend zwróci need_decision) -->
+    <div id="sd-anon-zadatek-box" style="display:none; background:#fffbeb; border:1px solid #fde68a; padding:12px; border-radius:8px; margin-bottom:14px;">
+      <div style="font-size:13px; font-weight:700; color:#78350f; margin-bottom:8px;">💰 Aktywny zadatek: <span id="sd-anon-saldo">0</span> zł — wybierz co zrobić</div>
+      <label style="display:block; font-size:13px; margin-bottom:6px; cursor:pointer;"><input type="radio" name="sd-anon-zadatek" value="zwroc" style="margin-right:6px;"> <strong>Zwróć klientowi</strong> (dopisze wypłatę, saldo wyzeruje się)</label>
+      <label style="display:block; font-size:13px; margin-bottom:6px; cursor:pointer;"><input type="radio" name="sd-anon-zadatek" value="przepadl" style="margin-right:6px;"> <strong>Oznacz jako przepadł</strong> (wszystkie wpłaty USUNIĘTE)</label>
+      <label style="display:block; font-size:13px; cursor:pointer;"><input type="radio" name="sd-anon-zadatek" value="zostaw" style="margin-right:6px;"> <strong>Zostaw saldo</strong> na anonimowym profilu (Klient #ID)</label>
+    </div>
+
+    <div style="display:flex; gap:10px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-anonimizacja-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="wykonajAnonimizacje()" style="padding:10px 20px; border:0; background:#7c2d12; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">🔒 Anonimizuj (nieodwracalne)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚰️ Modal: Zmarły -->
+<div id="sd-zmarly-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
+    <h3 style="margin-top:0; color:#1f2430;">⚰️ Oznacz klienta jako zmarłego</h3>
+    <p style="font-size:13px; color:#6b7280;">Klient zniknie z urodzin, retencji i marketingu. Profil zostaje (rodzina może wrócić po pakiet). Akcja przywracalna z logu.</p>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-zmarly-imie">—</span></p>
+    <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Data zgonu (opcjonalne)</label>
+    <input type="date" id="sd-zmarly-data" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;">
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-zmarly-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="wykonajZmarly()" style="padding:10px 20px; border:0; background:#374151; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">⚰️ Oznacz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⚠️ Modal: Klient problematyczny -->
+<div id="sd-ban-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
+    <h3 style="margin-top:0; color:#b91c1c;">⚠️ Oznacz klienta jako problematycznego</h3>
+    <p style="font-size:13px; color:#6b7280;">Klient zostaje w bazie ale przy każdym wyszukaniu wyświetla się czerwony alarm "NIE OBSŁUGIWAĆ". Akcja anulowalna z profilu.</p>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-ban-imie">—</span></p>
+    <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Opis powodu (obowiązkowy)</label>
+    <textarea id="sd-ban-opis" rows="3" placeholder="np. agresywne zachowanie, kradzież, naruszenie regulaminu..." style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical;"></textarea>
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-ban-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="wykonajBan()" style="padding:10px 20px; border:0; background:#b91c1c; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">⚠️ Oznacz</button>
+    </div>
+  </div>
 </div>
 
 <div id="client-edit-modal-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10030; justify-content: center; align-items: flex-start; padding-top: 50px;">

@@ -29,9 +29,11 @@ module.exports = (db) => {
     const action = req.query.action;
 
     if (action === 'get_clients') {
-      // Klienci + aktywne zadatki
+      // Klienci + aktywne zadatki — bez USUNIETY/ZANONIMIZOWANY (NULL = stare rekordy = aktywne)
+      const showDeleted = String(req.query.showDeleted || '') === 'true';
+      const filtrStatus = showDeleted ? '' : `AND (status = 'AKTYWNY' OR status IS NULL)`;
       db.query(
-        `SELECT id_klienta, imie_nazwisko, telefon, rodo, osw FROM Klienci WHERE tenant_id = ? ORDER BY imie_nazwisko`,
+        `SELECT id_klienta, imie_nazwisko, telefon, rodo, osw, status, ostrzezenie, zmarly, data_zgonu, data_usuniecia, kto_usunal, powod_usuniecia FROM Klienci WHERE tenant_id = ? ${filtrStatus} ORDER BY imie_nazwisko`,
         [tenant_id],
         (err, klienci) => {
           if (err) return res.json({ klienci: [], zadatki: [] });
@@ -40,7 +42,14 @@ module.exports = (db) => {
             nazwa: r.imie_nazwisko,
             telefon: r.telefon || '',
             rodo: r.rodo && (r.rodo.toUpperCase() === 'TAK' || r.rodo === '1' || r.rodo === 'TRUE'),
-            osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE')
+            osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE'),
+            status: r.status || 'AKTYWNY',
+            ostrzezenie: r.ostrzezenie || null,
+            zmarly: r.zmarly ? 1 : 0,
+            data_zgonu: r.data_zgonu || null,
+            data_usuniecia: r.data_usuniecia || null,
+            kto_usunal: r.kto_usunal || null,
+            powod_usuniecia: r.powod_usuniecia || null
           }));
 
           db.query(
@@ -489,6 +498,194 @@ module.exports = (db) => {
           });
         }
       );
+
+    } else if (action === 'soft_delete_client') {
+      // 🗑️ Usuń duplikat — status=USUNIETY, przywracalne z logu
+      const id_klienta = d.id_klienta;
+      const powod = String(d.powod || 'Duplikat').slice(0, 250);
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      db.query(`SELECT imie_nazwisko, status FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e0, rows0) => {
+        if (e0 || !rows0.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+        const st = String(rows0[0].status || 'AKTYWNY').toUpperCase();
+        if (st === 'USUNIETY' || st === 'ZANONIMIZOWANY') return res.json({ status: 'error', message: 'Klient już oznaczony: ' + st });
+
+        db.query(
+          `UPDATE Klienci SET status='USUNIETY', data_usuniecia=NOW(), kto_usunal=?, powod_usuniecia=? WHERE tenant_id=? AND id_klienta=?`,
+          [kto, powod, tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'USUNIECIE_KLIENTA', kto, JSON.stringify({ id_klienta, imie: rows0[0].imie_nazwisko, powod }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'anonymize_client') {
+      // 🔒 RODO anonimizacja — nieodwracalna. A3: Klienci + Rejestr_RODO + Rejestr_Oświadczeń + Memo
+      const id_klienta = d.id_klienta;
+      const powod = String(d.powod || '').slice(0, 250);
+      const zadatek_action = String(d.zadatek_action || '').toLowerCase(); // 'zwroc' / 'przepadl' / 'zostaw' / ''
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      // Sprawdź saldo aktywnych zadatków
+      db.query(
+        `SELECT COALESCE(SUM(CASE WHEN typ='WPŁATA' AND (status='AKTYWNY' OR status IS NULL) THEN kwota ELSE 0 END), 0) AS saldo FROM Zadatki WHERE tenant_id=? AND id_klienta=?`,
+        [tenant_id, id_klienta],
+        (eS, sumRows) => {
+          const saldo = Math.round(parseFloat((sumRows && sumRows[0] && sumRows[0].saldo) || 0) * 100) / 100;
+
+          if (saldo > 0.01 && !['zwroc', 'przepadl', 'zostaw'].includes(zadatek_action)) {
+            return res.json({ status: 'need_decision', saldo, message: 'Aktywny zadatek wymaga decyzji' });
+          }
+
+          db.query(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e1, kRows) => {
+            if (e1 || !kRows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+            const stareImie = kRows[0].imie_nazwisko;
+            const noweImie = `Klient #${id_klienta}`;
+
+            // 1) Anonimizuj Klienci
+            db.query(
+              `UPDATE Klienci SET imie_nazwisko=?, telefon=NULL, notatki=NULL, status='ZANONIMIZOWANY', data_usuniecia=NOW(), kto_usunal=?, powod_usuniecia=? WHERE tenant_id=? AND id_klienta=?`,
+              [noweImie, kto, powod, tenant_id, id_klienta],
+              (eU) => {
+                if (eU) return res.json({ status: 'error', message: eU.message });
+
+                // 2) Anonimizuj Rejestr_RODO
+                db.query(`UPDATE Rejestr_RODO SET klient=?, email_adres=NULL, email_kontaktowy=NULL WHERE tenant_id=? AND id_klienta=?`, [noweImie, tenant_id, id_klienta], () => {
+                  // 3) Anonimizuj Rejestr_Oświadczeń
+                  db.query("UPDATE `Rejestr_Oświadczeń` SET klient=? WHERE tenant_id=? AND id_klienta=?", [noweImie, tenant_id, id_klienta], () => {
+                    // 4) Usuń Memo
+                    db.query(`DELETE FROM Memo WHERE tenant_id=? AND id_klienta=?`, [tenant_id, id_klienta], () => {
+
+                      // 5) Obsłuż zadatek (saldo > 0)
+                      const finalize = () => {
+                        zapiszLog(tenant_id, 'ANONIMIZACJA_KLIENTA', kto, JSON.stringify({ id_klienta, stareImie, powod, saldo, zadatek_action: zadatek_action || 'brak' }));
+                        return res.json({ status: 'success', saldo, zadatek_action: zadatek_action || null });
+                      };
+
+                      if (saldo <= 0.01) return finalize();
+
+                      const dataTeraz = new Date();
+                      const newZadatekId = randomUUID();
+
+                      if (zadatek_action === 'zwroc') {
+                        // Dopisz WYPŁATĘ równą saldu — zeruje saldo
+                        db.query(
+                          `INSERT INTO Zadatki (id, tenant_id, data_wplaty, klient, id_klienta, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, ?, ?, 'WYPŁATA', ?, 'System', 'Zwrot przy anonimizacji RODO', 'AKTYWNY', ?)`,
+                          [newZadatekId, tenant_id, dataTeraz, noweImie, id_klienta, saldo, kto],
+                          () => finalize()
+                        );
+                      } else if (zadatek_action === 'przepadl') {
+                        // Oznacz wszystkie aktywne wpłaty jako USUNIĘTE z powodem
+                        db.query(
+                          `UPDATE Zadatki SET status='USUNIĘTY', uwagi=CONCAT(COALESCE(uwagi,''),' [Przepadł przy anonimizacji RODO]') WHERE tenant_id=? AND id_klienta=? AND typ='WPŁATA' AND (status='AKTYWNY' OR status IS NULL)`,
+                          [tenant_id, id_klienta],
+                          () => finalize()
+                        );
+                      } else {
+                        // 'zostaw' — anonimowy profil zachowuje saldo (zaktualizuj imię w klient)
+                        db.query(`UPDATE Zadatki SET klient=? WHERE tenant_id=? AND id_klienta=?`, [noweImie, tenant_id, id_klienta], () => finalize());
+                      }
+                    });
+                  });
+                });
+              }
+            );
+          });
+        }
+      );
+
+    } else if (action === 'mark_deceased') {
+      // ⚰️ Zmarły — soft-delete + flaga
+      const id_klienta = d.id_klienta;
+      const dataZgonu = d.data_zgonu || null;
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      db.query(`SELECT imie_nazwisko, status FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+        if (String(rows[0].status || '').toUpperCase() === 'ZANONIMIZOWANY') return res.json({ status: 'error', message: 'Klient jest już zanonimizowany' });
+
+        db.query(
+          `UPDATE Klienci SET status='USUNIETY', zmarly=1, data_zgonu=?, data_usuniecia=NOW(), kto_usunal=?, powod_usuniecia='Zmarły' WHERE tenant_id=? AND id_klienta=?`,
+          [dataZgonu, kto, tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'OZNACZENIE_ZMARLY', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, data_zgonu: dataZgonu }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'set_warning') {
+      // ⚠️ Klient problematyczny (BAN) — flaga ostrzeżenia, NIE soft-delete
+      const id_klienta = d.id_klienta;
+      const opis = String(d.opis || '').trim();
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+      if (!opis) return res.json({ status: 'error', message: 'Opis powodu jest wymagany' });
+
+      db.query(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+        const tekst = `BAN: ${opis}`.slice(0, 500);
+
+        db.query(
+          `UPDATE Klienci SET ostrzezenie=? WHERE tenant_id=? AND id_klienta=?`,
+          [tekst, tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'OZNACZENIE_BAN', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, opis }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'clear_warning') {
+      // Anuluj BAN
+      const id_klienta = d.id_klienta;
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      db.query(`SELECT imie_nazwisko, ostrzezenie FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+        const stareOstrz = rows[0].ostrzezenie || '';
+
+        db.query(
+          `UPDATE Klienci SET ostrzezenie=NULL WHERE tenant_id=? AND id_klienta=?`,
+          [tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'ANULOWANIE_BAN', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, stareOstrz }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'restore_client') {
+      // ↩️ Przywróć (tylko USUNIETY — ZANONIMIZOWANY jest nieodwracalny)
+      const id_klienta = d.id_klienta;
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      db.query(`SELECT imie_nazwisko, status FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+        const st = String(rows[0].status || 'AKTYWNY').toUpperCase();
+        if (st === 'ZANONIMIZOWANY') return res.json({ status: 'error', message: 'Anonimizacja jest nieodwracalna (RODO)' });
+        if (st === 'AKTYWNY') return res.json({ status: 'error', message: 'Klient już jest aktywny' });
+
+        db.query(
+          `UPDATE Klienci SET status='AKTYWNY', data_usuniecia=NULL, kto_usunal=NULL, powod_usuniecia=NULL, zmarly=0, data_zgonu=NULL WHERE tenant_id=? AND id_klienta=?`,
+          [tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'PRZYWROCENIE_KLIENTA', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
 
     } else if (action === 'add_suggestion_rule') {
       const id = randomUUID();
