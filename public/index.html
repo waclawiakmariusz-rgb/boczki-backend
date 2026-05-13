@@ -1256,6 +1256,204 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 /* ======================================================= */
+/* 🌙 DARK MODE — KONSULTACJE (redesign P3) + admin panel  */
+/* ======================================================= */
+
+/* Override zmiennych — pokrywa większość kr-* automatycznie */
+body.dark-mode #kon_raportowanie.kr-redesign {
+  --kr-ink: #f8fafc;
+  --kr-muted: #94a3b8;
+  --kr-rose: #f490b3;
+  --kr-rose-bg: #2a1f24;
+  --kr-rose-border: #4a3540;
+  --kr-rose-soft: #3a2730;
+  --kr-gold: #d4b87a;
+  --kr-border: #334155;
+  --kr-bg: #0f172a;
+  background: #0f172a !important;
+  color: #f8fafc;
+}
+
+/* Karty z hardcoded background:#fff */
+body.dark-mode .kr-hero-card,
+body.dark-mode .kr-hero-stats,
+body.dark-mode .kr-tabs-bar,
+body.dark-mode .kr-box,
+body.dark-mode .kr-rank-row {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Hero top — różowy odcień ciemnego */
+body.dark-mode .kr-hero-top {
+  background: #2a1f24 !important;
+  border-bottom-color: #4a3540 !important;
+}
+
+/* Tytuły i wartości jasne */
+body.dark-mode .kr-page-header h1,
+body.dark-mode .kr-hero-info h2,
+body.dark-mode .kr-box-title,
+body.dark-mode .kr-stat-value,
+body.dark-mode .kr-rank-name,
+body.dark-mode .kr-rank-amount {
+  color: #f8fafc !important;
+}
+
+/* Tekst muted (etykiety, opisy) */
+body.dark-mode .kr-page-header p,
+body.dark-mode .kr-hero-info p,
+body.dark-mode .kr-stat-label,
+body.dark-mode .kr-stat-sub,
+body.dark-mode .kr-box-subtitle,
+body.dark-mode .kr-rank-sub,
+body.dark-mode .kr-placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Eyebrow gold */
+body.dark-mode .kr-box-eyebrow {
+  color: #d4b87a !important;
+}
+
+/* Tabs */
+body.dark-mode .kr-tab { color: #94a3b8 !important; }
+body.dark-mode .kr-tab:hover,
+body.dark-mode .kr-tab.active {
+  color: #f490b3 !important;
+  border-bottom-color: #f490b3 !important;
+}
+
+/* Buttons */
+body.dark-mode .kr-btn-secondary {
+  background: #1e293b !important;
+  color: #f490b3 !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-btn-secondary:hover { background: #2a1f24 !important; }
+
+/* Pola formularzy */
+body.dark-mode .kr-field input,
+body.dark-mode .kr-field select,
+body.dark-mode .kr-field textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .kr-field input:focus,
+body.dark-mode .kr-field select:focus,
+body.dark-mode .kr-field textarea:focus {
+  border-color: #f490b3 !important;
+  box-shadow: 0 0 0 3px rgba(244, 144, 179, 0.15) !important;
+}
+body.dark-mode .kr-field-readonly input {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode .kr-field label { color: #94a3b8 !important; }
+body.dark-mode .kr-field-highlight input {
+  background: #2a1f24 !important;
+  border-color: #4a3540 !important;
+  color: #f490b3 !important;
+}
+
+/* Seg control (Normalna / Z Reklamy) */
+body.dark-mode .kr-seg-control { background: #0f172a !important; }
+body.dark-mode .kr-seg-option { color: #94a3b8 !important; }
+body.dark-mode .kr-seg-option.active {
+  background: #1e293b !important;
+  color: #f490b3 !important;
+}
+
+/* Pakiet spotlight + input */
+body.dark-mode .kr-pakiet-spotlight {
+  background: #2a1f24 !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-pakiet-input-wrap input {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-pakiet-label { color: #f490b3 !important; }
+body.dark-mode .kr-pakiet-hint,
+body.dark-mode .kr-pakiet-currency { color: #94a3b8 !important; }
+
+/* Upsell banner */
+body.dark-mode .kr-upsell-banner {
+  background: linear-gradient(135deg, #2a1f24, #3a2730) !important;
+}
+body.dark-mode .kr-upsell-label,
+body.dark-mode .kr-upsell-value { color: #f490b3 !important; }
+
+/* Badge'y — przyciemnione tła, akcent zachowany */
+body.dark-mode .kr-badge-success { background: rgba(21,128,61,0.25) !important; color: #6ee7b7 !important; }
+body.dark-mode .kr-badge-fail    { background: rgba(185,28,28,0.25) !important; color: #fca5a5 !important; }
+body.dark-mode .kr-badge-norm    { background: rgba(71,85,105,0.4) !important; color: #cbd5e1 !important; }
+body.dark-mode .kr-badge-ad      { background: rgba(207,61,120,0.25) !important; color: #f490b3 !important; }
+
+/* Stat boxes */
+body.dark-mode .kr-stat-box { border-color: #334155 !important; }
+body.dark-mode .kr-stat-box:hover { border-color: #4a3540 !important; }
+
+/* Ranking */
+body.dark-mode .kr-rank-bar-wrap { background: #0f172a !important; }
+body.dark-mode .kr-rank-other { background: #334155 !important; color: #94a3b8 !important; }
+
+/* Zabiegi list */
+body.dark-mode .kr-zabieg-row {
+  border-bottom-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .kr-zabieg-row strong { color: #f8fafc !important; }
+
+/* Hero icon — przyciemniony gradient */
+body.dark-mode .kr-hero-icon {
+  background: linear-gradient(135deg, #cf3d78, #a8316a) !important;
+  box-shadow: 0 8px 20px rgba(207,61,120,.4) !important;
+}
+
+/* Tabela wyników w nowym designie (kon_res-table z kr-redesign) */
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table th {
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table td {
+  color: #cbd5e1 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table tr:hover td {
+  background-color: #2a1f24 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table strong { color: #f8fafc !important; }
+
+/* ── Konfiguracja konsultacji (#kon_admin-panel) — uzupełnienia ── */
+body.dark-mode #kon_admin-panel { background: #0f172a !important; color: #f8fafc; }
+body.dark-mode #kon_admin-panel h3 {
+  color: #f8fafc !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_admin-panel label { color: #94a3b8 !important; }
+body.dark-mode #kon_admin-panel input,
+body.dark-mode #kon_admin-panel select,
+body.dark-mode #kon_admin-panel textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode #kon_admin-panel input:focus,
+body.dark-mode #kon_admin-panel select:focus,
+body.dark-mode #kon_admin-panel textarea:focus {
+  border-color: #f490b3 !important;
+  box-shadow: 0 0 0 3px rgba(244, 144, 179, 0.15) !important;
+}
+body.dark-mode #kon_admin-panel .kon_badge-rekl { background: rgba(99,102,241,0.25) !important; color: #c7d2fe !important; }
+body.dark-mode #kon_admin-panel .kon_badge-norm { background: rgba(71,85,105,0.4) !important; color: #cbd5e1 !important; }
+
+/* ── Sekcja Analiza Konsultacji (#analiza-konsultacji) — tło ── */
+body.dark-mode #analiza-konsultacji { background: #0f172a !important; }
+
+/* ======================================================= */
 /* 🌙 BEZPIECZNA NAKŁADKA DARK MODE (WYMUSZANA KLASĄ)      */
 /* ======================================================= */
 
