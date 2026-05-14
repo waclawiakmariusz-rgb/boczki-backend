@@ -312,13 +312,23 @@ module.exports = (db) => {
     } else if (action === 'update_birthday_field') {
       const tbl = getMonthTable(d.miesiac);
       if (!tbl) return res.json({ status: 'error', message: 'Nieznany miesiąc' });
-      // d.kolumna - numer kolumny Apps Script (1-indexed), mapuj na nazwę kolumny
+      // ZABEZPIECZENIE: pozwala edytować tylko pola które NIE wpływają na wybór
+      // tabeli miesięcznej. Zmiana data_urodzin/imie/nazwisko/c_status odbywa się
+      // wyłącznie przez 'edit_birthday' (który prawidłowo przenosi rekord między
+      // tabelami miesięcy + parsuje YYYY-MM-DD).
+      //
+      // Historia: gdy mapping zawierał 4: 'data_urodzin' i 2/3: nazwisko/imie,
+      // można było UPDATE'ować datę bez parsowania i bez przenoszenia rekordu —
+      // skutkowało to wpisami typu "tabela=Lipiec, data_urodzin=2026-05-07"
+      // (rekord widoczny w lipcu ale data wskazywała maj, frontend pokazywał błędnie).
       const kolMapping = {
-        1: 'c_status', 2: 'nazwisko', 3: 'imie', 4: 'data_urodzin',
         5: 'nr_telefonu', 6: 'sms', 7: 'telefon', 8: 'komentarz'
       };
       const kolName = kolMapping[d.kolumna];
-      if (!kolName) return res.json({ status: 'error', message: 'Nieznana kolumna: ' + d.kolumna });
+      if (!kolName) return res.json({
+        status: 'error',
+        message: 'Niedozwolona kolumna: ' + d.kolumna + '. Datę/imię/nazwisko edytuj przez edit_birthday.'
+      });
       db.query(
         `UPDATE ${tbl} SET ${kolName} = ? WHERE tenant_id = ? AND id = ?`,
         [d.wartosc, tenant_id, d.id],
