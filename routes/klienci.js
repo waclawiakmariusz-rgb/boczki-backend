@@ -12,6 +12,27 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
+  // Idempotentna migracja: tabela na "zaproponowane" sugestie retail (kosmetyki).
+  // Wpis = user kliknął "✓ Zaproponowane" przy danej sugestii — sugestia znika
+  // dla TEJ konkretnej transakcji (klient + kosmetyk + data_zakupu). Wraca przy
+  // następnym zakupie tego samego kosmetyku (bo nowa data_zakupu — UNIQUE KEY).
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Retail_Sugestie_Zaproponowane (
+       id VARCHAR(50) PRIMARY KEY,
+       tenant_id VARCHAR(50) NOT NULL,
+       id_klienta VARCHAR(50) NOT NULL,
+       kosmetyk VARCHAR(255) NOT NULL,
+       data_zakupu DATE NOT NULL,
+       data_zaproponowania DATETIME NOT NULL,
+       kto VARCHAR(100),
+       UNIQUE KEY uniq_retail (tenant_id, id_klienta, kosmetyk, data_zakupu),
+       INDEX idx_klient (tenant_id, id_klienta)
+     )`,
+    (err) => {
+      if (err) console.error('[klienci] CREATE Retail_Sugestie_Zaproponowane:', err.message);
+    }
+  );
+
   // Helper: generuj nowe ID klienta (numeryczne, max+1)
   function generujNoweIdKlienta(tenant_id, callback) {
     db.query(`SELECT MAX(CAST(id_klienta AS UNSIGNED)) as maxId FROM Klienci WHERE tenant_id = ?`, [tenant_id], (err, rows) => {
@@ -104,6 +125,19 @@ module.exports = (db) => {
               kampania: r.kategoria_filtr, status: r.status, notatka: r.notatka, pracownik: r.pracownik
             }));
 
+            // Retail proposed — kosmetyki które user kliknął "✓ Zaproponowane"
+            // (filtrowane we frontend, żeby nie pokazywać już dismissed sugestii)
+            const retailQ = id
+              ? `SELECT kosmetyk, data_zakupu, data_zaproponowania, kto FROM Retail_Sugestie_Zaproponowane WHERE tenant_id = ? AND id_klienta = ? ORDER BY data_zaproponowania DESC`
+              : `SELECT kosmetyk, data_zakupu, data_zaproponowania, kto FROM Retail_Sugestie_Zaproponowane WHERE tenant_id = ? AND id_klienta = '' AND 1=0`;
+            db.query(retailQ, id ? [tenant_id, id] : [tenant_id], (errR, rRows) => {
+              const retailProposed = (rRows || []).map(r => ({
+                kosmetyk: r.kosmetyk,
+                data_zakupu: r.data_zakupu ? String(r.data_zakupu).slice(0, 10) : '',
+                data_zaproponowania: r.data_zaproponowania,
+                kto: r.kto || ''
+              }));
+
             // Szukaj urodzin w tabelach miesięcznych
             const MIESIACE = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
             const szukany = nazwa.toLowerCase().replace(/\s/g, '');
@@ -129,6 +163,7 @@ module.exports = (db) => {
                         portfel: { saldo, historia },
                         memo,
                         retencja: retencjaData,
+                        retail_proposed: retailProposed,
                         urodziny: {
                           znaleziona: true,
                           id: r.id,
@@ -147,10 +182,11 @@ module.exports = (db) => {
                 }
                 bdPending--;
                 if (bdPending === 0 && !bdFound) {
-                  return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, urodziny: { znaleziona: false } });
+                  return res.json({ portfel: { saldo, historia }, memo, retencja: retencjaData, retail_proposed: retailProposed, urodziny: { znaleziona: false } });
                 }
               });
             });
+            }); // close retailQ callback
           });
         });
       });
@@ -686,6 +722,49 @@ module.exports = (db) => {
           }
         );
       });
+
+    } else if (action === 'mark_retail_proposed') {
+      // ✓ Zaproponowane — sugestia "Czas na zakupy" znika dla tej konkretnej
+      // transakcji (id_klienta + kosmetyk + data_zakupu). Wraca przy następnym zakupie.
+      const id_klienta = String(d.id_klienta || '').trim();
+      const kosmetyk = String(d.kosmetyk || '').trim();
+      const dataZakupu = String(d.data_zakupu || '').slice(0, 10); // YYYY-MM-DD
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      if (!id_klienta || !kosmetyk || !dataZakupu) {
+        return res.json({ status: 'error', message: 'Brak wymaganych pól (id_klienta, kosmetyk, data_zakupu)' });
+      }
+      const id = randomUUID();
+      db.query(
+        `INSERT INTO Retail_Sugestie_Zaproponowane (id, tenant_id, id_klienta, kosmetyk, data_zakupu, data_zaproponowania, kto)
+         VALUES (?, ?, ?, ?, ?, NOW(), ?)
+         ON DUPLICATE KEY UPDATE data_zaproponowania = NOW(), kto = VALUES(kto)`,
+        [id, tenant_id, id_klienta, kosmetyk, dataZakupu, kto],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          zapiszLog(tenant_id, 'RETAIL ZAPROPONOWANY', kto, `Klient ID ${id_klienta}: ${kosmetyk} (zakup ${dataZakupu})`);
+          return res.json({ status: 'success' });
+        }
+      );
+
+    } else if (action === 'unmark_retail_proposed') {
+      // ↩️ Cofnij zaproponowanie — sugestia wraca na listę
+      const id_klienta = String(d.id_klienta || '').trim();
+      const kosmetyk = String(d.kosmetyk || '').trim();
+      const dataZakupu = String(d.data_zakupu || '').slice(0, 10);
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      if (!id_klienta || !kosmetyk || !dataZakupu) {
+        return res.json({ status: 'error', message: 'Brak wymaganych pól' });
+      }
+      db.query(
+        `DELETE FROM Retail_Sugestie_Zaproponowane WHERE tenant_id = ? AND id_klienta = ? AND kosmetyk = ? AND data_zakupu = ? LIMIT 1`,
+        [tenant_id, id_klienta, kosmetyk, dataZakupu],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono wpisu do cofnięcia' });
+          zapiszLog(tenant_id, 'RETAIL COFNIĘCIE', kto, `Klient ID ${id_klienta}: ${kosmetyk} (zakup ${dataZakupu})`);
+          return res.json({ status: 'success' });
+        }
+      );
 
     } else if (action === 'add_suggestion_rule') {
       const id = randomUUID();

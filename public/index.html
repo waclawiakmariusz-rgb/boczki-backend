@@ -11771,27 +11771,118 @@ function generujAnalizeAktywna(klient) {
     retailList.innerHTML = "";
     let retailAlerts = 0;
     const dzis = new Date();
+    const proposedSet = window.retailProposed instanceof Set ? window.retailProposed : new Set();
 
     Object.entries(zakupioneKosmetyki).forEach(([produkt, dataZakupu]) => {
         const roznicaCzasu = dzis - dataZakupu;
         const dniTemu = Math.floor(roznicaCzasu / (1000 * 60 * 60 * 24));
 
         if (dniTemu >= 80 && dniTemu <= 200) {
+            // Format ISO daty zakupu (YYYY-MM-DD) — klucz w retailProposed
+            const dataZakupuIso = dataZakupu.toISOString().slice(0, 10);
+            const klucz = produkt.toLowerCase() + '@' + dataZakupuIso;
+            // Pomiń jeśli już zaproponowane
+            if (proposedSet.has(klucz)) return;
+
+            const produktEsc = escHtml(produkt);
+            const dataZakupuEsc = escHtml(dataZakupuIso);
             retailList.innerHTML += `
-                <div class="retail-item">
-                    <div>
-                        <div class="retail-name">🧴 ${produkt}</div>
+                <div class="retail-item" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                    <div style="flex:1;">
+                        <div class="retail-name">🧴 ${produktEsc}</div>
                         <div class="retail-date">Kupiono: ${dataZakupu.toLocaleDateString()} (${dniTemu} dni temu)</div>
+                        <div class="retail-alert-badge" style="display:inline-block; margin-top:6px;">Zapytaj o zużycie!</div>
                     </div>
-                    <div class="retail-alert-badge">Zapytaj o zużycie!</div>
+                    <button onclick="oznaczRetailZaproponowany('${produktEsc.replace(/'/g, "\\'")}', '${dataZakupuEsc}')"
+                            style="background:#ecfdf5; color:#15803d; border:1px solid #a7f3d0; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; align-self:center;"
+                            title="Oznacz jako zaproponowane — sugestia zniknie aż klient kupi ponownie">
+                        ✓ Zaproponowane
+                    </button>
                 </div>
             `;
             retailAlerts++;
         }
     });
 
-    if (retailAlerts > 0) retailBox.style.display = 'block';
+    // Panel "Zaproponowane wcześniej" (collapsible) — pokazuje dismissed sugestie z opcją cofnięcia
+    const proposedList = Array.isArray(window.retailProposedList) ? window.retailProposedList : [];
+    if (proposedList.length > 0) {
+        const itemsHtml = proposedList.map(rp => {
+            const dataNice = rp.data_zakupu ? new Date(rp.data_zakupu).toLocaleDateString('pl-PL') : '';
+            const propNice = rp.data_zaproponowania ? new Date(rp.data_zaproponowania).toLocaleDateString('pl-PL') : '';
+            return `
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px 10px; background:#f9fafb; border-radius:8px; margin-bottom:6px; font-size:12px;">
+                    <div style="flex:1;">
+                        <strong>${escHtml(rp.kosmetyk)}</strong>
+                        <div style="color:#6b7280; font-size:11px;">Kupiono: ${dataNice} · zaproponowano: ${propNice}${rp.kto ? ' przez ' + escHtml(rp.kto) : ''}</div>
+                    </div>
+                    <button onclick="cofnijRetailZaproponowany('${escHtml(rp.kosmetyk).replace(/'/g, "\\'")}', '${escHtml(rp.data_zakupu)}')"
+                            style="background:#fff; color:#6b7280; border:1px solid #e5e7eb; border-radius:6px; padding:4px 10px; font-size:11px; font-weight:600; cursor:pointer; white-space:nowrap;"
+                            title="Cofnij oznaczenie — sugestia wróci na listę">
+                        ↩️ Cofnij
+                    </button>
+                </div>`;
+        }).join('');
+        retailList.innerHTML += `
+            <details style="margin-top:12px; border-top:1px dashed #fed7aa; padding-top:10px;">
+                <summary style="cursor:pointer; font-size:12px; color:#9a3412; font-weight:700;">📋 Zaproponowane wcześniej (${proposedList.length}) — kliknij by cofnąć</summary>
+                <div style="margin-top:8px;">${itemsHtml}</div>
+            </details>`;
+    }
+
+    // Pokaż box jeśli są nowe sugestie LUB lista wcześniej zaproponowanych
+    if (retailAlerts > 0 || proposedList.length > 0) retailBox.style.display = 'block';
     else retailBox.style.display = 'none';
+}
+
+// ✓ Zaproponowane — kliknięcie przy sugestii "Czas na zakupy"
+function oznaczRetailZaproponowany(kosmetyk, dataZakupuIso) {
+    const id_klienta = window.aktualnyProfilKlientId;
+    if (!id_klienta) return alert('Brak ID klienta');
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'mark_retail_proposed',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta, kosmetyk, data_zakupu: dataZakupuIso
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            // Odśwież profil — proposedList zostanie zaktualizowany
+            if (typeof otworzProfil === 'function') otworzProfil(id_klienta);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
+// ↩️ Cofnij zaproponowanie — sugestia wraca na listę
+function cofnijRetailZaproponowany(kosmetyk, dataZakupuIso) {
+    const id_klienta = window.aktualnyProfilKlientId;
+    if (!id_klienta) return alert('Brak ID klienta');
+    if (!confirm('Cofnąć oznaczenie? Sugestia wróci na listę "Czas na zakupy".')) return;
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'unmark_retail_proposed',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta, kosmetyk, data_zakupu: dataZakupuIso
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            if (typeof otworzProfil === 'function') otworzProfil(id_klienta);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
 }
 
 function znajdzOstatniaDate(transakcje, szukanaNazwa) {
@@ -12608,6 +12699,14 @@ function otworzProfil(idKlienta) {
     fetch(API_URL + "?action=get_client_profile_data&klient=" + encodeURIComponent(payload))
     .then(r => r.json())
     .then(data => {
+        // Retail proposed — set z kluczem "kosmetyk@dataZakupu", używany w generujAnalizeAktywna()
+        // do filtrowania sugestii "Czas na zakupy" już zaproponowanych
+        window.retailProposed = new Set();
+        window.retailProposedList = Array.isArray(data.retail_proposed) ? data.retail_proposed : [];
+        window.retailProposedList.forEach(rp => {
+            window.retailProposed.add(rp.kosmetyk.toLowerCase() + '@' + rp.data_zakupu);
+        });
+
         // --- A: Urodziny ---
         if (data.urodziny && data.urodziny.znaleziona) {
             let alertUrodzinowy = "";
