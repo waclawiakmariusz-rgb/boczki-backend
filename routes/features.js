@@ -8,6 +8,16 @@
 const express = require('express');
 const { makeZapiszLog } = require('./logi');
 
+// Stripe SDK — opcjonalne. Gdy brak env (lub salon bez subscription_id) → fallback do trybu DB-only.
+let stripe = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY) {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+  }
+} catch (e) {
+  console.warn('[features] Stripe SDK niedostępny:', e.message);
+}
+
 // Cache features per tenant — 5 minut. Invalidowany przy toggle_feature.
 const featureCache = new Map(); // key: `${tenant_id}` → { fetchedAt, set: Set<feature_key> }
 const CACHE_TTL_MS = 5 * 60 * 1000;
@@ -98,43 +108,102 @@ module.exports = (db) => {
           return res.json({ status: 'error', message: 'Brak uprawnień. Tylko manager/admin może zarządzać dodatkami.' });
         }
 
-        // Pobierz cenę z katalogu (snapshot przy aktywacji)
+        // Pobierz: 1) cenę z katalogu (snapshot) + stripe_price_id; 2) sub_id salonu z Licencje
         db.query(
-          `SELECT nazwa, miesieczna_cena_grosze FROM Features_Catalog WHERE feature_key = ? AND status = 'AKTYWNY' LIMIT 1`,
+          `SELECT nazwa, miesieczna_cena_grosze, stripe_price_id FROM Features_Catalog WHERE feature_key = ? AND status = 'AKTYWNY' LIMIT 1`,
           [feature_key],
           (e1, cRows) => {
             if (e1 || !cRows.length) return res.json({ status: 'error', message: 'Nie znaleziono dodatku w katalogu' });
             const nazwa = cRows[0].nazwa;
             const cenaGrosze = Number(cRows[0].miesieczna_cena_grosze) || 0;
+            const stripePriceId = cRows[0].stripe_price_id || null;
 
-            if (enable) {
-              // UPSERT — aktywuj
-              db.query(
-                `INSERT INTO Tenant_Features (tenant_id, feature_key, enabled, monthly_price_grosze, activated_at, activated_by)
-                 VALUES (?, ?, 1, ?, NOW(), ?)
-                 ON DUPLICATE KEY UPDATE enabled = 1, monthly_price_grosze = VALUES(monthly_price_grosze),
-                   activated_at = NOW(), activated_by = VALUES(activated_by), cancelled_at = NULL`,
-                [tenant_id, feature_key, cenaGrosze, kto],
-                (e2) => {
-                  if (e2) return res.json({ status: 'error', message: e2.message });
-                  invalidateCache(tenant_id);
-                  zapiszLog(tenant_id, 'DODATEK AKTYWOWANY', kto, `${nazwa} (${feature_key}) — ${(cenaGrosze / 100).toFixed(2)} zł/mc`);
-                  return res.json({ status: 'success', action: 'enabled', feature_key, cena_zl: cenaGrosze / 100 });
-                }
-              );
-            } else {
-              // Dezaktywuj
-              db.query(
-                `UPDATE Tenant_Features SET enabled = 0, cancelled_at = NOW() WHERE tenant_id = ? AND feature_key = ?`,
-                [tenant_id, feature_key],
-                (e2, result) => {
-                  if (e2) return res.json({ status: 'error', message: e2.message });
-                  invalidateCache(tenant_id);
-                  zapiszLog(tenant_id, 'DODATEK WYLĄCZONY', kto, `${nazwa} (${feature_key})`);
-                  return res.json({ status: 'success', action: 'disabled', feature_key });
-                }
-              );
-            }
+            db.query(
+              `SELECT stripe_customer_id, stripe_subscription_id FROM Licencje WHERE id_bazy = ? LIMIT 1`,
+              [tenant_id],
+              (eL, lRows) => {
+                const subscriptionId = (lRows && lRows[0] && lRows[0].stripe_subscription_id) || null;
+                const stripeManaged = !!(stripe && subscriptionId && stripePriceId);
+
+                // Pobierz istniejący item_id (jeśli już aktywowany kiedyś)
+                db.query(
+                  `SELECT stripe_item_id FROM Tenant_Features WHERE tenant_id = ? AND feature_key = ? LIMIT 1`,
+                  [tenant_id, feature_key],
+                  (eI, iRows) => {
+                    const existingItemId = (iRows && iRows[0] && iRows[0].stripe_item_id) || null;
+
+                    const finishEnable = (newItemId) => {
+                      db.query(
+                        `INSERT INTO Tenant_Features (tenant_id, feature_key, enabled, monthly_price_grosze, stripe_item_id, activated_at, activated_by)
+                         VALUES (?, ?, 1, ?, ?, NOW(), ?)
+                         ON DUPLICATE KEY UPDATE enabled = 1, monthly_price_grosze = VALUES(monthly_price_grosze),
+                           stripe_item_id = VALUES(stripe_item_id),
+                           activated_at = NOW(), activated_by = VALUES(activated_by), cancelled_at = NULL`,
+                        [tenant_id, feature_key, cenaGrosze, newItemId, kto],
+                        (e2) => {
+                          if (e2) return res.json({ status: 'error', message: e2.message });
+                          invalidateCache(tenant_id);
+                          zapiszLog(tenant_id, 'DODATEK AKTYWOWANY', kto,
+                            `${nazwa} (${feature_key}) — ${(cenaGrosze / 100).toFixed(2)} zł/mc${newItemId ? ' [Stripe item: ' + newItemId + ']' : ' [tryb DB-only]'}`);
+                          return res.json({ status: 'success', action: 'enabled', feature_key, cena_zl: cenaGrosze / 100, stripe_managed: !!newItemId });
+                        }
+                      );
+                    };
+
+                    const finishDisable = () => {
+                      db.query(
+                        `UPDATE Tenant_Features SET enabled = 0, stripe_item_id = NULL, cancelled_at = NOW() WHERE tenant_id = ? AND feature_key = ?`,
+                        [tenant_id, feature_key],
+                        (e2) => {
+                          if (e2) return res.json({ status: 'error', message: e2.message });
+                          invalidateCache(tenant_id);
+                          zapiszLog(tenant_id, 'DODATEK WYLĄCZONY', kto, `${nazwa} (${feature_key})`);
+                          return res.json({ status: 'success', action: 'disabled', feature_key });
+                        }
+                      );
+                    };
+
+                    if (enable) {
+                      // AKTYWACJA
+                      if (!stripeManaged) {
+                        // Salon bez Stripe Subscription (np. testowy/migracyjny) — tylko DB
+                        return finishEnable(null);
+                      }
+                      // Stripe — dodaj Subscription Item
+                      stripe.subscriptionItems.create({
+                        subscription: subscriptionId,
+                        price: stripePriceId,
+                        quantity: 1,
+                      }).then(item => {
+                        console.log(`[features] Stripe item created: ${item.id} for ${tenant_id}/${feature_key}`);
+                        finishEnable(item.id);
+                      }).catch(err => {
+                        console.error(`[features] Stripe error (enable ${feature_key}):`, err.message);
+                        return res.json({ status: 'error', message: 'Błąd Stripe: ' + err.message });
+                      });
+                    } else {
+                      // DEZAKTYWACJA
+                      if (!stripeManaged || !existingItemId) {
+                        // Brak Stripe item lub salon bez Stripe — tylko DB
+                        return finishDisable();
+                      }
+                      stripe.subscriptionItems.del(existingItemId).then(() => {
+                        console.log(`[features] Stripe item deleted: ${existingItemId} for ${tenant_id}/${feature_key}`);
+                        finishDisable();
+                      }).catch(err => {
+                        // Jeśli item już nie istnieje (np. usunięty z Stripe dashboard) — kontynuuj dezaktywację w bazie
+                        if (err.code === 'resource_missing') {
+                          console.warn(`[features] Stripe item ${existingItemId} już nie istnieje — usuwam z bazy.`);
+                          return finishDisable();
+                        }
+                        console.error(`[features] Stripe error (disable ${feature_key}):`, err.message);
+                        return res.json({ status: 'error', message: 'Błąd Stripe: ' + err.message });
+                      });
+                    }
+                  }
+                );
+              }
+            );
           }
         );
       });
