@@ -4897,11 +4897,20 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                     <button onclick="pokaz('logi', this)" class="nav-single-btn"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>Dziennik Zdarzeń</span></button>
                 </li>
 
-                <!-- Dynamiczne zakładki z dodatków — widoczne tylko gdy dany feature jest aktywny -->
-                <li id="menu-feature-demo_dodatek" style="display:none;">
-                    <button onclick="pokaz('demo-dodatek', this)" class="nav-single-btn" style="background: linear-gradient(135deg, rgba(244,144,179,.18), rgba(212,184,122,.18)); border:1px solid rgba(244,144,179,.35);">
-                        <span class="nav-label">🎁 Dodatek!</span>
+                <!-- ✨ MOJE ESTELIO+ — grupa zakładek z aktywnych dodatków.
+                     Widoczna tylko gdy user ma co najmniej jeden aktywny dodatek z konfiguracją menu.
+                     Submenu generowane dynamicznie przez aktualizujMenuFeatures() z mapy FEATURE_MENU_CONFIG. -->
+                <li id="group-estelio-plus" style="display:none;">
+                    <button onclick="toggleEstelioPlusMenu()" class="nav-parent" style="background: linear-gradient(135deg, rgba(244,144,179,.15), rgba(212,184,122,.15)); border:1px solid rgba(244,144,179,.3);">
+                        <span class="nav-label">
+                            <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                            <span style="background:linear-gradient(135deg,#cf3d78,#c9a96e); -webkit-background-clip:text; background-clip:text; color:transparent; font-weight:700;">Moje Estelio+</span>
+                        </span>
+                        <span style="font-size:11px;">▼</span>
                     </button>
+                    <ul id="sub-estelio-plus" class="nav-submenu">
+                        <!-- generowane dynamicznie przez aktualizujMenuFeatures() -->
+                    </ul>
                 </li>
             </ul>
             <div class="sidebar-footer">
@@ -10364,17 +10373,48 @@ function uruchomAplikacjePracownika(imie, rola) {
 }
 
 // ═══════════════════════ FEATURE FLAGS (dodatki / mikropłatności) ═══════════════════════
+
+// Mapa konfiguracji menu dla każdego dodatku — gdy dodajesz nowy addon, dopisujesz tu jeden wpis.
+// (label, ikona, id sekcji do której prowadzi przycisk)
+const FEATURE_MENU_CONFIG = {
+    'demo_dodatek': { label: 'Dodatek!', icon: '🎁', sectionId: 'demo-dodatek' },
+    // Przykład gdy dodajesz nowy w przyszłości:
+    // 'sms_marketing':    { label: 'SMS Marketing', icon: '📱', sectionId: 'sms-marketing' },
+    // 'advanced_reports': { label: 'Raporty Pro',   icon: '📊', sectionId: 'advanced-reports' },
+};
+
 function hasFeature(key) {
     return Array.isArray(window.tenantFeatures) && window.tenantFeatures.includes(key);
 }
 
-// Pokaż/ukryj zakładki w menu zależnie od aktywnych featurów (id="menu-feature-<key>")
+// Toggle grupy "Moje Estelio+" — pokazuje/chowa submenu z aktywnymi dodatkami
+function toggleEstelioPlusMenu() {
+    const sub = document.getElementById('sub-estelio-plus');
+    if (!sub) return;
+    sub.style.display = (sub.style.display === 'block') ? '' : 'block';
+}
+
+// Aktualizuj grupę "Moje Estelio+": pokaż gdy są aktywne dodatki, wypełnij submenu
 function aktualizujMenuFeatures() {
     const features = Array.isArray(window.tenantFeatures) ? window.tenantFeatures : [];
-    document.querySelectorAll('[id^="menu-feature-"]').forEach(el => {
-        const key = el.id.replace('menu-feature-', '');
-        el.style.display = features.includes(key) ? '' : 'none';
-    });
+    const grupa = document.getElementById('group-estelio-plus');
+    const submenu = document.getElementById('sub-estelio-plus');
+    if (!grupa || !submenu) return;
+
+    // Bierzemy tylko te aktywne featury, które mają zdefiniowany wpis w FEATURE_MENU_CONFIG
+    const widoczne = features.filter(k => FEATURE_MENU_CONFIG[k]);
+
+    if (widoczne.length === 0) {
+        grupa.style.display = 'none';
+        submenu.innerHTML = '';
+        return;
+    }
+
+    grupa.style.display = '';
+    submenu.innerHTML = widoczne.map(k => {
+        const cfg = FEATURE_MENU_CONFIG[k];
+        return `<li><button onclick="pokaz('${cfg.sectionId}', this)"><span class="nav-label">${cfg.icon} ${escHtml(cfg.label)}</span></button></li>`;
+    }).join('');
 }
 
 // Pobierz katalog dodatków z backendu i wyrenderuj listę
