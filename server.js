@@ -293,6 +293,7 @@ const kosztPlanRoutes  = require('./routes/koszty_plan')(db);
 const zadaniaRoutes    = require('./routes/zadania')(db);
 const typyZabiegowRoutes = require('./routes/typy_zabiegow')(db);
 const leadyRoutes      = require('./routes/leady')(db);
+const featuresRoutes   = require('./routes/features')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -322,6 +323,7 @@ app.use('/api', kosztPlanRoutes);
 app.use('/api', zadaniaRoutes);
 app.use('/api', typyZabiegowRoutes);
 app.use('/api', leadyRoutes);
+app.use('/api', featuresRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -445,6 +447,7 @@ app.get('/api', (req, res) => {
         'akon_get_months': '/api/konsultacje?action=akon_get_months&tenant_id=' + tenant_id,
         'get_pin_users': '/api/users?action=get_pin_users&tenant_id=' + tenant_id,
         'get_admin_users': '/api/users?action=get_admin_users&tenant_id=' + tenant_id,
+        'get_features_catalog': '/api/features?action=get_features_catalog&tenant_id=' + tenant_id,
     };
 
     if (getActions[action]) {
@@ -511,6 +514,7 @@ app.post('/api', (req, res) => {
     const targetyActions = ['add_target', 'get_targets', 'edit_target', 'tgt_get_employee_dashboard'];
     const raportActions = ['rap_getInventory', 'rap_getCategories', 'rap_getLogs', 'rap_updateStock', 'rap_archiveProduct', 'rap_saveProduct', 'rap_saveCategory', 'rap_deleteCategory'];
     const usersActions = ['verify_pin', 'get_pin_users', 'get_admin_users', 'add_admin_user', 'delete_admin_user'];
+    const featuresActions = ['toggle_feature'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -545,6 +549,9 @@ app.post('/api', (req, res) => {
     } else if (usersActions.includes(action)) {
         req.url = '/users';
         return usersRoutes(req, res, () => {});
+    } else if (featuresActions.includes(action)) {
+        req.url = '/features';
+        return featuresRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
