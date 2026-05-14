@@ -61,7 +61,17 @@ module.exports = (db) => {
           if (String(user.haslo_pin).trim() === String(d.pin).trim()) {
             recordSuccessPin(req);
             const session_token = createSession(tenant_id, d.imie);
-            return res.json({ status: 'success', rola: user.rola, session_token });
+
+            // Załącz listę aktywnych dodatków (feature flags) — frontend zachowuje w window.tenantFeatures
+            db.query(
+              `SELECT feature_key FROM Tenant_Features WHERE tenant_id = ? AND enabled = 1`,
+              [tenant_id],
+              (errF, fRows) => {
+                const features = (fRows || []).map(r => r.feature_key);
+                return res.json({ status: 'success', rola: user.rola, session_token, features });
+              }
+            );
+            return;
           }
           recordFailedPin(req);
           return res.json({ status: 'error', message: 'Błędny PIN!' });
