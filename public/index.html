@@ -738,15 +738,36 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     width: 100% !important;
   }
 
-  /* Sekcja drukowana — flow normalny + 100% szerokości */
+  /* Sekcja drukowana — flow normalny + auto height + overflow visible.
+     Default .section ma height: 100% (CSS line 169) — bez override paginacja
+     się sypie i drukuje się tylko 1 strona (sekcja ograniczona do viewport). */
   body[data-print-section="magazyn"] #magazyn,
   body[data-print-section="inwentaryzacja"] #inwentaryzacja,
   body[data-print-section="rap_magazyn"] #rap_magazyn {
     position: static !important;
     display: block !important;
     width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
     padding: 0 !important;
     margin: 0 !important;
+  }
+  /* Card / wrapper wewnątrz sekcji — też auto height + overflow visible */
+  body[data-print-section] .card,
+  body[data-print-section] .rap_card {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  /* Table container — overflow visible (default ma overflow-x: auto) */
+  body[data-print-section] .table-container {
+    overflow: visible !important;
+    height: auto !important;
+    max-height: none !important;
   }
   /* Inne sekcje (.section) ukryte */
   body[data-print-section] .section:not(:has(.print-header)) { display: none !important; }
