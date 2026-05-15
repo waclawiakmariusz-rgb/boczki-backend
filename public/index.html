@@ -777,6 +777,30 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     height: auto !important;
     max-height: none !important;
   }
+
+  /* AGRESYWNY FIX: WSZYSTKIE potomki drukowanej sekcji — bez overflow/max-height
+     ograniczeń. Bez tego inline style='overflow-y:auto; max-height:60vh' albo
+     inline 'height: 100px' na potomku ucinają content i blokują paginację —
+     drukuje się tylko jedna strona z uciętym ostatnim wierszem. */
+  body[data-print-section] .printing-target,
+  body[data-print-section] .printing-target * {
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: auto !important;
+  }
+  /* Główne kontenery wewnątrz — height auto (zachowujemy fixed-size dla badges, ikon) */
+  body[data-print-section] .printing-target,
+  body[data-print-section] .printing-target > *,
+  body[data-print-section] .printing-target .card,
+  body[data-print-section] .printing-target .rap_card,
+  body[data-print-section] .printing-target .table-container,
+  body[data-print-section] .printing-target table,
+  body[data-print-section] .printing-target tbody,
+  body[data-print-section] .printing-target tr {
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+  }
   /* Inne sekcje (.section) ukryte — używamy klasy .printing-target zamiast :has()
      bo :has() ma quirks w starszych Safari/Chrome przy print mode. */
   body[data-print-section] .section:not(.printing-target) { display: none !important; }
