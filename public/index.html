@@ -11379,6 +11379,7 @@ function ds_zd_renderTaskCard(z, isReceiver, isPraktykantka, now) {
                         ${cyklPill}
                         ${deadlineStr && !z.is_szablon ? `<span class="${overdue?'overdue':''}">📅 ${deadlineStr}${overdue?' (po terminie!)':''}</span>` : ''}
                         ${klientPill}
+                        ${z.komentarzy > 0 ? `<span class="pill" onclick="event.stopPropagation(); event.preventDefault(); zd_openComments('${z.id}', '${tytulEsc}')" title="${z.komentarzy} ${z.komentarzy === 1 ? 'komentarz' : (z.komentarzy < 5 ? 'komentarze' : 'komentarzy')} — kliknij by zobaczyć" style="background:#e0f2fe; color:#075985; cursor:pointer; font-weight:600;">💬 ${z.komentarzy}</span>` : ''}
                     </div>
                 </div>
             </div>
