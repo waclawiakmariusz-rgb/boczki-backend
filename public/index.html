@@ -699,6 +699,174 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .main-content button { min-height: 44px; }
 }
 
+/* ══════════════════════════════════════════════════════════════════════
+   🖨️ EKSPORT PDF — Magazyn (#rap_magazyn) + Kosmetyki (#magazyn, #inwentaryzacja)
+   Aktywowany przez JS: document.body.dataset.printSection = 'sekcjaId'
+   Wzorzec sprawdzony w module Zebranie (#odp-print-area).
+══════════════════════════════════════════════════════════════════════ */
+.print-header { display: none; }
+
+@media print {
+  /* Tylko gdy body ma data-print-section ustawione */
+  body[data-print-section] {
+    background: #fff !important;
+  }
+  /* Domyślnie wszystko ukryte */
+  body[data-print-section] * { visibility: hidden; }
+
+  /* Pokaż tylko aktywną sekcję drukowaną + jej zawartość */
+  body[data-print-section="magazyn"] #magazyn,
+  body[data-print-section="magazyn"] #magazyn *,
+  body[data-print-section="inwentaryzacja"] #inwentaryzacja,
+  body[data-print-section="inwentaryzacja"] #inwentaryzacja *,
+  body[data-print-section="rap_magazyn"] #rap_magazyn,
+  body[data-print-section="rap_magazyn"] #rap_magazyn * {
+    visibility: visible;
+  }
+
+  /* Wszystkie kontenery rodziców — normalny flow, auto height (Apple safe-area, .main-content overflow OFF) */
+  body[data-print-section] html,
+  body[data-print-section] body,
+  body[data-print-section] #app-container,
+  body[data-print-section] .main-content {
+    display: block !important;
+    position: static !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  /* Sekcja drukowana — flow normalny + 100% szerokości */
+  body[data-print-section="magazyn"] #magazyn,
+  body[data-print-section="inwentaryzacja"] #inwentaryzacja,
+  body[data-print-section="rap_magazyn"] #rap_magazyn {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+  /* Inne sekcje (.section) ukryte */
+  body[data-print-section] .section:not(:has(.print-header)) { display: none !important; }
+
+  /* Ukryj UI elements w drukowanej sekcji */
+  body[data-print-section] .filters,
+  body[data-print-section] .filter-btn,
+  body[data-print-section] input[type="text"][id^="szukaj"],
+  body[data-print-section] #rap_search,
+  body[data-print-section] .header button,
+  body[data-print-section] .dash-header button,
+  body[data-print-section] .header > div:nth-child(2),
+  body[data-print-section] .dash-header > div:last-child,
+  body[data-print-section] .btn-edit,
+  body[data-print-section] .btn-delete,
+  body[data-print-section] .btn-restore,
+  body[data-print-section] .rap_btn-touch,
+  body[data-print-section] .rap_btn-fix,
+  body[data-print-section] .rap_pagination,
+  body[data-print-section] #magazyn-legenda,
+  body[data-print-section] .sidebar,
+  body[data-print-section] #mobile-bar {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Header eksportu — pokazany, z datą */
+  .print-header {
+    display: block !important;
+    visibility: visible !important;
+    padding: 0 0 14px 0;
+    margin-bottom: 18px;
+    border-bottom: 2px solid #1c1a18;
+  }
+  .print-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22pt;
+    font-weight: 600;
+    color: #1c1a18;
+    margin: 0 0 6px 0;
+    line-height: 1.1;
+  }
+  .print-header .print-date {
+    font-size: 10pt;
+    color: #6b7280;
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  /* TABELE — łamanie stron + powtarzanie nagłówka */
+  body[data-print-section] table {
+    width: 100% !important;
+    min-width: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 9.5pt !important;
+  }
+  body[data-print-section] thead { display: table-header-group !important; }
+  body[data-print-section] tbody { display: table-row-group !important; }
+  body[data-print-section] tr {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  body[data-print-section] th,
+  body[data-print-section] td {
+    padding: 6pt 8pt !important;
+    border: 1px solid #d1d5db !important;
+    font-size: 9.5pt !important;
+    color: #1f2937 !important;
+    white-space: normal !important;
+  }
+  body[data-print-section] th {
+    background: #f3f4f6 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+    font-size: 8.5pt !important;
+  }
+
+  /* RAP — akordeon kategorii (#rap_magazyn) — wszystkie rozwinięte przy druku */
+  body[data-print-section="rap_magazyn"] .rap_cat-content { display: block !important; }
+  body[data-print-section="rap_magazyn"] .rap_cat-arrow { display: none !important; }
+  body[data-print-section="rap_magazyn"] .rap_cat-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    margin-bottom: 8pt !important;
+    border: 1px solid #d1d5db !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  body[data-print-section="rap_magazyn"] .rap_cat-header-bar {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+    background: #f3f4f6 !important;
+    padding: 8pt 12pt !important;
+  }
+  body[data-print-section="rap_magazyn"] .rap_cat-title { font-size: 11pt !important; }
+  body[data-print-section="rap_magazyn"] .rap_cat-status { font-size: 8pt !important; padding: 2pt 6pt !important; }
+
+  /* Kart wrapper — bez shadows w druku */
+  body[data-print-section] .card,
+  body[data-print-section] .rap_card,
+  body[data-print-section] .table-container {
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+  }
+
+  /* Page setup */
+  @page { size: A4 portrait; margin: 1.5cm 1cm 1.5cm 1cm; }
+
+  /* Color print — żeby gradienty/badge'y się drukowały */
+  body[data-print-section] *,
+  body[data-print-section] *::before,
+  body[data-print-section] *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
 /* legacy */
 .profil-tab { background:none; border:none; padding:10px 14px; font-size:13px; font-weight:600; color:#94a3b8; cursor:pointer; border-bottom:2px solid transparent; margin-bottom:-2px; }
 .profil-tab-active { color:#db2777; border-bottom-color:#db2777; }
@@ -5060,7 +5228,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         <main class="main-content">
             <div id="magazyn" class="section active">
 			<input type="text" id="szukaj-magazyn" onkeyup="_db('mag',szukajWMagazynie)" placeholder="🔍 Szukaj produktu w magazynie..." style="width:100%; padding:12px 16px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:10px; box-sizing:border-box; font-size:14px; background:#f8fafc;">
-                <div class="header"><h1>Stan Magazynowy</h1><button onclick="pobierzDane()" class="btn-primary" style="width:auto; background:#9f1239; border-radius:10px; padding:10px 20px;">🔄 Odśwież</button></div>
+                <div class="header"><h1>Stan Magazynowy</h1><div style="display:flex; gap:8px; flex-wrap:wrap;"><button onclick="pobierzDane()" class="btn-primary" style="width:auto; background:#9f1239; border-radius:10px; padding:10px 20px;">🔄 Odśwież</button><button onclick="eksportujPDF('magazyn','Stan Magazynowy — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div></div>
                 <div class="filters" style="gap:8px;">
                     <button class="filter-btn active" onclick="filtrujMagazyn('Wszystkie', this)">Wszystkie</button>
                     <button class="filter-btn" onclick="filtrujMagazyn('Detal', this)">Detal</button>
@@ -5071,7 +5239,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
             </div>
             <div id="inwentaryzacja" class="section">
 			<input type="text" id="szukaj-inv" onkeyup="_db('inv',szukajWInwentaryzacji)" placeholder="🔍 Szukaj produktu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
-                <div class="header"><h1>Inwentaryzacja</h1></div>
+                <div class="header"><h1>Inwentaryzacja</h1><button onclick="eksportujPDF('inwentaryzacja','Inwentaryzacja — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div>
                 <div class="filters"><button class="filter-btn active" onclick="filtrujInwentaryzacje('Wszystkie', this)">Wszystkie</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Profesja', this)">🧴 Profesja</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Detal', this)">🛍️ Detal</button><button class="btn-archive filter-btn" onclick="filtrujInwentaryzacje('Archiwum', this)">🗑️ Archiwum</button></div>
                 <div class="card"><p style="color:#666; margin-bottom:20px;" id="inv-desc"></p><div id="lista-inv"></div></div>
             </div>
@@ -8868,7 +9036,10 @@ ANALIZA MANAGER
                          <h2 style="margin:0;">📦 Stan Magazynowy</h2>
                          <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Interaktywny panel z obsługą dotykową</p>
                      </div>
-                     <button onclick="rap_fetchInventory()" class="action-btn-light" style="width:auto; margin:0;">🔄 Odśwież</button>
+                     <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                       <button onclick="rap_fetchInventory()" class="action-btn-light" style="width:auto; margin:0;">🔄 Odśwież</button>
+                       <button onclick="eksportujPDF('rap_magazyn','Stan Magazynowy — Magazyn')" class="action-btn-light" style="width:auto; margin:0; background:#374151; color:white;">🖨️ Eksport PDF</button>
+                     </div>
                   </div>
                   <input type="text" id="rap_search" placeholder="🔍 Szukaj produktu (np. nazwa lub kategoria)..." onkeyup="_db('rap',rap_renderTable)" class="modern-form-control" style="margin-bottom: 25px;">
                   <div id="rap_inventory-container">Ładowanie magazynu...</div>
@@ -13828,6 +13999,49 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
         if(sb && sb.classList.contains('mobile-open')) toggleMobileMenu();
     }
 } */
+
+// 🖨️ EKSPORT PDF — uniwersalna funkcja dla Magazyn / Inwentaryzacja / Stan Magazynowy admin.
+// Wstawia/aktualizuje nagłówek `.print-header` z datą eksportu, ustawia data-print-section
+// na <body>, wywołuje window.print(). Po druku — cleanup atrybutu.
+// CSS @media print (body[data-print-section]) pokazuje TYLKO wybraną sekcję + page-break-inside.
+function eksportujPDF(sekcjaId, tytul) {
+    const sekcja = document.getElementById(sekcjaId);
+    if (!sekcja) return alert('Nie znaleziono sekcji do eksportu: ' + sekcjaId);
+
+    // 1. Stwórz / zaktualizuj nagłówek eksportu na początku sekcji
+    let header = sekcja.querySelector('.print-header');
+    if (!header) {
+        header = document.createElement('div');
+        header.className = 'print-header';
+        sekcja.insertBefore(header, sekcja.firstChild);
+    }
+    const dataExp = new Date().toLocaleString('pl-PL', { dateStyle: 'long', timeStyle: 'short' });
+    header.innerHTML = `
+        <h2>${tytul}</h2>
+        <div class="print-date">Data eksportu: ${dataExp}</div>
+    `;
+
+    // 2. Dla #rap_magazyn — rozwiń wszystkie kategorie (akordeony) przed drukiem
+    if (sekcjaId === 'rap_magazyn') {
+        document.querySelectorAll('#rap_magazyn .rap_cat-section').forEach(s => s.classList.add('open'));
+    }
+
+    // 3. Ustaw tryb druku
+    document.body.dataset.printSection = sekcjaId;
+
+    // 4. Cleanup po druku (afterprint — natywne, działa w Chrome/Safari)
+    const cleanup = () => {
+        delete document.body.dataset.printSection;
+        window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    // 5. Drukuj (chwila opóźnienia żeby DOM się odświeżył)
+    setTimeout(() => window.print(), 100);
+
+    // Fallback gdy afterprint nie zadziała (niektóre przeglądarki)
+    setTimeout(cleanup, 10000);
+}
 
 function pokaz(id, b) {
     // --- 0. RBAC GUARD — menu Analiza tylko dla admin/megaadmin/manager ---
