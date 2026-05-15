@@ -724,7 +724,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     visibility: visible;
   }
 
-  /* Wszystkie kontenery rodziców — normalny flow, auto height (Apple safe-area, .main-content overflow OFF) */
+  /* Wszystkie kontenery rodziców — normalny flow, auto height.
+     flex: none żeby #app-container (display:flex; height:100vh) NIE ograniczał
+     wysokości dzieci do viewportu — bez tego drukuje się tylko 1 strona. */
   body[data-print-section] html,
   body[data-print-section] body,
   body[data-print-section] #app-container,
@@ -732,10 +734,16 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     display: block !important;
     position: static !important;
     height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: visible !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    flex: none !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    flex-basis: auto !important;
   }
 
   /* Sekcja drukowana — flow normalny + auto height + overflow visible.
@@ -769,8 +777,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     height: auto !important;
     max-height: none !important;
   }
-  /* Inne sekcje (.section) ukryte */
-  body[data-print-section] .section:not(:has(.print-header)) { display: none !important; }
+  /* Inne sekcje (.section) ukryte — używamy klasy .printing-target zamiast :has()
+     bo :has() ma quirks w starszych Safari/Chrome przy print mode. */
+  body[data-print-section] .section:not(.printing-target) { display: none !important; }
+  body[data-print-section] .section.printing-target { display: block !important; }
 
   /* Ukryj UI elements w drukowanej sekcji */
   body[data-print-section] .filters,
@@ -14285,12 +14295,16 @@ function eksportujPDF(sekcjaId, tytul) {
         document.querySelectorAll('#rap_magazyn .rap_cat-section').forEach(s => s.classList.add('open'));
     }
 
-    // 3. Ustaw tryb druku
+    // 3. Oznacz drukowaną sekcję klasą (deterministyczny selektor, bez :has())
+    sekcja.classList.add('printing-target');
+
+    // 4. Ustaw tryb druku
     document.body.dataset.printSection = sekcjaId;
 
-    // 4. Cleanup po druku (afterprint — natywne, działa w Chrome/Safari)
+    // 5. Cleanup po druku (afterprint — natywne, działa w Chrome/Safari)
     const cleanup = () => {
         delete document.body.dataset.printSection;
+        sekcja.classList.remove('printing-target');
         window.removeEventListener('afterprint', cleanup);
     };
     window.addEventListener('afterprint', cleanup);
