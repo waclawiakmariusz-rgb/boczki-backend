@@ -2737,21 +2737,36 @@ body.dark-mode #kon_results-list td small {
     .rap_btn-page:hover:not(:disabled) { background: #f8fafc; color: var(--primary); border-color: var(--primary); transform: translateY(-2px); }
     .rap_btn-page:disabled { color: #cbd5e1; cursor: not-allowed; background: #f1f5f9; border-color: #e2e8f0; }
 
-    /* WIDOK DO DRUKU (Zachowany oryginał) */
+    /* WIDOK DO DRUKU (Zachowany oryginał — legacy mechanizm rap_module-wrapper).
+       Prefix body:not([data-print-section]) chroni przed nakładaniem się na nowy
+       eksportPDF (który ustawia data-print-section i ma własne @media print). */
     #rap_print-header, .rap_print-only { display: none; }
     @media print {
-      body * { visibility: hidden; } 
-      .rap_module-wrapper, .rap_module-wrapper * { visibility: visible; }
-      #rap_print-header, .rap_print-only { display: block !important; }
-      .rap_module-wrapper { position: absolute; left: 0; top: 0; width: 100%; }
-      .rap_btn-touch, .rap_inp-touch, button, input, select, .rap_qty-group, .rap_pagination, #rap_log-search, .dash-header { display: none !important; }
-      .rap_card, .rap_cat-section { box-shadow: none !important; border: 1px solid #000; margin-bottom: 10px; }
-      .rap_cat-content { display: block !important; }
-      .rap_cat-header-bar { border-bottom: 1px solid #000; background: #ddd !important; -webkit-print-color-adjust: exact; }
-      .rap_cat-arrow { display: none; }
-      .rap_table { width: 100%; border: 1px solid #000; font-size: 10pt; page-break-inside: avoid; }
-      .rap_table th, .rap_table td { border: 1px solid #000; padding: 5px; }
-      .rap_table th:last-child, .rap_table td:last-child { display: none; } 
+      body:not([data-print-section]) * { visibility: hidden; }
+      body:not([data-print-section]) .rap_module-wrapper,
+      body:not([data-print-section]) .rap_module-wrapper * { visibility: visible; }
+      body:not([data-print-section]) #rap_print-header,
+      body:not([data-print-section]) .rap_print-only { display: block !important; }
+      body:not([data-print-section]) .rap_module-wrapper { position: absolute; left: 0; top: 0; width: 100%; }
+      body:not([data-print-section]) .rap_btn-touch,
+      body:not([data-print-section]) .rap_inp-touch,
+      body:not([data-print-section]) button,
+      body:not([data-print-section]) input,
+      body:not([data-print-section]) select,
+      body:not([data-print-section]) .rap_qty-group,
+      body:not([data-print-section]) .rap_pagination,
+      body:not([data-print-section]) #rap_log-search,
+      body:not([data-print-section]) .dash-header { display: none !important; }
+      body:not([data-print-section]) .rap_card,
+      body:not([data-print-section]) .rap_cat-section { box-shadow: none !important; border: 1px solid #000; margin-bottom: 10px; }
+      body:not([data-print-section]) .rap_cat-content { display: block !important; }
+      body:not([data-print-section]) .rap_cat-header-bar { border-bottom: 1px solid #000; background: #ddd !important; -webkit-print-color-adjust: exact; }
+      body:not([data-print-section]) .rap_cat-arrow { display: none; }
+      body:not([data-print-section]) .rap_table { width: 100%; border: 1px solid #000; font-size: 10pt; page-break-inside: avoid; }
+      body:not([data-print-section]) .rap_table th,
+      body:not([data-print-section]) .rap_table td { border: 1px solid #000; padding: 5px; }
+      body:not([data-print-section]) .rap_table th:last-child,
+      body:not([data-print-section]) .rap_table td:last-child { display: none; }
     }
 
     @media (max-width: 900px) {
@@ -2982,16 +2997,20 @@ body.dark-mode #an_rep-daily-table td {
 
 .odp-footer { text-align: center; font-size: 8pt; color: #94a3b8; margin-top: 40px; border-top: 1px dashed #e2e8f0; padding-top: 10px; }
 
-/* 🖨️ MAGIA WYDRUKU */
+/* 🖨️ MAGIA WYDRUKU — Zebranie (#odp-print-area)
+   Aktywuje się TYLKO gdy NIE używamy nowego mechanizmu eksportPDF (z data-print-section).
+   Bez tego prefixu reguły body * { visibility: hidden } aktywowały się też przy eksporcie
+   Magazyn/Inwentaryzacja/StanMagazynowy → Zebranie pojawiało się w wynikowym PDF. */
 @media print {
     @page { size: A4 portrait; margin: 1cm; }
 
-    /* Ukryj wszystko EXCEPT print-area */
-    body * { visibility: hidden; }
-    #odp-print-area, #odp-print-area * { visibility: visible; }
+    /* Ukryj wszystko EXCEPT print-area — tylko dla domyślnego druku Zebrania */
+    body:not([data-print-section]) * { visibility: hidden; }
+    body:not([data-print-section]) #odp-print-area,
+    body:not([data-print-section]) #odp-print-area * { visibility: visible; }
 
     /* Print-area w NORMALNYM flow (nie absolute) — pozwala przeglądarce paginować */
-    #odp-print-area {
+    body:not([data-print-section]) #odp-print-area {
         position: static !important;
         width: 100% !important; max-width: 100% !important;
         margin: 0 !important; padding: 0 !important;
@@ -3000,35 +3019,38 @@ body.dark-mode #an_rep-daily-table td {
     }
 
     /* Kontenery rodziców muszą pozwolić na normalny flow + auto height (inaczej overflow:hidden ucina) */
-    html, body { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
-    #app-container, .main-content {
+    body:not([data-print-section]) html,
+    body:not([data-print-section]) #app-container,
+    body:not([data-print-section]) .main-content {
         display: block !important; position: static !important;
         height: auto !important; overflow: visible !important;
         padding: 0 !important; margin: 0 !important; width: 100% !important;
     }
+    body:not([data-print-section]) { height: auto !important; overflow: visible !important; margin: 0 !important; padding: 0 !important; }
     /* WAŻNE: tylko #odprawa widoczne podczas druku — reszta sekcji ukryta
        (mój poprzedni fix wymuszał display:block na .section, co pokazało magazyn+klientów+itd.) */
-    .section { display: none !important; }
-    #odprawa {
+    body:not([data-print-section]) .section { display: none !important; }
+    body:not([data-print-section]) #odprawa {
         display: block !important; position: static !important;
         height: auto !important; overflow: visible !important;
         padding: 0 !important; margin: 0 !important; width: 100% !important;
     }
 
-    .odp-no-print { display: none !important; }
+    body:not([data-print-section]) .odp-no-print { display: none !important; }
 
     /* PAGE BREAK — boxy nie ucinają się w środku */
-    .odp-zone,
-    #odp-print-area > div,
-    .odp-box {
+    body:not([data-print-section]) .odp-zone,
+    body:not([data-print-section]) #odp-print-area > div,
+    body:not([data-print-section]) .odp-box {
         page-break-inside: avoid;
         break-inside: avoid;
     }
-    .odp-zone-title,
-    .odp-header { page-break-after: avoid; break-after: avoid; }
+    body:not([data-print-section]) .odp-zone-title,
+    body:not([data-print-section]) .odp-header { page-break-after: avoid; break-after: avoid; }
 
     /* Tytuł boxa zawsze ze swoim contentem */
-    #odp-print-area ul, #odp-print-area li { page-break-inside: avoid; break-inside: avoid; }
+    body:not([data-print-section]) #odp-print-area ul,
+    body:not([data-print-section]) #odp-print-area li { page-break-inside: avoid; break-inside: avoid; }
 }
 
 /* Wymuszenia Dark Mode dla okna zebrania (by nie raziło) */
