@@ -14069,9 +14069,11 @@ function eksportujPDF(sekcjaId, tytul) {
         return;
     }
 
-    // 3. Skopiuj stylesheets z głównego dokumentu (style inline + linki Google Fonts)
+    // 3. Skopiuj TYLKO Google Fonts link (Cormorant + DM Sans). Reszta CSS w printCss
+    //    poniżej — kopiowanie wszystkich stylesheets (>500kb) blokuje Chrome przy
+    //    generowaniu preview wielostronicowego PDF.
     let stylesheetsHtml = '';
-    document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
+    document.querySelectorAll('link[href*="fonts.googleapis.com"], link[href*="fonts.gstatic.com"]').forEach(el => {
         stylesheetsHtml += el.outerHTML;
     });
 
