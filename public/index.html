@@ -14294,50 +14294,149 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
 } */
 
 // 🖨️ EKSPORT PDF — uniwersalna funkcja dla Magazyn / Inwentaryzacja / Stan Magazynowy admin.
-// Wstawia/aktualizuje nagłówek `.print-header` z datą eksportu, ustawia data-print-section
-// na <body>, wywołuje window.print(). Po druku — cleanup atrybutu.
-// CSS @media print (body[data-print-section]) pokazuje TYLKO wybraną sekcję + page-break-inside.
+// Strategia: otwórz osobne okno (popup) z czystym HTML zawierającym tylko sekcję
+// do druku. Eliminuje 100% problemów z CSS rodziców (sidebar, app-container flex,
+// overflow gdziekolwiek). Wcześniejsza wersja używała @media print + visibility:hidden
+// na głównym dokumencie — nie radziła sobie z 'overflow: hidden' u jakiegoś rodzica
+// → tylko 1 strona PDF z uciętymi danymi.
 function eksportujPDF(sekcjaId, tytul) {
     const sekcja = document.getElementById(sekcjaId);
     if (!sekcja) return alert('Nie znaleziono sekcji do eksportu: ' + sekcjaId);
 
-    // 1. Stwórz / zaktualizuj nagłówek eksportu na początku sekcji
-    let header = sekcja.querySelector('.print-header');
-    if (!header) {
-        header = document.createElement('div');
-        header.className = 'print-header';
-        sekcja.insertBefore(header, sekcja.firstChild);
-    }
-    const dataExp = new Date().toLocaleString('pl-PL', { dateStyle: 'long', timeStyle: 'short' });
-    header.innerHTML = `
-        <h2>${tytul}</h2>
-        <div class="print-date">Data eksportu: ${dataExp}</div>
-    `;
-
-    // 2. Dla #rap_magazyn — rozwiń wszystkie kategorie (akordeony) przed drukiem
+    // 1. Dla #rap_magazyn — rozwiń akordeony w oryginale (przed klonowaniem)
     if (sekcjaId === 'rap_magazyn') {
         document.querySelectorAll('#rap_magazyn .rap_cat-section').forEach(s => s.classList.add('open'));
     }
 
-    // 3. Oznacz drukowaną sekcję klasą (deterministyczny selektor, bez :has())
-    sekcja.classList.add('printing-target');
+    // 2. Otwórz nowe okno
+    const win = window.open('', '_blank', 'width=1000,height=800');
+    if (!win) {
+        alert('Twoja przeglądarka zablokowała popup. Zezwól na okna popup w ustawieniach przeglądarki i spróbuj ponownie.');
+        return;
+    }
 
-    // 4. Ustaw tryb druku
-    document.body.dataset.printSection = sekcjaId;
+    // 3. Skopiuj stylesheets z głównego dokumentu (style inline + linki Google Fonts)
+    let stylesheetsHtml = '';
+    document.querySelectorAll('style, link[rel="stylesheet"]').forEach(el => {
+        stylesheetsHtml += el.outerHTML;
+    });
 
-    // 5. Cleanup po druku (afterprint — natywne, działa w Chrome/Safari)
-    const cleanup = () => {
-        delete document.body.dataset.printSection;
-        sekcja.classList.remove('printing-target');
-        window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
+    // 4. Klonujemy sekcję — modyfikacje nie wpłyną na oryginał
+    const klon = sekcja.cloneNode(true);
+    klon.removeAttribute('id');                          // żeby nie miał kolizji z CSS
+    klon.removeAttribute('class');                       // bez .section / .active
+    // Usuń UI elements z klonu
+    klon.querySelectorAll(
+        'button, input[type="text"], input[type="search"], .filters, .filter-btn, ' +
+        '.header > div:nth-child(2), .dash-header > div:nth-child(2), ' +
+        '#magazyn-legenda, .rap_btn-touch, .rap_inp-touch, .rap_qty-group, .rap_pagination, ' +
+        '.btn-edit, .btn-delete, .btn-restore, .rap_btn-fix, .print-header, .rap_cat-arrow'
+    ).forEach(el => el.remove());
 
-    // 5. Drukuj (chwila opóźnienia żeby DOM się odświeżył)
-    setTimeout(() => window.print(), 100);
+    const dataExp = new Date().toLocaleString('pl-PL', { dateStyle: 'long', timeStyle: 'short' });
 
-    // Fallback gdy afterprint nie zadziała (niektóre przeglądarki)
-    setTimeout(cleanup, 10000);
+    win.document.write(`<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>${tytul}</title>
+${stylesheetsHtml}
+<style>
+  /* Override — czysty layout bez sidebar/app-container/flex */
+  html, body {
+    margin: 0 !important; padding: 0 !important;
+    height: auto !important; overflow: visible !important;
+    display: block !important; position: static !important;
+    background: #fff !important;
+  }
+  body { padding: 24px !important; color: #1c1a18; font-family: 'DM Sans', sans-serif; }
+
+  @page { size: A4 portrait; margin: 1.5cm 1cm; }
+
+  .pdf-header { padding-bottom: 14px; margin-bottom: 18px; border-bottom: 2px solid #1c1a18; }
+  .pdf-header h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22pt; font-weight: 600;
+    color: #1c1a18; margin: 0 0 6px 0; line-height: 1.1;
+  }
+  .pdf-date { font-size: 10pt; color: #6b7280; font-family: 'DM Sans', sans-serif; }
+
+  /* Tabele — paginacja A4 */
+  table {
+    width: 100% !important; min-width: 0 !important;
+    border-collapse: collapse !important;
+    font-size: 9.5pt !important;
+    margin: 0 !important;
+  }
+  thead { display: table-header-group !important; }
+  tbody { display: table-row-group !important; }
+  tr { page-break-inside: avoid !important; break-inside: avoid !important; }
+  th, td {
+    padding: 6pt 8pt !important;
+    border: 1px solid #d1d5db !important;
+    font-size: 9.5pt !important; color: #1f2937 !important;
+    white-space: normal !important;
+  }
+  th {
+    background: #f3f4f6 !important; font-weight: 700 !important;
+    text-transform: uppercase; font-size: 8.5pt !important;
+  }
+
+  /* Card — flat, bez shadow */
+  .card, .rap_card, .table-container {
+    box-shadow: none !important; border: none !important;
+    padding: 0 !important; margin: 0 0 14pt 0 !important;
+    border-radius: 0 !important; background: transparent !important;
+    overflow: visible !important; height: auto !important; max-height: none !important;
+  }
+
+  /* RAP akordeony — rozwinięte */
+  .rap_cat-section {
+    page-break-inside: avoid !important; break-inside: avoid !important;
+    margin-bottom: 10pt !important;
+    border: 1px solid #d1d5db !important; border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  .rap_cat-content { display: block !important; }
+  .rap_cat-status { display: none !important; }
+  .rap_cat-header-bar {
+    background: #f3f4f6 !important; padding: 8pt 12pt !important;
+    border-bottom: 1px solid #d1d5db !important;
+    cursor: default !important;
+  }
+  .rap_cat-title { font-size: 11pt !important; }
+
+  /* Ukryj oryginalne nagłówki sekcji (mamy własny .pdf-header) */
+  .header, .dash-header { display: none !important; }
+
+  /* Print color preservation — gradienty, badge'y stanu drukuja się dokładnie */
+  *, *::before, *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  @media screen { body { max-width: 21cm; margin: 0 auto !important; box-shadow: 0 0 20px rgba(0,0,0,.1); } }
+</style>
+</head>
+<body>
+  <div class="pdf-header">
+    <h2>${tytul}</h2>
+    <div class="pdf-date">Data eksportu: ${dataExp}</div>
+  </div>
+  ${klon.outerHTML}
+  <script>
+    // Po załadowaniu fontów/CSS — print
+    window.addEventListener('load', function() {
+      setTimeout(function() { window.focus(); window.print(); }, 400);
+    });
+    // Fallback jeśli load nie zadziała
+    setTimeout(function() {
+      try { window.focus(); window.print(); } catch(e) {}
+    }, 2000);
+  </script>
+</body>
+</html>`);
+    win.document.close();
 }
 
 function pokaz(id, b) {
