@@ -27575,30 +27575,55 @@ function dd_renderLista(dokumenty) {
     cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:10px 4px; font-style:italic;">Brak dodatkowych dokumentów. Kliknij „+ Dodaj dokument" aby dodać.</div>';
     return;
   }
-  cont.innerHTML = dokumenty.map(doc => {
+  // Helper — JSON.stringify zwraca "..." z double quotes, które łamią atrybut HTML
+  // onclick="..." . Zamiana " na &quot; sprawia że parser HTML zdekoduje to z powrotem
+  // do " dopiero przy uruchomieniu JS w handlerze.
+  const j = (v) => JSON.stringify(v == null ? '' : String(v)).replace(/"/g, '&quot;');
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+
+  // Renderuj wiersze przez DOM-attach (data-*) zamiast inline onclick — eliminuje
+  // 100% ryzyko że nietypowy znak w typ_nazwa/komentarzu/id złamie atrybut.
+  cont.innerHTML = dokumenty.map((doc, idx) => {
     const data = doc.data_dodania ? String(doc.data_dodania).slice(0, 10) : '';
-    const pracownik = doc.pracownik ? ` · ${doc.pracownik}` : '';
-    const komentarz = doc.komentarz ? `<div style="font-size:12px; color:#64748b; margin-top:4px; font-style:italic;">"${doc.komentarz.replace(/</g, '&lt;')}"</div>` : '';
+    const pracownik = doc.pracownik ? ` · ${esc(doc.pracownik)}` : '';
+    const komentarz = doc.komentarz ? `<div style="font-size:12px; color:#64748b; margin-top:4px; font-style:italic;">"${esc(doc.komentarz)}"</div>` : '';
     const hasPdf = doc.link_pdf && doc.link_pdf.length > 0;
     const podgladBtn = hasPdf
-      ? `<a href="${doc.link_pdf}" onclick="return otworzDokumentPdf('${doc.link_pdf}', event)" style="background:#0369a1; color:#fff; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; text-decoration:none;">👁️ Podgląd</a>`
+      ? `<button data-dd-action="preview" data-dd-idx="${idx}" style="background:#0369a1; color:#fff; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; border:0; cursor:pointer;">👁️ Podgląd</button>`
       : '<span style="color:#9ca3af; font-size:12px; padding:6px 0;">Brak pliku</span>';
     return `
       <div style="border:1px solid #efe5e8; border-radius:12px; padding:12px 14px; background:#fff;">
         <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;">
           <div style="flex:1; min-width:200px;">
-            <div style="font-size:14px; font-weight:700; color:#1f2430;">📄 ${doc.typ_nazwa.replace(/</g, '&lt;')}</div>
+            <div style="font-size:14px; font-weight:700; color:#1f2430;">📄 ${esc(doc.typ_nazwa)}</div>
             <div style="font-size:12px; color:#6b7280; margin-top:2px;">${data}${pracownik}</div>
             ${komentarz}
           </div>
           <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
             ${podgladBtn}
-            <button onclick="dd_openModal({id:'${doc.id}', typ_nazwa:${JSON.stringify(doc.typ_nazwa)}, komentarz:${JSON.stringify(doc.komentarz || '')}, link_pdf:${JSON.stringify(doc.link_pdf || '')}})" style="background:#f1f5f9; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">✏️ Edytuj</button>
-            <button onclick="dd_deleteDokument('${doc.id}', ${JSON.stringify(doc.typ_nazwa)})" style="background:#fee2e2; color:#b91c1c; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">🗑️ Usuń</button>
+            <button data-dd-action="edit" data-dd-idx="${idx}" style="background:#f1f5f9; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">✏️ Edytuj</button>
+            <button data-dd-action="delete" data-dd-idx="${idx}" style="background:#fee2e2; color:#b91c1c; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">🗑️ Usuń</button>
           </div>
         </div>
       </div>`;
   }).join('');
+
+  // Bind event listenerów — bez inline onclick, bez ryzyka HTML-injection
+  cont.querySelectorAll('[data-dd-action]').forEach(btn => {
+    const action = btn.getAttribute('data-dd-action');
+    const idx = parseInt(btn.getAttribute('data-dd-idx'), 10);
+    const doc = dokumenty[idx];
+    if (!doc) return;
+    btn.addEventListener('click', (ev) => {
+      if (action === 'preview') {
+        otworzDokumentPdf(doc.link_pdf, ev);
+      } else if (action === 'edit') {
+        dd_openModal({ id: doc.id, typ_nazwa: doc.typ_nazwa, komentarz: doc.komentarz || '', link_pdf: doc.link_pdf || '' });
+      } else if (action === 'delete') {
+        dd_deleteDokument(doc.id, doc.typ_nazwa);
+      }
+    });
+  });
 }
 
 // Otwiera modal dodawania/edycji
