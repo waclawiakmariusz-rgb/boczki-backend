@@ -58,31 +58,43 @@ module.exports = (db) => {
         [tenant_id],
         (err, klienci) => {
           if (err) return res.json({ klienci: [], zadatki: [] });
-          const clients = (klienci || []).map(r => ({
-            id: r.id_klienta,
-            nazwa: r.imie_nazwisko,
-            telefon: r.telefon || '',
-            rodo: r.rodo && (r.rodo.toUpperCase() === 'TAK' || r.rodo === '1' || r.rodo === 'TRUE'),
-            osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE'),
-            status: r.status || 'AKTYWNY',
-            ostrzezenie: r.ostrzezenie || null,
-            zmarly: r.zmarly ? 1 : 0,
-            data_zgonu: r.data_zgonu || null,
-            data_usuniecia: r.data_usuniecia || null,
-            kto_usunal: r.kto_usunal || null,
-            powod_usuniecia: r.powod_usuniecia || null
-          }));
 
+          // Zlicz dodatkowe dokumenty per klient (osobne zapytanie żeby nie psuć istniejącego SELECT)
           db.query(
-            `SELECT id, id_klienta, data_wplaty, klient, kwota, metoda, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL)`,
+            `SELECT id_klienta, COUNT(*) AS liczba FROM Dokumenty_Dodatkowe_Klienta WHERE tenant_id = ? GROUP BY id_klienta`,
             [tenant_id],
-            (err2, zadatki) => {
-              const aktywne = (zadatki || []).map(r => ({
-                id: r.id, id_klienta: String(r.id_klienta || ''),
-                data: r.data_wplaty, klient: String(r.klient || '').toLowerCase(),
-                kwota: parseFloat(r.kwota), metoda: r.metoda, cel: r.cel
+            (errDod, dodRows) => {
+              if (errDod) console.error('[get_clients dod count]', errDod.message);
+              const dodMap = new Map((dodRows || []).map(r => [String(r.id_klienta), Number(r.liczba) || 0]));
+
+              const clients = (klienci || []).map(r => ({
+                id: r.id_klienta,
+                nazwa: r.imie_nazwisko,
+                telefon: r.telefon || '',
+                rodo: r.rodo && (r.rodo.toUpperCase() === 'TAK' || r.rodo === '1' || r.rodo === 'TRUE'),
+                osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE'),
+                dodatkowe: dodMap.get(String(r.id_klienta)) || 0,
+                status: r.status || 'AKTYWNY',
+                ostrzezenie: r.ostrzezenie || null,
+                zmarly: r.zmarly ? 1 : 0,
+                data_zgonu: r.data_zgonu || null,
+                data_usuniecia: r.data_usuniecia || null,
+                kto_usunal: r.kto_usunal || null,
+                powod_usuniecia: r.powod_usuniecia || null
               }));
-              return res.json({ klienci: clients, zadatki: aktywne });
+
+              db.query(
+                `SELECT id, id_klienta, data_wplaty, klient, kwota, metoda, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL)`,
+                [tenant_id],
+                (err2, zadatki) => {
+                  const aktywne = (zadatki || []).map(r => ({
+                    id: r.id, id_klienta: String(r.id_klienta || ''),
+                    data: r.data_wplaty, klient: String(r.klient || '').toLowerCase(),
+                    kwota: parseFloat(r.kwota), metoda: r.metoda, cel: r.cel
+                  }));
+                  return res.json({ klienci: clients, zadatki: aktywne });
+                }
+              );
             }
           );
         }
