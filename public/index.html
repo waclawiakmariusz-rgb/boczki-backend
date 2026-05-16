@@ -7645,6 +7645,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#6e49df; color:#fff; border:0; border-radius:12px; padding:12px 22px; font-size:14px; font-weight:700; cursor:pointer;">📜 Regulamin</button>
                             <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#13a05f; color:#fff; border:0; border-radius:12px; padding:12px 22px; font-size:14px; font-weight:700; cursor:pointer;">🔒 Zgody RODO</button>
                         </div>
+
+                        <!-- ===== Dodatkowe dokumenty ===== -->
+                        <div style="margin-top:24px; border-top:1px solid #efe5e8; padding-top:18px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                                <div style="font-size:16px; font-weight:700; color:#2c3242;">📁 Dodatkowe dokumenty</div>
+                                <button onclick="dd_openModal()" style="background:#0ea5e9; color:#fff; border:0; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">+ Dodaj dokument</button>
+                            </div>
+                            <div id="dd-lista" style="display:flex; flex-direction:column; gap:8px;">
+                                <div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -14003,6 +14014,9 @@ function przelaczTabProfilu(tabId, btn) {
         b.classList.remove('pp-tab-active', 'profil-tab-active');
     });
     if (btn) { btn.classList.add('pp-tab-active'); btn.classList.add('profil-tab-active'); }
+    if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof dd_loadDokumenty === 'function') {
+        dd_loadDokumenty(window.aktualnyProfilKlientId);
+    }
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
         function toggleMenu(id, btn) { document.getElementById(id).classList.toggle('open'); if(btn) btn.classList.toggle('open'); }
@@ -26895,6 +26909,85 @@ initTheme();
 </div>
 
 
+<!-- ═════════════════════════ MODAL: Dodaj/Edytuj dodatkowy dokument ═════════════════════════ -->
+<div id="dd-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
+    <div style="background:#fff; width:95%; max-width:520px; padding:25px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,0.2); margin-bottom:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:18px;">
+            <div>
+                <h3 id="dd-modal-title" style="margin:0; color:#0369a1;">📁 Dodaj dokument</h3>
+                <p id="dd-modal-client" style="margin:5px 0 0 0; font-size:13px; color:#64748b; font-weight:600;"></p>
+            </div>
+            <button onclick="dd_closeModal()" style="border:none; background:none; font-size:24px; color:#94a3b8; cursor:pointer;">&times;</button>
+        </div>
+
+        <form onsubmit="dd_saveDokument(event)">
+            <input type="hidden" id="dd_id_klienta">
+            <input type="hidden" id="dd_klient_nazwa">
+            <input type="hidden" id="dd_existing_id">
+
+            <!-- Typ dokumentu -->
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Typ dokumentu:</label>
+                <div style="display:flex; gap:6px;">
+                    <select id="dd_typ_select" style="flex:1; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;" required>
+                        <option value="">— wybierz typ —</option>
+                    </select>
+                    <button type="button" onclick="dd_addNowyTyp()" style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:0 12px; font-size:13px; cursor:pointer; white-space:nowrap;" title="Dodaj nowy typ do słownika">+ Nowy typ</button>
+                </div>
+            </div>
+
+            <!-- Komentarz -->
+            <div style="margin-bottom:14px;">
+                <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Komentarz (opcjonalnie):</label>
+                <textarea id="dd_komentarz" rows="2" placeholder="np. dotyczy serii zabiegów laser" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px; resize:vertical;"></textarea>
+            </div>
+
+            <!-- Widget upload (prefix 'dok') -->
+            <div id="dok-upload-widget" style="background:#fffbeb; border:1px solid #fcd34d; padding:15px; border-radius:8px; margin-bottom:18px;">
+                <input type="hidden" id="dok_link_pdf">
+                <label style="font-weight:bold; font-size:13px; display:block; color:#b45309; margin-bottom:10px;">📂 Cyfrowy Skan Dokumentu:</label>
+
+                <!-- Stan: brak dokumentu -->
+                <div id="dok-upload-empty">
+                    <label id="dok-upload-btn" style="display:inline-flex; align-items:center; gap:8px; background:#b45309; color:white; padding:10px 18px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">
+                        📷 Dodaj zdjęcia stron
+                        <input type="file" id="dok-file-input" accept="image/*" multiple style="display:none;" onchange="dokumentWybierzPliki(this,'dok')">
+                    </label>
+                    <div style="font-size:11px; color:#92400e; margin-top:6px;">Wybierz 1–6 zdjęć. Możesz zmienić kolejność przed wysłaniem.</div>
+                </div>
+
+                <!-- Stan: podgląd miniaturek + sortowanie -->
+                <div id="dok-upload-preview" style="display:none;">
+                    <div id="dok-pages-list" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;"></div>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button type="button" onclick="dokumentWyslij('dok')" id="dok-upload-send" style="background:#b45309; color:white; border:none; padding:9px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">⬆️ Wyślij i zapisz PDF</button>
+                        <button type="button" onclick="dokumentAnuluj('dok')" style="background:#f1f5f9; border:none; padding:9px 14px; border-radius:8px; cursor:pointer; font-size:13px;">Anuluj</button>
+                    </div>
+                    <div id="dok-progress-wrap" style="display:none; margin-top:10px;">
+                        <div style="background:#fde68a; border-radius:6px; height:8px; overflow:hidden;">
+                            <div id="dok-progress-bar" style="background:#b45309; height:100%; width:0%; transition:width 0.3s;"></div>
+                        </div>
+                        <div id="dok-progress-label" style="font-size:11px; color:#92400e; margin-top:4px;">Wysyłanie...</div>
+                    </div>
+                </div>
+
+                <!-- Stan: dokument zapisany -->
+                <div id="dok-upload-done" style="display:none; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span style="font-size:13px; color:#b45309; font-weight:600;">✅ Dokument zapisany</span>
+                    <a id="btn-preview-dok" href="#" target="_blank" style="display:inline-flex; align-items:center; gap:6px; background:#b45309; color:white; padding:8px 14px; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;">👁️ Podgląd PDF</a>
+                    <button type="button" onclick="dokumentZmien('dok')" style="background:#f1f5f9; border:none; padding:8px 12px; border-radius:8px; cursor:pointer; font-size:12px;">🔄 Zmień</button>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:flex-end; gap:10px;">
+                <button type="button" onclick="dd_closeModal()" style="background:#f1f5f9; border:none; padding:10px 20px; border-radius:8px; cursor:pointer; font-weight:500;">Anuluj</button>
+                <button type="submit" style="background:#0ea5e9; color:#fff; border:0; padding:10px 24px; border-radius:8px; cursor:pointer; font-weight:700;">💾 Zapisz dokument</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
 <!-- Modal: Powiel miesiąc (Koszty) -->
 <div id="kp_powiel_overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.45); z-index:10030; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:16px; padding:28px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
@@ -27236,6 +27329,7 @@ initTheme();
 const _dok = {
   con:  { files: [], sortable: null },
   rodo: { files: [], sortable: null },
+  dok:  { files: [], sortable: null },
 };
 
 // Użytkownik wybrał pliki z dysku
@@ -27298,7 +27392,8 @@ function dokumentUsunStrone(prefix, idx) {
 // Anuluj — wróć do stanu początkowego (lub done jeśli był URL)
 function dokumentAnuluj(prefix) {
   _dok[prefix].files = [];
-  const url = document.getElementById(`${prefix === 'con' ? 'con' : 'rodo'}_link_pdf`).value;
+  const linkEl = document.getElementById(`${prefix}_link_pdf`);
+  const url = linkEl ? linkEl.value : '';
   if (url) {
     dokumentPokazDone(prefix, url);
   } else {
@@ -27356,7 +27451,7 @@ async function dokumentWyslij(prefix) {
     }
 
     // Zapisz URL w ukrytym polu (synchronicznie żeby był dostępny po await przez wywołującą funkcję)
-    const hiddenId = prefix === 'con' ? 'con_link_pdf' : 'rodo_link_pdf';
+    const hiddenId = `${prefix}_link_pdf`;
     document.getElementById(hiddenId).value = d.url;
     dokumentPokazDone(prefix, d.url);
     pokazPowiadomienie('success', 'Dokument zapisany', `PDF z ${d.pages} str. gotowy.`);
@@ -27400,7 +27495,9 @@ function dokumentPokazDone(prefix, url) {
   const done = document.getElementById(`${prefix}-upload-done`);
   done.style.display = 'flex';
 
-  const previewId = prefix === 'con' ? 'btn-preview-con' : 'btn-preview-pdf';
+  const previewId = prefix === 'con' ? 'btn-preview-con'
+                  : prefix === 'rodo' ? 'btn-preview-pdf'
+                  : `btn-preview-${prefix}`;
   const previewEl = document.getElementById(previewId);
   if (previewEl) {
     // Bazowy URL (bez tokenu) zapisany w data-url. Onclick dorzuca świeży token przy każdym kliku.
@@ -27420,7 +27517,8 @@ function dokumentZmien(prefix) {
 
 // Inicjalizacja stanu widgetu na podstawie istniejącego linku (ładowanie danych klienta)
 function dokumentInicjalizujWidget(prefix, url) {
-  document.getElementById(prefix === 'con' ? 'con_link_pdf' : 'rodo_link_pdf').value = url || '';
+  const linkEl = document.getElementById(`${prefix}_link_pdf`);
+  if (linkEl) linkEl.value = url || '';
   const progressWrap = document.getElementById(`${prefix}-progress-wrap`);
   if (progressWrap) { progressWrap.style.display = 'none'; }
   const sendBtn = document.getElementById(`${prefix}-upload-send`);
@@ -27434,6 +27532,215 @@ function dokumentInicjalizujWidget(prefix, url) {
     document.getElementById(`${prefix}-upload-empty`).style.display = 'block';
     document.getElementById(`${prefix}-upload-preview`).style.display = 'none';
     document.getElementById(`${prefix}-upload-done`).style.display = 'none';
+  }
+}
+
+/* ============================================================
+   DODATKOWE DOKUMENTY KLIENTA — lista + modal CRUD
+   ============================================================ */
+
+// Pobiera słownik typów z backendu i wstawia do dropdownu
+async function dd_loadTypy(selected) {
+  try {
+    const r = await fetch(API_URL + '?action=get_typy_dokumentow');
+    const d = await r.json();
+    const sel = document.getElementById('dd_typ_select');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">— wybierz typ —</option>' +
+      (d.typy || []).map(t => `<option value="${t.nazwa.replace(/"/g, '&quot;')}">${t.nazwa}</option>`).join('');
+    if (selected) sel.value = selected;
+  } catch (e) {
+    console.error('[dd_loadTypy]', e);
+  }
+}
+
+// Pobiera listę dokumentów klienta i renderuje pod tabem Dokumenty
+async function dd_loadDokumenty(idKlienta) {
+  const cont = document.getElementById('dd-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>';
+  try {
+    const r = await fetch(API_URL + '?action=get_dokumenty_klienta&id=' + encodeURIComponent(idKlienta));
+    const d = await r.json();
+    dd_renderLista(d.dokumenty || []);
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#dc2626; font-size:13px; padding:8px 4px;">Błąd ładowania dokumentów.</div>';
+  }
+}
+
+function dd_renderLista(dokumenty) {
+  const cont = document.getElementById('dd-lista');
+  if (!cont) return;
+  if (!dokumenty.length) {
+    cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:10px 4px; font-style:italic;">Brak dodatkowych dokumentów. Kliknij „+ Dodaj dokument" aby dodać.</div>';
+    return;
+  }
+  cont.innerHTML = dokumenty.map(doc => {
+    const data = doc.data_dodania ? String(doc.data_dodania).slice(0, 10) : '';
+    const pracownik = doc.pracownik ? ` · ${doc.pracownik}` : '';
+    const komentarz = doc.komentarz ? `<div style="font-size:12px; color:#64748b; margin-top:4px; font-style:italic;">"${doc.komentarz.replace(/</g, '&lt;')}"</div>` : '';
+    const hasPdf = doc.link_pdf && doc.link_pdf.length > 0;
+    const podgladBtn = hasPdf
+      ? `<a href="${doc.link_pdf}" onclick="return otworzDokumentPdf('${doc.link_pdf}', event)" style="background:#0369a1; color:#fff; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; text-decoration:none;">👁️ Podgląd</a>`
+      : '<span style="color:#9ca3af; font-size:12px; padding:6px 0;">Brak pliku</span>';
+    return `
+      <div style="border:1px solid #efe5e8; border-radius:12px; padding:12px 14px; background:#fff;">
+        <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+          <div style="flex:1; min-width:200px;">
+            <div style="font-size:14px; font-weight:700; color:#1f2430;">📄 ${doc.typ_nazwa.replace(/</g, '&lt;')}</div>
+            <div style="font-size:12px; color:#6b7280; margin-top:2px;">${data}${pracownik}</div>
+            ${komentarz}
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+            ${podgladBtn}
+            <button onclick="dd_openModal({id:'${doc.id}', typ_nazwa:${JSON.stringify(doc.typ_nazwa)}, komentarz:${JSON.stringify(doc.komentarz || '')}, link_pdf:${JSON.stringify(doc.link_pdf || '')}})" style="background:#f1f5f9; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">✏️ Edytuj</button>
+            <button onclick="dd_deleteDokument('${doc.id}', ${JSON.stringify(doc.typ_nazwa)})" style="background:#fee2e2; color:#b91c1c; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">🗑️ Usuń</button>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// Otwiera modal dodawania/edycji
+async function dd_openModal(existing) {
+  const idK = window.aktualnyProfilKlientId;
+  const nazwa = window.aktualnyProfilKlientNazwa || '';
+  if (!idK) {
+    alert('Brak wybranego klienta.');
+    return;
+  }
+  document.getElementById('dd_id_klienta').value = idK;
+  document.getElementById('dd_klient_nazwa').value = nazwa;
+  document.getElementById('dd_existing_id').value = existing && existing.id ? existing.id : '';
+  document.getElementById('dd_komentarz').value = existing && existing.komentarz ? existing.komentarz : '';
+  document.getElementById('dd-modal-client').textContent = nazwa;
+  document.getElementById('dd-modal-title').textContent = existing ? '📁 Edytuj dokument' : '📁 Dodaj dokument';
+
+  await dd_loadTypy(existing && existing.typ_nazwa ? existing.typ_nazwa : '');
+  dokumentInicjalizujWidget('dok', existing && existing.link_pdf ? existing.link_pdf : '');
+  document.getElementById('dd-modal-overlay').style.display = 'flex';
+}
+
+function dd_closeModal() {
+  document.getElementById('dd-modal-overlay').style.display = 'none';
+  _dok.dok.files = [];
+}
+
+// Submit formularza — auto-upload jeśli pliki nie wysłane, potem POST save_dokument_klienta
+async function dd_saveDokument(e) {
+  e.preventDefault();
+  const idK = document.getElementById('dd_id_klienta').value;
+  const klient_nazwa = document.getElementById('dd_klient_nazwa').value;
+  const typ_nazwa = document.getElementById('dd_typ_select').value.trim();
+  const komentarz = document.getElementById('dd_komentarz').value.trim();
+
+  if (!typ_nazwa) {
+    alert('Wybierz typ dokumentu.');
+    return;
+  }
+
+  const btn = e.target.querySelector('button[type="submit"]');
+  const origText = btn.innerText;
+  btn.innerText = 'Zapisywanie...'; btn.disabled = true;
+
+  // GUARD: jeśli pliki wybrane ale nie wysłane — auto-upload
+  let linkPdfVal = document.getElementById('dok_link_pdf').value || '';
+  const niewyslane = (window._dok && _dok.dok && _dok.dok.files && _dok.dok.files.length > 0);
+  if (niewyslane && !linkPdfVal) {
+    btn.innerText = 'Wysyłam PDF...';
+    const ok = await dokumentWyslij('dok');
+    if (!ok) {
+      alert('Nie udało się wysłać PDF. Dokument NIE został zapisany — popraw pliki i spróbuj ponownie.');
+      btn.innerText = origText; btn.disabled = false;
+      return;
+    }
+    linkPdfVal = document.getElementById('dok_link_pdf').value || '';
+  }
+
+  if (!linkPdfVal) {
+    alert('Wybierz i wyślij zdjęcia dokumentu przed zapisem.');
+    btn.innerText = origText; btn.disabled = false;
+    return;
+  }
+
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'save_dokument_klienta',
+        id_klienta: idK,
+        klient_nazwa: klient_nazwa,
+        typ_nazwa: typ_nazwa,
+        link_pdf: linkPdfVal,
+        komentarz: komentarz,
+        pracownik: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      pokazPowiadomienie('success', 'Zapisano', 'Dokument został zapisany.');
+      dd_closeModal();
+      dd_loadDokumenty(idK);
+    } else {
+      alert('Błąd: ' + (d.message || 'nieznany błąd'));
+    }
+  } catch (err) {
+    alert('Błąd połączenia: ' + err.message);
+  } finally {
+    btn.innerText = origText; btn.disabled = false;
+  }
+}
+
+async function dd_deleteDokument(id, typ_nazwa) {
+  if (!confirm(`Usunąć dokument "${typ_nazwa}"?\n\nPlik PDF zostanie odłączony od profilu, ale fizycznie zostanie na serwerze.`)) return;
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'delete_dokument_klienta', id: id })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      pokazPowiadomienie('success', 'Usunięto', 'Dokument został usunięty.');
+      dd_loadDokumenty(window.aktualnyProfilKlientId);
+    } else {
+      alert('Błąd: ' + (d.message || 'nieznany'));
+    }
+  } catch (err) {
+    alert('Błąd połączenia: ' + err.message);
+  }
+}
+
+// Dodanie nowego typu do globalnego słownika (z modala)
+async function dd_addNowyTyp() {
+  const nazwa = prompt('Podaj nazwę nowego typu dokumentu (np. "Zgoda na laserowe usuwanie owłosienia"):');
+  if (!nazwa || !nazwa.trim()) return;
+  const nazwaTrim = nazwa.trim();
+  if (nazwaTrim.length > 150) {
+    alert('Nazwa za długa (max 150 znaków).');
+    return;
+  }
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add_typ_dokumentu',
+        nazwa: nazwaTrim,
+        pracownik: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      // Odśwież dropdown i zaznacz nowo dodany typ
+      const sel = document.getElementById('dd_typ_select');
+      sel.innerHTML = '<option value="">— wybierz typ —</option>' +
+        (d.typy || []).map(t => `<option value="${t.nazwa.replace(/"/g, '&quot;')}">${t.nazwa}</option>`).join('');
+      sel.value = nazwaTrim;
+      pokazPowiadomienie('success', 'Dodano typ', `"${nazwaTrim}" dodano do słownika.`);
+    } else {
+      alert('Błąd: ' + (d.message || 'nieznany'));
+    }
+  } catch (err) {
+    alert('Błąd połączenia: ' + err.message);
   }
 }
 </script>

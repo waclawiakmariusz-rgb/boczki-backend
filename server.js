@@ -294,6 +294,7 @@ const zadaniaRoutes    = require('./routes/zadania')(db);
 const typyZabiegowRoutes = require('./routes/typy_zabiegow')(db);
 const leadyRoutes      = require('./routes/leady')(db);
 const featuresRoutes   = require('./routes/features')(db);
+const dokumentyDodatkoweRoutes = require('./routes/dokumenty_dodatkowe')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -324,6 +325,7 @@ app.use('/api', zadaniaRoutes);
 app.use('/api', typyZabiegowRoutes);
 app.use('/api', leadyRoutes);
 app.use('/api', featuresRoutes);
+app.use('/api', dokumentyDodatkoweRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -448,6 +450,8 @@ app.get('/api', (req, res) => {
         'get_pin_users': '/api/users?action=get_pin_users&tenant_id=' + tenant_id,
         'get_admin_users': '/api/users?action=get_admin_users&tenant_id=' + tenant_id,
         'get_features_catalog': '/api/features?action=get_features_catalog&tenant_id=' + tenant_id,
+        'get_typy_dokumentow': '/api/dokumenty_dodatkowe?action=get_typy_dokumentow&tenant_id=' + tenant_id,
+        'get_dokumenty_klienta': '/api/dokumenty_dodatkowe?action=get_dokumenty_klienta&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
     };
 
     if (getActions[action]) {
@@ -515,6 +519,7 @@ app.post('/api', (req, res) => {
     const raportActions = ['rap_getInventory', 'rap_getCategories', 'rap_getLogs', 'rap_updateStock', 'rap_archiveProduct', 'rap_saveProduct', 'rap_saveCategory', 'rap_deleteCategory'];
     const usersActions = ['verify_pin', 'get_pin_users', 'get_admin_users', 'add_admin_user', 'delete_admin_user'];
     const featuresActions = ['toggle_feature'];
+    const dokumentyDodatkoweActions = ['add_typ_dokumentu', 'save_dokument_klienta', 'delete_dokument_klienta'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -552,6 +557,9 @@ app.post('/api', (req, res) => {
     } else if (featuresActions.includes(action)) {
         req.url = '/features';
         return featuresRoutes(req, res, () => {});
+    } else if (dokumentyDodatkoweActions.includes(action)) {
+        req.url = '/dokumenty_dodatkowe';
+        return dokumentyDodatkoweRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
