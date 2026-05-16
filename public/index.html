@@ -7236,6 +7236,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div class="pp-hero-actions" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                             <button onclick="otworzEdycjeZgod(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#6e49df; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔒 REGULAMIN</button>
                             <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#13a05f; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔓 ZGODY</button>
+                            <span id="dd-hero-pigulki" style="display:inline-flex; gap:6px; flex-wrap:wrap;"></span>
                         </div>
                     </div>
 
@@ -12293,7 +12294,8 @@ function renderujKafelkiKlientow(data, kontener) {
         // Sprawdzamy czy klient ma RODO i Oświadczenie i generujemy ikony
         let rodoIcon = (typeof klient === 'object' && klient.rodo) ? `<span title="RODO Podpisane" style="margin-left: 8px; font-size: 14px; cursor: help;">🛡️</span>` : ``;
         let oswIcon = (typeof klient === 'object' && klient.osw) ? `<span title="Oświadczenie Podpisane" style="margin-left: 4px; font-size: 14px; cursor: help;">📝</span>` : ``;
-        let ikony = rodoIcon + oswIcon;
+        let dodIcon = (typeof klient === 'object' && klient.dodatkowe > 0) ? `<span title="${klient.dodatkowe} dodatkowych dokumentów" style="margin-left: 4px; font-size: 14px; cursor: help;">📁</span>` : ``;
+        let ikony = rodoIcon + oswIcon + dodIcon;
 
         let tel = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") ? escHtml(klient.telefon) : "";
         let telefon = tel
@@ -13012,6 +13014,11 @@ function otworzProfil(idKlienta) {
     const nazwaKlienta = klientObj.nazwa;
     window.aktualnyProfilKlientNazwa = nazwaKlienta;
     window.aktualnyProfilKlientId = idKlienta;
+
+    // Załaduj dodatkowe dokumenty (pigułki w hero + lista pod tabem) — w tle, nie blokuje renderu profilu
+    if (typeof dd_loadDokumenty === 'function') {
+        dd_loadDokumenty(idKlienta);
+    }
 
     // 1. Przełącz widok
     document.getElementById('widok-listy-klientow').style.display = 'none';
@@ -27269,18 +27276,46 @@ async function dd_loadTypy(selected) {
   }
 }
 
-// Pobiera listę dokumentów klienta i renderuje pod tabem Dokumenty
+// Pobiera listę dokumentów klienta i renderuje pod tabem Dokumenty + pigułki w hero
 async function dd_loadDokumenty(idKlienta) {
   const cont = document.getElementById('dd-lista');
-  if (!cont) return;
-  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>';
+  const hero = document.getElementById('dd-hero-pigulki');
+  if (cont) cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>';
   try {
     const r = await fetch(API_URL + '?action=get_dokumenty_klienta&id=' + encodeURIComponent(idKlienta));
     const d = await r.json();
-    dd_renderLista(d.dokumenty || []);
+    const dokumenty = d.dokumenty || [];
+    dd_renderLista(dokumenty);
+    dd_renderHeroPigulki(dokumenty);
   } catch (e) {
-    cont.innerHTML = '<div style="color:#dc2626; font-size:13px; padding:8px 4px;">Błąd ładowania dokumentów.</div>';
+    if (cont) cont.innerHTML = '<div style="color:#dc2626; font-size:13px; padding:8px 4px;">Błąd ładowania dokumentów.</div>';
+    if (hero) hero.innerHTML = '';
   }
+}
+
+// Renderuje pigułki w hero profilu (obok Regulamin/Zgody) — klik = podgląd PDF
+function dd_renderHeroPigulki(dokumenty) {
+  const hero = document.getElementById('dd-hero-pigulki');
+  if (!hero) return;
+  if (!dokumenty || !dokumenty.length) {
+    hero.innerHTML = '';
+    return;
+  }
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  hero.innerHTML = dokumenty.map((doc, idx) => {
+    const hasPdf = doc.link_pdf && doc.link_pdf.length > 0;
+    const bg = hasPdf ? '#0369a1' : '#94a3b8';
+    const cursor = hasPdf ? 'pointer' : 'default';
+    return `<button data-dd-hero-idx="${idx}" title="${hasPdf ? 'Kliknij — podgląd PDF' : 'Brak pliku'}" style="display:inline-flex; align-items:center; gap:6px; border:0; background:${bg}; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:${cursor};">📁 ${esc(doc.typ_nazwa)}</button>`;
+  }).join('');
+  hero.querySelectorAll('[data-dd-hero-idx]').forEach(btn => {
+    const idx = parseInt(btn.getAttribute('data-dd-hero-idx'), 10);
+    const doc = dokumenty[idx];
+    if (!doc) return;
+    btn.addEventListener('click', (ev) => {
+      if (doc.link_pdf) otworzDokumentPdf(doc.link_pdf, ev);
+    });
+  });
 }
 
 function dd_renderLista(dokumenty) {
