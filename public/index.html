@@ -7487,6 +7487,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#13a05f; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔓 ZGODY</button>
                             <span id="dd-hero-pigulki" style="display:inline-flex; gap:6px; flex-wrap:wrap;"></span>
                         </div>
+                        <!-- Treść notatki o kliencie — pod chipsami; pełna edycja w tabie Podsumowanie -->
+                        <div id="memo-hero" style="display:none; margin-top:10px; padding:10px 14px; background:#fffbf5; border:1px solid #f3e0c8; border-radius:12px; font-size:13px; color:#5b4a37; line-height:1.5; font-style:italic; white-space:pre-wrap; word-break:break-word;"></div>
                     </div>
 
                     <!-- birthday box -->
@@ -18397,15 +18399,18 @@ function filtrujLogi() {
 function pobierzNotatke(parametr, preloadedData = null) {
     const box = document.getElementById('memo-content');
     const label = document.getElementById('memo-action-label');
-    
+    const hero = document.getElementById('memo-hero');
+
     const renderUI = (d) => {
         if (d.znaleziona && d.tresc && d.tresc.trim() !== "") {
-            box.innerText = d.tresc; 
+            box.innerText = d.tresc;
             box.style.color = "#374151"; box.style.fontStyle = "normal";
             label.innerText = "✎ Edytuj";
+            if (hero) { hero.textContent = d.tresc; hero.style.display = 'block'; }
         } else {
             box.innerHTML = '<span style="color:#9ca3af; font-size:13px; font-style:italic;">Brak notatki. Kliknij "Dodaj", aby wpisać np. preferencje klienta.</span>';
             label.innerText = "➕ Dodaj";
+            if (hero) { hero.textContent = ''; hero.style.display = 'none'; }
         }
     };
 
