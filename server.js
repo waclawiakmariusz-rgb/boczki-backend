@@ -192,7 +192,7 @@ app.get('/blog/:slug', (req, res, next) => {
   <div class="article-cta">
     <h3>Wypróbuj Estelio</h3>
     <p>System zaprojektowany specjalnie dla salonów beauty.</p>
-    <a href="/zamow.html#formularz">Zamów dostęp za 49 zł / miesiąc →</a>
+    <a href="/zamow.html#formularz">Zamów dostęp za 79 zł / miesiąc →</a>
   </div>
 </div>
 <footer>
