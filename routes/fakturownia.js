@@ -55,9 +55,8 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
       issue_date:      dzisiaj(),
       sell_date:       dzisiaj(),
       payment_to:      terminPlatnosci(),
-      payment_kind:    'transfer',
+      payment_type:    'transfer',
       currency:        'PLN',
-      send_invoice:    true,          // Fakturownia wyśle PDF mailem do nabywcy automatycznie
 
       // Sprzedawca — pobierany z ustawień konta Fakturownia (nie trzeba podawać)
 
@@ -80,7 +79,7 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
     }
   });
 
-  return new Promise((resolve, reject) => {
+  const created = await new Promise((resolve, reject) => {
     const options = {
       hostname: `${subdomain}.fakturownia.pl`,
       path:     '/invoices.json',
@@ -98,7 +97,7 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
         try {
           const json = JSON.parse(data);
           if (res.statusCode >= 200 && res.statusCode < 300) {
-            console.log(`[fakturownia] Faktura wystawiona: #${json.number} (id: ${json.id}) → ${email}`);
+            console.log(`[fakturownia] Faktura wystawiona: #${json.number} (id: ${json.id})`);
             resolve({ id: json.id, numer: json.number });
           } else {
             reject(new Error(`Fakturownia HTTP ${res.statusCode}: ${data}`));
@@ -109,6 +108,50 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
       });
     });
 
+    req.on('error', reject);
+    req.write(body);
+    req.end();
+  });
+
+  // Wysyłka PDF mailem do nabywcy — osobny endpoint w Fakturownia API
+  try {
+    await wyslijFaktureMailem(created.id);
+    console.log(`[fakturownia] PDF wysłany mailem do ${email}`);
+  } catch (mailErr) {
+    console.error(`[fakturownia] Faktura #${created.numer} wystawiona, ale mail się nie wysłał:`, mailErr.message);
+    // Faktura jest w panelu — admin może wysłać ręcznie
+  }
+
+  return created;
+}
+
+/**
+ * Wysyła PDF faktury mailem do nabywcy (osobny endpoint Fakturownia API).
+ * @param {number} invoiceId - ID faktury z Fakturowni
+ */
+function wyslijFaktureMailem(invoiceId) {
+  const token     = TOKEN();
+  const subdomain = SUBDOMAIN();
+  const body = JSON.stringify({ api_token: token, email_to_buyer: true });
+
+  return new Promise((resolve, reject) => {
+    const options = {
+      hostname: `${subdomain}.fakturownia.pl`,
+      path:     `/invoices/${invoiceId}/send_by_email.json`,
+      method:   'POST',
+      headers:  {
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => { data += chunk; });
+      res.on('end', () => {
+        if (res.statusCode >= 200 && res.statusCode < 300) resolve();
+        else reject(new Error(`send_by_email HTTP ${res.statusCode}: ${data.slice(0, 200)}`));
+      });
+    });
     req.on('error', reject);
     req.write(body);
     req.end();
