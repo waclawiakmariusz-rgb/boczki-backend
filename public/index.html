@@ -3049,6 +3049,18 @@ body.dark-mode div[style*="background:#f9fafb"] * { color: #cbd5e1 !important; }
 /* Inline color:black w urodzinach */
 body.dark-mode span[style*="color:black"],
 body.dark-mode span[style*="color: black"] { color: #f8fafc !important; }
+
+/* Modal komentarzy do zadań — czytelne tła i tekst w dark mode */
+body.dark-mode #zd-comments-list > div { background: #1e293b !important; border: 1px solid #334155 !important; }
+body.dark-mode #zd-comments-list > div[style*="#dbeafe"] { background: #1e3a8a !important; border-color: #3b5fb8 !important; }
+body.dark-mode #zd-comments-list > div > div > span[style*="color:#475569"],
+body.dark-mode #zd-comments-list > div > div > span[style*="color: #475569"] { color: #cbd5e1 !important; }
+body.dark-mode #zd-comments-list > div > div > span[style*="color:#1e40af"],
+body.dark-mode #zd-comments-list > div > div > span[style*="color: #1e40af"] { color: #93c5fd !important; }
+body.dark-mode #zd-comments-list > div > div[style*="color:#1f2430"],
+body.dark-mode #zd-comments-list > div > div[style*="color: #1f2430"] { color: #f8fafc !important; }
+body.dark-mode #zd-comment-input { background: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
+body.dark-mode #zd-comment-input::placeholder { color: #64748b !important; }
 @keyframes bToastIn {
     from { opacity: 0; transform: translateX(50px) scale(0.95); }
     to   { opacity: 1; transform: translateX(0) scale(1); }
