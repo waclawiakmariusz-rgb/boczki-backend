@@ -639,6 +639,17 @@
 
   .voucher-row { display: flex; gap: 10px; align-items: flex-end; }
   .voucher-row .form-group { flex: 1; margin: 0; }
+
+  /* Zgody RODO/regulamin przed CTA */
+  .zgody-box { margin: 18px 0 6px; display: flex; flex-direction: column; gap: 10px; }
+  .zgoda-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.5; }
+  .zgoda-row input[type="checkbox"] {
+    flex-shrink: 0; margin-top: 3px; width: 18px; height: 18px;
+    accent-color: var(--rose); cursor: pointer;
+  }
+  .zgoda-row span { font-size: .82rem; color: var(--dark); }
+  .zgoda-row a { color: var(--rose); text-decoration: underline; }
+  .zgoda-row a:hover { color: var(--dark); }
   .btn-voucher {
     padding: 13px 18px; background: var(--cream);
     border: 1.5px solid var(--border); border-radius: 10px;
@@ -1291,6 +1302,18 @@
             <div id="voucher-info"></div>
           </div>
 
+          <!-- ZGODY -->
+          <div class="zgody-box">
+            <label class="zgoda-row">
+              <input type="checkbox" id="f-zgoda-regulamin" required>
+              <span>Akceptuję <a href="/regulamin.html" target="_blank" rel="noopener">Regulamin</a> i <a href="/polityka-prywatnosci.html" target="_blank" rel="noopener">Politykę prywatności</a> Estelio. *</span>
+            </label>
+            <label class="zgoda-row">
+              <input type="checkbox" id="f-zgoda-dpa" required>
+              <span>Akceptuję <a href="/umowa-powierzenia.html" target="_blank" rel="noopener">Umowę powierzenia danych osobowych</a>, która zostanie zawarta z Estelio z chwilą uruchomienia subskrypcji. *</span>
+            </label>
+          </div>
+
           <button type="submit" class="btn-submit" id="btn-wyslij">Zamów dostęp</button>
         </form>
       </div>
@@ -1563,6 +1586,16 @@ async function wyslij(e) {
   const errEl = document.getElementById('form-error');
   errEl.style.display = 'none';
   const btn = document.getElementById('btn-wyslij');
+
+  // Dodatkowe zabezpieczenie — HTML5 required już blokuje, ale na wszelki wypadek
+  const zgodaReg = document.getElementById('f-zgoda-regulamin').checked;
+  const zgodaDpa = document.getElementById('f-zgoda-dpa').checked;
+  if (!zgodaReg || !zgodaDpa) {
+    errEl.style.display = 'block';
+    errEl.textContent = 'Wymagana akceptacja Regulaminu, Polityki prywatności i Umowy powierzenia danych.';
+    return;
+  }
+
   btn.disabled = true; btn.textContent = '⏳ Przetwarzam...';
 
   const payload = {
@@ -1574,6 +1607,8 @@ async function wyslij(e) {
     nip:          document.getElementById('f-nip').value.replace(/\s|-/g, ''),
     wiadomosc:    document.getElementById('f-wiadomosc').value.trim(),
     kod_rabatowy: window._zastosowanyVoucher || '',
+    zgoda_regulamin: zgodaReg,
+    zgoda_dpa:    zgodaDpa,
   };
 
   try {
