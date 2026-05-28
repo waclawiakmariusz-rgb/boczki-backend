@@ -7,7 +7,7 @@ const { mockDb, mockDbAlways } = require('./helpers/mockDb');
 
 const ADMIN_TOKEN = 'test-token-123';
 process.env.ADMIN_TOKEN = ADMIN_TOKEN;
-process.env.STRIPE_CENA_GROSZE = '4900';
+process.env.STRIPE_CENA_GROSZE = '7900';
 
 function buildAdminApp(db) {
     const app = express();
@@ -55,7 +55,7 @@ describe('GET /api/voucher/weryfikuj', () => {
     });
 
     test('oblicza rabat procentowy poprawnie', async () => {
-        // 20% zniżki od 4900 groszy = 3920 groszy (49 zł → 39.20 zł)
+        // 20% zniżki od 7900 groszy = 6320 groszy (79 zł → 63.20 zł)
         const db = mockDbAlways([{
             id: 1, kod: 'BOCZKI20', typ: 'procent', wartosc: 20,
             czas_trwania: 'zawsze', czas_trwania_miesiecy: null,
@@ -66,14 +66,14 @@ describe('GET /api/voucher/weryfikuj', () => {
             .get('/api/voucher/weryfikuj')
             .query({ kod: 'BOCZKI20' });
         expect(res.body.status).toBe('ok');
-        expect(res.body.cena_po_rabacie_grosze).toBe(3920);
-        expect(res.body.cena_po_rabacie_display).toBe('39 zł');
+        expect(res.body.cena_po_rabacie_grosze).toBe(6320);
+        expect(res.body.cena_po_rabacie_display).toBe('63 zł');
         expect(res.body.opis_rabatu).toContain('-20%');
         expect(res.body.opis_rabatu).toContain('na zawsze');
     });
 
     test('oblicza rabat kwotowy poprawnie', async () => {
-        // -10 zł od 49 zł = 39 zł
+        // -10 zł od 79 zł = 69 zł
         const db = mockDbAlways([{
             id: 1, kod: 'MINUS10', typ: 'zlotowki', wartosc: 10,
             czas_trwania: 'miesiecy', czas_trwania_miesiecy: 6,
@@ -84,12 +84,12 @@ describe('GET /api/voucher/weryfikuj', () => {
             .get('/api/voucher/weryfikuj')
             .query({ kod: 'MINUS10' });
         expect(res.body.status).toBe('ok');
-        expect(res.body.cena_po_rabacie_grosze).toBe(3900);
+        expect(res.body.cena_po_rabacie_grosze).toBe(6900);
         expect(res.body.opis_rabatu).toContain('przez 6 mies.');
     });
 
     test('nie schodzi poniżej 0 przy za dużym rabacie kwotowym', async () => {
-        // -100 zł od 49 zł = max 0
+        // -100 zł od 79 zł = max 0
         const db = mockDbAlways([{
             id: 1, kod: 'GRATIS', typ: 'zlotowki', wartosc: 100,
             czas_trwania: 'zawsze', czas_trwania_miesiecy: null,
