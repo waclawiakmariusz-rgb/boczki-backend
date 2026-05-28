@@ -40,6 +40,12 @@ const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 7900;
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
 const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
 
+// Wersje dokumentów prawnych — inkrementować przy każdej zmianie treści
+// Wersja jest zapisywana w bazie przy każdym zamówieniu jako dowód co klient zaakceptował
+const REGULAMIN_VERSION = '1.0-2026-05-28';
+const POLITYKA_VERSION  = '1.0-2026-05-28';
+const DPA_VERSION       = '1.0-2026-05-28';
+
 module.exports = (db) => {
 
   // Idempotentne migracje:
@@ -71,15 +77,42 @@ module.exports = (db) => {
     }
   );
 
+  // Idempotentne migracje na Zamowienia — zgody RODO przy zakupie subskrypcji
+  // Bez tych pól nie da się prawnie udowodnić, że klient zaakceptował regulamin i DPA
+  const zamowieniaKolumny = [
+    `ALTER TABLE Zamowienia ADD COLUMN zgoda_regulamin TINYINT(1) NOT NULL DEFAULT 0`,
+    `ALTER TABLE Zamowienia ADD COLUMN zgoda_dpa TINYINT(1) NOT NULL DEFAULT 0`,
+    `ALTER TABLE Zamowienia ADD COLUMN wersja_regulaminu VARCHAR(20) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN wersja_polityki VARCHAR(20) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN wersja_dpa VARCHAR(20) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN ip_akceptacji VARCHAR(45) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN user_agent_akceptacji VARCHAR(500) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN data_akceptacji DATETIME NULL`,
+  ];
+  zamowieniaKolumny.forEach(sql => {
+    db.query(sql, (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[stripe] ALTER Zamowienia:', err.message);
+      }
+    });
+  });
+
   // ─── POST /api/stripe/create-checkout ────────────────────────
   // Tworzy sesję płatności Stripe i przekierowuje klienta
   router.post('/stripe/create-checkout', async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
-    const { imie, nazwa_salonu, email, telefon, miasto, nip, wiadomosc, kod_rabatowy } = req.body;
+    const { imie, nazwa_salonu, email, telefon, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
     }
+    // Wymagane zgody — bez nich nie zawieramy umowy (RODO art. 7 + UŚUDE + RODO art. 28)
+    if (zgoda_regulamin !== true || zgoda_dpa !== true) {
+      return res.json({ status: 'error', message: 'Wymagana akceptacja Regulaminu, Polityki prywatności i Umowy powierzenia danych.' });
+    }
+    // Metadane akceptacji — IP + user-agent zapisujemy jako dowód autentyczności (UODO)
+    const ipAkceptacji = (req.ip || '').slice(0, 45);
+    const userAgentAkceptacji = String(req.headers['user-agent'] || '').slice(0, 500);
 
     // Walidacja i obliczenie rabatu
     const cenaBazowa = CENA_GROSZE();
@@ -115,8 +148,8 @@ module.exports = (db) => {
     // Zapisz zgłoszenie w bazie (status: nowe — czeka na płatność)
     const zamowienieId = randomUUID();
     db.query(
-      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, miasto, wiadomosc, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'nowe')`,
-      [zamowienieId, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, miasto || null, wiadomosc || null],
+      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
+      [zamowienieId, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
