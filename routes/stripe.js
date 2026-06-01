@@ -178,6 +178,40 @@ module.exports = (db) => {
             nip:     nip     || '',
           };
 
+          // Voucher → dynamiczny Stripe Coupon dolaczany do sesji.
+          // Bez tego Stripe pobiera pelne 79 zl mimo waznego vouchera w naszej bazie.
+          let discounts;
+          if (voucherInfo) {
+            const couponOpts = {
+              name: `Voucher ${voucherInfo.kod}`.slice(0, 40),
+              metadata: { voucher_id: String(voucherInfo.id), voucher_kod: voucherInfo.kod || '' },
+            };
+            if (voucherInfo.typ === 'procent') {
+              couponOpts.percent_off = parseFloat(voucherInfo.wartosc);
+            } else {
+              couponOpts.amount_off = Math.round(parseFloat(voucherInfo.wartosc) * 100);
+              couponOpts.currency = 'pln';
+            }
+            if (voucherInfo.czas_trwania === 'zawsze') {
+              couponOpts.duration = 'forever';
+            } else if (voucherInfo.czas_trwania === 'miesiecy' && voucherInfo.czas_trwania_miesiecy) {
+              couponOpts.duration = 'repeating';
+              couponOpts.duration_in_months = voucherInfo.czas_trwania_miesiecy;
+            } else {
+              couponOpts.duration = 'once';
+            }
+            try {
+              const stripeCoupon = await stripe.coupons.create(couponOpts);
+              discounts = [{ coupon: stripeCoupon.id }];
+              console.log(`[stripe] Coupon ${stripeCoupon.id} (${voucherInfo.kod}) utworzony — ${couponOpts.percent_off || couponOpts.amount_off/100} ${couponOpts.percent_off ? '%' : 'zl'} / ${couponOpts.duration}`);
+            } catch (couponErr) {
+              console.error('[stripe] Blad tworzenia coupon dla vouchera', voucherInfo.kod, ':', couponErr.message);
+              // Nie blokujemy zakupu — Stripe pobierze pelna cene, ale plan rabatu w bazie zostal naliczony.
+              // Lepiej tu zwrocic blad zeby user wiedzial?
+              return res.json({ status: 'error', message: 'Voucher nie mogl byc zastosowany w Stripe. Sprobuj ponownie lub kup bez vouchera.' });
+            }
+          }
+
           const session = await stripe.checkout.sessions.create({
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
@@ -186,6 +220,7 @@ module.exports = (db) => {
             // metadata na session i subscription — potrzebne w webhookach
             metadata: sessionMeta,
             subscription_data: { metadata: sessionMeta },
+            ...(discounts ? { discounts } : {}),
             success_url: `${APP_URL()}/platnosc-sukces.html?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${APP_URL()}/zamow.html?anulowano=1`,
             locale: 'pl',
