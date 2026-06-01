@@ -25106,16 +25106,24 @@ function rap_renderTable() {
             </div>
             <div class="rap_cat-content">
                 <table class="rap_table">
-                    <thead><tr><th>Nazwa</th><th>Ilość (Dotyk)</th><th>Data Modyfikacji</th><th>Status</th><th>Akcja</th></tr></thead>
+                    <thead><tr><th>Nazwa</th><th>Ilość (Dotyk)</th><th>Data Modyfikacji</th><th>Ważność</th><th>Status</th><th>Akcja</th></tr></thead>
                     <tbody>`;
-                    
+
         catItems.forEach(r => {
             const st = rap_getStatus(r[3], r[4]);
-            
-            let dateVal = "";
+
+            // Wazność — kolorystyka jak w widoku Stan Magazynowy
+            let waznoscCell = '<span style="color:#cbd5e1;">—</span>';
             if (r[11]) {
-                const d = new Date(r[11]);
-                if(!isNaN(d.getTime())) dateVal = d.toISOString().split('T')[0];
+                const dW = new Date(r[11]);
+                if (!isNaN(dW.getTime())) {
+                    const dni = Math.ceil((dW - new Date()) / 86400000);
+                    let bg, col;
+                    if (dni < 0)       { bg = '#fee2e2'; col = '#b91c1c'; } // przeterminowane
+                    else if (dni <= 90){ bg = '#fef3c7'; col = '#b45309'; } // konczy sie
+                    else               { bg = '#dcfce7'; col = '#166534'; } // OK
+                    waznoscCell = `<span style="background:${bg}; color:${col}; padding:4px 9px; border-radius:8px; font-weight:700; font-size:0.8rem; white-space:nowrap;">${dW.toLocaleDateString('pl-PL')}</span>`;
+                }
             }
 
             html += `<tr>
@@ -25135,6 +25143,7 @@ function rap_renderTable() {
                 <td style="font-size:0.85rem; color:#64748b; text-align:center; min-width:90px; font-weight:600;">
                     ${rap_formatDatePL(r[6])}
                 </td>
+                <td style="text-align:center; min-width:100px;">${waznoscCell}</td>
                 <td><div style="color:${st.col}; background:${st.bg}; padding:5px 10px; border-radius:12px; font-weight:800; font-size:0.8rem; text-align:center;">${st.txt}</div></td>
                 <td style="display:flex; gap:10px; justify-content:center;">
                     <button onclick="rap_edit('${r[0]}')" style="background:white; border:1px solid #cbd5e1; padding:10px; border-radius:12px; cursor:pointer; transition:0.2s;" onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='white'">✏️</button>
