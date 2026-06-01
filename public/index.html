@@ -10716,13 +10716,14 @@ function uruchomAplikacjePracownika(imie, rola) {
         show('group-config');
         show('group-logs');
         show('menu-dodatki'); // panel Dodatki widoczny dla manager+
+        show('nav-billing-link'); // panel rozliczeniowy — admin/manager
         pokaz('pulpit'); zaladujPulpit();
     }
     else if (r === 'megaadmin' || r === 'admin') {
         // MEGAADMIN WIDZI WSZYSTKO
         grupy.forEach(g => show(g));
         show('menu-dodatki'); // panel Dodatki
-        show('nav-billing-link'); // panel rozliczeniowy — tylko właściciel salonu
+        show('nav-billing-link'); // panel rozliczeniowy — admin/manager
         pokaz('pulpit'); zaladujPulpit();
     }
     else {
