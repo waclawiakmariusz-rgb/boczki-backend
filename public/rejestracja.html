@@ -244,6 +244,10 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
           <label>Nazwa salonu *</label>
           <input type="text" id="s1-nazwa" placeholder="np. Studio Urody Kleopatra" oninput="autofillLogin()">
         </div>
+        <div class="form-group">
+          <label>Ulica i numer <span style="font-weight:400; color:#a0aec0; font-size:12px;">— wymagane do faktury VAT</span></label>
+          <input type="text" id="s1-ulica" placeholder="np. Kwiatowa 12/3">
+        </div>
         <div class="form-row">
           <div class="form-group">
             <label>Miasto</label>
@@ -406,6 +410,7 @@ function step1() {
   if (!nazwa) { err.style.display='block'; err.textContent='Podaj nazwę salonu.'; return; }
   wData.salon = {
     nazwa_salonu: nazwa,
+    ulica: document.getElementById('s1-ulica').value.trim(),
     miasto: document.getElementById('s1-miasto').value.trim(),
     telefon: document.getElementById('s1-telefon').value.trim(),
     email: document.getElementById('s1-email').value.trim(),
@@ -601,6 +606,7 @@ function renderSummary() {
     <div class="summary-section">
       <h4>Dane salonu</h4>
       <div class="summary-row"><strong>Nazwa</strong><span>${salon.nazwa_salonu}</span></div>
+      ${salon.ulica ? `<div class="summary-row"><strong>Ulica i numer</strong><span>${salon.ulica}</span></div>` : ''}
       ${salon.miasto ? `<div class="summary-row"><strong>Miasto</strong><span>${salon.miasto}</span></div>` : ''}
       ${salon.telefon ? `<div class="summary-row"><strong>Telefon</strong><span>${salon.telefon}</span></div>` : ''}
       ${salon.email ? `<div class="summary-row"><strong>E-mail</strong><span>${salon.email}</span></div>` : ''}

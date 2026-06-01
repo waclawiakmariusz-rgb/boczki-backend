@@ -429,7 +429,7 @@ module.exports = (db) => {
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
   router.post('/rejestracja/zaloz', async (req, res) => {
     const d = req.body;
-    const { token, imie, nazwa_salonu, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
+    const { token, imie, nazwa_salonu, ulica, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
 
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
     if (!nazwa_salonu || !login || !haslo) return res.json({ status: 'error', message: 'Uzupełnij wszystkie wymagane pola.' });
@@ -454,9 +454,9 @@ module.exports = (db) => {
         const licId = randomUUID();
 
         db.query(
-          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, miasto, telefon, email, data_waznosci, data_utworzenia)
-           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, login.trim(), hasloHash, tenant_id, nazwa_salonu, miasto || '', telefon || '', email || ''],
+          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, ulica, miasto, telefon, email, data_waznosci, data_utworzenia)
+           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
+          [licId, login.trim(), hasloHash, tenant_id, nazwa_salonu, ulica || '', miasto || '', telefon || '', email || ''],
           (err2) => {
             if (err2) {
               // Cofnij token jeśli zapis się nie udał
