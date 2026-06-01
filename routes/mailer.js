@@ -107,9 +107,16 @@ async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
         ${nazwa_salonu ? `<strong style="color:#1c1a18;">${nazwa_salonu}</strong>` : ''}.
       </p>
       ${emailBtn(link, 'Załóż profil salonu →')}
-      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
+      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
         <p style="font-size:11px; color:#a89e96; margin:0 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Lub skopiuj link ręcznie</p>
         <p style="font-size:11px; color:#5c5046; word-break:break-all; margin:0; font-family:monospace;">${link}</p>
+      </div>
+      <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
+        <p style="font-size:12px; font-weight:700; color:#c9a96e; margin:0 0 5px; text-transform:uppercase; letter-spacing:0.5px;">Panel rozliczeniowy</p>
+        <p style="font-size:12px; color:#7a6e66; margin:0; line-height:1.7;">
+          Po założeniu profilu znajdziesz faktury i historię płatności pod adresem
+          <a href="${APP_URL()}/billing.html" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/billing.html</a> — logujesz się tymi samymi danymi co do systemu.
+        </p>
       </div>
       <p style="font-size:12px; color:#a89e96; line-height:1.7;">
         ⚠️ Ten link jest jednorazowy i wygaśnie po 24 godzinach.<br>
