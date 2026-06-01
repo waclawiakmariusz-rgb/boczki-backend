@@ -5265,7 +5265,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                 </li>
             </ul>
             <div class="sidebar-footer">
-			<a href="/billing.html" target="_blank" rel="noopener" id="nav-billing-link" title="Faktury, status subskrypcji i zarządzanie kartą — otwiera się w nowej karcie" style="display:none; margin-bottom:12px; padding:12px 15px; background:linear-gradient(135deg,#b87080,#c98a96); color:#fff; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700; text-align:center; box-shadow:0 4px 12px rgba(184,112,128,0.25);">💳 Panel rozliczeniowy</a>
+			<a href="/billing.html" target="_blank" rel="noopener" id="nav-billing-link" onclick="otworzBilling(event)" title="Faktury, status subskrypcji i zarządzanie kartą — otwiera się w nowej karcie" style="display:none; margin-bottom:12px; padding:12px 15px; background:linear-gradient(135deg,#b87080,#c98a96); color:#fff; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700; text-align:center; box-shadow:0 4px 12px rgba(184,112,128,0.25);">💳 Panel rozliczeniowy</a>
 			<div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: var(--bg-hover); border-radius: 12px; border: 1px solid var(--border-color);">
     <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">🌙 Dark Mode</span>
     <label style="position: relative; display: inline-block; width: 44px; height: 24px;">
@@ -10882,6 +10882,15 @@ function addonsToggle(featureKey, enable, nazwa, cenaZl) {
 // Wejście bezpośrednie do panelu admina gdy brak pracowników (pierwsze uruchomienie salonu)
 function wejdzJakoAdmin() {
     uruchomAplikacjePracownika('Admin', 'admin');
+}
+
+// Panel rozliczeniowy — wyczyść starą sesję billing przed otwarciem nowej karty.
+// Bez tego localStorage trzyma `billing_token` z poprzedniego konta i auto-loguje
+// jako poprzedni salon (przeglądarka, nie tab, jest źródłem stanu).
+function otworzBilling(ev) {
+    if (ev && ev.preventDefault) ev.preventDefault();
+    try { localStorage.removeItem('billing_token'); } catch (e) {}
+    window.open('/billing.html', '_blank', 'noopener');
 }
 
 // Stary przycisk Wyloguj teraz nie wyrzuca z salonu, tylko wraca do wyboru pracownika!
