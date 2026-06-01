@@ -597,6 +597,15 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   touch-action: manipulation;                    /* eliminuje 300ms tap delay */
   -webkit-tap-highlight-color: transparent;      /* bez szarego flash na tap */
 }
+
+/* Zwijane sekcje "Zadania Magazynowe" */
+.rap_card-collapsible h3 { transition: padding-bottom 0.15s ease, margin-bottom 0.15s ease; }
+.rap_card-collapsible:not(.open) h3 { padding-bottom: 0 !important; border-bottom: none !important; margin-bottom: 0 !important; }
+.rap_card-collapsible:not(.open) .rap_card-body { display: none; }
+.rap_card-collapsible:not(.open) .rap_card-arrow { transform: rotate(-90deg); }
+.rap_card-collapsible h3:hover .rap_card-arrow { opacity: 0.7; }
+/* Przy druku — zawsze rozwinięte */
+body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !important; }
 /* Sticky mobile-bar + content: respekt safe-area dla notch i home indicator */
 #mobile-bar {
   padding-top: max(15px, env(safe-area-inset-top));
@@ -9339,14 +9348,18 @@ ANALIZA MANAGER
                 <div id="rap_report" class="section rap_view-section">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:10px;">
                      <h2>⚠️ Zadania Magazynowe</h2>
-                     <button onclick="rap_printReport()" class="btn-primary" style="width:auto; margin:0; background:#374151; box-shadow:none;">🖨️ DRUKUJ RAPORT</button>
+                     <div style="display:flex; gap:8px;">
+                        <button onclick="rap_toggleAllCards(true)" class="btn-primary" style="width:auto; margin:0; background:#64748b; box-shadow:none; font-size:12px; padding:8px 14px;">▼ Rozwiń wszystkie</button>
+                        <button onclick="rap_toggleAllCards(false)" class="btn-primary" style="width:auto; margin:0; background:#64748b; box-shadow:none; font-size:12px; padding:8px 14px;">▲ Zwiń wszystkie</button>
+                        <button onclick="rap_printReport()" class="btn-primary" style="width:auto; margin:0; background:#374151; box-shadow:none;">🖨️ DRUKUJ RAPORT</button>
+                     </div>
                   </div>
-                  <div id="rap_card-exp" class="rap_card" style="display:none; border-left: 5px solid #f59e0b;">
-                     <h3 style="color:#d97706; border-bottom:1px solid #fef3c7; padding-bottom:10px; margin-top:0;">⏳ Kończące się daty ważności</h3>
-                     <div id="rap_report-expiration"></div>
+                  <div id="rap_card-exp" class="rap_card rap_card-collapsible open" style="display:none; border-left: 5px solid #f59e0b;">
+                     <h3 onclick="rap_toggleCard(this)" style="color:#d97706; border-bottom:1px solid #fef3c7; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>⏳ Kończące się daty ważności</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3>
+                     <div class="rap_card-body"><div id="rap_report-expiration"></div></div>
                   </div>
-                  <div class="rap_card"><h3 style="color:#3b82f6; border-bottom:2px solid #eff6ff; padding-bottom:10px; margin-top:0;">🖨️ Dokumenty / Poligrafia</h3><div id="rap_report-docs">Ładowanie...</div></div>
-                  <div class="rap_card"><h3 style="color:#ef4444; border-bottom:2px solid #fef2f2; padding-bottom:10px; margin-top:0;">🛒 Pozostałe Braki</h3><div id="rap_report-others">Ładowanie...</div></div>
+                  <div class="rap_card rap_card-collapsible open"><h3 onclick="rap_toggleCard(this)" style="color:#3b82f6; border-bottom:2px solid #eff6ff; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>🖨️ Dokumenty / Poligrafia</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3><div class="rap_card-body"><div id="rap_report-docs">Ładowanie...</div></div></div>
+                  <div class="rap_card rap_card-collapsible open"><h3 onclick="rap_toggleCard(this)" style="color:#ef4444; border-bottom:2px solid #fef2f2; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>🛒 Pozostałe Braki</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3><div class="rap_card-body"><div id="rap_report-others">Ładowanie...</div></div></div>
                 </div>
 
                 <div id="rap_magazyn" class="section rap_view-section">
@@ -25157,11 +25170,22 @@ function rap_renderTable() {
     if (container) container.innerHTML = html || '<div style="padding:20px;text-align:center; color:#64748b; font-weight:600;">Brak wyników.</div>';
 }
 
-function rap_toggleCat(header) { 
-    const s = header.parentElement; 
-    const n = s.getAttribute('data-cat-name'); 
-    s.classList.toggle('open'); 
-    if(s.classList.contains('open')) rap_openCategories.add(n); else rap_openCategories.delete(n); 
+function rap_toggleCat(header) {
+    const s = header.parentElement;
+    const n = s.getAttribute('data-cat-name');
+    s.classList.toggle('open');
+    if(s.classList.contains('open')) rap_openCategories.add(n); else rap_openCategories.delete(n);
+}
+
+// Akordeon w widoku "Zadania Magazynowe" — zwijanie sekcji
+function rap_toggleCard(headerEl) {
+    const card = headerEl.closest('.rap_card-collapsible');
+    if (card) card.classList.toggle('open');
+}
+function rap_toggleAllCards(open) {
+    document.querySelectorAll('#rap_report .rap_card-collapsible').forEach(card => {
+        card.classList.toggle('open', !!open);
+    });
 }
 
 function rap_getStatus(q, m) { 
