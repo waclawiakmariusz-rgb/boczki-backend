@@ -429,7 +429,7 @@ module.exports = (db) => {
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
   router.post('/rejestracja/zaloz', async (req, res) => {
     const d = req.body;
-    const { token, nazwa_salonu, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
+    const { token, imie, nazwa_salonu, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
 
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
     if (!nazwa_salonu || !login || !haslo) return res.json({ status: 'error', message: 'Uzupełnij wszystkie wymagane pola.' });

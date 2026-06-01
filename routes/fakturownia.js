@@ -54,8 +54,10 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
       number:          null,          // Fakturownia nada numer automatycznie
       issue_date:      dzisiaj(),
       sell_date:       dzisiaj(),
-      payment_to:      terminPlatnosci(),
-      payment_type:    'transfer',
+      payment_to:      dzisiaj(),     // zapłacone od razu przez Stripe — termin = dziś
+      payment_type:    'card',        // klient zapłacił kartą w Stripe Checkout
+      paid:            cenaBrutto(),  // pełna kwota zapłacona → status faktury: zapłacona
+      paid_date:       dzisiaj(),     // data faktycznej zapłaty (dziś)
       currency:        'PLN',
 
       // Sprzedawca — pobierany z ustawień konta Fakturownia (nie trzeba podawać)
