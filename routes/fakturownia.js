@@ -34,12 +34,13 @@ function terminPlatnosci() {
  * @param {object} params
  * @param {string} params.nazwa_salonu  - Nazwa nabywcy (salon)
  * @param {string} params.email         - Email nabywcy
+ * @param {string} [params.ulica]       - Ulica i numer nabywcy (zalecane do faktury VAT)
  * @param {string} [params.miasto]      - Miasto nabywcy (opcjonalne)
  * @param {string} [params.telefon]     - Telefon nabywcy (opcjonalne)
  * @param {string} [params.nip]         - NIP nabywcy (opcjonalne — bez NIP = faktura B2C)
  * @returns {Promise<{id: number, numer: string}>}
  */
-async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
+async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip }) {
   const token     = TOKEN();
   const subdomain = SUBDOMAIN();
 
@@ -65,6 +66,7 @@ async function wystawFakture({ nazwa_salonu, email, miasto, telefon, nip }) {
       // Nabywca
       buyer_name:      nazwa_salonu,
       buyer_email:     email,
+      buyer_street:    ulica   || '',  // Ulica i numer — wymagane na fakturze VAT
       buyer_city:      miasto  || '',
       buyer_phone:     telefon || '',
       buyer_tax_no:    nip     || '',  // Pusty = faktura bez NIP (B2C)

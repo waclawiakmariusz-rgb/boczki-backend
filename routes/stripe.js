@@ -88,7 +88,19 @@ module.exports = (db) => {
     `ALTER TABLE Zamowienia ADD COLUMN ip_akceptacji VARCHAR(45) NULL`,
     `ALTER TABLE Zamowienia ADD COLUMN user_agent_akceptacji VARCHAR(500) NULL`,
     `ALTER TABLE Zamowienia ADD COLUMN data_akceptacji DATETIME NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN ulica VARCHAR(255) NULL`,
   ];
+
+  // Licencje też dostają ulicę — bo przy generowaniu kolejnych faktur Stripe webhook
+  // czyta dane z Licencje a nie z Zamowienia
+  db.query(
+    `ALTER TABLE Licencje ADD COLUMN ulica VARCHAR(255) NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[stripe] ALTER Licencje ulica:', err.message);
+      }
+    }
+  );
   zamowieniaKolumny.forEach(sql => {
     db.query(sql, (err) => {
       if (err && !/Duplicate column/i.test(err.message)) {
@@ -102,7 +114,7 @@ module.exports = (db) => {
   router.post('/stripe/create-checkout', async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
-    const { imie, nazwa_salonu, email, telefon, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
+    const { imie, nazwa_salonu, email, telefon, ulica, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
     }
@@ -148,8 +160,8 @@ module.exports = (db) => {
     // Zapisz zgłoszenie w bazie (status: nowe — czeka na płatność)
     const zamowienieId = randomUUID();
     db.query(
-      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
-      [zamowienieId, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
+      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, ulica, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
+      [zamowienieId, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, ulica || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
@@ -174,6 +186,7 @@ module.exports = (db) => {
             nazwa_salonu,
             email,
             telefon: telefon || '',
+            ulica:   ulica   || '',
             miasto:  miasto  || '',
             nip:     nip     || '',
           };
@@ -284,8 +297,8 @@ module.exports = (db) => {
 
           // Wystaw fakturę VAT przez Fakturownia.pl (wysyła PDF mailem do klienta)
           try {
-            const { miasto, telefon, nip } = session.metadata || {};
-            await wystawFakture({ nazwa_salonu, email, miasto, telefon, nip });
+            const { ulica, miasto, telefon, nip } = session.metadata || {};
+            await wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip });
           } catch (fakErr) {
             console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
             // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie

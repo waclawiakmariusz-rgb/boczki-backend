@@ -113,7 +113,7 @@ module.exports = (db) => {
   // ─── GET /api/billing/info ────────────────────────────────────
   router.get('/billing/info', requireBilling, (req, res) => {
     db.query(
-      `SELECT nazwa_salonu, email, telefon, miasto, status, data_waznosci, data_grace_until, data_utworzenia
+      `SELECT nazwa_salonu, email, telefon, ulica, miasto, status, data_waznosci, data_grace_until, data_utworzenia
        FROM Licencje WHERE id_bazy = ? LIMIT 1`,
       [req.billing_tenant_id],
       (err, rows) => {
@@ -129,6 +129,7 @@ module.exports = (db) => {
             nazwa:           s.nazwa_salonu,
             email:           s.email,
             telefon:         s.telefon || '',
+            ulica:           s.ulica   || '',
             miasto:          s.miasto  || '',
             status:          s.status,
             aktywna,
