@@ -475,17 +475,26 @@ module.exports = (db) => {
             const pObietnice = pracList.filter(p => p.imie?.trim()).map(p => new Promise(resolve => {
               const pid = randomUUID();
               db.query(`INSERT INTO Użytkownicy (id, tenant_id, imie_login, haslo_pin, rola) VALUES (?, ?, ?, ?, ?)`,
-                [pid, tenant_id, p.imie.trim(), p.pin || '0000', p.rola || 'pracownik'], () => {
+                [pid, tenant_id, p.imie.trim(), p.pin || '0000', p.rola || 'pracownik'], (errU) => {
+                  if (errU) console.error('[rejestracja/zaloz] INSERT Użytkownicy failed:', errU.message, '| imie:', p.imie, '| tenant:', tenant_id);
                   const prid = randomUUID();
                   db.query(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (?, ?, ?)`,
-                    [prid, tenant_id, p.imie.trim()], () => resolve());
+                    [prid, tenant_id, p.imie.trim()], (errP) => {
+                      if (errP) console.error('[rejestracja/zaloz] INSERT Pracownicy failed:', errP.message, '| imie:', p.imie, '| tenant:', tenant_id);
+                      resolve();
+                    });
                 });
             }));
+
+            console.log(`[rejestracja/zaloz] tenant=${tenant_id} | wstawiam ${uslugiList.length} uslug, ${pracList.length} pracownikow`);
 
             const uObietnice = uslugiList.filter(u => u.kategoria && u.wariant).map(u => new Promise(resolve => {
               const uid = randomUUID();
               db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, zrodlo) VALUES (?, ?, ?, ?, ?, ?)`,
-                [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0, u.zrodlo || 'reczne'], () => resolve());
+                [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0, u.zrodlo || 'reczne'], (errS) => {
+                  if (errS) console.error('[rejestracja/zaloz] INSERT Uslugi failed:', errS.message, '| kategoria:', u.kategoria, '| wariant:', u.wariant, '| tenant:', tenant_id);
+                  resolve();
+                });
             }));
 
             Promise.all([...pObietnice, ...uObietnice]).then(async () => {
