@@ -191,13 +191,15 @@ module.exports = (db) => {
     catch (e) { return res.json({ status: 'error', message: 'Fakturownia niedostępna.' }); }
 
     db.query(
-      `SELECT email FROM Licencje WHERE id_bazy = ? LIMIT 1`,
+      `SELECT email, nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`,
       [req.billing_tenant_id],
       async (err, rows) => {
         if (err || !rows || !rows.length) return res.json({ status: 'error', message: 'Salon nie znaleziony.' });
-        const email = rows[0].email;
+        const { email, nazwa_salonu } = rows[0];
         try {
-          const faktury = await pobierzFaktury(email);
+          // Filtr po nazwa_salonu — chroni przed leakiem cross-tenant gdy dwa
+          // salony mają ten sam email kontaktowy (np. ten sam wlasciciel)
+          const faktury = await pobierzFaktury(email, nazwa_salonu);
           return res.json({ status: 'success', faktury });
         } catch (e) {
           console.error('[billing/invoices]', e.message);

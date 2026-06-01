@@ -161,15 +161,25 @@ function wyslijFaktureMailem(invoiceId) {
 }
 
 /**
- * Pobiera listę faktur klienta (po emailu nabywcy).
+ * Pobiera listę faktur klienta (po emailu nabywcy + opcjonalnie nazwie salonu).
+ *
+ * UWAGA bezpieczeństwo: Fakturownia API filtruje TYLKO po buyer_email. Jeśli dwa
+ * tenanty Estelio użyły tego samego maila (np. ten sam właściciel ma 2 salony),
+ * API zwraca faktury obu — leak cross-tenant. Dlatego dodajemy drugi filtr
+ * lokalnie po buyer_name (= nazwa_salonu z tabeli Licencje), porównanie
+ * case-insensitive po trim.
+ *
  * @param {string} email - email klienta którego faktury chcemy zobaczyć
+ * @param {string} [nazwa_salonu] - nazwa salonu jako dodatkowy filtr (zalecane)
  * @returns {Promise<Array>} - lista faktur z polami: id, numer, data, kwota_brutto, status, link_pdf
  */
-async function pobierzFaktury(email) {
+async function pobierzFaktury(email, nazwa_salonu) {
   const token     = TOKEN();
   const subdomain = SUBDOMAIN();
   if (!token || !subdomain) throw new Error('Brak konfiguracji Fakturownia.');
   if (!email) return [];
+
+  const expectedName = (nazwa_salonu || '').trim().toLowerCase();
 
   return new Promise((resolve, reject) => {
     const path = `/invoices.json?api_token=${encodeURIComponent(token)}&buyer_email=${encodeURIComponent(email)}&period=last_2_years`;
@@ -188,7 +198,13 @@ async function pobierzFaktury(email) {
         }
         try {
           const json = JSON.parse(data);
-          const lista = (Array.isArray(json) ? json : []).map(f => ({
+          const wszystkie = Array.isArray(json) ? json : [];
+          // Drugi filtr: tylko faktury z buyer_name dokładnie pasującym do nazwy salonu.
+          // Bez nazwa_salonu — wstecznie kompatybilne (zwraca wszystkie po emailu).
+          const filtrowane = expectedName
+            ? wszystkie.filter(f => (f.buyer_name || '').trim().toLowerCase() === expectedName)
+            : wszystkie;
+          const lista = filtrowane.map(f => ({
             id:           f.id,
             numer:        f.number || '',
             data:         f.issue_date || f.sell_date || '',
