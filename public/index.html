@@ -5265,6 +5265,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                 </li>
             </ul>
             <div class="sidebar-footer">
+			<a href="/billing.html" target="_blank" rel="noopener" id="nav-billing-link" title="Faktury, status subskrypcji i zarządzanie kartą — otwiera się w nowej karcie" style="display:none; margin-bottom:12px; padding:12px 15px; background:linear-gradient(135deg,#b87080,#c98a96); color:#fff; border-radius:12px; text-decoration:none; font-size:13px; font-weight:700; text-align:center; box-shadow:0 4px 12px rgba(184,112,128,0.25);">💳 Panel rozliczeniowy</a>
 			<div style="margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between; padding: 10px 15px; background: var(--bg-hover); border-radius: 12px; border: 1px solid var(--border-color);">
     <span style="font-size: 13px; font-weight: 700; color: var(--text-muted);">🌙 Dark Mode</span>
     <label style="position: relative; display: inline-block; width: 44px; height: 24px;">
@@ -10674,6 +10675,7 @@ function uruchomAplikacjePracownika(imie, rola) {
     // 1. ZAMYKAMY WSZYSTKO (Domyślna kłódka na wszystko)
     const grupy = ['group-magazyn', 'group-sales', 'group-clients', 'group-an', 'group-config', 'group-logs', 'group-consultations', 'group-retention'];
     grupy.forEach(g => hide(g));
+    hide('nav-billing-link'); // ukryj panel rozliczeniowy — pokażemy poniżej tylko dla admin/megaadmin
 
     // Upewniamy się, że przycisk Kreatora jest domyślnie widoczny (schowamy go tylko wybranym)
     show('menu-kreator-dostepow');
@@ -10720,6 +10722,7 @@ function uruchomAplikacjePracownika(imie, rola) {
         // MEGAADMIN WIDZI WSZYSTKO
         grupy.forEach(g => show(g));
         show('menu-dodatki'); // panel Dodatki
+        show('nav-billing-link'); // panel rozliczeniowy — tylko właściciel salonu
         pokaz('pulpit'); zaladujPulpit();
     }
     else {
