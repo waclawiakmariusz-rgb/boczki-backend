@@ -196,6 +196,15 @@ module.exports = (db) => {
       async (err, rows) => {
         if (err || !rows || !rows.length) return res.json({ status: 'error', message: 'Salon nie znaleziony.' });
         const { email, nazwa_salonu } = rows[0];
+
+        // Fail-secure: bez nazwa_salonu nie da się odróżnić faktur naszego salonu
+        // od faktur innych salonów z tym samym emailem. Zwracamy pustą listę zamiast
+        // ryzykować leak cross-tenant.
+        if (!nazwa_salonu || !String(nazwa_salonu).trim()) {
+          console.warn(`[billing/invoices] tenant ${req.billing_tenant_id} ma pusty nazwa_salonu w Licencje — pomijam fetch faktur dla bezpieczeństwa`);
+          return res.json({ status: 'success', faktury: [] });
+        }
+
         try {
           // Filtr po nazwa_salonu — chroni przed leakiem cross-tenant gdy dwa
           // salony mają ten sam email kontaktowy (np. ten sam wlasciciel)
