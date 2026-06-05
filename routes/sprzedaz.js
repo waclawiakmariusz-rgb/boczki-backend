@@ -361,6 +361,32 @@ module.exports = (db) => {
           let _kwotaPoz;
           try { _kwotaPoz = parseKwota(poz.kwota, 'kwota pozycji'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
+          // ── Typ Zadatek: zapis do tabeli Zadatki, nie Sprzedaz ──
+          // Powstaje przy multisprzedaży — recepcja przyjmuje wpłatę na przyszły zabieg.
+          // Nie wpływa na Sprzedaz, nie zmienia istniejącej logiki Portfel/Zadatek.
+          if (poz.typ === 'Zadatek') {
+            const opisCel = (poz.kategoria || '') + (poz.wariant ? ' — ' + poz.wariant : '');
+            const cel = (opisCel || 'Zadatek').slice(0, 250);
+            const komentarzDodatkowy = (poz.komentarz || '').trim();
+            const finalCel = komentarzDodatkowy
+              ? `${cel} | ${komentarzDodatkowy}`.slice(0, 250)
+              : cel;
+            db.query(
+              `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy)
+               VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?)`,
+              [uniqueId, tenant_id, d.id_klienta || '', d.klient || '', _kwotaPoz, poz.platnosc || '', finalCel, sprzedawcyStr],
+              (errZ) => {
+                if (errZ) {
+                  console.error('[add_multi_sale] INSERT Zadatki failed:', errZ.message, '| poz:', poz);
+                  return res.json({ status: 'error', message: 'Błąd zapisu zadatku: ' + errZ.message });
+                }
+                zapiszLog(tenant_id, 'ZADATEK WPŁATA (multi)', sprzedawcyStr, `Klient: ${d.klient} | ${finalCel} | ${_kwotaPoz.toFixed(2)} zł | ${poz.platnosc || ''}`);
+                nextPoz();
+              }
+            );
+            return; // ważne: nie wpadamy w INSERT Sprzedaz poniżej
+          }
+
           // Snapshot typu zabiegu — lookup w Uslugi po (kategoria, wariant).
           // Dla Kosmetyków typ_zabiegu pozostaje NULL (mają osobny box w profilu klienta).
           const doInsertPoz = () => {
