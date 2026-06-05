@@ -5237,6 +5237,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 					    <li><button onclick="pokaz('awaryjna-zmiana', this)" style="color:#dc2626; font-weight:bold; border:1px solid #fecaca;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>Awaryjna Zmiana</span></button></li>
 						<li id="menu-kreator-dostepow"><button class="nav-btn" onclick="pokaz('kreator_dostepow', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Dostępy</span></button></li>
                         <li><button onclick="pokaz('sekcja-kreator-rabatow', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" x2="8.12" y1="4" y2="15.88"/><line x1="14.47" x2="20" y1="14.48" y2="20"/><line x1="8.12" x2="12" y1="8.12" y2="12"/></svg>Rabaty</span></button></li>
+                        <li><button onclick="pokaz('sekcja-zadatki-config', this); wczytajUstawieniaZadatkow();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Zadatki</span></button></li>
                         <li><button onclick="pokaz('setup-zabiegi', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Zabiegi</span></button></li>
                         <li><button onclick="pokaz('setup-pracownicy', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</span></button></li>
                         <li><button onclick="pokaz('setup-sugestie', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>Sugestia</span></button></li>
@@ -7572,6 +7573,94 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     USTAWIENIA ZADATKÓW — panel admina/managera/recepcji
+     Wyliczanie zadatków przy nowym typie pozycji w multisprzedaży.
+     Tryby: PROCENT (X% kwoty zabiegu) lub KWOTOWY (progi).
+     ══════════════════════════════════════════════════════════════ -->
+<div id="sekcja-zadatki-config" class="section">
+    <h2 style="border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; color: var(--primary);">
+        💰 Ustawienia zadatków
+    </h2>
+    <p style="color:#64748b; margin-bottom:24px; max-width:680px;">
+        Konfiguracja domyślnego wyliczenia zadatku przy multisprzedaży. Wartość zawsze edytowalna w trakcie sprzedaży — to tylko propozycja systemu.
+    </p>
+
+    <div class="card" style="background:white; padding:25px; border-radius:12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 720px;">
+        <div class="form-group" style="margin-bottom:18px;">
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">Tryb wyliczania zadatku:</label>
+            <select id="uz-tryb" class="form-control" onchange="uz_przelaczTryb()" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                <option value="PROCENT">Procent (X% kwoty zabiegu)</option>
+                <option value="KWOTOWY">Kwotowy (progi)</option>
+            </select>
+        </div>
+
+        <!-- Tryb PROCENT -->
+        <div id="uz-blok-procent" style="background:#fef3c7; padding:14px; border-radius:8px; border:1px solid #fde68a; margin-bottom:18px;">
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">Procent kwoty zabiegu:</label>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="number" id="uz-procent" class="form-control" min="0" max="100" step="0.5" value="50" style="width:120px; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                <span style="font-weight:bold; font-size:16px;">%</span>
+                <span style="color:#64748b; font-size:13px;">(np. 50 = połowa kwoty zabiegu)</span>
+            </div>
+        </div>
+
+        <!-- Tryb KWOTOWY -->
+        <div id="uz-blok-kwotowy" style="display:none; background:#dbeafe; padding:14px; border-radius:8px; border:1px solid #bfdbfe; margin-bottom:18px;">
+            <label style="font-weight:bold; display:block; margin-bottom:10px;">Progi kwotowe:</label>
+            <div id="uz-progi-lista" style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
+                <div style="color:#64748b; font-style:italic; font-size:13px;">Ładuję progi...</div>
+            </div>
+            <div style="background:#fff; padding:12px; border-radius:8px; border:1px dashed #94a3b8;">
+                <div style="font-weight:bold; font-size:13px; margin-bottom:8px; color:#475569;">Dodaj nowy próg:</div>
+                <div style="display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;">
+                    <div style="flex:1; min-width:120px;">
+                        <label style="font-size:12px; color:#64748b;">Do kwoty (zł):</label>
+                        <input type="number" id="uz-nowy-do" min="0" step="0.01" placeholder="200" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    </div>
+                    <div style="flex:1; min-width:120px;">
+                        <label style="font-size:12px; color:#64748b;">Zadatek (zł):</label>
+                        <input type="number" id="uz-nowy-zadatek" min="0" step="0.01" placeholder="50" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                    </div>
+                    <button onclick="uz_dodajProg()" class="btn-primary" style="background:#3b82f6; color:white; padding:9px 16px; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">+ Dodaj</button>
+                </div>
+            </div>
+
+            <div style="margin-top:14px; padding-top:14px; border-top:1px solid #bfdbfe;">
+                <label style="font-weight:bold; display:block; margin-bottom:5px; font-size:13px;">Co jeśli zabieg ma kwotę powyżej najwyższego progu:</label>
+                <select id="uz-powyzej-max" class="form-control" onchange="uz_przelaczPowyzej()" style="width:100%; padding:9px; border:1px solid #ddd; border-radius:6px;">
+                    <option value="OSTATNI_PROG">Użyj zadatku z ostatniego progu</option>
+                    <option value="PROCENT">Wylicz jako procent (poniżej)</option>
+                    <option value="PUSTE">Zostaw puste — recepcja wpisze ręcznie</option>
+                </select>
+                <div id="uz-fallback-box" style="display:none; margin-top:8px;">
+                    <label style="font-size:12px; color:#64748b;">Fallback procent:</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <input type="number" id="uz-fallback-procent" min="0" max="100" step="0.5" value="50" style="width:100px; padding:8px; border:1px solid #ddd; border-radius:6px;">
+                        <span style="font-weight:bold;">%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zaokrąglenie wspólne dla obu trybów -->
+        <div class="form-group" style="margin-bottom:20px;">
+            <label style="font-weight:bold; display:block; margin-bottom:5px;">Zaokrąglenie wyliczonej kwoty:</label>
+            <select id="uz-zaokraglenie" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                <option value="0">Bez zaokrąglenia (np. 97,50 zł)</option>
+                <option value="5">Do 5 zł (np. 95 lub 100 zł)</option>
+                <option value="10">Do 10 zł (np. 100 zł)</option>
+            </select>
+        </div>
+
+        <button onclick="uz_zapisz()" class="btn-primary" style="width:100%; background:#10b981; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px;">
+            💾 ZAPISZ USTAWIENIA
+        </button>
+        <div id="uz-msg" style="margin-top:10px; text-align:center; font-weight:600; min-height:20px;"></div>
+    </div>
+</div>
+
 <!--
 ANALIZA MANAGER
 -->
@@ -10330,6 +10419,124 @@ function normNumOr0(val) {
 }
 
 // --- FUNKCJA ZAPISU RABATU ---
+// ══════════════════════════════════════════════════════════════
+// USTAWIENIA ZADATKÓW (sekcja-zadatki-config)
+// Komunikuje się z /api/ustawienia/zadatki — config + progi.
+// ══════════════════════════════════════════════════════════════
+function uz_tenantId() {
+    return localStorage.getItem('boczki_tenant_id') || localStorage.getItem('tenant_id') || '';
+}
+function uz_msg(text, color) {
+    const el = document.getElementById('uz-msg');
+    if (!el) return;
+    el.textContent = text || '';
+    el.style.color = color || '#10b981';
+}
+function uz_przelaczTryb() {
+    const tryb = document.getElementById('uz-tryb').value;
+    document.getElementById('uz-blok-procent').style.display = (tryb === 'PROCENT') ? 'block' : 'none';
+    document.getElementById('uz-blok-kwotowy').style.display = (tryb === 'KWOTOWY') ? 'block' : 'none';
+}
+function uz_przelaczPowyzej() {
+    const v = document.getElementById('uz-powyzej-max').value;
+    document.getElementById('uz-fallback-box').style.display = (v === 'PROCENT') ? 'block' : 'none';
+}
+
+function wczytajUstawieniaZadatkow() {
+    const tenant_id = uz_tenantId();
+    if (!tenant_id) { uz_msg('Brak tenant_id', '#dc2626'); return; }
+    uz_msg('Ładuję...', '#64748b');
+    fetch(`/api/ustawienia/zadatki?tenant_id=${encodeURIComponent(tenant_id)}`, {
+        headers: { 'x-session-token': localStorage.getItem('boczki_session_token') || '' }
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status !== 'success') { uz_msg('Błąd: ' + (d.message || ''), '#dc2626'); return; }
+        document.getElementById('uz-tryb').value = d.config.tryb;
+        document.getElementById('uz-procent').value = d.config.procent;
+        document.getElementById('uz-zaokraglenie').value = String(d.config.zaokraglenie);
+        document.getElementById('uz-powyzej-max').value = d.config.powyzej_max;
+        document.getElementById('uz-fallback-procent').value = d.config.fallback_procent;
+        uz_przelaczTryb();
+        uz_przelaczPowyzej();
+        uz_renderProgi(d.progi || []);
+        uz_msg('', '');
+    })
+    .catch(e => uz_msg('Błąd sieci: ' + e.message, '#dc2626'));
+}
+
+function uz_renderProgi(progi) {
+    const cont = document.getElementById('uz-progi-lista');
+    if (!cont) return;
+    if (!progi.length) {
+        cont.innerHTML = '<div style="color:#64748b; font-style:italic; font-size:13px;">Brak progów — dodaj poniżej.</div>';
+        return;
+    }
+    cont.innerHTML = progi.map(p => `
+        <div style="display:flex; align-items:center; gap:10px; background:#fff; padding:10px 14px; border-radius:8px; border:1px solid #cbd5e1;">
+            <span style="flex:1; font-size:14px;">Do <strong>${parseFloat(p.do_kwoty).toFixed(2)} zł</strong> → zadatek <strong style="color:#3b82f6;">${parseFloat(p.zadatek_kwota).toFixed(2)} zł</strong></span>
+            <button onclick="uz_usunProg(${p.id})" style="background:#fee2e2; color:#991b1b; border:none; padding:6px 12px; border-radius:6px; cursor:pointer; font-weight:600; font-size:12px;">✕ Usuń</button>
+        </div>
+    `).join('');
+}
+
+function uz_dodajProg() {
+    const tenant_id = uz_tenantId();
+    const do_kwoty = parseFloat(document.getElementById('uz-nowy-do').value);
+    const zadatek_kwota = parseFloat(document.getElementById('uz-nowy-zadatek').value);
+    if (!(do_kwoty > 0) || !(zadatek_kwota > 0)) { uz_msg('Podaj poprawne kwoty (> 0).', '#dc2626'); return; }
+    if (zadatek_kwota > do_kwoty) { uz_msg('Zadatek nie może być większy niż kwota.', '#dc2626'); return; }
+    fetch('/api/ustawienia/zadatki/prog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+        body: JSON.stringify({ tenant_id, do_kwoty, zadatek_kwota }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status !== 'success') { uz_msg('Błąd: ' + (d.message || ''), '#dc2626'); return; }
+        document.getElementById('uz-nowy-do').value = '';
+        document.getElementById('uz-nowy-zadatek').value = '';
+        wczytajUstawieniaZadatkow();
+    });
+}
+
+function uz_usunProg(id) {
+    if (!confirm('Usunąć ten próg?')) return;
+    const tenant_id = uz_tenantId();
+    fetch(`/api/ustawienia/zadatki/prog/${id}?tenant_id=${encodeURIComponent(tenant_id)}`, {
+        method: 'DELETE',
+        headers: { 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status !== 'success') { uz_msg('Błąd: ' + (d.message || ''), '#dc2626'); return; }
+        wczytajUstawieniaZadatkow();
+    });
+}
+
+function uz_zapisz() {
+    const tenant_id = uz_tenantId();
+    const body = {
+        tenant_id,
+        tryb: document.getElementById('uz-tryb').value,
+        procent: parseFloat(document.getElementById('uz-procent').value) || 0,
+        zaokraglenie: parseInt(document.getElementById('uz-zaokraglenie').value) || 0,
+        powyzej_max: document.getElementById('uz-powyzej-max').value,
+        fallback_procent: parseFloat(document.getElementById('uz-fallback-procent').value) || 0,
+    };
+    fetch('/api/ustawienia/zadatki', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+        body: JSON.stringify(body),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status !== 'success') { uz_msg('Błąd: ' + (d.message || ''), '#dc2626'); return; }
+        uz_msg('✓ Zapisano!', '#10b981');
+        setTimeout(() => uz_msg('', ''), 2500);
+    });
+}
+
 function zapiszDefinicjeRabatu() {
     const nazwa = document.getElementById('rabat-nazwa').value;
     const typ = document.getElementById('rabat-typ').value;
@@ -16888,19 +17095,23 @@ function dodajNowyWiersz() {
     <div class="card mb-3 item-row" id="row-${id}" style="border-left: 5px solid var(--primary); margin-bottom: 15px; background: #fff;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
-            <div style="display:flex; gap: 15px;">
+            <div style="display:flex; gap: 15px; flex-wrap:wrap;">
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600;">
-                    <input type="radio" name="typ-${id}" value="Zabieg" checked onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;"> 
+                    <input type="radio" name="typ-${id}" value="Zabieg" checked onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
                     💆‍♀️ Zabieg
                 </label>
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600;">
-                    <input type="radio" name="typ-${id}" value="Kosmetyk" onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;"> 
+                    <input type="radio" name="typ-${id}" value="Kosmetyk" onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
                     🛍️ Kosmetyk
+                </label>
+                <label style="cursor:pointer; display:flex; align-items:center; font-weight:600; color:#d63384;">
+                    <input type="radio" name="typ-${id}" value="Zadatek" onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
+                    💰 Zadatek
                 </label>
             </div>
             <button type="button" onclick="usunWiersz('${id}')" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer;">USUŃ X</button>
         </div>
-        
+
         <div id="sekcja-zabieg-${id}" class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
             <div>
                 <label>Kategoria Zabiegu:</label>
@@ -16912,6 +17123,24 @@ function dodajNowyWiersz() {
                     <option value="">-- Wybierz kategorię najpierw --</option>
                 </select>
             </div>
+        </div>
+
+        <div id="sekcja-zadatek-${id}" style="display:none; background:#fef2f4; padding:14px; border-radius:8px; border:1px solid #fbcfe8;">
+            <div style="font-weight:bold; color:#9d174d; margin-bottom:10px; font-size:13px;">💰 Zadatek na zabieg z listy — system zaproponuje kwotę z ustawień salonu, edytowalna.</div>
+            <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom:10px;">
+                <div>
+                    <label>Kategoria zabiegu:</label>
+                    <select class="zad-cat form-control" onchange="zad_zmienKategorie(this)">${opcjeZabiegow}</select>
+                </div>
+                <div>
+                    <label>Wariant:</label>
+                    <select class="zad-var form-control" disabled onchange="zad_zmienWariant(this)">
+                        <option value="">-- Wybierz kategorię najpierw --</option>
+                    </select>
+                </div>
+            </div>
+            <div id="zad-info-${id}" style="font-size:12px; color:#7c2d3d; margin-top:4px; min-height:16px;"></div>
+            <input type="hidden" class="zad-base-price" value="0">
         </div>
 
         <div id="sekcja-kosmetyk-${id}" class="form-grid" style="display:none; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
@@ -17134,22 +17363,122 @@ function przeliczCeneWiersza(qtyInput) {
 function przelaczTypWiersza(id) {
     // Pobieramy wartość zaznaczonego radio buttona w tym konkretnym wierszu
     const selectedType = document.querySelector(`input[name="typ-${id}"]:checked`).value;
-    
+
     const divZabieg = document.getElementById(`sekcja-zabieg-${id}`);
     const divKosmetyk = document.getElementById(`sekcja-kosmetyk-${id}`);
+    const divZadatek = document.getElementById(`sekcja-zadatek-${id}`);
     const priceInput = document.querySelector(`#row-${id} .item-price`);
 
     // Reset ceny przy zmianie, by uniknąć błędów
     priceInput.value = '';
     odswiezSume();
 
+    // Ukryj wszystkie sekcje
+    if (divZabieg) divZabieg.style.display = 'none';
+    if (divKosmetyk) divKosmetyk.style.display = 'none';
+    if (divZadatek) divZadatek.style.display = 'none';
+
     if (selectedType === 'Zabieg') {
-        divZabieg.style.display = 'grid'; // Pokaż zabiegi
-        divKosmetyk.style.display = 'none'; // Ukryj kosmetyki
-    } else {
-        divZabieg.style.display = 'none'; // Ukryj zabiegi
-        divKosmetyk.style.display = 'grid'; // Pokaż kosmetyki
+        if (divZabieg) divZabieg.style.display = 'grid';
+    } else if (selectedType === 'Kosmetyk') {
+        if (divKosmetyk) divKosmetyk.style.display = 'grid';
+    } else if (selectedType === 'Zadatek') {
+        if (divZadatek) divZadatek.style.display = 'block';
+        // Auto-komentarz przy przełączeniu — recepcja może go zmienić
+        const komInput = document.querySelector(`#row-${id} .item-com`);
+        if (komInput && !komInput.value) komInput.value = 'Zadatek na zabieg';
     }
+}
+
+// ── Sekcja Zadatek w multisprzedaży ─────────────────────────────
+// Wybór kategorii → buduje listę wariantów (jak normalny Zabieg)
+function zad_zmienKategorie(selectEl) {
+    const row = selectEl.closest('.item-row');
+    const varSelect = row.querySelector('.zad-var');
+    const priceInput = row.querySelector('.item-price');
+    const baseInput = row.querySelector('.zad-base-price');
+    const info = row.querySelector('[id^="zad-info-"]');
+    const kat = selectEl.value;
+
+    varSelect.innerHTML = '<option value="">-- Wybierz --</option>';
+    priceInput.value = '';
+    if (baseInput) baseInput.value = '0';
+    if (info) info.textContent = '';
+
+    if (!kat) { varSelect.disabled = true; odswiezSume(); return; }
+
+    const warianty = (salesDictCache && salesDictCache.zabiegi || []).filter(z => z.kategoria === kat);
+    const unikalneWarianty = [...new Set(warianty.map(z => z.wariant))];
+
+    if (unikalneWarianty.length === 0 || (unikalneWarianty.length === 1 && unikalneWarianty[0] === '')) {
+        varSelect.innerHTML += '<option value="-">-</option>';
+        varSelect.value = '-';
+        zad_zmienWariant(varSelect);
+    } else {
+        unikalneWarianty.forEach(w => { varSelect.innerHTML += `<option value="${w}">${w}</option>`; });
+    }
+    varSelect.disabled = false;
+    odswiezSume();
+}
+
+// Wybór wariantu → pobiera cenę bazową i pyta backend o propozycję zadatku
+function zad_zmienWariant(selectEl) {
+    const row = selectEl.closest('.item-row');
+    const id = row.id.replace('row-', '');
+    const kat = row.querySelector('.zad-cat').value;
+    const wariant = selectEl.value === '-' ? '' : selectEl.value;
+    const priceInput = row.querySelector('.item-price');
+    const baseInput = row.querySelector('.zad-base-price');
+    const info = document.getElementById('zad-info-' + id);
+    const komInput = row.querySelector('.item-com');
+
+    // 1. Cena bazowa zabiegu ze słownika
+    const znaleziony = (salesDictCache && salesDictCache.zabiegi || []).find(z => z.kategoria === kat && z.wariant === wariant);
+    const cenaBazowa = (znaleziony && znaleziony.cena) ? parseFloat(znaleziony.cena) : 0;
+    if (baseInput) baseInput.value = cenaBazowa;
+
+    // 2. Auto-komentarz: "Zadatek na: [wariant]"
+    if (komInput) {
+        const opis = (kat + (wariant ? ' — ' + wariant : '')).trim();
+        komInput.value = 'Zadatek na: ' + opis;
+    }
+
+    if (cenaBazowa <= 0) {
+        priceInput.value = '';
+        if (info) info.textContent = 'Brak ceny w słowniku — wpisz kwotę zadatku ręcznie.';
+        odswiezSume();
+        return;
+    }
+
+    // 3. Pobierz propozycję zadatku z backendu
+    const tenant_id = uz_tenantId();
+    if (!tenant_id) {
+        priceInput.value = (cenaBazowa / 2).toFixed(2);
+        if (info) info.textContent = 'Brak tenant_id — wyliczono lokalnie 50% (' + (cenaBazowa).toFixed(2) + ' zł).';
+        odswiezSume();
+        return;
+    }
+
+    fetch('/api/ustawienia/zadatki/oblicz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
+        body: JSON.stringify({ tenant_id, kwota_zabiegu: cenaBazowa }),
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status !== 'success') {
+            if (info) info.textContent = 'Błąd wyliczenia: ' + (d.message || '');
+            return;
+        }
+        priceInput.value = parseFloat(d.zadatek_proponowany || 0).toFixed(2);
+        if (info) info.textContent = '✓ ' + d.opis + ' (cena zabiegu: ' + cenaBazowa.toFixed(2) + ' zł). Możesz edytować kwotę.';
+        odswiezSume();
+    })
+    .catch(e => {
+        priceInput.value = (cenaBazowa / 2).toFixed(2);
+        if (info) info.textContent = 'Brak połączenia — fallback 50%: ' + (cenaBazowa / 2).toFixed(2) + ' zł.';
+        odswiezSume();
+    });
 }
 
 function usunWiersz(id) {
@@ -17373,23 +17702,31 @@ function finalizujSprzedazPoWalidacji(klient, idKlienta, sellers) {
         if (typ === 'Zabieg') {
             const katSelect = row.querySelector('.item-cat');
             const warSelect = row.querySelector('.item-var');
-            
+
             if(!katSelect.value) { validationError = true; return; }
-            
+
             kategoriaBaza = katSelect.value;
             wariantBaza = (warSelect.value === '-' ? '' : warSelect.value);
-            
+
             // Obsługa specjalna dla Dopłaty (żeby było wiadomo do czego)
             if (kategoriaBaza === 'Dopłata' && parentName) {
                 kategoriaBaza = parentName + " Dopłata";
             }
+        } else if (typ === 'Zadatek') {
+            // Zadatek na zabieg z listy — kwota = item-price (wyliczona/edytowana),
+            // kategoria/wariant z dropdownów sekcji Zadatek.
+            const katSelect = row.querySelector('.zad-cat');
+            const warSelect = row.querySelector('.zad-var');
+            if (!katSelect || !katSelect.value) { validationError = true; return; }
+            kategoriaBaza = katSelect.value;
+            wariantBaza = (warSelect && warSelect.value && warSelect.value !== '-') ? warSelect.value : '';
         } else {
             // Kosmetyk
             const prodSelect = row.querySelector('.item-prod');
             const qtyInput = row.querySelector('.item-qty');
-            
+
             if(!prodSelect.value) { validationError = true; return; }
-            
+
             produktNazwa = prodSelect.value;
             iloscSztuk = qtyInput.value;
             kategoriaBaza = "Kosmetyk";

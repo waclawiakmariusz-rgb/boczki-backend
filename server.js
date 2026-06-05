@@ -295,6 +295,7 @@ const typyZabiegowRoutes = require('./routes/typy_zabiegow')(db);
 const leadyRoutes      = require('./routes/leady')(db);
 const featuresRoutes   = require('./routes/features')(db);
 const dokumentyDodatkoweRoutes = require('./routes/dokumenty_dodatkowe')(db);
+const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -326,6 +327,7 @@ app.use('/api', typyZabiegowRoutes);
 app.use('/api', leadyRoutes);
 app.use('/api', featuresRoutes);
 app.use('/api', dokumentyDodatkoweRoutes);
+app.use('/api', ustawieniaZadatkiRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
