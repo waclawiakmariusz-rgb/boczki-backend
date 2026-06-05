@@ -17911,6 +17911,15 @@ function realizujWysylke(payload) {
                 });
             }
 
+            // Wymuś re-fetch listy klientów z zadatkami — sessionStorage cache (10 min)
+            // nie wiedział o:
+            //   • nowych zadatkach wpisanych z multisprzedaży (typ Zadatek)
+            //   • częściowo zużytych zadatkach z resztą (DEP-REST-...)
+            // Po F5 cache nadal serwowałby stare wartości — stąd "puste 180 zł" mimo
+            // poprawnego stanu w bazie. (zob. wyslijMultiSprzedaz, 2026-06-05)
+            try { sessionStorage.removeItem('boczki_clients_cache'); sessionStorage.removeItem('boczki_clients_cache_at'); } catch (e) {}
+            if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow(true);
+
             document.getElementById('multi_klient').value = '';
             document.querySelectorAll('.seller-chip.selected').forEach(c => { 
                 c.classList.remove('selected'); c.querySelector('input').checked = false; 
