@@ -5919,9 +5919,19 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
         <div id="items-container">
             </div>
 
-        <div style="text-align: center; margin: 20px 0;">
-            <button type="button" onclick="dodajNowyWiersz()" style="width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; font-size: 24px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
-            <div style="font-size: 12px; color: #666; margin-top: 5px;">Dodaj kolejną pozycję</div>
+        <div style="text-align: center; margin: 20px 0; display:flex; justify-content:center; gap:24px; flex-wrap:wrap;">
+            <div>
+                <button type="button" onclick="dodajNowyWiersz('Zabieg')" title="Dodaj zabieg" style="width: 50px; height: 50px; border-radius: 50%; background: #10b981; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
+                <div style="font-size: 12px; color: #166534; margin-top: 5px; font-weight:600;">💆‍♀️ Zabieg</div>
+            </div>
+            <div>
+                <button type="button" onclick="dodajNowyWiersz('Kosmetyk')" title="Dodaj kosmetyk" style="width: 50px; height: 50px; border-radius: 50%; background: #f59e0b; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
+                <div style="font-size: 12px; color: #92400e; margin-top: 5px; font-weight:600;">🛍️ Kosmetyk</div>
+            </div>
+            <div>
+                <button type="button" onclick="dodajNowyWiersz('Zadatek')" title="Dodaj zadatek" style="width: 50px; height: 50px; border-radius: 50%; background: #d63384; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
+                <div style="font-size: 12px; color: #9d174d; margin-top: 5px; font-weight:600;">💰 Zadatek</div>
+            </div>
         </div>
 
         <div style="border-top: 2px solid #f1f5f9; padding-top: 20px; text-align: right;">
@@ -17043,9 +17053,12 @@ function inicjalizujMultiSprzedaz() {
     }
 }
 
-function dodajNowyWiersz() {
+function dodajNowyWiersz(domyslnyTyp) {
     const container = document.getElementById('items-container');
-    const id = Date.now(); 
+    const id = Date.now();
+    // Sanity: domyslnyTyp może być eventem (gdy wywołane bez argumentów ze starych miejsc)
+    if (typeof domyslnyTyp !== 'string') domyslnyTyp = 'Zabieg';
+    if (!['Zabieg', 'Kosmetyk', 'Zadatek'].includes(domyslnyTyp)) domyslnyTyp = 'Zabieg';
 
     // --- 1. ZABIEGI (Pobieramy bezpiecznie z window) ---
     let opcjeZabiegow = '<option value="">-- Wybierz kategorię --</option>';
@@ -17097,15 +17110,15 @@ function dodajNowyWiersz() {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid #eee; padding-bottom:10px;">
             <div style="display:flex; gap: 15px; flex-wrap:wrap;">
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600;">
-                    <input type="radio" name="typ-${id}" value="Zabieg" checked onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
+                    <input type="radio" name="typ-${id}" value="Zabieg" ${domyslnyTyp==='Zabieg'?'checked':''} onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
                     💆‍♀️ Zabieg
                 </label>
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600;">
-                    <input type="radio" name="typ-${id}" value="Kosmetyk" onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
+                    <input type="radio" name="typ-${id}" value="Kosmetyk" ${domyslnyTyp==='Kosmetyk'?'checked':''} onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
                     🛍️ Kosmetyk
                 </label>
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600; color:#d63384;">
-                    <input type="radio" name="typ-${id}" value="Zadatek" onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
+                    <input type="radio" name="typ-${id}" value="Zadatek" ${domyslnyTyp==='Zadatek'?'checked':''} onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
                     💰 Zadatek
                 </label>
             </div>
@@ -17202,6 +17215,11 @@ function dodajNowyWiersz() {
     </div>
     `;
     container.insertAdjacentHTML('beforeend', html);
+    // Dla typu innego niż Zabieg trzeba pokazać właściwą sekcję od razu — radio jest
+    // już zaznaczone, ale CSS display zarządzany przez JS w przelaczTypWiersza.
+    if (domyslnyTyp !== 'Zabieg') {
+        przelaczTypWiersza(id);
+    }
 }
 
 
