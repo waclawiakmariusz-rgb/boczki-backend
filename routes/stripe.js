@@ -328,6 +328,50 @@ module.exports = (db) => {
             else console.log(`[stripe webhook] Licencja przedłużona dla: ${customerEmail} (${result.affectedRows} rekord)`);
           }
         );
+
+        // Faktura dla miesięcznych odnowień (recurring).
+        // Pierwsza faktura (subscription_create) wystawiana jest osobno w checkout.session.completed.
+        // Tu obsługujemy subscription_cycle, subscription_update i każdy inny billing_reason
+        // poza create — żeby nie zrobić duplikatu pierwszej faktury.
+        const billingReason = invoice.billing_reason || '';
+        if (billingReason !== 'subscription_create' && subscriptionId) {
+          (async () => {
+            try {
+              // Dane salonu z Licencje (autorytatywne — nazwa, adres, telefon)
+              const salonDane = await new Promise((resolve) => {
+                db.query(
+                  `SELECT nazwa_salonu, ulica, miasto, telefon FROM Licencje WHERE email = ? LIMIT 1`,
+                  [customerEmail],
+                  (e, rows) => resolve((rows && rows[0]) || null)
+                );
+              });
+              if (!salonDane || !salonDane.nazwa_salonu) {
+                console.warn(`[stripe webhook] invoice.paid recurring: brak salonu w Licencje dla ${customerEmail} — pomijam fakturę`);
+                return;
+              }
+              // NIP nie jest w Licencje (zaszyty tylko w Stripe subscription.metadata z pierwszego checkout)
+              let nip = '';
+              try {
+                const sub = await stripe.subscriptions.retrieve(subscriptionId);
+                nip = (sub && sub.metadata && sub.metadata.nip) || '';
+              } catch (e) {
+                console.warn('[stripe webhook] subscriptions.retrieve fail (NIP pominięty):', e.message);
+              }
+              await wystawFakture({
+                nazwa_salonu: salonDane.nazwa_salonu,
+                email:        customerEmail,
+                ulica:        salonDane.ulica   || '',
+                miasto:       salonDane.miasto  || '',
+                telefon:      salonDane.telefon || '',
+                nip:          nip,
+              });
+              console.log(`[stripe webhook] Faktura recurring (${billingReason}) wystawiona dla ${customerEmail}`);
+            } catch (fakErr) {
+              console.error('[stripe webhook] Błąd faktury recurring:', fakErr.message);
+              // Nie blokujemy webhooka — Stripe nie ponowi, ale licencja przedłużona OK
+            }
+          })();
+        }
       }
     }
 
