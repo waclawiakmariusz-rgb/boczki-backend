@@ -87,11 +87,20 @@ module.exports = (db) => {
                   instDeadline = `${dzisStr} ${String(wzorD.getHours()).padStart(2,'0')}:${String(wzorD.getMinutes()).padStart(2,'0')}:00`;
                 }
                 const newId = randomUUID();
+                // INSERT IGNORE — gdy UNIQUE INDEX (uniq_instance) wykryje duplikat,
+                // wstawienie cicho się odrzuci. Sprawdzamy affectedRows by nie kopiować
+                // do podtabel niepotrzebnie (i nie tworzyć niespójności).
                 db.query(
-                  `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, parent_powtarzajacy_id, is_szablon)
+                  `INSERT IGNORE INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, parent_powtarzajacy_id, is_szablon)
                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, 0)`,
                   [newId, tenant_id, w.utworzone_przez, w.przypisane_do, w.tytul, w.opis, w.kategoria, w.priorytet, instDeadline, w.id_klienta, w.klient_nazwa, w.id],
-                  () => {
+                  (errIns, resIns) => {
+                    if (errIns || !resIns || resIns.affectedRows === 0) {
+                      // Duplikat odrzucony przez UNIQUE INDEX — pomiń kopiowanie podtabel.
+                      if (errIns) console.warn('[materializujWzorce] INSERT skip:', errIns.message, '| szablon:', w.id);
+                      if (--pending === 0) finish();
+                      return;
+                    }
                     // Skopiuj multi-kategorie z szablonu do instancji (INSERT ... SELECT)
                     db.query(
                       `INSERT IGNORE INTO Zadania_Kategorie (id, tenant_id, id_zadania, kategoria)
@@ -224,6 +233,22 @@ module.exports = (db) => {
       safeAlter(`ALTER TABLE Zadania ADD COLUMN parent_powtarzajacy_id VARCHAR(36) NULL`, 'parent_powtarzajacy_id');
       safeAlter(`ALTER TABLE Zadania ADD COLUMN is_szablon TINYINT(1) DEFAULT 0`, 'is_szablon');
       safeAlter(`ALTER TABLE Zadania ADD INDEX idx_szablon (tenant_id, is_szablon)`, 'idx_szablon');
+
+      // Twarde zabezpieczenie przed duplikatami instancji wzorców (incydent 2026-06-06).
+      // Generated STORED column = data instancji (deadline lub data_utworzenia jeśli NULL).
+      // UNIQUE INDEX (tenant, parent_powtarzajacy_id, dzien_instancji) → MySQL fizycznie
+      // odrzuci duplikat nawet jeśli race condition prześliznie się przez SELECT/INSERT w kodzie.
+      // Dla zadań spoza materializacji (parent_powtarzajacy_id IS NULL) constraint nie działa
+      // — NULL w UNIQUE pozwala na dowolnie wiele wpisów (MySQL behavior).
+      safeAlter(
+        `ALTER TABLE Zadania ADD COLUMN dzien_instancji DATE
+           GENERATED ALWAYS AS (COALESCE(DATE(deadline), DATE(data_utworzenia))) STORED`,
+        'dzien_instancji'
+      );
+      safeAlter(
+        `ALTER TABLE Zadania ADD UNIQUE INDEX uniq_instance (tenant_id, parent_powtarzajacy_id, dzien_instancji)`,
+        'uniq_instance'
+      );
     }
   );
 
