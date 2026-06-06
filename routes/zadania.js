@@ -47,6 +47,12 @@ module.exports = (db) => {
 
   // Lazy materializacja: dla każdego wzorca dla którego dziś przypada cykl,
   // sprawdź czy istnieje instancja na dziś — jeśli nie, utwórz.
+  //
+  // BUG #2026-06-06 — naprawiony: gdy szablon ma deadline IS NULL, instancje też mają NULL.
+  // Stary SELECT sprawdzał `DATE(deadline)=?`, ale `DATE(NULL)=NULL` i `NULL='2026-06-06'`
+  // zwraca NULL (nie TRUE) → przy każdym otwarciu listy zadań powstawała kolejna kopia.
+  // 5 czerwca 2026 jedno zadanie zduplikowało się 289 razy w ciągu doby.
+  // Fix: warunek bierze pod uwagę oba scenariusze (deadline lub data_utworzenia).
   function materializujWzorce(tenant_id, cb) {
     db.query(
       `SELECT * FROM Zadania WHERE tenant_id = ? AND is_szablon = 1 AND status = 'AKTYWNE'`,
@@ -60,10 +66,18 @@ module.exports = (db) => {
         wzorce.forEach(w => {
           if (!czyMaterializowacDzis(w, dzis)) return;
           pending++;
-          // Sprawdź czy instancja na dziś już istnieje
+          // Sprawdź czy instancja na dziś już istnieje.
+          // Dla szablonów z deadline=NULL porównujemy DATE(data_utworzenia)
+          // (bo instancja też dziedziczy NULL — patrz fragment "instDeadline" niżej).
           db.query(
-            `SELECT id FROM Zadania WHERE tenant_id = ? AND parent_powtarzajacy_id = ? AND DATE(deadline) = ? LIMIT 1`,
-            [tenant_id, w.id, dzisStr],
+            `SELECT id FROM Zadania
+             WHERE tenant_id = ? AND parent_powtarzajacy_id = ?
+               AND (
+                 (deadline IS NOT NULL AND DATE(deadline) = ?)
+                 OR (deadline IS NULL AND DATE(data_utworzenia) = ?)
+               )
+             LIMIT 1`,
+            [tenant_id, w.id, dzisStr, dzisStr],
             (err2, rows) => {
               if (!err2 && (!rows || !rows.length)) {
                 // Stwórz instancję — kopiuje pola wzorca; deadline = dziś + godzina ze wzorca
