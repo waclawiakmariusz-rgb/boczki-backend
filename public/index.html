@@ -22167,7 +22167,9 @@ if (inputNazwaCheck) {
             cosmList.innerHTML = "";
 
             if (!dataArray || dataArray.length === 0) {
-                cosmList.innerHTML = `<li style="padding:15px 0; color:#94a3b8; font-size:13px; text-align:center;">Brak danych o sprzedanych kosmetykach w tym ${emptyTimeText}.</li>`;
+                // Wyciągnij rzeczowną etykietę kategorii z ID kontenera (cosm → kosmetykach, sup → suplementach)
+                const cat = String(containerId || '').includes('sup') ? 'suplementach' : 'kosmetykach';
+                cosmList.innerHTML = `<li style="padding:15px 0; color:#94a3b8; font-size:13px; text-align:center;">Brak danych o sprzedanych ${cat} w tym ${emptyTimeText}.</li>`;
                 return;
             }
 
