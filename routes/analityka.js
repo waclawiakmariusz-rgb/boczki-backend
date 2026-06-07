@@ -697,10 +697,14 @@ module.exports = (db) => {
             availableTreatments: [], yearlyTrendRev: { '01': 0, '02': 0, '03': 0, '04': 0, '05': 0, '06': 0, '07': 0, '08': 0, '09': 0, '10': 0, '11': 0, '12': 0 },
             dayOfWeek: [0, 0, 0, 0, 0, 0, 0], totalYearlyRevenue: 0, treatmentCountYear: 0, uniqueClientsCount: 0,
             monthRev: 0, monthCount: 0, monthTotalRev: 0, prevMonthRev: 0, topSellersArr: [],
-            cosmeticsMonthRev: 0, cosmeticsMonthCount: 0, cosmeticsYearRev: 0, cosmeticsMonthTop20: [], cosmeticsTop20: []
+            cosmeticsMonthRev: 0, cosmeticsMonthCount: 0, cosmeticsYearRev: 0, cosmeticsMonthTop20: [], cosmeticsTop20: [],
+            // Suplementy — rozróżnione od kosmetyków po prefixie zabieg "Suplement:" (2026-06-07)
+            suplementsMonthRev: 0, suplementsMonthCount: 0, suplementsYearRev: 0, suplementsMonthTop20: [], suplementsTop20: []
           };
 
-          let allTreatmentsSet = new Set(), clientsSet = new Set(), topSellersMap = {}, cosmeticsYearMap = {}, cosmeticsMonthMap = {};
+          let allTreatmentsSet = new Set(), clientsSet = new Set(), topSellersMap = {};
+          let cosmeticsYearMap = {}, cosmeticsMonthMap = {};
+          let suplementsYearMap = {}, suplementsMonthMap = {};
           const normalizeName = (name) => String(name || 'Inne').trim().replace(/(?:\s|-)*dopłata$/i, '').trim();
 
           (sprzedaz || []).forEach(row => {
@@ -714,22 +718,38 @@ module.exports = (db) => {
             const rawZabieg = String(row.zabieg || 'Inne').trim();
             const zabieg = normalizeName(rawZabieg);
             const klient = String(row.klient || 'Nieznany').trim();
-            const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+            const isSuplement = zabieg.toLowerCase().includes('suplement');
+            // isKosmetyk obejmuje też suplementy (back-compat); rozdzielamy je niżej do osobnych map
+            const isKosmetyk = isSuplement || zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
 
             if (amount === 0 && !isKosmetyk) return;
             if (mFull === selectedMonth && !platnosc.includes('portfel') && platnosc !== 'mix') result.monthTotalRev += amount;
 
             if (isKosmetyk) {
-              const cleanCosm = rawZabieg.replace(/^kosmetyk\s*[:-]?\s*/i, '').trim() || rawZabieg;
-              if (y === selectedYear) {
-                result.cosmeticsYearRev += amount;
-                if (!cosmeticsYearMap[cleanCosm]) cosmeticsYearMap[cleanCosm] = { count: 0, rev: 0 };
-                cosmeticsYearMap[cleanCosm].count++; cosmeticsYearMap[cleanCosm].rev += amount;
-              }
-              if (mFull === selectedMonth) {
-                result.cosmeticsMonthRev += amount; result.cosmeticsMonthCount++;
-                if (!cosmeticsMonthMap[cleanCosm]) cosmeticsMonthMap[cleanCosm] = { count: 0, rev: 0 };
-                cosmeticsMonthMap[cleanCosm].count++; cosmeticsMonthMap[cleanCosm].rev += amount;
+              // Czysta nazwa produktu — strip prefix zarówno dla Kosmetyk: jak i Suplement:
+              const cleanName = rawZabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim() || rawZabieg;
+              if (isSuplement) {
+                if (y === selectedYear) {
+                  result.suplementsYearRev += amount;
+                  if (!suplementsYearMap[cleanName]) suplementsYearMap[cleanName] = { count: 0, rev: 0 };
+                  suplementsYearMap[cleanName].count++; suplementsYearMap[cleanName].rev += amount;
+                }
+                if (mFull === selectedMonth) {
+                  result.suplementsMonthRev += amount; result.suplementsMonthCount++;
+                  if (!suplementsMonthMap[cleanName]) suplementsMonthMap[cleanName] = { count: 0, rev: 0 };
+                  suplementsMonthMap[cleanName].count++; suplementsMonthMap[cleanName].rev += amount;
+                }
+              } else {
+                if (y === selectedYear) {
+                  result.cosmeticsYearRev += amount;
+                  if (!cosmeticsYearMap[cleanName]) cosmeticsYearMap[cleanName] = { count: 0, rev: 0 };
+                  cosmeticsYearMap[cleanName].count++; cosmeticsYearMap[cleanName].rev += amount;
+                }
+                if (mFull === selectedMonth) {
+                  result.cosmeticsMonthRev += amount; result.cosmeticsMonthCount++;
+                  if (!cosmeticsMonthMap[cleanName]) cosmeticsMonthMap[cleanName] = { count: 0, rev: 0 };
+                  cosmeticsMonthMap[cleanName].count++; cosmeticsMonthMap[cleanName].rev += amount;
+                }
               }
               return;
             }
@@ -757,6 +777,11 @@ module.exports = (db) => {
           result.cosmeticsTop20 = cosmYearArr.slice(0, 20);
           const cosmMonthArr = Object.entries(cosmeticsMonthMap).map(([name, obj]) => ({ name, count: obj.count, rev: obj.rev })).sort((a, b) => b.rev - a.rev || b.count - a.count);
           result.cosmeticsMonthTop20 = cosmMonthArr.slice(0, 20);
+          // Suplementy — Top 20 rok i miesiąc (analogicznie do kosmetyków)
+          const supYearArr = Object.entries(suplementsYearMap).map(([name, obj]) => ({ name, count: obj.count, rev: obj.rev })).sort((a, b) => b.rev - a.rev || b.count - a.count);
+          result.suplementsTop20 = supYearArr.slice(0, 20);
+          const supMonthArr = Object.entries(suplementsMonthMap).map(([name, obj]) => ({ name, count: obj.count, rev: obj.rev })).sort((a, b) => b.rev - a.rev || b.count - a.count);
+          result.suplementsMonthTop20 = supMonthArr.slice(0, 20);
           return res.json({ status: 'success', data: result });
         }
       );
