@@ -98,6 +98,14 @@ module.exports = (db) => {
       return str.length >= 15 ? str.substring(0, 15) : str;
     };
 
+    // Magazyn → Set nazw produktów typu Witaminy (= Suplementy). Używamy do rozpoznania
+    // starszych sprzedaży zapisanych jako "Kosmetyk: X" gdzie X jest suplementem.
+    db.query(
+      `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+      [tenant_id],
+      (errSup, supRows) => {
+        const suplementSet = new Set((supRows || []).map(r => r.nazwa));
+
     // Zadatki
     db.query(
       `SELECT id, data_wplaty, klient, metoda, kwota, pracownicy, status FROM Zadatki WHERE tenant_id = ? AND DATE(data_wplaty) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
@@ -117,14 +125,26 @@ module.exports = (db) => {
           });
         });
 
-        // Sprzedaż
+        // Sprzedaż — dodajemy szczegoly (liczba sztuk dla kosmetyków) i kategoria_produktu
+        // (rozróżnienie Kosmetyk vs Suplement na froncie dla chipów w Podsumowaniu Dziennym).
         db.query(
-          `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
+          `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly, kategoria_produktu, status FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
           [tenant_id, dataStr],
           (err2, sprzedaz) => {
             (sprzedaz || []).forEach(row => {
               const platnosc = String(row.platnosc || '').toLowerCase();
               if (platnosc.includes('portfel')) return;
+              // Wykryj kategorię produktu — najpierw z kolumny (nowe wpisy), potem z prefixu,
+              // a dla starszych "Kosmetyk: X" sprawdzamy czy X jest w suplementSet.
+              let katProd = row.kategoria_produktu || null;
+              if (!katProd) {
+                const zL = String(row.zabieg || '').toLowerCase();
+                if (zL.startsWith('suplement:')) katProd = 'Suplement';
+                else if (zL.startsWith('kosmetyk:')) {
+                  const cleanProd = String(row.zabieg).replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+                  katProd = suplementSet.has(cleanProd) ? 'Suplement' : 'Kosmetyk';
+                }
+              }
               wynik.push({
                 typ_rekordu: 'sprzedaz',
                 timestamp: new Date(row.data_sprzedazy).getTime(),
@@ -134,7 +154,9 @@ module.exports = (db) => {
                 zabieg: row.zabieg,
                 sprzedawca: row.sprzedawca,
                 kwota: row.kwota,
-                platnosc: row.platnosc
+                platnosc: row.platnosc,
+                szczegoly: row.szczegoly || '',
+                kategoria_produktu: katProd
               });
             });
 
@@ -177,6 +199,8 @@ module.exports = (db) => {
         );
       }
     );
+      } // koniec callback (errSup, supRows)
+    );    // koniec db.query Magazyn (suplementSet) dla pobierzTransakcjeZDnia
   }
 
   // ==========================================
