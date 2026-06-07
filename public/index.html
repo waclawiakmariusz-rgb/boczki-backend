@@ -5561,7 +5561,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <div style="background:#f0f9ff; padding:10px; margin-bottom:15px; border:1px solid #bae6fd;"><!--<input type="radio" name="kategoria" value="Profesja" checked> Profesja --><input type="radio" name="kategoria" value="Detal" checked> Detal</div>
                         <div class="form-grid"><div><label>Firma:</label><select id="n_firma" onchange="zaladujModeleDlaFirmy()"></select></div><div><label>Model:</label><select id="n_model" onchange="generujNazwe()" disabled></select></div></div>
                         <input type="text" id="n_nazwa" readonly style="background:#eee; font-weight:bold;">
-                        <div class="form-grid"><div><label>Ilość:</label><input type="number" id="n_ilosc" required min="1"></div><div><label>Typ:</label><select id="n_typ"><option>Kremy</option><option>Olejek</option><option>Inne</option></select></div></div>
+                        <div class="form-grid"><div><label>Ilość:</label><input type="number" id="n_ilosc" required min="1"></div><div><label>Typ:</label><select id="n_typ"><option>Kremy</option><option>Olejek</option><option value="Witaminy">Suplement</option><option>Inne</option></select></div></div>
                         <div class="form-grid"><div><label>Netto (szt):</label><input type="number" step="0.01" id="n_netto" required min="0.01"></div><div><label>Brutto (szt):</label><input type="number" step="0.01" id="n_brutto" required min="0.01"></div></div>
                         <div class="form-grid"><div style="display:none"><label>Min:</label><input type="number" id="n_min" value="2"></div><div><label>Ważność:</label><input type="date" id="n_waznosc" required></div></div>
                         <button type="submit" class="btn-primary">Zapisz</button>
@@ -6170,8 +6170,8 @@ body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; 
                 <div style="font-size: 12px; color: #166534; margin-top: 5px; font-weight:600;">💆‍♀️ Zabieg</div>
             </div>
             <div>
-                <button type="button" onclick="dodajNowyWiersz('Kosmetyk')" title="Dodaj kosmetyk" style="width: 50px; height: 50px; border-radius: 50%; background: #f59e0b; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
-                <div style="font-size: 12px; color: #92400e; margin-top: 5px; font-weight:600;">🛍️ Kosmetyk</div>
+                <button type="button" onclick="dodajNowyWiersz('Kosmetyk')" title="Dodaj sprzedaż detaliczną (kosmetyk lub suplement)" style="width: 50px; height: 50px; border-radius: 50%; background: #f59e0b; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
+                <div style="font-size: 12px; color: #92400e; margin-top: 5px; font-weight:600;">🛍️ Detal</div>
             </div>
             <div>
                 <button type="button" onclick="dodajNowyWiersz('Zadatek')" title="Dodaj zadatek" style="width: 50px; height: 50px; border-radius: 50%; background: #d63384; color: white; border: none; font-size: 22px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">+</button>
@@ -15938,7 +15938,7 @@ function renderMagazyn(d) {
                     + '<br><span style="font-size:11px; color:#94a3b8; margin-top:2px; display:inline-block;">↓ sprzedaż pobiera automatycznie z najstarszej</span>';
                 akcjaHtml = '<span style="font-size:11px; color:#94a3b8; font-style:italic;">(kliknij wiersz, by zobaczyć)</span>';
             } else {
-                podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ || '') + ' | ' + (g.kto_dodal || '-') + '</small>';
+                podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ === 'Witaminy' ? 'Suplement' : (g.typ || '')) + ' | ' + (g.kto_dodal || '-') + '</small>';
                 let obiektPartii = encodeURIComponent(JSON.stringify(g.partie[0]));
                 akcjaHtml = '<button onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="background:none; border:none; cursor:pointer; color:#16a34a; padding:6px;" title="Edytuj produkt">' + ICON_EDIT + '</button>';
             }
@@ -16309,7 +16309,9 @@ function generujNowaTabele(lista) {
         mediraty: 0,
         tubapay: 0,
         booksy: 0,
-        zadatek: 0
+        zadatek: 0,
+        kosmetyki: 0,  // ilość sztuk Kosmetyków (typ != Witaminy w Magazyn)
+        suplementy: 0  // ilość sztuk Suplementów (typ == Witaminy)
     };
 
     // Zmienne do sumowania kafelków
@@ -16343,6 +16345,21 @@ function generujNowaTabele(lista) {
             // --- LOGIKA KAFELKÓW ORAZ LICZNIKÓW ---
             if (r.typ_rekordu === 'zadatek') {
                 counts.zadatek++;
+            }
+
+            // Kosmetyki / Suplementy — sumowanie sztuk z pola szczegoly = "X szt."
+            // Rozróżniamy po prefixie w polu zabieg ("Kosmetyk: ..." vs "Suplement: ...")
+            // lub po kategoria_produktu jeśli backend ją przesłał.
+            const zabiegStr = String(r.zabieg || '');
+            const matchSzt = String(r.szczegoly || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+            const ileSzt = matchSzt ? parseFloat(matchSzt[1].replace(',', '.')) : 0;
+            if (ileSzt > 0) {
+                const kategoriaProd = String(r.kategoria_produktu || '').toLowerCase();
+                if (kategoriaProd === 'suplement' || zabiegStr.startsWith('Suplement:')) {
+                    counts.suplementy += ileSzt;
+                } else if (kategoriaProd === 'kosmetyk' || zabiegStr.startsWith('Kosmetyk:')) {
+                    counts.kosmetyki += ileSzt;
+                }
             }
 
             if (metoda.includes('gotówka') || metoda.includes('gotowka')) {
@@ -16430,7 +16447,9 @@ function generujNowaTabele(lista) {
         { key: 'booksy', label: 'płatności Booksy', icon: '🗓️', color: '#0284c7' },
         { key: 'mediraty', label: 'płatności MediRaty', icon: '🏥', color: '#f59e0b' },
         { key: 'tubapay', label: 'płatności TubaPay (0%)', icon: '📅', color: '#14b8a6' },
-        { key: 'zadatek', label: 'wpłat zadatków', icon: '👛', color: '#db2777' }
+        { key: 'zadatek', label: 'wpłat zadatków', icon: '👛', color: '#db2777' },
+        { key: 'kosmetyki', label: 'kosmetyków (szt.)', icon: '🧴', color: '#0d9488' },
+        { key: 'suplementy', label: 'suplementów (szt.)', icon: '💊', color: '#9333ea' }
     ];
 
     badgeConfigs.forEach(conf => {
@@ -17365,7 +17384,7 @@ function dodajNowyWiersz(domyslnyTyp) {
                 </label>
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600;">
                     <input type="radio" name="typ-${id}" value="Kosmetyk" ${domyslnyTyp==='Kosmetyk'?'checked':''} onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">
-                    🛍️ Kosmetyk
+                    🛍️ Detal
                 </label>
                 <label style="cursor:pointer; display:flex; align-items:center; font-weight:600; color:#d63384;">
                     <input type="radio" name="typ-${id}" value="Zadatek" ${domyslnyTyp==='Zadatek'?'checked':''} onchange="przelaczTypWiersza('${id}')" style="margin-right:5px;">

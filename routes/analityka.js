@@ -263,6 +263,11 @@ module.exports = (db) => {
 
               const initEmp = (person) => ({
                 name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0,
+                // Suplementy — podzbiór kosmetyków (rozróżnienie 2026-06-07 po typ='Witaminy'
+                // w Magazyn). Liczby kosmetyki/qty_kosmetyki ZAWIERAJĄ też suplementy
+                // (back-compat ze starymi raportami). suplementy/qty_suplementow to OSOBNY
+                // licznik tylko dla suplementów.
+                suplementy: 0, qty_suplementow: 0,
                 transakcje: 0, top: {}, transactionsList: [], virtualReceipts: {},
                 _topReceipts: new Set(),       // dedup Top 5 po (baseId, zabieg)
                 wykonaneZabiegi: new Set()     // dla worstTreatments: klucz "kategoria||wariant"
@@ -275,7 +280,10 @@ module.exports = (db) => {
                 // Portfel: pomijamy w sumach finansowych (zadatek już zaliczony przy wpłacie),
                 // ALE liczymy do Top 5 / wykonaneZabiegi / qty_kosmetyki (faktyczna sprzedaż fizyczna).
                 const isPortfel = (platL === 'portfel');
-                const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+                // isKosmetyk obejmuje też suplementy (back-compat z istniejącą logiką
+                // total/zabiegi/Top 5 — "Detal" to wspólna grupa).
+                const isSuplement = zabieg.toLowerCase().includes('suplement');
+                const isKosmetyk = isSuplement || zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
                 if (amount === 0 && !isKosmetyk && !isPortfel) return;
 
                 // baseId — multi-sale ma format "<base>-<n>"; single-sale = całe id
@@ -322,11 +330,13 @@ module.exports = (db) => {
                   // Wartość kosmetyków per pracownik — osobne KPI (nie wlicza się do total)
                   if (!isPortfel && isKosmetyk) {
                     e.kosmetyki += splitAmount;
+                    if (isSuplement) e.suplementy += splitAmount;
                   }
 
                   // qty_kosmetyki — fizyczna ilość sprzedanych sztuk, niezależnie od metody
                   if (isKosmetyk) {
                     e.qty_kosmetyki += (ilosc / count);
+                    if (isSuplement) e.qty_suplementow += (ilosc / count);
                   }
 
                   // Top 5 — uwzględnia Portfel; dedup po (baseId, zabieg) eliminuje
@@ -508,7 +518,7 @@ module.exports = (db) => {
               const m = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
               const platnosc = String(row.platnosc || '').toLowerCase();
               const zabieg = String(row.zabieg || 'Inne').trim();
-              const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+              const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem') || zabieg.toLowerCase().includes('suplement'); // 2026-06-07: rozszerzono o "suplement"
 
               if (m === targetMonth) {
                 if (isKosmetyk) report.cosmeticsCount++;
