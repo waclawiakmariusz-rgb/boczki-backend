@@ -689,6 +689,15 @@ module.exports = (db) => {
         prevMonth = prevD.getFullYear() + '-' + String(prevD.getMonth() + 1).padStart(2, '0');
       }
 
+      // Pobierz najpierw nazwy produktów typu Witaminy (= Suplementy) z Magazyn.
+      // Stare sprzedaże zapisywały wszystko jako "Kosmetyk: X" — żeby też je
+      // rozpoznać jako suplementy, robimy lookup po LOWER(TRIM(nazwa)).
+      db.query(
+        `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+        [tenant_id],
+        (errSup, supRows) => {
+          const suplementSet = new Set((supRows || []).map(r => r.nazwa));
+
       db.query(
         `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND YEAR(data_sprzedazy) = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
         [tenant_id, selectedYear],
@@ -698,7 +707,8 @@ module.exports = (db) => {
             dayOfWeek: [0, 0, 0, 0, 0, 0, 0], totalYearlyRevenue: 0, treatmentCountYear: 0, uniqueClientsCount: 0,
             monthRev: 0, monthCount: 0, monthTotalRev: 0, prevMonthRev: 0, topSellersArr: [],
             cosmeticsMonthRev: 0, cosmeticsMonthCount: 0, cosmeticsYearRev: 0, cosmeticsMonthTop20: [], cosmeticsTop20: [],
-            // Suplementy — rozróżnione od kosmetyków po prefixie zabieg "Suplement:" (2026-06-07)
+            // Suplementy — rozróżnione od kosmetyków po prefixie zabieg "Suplement:" lub
+            // po typie='Witaminy' w Magazyn (dla starszych wpisów "Kosmetyk: X").
             suplementsMonthRev: 0, suplementsMonthCount: 0, suplementsYearRev: 0, suplementsMonthTop20: [], suplementsTop20: []
           };
 
@@ -718,9 +728,15 @@ module.exports = (db) => {
             const rawZabieg = String(row.zabieg || 'Inne').trim();
             const zabieg = normalizeName(rawZabieg);
             const klient = String(row.klient || 'Nieznany').trim();
-            const isSuplement = zabieg.toLowerCase().includes('suplement');
-            // isKosmetyk obejmuje też suplementy (back-compat); rozdzielamy je niżej do osobnych map
-            const isKosmetyk = isSuplement || zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+            // Wykryj suplement: po prefixie zabieg LUB po typ='Witaminy' w Magazyn
+            // (kluczowe dla starszych sprzedaży zapisanych jako "Kosmetyk: X").
+            const zabiegLow = zabieg.toLowerCase();
+            let isSuplement = zabiegLow.includes('suplement');
+            const isKosmetyk = isSuplement || zabiegLow.includes('kosmetyk') || zabiegLow.includes('krem');
+            if (isKosmetyk && !isSuplement && suplementSet.size > 0) {
+              const cleanProd = rawZabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+              if (suplementSet.has(cleanProd)) isSuplement = true;
+            }
 
             if (amount === 0 && !isKosmetyk) return;
             if (mFull === selectedMonth && !platnosc.includes('portfel') && platnosc !== 'mix') result.monthTotalRev += amount;
@@ -785,6 +801,8 @@ module.exports = (db) => {
           return res.json({ status: 'success', data: result });
         }
       );
+        } // koniec callback (errSup, supRows)
+      );    // koniec db.query Magazyn (suplementSet)
 
     } else if (action === 'get_bi_data' || action === 'an_get_bi_data') {
       const currentYear = new Date().getFullYear();
