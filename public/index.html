@@ -7785,6 +7785,12 @@ ANALIZA MANAGER
                             <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Wykaz produktów pracownika w tym miesiącu:</p>
                             <ul id="an_emp-cosmetics-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
                         </div>
+
+                        <div class="chart-box">
+                            <h6 class="text-muted fw-bold mb-3" style="margin-top:0; font-size:16px; color:#475569;">💊 Sprzedane Suplementy</h6>
+                            <p style="font-size:11px; color:#6b7280; margin-top:-10px; margin-bottom:15px;">Wykaz suplementów pracownika w tym miesiącu:</p>
+                            <ul id="an_emp-suplements-list" class="top-list" style="max-height: 250px; overflow-y: auto; padding-right: 10px;"></ul>
+                        </div>
                     </div>
                 </details>
             </div>
@@ -8584,6 +8590,68 @@ ANALIZA MANAGER
                 </div>
             </div>
             <ul id="an_ta-cosm-year-list" class="list-group list-group-flush" style="padding-left:0; margin-bottom:0; list-style:none;"></ul>
+        </div>
+    </details>
+
+    <details class="an_detail-section" style="margin-top: 20px; border-top: 2px dashed #e0daf5; padding-top: 30px;">
+        <summary class="an_detail-title">💊 Analiza Suplementów — <span class="sup-month-label">Miesiąc</span></summary>
+        <p style="font-size:13px; color:#64748b; margin-top:12px; margin-bottom:20px;">Ranking i obroty suplementów w wybranym miesiącu.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="card" style="border-top: 4px solid #9333ea;">
+                <div class="kpi-title">Przychód z Suplementów</div>
+                <div id="an_ta-sup-month-rev" style="font-size: 26px; font-weight: 800; color: #111; margin-top:5px;">0 zł</div>
+                <div id="an_ta-sup-month-count" style="font-size:12px; color:#7e22ce; font-weight:bold;">Wydano sztuk: 0</div>
+            </div>
+            <div class="card" style="background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%); border: 1px solid #e9d5ff;">
+                <div class="kpi-title" style="color: #7e22ce;">Bestseller (W tym miesiącu)</div>
+                <div id="an_ta-sup-month-top-name" style="font-size: 17px; font-weight: 800; color: #6b21a8; margin-top:5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                <div id="an_ta-sup-month-top-val" style="font-size:12px; color:#7e22ce; font-weight:bold;">0 szt.</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom: 40px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin-top:0; font-size:15px; color:#475569; margin-bottom: 0;">🏆 Ranking Suplementów - Top 20 (<span class="sup-month-label"></span>)</h3>
+                <div style="display: flex; gap: 5px; font-size: 11px;">
+                    <span style="color:#94a3b8; align-self: center; margin-right: 5px;">Sortuj:</span>
+                    <button id="an_btn-sort-sm-rev" onclick="an_sortSuplementsMonth('rev')" style="background:#fce7f3; color:#db2777; border:1px solid #fbcfe8; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:bold; transition: 0.2s;">Kwocie</button>
+                    <button id="an_btn-sort-sm-count" onclick="an_sortSuplementsMonth('count')" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; cursor:pointer; transition: 0.2s;">Ilości</button>
+                    <button id="an_btn-sort-sm-name" onclick="an_sortSuplementsMonth('name')" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; cursor:pointer; transition: 0.2s;">Nazwie</button>
+                </div>
+            </div>
+            <ul id="an_ta-sup-month-list" class="list-group list-group-flush" style="padding-left:0; margin-bottom:0; list-style:none;"></ul>
+        </div>
+    </details>
+
+    <details class="an_detail-section" style="margin-top: 20px; border-top: 2px dashed #e0daf5; padding-top: 30px;">
+        <summary class="an_detail-title">💊 Analiza Suplementów — <span class="sup-year-label">Rok</span></summary>
+        <p style="font-size:13px; color:#64748b; margin-top:12px; margin-bottom:20px;">Zestawienie narastające dla całego bieżącego roku.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px;">
+            <div class="card" style="border-top: 4px solid #a855f7;">
+                <div class="kpi-title">Utarg z Suplementów (Rok)</div>
+                <div id="an_ta-sup-year-rev" style="font-size: 26px; font-weight: 800; color: #111; margin-top:5px;">0 zł</div>
+                <div style="font-size:12px; color:#6b7280; font-weight:bold;">Suma ze wszystkich miesięcy</div>
+            </div>
+            <div class="card" style="background: linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%); border: 1px solid #d8b4fe;">
+                <div class="kpi-title" style="color: #6b21a8;">Absolutny Bestseller (Rok)</div>
+                <div id="an_ta-sup-year-top-name" style="font-size: 17px; font-weight: 800; color: #581c87; margin-top:5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">-</div>
+                <div id="an_ta-sup-year-top-val" style="font-size:12px; color:#7e22ce; font-weight:bold;">0 szt.</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 10px; flex-wrap: wrap; gap: 10px;">
+                <h3 style="margin-top:0; font-size:15px; color:#475569; margin-bottom: 0;">🏆 Ranking Suplementów - Top 20 (<span class="sup-year-label"></span>)</h3>
+                <div style="display: flex; gap: 5px; font-size: 11px;">
+                    <span style="color:#94a3b8; align-self: center; margin-right: 5px;">Sortuj:</span>
+                    <button id="an_btn-sort-sy-rev" onclick="an_sortSuplementsYear('rev')" style="background:#fce7f3; color:#db2777; border:1px solid #fbcfe8; padding:4px 10px; border-radius:6px; cursor:pointer; font-weight:bold; transition: 0.2s;">Kwocie</button>
+                    <button id="an_btn-sort-sy-count" onclick="an_sortSuplementsYear('count')" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; cursor:pointer; transition: 0.2s;">Ilości</button>
+                    <button id="an_btn-sort-sy-name" onclick="an_sortSuplementsYear('name')" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; padding:4px 10px; border-radius:6px; cursor:pointer; transition: 0.2s;">Nazwie</button>
+                </div>
+            </div>
+            <ul id="an_ta-sup-year-list" class="list-group list-group-flush" style="padding-left:0; margin-bottom:0; list-style:none;"></ul>
         </div>
     </details>
 </div>
@@ -20868,8 +20936,10 @@ if (inputNazwaCheck) {
         let an_trendChartInstance = null;
         let an_taYearlyChartInst = null;
         let an_taDayChartInst = null;
-        let an_currentCosmeticsYearData = []; 
-        let an_currentCosmeticsMonthData = []; 
+        let an_currentCosmeticsYearData = [];
+        let an_currentCosmeticsMonthData = [];
+        let an_currentSuplementsYearData = [];
+        let an_currentSuplementsMonthData = [];
         let an_biAovChartInst = null;
 
         function an_sprobojZalogowac() {
@@ -21125,8 +21195,13 @@ if (inputNazwaCheck) {
             const cosmeticsListEl = document.getElementById('an_emp-cosmetics-list');
             if (cosmeticsListEl) {
                 cosmeticsListEl.innerHTML = "";
+                // Filtr: tylko Kosmetyki (z prefixem "kosmetyk" lub "krem"), BEZ suplementów
                 const cosmeticsEntries = Object.entries(emp.top)
-                    .filter(([name, count]) => name.toLowerCase().includes('kosmetyk') || name.toLowerCase().includes('krem'))
+                    .filter(([name, count]) => {
+                        const n = name.toLowerCase();
+                        if (n.includes('suplement')) return false;
+                        return n.includes('kosmetyk') || n.includes('krem');
+                    })
                     .sort((a, b) => b[1] - a[1]);
 
                 if (cosmeticsEntries.length === 0) {
@@ -21139,6 +21214,28 @@ if (inputNazwaCheck) {
                             <li style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; font-size:13px;">
                                 <span style="font-weight:600; color:#334155; line-height:1.2; padding-right:10px;">${cleanName}</span>
                                 <span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; white-space:nowrap;">${displayCount} szt.</span>
+                            </li>`;
+                    });
+                }
+            }
+
+            // Sprzedane Suplementy — analogicznie do Kosmetyków, filtr po "suplement" w nazwie
+            const suplementsListEl = document.getElementById('an_emp-suplements-list');
+            if (suplementsListEl) {
+                suplementsListEl.innerHTML = "";
+                const supEntries = Object.entries(emp.top)
+                    .filter(([name]) => name.toLowerCase().includes('suplement'))
+                    .sort((a, b) => b[1] - a[1]);
+                if (supEntries.length === 0) {
+                    suplementsListEl.innerHTML = `<li style="padding:15px 0; color:#94a3b8; font-size:13px; text-align:center;">Brak sprzedanych suplementów w tym miesiącu.</li>`;
+                } else {
+                    supEntries.forEach(([name, count]) => {
+                        let displayCount = Number.isInteger(count) ? count : count.toFixed(1);
+                        let cleanName = name.replace(/^suplement\s*[:-]?\s*/i, '').trim();
+                        suplementsListEl.innerHTML += `
+                            <li style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; font-size:13px;">
+                                <span style="font-weight:600; color:#334155; line-height:1.2; padding-right:10px;">${cleanName}</span>
+                                <span style="background:#f3e8ff; color:#7e22ce; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; white-space:nowrap;">${displayCount} szt.</span>
                             </li>`;
                     });
                 }
@@ -21891,6 +21988,43 @@ if (inputNazwaCheck) {
                     an_sortCosmeticsMonth('rev');
                     an_sortCosmeticsYear('rev');
 
+                    // Suplementy — analogicznie do kosmetyków, oddzielne KPI i ranking
+                    document.querySelectorAll('.sup-month-label').forEach(el => el.innerText = monthSel);
+                    document.querySelectorAll('.sup-year-label').forEach(el => el.innerText = year);
+
+                    const supMonthRevEl = document.getElementById('an_ta-sup-month-rev');
+                    if (supMonthRevEl) supMonthRevEl.innerText = an_formatPLN(d.suplementsMonthRev || 0);
+                    const supMonthCountEl = document.getElementById('an_ta-sup-month-count');
+                    if (supMonthCountEl) supMonthCountEl.innerText = `Wydano sztuk: ${d.suplementsMonthCount || 0}`;
+
+                    an_currentSuplementsMonthData = d.suplementsMonthTop20 || [];
+                    const supMonthTopNameEl = document.getElementById('an_ta-sup-month-top-name');
+                    const supMonthTopValEl  = document.getElementById('an_ta-sup-month-top-val');
+                    if (an_currentSuplementsMonthData.length > 0) {
+                        if (supMonthTopNameEl) supMonthTopNameEl.innerText = an_currentSuplementsMonthData[0].name;
+                        if (supMonthTopValEl)  supMonthTopValEl.innerText  = `${an_currentSuplementsMonthData[0].count} szt. (${an_formatPLN(an_currentSuplementsMonthData[0].rev)})`;
+                    } else {
+                        if (supMonthTopNameEl) supMonthTopNameEl.innerText = '-';
+                        if (supMonthTopValEl)  supMonthTopValEl.innerText  = '';
+                    }
+
+                    const supYearRevEl = document.getElementById('an_ta-sup-year-rev');
+                    if (supYearRevEl) supYearRevEl.innerText = an_formatPLN(d.suplementsYearRev || 0);
+
+                    an_currentSuplementsYearData = d.suplementsTop20 || [];
+                    const supYearTopNameEl = document.getElementById('an_ta-sup-year-top-name');
+                    const supYearTopValEl  = document.getElementById('an_ta-sup-year-top-val');
+                    if (an_currentSuplementsYearData.length > 0) {
+                        if (supYearTopNameEl) supYearTopNameEl.innerText = an_currentSuplementsYearData[0].name;
+                        if (supYearTopValEl)  supYearTopValEl.innerText  = `${an_currentSuplementsYearData[0].count} szt. (${an_formatPLN(an_currentSuplementsYearData[0].rev)})`;
+                    } else {
+                        if (supYearTopNameEl) supYearTopNameEl.innerText = '-';
+                        if (supYearTopValEl)  supYearTopValEl.innerText  = '';
+                    }
+
+                    an_sortSuplementsMonth('rev');
+                    an_sortSuplementsYear('rev');
+
                     if (!treatmentSel) {
                         document.getElementById('an_ta-month-rev').innerText = "0 zł";
                         document.getElementById('an_ta-year-rev').innerText = "0 zł";
@@ -21988,8 +22122,18 @@ if (inputNazwaCheck) {
         }
 
         function an_sortCosmeticsMonth(type) {
-            an_updateSortButtons('m', type); 
+            an_updateSortButtons('m', type);
             an_renderCosmeticsList(an_currentCosmeticsMonthData, 'an_ta-cosm-month-list', type, 'miesiącu');
+        }
+
+        // Sortowanie rankingu suplementów (analogicznie do kosmetyków)
+        function an_sortSuplementsYear(type) {
+            an_updateSortButtons('sy', type);
+            an_renderCosmeticsList(an_currentSuplementsYearData, 'an_ta-sup-year-list', type, 'roku');
+        }
+        function an_sortSuplementsMonth(type) {
+            an_updateSortButtons('sm', type);
+            an_renderCosmeticsList(an_currentSuplementsMonthData, 'an_ta-sup-month-list', type, 'miesiącu');
         }
 
         function an_updateSortButtons(prefix, type) {
