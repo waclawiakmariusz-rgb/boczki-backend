@@ -11,6 +11,34 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
+  // Idempotentna migracja — kolumna rozróżniająca Kosmetyk vs Suplement.
+  // Wartości: 'Kosmetyk' (default dla sprzedaży typu kosmetyk), 'Suplement' (typ='Witaminy'
+  // w tabeli Magazyn). Pole NULL dla starszych wpisów i sprzedaży zabiegów.
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN kategoria_produktu ENUM('Kosmetyk','Suplement') NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER kategoria_produktu:', err.message);
+      }
+    }
+  );
+
+  // Sprawdza w Magazyn czy produkt o danej nazwie ma typ='Witaminy' → 'Suplement'.
+  // Inaczej (Kremy/Olejek/Inne/NULL) → 'Kosmetyk'. Używa LIMIT 1 (różne partie tego
+  // samego produktu mają zwykle ten sam typ).
+  function rozpoznajKategorieProduktu(tenant_id, nazwa, cb) {
+    if (!nazwa) return cb('Kosmetyk');
+    db.query(
+      `SELECT typ FROM Magazyn WHERE tenant_id = ? AND nazwa_produktu = ? LIMIT 1`,
+      [tenant_id, nazwa],
+      (err, rows) => {
+        if (err || !rows || !rows.length) return cb('Kosmetyk');
+        const typ = String(rows[0].typ || '').trim();
+        cb(typ === 'Witaminy' ? 'Suplement' : 'Kosmetyk');
+      }
+    );
+  }
+
   // ==========================================
   // Helper: pobierz FIFO i zdejmij ze stanu
   // ==========================================
@@ -164,7 +192,7 @@ module.exports = (db) => {
     if (action === 'sales_history') {
       const today = new Date().toISOString().slice(0, 10);
       db.query(
-        `SELECT id, data_sprzedazy, TIME_FORMAT(data_sprzedazy, '%H:%i') as czas_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
+        `SELECT id, data_sprzedazy, TIME_FORMAT(data_sprzedazy, '%H:%i') as czas_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND DATE(data_sprzedazy) = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC LIMIT 50`,
         [tenant_id, today],
         (err, rows) => {
           if (err) return res.json([]);
@@ -179,7 +207,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -253,17 +281,21 @@ module.exports = (db) => {
       let _kwotaAdd;
       try { _kwotaAdd = parseKwota(d.kwota, 'kwota'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
+      // kategoria_produktu — wypełnia się tylko dla typu Kosmetyk po rozpoznaniu
+      // typu w Magazyn (Witaminy → Suplement, inaczej → Kosmetyk). Zabiegi → NULL.
+      let kategoriaProduktuAdd = null;
+      let zabiegNazwaFinal = d.zabieg_nazwa;
       const doInsert = () => {
         // Snapshot typu zabiegu — best-effort lookup w Uslugi.
         // Próby (kolejno): exact CONCAT(kategoria,' ',wariant), exact kategoria, prefix.
         // Dla Kosmetyków NULL (osobny box w profilu).
         const insertWithTyp = (typZab) => {
           db.query(
-            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?)`,
-            [uniqueId, tenant_id, now, d.klient, d.zabieg_nazwa, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab],
+            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?)`,
+            [uniqueId, tenant_id, now, d.klient, zabiegNazwaFinal, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab, kategoriaProduktuAdd],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
-              zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${d.zabieg_nazwa} | ${d.kwota} zł`);
+              zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${zabiegNazwaFinal} | ${d.kwota} zł`);
               return res.json({ status: 'success', message: 'Sprzedaż zarejestrowana!' });
             }
           );
@@ -288,9 +320,17 @@ module.exports = (db) => {
       };
 
       if (d.typ_transakcji === 'Kosmetyk') {
-        zdejmijZeStanuFIFO(tenant_id, d.produkt_nazwa, d.ilosc_sztuk, d.sprzedawca, (err) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          doInsert();
+        // Rozpoznaj kategorię (Kosmetyk lub Suplement) po typie produktu w Magazyn —
+        // i podmień prefix w zabieg_nazwa ("Kosmetyk: X" → "Suplement: X" jeśli Suplement).
+        rozpoznajKategorieProduktu(tenant_id, d.produkt_nazwa, (kat) => {
+          kategoriaProduktuAdd = kat;
+          if (typeof zabiegNazwaFinal === 'string' && zabiegNazwaFinal.startsWith('Kosmetyk:')) {
+            zabiegNazwaFinal = kat + ': ' + zabiegNazwaFinal.slice('Kosmetyk:'.length).trim();
+          }
+          zdejmijZeStanuFIFO(tenant_id, d.produkt_nazwa, d.ilosc_sztuk, d.sprzedawca, (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            doInsert();
+          });
         });
       } else {
         doInsert();
@@ -351,9 +391,12 @@ module.exports = (db) => {
           const uniqueId = uniqueIdBase + '-' + idx;
           let zapisKategoria = poz.kategoria;
           let zapisSzczegoly = poz.wariant || '';
+          // kategoria_produktu — pole nowe (2026-06-07). Tylko dla typu Kosmetyk
+          // (rozróżnia Kosmetyk vs Suplement po typ w Magazyn). Dla Zabiegu/Zadatku NULL.
+          let kategoriaProduktu = null;
           if (poz.typ === 'Kosmetyk') {
-            zapisKategoria = 'Kosmetyk: ' + poz.nazwa_produktu;
             zapisSzczegoly = poz.ilosc + ' szt.';
+            // zapisKategoria zostanie ustawiona po rozpoznaniu typu (asynchronicznie)
           }
           let idZadatkuLog = '';
           if (poz.platnosc === 'Portfel' || poz.platnosc === 'Zadatek') idZadatkuLog = poz.depositId || '';
@@ -392,8 +435,8 @@ module.exports = (db) => {
           const doInsertPoz = () => {
             const insertWithTyp = (typZab) => {
               db.query(
-                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?)`,
-                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab],
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu],
                 nextPoz
               );
             };
@@ -411,9 +454,16 @@ module.exports = (db) => {
           };
 
           if (poz.typ === 'Kosmetyk') {
-            zdejmijZeStanuFIFO(tenant_id, poz.nazwa_produktu, poz.ilosc, sprzedawcyStr, (err) => {
-              if (err) return res.json({ status: 'error', message: 'Błąd magazynu: ' + err.message });
-              doInsertPoz();
+            // Rozpoznaj kategorię (Kosmetyk lub Suplement) po typie w Magazyn —
+            // typ='Witaminy' → Suplement, inaczej → Kosmetyk. Ustawiamy prefix
+            // w "zabieg" zgodnie z kategorią żeby raporty rozumiały je oddzielnie.
+            rozpoznajKategorieProduktu(tenant_id, poz.nazwa_produktu, (kat) => {
+              kategoriaProduktu = kat;
+              zapisKategoria = kat + ': ' + poz.nazwa_produktu;
+              zdejmijZeStanuFIFO(tenant_id, poz.nazwa_produktu, poz.ilosc, sprzedawcyStr, (err) => {
+                if (err) return res.json({ status: 'error', message: 'Błąd magazynu: ' + err.message });
+                doInsertPoz();
+              });
             });
           } else {
             doInsertPoz();
