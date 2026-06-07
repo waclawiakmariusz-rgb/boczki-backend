@@ -239,6 +239,15 @@ module.exports = (db) => {
 
     } else if (action === 'get_stats' || action === 'an_get_stats') {
       const selectedMonth = d.month;
+
+      // Najpierw nazwy produktów typu Witaminy (= Suplementy) z Magazyn — żeby
+      // rozpoznać starsze sprzedaże zapisane jako "Kosmetyk: X" gdzie X to Suplement.
+      db.query(
+        `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+        [tenant_id],
+        (errSup, supRows) => {
+      const suplementSet = new Set((supRows || []).map(r => r.nazwa));
+
       // Sprzedaż główna
       db.query(
         `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
@@ -282,8 +291,14 @@ module.exports = (db) => {
                 const isPortfel = (platL === 'portfel');
                 // isKosmetyk obejmuje też suplementy (back-compat z istniejącą logiką
                 // total/zabiegi/Top 5 — "Detal" to wspólna grupa).
-                const isSuplement = zabieg.toLowerCase().includes('suplement');
-                const isKosmetyk = isSuplement || zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+                const zabiegLow = zabieg.toLowerCase();
+                let isSuplement = zabiegLow.includes('suplement');
+                const isKosmetyk = isSuplement || zabiegLow.includes('kosmetyk') || zabiegLow.includes('krem');
+                if (isKosmetyk && !isSuplement && suplementSet.size > 0) {
+                  // Stara sprzedaż "Kosmetyk: X" — sprawdź czy X to suplement (typ=Witaminy w Magazyn)
+                  const cleanProd = String(zabieg).replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+                  if (suplementSet.has(cleanProd)) isSuplement = true;
+                }
                 if (amount === 0 && !isKosmetyk && !isPortfel) return;
 
                 // baseId — multi-sale ma format "<base>-<n>"; single-sale = całe id
@@ -491,6 +506,9 @@ module.exports = (db) => {
           );
         }
       );
+        } // koniec callback (errSup, supRows)
+      );    // koniec db.query Magazyn (suplementSet) dla get_stats
+
 
     } else if (action === 'get_monthly_details' || action === 'an_get_monthly_details') {
       const targetMonth = d.month;

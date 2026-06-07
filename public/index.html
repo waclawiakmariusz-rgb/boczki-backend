@@ -7998,6 +7998,11 @@ ANALIZA MANAGER
                         <div class="kpi-value" id="an_emp-kosmetyki">0 zł</div>
                         <div class="kpi-sub" id="an_emp-kosmetyki-qty" style="color:#b45309; font-weight:bold; font-size:14px; margin-top:5px;">0 szt.</div>
                     </div>
+                    <div class="card" style="border-left: 5px solid #9333ea;">
+                        <div class="kpi-title">Sprzedaż Suplementów</div>
+                        <div class="kpi-value" id="an_emp-suplementy">0 zł</div>
+                        <div class="kpi-sub" id="an_emp-suplementy-qty" style="color:#7e22ce; font-weight:bold; font-size:14px; margin-top:5px;">0 szt.</div>
+                    </div>
                     <div class="card" style="border-left: 5px solid #10b981;">
                         <div class="kpi-title">Średnia Transakcja</div>
                         <div class="kpi-value" id="an_emp-avg">0 zł</div>
@@ -21370,9 +21375,17 @@ if (inputNazwaCheck) {
             an_renderDebugLog(name);
 
             document.getElementById('an_emp-zabiegi').innerText = an_formatPLN(emp.zabiegi);
-            document.getElementById('an_emp-kosmetyki').innerText = an_formatPLN(emp.kosmetyki);
-            let qty = Math.ceil(emp.qty_kosmetyki || 0);
-            document.getElementById('an_emp-kosmetyki-qty').innerText = qty + " szt.";
+            // Kosmetyki = suma WSZYSTKICH (back-compat) MINUS suplementy
+            const kosmRev = (emp.kosmetyki || 0) - (emp.suplementy || 0);
+            const kosmQty = Math.max(0, Math.ceil((emp.qty_kosmetyki || 0) - (emp.qty_suplementow || 0)));
+            document.getElementById('an_emp-kosmetyki').innerText = an_formatPLN(kosmRev);
+            document.getElementById('an_emp-kosmetyki-qty').innerText = kosmQty + " szt.";
+
+            // Suplementy — osobny kafelek
+            const supEl = document.getElementById('an_emp-suplementy');
+            const supQtyEl = document.getElementById('an_emp-suplementy-qty');
+            if (supEl) supEl.innerText = an_formatPLN(emp.suplementy || 0);
+            if (supQtyEl) supQtyEl.innerText = Math.ceil(emp.qty_suplementow || 0) + " szt.";
 
             let avg = emp.transakcje > 0 ? (emp.total / emp.transakcje) : 0;
             document.getElementById('an_emp-avg').innerText = an_formatPLN(avg);
