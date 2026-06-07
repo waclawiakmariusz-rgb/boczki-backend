@@ -383,8 +383,14 @@ module.exports = (db) => {
                   const topKey = `${baseId}|${zabieg}`;
                   if (!e._topReceipts.has(topKey)) {
                     e._topReceipts.add(topKey);
-                    if (!e.top[zabieg]) e.top[zabieg] = 0;
-                    e.top[zabieg] += isKosmetyk ? ilosc : 1;
+                    // Klucz dla emp.top: gdy isSuplement (rozpoznane przez Magazyn lookup),
+                    // a zabieg ma stary prefix "Kosmetyk: X" — podmień na "Suplement: X" aby
+                    // front prawidłowo filtrował listy per kategoria.
+                    const zabiegTop = (isSuplement && /^kosmetyk\s*[:-]?\s*/i.test(zabieg))
+                      ? zabieg.replace(/^kosmetyk\s*[:-]?\s*/i, 'Suplement: ')
+                      : zabieg;
+                    if (!e.top[zabiegTop]) e.top[zabiegTop] = 0;
+                    e.top[zabiegTop] += isKosmetyk ? ilosc : 1;
                   }
 
                   // wykonaneZabiegi — dla worstTreatments (tylko zabiegi, nie kosmetyki).
