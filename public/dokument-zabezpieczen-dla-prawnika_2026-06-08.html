@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estelio — Opis techniczny zabezpieczeń (do oceny prawnej)</title>
+  <meta name="description" content="Dokument dla radcy prawnego — pełny opis zabezpieczeń systemu Estelio, kontrola dostępu, ochrona danych osobowych RODO, izolacja danych między salonami.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --dark: #1c1a18;
+      --rose: #b87080;
+      --gold: #c9a96e;
+      --cream: #f4efe6;
+      --cream2: #ede6d8;
+      --muted: #7a6e66;
+      --border: #e0d8ce;
+      --warn-bg: #fdf2f2;
+      --warn-border: #c97078;
+      --warn-ink: #8a3a4a;
+      --ok-bg: #f0f7f0;
+      --ok-border: #6a9968;
+      --ok-ink: #2d5a2d;
+      --info-bg: #f0f3f9;
+      --info-border: #6a82b8;
+      --info-ink: #2d3f6a;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--dark);
+      line-height: 1.78;
+    }
+    header {
+      background: linear-gradient(135deg, #1c1a18, #2a2420);
+      padding: 24px 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header a.logo {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--gold);
+      text-decoration: none;
+      letter-spacing: .06em;
+    }
+    header .doc-tag {
+      font-size: .72rem;
+      color: rgba(255,255,255,.55);
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .container { max-width: 880px; margin: 0 auto; padding: 56px 40px 80px; }
+    .doc-eyebrow { font-size: .7rem; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); margin-bottom: 10px; }
+    h1 { font-family: 'Cormorant Garamond', serif; font-size: 2.6rem; font-weight: 600; color: var(--dark); margin-bottom: 12px; line-height: 1.18; }
+    .doc-meta { font-size: .82rem; color: var(--muted); margin-bottom: 28px; letter-spacing: .04em; }
+    .doc-meta strong { color: var(--dark); font-weight: 600; }
+    .doc-meta .dot { color: var(--gold); margin: 0 8px; }
+    .divider { border: 0; border-top: 1px solid var(--cream2); margin: 32px 0; }
+    h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.7rem; font-weight: 600; color: #5a3a40; margin: 48px 0 14px; border-bottom: 1px solid var(--cream2); padding-bottom: 8px; }
+    h3 { font-size: 1.05rem; font-weight: 600; color: var(--dark); margin: 28px 0 10px; }
+    h4 { font-size: .94rem; font-weight: 600; color: var(--dark); margin: 18px 0 8px; }
+    p { font-size: .93rem; color: #3a3230; margin-bottom: 14px; }
+    ul, ol { margin: 8px 0 14px 22px; }
+    li { font-size: .92rem; color: #3a3230; margin-bottom: 6px; }
+    strong { color: var(--dark); }
+    a { color: var(--rose); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code { background: #f1ece1; padding: 1px 6px; border-radius: 3px; font-size: 87%; color: #5a4030; }
+    blockquote { margin: 14px 0; padding: 14px 20px; background: #fff; border-left: 3px solid var(--gold); border-radius: 4px; font-size: .9rem; color: var(--dark); }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0 24px; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.04); }
+    th { background: var(--cream2); padding: 10px 14px; text-align: left; font-size: .82rem; font-weight: 600; color: var(--dark); letter-spacing: .03em; }
+    td { padding: 10px 14px; font-size: .87rem; color: #3a3230; border-top: 1px solid var(--cream2); vertical-align: top; }
+    .summary-box { margin: 24px 0; padding: 22px 26px; background: var(--cream2); border-left: 4px solid var(--gold); border-radius: 4px; }
+    .summary-box .label { font-family: 'Cormorant Garamond', serif; font-style: italic; font-size: 1.1rem; font-weight: 600; color: var(--dark); display: block; margin-bottom: 6px; }
+    .summary-box p { margin: 0; font-size: .94rem; }
+    .ok-box { margin: 14px 0; padding: 14px 18px; background: var(--ok-bg); border-left: 4px solid var(--ok-border); border-radius: 4px; }
+    .ok-box .label { font-weight: 600; color: var(--ok-ink); display: block; margin-bottom: 4px; font-size: .85rem; letter-spacing: .03em; }
+    .ok-box p { margin: 0; font-size: .9rem; }
+    .warning-box { margin: 14px 0; padding: 14px 18px; background: var(--warn-bg); border-left: 4px solid var(--warn-border); border-radius: 4px; }
+    .warning-box .label { font-weight: 600; color: var(--warn-ink); display: block; margin-bottom: 4px; font-size: .85rem; letter-spacing: .03em; }
+    .warning-box p { margin: 0; font-size: .9rem; }
+    .info-box { margin: 14px 0; padding: 14px 18px; background: var(--info-bg); border-left: 4px solid var(--info-border); border-radius: 4px; }
+    .info-box .label { font-weight: 600; color: var(--info-ink); display: block; margin-bottom: 4px; font-size: .85rem; letter-spacing: .03em; }
+    .info-box p { margin: 0; font-size: .9rem; }
+    .toc { margin: 28px 0 40px; padding: 22px 26px; background: #fff; border: 1px solid var(--cream2); border-radius: 6px; }
+    .toc h3 { margin-top: 0; font-family: 'Cormorant Garamond', serif; font-size: 1.2rem; color: var(--rose); }
+    .toc ol { margin-left: 22px; }
+    .toc li { font-size: .9rem; margin-bottom: 4px; }
+    .toc a { color: var(--dark); }
+    .toc a:hover { color: var(--rose); }
+    .badge { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: .72rem; font-weight: 600; letter-spacing: .04em; margin-left: 6px; }
+    .badge-new { background: #fef0d6; color: #8a5a0a; }
+    .badge-done { background: #d6f0d6; color: #2d5a2d; }
+    .badge-progress { background: #f8e0d6; color: #8a3a0a; }
+    .change-log { background: #fff; border: 1px solid var(--cream2); border-radius: 6px; padding: 22px 26px; margin: 24px 0; }
+    .change-log h4 { margin-top: 0; }
+    footer { background: var(--cream2); border-top: 1px solid var(--border); padding: 28px 40px; text-align: center; font-size: .78rem; color: var(--muted); line-height: 1.7; }
+    footer a { color: var(--rose); text-decoration: none; }
+    footer .firma { color: var(--dark); margin-bottom: 6px; }
+    .print-only { display: none; }
+    @media print {
+      header, footer { background: none !important; }
+      header { color: var(--dark) !important; }
+      .container { padding: 20px; }
+      h2 { page-break-after: avoid; }
+      table, .summary-box, .warning-box, .ok-box, .info-box { page-break-inside: avoid; }
+      .print-only { display: block; }
+    }
+    @media (max-width: 600px) { .container { padding: 36px 20px 60px; } header { padding: 18px 20px; flex-direction: column; align-items: flex-start; gap: 6px; } h1 { font-size: 1.9rem; } }
+  </style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="/">✦ Estelio</a>
+  <div class="doc-tag">Dokument do oceny prawnej</div>
+</header>
+
+<div class="container">
+
+  <div class="doc-eyebrow">Opis techniczny systemu</div>
+  <h1>Zabezpieczenia systemu <em>Estelio</em><br>do oceny prawnej</h1>
+  <div class="doc-meta">
+    <strong>Przeznaczenie:</strong> Ocena prawna zgodności z RODO
+    <span class="dot">·</span>
+    <strong>Stan systemu:</strong> produkcja, estelio.com.pl
+  </div>
+
+  <div class="summary-box">
+    <span class="label">Skrót dla radcy prawnego</span>
+    <p>Estelio jest oprogramowaniem SaaS w modelu wielodostępowym (multi-tenant) dla salonów beauty. Dane każdego salonu są szczelnie odseparowane na poziomie aplikacji przez identyfikator <code>tenant_id</code> dodawany do każdego zapytania bazodanowego. Hasła użytkowników są hashowane algorytmem bcrypt. Tokeny sesji w pełni egzekwowane przy każdym żądaniu. Wszystkie dane przechowywane wyłącznie w Unii Europejskiej (Hostinger UAB, Litwa). System obsługuje sprzedaż subskrypcji (Stripe, Fakturownia, panel rozliczeniowy klienta), zgody RODO/regulamin przy zakupie subskrypcji, twarde zabezpieczenia anti-duplikacji w warstwie bazy danych oraz fail-secure filtrowanie faktur po dwóch kluczach.</p>
+  </div>
+
+  <div class="toc">
+    <h3>Spis treści</h3>
+    <ol>
+      <li><a href="#ogolne">Informacje ogólne o systemie</a></li>
+      <li><a href="#dane">Rodzaje przetwarzanych danych osobowych</a></li>
+      <li><a href="#izolacja">Izolacja danych między salonami (multi-tenant)</a></li>
+      <li><a href="#dostep">Kontrola dostępu — kto może wejść do systemu</a></li>
+      <li><a href="#hasla">Przechowywanie haseł i tokenów uwierzytelniających</a></li>
+      <li><a href="#dokumenty">Przechowywanie i ochrona dokumentów RODO oraz kart klienta</a></li>
+      <li><a href="#dokumenty-dodatkowe">Dodatkowe dokumenty klienta</a></li>
+      <li><a href="#srodki">Środki techniczne ochrony danych</a></li>
+      <li><a href="#saas">Sprzedaż subskrypcji SaaS — Stripe, Fakturownia, billing klienta</a></li>
+      <li><a href="#zgody">Zgody RODO przy zakupie subskrypcji</a></li>
+      <li><a href="#soft-delete">Realizacja prawa do usunięcia danych (soft-delete i zapomnienie)</a></li>
+      <li><a href="#limity">Znane ograniczenia i planowane usprawnienia</a></li>
+      <li><a href="#rola">Podstawa prawna przetwarzania i rola systemu</a></li>
+      <li><a href="#logi">Logi i monitoring</a></li>
+      <li><a href="#lokalizacja">Lokalizacja danych</a></li>
+      <li><a href="#incydenty">Procedura obsługi incydentów bezpieczeństwa</a></li>
+    </ol>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════ OGOLNE ════════════════ -->
+  <h2 id="ogolne">I. Informacje ogólne o systemie</h2>
+
+  <p><strong>Estelio</strong> to oprogramowanie klasy SaaS (Software as a Service) przeznaczone dla właścicieli salonów beauty. System umożliwia:</p>
+  <ul>
+    <li>ewidencję sprzedaży usług i produktów (w tym kosmetyków, suplementów, zadatków),</li>
+    <li>zarządzanie bazą klientek salonu wraz z historią wizyt,</li>
+    <li>rejestrację i przechowywanie dokumentów RODO oraz oświadczeń klientek,</li>
+    <li>gromadzenie dokumentów dodatkowych (np. wyniki konsultacji dermatologicznych) w ramach pracy z konkretną klientką,</li>
+    <li>dokumentowanie konsultacji i zabiegów,</li>
+    <li>rozliczanie pracowników,</li>
+    <li>analizę finansową (przychody, koszty, podział na kategorie produktów).</li>
+  </ul>
+
+  <h3>Model wielodostępowy (multi-tenant)</h3>
+  <p>Jeden serwer obsługuje wielu niezależnych klientów (salonów). Dane każdego salonu są od siebie całkowicie odseparowane na poziomie aplikacji — żaden salon nie ma technicznej możliwości dostępu do danych innego salonu. Szczegóły izolacji w rozdziale IV.</p>
+
+  <h3>Infrastruktura</h3>
+  <p>Serwer aplikacji oraz baza danych zlokalizowane w infrastrukturze <strong>Hostinger UAB, Lietuva (Litwa)</strong> — terytorium Unii Europejskiej. Komunikacja z aplikacją odbywa się wyłącznie przez szyfrowany protokół HTTPS (TLS), certyfikat SSL dostarczany przez Hostinger. Domena produkcyjna: <code>estelio.com.pl</code>.</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ DANE ════════════════ -->
+  <h2 id="dane">II. Rodzaje przetwarzanych danych osobowych</h2>
+
+  <p>System przetwarza następujące kategorie danych osobowych klientek salonów:</p>
+
+  <table>
+    <thead>
+      <tr><th>Kategoria danych</th><th>Miejsce przechowywania</th><th>Kto ma dostęp</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Imię i nazwisko</td><td>Baza MySQL, tabela <code>Klienci</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Numer telefonu</td><td>Baza MySQL, tabela <code>Klienci</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Adres e-mail</td><td>Baza MySQL, tabela <code>Klienci</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Data urodzenia (opcjonalna)</td><td>Baza MySQL, tabela <code>Klienci</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Adres pocztowy (opcjonalny)</td><td>Baza MySQL, tabela <code>Klienci</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Historia zabiegów i sprzedaży</td><td>Baza MySQL, tabele <code>Sprzedaz</code>, <code>Konsultacje</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Zgody RODO (checkboxy)</td><td>Baza MySQL, tabela <code>Rejestr_RODO</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Oświadczenia klientki (checkboxy)</td><td>Baza MySQL, tabela <code>Rejestr_Oswiadczen</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Skany dokumentów papierowych (RODO, regulamin)</td><td>Pliki PDF w katalogu <code>/home/u393261461/uploads_klientow/[tenant_id]/</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Dodatkowe dokumenty (od maja 2026)</td><td>Pliki w tej samej hierarchii + tabela <code>DokumentyDodatkowe</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Notatki konsultacji</td><td>Baza MySQL, tabela <code>Konsultacje</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+      <tr><td>Zadatki i zobowiązania finansowe</td><td>Baza MySQL, tabela <code>Zadatki</code></td><td>Tylko pracownicy właściwego salonu</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Dane osobowe klientów SaaS (właścicieli salonów)</h3>
+  <p>Niezależnie od danych klientek salonu, system przetwarza dane osobowe samych <strong>klientów Estelio</strong> (właścicieli salonów korzystających z subskrypcji):</p>
+
+  <table>
+    <thead>
+      <tr><th>Kategoria danych</th><th>Miejsce przechowywania</th><th>Podstawa prawna</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Imię, nazwisko, nazwa firmy, NIP</td><td>Baza MySQL (tenant) + Fakturownia.pl</td><td>Art. 6 ust. 1 lit. b RODO (umowa)</td></tr>
+      <tr><td>Adres pocztowy (ulica, miasto, kod) — dla faktur</td><td>Baza MySQL (tenant) + Fakturownia.pl</td><td>Art. 6 ust. 1 lit. c RODO (obowiązek prawny — fakturowanie)</td></tr>
+      <tr><td>E-mail i numer telefonu</td><td>Baza MySQL (tenant)</td><td>Art. 6 ust. 1 lit. b RODO (umowa)</td></tr>
+      <tr><td>Dane karty płatniczej</td><td><strong>Wyłącznie po stronie Stripe</strong> — system nie przechowuje numerów kart</td><td>Stripe jako procesor płatności (PCI DSS)</td></tr>
+      <tr><td>Historia płatności i faktur</td><td>Stripe Dashboard + Fakturownia.pl</td><td>Art. 6 ust. 1 lit. c RODO (księgowość, 5 lat)</td></tr>
+      <tr><td>Zgody (regulamin, RODO, marketing)</td><td>Baza MySQL — z datą, godziną i IP</td><td>Art. 6 ust. 1 lit. a/b RODO</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- ════════════════ IZOLACJA ════════════════ -->
+  <h2 id="izolacja">III. Izolacja danych między salonami (multi-tenant)</h2>
+
+  <h3>Mechanizm izolacji</h3>
+  <p>Każdy salon w systemie otrzymuje przy rejestracji unikalny identyfikator (<code>tenant_id</code>), np. <code>studio-urody-anna-4821</code>. Identyfikator jest generowany automatycznie na podstawie nazwy salonu z losowym sufiksem.</p>
+
+  <p><strong>Każdy rekord</strong> w bazie danych (klientka, transakcja, dokument, notatka, zadatek, konsultacja, plik) ma przypisany <code>tenant_id</code> salonu, do którego należy. <strong>Każde zapytanie</strong> do bazy danych jest obowiązkowo filtrowane przez ten identyfikator klauzulą <code>WHERE tenant_id = ?</code>, gdzie wartość pochodzi <strong>wyłącznie z aktualnie aktywnej sesji serwera</strong>, nigdy z parametrów przesyłanych przez aplikację kliencką. Oznacza to, że nawet w przypadku próby manipulacji parametrami żądania, zapytanie nie zwróci danych innego salonu.</p>
+
+  <h3>Weryfikacja tożsamości (session token)</h3>
+  <p>W systemie wdrożono dwuetapową weryfikację dostępu:</p>
+  <ol>
+    <li><strong>Logowanie:</strong> użytkownik podaje login i hasło. Hasło jest porównywane z bcrypt-hashem przechowywanym w bazie. Po pomyślnej weryfikacji serwer generuje losowy <strong>token sesji</strong> (UUID v4 — ciąg 36 znaków). Token jest przechowywany wyłącznie po stronie serwera i jest powiązany z konkretnym salonem oraz konkretnym kontem użytkownika.</li>
+    <li><strong>Każde kolejne żądanie:</strong> aplikacja musi przedstawić token sesji w nagłówku <code>Authorization</code>. Serwer weryfikuje czy token jest ważny, czy nie wygasł, oraz czy należy do salonu, którego dane są żądane. Rozbieżność skutkuje odmową dostępu (HTTP 401/403) — żądanie nie dociera do warstwy bazy danych.</li>
+  </ol>
+
+  <p>Token sesji wygasa automatycznie po <strong>8 godzinach</strong> od ostatniej aktywności lub w momencie wylogowania.</p>
+
+  <p>Każde żądanie do API jest weryfikowane przed wykonaniem jakiejkolwiek operacji bazodanowej — brak ważnego tokenu skutkuje natychmiastową odmową dostępu.</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ DOSTĘP ════════════════ -->
+  <h2 id="dostep">IV. Kontrola dostępu — kto może wejść do systemu</h2>
+
+  <p>System wyróżnia cztery poziomy dostępu:</p>
+
+  <h3>1. Administrator systemu (właściciel Estelio)</h3>
+  <ul>
+    <li>Dostęp przez osobny panel (<code>/admin.html</code>) chroniony tokenem administratora przechowywanym w zmiennych środowiskowych serwera (nie w kodzie źródłowym).</li>
+    <li>Administrator może zakładać nowe salony, blokować dostęp, generować linki rejestracyjne, generować vouchery (kody rabatowe), zarządzać blogiem.</li>
+    <li><strong>Administrator nie ma dostępu do danych klientek poszczególnych salonów</strong> — widzi wyłącznie dane licencyjne (nazwa salonu, email kontaktowy, status subskrypcji, daty).</li>
+    <li>Próby logowania na panel administratora są ograniczone mechanizmem rate limiting (sekcja IX).</li>
+  </ul>
+
+  <h3>2. Właściciel/manager salonu</h3>
+  <ul>
+    <li>Loguje się loginem i hasłem przypisanym do konkretnego salonu.</li>
+    <li>Ma dostęp wyłącznie do danych swojego salonu (jeden <code>tenant_id</code>).</li>
+    <li>Może zarządzać pracownikami i ich uprawnieniami w ramach własnego salonu.</li>
+    <li>Ma dostęp do panelu billingowego (<code>billing.html</code>) — widzi własne faktury, datę kolejnej płatności, może anulować subskrypcję.</li>
+  </ul>
+
+  <h3>3. Pracownik salonu</h3>
+  <ul>
+    <li>Loguje się 4–6-cyfrowym kodem PIN przypisanym do jego konta w danym salonie.</li>
+    <li>Ma dostęp wyłącznie do danych salonu, w którym pracuje.</li>
+    <li>Zakres uprawnień (sprzedaż, magazyn, klienci, raporty) określa właściciel salonu w ramach trzech ról: <em>manager</em>, <em>recepcja</em>, <em>praktykantka</em>.</li>
+    <li>Każde działanie jest logowane do konkretnego konta (audyt — kto wpisał sprzedaż, kto edytował klientkę).</li>
+  </ul>
+
+  <h3>4. Panel rozliczeniowy (Magda)</h3>
+  <ul>
+    <li>Osobny panel dostępny pod osobnym adresem, służący do rozliczeń między właścicielami głównego salonu.</li>
+    <li>Chroniony hasłem przechowywanym w zmiennych środowiskowych serwera.</li>
+    <li>Generuje token sesji <strong>podpisywany sekretem HMAC</strong> z TTL 12 godzin — token niemożliwy do podrobienia po stronie klienta.</li>
+    <li>Dostęp tylko do danych rozliczeniowych jednego konkretnego salonu (zakodowane na stałe w konfiguracji).</li>
+  </ul>
+
+  <hr class="divider">
+
+  <!-- ════════════════ HASŁA ════════════════ -->
+  <h2 id="hasla">V. Przechowywanie haseł i tokenów uwierzytelniających</h2>
+
+  <h3>Hasła użytkowników — bcrypt</h3>
+  <p>Wszystkie hasła użytkowników systemu (właściciele salonów, managerowie) są przechowywane w bazie danych wyłącznie jako <strong>bcrypt-hashe</strong> z kosztem 10 rund. Algorytm bcrypt jest standardem branżowym dla hashowania haseł — odporny na ataki słownikowe i tęczowe tablice, automatycznie posiada wbudowaną sól (salt) per hash.</p>
+
+  <p>Po stronie serwera dostępne są wyłącznie hashe — nawet w przypadku nieautoryzowanego dostępu do bazy danych, oryginalne hasła nie mogą być odtworzone bez kosztownego ataku brute-force.</p>
+
+  <h3>PIN-y pracowników</h3>
+  <p>Kody PIN pracowników są również hashowane (bcrypt). Dodatkowo każdy PIN jest <strong>powiązany z konkretnym pracownikiem w konkretnym salonie</strong> — ten sam PIN w dwóch różnych salonach to dwa różne konta bez wzajemnej relacji.</p>
+
+  <h3>Tokeny sesji</h3>
+  <p>Tokeny sesji (UUID v4) są generowane losowo przy każdym logowaniu i przechowywane wyłącznie po stronie serwera. Klient otrzymuje token tylko w odpowiedzi na pomyślne logowanie i przesyła go w nagłówku każdego kolejnego żądania.</p>
+
+  <h3>Tokeny rejestracyjne nowych salonów</h3>
+  <p>Po opłaceniu subskrypcji system generuje jednorazowy token rejestracyjny (UUID) z czasem życia 7 dni. Token jest wysyłany na adres e-mail klienta i pozwala mu na założenie salonu z własnymi danymi dostępowymi. Po użyciu (lub upływie czasu) token jest unieważniany — kolejna próba użycia kończy się błędem.</p>
+
+  <h3>Sekrety serwera</h3>
+  <p>Wszystkie sekrety systemu (klucze Stripe, token Fakturownia, hasło bazy danych, hasło SMTP, token administratora, sekret HMAC, hasło panelu Magdy) przechowywane są wyłącznie w zmiennych środowiskowych serwera (<code>.env</code>) i panel Hostinger — nigdy w kodzie źródłowym ani repozytorium git.</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ DOKUMENTY ════════════════ -->
+  <h2 id="dokumenty">VI. Przechowywanie i ochrona dokumentów RODO oraz kart klienta</h2>
+
+  <h3>Sposób tworzenia dokumentów</h3>
+  <p>System umożliwia fotografowanie papierowych dokumentów (zgód RODO, oświadczeń, regulaminów) telefonem lub tabletem. Zdjęcia są:</p>
+  <ol>
+    <li>Przesyłane do serwera przez szyfrowane połączenie HTTPS.</li>
+    <li>Automatycznie konwertowane do formatu PDF (grayscale, optymalizacja rozmiaru — biblioteki Jimp i pdf-lib).</li>
+    <li>Zapisywane na serwerze pod losową nazwą (UUID, np. <code>3f7a9c2e-1b4d-4e8a-9c3f-7a1b2c3d4e5f.pdf</code>).</li>
+    <li>Oryginalne zdjęcia są usuwane z serwera — przechowywany jest tylko wynikowy PDF.</li>
+  </ol>
+
+  <h3>Gdzie fizycznie przechowywane są pliki</h3>
+  <p>Pliki PDF przechowywane są w katalogu serwera <strong>poza ścieżką aplikacji</strong>:</p>
+  <p><code>/home/u393261461/uploads_klientow/[tenant_id]/[uuid].pdf</code></p>
+
+  <p>Każdy salon ma osobny podkatalog. Nazwy plików są losowymi UUID — nie zawierają danych osobowych ani żadnej informacji umożliwiającej identyfikację klientki z samej nazwy pliku.</p>
+
+  <p>Katalog jest skonfigurowany zmienną środowiskową <code>UPLOADS_DIR</code> — leży poza katalogiem aplikacji i nie jest dostępny przez bezpośredni URL aplikacji.</p>
+
+  <h3>Kontrola dostępu do plików</h3>
+  <p>Pliki PDF nie są publicznie dostępne. Dostęp do pliku wymaga:</p>
+  <ul>
+    <li>Ważnej sesji użytkownika (zalogowania do systemu).</li>
+    <li>Żądanie musi dotyczyć pliku należącego do salonu użytkownika (weryfikacja po <code>tenant_id</code> ścieżki vs. <code>tenant_id</code> sesji).</li>
+  </ul>
+  <p>Próba pobrania pliku innego salonu przez bezpośredni adres URL skutkuje odpowiedzią <code>403 Brak dostępu</code> bez ujawniania, czy plik w ogóle istnieje.</p>
+
+  <h3>Zabezpieczenia techniczne plików</h3>
+
+  <table>
+    <thead><tr><th>Zabezpieczenie</th><th>Opis</th></tr></thead>
+    <tbody>
+      <tr><td>Path traversal</td><td>Nazwa pliku walidowana wyrażeniem regularnym — niemożliwe wyjście poza katalog salonu (próby <code>../</code> odrzucane)</td></tr>
+      <tr><td>Brak listowania katalogów</td><td>Serwer nie ujawnia listy plików w katalogu — bezpośrednie żądanie katalogu zwraca 403</td></tr>
+      <tr><td>Szyfrowanie transmisji</td><td>Przesył wyłącznie przez HTTPS/TLS</td></tr>
+      <tr><td>Losowe nazwy plików</td><td>UUID v4 jako nazwa — przestrzeń 2¹²² możliwości, niemożliwe odgadnięcie</td></tr>
+      <tr><td>Walidacja typu pliku przy upload</td><td>Akceptowane wyłącznie obrazy (JPEG, PNG, WebP) przed konwersją do PDF</td></tr>
+      <tr><td>Limit wielkości pliku</td><td>Maksymalnie kilka MB na plik (chroni przed wyczerpaniem dysku)</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- ════════════════ DOKUMENTY DODATKOWE ════════════════ -->
+  <h2 id="dokumenty-dodatkowe">VII. Dodatkowe dokumenty klienta</h2>
+
+  <p>System udostępnia funkcjonalność <strong>„Dodatkowe dokumenty"</strong> — sekcję w profilu klientki przeznaczoną do przechowywania plików nie będących wymaganymi prawem zgodami RODO. Przykładowe użycia:</p>
+  <ul>
+    <li>Wyniki konsultacji u dermatologa lub innego specjalisty,</li>
+    <li>Etykiety lub składy kosmetyków używanych przez klientkę w domu,</li>
+    <li>Certyfikaty alergii lub testów płatkowych,</li>
+    <li>Indywidualne ustalenia z klientką (rabaty, pakiety).</li>
+  </ul>
+
+  <h3>Architektura bazodanowa</h3>
+  <p>Dwie tabele:</p>
+  <ul>
+    <li><code>DokumentyDodatkoweTypy</code> — słownik typów dokumentów. Dwie warstwy: <em>globalne</em> (typy domyślne udostępniane wszystkim salonom) + <em>per-tenant</em> (typy specyficzne dla konkretnego salonu, dostępne wyłącznie w jego ramach).</li>
+    <li><code>DokumentyDodatkowe</code> — same pliki klienta. Każdy rekord ma <code>tenant_id</code>, <code>id_klienta</code>, <code>typ_id</code>, <code>nazwa</code>, <code>notatka</code>, <code>file_path</code>, <code>data_dodania</code>, <code>dodane_przez</code>.</li>
+  </ul>
+
+  <h3>Reżim ochrony danych</h3>
+  <p>Dokumenty dodatkowe podlegają <strong>identycznemu reżimowi izolacji i ochrony</strong> co dokumenty RODO:</p>
+  <ul>
+    <li>przechowywane w tej samej hierarchii katalogów <code>/home/u393261461/uploads_klientow/[tenant_id]/</code>,</li>
+    <li>nazwy plików UUID,</li>
+    <li>dostęp tylko po ważnej sesji + zgodnym <code>tenant_id</code>,</li>
+    <li>walidacja typu pliku przy upload (JPEG, PNG, PDF),</li>
+    <li>logowanie kto i kiedy wgrał, kto otworzył.</li>
+  </ul>
+
+  <p>Z perspektywy RODO są to dane osobowe klientki przetwarzane przez salon (jako administratora) — system pełni tę samą rolę co przy zgodach RODO (podmiot przetwarzający).</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ ŚRODKI ════════════════ -->
+  <h2 id="srodki">VIII. Środki techniczne ochrony danych</h2>
+
+  <h3>Ochrona przed nieautoryzowanym dostępem</h3>
+
+  <table>
+    <thead><tr><th>Środek</th><th>Opis</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>HTTPS / TLS</td><td>Cała komunikacja szyfrowana, certyfikat SSL Hostinger</td><td>Aktywne</td></tr>
+      <tr><td>Hashowanie haseł (bcrypt)</td><td>Hasła użytkowników w bazie wyłącznie jako bcrypt-hashe (cost 10)</td><td>Aktywne</td></tr>
+      <tr><td>Tokeny sesji (UUID, 8h TTL)</td><td>Generowane przy logowaniu, weryfikowane przy każdym żądaniu — pełne egzekwowanie</td><td>Aktywne</td></tr>
+      <tr><td>Tokeny HMAC dla panelu Magdy</td><td>Token podpisywany sekretem HMAC, niemożliwa manipulacja</td><td>Aktywne</td></tr>
+      <tr><td>Izolacja danych (<code>tenant_id</code>)</td><td>Każde zapytanie filtrowane po identyfikatorze salonu pobranym wyłącznie z sesji serwera</td><td>Aktywne</td></tr>
+      <tr><td>Rate limiting logowania</td><td>Blokada IP po wielokrotnych nieudanych próbach</td><td>Aktywne</td></tr>
+      <tr><td>CORS</td><td>Tylko żądania z autoryzowanych domen akceptowane</td><td>Aktywne</td></tr>
+      <tr><td>Timeout żądań</td><td>Żądania nieobsłużone w określonym czasie są przerywane</td><td>Aktywne</td></tr>
+      <tr><td>Weryfikacja webhook Stripe</td><td>Wszystkie webhooki Stripe weryfikowane sekretem <code>STRIPE_WEBHOOK_SECRET</code></td><td>Aktywne</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ochrona przed atakami aplikacyjnymi</h3>
+
+  <table>
+    <thead><tr><th>Środek</th><th>Opis</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Parametryzowane zapytania SQL</td><td>Eliminuje SQL Injection (wszystkie zapytania używają placeholderów MySQL2)</td><td>Aktywne</td></tr>
+      <tr><td>Nagłówek X-Content-Type-Options</td><td>Zapobiega MIME sniffing</td><td>Aktywne</td></tr>
+      <tr><td>Nagłówek X-Frame-Options</td><td>Zapobiega clickjackingowi</td><td>Aktywne</td></tr>
+      <tr><td>Nagłówek X-XSS-Protection</td><td>Aktywuje ochronę XSS w przeglądarce</td><td>Aktywne</td></tr>
+      <tr><td>Nagłówek Referrer-Policy</td><td>Ogranicza wyciek informacji przez nagłówek Referer</td><td>Aktywne</td></tr>
+      <tr><td>Walidacja typów plików</td><td>Akceptowane wyłącznie obrazy (JPEG, PNG, WebP) przy uploadzie</td><td>Aktywne</td></tr>
+      <tr><td>Walidacja nazw plików</td><td>Regex uniemożliwia path traversal</td><td>Aktywne</td></tr>
+      <tr><td>Funkcja escHtml</td><td>Escapowanie HTML w renderze dynamicznych treści (ochrona XSS)</td><td>Aktywne</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Stabilność i ciągłość działania</h3>
+
+  <table>
+    <thead><tr><th>Środek</th><th>Opis</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Obsługa nieoczekiwanych błędów</td><td>Serwer nie pada przy błędzie aplikacji (uncaughtException handler)</td><td>Aktywne</td></tr>
+      <tr><td>Graceful shutdown</td><td>Czyste zamknięcie połączeń przy restarcie serwera</td><td>Aktywne</td></tr>
+      <tr><td>Connection pooling (MySQL)</td><td>Pula połączeń z bazą danych z mechanizmem reconnect</td><td>Aktywne</td></tr>
+      <tr><td>Keepalive połączeń DB</td><td>Połączenia z bazą podtrzymywane aktywnie</td><td>Aktywne</td></tr>
+      <tr><td>UNIQUE INDEX na zadaniach cyklicznych</td><td>Twarde zabezpieczenie anti-duplikacji na poziomie bazy — fizyczna niemożliwość duplikatu</td><td>Aktywne</td></tr>
+      <tr><td>Fail-secure filtrowanie faktur</td><td>Lista faktur klienta zwracana tylko gdy <strong>oba</strong> filtry (e-mail + nazwa salonu) są spełnione; pusta nazwa salonu blokuje listę</td><td>Aktywne</td></tr>
+      <tr><td>Backup bazy danych</td><td>Codzienny backup w ramach usługi Hostinger</td><td>Aktywne</td></tr>
+    </tbody>
+  </table>
+
+  <hr class="divider">
+
+  <!-- ════════════════ SAAS ════════════════ -->
+  <h2 id="saas">IX. Sprzedaż subskrypcji SaaS — Stripe, Fakturownia, billing klienta</h2>
+
+  <p>System obsługuje publiczną sprzedaż subskrypcji w modelu SaaS — klient (właściciel salonu) wykupuje miesięczny dostęp do platformy za 79 zł.</p>
+
+  <h3>Proces zakupu</h3>
+  <ol>
+    <li>Klient wchodzi na <code>estelio.com.pl/zamow.html</code>.</li>
+    <li>Wypełnia formularz: imię i nazwisko, nazwa salonu, adres pocztowy (ulica, miasto, kod), NIP (opcjonalnie), e-mail, telefon.</li>
+    <li>Zaznacza wymagane zgody (regulamin, polityka prywatności) — patrz rozdział XI.</li>
+    <li>Jest przekierowywany do Stripe Checkout — wprowadza dane karty po stronie Stripe (system Estelio nie ma dostępu do danych karty).</li>
+    <li>Po pomyślnej płatności webhook Stripe (<code>checkout.session.completed</code>) trafia do serwera Estelio, który:
+      <ul>
+        <li>tworzy rekord tenanta (nowego salonu),</li>
+        <li>wystawia fakturę VAT przez API Fakturownia.pl i wysyła ją na e-mail klienta,</li>
+        <li>generuje jednorazowy token rejestracyjny i wysyła link aktywacyjny e-mailem (welcome email),</li>
+        <li>aktywuje subskrypcję recurring (79 zł co miesiąc).</li>
+      </ul>
+    </li>
+  </ol>
+
+  <h3>Stripe — przetwarzanie płatności</h3>
+  <p>System współpracuje z <strong>Stripe Payments Europe Ltd.</strong> (Irlandia, UE) jako procesorem płatności. Dane karty płatniczej klienta są wprowadzane <strong>wyłącznie po stronie Stripe</strong> (Stripe Checkout) — serwer Estelio nigdy nie widzi ani nie przechowuje numerów kart. Stripe spełnia standard PCI DSS Level 1.</p>
+
+  <p>Klucze Stripe (LIVE) są przechowywane w zmiennych środowiskowych serwera. Wszystkie webhooki przychodzące ze Stripe są weryfikowane sekretem <code>STRIPE_WEBHOOK_SECRET</code> — żądanie bez ważnego podpisu jest odrzucane.</p>
+
+  <h3>Fakturownia — wystawianie faktur VAT</h3>
+  <p>Po każdej płatności (initial + recurring) system automatycznie wystawia fakturę VAT w <strong>Fakturownia.pl</strong> i wysyła ją mailem do klienta. Faktura zawiera pełne dane salonu (nazwa, adres z ulicą i numerem, NIP jeśli podany) oraz znacznik „zapłacona" (<code>paid=1, paid_date, payment_type='card'</code>).</p>
+
+  <p>Dane przekazywane do Fakturowni: nazwa nabywcy, adres, NIP, e-mail, opis pozycji („Subskrypcja Estelio — miesiąc XX/YYYY"), kwota. Fakturownia jako podmiot przetwarzający te dane w naszym imieniu — z firmą podpisana standardowa umowa Fakturownia.</p>
+
+  <h3>Panel rozliczeniowy klienta (<code>billing.html</code>)</h3>
+  <p>Każdy klient (właściciel salonu) ma dostęp do swojego panelu rozliczeniowego pod adresem <code>estelio.com.pl/billing.html</code>. Po zalogowaniu się swoim adresem e-mail widzi:</p>
+  <ul>
+    <li>historię swoich faktur (lista z linkami do PDF),</li>
+    <li>aktualny stan subskrypcji Stripe (aktywna / zawieszona / anulowana),</li>
+    <li>dane karty płatniczej w formie zamaskowanej (last4 + data wygaśnięcia),</li>
+    <li>datę kolejnej automatycznej płatności,</li>
+    <li>przycisk „Anuluj subskrypcję" — kasuje recurring na koniec bieżącego okresu rozliczeniowego.</li>
+  </ul>
+
+  <p>Zmianę karty płatniczej klient wykonuje przez przekierowanie do Stripe Customer Portal — wszystkie dane karty obsługiwane wyłącznie przez Stripe.</p>
+
+  <div class="ok-box">
+    <span class="label">Fail-secure filtrowanie faktur</span>
+    <p>Lista faktur klienta filtrowana jest po <strong>dwóch kluczach</strong>: adres e-mail kupującego (<code>buyer_email</code>) <strong>oraz</strong> nazwa salonu (<code>buyer_name</code>). Dodatkowo: jeśli pole nazwy salonu jest puste w bazie, lista faktur jest zwracana jako pusta — <em>fail-secure</em>. Mechanizm chroni przed sytuacją w której dwóch klientów posiadających ten sam adres e-mail mogłoby teoretycznie zobaczyć cudze dokumenty.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ════════════════ ZGODY ════════════════ -->
+  <h2 id="zgody">X. Zgody RODO przy zakupie subskrypcji</h2>
+
+  <p>Przed dokonaniem zakupu subskrypcji klient musi zaznaczyć następujące zgody:</p>
+
+  <table>
+    <thead><tr><th>Zgoda</th><th>Charakter</th><th>Podstawa prawna</th></tr></thead>
+    <tbody>
+      <tr><td>Akceptacja regulaminu Estelio</td><td>Wymagana</td><td>Art. 6 ust. 1 lit. b RODO (zawarcie umowy)</td></tr>
+      <tr><td>Akceptacja polityki prywatności (RODO)</td><td>Wymagana</td><td>Art. 13 RODO (obowiązek informacyjny)</td></tr>
+      <tr><td>Zgoda marketingowa</td><td>Opcjonalna</td><td>Art. 6 ust. 1 lit. a RODO (zgoda)</td></tr>
+    </tbody>
+  </table>
+
+  <p>Przycisk „Zamawiam" pozostaje nieaktywny do momentu zaznaczenia obu wymaganych zgód. Każda zgoda jest zapisywana w bazie z następującymi danymi:</p>
+  <ul>
+    <li>znacznik faktu zaznaczenia,</li>
+    <li>dokładna data i godzina (z dokładnością do sekundy),</li>
+    <li>adres IP klienta,</li>
+    <li>identyfikator wersji regulaminu/polityki obowiązującej w momencie zgody.</li>
+  </ul>
+
+  <p>Dzięki temu w razie kontroli organu nadzorczego (UODO) można jednoznacznie wykazać, kiedy i na co konkretny klient wyraził zgodę. Cofnięcie zgody jest możliwe — klient może wysłać żądanie cofnięcia e-mailem na adres kontaktowy administratora; w przypadku zgody marketingowej możliwe również wypisanie z newslettera linkiem w stopce każdej wiadomości.</p>
+
+  <h3>Linki do dokumentów dostępnych klientowi</h3>
+  <ul>
+    <li><strong>Regulamin Estelio</strong> — <code>estelio.com.pl/regulamin.html</code></li>
+    <li><strong>Polityka prywatności</strong> — <code>estelio.com.pl/polityka-prywatnosci.html</code></li>
+    <li><strong>Polityka cookies</strong> — <code>estelio.com.pl/polityka-cookies.html</code></li>
+    <li><strong>Klauzula RODO dla salonu (wzór)</strong> — <code>estelio.com.pl/klauzula-rodo-dla-salonu.html</code></li>
+    <li><strong>Umowa powierzenia przetwarzania (do podpisania z salonem)</strong> — <code>estelio.com.pl/umowa-powierzenia.html</code></li>
+    <li><strong>Procedura RODO dla salonu</strong> — <code>estelio.com.pl/procedura-rodo.html</code></li>
+  </ul>
+
+  <hr class="divider">
+
+  <!-- ════════════════ SOFT-DELETE ════════════════ -->
+  <h2 id="soft-delete">XI. Realizacja prawa do usunięcia danych (soft-delete i zapomnienie)</h2>
+
+  <h3>Procedura „prawa do zapomnienia" (art. 17 RODO) — klientka salonu</h3>
+  <p>Gdy klientka salonu zgłosi żądanie usunięcia jej danych osobowych, salon (jako administrator) inicjuje procedurę przez funkcję <strong>„RODO — anonimizuj klienta"</strong> w panelu zarządzania klientami. System:</p>
+  <ol>
+    <li>Zastępuje imię i nazwisko anonimowym identyfikatorem (np. <code>Klient #1234</code>).</li>
+    <li>Czyści pola: telefon, e-mail, data urodzenia, adres pocztowy, notatki.</li>
+    <li>Usuwa fizycznie pliki dokumentów RODO i dodatkowych dokumentów z dysku.</li>
+    <li><strong>Zachowuje</strong> historię finansową (kwoty wydane, daty wizyt, metody płatności) — wymóg art. 86 § 1 pkt 3 Ordynacji podatkowej (przechowywanie dokumentacji księgowej przez 5 lat).</li>
+  </ol>
+
+  <p>Operacja jest logowana z datą i tożsamością osoby ją wykonującej. Po wykonaniu — klientka nie jest już identyfikowalna z poziomu systemu; pozostają wyłącznie anonimowe dane finansowe.</p>
+
+  <h3>Soft-delete zadatków</h3>
+  <p>Zadatki mogą być oznaczane jako usunięte z zachowaniem rekordu w bazie (status <code>USUNIĘTY</code>). Pełne usunięcie nie jest możliwe — wymóg audytu finansowego. Saldo klientki nie obejmuje skasowanych zadatków, ale historia operacji pozostaje dostępna dla managera (z komentarzem powodu usunięcia, datą i osobą wykonującą).</p>
+
+  <h3>Projekt soft-delete kartoteki klienta</h3>
+  <p>Ustalone biznesowo cztery odrębne ścieżki usunięcia kartoteki klienta. Implementacja oczekuje na rozstrzygnięcie pytań technicznych:</p>
+  <ul>
+    <li><strong>Duplikat</strong> — łączenie z innym profilem przy zachowaniu historii sprzedaży, zadatków i dokumentów.</li>
+    <li><strong>Zapomnienie RODO</strong> — anonimizacja (jak wyżej, art. 17 RODO).</li>
+    <li><strong>Klient zmarły</strong> — oznaczenie jako nieaktywny, wyłączenie z urodzin i retencji, zachowanie pełnych danych dla potencjalnych rozliczeń z rodziną.</li>
+    <li><strong>Klient problematyczny</strong> — recepcja widzi ostrzeżenie przy próbie umówienia, historia zachowana.</li>
+  </ul>
+  <p>Każde z usunięć wymagać będzie potwierdzenia managera oraz zapisu w logu z 30-dniowym oknem cofnięcia (poza opcją „Zapomnienie RODO" — która jest definitywna).</p>
+
+  <h3>Procedura usunięcia konta klienta SaaS (właściciela salonu)</h3>
+  <p>Klient Estelio (właściciel salonu) może zażądać usunięcia swojego konta. Procedura:</p>
+  <ol>
+    <li>Anulacja subskrypcji (sam klient z poziomu <code>billing.html</code> lub administrator).</li>
+    <li>Po wygaśnięciu opłaconego okresu — dostęp do panelu wstrzymywany.</li>
+    <li>Klient ma 30 dni na pobranie kopii swoich danych (export bazy).</li>
+    <li>Po upływie tego okresu — dane salonu (klientki, sprzedaż, dokumenty) są usuwane na żądanie klienta lub anonimizowane po upływie ustawowego terminu przechowywania (5 lat dla danych finansowych).</li>
+  </ol>
+
+  <hr class="divider">
+
+  <!-- ════════════════ LIMITY ════════════════ -->
+  <h2 id="limity">XII. Znane ograniczenia i planowane usprawnienia</h2>
+
+  <p>W trosce o transparentność poniżej wymieniono obszary, w których trwają lub są planowane prace.</p>
+
+  <h3>1. Przechowywanie sesji w pamięci RAM</h3>
+  <p><strong>Stan obecny:</strong> Tokeny sesji są przechowywane w pamięci RAM procesu Node.js. Restart serwera (np. po wdrożeniu nowej wersji) powoduje wygaśnięcie wszystkich aktywnych sesji — użytkownicy muszą zalogować się ponownie.</p>
+  <p><strong>Ryzyko:</strong> Niedogodność użytkowa, brak ryzyka bezpieczeństwa danych.</p>
+  <p><strong>Planowana naprawa:</strong> Przeniesienie sesji do Redis lub bazy danych.</p>
+
+  <h3>2. Implementacja soft-delete kartoteki klienta</h3>
+  <p><strong>Stan obecny:</strong> Design ustalony biznesowo (4 ścieżki). Oczekuje rozstrzygnięcia 4 pytań technicznych.</p>
+  <p><strong>Planowana naprawa:</strong> Implementacja w nadchodzącym sprincie.</p>
+
+  <h3>3. Pełny RBAC backend dla wszystkich endpointów</h3>
+  <p><strong>Stan obecny:</strong> Frontend chroni dostęp do widoków (np. Analiza, Zadania) zgodnie z rolą użytkownika. Część endpointów backend wciąż akceptuje żądania bez sprawdzenia roli.</p>
+  <p><strong>Ryzyko:</strong> Złośliwy użytkownik z ważną sesją może teoretycznie wywołać endpoint do którego frontend nie powinien dawać dostępu. Skala: niski — wymaga aktywnego użytkownika wewnątrz salonu, dostęp wyłącznie do danych własnego salonu.</p>
+  <p><strong>Planowana naprawa:</strong> Dodanie middleware RBAC do wszystkich endpointów backend (zaplanowane).</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ ROLA ════════════════ -->
+  <h2 id="rola">XIII. Podstawa prawna przetwarzania i rola systemu</h2>
+
+  <p>System Estelio pełni rolę <strong>podmiotu przetwarzającego</strong> dane osobowe w rozumieniu art. 4 pkt 8 RODO. Administratorem danych osobowych klientek jest każdy salon beauty korzystający z systemu.</p>
+
+  <p>Właściciel systemu Estelio zobowiązany jest do zawarcia z każdym salonem <strong>umowy powierzenia przetwarzania danych osobowych</strong> zgodnie z art. 28 RODO. Wzór umowy dostępny pod adresem <code>estelio.com.pl/umowa-powierzenia.html</code>.</p>
+
+  <p>System nie przetwarza danych osobowych klientek we własnym celu — dane są przetwarzane wyłącznie na potrzeby i w imieniu salonu beauty jako administratora.</p>
+
+  <p>Niezależnie od powyższego, właściciel systemu Estelio jest <strong>samodzielnym administratorem</strong> danych osobowych <strong>klientów SaaS</strong> (właścicieli salonów korzystających z subskrypcji) — w zakresie niezbędnym do wykonania umowy subskrypcji (art. 6 ust. 1 lit. b RODO), wystawienia faktur (art. 6 ust. 1 lit. c RODO) oraz — za zgodą — komunikacji marketingowej (art. 6 ust. 1 lit. a RODO).</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ LOGI ════════════════ -->
+  <h2 id="logi">XIV. Logi i monitoring</h2>
+
+  <p>System prowadzi logi zdarzeń bezpieczeństwa obejmujące:</p>
+  <ul>
+    <li>Próby dostępu bez ważnej sesji lub z błędnym <code>tenant_id</code> (z adresem IP i datą),</li>
+    <li>Przekroczenia limitu prób logowania (z adresem IP),</li>
+    <li>Błędy serwera i bazy danych,</li>
+    <li>Żądania z nieautoryzowanych domen (CORS),</li>
+    <li>Webhooki Stripe z nieważnym podpisem,</li>
+    <li>Próby manipulacji ścieżką pliku (path traversal),</li>
+    <li>Operacje krytyczne wykonywane w aplikacji (anonimizacja klienta, usunięcie zadatku, zmiana hasła, anulacja subskrypcji).</li>
+  </ul>
+
+  <p>Logi techniczne (HTTP, błędy serwera) nie zawierają danych osobowych klientek ani treści żądań — rejestrowane są wyłącznie metadane (IP, ścieżka, czas, typ błędu).</p>
+
+  <p>Logi audytowe (operacje w aplikacji) zawierają identyfikator wykonującego użytkownika oraz identyfikator przedmiotu operacji (np. ID klientki, której dotyczyła anonimizacja) — wymóg art. 30 RODO (rejestr czynności przetwarzania).</p>
+
+  <p>Czas przechowywania logów: technicznych — zgodny z polityką Hostinger (rotacja); audytowych — zgodnie z polityką salonu (administrator danych), zalecane 5 lat.</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ LOKALIZACJA ════════════════ -->
+  <h2 id="lokalizacja">XV. Lokalizacja danych</h2>
+
+  <table>
+    <thead><tr><th>Element</th><th>Lokalizacja</th><th>Uwagi</th></tr></thead>
+    <tbody>
+      <tr><td>Serwer aplikacji</td><td>Hostinger UAB, Litwa (UE)</td><td>Domena estelio.com.pl</td></tr>
+      <tr><td>Baza danych MySQL</td><td>Hostinger UAB, Litwa (UE)</td><td>Ten sam ośrodek</td></tr>
+      <tr><td>Pliki PDF (dokumenty RODO i dodatkowe)</td><td>Hostinger UAB, Litwa (UE)</td><td>Katalog poza repozytorium kodu</td></tr>
+      <tr><td>Kopie zapasowe</td><td>Hostinger UAB, Litwa (UE)</td><td>W ramach usługi Hostinger, codzienne</td></tr>
+      <tr><td>Logi serwera</td><td>Hostinger UAB, Litwa (UE)</td><td>Z rotacją</td></tr>
+      <tr><td>Stripe (dane karty + płatności)</td><td>Stripe Payments Europe Ltd., Irlandia (UE)</td><td>System nie przechowuje numerów kart — całość po stronie Stripe (PCI DSS Level 1)</td></tr>
+      <tr><td>Fakturownia (faktury VAT)</td><td>Fakturownia.pl, Polska (UE)</td><td>Standardowa umowa powierzenia</td></tr>
+      <tr><td>SMTP (wysyłka emaili)</td><td>Hostinger UAB, Litwa (UE)</td><td>kontakt@estelio.com.pl</td></tr>
+      <tr><td>Przesył danych</td><td>HTTPS/TLS, wyłącznie UE</td><td>Brak transferu poza EOG</td></tr>
+    </tbody>
+  </table>
+
+  <p>Dane osobowe <strong>nie są przekazywane</strong> do państw trzecich (poza UE/EOG).</p>
+
+  <hr class="divider">
+
+  <!-- ════════════════ INCYDENTY ════════════════ -->
+  <h2 id="incydenty">XVI. Procedura obsługi incydentów bezpieczeństwa</h2>
+
+  <p>W przypadku potwierdzonego incydentu bezpieczeństwa danych osobowych stosowana jest następująca procedura:</p>
+
+  <ol>
+    <li><strong>Natychmiastowe ograniczenie skali</strong> — wyłączenie podatnego endpointu, blokada IP, czasowe zawieszenie funkcjonalności, jeśli wymagane.</li>
+    <li><strong>Powiadomienie administratorów danych</strong> (właścicieli salonów), których dane mogły być narażone, w terminie maksymalnie 72 godzin od wykrycia.</li>
+    <li><strong>Wsparcie administratora danych</strong> w jego obowiązku notyfikacji UODO (art. 33 RODO) i osób, których dane dotyczą (art. 34 RODO), jeśli zaistnieje taka konieczność.</li>
+    <li><strong>Wdrożenie naprawy</strong> w warstwie aplikacji i — jeśli to możliwe — w warstwie bazy danych (jako twarde zabezpieczenie niezależne od poprawności logiki).</li>
+    <li><strong>Dokumentacja incydentu</strong> — data wykrycia, opis, przyczyna techniczna, podjęte działania naprawcze, status zamknięcia.</li>
+  </ol>
+
+  <p>Każdy odnotowany incydent jest rejestrowany wraz z dokumentacją wdrożonych zabezpieczeń. Mechanizmy opisane w niniejszym dokumencie (UNIQUE INDEX na tabelach krytycznych, fail-secure filtrowanie, izolacja przez <code>tenant_id</code> wyłącznie z sesji serwera) stanowią wynik takiego procesu — są zaprojektowane jako wielowarstwowa ochrona uniezależniona od poprawności pojedynczej linijki kodu aplikacji.</p>
+
+  <hr class="divider">
+
+  <p style="font-style:italic; color:var(--muted); font-size:.85rem; margin-top:32px; text-align:center;">
+    Dokument sporządzony na podstawie kodu źródłowego systemu i dokumentacji technicznej.<br>
+    Odzwierciedla rzeczywisty stan wdrożonych zabezpieczeń.
+  </p>
+
+</div>
+
+<footer>
+  <div class="firma">Estelio — system zarządzania salonami beauty</div>
+  <div>estelio.com.pl &nbsp;·&nbsp; kontakt@estelio.com.pl</div>
+  <div class="links">
+    Powiązane dokumenty:
+    <a href="/regulamin.html">Regulamin</a> ·
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> ·
+    <a href="/polityka-cookies.html">Cookies</a> ·
+    <a href="/klauzula-rodo-dla-salonu.html">Klauzula RODO</a> ·
+    <a href="/umowa-powierzenia.html">Umowa powierzenia</a> ·
+    <a href="/procedura-rodo.html">Procedura RODO</a>
+  </div>
+</footer>
+
+</body>
+</html>
