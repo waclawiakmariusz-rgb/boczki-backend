@@ -82,14 +82,24 @@ module.exports = (db) => {
       let res_data = {
         utargTotal: 0, utargUslogi: 0, utargKosmetyki: 0,
         kosmetykiSzt: 0, uslugiSzt: 0, zlotyParagon: 0, aov: 0,
-        konCount: 0, konSuccess: 0, konUpsell: 0, logZabiegow: []
+        konCount: 0, konSuccess: 0, konUpsell: 0, logZabiegow: [],
+        // Suplementy — osobny licznik (2026-06-08). utargKosmetyki nadal sumuje
+        // OBA (back-compat); utargSuplementy jest podzbiorem.
+        utargSuplementy: 0, suplementySzt: 0
       };
 
       let wizyty = {};
 
+      // 0. Magazyn → Set produktów typu Witaminy (do rozpoznania starych "Kosmetyk: X")
+      db.query(
+        `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+        [tenant_id],
+        (errSup, supRows) => {
+          const suplementSet = new Set((supRows || []).map(r => r.nazwa));
+
       // 1. Sprzedaż główna
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
         [tenant_id, dFrom, dTo],
         (err1, sprzedaz) => {
           if (!err1 && sprzedaz) {
@@ -102,15 +112,30 @@ module.exports = (db) => {
               const amount = safeNum(row.kwota);
               const kwotaDlaMnie = amount / count;
               const zabieg = String(row.zabieg || 'Inne').trim();
-              const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
-              const isDoplata = zabieg.toLowerCase().includes('dopłata') || zabieg.toLowerCase().includes('doplata');
+              const zL = zabieg.toLowerCase();
+              let isSuplement = zL.includes('suplement') || String(row.kategoria_produktu || '').toLowerCase() === 'suplement';
+              const isKosmetyk = isSuplement || zL.includes('kosmetyk') || zL.includes('krem');
+              if (isKosmetyk && !isSuplement && suplementSet.size > 0) {
+                const cleanProd = zabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+                if (suplementSet.has(cleanProd)) isSuplement = true;
+              }
+              const isDoplata = zL.includes('dopłata') || zL.includes('doplata');
 
               if (!platnosc.includes('portfel')) {
                 res_data.utargTotal += kwotaDlaMnie;
-                if (isKosmetyk) res_data.utargKosmetyki += kwotaDlaMnie;
-                else res_data.utargUslogi += kwotaDlaMnie;
+                if (isKosmetyk) {
+                  res_data.utargKosmetyki += kwotaDlaMnie;
+                  if (isSuplement) res_data.utargSuplementy += kwotaDlaMnie;
+                } else {
+                  res_data.utargUslogi += kwotaDlaMnie;
+                }
               }
-              if (isKosmetyk) { if (!isDoplata) res_data.kosmetykiSzt++; }
+              if (isKosmetyk) {
+                if (!isDoplata) {
+                  res_data.kosmetykiSzt++;
+                  if (isSuplement) res_data.suplementySzt++;
+                }
+              }
               else { if (!isDoplata) res_data.uslugiSzt++; }
 
               if (!isDoplata) res_data.logZabiegow.push({ n: zabieg, v: amount, q: 1 });
@@ -203,6 +228,8 @@ module.exports = (db) => {
           );
         }
       );
+        } // koniec callback (errSup, supRows)
+      );    // koniec db.query Magazyn (suplementSet) dla tgt_get_employee_dashboard
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja targety POST: ' + action });

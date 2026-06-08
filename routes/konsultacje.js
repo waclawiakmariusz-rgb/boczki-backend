@@ -383,7 +383,11 @@ module.exports = (db) => {
         cash: 0, card: 0, blik: 0, raty: 0, tubapay: 0, inne: 0,
         topEmployees: [], topItems: [], topClients: [],
         konTotal: 0, konSuccess: 0, konUpsell: 0, konEmpStats: [],
-        sleepingItems: [], cosmeticsTotal: 0, topCosmeticsEmp: []
+        sleepingItems: [],
+        cosmeticsTotal: 0, topCosmeticsEmp: [],
+        // Suplementy — osobne pola (2026-06-08). Rozróżnione od kosmetyków po
+        // prefixie "Suplement:" w zabieg lub po typie='Witaminy' w Magazyn.
+        suplementsTotal: 0, topSuplementsEmp: []
       };
 
       const classifyPayment = (m) => {
@@ -397,11 +401,20 @@ module.exports = (db) => {
         return 'cash';
       };
 
-      let empS = {}, itemS = {}, clientS = {}, empKon = {}, empCosm = {}, soldItemsSet = new Set();
+      let empS = {}, itemS = {}, clientS = {}, empKon = {}, empCosm = {}, empSup = {}, soldItemsSet = new Set();
+
+      // 0. Magazyn → Set nazw produktów typu Witaminy (= Suplementy). Lookup po
+      // LOWER(TRIM) dla starych sprzedaży zapisanych jako "Kosmetyk: X" gdzie
+      // X jest suplementem.
+      db.query(
+        `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+        [tenant_id],
+        (errSup, supRows) => {
+          const suplementSet = new Set((supRows || []).map(r => r.nazwa));
 
       // 1. Sprzedaż
       db.query(
-        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
+        `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, szczegoly, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY') AND data_sprzedazy BETWEEN ? AND ?`,
         [tenant_id, dFrom, dTo],
         (err1, sprzedaz) => {
           (sprzedaz || []).forEach(row => {
@@ -411,15 +424,29 @@ module.exports = (db) => {
             if (amount === 0) return;
             const zabieg = String(row.zabieg || 'Inne').trim();
             const klient = String(row.klient || 'Nieznany').trim();
-            const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem');
+            const zL = zabieg.toLowerCase();
+            // Wykrycie suplementu: prefix "Suplement:" w zabieg LUB kolumna
+            // kategoria_produktu='Suplement' (nowe wpisy) LUB lookup w Magazyn (stare)
+            let isSuplement = zL.includes('suplement') || String(row.kategoria_produktu || '').toLowerCase() === 'suplement';
+            const isKosmetyk = isSuplement || zL.includes('kosmetyk') || zL.includes('krem');
+            if (isKosmetyk && !isSuplement && suplementSet.size > 0) {
+              const cleanProd = zabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+              if (suplementSet.has(cleanProd)) isSuplement = true;
+            }
             const sellers = String(row.sprzedawca || '').split(',').map(s => s.trim()).filter(Boolean);
             const count = sellers.length || 1;
 
             // topClients / topEmployees / topItems / cosmetics — liczone z KAŻDEGO wpisu Sprzedaży (włącznie z mix)
             if (klient && klient.toLowerCase() !== 'nieznany') clientS[klient] = (clientS[klient] || 0) + amount;
             if (isKosmetyk) {
-              result.cosmeticsTotal++;
-              sellers.forEach(p => { if (!empCosm[p]) empCosm[p] = { count: 0, val: 0 }; empCosm[p].count++; empCosm[p].val += amount / count; });
+              // Rozdziel sumy: Suplementy do empSup/suplementsTotal, Kosmetyki do empCosm/cosmeticsTotal
+              if (isSuplement) {
+                result.suplementsTotal++;
+                sellers.forEach(p => { if (!empSup[p]) empSup[p] = { count: 0, val: 0 }; empSup[p].count++; empSup[p].val += amount / count; });
+              } else {
+                result.cosmeticsTotal++;
+                sellers.forEach(p => { if (!empCosm[p]) empCosm[p] = { count: 0, val: 0 }; empCosm[p].count++; empCosm[p].val += amount / count; });
+              }
             } else {
               if (zabieg && zabieg !== 'Inne') { itemS[zabieg] = (itemS[zabieg] || 0) + 1; soldItemsSet.add(zabieg.toLowerCase()); }
               sellers.forEach(p => { empS[p] = (empS[p] || 0) + amount / count; });
@@ -535,6 +562,7 @@ module.exports = (db) => {
                         rate: Math.round((empKon[k].success / empKon[k].total) * 100) || 0
                       })).sort((a, b) => b.rate - a.rate);
                       result.topCosmeticsEmp = Object.keys(empCosm).map(k => ({ name: k, count: empCosm[k].count, val: empCosm[k].val })).sort((a, b) => b.count - a.count);
+                      result.topSuplementsEmp = Object.keys(empSup).map(k => ({ name: k, count: empSup[k].count, val: empSup[k].val })).sort((a, b) => b.count - a.count);
 
                       return res.json({ status: 'success', data: result });
                     });
@@ -547,6 +575,8 @@ module.exports = (db) => {
           );
         }
       );
+        } // koniec callback (errSup, supRows)
+      );    // koniec db.query Magazyn (suplementSet) dla odp_getReportData
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja konsultacje POST: ' + action });
