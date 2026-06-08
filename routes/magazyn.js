@@ -203,7 +203,7 @@ module.exports = (db) => {
     // --- EDIT_PRODUCT (edytuj produkt) ---
     } else if (action === 'edit_product') {
       db.query(
-        `SELECT id, nazwa_produktu, ilosc, data_waznosci, cena_netto, cena_brutto FROM Magazyn WHERE tenant_id = ? AND id = ?`,
+        `SELECT id, nazwa_produktu, ilosc, data_waznosci, cena_netto, cena_brutto, typ FROM Magazyn WHERE tenant_id = ? AND id = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono produktu o ID: ' + d.id });
@@ -214,6 +214,9 @@ module.exports = (db) => {
           if (Number(old.cena_netto).toFixed(2) !== Number(d.netto).toFixed(2)) logiZmian.push(`Netto: ${old.cena_netto} -> ${d.netto}`);
           if (Number(old.cena_brutto).toFixed(2) !== Number(d.brutto).toFixed(2)) logiZmian.push(`Brutto: ${old.cena_brutto} -> ${d.brutto}`);
           if (String(old.data_waznosci || '') !== String(d.waznosc || '')) logiZmian.push(`Ważność: ${old.data_waznosci} -> ${d.waznosc}`);
+          // Typ — nowe pole (2026-06-08). Jeśli nie przekazane w body, zostawiamy stary.
+          const nowyTyp = (d.typ === undefined || d.typ === null || d.typ === '') ? old.typ : String(d.typ).trim();
+          if (String(old.typ || '') !== String(nowyTyp || '')) logiZmian.push(`Typ: ${old.typ || '(brak)'} -> ${nowyTyp}`);
 
           let _il, _ne, _br;
           try {
@@ -223,8 +226,8 @@ module.exports = (db) => {
           } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
           db.query(
-            `UPDATE Magazyn SET nazwa_produktu = ?, ilosc = ?, data_waznosci = ?, cena_netto = ?, cena_brutto = ? WHERE tenant_id = ? AND id = ?`,
-            [d.nazwa, _il, d.waznosc || null, _ne, _br, tenant_id, d.id],
+            `UPDATE Magazyn SET nazwa_produktu = ?, ilosc = ?, data_waznosci = ?, cena_netto = ?, cena_brutto = ?, typ = ? WHERE tenant_id = ? AND id = ?`,
+            [d.nazwa, _il, d.waznosc || null, _ne, _br, nowyTyp, tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               const opisLog = logiZmian.length > 0 ? logiZmian.join(' | ') : 'Edycja (brak zmian wartości)';

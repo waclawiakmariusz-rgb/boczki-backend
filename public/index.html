@@ -16128,6 +16128,9 @@ function otworzEdycjeProduktu(rowStr) {
     document.getElementById('ep_ilosc').value = p.ilosc;
     document.getElementById('ep_netto').value = p.netto;
     document.getElementById('ep_brutto').value = p.brutto;
+    // Typ (Kremy / Olejek / Witaminy=Suplement / Inne) — domyślnie z produktu lub Kremy
+    const typSel = document.getElementById('ep_typ');
+    if (typSel) typSel.value = ['Kremy','Olejek','Witaminy','Inne'].includes(p.typ) ? p.typ : 'Kremy';
     
     // Formatowanie daty do input type="date" (YYYY-MM-DD)
     const d = new Date(p.waznosc);
@@ -16152,7 +16155,8 @@ function zapiszEdycjeProduktu(e) {
         waznosc: document.getElementById('ep_waznosc').value,
         netto: normNum(document.getElementById('ep_netto').value),
         brutto: normNum(document.getElementById('ep_brutto').value),
-        pracownik: currentUser 
+        typ: (document.getElementById('ep_typ') && document.getElementById('ep_typ').value) || '',
+        pracownik: currentUser
     };
 
     fetch(API_URL, { method: "POST", body: JSON.stringify(payload) })
@@ -26910,6 +26914,14 @@ initTheme();
             
             <label>Nazwa produktu:</label>
             <input type="text" id="ep_nazwa" style="background:#eee; color:#555; font-weight:bold; margin-bottom:15px;">
+
+            <label>Typ:</label>
+            <select id="ep_typ" style="margin-bottom:15px;">
+                <option value="Kremy">Kremy</option>
+                <option value="Olejek">Olejek</option>
+                <option value="Witaminy">Suplement</option>
+                <option value="Inne">Inne</option>
+            </select>
 
             <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:15px;">
                 <div>
