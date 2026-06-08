@@ -9688,6 +9688,15 @@ ANALIZA MANAGER
                             </div>
                             <ul class="odp-list" id="odp_cosm_emp_list" style="font-size: 10pt; color:#86198f;"></ul>
                         </div>
+
+                        <div class="odp-zone" style="margin-bottom:0; background:#faf5ff; border-color:#d8b4fe;">
+                            <div class="odp-zone-title" style="color:#7e22ce;">💊 Ranking Suplementów</div>
+                            <div style="text-align:center; margin-bottom: 10px;">
+                                <div style="font-size:11pt; color:#6b21a8;">Łącznie sprzedano:</div>
+                                <div id="odp_sup_total" style="font-size:20pt; font-weight:bold; color:#7e22ce;">0 szt.</div>
+                            </div>
+                            <ul class="odp-list" id="odp_sup_emp_list" style="font-size: 10pt; color:#6b21a8;"></ul>
+                        </div>
                     </div>
 
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px; margin-bottom:20px;">
@@ -9753,6 +9762,7 @@ ANALIZA MANAGER
                 <select id="tgt-type" class="form-control">
                     <option value="Przychód (PLN)">Przychód (PLN)</option>
                     <option value="Kosmetyki (szt.)">Kosmetyki (szt.)</option>
+                    <option value="Suplementy (szt.)">Suplementy (szt.)</option>
                     <option value="Usługi (szt.)">Usługi (szt.)</option>
                     <option value="Konsultacje (% sukcesu)">Konsultacje (% sukcesu)</option>
                 </select>
@@ -9819,6 +9829,7 @@ ANALIZA MANAGER
                     <option value="Przychód (PLN)">Przychód (PLN)</option>
                     <option value="Usługi (szt.)">Usługi (szt.)</option>
                     <option value="Kosmetyki (szt.)">Kosmetyki (szt.)</option>
+                    <option value="Suplementy (szt.)">Suplementy (szt.)</option>
                     <option value="Konsultacje (% sukcesu)">Konsultacje (% sukcesu)</option>
                 </select>
             </div>
@@ -26220,6 +26231,14 @@ function odp_renderReport(data, dFrom, dTo) {
             <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
         </li>`).join('') : "<li>Brak sprzedaży kosmetyków</li>");
 
+    // Suplementy — analogicznie do kosmetyków, kolor fioletowy
+    setText('odp_sup_total', (data.suplementsTotal || 0) + ' szt.');
+    setHtml('odp_sup_emp_list', (data.topSuplementsEmp && data.topSuplementsEmp.length > 0) ? data.topSuplementsEmp.map(e =>
+        `<li style="padding: 2px 0; border-bottom: 1px dashed #d8b4fe;">
+            <strong>${e.name}</strong>
+            <span style="float:right; font-weight:bold; color:#6b21a8;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
+        </li>`).join('') : "<li>Brak sprzedaży suplementów</li>");
+
     // Śpiące zabiegi — lista z myślnikami, pokazujemy top 5
     let sleepHtml = "";
     if (data.sleepingItems && data.sleepingItems.length > 0) {
@@ -26770,7 +26789,8 @@ function tgt_renderujDashboardZSerwera(d, mojeTargety) {
             let formWartosc = (v) => Number.isInteger(v) ? v : Number(v).toFixed(1);
 
             if (t.typ_targetu === 'Przychód (PLN)') { obecnyWynik = d.utargTotal; suffix = "zł"; formWartosc = formatPLN; }
-            else if (t.typ_targetu === 'Kosmetyki (szt.)') { obecnyWynik = d.kosmetykiSzt; }
+            else if (t.typ_targetu === 'Kosmetyki (szt.)') { obecnyWynik = (d.kosmetykiSzt || 0) - (d.suplementySzt || 0); }
+            else if (t.typ_targetu === 'Suplementy (szt.)') { obecnyWynik = d.suplementySzt || 0; }
             else if (t.typ_targetu === 'Konsultacje (% sukcesu)') { obecnyWynik = skutKonsultacji; suffix = "%"; }
             else if (t.typ_targetu === 'Usługi (szt.)') {
                 // 🟢 TUTAJ DZIAŁA NASZA LUPA (Wykrywanie PAKIETU)
@@ -26857,7 +26877,11 @@ function tgt_renderujDashboardZSerwera(d, mojeTargety) {
             </div>
             <div style="display:flex; justify-content:space-between; padding:6px 10px; font-size:12px;">
                 <span style="color:#b45309;">↳ W tym Kosmetyki:</span>
-                <span style="font-weight:bold; color:#b45309;">${formatWhole(d.utargKosmetyki)}</span>
+                <span style="font-weight:bold; color:#b45309;">${formatWhole((d.utargKosmetyki || 0) - (d.utargSuplementy || 0))}</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 10px; font-size:12px;">
+                <span style="color:#7e22ce;">↳ W tym Suplementy:</span>
+                <span style="font-weight:bold; color:#7e22ce;">${formatWhole(d.utargSuplementy || 0)}</span>
             </div>
         </div>
     </div>`;
