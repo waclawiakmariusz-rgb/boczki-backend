@@ -8017,6 +8017,11 @@ ANALIZA MANAGER
                     <div id="an_rep-cosmetics-count" class="anm-cosm-count">0 szt.</div>
                 </div>
 
+                <div class="anm-cosmetics-hero" style="background:#faf5ff; border-color:#d8b4fe;">
+                    <div class="anm-eyebrow" style="color:#7e22ce;">Sprzedano Suplementów</div>
+                    <div id="an_rep-suplement-count" class="anm-cosm-count" style="color:#6b21a8;">0 szt.</div>
+                </div>
+
                 <div class="anm-side-card">
                     <div class="anm-side-head">
                         <h3 class="anm-title-inline"><span class="anm-title-icon">◉</span>Top Pracownicy</h3>
@@ -21873,6 +21878,8 @@ if (inputNazwaCheck) {
                 if (barEl) barEl.style.width = pct + '%';
             });
             document.getElementById('an_rep-cosmetics-count').innerText = (data.cosmeticsCount || 0) + " szt.";
+            const supEl = document.getElementById('an_rep-suplement-count');
+            if (supEl) supEl.innerText = (data.suplementCount || 0) + " szt.";
 
             const ctx = document.getElementById('an_monthlyTrendChart');
             if(an_trendChartInstance) an_trendChartInstance.destroy();

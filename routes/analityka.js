@@ -550,15 +550,25 @@ module.exports = (db) => {
           total: 0, costs, profit: 0,
           payments: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 },
           daily: {}, topTreatments: {}, worstTreatments: [], topEmployees: {},
-          chartValues: [], daysLabels: [], compareTotal: 0, cosmeticsCount: 0, debugLog: [],
+          chartValues: [], daysLabels: [], compareTotal: 0,
+          cosmeticsCount: 0, suplementCount: 0, // 2026-06-08 — Suplementy rozdzielone od Kosmetykow
+          debugLog: [],
           _mediRatyClients: new Set(),
           _tubaPayClients: new Set()
         };
 
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
 
+        // Magazyn lookup — Set produktów typu Witaminy (= Suplementy). Pozwala
+        // rozpoznać stare sprzedaze "Kosmetyk: X" gdzie X to suplement.
         db.query(
-          `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') IN (?) AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
+          `SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`,
+          [tenant_id],
+          (errSup, supRows) => {
+            const suplementSet = new Set((supRows || []).map(r => r.nazwa));
+
+        db.query(
+          `SELECT data_sprzedazy, klient, zabieg, sprzedawca, kwota, platnosc, status, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND DATE_FORMAT(data_sprzedazy, '%Y-%m') IN (?) AND COALESCE(status, '') NOT IN ('USUNIĘTY', 'SCALONY')`,
           [tenant_id, months],
           (err1, sprzedaz) => {
             (sprzedaz || []).forEach(row => {
@@ -566,10 +576,19 @@ module.exports = (db) => {
               const m = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
               const platnosc = String(row.platnosc || '').toLowerCase();
               const zabieg = String(row.zabieg || 'Inne').trim();
-              const isKosmetyk = zabieg.toLowerCase().includes('kosmetyk') || zabieg.toLowerCase().includes('krem') || zabieg.toLowerCase().includes('suplement'); // 2026-06-07: rozszerzono o "suplement"
+              const zL = zabieg.toLowerCase();
+              let isSuplement = zL.includes('suplement') || String(row.kategoria_produktu || '').toLowerCase() === 'suplement';
+              const isKosmetyk = isSuplement || zL.includes('kosmetyk') || zL.includes('krem');
+              if (isKosmetyk && !isSuplement && suplementSet.size > 0) {
+                const cleanProd = zabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+                if (suplementSet.has(cleanProd)) isSuplement = true;
+              }
 
               if (m === targetMonth) {
-                if (isKosmetyk) report.cosmeticsCount++;
+                if (isKosmetyk) {
+                  if (isSuplement) report.suplementCount++;
+                  else report.cosmeticsCount++;
+                }
                 else { if (!report.topTreatments[zabieg]) report.topTreatments[zabieg] = 0; report.topTreatments[zabieg]++; }
 
                 // Top Pracownicy — liczone jak utarg pracownika (Analiza/Pracownik):
@@ -690,6 +709,8 @@ module.exports = (db) => {
             );
           }
         );
+        } // koniec callback (errSup, supRows)
+      );    // koniec db.query Magazyn (suplementSet) dla get_monthly_details
       });
 
     } else if (action === 'get_yearly_summary' || action === 'an_get_yearly_summary') {
