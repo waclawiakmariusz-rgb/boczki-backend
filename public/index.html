@@ -28955,6 +28955,9 @@ function estGuideBuildSubAnswer(h3) {
 // Single-flight wrapper — wielokrotne wywołania (timer 2.5s, bezpiecznik 5s,
 // doładowanie na żądanie z estReply) współdzielą jeden fetch.
 let estGuideInflight = null;
+// Diagnoza ostatniej nieudanej próby — pokazywana userowi w czacie,
+// żeby zgłoszenie błędu zawierało URL+status bez grzebania w konsoli.
+let estGuideLastError = '';
 function estLoadGuide() {
     if (EST_KB_GUIDE.length) return Promise.resolve();
     if (!estGuideInflight) {
@@ -28973,10 +28976,12 @@ async function estLoadGuideInner() {
         if (!r.ok) {
             // Bezpiecznik: serwer może jeszcze nie mieć nowego pliku (stary deploy)
             console.warn('[Esti] HTTP', r.status, 'dla', EST_GUIDE_URL, '— fallback na starszy przewodnik');
+            estGuideLastError = `HTTP ${r.status}: ${EST_GUIDE_URL}`;
             r = await fetch(`/Estelio_Przewodnik_Pracownik.html?v=${v}`, { cache: 'no-cache' });
         }
         if (!r.ok) {
             console.warn('[Esti] Nie udało się pobrać przewodnika — HTTP', r.status);
+            estGuideLastError += ` | HTTP ${r.status}: /Estelio_Przewodnik_Pracownik.html`;
             return;
         }
         const html = await r.text();
@@ -29044,8 +29049,14 @@ async function estLoadGuideInner() {
 
         EST_KB_GUIDE = entries;
         console.log('[Esti] KB załadowane:', entries.length, 'wpisów');
+        if (entries.length) {
+            estGuideLastError = '';
+        } else {
+            estGuideLastError = `pobrano ${html.length} znaków, ale 0 sekcji (sections=${sections.length})`;
+        }
     } catch(e) {
         console.warn('[Esti] Błąd ładowania przewodnika:', e.message);
+        estGuideLastError = `wyjątek: ${e.message}`;
     }
 }
 
@@ -29327,7 +29338,10 @@ function estReply(userMsg) {
         }
         estHideTyping();
         if (!EST_KB_GUIDE.length) {
-            estAddMsg('Nie mogę pobrać przewodnika z serwera 😔 Odśwież stronę (Ctrl+Shift+R) i spróbuj ponownie. Jeśli problem wraca — napisz: <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>', 'bot');
+            const diag = estGuideLastError
+                ? `<br><br><small style="opacity:.7">Szczegóły techniczne: ${estGuideLastError}</small>`
+                : '';
+            estAddMsg('Nie mogę pobrać przewodnika z serwera 😔 Odśwież stronę (Ctrl+Shift+R) i spróbuj ponownie. Jeśli problem wraca — napisz: <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>' + diag, 'bot');
             return;
         }
         const { best, score, runners } = estFind(userMsg);
