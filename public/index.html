@@ -28951,7 +28951,18 @@ function estGuideBuildSubAnswer(h3) {
     return answerHtml;
 }
 
-async function estLoadGuide() {
+// Single-flight wrapper — wielokrotne wywołania (timer 2.5s, bezpiecznik 5s,
+// doładowanie na żądanie z estReply) współdzielą jeden fetch.
+let estGuideInflight = null;
+function estLoadGuide() {
+    if (EST_KB_GUIDE.length) return Promise.resolve();
+    if (!estGuideInflight) {
+        estGuideInflight = estLoadGuideInner().finally(() => { estGuideInflight = null; });
+    }
+    return estGuideInflight;
+}
+
+async function estLoadGuideInner() {
     try {
         console.log('[Esti] estLoadGuide() — start');
         // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
@@ -29301,8 +29312,17 @@ function estReply(userMsg) {
 
     estShowTyping();
     clearTimeout(estTypingTimeout);
-    estTypingTimeout = setTimeout(() => {
+    estTypingTimeout = setTimeout(async () => {
+        // KB puste (kliknięcie przed załadowaniem / wcześniejszy błąd sieci)
+        // → spróbuj doładować TERAZ zamiast odpowiadać z pustej bazy.
+        if (!EST_KB_GUIDE.length) {
+            await estLoadGuide();
+        }
         estHideTyping();
+        if (!EST_KB_GUIDE.length) {
+            estAddMsg('Nie mogę pobrać przewodnika z serwera 😔 Odśwież stronę (Ctrl+Shift+R) i spróbuj ponownie. Jeśli problem wraca — napisz: <a href="mailto:kontakt@estelio.com.pl"><b>kontakt@estelio.com.pl</b></a>', 'bot');
+            return;
+        }
         const { best, score, runners } = estFind(userMsg);
 
         // Próg pewności (po dodaniu title-boost +3/trafienie):
