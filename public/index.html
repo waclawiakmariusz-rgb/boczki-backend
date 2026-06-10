@@ -28811,7 +28811,7 @@ body.dark-mode .est-typing { background: #0f172a; }
             <button class="est-sug" onclick="estAsk('Co to są zadatki?')">💳 Zadatki</button>
             <button class="est-sug" onclick="estAsk('Magazyn — pilnowanie zapasów')">📦 Magazyn</button>
             <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
-            <button class="est-sug" onclick="window.open('/Estelio_Przewodnik_Pracownik.html','_blank')">📖 Pełny przewodnik</button>
+            <button class="est-sug" onclick="window.open('/Estelio_Przewodnik_Pracownik_2026-06-08.html','_blank')">📖 Pełny przewodnik</button>
         </div>
 
         <div id="est-help-input-row">
@@ -28831,8 +28831,8 @@ body.dark-mode .est-typing { background: #0f172a; }
 
 /* ----------------------------------------------------------
    BAZA WIEDZY — od 2026-05-03 PUSTA.
-   Esti czerpie wiedzę WYŁĄCZNIE z public/Estelio_Przewodnik_Pracownik.html
-   (patrz EST_KB_GUIDE i estLoadGuide() poniżej).
+   Esti czerpie wiedzę WYŁĄCZNIE z przewodnika pracownika (EST_GUIDE_URL,
+   patrz EST_KB_GUIDE i estLoadGuide() poniżej).
    Stara hardcoded EST_KB usunięta — żeby cache przeglądarki nie
    wracał z halucynacjami nawet gdyby ktoś trzymał poprzednią wersję JS.
    ---------------------------------------------------------- */
@@ -28840,10 +28840,13 @@ const EST_KB = [];
 
 /* ----------------------------------------------------------
    ŹRÓDŁO WIEDZY: PRZEWODNIK PRACOWNIKA (parsowany z HTML)
-   Esti czerpie wiedzę WYŁĄCZNIE z `/Estelio_Przewodnik_Pracownik.html`.
+   Esti czerpie wiedzę WYŁĄCZNIE z pliku EST_GUIDE_URL poniżej.
    Plik jest zewnętrzny (nie kopiowany do JS) — żeby zaktualizować Esti
    wystarczy edytować HTML przewodnika, bez zmian w kodzie.
+   UWAGA: przy publikacji nowej datowanej wersji przewodnika trzeba
+   podmienić EST_GUIDE_URL (jedno miejsce).
    ---------------------------------------------------------- */
+const EST_GUIDE_URL = '/Estelio_Przewodnik_Pracownik_2026-06-08.html';
 let EST_KB_GUIDE = [];
 
 // Mapa: id sekcji w przewodniku → kategoria (do EST_SECTION_TO_CAT bonusu)
@@ -28855,16 +28858,56 @@ const EST_GUIDE_CAT_MAP = {
     zebranie: 'Analityka', retencja: 'Analityka', wskazowki: 'Ogólne', faq: 'Ogólne'
 };
 
+// Krótkie słowa (<4 znaki) które MIMO TO są znaczące — bez tej listy
+// pytanie „zapomniałam PIN" traciło najważniejszy token.
+const EST_SHORT_OK = new Set(['pin','kod','sms','qr','vat','rok']);
+
+// Słowa zbyt pospolite by indeksować je z TREŚCI rozdziałów (w tytułach zostają).
+// Bez stoplisty każda sekcja łapałaby się na „klientka/system/salon".
+const EST_BODY_STOP = new Set([
+    'estelio','system','systemie','salon','salonu','salonie','klient','klienta','klientka','klientke','klientki',
+    'manager','managera','managerowi','recepcja','recepcji','pani','panu',
+    'jesli','jezeli','mozna','mozesz','moze','ktora','ktore','ktory','przez','oraz','jako','jest','tylko',
+    'albo','jednak','bedzie','beda','zeby','poniewaz','czyli','przyklad','takze','wtedy','ktorych','swoje',
+    'kliknij','przycisk','sekcja','sekcji','wpisz','potem','teraz','zawsze','bardzo','tego','tych','przy'
+]);
+
+function estTokenOk(t) { return t.length >= 4 || EST_SHORT_OK.has(t); }
+
+// Dopasowanie dwóch tokenów z obsługą polskiej odmiany.
+// Pełny prefiks (klient↔klientka) LUB wspólny prefiks ≥4 znaki pokrywający
+// ≥60% krótszego słowa (zamowic↔zamowienie, faktura↔fakture).
+function estTokenMatch(a, b) {
+    if (a === b) return true;
+    if (a.startsWith(b) || b.startsWith(a)) return true;
+    const min = Math.min(a.length, b.length);
+    let i = 0;
+    while (i < min && a[i] === b[i]) i++;
+    return i >= 4 && i >= Math.ceil(min * 0.6);
+}
+
 // Wyciąga keyword tokens z dowolnej liczby tekstów (tytuł, h3, id, lead).
-// Normalizuje polskie znaki i bierze tylko wyrazy ≥4 znaki.
+// Normalizuje polskie znaki i bierze wyrazy ≥4 znaki (+ krótkie z EST_SHORT_OK).
 function estGuideTokens(...parts) {
     const norm = parts.filter(Boolean).join(' ').toLowerCase()
         .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e')
         .replace(/ł/g,'l').replace(/ń/g,'n').replace(/ó/g,'o')
         .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z');
-    const tokens = norm.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(t => t.length >= 4);
+    const tokens = norm.replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(estTokenOk);
     // Unique, max 25 — zapobiegnie inflacji score'u od długich nagłówków
     return [...new Set(tokens)].slice(0, 25);
+}
+
+// Tokeny z TREŚCI rozdziału (plain text) — słabszy sygnał niż tytuł.
+// Stoplist + limit 150 tokenów, żeby pospolite sekcje nie łapały wszystkiego.
+function estGuideBodyTokens(text) {
+    const norm = (text || '').toLowerCase()
+        .replace(/ą/g,'a').replace(/ć/g,'c').replace(/ę/g,'e')
+        .replace(/ł/g,'l').replace(/ń/g,'n').replace(/ó/g,'o')
+        .replace(/ś/g,'s').replace(/ź/g,'z').replace(/ż/g,'z');
+    const tokens = norm.replace(/[^a-z0-9 ]/g,' ').split(/\s+/)
+        .filter(t => estTokenOk(t) && !EST_BODY_STOP.has(t));
+    return [...new Set(tokens)].slice(0, 150);
 }
 
 // Buduje krótkie HTML body sub-wpisu z elementów między dwoma <h3>.
@@ -28913,7 +28956,7 @@ async function estLoadGuide() {
         console.log('[Esti] estLoadGuide() — start');
         // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
         const v = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-        const r = await fetch(`/Estelio_Przewodnik_Pracownik.html?v=${v}`, { cache: 'no-cache' });
+        const r = await fetch(`${EST_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
         if (!r.ok) {
             console.warn('[Esti] Nie udało się pobrać przewodnika — HTTP', r.status);
             return;
@@ -28930,7 +28973,27 @@ async function estLoadGuide() {
             const h2 = sec.querySelector('h2');
             if (!h2) return;
             const sectionTitle = h2.textContent.trim();
-            const link = `<br><br><a href="/Estelio_Przewodnik_Pracownik.html#${id}" target="_blank" style="color:#ec3f91;font-weight:600;">📖 Otwórz pełny rozdział →</a>`;
+            const link = `<br><br><a href="${EST_GUIDE_URL}#${id}" target="_blank" style="color:#ec3f91;font-weight:600;">📖 Otwórz pełny rozdział →</a>`;
+
+            // Treść sekcji dzielona na: wstęp (przed pierwszym h3) i bloki per-h3.
+            // Indeksujemy też scenariusze/przykłady — w nich jest najwięcej
+            // naturalnego słownictwa ("zwrot", "alergia", "pomyłka"...).
+            const introTexts = [];
+            const h3Bodies = new Map(); // h3 element → plain text bloku
+            let cursor = sec.querySelector('h2')?.closest('.card-header')?.nextElementSibling
+                      || sec.firstElementChild;
+            let currentH3 = null;
+            while (cursor) {
+                if (cursor.tagName === 'H3') {
+                    currentH3 = cursor;
+                    h3Bodies.set(currentH3, [cursor.textContent]);
+                } else if (currentH3) {
+                    h3Bodies.get(currentH3).push(cursor.textContent);
+                } else {
+                    introTexts.push(cursor.textContent);
+                }
+                cursor = cursor.nextElementSibling;
+            }
 
             // 1) Wpis główny sekcji (lead = ogólne wprowadzenie)
             const lead = sec.querySelector('p.lead');
@@ -28939,6 +29002,7 @@ async function estLoadGuide() {
                 title: sectionTitle,
                 category: cat,
                 keywords: estGuideTokens(sectionTitle, id),
+                body: estGuideBodyTokens(introTexts.join(' ')),
                 answer: (leadHtml || `Sekcja „${sectionTitle}" w przewodniku pracownika.`) + link,
                 _bonus: 0
             });
@@ -28953,6 +29017,7 @@ async function estLoadGuide() {
                     title: `${sectionTitle.split('—')[0].trim()} — ${subTitle}`,
                     category: cat,
                     keywords: estGuideTokens(subTitle, sectionTitle, id),
+                    body: estGuideBodyTokens((h3Bodies.get(h3) || []).join(' ')),
                     answer: answerHtml + link,
                     _bonus: 0
                 });
@@ -29023,10 +29088,52 @@ const EST_LOOKUP_BOOST_KEYWORDS = ['gdzie','raport','lista','spis','historia','z
 // Boost wpisów których tytuł zaczyna się od „Co to / Czym jest" — bo to definicje.
 const EST_DEFINE_INTENT_RX = /^(co to|czym jest|czym sa|czym są|definicja|wytlumacz|wytłumacz|znaczenie|do czego)\b/;
 
+// Grupy synonimów (znormalizowane, bez polskich znaków). Token pytania
+// pasujący prefiksowo do któregokolwiek słowa grupy → do pytania dokładane
+// są pozostałe słowa grupy. Dzięki temu „zaliczka" znajdzie „zadatek".
+const EST_SYNONYMS = [
+    ['zadatek','zaliczka','przedplata','wplata','kaucja'],
+    ['faktura','paragon','rachunek'],
+    ['usunac','skasowac','wykasowac','anulowac','cofnac','wycofac','usunelam','skasowalam'],
+    ['edytowac','poprawic','zmienic','korekta','pomylka','pomylkowa','blad','blednie','literowka'],
+    ['kosmetyk','krem','serum','peeling','produkt','detal'],
+    ['suplement','witaminy','tabletki','kapsulki'],
+    ['magazyn','stan','zapas','towar','dostawa'],
+    ['sprzedaz','transakcja','paragon','sprzedalam','wpisac'],
+    ['zwrot','reklamacja','oddac','oddala','zwrocic'],
+    ['pin','haslo','logowanie','zalogowac'],
+    ['urodziny','zyczenia','urodzinowa'],
+    ['zadanie','task','przypomnienie','cykliczne'],
+    ['konsultacja','wywiad','ankieta'],
+    ['rodo','zgoda','dokument','podpis'],
+    ['pracownik','kosmetolog','dziewczyny','zespol'],
+    ['raport','podsumowanie','statystyki','analiza','zebranie'],
+    ['voucher','bon','prezentowy'],
+    ['telefon','komorka','mobilnie','smartfon'],
+    ['zamowic','zamowienie','hurtownia','dostawca','braki'],
+];
+const EST_SYN_INDEX = (() => {
+    const idx = [];
+    EST_SYNONYMS.forEach(group => group.forEach(w => idx.push([w, group])));
+    return idx;
+})();
+function estExpandTokens(qTokens) {
+    const out = new Set(qTokens);
+    qTokens.forEach(t => {
+        EST_SYN_INDEX.forEach(([w, group]) => {
+            if (estTokenMatch(t, w)) {
+                group.forEach(g => out.add(g));
+            }
+        });
+    });
+    return [...out];
+}
+
 function estFind(query) {
     const q = estNormalize(query);
-    // Tokeny pytania — bez interpunkcji, min 4 znaki
-    const qTokens = q.replace(/[?!.,;:]/g, '').split(/\s+/).filter(t => t.length >= 4);
+    // Tokeny pytania — bez interpunkcji, min 4 znaki (+ krótkie znaczące jak „pin")
+    const qTokensRaw = q.replace(/[?!.,;:]/g, '').split(/\s+/).filter(estTokenOk);
+    const qTokens = estExpandTokens(qTokensRaw);
     const activeCat = estActiveCategory();
     const isLookup = EST_LOOKUP_INTENT_RX.test(q);
     const isDefine = EST_DEFINE_INTENT_RX.test(q);
@@ -29050,22 +29157,30 @@ function estFind(query) {
             } else {
                 // Pojedyncze słowa: dopasowanie przez prefix (obsługuje odmianę: "klienta"↔"klient", "zadatki"↔"zadatek")
                 kwN.split(' ').forEach(word => {
-                    if (word.length < 4) return;
-                    const match = qTokens.find(t =>
-                        !usedTokens.has(t) && (
-                            t === word ||
-                            t.startsWith(word) ||
-                            word.startsWith(t)
-                        )
-                    );
+                    if (!estTokenOk(word)) return;
+                    const match = qTokens.find(t => !usedTokens.has(t) && estTokenMatch(t, word));
                     if (match) { usedTokens.add(match); kwScore += 1; }
                 });
             }
         });
 
+        // Trafienia w TREŚCI rozdziału — słabszy sygnał (+1/token, max +3).
+        // Ratują pytania, których słowa nie występują w żadnym tytule.
+        let bodyScore = 0;
+        if (item.body && item.body.length) {
+            for (const t of qTokens) {
+                if (bodyScore >= 3) break;
+                if (usedTokens.has(t)) continue;
+                if (item.body.some(w => estTokenMatch(t, w))) {
+                    usedTokens.add(t);
+                    bodyScore += 1;
+                }
+            }
+        }
+
         // Bonusy kontekstowe działają TYLKO jeśli jest realne trafienie słowne
-        let score = kwScore;
-        if (kwScore > 0) {
+        let score = kwScore + bodyScore;
+        if (score > 0) {
             score += item._bonus || 0;
             if (activeCat && (item.category || 'Ogólne') === activeCat) score += 2;
 
@@ -29073,11 +29188,11 @@ function estFind(query) {
             // to silny sygnał że wpis jest „o tym". Każde trafienie +3.
             // Tytuł opisuje TEMAT wpisu, keyword — różne formy/synonimy. Tytuł to silniejszy sygnał.
             const titleN = estNormalize(item.title || '');
-            const titleWords = new Set(titleN.replace(/[?!.,;:—–-]/g,' ').split(/\s+/).filter(w => w.length >= 4));
+            const titleWords = new Set(titleN.replace(/[?!.,;:—–-]/g,' ').split(/\s+/).filter(estTokenOk));
             let titleHits = 0;
             qTokens.forEach(t => {
                 titleWords.forEach(tw => {
-                    if (t === tw || t.startsWith(tw) || tw.startsWith(t)) titleHits++;
+                    if (estTokenMatch(t, tw)) titleHits++;
                 });
             });
             if (titleHits > 0) score += titleHits * 3;
