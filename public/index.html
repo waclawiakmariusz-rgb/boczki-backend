@@ -21107,7 +21107,8 @@ if (inputNazwaCheck) {
         }
         
         document.addEventListener('keypress', function (e) {
-            if (e.key === 'Enter' && document.getElementById('an_login-overlay').style.display !== 'none') {
+            const anOverlay = document.getElementById('an_login-overlay');
+            if (e.key === 'Enter' && anOverlay && anOverlay.style.display !== 'none') {
                 an_sprobojZalogowac();
             }
         });
