@@ -10211,6 +10211,14 @@ let wciecieLogow = "";
         let options = args[1] || {};
         let akcja = 'nieznana';
 
+        // Pliki statyczne (np. przewodnik Esti) to nie API — przepuszczamy bez zmian.
+        // Wrapper robił JSON.parse na ich HTML-u, parse padał i podmieniał odpowiedź
+        // na awaryjny JSON {"status":"error",...} — przez co Esti nigdy nie dostała
+        // przewodnika i zawsze odpowiadała fallbackiem "napisz email".
+        if (/\.html(\?|#|$)/.test(urlStr)) {
+            return oldFetch(...args);
+        }
+
         // 1. Rozpoznanie akcji
         if (options.body && typeof options.body === 'string') {
             try { const parsed = JSON.parse(options.body); akcja = parsed.action || akcja; } catch(e) {}
