@@ -28967,7 +28967,12 @@ async function estLoadGuideInner() {
         console.log('[Esti] estLoadGuide() — start');
         // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
         const v = new Date().toISOString().slice(0,10); // YYYY-MM-DD
-        const r = await fetch(`${EST_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
+        let r = await fetch(`${EST_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
+        if (!r.ok) {
+            // Bezpiecznik: serwer może jeszcze nie mieć nowego pliku (stary deploy)
+            console.warn('[Esti] HTTP', r.status, 'dla', EST_GUIDE_URL, '— fallback na starszy przewodnik');
+            r = await fetch(`/Estelio_Przewodnik_Pracownik.html?v=${v}`, { cache: 'no-cache' });
+        }
         if (!r.ok) {
             console.warn('[Esti] Nie udało się pobrać przewodnika — HTTP', r.status);
             return;
