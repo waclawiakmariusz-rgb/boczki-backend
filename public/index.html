@@ -6725,7 +6725,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     <div style="background:#fef2f2; padding:15px; border:1px solid #ef4444; border-radius:8px; margin-bottom:20px; color:#7f1d1d;">
         <strong>TRYB SERWISOWY:</strong> Każda zmiana tutaj jest logowana jako "ALARMOWA MODYFIKACJA".<br>
-        Widzisz transakcje z 30 dni. <span style="background:#e5e7eb; padding:2px 5px; border-radius:4px;">Szare wiersze</span> są zablokowane (rozliczone przez Magdę — cofnij rozliczenie w Panelu Magdy).
+        Widzisz transakcje z 30 dni.
     </div>
 
     <div class="table-container">
@@ -14788,8 +14788,10 @@ function otworzEdycjeAwaryjna(rowStr) {
     document.getElementById('em_id').value = r.id;
     document.getElementById('em_data').value = new Date(r.data).toLocaleString();
     document.getElementById('em_kto_dodal').value = r.kto_dodal || "Brak danych";
-    document.getElementById('em_sprzedawca').value = r.sprzedawca;
-    
+
+    // Sprzedawcy — pastylki z wyboru z listy (bez wpisywania z palca)
+    inicjalizujTagiSprzedawcowEm(r.sprzedawca);
+
     // Klient
     document.getElementById('em_klient').value = r.klient;
     document.getElementById('em_id_klienta').value = r.id_klienta || ""; 
@@ -20529,6 +20531,94 @@ function dodajSprzedawceTag() {
 function usunSprzedawceTag(index) {
     wybraniSprzedawcy.splice(index, 1);
     renderujTagi();
+}
+
+// ============================================================
+// PASTYLKI SPRZEDAWCÓW — EDYCJA AWARYJNA (izolowane od standardowej)
+// ============================================================
+let wybraniSprzedawcyEm = [];
+
+function inicjalizujTagiSprzedawcowEm(aktualnyCiag) {
+    const container = document.getElementById('em_seller_tags_container');
+    const select = document.getElementById('em_seller_add_select');
+    container.innerHTML = "";
+    select.innerHTML = '<option value="" disabled selected>+ Dodaj pracownika...</option>';
+
+    // Szpieg: szukamy istniejącej listy pracowników na stronie
+    let listaPracownikow = [];
+    const wszystkieSelecty = document.querySelectorAll('select');
+    let znalezionaLista = null;
+    for (let s of wszystkieSelecty) {
+        if (s.id === 'em_seller_add_select' || s.id === 'seller_add_select') continue;
+        for (let op of s.options) {
+            if (op.value === "Ola" || op.value === "Julia" || op.value === "Marta") {
+                znalezionaLista = s;
+                break;
+            }
+        }
+        if (znalezionaLista) break;
+    }
+    if (znalezionaLista) {
+        for (let i = 0; i < znalezionaLista.options.length; i++) {
+            const val = znalezionaLista.options[i].value;
+            if (val && val !== "" && !val.includes("Wybierz")) {
+                listaPracownikow.push(val);
+            }
+        }
+    } else {
+        listaPracownikow = ["Ania", "DominikaD", "DominikaR", "Julia", "Marta", "Ola"];
+    }
+    listaPracownikow = [...new Set(listaPracownikow)].sort();
+    listaPracownikow.forEach(osoba => {
+        const opt = document.createElement('option');
+        opt.value = osoba;
+        opt.innerText = osoba;
+        select.appendChild(opt);
+    });
+
+    // Rozbij obecny ciąg na tagi
+    if (aktualnyCiag && aktualnyCiag.trim() !== "") {
+        wybraniSprzedawcyEm = aktualnyCiag.split(',').map(s => s.trim()).filter(s => s !== "");
+    } else {
+        wybraniSprzedawcyEm = [];
+    }
+    renderujTagiEm();
+}
+
+function renderujTagiEm() {
+    const container = document.getElementById('em_seller_tags_container');
+    const hiddenInput = document.getElementById('em_sprzedawca');
+    container.innerHTML = "";
+    if (wybraniSprzedawcyEm.length === 0) {
+        container.innerHTML = '<span style="color:#9ca3af; font-size:12px; font-style:italic; padding:4px 6px;">brak — wybierz z listy poniżej</span>';
+    }
+    wybraniSprzedawcyEm.forEach((osoba, index) => {
+        const tag = document.createElement('div');
+        tag.style.cssText = "background:#e0e7ff; color:#3730a3; padding:3px 10px; border-radius:12px; font-size:12px; font-weight:bold; display:flex; align-items:center; gap:6px; white-space:nowrap;";
+        tag.innerHTML = `
+            ${osoba}
+            <span onclick="usunSprzedawceTagEm(${index})" style="cursor:pointer; color:#dc2626; font-weight:bold; font-size:14px; line-height:1;">&times;</span>
+        `;
+        container.appendChild(tag);
+    });
+    hiddenInput.value = wybraniSprzedawcyEm.join(", ");
+}
+
+function dodajSprzedawceTagEm() {
+    const select = document.getElementById('em_seller_add_select');
+    const nowy = select.value;
+    if (nowy) {
+        if (!wybraniSprzedawcyEm.includes(nowy)) {
+            wybraniSprzedawcyEm.push(nowy);
+            renderujTagiEm();
+        }
+    }
+    select.value = "";
+}
+
+function usunSprzedawceTagEm(index) {
+    wybraniSprzedawcyEm.splice(index, 1);
+    renderujTagiEm();
 }
 
 // walidacja klientow, sprawdzanie czy są w bazie
@@ -26956,8 +27046,12 @@ initTheme();
 					<input type="text" id="em_kto_dodal" class="form-control" disabled style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; background:#f3f4f6; color:#6b7280; font-weight:bold;">
 				</div>
                 <div>
-                    <label style="font-size:12px; font-weight:bold; color:#555;">Sprzedawca:</label>
-                    <input type="text" id="em_sprzedawca" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
+                    <label style="font-size:12px; font-weight:bold; color:#555;">Sprzedawca / sprzedawcy:</label>
+                    <div id="em_seller_tags_container" style="display:flex; flex-wrap:wrap; gap:6px; min-height:36px; padding:6px 8px; border:1px solid #ddd; border-radius:6px; background:#fff; align-items:center;"></div>
+                    <select id="em_seller_add_select" onchange="dodajSprzedawceTagEm()" class="form-control" style="width:100%; padding:8px; border:1px solid #ddd; border-radius:6px; margin-top:6px; font-size:13px;">
+                        <option value="" disabled selected>+ Dodaj pracownika...</option>
+                    </select>
+                    <input type="hidden" id="em_sprzedawca">
                 </div>
             </div>
 
