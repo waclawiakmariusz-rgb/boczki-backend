@@ -28965,8 +28965,9 @@ function estLoadGuide() {
 async function estLoadGuideInner() {
     try {
         console.log('[Esti] estLoadGuide() — start');
-        // Cache-bust z aktualną datą — wymusza świeży fetch nawet jeśli proxy/CDN cachują HTML
-        const v = new Date().toISOString().slice(0,10); // YYYY-MM-DD
+        // Cache-bust unikalny per próba — wymusza świeży fetch nawet jeśli
+        // przeglądarka/proxy/LiteSpeed zapamiętały wcześniejszą odpowiedź (w tym 404)
+        const v = Date.now();
         let r = await fetch(`${EST_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
         if (!r.ok) {
             // Bezpiecznik: serwer może jeszcze nie mieć nowego pliku (stary deploy)
