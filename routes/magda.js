@@ -73,7 +73,8 @@ module.exports = (db) => {
 
     db.query(
       `SELECT id, data_sprzedazy, klient, id_klienta, zabieg, sprzedawca,
-              kwota, komentarz, szczegoly, platnosc, status, czy_rozliczone
+              kwota, komentarz, szczegoly, platnosc, status, czy_rozliczone,
+              kategoria_produktu
        FROM Sprzedaz
        WHERE tenant_id = ?
          AND DATE(data_sprzedazy) BETWEEN ? AND ?

@@ -39,7 +39,7 @@ module.exports = (db) => {
 
     if (action === 'kon_read_results') {
       db.query(
-        `SELECT id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji FROM Wyniki_konsultacja WHERE tenant_id = ? ORDER BY data_wpisu DESC LIMIT 50`,
+        `SELECT id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji, status FROM Wyniki_konsultacja WHERE tenant_id = ? ORDER BY data_wpisu DESC LIMIT 50`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -53,7 +53,8 @@ module.exports = (db) => {
             kwota_reklama: safeNum(r.kwota_reklama),
             kwota: safeNum(r.kwota_pakiet),
             kto: r.kto_wykonal, uwagi: r.uwagi,
-            typ_akcji: r.typ_akcji, upsell: safeNum(r.upsell)
+            typ_akcji: r.typ_akcji, upsell: safeNum(r.upsell),
+            status: r.status || 'Aktywna'
           })));
         }
       );
@@ -153,6 +154,19 @@ module.exports = (db) => {
         }
       );
 
+    } else if (action === 'kon_set_status') {
+      const newStatus = String(d.status || '').toLowerCase() === 'archiwizacja' ? 'Archiwizacja' : 'Aktywna';
+      db.query(
+        `UPDATE Wyniki_konsultacja SET status = ? WHERE tenant_id = ? AND id = ?`,
+        [newStatus, tenant_id, d.id],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono wpisu' });
+          zapiszLog(tenant_id, 'KONSULTACJA STATUS', d.user_log || '', `${d.id} -> ${newStatus}`);
+          return res.json({ status: 'success', newStatus });
+        }
+      );
+
     } else if (action === 'kon_add_consultant') {
       // Sprawdź czy istnieje
       db.query(
@@ -234,7 +248,7 @@ module.exports = (db) => {
       const month = d.month;
       getThresholdsMap(tenant_id, (thresholdsMap) => {
         db.query(
-          `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal, zabiegi_cialo, zabiegi_twarz FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') = ?`,
+          `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal, zabiegi_cialo, zabiegi_twarz FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') = ? AND (status = 'Aktywna' OR status IS NULL)`,
           [tenant_id, month],
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
@@ -276,7 +290,7 @@ module.exports = (db) => {
     } else if (action === 'akon_get_daily_summary') {
       const dateStr = d.date;
       db.query(
-        `SELECT klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE(data_konsultacji) = ?`,
+        `SELECT klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE(data_konsultacji) = ? AND (status = 'Aktywna' OR status IS NULL)`,
         [tenant_id, dateStr],
         (err, rows) => {
           if (err) return res.json({ status: 'success', data: [] });
@@ -296,7 +310,7 @@ module.exports = (db) => {
       const month = d.month;
       const compareMonth = d.compareMonth;
       db.query(
-        `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND (DATE_FORMAT(data_konsultacji, '%Y-%m') = ? OR DATE_FORMAT(data_konsultacji, '%Y-%m') = ?)`,
+        `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND (DATE_FORMAT(data_konsultacji, '%Y-%m') = ? OR DATE_FORMAT(data_konsultacji, '%Y-%m') = ?) AND (status = 'Aktywna' OR status IS NULL)`,
         [tenant_id, month, compareMonth || month],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
@@ -340,7 +354,7 @@ module.exports = (db) => {
       const monthStr = d.month;
       getThresholdsMap(tenant_id, (thresholdsMap) => {
         db.query(
-          `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal, obszar, typ_akcji FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') = ? ORDER BY data_konsultacji DESC`,
+          `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal, obszar, typ_akcji FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') = ? AND (status = 'Aktywna' OR status IS NULL) ORDER BY data_konsultacji DESC`,
           [tenant_id, monthStr],
           (err, rows) => {
             if (err) return res.json({ status: 'success', data: [] });

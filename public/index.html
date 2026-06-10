@@ -733,7 +733,9 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
     visibility: visible;
   }
 
-  /* Wszystkie kontenery rodziców — normalny flow, auto height (Apple safe-area, .main-content overflow OFF) */
+  /* Wszystkie kontenery rodziców — normalny flow, auto height.
+     flex: none żeby #app-container (display:flex; height:100vh) NIE ograniczał
+     wysokości dzieci do viewportu — bez tego drukuje się tylko 1 strona. */
   body[data-print-section] html,
   body[data-print-section] body,
   body[data-print-section] #app-container,
@@ -741,10 +743,16 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
     display: block !important;
     position: static !important;
     height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: visible !important;
     padding: 0 !important;
     margin: 0 !important;
     width: 100% !important;
+    flex: none !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
+    flex-basis: auto !important;
   }
 
   /* Sekcja drukowana — flow normalny + auto height + overflow visible.
@@ -778,8 +786,34 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
     height: auto !important;
     max-height: none !important;
   }
-  /* Inne sekcje (.section) ukryte */
-  body[data-print-section] .section:not(:has(.print-header)) { display: none !important; }
+
+  /* AGRESYWNY FIX: WSZYSTKIE potomki drukowanej sekcji — bez overflow/max-height
+     ograniczeń. Bez tego inline style='overflow-y:auto; max-height:60vh' albo
+     inline 'height: 100px' na potomku ucinają content i blokują paginację —
+     drukuje się tylko jedna strona z uciętym ostatnim wierszem. */
+  body[data-print-section] .printing-target,
+  body[data-print-section] .printing-target * {
+    max-height: none !important;
+    overflow: visible !important;
+    -webkit-overflow-scrolling: auto !important;
+  }
+  /* Główne kontenery wewnątrz — height auto (zachowujemy fixed-size dla badges, ikon) */
+  body[data-print-section] .printing-target,
+  body[data-print-section] .printing-target > *,
+  body[data-print-section] .printing-target .card,
+  body[data-print-section] .printing-target .rap_card,
+  body[data-print-section] .printing-target .table-container,
+  body[data-print-section] .printing-target table,
+  body[data-print-section] .printing-target tbody,
+  body[data-print-section] .printing-target tr {
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+  }
+  /* Inne sekcje (.section) ukryte — używamy klasy .printing-target zamiast :has()
+     bo :has() ma quirks w starszych Safari/Chrome przy print mode. */
+  body[data-print-section] .section:not(.printing-target) { display: none !important; }
+  body[data-print-section] .section.printing-target { display: block !important; }
 
   /* Ukryj UI elements w drukowanej sekcji */
   body[data-print-section] .filters,
@@ -1580,6 +1614,217 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
   .kr-seg-control { width: 100%; display: flex; }
   .kr-seg-option { flex: 1; padding: 10px 8px; font-size: 13px; }
 }
+
+/* ======================================================= */
+/* 🌙 DARK MODE — KONSULTACJE (redesign P3) + admin panel  */
+/* ======================================================= */
+
+/* Override zmiennych — pokrywa większość kr-* automatycznie */
+body.dark-mode #kon_raportowanie.kr-redesign {
+  --kr-ink: #f8fafc;
+  --kr-muted: #94a3b8;
+  --kr-rose: #f490b3;
+  --kr-rose-bg: #2a1f24;
+  --kr-rose-border: #4a3540;
+  --kr-rose-soft: #3a2730;
+  --kr-gold: #d4b87a;
+  --kr-border: #334155;
+  --kr-bg: #0f172a;
+  background: #0f172a !important;
+  color: #f8fafc;
+}
+
+/* Karty z hardcoded background:#fff */
+body.dark-mode .kr-hero-card,
+body.dark-mode .kr-hero-stats,
+body.dark-mode .kr-tabs-bar,
+body.dark-mode .kr-box,
+body.dark-mode .kr-rank-row {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+/* Hero top — różowy odcień ciemnego */
+body.dark-mode .kr-hero-top {
+  background: #2a1f24 !important;
+  border-bottom-color: #4a3540 !important;
+}
+
+/* Tytuły i wartości jasne */
+body.dark-mode .kr-page-header h1,
+body.dark-mode .kr-hero-info h2,
+body.dark-mode .kr-box-title,
+body.dark-mode .kr-stat-value,
+body.dark-mode .kr-rank-name,
+body.dark-mode .kr-rank-amount {
+  color: #f8fafc !important;
+}
+
+/* Tekst muted (etykiety, opisy) */
+body.dark-mode .kr-page-header p,
+body.dark-mode .kr-hero-info p,
+body.dark-mode .kr-stat-label,
+body.dark-mode .kr-stat-sub,
+body.dark-mode .kr-box-subtitle,
+body.dark-mode .kr-rank-sub,
+body.dark-mode .kr-placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Eyebrow gold */
+body.dark-mode .kr-box-eyebrow {
+  color: #d4b87a !important;
+}
+
+/* Tabs */
+body.dark-mode .kr-tab { color: #94a3b8 !important; }
+body.dark-mode .kr-tab:hover,
+body.dark-mode .kr-tab.active {
+  color: #f490b3 !important;
+  border-bottom-color: #f490b3 !important;
+}
+
+/* Buttons */
+body.dark-mode .kr-btn-secondary {
+  background: #1e293b !important;
+  color: #f490b3 !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-btn-secondary:hover { background: #2a1f24 !important; }
+
+/* Pola formularzy */
+body.dark-mode .kr-field input,
+body.dark-mode .kr-field select,
+body.dark-mode .kr-field textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode .kr-field input:focus,
+body.dark-mode .kr-field select:focus,
+body.dark-mode .kr-field textarea:focus {
+  border-color: #f490b3 !important;
+  box-shadow: 0 0 0 3px rgba(244, 144, 179, 0.15) !important;
+}
+body.dark-mode .kr-field-readonly input {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+}
+body.dark-mode .kr-field label { color: #94a3b8 !important; }
+body.dark-mode .kr-field-highlight input {
+  background: #2a1f24 !important;
+  border-color: #4a3540 !important;
+  color: #f490b3 !important;
+}
+
+/* Seg control (Normalna / Z Reklamy) */
+body.dark-mode .kr-seg-control { background: #0f172a !important; }
+body.dark-mode .kr-seg-option { color: #94a3b8 !important; }
+body.dark-mode .kr-seg-option.active {
+  background: #1e293b !important;
+  color: #f490b3 !important;
+}
+
+/* Pakiet spotlight + input */
+body.dark-mode .kr-pakiet-spotlight {
+  background: #2a1f24 !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-pakiet-input-wrap input {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #4a3540 !important;
+}
+body.dark-mode .kr-pakiet-label { color: #f490b3 !important; }
+body.dark-mode .kr-pakiet-hint,
+body.dark-mode .kr-pakiet-currency { color: #94a3b8 !important; }
+
+/* Upsell banner */
+body.dark-mode .kr-upsell-banner {
+  background: linear-gradient(135deg, #2a1f24, #3a2730) !important;
+}
+body.dark-mode .kr-upsell-label,
+body.dark-mode .kr-upsell-value { color: #f490b3 !important; }
+
+/* Badge'y — przyciemnione tła, akcent zachowany */
+body.dark-mode .kr-badge-success { background: rgba(21,128,61,0.25) !important; color: #6ee7b7 !important; }
+body.dark-mode .kr-badge-fail    { background: rgba(185,28,28,0.25) !important; color: #fca5a5 !important; }
+body.dark-mode .kr-badge-norm    { background: rgba(71,85,105,0.4) !important; color: #cbd5e1 !important; }
+body.dark-mode .kr-badge-ad      { background: rgba(207,61,120,0.25) !important; color: #f490b3 !important; }
+
+/* Stat boxes */
+body.dark-mode .kr-stat-box { border-color: #334155 !important; }
+body.dark-mode .kr-stat-box:hover { border-color: #4a3540 !important; }
+
+/* Ranking */
+body.dark-mode .kr-rank-bar-wrap { background: #0f172a !important; }
+body.dark-mode .kr-rank-other { background: #334155 !important; color: #94a3b8 !important; }
+
+/* Zabiegi list */
+body.dark-mode .kr-zabieg-row {
+  border-bottom-color: #334155 !important;
+  color: #cbd5e1 !important;
+}
+body.dark-mode .kr-zabieg-row strong { color: #f8fafc !important; }
+
+/* Hero icon — przyciemniony gradient */
+body.dark-mode .kr-hero-icon {
+  background: linear-gradient(135deg, #cf3d78, #a8316a) !important;
+  box-shadow: 0 8px 20px rgba(207,61,120,.4) !important;
+}
+
+/* Tabela wyników w nowym designie (kon_res-table z kr-redesign) */
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table th {
+  color: #94a3b8 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table td {
+  color: #cbd5e1 !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table tr:hover td {
+  background-color: #2a1f24 !important;
+}
+body.dark-mode #kon_raportowanie.kr-redesign .kon_res-table strong { color: #f8fafc !important; }
+
+/* ── Konfiguracja konsultacji (#kon_admin-panel) — uzupełnienia ── */
+body.dark-mode #kon_admin-panel { background: #0f172a !important; color: #f8fafc; }
+body.dark-mode #kon_admin-panel h3 {
+  color: #f8fafc !important;
+  border-bottom-color: #334155 !important;
+}
+body.dark-mode #kon_admin-panel label { color: #94a3b8 !important; }
+body.dark-mode #kon_admin-panel input,
+body.dark-mode #kon_admin-panel select,
+body.dark-mode #kon_admin-panel textarea {
+  background: #0f172a !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+body.dark-mode #kon_admin-panel input:focus,
+body.dark-mode #kon_admin-panel select:focus,
+body.dark-mode #kon_admin-panel textarea:focus {
+  border-color: #f490b3 !important;
+  box-shadow: 0 0 0 3px rgba(244, 144, 179, 0.15) !important;
+}
+body.dark-mode #kon_admin-panel .kon_badge-rekl { background: rgba(99,102,241,0.25) !important; color: #c7d2fe !important; }
+body.dark-mode #kon_admin-panel .kon_badge-norm { background: rgba(71,85,105,0.4) !important; color: #cbd5e1 !important; }
+
+/* ── Zakładka Statystyki — kafelki z hardcoded jasnymi tłami ──
+   Pakiety/Konsultacji/Skuteczność/Średnia mają jasne tła (#fff2f5, #f3f4f6,
+   #fef3c7, #fafbfc) — wymuszamy ciemny tekst żeby liczby były czytelne.
+   Suma upsell zostaje zielona (#15803d hardcoded). */
+body.dark-mode #kr-stats-finanse > div:nth-child(1) { background: #fff2f5 !important; }
+body.dark-mode #kr-stats-finanse > div > div:first-child { color: #6b7280 !important; }
+body.dark-mode #kr-stat-pakiety,
+body.dark-mode #kr-stat-count,
+body.dark-mode #kr-stat-skutecz { color: #1c1a18 !important; }
+body.dark-mode #kr-stat-srednia { color: #1c1a18 !important; }
+body.dark-mode #kr-stat-srednia-sub { color: #6b7280 !important; }
+body.dark-mode #kr-panel-statystyki .kr-box > div[style*="background:#fafbfc"] > div:first-child { color: #6b7280 !important; }
+
+/* ── Sekcja Analiza Konsultacji (#analiza-konsultacji) — tło ── */
+body.dark-mode #analiza-konsultacji { background: #0f172a !important; }
 
 /* ======================================================= */
 /* 🌙 DARK MODE — Dodatki (#addons) + Demo Dodatek         */
@@ -5790,6 +6035,52 @@ body.dark-mode .ds-pay-pill.card { background:rgba(45,119,234,.22) !important; c
 body.dark-mode .ds-pay-pill.transfer { background:rgba(124,58,237,.22) !important; color:#b497ff !important; }
 body.dark-mode .ds-pay-pill.blik { background:rgba(148,163,184,.22) !important; color:#cbd5e1 !important; }
 body.dark-mode .ds-pay-pill.other { background:rgba(148,163,184,.2) !important; color:#cbd5e1 !important; }
+
+/* Dark mode — profil klienta (notatki, memo-hero, retail) */
+body.dark-mode #memo-hero {
+    background:#1e1a14 !important;
+    border-color:#3a3225 !important;
+    color:#e8d9bf !important;
+}
+body.dark-mode #memo-content {
+    background:#1a1f2e !important;
+    border-color:#334155 !important;
+    color:#fcd9a0 !important;
+}
+body.dark-mode #analiza-retail-box,
+body.dark-mode #analiza-retail-box-2 {
+    background:#1e293b !important;
+    border-color:#334155 !important;
+}
+body.dark-mode #analiza-retail-box > div:first-child,
+body.dark-mode #analiza-retail-box-2 .analysis-header {
+    color:#fdba74 !important;
+}
+body.dark-mode #analiza-retail-list,
+body.dark-mode #analiza-retail-list-2 {
+    color:#e2e8f0 !important;
+}
+body.dark-mode #analiza-retail-list .retail-alert-badge,
+body.dark-mode #analiza-retail-list-2 .retail-alert-badge {
+    background:rgba(251,146,60,.2) !important;
+    color:#fdba74 !important;
+    border:1px solid rgba(251,146,60,.4) !important;
+}
+
+/* Dark mode — boxy z białym tłem w pp-summary-grid (Notatki, Zaproponuj nowość, Retencja) */
+body.dark-mode .pp-summary-grid > div {
+    background:#1e293b !important;
+    border-color:#334155 !important;
+}
+body.dark-mode .pp-summary-grid > div > div:first-child {
+    color:#e2e8f0 !important;
+}
+body.dark-mode #analiza-missing-list {
+    color:#cbd5e1 !important;
+}
+body.dark-mode #analiza-missing-list li {
+    color:#cbd5e1 !important;
+}
 </style>
 
 <div class="header">
@@ -6331,6 +6622,7 @@ function krSegSync(groupId, radio) {
 // === KR: wyliczanie KPI w hero z kon_rawData ===
 function krRenderKPI(data) {
   if(!Array.isArray(data)) return;
+  data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const now = new Date();
   const todayStr = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0') + '-' + String(now.getDate()).padStart(2,'0');
   const curMonth = now.getMonth();
@@ -6386,6 +6678,7 @@ function krParseZabiegi(text) {
 
 // === KR: statystyki miesięczne ===
 function krRenderStats(data) {
+  if(Array.isArray(data)) data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const monthRecs = krFilterMonth(data);
   const total = monthRecs.length;
   const sumPakiety = monthRecs.reduce((s,r) => s + (parseFloat(r.kwota) || 0), 0);
@@ -6460,6 +6753,7 @@ function krRenderStats(data) {
 
 // === KR: ranking pracownic ===
 function krRenderRanking(data) {
+  if(Array.isArray(data)) data = data.filter(r => String(r.status || 'Aktywna').toLowerCase() !== 'archiwizacja');
   const monthRecs = krFilterMonth(data);
   // Grupowanie po polu r.kto (pracownica która wykonała konsultację)
   const byKto = {};
@@ -6969,7 +7263,8 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="display:flex;gap:5px">
             <select id="bd-month-select" onchange="zmienMiesiac()"></select>
             <button onclick="pobierzUrodziny()" class="btn-primary" style="width:auto; margin:0;">Wczytaj</button>
-            <button onclick="toggleAddBirthday()" class="btn-primary" style="width:auto; margin:0; background:#10b981;">➕ Dodaj Klienta</button>
+            <!-- <button onclick="toggleAddBirthday()" class="btn-primary" style="width:auto; margin:0; background:#10b981;">➕ Dodaj Klienta</button> -->
+
         </div>
     </div>
 
@@ -9491,7 +9786,8 @@ ANALIZA MANAGER
                     </div>
 
                     <div class="odp-footer">
-                        Raport wygenerowany z Systemu Estelio | <span id="odp_print_timestamp"></span>
+                        <img src="/img/estelio-logo.png" alt="Estelio" style="height:28px; margin-bottom:6px; display:block; margin-left:auto; margin-right:auto;">
+                        <div>Raport wygenerowany z Systemu Estelio | <span id="odp_print_timestamp"></span></div>
                     </div>
                 </div>
             </div>
@@ -10352,7 +10648,7 @@ function kopiujLogiDoSchowka() {
     }
 
     // Tworzymy nagłówek raportu
-    const naglowek = "=== RAPORT DEBUGOWY SYSTEMU BOCZKI ===\n" + 
+    const naglowek = "=== RAPORT DEBUGOWY SYSTEMU ESTELIO ===\n" +
                      "Data: " + new Date().toLocaleString() + "\n" +
                      "Użytkownik: " + (currentUser || "Nieznany") + "\n" +
                      "User-Agent: " + navigator.userAgent + "\n" +
@@ -24401,10 +24697,11 @@ function kon_przeliczAutomatyke() {
 
 // ZAPIS WYNIKU DO BAZY
 function kon_zapiszWynik(e) {
-    e.preventDefault(); 
-    const btn = document.querySelector('#kon_raportowanie .kon_btn-primary'); 
-    btn.innerText="Zapisywanie..."; btn.disabled=true;
-    
+    e.preventDefault();
+    const btn = e.target.querySelector('button[type="submit"]');
+    const btnLabel = btn ? btn.innerText : "💾 Zapisz wynik konsultacji";
+    if (btn) { btn.innerText="Zapisywanie..."; btn.disabled=true; }
+
     let nazwaAkcji = "-";
     let obszar = "-";
 
@@ -24414,12 +24711,12 @@ function kon_zapiszWynik(e) {
         obszar = obszarRadio ? obszarRadio.value : "Ciało";
         nazwaAkcji = "Konsultacja Standardowa";
     } else {
-        const kampaniaVal = document.getElementById('kon_k_kampania').value;
-        if(!kampaniaVal) { 
-            alert("Wybierz akcję z listy rozwijanej!"); 
-            btn.disabled=false; 
-            btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-            return; 
+        const kampaniaEl = document.getElementById('kon_k_kampania');
+        const kampaniaVal = kampaniaEl ? kampaniaEl.value : "";
+        if(!kampaniaVal) {
+            alert("Wybierz akcję z listy rozwijanej!");
+            if (btn) { btn.disabled=false; btn.innerText=btnLabel; }
+            return;
         }
         const camp = kon_campaignsData.find(c => String(c.id_row) === String(kampaniaVal));
         nazwaAkcji = camp ? camp.nazwa : "-";
@@ -24449,17 +24746,16 @@ function kon_zapiszWynik(e) {
     };
 
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
-        alert("✅ Zapisano pomyślnie!"); 
-        e.target.reset(); 
-        document.getElementById('kon_k_data').value=new Date().toISOString().split('T')[0]; 
-        kon_przelaczTryb('Normalna'); 
-        kon_pobierzWyniki(); 
-        btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-        btn.disabled=false;
+        alert("✅ Zapisano pomyślnie!");
+        e.target.reset();
+        const dataEl = document.getElementById('kon_k_data');
+        if (dataEl) dataEl.value = new Date().toISOString().split('T')[0];
+        kon_przelaczTryb('Normalna');
+        kon_pobierzWyniki();
+        if (btn) { btn.innerText=btnLabel; btn.disabled=false; }
     }).catch(err => {
         alert("Błąd zapisu: " + err);
-        btn.innerText="💾 Zapisz Wynik Konsultacji"; 
-        btn.disabled=false;
+        if (btn) { btn.innerText=btnLabel; btn.disabled=false; }
     });
 }
 // Pobieranie listy zapisanych wyników z bazy (Arkusz: Konsultacje)
@@ -24643,27 +24939,37 @@ function kon_renderujTabeleWycinek() {
     }
 
     wycinek.forEach(r => {
-        let badge = r.typ === "Reklama" 
+        let badge = r.typ === "Reklama"
             ? `<span class="kon_res-badge" style="background:#fff7ed; color:#9a3412; border:1px solid #ffedd5">REKLAMA</span>`
             : `<span class="kon_res-badge" style="background:#f0f9ff; color:#075985; border:1px solid #e0f2fe">NORMALNA</span>`;
-        
+
         let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${r.upsell} zł</span>` : "-";
         let zabiegi = (r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "");
-        
+
         let obszarInfo = r.obszar && r.obszar !== "-" ? `(${r.obszar})` : "";
         let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? r.typ_akcji : "";
 
+        const isArchive = String(r.status || '').toLowerCase() === 'archiwizacja';
+        const statusBadge = isArchive
+            ? ` <span class="kon_res-badge" style="background:#fef2f2; color:#991b1b; border:1px solid #fecaca">ARCHIWUM</span>`
+            : '';
+        const akcjaPrzycisk = isArchive
+            ? `<button class="kon_btn-sm" onclick="kon_setStatusKonsultacji('${r.id}','Aktywna')" title="Przywróć">↩️</button>`
+            : `<button class="kon_btn-sm" onclick="kon_setStatusKonsultacji('${r.id}','Archiwizacja')" title="Archiwizuj">📦</button>`;
+        const trStyle = isArchive ? ' style="opacity:0.55;"' : '';
+
         t.innerHTML += `
-            <tr>
+            <tr${trStyle}>
                 <td style="white-space:nowrap;">${r.data_display}</td>
-                <td><strong>${r.klient}</strong></td>
+                <td><strong>${r.klient}</strong>${statusBadge}</td>
                 <td>${badge}<br><small style="color:#6b7280; display:block; margin-top:4px;">${akcjaInfo} ${obszarInfo}</small></td>
                 <td><small>${zabiegi || "-"}</small></td>
                 <td><b style="color:var(--kon_primary)">${r.kwota} zł</b></td>
                 <td>${upsellText}</td>
                 <td>${r.kto}</td>
                 <td>
-                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')">✏️</button>
+                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')" title="Edytuj">✏️</button>
+                    ${akcjaPrzycisk}
                 </td>
             </tr>`;
     });
@@ -24688,6 +24994,31 @@ function kon_renderujTabeleWycinek() {
 function kon_zmienStrone(kierunek) {
     kon_obecnaStrona += kierunek;
     kon_renderujTabeleWycinek();
+}
+
+// Archiwizacja / przywracanie konsultacji — archiwum NIE jest podliczane w KPI/Stats/Rankingu
+function kon_setStatusKonsultacji(id, newStatus) {
+    const akcja = newStatus === 'Archiwizacja' ? 'zarchiwizować' : 'przywrócić jako aktywną';
+    if (!confirm(`Czy na pewno ${akcja} tę konsultację?`)) return;
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: 'kon_set_status',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id: id,
+            status: newStatus
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            kon_pobierzWyniki();
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd zapisu: ' + err));
 }
 
 // --- HISTORIA LOGÓW ---

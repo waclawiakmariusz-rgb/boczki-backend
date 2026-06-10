@@ -177,7 +177,7 @@ module.exports = (db) => {
 
               // 3. Konsultacje
               db.query(
-                `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji BETWEEN ? AND ?`,
+                `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji BETWEEN ? AND ? AND (status = 'Aktywna' OR status IS NULL)`,
                 [tenant_id, dFrom, dTo],
                 (err3, konsultacje) => {
                   // Progi z Typy_konsultacji

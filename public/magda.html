@@ -512,7 +512,7 @@
     <div class="tabs">
       <button class="tab-btn active" data-tab="sprzedaz">💳 Sprzedaż</button>
       <button class="tab-btn" data-tab="zadatki">🏷️ Zadatki</button>
-      <button class="tab-btn" data-tab="kosmetyki">💄 Kosmetyki</button>
+      <button class="tab-btn" data-tab="kosmetyki">🛍️ Detal</button>
     </div>
 
     <!-- Sprzedaż -->
@@ -622,7 +622,7 @@
           <div class="col-info"></div>
         </div>
         <div id="listaKosmetyki">
-          <div class="empty-msg"><div class="empty-icon">💄</div>Wybierz zakres dat i kliknij Szukaj.</div>
+          <div class="empty-msg"><div class="empty-icon">🛍️</div>Wybierz zakres dat i kliknij Szukaj.</div>
         </div>
       </div>
     </div>
@@ -816,12 +816,31 @@ async function wczytajZadatki(od, _do) {
   } catch { $('listaZadatki').innerHTML='<div class="empty-msg" style="color:#ef4444">Błąd połączenia.</div>'; }
 }
 
-// ── Helpers — kosmetyki filter ────────────────────────────────────
+// ── Helpers — Detal filter ────────────────────────────────────────
+// Detal = kosmetyk lub suplement (z prefiksu w zabiegu/celu lub kategoria_produktu w bazie)
+const DETAL_PREFIX_RE = /^(kosmetyk|suplement):/i;
+const DETAL_INCLUDES_RE = /(kosmetyk|suplement):/i;
+
+function jestDetalem(r) {
+  // Sprzedaz: pole zabieg + kolumna kategoria_produktu
+  if (r.zabieg !== undefined) {
+    if (DETAL_INCLUDES_RE.test(String(r.zabieg||''))) return true;
+    const kat = String(r.kategoria_produktu||'').toLowerCase();
+    if (kat === 'kosmetyk' || kat === 'suplement') return true;
+    return false;
+  }
+  // Zadatki: pole cel (brak kolumny kategoria_produktu)
+  if (r.cel !== undefined) {
+    return DETAL_INCLUDES_RE.test(String(r.cel||''));
+  }
+  return false;
+}
+
 function sprzedazBezKosmetykow() {
-  return rowsSprzedaz.filter(r => !String(r.zabieg||'').toLowerCase().includes('kosmetyk:'));
+  return rowsSprzedaz.filter(r => !jestDetalem(r));
 }
 function zadatkiBezKosmetykow() {
-  return rowsZadatki.filter(r => !String(r.cel||'').toLowerCase().includes('kosmetyk:'));
+  return rowsZadatki.filter(r => !jestDetalem(r));
 }
 
 // ── Stats ─────────────────────────────────────────────────────────
@@ -839,7 +858,7 @@ function updateStats() {
   $('statNie').textContent      = rows.length-licRoz;
   $('statNieKwota').textContent = fmtKwota(total-kwRoz);
   $('statSuma').textContent     = fmtKwota(total);
-  $('statSumaTab').textContent  = activeTab==='sprzedaz' ? 'sprzedaż' : activeTab==='zadatki' ? 'zadatki' : 'kosmetyki';
+  $('statSumaTab').textContent  = activeTab==='sprzedaz' ? 'sprzedaż' : activeTab==='zadatki' ? 'zadatki' : 'detalu';
 }
 
 // ── Payment breakdown ─────────────────────────────────────────────
@@ -930,7 +949,7 @@ function renderSprzedawcy() {
   if (activeTab === 'kosmetyki') {
     map = buildPersonMap(rowsKosmetyki, 'sprzedawca');
   } else {
-    // Sprzedaż+Zadatki combined (bez kosmetyków) — shown on both sprzedaz and zadatki tabs
+    // Sprzedaż+Zadatki combined (bez detalu) — shown on both sprzedaz and zadatki tabs
     map = mergePersonMaps(
       buildPersonMap(sprzedazBezKosmetykow(), 'sprzedawca'),
       buildPersonMap(zadatkiBezKosmetykow(), 'pracownicy')
@@ -942,7 +961,7 @@ function renderSprzedawcy() {
   $('sprzedawcySection').style.display = 'block';
   $('sprzedawcySubtitle').textContent = activeTab === 'kosmetyki'
     ? '— tylko rozliczone transakcje, kwota podzielona proporcjonalnie'
-    : '— Sprzedaż + Zadatki (bez kosmetyków), tylko rozliczone, kwota podzielona proporcjonalnie';
+    : '— Sprzedaż + Zadatki (bez detalu), tylko rozliczone, kwota podzielona proporcjonalnie';
 
   // Color palette for avatars (cycles)
   const colors = [
@@ -976,7 +995,7 @@ function renderSprzedawcy() {
 // ── Render Sprzedaż ───────────────────────────────────────────────
 function renderSprzedaz() {
   const rows = sortedRows(rowsSprzedaz, sortS)
-    .filter(r => !String(r.zabieg||'').toLowerCase().includes('kosmetyk:'));
+    .filter(r => !jestDetalem(r));
   if (!rows.length) {
     $('listaSprzedaz').innerHTML='<div class="empty-msg"><div class="empty-icon">🔍</div>Brak transakcji w podanym okresie.</div>';
     return;
@@ -1012,7 +1031,7 @@ function rowHtmlSprzedaz(r) {
 // ── Render Zadatki ────────────────────────────────────────────────
 function renderZadatki() {
   const rows = sortedRows(rowsZadatki, sortZ)
-    .filter(r => !String(r.cel||'').toLowerCase().includes('kosmetyk:'));
+    .filter(r => !jestDetalem(r));
   if (!rows.length) {
     $('listaZadatki').innerHTML='<div class="empty-msg"><div class="empty-icon">🔍</div>Brak zadatków w podanym okresie.</div>';
     return;
@@ -1045,24 +1064,24 @@ function rowHtmlZadatek(r) {
   </div>`;
 }
 
-// ── Kosmetyki ─────────────────────────────────────────────────────
+// ── Detal (kosmetyki + suplementy) ────────────────────────────────
 function buildKosmetyki() {
   const fromSp = rowsSprzedaz
-    .filter(r => String(r.zabieg||'').toLowerCase().includes('kosmetyk:'))
+    .filter(r => jestDetalem(r))
     .map(r => ({
       ...r,
       _tabela: 'sprzedaz',
       data: r.data_sprzedazy,
-      produkt: String(r.zabieg||'').replace(/^kosmetyk:\s*/i, ''),
+      produkt: String(r.zabieg||'').replace(DETAL_PREFIX_RE, '').trim(),
       platnosc_display: r.platnosc
     }));
   const fromZa = rowsZadatki
-    .filter(r => String(r.cel||'').toLowerCase().includes('kosmetyk:'))
+    .filter(r => jestDetalem(r))
     .map(r => ({
       ...r,
       _tabela: 'zadatki',
       data: r.data_wplaty,
-      produkt: String(r.cel||'').replace(/^kosmetyk:\s*/i, ''),
+      produkt: String(r.cel||'').replace(DETAL_PREFIX_RE, '').trim(),
       sprzedawca: r.pracownicy,
       platnosc_display: r.metoda
     }));
@@ -1072,7 +1091,7 @@ function buildKosmetyki() {
 function renderKosmetyki() {
   const rows = sortedRows(rowsKosmetyki, sortK);
   if (!rows.length) {
-    $('listaKosmetyki').innerHTML='<div class="empty-msg"><div class="empty-icon">💄</div>Brak kosmetyków w podanym okresie.</div>';
+    $('listaKosmetyki').innerHTML='<div class="empty-msg"><div class="empty-icon">🛍️</div>Brak detalu w podanym okresie.</div>';
     return;
   }
   $('listaKosmetyki').innerHTML = rows.map(r => rowHtmlKosmetyk(r)).join('');
@@ -1142,7 +1161,7 @@ function onInfo(event, btn) {
   const rows = tabela==='sprzedaz' ? rowsSprzedaz : tabela==='zadatki' ? rowsZadatki : rowsKosmetyki;
   const row  = rows.find(r => String(r.id)===String(id));
   if (!row) return;
-  $('modalTitle').textContent = tabela==='sprzedaz' ? '💳 Szczegóły sprzedaży' : tabela==='zadatki' ? '🏷️ Szczegóły zadatku' : '💄 Szczegóły kosmetyku';
+  $('modalTitle').textContent = tabela==='sprzedaz' ? '💳 Szczegóły sprzedaży' : tabela==='zadatki' ? '🏷️ Szczegóły zadatku' : '🛍️ Szczegóły detalu';
   let html = '';
   if (tabela==='kosmetyki') {
     const data = row.data ? String(row.data).slice(0,10) : '';
