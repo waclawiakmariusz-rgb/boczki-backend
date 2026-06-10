@@ -29052,7 +29052,11 @@ async function estLoadGuideInner() {
         if (entries.length) {
             estGuideLastError = '';
         } else {
-            estGuideLastError = `pobrano ${html.length} znaków, ale 0 sekcji (sections=${sections.length})`;
+            // Pokaż początek odpowiedzi — gdy serwer/proxy/antywirus podmienia
+            // treść na coś krótkiego, to jedyny sposób żeby zobaczyć CO przyszło.
+            const snippet = escHtml(html.slice(0, 150));
+            estGuideLastError = (estGuideLastError ? estGuideLastError + ' | ' : '')
+                + `odpowiedź ${r.status} z ${r.url}, ${html.length} znaków: „${snippet}"`;
         }
     } catch(e) {
         console.warn('[Esti] Błąd ładowania przewodnika:', e.message);
