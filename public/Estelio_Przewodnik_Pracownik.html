@@ -854,7 +854,7 @@
         <span class="scenario-label">Nowa dostawa — Vagheggi</span>
         <h4>Wczoraj przyszedł karton kremów Vagheggi — 12 słoików</h4>
         <div class="scenario-body">
-          <p>Marta wchodzi w <strong>Magazyn → Stan magazynowy</strong>. Znajduje pozycję "Vagheggi twarz - krem nawilżający". Stan obecny: 2 sztuki (poprzednia dostawa się skończyła).</p>
+          <p>Marta wchodzi w <strong>Kosmetyki → Stan magazynowy</strong>. Znajduje pozycję "Vagheggi twarz - krem nawilżający". Stan obecny: 2 sztuki (poprzednia dostawa się skończyła).</p>
           <p>Klika ✏️ przy produkcie. Otwiera się modal edycji:</p>
           <ul>
             <li>Aktualna ilość: <code>2</code> → zmienia na <code>14</code> (2 + 12 nowych)</li>
@@ -863,12 +863,12 @@
             <li>Data ważności: <code>2027-12-31</code> (z nowej dostawy, jeśli różna)</li>
           </ul>
           <p>Klika "Zapisz".</p>
-          <div class="scenario-result">Stan kremów wzrósł z 2 do 14. Alert "niski stan" zniknął. W logach jest wpis "Marta zwiększyła stan z 2 do 14 (dostawa)". Manager widzi.</div>
+          <div class="scenario-result">Stan kremów wzrósł z 2 do 14. Alert "niski stan" zniknął. W logu systemu zostaje wpis o edycji (Ilość: 2 → 14, kto i kiedy). Manager widzi.</div>
         </div>
       </div>
 
       <h3>Stan magazynowy — co widzisz</h3>
-      <p>Menu → <strong>Magazyn → Stan magazynowy</strong>. Lista produktów z kolumnami:</p>
+      <p>Menu → <strong>Kosmetyki → Stan magazynowy</strong>. Na górze filtry kategorii: <strong>Wszystkie / Detal / ∑ Lista Zbiorcza</strong>, obok przyciski 🔄 Odśwież i 🖨️ Eksport PDF. Lista produktów z kolumnami:</p>
       <table>
         <thead><tr><th>Kolumna</th><th>Co znaczy</th></tr></thead>
         <tbody>
@@ -882,7 +882,7 @@
       </table>
 
       <h3>Dodanie nowego produktu (nowy artykuł w cenniku)</h3>
-      <p>Przycisk "+ Dodaj produkt". Wypełnij:</p>
+      <p>Menu → <strong>Kosmetyki → Przyjęcie towaru</strong>. Wypełnij:</p>
       <ul>
         <li>Nazwa produktu (np. "Vagheggi serum nawilżające 30ml")</li>
         <li>Ilość początkowa (np. 6)</li>
@@ -890,7 +890,7 @@
         <li>Cena brutto (np. 120)</li>
         <li>Data ważności (np. 2027-06-30)</li>
       </ul>
-      <p>Klika "Dodaj". Produkt pojawia się w stanie magazynowym i w liście rozwijanej przy sprzedaży.</p>
+      <p>Klikasz "Zapisz". Produkt pojawia się w stanie magazynowym i w liście rozwijanej przy sprzedaży.</p>
 
       <h3>Edycja produktu — zmiana stanu</h3>
 
@@ -903,16 +903,14 @@
           <ol>
             <li>Wchodzi w "Stan magazynowy"</li>
             <li>Klika ✏️ przy Vagheggi krem</li>
-            <li>Zmniejsza stan z 14 na 13</li>
-            <li><strong>System WYMAGA podania powodu</strong> (bo to zmniejszenie nie przez sprzedaż)</li>
-            <li>Marta wpisuje: <code>"Julia - tester do polecania klientkom (zatwierdzone przez Patrycję)"</code></li>
-            <li>Zapisuje</li>
+            <li>Zmniejsza stan z 14 na 13 i zapisuje</li>
+            <li>Mówi Patrycji (albo pisze na grupie): "Julia wzięła tester kremu Vagheggi, zatwierdzone"</li>
           </ol>
-          <div class="scenario-result">Magazyn zaktualizowany. W logach: "Marta zmniejszyła Vagheggi krem z 14 do 13 — POWÓD: Julia tester (zatwierdzone)". Manager widzi i wie że to nie pomyłka, nie kradzież, tylko wzięcie z autoryzacją.</div>
+          <div class="scenario-result">Magazyn zaktualizowany. W logu systemu zostaje wpis o edycji (Ilość: 14 → 13, kto i kiedy). Manager wie od Marty, że to tester z autoryzacją — nie pomyłka, nie kradzież.</div>
         </div>
       </div>
 
-      <div class="warning"><strong>Bardzo ważne:</strong> jeśli zmniejszasz stan produktu (poza sprzedażą która robi to automatycznie) — system <strong>wymaga podania powodu</strong>. To audyt — żeby manager wiedział, dlaczego stan spadł. Przykładowe powody:</div>
+      <div class="warning"><strong>Bardzo ważne:</strong> każda zmiana stanu (poza sprzedażą, która robi to automatycznie) jest <strong>zapisywana w logu systemu</strong> — kto, kiedy i o ile zmienił. Manager to widzi. Dlatego gdy zmniejszasz stan ręcznie, zawsze poinformuj managera dlaczego. Typowe powody:</div>
       <ul>
         <li>"Tester pracownika" (z autoryzacją managera)</li>
         <li>"Zepsute opakowanie - wyrzucono"</li>
@@ -928,19 +926,18 @@
         <span class="scenario-label">Czwartek = przegląd zamówień</span>
         <h4>Marta sprawdza co trzeba zamówić u dostawców</h4>
         <div class="scenario-body">
-          <p>Menu → <strong>Magazyn → Co zamówić</strong>. System pokazuje:</p>
+          <p>Menu → <strong>Kosmetyki → Co zamówić?</strong>. Raport pokazuje dwie listy:</p>
           <ul>
-            <li>Vagheggi krem nawilżający — stan: 2 (niski!) → sugerowane: 12 sztuk</li>
-            <li>Endermologia preparat — stan: 1 (krytyczny!) → sugerowane: 5 sztuk</li>
-            <li>Karboksyterapia płyn — data ważności za 30 dni → sugerowane: nie zamawiać, zużyć obecne</li>
+            <li><strong>📉 Krytyczne stany (0 lub 1 sztuka)</strong> — np. Vagheggi krem nawilżający (stan: 1), Endermologia preparat (stan: 0)</li>
+            <li><strong>⏳ Krótka data ważności</strong> — np. Karboksyterapia płyn, 30 dni do końca → zużyć w pierwszej kolejności, nie zamawiać nowych</li>
           </ul>
           <p>Marta wysyła email do dostawcy Vagheggi: "Proszę o 12 słoików kremu nawilżającego, zamówienie standardowe".</p>
           <div class="scenario-result">Zamówienie wysłane. Marta dodaje zadanie "Sprawdź czy dostawa Vagheggi przyszła w piątek" do Zadań na piątek.</div>
         </div>
       </div>
 
-      <h3>Historia ruchu</h3>
-      <p>Menu → <strong>Magazyn → Historia</strong>. Cała historia zmian stanów — kto, kiedy, co dodał/usunął, z jakim powodem. Manager używa tego do kontroli.</p>
+      <h3>Historia zmian magazynowych</h3>
+      <p>Każda operacja (edycja produktu, przyjęcie towaru, archiwizacja) zapisuje się automatycznie w logu systemu — kto, kiedy i co zmienił. Manager ma do tych wpisów wgląd w <strong>Dzienniku Zdarzeń</strong> i używa ich do kontroli.</p>
 
       <div class="tip"><strong>💡 Praktyka:</strong> sprawdzaj "Co zamówić" raz w tygodniu (np. czwartek rano). Wystarczy 5 minut żeby uniknąć "skończył się krem na zabiegu" za miesiąc.</div>
     </section>
@@ -961,13 +958,13 @@
         <h4>Ostatni piątek miesiąca, 16:00 — Marta i Julia robią inwentaryzację</h4>
         <div class="scenario-body">
           <p>Po zamknięciu salonu Marta z Julią siadają z tabletem do inwentaryzacji.</p>
-          <p>Plan: Julia <strong>liczy fizycznie</strong> (przegląda półki, otwiera szufladki), Marta <strong>wpisuje</strong> w tablet.</p>
-          <p>Menu → <strong>Magazyn → Inwentaryzacja</strong>. Lista wszystkich 124 produktów.</p>
+          <p>Plan: Julia <strong>liczy fizycznie</strong> (przegląda półki, otwiera szufladki), Marta <strong>porównuje i koryguje</strong> w tablecie.</p>
+          <p>Menu → <strong>Kosmetyki → Inwentaryzacja</strong>. Lista wszystkich produktów pogrupowana po nazwie, z filtrami <strong>Wszystkie / 🧴 Profesja / 🛍️ Detal</strong>.</p>
           <p>Procedura per produkt:</p>
           <ol>
             <li>Julia bierze produkt z półki, czyta nazwę, liczy sztuki</li>
-            <li>Marta wpisuje liczbę w polu "Faktyczna ilość"</li>
-            <li>System pokazuje: <strong>system: 14 / faktycznie: 13</strong> → pole zielone gdy zgadza się, czerwone gdy różnica</li>
+            <li>Marta porównuje z liczbą w systemie przy tym produkcie</li>
+            <li>Gdy się nie zgadza — koryguje od razu przyciskami <strong>−</strong> / <strong>+</strong> przy produkcie (zmiana zapisuje się natychmiast)</li>
           </ol>
           <p>Po 90 minutach, 124 produkty sprawdzone. Wyniki:</p>
           <ul>
@@ -975,26 +972,25 @@
             <li>3 produkty miały mniej niż w systemie (sumaryczna różnica: -3 sztuki)</li>
             <li>1 produkt miał o 1 więcej (pewnie ktoś nie wpisał ostatniej dostawy)</li>
           </ul>
-          <p>Marta klika "Zatwierdź inwentaryzację". System koryguje stany na faktyczne.</p>
-          <div class="scenario-result">Magazyn zsynchronizowany z rzeczywistością. W logach jest pełen raport różnic. Manager Patrycja po weekendzie sprawdza raport — zauważa, że krem do rąk minus 2 = warto zapytać kosmetologów czy ktoś nie zapomniał wpisać sprzedaży.</div>
+          <div class="scenario-result">Magazyn zsynchronizowany z rzeczywistością. Każda korekta zostawiła wpis w logu systemu. Manager Patrycja po weekendzie przegląda wpisy — zauważa, że krem do rąk minus 2 = warto zapytać kosmetologów czy ktoś nie zapomniał wpisać sprzedaży.</div>
         </div>
       </div>
 
       <h3>Procedura inwentaryzacji</h3>
       <ol>
         <li>Wybierz dzień — <strong>po zamknięciu salonu</strong>, najlepiej koniec miesiąca</li>
-        <li>Wejdź w <strong>Magazyn → Inwentaryzacja</strong></li>
-        <li>Lista wszystkich produktów z kolumną "Faktyczna ilość"</li>
-        <li>Idź po kolei z koleżanką (jedna liczy, druga wpisuje)</li>
-        <li>System na bieżąco pokazuje różnice</li>
-        <li>Po skończeniu kliknij "Zatwierdź"</li>
-        <li>System zapisuje korektę i raport różnic</li>
+        <li>Wejdź w <strong>Kosmetyki → Inwentaryzacja</strong></li>
+        <li>Lista produktów pogrupowana po nazwie z aktualną ilością (filtry: Wszystkie / Profesja / Detal)</li>
+        <li>Idź po kolei z koleżanką (jedna liczy fizycznie, druga porównuje z systemem)</li>
+        <li>Różnice koryguj od razu przyciskami <strong>−</strong> / <strong>+</strong> przy produkcie — każda zmiana zapisuje się natychmiast</li>
+        <li>Produkt wycofany z oferty usuwasz przyciskiem <strong>X</strong> — trafia do 🗑️ <strong>Archiwum</strong>, skąd można go przywrócić (⟲)</li>
+        <li>Wolisz liczyć na papierze? <strong>🖨️ Eksport PDF</strong> drukuje listę do odhaczania</li>
       </ol>
 
       <div class="tip"><strong>💡 Dobra praktyka:</strong> rób inwentaryzację we DWIE osoby — recepcja+kosmetolog. Jedna liczy fizycznie, druga wpisuje. Mniej pomyłek, szybciej, sprawiedliwiej (nikt nie pisze "sam swoje liczby").</div>
 
       <h3>Po inwentaryzacji — analiza różnic</h3>
-      <p>Manager Patrycja wieczorem przegląda raport. Częste przyczyny różnic:</p>
+      <p>Manager przegląda wpisy o korektach w logu systemu. Częste przyczyny różnic:</p>
       <ul>
         <li><strong>Sprzedaż nie wpisana</strong> — kosmetolog dał klientce produkt ale nie zarejestrował</li>
         <li><strong>Tester pracownika bez wpisu</strong> — ktoś wziął i zapomniał</li>
@@ -1002,7 +998,7 @@
         <li><strong>Zniknięcie</strong> — niestety czasem się zdarza, manager bada dalej</li>
       </ul>
 
-      <div class="warning"><strong>Bezpieczeństwo:</strong> nigdy nie zatwierdzaj inwentaryzacji "z głowy" bez fizycznego liczenia. To jest cały sens audytu — różnice są informacją, nie problemem do schowania.</div>
+      <div class="warning"><strong>Bezpieczeństwo:</strong> nigdy nie koryguj stanów "z głowy" bez fizycznego liczenia. To jest cały sens audytu — różnice są informacją, nie problemem do schowania.</div>
     </section>
 
     <!-- ZADANIA -->
