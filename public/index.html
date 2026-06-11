@@ -6643,7 +6643,8 @@ function krRenderKPI(data) {
   const dzisCount = dzisRecs.length;
   const totalCount = monthRecs.length;
   const upsellSum = monthRecs.reduce((s,r) => s + (parseFloat(r.upsell) || 0), 0);
-  const successCount = monthRecs.filter(r => (parseFloat(r.upsell) || 0) > 0).length;
+  // Sukces wg backendu (isSuccess z progów Typy_konsultacji) — wcześniej upsell>0, co rozjeżdżało się z Analizą Konsultacji
+  const successCount = monthRecs.filter(r => !!r.isSuccess).length;
   const skutecznosc = totalCount > 0 ? Math.round(successCount/totalCount*100) : 0;
 
   const setEl = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
@@ -6683,7 +6684,8 @@ function krRenderStats(data) {
   const total = monthRecs.length;
   const sumPakiety = monthRecs.reduce((s,r) => s + (parseFloat(r.kwota) || 0), 0);
   const sumUpsell = monthRecs.reduce((s,r) => s + (parseFloat(r.upsell) || 0), 0);
-  const succCount = monthRecs.filter(r => (parseFloat(r.upsell) || 0) > 0).length;
+  // Sukces wg backendu (isSuccess) — spójne z Analizą Konsultacji
+  const succCount = monthRecs.filter(r => !!r.isSuccess).length;
   const skut = total > 0 ? Math.round(succCount/total*100) : 0;
   const srednia = total > 0 ? sumPakiety / total : 0;
 
@@ -6712,7 +6714,7 @@ function krRenderStats(data) {
       zabiegiBox.innerHTML = '<div style="text-align:center; color:#9ca3af; padding:20px;">Brak danych w tym miesiącu</div>';
     } else {
       zabiegiBox.innerHTML = top.map(([name, n]) =>
-        `<div class="kr-zabieg-row"><span>${name.charAt(0).toUpperCase() + name.slice(1)}</span><strong>${n}×</strong></div>`
+        `<div class="kr-zabieg-row"><span>${escHtml(name.charAt(0).toUpperCase() + name.slice(1))}</span><strong>${n}×</strong></div>`
       ).join('');
     }
   }
@@ -6791,7 +6793,7 @@ function krRenderRanking(data) {
       <div class="kr-rank-row">
         <div class="kr-rank-medal ${medalClass}">${medalContent}</div>
         <div class="kr-rank-info">
-          <div class="kr-rank-name">${p.name}</div>
+          <div class="kr-rank-name">${escHtml(p.name)}</div>
           <div class="kr-rank-bar-wrap"><div class="kr-rank-bar" style="width:${barWidth}%;"></div></div>
         </div>
         <div class="kr-rank-stats">
@@ -6852,6 +6854,16 @@ document.addEventListener('DOMContentLoaded', () => {
         <div style="margin-top:20px;"><ul id="kon_admin-list" style="list-style:none; padding:0; margin:0;"></ul></div>
     </div>
 
+    <div class="kon_card">
+        <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">⚙️ Ustawienia Konsultacji Standardowej</h3>
+        <div class="kon_form-grid" style="align-items:end; margin-bottom:15px;">
+            <div><label>Cena konsultacji (PLN):</label><input type="number" step="0.01" min="0" id="kon_set_cena" placeholder="199"></div>
+            <div><label>Próg darmowości / upsellu (PLN):</label><input type="number" step="0.01" min="0" id="kon_set_prog" placeholder="1000"></div>
+        </div>
+        <p style="font-size:12px; color:#64748b; margin:0 0 15px;">Przy pakiecie ≥ progu konsultacja jest darmowa (koszt 0 zł), a nadwyżka ponad próg liczy się jako upsell. Wartości dotyczą trybu „Normalna" — akcje promocyjne mają własne ceny i progi poniżej.</p>
+        <button onclick="kon_zapiszUstawienia()" class="kon_btn-primary" style="width:auto; background:#374151; padding:10px 25px; margin-top:0;">💾 Zapisz Ustawienia</button>
+    </div>
+
     <div class="kon_card" style="border-top: 4px solid var(--kon_primary);">
         <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px; color:var(--kon_primary);">🎯 Akcje Promocyjne i Typy Konsultacji</h3>
         
@@ -6881,18 +6893,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <tbody id="kon_campaigns-list"><tr><td colspan="6" style="text-align:center">Ładowanie...</td></tr></tbody>
             </table>
         </div>
-    </div>
-</div>
-
-<div id="kon_admin-panel" class="section" style="padding: 20px; overflow-y: auto;">
-    <div class="kon_header"><h1>Zarządzanie Konsultantami</h1></div>
-    <div class="kon_card">
-        <div class="kon_form-grid" style="align-items:end; margin-bottom:15px;">
-            <div><label>Imię / Nazwa:</label><input type="text" id="kon_adm_imie"></div>
-            <div><label>Status:</label><select id="kon_adm_status"><option>Aktywny</option><option>Zablokowany</option></select></div>
-        </div>
-        <button onclick="kon_dodajKonsultanta()" class="kon_btn-primary" style="width:auto; background:#374151; padding:10px 25px; margin-top:0;">➕ Dodaj Konsultanta</button>
-        <div style="margin-top:30px;"><ul id="kon_admin-list" class="kon_admin-list"></ul></div>
     </div>
 </div>
 
@@ -24485,6 +24485,54 @@ function usunUzytkownikaAdmin(imie) {
 
 let kon_currentMode = 'Normalna';
 let kon_campaignsData = [];
+// Ustawienia konsultacji standardowej per salon (zamiast hardcoded 199/1000)
+let kon_cenaStandard = 199;
+let kon_progStandard = 1000;
+
+function kon_pobierzUstawienia() {
+    fetch(API_URL + "?action=kon_get_settings&tenant_id=" + localStorage.getItem('boczki_tenant_id'))
+    .then(r => r.json())
+    .then(d => {
+        if (!d || d.status !== 'success') return;
+        kon_cenaStandard = parseFloat(d.cena_standard) || 199;
+        kon_progStandard = parseFloat(d.prog_standard) || 1000;
+        const cenaEl = document.getElementById('kon_set_cena');
+        const progEl = document.getElementById('kon_set_prog');
+        if (cenaEl) cenaEl.value = kon_cenaStandard;
+        if (progEl) progEl.value = kon_progStandard;
+        // Jeśli formularz stoi w trybie Normalna — odśwież pola kosztu/progu nowymi wartościami
+        if (kon_currentMode === 'Normalna') {
+            const koszt = document.getElementById('kon_k_koszt');
+            const prog = document.getElementById('kon_k_prog');
+            if (koszt) koszt.value = kon_cenaStandard;
+            if (prog) prog.value = kon_progStandard;
+        }
+    })
+    .catch(err => console.error("Błąd pobierania ustawień konsultacji:", err));
+}
+
+function kon_zapiszUstawienia() {
+    const cena = parseFloat(document.getElementById('kon_set_cena').value);
+    const prog = parseFloat(document.getElementById('kon_set_prog').value);
+    if (isNaN(cena) || cena < 0 || isNaN(prog) || prog < 0) { alert("Podaj poprawne, nieujemne wartości."); return; }
+    fetch(API_URL, { method: "POST", body: JSON.stringify({
+        action: 'kon_save_settings',
+        tenant_id: localStorage.getItem('boczki_tenant_id'),
+        user_log: currentUser,
+        cena_standard: cena,
+        prog_standard: prog
+    }) })
+    .then(r => r.json())
+    .then(d => {
+        if (d && d.status === 'success') {
+            alert("✅ Zapisano ustawienia konsultacji.");
+            kon_pobierzUstawienia();
+        } else {
+            alert("Błąd zapisu: " + ((d && d.message) || 'nieznany'));
+        }
+    })
+    .catch(err => alert("Błąd zapisu: " + err));
+}
 
 // Inicjalizacja
 function kon_init() {
@@ -24501,8 +24549,9 @@ const role = (localStorage.getItem('boczki_pracownik_rola') || "").toLowerCase()
     }
 
     kon_pobierzAktywnychKonsultantow();
+    kon_pobierzUstawienia(); // Cena/próg konsultacji standardowej per salon
     kon_pobierzKampanie(); // Pobiera dane i zasila selecty
-    kon_pobierzWyniki();  
+    kon_pobierzWyniki();
 }
 
 // Pobieranie typów konsultacji (Kampanii)
@@ -24520,7 +24569,8 @@ function kon_pobierzKampanie() {
             console.log(`[kon_get_campaigns] Pobrano: ${d.length} kampanii, aktywnych: ${aktywne.length}`);
             sel.innerHTML = `<option value="">-- Wybierz Akcję (${aktywne.length} dostępnych) --</option>`;
             aktywne.forEach(c => {
-                sel.innerHTML += `<option value="${c.id_row}">${c.nazwa} (${c.obszar || 'brak obszaru'})</option>`;
+                // c.id (UUID z bazy), NIE c.id_row (sztuczny indeks z czasów Apps Script)
+                sel.innerHTML += `<option value="${escHtml(c.id)}">${escHtml(c.nazwa)} (${escHtml(c.obszar || 'brak obszaru')})</option>`;
             });
         }
         
@@ -24531,14 +24581,14 @@ function kon_pobierzKampanie() {
             d.forEach(c => {
                 let statusBadge = c.status === 'Aktywna' ? '<span class="kon_res-badge" style="background:#dcfce7;color:#166534">AKTYWNA</span>' : '<span class="kon_res-badge" style="background:#fee2e2;color:#991b1b">ZAKOŃCZONA</span>';
                 t.innerHTML += `<tr>
-                    <td><strong>${c.nazwa}</strong></td>
-                    <td>${c.obszar}</td>
-                    <td>${c.cena} zł</td>
-                    <td>${c.prog} zł</td>
+                    <td><strong>${escHtml(c.nazwa)}</strong></td>
+                    <td>${escHtml(c.obszar)}</td>
+                    <td>${escHtml(c.cena)} zł</td>
+                    <td>${escHtml(c.prog)} zł</td>
                     <td>${statusBadge}</td>
                     <td>
-                        <button class="kon_btn-sm" onclick="kon_edytujKampanieUI(${c.id_row})" title="Edytuj">${ICON_EDIT}</button>
-                        <button class="kon_btn-sm" onclick="kon_zmienStatusKampanii(${c.id_row}, '${c.status}')" title="Zmień status">${ICON_REFRESH}</button>
+                        <button class="kon_btn-sm" onclick="kon_edytujKampanieUI('${escHtml(c.id)}')" title="Edytuj">${ICON_EDIT}</button>
+                        <button class="kon_btn-sm" onclick="kon_zmienStatusKampanii('${escHtml(c.id)}')" title="Zmień status">${ICON_REFRESH}</button>
                     </td>
                 </tr>`;
             });
@@ -24551,9 +24601,9 @@ function kon_pobierzKampanie() {
 // =========================================================
 
 function kon_edytujKampanieUI(id) {
-    const c = kon_campaignsData.find(x => String(x.id_row) === String(id));
+    const c = kon_campaignsData.find(x => String(x.id) === String(id));
     if(!c) return;
-    document.getElementById('kon_camp_id').value = c.id_row;
+    document.getElementById('kon_camp_id').value = c.id;
     document.getElementById('kon_camp_nazwa').value = c.nazwa;
     document.getElementById('kon_camp_obszar').value = c.obszar;
     document.getElementById('kon_camp_cena').value = c.cena;
@@ -24580,7 +24630,7 @@ function kon_zapiszKampanie() {
         action: 'kon_save_campaign',
         tenant_id: localStorage.getItem('boczki_tenant_id'),
         user_log: currentUser,
-        id_row: document.getElementById('kon_camp_id').value,
+        id: document.getElementById('kon_camp_id').value, // UUID kampanii (backend rozpoznaje edycję po d.id)
         nazwa: nazwa,
         obszar: document.getElementById('kon_camp_obszar').value,
         cena: document.getElementById('kon_camp_cena').value,
@@ -24595,8 +24645,9 @@ function kon_zapiszKampanie() {
 
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) })
     .then(r => r.json())
-    .then(() => {
-        kon_resetCampForm();
+    .then(d => {
+        if (!d || d.status !== 'success') { alert("Błąd zapisu: " + ((d && d.message) || 'nieznany')); }
+        else { kon_resetCampForm(); }
         kon_pobierzKampanie(); // Odświeża tabelę!
         if(btn) { btn.innerText = "💾 Zapisz Akcję"; btn.disabled = false; }
     })
@@ -24606,18 +24657,18 @@ function kon_zapiszKampanie() {
     });
 }
 
-function kon_zmienStatusKampanii(id, currentStatus) {
-    // Od razu pokazujemy użytkownikowi, że coś się dzieje
-    fetch(API_URL, { 
-        method:"POST", 
+function kon_zmienStatusKampanii(id) {
+    // Backend sam odczytuje aktualny status i przełącza (Aktywna ⇄ Zakończona)
+    fetch(API_URL, {
+        method:"POST",
         body:JSON.stringify({
-            action: 'kon_toggle_campaign', 
-            tenant_id: localStorage.getItem('boczki_tenant_id'), 
-            user_log: currentUser, 
-            id_row: id, 
-            status: currentStatus
-        }) 
-    }).then(() => {
+            action: 'kon_toggle_campaign',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id: id
+        })
+    }).then(r => r.json()).then(d => {
+        if (!d || d.status !== 'success') alert("Błąd zmiany statusu: " + ((d && d.message) || 'nieznany'));
         kon_pobierzKampanie(); // Pobiera zaktualizowaną listę z bazy i odświeża tabelę
     });
 }
@@ -24635,8 +24686,8 @@ function kon_przelaczTryb(tryb) {
     if (tryb === 'Normalna') {
         if(widokNormalna) widokNormalna.style.display = 'block';
         if(widokReklama) widokReklama.style.display = 'none';
-        if(koszt) koszt.value = 199;
-        if(prog) prog.value = 1000;
+        if(koszt) koszt.value = kon_cenaStandard;
+        if(prog) prog.value = kon_progStandard;
         if(selectKampania) selectKampania.value = "";
     } else {
         if(widokNormalna) widokNormalna.style.display = 'none';
@@ -24653,8 +24704,8 @@ function kon_przelaczTryb(tryb) {
 function kon_wybranoKampanie() {
     if (kon_currentMode !== 'Reklama') return;
     const selVal = document.getElementById('kon_k_kampania').value;
-    const camp = kon_campaignsData.find(c => String(c.id_row) === String(selVal));
-    
+    const camp = kon_campaignsData.find(c => String(c.id) === String(selVal));
+
     if(camp) {
         document.getElementById('kon_k_koszt').value = camp.cena;
         document.getElementById('kon_k_prog').value = camp.prog;
@@ -24678,10 +24729,10 @@ function kon_przeliczAutomatyke() {
     if (!kosztEl) return;
 
     // Ustalanie ceny bazowej (żeby wiedzieć co wyzerować przy darmowości)
-    let cenaBazowa = 199; 
+    let cenaBazowa = kon_cenaStandard;
     if(kon_currentMode === 'Reklama') {
         const selVal = document.getElementById('kon_k_kampania').value;
-        const camp = kon_campaignsData.find(c => String(c.id_row) === String(selVal));
+        const camp = kon_campaignsData.find(c => String(c.id) === String(selVal));
         cenaBazowa = camp ? camp.cena : (parseFloat(kosztEl.value) || 0);
     }
 
@@ -24721,7 +24772,7 @@ function kon_zapiszWynik(e) {
             if (btn) { btn.disabled=false; btn.innerText=btnLabel; }
             return;
         }
-        const camp = kon_campaignsData.find(c => String(c.id_row) === String(kampaniaVal));
+        const camp = kon_campaignsData.find(c => String(c.id) === String(kampaniaVal));
         nazwaAkcji = camp ? camp.nazwa : "-";
         obszar = camp ? camp.obszar : "-";
     }
@@ -24749,6 +24800,11 @@ function kon_zapiszWynik(e) {
     };
 
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
+        if (!d || d.status !== 'success') {
+            alert("Błąd zapisu: " + ((d && d.message) || 'nieznany'));
+            if (btn) { btn.innerText=btnLabel; btn.disabled=false; }
+            return;
+        }
         alert("✅ Zapisano pomyślnie!");
         e.target.reset();
         const dataEl = document.getElementById('kon_k_data');
@@ -24767,8 +24823,7 @@ function kon_pobierzWyniki() {
     .then(r => r.json())
     .then(d => {
         kon_rawData = d;
-        //kon_renderujTabele(d);
-		kon_zainicjujTabele(d);
+        kon_zainicjujTabele(d);
         // KR redesign — podpięcie KPI w hero + statystyki + ranking
         if(typeof krRenderKPI === 'function') krRenderKPI(d);
         if(typeof krRenderStats === 'function') krRenderStats(d);
@@ -24779,118 +24834,6 @@ function kon_pobierzWyniki() {
 
 // Renderowanie wierszy w tabeli historycznej
 // Renderowanie wierszy w tabeli historycznej
-/*
-function kon_renderujTabele(data) {
-    const t = document.getElementById('kon_results-list'); 
-    if(!t) return;
-    
-    t.innerHTML = "";
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Filtrujemy dane, by pokazać tylko obecny miesiąc (opcjonalnie)
-    const filtered = data.filter(r => {
-        const d = new Date(r.data_konsultacji);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-
-    if(filtered.length === 0) { 
-        t.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color:#888;">Brak danych w tym miesiącu</td></tr>`; 
-        return; 
-    }
-
-    filtered.forEach(r => {
-        let badge = "";
-        
-        // TUTAJ BYŁ BŁĄD: frontend szukał 'r.zrodlo', a backend wysyła 'r.typ'
-        if(r.typ === "Reklama") {
-            badge = `<span class="kon_res-badge" style="background:#fff7ed; color:#9a3412; border:1px solid #ffedd5">REKLAMA</span>`;
-        } else {
-            badge = `<span class="kon_res-badge" style="background:#f0f9ff; color:#075985; border:1px solid #e0f2fe">NORMALNA</span>`;
-        }
-        
-        // TUTAJ BYŁ BŁĄD: szukał 'r.kwota_upsell', a backend wysyła 'r.upsell'
-        let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${r.upsell} zł</span>` : "-";
-        let zabiegi = (r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "");
-        
-        // Ładne formatowanie obszaru i nazwy akcji pod plakietką
-        let obszarInfo = r.obszar && r.obszar !== "-" ? `(${r.obszar})` : "";
-        let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? r.typ_akcji : "";
-
-        t.innerHTML += `
-            <tr>
-                <td style="white-space:nowrap;">${r.data_display}</td>
-                <td><strong>${r.klient}</strong></td>
-                <td>${badge}<br><small style="color:#6b7280; display:block; margin-top:4px;">${akcjaInfo} ${obszarInfo}</small></td>
-                <td><small>${zabiegi || "-"}</small></td>
-                <td><b style="color:var(--kon_primary)">${r.kwota} zł</b></td>
-                <td>${upsellText}</td>
-                <td>${r.kto}</td>
-                <td>
-                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')">✏️</button>
-                </td>
-            </tr>`;
-    });
-} */ // koniec
-/*
-function kon_renderujTabele(data) {
-    const t = document.getElementById('kon_results-list'); 
-    if(!t) return;
-    
-    t.innerHTML = "";
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    // Filtrujemy dane, by pokazać tylko obecny miesiąc (opcjonalnie)
-    let filtered = data.filter(r => {
-        const d = new Date(r.data_konsultacji);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    });
-
-    // 🚀 NOWE: SORTOWANIE WIDOKU PO DACIE KONSULTACJI (MALEJĄCO)
-    filtered.sort((a, b) => new Date(b.data_konsultacji).getTime() - new Date(a.data_konsultacji).getTime());
-
-    if(filtered.length === 0) { 
-        t.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px; color:#888;">Brak danych w tym miesiącu</td></tr>`; 
-        return; 
-    }
-
-    filtered.forEach(r => {
-        let badge = "";
-        
-        // TUTAJ BYŁ BŁĄD: frontend szukał 'r.zrodlo', a backend wysyła 'r.typ'
-        if(r.typ === "Reklama") {
-            badge = `<span class="kon_res-badge" style="background:#fff7ed; color:#9a3412; border:1px solid #ffedd5">REKLAMA</span>`;
-        } else {
-            badge = `<span class="kon_res-badge" style="background:#f0f9ff; color:#075985; border:1px solid #e0f2fe">NORMALNA</span>`;
-        }
-        
-        // TUTAJ BYŁ BŁĄD: szukał 'r.kwota_upsell', a backend wysyła 'r.upsell'
-        let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${r.upsell} zł</span>` : "-";
-        let zabiegi = (r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "");
-        
-        // Ładne formatowanie obszaru i nazwy akcji pod plakietką
-        let obszarInfo = r.obszar && r.obszar !== "-" ? `(${r.obszar})` : "";
-        let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? r.typ_akcji : "";
-
-        t.innerHTML += `
-            <tr>
-                <td style="white-space:nowrap;">${r.data_display}</td>
-                <td><strong>${r.klient}</strong></td>
-                <td>${badge}<br><small style="color:#6b7280; display:block; margin-top:4px;">${akcjaInfo} ${obszarInfo}</small></td>
-                <td><small>${zabiegi || "-"}</small></td>
-                <td><b style="color:var(--kon_primary)">${r.kwota} zł</b></td>
-                <td>${upsellText}</td>
-                <td>${r.kto}</td>
-                <td>
-                    <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')">✏️</button>
-                </td>
-            </tr>`;
-    });
-} */
-
 // ==========================================
 // 📄 PAGINACJA KONSULTACJI
 // ==========================================
@@ -24946,11 +24889,11 @@ function kon_renderujTabeleWycinek() {
             ? `<span class="kon_res-badge" style="background:#fff7ed; color:#9a3412; border:1px solid #ffedd5">REKLAMA</span>`
             : `<span class="kon_res-badge" style="background:#f0f9ff; color:#075985; border:1px solid #e0f2fe">NORMALNA</span>`;
 
-        let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${r.upsell} zł</span>` : "-";
-        let zabiegi = (r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "");
+        let upsellText = r.upsell > 0 ? `<span style="color:#166534; font-weight:bold;">+${escHtml(r.upsell)} zł</span>` : "-";
+        let zabiegi = escHtml(((r.zabiegi_cialo || "") + " " + (r.zabiegi_twarz || "")).trim());
 
-        let obszarInfo = r.obszar && r.obszar !== "-" ? `(${r.obszar})` : "";
-        let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? r.typ_akcji : "";
+        let obszarInfo = r.obszar && r.obszar !== "-" ? `(${escHtml(r.obszar)})` : "";
+        let akcjaInfo = r.typ_akcji && r.typ_akcji !== "-" ? escHtml(r.typ_akcji) : "";
 
         const isArchive = String(r.status || '').toLowerCase() === 'archiwizacja';
         const statusBadge = isArchive
@@ -24963,13 +24906,13 @@ function kon_renderujTabeleWycinek() {
 
         t.innerHTML += `
             <tr${trStyle}>
-                <td style="white-space:nowrap;">${r.data_display}</td>
-                <td><strong>${r.klient}</strong>${statusBadge}</td>
+                <td style="white-space:nowrap;">${escHtml(r.data_display)}</td>
+                <td><strong>${escHtml(r.klient)}</strong>${statusBadge}</td>
                 <td>${badge}<br><small style="color:#6b7280; display:block; margin-top:4px;">${akcjaInfo} ${obszarInfo}</small></td>
                 <td><small>${zabiegi || "-"}</small></td>
-                <td><b style="color:var(--kon_primary)">${r.kwota} zł</b></td>
+                <td><b style="color:var(--kon_primary)">${escHtml(r.kwota)} zł</b></td>
                 <td>${upsellText}</td>
-                <td>${r.kto}</td>
+                <td>${escHtml(r.kto)}</td>
                 <td>
                     <button class="kon_btn-sm" onclick="kon_otworzEdycje('${r.id}')" title="Edytuj">✏️</button>
                     ${akcjaPrzycisk}
@@ -25036,10 +24979,10 @@ function kon_pobierzHistorie() {
         
         d.forEach(r => {
             t.innerHTML += `<tr>
-                <td style="white-space:nowrap; font-size:11px; color:#666;">${r.data}</td>
-                <td><strong>${r.user}</strong></td>
-                <td><span class="kon_res-badge" style="background:#e0f2fe; color:#0369a1">${r.akcja}</span></td>
-                <td style="font-size:12px; color:#333;">${r.opis}</td>
+                <td style="white-space:nowrap; font-size:11px; color:#666;">${escHtml(r.data)}</td>
+                <td><strong>${escHtml(r.user)}</strong></td>
+                <td><span class="kon_res-badge" style="background:#e0f2fe; color:#0369a1">${escHtml(r.akcja)}</span></td>
+                <td style="font-size:12px; color:#333;">${escHtml(r.opis)}</td>
             </tr>`;
         });
     });
@@ -25067,13 +25010,13 @@ function kon_otworzEdycje(id) {
         document.getElementById('kon_e_typ_akcji').value = r.typ_akcji;
         document.getElementById('kon_e_kwota_reklama').value = r.kwota_reklama;
         document.getElementById('kon_e_upsell').value = r.upsell;
-        // Wczytaj próg z kon_campaignsData po nazwie typ_akcji (fallback do 1000)
+        // Wczytaj próg z kon_campaignsData po nazwie typ_akcji (fallback do progu standardowego)
         const camp = kon_campaignsData.find(c => String(c.nazwa).trim() === String(r.typ_akcji).trim());
-        document.getElementById('kon_e_prog').value = camp ? camp.prog : 1000;
+        document.getElementById('kon_e_prog').value = camp ? camp.prog : kon_progStandard;
     } else {
         document.getElementById('kon_e_kwota_reklama').value = r.kwota_reklama;
-        // Tryb Normalna — próg ustawia kon_przelaczTrybEdycji (1000), ale na wszelki wypadek:
-        if(!document.getElementById('kon_e_prog').value) document.getElementById('kon_e_prog').value = 1000;
+        // Tryb Normalna — próg ustawia kon_przelaczTrybEdycji, ale na wszelki wypadek:
+        if(!document.getElementById('kon_e_prog').value) document.getElementById('kon_e_prog').value = kon_progStandard;
     }
 
     document.getElementById('kon_e_cialo').value = r.zabiegi_cialo;
@@ -25098,8 +25041,8 @@ function kon_przelaczTrybEdycji(tryb) {
         detale.style.display = 'none';
         upsell.style.display = 'none';
         lbl.innerText = "Koszt Konsultacji:";
-        // Próg dla Normalna = 1000 (analogicznie do kon_przelaczTryb)
-        if(prog) prog.value = 1000;
+        // Próg dla Normalna = próg standardowy salonu (analogicznie do kon_przelaczTryb)
+        if(prog) prog.value = kon_progStandard;
     } else {
         panel.style.background = "#fff7ed";
         detale.style.display = 'block';
@@ -25120,7 +25063,7 @@ function kon_przeliczAutomatykeEdycji() {
     if(!kosztEl) return;
 
     // Cena bazowa do przywracania gdy pakiet < próg
-    let cenaBazowa = isAd ? (parseFloat(kosztEl.value) || 0) : 199;
+    let cenaBazowa = isAd ? (parseFloat(kosztEl.value) || 0) : kon_cenaStandard;
     if(isAd) {
         const camp = kon_campaignsData.find(c => String(c.nazwa).trim() === String(document.getElementById('kon_e_typ_akcji').value).trim());
         if(camp) cenaBazowa = Number(camp.cena) || cenaBazowa;
@@ -25152,8 +25095,8 @@ function kon_zapiszEdycje(e) {
     // Upsell = pakiet powyżej progu rentowności (a nie pakiet - koszt reklamy jak było wcześniej)
     let upsell = pakiet - prog;
     if(upsell < 0) upsell = 0;
-    // Dla Normalna — koszt 0 gdy pakiet >= próg, inaczej cena bazowa 199 (dynamiczna zamiast hardcoded 1000/150)
-    if (!isAd) koszt = (prog > 0 && pakiet >= prog) ? 0 : 199;
+    // Dla Normalna — koszt 0 gdy pakiet >= próg, inaczej cena standardowa salonu
+    if (!isAd) koszt = (prog > 0 && pakiet >= prog) ? 0 : kon_cenaStandard;
 
     const p = {
         action: 'kon_update_result',
@@ -25173,10 +25116,16 @@ function kon_zapiszEdycje(e) {
     };
 
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
-        alert("✅ Zaktualizowano pomyślnie!"); 
-        kon_zamknijEdycje(); 
-        kon_pobierzWyniki(); 
-        btn.innerText="💾 Zapisz Zmiany"; 
+        if (!d || d.status !== 'success') {
+            alert("Błąd zapisu: " + ((d && d.message) || 'nieznany'));
+            btn.innerText="💾 Zapisz Zmiany";
+            btn.disabled=false;
+            return;
+        }
+        alert("✅ Zaktualizowano pomyślnie!");
+        kon_zamknijEdycje();
+        kon_pobierzWyniki();
+        btn.innerText="💾 Zapisz Zmiany";
         btn.disabled=false;
     });
 }
@@ -25187,10 +25136,10 @@ function kon_pobierzAktywnychKonsultantow() {
     .then(r=>r.json()).then(d=>{ 
         const s = document.getElementById('kon_k_kto'); s.innerHTML = "<option value=''>-- Wybierz --</option>"; 
         const se = document.getElementById('kon_e_kto'); se.innerHTML = "<option value=''>-- Wybierz --</option>";
-        d.forEach(p => { 
-            s.innerHTML += `<option>${p}</option>`; 
-            se.innerHTML += `<option>${p}</option>`;
-        }); 
+        d.forEach(p => {
+            s.innerHTML += `<option>${escHtml(p)}</option>`;
+            se.innerHTML += `<option>${escHtml(p)}</option>`;
+        });
     }); 
 }
 
@@ -25204,11 +25153,11 @@ function kon_pobierzWszystkichKonsultantow() {
             
             l.innerHTML += `<li style="display:flex; justify-content:space-between; align-items:center; padding:10px; border-bottom:1px solid #f1f5f9;">
                 <div>
-                    <strong style="margin-right:10px;">${p.imie}</strong> 
-                    <span style="background:${bgColor}; color:${color}; padding:2px 8px; border-radius:10px; font-size:11px;">${p.status}</span>
+                    <strong style="margin-right:10px;">${escHtml(p.imie)}</strong>
+                    <span style="background:${bgColor}; color:${color}; padding:2px 8px; border-radius:10px; font-size:11px;">${escHtml(p.status)}</span>
                 </div>
-                <button onclick="kon_usunKonsultanta('${p.imie}')" style="background:none; border:none; color:#dc2626; font-size:20px; cursor:pointer;">×</button>
-            </li>`; 
+                <button data-imie="${escHtml(p.imie)}" onclick="kon_usunKonsultanta(this.dataset.imie)" style="background:none; border:none; color:#dc2626; font-size:20px; cursor:pointer;">×</button>
+            </li>`;
         }); 
     }); 
 }
@@ -25258,7 +25207,9 @@ function kon_usunKonsultanta(i) {
             }
             
             // Pobieramy ID bazy z localStorage (standard w Twoim systemie SaaS)
-            const tenantId = localStorage.getItem('boczki_tenant');
+            // FIX: klucz to 'boczki_tenant_id' (nie 'boczki_tenant') — zły klucz dawał tenant_id=null
+            // i cały moduł Analizy Konsultacji dostawał "Brak tenant_id"
+            const tenantId = localStorage.getItem('boczki_tenant_id');
             
             try {
                 const bodyData = JSON.stringify({ 
@@ -25280,14 +25231,7 @@ function kon_usunKonsultanta(i) {
             }
         }
 
-        // --- START (Wywoływane przez główną funkcję pokaz() w głównym skrypcie) ---
-		/*
-        function akon_uruchomAplikacje() {
-            document.getElementById('akon_daily-date').value = new Date().toISOString().slice(0,10);
-            if(window.innerWidth <= 768) document.getElementById('akon_mobile-header-btn').style.display = 'flex';
-            akon_pobierzMiesiaceDoSelectow();
-        }*/
-		// --- START (Uruchamiane przy włączaniu modułu przez główny system) ---
+        // --- START (Uruchamiane przy włączaniu modułu przez główny system) ---
         function akon_uruchomAplikacje() {
             // Ustawiamy dzisiejszą datę w dzienniku
             document.getElementById('akon_daily-date').value = new Date().toISOString().slice(0,10);
@@ -25312,7 +25256,7 @@ const res = await akon_apiCall('akon_get_consultants', { onlyActive: 'true' });
                     
                     // Twoja funkcja backendowa kon_pobierzKonsultantow() zwraca prostą tablicę imion, gdy onlyActive=true
                     res.data.forEach(name => {
-                        empSel.innerHTML += `<option value="${name}">${name}</option>`;
+                        empSel.innerHTML += `<option value="${escHtml(name)}">${escHtml(name)}</option>`;
                     });
                     
                     // Opcjonalnie dodajemy opcję pokazania całego rankingu zespołu
@@ -25387,40 +25331,6 @@ const res = await akon_apiCall('akon_get_consultants', { onlyActive: 'true' });
                 akon_renderDashboard(res.data);
             }
         }
-/*
-        function akon_renderDashboard(data) {
-            akon_dashData = data;
-            document.getElementById('akon_dash-rev').innerText = akon_formatPLN(data.totalRevenue);
-            document.getElementById('akon_dash-upsell').innerText = akon_formatPLN(data.totalUpsell);
-            
-            let rate = data.consultationsCount > 0 ? Math.round((data.successes / data.consultationsCount) * 100) : 0;
-            document.getElementById('akon_dash-succ-rate').innerText = rate + "%";
-            document.getElementById('akon_dash-succ-count').innerText = `${data.successes} udanych / ${data.consultationsCount} łącznie`;
-
-            if(data.rankingPracownikow.length > 0) {
-                document.getElementById('akon_dash-leader').innerText = data.rankingPracownikow[0].name;
-                document.getElementById('akon_dash-leader-val').innerText = akon_formatPLN(data.rankingPracownikow[0].total);
-            } else {
-                document.getElementById('akon_dash-leader').innerText = "-";
-                document.getElementById('akon_dash-leader-val').innerText = "";
-            }
-
-            const empSel = document.getElementById('akon_employeeSelect');
-            empSel.innerHTML = '<option value="">-- Wybierz Pracownika --</option>';
-            data.rankingPracownikow.forEach(e => empSel.innerHTML += `<option value="${e.name}">${e.name}</option>`);
-            document.getElementById('akon_employee-section').style.display = 'none';
-
-            const ctx = document.getElementById('akon_globalChart');
-            if(akon_globalChartInst) akon_globalChartInst.destroy();
-            akon_globalChartInst = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: data.rankingPracownikow.map(e => e.name),
-                    datasets: [{ label: 'Utarg (PLN)', data: data.rankingPracownikow.map(e => e.total), backgroundColor: '#1f2937', borderRadius: 4 }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: {display:false} } }
-            });
-        }  */
 function akon_renderDashboard(data) {
     if (!data) return;
     akon_dashData = data;
@@ -25533,7 +25443,7 @@ function akon_renderDashboard(data) {
                         ul.innerHTML = "<li>Brak danych</li>";
                     } else {
                         topSort.forEach(([z, c]) => {
-                            ul.innerHTML += `<li><span>✨ ${z}</span> <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold; color:var(--text-dark);">${c}x</span></li>`;
+                            ul.innerHTML += `<li><span>✨ ${escHtml(z)}</span> <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-size:12px; font-weight:bold; color:var(--text-dark);">${escHtml(c)}x</span></li>`;
                         });
                     }
                 } else {
@@ -25568,12 +25478,12 @@ function akon_renderDashboard(data) {
                         
                         tb.innerHTML += `
                             <tr style="border-bottom:1px solid #f1f5f9;">
-                                <td style="padding:15px; font-weight:600; color:var(--text-dark);">${r.klient}</td>
-                                <td style="color:var(--text-muted);">${r.zabieg}</td>
+                                <td style="padding:15px; font-weight:600; color:var(--text-dark);">${escHtml(r.klient)}</td>
+                                <td style="color:var(--text-muted);">${escHtml(r.zabieg)}</td>
                                 <td>${badge}</td>
                                 <td style="font-weight:bold; color:var(--text-dark);">${akon_formatPLN(r.kwota)}</td>
                                 <td style="color:#d97706; font-weight:600;">${r.upsell > 0 ? '+'+akon_formatPLN(r.upsell) : '<span style="color:#cbd5e1">-</span>'}</td>
-                                <td style="color:var(--text-muted); font-size:12px;">${r.sprzedawca}</td>
+                                <td style="color:var(--text-muted); font-size:12px;">${escHtml(r.sprzedawca)}</td>
                             </tr>
                         `;
                     });
@@ -25607,7 +25517,9 @@ function akon_renderDashboard(data) {
                     let perc = ((diff / d.compareTotal) * 100).toFixed(1);
                     let col = diff >= 0 ? '#10b981' : '#ef4444';
                     let ico = diff >= 0 ? '▲' : '▼';
-                    compTxt = `<span style="color:${col}; font-weight:bold;">${ico} ${perc}%</span> vs ${c} (${akon_formatPLN(d.compareTotal)})`;
+                    // compareCutoffDay > 0 = porównanie month-to-date (bieżący miesiąc vs ten sam wycinek tamtego)
+                    const cutoffInfo = d.compareCutoffDay ? ` do ${d.compareCutoffDay}. dnia` : '';
+                    compTxt = `<span style="color:${col}; font-weight:bold;">${ico} ${perc}%</span> vs ${c}${cutoffInfo} (${akon_formatPLN(d.compareTotal)})`;
                 }
                 document.getElementById('akon_rep-compare-text').innerHTML = compTxt;
 
@@ -25625,12 +25537,12 @@ function akon_renderDashboard(data) {
                 const ulEmp = document.getElementById('akon_rep-top-emp'); ulEmp.innerHTML = "";
                 d.topEmployees.forEach(([n, v], i) => {
                     let dot = ['#FFD700', '#C0C0C0', '#CD7F32'][i] || '#ddd';
-                    ulEmp.innerHTML += `<li style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f9fafb;"><span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${dot}; margin-right:6px;"></span> ${n}</span> <span style="font-weight:600; color:var(--text-dark);">${akon_formatPLN(v)}</span></li>`;
+                    ulEmp.innerHTML += `<li style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #f9fafb;"><span><span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${dot}; margin-right:6px;"></span> ${escHtml(n)}</span> <span style="font-weight:600; color:var(--text-dark);">${akon_formatPLN(v)}</span></li>`;
                 });
 
                 const ulTreat = document.getElementById('akon_rep-top-treat'); ulTreat.innerHTML = "";
                 d.topTreatments.forEach(([n, c], i) => {
-                    ulTreat.innerHTML += `<li style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f9fafb;"><span style="font-size:13px; color:var(--text-dark);">${i+1}. ${n}</span> <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-weight:bold; color:#555;">${c} szt.</span></li>`;
+                    ulTreat.innerHTML += `<li style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f9fafb;"><span style="font-size:13px; color:var(--text-dark);">${i+1}. ${escHtml(n)}</span> <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-weight:bold; color:#555;">${escHtml(c)} szt.</span></li>`;
                 });
             }
         }
@@ -25692,13 +25604,13 @@ function akon_renderDashboard(data) {
 
                         tb.innerHTML += `
                             <tr style="border-bottom:1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background='transparent'">
-                                <td style="padding:15px; font-weight:600; color:var(--text-muted); font-size:12px;">${r.data}</td>
-                                <td style="font-weight:700; color:var(--text-dark);">${r.klient}</td>
-                                <td style="color:var(--text-muted); font-weight:500;">${r.zabieg}</td>
+                                <td style="padding:15px; font-weight:600; color:var(--text-muted); font-size:12px;">${escHtml(r.data)}</td>
+                                <td style="font-weight:700; color:var(--text-dark);">${escHtml(r.klient)}</td>
+                                <td style="color:var(--text-muted); font-weight:500;">${escHtml(r.zabieg)}</td>
                                 <td>${badge}</td>
                                 <td style="${kwotaStyle}">${kwotaText}</td>
                                 <td>${upsellText}</td>
-                                <td style="color:var(--text-muted); font-size:12px; font-weight:600;">${r.sprzedawca}</td>
+                                <td style="color:var(--text-muted); font-size:12px; font-weight:600;">${escHtml(r.sprzedawca)}</td>
                             </tr>
                         `;
                     });
@@ -26282,11 +26194,11 @@ function odp_generate() {
         if(res.status === 'success') {
             odp_renderReport(res.data, dFrom, dTo);
         } else {
-            alert("Błąd serwera (Zajrzyj do arkusza): " + res.message);
+            alert("Błąd serwera: " + res.message);
         }
     })
     .catch(err => {
-        alert("Błąd połączenia z serwerem Google.");
+        alert("Błąd połączenia z serwerem.");
         console.error(err);
     })
     .finally(() => { 
@@ -26344,21 +26256,21 @@ function odp_renderReport(data, dFrom, dTo) {
     // Toggle 'Ukryj kwoty' NIE dotyczy rankingów (Top Pracownicy / VIP / Konsultacje / Kosmetyki)
     // — to wewnętrzne wskaźniki wydajności, hide=true działa tylko dla KPI top + Metody Płatności
     setHtml('odp_emp_list', (data.topEmployees && data.topEmployees.length > 0) ? data.topEmployees.map(e =>
-        `<li style="padding: 4px 0;"><strong>${e.name}</strong> <span style="float:right">${formatWhole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
+        `<li style="padding: 4px 0;"><strong>${escHtml(e.name)}</strong> <span style="float:right">${formatWhole(e.val)}</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
 
     setHtml('odp_top_items_list', (data.topItems && data.topItems.length > 0) ? data.topItems.map(i =>
-        `<li style="padding: 4px 0;">${i.name} <span style="float:right; color:#64748b; font-weight:bold;">${i.count} szt.</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
+        `<li style="padding: 4px 0;">${escHtml(i.name)} <span style="float:right; color:#64748b; font-weight:bold;">${escHtml(i.count)} szt.</span></li>`).join('') : "<li>Brak sprzedaży w tym okresie</li>");
 
     setHtml('odp_vip_list', (data.topClients && data.topClients.length > 0) ? data.topClients.map(c =>
         `<span class="odp-vip-chip" style="background:#fff; padding:6px 12px; border-radius:8px; font-size:9pt; border:1px solid #e9d5ff; color:#5b21b6;">
-            ${c.name}: <strong style="color:#7c3aed;">${formatWhole(c.val)}</strong>
+            ${escHtml(c.name)}: <strong style="color:#7c3aed;">${formatWhole(c.val)}</strong>
         </span>`).join('') : "<span style='color:#94a3b8;'>Brak klientów w tym okresie.</span>");
 
     // Konsultacje — Top zabiegi (parsowane z zabiegi_cialo + zabiegi_twarz)
     setHtml('odp_kon_top_zabiegi', (data.topKonZabiegi && data.topKonZabiegi.length > 0) ? data.topKonZabiegi.map(z =>
         `<li style="padding:4px 0; border-bottom:1px dashed #dbeafe;">
-            <strong>${z.name}</strong>
-            <span style="float:right; color:#64748b; font-weight:bold;">${z.count}×</span>
+            <strong>${escHtml(z.name)}</strong>
+            <span style="float:right; color:#64748b; font-weight:bold;">${escHtml(z.count)}×</span>
         </li>`).join('') : '<li>Brak konsultacji w okresie.</li>');
 
     // Konsultacje — Ranking pracowników (wg sumy pakietu = baza + upsell)
@@ -26371,7 +26283,7 @@ function odp_renderReport(data, dFrom, dTo) {
         const ups = formatWhole(p.sumUpsell);
         return `<li style="padding:6px 0; border-bottom:1px solid #fde68a;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span>${ico} <strong>${p.name}</strong></span>
+                <span>${ico} <strong>${escHtml(p.name)}</strong></span>
                 <strong style="color:#92400e;">${sumP}</strong>
             </div>
             <div style="font-size:8.5pt; color:#92400e; padding-left:22px;">${p.count} konsultacji · ${baza} baza + <span style="color:#15803d;">${ups} upsell</span></div>
@@ -26382,7 +26294,7 @@ function odp_renderReport(data, dFrom, dTo) {
     setText('odp_cosm_total', (data.cosmeticsTotal || 0) + ' szt.');
     setHtml('odp_cosm_emp_list', (data.topCosmeticsEmp && data.topCosmeticsEmp.length > 0) ? data.topCosmeticsEmp.map(e =>
         `<li style="padding: 2px 0; border-bottom: 1px dashed #f5d0fe;">
-            <strong>${e.name}</strong>
+            <strong>${escHtml(e.name)}</strong>
             <span style="float:right; font-weight:bold; color:#86198f;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
         </li>`).join('') : "<li>Brak sprzedaży kosmetyków</li>");
 
@@ -26390,14 +26302,14 @@ function odp_renderReport(data, dFrom, dTo) {
     setText('odp_sup_total', (data.suplementsTotal || 0) + ' szt.');
     setHtml('odp_sup_emp_list', (data.topSuplementsEmp && data.topSuplementsEmp.length > 0) ? data.topSuplementsEmp.map(e =>
         `<li style="padding: 2px 0; border-bottom: 1px dashed #d8b4fe;">
-            <strong>${e.name}</strong>
+            <strong>${escHtml(e.name)}</strong>
             <span style="float:right; font-weight:bold; color:#6b21a8;">${Number(e.count).toFixed(1).replace('.0', '')} szt. za ${formatWhole(e.val)}</span>
         </li>`).join('') : "<li>Brak sprzedaży suplementów</li>");
 
     // Śpiące zabiegi — lista z myślnikami, pokazujemy top 5
     let sleepHtml = "";
     if (data.sleepingItems && data.sleepingItems.length > 0) {
-        sleepHtml = data.sleepingItems.slice(0, 5).map(s => `<li>${s}</li>`).join('');
+        sleepHtml = data.sleepingItems.slice(0, 5).map(s => `<li>${escHtml(s)}</li>`).join('');
         if (data.sleepingItems.length > 5) {
             sleepHtml += `<li style="list-style:none; color:#94a3b8; font-style:italic; margin-left:-20px; padding-left:20px;">...i ${data.sleepingItems.length - 5} innych</li>`;
         }
