@@ -19670,9 +19670,16 @@ function aplikujZadatekNaKoszyk(dostepnaKwota, idZadatku, opisLog) {
         }
     });
 
-    // 3. APLIKACJA KASKADOWA: Rozlewamy kwotę z góry na dół na czyste wiersze
-    const wierszeGlowne = document.querySelectorAll('.item-row');
-    
+    // 3. APLIKACJA KASKADOWA: Rozlewamy kwotę od NAJDROŻSZEJ pozycji do najtańszej
+    // (nie w kolejności wpisania) — żeby zadatek nie pochłaniał w całości tanich
+    // pozycji, zostawiając całą dopłatę na drogiej. Kolejność wierszy w koszyku
+    // na ekranie się nie zmienia — tylko kolejność przydzielania środków.
+    const wierszeGlowne = Array.from(document.querySelectorAll('.item-row')).sort((a, b) => {
+        const cenaA = parseFloat(a.querySelector('.item-price').value) || 0;
+        const cenaB = parseFloat(b.querySelector('.item-price').value) || 0;
+        return cenaB - cenaA;
+    });
+
     wierszeGlowne.forEach(row => {
         if (pozostalo <= 0.01) return; // Zadatku brakło - omijamy resztę koszyka
         
