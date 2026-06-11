@@ -448,6 +448,7 @@ app.get('/api', (req, res) => {
         'kon_get_consultants': '/api/konsultacje?action=kon_get_consultants&tenant_id=' + tenant_id + '&onlyActive=' + (req.query.onlyActive || ''),
         'kon_get_logs': '/api/konsultacje?action=kon_get_logs&tenant_id=' + tenant_id,
         'kon_get_campaigns': '/api/konsultacje?action=kon_get_campaigns&tenant_id=' + tenant_id,
+        'kon_get_settings': '/api/konsultacje?action=kon_get_settings&tenant_id=' + tenant_id,
         'akon_get_months': '/api/konsultacje?action=akon_get_months&tenant_id=' + tenant_id,
         'get_pin_users': '/api/users?action=get_pin_users&tenant_id=' + tenant_id,
         'get_admin_users': '/api/users?action=get_admin_users&tenant_id=' + tenant_id,
@@ -516,7 +517,7 @@ app.post('/api', (req, res) => {
     const urodzinyActions = ['add_birthday', 'edit_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
     const retencjaActions = ['save_retention'];
     const analitykaActions = ['get_months', 'an_get_months', 'get_daily_summary', 'an_get_daily_summary', 'get_monthly_details', 'an_get_monthly_details', 'save_monthly_cost', 'an_save_monthly_cost', 'get_costs_list', 'an_get_costs_list', 'get_stats', 'an_get_stats', 'get_yearly_summary', 'an_get_yearly_summary', 'get_treatment_analysis', 'an_get_treatment_analysis', 'get_bi_data', 'an_get_bi_data'];
-    const konsultacjeActions = ['kon_save_result', 'kon_update_result', 'kon_set_status', 'kon_add_consultant', 'kon_delete_consultant', 'kon_save_campaign', 'kon_toggle_campaign', 'akon_get_months', 'akon_get_stats', 'akon_get_daily_summary', 'akon_get_monthly_details', 'akon_get_monthly_list', 'akon_get_consultants', 'odp_getReportData'];
+    const konsultacjeActions = ['kon_save_result', 'kon_update_result', 'kon_set_status', 'kon_add_consultant', 'kon_delete_consultant', 'kon_save_settings', 'kon_save_campaign', 'kon_toggle_campaign', 'akon_get_months', 'akon_get_stats', 'akon_get_daily_summary', 'akon_get_monthly_details', 'akon_get_monthly_list', 'akon_get_consultants', 'odp_getReportData'];
     const targetyActions = ['add_target', 'get_targets', 'edit_target', 'tgt_get_employee_dashboard'];
     const raportActions = ['rap_getInventory', 'rap_getCategories', 'rap_getLogs', 'rap_updateStock', 'rap_archiveProduct', 'rap_saveProduct', 'rap_saveCategory', 'rap_deleteCategory'];
     const usersActions = ['verify_pin', 'get_pin_users', 'get_admin_users', 'add_admin_user', 'delete_admin_user'];

@@ -29,6 +29,42 @@ module.exports = (db) => {
     return pakiet >= threshold;
   }
 
+  // Helper: tokenizuj listę zabiegów na pojedyncze pozycje — wspólny dla akon_ i odp_
+  // (spójny z krParseZabiegi we froncie; wcześniej akon_ liczył cały sklejony string jako 1 klucz)
+  const parseZabiegi = (text) => {
+    if (!text || typeof text !== 'string') return [];
+    return text.split(/[,;]| i |\s*\+\s*/)
+      .map(t => t.trim())
+      .filter(t => t.length > 2 && t.length < 80);
+  };
+
+  // Helper: data → 'YYYY-MM-DD' niezależnie czy driver zwrócił Date czy string
+  const toYmd = (v) => {
+    if (!v) return '';
+    if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+    return String(v).slice(0, 10);
+  };
+
+  // Ustawienia konsultacji standardowej per salon (cena bazowa + próg darmowości/upsellu)
+  // — zastępują hardcoded 199/1000 z frontendu
+  db.query(`
+    CREATE TABLE IF NOT EXISTS Ustawienia_Konsultacje (
+      tenant_id     VARCHAR(64) PRIMARY KEY,
+      cena_standard DECIMAL(10,2) NOT NULL DEFAULT 199.00,
+      prog_standard DECIMAL(10,2) NOT NULL DEFAULT 1000.00,
+      updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  `, err => { if (err) console.error('[konsultacje] CREATE TABLE Ustawienia_Konsultacje:', err.message); });
+
+  function pobierzUstawienia(tenant_id, cb) {
+    db.query(`SELECT cena_standard, prog_standard FROM Ustawienia_Konsultacje WHERE tenant_id = ? LIMIT 1`, [tenant_id], (err, rows) => {
+      if (!err && rows && rows.length) {
+        return cb({ cena_standard: Number(rows[0].cena_standard) || 199, prog_standard: Number(rows[0].prog_standard) || 1000 });
+      }
+      cb({ cena_standard: 199, prog_standard: 1000 });
+    });
+  }
+
   // ==========================================
   // GET /konsultacje
   // ==========================================
@@ -38,26 +74,32 @@ module.exports = (db) => {
     const action = req.query.action;
 
     if (action === 'kon_read_results') {
-      db.query(
-        `SELECT id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji, status FROM Wyniki_konsultacja WHERE tenant_id = ? ORDER BY data_wpisu DESC LIMIT 50`,
-        [tenant_id],
-        (err, rows) => {
-          if (err) return res.json([]);
-          return res.json((rows || []).map(r => ({
-            id: r.id,
-            data_display: r.data_konsultacji ? String(r.data_konsultacji).slice(0, 10) : '-',
-            data_konsultacji: r.data_konsultacji ? String(r.data_konsultacji).slice(0, 10) : '',
-            typ: r.zrodlo, obszar: r.obszar, klient: r.klient,
-            zabiegi_cialo: String(r.zabiegi_cialo || ''),
-            zabiegi_twarz: String(r.zabiegi_twarz || ''),
-            kwota_reklama: safeNum(r.kwota_reklama),
-            kwota: safeNum(r.kwota_pakiet),
-            kto: r.kto_wykonal, uwagi: r.uwagi,
-            typ_akcji: r.typ_akcji, upsell: safeNum(r.upsell),
-            status: r.status || 'Aktywna'
-          })));
-        }
-      );
+      // LIMIT 500 (było 50 — KPI/ranking liczone we froncie z tych wierszy były zaniżane
+      // przy >50 konsultacjach). isSuccess doliczany tu, żeby front nie miał własnej,
+      // rozjazdowej definicji sukcesu (wcześniej: upsell > 0).
+      getThresholdsMap(tenant_id, (thresholdsMap) => {
+        db.query(
+          `SELECT id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji, status FROM Wyniki_konsultacja WHERE tenant_id = ? ORDER BY data_wpisu DESC LIMIT 500`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json([]);
+            return res.json((rows || []).map(r => ({
+              id: r.id,
+              data_display: r.data_konsultacji ? toYmd(r.data_konsultacji) : '-',
+              data_konsultacji: toYmd(r.data_konsultacji),
+              typ: r.zrodlo, obszar: r.obszar, klient: r.klient,
+              zabiegi_cialo: String(r.zabiegi_cialo || ''),
+              zabiegi_twarz: String(r.zabiegi_twarz || ''),
+              kwota_reklama: safeNum(r.kwota_reklama),
+              kwota: safeNum(r.kwota_pakiet),
+              kto: r.kto_wykonal, uwagi: r.uwagi,
+              typ_akcji: r.typ_akcji, upsell: safeNum(r.upsell),
+              isSuccess: checkIfSuccess(safeNum(r.kwota_pakiet), String(r.zrodlo || '').trim(), String(r.typ_akcji || '').trim(), thresholdsMap),
+              status: r.status || 'Aktywna'
+            })));
+          }
+        );
+      });
 
     } else if (action === 'kon_get_consultants') {
       const onlyActive = req.query.onlyActive;
@@ -72,7 +114,7 @@ module.exports = (db) => {
         );
       } else {
         db.query(
-          `SELECT imie, status FROM Pracownicy_konsultacja WHERE tenant_id = ?`,
+          `SELECT imie, status FROM Pracownicy_konsultacja WHERE tenant_id = ? AND COALESCE(status, '') != 'Usunięty'`,
           [tenant_id],
           (err, rows) => {
             if (err) return res.json([]);
@@ -80,6 +122,9 @@ module.exports = (db) => {
           }
         );
       }
+
+    } else if (action === 'kon_get_settings') {
+      pobierzUstawienia(tenant_id, (s) => res.json({ status: 'success', cena_standard: s.cena_standard, prog_standard: s.prog_standard }));
 
     } else if (action === 'kon_get_logs') {
       db.query(
@@ -130,8 +175,13 @@ module.exports = (db) => {
     const action = d.action;
 
     if (action === 'kon_save_result') {
+      const klientVal = String(d.klient || '').trim();
+      if (!klientVal) return res.json({ status: 'error', message: 'Podaj imię i nazwisko klienta.' });
+      if (!d.data_konsultacji || isNaN(new Date(d.data_konsultacji).getTime())) return res.json({ status: 'error', message: 'Nieprawidłowa data konsultacji.' });
+      if (safeNum(d.kwota_pakiet) < 0 || safeNum(d.kwota_reklama) < 0 || safeNum(d.kwota_upsell) < 0) return res.json({ status: 'error', message: 'Kwoty nie mogą być ujemne.' });
       const now = new Date();
-      const uniqueID = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 15);
+      // randomUUID zamiast timestampu z sekundową rozdzielczością (kolizje przy 2 zapisach w tej samej sekundzie)
+      const uniqueID = randomUUID();
       db.query(
         `INSERT INTO Wyniki_konsultacja (id, tenant_id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [uniqueID, tenant_id, now, d.data_konsultacji || null, d.zrodlo || '', d.obszar_reklamy || '', d.klient || '', d.telefon || '', d.zabiegi_cialo || '', d.zabiegi_twarz || '', safeNum(d.kwota_reklama), safeNum(d.kwota_pakiet), safeNum(d.kwota_upsell), d.kto || '', d.uwagi || '', d.typ_akcji || ''],
@@ -143,14 +193,42 @@ module.exports = (db) => {
       );
 
     } else if (action === 'kon_update_result') {
+      const klientVal = String(d.klient || '').trim();
+      if (!klientVal) return res.json({ status: 'error', message: 'Podaj imię i nazwisko klienta.' });
+      if (!d.data_konsultacji || isNaN(new Date(d.data_konsultacji).getTime())) return res.json({ status: 'error', message: 'Nieprawidłowa data konsultacji.' });
+      if (safeNum(d.kwota_pakiet) < 0 || safeNum(d.kwota_reklama) < 0 || safeNum(d.kwota_upsell) < 0) return res.json({ status: 'error', message: 'Kwoty nie mogą być ujemne.' });
+      // SELECT przed UPDATE — żeby zalogować CO się zmieniło (audyt finansowy), nie tylko że edytowano
       db.query(
-        `UPDATE Wyniki_konsultacja SET data_konsultacji = ?, zrodlo = ?, obszar = ?, klient = ?, telefon = ?, zabiegi_cialo = ?, zabiegi_twarz = ?, kwota_reklama = ?, kwota_pakiet = ?, kto_wykonal = ?, uwagi = ?, typ_akcji = ?, upsell = ? WHERE tenant_id = ? AND id = ?`,
-        [d.data_konsultacji || null, d.zrodlo || '', d.obszar_reklamy || '', d.klient || '', d.telefon || '', d.zabiegi_cialo || '', d.zabiegi_twarz || '', safeNum(d.kwota_reklama), safeNum(d.kwota_pakiet), d.kto || '', d.uwagi || '', d.typ_akcji || '', safeNum(d.kwota_upsell), tenant_id, d.id],
-        (err, result) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono wpisu' });
-          zapiszLog(tenant_id, 'KONSULTACJA EDYCJA', d.user_log || '', `Edycja konsultacji: ${d.klient}`);
-          return res.json({ status: 'success' });
+        `SELECT data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, kto_wykonal, uwagi, typ_akcji, upsell FROM Wyniki_konsultacja WHERE tenant_id = ? AND id = ? LIMIT 1`,
+        [tenant_id, d.id],
+        (errSel, oldRows) => {
+          if (errSel) return res.json({ status: 'error', message: errSel.message });
+          if (!oldRows || !oldRows.length) return res.json({ status: 'error', message: 'Nie znaleziono wpisu' });
+          const o = oldRows[0];
+          const zmiany = [];
+          const cmp = (label, oldV, newV) => { if (String(oldV) !== String(newV)) zmiany.push(`${label}: "${oldV}" → "${newV}"`); };
+          cmp('data', toYmd(o.data_konsultacji), toYmd(d.data_konsultacji));
+          cmp('źródło', String(o.zrodlo || ''), String(d.zrodlo || ''));
+          cmp('obszar', String(o.obszar || ''), String(d.obszar_reklamy || ''));
+          cmp('klient', String(o.klient || ''), klientVal);
+          cmp('zabiegi ciało', String(o.zabiegi_cialo || ''), String(d.zabiegi_cialo || ''));
+          cmp('zabiegi twarz', String(o.zabiegi_twarz || ''), String(d.zabiegi_twarz || ''));
+          cmp('reklama', safeNum(o.kwota_reklama), safeNum(d.kwota_reklama));
+          cmp('pakiet', safeNum(o.kwota_pakiet), safeNum(d.kwota_pakiet));
+          cmp('upsell', safeNum(o.upsell), safeNum(d.kwota_upsell));
+          cmp('kto', String(o.kto_wykonal || ''), String(d.kto || ''));
+          cmp('typ akcji', String(o.typ_akcji || ''), String(d.typ_akcji || ''));
+          if (String(o.uwagi || '') !== String(d.uwagi || '')) zmiany.push('uwagi');
+          db.query(
+            `UPDATE Wyniki_konsultacja SET data_konsultacji = ?, zrodlo = ?, obszar = ?, klient = ?, telefon = ?, zabiegi_cialo = ?, zabiegi_twarz = ?, kwota_reklama = ?, kwota_pakiet = ?, kto_wykonal = ?, uwagi = ?, typ_akcji = ?, upsell = ? WHERE tenant_id = ? AND id = ?`,
+            [d.data_konsultacji || null, d.zrodlo || '', d.obszar_reklamy || '', d.klient || '', d.telefon || '', d.zabiegi_cialo || '', d.zabiegi_twarz || '', safeNum(d.kwota_reklama), safeNum(d.kwota_pakiet), d.kto || '', d.uwagi || '', d.typ_akcji || '', safeNum(d.kwota_upsell), tenant_id, d.id],
+            (err, result) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono wpisu' });
+              zapiszLog(tenant_id, 'KONSULTACJA EDYCJA', d.user_log || '', `Edycja konsultacji: ${d.klient}${zmiany.length ? ' | ' + zmiany.join('; ').slice(0, 500) : ' (bez zmian)'}`);
+              return res.json({ status: 'success' });
+            }
+          );
         }
       );
 
@@ -189,11 +267,27 @@ module.exports = (db) => {
       );
 
     } else if (action === 'kon_delete_consultant') {
-      db.query(`DELETE FROM Pracownicy_konsultacja WHERE tenant_id = ? AND imie = ? LIMIT 1`, [tenant_id, d.imie], (err) => {
+      // Soft-delete zamiast DELETE — statystyki historyczne (kto_wykonal) zostają spójne,
+      // a ponowne dodanie tego samego imienia (kon_add_consultant upsert po imieniu) reaktywuje wpis
+      db.query(`UPDATE Pracownicy_konsultacja SET status = 'Usunięty' WHERE tenant_id = ? AND imie = ? LIMIT 1`, [tenant_id, d.imie], (err) => {
         if (err) return res.json({ status: 'error', message: err.message });
         zapiszLog(tenant_id, 'KONSULTANT USUNIĘCIE', d.user_log || '', `${d.imie}`);
         return res.json({ status: 'success' });
       });
+
+    } else if (action === 'kon_save_settings') {
+      const cena = safeNum(d.cena_standard);
+      const prog = safeNum(d.prog_standard);
+      if (cena < 0 || prog < 0) return res.json({ status: 'error', message: 'Wartości nie mogą być ujemne.' });
+      db.query(
+        `INSERT INTO Ustawienia_Konsultacje (tenant_id, cena_standard, prog_standard) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE cena_standard = VALUES(cena_standard), prog_standard = VALUES(prog_standard)`,
+        [tenant_id, cena, prog],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          zapiszLog(tenant_id, 'KONSULTACJA USTAWIENIA', d.user_log || '', `Cena standard: ${cena} zł, próg: ${prog} zł`);
+          return res.json({ status: 'success' });
+        }
+      );
 
     } else if (action === 'kon_save_campaign') {
       if (d.id) {
@@ -278,8 +372,8 @@ module.exports = (db) => {
               const emp = stats.employeeDetails[pracownik];
               emp.total += pakiet; emp.upsell += upsell; emp.consultations++;
               if (isSuccess) emp.successes++;
-              const zabiegi = (String(r.zabiegi_cialo || '') + ' ' + String(r.zabiegi_twarz || '')).trim();
-              if (zabiegi) { if (!emp.top[zabiegi]) emp.top[zabiegi] = 0; emp.top[zabiegi]++; }
+              const tokens = [].concat(parseZabiegi(String(r.zabiegi_cialo || '')), parseZabiegi(String(r.zabiegi_twarz || '')));
+              tokens.forEach(t => { if (!emp.top[t]) emp.top[t] = 0; emp.top[t]++; });
             });
             stats.rankingPracownikow = Object.values(stats.employeeDetails).sort((a, b) => b.total - a.total);
             return res.json({ status: 'success', data: stats });
@@ -309,6 +403,17 @@ module.exports = (db) => {
     } else if (action === 'akon_get_monthly_details') {
       const month = d.month;
       const compareMonth = d.compareMonth;
+      // Month-to-date: gdy porównujemy bieżący (niepełny) miesiąc z innym, ucinamy miesiąc
+      // porównawczy do tego samego dnia — jak w raporcie miesięcznym analityki (f4fd96b)
+      let compareCutoffDay = 0;
+      if (compareMonth) {
+        const now = new Date();
+        const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        if (month === cur) {
+          const [cy, cm] = compareMonth.split('-').map(Number);
+          compareCutoffDay = Math.min(now.getDate(), new Date(cy, cm, 0).getDate());
+        }
+      }
       db.query(
         `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND (DATE_FORMAT(data_konsultacji, '%Y-%m') = ? OR DATE_FORMAT(data_konsultacji, '%Y-%m') = ?) AND (status = 'Aktywna' OR status IS NULL)`,
         [tenant_id, month, compareMonth || month],
@@ -327,7 +432,7 @@ module.exports = (db) => {
             const rowDate = new Date(r.data_konsultacji);
             const rowM = `${rowDate.getFullYear()}-${String(rowDate.getMonth() + 1).padStart(2, '0')}`;
             const pakiet = safeNum(r.kwota_pakiet);
-            if (rowM === compareMonth && compareMonth) result.compareTotal += pakiet;
+            if (rowM === compareMonth && compareMonth && (!compareCutoffDay || rowDate.getDate() <= compareCutoffDay)) result.compareTotal += pakiet;
             if (rowM === month) {
               result.total += pakiet;
               result.upsellSum += safeNum(r.upsell);
@@ -337,8 +442,8 @@ module.exports = (db) => {
               if (daysMap[dayKey] !== undefined) daysMap[dayKey] += pakiet;
               const prac = String(r.kto_wykonal || '');
               if (prac) { if (!empMap[prac]) empMap[prac] = 0; empMap[prac] += pakiet; }
-              const zabiegi = (String(r.zabiegi_cialo || '') + ' ' + String(r.zabiegi_twarz || '')).trim();
-              if (zabiegi) { if (!treatMap[zabiegi]) treatMap[zabiegi] = 0; treatMap[zabiegi]++; }
+              const tokens = [].concat(parseZabiegi(String(r.zabiegi_cialo || '')), parseZabiegi(String(r.zabiegi_twarz || '')));
+              tokens.forEach(t => { if (!treatMap[t]) treatMap[t] = 0; treatMap[t]++; });
             }
           });
 
@@ -346,6 +451,7 @@ module.exports = (db) => {
           result.chartValues = result.daysLabels.map(k => daysMap[k]);
           result.topEmployees = Object.entries(empMap).sort((a, b) => b[1] - a[1]);
           result.topTreatments = Object.entries(treatMap).sort((a, b) => b[1] - a[1]).slice(0, 10);
+          result.compareCutoffDay = compareCutoffDay;
           return res.json({ status: 'success', data: result });
         }
       );
@@ -500,8 +606,13 @@ module.exports = (db) => {
                 if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                 const amount = safeNum(row.kwota);
                 if (amount === 0) return;
-                const methodCat = classifyPayment(metoda);
-                result.totalSales += amount; result[methodCat] += amount;
+                // Zadatek na MIX: kwoty realne siedzą w splitach Platnosci (już zsumowane wyżej) —
+                // nagłówkowy wiersz pomijamy w utargu, żeby nie liczyć 2× (inwariant MIX, jak w pętli Sprzedaż).
+                // Atrybucja pracownika ZOSTAJE z nagłówka — splity Platnosci nie mają pola pracownika.
+                if (metoda !== 'mix') {
+                  const methodCat = classifyPayment(metoda);
+                  result.totalSales += amount; result[methodCat] += amount;
+                }
                 const sellers = String(row.pracownicy || '').split(',').map(s => s.trim()).filter(Boolean);
                 const count = sellers.length || 1;
                 sellers.forEach(p => { empS[p] = (empS[p] || 0) + amount / count; });
@@ -513,13 +624,6 @@ module.exports = (db) => {
                   `SELECT data_konsultacji, kwota_pakiet, upsell, zrodlo, typ_akcji, kto_wykonal, zabiegi_cialo, zabiegi_twarz FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji BETWEEN ? AND ? AND (status = 'Aktywna' OR status IS NULL)`,
                   [tenant_id, dFrom, dTo],
                   (err3, konsultacje) => {
-                    // Helper: parsuj listę zabiegów do tokenów (jak krParseZabiegi we frontend)
-                    const parseZabiegi = (text) => {
-                      if (!text || typeof text !== 'string') return [];
-                      return text.split(/[,;]| i |\s*\+\s*/)
-                        .map(t => t.trim())
-                        .filter(t => t.length > 2 && t.length < 80);
-                    };
                     const konZabiegiCounter = {};
                     const konRanking = {}; // per pracownik: { count, sumPakiet, sumUpsell }
 
