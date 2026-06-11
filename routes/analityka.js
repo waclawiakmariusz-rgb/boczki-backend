@@ -133,7 +133,9 @@ module.exports = (db) => {
           (err2, sprzedaz) => {
             (sprzedaz || []).forEach(row => {
               const platnosc = String(row.platnosc || '').toLowerCase();
-              if (platnosc.includes('portfel')) return;
+              // Pozycje opłacone z portfela (zadatku) pokazujemy informacyjnie,
+              // ale NIE liczą się do utargu — pieniądze policzone w dniu wpłaty zadatku.
+              const czyPortfel = platnosc.includes('portfel');
               // Wykryj kategorię produktu — najpierw z kolumny (nowe wpisy), potem z prefixu,
               // a dla starszych "Kosmetyk: X" sprawdzamy czy X jest w suplementSet.
               let katProd = row.kategoria_produktu || null;
@@ -146,7 +148,7 @@ module.exports = (db) => {
                 }
               }
               wynik.push({
-                typ_rekordu: 'sprzedaz',
+                typ_rekordu: czyPortfel ? 'sprzedaz_portfel' : 'sprzedaz',
                 timestamp: new Date(row.data_sprzedazy).getTime(),
                 baseId: getBaseId(row.id),
                 godzina: String(row.data_sprzedazy).slice(11, 16),
@@ -167,14 +169,14 @@ module.exports = (db) => {
               (err3, platnosci) => {
                 (platnosci || []).forEach(row => {
                   const metoda = String(row.metoda_platnosci || '').toLowerCase();
-                  if (metoda.includes('portfel')) return;
+                  const czyPortfelSplit = metoda.includes('portfel');
                   wynik.push({
                     typ_rekordu: 'platnosc_mix',
                     timestamp: new Date(row.data_platnosci).getTime(),
                     baseId: getBaseId(row.id),
                     godzina: String(row.data_platnosci).slice(11, 16),
                     klient: row.klient,
-                    zabieg: '↳ Dopłata Mix (' + row.metoda_platnosci + ')',
+                    zabieg: czyPortfelSplit ? '↳ Pokryte z portfela (zadatek)' : ('↳ Dopłata Mix (' + row.metoda_platnosci + ')'),
                     sprzedawca: '-',
                     kwota: row.kwota,
                     platnosc: row.metoda_platnosci

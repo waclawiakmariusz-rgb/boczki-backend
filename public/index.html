@@ -12221,11 +12221,12 @@ function zaladujPulpit() {
     .then(r => r.json())
     .then(data => {
         const today = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
-        // Wykluczamy: 'mix' (parent agregacyjny) i 'System' (ręczne korekty,
-        // nie realny wpływ gotówki — np. zadatki przeniesione automatycznie)
+        // Wykluczamy: 'mix' (parent agregacyjny), 'System' (ręczne korekty,
+        // nie realny wpływ gotówki) i 'Portfel' (pozycje pokryte z zadatku —
+        // pieniądze policzone w dniu wpłaty zadatku)
         const widoczne = today.filter(r => {
             const p = String(r.platnosc || '').toLowerCase().trim();
-            return p !== 'mix' && p !== 'system';
+            return p !== 'mix' && p !== 'system' && !p.includes('portfel');
         });
         const total = widoczne.reduce((s, r) => s + (parseFloat(r.kwota) || 0), 0);
         const uniqClients = new Set(widoczne.map(r => String(r.klient || '')).filter(Boolean));
@@ -16487,7 +16488,9 @@ function generujNowaTabele(lista) {
         const metodaRaw = String(r.platnosc || ""); 
         const metoda = metodaRaw.toLowerCase(); 
 
-        let czyLiczyc = (metoda !== 'mix');
+        // Portfel = pozycja pokryta z zadatku — informacyjna, NIE liczy się do utargu
+        // (pieniądze policzone w dniu wpłaty zadatku).
+        let czyLiczyc = (metoda !== 'mix' && !metoda.includes('portfel'));
 
         if (czyLiczyc) {
             total += kwota;
@@ -16556,15 +16559,21 @@ function generujNowaTabele(lista) {
         else if (metoda.includes('booksy')) icon = "🗓️";
         else if (metoda.includes('mix')) icon = "🔀";
 
-        if (metoda === 'mix') {
-            rowClass = "mix-parent"; 
+        if (r.typ_rekordu === 'sprzedaz_portfel') {
+            icon = "👛";
+            nameHtml = `${r.zabieg} <span style="font-size:11px; color:#94a3b8;">(pokryte z zadatku)</span>`;
+            amountStyle = "font-weight:bold; color:#94a3b8;";
+        }
+        else if (metoda === 'mix') {
+            rowClass = "mix-parent";
             nameHtml = `<span style="font-size:15px; letter-spacing:0.5px; color:#1e293b;">✨ ${r.zabieg.toUpperCase()}</span>`;
-            amountStyle = "font-weight:bold; color:#64748b;"; 
+            amountStyle = "font-weight:bold; color:#64748b;";
         }
         else if (r.typ_rekordu === 'platnosc_mix' || String(r.zabieg).includes('↳')) {
-            rowClass = "mix-child"; 
+            rowClass = "mix-child";
             nameHtml = `<div class="tree-node"><span class="tree-icon">└─</span> ${r.zabieg}</div>`;
-            amountStyle = "font-weight:bold; color:#166534;"; 
+            if (metoda.includes('portfel')) { icon = "👛"; amountStyle = "font-weight:bold; color:#94a3b8;"; }
+            else amountStyle = "font-weight:bold; color:#166534;";
         }
         else if (r.typ_rekordu === 'zadatek') {
              nameHtml = `<span style="color:#166534; font-weight:bold;">${r.zabieg}</span>`;
@@ -21911,7 +21920,8 @@ if (inputNazwaCheck) {
                 const kwota = parseFloat(r.kwota) || 0;
                 const metodaRaw = String(r.platnosc || "");
                 const metoda = metodaRaw.toLowerCase();
-                let czyLiczyc = (metoda !== 'mix');
+                // Portfel = pozycja pokryta z zadatku — informacyjna, NIE liczy się do utargu
+                let czyLiczyc = (metoda !== 'mix' && !metoda.includes('portfel'));
 
                 if (czyLiczyc) {
                     total += kwota;
@@ -21940,15 +21950,21 @@ if (inputNazwaCheck) {
                 else if (metoda.includes('mix')) { icon = "🔀"; paymentColor = "#475569"; }
                 else if (metoda.includes('gotówka') || metoda.includes('gotowka')) { icon = "💵"; paymentColor = "#10b981"; }
 
-                if (metoda === 'mix') {
-                    rowClass = "mix-parent"; 
+                if (r.typ_rekordu === 'sprzedaz_portfel') {
+                    icon = "👛"; paymentColor = "#94a3b8";
+                    nameHtml = `${r.zabieg} <span style="font-size:11px; color:#94a3b8;">(pokryte z zadatku)</span>`;
+                    amountStyle = "font-weight:600; color:#94a3b8;";
+                }
+                else if (metoda === 'mix') {
+                    rowClass = "mix-parent";
                     nameHtml = `<span style="font-size:14px; font-weight:600; color:#1e293b;">✨ ${r.zabieg.toUpperCase()}</span>`;
-                    amountStyle = "font-weight:600; color:#94a3b8;"; 
+                    amountStyle = "font-weight:600; color:#94a3b8;";
                 }
                 else if (r.typ_rekordu === 'platnosc_mix' || String(r.zabieg).includes('↳')) {
-                    rowClass = "mix-child"; 
+                    rowClass = "mix-child";
                     nameHtml = `<div style="padding-left:15px; color:#475569; font-weight:500;"><span style="color:#cbd5e1; margin-right:5px;">└─</span> ${r.zabieg}</div>`;
-                    amountStyle = "font-weight:600; color:#334155;"; 
+                    if (metoda.includes('portfel')) { icon = "👛"; paymentColor = "#94a3b8"; amountStyle = "font-weight:600; color:#94a3b8;"; }
+                    else amountStyle = "font-weight:600; color:#334155;";
                 }
                 else if (r.typ_rekordu === 'zadatek') {
                      nameHtml = `<span style="color:#10b981; font-weight:600;">➕ ${r.zabieg}</span>`;
