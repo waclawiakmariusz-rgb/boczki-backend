@@ -662,12 +662,19 @@ module.exports = (db) => {
                       const dateObj = new Date(row.data_wplaty);
                       const m = `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}`;
                       const amount = parseAmount(row.kwota);
+                      // Zadatek opłacony Mixem ma realne kwoty w tabeli Platnosci (splity) — tam są
+                      // już policzone. Pomijamy go w utargu (inaczej liczy się 2×, jak wiersz mix
+                      // w Sprzedazy na linii ~611), ale niżej zachowujemy przypisanie do pracownika,
+                      // bo splity Platnosci nie mają pola pracownika.
+                      const isMixZadatek = metoda === 'mix';
                       if (m === targetMonth) {
-                        const method = classifyPayment(metoda);
-                        const day = String(dateObj.getDate()).padStart(2, '0');
-                        report.total += amount; report.payments[method] += amount;
-                        if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
-                        report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+                        if (!isMixZadatek) {
+                          const method = classifyPayment(metoda);
+                          const day = String(dateObj.getDate()).padStart(2, '0');
+                          report.total += amount; report.payments[method] += amount;
+                          if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
+                          report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
+                        }
 
                         // Top Pracownicy — Zadatki też liczą się do utargu pracownika (jak Analiza/Pracownik)
                         if (amount > 0) {
@@ -681,7 +688,7 @@ module.exports = (db) => {
                           }
                         }
                       }
-                      if (compareMonth && m === compareMonth) report.compareTotal += amount;
+                      if (compareMonth && m === compareMonth && !isMixZadatek) report.compareTotal += amount;
                     });
 
                     report.profit = report.total - report.costs;
