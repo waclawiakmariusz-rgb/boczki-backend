@@ -38,15 +38,24 @@ function terminPlatnosci() {
  * @param {string} [params.miasto]      - Miasto nabywcy (opcjonalne)
  * @param {string} [params.telefon]     - Telefon nabywcy (opcjonalne)
  * @param {string} [params.nip]         - NIP nabywcy (opcjonalne — bez NIP = faktura B2C)
+ * @param {number} [params.kwota_grosze] - Rzeczywiście pobrana kwota w groszach (np. po voucherze).
+ *                                         Brak/nieprawidłowa → fallback na STRIPE_CENA_GROSZE.
  * @returns {Promise<{id: number, numer: string}>}
  */
-async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip }) {
+async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip, kwota_grosze }) {
   const token     = TOKEN();
   const subdomain = SUBDOMAIN();
 
   if (!token || !subdomain) {
     throw new Error('Brak konfiguracji Fakturownia (FAKTUROWNIA_TOKEN, FAKTUROWNIA_SUBDOMAIN).');
   }
+
+  // Faktura musi opiewać na kwotę faktycznie pobraną przez Stripe (vouchery!),
+  // a nie sztywny cennik. 0 zł jest poprawne (voucher 100%).
+  const groszeNum = parseInt(kwota_grosze);
+  const kwotaBrutto = (Number.isFinite(groszeNum) && groszeNum >= 0)
+    ? (groszeNum / 100).toFixed(2)
+    : cenaBrutto();
 
   const body = JSON.stringify({
     api_token: token,
@@ -57,7 +66,7 @@ async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip 
       sell_date:       dzisiaj(),
       payment_to:      dzisiaj(),     // zapłacone od razu przez Stripe — termin = dziś
       payment_type:    'card',        // klient zapłacił kartą w Stripe Checkout
-      paid:            cenaBrutto(),  // pełna kwota zapłacona → status faktury: zapłacona
+      paid:            kwotaBrutto,   // kwota faktycznie zapłacona → status faktury: zapłacona
       paid_date:       dzisiaj(),     // data faktycznej zapłaty (dziś)
       currency:        'PLN',
 
@@ -76,7 +85,7 @@ async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip 
         {
           name:              'Dostęp do systemu Estelio (1 miesiąc)',
           tax:               '23',
-          total_price_gross: cenaBrutto(),
+          total_price_gross: kwotaBrutto,
           quantity:          '1',
         }
       ]

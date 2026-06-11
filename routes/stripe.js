@@ -298,7 +298,8 @@ module.exports = (db) => {
           // Wystaw fakturę VAT przez Fakturownia.pl (wysyła PDF mailem do klienta)
           try {
             const { ulica, miasto, telefon, nip } = session.metadata || {};
-            await wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip });
+            // amount_total = kwota faktycznie pobrana (po voucherze/coupon Stripe)
+            await wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip, kwota_grosze: session.amount_total });
           } catch (fakErr) {
             console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
             // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie
@@ -364,6 +365,7 @@ module.exports = (db) => {
                 miasto:       salonDane.miasto  || '',
                 telefon:      salonDane.telefon || '',
                 nip:          nip,
+                kwota_grosze: invoice.amount_paid, // realna kwota z faktury Stripe (po voucherze)
               });
               console.log(`[stripe webhook] Faktura recurring (${billingReason}) wystawiona dla ${customerEmail}`);
             } catch (fakErr) {
