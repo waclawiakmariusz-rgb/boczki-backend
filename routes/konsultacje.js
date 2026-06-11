@@ -150,16 +150,6 @@ module.exports = (db) => {
         }
       );
 
-    } else if (action === 'akon_get_months') {
-      db.query(
-        `SELECT DATE_FORMAT(data_konsultacji, '%Y-%m') as miesiac FROM Wyniki_konsultacja WHERE tenant_id = ? AND data_konsultacji IS NOT NULL GROUP BY miesiac ORDER BY miesiac DESC`,
-        [tenant_id],
-        (err, rows) => {
-          if (err) return res.json({ status: 'success', months: [] });
-          return res.json({ status: 'success', months: (rows || []).map(r => r.miesiac) });
-        }
-      );
-
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja GET konsultacje: ' + action });
     }
@@ -348,7 +338,6 @@ module.exports = (db) => {
             if (err) return res.json({ status: 'error', message: err.message });
             let stats = {
               totalRevenue: 0, consultationsCount: 0, successes: 0, totalUpsell: 0,
-              categorySplit: { Reklama: 0, Normalna: 0 },
               employeeDetails: {}, rankingPracownikow: []
             };
             (rows || []).forEach(r => {
@@ -363,8 +352,6 @@ module.exports = (db) => {
               stats.totalUpsell += upsell;
               stats.consultationsCount++;
               if (isSuccess) stats.successes++;
-              if (zrodlo.toLowerCase().includes('reklama')) stats.categorySplit['Reklama']++;
-              else stats.categorySplit['Normalna']++;
 
               if (!stats.employeeDetails[pracownik]) {
                 stats.employeeDetails[pracownik] = { name: pracownik, total: 0, upsell: 0, consultations: 0, successes: 0, top: {} };
@@ -387,14 +374,14 @@ module.exports = (db) => {
         `SELECT klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE(data_konsultacji) = ? AND (status = 'Aktywna' OR status IS NULL)`,
         [tenant_id, dateStr],
         (err, rows) => {
-          if (err) return res.json({ status: 'success', data: [] });
+          if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success', data: (rows || []).map(r => {
             const cialo = String(r.zabiegi_cialo || '');
             const twarz = String(r.zabiegi_twarz || '');
             return {
               klient: r.klient, zabieg: (cialo + (cialo && twarz ? ' + ' : '') + twarz).trim() || 'Konsultacja',
               kwota: safeNum(r.kwota_pakiet), upsell: safeNum(r.upsell),
-              zrodlo: r.zrodlo, sprzedawca: r.kto_wykonal
+              zrodlo: String(r.zrodlo || ''), sprzedawca: r.kto_wykonal
             };
           }) });
         }
@@ -463,7 +450,7 @@ module.exports = (db) => {
           `SELECT data_konsultacji, klient, zabiegi_cialo, zabiegi_twarz, kwota_pakiet, upsell, zrodlo, kto_wykonal, obszar, typ_akcji FROM Wyniki_konsultacja WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') = ? AND (status = 'Aktywna' OR status IS NULL) ORDER BY data_konsultacji DESC`,
           [tenant_id, monthStr],
           (err, rows) => {
-            if (err) return res.json({ status: 'success', data: [] });
+            if (err) return res.json({ status: 'error', message: err.message });
             return res.json({ status: 'success', data: (rows || []).map(r => {
               const cialo = String(r.zabiegi_cialo || '');
               const twarz = String(r.zabiegi_twarz || '');
@@ -481,18 +468,6 @@ module.exports = (db) => {
           }
         );
       });
-
-    } else if (action === 'akon_get_consultants') {
-      const onlyActive = d.onlyActive;
-      if (String(onlyActive) === 'true') {
-        db.query(`SELECT imie FROM Pracownicy_konsultacja WHERE tenant_id = ? AND (status = 'Aktywny' OR status IS NULL)`, [tenant_id], (err, rows) => {
-          return res.json({ status: 'success', data: (rows || []).map(r => r.imie) });
-        });
-      } else {
-        db.query(`SELECT imie, status FROM Pracownicy_konsultacja WHERE tenant_id = ?`, [tenant_id], (err, rows) => {
-          return res.json({ status: 'success', data: (rows || []).map(r => ({ imie: r.imie, status: r.status })) });
-        });
-      }
 
     } else if (action === 'odp_getReportData') {
       const dFrom = new Date(d.dateFrom); dFrom.setHours(0, 0, 0, 0);

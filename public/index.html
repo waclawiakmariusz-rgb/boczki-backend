@@ -9540,6 +9540,7 @@ ANALIZA MANAGER
             <div style="font-size: 14px; color: #6b7280; text-transform: uppercase; font-weight:bold;">Suma Sprzedaży w Miesiącu</div>
             <div id="akon_rep-total" style="font-size: 38px; font-weight: 800; margin: 5px 0;">0 zł</div>
             <div id="akon_rep-compare-text" style="font-size: 15px; font-weight: 500;">...</div>
+            <div id="akon_rep-substats" style="font-size: 13px; font-weight: 600; color:#64748b; margin-top: 6px;"></div>
         </div>
 
         <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
@@ -14688,7 +14689,7 @@ if (id === 'kon_raportowanie' || id === 'kon_admin-panel' || id === 'kon_histori
     if (id === 'analiza-konsultacji') {
         akon_uruchomAplikacje();
         // Wymuszenie kliknięcia w pierwszy przycisk (Dashboard), żeby załadować domyślny widok
-        const btnDashboard = document.querySelector('.akon_nav-btn.akon_active') || document.querySelector('.akon_nav-btn');
+        const btnDashboard = document.querySelector('.akon-tab'); // klasa .akon_nav-btn nie istnieje — pigułki to .akon-tab (pierwsza = Przegląd)
         akon_switchView('dashboard', btnDashboard);
     }
 	
@@ -14957,7 +14958,7 @@ function pokaz(id, b) {
     if (id === 'zadania') zd_init();
     if (id === 'analiza-konsultacji') {
         akon_uruchomAplikacje();
-        const btnDashboard = document.querySelector('.akon_nav-btn.akon_active') || document.querySelector('.akon_nav-btn');
+        const btnDashboard = document.querySelector('.akon-tab'); // klasa .akon_nav-btn nie istnieje — pigułki to .akon-tab (pierwsza = Przegląd)
         akon_switchView('dashboard', btnDashboard);
     }
     
@@ -25233,41 +25234,12 @@ function kon_usunKonsultanta(i) {
 
         // --- START (Uruchamiane przy włączaniu modułu przez główny system) ---
         function akon_uruchomAplikacje() {
-            // Ustawiamy dzisiejszą datę w dzienniku
-            document.getElementById('akon_daily-date').value = new Date().toISOString().slice(0,10);
-            
-            // Obsługa mobile menu
-            if(window.innerWidth <= 768) document.getElementById('akon_mobile-header-btn').style.display = 'flex';
-            
-            // 🚀 NOWE: Pobieramy pełną listę konsultantów do filtra
-            akon_pobierzListeKonsultantowDoFiltra();
+            // Dzisiejsza data w dzienniku — czas LOKALNY (toISOString to UTC: między 0:00 a 2:00 cofało dzień)
+            const akonNow = new Date();
+            document.getElementById('akon_daily-date').value = `${akonNow.getFullYear()}-${String(akonNow.getMonth() + 1).padStart(2, '0')}-${String(akonNow.getDate()).padStart(2, '0')}`;
 
-            // Pobieramy miesiące do selectów
+            // Pobieramy miesiące do selectów (filtr pracowników zasila się z danych dashboardu)
             akon_pobierzMiesiaceDoSelectow();
-        }
-		// 🚀 NOWA FUNKCJA: Pobiera pełną listę aktywnych konsultantów z Pracownicy_konsultacja
-        async function akon_pobierzListeKonsultantowDoFiltra() {
-            try {
-                // Wywołujemy Twoją ścieżkę POST dla pobrania konsultantów (tylko aktywnych)
-const res = await akon_apiCall('akon_get_consultants', { onlyActive: 'true' });                
-                if (res.status === 'success' && res.data) {
-                    const empSel = document.getElementById('akon_employeeSelect');
-                    empSel.innerHTML = '<option value="">-- Wybierz Pracownika --</option>';
-                    
-                    // Twoja funkcja backendowa kon_pobierzKonsultantow() zwraca prostą tablicę imion, gdy onlyActive=true
-                    res.data.forEach(name => {
-                        empSel.innerHTML += `<option value="${escHtml(name)}">${escHtml(name)}</option>`;
-                    });
-                    
-                    // Opcjonalnie dodajemy opcję pokazania całego rankingu zespołu
-                    // empSel.innerHTML += `<option value="ranking_zespolu">--- Ranking Zespołu ---</option>`;
-                    
-                } else {
-                    console.error("Błąd pobierania konsultantów:", res.message);
-                }
-            } catch (error) {
-                console.error("Błąd krytyczny pobierania konsultantów:", error);
-            }
         }
 
         // --- PRZEŁĄCZANIE ZAKŁADEK (PIGUŁEK) ---
@@ -25326,9 +25298,12 @@ const res = await akon_apiCall('akon_get_consultants', { onlyActive: 'true' });
             document.getElementById('akon_dash-rev').innerText = "...";
 
             const res = await akon_apiCall('akon_get_stats', { month: m });
-			
+
             if(res.status === 'success') {
                 akon_renderDashboard(res.data);
+            } else {
+                document.getElementById('akon_dash-rev').innerText = "Błąd";
+                console.error('akon_get_stats:', res.message);
             }
         }
 function akon_renderDashboard(data) {
@@ -25362,9 +25337,15 @@ function akon_renderDashboard(data) {
         }
     }
 
-    // Resetuj widok pracownika
+    // Filtr pracownika z danych miesiąca (ranking) — lista "tylko aktywni" ukrywała byłych
+    // konsultantów, którzy są w rankingu, ale nie dało się ich wybrać do analizy
     const empSel = document.getElementById('akon_employeeSelect');
-    if (empSel) empSel.value = "";
+    if (empSel) {
+        empSel.innerHTML = '<option value="">-- Wybierz Pracownika --</option>';
+        (data.rankingPracownikow || []).forEach(e => {
+            empSel.innerHTML += `<option value="${escHtml(e.name)}">${escHtml(e.name)}</option>`;
+        });
+    }
     const empSec = document.getElementById('akon_employee-section');
     if (empSec) empSec.style.display = 'none';
 
@@ -25470,9 +25451,11 @@ function akon_renderDashboard(data) {
                 } else {
                     res.data.forEach(r => {
                         sums.total += r.kwota; sums.ups += r.upsell;
-                        if(r.zrodlo.includes('Reklama')) sums.ad++; else sums.nor++;
-                        
-                        let badge = r.zrodlo.includes('Reklama') 
+                        // toLowerCase + null-guard — spójnie z Listą Miesięczną (surowe r.zrodlo bywało NULL → TypeError)
+                        const isRek = String(r.zrodlo || '').toLowerCase().includes('reklama');
+                        if(isRek) sums.ad++; else sums.nor++;
+
+                        let badge = isRek
                             ? `<span style="background:#e0e7ff; color:#3730a3; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">REKLAMA</span>` 
                             : `<span style="background:#f1f5f9; color:#475569; padding:4px 8px; border-radius:6px; font-size:10px; font-weight:bold; letter-spacing:0.5px;">BAZA</span>`;
                         
@@ -25500,7 +25483,8 @@ function akon_renderDashboard(data) {
         // --- WIDOK 3: RAPORT MIESIĘCZNY ---
         async function akon_pobierzRaportMiesieczny() {
             const m = document.getElementById('akon_reportMonthSelect').value;
-            const c = document.getElementById('akon_compareMonthSelect').value;
+            let c = document.getElementById('akon_compareMonthSelect').value;
+            if (c === m) c = ''; // porównanie miesiąca z samym sobą nie ma sensu (zawsze 0%)
             if(!m) return;
 
             document.getElementById('akon_rep-total').innerText = "⏳";
@@ -25520,8 +25504,13 @@ function akon_renderDashboard(data) {
                     // compareCutoffDay > 0 = porównanie month-to-date (bieżący miesiąc vs ten sam wycinek tamtego)
                     const cutoffInfo = d.compareCutoffDay ? ` do ${d.compareCutoffDay}. dnia` : '';
                     compTxt = `<span style="color:${col}; font-weight:bold;">${ico} ${perc}%</span> vs ${c}${cutoffInfo} (${akon_formatPLN(d.compareTotal)})`;
+                } else if (c) {
+                    compTxt = `vs ${escHtml(c)}: brak utargu do porównania`;
                 }
                 document.getElementById('akon_rep-compare-text').innerHTML = compTxt;
+
+                const repSub = document.getElementById('akon_rep-substats');
+                if (repSub) repSub.innerText = `w tym upsell: ${akon_formatPLN(d.upsellSum || 0)} • z reklamy: ${d.adsCount || 0} • z bazy: ${d.normCount || 0}`;
 
                 const ctx = document.getElementById('akon_monthlyTrendChart');
                 if(akon_trendChartInst) akon_trendChartInst.destroy();
@@ -25544,6 +25533,9 @@ function akon_renderDashboard(data) {
                 d.topTreatments.forEach(([n, c], i) => {
                     ulTreat.innerHTML += `<li style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f9fafb;"><span style="font-size:13px; color:var(--text-dark);">${i+1}. ${escHtml(n)}</span> <span style="background:#f3f4f6; padding:2px 8px; border-radius:10px; font-weight:bold; color:#555;">${escHtml(c)} szt.</span></li>`;
                 });
+            } else {
+                document.getElementById('akon_rep-total').innerText = "Błąd";
+                document.getElementById('akon_rep-compare-text').innerText = res.message || 'Nie udało się pobrać danych raportu.';
             }
         }
 
@@ -25638,9 +25630,12 @@ function akon_renderDashboard(data) {
         }
 
         // --- POMOCNICZE ---
-        function akon_formatPLN(val) { 
-            return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', maximumFractionDigits: 0 }).format(val); 
-        }  
+        function akon_formatPLN(val) {
+            // Grosze tylko gdy występują — sztywne zaokrąglanie do pełnych zł przekłamywało KPI (np. 2637,50 → "2 638 zł")
+            const n = Number(val) || 0;
+            const maGrosze = Math.round(n * 100) % 100 !== 0;
+            return new Intl.NumberFormat('pl-PL', { style: 'currency', currency: 'PLN', minimumFractionDigits: maGrosze ? 2 : 0, maximumFractionDigits: maGrosze ? 2 : 0 }).format(n);
+        }
 	
 	
 	
