@@ -191,11 +191,7 @@ module.exports = (db) => {
                     if (String(r.platnosc || '').toLowerCase() === 'mix') return 2;
                     return 1;
                   };
-                  const wDiff = getW(a) - getW(b);
-                  if (wDiff !== 0) return wDiff;
-                  // W ramach jednej transakcji: pozycje od najdroższej do najtańszej,
-                  // żeby tanie pozycje pochłonięte przez portfel nie lądowały na górze.
-                  return (parseFloat(b.kwota) || 0) - (parseFloat(a.kwota) || 0);
+                  return getW(a) - getW(b);
                 });
 
                 callback(wynik);
