@@ -22222,7 +22222,10 @@ if (inputNazwaCheck) {
                 let percent = ((diff / data.compareTotal) * 100).toFixed(1);
                 let color = diff >= 0 ? '#10b981' : '#ef4444';
                 let icon = diff >= 0 ? '▲' : '▼';
-                compareHtml = `<div style="color:${color}; font-weight:bold;">${icon} ${percent}% <span style="color:#6b7280; font-weight:normal;">vs ${compareMonth}</span></div>`;
+                // Porównanie „do dziś" — gdy oglądamy bieżący miesiąc, backend uciął
+                // miesiąc porównawczy do tego samego dnia (month-to-date).
+                const cutoffLabel = data.compareCutoffDay ? ` (do ${data.compareCutoffDay}. dnia)` : '';
+                compareHtml = `<div style="color:${color}; font-weight:bold;">${icon} ${percent}% <span style="color:#6b7280; font-weight:normal;">vs ${compareMonth}${cutoffLabel}</span></div>`;
             }
 
             let costHtml = "";

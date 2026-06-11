@@ -559,6 +559,22 @@ module.exports = (db) => {
 
         const months = compareMonth ? [targetMonth, compareMonth] : [targetMonth];
 
+        // Porównanie „month-to-date": gdy oglądamy bieżący (trwający) miesiąc,
+        // ucinamy miesiąc porównawczy do tego samego dnia (np. 11 czerwca → maj 1–11),
+        // żeby nie zestawiać niepełnego miesiąca z pełnym. Dla zamkniętych miesięcy
+        // (oglądamy przeszły miesiąc) compareCutoffDay = null → pełne porównanie.
+        let compareCutoffDay = null;
+        if (compareMonth) {
+          const now = new Date();
+          const currentMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+          if (targetMonth === currentMonthStr) {
+            const [cy, cm] = compareMonth.split('-').map(Number);
+            const daysInCompare = new Date(cy, cm, 0).getDate(); // dni w miesiącu porównania
+            compareCutoffDay = Math.min(now.getDate(), daysInCompare);
+          }
+        }
+        report.compareCutoffDay = compareCutoffDay;
+
         // Magazyn lookup — Set produktów typu Witaminy (= Suplementy). Pozwala
         // rozpoznać stare sprzedaze "Kosmetyk: X" gdzie X to suplement.
         db.query(
@@ -621,7 +637,7 @@ module.exports = (db) => {
                 if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                 report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
               }
-              if (compareMonth && m === compareMonth) report.compareTotal += amount;
+              if (compareMonth && m === compareMonth && (!compareCutoffDay || dateObj.getDate() <= compareCutoffDay)) report.compareTotal += amount;
             });
 
             // Platnosci mix
@@ -644,7 +660,7 @@ module.exports = (db) => {
                     if (!report.daily[day]) report.daily[day] = { total: 0, count: 0, methods: { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 } };
                     report.daily[day].total += amount; report.daily[day].count++; report.daily[day].methods[method] += amount;
                   }
-                  if (compareMonth && m === compareMonth) report.compareTotal += amount;
+                  if (compareMonth && m === compareMonth && (!compareCutoffDay || dateObj.getDate() <= compareCutoffDay)) report.compareTotal += amount;
                 });
 
                 // Zadatki
@@ -688,7 +704,7 @@ module.exports = (db) => {
                           }
                         }
                       }
-                      if (compareMonth && m === compareMonth && !isMixZadatek) report.compareTotal += amount;
+                      if (compareMonth && m === compareMonth && !isMixZadatek && (!compareCutoffDay || dateObj.getDate() <= compareCutoffDay)) report.compareTotal += amount;
                     });
 
                     report.profit = report.total - report.costs;
