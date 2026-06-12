@@ -1260,7 +1260,13 @@
           </div>
           <div class="form-group">
             <label>NIP <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— opcjonalnie, do faktury VAT dla firmy</span></label>
-            <input type="text" id="f-nip" placeholder="np. 1234567890" maxlength="13">
+            <div class="voucher-row">
+              <div class="form-group" style="margin-bottom:0;">
+                <input type="text" id="f-nip" placeholder="np. 1234567890" maxlength="13">
+              </div>
+              <button type="button" class="btn-voucher" id="btn-gus" onclick="pobierzZGus()">Pobierz dane</button>
+            </div>
+            <div id="gus-info" style="font-size:.75rem; margin-top:5px; display:none;"></div>
           </div>
           <div class="form-group">
             <label>Wiadomość (opcjonalnie)</label>
@@ -1560,6 +1566,48 @@ async function sprawdzVoucher() {
     orygEl.textContent = window._cenaBazowa || '';
     orygEl.style.display = 'block';
     if (window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i aktywuj salon';
+  } catch {
+    infoEl.style.color = '#991b1b';
+    infoEl.textContent = '✗ Błąd połączenia.';
+  }
+  btn.disabled = false;
+}
+
+// ── GUS / biała lista — autouzupełnianie po NIP ───────────────────
+async function pobierzZGus() {
+  const infoEl = document.getElementById('gus-info');
+  const btn = document.getElementById('btn-gus');
+  const nip = document.getElementById('f-nip').value.replace(/[\s-]/g, '');
+
+  infoEl.style.display = 'block';
+  infoEl.style.color = 'var(--text-muted)';
+
+  if (!/^\d{10}$/.test(nip)) {
+    infoEl.style.color = '#991b1b';
+    infoEl.textContent = '✗ Wpisz najpierw NIP (10 cyfr).';
+    return;
+  }
+
+  infoEl.textContent = 'Pobieram dane firmy...';
+  btn.disabled = true;
+  try {
+    const d = await fetch('/api/gus?nip=' + encodeURIComponent(nip)).then(r => r.json());
+    if (d.status !== 'success') {
+      infoEl.style.color = '#991b1b';
+      infoEl.textContent = '✗ ' + (d.message || 'Nie udało się pobrać danych.');
+      btn.disabled = false;
+      return;
+    }
+    // Uzupełniamy tylko puste pola — nie nadpisujemy tego, co klient już wpisał
+    const fillIfEmpty = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && !el.value.trim() && val) el.value = val;
+    };
+    fillIfEmpty('f-salon', d.nazwa);
+    fillIfEmpty('f-ulica', d.ulica);
+    fillIfEmpty('f-miasto', d.miasto);
+    infoEl.style.color = '#166534';
+    infoEl.textContent = '✦ Znaleziono: ' + d.nazwa + ' — uzupełniono puste pola. Sprawdź i popraw, jeśli trzeba.';
   } catch {
     infoEl.style.color = '#991b1b';
     infoEl.textContent = '✗ Błąd połączenia.';
