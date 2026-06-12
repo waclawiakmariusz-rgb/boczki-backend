@@ -448,7 +448,16 @@ module.exports = (db) => {
               [tenant_id, poz.kategoria || '', poz.wariant || ''],
               (errL, rowsL) => {
                 const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
-                insertWithTyp(typZab);
+                if (typZab) return insertWithTyp(typZab);
+                // Dopłata (portfel/zadatek): kategoria "X Dopłata" nie istnieje w Uslugi —
+                // dziedziczymy typ_zabiegu z kategorii bazowej X, żeby snapshot nie był NULL.
+                const m = String(poz.kategoria || '').match(/^(.+)\s+Dopłata$/);
+                if (!m) return insertWithTyp(null);
+                db.query(
+                  `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND typ_zabiegu IS NOT NULL LIMIT 1`,
+                  [tenant_id, m[1]],
+                  (errB, rowsB) => insertWithTyp((rowsB && rowsB[0] && rowsB[0].typ_zabiegu) || null)
+                );
               }
             );
           };
