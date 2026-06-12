@@ -355,4 +355,57 @@ async function powiadomAdminaOFailedPayment({ email, nazwa_salonu, kwota }) {
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment };
+// ─── Powiadom admina o nowym zakupie (Stripe checkout opłacony) ──
+async function powiadomAdminaOZakupie({ imie, nazwa_salonu, email, telefon, miasto, kwota_grosze, voucher }) {
+  const transporter = createTransport();
+  const groszeNum = parseInt(kwota_grosze);
+  const kwota = Number.isFinite(groszeNum) ? (groszeNum / 100).toFixed(2) + ' zł' : '(nieznana)';
+  return transporter.sendMail({
+    from: FROM(),
+    to: ADMIN_EMAIL(),
+    subject: `💰 Nowy zakup: ${nazwa_salonu || email} — ${kwota}`,
+    html: emailWrapper('💰', 'Nowy zakup!', 'Powiadomienie admina', `
+      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">Ktoś właśnie kupił Estelio 🎉</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:14px;">
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6; width:140px;">Salon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><strong>${nazwa_salonu || '(brak)'}</strong></td></tr>
+        ${imie ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Imię:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${imie}</td></tr>` : ''}
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Email:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><a href="mailto:${email}" style="color:#b87080;">${email}</a></td></tr>
+        ${telefon ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Telefon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${telefon}</td></tr>` : ''}
+        ${miasto ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Miasto:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${miasto}</td></tr>` : ''}
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Pobrana kwota:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6; font-weight:700; color:#16a34a;">${kwota}</td></tr>
+        ${voucher ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Voucher:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6; font-weight:700; color:#c9a96e;">${voucher}</td></tr>` : ''}
+      </table>
+      <p style="font-size:13px; color:#7a6e66; margin-top:20px;">
+        Link rejestracyjny został wysłany klientowi automatycznie. Faktura w Fakturowni.
+        Gdy klient ukończy rejestrację salonu, dostaniesz osobne powiadomienie.
+      </p>
+      ${emailBtn(`${APP_URL()}/admin.html`, 'Otwórz panel admina →')}
+    `)
+  });
+}
+
+// ─── Powiadom admina o ukończonej rejestracji salonu ─────────
+async function powiadomAdminaORejestracji({ nazwa_salonu, email, login, tenant_id }) {
+  const transporter = createTransport();
+  return transporter.sendMail({
+    from: FROM(),
+    to: ADMIN_EMAIL(),
+    subject: `🎉 Nowy salon zarejestrowany: ${nazwa_salonu}`,
+    html: emailWrapper('🎉', 'Nowy salon!', 'Powiadomienie admina', `
+      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">Salon ukończył rejestrację</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:14px; margin-top:14px;">
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6; width:140px;">Salon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><strong>${nazwa_salonu}</strong></td></tr>
+        ${email ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Email:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><a href="mailto:${email}" style="color:#b87080;">${email}</a></td></tr>` : ''}
+        ${login ? `<tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Login:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6; font-family:monospace;">${login}</td></tr>` : ''}
+        <tr><td style="padding:8px 0; color:#7a6e66;">Tenant ID:</td><td style="padding:8px 0; font-family:monospace; font-size:12px;">${tenant_id}</td></tr>
+      </table>
+      <p style="font-size:13px; color:#7a6e66; margin-top:20px;">
+        Klient dostał welcome email z danymi logowania i linkiem do panelu rozliczeniowego.
+        System jest dla niego w pełni aktywny.
+      </p>
+      ${emailBtn(`${APP_URL()}/admin.html`, 'Otwórz panel admina →')}
+    `)
+  });
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji };

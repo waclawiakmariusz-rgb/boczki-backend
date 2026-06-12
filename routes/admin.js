@@ -10,19 +10,21 @@ const { migracjaTenanta: migracjaTypyZabiegow, listaTenantow: listaTenantowDoMig
 
 const BCRYPT_ROUNDS = 10;
 
-let wyslijLinkRejestracji, powiadomAdmina, wyslijWitamy, wyslijPotwierdzeniZgloszenia;
+let wyslijLinkRejestracji, powiadomAdmina, wyslijWitamy, wyslijPotwierdzeniZgloszenia, powiadomAdminaORejestracji;
 try {
   const mailer = require('./mailer');
   wyslijLinkRejestracji = mailer.wyslijLinkRejestracji;
   powiadomAdmina = mailer.powiadomAdmina;
   wyslijWitamy = mailer.wyslijWitamy;
   wyslijPotwierdzeniZgloszenia = mailer.wyslijPotwierdzeniZgloszenia;
+  powiadomAdminaORejestracji = mailer.powiadomAdminaORejestracji;
 } catch (e) {
   console.warn('[admin] Mailer niedostępny:', e.message);
   wyslijLinkRejestracji = async () => { throw new Error('Mailer nie skonfigurowany na serwerze.'); };
   powiadomAdmina = async () => {};
   wyslijWitamy = async () => {};
   wyslijPotwierdzeniZgloszenia = async () => {};
+  powiadomAdminaORejestracji = async () => {};
 }
 
 // ─── Pomocnicze ──────────────────────────────────────────────
@@ -507,6 +509,10 @@ module.exports = (db) => {
                   // Nie blokujemy odpowiedzi — salon już istnieje
                 }
               }
+              // Powiadom admina o nowym salonie (fire-and-forget)
+              powiadomAdminaORejestracji({ nazwa_salonu, email, login: login.trim(), tenant_id })
+                .then(() => console.log('[admin] Powiadomienie admina o rejestracji wysłane'))
+                .catch(err => console.error('[admin] Powiadomienie admina o rejestracji error:', err.message));
               return res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: login.trim() });
             });
           }

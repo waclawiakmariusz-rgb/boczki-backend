@@ -12,18 +12,20 @@ try {
   console.warn('[stripe] Stripe SDK niedostępny:', e.message);
 }
 
-let wyslijLinkRejestracji, powiadomAdmina, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment;
+let wyslijLinkRejestracji, powiadomAdmina, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie;
 try {
   const mailer = require('./mailer');
   wyslijLinkRejestracji = mailer.wyslijLinkRejestracji;
   powiadomAdmina = mailer.powiadomAdmina;
   wyslijOstrzezenieOPlatnosci = mailer.wyslijOstrzezenieOPlatnosci;
   powiadomAdminaOFailedPayment = mailer.powiadomAdminaOFailedPayment;
+  powiadomAdminaOZakupie = mailer.powiadomAdminaOZakupie;
 } catch (e) {
   wyslijLinkRejestracji = async () => { throw new Error('Mailer nie skonfigurowany.'); };
   powiadomAdmina = async () => {};
   wyslijOstrzezenieOPlatnosci = async () => {};
   powiadomAdminaOFailedPayment = async () => {};
+  powiadomAdminaOZakupie = async () => {};
 }
 
 let wystawFakture;
@@ -189,6 +191,7 @@ module.exports = (db) => {
             ulica:   ulica   || '',
             miasto:  miasto  || '',
             nip:     nip     || '',
+            voucher: voucherInfo ? (voucherInfo.kod || '') : '',
           };
 
           // Voucher → dynamiczny Stripe Coupon dolaczany do sesji.
@@ -304,6 +307,12 @@ module.exports = (db) => {
             console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
             // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie
           }
+
+          // Powiadom admina o nowym zakupie (fire-and-forget)
+          const { telefon: telAdm, miasto: miastoAdm, voucher } = session.metadata || {};
+          powiadomAdminaOZakupie({ imie, nazwa_salonu, email, telefon: telAdm, miasto: miastoAdm, kwota_grosze: session.amount_total, voucher })
+            .then(() => console.log('[stripe webhook] Powiadomienie admina o zakupie wysłane'))
+            .catch(err => console.error('[stripe webhook] Powiadomienie admina o zakupie error:', err.message));
         }
       );
     }
