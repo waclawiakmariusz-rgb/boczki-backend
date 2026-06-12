@@ -1297,6 +1297,7 @@
             <label>Wiadomość (opcjonalnie)</label>
             <textarea id="f-wiadomosc" placeholder="np. Mam 3 pracownice, czy system to obsługuje? Mam pytanie dotyczące..."></textarea>
           </div>
+          </div><!-- /dane-body -->
 
           <!-- CENA -->
           <div class="price-box" id="cena-box" style="display:none;">
@@ -1333,7 +1334,6 @@
           </div>
 
           <button type="submit" class="btn-submit" id="btn-wyslij">Zamów dostęp</button>
-          </div><!-- /dane-body -->
         </form>
       </div>
     </div>
@@ -1618,6 +1618,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('f-nip').addEventListener('input', function() {
     if (this.value.trim()) document.getElementById('firma-group').style.display = 'block';
   });
+  // Wymagane pola siedzą w harmonijce — przed walidacją HTML5 musi być otwarta,
+  // inaczej przeglądarka nie może sfokusować ukrytego pola i submit umiera po cichu
+  document.getElementById('btn-wyslij').addEventListener('click', otworzDane);
+  document.getElementById('zamow-form').addEventListener('invalid', otworzDane, true);
 });
 
 async function pobierzZGus() {
