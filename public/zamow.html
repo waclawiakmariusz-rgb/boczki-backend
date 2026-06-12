@@ -640,6 +640,20 @@
   .voucher-row { display: flex; gap: 10px; align-items: flex-end; }
   .voucher-row .form-group { flex: 1; margin: 0; }
 
+  /* Harmonijka — dane zamówienia */
+  .dane-toggle {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding: 14px 16px; margin-bottom: 18px;
+    background: var(--cream); border: 1.5px solid var(--border); border-radius: 10px;
+    font-family: 'DM Sans', sans-serif; font-weight: 600; font-size: .85rem;
+    color: var(--dark); cursor: pointer; text-align: left; transition: all .2s;
+  }
+  .dane-toggle:hover { border-color: var(--rose); color: var(--rose); }
+  .dane-toggle .arrow { flex-shrink: 0; font-size: .7rem; transition: transform .25s; }
+  .dane-toggle.open .arrow { transform: rotate(180deg); }
+  .dane-body { display: none; }
+  .dane-body.open { display: block; }
+
   /* Zgody RODO/regulamin przed CTA */
   .zgody-box { margin: 18px 0 6px; display: flex; flex-direction: column; gap: 10px; }
   .zgoda-row { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; line-height: 1.5; }
@@ -1232,6 +1246,27 @@
 
         <form id="zamow-form" onsubmit="wyslij(event)">
           <div class="form-group">
+            <label>NIP <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— masz firmę? Wpisz NIP, a dane do faktury uzupełnimy za Ciebie</span></label>
+            <div class="voucher-row">
+              <div class="form-group" style="margin-bottom:0;">
+                <input type="text" id="f-nip" placeholder="np. 1234567890" maxlength="13">
+              </div>
+              <button type="button" class="btn-voucher" id="btn-gus" onclick="pobierzZGus()">Pobierz dane</button>
+            </div>
+            <div id="gus-info" style="font-size:.75rem; margin-top:5px; display:none;"></div>
+          </div>
+
+          <button type="button" class="dane-toggle" id="dane-toggle" onclick="toggleDane()" aria-expanded="false" aria-controls="dane-body">
+            <span>Dane zamówienia <span style="font-weight:400; color:var(--text-muted);">— nie masz NIP? Wypełnij ręcznie</span></span>
+            <span class="arrow">▼</span>
+          </button>
+
+          <div class="dane-body" id="dane-body">
+          <div class="form-group" id="firma-group" style="display:none;">
+            <label>Nazwa firmy <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— na nią zostanie wystawiona faktura</span></label>
+            <input type="text" id="f-firma" placeholder="np. Anna Kowalska Studio Urody">
+          </div>
+          <div class="form-group">
             <label>Imię i nazwisko *</label>
             <input type="text" id="f-imie" placeholder="np. Anna Kowalska" required>
           </div>
@@ -1257,20 +1292,6 @@
           <div class="form-group">
             <label>Ulica i numer <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— do faktury VAT</span></label>
             <input type="text" id="f-ulica" placeholder="np. Kwiatowa 12/3">
-          </div>
-          <div class="form-group">
-            <label>NIP <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— opcjonalnie, do faktury VAT dla firmy</span></label>
-            <div class="voucher-row">
-              <div class="form-group" style="margin-bottom:0;">
-                <input type="text" id="f-nip" placeholder="np. 1234567890" maxlength="13">
-              </div>
-              <button type="button" class="btn-voucher" id="btn-gus" onclick="pobierzZGus()">Pobierz dane</button>
-            </div>
-            <div id="gus-info" style="font-size:.75rem; margin-top:5px; display:none;"></div>
-          </div>
-          <div class="form-group" id="firma-group" style="display:none;">
-            <label>Nazwa firmy <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— na nią zostanie wystawiona faktura</span></label>
-            <input type="text" id="f-firma" placeholder="np. Anna Kowalska Studio Urody">
           </div>
           <div class="form-group">
             <label>Wiadomość (opcjonalnie)</label>
@@ -1312,6 +1333,7 @@
           </div>
 
           <button type="submit" class="btn-submit" id="btn-wyslij">Zamów dostęp</button>
+          </div><!-- /dane-body -->
         </form>
       </div>
     </div>
@@ -1577,6 +1599,19 @@ async function sprawdzVoucher() {
   btn.disabled = false;
 }
 
+// ── Harmonijka z danymi zamówienia ────────────────────────────────
+function toggleDane() {
+  const body = document.getElementById('dane-body');
+  const btn = document.getElementById('dane-toggle');
+  const open = body.classList.toggle('open');
+  btn.classList.toggle('open', open);
+  btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+function otworzDane() {
+  const body = document.getElementById('dane-body');
+  if (!body.classList.contains('open')) toggleDane();
+}
+
 // ── GUS / biała lista — autouzupełnianie po NIP ───────────────────
 // Pole "Nazwa firmy" pokazuje się dopiero gdy klient wpisze NIP
 document.addEventListener('DOMContentLoaded', () => {
@@ -1605,7 +1640,8 @@ async function pobierzZGus() {
     const d = await fetch('/api/gus?nip=' + encodeURIComponent(nip)).then(r => r.json());
     if (d.status !== 'success') {
       infoEl.style.color = '#991b1b';
-      infoEl.textContent = '✗ ' + (d.message || 'Nie udało się pobrać danych.');
+      infoEl.textContent = '✗ ' + (d.message || 'Nie udało się pobrać danych.') + ' Możesz wypełnić dane ręcznie poniżej.';
+      otworzDane();
       btn.disabled = false;
       return;
     }
@@ -1620,9 +1656,12 @@ async function pobierzZGus() {
     fillIfEmpty('f-miasto', d.miasto);
     infoEl.style.color = '#166534';
     infoEl.textContent = '✦ Znaleziono: ' + d.nazwa + ' — faktura zostanie wystawiona na te dane. Sprawdź i popraw, jeśli trzeba.';
+    otworzDane();
+    document.getElementById('f-imie').focus();
   } catch {
     infoEl.style.color = '#991b1b';
-    infoEl.textContent = '✗ Błąd połączenia.';
+    infoEl.textContent = '✗ Błąd połączenia. Możesz wypełnić dane ręcznie poniżej.';
+    otworzDane();
   }
   btn.disabled = false;
 }
