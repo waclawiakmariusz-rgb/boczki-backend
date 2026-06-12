@@ -231,7 +231,7 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
       <div class="w-step" id="ws-2"><div class="w-dot">2</div><div class="w-label">Logowanie</div></div>
       <div class="w-step" id="ws-3"><div class="w-dot">3</div><div class="w-label">Pracownicy</div></div>
       <div class="w-step" id="ws-4"><div class="w-dot">4</div><div class="w-label">Usługi</div></div>
-      <div class="w-step" id="ws-5"><div class="w-dot">5</div><div class="w-label">Gotowe!</div></div>
+      <div class="w-step" id="ws-5"><div class="w-dot">5</div><div class="w-label">Podsumowanie</div></div>
     </div>
 
     <!-- KROK 1: Dane salonu -->
@@ -259,8 +259,10 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
           </div>
         </div>
         <div class="form-group">
-          <label>E-mail</label>
+          <label>E-mail rozliczeniowy</label>
           <input type="email" id="s1-email" placeholder="np. kontakt@salon.pl">
+          <div id="s1-email-info" style="display:none; background:#f4f7f8; border-radius:var(--radius-input); padding:14px 17px; font-size:14px; font-weight:600; color:#64748b;"></div>
+          <div class="hint" id="s1-email-hint">Na ten adres trafiają faktury i informacje o subskrypcji.</div>
         </div>
         <div class="nav">
           <button class="btn-primary" onclick="step1()">Dalej →</button>
@@ -359,6 +361,7 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
 const API = '/api';
 let token = '';
 let currentStep = 1;
+let emailZakupu = ''; // email z zakupu — na niego idą faktury i odnowienia (backend i tak go wymusza)
 let wData = { salon: {}, dostep: {}, pracownicy: [], uslugi: [] };
 
 // ═══════════════════════════════════════
@@ -376,11 +379,91 @@ window.addEventListener('load', () => {
     .then(r => r.json())
     .then(d => {
       if (d.status !== 'ok') { showError('Link nieważny', d.message); return; }
+      prefillZakup(d.zakup);
+      restoreProgress();
       hide('state-loading');
       show('state-form');
     })
     .catch(() => showError('Błąd połączenia', 'Nie można połączyć się z serwerem. Spróbuj odświeżyć stronę.'));
 });
+
+// Prefill danych z zakupu (zamow.html) — klient nie wpisuje wszystkiego od nowa
+function prefillZakup(zakup) {
+  if (!zakup) return;
+  const setIfEmpty = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && !el.value && val) el.value = val;
+  };
+  setIfEmpty('s1-nazwa', zakup.nazwa_salonu);
+  setIfEmpty('s1-ulica', zakup.ulica);
+  setIfEmpty('s1-miasto', zakup.miasto);
+  setIfEmpty('s1-telefon', zakup.telefon);
+  if (zakup.nazwa_salonu) autofillLogin();
+  if (zakup.email) {
+    emailZakupu = zakup.email;
+    // Email rozliczeniowy jest z zakupu — pokazujemy jako informację, nie pole
+    hide('s1-email');
+    const info = document.getElementById('s1-email-info');
+    info.textContent = emailZakupu;
+    info.style.display = 'block';
+    document.getElementById('s1-email-hint').textContent =
+      'Adres podany przy zakupie — na niego trafiają faktury i informacje o subskrypcji.';
+  }
+}
+
+// ═══════════════════════════════════════
+// ZAPIS POSTĘPU — F5 nie kasuje formularza (sessionStorage, bez hasła)
+// ═══════════════════════════════════════
+function ssKey() { return 'estelio_rej_' + token.slice(0, 8); }
+
+function saveProgress() {
+  try {
+    sessionStorage.setItem(ssKey(), JSON.stringify({
+      nazwa:   document.getElementById('s1-nazwa').value,
+      ulica:   document.getElementById('s1-ulica').value,
+      miasto:  document.getElementById('s1-miasto').value,
+      telefon: document.getElementById('s1-telefon').value,
+      email:   document.getElementById('s1-email').value,
+      login:   document.getElementById('s2-login').value,
+      loginTouched: document.getElementById('s2-login').dataset.touched || '',
+      pracownicy: getPracownicy(),
+      uslugiReczne: getUslugi(),
+      predefIds: Array.from(document.querySelectorAll('#predef-kategorie input[type=checkbox]:checked')).map(cb => cb.value),
+    }));
+  } catch (e) { /* sessionStorage niedostępne — trudno */ }
+}
+
+let savedPredefIds = [];
+
+function restoreProgress() {
+  let s;
+  try { s = JSON.parse(sessionStorage.getItem(ssKey()) || 'null'); } catch (e) { return; }
+  if (!s) return;
+  const setVal = (id, val) => { if (val) document.getElementById(id).value = val; };
+  setVal('s1-nazwa', s.nazwa);
+  setVal('s1-ulica', s.ulica);
+  setVal('s1-miasto', s.miasto);
+  setVal('s1-telefon', s.telefon);
+  setVal('s1-email', s.email);
+  setVal('s2-login', s.login);
+  if (s.loginTouched) document.getElementById('s2-login').dataset.touched = s.loginTouched;
+  (s.pracownicy || []).forEach(p => {
+    dodajPracownika(p.rola);
+    const el = document.querySelector('#prac-lista .list-item:last-child');
+    const inp = el.querySelectorAll('input');
+    inp[0].value = p.imie || '';
+    inp[1].value = p.pin || '';
+  });
+  (s.uslugiReczne || []).forEach(u => {
+    dodajUsluge();
+    const el = document.querySelector('#uslugi-lista .list-item:last-child');
+    const inp = el.querySelectorAll('input');
+    inp[0].value = u.kategoria || '';
+    inp[1].value = u.wariant || '';
+    inp[2].value = u.cena || '';
+  });
+  savedPredefIds = s.predefIds || [];
+}
 
 function show(id) { document.getElementById(id).style.display = 'block'; }
 function hide(id) { document.getElementById(id).style.display = 'none'; }
@@ -403,6 +486,7 @@ function goStep(n) {
   if (n === 3 && !document.querySelector('#prac-lista .list-item')) dodajPracownika('manager');
   if (n === 4) loadPredef();
   if (n === 5) renderSummary();
+  saveProgress();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -414,12 +498,16 @@ function step1() {
   err.style.display = 'none';
   const nazwa = document.getElementById('s1-nazwa').value.trim();
   if (!nazwa) { err.style.display='block'; err.textContent='Podaj nazwę salonu.'; return; }
+  const emailWpisany = document.getElementById('s1-email').value.trim();
+  if (!emailZakupu && emailWpisany && !/^\S+@\S+\.\S+$/.test(emailWpisany)) {
+    err.style.display='block'; err.textContent='Podaj poprawny adres e-mail.'; return;
+  }
   wData.salon = {
     nazwa_salonu: nazwa,
     ulica: document.getElementById('s1-ulica').value.trim(),
     miasto: document.getElementById('s1-miasto').value.trim(),
     telefon: document.getElementById('s1-telefon').value.trim(),
-    email: document.getElementById('s1-email').value.trim(),
+    email: emailZakupu || emailWpisany,
   };
   goStep(2);
 }
@@ -465,16 +553,33 @@ function checkStrength() {
   fill.style.width = l.w; fill.style.background = l.bg; lbl.textContent = l.txt;
 }
 
-function step2() {
+async function step2() {
   const err = document.getElementById('s2-err');
   err.style.display = 'none';
   const login = document.getElementById('s2-login').value.trim();
   const haslo = document.getElementById('s2-haslo').value;
   const haslo2 = document.getElementById('s2-haslo2').value;
   if (!login) { err.style.display='block'; err.textContent='Podaj login.'; return; }
-  if (!/^[a-z0-9-]+$/.test(login)) { err.style.display='block'; err.textContent='Login może zawierać tylko małe litery, cyfry i myślniki.'; return; }
+  if (!/^[a-z0-9-]{3,40}$/.test(login)) { err.style.display='block'; err.textContent='Login: 3-40 znaków — tylko małe litery, cyfry i myślniki.'; return; }
   if (haslo.length < 6) { err.style.display='block'; err.textContent='Hasło musi mieć minimum 6 znaków.'; return; }
   if (haslo !== haslo2) { err.style.display='block'; err.textContent='Hasła nie są identyczne.'; return; }
+
+  // Sprawdź zajętość loginu od razu — żeby nie wracać z kroku 5
+  const btn = document.querySelector('#step-2 .btn-primary');
+  btn.disabled = true; btn.textContent = '⏳ Sprawdzam login...';
+  try {
+    const d = await fetch(`${API}/rejestracja/check-login?login=${encodeURIComponent(login)}`).then(r => r.json());
+    if (d.dostepny === false) {
+      err.style.display = 'block';
+      err.textContent = d.message || 'Ten login jest już zajęty. Wybierz inny.';
+      return;
+    }
+  } catch (e) {
+    // Serwer nie odpowiada — nie blokujemy, duplikat i tak wyłapie krok 5
+  } finally {
+    btn.disabled = false; btn.textContent = 'Dalej →';
+  }
+
   wData.dostep = { login, haslo };
   goStep(3);
 }
@@ -512,6 +617,13 @@ function step3() {
   if (!prac.some(p => p.rola === 'manager')) {
     err.style.display = 'block';
     err.textContent = 'Dodaj co najmniej jednego pracownika z rolą Manager — bez konta Managera nie zalogujesz się do salonu.';
+    return;
+  }
+  const piny = prac.map(p => p.pin);
+  const duplikatPin = piny.find((pin, i) => piny.indexOf(pin) !== i);
+  if (duplikatPin) {
+    err.style.display = 'block';
+    err.textContent = `PIN ${duplikatPin} powtarza się u dwóch pracowników — każdy musi mieć inny PIN.`;
     return;
   }
   goStep(4);
@@ -560,6 +672,11 @@ function loadPredef() {
           </div>
         </div>
       `).join('');
+      // Przywróć zaznaczenia sprzed odświeżenia strony
+      savedPredefIds.forEach(id => {
+        const cb = document.getElementById('pz-' + id);
+        if (cb) cb.checked = true;
+      });
     })
     .catch(() => {
       document.getElementById('predef-loading').textContent = 'Nie udało się załadować listy. Możesz dodać usługi ręcznie poniżej.';
@@ -684,8 +801,12 @@ function zarejestruj() {
       return;
     }
     // Sukces!
+    try { sessionStorage.removeItem(ssKey()); } catch (e) {}
     hide('state-form');
     show('state-success');
+    const pinList = (wData.pracownicy || [])
+      .map(p => `<div class="row"><strong>${p.imie}${p.rola === 'manager' ? ' (Manager)' : ''}</strong><span>PIN: ${p.pin}</span></div>`)
+      .join('');
     document.getElementById('state-success').innerHTML = `
       <div class="success-box">
         <div class="icon">🎉</div>
@@ -696,7 +817,18 @@ function zarejestruj() {
           <div class="row"><strong>Hasło</strong><span>${wData.dostep.haslo}</span></div>
           <div class="row"><strong>Salon</strong><span>${wData.salon.nazwa_salonu}</span></div>
         </div>
-        <p style="font-size:12px; color:#166534;">⚠️ Zapisz te dane w bezpiecznym miejscu!</p>
+        ${pinList ? `
+        <div class="credential-box">
+          <div style="font-size:11px; font-weight:700; color:#a0aec0; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">PIN-y pracowników</div>
+          ${pinList}
+        </div>` : ''}
+        <div class="credential-box" style="font-size:13px; color:#334155; line-height:2;">
+          <div style="font-size:11px; font-weight:700; color:#a0aec0; text-transform:uppercase; letter-spacing:0.5px; margin-bottom:8px;">Co dalej?</div>
+          <strong>1.</strong> Kliknij „Przejdź do logowania" i zaloguj się loginem i hasłem powyżej.<br>
+          <strong>2.</strong> Po zalogowaniu wybierz siebie z listy pracowników.<br>
+          <strong>3.</strong> Wpisz swój 4-cyfrowy PIN — i system jest gotowy do pracy.
+        </div>
+        <p style="font-size:12px; color:#166534;">⚠️ Zapisz te dane w bezpiecznym miejscu — hasła i PIN-ów nie wyślemy mailem!</p>
         <a href="/zaloguj" class="btn-go">→ Przejdź do logowania</a>
       </div>
     `;

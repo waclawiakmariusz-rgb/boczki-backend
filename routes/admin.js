@@ -413,12 +413,18 @@ module.exports = (db) => {
   // ─── REJESTRACJA PRZEZ TOKEN (publiczne, bez requireAdmin) ───
 
   // GET /api/rejestracja/weryfikuj?token=... — sprawdź ważność tokenu
+  // Zwraca też dane z zakupu (Zamowienia) do prefillu formularza rejestracji.
   router.get('/rejestracja/weryfikuj', (req, res) => {
     const { token } = req.query;
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
 
     db.query(
-      `SELECT token, status, data_wygasniecia, notatka FROM Tokeny_rejestracji WHERE token = ? LIMIT 1`,
+      `SELECT t.token, t.status, t.data_wygasniecia,
+              z.imie AS z_imie, z.nazwa_salonu AS z_nazwa, z.email AS z_email,
+              z.telefon AS z_telefon, z.ulica AS z_ulica, z.miasto AS z_miasto
+       FROM Tokeny_rejestracji t
+       LEFT JOIN Zamowienia z ON z.token_wyslany = t.token
+       WHERE t.token = ? LIMIT 1`,
       [token],
       (err, rows) => {
         if (err || !rows.length) return res.json({ status: 'error', message: 'Nieprawidłowy link rejestracyjny.' });
@@ -427,9 +433,37 @@ module.exports = (db) => {
         if (t.status === 'wygasly' || new Date(t.data_wygasniecia) < new Date()) {
           return res.json({ status: 'error', message: 'Ten link rejestracyjny wygasł.' });
         }
-        return res.json({ status: 'ok', wygasa: t.data_wygasniecia });
+        return res.json({
+          status: 'ok',
+          wygasa: t.data_wygasniecia,
+          zakup: t.z_email ? {
+            imie:         t.z_imie    || '',
+            nazwa_salonu: t.z_nazwa   || '',
+            email:        t.z_email   || '',
+            telefon:      t.z_telefon || '',
+            ulica:        t.z_ulica   || '',
+            miasto:       t.z_miasto  || '',
+          } : null,
+        });
       }
     );
+  });
+
+  // GET /api/rejestracja/check-login?login=... — czy login jest wolny (krok 2 wizarda)
+  const limiterCheckLogin = makePublicLimiter({ max: 30, message: 'Za dużo zapytań.' });
+  router.get('/rejestracja/check-login', limiterCheckLogin, (req, res) => {
+    const login = String(req.query.login || '').trim().toLowerCase();
+    if (!/^[a-z0-9-]{3,40}$/.test(login)) {
+      return res.json({ status: 'success', dostepny: false, message: 'Login: 3-40 znaków — małe litery, cyfry i myślniki.' });
+    }
+    db.query(`SELECT 1 FROM Licencje WHERE login = ? LIMIT 1`, [login], (err, rows) => {
+      if (err) return res.json({ status: 'error', dostepny: false, message: 'Błąd serwera. Spróbuj ponownie.' });
+      return res.json({
+        status: 'success',
+        dostepny: !rows.length,
+        message: rows.length ? 'Ten login jest już zajęty. Wybierz inny.' : '',
+      });
+    });
   });
 
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
