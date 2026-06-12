@@ -461,7 +461,8 @@
           </div>
           <div class="status-date-item">
             <div class="lbl">Abonament</div>
-            <div class="val">79 zł / miesiąc</div>
+            <div class="val" id="stat-abonament">—</div>
+            <div class="lbl" id="stat-abonament-info" style="margin-top:2px; display:none;"></div>
           </div>
         </div>
       </div>
@@ -627,6 +628,22 @@
 
     document.getElementById('stat-wazna').textContent        = formatDate(s.data_waznosci);
     document.getElementById('stat-rejestracja').textContent  = formatDate(s.data_utworzenia);
+
+    // Abonament — realna kwota ze Stripe (po voucherze)
+    const ab = s.abonament;
+    const zl = g => (g / 100).toFixed(2).replace('.00', '') + ' zł';
+    if (ab && Number.isFinite(ab.kwota_grosze)) {
+      document.getElementById('stat-abonament').textContent = zl(ab.kwota_grosze) + ' / miesiąc';
+      const info = document.getElementById('stat-abonament-info');
+      if (ab.rabat_do && ab.kwota_grosze !== ab.bazowa_grosze) {
+        info.textContent = 'cena promocyjna do ' + formatDate(ab.rabat_do) + ', potem ' + zl(ab.bazowa_grosze);
+        info.style.display = 'block';
+      } else {
+        info.style.display = 'none';
+      }
+    } else {
+      document.getElementById('stat-abonament').textContent = '79 zł / miesiąc';
+    }
 
     // Dane salonu
     document.getElementById('dc-nazwa').textContent   = s.nazwa   || '—';

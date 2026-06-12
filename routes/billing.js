@@ -113,15 +113,70 @@ module.exports = (db) => {
   // ─── GET /api/billing/info ────────────────────────────────────
   router.get('/billing/info', requireBilling, (req, res) => {
     db.query(
-      `SELECT nazwa_salonu, email, telefon, ulica, miasto, status, data_waznosci, data_grace_until, data_utworzenia
+      `SELECT nazwa_salonu, email, telefon, ulica, miasto, status, data_waznosci, data_grace_until, data_utworzenia, stripe_subscription_id
        FROM Licencje WHERE id_bazy = ? LIMIT 1`,
       [req.billing_tenant_id],
-      (err, rows) => {
+      async (err, rows) => {
         if (err || !rows || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono salonu.' });
         const s = rows[0];
         const teraz = new Date();
         const wazna = s.data_waznosci ? new Date(s.data_waznosci) : null;
         const aktywna = ['aktywna', 'aktywny'].includes(s.status) && wazna && wazna > teraz;
+
+        // Realna kwota abonamentu ze Stripe (uwzględnia voucher/coupon),
+        // zamiast sztywnego cennika. Brak danych → frontend pokaże cenę z env.
+        let abonament = null;
+        try {
+          if (process.env.STRIPE_SECRET_KEY) {
+            const stripe = require('stripe')(stripQuotes(process.env.STRIPE_SECRET_KEY));
+
+            // Fallback: zakup odbywa się PRZED rejestracją, więc webhook invoice.paid
+            // nie miał jeszcze rekordu Licencje i nie zapisał id-ków — szukamy po emailu.
+            let subId = s.stripe_subscription_id;
+            if (!subId && s.email) {
+              const customers = await stripe.customers.list({ email: s.email, limit: 1 });
+              if (customers.data[0]) {
+                const subs = await stripe.subscriptions.list({ customer: customers.data[0].id, limit: 1 });
+                if (subs.data[0]) {
+                  subId = subs.data[0].id;
+                  db.query(
+                    `UPDATE Licencje SET stripe_customer_id = COALESCE(stripe_customer_id, ?),
+                            stripe_subscription_id = COALESCE(stripe_subscription_id, ?)
+                     WHERE id_bazy = ?`,
+                    [customers.data[0].id, subId, req.billing_tenant_id]
+                  );
+                }
+              }
+            }
+
+            if (subId) {
+              const sub = await stripe.subscriptions.retrieve(subId, { expand: ['discounts'] });
+              const bazowa = (sub.items && sub.items.data[0] && sub.items.data[0].price && sub.items.data[0].price.unit_amount) || null;
+              if (bazowa !== null) {
+                // discount: nowe API → discounts[] (obiekty po expand), stare → pole discount
+                const disc = (Array.isArray(sub.discounts) && typeof sub.discounts[0] === 'object' && sub.discounts[0])
+                  || sub.discount || null;
+                let kwota = bazowa;
+                if (disc && disc.coupon) {
+                  if (disc.coupon.percent_off)     kwota = Math.round(bazowa * (100 - disc.coupon.percent_off) / 100);
+                  else if (disc.coupon.amount_off) kwota = Math.max(0, bazowa - disc.coupon.amount_off);
+                }
+                abonament = {
+                  kwota_grosze:  kwota,
+                  bazowa_grosze: bazowa,
+                  rabat_do:      (disc && disc.end) ? new Date(disc.end * 1000).toISOString().slice(0, 10) : null,
+                  voucher:       (disc && disc.coupon && disc.coupon.name) || null,
+                };
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[billing/info] Stripe subscription fetch:', e.message);
+        }
+        if (!abonament) {
+          const grosze = parseInt(process.env.STRIPE_CENA_GROSZE || '7900');
+          abonament = { kwota_grosze: grosze, bazowa_grosze: grosze, rabat_do: null, voucher: null };
+        }
 
         return res.json({
           status: 'success',
@@ -136,6 +191,7 @@ module.exports = (db) => {
             data_waznosci:   s.data_waznosci   || null,
             data_grace_until: s.data_grace_until || null,
             data_utworzenia: s.data_utworzenia || null,
+            abonament,
           }
         });
       }
@@ -192,11 +248,15 @@ module.exports = (db) => {
     catch (e) { return res.json({ status: 'error', message: 'Fakturownia niedostępna.' }); }
 
     db.query(
-      `SELECT email, nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`,
+      `SELECT l.email, l.nazwa_salonu,
+              (SELECT z.nazwa_salonu FROM Tokeny_rejestracji t
+               JOIN Zamowienia z ON z.token_wyslany = t.token
+               WHERE t.tenant_id_utworzony = l.id_bazy LIMIT 1) AS nazwa_z_zakupu
+       FROM Licencje l WHERE l.id_bazy = ? LIMIT 1`,
       [req.billing_tenant_id],
       async (err, rows) => {
         if (err || !rows || !rows.length) return res.json({ status: 'error', message: 'Salon nie znaleziony.' });
-        const { email, nazwa_salonu } = rows[0];
+        const { email, nazwa_salonu, nazwa_z_zakupu } = rows[0];
 
         // Fail-secure: bez nazwa_salonu nie da się odróżnić faktur naszego salonu
         // od faktur innych salonów z tym samym emailem. Zwracamy pustą listę zamiast
@@ -207,9 +267,10 @@ module.exports = (db) => {
         }
 
         try {
-          // Filtr po nazwa_salonu — chroni przed leakiem cross-tenant gdy dwa
-          // salony mają ten sam email kontaktowy (np. ten sam wlasciciel)
-          const faktury = await pobierzFaktury(email, nazwa_salonu);
+          // Filtr po nazwach salonu — chroni przed leakiem cross-tenant gdy dwa
+          // salony mają ten sam email. Dwie nazwy, bo pierwsza faktura ma buyer_name
+          // z formularza zakupu (zamow.html), a odnowienia z rejestracji (Licencje).
+          const faktury = await pobierzFaktury(email, [nazwa_salonu, nazwa_z_zakupu]);
           return res.json({ status: 'success', faktury });
         } catch (e) {
           console.error('[billing/invoices]', e.message);

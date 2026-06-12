@@ -10,6 +10,11 @@ function stripQuotes(val) {
 const TOKEN      = () => stripQuotes(process.env.FAKTUROWNIA_TOKEN);
 const SUBDOMAIN  = () => stripQuotes(process.env.FAKTUROWNIA_SUBDOMAIN);
 
+// Stawka VAT na fakturach. Sprzedawca zwolniony podmiotowo z VAT (art. 113 ust. 1)
+// → 'zw'. Po wejściu na VAT ustawić FAKTUROWNIA_VAT=23 w env (bez zmiany kodu).
+const STAWKA_VAT = () => stripQuotes(process.env.FAKTUROWNIA_VAT) || 'zw';
+const PODSTAWA_ZWOLNIENIA = 'Sprzedawca zwolniony z VAT na podstawie art. 113 ust. 1 ustawy o podatku od towarów i usług.';
+
 // Cena brutto w złotych (STRIPE_CENA_GROSZE w groszach → złote)
 function cenaBrutto() {
   const grosze = parseInt(process.env.STRIPE_CENA_GROSZE || '7900');
@@ -57,11 +62,14 @@ async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip,
     ? (groszeNum / 100).toFixed(2)
     : cenaBrutto();
 
+  const stawka = STAWKA_VAT();
+
   const body = JSON.stringify({
     api_token: token,
     invoice: {
       kind:            'vat',
       number:          null,          // Fakturownia nada numer automatycznie
+      description:     stawka === 'zw' ? PODSTAWA_ZWOLNIENIA : '',
       issue_date:      dzisiaj(),
       sell_date:       dzisiaj(),
       payment_to:      dzisiaj(),     // zapłacone od razu przez Stripe — termin = dziś
@@ -84,7 +92,7 @@ async function wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip,
       positions: [
         {
           name:              'Dostęp do systemu Estelio (1 miesiąc)',
-          tax:               '23',
+          tax:               stawka,
           total_price_gross: kwotaBrutto,
           quantity:          '1',
         }
@@ -181,7 +189,9 @@ function wyslijFaktureMailem(invoiceId) {
  * case-insensitive po trim.
  *
  * @param {string} email - email klienta którego faktury chcemy zobaczyć
- * @param {string} [nazwa_salonu] - nazwa salonu jako dodatkowy filtr (zalecane)
+ * @param {string|string[]} [nazwa_salonu] - nazwa/nazwy salonu jako dodatkowy filtr (zalecane).
+ *   Tablica, bo pierwsza faktura ma buyer_name z formularza ZAKUPU (zamow.html),
+ *   a odnowienia z Licencje (rejestracja) — klient mógł podać różne nazwy.
  * @returns {Promise<Array>} - lista faktur z polami: id, numer, data, kwota_brutto, status, link_pdf
  */
 async function pobierzFaktury(email, nazwa_salonu) {
@@ -190,7 +200,9 @@ async function pobierzFaktury(email, nazwa_salonu) {
   if (!token || !subdomain) throw new Error('Brak konfiguracji Fakturownia.');
   if (!email) return [];
 
-  const expectedName = (nazwa_salonu || '').trim().toLowerCase();
+  const expectedNames = (Array.isArray(nazwa_salonu) ? nazwa_salonu : [nazwa_salonu])
+    .map(n => (n || '').trim().toLowerCase())
+    .filter(Boolean);
 
   return new Promise((resolve, reject) => {
     const path = `/invoices.json?api_token=${encodeURIComponent(token)}&buyer_email=${encodeURIComponent(email)}&period=last_2_years`;
@@ -210,10 +222,10 @@ async function pobierzFaktury(email, nazwa_salonu) {
         try {
           const json = JSON.parse(data);
           const wszystkie = Array.isArray(json) ? json : [];
-          // Drugi filtr: tylko faktury z buyer_name dokładnie pasującym do nazwy salonu.
-          // Bez nazwa_salonu — wstecznie kompatybilne (zwraca wszystkie po emailu).
-          const filtrowane = expectedName
-            ? wszystkie.filter(f => (f.buyer_name || '').trim().toLowerCase() === expectedName)
+          // Drugi filtr: tylko faktury z buyer_name dokładnie pasującym do jednej
+          // z nazw salonu. Bez nazw — wstecznie kompatybilne (zwraca wszystkie po emailu).
+          const filtrowane = expectedNames.length
+            ? wszystkie.filter(f => expectedNames.includes((f.buyer_name || '').trim().toLowerCase()))
             : wszystkie;
           const lista = filtrowane.map(f => ({
             id:           f.id,

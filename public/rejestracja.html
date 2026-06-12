@@ -300,12 +300,17 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
     <div class="step-panel" id="step-3">
       <div class="card">
         <h2>👤 Pracownicy i PIN-y</h2>
-        <p class="sub">Dodaj pracowników, którzy będą obsługiwać system. Każdy loguje się 4-cyfrowym PIN-em. Możesz to uzupełnić później.</p>
+        <p class="sub">Dodaj pracowników, którzy będą obsługiwać system. Każdy loguje się 4-cyfrowym PIN-em.</p>
+        <div class="alert" style="display:block; background:#fff7ed; border:1px solid #fdba74; color:#9a3412; border-radius:10px; padding:12px 16px; font-size:13px; margin-bottom:14px;">
+          ⚠️ <strong>Wymagany jest co najmniej jeden pracownik z rolą Manager i 4-cyfrowym PIN-em.</strong><br>
+          Bez konta Managera nie zalogujesz się do salonu po rejestracji! Pozostałych pracowników możesz dodać później.
+        </div>
+        <div id="s3-err" class="alert alert-error" style="display:none;"></div>
         <div id="prac-lista"></div>
         <button class="btn-add-row" onclick="dodajPracownika()">+ Dodaj pracownika</button>
         <div class="nav" style="margin-top:22px;">
           <button class="btn-secondary" onclick="goStep(2)">← Wróć</button>
-          <button class="btn-primary" onclick="goStep(4)">Dalej →</button>
+          <button class="btn-primary" onclick="step3()">Dalej →</button>
         </div>
       </div>
     </div>
@@ -395,6 +400,7 @@ function goStep(n) {
   currentStep = n;
   document.getElementById(`step-${currentStep}`).classList.add('visible');
   document.getElementById(`ws-${currentStep}`).className = 'w-step active';
+  if (n === 3 && !document.querySelector('#prac-lista .list-item')) dodajPracownika('manager');
   if (n === 4) loadPredef();
   if (n === 5) renderSummary();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -476,7 +482,7 @@ function step2() {
 // ═══════════════════════════════════════
 // KROK 3 — Pracownicy
 // ═══════════════════════════════════════
-function dodajPracownika() {
+function dodajPracownika(rola) {
   const lista = document.getElementById('prac-lista');
   const id = 'prac-' + Date.now();
   lista.insertAdjacentHTML('beforeend', `
@@ -490,6 +496,25 @@ function dodajPracownika() {
       <button class="btn-remove" onclick="document.getElementById('${id}').remove()">×</button>
     </div>
   `);
+  if (rola) document.getElementById(id).querySelector('select').value = rola;
+}
+
+function step3() {
+  const err = document.getElementById('s3-err');
+  err.style.display = 'none';
+  const prac = getPracownicy();
+  const zlyPin = prac.find(p => !/^\d{4}$/.test(p.pin));
+  if (zlyPin) {
+    err.style.display = 'block';
+    err.textContent = `Pracownik „${zlyPin.imie}" musi mieć 4-cyfrowy PIN.`;
+    return;
+  }
+  if (!prac.some(p => p.rola === 'manager')) {
+    err.style.display = 'block';
+    err.textContent = 'Dodaj co najmniej jednego pracownika z rolą Manager — bez konta Managera nie zalogujesz się do salonu.';
+    return;
+  }
+  goStep(4);
 }
 
 function getPracownicy() {
