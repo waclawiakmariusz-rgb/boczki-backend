@@ -248,15 +248,18 @@ module.exports = (db) => {
     catch (e) { return res.json({ status: 'error', message: 'Fakturownia niedostępna.' }); }
 
     db.query(
-      `SELECT l.email, l.nazwa_salonu,
+      `SELECT l.email, l.nazwa_salonu, l.nazwa_firmy,
               (SELECT z.nazwa_salonu FROM Tokeny_rejestracji t
                JOIN Zamowienia z ON z.token_wyslany = t.token
-               WHERE t.tenant_id_utworzony = l.id_bazy LIMIT 1) AS nazwa_z_zakupu
+               WHERE t.tenant_id_utworzony = l.id_bazy LIMIT 1) AS nazwa_z_zakupu,
+              (SELECT z.nazwa_firmy FROM Tokeny_rejestracji t
+               JOIN Zamowienia z ON z.token_wyslany = t.token
+               WHERE t.tenant_id_utworzony = l.id_bazy LIMIT 1) AS firma_z_zakupu
        FROM Licencje l WHERE l.id_bazy = ? LIMIT 1`,
       [req.billing_tenant_id],
       async (err, rows) => {
         if (err || !rows || !rows.length) return res.json({ status: 'error', message: 'Salon nie znaleziony.' });
-        const { email, nazwa_salonu, nazwa_z_zakupu } = rows[0];
+        const { email, nazwa_salonu, nazwa_firmy, nazwa_z_zakupu, firma_z_zakupu } = rows[0];
 
         // Fail-secure: bez nazwa_salonu nie da się odróżnić faktur naszego salonu
         // od faktur innych salonów z tym samym emailem. Zwracamy pustą listę zamiast
@@ -267,10 +270,10 @@ module.exports = (db) => {
         }
 
         try {
-          // Filtr po nazwach salonu — chroni przed leakiem cross-tenant gdy dwa
-          // salony mają ten sam email. Dwie nazwy, bo pierwsza faktura ma buyer_name
-          // z formularza zakupu (zamow.html), a odnowienia z rejestracji (Licencje).
-          const faktury = await pobierzFaktury(email, [nazwa_salonu, nazwa_z_zakupu]);
+          // Filtr po nazwach salonu/firmy — chroni przed leakiem cross-tenant gdy dwa
+          // salony mają ten sam email. Cztery warianty, bo buyer_name na fakturze to:
+          // nazwa firmy (GUS, gdy podano NIP) albo nazwa salonu — z zakupu lub z Licencje.
+          const faktury = await pobierzFaktury(email, [nazwa_salonu, nazwa_z_zakupu, nazwa_firmy, firma_z_zakupu]);
           return res.json({ status: 'success', faktury });
         } catch (e) {
           console.error('[billing/invoices]', e.message);

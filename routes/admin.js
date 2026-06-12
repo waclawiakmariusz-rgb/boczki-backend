@@ -495,11 +495,12 @@ module.exports = (db) => {
     // Email rozliczeniowy MUSI być tym z zakupu — webhook invoice.paid przedłuża
     // licencję po emailu klienta Stripe. Inny email w formularzu rejestracji
     // = licencja przestałaby się przedłużać mimo opłacanej subskrypcji.
-    const emailZakupu = await new Promise(resolve => {
-      db.query(`SELECT email FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
-        (e, rows) => resolve((rows && rows[0] && rows[0].email) || null));
+    const zakup = await new Promise(resolve => {
+      db.query(`SELECT email, nazwa_firmy FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
+        (e, rows) => resolve((rows && rows[0]) || null));
     });
-    const emailLicencji = (emailZakupu || email || '').trim();
+    const emailLicencji = ((zakup && zakup.email) || email || '').trim();
+    const nazwaFirmy = ((zakup && zakup.nazwa_firmy) || '').trim() || null; // nabywca faktur recurring
 
     const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
@@ -521,9 +522,9 @@ module.exports = (db) => {
         const licId = randomUUID();
 
         db.query(
-          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, ulica, miasto, telefon, email, data_waznosci, data_utworzenia)
-           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, ulica || '', miasto || '', telefon || '', emailLicencji],
+          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, nazwa_firmy, ulica, miasto, telefon, email, data_waznosci, data_utworzenia)
+           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
+          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, nazwaFirmy, ulica || '', miasto || '', telefon || '', emailLicencji],
           (err2) => {
             if (err2) {
               // Cofnij token jeśli zapis się nie udał

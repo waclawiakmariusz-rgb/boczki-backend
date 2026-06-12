@@ -93,6 +93,8 @@ module.exports = (db) => {
     `ALTER TABLE Zamowienia ADD COLUMN user_agent_akceptacji VARCHAR(500) NULL`,
     `ALTER TABLE Zamowienia ADD COLUMN data_akceptacji DATETIME NULL`,
     `ALTER TABLE Zamowienia ADD COLUMN ulica VARCHAR(255) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN nazwa_firmy VARCHAR(255) NULL`,
+    `ALTER TABLE Licencje ADD COLUMN nazwa_firmy VARCHAR(255) NULL`,
   ];
 
   // Licencje też dostają ulicę — bo przy generowaniu kolejnych faktur Stripe webhook
@@ -119,7 +121,7 @@ module.exports = (db) => {
   router.post('/stripe/create-checkout', limiterCheckout, async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
-    const { imie, nazwa_salonu, email, telefon, ulica, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
+    const { imie, nazwa_salonu, nazwa_firmy, email, telefon, ulica, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
     }
@@ -168,8 +170,8 @@ module.exports = (db) => {
     // Zapisz zgłoszenie w bazie (status: nowe — czeka na płatność)
     const zamowienieId = randomUUID();
     db.query(
-      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, ulica, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
-      [zamowienieId, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, ulica || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
+      `INSERT INTO Zamowienia (id, imie, nazwa_salonu, nazwa_firmy, email, telefon, ulica, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
+      [zamowienieId, imie.trim(), nazwa_salonu.trim(), (nazwa_firmy || '').trim() || null, email.trim(), telefon || null, ulica || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
@@ -190,6 +192,7 @@ module.exports = (db) => {
             zamowienie_id: zamowienieId,
             imie,
             nazwa_salonu,
+            firma:   (nazwa_firmy || '').trim(),
             email,
             telefon: telefon || '',
             ulica:   ulica   || '',
@@ -314,9 +317,10 @@ module.exports = (db) => {
 
           // Wystaw fakturę VAT przez Fakturownia.pl (wysyła PDF mailem do klienta)
           try {
-            const { ulica, miasto, telefon, nip } = session.metadata || {};
+            const { ulica, miasto, telefon, nip, firma } = session.metadata || {};
+            // Nabywca: nazwa firmy (z GUS/formularza) jeśli podana, inaczej nazwa salonu
             // amount_total = kwota faktycznie pobrana (po voucherze/coupon Stripe)
-            await wystawFakture({ nazwa_salonu, email, ulica, miasto, telefon, nip, kwota_grosze: session.amount_total });
+            await wystawFakture({ nazwa_salonu: (firma || '').trim() || nazwa_salonu, email, ulica, miasto, telefon, nip, kwota_grosze: session.amount_total });
           } catch (fakErr) {
             console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
             // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie
@@ -364,7 +368,7 @@ module.exports = (db) => {
               // Dane salonu z Licencje (autorytatywne — nazwa, adres, telefon)
               const salonDane = await new Promise((resolve) => {
                 db.query(
-                  `SELECT nazwa_salonu, ulica, miasto, telefon FROM Licencje WHERE email = ? LIMIT 1`,
+                  `SELECT nazwa_salonu, nazwa_firmy, ulica, miasto, telefon FROM Licencje WHERE email = ? LIMIT 1`,
                   [customerEmail],
                   (e, rows) => resolve((rows && rows[0]) || null)
                 );
@@ -373,16 +377,17 @@ module.exports = (db) => {
                 console.warn(`[stripe webhook] invoice.paid recurring: brak salonu w Licencje dla ${customerEmail} — pomijam fakturę`);
                 return;
               }
-              // NIP nie jest w Licencje (zaszyty tylko w Stripe subscription.metadata z pierwszego checkout)
-              let nip = '';
+              // NIP i firma nie zawsze są w Licencje (zaszyte w Stripe subscription.metadata z pierwszego checkout)
+              let nip = '', firmaMeta = '';
               try {
                 const sub = await stripe.subscriptions.retrieve(subscriptionId);
                 nip = (sub && sub.metadata && sub.metadata.nip) || '';
+                firmaMeta = (sub && sub.metadata && sub.metadata.firma) || '';
               } catch (e) {
                 console.warn('[stripe webhook] subscriptions.retrieve fail (NIP pominięty):', e.message);
               }
               await wystawFakture({
-                nazwa_salonu: salonDane.nazwa_salonu,
+                nazwa_salonu: firmaMeta || salonDane.nazwa_firmy || salonDane.nazwa_salonu,
                 email:        customerEmail,
                 ulica:        salonDane.ulica   || '',
                 miasto:       salonDane.miasto  || '',

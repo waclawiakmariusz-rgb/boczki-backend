@@ -1268,6 +1268,10 @@
             </div>
             <div id="gus-info" style="font-size:.75rem; margin-top:5px; display:none;"></div>
           </div>
+          <div class="form-group" id="firma-group" style="display:none;">
+            <label>Nazwa firmy <span style="font-weight:400; text-transform:none; font-size:.75rem; color:var(--text-muted);">— na nią zostanie wystawiona faktura</span></label>
+            <input type="text" id="f-firma" placeholder="np. Anna Kowalska Studio Urody">
+          </div>
           <div class="form-group">
             <label>Wiadomość (opcjonalnie)</label>
             <textarea id="f-wiadomosc" placeholder="np. Mam 3 pracownice, czy system to obsługuje? Mam pytanie dotyczące..."></textarea>
@@ -1574,6 +1578,13 @@ async function sprawdzVoucher() {
 }
 
 // ── GUS / biała lista — autouzupełnianie po NIP ───────────────────
+// Pole "Nazwa firmy" pokazuje się dopiero gdy klient wpisze NIP
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-nip').addEventListener('input', function() {
+    if (this.value.trim()) document.getElementById('firma-group').style.display = 'block';
+  });
+});
+
 async function pobierzZGus() {
   const infoEl = document.getElementById('gus-info');
   const btn = document.getElementById('btn-gus');
@@ -1603,11 +1614,12 @@ async function pobierzZGus() {
       const el = document.getElementById(id);
       if (el && !el.value.trim() && val) el.value = val;
     };
-    fillIfEmpty('f-salon', d.nazwa);
+    document.getElementById('firma-group').style.display = 'block';
+    fillIfEmpty('f-firma', d.nazwa);
     fillIfEmpty('f-ulica', d.ulica);
     fillIfEmpty('f-miasto', d.miasto);
     infoEl.style.color = '#166534';
-    infoEl.textContent = '✦ Znaleziono: ' + d.nazwa + ' — uzupełniono puste pola. Sprawdź i popraw, jeśli trzeba.';
+    infoEl.textContent = '✦ Znaleziono: ' + d.nazwa + ' — faktura zostanie wystawiona na te dane. Sprawdź i popraw, jeśli trzeba.';
   } catch {
     infoEl.style.color = '#991b1b';
     infoEl.textContent = '✗ Błąd połączenia.';
@@ -1636,6 +1648,7 @@ async function wyslij(e) {
   const payload = {
     imie:         document.getElementById('f-imie').value.trim(),
     nazwa_salonu: document.getElementById('f-salon').value.trim(),
+    nazwa_firmy:  document.getElementById('f-firma').value.trim(),
     email:        document.getElementById('f-email').value.trim(),
     telefon:      document.getElementById('f-telefon').value.trim(),
     ulica:        document.getElementById('f-ulica').value.trim(),
