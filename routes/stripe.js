@@ -36,6 +36,8 @@ try {
   wystawFakture = async () => {};
 }
 
+const { makePublicLimiter } = require('./sessions');
+
 function stripQuotes(val) { return (val || '').replace(/^['"]|['"]$/g, ''); }
 const APP_URL        = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
 const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 7900;
@@ -113,12 +115,16 @@ module.exports = (db) => {
 
   // ─── POST /api/stripe/create-checkout ────────────────────────
   // Tworzy sesję płatności Stripe i przekierowuje klienta
-  router.post('/stripe/create-checkout', async (req, res) => {
+  const limiterCheckout = makePublicLimiter({ max: 10, message: 'Za dużo prób zakupu z tego adresu.' });
+  router.post('/stripe/create-checkout', limiterCheckout, async (req, res) => {
     if (!stripe) return res.json({ status: 'error', message: 'Stripe nie jest skonfigurowany.' });
 
     const { imie, nazwa_salonu, email, telefon, ulica, miasto, nip, wiadomosc, kod_rabatowy, zgoda_regulamin, zgoda_dpa } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Uzupełnij imię, nazwę salonu i email.' });
+    }
+    if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
+      return res.json({ status: 'error', message: 'Podaj poprawny adres email — trafi na niego link rejestracyjny i faktura.' });
     }
     // Wymagane zgody — bez nich nie zawieramy umowy (RODO art. 7 + UŚUDE + RODO art. 28)
     if (zgoda_regulamin !== true || zgoda_dpa !== true) {
@@ -167,10 +173,8 @@ module.exports = (db) => {
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
-        // Jeśli voucher był użyty — inkrementuj licznik (nie czekamy na wynik)
-        if (voucherInfo) {
-          db.query(`UPDATE Kody_rabatowe SET ilosc_uzyc = ilosc_uzyc + 1 WHERE id=? LIMIT 1`, [voucherInfo.id]);
-        }
+        // Licznik użyć vouchera inkrementowany dopiero w webhooku po OPŁACENIU
+        // (checkout.session.completed) — porzucony koszyk nie zużywa puli.
 
         const czasOpis = voucherInfo
           ? (voucherInfo.czas_trwania === 'zawsze' ? 'na zawsze' : `przez ${voucherInfo.czas_trwania_miesiecy} mies.`)
@@ -269,6 +273,16 @@ module.exports = (db) => {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object;
       const { zamowienie_id, imie, nazwa_salonu, email } = session.metadata;
+
+      // Voucher zużyty dopiero po realnej płatności (nie przy tworzeniu koszyka)
+      const voucherKodUzyty = (session.metadata && session.metadata.voucher || '').trim();
+      if (voucherKodUzyty) {
+        db.query(
+          `UPDATE Kody_rabatowe SET ilosc_uzyc = ilosc_uzyc + 1 WHERE kod = ? LIMIT 1`,
+          [voucherKodUzyty],
+          (e) => { if (e) console.error('[stripe webhook] inkrementacja vouchera:', e.message); }
+        );
+      }
 
       // Generuj token rejestracyjny
       const token = randomUUID();

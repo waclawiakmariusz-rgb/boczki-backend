@@ -4,7 +4,7 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const bcrypt = require('bcrypt');
-const { rateLimitLogin, recordFailedLogin, recordSuccessLogin } = require('./sessions');
+const { rateLimitLogin, recordFailedLogin, recordSuccessLogin, makePublicLimiter } = require('./sessions');
 const { cloneBoczkiToDemo } = require('../scripts/clone_to_demo_lib');
 const { migracjaTenanta: migracjaTypyZabiegow, listaTenantow: listaTenantowDoMigracji } = require('../scripts/migrate_typy_lib');
 
@@ -354,10 +354,14 @@ module.exports = (db) => {
   // ─── ZAMÓWIENIA (formularz publiczny) ────────────────────────
 
   // POST /api/zamowienie — nowe zgłoszenie od klienta
-  router.post('/zamowienie', async (req, res) => {
+  const limiterZamowienie = makePublicLimiter({ max: 5, message: 'Za dużo zgłoszeń z tego adresu.' });
+  router.post('/zamowienie', limiterZamowienie, async (req, res) => {
     const { imie, nazwa_salonu, email, telefon, miasto, wiadomosc } = req.body;
     if (!imie || !nazwa_salonu || !email) {
       return res.json({ status: 'error', message: 'Podaj imię, nazwę salonu i email.' });
+    }
+    if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
+      return res.json({ status: 'error', message: 'Podaj poprawny adres email.' });
     }
 
     const id = randomUUID();
@@ -429,12 +433,39 @@ module.exports = (db) => {
   });
 
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
-  router.post('/rejestracja/zaloz', async (req, res) => {
+  const limiterRejestracja = makePublicLimiter({ max: 10, message: 'Za dużo prób rejestracji.' });
+  router.post('/rejestracja/zaloz', limiterRejestracja, async (req, res) => {
     const d = req.body;
     const { token, imie, nazwa_salonu, ulica, miasto, telefon, email, login, haslo, pracownicy, uslugi } = d;
 
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
     if (!nazwa_salonu || !login || !haslo) return res.json({ status: 'error', message: 'Uzupełnij wszystkie wymagane pola.' });
+
+    // Walidacja serwerowa — frontend pilnuje tego samego, ale API nie może ufać klientowi
+    const loginNorm = String(login).trim().toLowerCase();
+    if (!/^[a-z0-9-]{3,40}$/.test(loginNorm)) {
+      return res.json({ status: 'error', message: 'Login: 3-40 znaków, tylko małe litery, cyfry i myślniki.' });
+    }
+    if (String(haslo).trim().length < 6) {
+      return res.json({ status: 'error', message: 'Hasło musi mieć minimum 6 znaków.' });
+    }
+    const pracWalidni = (Array.isArray(pracownicy) ? pracownicy : []).filter(p => p && p.imie && String(p.imie).trim());
+    if (!pracWalidni.some(p => String(p.rola || '').toLowerCase() === 'manager')) {
+      return res.json({ status: 'error', message: 'Wymagany jest co najmniej jeden pracownik z rolą Manager — bez niego nie zalogujesz się do salonu.' });
+    }
+    const zlyPin = pracWalidni.find(p => !/^\d{4}$/.test(String(p.pin || '').trim()));
+    if (zlyPin) {
+      return res.json({ status: 'error', message: `Pracownik „${String(zlyPin.imie).trim()}" musi mieć 4-cyfrowy PIN.` });
+    }
+
+    // Email rozliczeniowy MUSI być tym z zakupu — webhook invoice.paid przedłuża
+    // licencję po emailu klienta Stripe. Inny email w formularzu rejestracji
+    // = licencja przestałaby się przedłużać mimo opłacanej subskrypcji.
+    const emailZakupu = await new Promise(resolve => {
+      db.query(`SELECT email FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
+        (e, rows) => resolve((rows && rows[0] && rows[0].email) || null));
+    });
+    const emailLicencji = (emailZakupu || email || '').trim();
 
     const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
@@ -458,7 +489,7 @@ module.exports = (db) => {
         db.query(
           `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, ulica, miasto, telefon, email, data_waznosci, data_utworzenia)
            VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, login.trim(), hasloHash, tenant_id, nazwa_salonu, ulica || '', miasto || '', telefon || '', email || ''],
+          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, ulica || '', miasto || '', telefon || '', emailLicencji],
           (err2) => {
             if (err2) {
               // Cofnij token jeśli zapis się nie udał
@@ -477,7 +508,7 @@ module.exports = (db) => {
             const pObietnice = pracList.filter(p => p.imie?.trim()).map(p => new Promise(resolve => {
               const pid = randomUUID();
               db.query(`INSERT INTO Użytkownicy (id, tenant_id, imie_login, haslo_pin, rola) VALUES (?, ?, ?, ?, ?)`,
-                [pid, tenant_id, p.imie.trim(), p.pin || '0000', p.rola || 'pracownik'], (errU) => {
+                [pid, tenant_id, p.imie.trim(), String(p.pin).trim(), p.rola || 'pracownik'], (errU) => {
                   if (errU) console.error('[rejestracja/zaloz] INSERT Użytkownicy failed:', errU.message, '| imie:', p.imie, '| tenant:', tenant_id);
                   const prid = randomUUID();
                   db.query(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (?, ?, ?)`,
@@ -500,20 +531,20 @@ module.exports = (db) => {
             }));
 
             Promise.all([...pObietnice, ...uObietnice]).then(async () => {
-              // Wyślij welcome email z danymi logowania
-              if (email) {
+              // Wyślij welcome email z danymi logowania (na email z zakupu — autorytatywny)
+              if (emailLicencji) {
                 try {
-                  await wyslijWitamy({ email, imie: imie || '', nazwa_salonu, login: login.trim(), haslo: haslo.trim() });
+                  await wyslijWitamy({ email: emailLicencji, imie: imie || '', nazwa_salonu, login: loginNorm, haslo: haslo.trim() });
                 } catch (mailErr) {
                   console.error('[admin] Błąd wysyłki welcome email:', mailErr.message);
                   // Nie blokujemy odpowiedzi — salon już istnieje
                 }
               }
               // Powiadom admina o nowym salonie (fire-and-forget)
-              powiadomAdminaORejestracji({ nazwa_salonu, email, login: login.trim(), tenant_id })
+              powiadomAdminaORejestracji({ nazwa_salonu, email: emailLicencji, login: loginNorm, tenant_id })
                 .then(() => console.log('[admin] Powiadomienie admina o rejestracji wysłane'))
                 .catch(err => console.error('[admin] Powiadomienie admina o rejestracji error:', err.message));
-              return res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: login.trim() });
+              return res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: loginNorm });
             });
           }
         );

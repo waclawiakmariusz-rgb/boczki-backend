@@ -119,7 +119,7 @@ async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
         </p>
       </div>
       <p style="font-size:12px; color:#a89e96; line-height:1.7;">
-        ⚠️ Ten link jest jednorazowy i wygaśnie po 24 godzinach.<br>
+        ⚠️ Ten link jest jednorazowy i wygaśnie po 7 dniach.<br>
         Jeśli nie rejestrowałeś/-aś salonu, zignoruj tę wiadomość.
       </p>
     `)

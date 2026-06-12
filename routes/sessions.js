@@ -210,6 +210,32 @@ function recordSuccessPin(req) {
   pinAttempts.delete(key);
 }
 
+// ─── RATE LIMITER PUBLICZNY ───────────────────────────────────
+// Dla endpointów publicznych bez logowania (zamówienia, checkout, rejestracja).
+// Zlicza KAŻDE żądanie z IP (nie tylko nieudane) — chroni przed spamem
+// zapełniającym Zamowienia i nabijającym liczniki voucherów.
+function makePublicLimiter({ windowMs = 15 * 60 * 1000, max = 10, message = 'Za dużo żądań z tego adresu. Spróbuj ponownie później.' } = {}) {
+  const hits = new Map(); // ip -> { count, resetAt }
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, rec] of hits) if (now > rec.resetAt) hits.delete(ip);
+  }, windowMs).unref();
+
+  return (req, res, next) => {
+    const ip = req.ip || req.socket?.remoteAddress || 'unknown';
+    const now = Date.now();
+    let rec = hits.get(ip);
+    if (rec && now > rec.resetAt) { hits.delete(ip); rec = null; }
+    if (!rec) { rec = { count: 0, resetAt: now + windowMs }; hits.set(ip, rec); }
+    rec.count++;
+    if (rec.count > max) {
+      const pozostalo = Math.ceil((rec.resetAt - now) / 60000);
+      return res.status(429).json({ status: 'error', message: `${message} (ok. ${pozostalo} min)` });
+    }
+    next();
+  };
+}
+
 module.exports = {
   initSessions,
   createSession,
@@ -222,4 +248,5 @@ module.exports = {
   recordSuccessPin,
   recordFailedLogin,
   recordSuccessLogin,
+  makePublicLimiter,
 };
