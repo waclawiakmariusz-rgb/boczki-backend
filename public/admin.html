@@ -118,6 +118,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 }
 .badge-active   { background: #e4f0e4; color: #3a6a3a; }
 .badge-inactive { background: #f5e4e4; color: #8a3030; }
+.badge-warn        { background: #fdf0d5; color: #92600e; }
+.badge-expired-lic { background: #faddcf; color: #9a3412; }
+.salony-toolbar { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.salony-toolbar input, .salony-toolbar select { margin: 0; }
+.salony-licznik { font-size: 12.5px; color: var(--taupe); margin-bottom: 16px; }
+@media (max-width: 760px) { .salony-toolbar { grid-template-columns: 1fr; } }
+.spinner {
+  display: inline-block; width: 15px; height: 15px; border: 2px solid var(--sand);
+  border-top-color: var(--primary); border-radius: 50%;
+  animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 9px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
 .salon-meta { font-size: 13px; color: var(--muted); line-height: 1.85; }
 .salon-meta strong { color: var(--text); font-weight: 600; }
 .salon-actions { display: flex; gap: 8px; margin-top: 18px; }
@@ -411,6 +423,26 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
     <!-- Tab: Lista salonów -->
     <div id="tab-salony" class="tab-panel active">
+      <div class="salony-toolbar">
+        <input type="text" id="salony-search" placeholder="🔍 Szukaj: nazwa, miasto, e-mail, login, telefon..." oninput="filtrujSalony()" autocomplete="off">
+        <select id="salony-filter-status" onchange="renderSalony()">
+          <option value="">Wszystkie statusy</option>
+          <option value="aktywny">✓ Aktywne</option>
+          <option value="nieaktywny">✗ Zablokowane</option>
+        </select>
+        <select id="salony-filter-waznosc" onchange="renderSalony()">
+          <option value="">Każda ważność</option>
+          <option value="wygasa">⏳ Wygasa ≤7 dni</option>
+          <option value="wygasla">⚠ Licencja wygasła</option>
+        </select>
+        <select id="salony-sort" onchange="renderSalony()">
+          <option value="created_desc">Sortuj: najnowsze</option>
+          <option value="created_asc">Sortuj: najstarsze</option>
+          <option value="nazwa">Sortuj: nazwa A→Z</option>
+          <option value="waznosc">Sortuj: ważność rosnąco</option>
+        </select>
+      </div>
+      <div id="salony-licznik" class="salony-licznik"></div>
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
     </div>
 
@@ -1138,7 +1170,7 @@ async function cloneDemo(force) {
   document.getElementById('btn-demo-force').disabled = true;
   document.getElementById('demo-progress').style.display = 'block';
   document.getElementById('demo-result').style.display = 'none';
-  document.getElementById('demo-progress-status').textContent = 'Klonowanie w toku... (może potrwać kilka minut)';
+  document.getElementById('demo-progress-status').innerHTML = '<span class="spinner"></span>Klonowanie w toku... (może potrwać kilka minut)';
   document.getElementById('demo-progress-log').textContent = 'Łączenie z bazą...\n';
 
   try {
@@ -1380,6 +1412,9 @@ function usunToken(token, btn) {
 // ═══════════════════════════════════════════════
 // LISTA SALONÓW
 // ═══════════════════════════════════════════════
+let _salonyAll = [];
+let _salonySearchTimer = null;
+
 function zaladujSalony() {
   const cont = document.getElementById('salony-content');
   cont.innerHTML = '<div class="loading">Ładowanie salonów...</div>';
@@ -1391,6 +1426,7 @@ function zaladujSalony() {
   .then(salony => {
     // Obsługa wygasłej sesji / błędu autoryzacji
     if (!Array.isArray(salony)) {
+      _salonyAll = [];
       if (salony.status === 'error' && (salony.message || '').includes('Brak dostępu')) {
         cont.innerHTML = '<div class="alert alert-error">Sesja wygasła — zaloguj się ponownie.</div>';
         setTimeout(() => adminLogout(), 2000);
@@ -1399,46 +1435,110 @@ function zaladujSalony() {
       }
       return;
     }
-    if (!salony.length) {
-      cont.innerHTML = `<div class="empty-state"><div class="icon">🏪</div><p>Brak salonów w systemie.<br>Dodaj pierwszy salon klikając "Nowy salon".</p></div>`;
-      return;
-    }
-
-    const html = `<div class="salony-grid">${salony.map(s => {
-      const aktywny = String(s.status || '').toLowerCase() === 'aktywny';
-      const waznosc = s.data_waznosci ? new Date(s.data_waznosci).toLocaleDateString('pl-PL') : '—';
-      const created = s.data_utworzenia ? new Date(s.data_utworzenia).toLocaleDateString('pl-PL') : '—';
-      return `
-        <div class="salon-card">
-          <div class="salon-card-header">
-            <div>
-              <div class="salon-name">${s.nazwa_salonu || s.login}</div>
-              <div class="salon-city">${s.miasto || 'Brak miasta'}</div>
-            </div>
-            <span class="badge ${aktywny ? 'badge-active' : 'badge-inactive'}">${aktywny ? '✓ Aktywny' : '✗ Nieaktywny'}</span>
-          </div>
-          <div class="salon-meta">
-            <div><strong>Login:</strong> <span>${s.login}</span></div>
-            <div><strong>Tenant ID:</strong> <span style="font-family:monospace; font-size:11px;">${s.id_bazy}</span></div>
-            ${s.telefon ? `<div><strong>Telefon:</strong> <span>${s.telefon}</span></div>` : ''}
-            ${s.email ? `<div><strong>E-mail:</strong> <span>${s.email}</span></div>` : ''}
-            <div><strong>Ważność:</strong> <span>${waznosc}</span></div>
-            <div><strong>Dodano:</strong> <span>${created}</span></div>
-          </div>
-          <div class="salon-actions">
-            <button class="btn-sm btn-edit" onclick="otworzEdycje('${s.id_bazy}', ${JSON.stringify(s).replace(/'/g,"&apos;").replace(/"/g,'&quot;')})">✏️ Edytuj</button>
-            <button class="btn-sm ${aktywny ? 'btn-deactivate' : 'btn-activate'}"
-              onclick="toggleSalon('${s.id_bazy}', '${aktywny ? 'nieaktywny' : 'aktywny'}', this)">
-              ${aktywny ? '⛔ Zablokuj' : '✅ Aktywuj'}
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('')}</div>`;
-
-    cont.innerHTML = html;
+    _salonyAll = salony;
+    renderSalony();
   })
   .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania danych.</div>'; });
+}
+
+function filtrujSalony() {
+  clearTimeout(_salonySearchTimer);
+  _salonySearchTimer = setTimeout(renderSalony, 180);
+}
+
+function _dniDoWaznosci(s) {
+  if (!s.data_waznosci) return null;
+  const d = new Date(s.data_waznosci); d.setHours(0, 0, 0, 0);
+  const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+  return Math.round((d - dzis) / 86400000);
+}
+
+function renderSalony() {
+  const cont = document.getElementById('salony-content');
+  const licznik = document.getElementById('salony-licznik');
+
+  if (!_salonyAll.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">🏪</div><p>Brak salonów w systemie.<br>Dodaj pierwszy salon klikając "Nowy salon".</p></div>`;
+    if (licznik) licznik.textContent = '';
+    return;
+  }
+
+  const q = (document.getElementById('salony-search')?.value || '').trim().toLowerCase();
+  const fStatus = document.getElementById('salony-filter-status')?.value || '';
+  const fWaz = document.getElementById('salony-filter-waznosc')?.value || '';
+  const sort = document.getElementById('salony-sort')?.value || 'created_desc';
+
+  let lista = _salonyAll.filter(s => {
+    const aktywny = String(s.status || '').toLowerCase() === 'aktywny';
+    if (q) {
+      const hay = `${s.nazwa_salonu || ''} ${s.miasto || ''} ${s.email || ''} ${s.login || ''} ${s.telefon || ''}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (fStatus === 'aktywny' && !aktywny) return false;
+    if (fStatus === 'nieaktywny' && aktywny) return false;
+    if (fWaz) {
+      const dni = _dniDoWaznosci(s);
+      if (fWaz === 'wygasa' && !(dni !== null && dni >= 0 && dni <= 7)) return false;
+      if (fWaz === 'wygasla' && !(dni !== null && dni < 0)) return false;
+    }
+    return true;
+  });
+
+  lista.sort((a, b) => {
+    if (sort === 'nazwa') return (a.nazwa_salonu || a.login || '').localeCompare(b.nazwa_salonu || b.login || '', 'pl');
+    if (sort === 'waznosc') {
+      const da = a.data_waznosci ? new Date(a.data_waznosci).getTime() : Infinity;
+      const db = b.data_waznosci ? new Date(b.data_waznosci).getTime() : Infinity;
+      return da - db;
+    }
+    const ca = a.data_utworzenia ? new Date(a.data_utworzenia).getTime() : 0;
+    const cb = b.data_utworzenia ? new Date(b.data_utworzenia).getTime() : 0;
+    return sort === 'created_asc' ? ca - cb : cb - ca;
+  });
+
+  if (licznik) licznik.textContent = `Wyświetlono ${lista.length} z ${_salonyAll.length} ${_salonyAll.length === 1 ? 'salonu' : 'salonów'}`;
+
+  if (!lista.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><p>Brak salonów pasujących do filtrów.</p></div>`;
+    return;
+  }
+
+  cont.innerHTML = `<div class="salony-grid">${lista.map(s => {
+    const aktywny = String(s.status || '').toLowerCase() === 'aktywny';
+    const dni = _dniDoWaznosci(s);
+    const waznosc = s.data_waznosci ? new Date(s.data_waznosci).toLocaleDateString('pl-PL') : '—';
+    const created = s.data_utworzenia ? new Date(s.data_utworzenia).toLocaleDateString('pl-PL') : '—';
+    let badgeCls = 'badge-active', badgeTxt = '✓ Aktywny';
+    if (!aktywny) { badgeCls = 'badge-inactive'; badgeTxt = '✗ Zablokowany'; }
+    else if (dni !== null && dni < 0) { badgeCls = 'badge-expired-lic'; badgeTxt = '⚠ Licencja wygasła'; }
+    else if (dni !== null && dni <= 7) { badgeCls = 'badge-warn'; badgeTxt = dni === 0 ? '⏳ Wygasa dziś' : `⏳ Wygasa za ${dni} ${dni === 1 ? 'dzień' : 'dni'}`; }
+    return `
+      <div class="salon-card">
+        <div class="salon-card-header">
+          <div>
+            <div class="salon-name">${s.nazwa_salonu || s.login}</div>
+            <div class="salon-city">${s.miasto || 'Brak miasta'}</div>
+          </div>
+          <span class="badge ${badgeCls}">${badgeTxt}</span>
+        </div>
+        <div class="salon-meta">
+          <div><strong>Login:</strong> <span>${s.login}</span></div>
+          <div><strong>Tenant ID:</strong> <span style="font-family:monospace; font-size:11px;">${s.id_bazy}</span></div>
+          ${s.telefon ? `<div><strong>Telefon:</strong> <span>${s.telefon}</span></div>` : ''}
+          ${s.email ? `<div><strong>E-mail:</strong> <span>${s.email}</span></div>` : ''}
+          <div><strong>Ważność:</strong> <span>${waznosc}</span></div>
+          <div><strong>Dodano:</strong> <span>${created}</span></div>
+        </div>
+        <div class="salon-actions">
+          <button class="btn-sm btn-edit" onclick="otworzEdycje('${s.id_bazy}', ${JSON.stringify(s).replace(/'/g,"&apos;").replace(/"/g,'&quot;')})">✏️ Edytuj</button>
+          <button class="btn-sm ${aktywny ? 'btn-deactivate' : 'btn-activate'}"
+            onclick="toggleSalon('${s.id_bazy}', '${aktywny ? 'nieaktywny' : 'aktywny'}', this)">
+            ${aktywny ? '⛔ Zablokuj' : '✅ Aktywuj'}
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('')}</div>`;
 }
 
 function toggleSalon(tenant_id, nowyStatus, btn) {
@@ -2354,6 +2454,7 @@ async function predef_dodajZabieg(katId) {
 }
 
 async function predef_usunZabieg(id, katId) {
+  if (!confirm('Usunąć ten zabieg z predefiniowanych usług?')) return;
   const r = await fetch(`${API}/admin/predef/zabiegi/${id}`, {
     method: 'DELETE',
     headers: { 'X-Admin-Token': adminToken }
