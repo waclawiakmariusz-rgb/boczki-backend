@@ -180,6 +180,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .dt-row { display: flex; justify-content: space-between; gap: 14px; padding: 5px 0; font-size: 13px; }
 .dt-label { color: var(--muted); flex-shrink: 0; }
 .dt-val { text-align: right; word-break: break-word; }
+.dt-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.btn-export-sm {
+  padding: 9px 12px; border: 1px solid var(--sand); border-radius: 9px; background: var(--cream);
+  font-family: inherit; font-weight: 500; font-size: 12px; cursor: pointer; transition: 0.2s; color: var(--text);
+}
+.btn-export-sm:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
+.btn-export-sm:disabled { opacity: 0.6; cursor: default; transform: none; }
+.dt-export-grid .btn-export-sm:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* ── WIZARD ── */
 .wizard-wrap { max-width: 720px; margin: 0 auto; }
@@ -1916,6 +1924,16 @@ function otworzSzczegoly(tenant_id) {
       ${row('Customer ID', `<span style="font-family:monospace;font-size:11px;">${esc(s.stripe_customer_id)}</span>`)}
       ${row('Subscription ID', `<span style="font-family:monospace;font-size:11px;">${esc(s.stripe_subscription_id)}</span>`)}
     </div>
+    <div class="dt-section">
+      <div class="dt-section-title">Eksport danych (CSV)</div>
+      <div class="dt-export-grid">
+        <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','klienci',this)">👤 Klienci</button>
+        <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','sprzedaz',this)">💰 Sprzedaż + zadatki</button>
+        <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','zabiegi',this)">✨ Zabiegi</button>
+        <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','magazyn',this)">📦 Magazyn</button>
+        <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','inne',this)">🗂️ Inne</button>
+      </div>
+    </div>
   `;
 
   document.getElementById('detail-edit-btn').onclick = function() {
@@ -1932,6 +1950,37 @@ function closeDetailModal() {
 document.getElementById('detail-modal').addEventListener('click', function(e) {
   if (e.target === this) closeDetailModal();
 });
+
+// Eksport danych jednego salonu do CSV (uwierzytelniony fetch -> blob -> pobranie)
+async function eksportTenant(tenantId, typ, btn) {
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Eksport...';
+  try {
+    const r = await fetch(`${API}/admin/export_tenant?tenant_id=${encodeURIComponent(tenantId)}&typ=${encodeURIComponent(typ)}`, {
+      headers: { 'X-Admin-Token': adminToken }
+    });
+    if (!r.ok || (r.headers.get('content-type') || '').includes('application/json')) {
+      const t = await r.json().catch(() => ({}));
+      throw new Error(t.message || 'Błąd eksportu.');
+    }
+    const blob = await r.blob();
+    let fname = `${tenantId}_${typ}.csv`;
+    const cd = r.headers.get('Content-Disposition') || '';
+    const mm = cd.match(/filename="?([^"]+)"?/);
+    if (mm) fname = mm[1];
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    pokazPowiadomienie('error', 'Błąd eksportu', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
 
 // ═══════════════════════════════════════════════
 // WIZARD — NAWIGACJA

@@ -248,6 +248,57 @@ module.exports = (db) => {
     });
   });
 
+  // GET /api/admin/export_tenant?tenant_id=X&typ=Y — eksport danych jednego salonu do CSV
+  // typ: klienci | sprzedaz | zabiegi | magazyn | inne. Nazwy tabel z bialej listy, tenant_id parametryzowany.
+  const EXPORT_TABELE = {
+    klienci:  ['Klienci'],
+    sprzedaz: ['Sprzedaz', 'Zadatki'],
+    zabiegi:  ['Uslugi', 'Typy_Zabiegow'],
+    magazyn:  ['Magazyn'],
+    inne:     ['Pracownicy', 'Platnosci', 'Koszty', 'Koszty_Szczegoly', 'Memo', 'Wyniki_konsultacja', 'Rejestr_RODO', 'Rejestr_Oświadczeń']
+  };
+
+  router.get('/admin/export_tenant', requireAdmin, (req, res) => {
+    const tenantId = String(req.query.tenant_id || '').trim();
+    const typ = String(req.query.typ || '').trim();
+    if (!tenantId) return res.json({ status: 'error', message: 'Brak tenant_id.' });
+    const tabele = EXPORT_TABELE[typ];
+    if (!tabele) return res.json({ status: 'error', message: 'Nieznany typ eksportu.' });
+
+    const csvEsc = (v) => {
+      const str = (v === null || v === undefined) ? '' : (v instanceof Date ? v.toISOString() : String(v));
+      return /[",\n;\r]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+    };
+    const tableToCsv = (fields, rows) => {
+      const cols = fields.map(f => f.name);
+      const lines = [cols.map(csvEsc).join(';')];
+      for (const r of rows) lines.push(cols.map(c => csvEsc(r[c])).join(';'));
+      return lines.join('\r\n');
+    };
+
+    const wieleTabel = tabele.length > 1;
+    const sekcje = [];
+    let i = 0;
+    const dalej = () => {
+      if (i >= tabele.length) {
+        const csv = '﻿' + sekcje.join('\r\n\r\n');
+        const safeTenant = tenantId.replace(/[^a-zA-Z0-9_-]/g, '');
+        const data = new Date().toISOString().slice(0, 10);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${safeTenant}_${typ}_${data}.csv"`);
+        return res.send(csv);
+      }
+      const nazwa = tabele[i++];
+      db.query('SELECT * FROM `' + nazwa + '` WHERE tenant_id = ?', [tenantId], (err, rows, fields) => {
+        if (err) return res.json({ status: 'error', message: `Błąd tabeli ${nazwa}: ${err.message}` });
+        const blok = tableToCsv(fields, rows || []);
+        sekcje.push(wieleTabel ? `### ${nazwa} (${(rows || []).length})\r\n${blok}` : blok);
+        dalej();
+      });
+    };
+    dalej();
+  });
+
   // POST /api/admin/create_tenant — tworzenie nowego salonu
   router.post('/admin/create_tenant', requireAdmin, async (req, res) => {
     const d = req.body;
