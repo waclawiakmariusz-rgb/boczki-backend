@@ -270,7 +270,7 @@ module.exports = (db) => {
       return /[",\n;\r]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
     };
     const tableToCsv = (fields, rows) => {
-      const cols = fields.map(f => f.name);
+      const cols = fields.map(f => f.name).filter(n => n !== 'tenant_id');
       const lines = [cols.map(csvEsc).join(';')];
       for (const r of rows) lines.push(cols.map(c => csvEsc(r[c])).join(';'));
       return lines.join('\r\n');
