@@ -122,8 +122,35 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .badge-expired-lic { background: #faddcf; color: #9a3412; }
 .salony-toolbar { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
 .salony-toolbar input, .salony-toolbar select { margin: 0; }
-.salony-licznik { font-size: 12.5px; color: var(--taupe); margin-bottom: 16px; }
+.salony-licznik-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+.salony-licznik { font-size: 12.5px; color: var(--taupe); }
 @media (max-width: 760px) { .salony-toolbar { grid-template-columns: 1fr; } }
+
+/* ── PULPIT / FINANSE ── */
+.pulpit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+.stat-card { background: var(--cream); border: 1px solid var(--sand); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
+.stat-card .stat-label { font-size: 11.5px; color: var(--taupe); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 11px; }
+.stat-card .stat-value { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
+.stat-card .stat-sub { font-size: 12px; color: var(--muted); margin-top: 9px; }
+.stat-card.accent-mrr .stat-value { color: #3a6a3a; }
+.stat-card.accent-warn { border-color: #f5cf66; background: #fffaf0; }
+.stat-card.accent-warn .stat-value { color: #92600e; }
+.stat-card.accent-danger { border-color: #fca5a5; background: #fff6f4; }
+.stat-card.accent-danger .stat-value { color: #9a3412; }
+.pulpit-section-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 6px 0 16px; }
+.pulpit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.pulpit-table th { text-align: left; padding: 10px 14px; color: var(--taupe); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--sand); }
+.pulpit-table td { padding: 11px 14px; border-bottom: 1px solid var(--sand); color: var(--text); }
+.alert-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #fffaf0; border: 1px solid #f5cf66; border-radius: 12px; padding: 13px 20px; margin-bottom: 18px; font-size: 13.5px; color: #92600e; font-weight: 500; }
+.alert-banner button { background: #fff; border: 1px solid #f5cf66; color: #92600e; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-export { background: var(--cream); border: 1px solid var(--sand); color: var(--text); padding: 9px 16px; border-radius: 9px; font-weight: 500; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.btn-export:hover { border-color: var(--primary); color: var(--primary); }
+.zgl-toolbar { display: flex; gap: 12px; justify-content: flex-end; align-items: center; margin-bottom: 16px; }
+.zgl-toolbar select { width: auto; margin: 0; }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 20px; }
+.pager button { background: var(--cream); border: 1px solid var(--sand); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--text); }
+.pager button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
 .spinner {
   display: inline-block; width: 15px; height: 15px; border: 2px solid var(--sand);
   border-top-color: var(--primary); border-radius: 50%;
@@ -141,7 +168,18 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-activate   { background: #e4f0e4; color: #3a6a3a; border-color: #b4d4b4; }
 .btn-deactivate { background: #f5e4e4; color: #8a3030; border-color: #d4a4a4; }
 .btn-edit       { background: #e4ecf5; color: #2a5080; border-color: #a4c0d8; }
+.btn-detail     { background: #efe8f5; color: #5a3a80; border-color: #c4b0d8; }
 .btn-sm:hover { opacity: 0.85; transform: translateY(-1px); }
+
+/* ── MODAL SZCZEGÓŁÓW ── */
+.dt-section { margin-bottom: 18px; }
+.dt-section-title {
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--primary); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--sand);
+}
+.dt-row { display: flex; justify-content: space-between; gap: 14px; padding: 5px 0; font-size: 13px; }
+.dt-label { color: var(--muted); flex-shrink: 0; }
+.dt-val { text-align: right; word-break: break-word; }
 
 /* ── WIZARD ── */
 .wizard-wrap { max-width: 720px; margin: 0 auto; }
@@ -408,9 +446,12 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
   <div class="app-content">
 
+    <div id="alert-wygasajace" class="alert-banner" style="display:none;"></div>
+
     <!-- Tabs -->
     <div class="tab-bar">
-      <button class="tab-btn active" onclick="showTab('tab-salony')">🏪 Salony</button>
+      <button class="tab-btn active" onclick="showTab('tab-pulpit')">📊 Pulpit</button>
+      <button class="tab-btn" onclick="showTab('tab-salony')">🏪 Salony</button>
       <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
       <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
       <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
@@ -421,8 +462,13 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <button class="tab-btn" onclick="showTab('tab-typy-migracja'); typyMigracja_init();">🏷️ Migracja typów</button>
     </div>
 
+    <!-- Tab: Pulpit / Finanse -->
+    <div id="tab-pulpit" class="tab-panel active">
+      <div id="pulpit-content" class="loading">Ładowanie pulpitu...</div>
+    </div>
+
     <!-- Tab: Lista salonów -->
-    <div id="tab-salony" class="tab-panel active">
+    <div id="tab-salony" class="tab-panel">
       <div class="salony-toolbar">
         <input type="text" id="salony-search" placeholder="🔍 Szukaj: nazwa, miasto, e-mail, login, telefon..." oninput="filtrujSalony()" autocomplete="off">
         <select id="salony-filter-status" onchange="renderSalony()">
@@ -442,7 +488,10 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
           <option value="waznosc">Sortuj: ważność rosnąco</option>
         </select>
       </div>
-      <div id="salony-licznik" class="salony-licznik"></div>
+      <div class="salony-licznik-row">
+        <div id="salony-licznik" class="salony-licznik"></div>
+        <button class="btn-export" onclick="eksportSalonyCSV()">⬇ Eksport CSV</button>
+      </div>
       <div id="salony-content" class="loading">Ładowanie salonów...</div>
     </div>
 
@@ -593,7 +642,18 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
     <!-- Tab: Zgłoszenia od klientów -->
     <div id="tab-zgloszenia" class="tab-panel">
+      <div class="zgl-toolbar">
+        <select id="zgl-filter-status" onchange="_zglPage=1; renderZgloszenia()">
+          <option value="">Wszystkie statusy</option>
+          <option value="nowe">Nowe</option>
+          <option value="wyslano_link">Wysłano link</option>
+          <option value="zrealizowane">Zrealizowane</option>
+          <option value="odrzucone">Odrzucone</option>
+        </select>
+        <button class="btn-export" onclick="eksportZgloszeniaCSV()">⬇ Eksport CSV</button>
+      </div>
       <div id="zgloszenia-content" class="loading">Ładowanie zgłoszeń...</div>
+      <div id="zgl-pager" class="pager"></div>
     </div>
 
     <!-- Tab: Linki rejestracji -->
@@ -890,6 +950,18 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
   </div>
 </div>
 
+<!-- Modal szczegółów salonu -->
+<div class="modal-overlay" id="detail-modal">
+  <div class="modal-box" style="max-width:560px;">
+    <h3 id="detail-title">Szczegóły salonu</h3>
+    <div id="detail-body"></div>
+    <div style="display:flex; gap:12px; margin-top:22px;">
+      <button class="btn-secondary" style="flex:1;" onclick="closeDetailModal()">Zamknij</button>
+      <button class="btn-primary" style="flex:1; margin-top:0;" id="detail-edit-btn">✏️ Edytuj</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ─── SYSTEM POWIADOMIEŃ ────────────────────────────────────────
 window.pokazPowiadomienie = function(typ, tytul, wiadomosc, czas) {
@@ -963,6 +1035,7 @@ function adminLogin() {
     sessionStorage.setItem('boczki_admin_token', adminToken);
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
     initWizard();
@@ -984,6 +1057,10 @@ function adminLogout() {
 const statusLabel = { nowe: '🆕 Nowe', wyslano_link: '📩 Wysłano link', zrealizowane: '✅ Zrealizowane', odrzucone: '✗ Odrzucone' };
 const statusBadge = { nowe: 'badge-nowe', wyslano_link: 'badge-wyslano', zrealizowane: 'badge-zreal', odrzucone: 'badge-odrz' };
 
+let _zgloszeniaAll = [];
+let _zglPage = 1;
+const ZGL_PER_PAGE = 20;
+
 function zaladujZgloszenia() {
   const cont = document.getElementById('zgloszenia-content');
   cont.innerHTML = '<div class="loading">Ładowanie zgłoszeń...</div>';
@@ -991,19 +1068,38 @@ function zaladujZgloszenia() {
   fetch(`${API}/admin/zamowienia`, { headers: { 'X-Admin-Token': adminToken } })
   .then(r => r.json())
   .then(data => {
-    const nowe = data.filter(z => z.status === 'nowe').length;
+    _zgloszeniaAll = Array.isArray(data) ? data : [];
+    const nowe = _zgloszeniaAll.filter(z => z.status === 'nowe').length;
     const badge = document.getElementById('badge-nowe');
     if (nowe > 0) { badge.style.display = 'inline'; badge.textContent = nowe; }
     else badge.style.display = 'none';
+    _zglPage = 1;
+    renderZgloszenia();
+  })
+  .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania zgłoszeń.</div>'; });
+}
 
-    if (!data.length) {
-      cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Brak zgłoszeń.<br>Klienci mogą składać zamówienia przez <strong>/zamow.html</strong></p></div>`;
-      return;
-    }
+function renderZgloszenia() {
+  const cont = document.getElementById('zgloszenia-content');
+  const pager = document.getElementById('zgl-pager');
+  const fStatus = document.getElementById('zgl-filter-status')?.value || '';
+  let lista = fStatus ? _zgloszeniaAll.filter(z => z.status === fStatus) : _zgloszeniaAll;
 
-    cont.innerHTML = data.map(z => {
-      const data_zgl = new Date(z.data_zgloszenia).toLocaleString('pl-PL');
-      return `
+  if (!lista.length) {
+    cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${fStatus ? 'Brak zgłoszeń o tym statusie.' : 'Brak zgłoszeń.<br>Klienci mogą składać zamówienia przez <strong>/zamow.html</strong>'}</p></div>`;
+    if (pager) pager.innerHTML = '';
+    return;
+  }
+
+  const totalPages = Math.ceil(lista.length / ZGL_PER_PAGE);
+  if (_zglPage > totalPages) _zglPage = totalPages;
+  if (_zglPage < 1) _zglPage = 1;
+  const start = (_zglPage - 1) * ZGL_PER_PAGE;
+  const strona = lista.slice(start, start + ZGL_PER_PAGE);
+
+  cont.innerHTML = strona.map(z => {
+    const data_zgl = new Date(z.data_zgloszenia).toLocaleString('pl-PL');
+    return `
       <div class="zgl-card ${z.status}">
         <div class="zgl-header">
           <div>
@@ -1034,10 +1130,17 @@ function zaladujZgloszenia() {
             <button class="btn-sm btn-deactivate" onclick="zmienStatusZgl('${z.id}','odrzucone')">✗ Odrzuć</button>` : ''}
         </div>
       </div>`;
-    }).join('');
-  })
-  .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania zgłoszeń.</div>'; });
+  }).join('');
+
+  if (pager) {
+    pager.innerHTML = totalPages <= 1 ? '' : `
+      <button onclick="zglStrona(${_zglPage - 1})" ${_zglPage === 1 ? 'disabled' : ''}>← Poprzednia</button>
+      <span style="font-size:13px; color:var(--taupe);">Strona ${_zglPage} z ${totalPages} · ${lista.length} zgłoszeń</span>
+      <button onclick="zglStrona(${_zglPage + 1})" ${_zglPage === totalPages ? 'disabled' : ''}>Następna →</button>`;
+  }
 }
+
+function zglStrona(n) { _zglPage = n; renderZgloszenia(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
 
 function zmienStatusZgl(id, status) {
   fetch(`${API}/admin/zamowienie_status`, {
@@ -1120,11 +1223,122 @@ window.addEventListener('load', () => {
     adminToken = saved;
     document.getElementById('login-screen').style.display = 'none';
     document.getElementById('app').style.display = 'block';
+    zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
     initWizard();
   }
 });
+
+// ═══════════════════════════════════════════════
+// PULPIT / FINANSE
+// ═══════════════════════════════════════════════
+function zaladujPulpit() {
+  const cont = document.getElementById('pulpit-content');
+  if (cont) cont.innerHTML = '<div class="loading">Ładowanie pulpitu...</div>';
+  fetch(`${API}/admin/pulpit`, { headers: { 'X-Admin-Token': adminToken } })
+  .then(r => r.json())
+  .then(d => {
+    if (d.status !== 'success') {
+      if (cont) cont.innerHTML = `<div class="alert alert-error">${d.message || 'Błąd ładowania.'}</div>`;
+      return;
+    }
+    const s = d.statystyki;
+    renderAlertWygasajace(s);
+    if (!cont) return;
+    const liczba = n => Number(n).toLocaleString('pl-PL', { maximumFractionDigits: 0 });
+    const cards = `
+      <div class="pulpit-grid">
+        <div class="stat-card"><div class="stat-label">Aktywne salony</div><div class="stat-value">${s.aktywne}</div><div class="stat-sub">z ${s.wszystkie} łącznie</div></div>
+        <div class="stat-card accent-mrr"><div class="stat-label">MRR (szacowany)</div><div class="stat-value">${liczba(s.mrr_szac)} zł</div><div class="stat-sub">${s.z_subskrypcja} subskrypcji × ${liczba(d.cena_bazowa_zl)} zł</div></div>
+        <div class="stat-card"><div class="stat-label">Nowi w tym miesiącu</div><div class="stat-value">${s.nowi_miesiac}</div><div class="stat-sub">zarejestrowane salony</div></div>
+        <div class="stat-card ${s.zgloszenia_nowe ? 'accent-warn' : ''}"><div class="stat-label">Nowe zgłoszenia</div><div class="stat-value">${s.zgloszenia_nowe}</div><div class="stat-sub">czekają na link</div></div>
+        <div class="stat-card ${s.wygasa_7dni ? 'accent-warn' : ''}"><div class="stat-label">Wygasa ≤7 dni</div><div class="stat-value">${s.wygasa_7dni}</div><div class="stat-sub">licencje do odnowienia</div></div>
+        <div class="stat-card ${s.wygasle ? 'accent-danger' : ''}"><div class="stat-label">Wygasłe licencje</div><div class="stat-value">${s.wygasle}</div><div class="stat-sub">po terminie ważności</div></div>
+        <div class="stat-card"><div class="stat-label">Zablokowane</div><div class="stat-value">${s.zablokowane}</div><div class="stat-sub">nieaktywne konta</div></div>
+      </div>`;
+    const vouchery = (d.vouchery || []).length ? `
+      <div class="pulpit-section-title">🏷️ Wykorzystanie voucherów</div>
+      <table class="pulpit-table">
+        <thead><tr><th>Kod</th><th>Rabat</th><th>Użyć</th><th>Limit</th><th>Status</th></tr></thead>
+        <tbody>${d.vouchery.map(v => `<tr>
+          <td><code>${v.kod}</code></td>
+          <td>${v.typ === 'procent' ? v.wartosc + '%' : v.wartosc + ' zł'}</td>
+          <td><strong>${v.ilosc_uzyc || 0}</strong></td>
+          <td>${v.max_uzyc || '∞'}</td>
+          <td>${v.aktywny ? '<span class="badge badge-active">aktywny</span>' : '<span class="badge badge-inactive">wyłączony</span>'}</td>
+        </tr>`).join('')}</tbody>
+      </table>` : '';
+    const note = `<div style="font-size:11.5px; color:var(--taupe); margin-top:18px; line-height:1.6;">MRR szacowany = liczba aktywnych subskrypcji × cena bazowa. Vouchery (np. START29) czasowo obniżają realny przychód — dokładne kwoty znajdziesz w panelu Stripe.</div>`;
+    cont.innerHTML = cards + vouchery + note;
+  })
+  .catch(() => { if (cont) cont.innerHTML = '<div class="alert alert-error">Błąd ładowania pulpitu.</div>'; });
+}
+
+function renderAlertWygasajace(s) {
+  const el = document.getElementById('alert-wygasajace');
+  if (!el) return;
+  const total = (s.wygasa_7dni || 0) + (s.wygasle || 0);
+  if (!total) { el.style.display = 'none'; return; }
+  const czesci = [];
+  if (s.wygasle) czesci.push(`${s.wygasle} ${s.wygasle === 1 ? 'licencja wygasła' : 'wygasłych'}`);
+  if (s.wygasa_7dni) czesci.push(`${s.wygasa_7dni} wygasa w ciągu 7 dni`);
+  el.innerHTML = `<span>⏳ <strong>Uwaga:</strong> ${czesci.join(' · ')} — sprawdź odnowienia.</span>
+    <button onclick="pokazWygasajace()">Pokaż salony →</button>`;
+  el.style.display = 'flex';
+}
+
+function pokazWygasajace() {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-salony').classList.add('active');
+  const btn = document.querySelector('.tab-btn[onclick*="tab-salony"]');
+  if (btn) btn.classList.add('active');
+  zaladujSalony();
+  setTimeout(() => {
+    const sort = document.getElementById('salony-sort');
+    if (sort) sort.value = 'waznosc';
+    renderSalony();
+  }, 350);
+}
+
+// ── EKSPORT CSV ──
+function downloadCSV(filename, rows) {
+  const esc = v => {
+    const str = (v === null || v === undefined) ? '' : String(v);
+    return /[",\n;]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+  };
+  const csv = rows.map(r => r.map(esc).join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function eksportSalonyCSV() {
+  if (!_salonyAll.length) { alert('Brak salonów do eksportu.'); return; }
+  const naglowki = ['Nazwa salonu', 'Miasto', 'Login', 'Tenant ID', 'Telefon', 'E-mail', 'Status', 'Ważność', 'Dodano'];
+  const wiersze = _salonyAll.map(s => [
+    s.nazwa_salonu || '', s.miasto || '', s.login || '', s.id_bazy || '',
+    s.telefon || '', s.email || '', s.status || '',
+    s.data_waznosci ? new Date(s.data_waznosci).toLocaleDateString('pl-PL') : '',
+    s.data_utworzenia ? new Date(s.data_utworzenia).toLocaleDateString('pl-PL') : ''
+  ]);
+  downloadCSV(`salony_${new Date().toISOString().slice(0, 10)}.csv`, [naglowki, ...wiersze]);
+}
+
+function eksportZgloszeniaCSV() {
+  if (!_zgloszeniaAll.length) { alert('Brak zgłoszeń do eksportu.'); return; }
+  const naglowki = ['Imię', 'Salon', 'Miasto', 'E-mail', 'Telefon', 'Status', 'Wiadomość', 'Data zgłoszenia'];
+  const wiersze = _zgloszeniaAll.map(z => [
+    z.imie || '', z.nazwa_salonu || '', z.miasto || '', z.email || '', z.telefon || '',
+    statusLabel[z.status] || z.status || '', z.wiadomosc || '',
+    z.data_zgloszenia ? new Date(z.data_zgloszenia).toLocaleString('pl-PL') : ''
+  ]);
+  downloadCSV(`zgloszenia_${new Date().toISOString().slice(0, 10)}.csv`, [naglowki, ...wiersze]);
+}
 
 // ═══════════════════════════════════════════════
 // TABS
@@ -1134,6 +1348,7 @@ function showTab(id) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   event.target.classList.add('active');
+  if (id === 'tab-pulpit') zaladujPulpit();
   if (id === 'tab-salony') zaladujSalony();
   if (id === 'tab-zgloszenia') zaladujZgloszenia();
   if (id === 'tab-linki') zaladujTokeny();
@@ -1530,6 +1745,7 @@ function renderSalony() {
           <div><strong>Dodano:</strong> <span>${created}</span></div>
         </div>
         <div class="salon-actions">
+          <button class="btn-sm btn-detail" onclick="otworzSzczegoly('${s.id_bazy}')">🔍 Szczegóły</button>
           <button class="btn-sm btn-edit" onclick="otworzEdycje('${s.id_bazy}', ${JSON.stringify(s).replace(/'/g,"&apos;").replace(/"/g,'&quot;')})">✏️ Edytuj</button>
           <button class="btn-sm ${aktywny ? 'btn-deactivate' : 'btn-activate'}"
             onclick="toggleSalon('${s.id_bazy}', '${aktywny ? 'nieaktywny' : 'aktywny'}', this)">
@@ -1603,6 +1819,76 @@ function zapiszEdycje() {
 // Zamknij modal klikając poza nim
 document.getElementById('edit-modal').addEventListener('click', function(e) {
   if (e.target === this) closeEditModal();
+});
+
+// ═══════════════════════════════════════════════
+// MODAL SZCZEGÓŁÓW SALONU
+// ═══════════════════════════════════════════════
+function otworzSzczegoly(tenant_id) {
+  const s = _salonyAll.find(x => String(x.id_bazy) === String(tenant_id));
+  if (!s) { pokazPowiadomienie('error', 'Błąd', 'Nie znaleziono salonu.'); return; }
+
+  const aktywny = String(s.status || '').toLowerCase() === 'aktywny';
+  const dni = _dniDoWaznosci(s);
+  const fmt = (d) => d ? new Date(d).toLocaleDateString('pl-PL') : '—';
+  const esc = (v) => v == null || v === '' ? '—' : String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+  let statusTxt = aktywny ? '✓ Aktywny' : '✗ Zablokowany';
+  if (aktywny && dni !== null && dni < 0) statusTxt = '⚠ Aktywny, licencja wygasła';
+  else if (aktywny && dni !== null && dni <= 7) statusTxt = `⏳ Aktywny, wygasa za ${dni} dni`;
+
+  const maSub = s.stripe_subscription_id && String(s.stripe_subscription_id).trim();
+  const subTxt = maSub
+    ? `✓ Subskrypcja Stripe aktywna`
+    : (s.stripe_customer_id ? 'Klient Stripe bez aktywnej subskrypcji' : 'Brak powiązania ze Stripe (ręczny/voucher)');
+
+  document.getElementById('detail-title').textContent = `🔍 ${s.nazwa_salonu || s.login}`;
+
+  const row = (label, val) => `<div class="dt-row"><span class="dt-label">${label}</span><span class="dt-val">${val}</span></div>`;
+
+  document.getElementById('detail-body').innerHTML = `
+    <div class="dt-section">
+      <div class="dt-section-title">Dane salonu</div>
+      ${row('Status', `<strong>${statusTxt}</strong>`)}
+      ${row('Nazwa salonu', esc(s.nazwa_salonu))}
+      ${row('Miasto', esc(s.miasto))}
+      ${row('Tenant ID', `<span style="font-family:monospace;">${esc(s.id_bazy)}</span>`)}
+      ${row('Login', esc(s.login))}
+    </div>
+    <div class="dt-section">
+      <div class="dt-section-title">Kontakt</div>
+      ${row('Telefon', esc(s.telefon))}
+      ${row('E-mail', esc(s.email))}
+    </div>
+    <div class="dt-section">
+      <div class="dt-section-title">Dane do faktury</div>
+      ${row('Nazwa firmy', esc(s.nazwa_firmy))}
+      ${row('Ulica', esc(s.ulica))}
+    </div>
+    <div class="dt-section">
+      <div class="dt-section-title">Licencja i płatności</div>
+      ${row('Ważność', fmt(s.data_waznosci) + (dni !== null ? ` <span style="color:var(--muted);font-size:12px;">(${dni < 0 ? 'wygasła ' + Math.abs(dni) + ' dni temu' : 'za ' + dni + ' dni'})</span>` : ''))}
+      ${row('Okres karencji do', fmt(s.data_grace_until))}
+      ${row('Dodano', fmt(s.data_utworzenia))}
+      ${row('Stripe', esc(subTxt))}
+      ${row('Customer ID', `<span style="font-family:monospace;font-size:11px;">${esc(s.stripe_customer_id)}</span>`)}
+      ${row('Subscription ID', `<span style="font-family:monospace;font-size:11px;">${esc(s.stripe_subscription_id)}</span>`)}
+    </div>
+  `;
+
+  document.getElementById('detail-edit-btn').onclick = function() {
+    closeDetailModal();
+    otworzEdycje(s.id_bazy, s);
+  };
+  document.getElementById('detail-modal').style.display = 'flex';
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').style.display = 'none';
+}
+
+document.getElementById('detail-modal').addEventListener('click', function(e) {
+  if (e.target === this) closeDetailModal();
 });
 
 // ═══════════════════════════════════════════════

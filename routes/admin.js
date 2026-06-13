@@ -159,13 +159,57 @@ module.exports = (db) => {
   // GET /api/admin/salony — lista wszystkich salonów
   router.get('/admin/salony', requireAdmin, (req, res) => {
     db.query(
-      `SELECT id, login, rola, id_bazy, status, data_waznosci, nazwa_salonu, miasto, telefon, email, data_utworzenia
+      `SELECT id, login, rola, id_bazy, status, data_waznosci, nazwa_salonu, miasto, telefon, email, data_utworzenia,
+              nazwa_firmy, ulica, data_grace_until, stripe_customer_id, stripe_subscription_id
        FROM Licencje ORDER BY data_utworzenia DESC`,
       (err, rows) => {
         if (err) return res.json({ status: 'error', message: err.message });
         return res.json(rows || []);
       }
     );
+  });
+
+  // GET /api/admin/pulpit — zagregowane statystyki dla pulpitu (czysty odczyt z bazy)
+  router.get('/admin/pulpit', requireAdmin, (req, res) => {
+    const cenaBazowaZl = (parseInt(process.env.STRIPE_CENA_GROSZE) || 7900) / 100;
+    const sql = `
+      SELECT
+        (SELECT COUNT(*) FROM Licencje WHERE LOWER(status)='aktywny' AND (data_waznosci IS NULL OR data_waznosci >= CURDATE())) AS aktywne,
+        (SELECT COUNT(*) FROM Licencje WHERE LOWER(status)<>'aktywny') AS zablokowane,
+        (SELECT COUNT(*) FROM Licencje WHERE stripe_subscription_id IS NOT NULL AND stripe_subscription_id<>'') AS z_subskrypcja,
+        (SELECT COUNT(*) FROM Licencje WHERE data_utworzenia >= DATE_FORMAT(CURDATE(),'%Y-%m-01')) AS nowi_miesiac,
+        (SELECT COUNT(*) FROM Licencje WHERE data_waznosci IS NOT NULL AND data_waznosci >= CURDATE() AND data_waznosci <= DATE_ADD(CURDATE(), INTERVAL 7 DAY) AND LOWER(status)='aktywny') AS wygasa_7dni,
+        (SELECT COUNT(*) FROM Licencje WHERE data_waznosci IS NOT NULL AND data_waznosci < CURDATE()) AS wygasle,
+        (SELECT COUNT(*) FROM Zamowienia WHERE status='nowe') AS zgloszenia_nowe,
+        (SELECT COUNT(*) FROM Licencje) AS wszystkie
+    `;
+    db.query(sql, (err, rows) => {
+      if (err) return res.json({ status: 'error', message: err.message });
+      const s = rows[0] || {};
+      const num = (v) => Number(v) || 0;
+      const mrr = num(s.z_subskrypcja) * cenaBazowaZl;
+      db.query(
+        `SELECT kod, typ, wartosc, ilosc_uzyc, max_uzyc, aktywny FROM Kody_rabatowe ORDER BY ilosc_uzyc DESC, created_at DESC`,
+        (e2, vouchery) => {
+          return res.json({
+            status: 'success',
+            cena_bazowa_zl: cenaBazowaZl,
+            statystyki: {
+              aktywne: num(s.aktywne),
+              zablokowane: num(s.zablokowane),
+              z_subskrypcja: num(s.z_subskrypcja),
+              nowi_miesiac: num(s.nowi_miesiac),
+              wygasa_7dni: num(s.wygasa_7dni),
+              wygasle: num(s.wygasle),
+              zgloszenia_nowe: num(s.zgloszenia_nowe),
+              wszystkie: num(s.wszystkie),
+              mrr_szac: mrr
+            },
+            vouchery: e2 ? [] : (vouchery || [])
+          });
+        }
+      );
+    });
   });
 
   // POST /api/admin/create_tenant — tworzenie nowego salonu
