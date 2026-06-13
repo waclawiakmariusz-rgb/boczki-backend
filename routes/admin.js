@@ -212,6 +212,42 @@ module.exports = (db) => {
     });
   });
 
+  // GET /api/admin/aktywnosc — statystyki aktywnosci kazdego salonu (GROUP BY per tenant)
+  // Dopasowanie tenant_id -> id_bazy robione w JS, wiec brak problemu z kolacja kolumn.
+  router.get('/admin/aktywnosc', requireAdmin, (req, res) => {
+    const queries = {
+      klienci: `SELECT tenant_id AS t, COUNT(*) AS n FROM Klienci WHERE data_usuniecia IS NULL GROUP BY tenant_id`,
+      pracownicy: `SELECT tenant_id AS t, COUNT(*) AS n FROM Pracownicy GROUP BY tenant_id`,
+      sprzedaz: `SELECT tenant_id AS t, COUNT(*) AS n, SUM(data_sprzedazy >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)) AS n30, MAX(data_sprzedazy) AS mx FROM Sprzedaz GROUP BY tenant_id`,
+      logi: `SELECT tenant_id AS t, MAX(data_zdarzenia) AS mx FROM Logi GROUP BY tenant_id`
+    };
+
+    const wynik = {};
+    const ensure = (t) => {
+      if (!t) return null;
+      if (!wynik[t]) wynik[t] = { klienci: 0, pracownicy: 0, sprzedaze: 0, sprzedaze_30d: 0, ostatnia_sprzedaz: null, ostatnia_aktywnosc: null };
+      return wynik[t];
+    };
+
+    db.query(queries.klienci, (e1, rKli) => {
+      if (e1) return res.json({ status: 'error', message: e1.message });
+      (rKli || []).forEach(r => { const o = ensure(r.t); if (o) o.klienci = Number(r.n) || 0; });
+      db.query(queries.pracownicy, (e2, rPrac) => {
+        if (e2) return res.json({ status: 'error', message: e2.message });
+        (rPrac || []).forEach(r => { const o = ensure(r.t); if (o) o.pracownicy = Number(r.n) || 0; });
+        db.query(queries.sprzedaz, (e3, rSprz) => {
+          if (e3) return res.json({ status: 'error', message: e3.message });
+          (rSprz || []).forEach(r => { const o = ensure(r.t); if (o) { o.sprzedaze = Number(r.n) || 0; o.sprzedaze_30d = Number(r.n30) || 0; o.ostatnia_sprzedaz = r.mx; } });
+          db.query(queries.logi, (e4, rLogi) => {
+            if (e4) return res.json({ status: 'error', message: e4.message });
+            (rLogi || []).forEach(r => { const o = ensure(r.t); if (o) o.ostatnia_aktywnosc = r.mx; });
+            return res.json({ status: 'success', aktywnosc: wynik });
+          });
+        });
+      });
+    });
+  });
+
   // POST /api/admin/create_tenant — tworzenie nowego salonu
   router.post('/admin/create_tenant', requireAdmin, async (req, res) => {
     const d = req.body;

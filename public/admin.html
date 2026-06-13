@@ -1628,17 +1628,18 @@ function usunToken(token, btn) {
 // LISTA SALONÓW
 // ═══════════════════════════════════════════════
 let _salonyAll = [];
+let _aktywnosc = {};
 let _salonySearchTimer = null;
 
 function zaladujSalony() {
   const cont = document.getElementById('salony-content');
   cont.innerHTML = '<div class="loading">Ładowanie salonów...</div>';
 
-  fetch(`${API}/admin/salony`, {
-    headers: { 'X-Admin-Token': adminToken }
-  })
-  .then(r => r.json())
-  .then(salony => {
+  Promise.all([
+    fetch(`${API}/admin/salony`, { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json()),
+    fetch(`${API}/admin/aktywnosc`, { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json()).catch(() => ({}))
+  ])
+  .then(([salony, akt]) => {
     // Obsługa wygasłej sesji / błędu autoryzacji
     if (!Array.isArray(salony)) {
       _salonyAll = [];
@@ -1651,9 +1652,19 @@ function zaladujSalony() {
       return;
     }
     _salonyAll = salony;
+    _aktywnosc = (akt && akt.status === 'success' && akt.aktywnosc) ? akt.aktywnosc : {};
     renderSalony();
   })
   .catch(() => { cont.innerHTML = '<div class="alert alert-error">Błąd ładowania danych.</div>'; });
+}
+
+// Liczba dni od ostatniej aktywnosci (Logi) salonu; null gdy brak danych
+function _dniOdAktywnosci(s) {
+  const a = _aktywnosc[s.id_bazy];
+  if (!a || !a.ostatnia_aktywnosc) return null;
+  const d = new Date(a.ostatnia_aktywnosc); d.setHours(0, 0, 0, 0);
+  const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+  return Math.round((dzis - d) / 86400000);
 }
 
 function filtrujSalony() {
@@ -1743,6 +1754,19 @@ function renderSalony() {
           ${s.email ? `<div><strong>E-mail:</strong> <span>${s.email}</span></div>` : ''}
           <div><strong>Ważność:</strong> <span>${waznosc}</span></div>
           <div><strong>Dodano:</strong> <span>${created}</span></div>
+          ${(() => {
+            const a = _aktywnosc[s.id_bazy];
+            const dniAkt = _dniOdAktywnosci(s);
+            let aktTxt;
+            if (dniAkt === null) aktTxt = '<span style="color:var(--muted);">brak — salon nieaktywny</span>';
+            else if (dniAkt === 0) aktTxt = '<span style="color:#3a6a3a;">dziś</span>';
+            else if (dniAkt <= 7) aktTxt = `${dniAkt} ${dniAkt === 1 ? 'dzień' : 'dni'} temu`;
+            else aktTxt = `<span style="color:#8a3030;">${dniAkt} dni temu</span>`;
+            const klienci = a ? a.klienci : 0;
+            const sprz30 = a ? a.sprzedaze_30d : 0;
+            return `<div><strong>Aktywność:</strong> <span>${aktTxt}</span></div>
+                    <div><strong>Klienci / sprzedaże 30d:</strong> <span>${klienci} / ${sprz30}</span></div>`;
+          })()}
         </div>
         <div class="salon-actions">
           <button class="btn-sm btn-detail" onclick="otworzSzczegoly('${s.id_bazy}')">🔍 Szczegóły</button>
@@ -1846,7 +1870,25 @@ function otworzSzczegoly(tenant_id) {
 
   const row = (label, val) => `<div class="dt-row"><span class="dt-label">${label}</span><span class="dt-val">${val}</span></div>`;
 
+  const a = _aktywnosc[s.id_bazy] || null;
+  const dniAkt = _dniOdAktywnosci(s);
+  let aktTxt;
+  if (dniAkt === null) aktTxt = '<span style="color:#8a3030;font-weight:600;">Brak aktywności — salon nie wystartował</span>';
+  else if (dniAkt === 0) aktTxt = '<span style="color:#3a6a3a;font-weight:600;">dziś</span>';
+  else if (dniAkt <= 7) aktTxt = `${dniAkt} ${dniAkt === 1 ? 'dzień' : 'dni'} temu`;
+  else aktTxt = `<span style="color:#8a3030;font-weight:600;">${dniAkt} dni temu (uśpiony)</span>`;
+  const ostSprz = a && a.ostatnia_sprzedaz ? new Date(a.ostatnia_sprzedaz).toLocaleDateString('pl-PL') : '—';
+
   document.getElementById('detail-body').innerHTML = `
+    <div class="dt-section">
+      <div class="dt-section-title">Aktywność</div>
+      ${row('Ostatnia aktywność', aktTxt)}
+      ${row('Liczba klientów', a ? a.klienci : 0)}
+      ${row('Liczba pracowników', a ? a.pracownicy : 0)}
+      ${row('Sprzedaże łącznie', a ? a.sprzedaze : 0)}
+      ${row('Sprzedaże (30 dni)', a ? a.sprzedaze_30d : 0)}
+      ${row('Ostatnia sprzedaż', ostSprz)}
+    </div>` + `
     <div class="dt-section">
       <div class="dt-section-title">Dane salonu</div>
       ${row('Status', `<strong>${statusTxt}</strong>`)}
