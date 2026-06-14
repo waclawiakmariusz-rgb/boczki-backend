@@ -11150,7 +11150,11 @@ function pokazEkranPinu() {
         const grid = document.getElementById('pin-users-grid');
         grid.innerHTML = '';
         if(!users || users.length === 0 || users.error) {
-            const isAdmin = (localStorage.getItem('boczki_user') || '').toLowerCase() === 'admin';
+            // Wlasciciel salonu loguje sie z rola 'salon' (lub 'admin' w starym Boczki).
+            // Oba musza dostac furtke startowa do dodania pierwszego pracownika —
+            // inaczej nowy salon utyka na ekranie PIN bez mozliwosci wejscia.
+            const rolaKonta = (localStorage.getItem('boczki_user') || '').toLowerCase();
+            const isAdmin = rolaKonta === 'admin' || rolaKonta === 'salon';
             if (isAdmin) {
                 grid.innerHTML = `
                     <div style="text-align:center; padding:20px;">

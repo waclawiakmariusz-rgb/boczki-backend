@@ -402,6 +402,31 @@ module.exports = (db) => {
     );
   });
 
+  // POST /api/admin/reset_haslo — nadaj nowe hasło dostępu (gdy klient nie może się zalogować)
+  // Generuje czytelne hasło tymczasowe, hashuje bcryptem, zwraca jednorazowo do podyktowania.
+  // NIE zmienia statusu salonu (zablokowany zostaje zablokowany).
+  router.post('/admin/reset_haslo', requireAdmin, async (req, res) => {
+    const { id_bazy } = req.body;
+    if (!id_bazy) return res.json({ status: 'error', message: 'Brak tenant_id' });
+
+    // Hasło bez mylących znaków (0/O/1/l/I), format slowo-cyfry: np. "kawa-7392"
+    const slowa = ['kawa', 'sloma', 'mleko', 'czas', 'kotek', 'ptak', 'rzeka', 'gora', 'pole', 'most', 'sok', 'lato'];
+    const slowo = slowa[Math.floor(Math.random() * slowa.length)];
+    const cyfry = String(Math.floor(1000 + Math.random() * 9000));
+    const noweHaslo = `${slowo}-${cyfry}`;
+    const hash = await bcrypt.hash(noweHaslo, BCRYPT_ROUNDS);
+
+    db.query(
+      `UPDATE Licencje SET haslo=? WHERE id_bazy=? LIMIT 1`,
+      [hash, id_bazy],
+      (err, result) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono salonu.' });
+        return res.json({ status: 'success', haslo: noweHaslo, message: 'Nadano nowe hasło dostępu.' });
+      }
+    );
+  });
+
   // ─── TOKENY REJESTRACJI ───────────────────────────────────────
 
   // POST /api/admin/generate_token — wygeneruj link rejestracyjny (opcjonalnie wyślij email)
@@ -627,11 +652,14 @@ module.exports = (db) => {
     // licencję po emailu klienta Stripe. Inny email w formularzu rejestracji
     // = licencja przestałaby się przedłużać mimo opłacanej subskrypcji.
     const zakup = await new Promise(resolve => {
-      db.query(`SELECT email, nazwa_firmy FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
+      db.query(`SELECT email, nazwa_firmy, stripe_customer_id, stripe_subscription_id FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
         (e, rows) => resolve((rows && rows[0]) || null));
     });
     const emailLicencji = ((zakup && zakup.email) || email || '').trim();
     const nazwaFirmy = ((zakup && zakup.nazwa_firmy) || '').trim() || null; // nabywca faktur recurring
+    // Stripe IDs z zakupu — wpisane od razu do Licencje, niezależnie od wyścigu z invoice.paid
+    const stripeCustomerId = (zakup && zakup.stripe_customer_id) || null;
+    const stripeSubscriptionId = (zakup && zakup.stripe_subscription_id) || null;
 
     const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
@@ -653,9 +681,9 @@ module.exports = (db) => {
         const licId = randomUUID();
 
         db.query(
-          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, nazwa_firmy, ulica, miasto, telefon, email, data_waznosci, data_utworzenia)
-           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, nazwaFirmy, ulica || '', miasto || '', telefon || '', emailLicencji],
+          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, nazwa_firmy, ulica, miasto, telefon, email, stripe_customer_id, stripe_subscription_id, data_waznosci, data_utworzenia)
+           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
+          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, nazwaFirmy, ulica || '', miasto || '', telefon || '', emailLicencji, stripeCustomerId, stripeSubscriptionId],
           (err2) => {
             if (err2) {
               // Cofnij token jeśli zapis się nie udał

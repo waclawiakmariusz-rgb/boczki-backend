@@ -1925,6 +1925,18 @@ function otworzSzczegoly(tenant_id) {
       ${row('Subscription ID', `<span style="font-family:monospace;font-size:11px;">${esc(s.stripe_subscription_id)}</span>`)}
     </div>
     <div class="dt-section">
+      <div class="dt-section-title">Dostęp do konta</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Gdy klient nie może się zalogować — wygeneruj nowe hasło tymczasowe i podyktuj je. Po zalogowaniu może je zmienić przez „Zapomniałem hasła".</div>
+      <button class="btn-export-sm" onclick="nadajHaslo('${s.id_bazy}',this)">🔑 Nadaj nowe hasło dostępu</button>
+      <div id="nadane-haslo" style="display:none;margin-top:10px;padding:12px;background:var(--cream);border-radius:var(--radius);">
+        <div style="font-size:12px;color:var(--muted);">Nowe hasło (jednorazowo widoczne):</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+          <span id="nadane-haslo-val" style="font-family:monospace;font-size:20px;font-weight:700;letter-spacing:1px;"></span>
+          <button class="btn-export-sm" onclick="kopiujHaslo(this)">📋 Kopiuj</button>
+        </div>
+      </div>
+    </div>
+    <div class="dt-section">
       <div class="dt-section-title">Eksport danych (CSV)</div>
       <div class="dt-export-grid">
         <button class="btn-export-sm" onclick="eksportTenant('${s.id_bazy}','klienci',this)">👤 Klienci</button>
@@ -1980,6 +1992,40 @@ async function eksportTenant(tenantId, typ, btn) {
     btn.disabled = false;
     btn.textContent = orig;
   }
+}
+
+// Nadanie nowego hasla dostepu dla salonu (gdy klient nie moze sie zalogowac)
+async function nadajHaslo(tenantId, btn) {
+  if (!confirm('Wygenerować nowe hasło dostępu dla tego salonu?\n\nStare hasło klienta przestanie działać. Nowe hasło podyktujesz klientowi.')) return;
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = '⏳ Generuję...';
+  try {
+    const r = await fetch(`${API}/admin/reset_haslo`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ id_bazy: tenantId })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') throw new Error(d.message || 'Błąd nadawania hasła.');
+    document.getElementById('nadane-haslo-val').textContent = d.haslo;
+    document.getElementById('nadane-haslo').style.display = 'block';
+    pokazPowiadomienie('success', 'Hasło nadane', 'Podyktuj klientowi nowe hasło.');
+  } catch (e) {
+    pokazPowiadomienie('error', 'Błąd', e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = orig;
+  }
+}
+
+function kopiujHaslo(btn) {
+  const val = document.getElementById('nadane-haslo-val').textContent;
+  navigator.clipboard.writeText(val).then(() => {
+    const o = btn.textContent;
+    btn.textContent = '✓ Skopiowano';
+    setTimeout(() => { btn.textContent = o; }, 1500);
+  });
 }
 
 // ═══════════════════════════════════════════════

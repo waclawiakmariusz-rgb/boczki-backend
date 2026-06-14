@@ -95,6 +95,10 @@ module.exports = (db) => {
     `ALTER TABLE Zamowienia ADD COLUMN ulica VARCHAR(255) NULL`,
     `ALTER TABLE Zamowienia ADD COLUMN nazwa_firmy VARCHAR(255) NULL`,
     `ALTER TABLE Licencje ADD COLUMN nazwa_firmy VARCHAR(255) NULL`,
+    // Stripe IDs zapamiętane przy checkout.session.completed — przenoszone do Licencje
+    // w /rejestracja/zaloz, żeby nie zależeć od wyścigu z invoice.paid.
+    `ALTER TABLE Zamowienia ADD COLUMN stripe_customer_id VARCHAR(100) NULL`,
+    `ALTER TABLE Zamowienia ADD COLUMN stripe_subscription_id VARCHAR(100) NULL`,
   ];
 
   // Licencje też dostają ulicę — bo przy generowaniu kolejnych faktur Stripe webhook
@@ -300,10 +304,15 @@ module.exports = (db) => {
             return res.json({ received: true });
           }
 
-          // Zaktualizuj status zamówienia
+          // Zaktualizuj status zamówienia + zapamiętaj Stripe IDs z sesji.
+          // session.customer/subscription istnieją już tutaj (mode: subscription),
+          // a Licencja powstaje dopiero przy rejestracji z linku — stąd przenosimy
+          // je przez Zamowienia, zamiast polegać na wyścigu z invoice.paid.
+          const stripeCustomerId = session.customer || null;
+          const stripeSubscriptionId = session.subscription || null;
           db.query(
-            `UPDATE Zamowienia SET status='wyslano_link', token_wyslany=? WHERE id=?`,
-            [token, zamowienie_id]
+            `UPDATE Zamowienia SET status='wyslano_link', token_wyslany=?, stripe_customer_id=?, stripe_subscription_id=? WHERE id=?`,
+            [token, stripeCustomerId, stripeSubscriptionId, zamowienie_id]
           );
 
           // Wyślij email z linkiem rejestracyjnym
