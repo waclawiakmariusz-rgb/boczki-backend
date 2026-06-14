@@ -1214,7 +1214,7 @@
             <div class="how-num">2</div>
             <div>
               <strong>Opłać dostęp</strong>
-              <span>Kartą lub BLIK, bezpiecznie przez Stripe.</span>
+              <span>Kartą, bezpiecznie przez Stripe.</span>
             </div>
           </div>
           <div class="how-step">
@@ -1306,7 +1306,7 @@
               <div id="cena-display">—</div>
               <div id="cena-oryginalna" style="display:none;"></div>
             </div>
-            <div class="price-meta">Karta, BLIK<br>bezpieczna płatność</div>
+            <div class="price-meta">Karta<br>bezpieczna płatność</div>
           </div>
 
           <!-- VOUCHER -->
@@ -1352,7 +1352,7 @@
       <span class="faq-icon">+</span>
     </button>
     <div class="faq-answer">
-      Nie — do zamówienia potrzebujesz tylko karty debetowej lub możliwości płatności BLIK. Akceptujemy wszystkie popularne metody płatności online. Brak ukrytych opłat ani subskrypcji — płacisz raz za cały rok.
+      Nie — do zamówienia potrzebujesz tylko karty debetowej lub kredytowej. Płatność obsługuje bezpiecznie Stripe. Brak ukrytych opłat ani subskrypcji — płacisz raz za cały rok.
     </div>
   </div>
 
@@ -1533,7 +1533,7 @@ fetch('/api/stripe/config').then(r => r.json()).then(d => {
     window._stripeAktywny = true;
     window._cenaBazowa = d.cena_display;
     document.getElementById('form-title').textContent = 'Kup dostęp do Estelio';
-    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą lub BLIK. Link aktywacyjny otrzymasz automatycznie na e-mail.';
+    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą. Link aktywacyjny otrzymasz automatycznie na e-mail.';
     document.getElementById('cena-display').textContent = d.cena_display;
     document.getElementById('cena-box').style.display = 'flex';
     document.getElementById('voucher-box').style.display = 'block';
