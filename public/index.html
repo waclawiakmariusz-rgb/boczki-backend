@@ -21299,8 +21299,10 @@ if (inputNazwaCheck) {
   // Blokuje: wykrzykniki, cudzysłowy, nawiasy klamrowe, znaki formuł arkusza (=, +) i inne techniczne śmieci.
   
   document.addEventListener('input', function(e) {
-    if (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'password')) {
-       
+    // UWAGA: pola hasła wykluczone — hasła są hashowane bcryptem, nie trafiają
+    // do arkuszy/CSV, a klienci legalnie używają znaków @ ! $ itp. w hasłach.
+    if (e.target.tagName === 'INPUT' && e.target.type === 'text') {
+
        // ROZSZERZONA LISTA ZAKAZANYCH ZNAKÓW:
        // ! " ' < > { } [ ] \ = + ` | ^ % $ @ ~
        const forbiddenChars = /[!"'<>{}[\]\\=+`|^%$@~]/g;
