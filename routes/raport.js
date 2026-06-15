@@ -10,6 +10,21 @@ const { makeZapiszLog } = require('./logi');
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
 
+  // Idempotentna migracja: produkty wycofane z raportu "Zadania na dziś" (nie zamawiamy).
+  // Klucz po id produktu (Raport_Magazyn.id), bo w tym module każdy wiersz to osobny rekord.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Raport_Wycofane_Zamowienia (
+       tenant_id VARCHAR(100) NOT NULL,
+       produkt_id VARCHAR(64) NOT NULL,
+       kto VARCHAR(100),
+       data DATETIME NOT NULL,
+       PRIMARY KEY (tenant_id, produkt_id)
+     )`,
+    (err) => {
+      if (err) console.error('[raport] CREATE Raport_Wycofane_Zamowienia:', err.message);
+    }
+  );
+
   // Helper: loguj do Raport_Logi i Logi
   function rap_logAction(tenant_id, akcja, produkt, opis, pracownik) {
     const id = randomUUID();
@@ -142,15 +157,29 @@ module.exports = (db) => {
           }
         );
       } else {
-        // Nowy produkt
-        const newId = 'PRD_' + Date.now();
+        // Nowy produkt — guard: nie pozwalamy na cichy duplikat (ta sama nazwa w tej samej kategorii).
         db.query(
-          `INSERT INTO Raport_Magazyn (id, tenant_id, kategoria, nazwa, ilosc, min, jednostka, data_zmiany, edytowal, cena_brutto, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
-          [newId, tenant_id, d.category || '', d.nazwa || '', Number(d.ilosc) || 0, Number(d.min) || 0, d.unit || 'szt.', d.userFull || '', Number(d.price_gross) || null, d.expiration || null],
-          (err) => {
-            if (err) return res.json({ status: 'error', message: err.message });
-            rap_logAction(tenant_id, 'NOWY PRODUKT', d.nazwa, `Dodano na stan: ${d.ilosc} ${d.unit || 'szt.'}`, d.userFull);
-            return res.json({ status: 'success', message: 'Dodano produkt' });
+          `SELECT id FROM Raport_Magazyn
+           WHERE tenant_id = ?
+             AND LOWER(TRIM(nazwa)) = LOWER(TRIM(?))
+             AND LOWER(TRIM(IFNULL(kategoria, ''))) = LOWER(TRIM(?))
+             AND (kategoria != 'Archiwum' OR kategoria IS NULL)
+           LIMIT 1`,
+          [tenant_id, d.nazwa || '', d.category || ''],
+          (errDup, dupRows) => {
+            if (!errDup && dupRows && dupRows.length) {
+              return res.json({ status: 'error', code: 'DUPLICATE', message: 'Produkt o tej nazwie już istnieje w tej kategorii. Edytuj istniejący wpis zamiast dodawać nowy (inaczej powstanie duplikat na liście zamówień).' });
+            }
+            const newId = 'PRD_' + Date.now();
+            db.query(
+              `INSERT INTO Raport_Magazyn (id, tenant_id, kategoria, nazwa, ilosc, min, jednostka, data_zmiany, edytowal, cena_brutto, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)`,
+              [newId, tenant_id, d.category || '', d.nazwa || '', Number(d.ilosc) || 0, Number(d.min) || 0, d.unit || 'szt.', d.userFull || '', Number(d.price_gross) || null, d.expiration || null],
+              (err) => {
+                if (err) return res.json({ status: 'error', message: err.message });
+                rap_logAction(tenant_id, 'NOWY PRODUKT', d.nazwa, `Dodano na stan: ${d.ilosc} ${d.unit || 'szt.'}`, d.userFull);
+                return res.json({ status: 'success', message: 'Dodano produkt' });
+              }
+            );
           }
         );
       }
@@ -192,6 +221,42 @@ module.exports = (db) => {
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono kategorii' });
+          return res.json({ status: 'success' });
+        }
+      );
+
+    } else if (action === 'rap_getHidden') {
+      db.query(
+        `SELECT produkt_id FROM Raport_Wycofane_Zamowienia WHERE tenant_id = ?`,
+        [tenant_id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'success', data: [] });
+          return res.json({ status: 'success', data: (rows || []).map(r => r.produkt_id) });
+        }
+      );
+
+    } else if (action === 'rap_hideReorder') {
+      if (!d.id) return res.json({ status: 'error', message: 'Brak id produktu.' });
+      db.query(
+        `INSERT INTO Raport_Wycofane_Zamowienia (tenant_id, produkt_id, kto, data)
+         VALUES (?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE kto = VALUES(kto), data = VALUES(data)`,
+        [tenant_id, String(d.id), d.userFull || ''],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          rap_logAction(tenant_id, 'WYCOFANIE Z ZAMOWIEN', d.nazwa || String(d.id), 'Nie zamawiamy ponownie', d.userFull);
+          return res.json({ status: 'success' });
+        }
+      );
+
+    } else if (action === 'rap_unhideReorder') {
+      if (!d.id) return res.json({ status: 'error', message: 'Brak id produktu.' });
+      db.query(
+        `DELETE FROM Raport_Wycofane_Zamowienia WHERE tenant_id = ? AND produkt_id = ?`,
+        [tenant_id, String(d.id)],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          rap_logAction(tenant_id, 'PRZYWROCENIE DO ZAMOWIEN', d.nazwa || String(d.id), 'Znow zamawiamy', d.userFull);
           return res.json({ status: 'success' });
         }
       );

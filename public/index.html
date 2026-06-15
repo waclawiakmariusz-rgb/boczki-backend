@@ -9601,7 +9601,7 @@ ANALIZA MANAGER
                      <div class="rap_card-body"><div id="rap_report-expiration"></div></div>
                   </div>
                   <div class="rap_card rap_card-collapsible"><h3 onclick="rap_toggleCard(this)" style="color:#3b82f6; border-bottom:2px solid #eff6ff; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>🖨️ Dokumenty / Poligrafia</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3><div class="rap_card-body"><div id="rap_report-docs">Ładowanie...</div></div></div>
-                  <div class="rap_card rap_card-collapsible"><h3 onclick="rap_toggleCard(this)" style="color:#ef4444; border-bottom:2px solid #fef2f2; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>🛒 Pozostałe Braki</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3><div class="rap_card-body"><div id="rap_report-others">Ładowanie...</div></div></div>
+                  <div class="rap_card rap_card-collapsible"><h3 onclick="rap_toggleCard(this)" style="color:#ef4444; border-bottom:2px solid #fef2f2; padding-bottom:10px; margin-top:0; cursor:pointer; user-select:none; display:flex; justify-content:space-between; align-items:center;"><span>🛒 Pozostałe Braki</span><span class="rap_card-arrow" style="font-size:14px; transition:transform 0.2s;">▼</span></h3><div class="rap_card-body"><div id="rap_report-others">Ładowanie...</div><div id="rap_report-ukryte" style="margin-top:14px;"></div></div></div>
                 </div>
 
                 <div id="rap_magazyn" class="section rap_view-section">
@@ -25788,6 +25788,7 @@ function akon_renderDashboard(data) {
 // =========================================================
 
 let rap_categoriesFlat = [], rap_inventoryData = [];
+let rap_ukryte = null; // Set id-ów produktów wycofanych z zamówień; null = jeszcze nie pobrano
 let rap_openCategories = new Set();
 let rap_allLogsData = [], rap_currentLogPage = 1; 
 const rap_logsPerPage = 40;
@@ -25827,7 +25828,14 @@ function rap_fetchInventory() {
         if(res.status === 'success' || res.success) {
             rap_inventoryData = res.data;
             rap_renderTable();
-            rap_renderReport(); 
+            if (rap_ukryte === null) {
+                rap_apiCall('rap_getHidden').then(h => {
+                    rap_ukryte = new Set(((h && h.data) || []).map(String));
+                    rap_renderReport();
+                }).catch(() => { rap_ukryte = new Set(); rap_renderReport(); });
+            } else {
+                rap_renderReport();
+            }
         }
     });
 }
@@ -26204,12 +26212,12 @@ function rap_renderReport() {
     }).sort((a,b) => a.diffDays - b.diffDays);
 
     if(expItems.length > 0 && cExp && cardExp) {
-        let hExp = '<table class="rap_table"><thead><tr><th>Produkt</th><th>Termin</th><th>Dni</th></tr></thead><tbody>';
+        let hExp = '<table class="rap_table stack-table"><thead><tr><th>Produkt</th><th>Termin</th><th>Dni</th></tr></thead><tbody>';
         expItems.forEach(i => {
-             const color = i.diffDays < 0 ? '#b91c1c' : '#d97706'; 
+             const color = i.diffDays < 0 ? '#b91c1c' : '#d97706';
              let dView = i.dateStr;
              try { dView = new Date(i.dateStr).toLocaleDateString('pl-PL'); } catch(e){}
-             hExp += `<tr><td><b>${i[2]}</b><br><small style="color:var(--text-muted);">${i[1]}</small></td><td style="font-weight:600; color:var(--text-dark);">${dView}</td><td><span style="color:${color};font-weight:800;background:#fef3c7;padding:4px 8px;border-radius:8px;">${i.diffDays}</span></td></tr>`;
+             hExp += `<tr><td data-label="Produkt"><b>${i[2]}</b><br><small style="color:var(--text-muted);">${i[1]}</small></td><td data-label="Termin" style="font-weight:600; color:var(--text-dark);">${dView}</td><td data-label="Dni"><span style="color:${color};font-weight:800;background:#fef3c7;padding:4px 8px;border-radius:8px;">${i.diffDays}</span></td></tr>`;
         });
         hExp += '</tbody></table>';
         cExp.innerHTML = hExp;
@@ -26220,21 +26228,31 @@ function rap_renderReport() {
 
     // Braki
     const cDocs = document.getElementById('rap_report-docs'), cOthers = document.getElementById('rap_report-others');
-    let hDocs='<table class="rap_table"><thead><tr><th>Nazwa</th><th>Jest</th><th>Cel</th><th>Brakuje</th><th>Akcja</th></tr></thead><tbody>', hOthers=hDocs, cD=0, cO=0;
-    
+    const naglowek = '<table class="rap_table stack-table"><thead><tr><th>Nazwa</th><th>Jest</th><th>Cel</th><th>Brakuje</th><th>Akcja</th></tr></thead><tbody>';
+    let hDocs = naglowek, hOthers = naglowek, cD = 0, cO = 0;
+
     rap_inventoryData.forEach(r => {
+       // Produkty wycofane z zamówień pomijamy.
+       if (rap_ukryte && rap_ukryte.has(String(r[0]))) return;
+
        const min = Number(r[4]), qty = Number(r[3]);
        if(min > 0) {
            const target = Math.ceil(min * 1.3);
            if(qty < target) {
                const missing = Math.round((target - qty) * 100) / 100;
                const isDoc = r[1].toLowerCase().includes('dokument') || r[1].toLowerCase().includes('wydruk');
+               const nazwaJs = escHtml(r[2]).replace(/'/g, "\\'");
                const row = `<tr>
-                   <td><strong style="color:var(--text-dark);">${r[2]}</strong><br><small style="color:var(--text-muted);">${r[1]}</small></td>
-                   <td style="font-weight:800; color:#475569;">${qty}</td>
-                   <td style="font-weight:800; color:#10b981;">${target}</td>
-                   <td class="rap_report-missing">+${missing}</td>
-                   <td><button class="rap_btn-fix" onclick="rap_quickAdd('${r[0]}', ${missing})">Wyrównaj</button></td>
+                   <td data-label="Nazwa"><strong style="color:var(--text-dark);">${r[2]}</strong><br><small style="color:var(--text-muted);">${r[1]}</small></td>
+                   <td data-label="Jest" style="font-weight:800; color:#475569;">${qty}</td>
+                   <td data-label="Cel" style="font-weight:800; color:#10b981;">${target}</td>
+                   <td data-label="Brakuje" class="rap_report-missing">+${missing}</td>
+                   <td data-label="Akcja">
+                       <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                           <button class="rap_btn-fix" onclick="rap_quickAdd('${r[0]}', ${missing})">Wyrównaj</button>
+                           <button onclick="rap_ukryjZZamowien('${r[0]}', '${nazwaJs}')" title="Nie zamawiam tego produktu" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">✕ Usuń</button>
+                       </div>
+                   </td>
                </tr>`;
                if(isDoc) { hDocs += row; cD++; } else { hOthers += row; cO++; }
            }
@@ -26242,6 +26260,61 @@ function rap_renderReport() {
     });
     if(cDocs) cDocs.innerHTML = cD ? hDocs+'</tbody></table>' : '<div style="color:#16a34a;padding:10px;font-weight:bold;">✅ Wszystkie dokumenty w normie</div>';
     if(cOthers) cOthers.innerHTML = cO ? hOthers+'</tbody></table>' : '<div style="color:#16a34a;padding:10px;font-weight:bold;">✅ Magazyn uzupełniony</div>';
+
+    rap_renderUkryte();
+}
+
+// Stopka raportu: produkty wycofane z zamówień (do przywrócenia).
+function rap_renderUkryte() {
+    const box = document.getElementById('rap_report-ukryte');
+    if (!box) return;
+    const ids = rap_ukryte ? Array.from(rap_ukryte) : [];
+    if (ids.length === 0) { box.innerHTML = ""; return; }
+
+    // Mapujemy id -> nazwa z aktualnego magazynu (jeśli rekord nadal istnieje).
+    const nazwaPoId = {};
+    rap_inventoryData.forEach(r => { nazwaPoId[String(r[0])] = r[2]; });
+
+    const chipsy = ids.map(id => {
+        const display = nazwaPoId[id] || ('(produkt ' + id + ')');
+        const nazwaJs = escHtml(display).replace(/'/g, "\\'");
+        return `<button onclick="rap_przywrocDoZamowien('${id}', '${nazwaJs}')" title="Przywróć na listę zamówień"
+                    style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:999px; padding:6px 12px; margin:3px; cursor:pointer; font-size:12px; font-weight:600;">
+                    ↩️ ${escHtml(display)}
+                </button>`;
+    }).join('');
+
+    box.innerHTML = `
+        <details style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px;">
+            <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#64748b;">Wycofane z zamówień (${ids.length}) — kliknij, aby przywrócić</summary>
+            <div style="margin-top:10px; display:flex; flex-wrap:wrap;">${chipsy}</div>
+        </details>
+    `;
+}
+
+// Wycofaj produkt z raportu "Zadania na dziś" (nie zamawiamy go).
+function rap_ukryjZZamowien(id, nazwa) {
+    if (!confirm(`Usunąć „${nazwa}" z listy zamówień?\n\nProdukt nie będzie się już pojawiał w brakach. Możesz go przywrócić w sekcji „Wycofane z zamówień".`)) return;
+    rap_apiCall('rap_hideReorder', { id, nazwa, userFull: currentUser }).then(res => {
+        if (res.success || res.status === 'success') {
+            if (rap_ukryte) rap_ukryte.add(String(id));
+            rap_renderReport();
+        } else {
+            alert(res.message || 'Nie udało się usunąć z listy.');
+        }
+    });
+}
+
+// Przywróć produkt na listę zamówień.
+function rap_przywrocDoZamowien(id, nazwa) {
+    rap_apiCall('rap_unhideReorder', { id, nazwa, userFull: currentUser }).then(res => {
+        if (res.success || res.status === 'success') {
+            if (rap_ukryte) rap_ukryte.delete(String(id));
+            rap_renderReport();
+        } else {
+            alert(res.message || 'Nie udało się przywrócić.');
+        }
+    });
 }
   
 function rap_quickAdd(id, val) { 
