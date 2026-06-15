@@ -13038,34 +13038,61 @@ function renderCoZamowic() {
 
     const dzis = new Date();
 
+    // 1. TABELA BRAKÓW — agregacja po nazwie produktu (sumujemy stan ze wszystkich partii/dostaw).
+    // Magazyn trzyma osobny wiersz per partia, więc bez sumowania ten sam produkt dublował się
+    // jako "BRAK (0)" (wyprzedana partia) i "1 szt." (bieżąca) — pokazujemy realny stan łączny.
+    const agregat = new Map();
     dane.forEach(p => {
-        // Filtr wyszukiwarki
         const text = p.nazwa.toLowerCase();
         if (!text.includes(filter)) return;
 
-        // 1. TABELA BRAKÓW (Ilość <= 1)
-        if (Number(p.ilosc) <= 1) {
-            let stylStan = Number(p.ilosc) <= 0 
-                ? "background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" // Czerwony dla 0
-                : "background:#ffedd5; color:#9a3412; border:1px solid #fed7aa;"; // Pomarańczowy dla 1
-
-            let tekstStan = Number(p.ilosc) <= 0 ? "BRAK (0)" : "1 szt.";
-            
-            // Usunąłem kolumnę Kategoria, dodałem pogrubienie nazwy
-            tbodyBraki.innerHTML += `
-                <tr style="border-bottom:1px solid #eee;">
-                    <td style="padding:10px;"><strong>${p.nazwa}</strong></td>
-                    <td style="padding:10px;">
-                        <span style="font-size:11px; font-weight:bold; padding:4px 10px; border-radius:12px; ${stylStan}">
-                            ${tekstStan}
-                        </span>
-                    </td>
-                    <td style="padding:10px;">${p.brutto} zł</td>
-                </tr>
-            `;
+        const ilosc = Number(p.ilosc) || 0;
+        let rec = agregat.get(p.nazwa);
+        if (!rec) {
+            rec = { nazwa: p.nazwa, ilosc: 0, brutto: null, bruttoZeStanu: null };
+            agregat.set(p.nazwa, rec);
         }
+        rec.ilosc += ilosc;
+        // Cena z partii, która jeszcze coś ma na stanie (najbardziej aktualna); fallback do jakiejkolwiek.
+        if (rec.brutto === null) rec.brutto = p.brutto;
+        if (ilosc > 0 && rec.bruttoZeStanu === null) rec.bruttoZeStanu = p.brutto;
+    });
 
-        // 2. TABELA TERMINÓW (< 60 dni i stan > 0)
+    Array.from(agregat.values())
+        .sort((a, b) => {
+            const dir = sortOrderZamowienia.dir === 'asc' ? 1 : -1;
+            if (sortOrderZamowienia.col === 'nazwa') {
+                return String(a.nazwa).localeCompare(String(b.nazwa)) * dir;
+            }
+            return (a.ilosc - b.ilosc) * dir;
+        })
+        .forEach(p => {
+            if (p.ilosc <= 1) {
+                let stylStan = p.ilosc <= 0
+                    ? "background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" // Czerwony dla 0
+                    : "background:#ffedd5; color:#9a3412; border:1px solid #fed7aa;"; // Pomarańczowy dla 1
+
+                let tekstStan = p.ilosc <= 0 ? "BRAK (0)" : "1 szt.";
+
+                tbodyBraki.innerHTML += `
+                    <tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:10px;"><strong>${p.nazwa}</strong></td>
+                        <td style="padding:10px;">
+                            <span style="font-size:11px; font-weight:bold; padding:4px 10px; border-radius:12px; ${stylStan}">
+                                ${tekstStan}
+                            </span>
+                        </td>
+                        <td style="padding:10px;">${(p.bruttoZeStanu !== null ? p.bruttoZeStanu : p.brutto)} zł</td>
+                    </tr>
+                `;
+            }
+        });
+
+    // 2. TABELA TERMINÓW (< 60 dni i stan > 0) — per partia, bo każda dostawa ma własną datę ważności.
+    dane.forEach(p => {
+        const text = p.nazwa.toLowerCase();
+        if (!text.includes(filter)) return;
+
         if (p.waznosc && Number(p.ilosc) > 0) {
             const dataWaznosci = new Date(p.waznosc);
             const roznicaCzasu = dataWaznosci - dzis;
