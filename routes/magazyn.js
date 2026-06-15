@@ -10,6 +10,25 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
+  // Idempotentna migracja: produkty (detal), których salon nie chce już zamawiać.
+  // Wpis = manager kliknął "Usuń z listy" w raporcie "Co zamówić?" — produkt znika
+  // z listy braków, mimo niskiego stanu. Klucz po nazwie (znormalizowanej), bo raport
+  // agreguje magazyn po nazwie produktu, nie po pojedynczej partii.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Magazyn_Wycofane_Zamowienia (
+       id VARCHAR(50) PRIMARY KEY,
+       tenant_id VARCHAR(100) NOT NULL,
+       nazwa VARCHAR(255) NOT NULL,
+       nazwa_norm VARCHAR(255) NOT NULL,
+       kto VARCHAR(100),
+       data DATETIME NOT NULL,
+       UNIQUE KEY uniq_wycofane (tenant_id, nazwa_norm)
+     )`,
+    (err) => {
+      if (err) console.error('[magazyn] CREATE Magazyn_Wycofane_Zamowienia:', err.message);
+    }
+  );
+
   // ==========================================
   // GET /magazyn - pobierz magazyn
   // ==========================================
@@ -72,6 +91,15 @@ module.exports = (db) => {
             model: r.model,
             cena: r.cena_detal !== null && r.cena_detal !== '' ? parseFloat(r.cena_detal) : ''
           })));
+        }
+      );
+    } else if (action === 'hidden_reorder') {
+      db.query(
+        `SELECT nazwa FROM Magazyn_Wycofane_Zamowienia WHERE tenant_id = ? ORDER BY nazwa`,
+        [tenant_id],
+        (err, rows) => {
+          if (err) return res.json([]);
+          return res.json(rows.map(r => r.nazwa));
         }
       );
     } else {
@@ -279,6 +307,38 @@ module.exports = (db) => {
               return res.json({ status: 'success', message: 'Kosmetyk został wycofany z systemu.' });
             }
           );
+        }
+      );
+
+    // --- HIDE_REORDER (wycofaj produkt z listy "Co zamówić?") ---
+    } else if (action === 'hide_reorder') {
+      if (!d.nazwa || !String(d.nazwa).trim()) return res.json({ status: 'error', message: 'Brak nazwy produktu.' });
+      const nazwa = String(d.nazwa).trim();
+      const nazwaNorm = nazwa.toLowerCase();
+      const id = randomUUID();
+      db.query(
+        `INSERT INTO Magazyn_Wycofane_Zamowienia (id, tenant_id, nazwa, nazwa_norm, kto, data)
+         VALUES (?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE nazwa = VALUES(nazwa), kto = VALUES(kto), data = VALUES(data)`,
+        [id, tenant_id, nazwa, nazwaNorm, d.pracownik || ''],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          zapiszLog(tenant_id, 'WYCOFANIE Z LISTY ZAMOWIEN', d.pracownik, `${nazwa} - nie zamawiamy ponownie`);
+          return res.json({ status: 'success', message: 'Usunięto z listy zamówień.' });
+        }
+      );
+
+    // --- UNHIDE_REORDER (przywróć produkt na listę "Co zamówić?") ---
+    } else if (action === 'unhide_reorder') {
+      if (!d.nazwa || !String(d.nazwa).trim()) return res.json({ status: 'error', message: 'Brak nazwy produktu.' });
+      const nazwaNorm = String(d.nazwa).trim().toLowerCase();
+      db.query(
+        `DELETE FROM Magazyn_Wycofane_Zamowienia WHERE tenant_id = ? AND nazwa_norm = ?`,
+        [tenant_id, nazwaNorm],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          zapiszLog(tenant_id, 'PRZYWROCENIE NA LISTE ZAMOWIEN', d.pracownik, `${String(d.nazwa).trim()} - znów zamawiamy`);
+          return res.json({ status: 'success', message: 'Przywrócono na listę.' });
         }
       );
 

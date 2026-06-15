@@ -1183,6 +1183,9 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
     .stack-table td[data-label="Produkt"]::before { display: none; }
     .stack-table td[colspan] { justify-content: center; }
     .stack-table td[colspan]::before { display: none; }
+    .stack-table td[data-label=""]::before { display: none; }
+    .stack-table td[data-label=""] { padding-top: 4px; }
+    .stack-table td[data-label=""] button { width: 100%; padding: 12px !important; }
     body.dark-mode .stack-table tr { background: #0f172a; border-color: #334155 !important; }
     
     .edit-modal-card, #edit-product-overlay > div, #edit-dict-overlay > div, .rodo-card, #new-client-overlay > div, #deposit-overlay > div, #consent-modal-overlay > div, #birthday-modal-overlay > div, #client-edit-modal-overlay > div, #split-payment-modal > div, #emergency-modal-overlay > div { 
@@ -5605,11 +5608,13 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <th onclick="sortujZamowienia('nazwa')" style="cursor:pointer; user-select:none;">Produkt ⇅</th>
                         <th onclick="sortujZamowienia('ilosc')" style="cursor:pointer; user-select:none; width:120px;">Stan ⇅</th>
                         <th>Cena (Brutto)</th>
+                        <th style="width:60px;"></th>
                     </tr>
                 </thead>
                 <tbody id="lista-braki" class="stack-mobile"></tbody>
             </table>
         </div>
+        <div id="ukryte-zamowienia" style="margin-top:14px;"></div>
     </div>
 
     <div class="card" style="border-left: 5px solid #f59e0b; margin-top:20px;">
@@ -13019,12 +13024,25 @@ function renderujKafelkiKlientow(data, kontener) {
 // --- MODUŁ MANAGER: CO ZAMÓWIĆ ---
 
 let sortOrderZamowienia = { col: 'ilosc', dir: 'asc' }; // Domyślne sortowanie
+let ukryteZamowienia = null; // Set znormalizowanych nazw wycofanych z listy; null = jeszcze nie pobrano
 
 function renderCoZamowic() {
     const tbodyBraki = document.getElementById('lista-braki');
     const tbodyTerminy = document.getElementById('lista-terminy');
     const input = document.getElementById('szukaj-zamowienia');
     const filter = input ? input.value.toLowerCase() : "";
+
+    // Leniwe pobranie listy wycofanych produktów (raz na sesję), potem ponowny render.
+    if (ukryteZamowienia === null) {
+        ukryteZamowienia = new Set();
+        fetch(API_URL + "?action=hidden_reorder")
+            .then(r => r.json())
+            .then(arr => {
+                ukryteZamowienia = new Set((Array.isArray(arr) ? arr : []).map(n => String(n).trim().toLowerCase()));
+                renderCoZamowic();
+            })
+            .catch(() => { renderCoZamowic(); });
+    }
 
     tbodyBraki.innerHTML = "";
     tbodyTerminy.innerHTML = "";
@@ -13080,12 +13098,16 @@ function renderCoZamowic() {
             return (a.ilosc - b.ilosc) * dir;
         })
         .forEach(p => {
+            // Produkty wycofane z listy ("nie zamawiamy") pomijamy całkowicie.
+            if (ukryteZamowienia && ukryteZamowienia.has(String(p.nazwa).trim().toLowerCase())) return;
+
             if (p.ilosc <= 1) {
                 let stylStan = p.ilosc <= 0
                     ? "background:#fee2e2; color:#991b1b; border:1px solid #fecaca;" // Czerwony dla 0
                     : "background:#ffedd5; color:#9a3412; border:1px solid #fed7aa;"; // Pomarańczowy dla 1
 
                 let tekstStan = p.ilosc <= 0 ? "BRAK (0)" : "1 szt.";
+                const nazwaJs = escHtml(p.nazwa).replace(/'/g, "\\'");
 
                 tbodyBraki.innerHTML += `
                     <tr style="border-bottom:1px solid #eee;">
@@ -13096,6 +13118,12 @@ function renderCoZamowic() {
                             </span>
                         </td>
                         <td data-label="Cena" style="padding:10px;">${(p.bruttoZeStanu !== null ? p.bruttoZeStanu : p.brutto)} zł</td>
+                        <td data-label="" style="padding:10px; text-align:right;">
+                            <button onclick="ukryjZZamowien('${nazwaJs}')" title="Nie chcę już zamawiać tego produktu"
+                                    style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:6px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">
+                                ✕ Usuń
+                            </button>
+                        </td>
                     </tr>
                 `;
             }
@@ -13136,8 +13164,71 @@ function renderCoZamowic() {
         }
     });
 
-    if (tbodyBraki.innerHTML === "") tbodyBraki.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:15px; color:#10b981;">Brak pilnych zamówień! 🎉</td></tr>';
+    if (tbodyBraki.innerHTML === "") tbodyBraki.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#10b981;">Brak pilnych zamówień! 🎉</td></tr>';
     if (tbodyTerminy.innerHTML === "") tbodyTerminy.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#10b981;">Wszystkie daty ważności są bezpieczne. ✅</td></tr>';
+
+    renderUkryteZamowienia();
+}
+
+// Stopka raportu: produkty wycofane z listy "Co zamówić?" (do ewentualnego przywrócenia).
+function renderUkryteZamowienia() {
+    const box = document.getElementById('ukryte-zamowienia');
+    if (!box) return;
+    const nazwy = ukryteZamowienia ? Array.from(ukryteZamowienia) : [];
+    if (nazwy.length === 0) { box.innerHTML = ""; return; }
+
+    // Mapujemy znormalizowane nazwy z powrotem na oryginalną pisownię z magazynu (jeśli dostępna).
+    const oryginaly = {};
+    (window.daneCache || []).forEach(p => {
+        if (p && p.nazwa) oryginaly[String(p.nazwa).trim().toLowerCase()] = p.nazwa;
+    });
+
+    const chipsy = nazwy.sort().map(norm => {
+        const display = oryginaly[norm] || norm;
+        const nazwaJs = escHtml(display).replace(/'/g, "\\'");
+        return `<button onclick="przywrocDoZamowien('${nazwaJs}')" title="Przywróć na listę zamówień"
+                    style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:999px; padding:6px 12px; margin:3px; cursor:pointer; font-size:12px; font-weight:600;">
+                    ↩️ ${escHtml(display)}
+                </button>`;
+    }).join('');
+
+    box.innerHTML = `
+        <details style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px;">
+            <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#64748b;">Wycofane z listy (${nazwy.length}) — kliknij, aby przywrócić</summary>
+            <div style="margin-top:10px; display:flex; flex-wrap:wrap;">${chipsy}</div>
+        </details>
+    `;
+}
+
+// Wycofaj produkt z listy "Co zamówić?" (salon nie chce go już zamawiać).
+function ukryjZZamowien(nazwa) {
+    if (!confirm(`Usunąć „${nazwa}" z listy do zamówienia?\n\nProdukt nie będzie się już pojawiał w brakach. Możesz go przywrócić w sekcji „Wycofane z listy".`)) return;
+    fetch(API_URL, { method: "POST", body: JSON.stringify({ action: 'hide_reorder', nazwa, pracownik: currentUser }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') {
+                if (ukryteZamowienia) ukryteZamowienia.add(String(nazwa).trim().toLowerCase());
+                renderCoZamowic();
+            } else {
+                alert(d.message || 'Nie udało się usunąć z listy.');
+            }
+        })
+        .catch(() => alert('Błąd połączenia.'));
+}
+
+// Przywróć produkt na listę "Co zamówić?".
+function przywrocDoZamowien(nazwa) {
+    fetch(API_URL, { method: "POST", body: JSON.stringify({ action: 'unhide_reorder', nazwa, pracownik: currentUser }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') {
+                if (ukryteZamowienia) ukryteZamowienia.delete(String(nazwa).trim().toLowerCase());
+                renderCoZamowic();
+            } else {
+                alert(d.message || 'Nie udało się przywrócić.');
+            }
+        })
+        .catch(() => alert('Błąd połączenia.'));
 }
 
 function sortujZamowienia(kolumna) {

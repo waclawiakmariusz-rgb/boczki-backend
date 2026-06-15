@@ -421,6 +421,7 @@ app.get('/api', (req, res) => {
         'read': '/api/magazyn?action=read&tenant_id=' + tenant_id,
         'archive_read': '/api/magazyn?action=archive_read&tenant_id=' + tenant_id,
         'dictionary': '/api/magazyn?action=dictionary&tenant_id=' + tenant_id,
+        'hidden_reorder': '/api/magazyn?action=hidden_reorder&tenant_id=' + tenant_id,
         'birthdays': '/api/urodziny?action=birthdays&tenant_id=' + tenant_id + (req.query.miesiac ? '&miesiac=' + req.query.miesiac : ''),
         'upcoming_birthdays': '/api/urodziny?action=upcoming_birthdays&tenant_id=' + tenant_id,
         'get_client_birthday': '/api/urodziny?action=get_client_birthday&tenant_id=' + tenant_id + '&klient=' + encodeURIComponent(req.query.klient || ''),
@@ -511,7 +512,7 @@ app.post('/api', (req, res) => {
     if (!tenant_id) return res.json({ status: 'error', message: 'Błąd sesji SaaS: Brak przypisanej bazy. Zaloguj się ponownie.' });
 
     // Mapowanie akcji na route handlery
-    const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry'];
+    const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry', 'hide_reorder', 'unhide_reorder'];
     const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service'];
     const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule', 'soft_delete_client', 'anonymize_client', 'mark_deceased', 'set_warning', 'clear_warning', 'restore_client', 'mark_retail_proposed', 'unmark_retail_proposed'];
     const rodoActions = ['save_rodo', 'update_consents'];
