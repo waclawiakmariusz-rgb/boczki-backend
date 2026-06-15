@@ -1171,6 +1171,19 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
     
     .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 16px; border: none; box-shadow: var(--shadow-soft); }
     th, td { white-space: nowrap; font-size: 13px; padding: 15px 12px; }
+
+    /* Tabele "Co zamowic" na mobile: zamiast scrolla w poziomie -> karty (wiersz = blok) */
+    .stack-table { display: block; }
+    .stack-table thead { display: none; }
+    .stack-table tbody { display: block; }
+    .stack-table tr { display: block; background: #fff; border: 1px solid #eee !important; border-radius: 14px; padding: 6px 4px; margin-bottom: 12px; box-shadow: var(--shadow-soft); }
+    .stack-table td { display: flex; justify-content: space-between; align-items: center; gap: 12px; white-space: normal; border: none; padding: 8px 14px; font-size: 14px; }
+    .stack-table td::before { content: attr(data-label); font-weight: 600; color: #94a3b8; flex-shrink: 0; }
+    .stack-table td[data-label="Produkt"] { font-size: 15px; padding-bottom: 4px; }
+    .stack-table td[data-label="Produkt"]::before { display: none; }
+    .stack-table td[colspan] { justify-content: center; }
+    .stack-table td[colspan]::before { display: none; }
+    body.dark-mode .stack-table tr { background: #0f172a; border-color: #334155 !important; }
     
     .edit-modal-card, #edit-product-overlay > div, #edit-dict-overlay > div, .rodo-card, #new-client-overlay > div, #deposit-overlay > div, #consent-modal-overlay > div, #birthday-modal-overlay > div, #client-edit-modal-overlay > div, #split-payment-modal > div, #emergency-modal-overlay > div { 
         width: 95% !important; padding: 30px !important; max-height: 90vh; overflow-y: auto; border-radius: 24px; border: none; box-shadow: var(--shadow-hover);
@@ -5577,7 +5590,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 
     <input type="text" id="szukaj-zamowienia" onkeyup="_db('zam',renderCoZamowic)"
            placeholder="🔍 Szukaj produktu..."
-           style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
+           style="width: 100%; padding: 12px; margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; font-size: 16px;">
 
     <div class="card" style="border-left: 5px solid #ef4444;">
         <h3 style="color:#991b1b; display:flex; align-items:center; gap:10px; margin-top:0;">
@@ -5586,7 +5599,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         <p style="font-size:13px; color:#666; margin-bottom:15px;">Tylko produkty z kategorii DETAL.</p>
         
         <div class="table-container">
-            <table style="width:100%">
+            <table style="width:100%" class="stack-table">
                 <thead>
                     <tr>
                         <th onclick="sortujZamowienia('nazwa')" style="cursor:pointer; user-select:none;">Produkt ⇅</th>
@@ -5594,7 +5607,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <th>Cena (Brutto)</th>
                     </tr>
                 </thead>
-                <tbody id="lista-braki"></tbody>
+                <tbody id="lista-braki" class="stack-mobile"></tbody>
             </table>
         </div>
     </div>
@@ -5606,7 +5619,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         <p style="font-size:13px; color:#666; margin-bottom:15px;">Produkty, które są na stanie, ale trzeba je zużyć priorytetowo.</p>
         
         <div class="table-container">
-            <table style="width:100%">
+            <table style="width:100%" class="stack-table">
                 <thead>
                     <tr>
                         <th>Produkt</th>
@@ -5615,7 +5628,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <th>Obecny Stan</th>
                     </tr>
                 </thead>
-                <tbody id="lista-terminy"></tbody>
+                <tbody id="lista-terminy" class="stack-mobile"></tbody>
             </table>
         </div>
     </div>
@@ -13076,13 +13089,13 @@ function renderCoZamowic() {
 
                 tbodyBraki.innerHTML += `
                     <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:10px;"><strong>${p.nazwa}</strong></td>
-                        <td style="padding:10px;">
+                        <td data-label="Produkt" style="padding:10px;"><strong>${p.nazwa}</strong></td>
+                        <td data-label="Stan" style="padding:10px;">
                             <span style="font-size:11px; font-weight:bold; padding:4px 10px; border-radius:12px; ${stylStan}">
                                 ${tekstStan}
                             </span>
                         </td>
-                        <td style="padding:10px;">${(p.bruttoZeStanu !== null ? p.bruttoZeStanu : p.brutto)} zł</td>
+                        <td data-label="Cena" style="padding:10px;">${(p.bruttoZeStanu !== null ? p.bruttoZeStanu : p.brutto)} zł</td>
                     </tr>
                 `;
             }
@@ -13109,14 +13122,14 @@ function renderCoZamowic() {
 
                 tbodyTerminy.innerHTML += `
                     <tr style="border-bottom:1px solid #eee;">
-                        <td style="padding:10px;"><strong>${p.nazwa}</strong></td>
-                        <td style="padding:10px;">${dataWaznosci.toLocaleDateString()}</td>
-                        <td style="padding:10px;">
+                        <td data-label="Produkt" style="padding:10px;"><strong>${p.nazwa}</strong></td>
+                        <td data-label="Ważność" style="padding:10px;">${dataWaznosci.toLocaleDateString()}</td>
+                        <td data-label="Dni do końca" style="padding:10px;">
                             <span style="font-size:11px; padding:4px 8px; border-radius:6px; ${stylDaty}">
                                 ${tekstDni}
                             </span>
                         </td>
-                        <td style="padding:10px; font-weight:bold;">${p.ilosc} szt.</td>
+                        <td data-label="Stan" style="padding:10px; font-weight:bold;">${p.ilosc} szt.</td>
                     </tr>
                 `;
             }
