@@ -2969,6 +2969,41 @@ body.dark-mode .rap_module-wrapper small[style*="var(--text-muted)"] {
 }
 
 /* ==========================================
+   📱 ŁATKA: czytelne etykiety w kartach raportu (stack-table)
+   Nadpisuje starsze reguly .rap_table, ktore sklejaly etykiete z wartoscia.
+   ========================================== */
+@media (max-width: 900px) {
+    .rap_table.stack-table td {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        text-align: left !important;
+        font-size: 14px !important;
+        opacity: 1 !important;
+        padding: 10px 14px !important;
+    }
+    .rap_table.stack-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #94a3b8;
+        flex-shrink: 0;
+    }
+    /* Nazwa produktu: pelna szerokosc, wycentrowana, bez etykiety */
+    .rap_table.stack-table td[data-label="Nazwa"],
+    .rap_table.stack-table td[data-label="Produkt"] {
+        display: block !important;
+        text-align: center !important;
+        border-bottom: none !important;
+        padding-bottom: 2px !important;
+    }
+    .rap_table.stack-table td[data-label="Nazwa"]::before,
+    .rap_table.stack-table td[data-label="Produkt"]::before {
+        display: none !important;
+    }
+}
+
+/* ==========================================
    🌙 ZOPTYMALIZOWANA ŁATKA DARK MODE - ANALIZA MIESIĘCZNA
    ========================================== */
 
