@@ -26247,12 +26247,13 @@ function rap_renderReport() {
     }).sort((a,b) => a.diffDays - b.diffDays);
 
     if(expItems.length > 0 && cExp && cardExp) {
-        let hExp = '<table class="rap_table stack-table"><thead><tr><th>Produkt</th><th>Termin</th><th>Dni</th></tr></thead><tbody>';
+        let hExp = '<table class="rap_table stack-table"><thead><tr><th>Produkt</th><th>Termin</th><th>Dni</th><th>Akcja</th></tr></thead><tbody>';
         expItems.forEach(i => {
              const color = i.diffDays < 0 ? '#b91c1c' : '#d97706';
              let dView = i.dateStr;
              try { dView = new Date(i.dateStr).toLocaleDateString('pl-PL'); } catch(e){}
-             hExp += `<tr><td data-label="Produkt"><b>${i[2]}</b><br><small style="color:var(--text-muted);">${i[1]}</small></td><td data-label="Termin" style="font-weight:600; color:var(--text-dark);">${dView}</td><td data-label="Dni"><span style="color:${color};font-weight:800;background:#fef3c7;padding:4px 8px;border-radius:8px;">${i.diffDays}</span></td></tr>`;
+             const nazwaJs = escHtml(i[2]).replace(/'/g, "\\'");
+             hExp += `<tr><td data-label="Produkt"><b>${i[2]}</b><br><small style="color:var(--text-muted);">${i[1]}</small></td><td data-label="Termin" style="font-weight:600; color:var(--text-dark);">${dView}</td><td data-label="Dni"><span style="color:${color};font-weight:800;background:#fef3c7;padding:4px 8px;border-radius:8px;">${i.diffDays}</span></td><td data-label="Akcja"><button onclick="rap_archiveItem('${i[0]}', '${nazwaJs}')" title="Usun przeterminowany produkt z magazynu" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">🗑 Usuń</button></td></tr>`;
         });
         hExp += '</tbody></table>';
         cExp.innerHTML = hExp;
