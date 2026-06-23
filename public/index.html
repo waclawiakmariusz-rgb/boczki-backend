@@ -7259,11 +7259,11 @@ document.addEventListener('DOMContentLoaded', () => {
         <table style="width:100%">
             <thead>
                 <tr>
-                    <th style="width: 22%;">Kategoria</th>
-                    <th style="width: 20%;">Wariant</th>
-                    <th style="width: 13%;">Cena (PLN)</th>
-                    <th style="width: 13%;">Ważność</th>
-                    <th style="width: 18%;">Typ</th>
+                    <th style="width: 22%; cursor:pointer; user-select:none;" onclick="sortujZabiegi('kategoria')">Kategoria <span class="zab-sort-ind" data-col="kategoria"></span></th>
+                    <th style="width: 20%; cursor:pointer; user-select:none;" onclick="sortujZabiegi('wariant')">Wariant <span class="zab-sort-ind" data-col="wariant"></span></th>
+                    <th style="width: 13%; cursor:pointer; user-select:none;" onclick="sortujZabiegi('cena')">Cena (PLN) <span class="zab-sort-ind" data-col="cena"></span></th>
+                    <th style="width: 13%; cursor:pointer; user-select:none;" onclick="sortujZabiegi('waznosc')">Ważność <span class="zab-sort-ind" data-col="waznosc"></span></th>
+                    <th style="width: 18%; cursor:pointer; user-select:none;" onclick="sortujZabiegi('typ')">Typ <span class="zab-sort-ind" data-col="typ"></span></th>
                     <th style="width: 14%; text-align: right;">Akcja</th>
                 </tr>
             </thead>
@@ -17511,12 +17511,43 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
         }
 
         // --- NOWE FUNKCJE DO TABELI ZABIEGÓW ---
+window.__zabiegiSort = window.__zabiegiSort || { col: null, dir: 1 };
+
+function sortujZabiegi(col) {
+    const s = window.__zabiegiSort;
+    if (s.col === col) { s.dir = -s.dir; } else { s.col = col; s.dir = 1; }
+    renderTabelaZabiegow();
+}
+
+function _porownajZabieg(a, b, col) {
+    if (col === 'cena') {
+        return (parseFloat(a.cena) || 0) - (parseFloat(b.cena) || 0);
+    }
+    if (col === 'waznosc') {
+        const norm = z => (z.waznosc_dni === null || z.waznosc_dni === undefined || z.waznosc_dni === '') ? Infinity : Number(z.waznosc_dni);
+        return norm(a) - norm(b);
+    }
+    const pole = col === 'typ' ? 'typ_zabiegu' : col;
+    return String(a[pole] || '').toLowerCase().localeCompare(String(b[pole] || '').toLowerCase(), 'pl');
+}
+
 function renderTabelaZabiegow(zabiegi) {
     const t = document.getElementById('tabela-zabiegow-body');
     if (!t) return;
+    if (zabiegi) window.__zabiegiData = zabiegi.slice();
     t.innerHTML = "";
 
-    if (!zabiegi || zabiegi.length === 0) {
+    let dane = (window.__zabiegiData || []).slice();
+    const s = window.__zabiegiSort;
+    if (s.col) dane.sort((a, b) => _porownajZabieg(a, b, s.col) * s.dir);
+
+    // Wskaźniki kierunku w nagłówkach
+    document.querySelectorAll('.zab-sort-ind').forEach(el => {
+        const c = el.getAttribute('data-col');
+        el.textContent = (s.col === c) ? (s.dir === 1 ? '▲' : '▼') : '';
+    });
+
+    if (dane.length === 0) {
         t.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px; color:#888;'>Brak zdefiniowanych zabiegów.</td></tr>";
         return;
     }
@@ -17527,7 +17558,7 @@ function renderTabelaZabiegow(zabiegi) {
         typyMap[String(t.nazwa).toLowerCase()] = t;
     });
 
-    zabiegi.forEach(z => {
+    dane.forEach(z => {
         const k = encodeURIComponent(z.kategoria);
         const w = encodeURIComponent(z.wariant);
         const rawPrice = z.cena || "";
