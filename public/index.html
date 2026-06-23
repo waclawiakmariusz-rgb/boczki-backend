@@ -14299,7 +14299,13 @@ function renderKarnetInfo(t) {
     }
     return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
         ${badge}
-        <button onclick="przedluzKarnet('${t.id}', '${t.data_waznosci}')" style="background:none; border:none; color:#b87080; cursor:pointer; font-size:12px; text-decoration:underline; padding:0;">przedłuż</button>
+        <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value); this.selectedIndex=0;" style="font-size:12px; color:#b87080; border:1px solid #e2c8d0; border-radius:6px; padding:2px 6px; background:#fff; cursor:pointer;">
+            <option value="">przedłuż o…</option>
+            <option value="2">+2 dni</option>
+            <option value="7">+7 dni</option>
+            <option value="14">+14 dni</option>
+            <option value="30">+30 dni</option>
+        </select>
         <button onclick="zakonczKarnet('${t.id}')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:12px; text-decoration:underline; padding:0;">zakończ</button>
     </div>`;
 }
@@ -14324,17 +14330,16 @@ function _karnetAction(payload) {
         .catch(() => alert('Błąd połączenia.'));
 }
 
-function przedluzKarnet(id, aktualnaData) {
-    // Sugerujemy +30 dni od obecnej ważności (lub od dziś, jeśli już minęła).
+function przedluzKarnet(id, aktualnaData, dni) {
+    // Dodajemy wybraną liczbę dni do obecnej ważności (lub od dziś, jeśli już minęła).
+    const liczbaDni = parseInt(dni, 10);
+    if (!Number.isFinite(liczbaDni) || liczbaDni <= 0) return;
     const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
     let baza = aktualnaData ? new Date(aktualnaData + 'T00:00:00') : dzis;
     if (baza < dzis) baza = new Date(dzis.getTime());
-    baza.setDate(baza.getDate() + 30);
-    const sugestia = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
-    const nowa = prompt('Nowa data ważności (RRRR-MM-DD):', sugestia);
-    if (!nowa) return;
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(nowa.trim())) { alert('Zły format daty. Użyj RRRR-MM-DD.'); return; }
-    _karnetAction({ action: 'extend_karnet', id: id, data_waznosci: nowa.trim(), pracownik: currentUser });
+    baza.setDate(baza.getDate() + liczbaDni);
+    const nowa = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
+    _karnetAction({ action: 'extend_karnet', id: id, data_waznosci: nowa, pracownik: currentUser });
 }
 
 function zakonczKarnet(id) {
