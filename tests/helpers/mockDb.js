@@ -15,10 +15,18 @@ function mockDb(...resultSets) {
     let callIndex = 0;
 
     const queryMock = jest.fn((sql, paramsOrCallback, maybeCallback) => {
+        const callback = typeof paramsOrCallback === 'function' ? paramsOrCallback : maybeCallback;
+
+        // Idempotentne migracje ALTER TABLE uruchamiane przy ładowaniu modułu (fire-and-forget)
+        // nie powinny "zjadać" kolejnych wyników przeznaczonych dla logiki handlera.
+        if (/^\s*ALTER\s+TABLE/i.test(String(sql || ''))) {
+            if (callback) callback(null, { affectedRows: 0 });
+            return;
+        }
+
         const result = resultSets[callIndex] || { err: null, rows: [] };
         callIndex++;
 
-        const callback = typeof paramsOrCallback === 'function' ? paramsOrCallback : maybeCallback;
         if (callback) {
             callback(result.err || null, result.rows !== undefined ? result.rows : result);
         }

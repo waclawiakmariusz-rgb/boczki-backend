@@ -23,6 +23,81 @@ module.exports = (db) => {
     }
   );
 
+  // --- Ważność zabiegów/karnetów (2026-06) ---
+  // Uslugi.waznosc_dni — ile dni ważny jest zabieg/pakiet od daty zakupu
+  // (domyślnie 7; NULL = bezterminowo). Ustawiane w Administracja → Zabiegi.
+  db.query(
+    `ALTER TABLE Uslugi ADD COLUMN waznosc_dni INT NULL DEFAULT 7`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Uslugi.waznosc_dni:', err.message);
+      }
+    }
+  );
+  // Sprzedaz.data_waznosci — konkretna data wygaśnięcia tego zakupu, zapisana
+  // na sztywno przy sprzedaży (= data_sprzedazy + waznosc_dni). Edytowalna na
+  // profilu klienta ("Przedłuż"). NULL = bezterminowo lub sprzedaż produktu.
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN data_waznosci DATE NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.data_waznosci:', err.message);
+      }
+    }
+  );
+  // Sprzedaz.karnet_zamkniety_w / _przez — ręczne oznaczenie "karnet zakończony"
+  // (znika z alertów wygasania, żeby przeterminowane nie wisiały wiecznie).
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN karnet_zamkniety_w DATETIME NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.karnet_zamkniety_w:', err.message);
+      }
+    }
+  );
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN karnet_zamkniety_przez VARCHAR(100) NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.karnet_zamkniety_przez:', err.message);
+      }
+    }
+  );
+
+  // Normalizuje ważność z formularza: '' / null / undefined / 0 / nie-liczba → null
+  // (bezterminowo). Inaczej dodatnia liczba całkowita dni.
+  function parseWaznoscDni(v) {
+    if (v === '' || v === null || v === undefined) return null;
+    const n = parseInt(v, 10);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return n;
+  }
+
+  // Formatuje wartość kolumny DATE do 'YYYY-MM-DD' (sterownik bywa zwraca Date albo string).
+  function toDateStr(v) {
+    if (!v) return null;
+    if (v instanceof Date) {
+      const y = v.getFullYear();
+      const m = String(v.getMonth() + 1).padStart(2, '0');
+      const dd = String(v.getDate()).padStart(2, '0');
+      return `${y}-${m}-${dd}`;
+    }
+    return String(v).slice(0, 10);
+  }
+
+  // Snapshot daty wygaśnięcia zakupu = data sprzedaży + waznosc_dni dni.
+  // Zwraca 'YYYY-MM-DD' albo null (bezterminowo / produkt / brak ważności).
+  function obliczDataWaznosci(baseDate, waznoscDni) {
+    const n = parseWaznoscDni(waznoscDni);
+    if (n === null) return null;
+    const d2 = new Date(baseDate.getTime());
+    d2.setDate(d2.getDate() + n);
+    const y = d2.getFullYear();
+    const m = String(d2.getMonth() + 1).padStart(2, '0');
+    const dd = String(d2.getDate()).padStart(2, '0');
+    return `${y}-${m}-${dd}`;
+  }
+
   // Sprawdza w Magazyn czy produkt o danej nazwie ma typ='Witaminy' → 'Suplement'.
   // Inaczej (Kremy/Olejek/Inne/NULL) → 'Kosmetyk'. Używa LIMIT 1 (różne partie tego
   // samego produktu mają zwykle ten sam typ).
@@ -207,7 +282,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -215,7 +290,10 @@ module.exports = (db) => {
             data: r.data_sprzedazy, id: r.id, klient: r.klient, zabieg: r.zabieg,
             sprzedawca: r.sprzedawca, kwota: r.kwota, komentarz: r.komentarz,
             szczegoly: r.szczegoly, platnosc: r.platnosc, id_klienta: r.id_klienta,
-            typ_zabiegu: r.typ_zabiegu || null
+            typ_zabiegu: r.typ_zabiegu || null,
+            data_waznosci: r.data_waznosci ? toDateStr(r.data_waznosci) : null,
+            karnet_zamkniety_w: r.karnet_zamkniety_w || null,
+            karnet_zamkniety_przez: r.karnet_zamkniety_przez || null
           })));
         }
       );
@@ -223,9 +301,9 @@ module.exports = (db) => {
     } else if (action === 'sales_dictionary') {
       // Pracownicy + Uslugi
       db.query(`SELECT imie FROM Pracownicy WHERE tenant_id = ? ORDER BY imie`, [tenant_id], (err1, pracownicy) => {
-        db.query(`SELECT kategoria, wariant, cena, typ_zabiegu FROM Uslugi WHERE tenant_id = ? ORDER BY kategoria, wariant`, [tenant_id], (err2, uslugi) => {
+        db.query(`SELECT kategoria, wariant, cena, typ_zabiegu, waznosc_dni FROM Uslugi WHERE tenant_id = ? ORDER BY kategoria, wariant`, [tenant_id], (err2, uslugi) => {
           const pr = (pracownicy || []).map(r => r.imie).filter(Boolean);
-          const zb = (uslugi || []).map(r => ({ kategoria: r.kategoria, wariant: r.wariant, cena: r.cena, typ_zabiegu: r.typ_zabiegu || null }));
+          const zb = (uslugi || []).map(r => ({ kategoria: r.kategoria, wariant: r.wariant, cena: r.cena, typ_zabiegu: r.typ_zabiegu || null, waznosc_dni: (r.waznosc_dni === null || r.waznosc_dni === undefined) ? null : r.waznosc_dni }));
           return res.json({ pracownicy: pr.sort(), zabiegi: zb });
         });
       });
@@ -289,10 +367,10 @@ module.exports = (db) => {
         // Snapshot typu zabiegu — best-effort lookup w Uslugi.
         // Próby (kolejno): exact CONCAT(kategoria,' ',wariant), exact kategoria, prefix.
         // Dla Kosmetyków NULL (osobny box w profilu).
-        const insertWithTyp = (typZab) => {
+        const insertWithTyp = (typZab, dataWaznosci) => {
           db.query(
-            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?)`,
-            [uniqueId, tenant_id, now, d.klient, zabiegNazwaFinal, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab, kategoriaProduktuAdd],
+            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
+            [uniqueId, tenant_id, now, d.klient, zabiegNazwaFinal, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab, kategoriaProduktuAdd, dataWaznosci || null],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
               zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${zabiegNazwaFinal} | ${d.kwota} zł`);
@@ -301,11 +379,11 @@ module.exports = (db) => {
           );
         };
         if (d.typ_transakcji === 'Kosmetyk') {
-          return insertWithTyp(null);
+          return insertWithTyp(null, null);
         }
         const nazwa = String(d.zabieg_nazwa || '').trim();
         db.query(
-          `SELECT typ_zabiegu FROM Uslugi
+          `SELECT typ_zabiegu, waznosc_dni FROM Uslugi
              WHERE tenant_id = ?
                AND (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)
                     OR TRIM(kategoria) = TRIM(?))
@@ -314,7 +392,8 @@ module.exports = (db) => {
           [tenant_id, nazwa, nazwa, nazwa],
           (errL, rowsL) => {
             const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
-            insertWithTyp(typZab);
+            const wazDni = (rowsL && rowsL[0]) ? rowsL[0].waznosc_dni : null;
+            insertWithTyp(typZab, obliczDataWaznosci(now, wazDni));
           }
         );
       };
@@ -433,30 +512,31 @@ module.exports = (db) => {
           // Snapshot typu zabiegu — lookup w Uslugi po (kategoria, wariant).
           // Dla Kosmetyków typ_zabiegu pozostaje NULL (mają osobny box w profilu klienta).
           const doInsertPoz = () => {
-            const insertWithTyp = (typZab) => {
+            const insertWithTyp = (typZab, dataWaznosci) => {
               db.query(
-                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
-                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu],
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null],
                 nextPoz
               );
             };
             if (poz.typ === 'Kosmetyk') {
-              return insertWithTyp(null);
+              return insertWithTyp(null, null);
             }
             db.query(
-              `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?) LIMIT 1`,
+              `SELECT typ_zabiegu, waznosc_dni FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?) LIMIT 1`,
               [tenant_id, poz.kategoria || '', poz.wariant || ''],
               (errL, rowsL) => {
                 const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
-                if (typZab) return insertWithTyp(typZab);
+                if (rowsL && rowsL[0]) return insertWithTyp(typZab, obliczDataWaznosci(now, rowsL[0].waznosc_dni));
                 // Dopłata (portfel/zadatek): kategoria "X Dopłata" nie istnieje w Uslugi —
                 // dziedziczymy typ_zabiegu z kategorii bazowej X, żeby snapshot nie był NULL.
+                // Dopłata nie tworzy własnej ważności (data_waznosci = NULL).
                 const m = String(poz.kategoria || '').match(/^(.+)\s+Dopłata$/);
-                if (!m) return insertWithTyp(null);
+                if (!m) return insertWithTyp(null, null);
                 db.query(
                   `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND typ_zabiegu IS NOT NULL LIMIT 1`,
                   [tenant_id, m[1]],
-                  (errB, rowsB) => insertWithTyp((rowsB && rowsB[0] && rowsB[0].typ_zabiegu) || null)
+                  (errB, rowsB) => insertWithTyp((rowsB && rowsB[0] && rowsB[0].typ_zabiegu) || null, null)
                 );
               }
             );
@@ -805,11 +885,13 @@ module.exports = (db) => {
       } else {
         const id = randomUUID();
         const typZabiegu = d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null;
-        db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, typ_zabiegu) VALUES (?, ?, ?, ?, ?, ?)`,
-          [id, tenant_id, d.kategoria, d.wariant, d.cena ? parseNumOpt(d.cena) : null, typZabiegu],
+        // waznosc_dni: '' / brak = bezterminowo (NULL); inaczej liczba dni
+        const waznoscDni = parseWaznoscDni(d.waznosc_dni);
+        db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, typ_zabiegu, waznosc_dni) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [id, tenant_id, d.kategoria, d.wariant, d.cena ? parseNumOpt(d.cena) : null, typZabiegu, waznoscDni],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)${typZabiegu ? ' [typ: ' + typZabiegu + ']' : ''}`);
+            zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)${typZabiegu ? ' [typ: ' + typZabiegu + ']' : ''}${waznoscDni === null ? ' [bezterminowo]' : ' [ważność: ' + waznoscDni + ' dni]'}`);
             return res.json({ status: 'success', message: 'Dodano pomyślnie!' });
           }
         );
@@ -857,6 +939,11 @@ module.exports = (db) => {
         fields.push('typ_zabiegu = ?');
         vals.push(d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null);
       }
+      // waznosc_dni: '' / brak wartości = bezterminowo (NULL); inaczej liczba dni
+      if (d.waznosc_dni !== undefined) {
+        fields.push('waznosc_dni = ?');
+        vals.push(parseWaznoscDni(d.waznosc_dni));
+      }
       vals.push(tenant_id, d.old_kategoria, d.old_wariant);
       db.query(
         `UPDATE Uslugi SET ${fields.join(', ')} WHERE tenant_id = ? AND TRIM(kategoria) = ? AND TRIM(wariant) = ? LIMIT 1`,
@@ -865,6 +952,50 @@ module.exports = (db) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'EDYCJA ZABIEGU', d.pracownik, d.new_kategoria);
           return res.json({ status: 'success', message: 'Zaktualizowano' });
+        }
+      );
+
+    // --- EXTEND_KARNET (Przedłuż ważność / ustaw nową datę) ---
+    } else if (action === 'extend_karnet') {
+      const nowaData = toDateStr(d.data_waznosci);
+      if (!nowaData || !/^\d{4}-\d{2}-\d{2}$/.test(nowaData)) {
+        return res.json({ status: 'error', message: 'Nieprawidłowa data ważności (YYYY-MM-DD).' });
+      }
+      // Przedłużenie znosi ewentualne oznaczenie "karnet zakończony".
+      db.query(
+        `UPDATE Sprzedaz SET data_waznosci = ?, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND id = ?`,
+        [nowaData, tenant_id, d.id],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
+          zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, `ID:${d.id} | nowa ważność: ${nowaData}`);
+          return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData });
+        }
+      );
+
+    // --- CLOSE_KARNET (Oznacz jako zakończony) ---
+    } else if (action === 'close_karnet') {
+      db.query(
+        `UPDATE Sprzedaz SET karnet_zamkniety_w = NOW(), karnet_zamkniety_przez = ? WHERE tenant_id = ? AND id = ?`,
+        [String(d.pracownik || '').slice(0, 100), tenant_id, d.id],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
+          zapiszLog(tenant_id, 'KARNET ZAKOŃCZONY', d.pracownik, `ID:${d.id}`);
+          return res.json({ status: 'success', message: 'Oznaczono karnet jako zakończony.' });
+        }
+      );
+
+    // --- REOPEN_KARNET (Cofnij oznaczenie zakończenia) ---
+    } else if (action === 'reopen_karnet') {
+      db.query(
+        `UPDATE Sprzedaz SET karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND id = ?`,
+        [tenant_id, d.id],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
+          zapiszLog(tenant_id, 'KARNET PRZYWRÓCONY', d.pracownik, `ID:${d.id}`);
+          return res.json({ status: 'success', message: 'Cofnięto oznaczenie zakończenia.' });
         }
       );
 

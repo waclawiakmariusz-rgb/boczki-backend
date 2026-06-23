@@ -72,6 +72,9 @@ CREATE TABLE `Sprzedaz` (
   `id_klienta`          VARCHAR(50)   NULL,
   `pracownik_dodajacy`  VARCHAR(100)  NULL,
   `id_zadatku`          TEXT          NULL,
+  `data_waznosci`         DATE        NULL,   /* wygaśnięcie karnetu/zabiegu = data_sprzedazy + Uslugi.waznosc_dni; edytowalne ("Przedłuż") */
+  `karnet_zamkniety_w`    DATETIME    NULL,   /* ręczne oznaczenie "karnet zakończony" — znika z alertów wygasania */
+  `karnet_zamkniety_przez` VARCHAR(100) NULL,
   `utworzono_w`         TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_tenant` (`tenant_id`),
@@ -198,6 +201,7 @@ CREATE TABLE `Uslugi` (
   `kategoria`   VARCHAR(255)  NULL,
   `wariant`     VARCHAR(255)  NULL,
   `cena`        DECIMAL(10,2) NULL,
+  `waznosc_dni` INT           NULL DEFAULT 7,  /* ile dni ważny zabieg/pakiet od daty zakupu; NULL = bezterminowo */
   `utworzono_w` TIMESTAMP     NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_tenant` (`tenant_id`)

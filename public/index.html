@@ -7191,6 +7191,19 @@ document.addEventListener('DOMContentLoaded', () => {
     <label>Cena domyślna (PLN):</label>
     <input type="number" id="def_cena" step="0.01" placeholder="0.00">
 </div>
+<div style="margin-top:10px;">
+    <label>Ważność (od daty zakupu):</label>
+    <select id="def_waznosc" style="width:100%;">
+        <option value="7" selected>7 dni</option>
+        <option value="14">14 dni</option>
+        <option value="30">30 dni</option>
+        <option value="60">60 dni</option>
+        <option value="90">90 dni</option>
+        <option value="180">180 dni</option>
+        <option value="365">365 dni</option>
+        <option value="">Bezterminowo</option>
+    </select>
+</div>
 <div style="margin-top:10px; grid-column: span 2;">
     <label>Typ zabiegu:</label>
     <select id="def_typ_zabiegu" style="width:100%;">
@@ -7246,11 +7259,12 @@ document.addEventListener('DOMContentLoaded', () => {
         <table style="width:100%">
             <thead>
                 <tr>
-                    <th style="width: 25%;">Kategoria</th>
-                    <th style="width: 25%;">Wariant</th>
-                    <th style="width: 15%;">Cena (PLN)</th>
-                    <th style="width: 20%;">Typ</th>
-                    <th style="width: 15%; text-align: right;">Akcja</th>
+                    <th style="width: 22%;">Kategoria</th>
+                    <th style="width: 20%;">Wariant</th>
+                    <th style="width: 13%;">Cena (PLN)</th>
+                    <th style="width: 13%;">Ważność</th>
+                    <th style="width: 18%;">Typ</th>
+                    <th style="width: 14%; text-align: right;">Akcja</th>
                 </tr>
             </thead>
             <tbody id="tabela-zabiegow-body"></tbody>
@@ -7560,10 +7574,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button onclick="zaladujKlientowDoKartoteki(true)" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
             </div>
         </div>
-        <div class="card">
-            <input type="text" id="szukaj-klienta-profil" onkeyup="_db('kli',filtrujListeKlientow)" placeholder="🔍 Szukaj klienta..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
-            <div id="lista-klientow-widok" style="max-height: 60vh; overflow-y: auto;">
-                <ul id="lista-klientow-ul" class="dict-list"></ul>
+        <!-- Pod-zakładki: Kartoteka / Wygasające karnety -->
+        <div style="display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap;">
+            <button id="ktab-btn-kartoteka" onclick="przelaczTabKlienci('kartoteka')" style="background:#b87080; color:#fff; border:none; border-radius:10px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer;">👥 Kartoteka</button>
+            <button id="ktab-btn-karnety" onclick="przelaczTabKlienci('karnety')" style="background:#f1f5f9; color:#475569; border:none; border-radius:10px; padding:9px 16px; font-size:14px; font-weight:600; cursor:pointer;">⏳ Wygasające karnety <span id="ktab-badge-karnety" style="display:inline-block; min-width:18px; text-align:center; background:#ef4f86; color:#fff; border-radius:999px; padding:1px 7px; font-size:12px; margin-left:4px;">0</span></button>
+        </div>
+
+        <div id="ktab-kartoteka">
+            <div class="card">
+                <input type="text" id="szukaj-klienta-profil" onkeyup="_db('kli',filtrujListeKlientow)" placeholder="🔍 Szukaj klienta..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <div id="lista-klientow-widok" style="max-height: 60vh; overflow-y: auto;">
+                    <ul id="lista-klientow-ul" class="dict-list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <div id="ktab-karnety" style="display:none;">
+            <div class="card">
+                <p style="color:#64748b; font-size:14px; margin:0 0 14px 0;">Karnety i pakiety kończące się w ciągu 14 dni lub już wygasłe (nieoznaczone jako zakończone). Przedłuż przy zawieszeniu lub oznacz jako zakończony.</p>
+                <div id="lista-wygasajacych" style="max-height: 60vh; overflow-y: auto;"></div>
             </div>
         </div>
     </div>
@@ -12390,16 +12419,17 @@ function zaladujPulpit() {
         fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'rap_getInventory' }) }).then(r=>r.json()).catch(()=>({status:'error',data:[]})),
         fetch(API_URL + '?action=get_all_deposits').then(r=>r.json()).catch(()=>[]),
         fetch(API_URL + '?action=upcoming_birthdays').then(r=>r.json()).catch(()=>({lista:[]})),
-        fetch(API_URL + '?action=get_clients').then(r=>r.json()).catch(()=>({klienci:[]}))
-    ]).then(([inv, deposits, urodziny, clientsResp]) => {
-        window.__ds_uwaga_cache = { t: Date.now(), data: { inv, deposits, urodziny, clientsResp } };
-        __ds_renderUwaga({ inv, deposits, urodziny, clientsResp });
+        fetch(API_URL + '?action=get_clients').then(r=>r.json()).catch(()=>({klienci:[]})),
+        fetch(API_URL + '?action=full_sales_history').then(r=>r.json()).catch(()=>[])
+    ]).then(([inv, deposits, urodziny, clientsResp, sprzedaz]) => {
+        window.__ds_uwaga_cache = { t: Date.now(), data: { inv, deposits, urodziny, clientsResp, sprzedaz } };
+        __ds_renderUwaga({ inv, deposits, urodziny, clientsResp, sprzedaz });
     });
     }, 800);
 }
 
 function __ds_renderUwaga(payload) {
-    const { inv, deposits, urodziny, clientsResp } = payload;
+    const { inv, deposits, urodziny, clientsResp, sprzedaz } = payload;
     const fmtPLN = v => {
         const n = parseFloat(v) || 0;
         return n.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
@@ -12458,6 +12488,24 @@ function __ds_renderUwaga(payload) {
                 title: n + ' klient' + (n === 1 ? '' : n < 5 ? 'ów' : 'ów') + ' bez kompletu dokumentów',
                 sub: 'Brakuje RODO lub regulaminu — uzupełnij przy następnej wizycie',
                 onclick: "pokaz('klient-profil',null)"
+            });
+        }
+
+        // Wygasające/wygasłe karnety (≤14 dni, nie oznaczone jako zakończone)
+        const wygKarnety = (typeof policzWygasajaceKarnety === 'function')
+            ? policzWygasajaceKarnety(Array.isArray(sprzedaz) ? sprzedaz : [])
+            : [];
+        if (wygKarnety.length > 0) {
+            const n = wygKarnety.length;
+            const wygasle = wygKarnety.filter(w => w.diff < 0).length;
+            const sub = wygasle > 0
+                ? wygasle + (wygasle === 1 ? ' już wygasł' : ' już wygasłych') + ' — wymaga kontroli'
+                : 'Najbliższy: ' + (wygKarnety[0].klient || '') + ' za ' + wygKarnety[0].diff + (wygKarnety[0].diff === 1 ? ' dzień' : ' dni');
+            items.push({
+                icon: '⏳', cls: 'orange',
+                title: n + ' karnet' + (n === 1 ? '' : n < 5 ? 'y' : 'ów') + ' kończy się wkrótce',
+                sub: sub,
+                onclick: "pokaz('klient-profil',null); setTimeout(function(){ if(typeof przelaczTabKlienci==='function') przelaczTabKlienci('karnety'); }, 60);"
             });
         }
 
@@ -14221,8 +14269,164 @@ async function zapiszEdycjeZgod(e) {
 
 
 // --- ZAKTUALIZOWANA FUNKCJA GENEROWANIA TABEL (Z FILTREM) ---
+// ─── KARNETY / WAŻNOŚĆ ZABIEGÓW ─────────────────────────────────────
+// Plakietka ważności + akcje (Przedłuż / Zakończ) renderowane w wierszu historii.
+function renderKarnetInfo(t) {
+    if (t.karnet_zamkniety_w) {
+        const kto = t.karnet_zamkniety_przez ? ' · ' + t.karnet_zamkniety_przez : '';
+        return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+            <span style="background:#e2e8f0; color:#475569; padding:2px 8px; border-radius:999px; font-weight:600;">✓ Karnet zakończony${kto}</span>
+            <button onclick="cofnijKarnet('${t.id}')" style="background:none; border:none; color:#3b82f6; cursor:pointer; font-size:12px; text-decoration:underline; padding:0;">cofnij</button>
+        </div>`;
+    }
+    if (!t.data_waznosci) return ''; // bezterminowo lub produkt
+
+    const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+    const dataW = new Date(t.data_waznosci + 'T00:00:00');
+    const diff = Math.round((dataW - dzis) / 86400000);
+    const parts = String(t.data_waznosci).split('-');
+    const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : t.data_waznosci;
+
+    let badge;
+    if (diff < 0) {
+        badge = `<span style="background:#fee2e2; color:#b91c1c; padding:2px 8px; border-radius:999px; font-weight:700;">⚠ Wygasł ${Math.abs(diff)} dni temu (${dataFmt})</span>`;
+    } else if (diff === 0) {
+        badge = `<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:999px; font-weight:700;">⏳ Wygasa DZIŚ (${dataFmt})</span>`;
+    } else if (diff <= 14) {
+        badge = `<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:999px; font-weight:700;">⏳ Wygasa za ${diff} dni (${dataFmt})</span>`;
+    } else {
+        badge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-weight:600;">✓ Ważny do ${dataFmt}</span>`;
+    }
+    return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        ${badge}
+        <button onclick="przedluzKarnet('${t.id}', '${t.data_waznosci}')" style="background:none; border:none; color:#b87080; cursor:pointer; font-size:12px; text-decoration:underline; padding:0;">przedłuż</button>
+        <button onclick="zakonczKarnet('${t.id}')" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:12px; text-decoration:underline; padding:0;">zakończ</button>
+    </div>`;
+}
+
+function _karnetAction(payload) {
+    fetch(API_URL, { method: "POST", body: JSON.stringify(payload) })
+        .then(r => r.json())
+        .then(d => {
+            alert(d.message || 'Gotowe.');
+            if (d.status === 'success') {
+                historiaDane = [];
+                // Odśwież kontekst: lista wygasających karnetów albo otwarty profil klienta
+                const tabKarn = document.getElementById('ktab-karnety');
+                const profilOtwarty = document.getElementById('widok-szczegolow-klienta');
+                if (tabKarn && tabKarn.style.display === 'block') {
+                    renderWygasajaceKarnety();
+                } else if (profilOtwarty && profilOtwarty.style.display === 'block') {
+                    odswiezProfilAktualnegoKlienta();
+                }
+            }
+        })
+        .catch(() => alert('Błąd połączenia.'));
+}
+
+function przedluzKarnet(id, aktualnaData) {
+    // Sugerujemy +30 dni od obecnej ważności (lub od dziś, jeśli już minęła).
+    const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+    let baza = aktualnaData ? new Date(aktualnaData + 'T00:00:00') : dzis;
+    if (baza < dzis) baza = new Date(dzis.getTime());
+    baza.setDate(baza.getDate() + 30);
+    const sugestia = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
+    const nowa = prompt('Nowa data ważności (RRRR-MM-DD):', sugestia);
+    if (!nowa) return;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nowa.trim())) { alert('Zły format daty. Użyj RRRR-MM-DD.'); return; }
+    _karnetAction({ action: 'extend_karnet', id: id, data_waznosci: nowa.trim(), pracownik: currentUser });
+}
+
+function zakonczKarnet(id) {
+    if (!confirm('Oznaczyć ten karnet jako zakończony? Zniknie z alertów wygasania.')) return;
+    _karnetAction({ action: 'close_karnet', id: id, pracownik: currentUser });
+}
+
+function cofnijKarnet(id) {
+    _karnetAction({ action: 'reopen_karnet', id: id, pracownik: currentUser });
+}
+
+// Filtruje historię sprzedaży do karnetów wygasających ≤14 dni (lub już wygasłych),
+// pomijając oznaczone jako zakończone. Zwraca posortowane od najpilniejszych.
+function policzWygasajaceKarnety(rows) {
+    const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+    const out = [];
+    (rows || []).forEach(t => {
+        if (!t || !t.data_waznosci || t.karnet_zamkniety_w) return;
+        const dataW = new Date(String(t.data_waznosci) + 'T00:00:00');
+        if (isNaN(dataW.getTime())) return;
+        const diff = Math.round((dataW - dzis) / 86400000);
+        if (diff > 14) return; // jeszcze odległe — nie alarmujemy
+        out.push({
+            id: t.id, klient: t.klient, id_klienta: t.id_klienta, zabieg: t.zabieg,
+            data: t.data, data_waznosci: t.data_waznosci, diff: diff
+        });
+    });
+    out.sort((a, b) => a.diff - b.diff); // najpierw najbardziej przeterminowane
+    return out;
+}
+
+// Pod-zakładki widoku Klienci: 'kartoteka' | 'karnety'
+function przelaczTabKlienci(tab) {
+    const tabKart = document.getElementById('ktab-kartoteka');
+    const tabKarn = document.getElementById('ktab-karnety');
+    const btnKart = document.getElementById('ktab-btn-kartoteka');
+    const btnKarn = document.getElementById('ktab-btn-karnety');
+    const aktywny = (b) => { if (b) { b.style.background = '#b87080'; b.style.color = '#fff'; } };
+    const nieaktywny = (b) => { if (b) { b.style.background = '#f1f5f9'; b.style.color = '#475569'; } };
+    if (tab === 'karnety') {
+        if (tabKart) tabKart.style.display = 'none';
+        if (tabKarn) tabKarn.style.display = 'block';
+        aktywny(btnKarn); nieaktywny(btnKart);
+        renderWygasajaceKarnety();
+    } else {
+        if (tabKart) tabKart.style.display = 'block';
+        if (tabKarn) tabKarn.style.display = 'none';
+        aktywny(btnKart); nieaktywny(btnKarn);
+    }
+}
+
+function renderWygasajaceKarnety() {
+    const box = document.getElementById('lista-wygasajacych');
+    if (!box) return;
+    box.innerHTML = '<div style="padding:18px; text-align:center; color:#999;">⏳ Ładowanie…</div>';
+    fetch(API_URL + '?action=full_sales_history')
+        .then(r => r.json())
+        .then(d => {
+            const lista = policzWygasajaceKarnety(Array.isArray(d) ? d : []);
+            // Zaktualizuj licznik w pasku zakładek
+            const badge = document.getElementById('ktab-badge-karnety');
+            if (badge) badge.textContent = lista.length;
+            if (lista.length === 0) {
+                box.innerHTML = '<div style="padding:18px; text-align:center; color:#50c878;">✓ Brak karnetów kończących się w najbliższych 14 dniach.</div>';
+                return;
+            }
+            box.innerHTML = lista.map(w => {
+                const parts = String(w.data_waznosci).split('-');
+                const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : w.data_waznosci;
+                let badge, kolor;
+                if (w.diff < 0) { badge = `⚠ Wygasł ${Math.abs(w.diff)} dni temu`; kolor = '#b91c1c'; }
+                else if (w.diff === 0) { badge = '⏳ Wygasa DZIŚ'; kolor = '#b45309'; }
+                else { badge = `⏳ Wygasa za ${w.diff} dni`; kolor = '#b45309'; }
+                const klientHtml = w.id_klienta
+                    ? `<a href="javascript:void(0)" onclick="otworzProfil('${w.id_klienta}')" style="color:#b87080; font-weight:700; text-decoration:none;">${w.klient || '—'}</a>`
+                    : `<span style="font-weight:700;">${w.klient || '—'}</span>`;
+                return `<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
+                    <div style="min-width:160px;">${klientHtml}</div>
+                    <div style="flex:1; min-width:140px; color:#334155;">${w.zabieg || '—'}</div>
+                    <div style="min-width:150px; color:${kolor}; font-weight:700; font-size:13px;">${badge} (${dataFmt})</div>
+                    <div style="display:flex; gap:8px;">
+                        <button onclick="przedluzKarnet('${w.id}', '${w.data_waznosci}')" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Przedłuż</button>
+                        <button onclick="zakonczKarnet('${w.id}')" style="background:#e2e8f0; color:#475569; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Zakończ</button>
+                    </div>
+                </div>`;
+            }).join('');
+        })
+        .catch(() => { box.innerHTML = '<div style="padding:18px; text-align:center; color:#b91c1c;">Błąd ładowania.</div>'; });
+}
+
 function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "") {
-    
+
     // Normalizujemy frazę (małe litery)
     const fraza = frazaSzukania.toLowerCase().trim();
 
@@ -14317,10 +14521,12 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
             `;
         }
 
+        const karnetInfo = (typeof renderKarnetInfo === 'function') ? renderKarnetInfo(t) : '';
+
         const html = `
             <tr style="${glownyWierszStyl}">
                 <td style="padding:10px; width:90px; vertical-align:top;">${t.data}</td>
-                <td style="padding:10px; font-weight:500; vertical-align:top;">${t.zabieg}</td>
+                <td style="padding:10px; font-weight:500; vertical-align:top;">${t.zabieg}${karnetInfo}</td>
                 <td style="padding:10px; color:#666; vertical-align:top;">${t.szczegoly || '-'}</td>
                 <td style="padding:10px; font-weight:bold; color:#166534; width:80px; vertical-align:top;">${kwota}</td>
                 <td style="padding:10px; ${stylPlatnosci}; width:80px; vertical-align:top;">${platnosc}</td>
@@ -15964,6 +16170,10 @@ function dodajDefinicje(e, typ) {
         const typSel = document.getElementById('def_typ_zabiegu');
         p.typ_zabiegu = typSel ? typSel.value : '';
 
+        // Ważność (dni od daty zakupu; puste = bezterminowo)
+        const wazSel = document.getElementById('def_waznosc');
+        p.waznosc_dni = wazSel ? wazSel.value : '';
+
         if(isEdit) {
             p.old_kategoria = document.getElementById('edit_old_kat').value;
             p.old_wariant = document.getElementById('edit_old_war').value;
@@ -17307,7 +17517,7 @@ function renderTabelaZabiegow(zabiegi) {
     t.innerHTML = "";
 
     if (!zabiegi || zabiegi.length === 0) {
-        t.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:20px; color:#888;'>Brak zdefiniowanych zabiegów.</td></tr>";
+        t.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:20px; color:#888;'>Brak zdefiniowanych zabiegów.</td></tr>";
         return;
     }
 
@@ -17322,11 +17532,21 @@ function renderTabelaZabiegow(zabiegi) {
         const w = encodeURIComponent(z.wariant);
         const rawPrice = z.cena || "";
         const typZab = z.typ_zabiegu ? String(z.typ_zabiegu).toLowerCase() : "";
+        // waznosc_dni: liczba (np. 7) lub null/'' = bezterminowo
+        const rawWaz = (z.waznosc_dni === null || z.waznosc_dni === undefined || z.waznosc_dni === '') ? '' : String(z.waznosc_dni);
 
         // Formatowanie ceny
         let displayPrice = "-";
         if (z.cena !== "" && z.cena !== undefined) {
             displayPrice = parseFloat(z.cena).toFixed(2) + " zł";
+        }
+
+        // Formatowanie ważności
+        let wazBadge;
+        if (rawWaz === '') {
+            wazBadge = '<span style="color:#9ca3af; font-style:italic;">bezterminowo</span>';
+        } else {
+            wazBadge = `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:#b8708022; color:var(--primary); font-size:12px; font-weight:600;">⏳ ${rawWaz} dni</span>`;
         }
 
         // Render badge typu (z ikoną i kolorem) lub myślnik
@@ -17341,9 +17561,10 @@ function renderTabelaZabiegow(zabiegi) {
                 <td style="padding:10px;"><strong>${z.kategoria}</strong></td>
                 <td style="padding:10px;">${z.wariant || '-'}</td>
                 <td style="padding:10px; font-weight:bold; color:var(--primary);">${displayPrice}</td>
+                <td style="padding:10px;">${wazBadge}</td>
                 <td style="padding:10px;">${typBadge}</td>
                 <td style="padding:10px; text-align: right;">
-                    <button class="btn-edit" onclick="edytujZabiegUI('${k}', '${w}', '${rawPrice}', '${typZab}')" style="margin-right:5px; width:30px; height:30px;">✎</button>
+                    <button class="btn-edit" onclick="edytujZabiegUI('${k}', '${w}', '${rawPrice}', '${typZab}', '${rawWaz}')" style="margin-right:5px; width:30px; height:30px;">✎</button>
                     <button class="btn-delete" onclick="usunZabiegUI('${k}', '${w}')" style="margin:0; width:30px; height:30px;">×</button>
                 </td>
             </tr>
@@ -17370,7 +17591,7 @@ function renderTabelaZabiegow(zabiegi) {
             }
         }
 
-        function edytujZabiegUI(kategoria, wariant, cena, typZabiegu) {
+        function edytujZabiegUI(kategoria, wariant, cena, typZabiegu, waznosc) {
     const k = decodeURIComponent(kategoria);
     const w = decodeURIComponent(wariant);
 
@@ -17399,6 +17620,10 @@ function renderTabelaZabiegow(zabiegi) {
     const typSel = document.getElementById('def_typ_zabiegu');
     if (typSel) typSel.value = typZabiegu || '';
 
+    // Ustaw ważność ('' = bezterminowo)
+    const wazSel = document.getElementById('def_waznosc');
+    if (wazSel) wazSel.value = (waznosc === undefined || waznosc === null) ? '' : String(waznosc);
+
     // Ustaw ukryte pola (do identyfikacji rekordu)
     document.getElementById('edit_old_kat').value = k;
     document.getElementById('edit_old_war').value = w;
@@ -17417,6 +17642,8 @@ function renderTabelaZabiegow(zabiegi) {
             document.getElementById('edit_old_war').value = "";
             const typSel = document.getElementById('def_typ_zabiegu');
             if (typSel) typSel.value = '';
+            const wazSel = document.getElementById('def_waznosc');
+            if (wazSel) wazSel.value = '7';
             document.getElementById('btn-zabieg-submit').innerText = "Dodaj";
             document.getElementById('btn-zabieg-submit').style.background = "var(--primary)";
             document.getElementById('btn-zabieg-cancel').style.display = "none";
