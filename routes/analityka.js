@@ -294,6 +294,12 @@ module.exports = (db) => {
                 return m ? parseFloat(m[1].replace(',', '.')) : 1;
               };
 
+              // debugLog jest rozdzielany znakiem '|' (parser an_renderDebugLog w index.html
+              // robi line.split('|')). Wolne pola tekstowe (nazwa zabiegu, cel zadatku) MOGĄ
+              // zawierać '|' (np. "Żelazko 1x | Zadatek..."), co przesuwa wszystkie kolejne
+              // kolumny i psuje parsowanie kwoty → panel zaniżał sumę zadatków. Wycinamy '|'.
+              const noPipe = (s) => String(s == null ? '' : s).replace(/\|/g, '/');
+
               const initEmp = (person) => ({
                 name: person, total: 0, zabiegi: 0, kosmetyki: 0, qty_kosmetyki: 0,
                 // Suplementy — podzbiór kosmetyków (rozróżnienie 2026-06-07 po typ='Witaminy'
@@ -415,7 +421,7 @@ module.exports = (db) => {
                       kategoria = 'SPRZEDAŻ';
                     }
                     stats.debugLog.push(
-                      `${dataStr} | ${person.padEnd(12)} | ${kategoria.padEnd(10)} | ${zabieg.substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(platnosc || '').padEnd(8)} | ${liczone}`
+                      `${dataStr} | ${person.padEnd(12)} | ${kategoria.padEnd(10)} | ${noPipe(zabieg).substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${noPipe(platnosc).padEnd(8)} | ${liczone}`
                     );
                   }
                 });
@@ -477,7 +483,7 @@ module.exports = (db) => {
 
                   // Debug log dla zadatku
                   stats.debugLog.push(
-                    `${dataStrZ} | ${person.padEnd(12)} | ZADATEK    | ${String(row.cel || row.klient || '').substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${String(row.metoda || '').padEnd(8)} | → ✓ +${splitAmount.toFixed(2)} do total`
+                    `${dataStrZ} | ${person.padEnd(12)} | ZADATEK    | ${noPipe(row.cel || row.klient).substring(0, 40).padEnd(40)} | ${splitAmount.toFixed(2).padStart(8)} zł (z ${amount}/${count}os) | ${noPipe(row.metoda).padEnd(8)} | → ✓ +${splitAmount.toFixed(2)} do total`
                   );
                 });
               });
