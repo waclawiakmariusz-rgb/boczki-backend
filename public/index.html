@@ -14297,16 +14297,16 @@ function renderKarnetInfo(t) {
     } else {
         badge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-weight:600;">✓ Ważny do ${dataFmt}</span>`;
     }
-    return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+    return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow-x:auto;">
         ${badge}
-        <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 14px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
+        <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 14px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
             <option value="">＋ Przedłuż ▾</option>
             <option value="2">+2 dni</option>
             <option value="7">+7 dni</option>
             <option value="14">+14 dni</option>
             <option value="30">+30 dni</option>
         </select>
-        <button onclick="zakonczKarnet('${t.id}')" style="background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
+        <button onclick="zakonczKarnet('${t.id}')" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
     </div>`;
 }
 
