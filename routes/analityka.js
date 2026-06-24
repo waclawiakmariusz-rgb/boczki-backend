@@ -278,7 +278,7 @@ module.exports = (db) => {
         [tenant_id, selectedMonth],
         (err1, sprzedaz) => {
           db.query(
-            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') = 'AKTYWNY'`,
+            `SELECT data_wplaty, klient, kwota, metoda, pracownicy, status, typ, cel FROM Zadatki WHERE tenant_id = ? AND DATE_FORMAT(data_wplaty, '%Y-%m') = ? AND COALESCE(status, 'AKTYWNY') NOT IN ('USUNIĘTY', 'SCALONY')`,
             [tenant_id, selectedMonth],
             (err2, zadatki) => {
               let stats = {
@@ -438,7 +438,10 @@ module.exports = (db) => {
                 const status = String(row.status || '').toUpperCase();
                 const typ = String(row.typ || '').toUpperCase();
                 const metoda = String(row.metoda || '').toLowerCase();
-                if ((status !== 'AKTYWNY' && status !== '') || typ !== 'WPŁATA') return;
+                // Liczymy też WYKORZYSTANE zadatki (jak Zebranie/odp_getReportData): wykorzystany
+                // zadatek to realna gotówka/karta, a zabieg za niego jest zapisany jako Portfel (pomijany
+                // wszędzie). Pominięcie go = utrata realnego przychodu. Wykluczamy tylko USUNIĘTY/SCALONY.
+                if (status === 'USUNIĘTY' || status === 'SCALONY' || typ !== 'WPŁATA') return;
                 if (metoda.includes('ręczne') || metoda.includes('reczne') || metoda.includes('system')) return;
                 const amount = parseAmount(row.kwota);
                 if (amount === 0) return;
