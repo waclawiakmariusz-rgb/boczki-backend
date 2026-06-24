@@ -17975,7 +17975,10 @@ function dodajNowyWiersz(domyslnyTyp) {
                     💰 Zadatek
                 </label>
             </div>
-            <button type="button" onclick="usunWiersz('${id}')" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer;">USUŃ X</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button type="button" onclick="duplikujWiersz('${id}')" title="Powiel tę pozycję jako osobny wiersz na rachunku" style="background:none; border:1px solid #cbd5e1; border-radius:6px; padding:4px 10px; color:#2563eb; font-weight:600; cursor:pointer; font-size:13px;">⧉ Duplikuj</button>
+                <button type="button" onclick="usunWiersz('${id}')" style="background:none; border:none; color:red; font-weight:bold; cursor:pointer;">USUŃ X</button>
+            </div>
         </div>
 
         <div id="sekcja-zabieg-${id}" class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -18073,6 +18076,98 @@ function dodajNowyWiersz(domyslnyTyp) {
     if (domyslnyTyp !== 'Zabieg') {
         przelaczTypWiersza(id);
     }
+}
+
+// --- DUPLIKUJ POZYCJĘ ---
+// Tworzy nowy, NIEZALEŻNY wiersz koszyka z identycznym stanem co źródłowy.
+// Każda kopia jest osobnym wierszem `.item-row`, więc przy zatwierdzaniu trafia
+// do bazy jako osobny rekord Sprzedaz — sumy ORAZ liczniki zabiegów zostają
+// poprawne (nie ruszamy logiki podliczeń). Powiązań kaskadowego zadatku
+// (depositId/specificLimit) świadomie NIE kopiujemy — to artefakty rozliczania
+// zadatku, które i tak rozdziela się od nowa po wszystkich wierszach przy
+// kolejnym kliknięciu. Kopia wiersza pokrytego zadatkiem startuje jako Gotówka.
+function duplikujWiersz(id) {
+    const src = document.getElementById('row-' + id);
+    if (!src) return;
+    const q = (sel) => src.querySelector(sel);
+    const gid = (pref) => document.getElementById(pref + '-' + id);
+
+    const typInput = src.querySelector('input[name="typ-' + id + '"]:checked');
+    const typ = typInput ? typInput.value : 'Zabieg';
+    const srcPay = q('.item-pay') ? q('.item-pay').value : 'Gotówka';
+    const bylZadatekBound = !!src.dataset.depositId && (srcPay === 'Portfel' || srcPay === 'Zadatek');
+
+    // cloneNode nie kopiuje wartości select/input ustawianych w JS — robimy snapshot ręcznie.
+    const snap = {
+        cat:        q('.item-cat') ? q('.item-cat').value : '',
+        varHtml:    q('.item-var') ? q('.item-var').innerHTML : '',
+        varVal:     q('.item-var') ? q('.item-var').value : '',
+        varDis:     q('.item-var') ? q('.item-var').disabled : true,
+        zadCat:     q('.zad-cat') ? q('.zad-cat').value : '',
+        zadVarHtml: q('.zad-var') ? q('.zad-var').innerHTML : '',
+        zadVarVal:  q('.zad-var') ? q('.zad-var').value : '',
+        zadVarDis:  q('.zad-var') ? q('.zad-var').disabled : true,
+        zadBase:    q('.zad-base-price') ? q('.zad-base-price').value : '0',
+        zadInfo:    gid('zad-info') ? gid('zad-info').innerHTML : '',
+        prod:       q('.item-prod') ? q('.item-prod').value : '',
+        qty:        q('.item-qty') ? q('.item-qty').value : '1',
+        unit:       q('.item-unit-price') ? q('.item-unit-price').value : '',
+        discSel:    q('.item-discount-select') ? q('.item-discount-select').value : '',
+        discInfo:   gid('discount-info') ? gid('discount-info').innerHTML : '',
+        manDisp:    gid('manual-discount-box') ? gid('manual-discount-box').style.display : 'none',
+        manVal:     gid('manual-discount-val') ? gid('manual-discount-val').value : '',
+        manSym:     gid('manual-discount-symbol') ? gid('manual-discount-symbol').textContent : '',
+        com:        q('.item-com') ? q('.item-com').value : '',
+        pay:        bylZadatekBound ? 'Gotówka' : srcPay,
+        basePrice:  gid('base-price') ? gid('base-price').value : '0',
+        price:      q('.item-price') ? q('.item-price').value : '',
+        dsDiscountInfo: src.dataset.discountInfo || '',
+        dsParentName:   src.dataset.parentName || ''
+    };
+
+    dodajNowyWiersz(typ);
+    const container = document.getElementById('items-container');
+    const dst = container.lastElementChild;
+    if (!dst) return;
+    const nid = dst.id.replace('row-', '');
+    const dq = (sel) => dst.querySelector(sel);
+    const ngid = (pref) => document.getElementById(pref + '-' + nid);
+
+    if (typ === 'Zabieg') {
+        if (dq('.item-cat')) dq('.item-cat').value = snap.cat;
+        const v = dq('.item-var');
+        if (v) { v.innerHTML = snap.varHtml; v.disabled = snap.varDis; v.value = snap.varVal; }
+    } else if (typ === 'Zadatek') {
+        if (dq('.zad-cat')) dq('.zad-cat').value = snap.zadCat;
+        const zv = dq('.zad-var');
+        if (zv) { zv.innerHTML = snap.zadVarHtml; zv.disabled = snap.zadVarDis; zv.value = snap.zadVarVal; }
+        if (dq('.zad-base-price')) dq('.zad-base-price').value = snap.zadBase;
+        if (ngid('zad-info')) ngid('zad-info').innerHTML = snap.zadInfo;
+    } else {
+        if (dq('.item-prod')) dq('.item-prod').value = snap.prod;
+        if (dq('.item-qty')) dq('.item-qty').value = snap.qty;
+        if (dq('.item-unit-price')) dq('.item-unit-price').value = snap.unit;
+    }
+
+    if (dq('.item-discount-select')) dq('.item-discount-select').value = snap.discSel;
+    if (ngid('manual-discount-box')) ngid('manual-discount-box').style.display = snap.manDisp;
+    if (ngid('manual-discount-val')) ngid('manual-discount-val').value = snap.manVal;
+    if (ngid('manual-discount-symbol')) ngid('manual-discount-symbol').textContent = snap.manSym;
+    if (ngid('discount-info')) ngid('discount-info').innerHTML = snap.discInfo;
+
+    if (dq('.item-com')) dq('.item-com').value = snap.com;
+    if (dq('.item-pay')) dq('.item-pay').value = snap.pay;
+    if (ngid('base-price')) ngid('base-price').value = snap.basePrice;
+    if (dq('.item-price')) dq('.item-price').value = snap.price;
+
+    // Metadane czytane przy zapisie (rabat, dopłata). depositId/specificLimit pomijamy.
+    dst.dataset.discountInfo = snap.dsDiscountInfo;
+    if (snap.dsParentName) dst.dataset.parentName = snap.dsParentName;
+
+    // Kopia ląduje tuż pod oryginałem dla czytelności.
+    src.insertAdjacentElement('afterend', dst);
+
+    if (typeof odswiezSume === 'function') odswiezSume();
 }
 
 
