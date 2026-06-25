@@ -14421,9 +14421,19 @@ function ladujDoSprawdzenia() {
         const aktywny = (r) => { const st = String(r.status || '').toUpperCase().trim(); return st === 'AKTYWNY' || st === ''; };
         const jestWplata = (r) => String(r.typ || '').toUpperCase().includes('WP');
         const zl = (v) => (parseFloat(v) || 0).toFixed(2) + ' zł';
-        const klientLink = (nazwa, id) => id
-            ? `<a href="javascript:void(0)" onclick="otworzProfil('${String(id).replace(/'/g, "\\'")}')" style="color:#b87080; font-weight:700; text-decoration:none;">${nazwa || '—'}</a>`
-            : `<span style="font-weight:700;">${nazwa || '—'}</span>`;
+        const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+        // Mapa nazwisko -> id_klienta (backfill dla zadatków z pustym id_klienta).
+        // Źródła: historia sprzedaży + kartoteka (jeśli już wczytana).
+        const mapaNazwaId = {};
+        historia.forEach(s => { const id = String(s.id_klienta || '').trim(); if (id && s.klient) { const k = norm(s.klient); if (!mapaNazwaId[k]) mapaNazwaId[k] = id; } });
+        (window.wszyscyKlienciDane || []).forEach(k => { if (k && k.id && k.nazwa) { const n = norm(k.nazwa); if (!mapaNazwaId[n]) mapaNazwaId[n] = String(k.id); } });
+        const znajdzId = (r) => String(r.id_klienta || '').trim() || mapaNazwaId[norm(r.klient)] || '';
+
+        // Nazwisko zawsze klikalne: jeśli mamy id — przejdź wprost, w innym razie szukaj po nazwisku.
+        const klientLink = (nazwa, id) =>
+            `<a href="javascript:void(0)" onclick="dsProfil('${esc(id)}','${esc(nazwa)}')" style="color:#b87080; font-weight:700; text-decoration:none;">${nazwa || '—'}</a>`;
 
         // 1) Zadatki długo czekające (AKTYWNY, starsze niż 45 dni)
         const dawne = zadatki.filter(r => jestWplata(r) && aktywny(r)).map(r => {
@@ -14466,14 +14476,14 @@ function ladujDoSprawdzenia() {
 
         // Render sekcji 1
         const html1 = dawne.map(r => wiersz(
-            klientLink(r.klient, r.id_klienta),
+            klientLink(r.klient, znajdzId(r)),
             `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
             `<span style="color:#b45309; font-weight:700; font-size:13px;">czeka ${r.dni} dni</span>`
         )).join('');
 
         // Render sekcji 2
         const html2 = bezKlienta.map(r => wiersz(
-            `<span style="font-weight:700;">${r.klient || '—'}</span>`,
+            klientLink(r.klient, znajdzId(r)),
             `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
             `<span style="color:#b45309; font-weight:700; font-size:13px;">brak karty klienta</span>`
         )).join('');
@@ -14487,7 +14497,7 @@ function ladujDoSprawdzenia() {
             else if (w.diff === 0) { badge = 'wygasa DZIŚ'; kolor = '#b45309'; }
             else { badge = `wygasa za ${w.diff} dni`; kolor = '#b45309'; }
             return wiersz(
-                klientLink(w.klient, w.id_klienta),
+                klientLink(w.klient, String(w.id_klienta || '').trim() || mapaNazwaId[norm(w.klient)] || ''),
                 `<span style="color:#475569;">${w.zabieg || 'karnet'}</span>`,
                 `<span style="color:${kolor}; font-weight:700; font-size:13px;">${badge}<br><small style="color:#94a3b8;">${dataFmt}</small></span>`
             );
@@ -14512,6 +14522,47 @@ function ladujDoSprawdzenia() {
     }).catch(() => {
         box.innerHTML = '<div style="padding:30px; text-align:center; color:#b91c1c;">Nie udało się pobrać danych. Spróbuj „Odśwież”.</div>';
     });
+}
+
+// Przejście do karty klienta z panelu "Do sprawdzenia" (inna sekcja niż profil,
+// więc najpierw przełączamy widok, potem czekamy aż wczyta się kartoteka).
+function dsProfil(id, nazwa) {
+    const otworz = (realId) => {
+        pokaz('klient-profil', null); // ładuje listę klientów (zaladujKlientowDoKartoteki)
+        let pozostalo = 20;
+        const proba = () => {
+            const gotowe = window.wszyscyKlienciDane && window.wszyscyKlienciDane.find(k => k.id == realId);
+            if (gotowe) { otworzProfil(realId); }
+            else if (pozostalo-- > 0) { setTimeout(proba, 200); }
+            else { otworzProfil(realId); } // ostatnia próba — niech zaloguje błąd jak naprawdę brak
+        };
+        proba();
+    };
+
+    const cleanId = String(id || '').trim();
+    if (cleanId) { otworz(cleanId); return; }
+
+    // Brak id — spróbuj dopasować po nazwisku w kartotece.
+    const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    const dopasuj = () => {
+        const k = (window.wszyscyKlienciDane || []).find(k => norm(k.nazwa) === norm(nazwa));
+        if (k) { otworz(String(k.id)); return true; }
+        return false;
+    };
+    if (dopasuj()) return;
+    // Kartoteka może nie być jeszcze wczytana — wczytaj i spróbuj ponownie.
+    if (typeof zaladujKlientowDoKartoteki === 'function') {
+        zaladujKlientowDoKartoteki(true);
+        let pozostalo = 20;
+        const ponow = () => {
+            if (dopasuj()) return;
+            if (pozostalo-- > 0) setTimeout(ponow, 200);
+            else alert('Nie znalazłem karty „' + nazwa + '". Możliwe, że ten klient nie ma jeszcze założonej kartoteki.');
+        };
+        setTimeout(ponow, 250);
+    } else {
+        alert('Nie znalazłem karty „' + nazwa + '".');
+    }
 }
 
 // Pod-zakładki widoku Klienci: 'kartoteka' | 'karnety'
