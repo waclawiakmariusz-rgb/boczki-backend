@@ -7061,6 +7061,20 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 </div>
 
+<!-- Do sprawdzenia — pomocny przegląd dla recepcji (link tylko z Pulpitu, NIE w menu po lewej) -->
+<div id="do-sprawdzenia" class="section">
+    <div class="header">
+        <h1>🔎 Do sprawdzenia</h1>
+        <button onclick="ladujDoSprawdzenia()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
+    </div>
+    <p style="color:#64748b; font-size:15px; margin:-6px 0 18px;">
+        Spokojny przegląd rzeczy, które warto ogarnąć — żeby nic nie umknęło. To tylko podpowiedzi, nic się nie psuje.
+    </p>
+    <div id="ds-spr-content">
+        <div style="padding:40px; text-align:center; color:#999;">⏳ Sprawdzam…</div>
+    </div>
+</div>
+
 <div id="awaryjna-zmiana" class="section">
     <div class="header">
 	<input type="text" id="search-emergency" onkeyup="_db('aw',filtrujAwaryjne)"
@@ -7509,6 +7523,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ds-quick-tile" onclick="pokaz('podsumowanie',null)">
           <div class="ds-tile-icon" style="background:#f2ebff;color:#7f6af0;">🗓</div>
           <div><strong>Podsumowanie dnia</strong><span>Pełny raport z dzisiejszych działań</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('do-sprawdzenia',null)">
+          <div class="ds-tile-icon" style="background:#e8f7ef;color:#2fae6a;">🔎</div>
+          <div><strong>Do sprawdzenia</strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
         </div>
       </div>
     </div>
@@ -14386,6 +14404,116 @@ function policzWygasajaceKarnety(rows) {
     return out;
 }
 
+// === "Do sprawdzenia" — pomocny przegląd dla recepcji (link tylko z Pulpitu) ===
+function ladujDoSprawdzenia() {
+    const box = document.getElementById('ds-spr-content');
+    if (!box) return;
+    box.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">⏳ Sprawdzam…</div>';
+
+    Promise.all([
+        fetch(API_URL + '?action=full_sales_history').then(r => r.json()).catch(() => []),
+        fetch(API_URL + '?action=get_all_deposits').then(r => r.json()).catch(() => [])
+    ]).then(([historia, zadatki]) => {
+        historia = Array.isArray(historia) ? historia : [];
+        zadatki = Array.isArray(zadatki) ? zadatki : [];
+
+        const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+        const aktywny = (r) => { const st = String(r.status || '').toUpperCase().trim(); return st === 'AKTYWNY' || st === ''; };
+        const jestWplata = (r) => String(r.typ || '').toUpperCase().includes('WP');
+        const zl = (v) => (parseFloat(v) || 0).toFixed(2) + ' zł';
+        const klientLink = (nazwa, id) => id
+            ? `<a href="javascript:void(0)" onclick="otworzProfil('${String(id).replace(/'/g, "\\'")}')" style="color:#b87080; font-weight:700; text-decoration:none;">${nazwa || '—'}</a>`
+            : `<span style="font-weight:700;">${nazwa || '—'}</span>`;
+
+        // 1) Zadatki długo czekające (AKTYWNY, starsze niż 45 dni)
+        const dawne = zadatki.filter(r => jestWplata(r) && aktywny(r)).map(r => {
+            const d = new Date(r.data); d.setHours(0, 0, 0, 0);
+            const dni = isNaN(d.getTime()) ? 0 : Math.round((dzis - d) / 86400000);
+            return Object.assign({}, r, { dni });
+        }).filter(r => r.dni >= 45).sort((a, b) => b.dni - a.dni);
+
+        // 2) Zadatki bez podpiętego klienta (puste id_klienta) — ten sam typ błędu co Pani Wiśniewska
+        const bezKlienta = zadatki.filter(r => jestWplata(r) && aktywny(r) && !String(r.id_klienta || '').trim());
+
+        // 3) Karnety wygasające / wygasłe (≤14 dni)
+        const karnety = (typeof policzWygasajaceKarnety === 'function') ? policzWygasajaceKarnety(historia) : [];
+
+        const sekcja = (icon, tytul, opis, n, pustyTekst, wierszeHtml) => {
+            const kolor = n > 0 ? '#b45309' : '#2fae6a';
+            const tlo = n > 0 ? '#fffaf2' : '#f3fbf6';
+            const ramka = n > 0 ? '#f1d9b0' : '#cdeede';
+            const naglowek = `
+                <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid ${ramka};">
+                    <span style="font-size:22px;">${icon}</span>
+                    <div style="flex:1;">
+                        <div style="font-weight:800; color:#1f2937; font-size:16px;">${tytul}</div>
+                        <div style="color:#64748b; font-size:13px;">${opis}</div>
+                    </div>
+                    <span style="background:${kolor}; color:#fff; font-weight:800; border-radius:999px; min-width:30px; height:30px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; font-size:14px;">${n}</span>
+                </div>`;
+            const tresc = n === 0
+                ? `<div style="padding:16px; color:#2fae6a; font-weight:600;">✓ ${pustyTekst}</div>`
+                : wierszeHtml;
+            return `<div style="background:${tlo}; border:1px solid ${ramka}; border-radius:16px; overflow:hidden; margin-bottom:18px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${naglowek}${tresc}</div>`;
+        };
+
+        const wiersz = (lewo, srodek, prawo) => `
+            <div style="display:flex; align-items:center; gap:14px; padding:11px 16px; border-bottom:1px solid rgba(0,0,0,0.04); flex-wrap:wrap;">
+                <div style="min-width:170px;">${lewo}</div>
+                <div style="flex:1; min-width:150px; color:#334155;">${srodek}</div>
+                <div style="min-width:150px; text-align:right;">${prawo}</div>
+            </div>`;
+
+        // Render sekcji 1
+        const html1 = dawne.map(r => wiersz(
+            klientLink(r.klient, r.id_klienta),
+            `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
+            `<span style="color:#b45309; font-weight:700; font-size:13px;">czeka ${r.dni} dni</span>`
+        )).join('');
+
+        // Render sekcji 2
+        const html2 = bezKlienta.map(r => wiersz(
+            `<span style="font-weight:700;">${r.klient || '—'}</span>`,
+            `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
+            `<span style="color:#b45309; font-weight:700; font-size:13px;">brak karty klienta</span>`
+        )).join('');
+
+        // Render sekcji 3
+        const html3 = karnety.map(w => {
+            const parts = String(w.data_waznosci).split('-');
+            const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : w.data_waznosci;
+            let badge, kolor;
+            if (w.diff < 0) { badge = `wygasł ${Math.abs(w.diff)} dni temu`; kolor = '#b91c1c'; }
+            else if (w.diff === 0) { badge = 'wygasa DZIŚ'; kolor = '#b45309'; }
+            else { badge = `wygasa za ${w.diff} dni`; kolor = '#b45309'; }
+            return wiersz(
+                klientLink(w.klient, w.id_klienta),
+                `<span style="color:#475569;">${w.zabieg || 'karnet'}</span>`,
+                `<span style="color:${kolor}; font-weight:700; font-size:13px;">${badge}<br><small style="color:#94a3b8;">${dataFmt}</small></span>`
+            );
+        }).join('');
+
+        const lacznie = dawne.length + bezKlienta.length + karnety.length;
+        const podsumowanie = lacznie === 0
+            ? `<div style="background:#f3fbf6; border:1px solid #cdeede; border-radius:14px; padding:18px; margin-bottom:18px; color:#2fae6a; font-weight:700; text-align:center;">🎉 Wszystko ogarnięte — nic nie wymaga teraz uwagi.</div>`
+            : `<div style="background:#fff; border:1px solid #eef2f7; border-radius:14px; padding:14px 16px; margin-bottom:18px; color:#475569;">Znalazłem <strong>${lacznie}</strong> ${lacznie === 1 ? 'rzecz' : 'rzeczy'} do spokojnego sprawdzenia. Kliknij w nazwisko, żeby wejść w kartę klienta.</div>`;
+
+        box.innerHTML =
+            podsumowanie +
+            sekcja('💳', 'Zadatki, które długo czekają',
+                'Klient wpłacił zadatek ponad 45 dni temu i jeszcze z niego nie skorzystał — może warto przypomnieć albo umówić wizytę.',
+                dawne.length, 'Żaden zadatek nie zalega.', html1) +
+            sekcja('🔗', 'Zadatki bez podpiętej karty klienta',
+                'Te wpłaty nie są powiązane z kartoteką — łatwo wtedy o pomyłkę przy rozliczaniu. Warto sprawdzić i przypisać klienta.',
+                bezKlienta.length, 'Wszystkie zadatki mają przypisanego klienta.', html2) +
+            sekcja('🎟️', 'Karnety na wyczerpaniu lub wygasłe',
+                'Karnety, które kończą się w ciągu 14 dni lub już wygasły — dobry moment, żeby zaproponować przedłużenie.',
+                karnety.length, 'Żaden karnet nie wygasa w najbliższym czasie.', html3);
+    }).catch(() => {
+        box.innerHTML = '<div style="padding:30px; text-align:center; color:#b91c1c;">Nie udało się pobrać danych. Spróbuj „Odśwież”.</div>';
+    });
+}
+
 // Pod-zakładki widoku Klienci: 'kartoteka' | 'karnety'
 function przelaczTabKlienci(tab) {
     const tabKart = document.getElementById('ktab-kartoteka');
@@ -15010,6 +15138,7 @@ function pokaz(id, b) {
     }
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
+    if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -15136,6 +15265,7 @@ function pokaz(id, b) {
     if (id === 'dzisiejsza-sprzedaz') { odswiezSprzedaz(); }
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
+    if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -15398,6 +15528,7 @@ function pokaz(id, b) {
     if (id === 'dzisiejsza-sprzedaz') { odswiezSprzedaz(); }
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
+    if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
