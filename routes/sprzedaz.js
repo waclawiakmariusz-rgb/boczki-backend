@@ -213,17 +213,30 @@ module.exports = (db) => {
   // Helper: rozlicz zadatek automatycznie
   // Gdy znamy klientId, identyfikujemy WYŁĄCZNIE po ID (zmiana nazwiska nie rozłącza zadatków).
   function rozliczZadatekAutomatycznie(tenant_id, klientId, klientNazwa, kwotaDoPobrania, konkretneIdZadatku, pracownik, callback) {
-    const zadatekQ = klientId
-      ? `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND id_klienta = ? ORDER BY data_wplaty ASC`
-      : `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty ASC`;
-    const zadatekParams = klientId ? [tenant_id, klientId] : [tenant_id, klientNazwa || ''];
+    // Jawnie wybrane zadatki (recepcja wskazała konkretny depositId) dopuszczamy
+    // NIEZALEŻNIE od dopasowania klienta — inaczej zadatek z pustym/rozjechanym
+    // id_klienta nie zostałby rozliczony mimo że pieniądze pobrano. Incydent
+    // Wiśniewska 17.06: DEP z pustym id_klienta nie wpadał do SELECT-u po id_klienta,
+    // więc został AKTYWNY mimo sprzedaży Portfel+Dopłata. Nadal ograniczamy do tenant_id.
+    const dozwoloneId = konkretneIdZadatku
+      ? String(konkretneIdZadatku).split(',').map(s => s.trim()).filter(Boolean)
+      : [];
+    const params = [tenant_id];
+    let whereKlient;
+    if (klientId) { whereKlient = 'id_klienta = ?'; params.push(klientId); }
+    else { whereKlient = 'LOWER(klient) = LOWER(?)'; params.push(klientNazwa || ''); }
+    let whereIdJawne = '';
+    if (dozwoloneId.length) {
+      whereIdJawne = ` OR id IN (${dozwoloneId.map(() => '?').join(',')})`;
+      params.push(...dozwoloneId);
+    }
+    const zadatekQ = `SELECT id, klient, kwota, cel FROM Zadatki WHERE tenant_id = ? AND typ = 'WPŁATA' AND (status = 'AKTYWNY' OR status IS NULL) AND (${whereKlient}${whereIdJawne}) ORDER BY data_wplaty ASC`;
     db.query(
       zadatekQ,
-      zadatekParams,
+      params,
       (err, rows) => {
         if (err || !rows.length) return callback && callback();
         let pozostalo = parseFloat(kwotaDoPobrania);
-        let dozwoloneId = konkretneIdZadatku ? String(konkretneIdZadatku).split(',') : [];
         let idx = 0;
         function next() {
           if (pozostalo <= 0 || idx >= rows.length) return callback && callback();
