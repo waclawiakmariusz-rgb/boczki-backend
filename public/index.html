@@ -13559,6 +13559,10 @@ function weryfikujZadatek(selectEl, wymuszonaCena = null) {
             // --- KLUCZOWA ZMIANA: Zapisujemy nazwę matkę w ukryciu ---
             doplataRow.dataset.parentName = nazwaBazy;
             // ---------------------------------------------------------
+            // Dopłata dziedziczy grupę powielenia po wierszu-matce, żeby w profilu
+            // klienta scaliła się z resztą grupy (inaczej wisiałaby osobno).
+            if (row.dataset.grupaId) doplataRow.dataset.grupaId = row.dataset.grupaId;
+            else delete doplataRow.dataset.grupaId;
 
             newPrice.value = reszta.toFixed(2);
             newPrice.style.backgroundColor = "#fee2e2"; 
@@ -14273,12 +14277,17 @@ async function zapiszEdycjeZgod(e) {
 // --- ZAKTUALIZOWANA FUNKCJA GENEROWANIA TABEL (Z FILTREM) ---
 // ─── KARNETY / WAŻNOŚĆ ZABIEGÓW ─────────────────────────────────────
 // Plakietka ważności + akcje (Przedłuż / Zakończ) renderowane w wierszu historii.
-function renderKarnetInfo(t) {
+function renderKarnetInfo(t, grupaId, liczba) {
+    // grupaId/liczba (opcjonalne) — gdy wiersz reprezentuje scaloną grupę powieleń,
+    // akcje Przedłuż/Zakończ/Cofnij operują na całej grupie (grupa_id), nie pojedynczym id.
+    const gid = grupaId || null;
+    const gidArg = gid ? `, '${gid}'` : '';
+    const nota = (gid && liczba > 1) ? ` <span style="color:#6d28d9; font-weight:600;">(dotyczy ${liczba} szt.)</span>` : '';
     if (t.karnet_zamkniety_w) {
         const kto = t.karnet_zamkniety_przez ? ' · ' + t.karnet_zamkniety_przez : '';
         return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <span style="background:#e2e8f0; color:#475569; padding:4px 10px; border-radius:999px; font-weight:600;">✓ Karnet zakończony${kto}</span>
-            <button onclick="cofnijKarnet('${t.id}')" style="background:#eff6ff; border:1px solid #dbeafe; color:#2563eb; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">↩ Cofnij</button>
+            <span style="background:#e2e8f0; color:#475569; padding:4px 10px; border-radius:999px; font-weight:600;">✓ Karnet zakończony${kto}${nota}</span>
+            <button onclick="cofnijKarnet('${t.id}'${gidArg})" style="background:#eff6ff; border:1px solid #dbeafe; color:#2563eb; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">↩ Cofnij</button>
         </div>`;
     }
     if (!t.data_waznosci) return ''; // bezterminowo lub produkt
@@ -14300,15 +14309,15 @@ function renderKarnetInfo(t) {
         badge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-weight:600;">✓ Ważny do ${dataFmt}</span>`;
     }
     return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow-x:auto;">
-        ${badge}
-        <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; width:104px; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 10px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
+        ${badge}${nota}
+        <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value${gidArg}); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; width:104px; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 10px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
             <option value="">＋ Przedłuż ▾</option>
             <option value="2">+2 dni</option>
             <option value="7">+7 dni</option>
             <option value="14">+14 dni</option>
             <option value="30">+30 dni</option>
         </select>
-        <button onclick="zakonczKarnet('${t.id}')" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
+        <button onclick="zakonczKarnet('${t.id}'${gidArg})" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
     </div>`;
 }
 
@@ -14332,8 +14341,9 @@ function _karnetAction(payload) {
         .catch(() => alert('Błąd połączenia.'));
 }
 
-function przedluzKarnet(id, aktualnaData, dni) {
+function przedluzKarnet(id, aktualnaData, dni, grupaId) {
     // Dodajemy wybraną liczbę dni do obecnej ważności (lub od dziś, jeśli już minęła).
+    // grupaId (opcjonalny) → przedłuża wszystkie powielone pozycje grupy naraz.
     const liczbaDni = parseInt(dni, 10);
     if (!Number.isFinite(liczbaDni) || liczbaDni <= 0) return;
     const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
@@ -14341,16 +14351,19 @@ function przedluzKarnet(id, aktualnaData, dni) {
     if (baza < dzis) baza = new Date(dzis.getTime());
     baza.setDate(baza.getDate() + liczbaDni);
     const nowa = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
-    _karnetAction({ action: 'extend_karnet', id: id, data_waznosci: nowa, pracownik: currentUser });
+    _karnetAction({ action: 'extend_karnet', id: id, grupa_id: grupaId || null, data_waznosci: nowa, pracownik: currentUser });
 }
 
-function zakonczKarnet(id) {
-    if (!confirm('Oznaczyć ten karnet jako zakończony? Zniknie z alertów wygasania.')) return;
-    _karnetAction({ action: 'close_karnet', id: id, pracownik: currentUser });
+function zakonczKarnet(id, grupaId) {
+    const pyt = grupaId
+        ? 'Oznaczyć WSZYSTKIE powielone pozycje tej grupy jako zakończone? Znikną z alertów wygasania.'
+        : 'Oznaczyć ten karnet jako zakończony? Zniknie z alertów wygasania.';
+    if (!confirm(pyt)) return;
+    _karnetAction({ action: 'close_karnet', id: id, grupa_id: grupaId || null, pracownik: currentUser });
 }
 
-function cofnijKarnet(id) {
-    _karnetAction({ action: 'reopen_karnet', id: id, pracownik: currentUser });
+function cofnijKarnet(id, grupaId) {
+    _karnetAction({ action: 'reopen_karnet', id: id, grupa_id: grupaId || null, pracownik: currentUser });
 }
 
 // Filtruje historię sprzedaży do karnetów wygasających ≤14 dni (lub już wygasłych),
@@ -14492,12 +14505,58 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
         return;
     }
 
+    // Scalanie powieleń (przycisk "Duplikuj" w sprzedaży): rekordy o tym samym
+    // grupa_id pokazujemy jako JEDEN wiersz "N× cena". Kolejność wg pierwszego
+    // wystąpienia. grupa_id == null → rekord pojedynczy (jak dotąd).
+    const pozGrupy = [];
+    const indeksGrupy = {};
+    transakcje.forEach(t => {
+        const gid = t.grupa_id || null;
+        if (gid && indeksGrupy[gid] !== undefined) {
+            pozGrupy[indeksGrupy[gid]].pozycje.push(t);
+        } else {
+            if (gid) indeksGrupy[gid] = pozGrupy.length;
+            pozGrupy.push({ rep: t, pozycje: [t] });
+        }
+    });
+
+    // Jednostki renderowania. Grupę scalamy w JEDEN wiersz tylko gdy ma ≥2 REALNE
+    // zabiegi (pomijając dopłaty — dopłata to tylko część płatności, nie osobny
+    // zabieg). Inaczej renderujemy każdy rekord osobno, żeby nie ukryć żadnej kwoty.
+    const jestDoplata = (p) => /dopłata\s*$/i.test(String(p.zabieg || '').trim());
+    const jednostki = [];
+    pozGrupy.forEach(g => {
+        const realne = g.pozycje.filter(p => !jestDoplata(p));
+        if (g.pozycje.length > 1 && realne.length >= 2) {
+            jednostki.push({ rep: realne[0], pozycje: g.pozycje, realne: realne, grupa: true });
+        } else {
+            g.pozycje.forEach(p => jednostki.push({ rep: p, pozycje: [p], realne: [p], grupa: false }));
+        }
+    });
+
     // Grupy zabiegów per typ (z snapshotu w bazie lub fallback po nazwie)
     const groupedByType = {}; // { typ → [htmlRow, ...] }
 
-    transakcje.forEach(t => {
+    jednostki.forEach(u => {
+        const t = u.rep;
+        const liczba = u.grupa ? u.realne.length : 1;
+        const grupaId = u.grupa ? (t.grupa_id || null) : null;
         const nazwaZabiegu = String(t.zabieg || '').toLowerCase();
-        const kwota = parseFloat(t.kwota).toFixed(2) + " zł";
+
+        // Kwota: grupa → suma WSZYSTKICH części (w tym dopłat). Gdy realne zabiegi
+        // mają równą cenę i grupa nie zawiera dopłaty → "N× cena". Inaczej (rabaty,
+        // dopłaty, podział zadatku) → "suma zł (N poz.)". Pojedyncza → jak dotąd.
+        let kwota;
+        if (u.grupa) {
+            const suma = u.pozycje.reduce((a, p) => a + (parseFloat(p.kwota) || 0), 0);
+            const cenyReal = u.realne.map(p => parseFloat(p.kwota) || 0);
+            const maDoplate = u.pozycje.some(jestDoplata);
+            const teSame = cenyReal.every(c => c === cenyReal[0]);
+            kwota = (!maDoplate && teSame) ? `${liczba}× ${cenyReal[0].toFixed(2)} zł` : `${suma.toFixed(2)} zł (${liczba} poz.)`;
+        } else {
+            kwota = parseFloat(t.kwota).toFixed(2) + " zł";
+        }
+
         let platnosc = t.platnosc || "-";
 
         let stylPlatnosci = "font-size:13px; color:#555;";
@@ -14528,12 +14587,17 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
             `;
         }
 
-        const karnetInfo = (typeof renderKarnetInfo === 'function') ? renderKarnetInfo(t) : '';
+        const karnetInfo = (typeof renderKarnetInfo === 'function') ? renderKarnetInfo(t, grupaId, liczba) : '';
+
+        // Plakietka "× N" przy nazwie zabiegu dla scalonej grupy powieleń.
+        const nazwaZabieguHtml = (liczba > 1)
+            ? `${t.zabieg} <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#ede9fe; color:#6d28d9; font-size:12px; font-weight:600;">× ${liczba}</span>`
+            : t.zabieg;
 
         const html = `
             <tr style="${glownyWierszStyl}">
                 <td style="padding:10px; width:90px; vertical-align:top;">${t.data}</td>
-                <td style="padding:10px; font-weight:500; vertical-align:top;">${t.zabieg}${karnetInfo}</td>
+                <td style="padding:10px; font-weight:500; vertical-align:top;">${nazwaZabieguHtml}${karnetInfo}</td>
                 <td style="padding:10px; color:#666; vertical-align:top;">${t.szczegoly || '-'}</td>
                 <td style="padding:10px; font-weight:bold; color:#166534; width:80px; vertical-align:top;">${kwota}</td>
                 <td style="padding:10px; ${stylPlatnosci}; width:80px; vertical-align:top;">${platnosc}</td>

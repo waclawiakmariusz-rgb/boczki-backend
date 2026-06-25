@@ -973,41 +973,51 @@ module.exports = (db) => {
       if (!nowaData || !/^\d{4}-\d{2}-\d{2}$/.test(nowaData)) {
         return res.json({ status: 'error', message: 'Nieprawidłowa data ważności (YYYY-MM-DD).' });
       }
+      // grupa_id → akcja obejmuje wszystkie powielone pozycje grupy; inaczej pojedyncze id.
+      const grupowe = !!d.grupa_id;
+      const warKol = grupowe ? 'grupa_id' : 'id';
+      const warVal = grupowe ? d.grupa_id : d.id;
       // Przedłużenie znosi ewentualne oznaczenie "karnet zakończony".
       db.query(
-        `UPDATE Sprzedaz SET data_waznosci = ?, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND id = ?`,
-        [nowaData, tenant_id, d.id],
+        `UPDATE Sprzedaz SET data_waznosci = ?, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND ${warKol} = ?`,
+        [nowaData, tenant_id, warVal],
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, `ID:${d.id} | nowa ważność: ${nowaData}`);
-          return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData });
+          zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, `${grupowe ? 'GRUPA:' + d.grupa_id + ' (' + result.affectedRows + ' szt.)' : 'ID:' + d.id} | nowa ważność: ${nowaData}`);
+          return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
 
     // --- CLOSE_KARNET (Oznacz jako zakończony) ---
     } else if (action === 'close_karnet') {
+      const grupowe = !!d.grupa_id;
+      const warKol = grupowe ? 'grupa_id' : 'id';
+      const warVal = grupowe ? d.grupa_id : d.id;
       db.query(
-        `UPDATE Sprzedaz SET karnet_zamkniety_w = NOW(), karnet_zamkniety_przez = ? WHERE tenant_id = ? AND id = ?`,
-        [String(d.pracownik || '').slice(0, 100), tenant_id, d.id],
+        `UPDATE Sprzedaz SET karnet_zamkniety_w = NOW(), karnet_zamkniety_przez = ? WHERE tenant_id = ? AND ${warKol} = ?`,
+        [String(d.pracownik || '').slice(0, 100), tenant_id, warVal],
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'KARNET ZAKOŃCZONY', d.pracownik, `ID:${d.id}`);
-          return res.json({ status: 'success', message: 'Oznaczono karnet jako zakończony.' });
+          zapiszLog(tenant_id, 'KARNET ZAKOŃCZONY', d.pracownik, grupowe ? `GRUPA:${d.grupa_id} (${result.affectedRows} szt.)` : `ID:${d.id}`);
+          return res.json({ status: 'success', message: 'Oznaczono karnet jako zakończony.' + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
 
     // --- REOPEN_KARNET (Cofnij oznaczenie zakończenia) ---
     } else if (action === 'reopen_karnet') {
+      const grupowe = !!d.grupa_id;
+      const warKol = grupowe ? 'grupa_id' : 'id';
+      const warVal = grupowe ? d.grupa_id : d.id;
       db.query(
-        `UPDATE Sprzedaz SET karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND id = ?`,
-        [tenant_id, d.id],
+        `UPDATE Sprzedaz SET karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL WHERE tenant_id = ? AND ${warKol} = ?`,
+        [tenant_id, warVal],
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'KARNET PRZYWRÓCONY', d.pracownik, `ID:${d.id}`);
-          return res.json({ status: 'success', message: 'Cofnięto oznaczenie zakończenia.' });
+          zapiszLog(tenant_id, 'KARNET PRZYWRÓCONY', d.pracownik, grupowe ? `GRUPA:${d.grupa_id} (${result.affectedRows} szt.)` : `ID:${d.id}`);
+          return res.json({ status: 'success', message: 'Cofnięto oznaczenie zakończenia.' + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
 
