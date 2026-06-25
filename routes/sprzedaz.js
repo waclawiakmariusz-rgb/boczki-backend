@@ -63,6 +63,17 @@ module.exports = (db) => {
       }
     }
   );
+  // Sprzedaz.grupa_id — wspólny identyfikator pozycji powielonych przyciskiem
+  // "Duplikuj" w koszyku. Pozwala w profilu klienta scalić N identycznych
+  // rekordów w jeden wiersz "N × cena". NULL = pojedyncza sprzedaż (nie grupa).
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN grupa_id VARCHAR(40) NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.grupa_id:', err.message);
+      }
+    }
+  );
 
   // Normalizuje ważność z formularza: '' / null / undefined / 0 / nie-liczba → null
   // (bezterminowo). Inaczej dodatnia liczba całkowita dni.
@@ -282,7 +293,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez, grupa_id FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -293,7 +304,8 @@ module.exports = (db) => {
             typ_zabiegu: r.typ_zabiegu || null,
             data_waznosci: r.data_waznosci ? toDateStr(r.data_waznosci) : null,
             karnet_zamkniety_w: r.karnet_zamkniety_w || null,
-            karnet_zamkniety_przez: r.karnet_zamkniety_przez || null
+            karnet_zamkniety_przez: r.karnet_zamkniety_przez || null,
+            grupa_id: r.grupa_id || null
           })));
         }
       );
@@ -514,8 +526,8 @@ module.exports = (db) => {
           const doInsertPoz = () => {
             const insertWithTyp = (typZab, dataWaznosci) => {
               db.query(
-                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?)`,
-                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null],
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci, grupa_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null, poz.grupaId || null],
                 nextPoz
               );
             };

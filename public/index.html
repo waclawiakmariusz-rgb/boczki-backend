@@ -14741,15 +14741,45 @@ function segregujHistorie(klient) {
         return;
     }
 
+    // Scalanie powieleń (przycisk "Duplikuj" w sprzedaży): rekordy o tym samym
+    // grupa_id pokazujemy jako JEDEN wiersz "N × cena". Kolejność zachowana wg
+    // pierwszego wystąpienia. grupa_id == null → rekord pojedynczy (jak dotąd).
+    const grupy = [];
+    const indeksGrupy = {};
     transakcje.forEach(t => {
+        const gid = t.grupa_id || null;
+        if (gid && indeksGrupy[gid] !== undefined) {
+            grupy[indeksGrupy[gid]].pozycje.push(t);
+        } else {
+            if (gid) indeksGrupy[gid] = grupy.length;
+            grupy.push({ rep: t, pozycje: [t] });
+        }
+    });
+
+    grupy.forEach(g => {
+        const t = g.rep;
+        const liczba = g.pozycje.length;
         const nazwa = t.zabieg.toLowerCase();
-        
-        // Formatowanie kwoty
-        const kwotaWyswietlana = parseFloat(t.kwota).toFixed(2) + " zł";
-        
+
+        // Kwota: dla grupy >1 pokazujemy "N × cena jednostkowa". Jeśli ceny w grupie
+        // się różnią (rabaty/dopłaty) — pokazujemy sumę + "(N poz.)".
+        let kwotaWyswietlana;
+        if (liczba > 1) {
+            const ceny = g.pozycje.map(p => parseFloat(p.kwota) || 0);
+            const suma = ceny.reduce((a, b) => a + b, 0);
+            const teSame = ceny.every(c => c === ceny[0]);
+            if (teSame) {
+                kwotaWyswietlana = `${liczba}× ${ceny[0].toFixed(2)} zł`;
+            } else {
+                kwotaWyswietlana = `${suma.toFixed(2)} zł (${liczba} poz.)`;
+            }
+        } else {
+            kwotaWyswietlana = parseFloat(t.kwota).toFixed(2) + " zł";
+        }
+
         // Formatowanie płatności (możesz dodać ikonki jeśli chcesz, tu wersja tekstowa)
         let platnoscWyswietlana = t.platnosc || "-";
-        
+
         // Dodajemy kolorowanie dla Mix i Portfela dla lepszej czytelności
         let stylPlatnosci = "font-size:13px; color:#555;";
         if(platnoscWyswietlana === 'Mix') {
@@ -14764,11 +14794,16 @@ function segregujHistorie(klient) {
              platnoscWyswietlana = "💳 Karta";
         }
 
+        // Etykieta "× N" przy nazwie zabiegu, gdy to scalona grupa powieleń.
+        const nazwaZabiegu = liczba > 1
+            ? `${t.zabieg} <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#ede9fe; color:#6d28d9; font-size:12px; font-weight:600;">× ${liczba}</span>`
+            : t.zabieg;
+
         // Generowanie HTML wiersza (teraz z 5 kolumnami)
         const html = `
             <tr style="border-bottom:1px solid #f1f5f9;">
                 <td style="padding:10px;">${t.data}</td>
-                <td style="padding:10px; font-weight:500;">${t.zabieg}</td>
+                <td style="padding:10px; font-weight:500;">${nazwaZabiegu}</td>
                 <td style="padding:10px; color:#666;">${t.szczegoly || '-'}</td>
                 <td style="padding:10px; font-weight:bold; color:#166534;">${kwotaWyswietlana}</td>
                 <td style="padding:10px; ${stylPlatnosci}">${platnoscWyswietlana}</td>
@@ -18165,6 +18200,14 @@ function duplikujWiersz(id) {
     dst.dataset.discountInfo = snap.dsDiscountInfo;
     if (snap.dsParentName) dst.dataset.parentName = snap.dsParentName;
 
+    // grupa_id — wspólny identyfikator powieleń, żeby w profilu klienta scalić
+    // N identycznych rekordów w jeden wiersz "N × cena". Nadajemy go oryginałowi
+    // (jeśli jeszcze nie ma) i przepisujemy na kopię.
+    if (!src.dataset.grupaId) {
+        src.dataset.grupaId = 'GRP-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+    }
+    dst.dataset.grupaId = src.dataset.grupaId;
+
     // Kopia ląduje tuż pod oryginałem dla czytelności.
     src.insertAdjacentElement('afterend', dst);
 
@@ -18657,9 +18700,10 @@ function finalizujSprzedazPoWalidacji(klient, idKlienta, sellers) {
         const platnosc = row.querySelector('.item-pay').value;
         
         // Dane ukryte (zadatki, rabaty)
-        const discountInfo = row.dataset.discountInfo || ""; 
+        const discountInfo = row.dataset.discountInfo || "";
         const depositId = row.dataset.depositId || null;
         const parentName = row.dataset.parentName || ""; // Dla dopłat
+        const grupaId = row.dataset.grupaId || null;     // Powielone pozycje (Duplikuj)
 
         // Walidacja ceny (może być 0 dla bonów, ale nie ujemna)
         if (cena < 0) validationError = true;
@@ -18704,15 +18748,16 @@ function finalizujSprzedazPoWalidacji(klient, idKlienta, sellers) {
         if (discountInfo) wariantBaza += " [" + discountInfo + "]";
 
         // Dodajemy do listy pozycji
-        pozycje.push({ 
-            typ: typ, 
-            kwota: cena, 
-            komentarz: kom, 
-            platnosc: platnosc, 
+        pozycje.push({
+            typ: typ,
+            kwota: cena,
+            komentarz: kom,
+            platnosc: platnosc,
             depositId: depositId,
-            kategoria: kategoriaBaza, 
-            wariant: wariantBaza, 
-            nazwa_produktu: produktNazwa, 
+            grupaId: grupaId,
+            kategoria: kategoriaBaza,
+            wariant: wariantBaza,
+            nazwa_produktu: produktNazwa,
             ilosc: iloscSztuk
         });
 
