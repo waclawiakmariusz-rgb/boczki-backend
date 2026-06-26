@@ -227,17 +227,37 @@ module.exports = (db) => {
 
     if (action === 'booksy_dzis') {
       const data = req.query.data && /^\d{4}-\d{2}-\d{2}$/.test(req.query.data) ? req.query.data : null;
-      const where = data ? 'data_wizyty = ?' : 'data_wizyty = CURDATE()';
+      const where = data ? 'w.data_wizyty = ?' : 'w.data_wizyty = CURDATE()';
       const params = data ? [tenant_id, data] : [tenant_id];
+      // Skojarzenie wizyty z kartoteką Estelio:
+      //   1) po telefonie (ostatnie 9 cyfr, ignorując spacje/+48) — pewne,
+      //   2) zapasowo po imieniu i nazwisku — orientacyjne.
       return db.query(
-        `SELECT slot_key, klient, telefon, email, data_wizyty, godz_od, godz_do, zabieg, pracownik, status
-           FROM WizytyBooksy
-          WHERE tenant_id = ? AND ${where} AND status = 'zapisana'
-          ORDER BY godz_od ASC, pracownik ASC`,
+        `SELECT w.slot_key, w.klient, w.telefon, w.email, w.data_wizyty, w.godz_od, w.godz_do, w.zabieg, w.pracownik, w.status,
+           (SELECT k.id_klienta FROM Klienci k
+              WHERE k.tenant_id = w.tenant_id AND w.telefon <> ''
+                AND LENGTH(REGEXP_REPLACE(k.telefon, '[^0-9]', '')) >= 9
+                AND RIGHT(REGEXP_REPLACE(k.telefon, '[^0-9]', ''), 9) = RIGHT(REGEXP_REPLACE(w.telefon, '[^0-9]', ''), 9)
+              LIMIT 1) AS id_tel,
+           (SELECT k.id_klienta FROM Klienci k
+              WHERE k.tenant_id = w.tenant_id AND w.klient <> ''
+                AND LOWER(TRIM(k.imie_nazwisko)) = LOWER(TRIM(w.klient))
+              LIMIT 1) AS id_nazwa
+           FROM WizytyBooksy w
+          WHERE w.tenant_id = ? AND ${where} AND w.status = 'zapisana'
+          ORDER BY w.godz_od ASC, w.pracownik ASC`,
         params,
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
-          return res.json({ status: 'success', wizyty: rows || [], skonfigurowane: !!(IMAP_USER && IMAP_PASS) });
+          const wizyty = (rows || []).map(r => {
+            const idTel = r.id_tel != null ? String(r.id_tel) : '';
+            const idNaz = r.id_nazwa != null ? String(r.id_nazwa) : '';
+            const id_klienta = idTel || idNaz;
+            const dopasowano = idTel ? 'telefon' : (idNaz ? 'nazwa' : null);
+            const { id_tel, id_nazwa, ...reszta } = r;
+            return { ...reszta, id_klienta, dopasowano };
+          });
+          return res.json({ status: 'success', wizyty, skonfigurowane: !!(IMAP_USER && IMAP_PASS) });
         }
       );
     }

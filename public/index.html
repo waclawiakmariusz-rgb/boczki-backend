@@ -14753,10 +14753,23 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
         lista.forEach(w => {
             const godz = esc(w.godz_od || '') + (w.godz_do ? ' – ' + esc(w.godz_do) : '');
             const tel = w.telefon ? '<a href="tel:' + esc(String(w.telefon).replace(/\s/g,'')) + '" style="color:' + fg + '; text-decoration:none; font-weight:600;">📞 ' + esc(w.telefon) + '</a>' : '';
+            const nazwa = w.klient || '— (bez nazwiska)';
+            let klientHtml;
+            if (w.id_klienta) {
+                // Dopasowano do kartoteki Estelio — nazwisko klikalne (otwiera profil).
+                const znacznik = w.dopasowano === 'telefon'
+                    ? '<span title="Dopasowano po numerze telefonu" style="color:#16a06a; font-size:11px; margin-left:5px;">✓ klient</span>'
+                    : '<span title="Dopasowano po imieniu i nazwisku (sprawdź)" style="color:#ea8a3c; font-size:11px; margin-left:5px;">≈ klient?</span>';
+                klientHtml = '<a href="javascript:void(0)" onclick="dsProfil(\'' + esc(String(w.id_klienta)).replace(/'/g,"\\'") + '\',\'' + esc(nazwa).replace(/'/g,"\\'") + '\')" '
+                    + 'style="font-weight:700; color:#b87080; text-decoration:none;">' + esc(nazwa) + '</a>' + znacznik;
+            } else {
+                klientHtml = '<span style="font-weight:600; color:#0f172a;">' + esc(nazwa) + '</span>'
+                    + '<span title="Brak w kartotece — może nowy klient" style="color:#94a3b8; font-size:11px; margin-left:5px;">• spoza bazy</span>';
+            }
             karty += '<div style="display:flex; align-items:center; gap:14px; padding:11px 14px; border-bottom:1px solid #f4f6f9;">'
                 + '<div style="min-width:96px; font-weight:700; color:' + fg + '; font-size:14px;">' + (godz || '—') + '</div>'
                 + '<div style="flex:1;">'
-                +   '<div style="font-weight:600; color:#0f172a; font-size:14px;">' + esc(w.klient || '— (bez nazwiska)') + '</div>'
+                +   '<div style="font-size:14px;">' + klientHtml + '</div>'
                 +   (w.zabieg ? '<div style="color:#64748b; font-size:12.5px; margin-top:1px;">' + esc(w.zabieg) + '</div>' : '')
                 + '</div>'
                 + (tel ? '<div style="font-size:12.5px; white-space:nowrap;">' + tel + '</div>' : '')
