@@ -14412,10 +14412,13 @@ function ladujDoSprawdzenia() {
 
     Promise.all([
         fetch(API_URL + '?action=full_sales_history').then(r => r.json()).catch(() => []),
-        fetch(API_URL + '?action=get_all_deposits').then(r => r.json()).catch(() => [])
-    ]).then(([historia, zadatki]) => {
+        fetch(API_URL + '?action=get_all_deposits').then(r => r.json()).catch(() => []),
+        fetch(API_URL + '?action=ds_get_pominiete').then(r => r.json()).catch(() => [])
+    ]).then(([historia, zadatki, pominiete]) => {
         historia = Array.isArray(historia) ? historia : [];
         zadatki = Array.isArray(zadatki) ? zadatki : [];
+        pominiete = Array.isArray(pominiete) ? pominiete : [];
+        const pominieteSet = new Set(pominiete.map(p => String(p.klucz)));
 
         const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
         const aktywny = (r) => { const st = String(r.status || '').toUpperCase().trim(); return st === 'AKTYWNY' || st === ''; };
@@ -14435,18 +14438,20 @@ function ladujDoSprawdzenia() {
         const klientLink = (nazwa, id) =>
             `<a href="javascript:void(0)" onclick="dsProfil('${esc(id)}','${esc(nazwa)}')" style="color:#b87080; font-weight:700; text-decoration:none;">${nazwa || '—'}</a>`;
 
+        const pomin = (r) => !pominieteSet.has(String(r.id));
+
         // 1) Zadatki długo czekające (AKTYWNY, starsze niż 45 dni)
-        const dawne = zadatki.filter(r => jestWplata(r) && aktywny(r)).map(r => {
+        const dawne = zadatki.filter(r => jestWplata(r) && aktywny(r) && pomin(r)).map(r => {
             const d = new Date(r.data); d.setHours(0, 0, 0, 0);
             const dni = isNaN(d.getTime()) ? 0 : Math.round((dzis - d) / 86400000);
             return Object.assign({}, r, { dni });
         }).filter(r => r.dni >= 45).sort((a, b) => b.dni - a.dni);
 
         // 2) Zadatki bez podpiętego klienta (puste id_klienta) — ten sam typ błędu co Pani Wiśniewska
-        const bezKlienta = zadatki.filter(r => jestWplata(r) && aktywny(r) && !String(r.id_klienta || '').trim());
+        const bezKlienta = zadatki.filter(r => jestWplata(r) && aktywny(r) && pomin(r) && !String(r.id_klienta || '').trim());
 
         // 3) Karnety wygasające / wygasłe (≤14 dni)
-        const karnety = (typeof policzWygasajaceKarnety === 'function') ? policzWygasajaceKarnety(historia) : [];
+        const karnety = ((typeof policzWygasajaceKarnety === 'function') ? policzWygasajaceKarnety(historia) : []).filter(pomin);
 
         const sekcja = (icon, tytul, opis, n, pustyTekst, wierszeHtml) => {
             const kolor = n > 0 ? '#b45309' : '#2fae6a';
@@ -14467,25 +14472,32 @@ function ladujDoSprawdzenia() {
             return `<div style="background:${tlo}; border:1px solid ${ramka}; border-radius:16px; overflow:hidden; margin-bottom:18px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${naglowek}${tresc}</div>`;
         };
 
-        const wiersz = (lewo, srodek, prawo) => `
+        const btnPomin = (klucz, rodzaj) =>
+            `<button onclick="dsPomin('${esc(klucz)}','${esc(rodzaj)}',this)" title="Oznacz jako nieaktualne — zniknie z panelu dla całego salonu"
+                style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer; white-space:nowrap;">✕ Pomiń</button>`;
+
+        const wiersz = (lewo, srodek, prawo, akcje) => `
             <div style="display:flex; align-items:center; gap:14px; padding:11px 16px; border-bottom:1px solid rgba(0,0,0,0.04); flex-wrap:wrap;">
                 <div style="min-width:170px;">${lewo}</div>
                 <div style="flex:1; min-width:150px; color:#334155;">${srodek}</div>
-                <div style="min-width:150px; text-align:right;">${prawo}</div>
+                <div style="min-width:130px; text-align:right;">${prawo}</div>
+                <div style="min-width:80px; text-align:right;">${akcje || ''}</div>
             </div>`;
 
         // Render sekcji 1
         const html1 = dawne.map(r => wiersz(
             klientLink(r.klient, znajdzId(r)),
             `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
-            `<span style="color:#b45309; font-weight:700; font-size:13px;">czeka ${r.dni} dni</span>`
+            `<span style="color:#b45309; font-weight:700; font-size:13px;">czeka ${r.dni} dni</span>`,
+            btnPomin(r.id, 'zadatek')
         )).join('');
 
         // Render sekcji 2
         const html2 = bezKlienta.map(r => wiersz(
             klientLink(r.klient, znajdzId(r)),
             `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
-            `<span style="color:#b45309; font-weight:700; font-size:13px;">brak karty klienta</span>`
+            `<span style="color:#b45309; font-weight:700; font-size:13px;">brak karty klienta</span>`,
+            btnPomin(r.id, 'zadatek')
         )).join('');
 
         // Render sekcji 3
@@ -14499,7 +14511,8 @@ function ladujDoSprawdzenia() {
             return wiersz(
                 klientLink(w.klient, String(w.id_klienta || '').trim() || mapaNazwaId[norm(w.klient)] || ''),
                 `<span style="color:#475569;">${w.zabieg || 'karnet'}</span>`,
-                `<span style="color:${kolor}; font-weight:700; font-size:13px;">${badge}<br><small style="color:#94a3b8;">${dataFmt}</small></span>`
+                `<span style="color:${kolor}; font-weight:700; font-size:13px;">${badge}<br><small style="color:#94a3b8;">${dataFmt}</small></span>`,
+                btnPomin(w.id, 'karnet')
             );
         }).join('');
 
@@ -14518,10 +14531,37 @@ function ladujDoSprawdzenia() {
                 bezKlienta.length, 'Wszystkie zadatki mają przypisanego klienta.', html2) +
             sekcja('🎟️', 'Karnety na wyczerpaniu lub wygasłe',
                 'Karnety, które kończą się w ciągu 14 dni lub już wygasły — dobry moment, żeby zaproponować przedłużenie.',
-                karnety.length, 'Żaden karnet nie wygasa w najbliższym czasie.', html3);
+                karnety.length, 'Żaden karnet nie wygasa w najbliższym czasie.', html3) +
+            (pominiete.length
+                ? `<div style="text-align:center; margin-top:6px; color:#94a3b8; font-size:13px;">Pominięto ${pominiete.length} ${pominiete.length === 1 ? 'pozycję' : 'pozycji'} jako nieaktualne. <a href="javascript:void(0)" onclick="dsPrzywrocWszystkie()" style="color:#b87080; font-weight:600;">Przywróć wszystkie</a></div>`
+                : '');
     }).catch(() => {
         box.innerHTML = '<div style="padding:30px; text-align:center; color:#b91c1c;">Nie udało się pobrać danych. Spróbuj „Odśwież”.</div>';
     });
+}
+
+// Oznacz pozycję panelu jako nieaktualną — znika dla całego salonu (zapis w bazie).
+function dsPomin(klucz, rodzaj, el) {
+    if (el) { el.disabled = true; el.textContent = '…'; }
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'ds_pomin', klucz: klucz, rodzaj: rodzaj, pracownik: (typeof currentUser !== 'undefined' ? currentUser : '') }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') { ladujDoSprawdzenia(); }
+            else { alert(d.message || 'Nie udało się pominąć.'); if (el) { el.disabled = false; el.textContent = '✕ Pomiń'; } }
+        })
+        .catch(() => { alert('Błąd połączenia.'); if (el) { el.disabled = false; el.textContent = '✕ Pomiń'; } });
+}
+
+// Przywróć wszystkie pominięte pozycje (wrócą do panelu).
+function dsPrzywrocWszystkie() {
+    if (!confirm('Przywrócić wszystkie pominięte pozycje? Wrócą do panelu.')) return;
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'ds_przywroc', klucz: 'ALL' }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') { ladujDoSprawdzenia(); }
+            else alert(d.message || 'Nie udało się przywrócić.');
+        })
+        .catch(() => alert('Błąd połączenia.'));
 }
 
 // Przejście do karty klienta z panelu "Do sprawdzenia" (inna sekcja niż profil,

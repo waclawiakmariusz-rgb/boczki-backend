@@ -33,6 +33,25 @@ module.exports = (db) => {
     }
   );
 
+  // Idempotentna migracja: pozycje "pominięte" w panelu "Do sprawdzenia" (Pulpit).
+  // Recepcja oznacza martwy/nieaktualny wpis -> znika z panelu dla całego salonu.
+  // klucz = identyfikator źródłowy (id zadatku albo id sprzedaży); rodzaj rozróżnia typ.
+  db.query(
+    `CREATE TABLE IF NOT EXISTS DoSprawdzeniaPominiete (
+       id INT AUTO_INCREMENT PRIMARY KEY,
+       tenant_id VARCHAR(50) NOT NULL,
+       klucz VARCHAR(100) NOT NULL,
+       rodzaj VARCHAR(20),
+       pominiete_przez VARCHAR(120),
+       data DATETIME NOT NULL,
+       UNIQUE KEY uniq_pominiete (tenant_id, klucz),
+       INDEX idx_tenant (tenant_id)
+     )`,
+    (err) => {
+      if (err) console.error('[klienci] CREATE DoSprawdzeniaPominiete:', err.message);
+    }
+  );
+
   // Helper: generuj nowe ID klienta (numeryczne, max+1)
   function generujNoweIdKlienta(tenant_id, callback) {
     db.query(`SELECT MAX(CAST(id_klienta AS UNSIGNED)) as maxId FROM Klienci WHERE tenant_id = ?`, [tenant_id], (err, rows) => {
@@ -233,6 +252,16 @@ module.exports = (db) => {
         (err, rows) => {
           if (err) return res.json([]);
           return res.json((rows || []).map(r => ({ id: r.id, id_klienta: r.id_klienta, data: r.data_wplaty, klient: r.klient, typ: r.typ, kwota: r.kwota, metoda: r.metoda, cel: r.cel, status: r.status })));
+        }
+      );
+
+    } else if (action === 'ds_get_pominiete') {
+      db.query(
+        `SELECT klucz, rodzaj FROM DoSprawdzeniaPominiete WHERE tenant_id = ?`,
+        [tenant_id],
+        (err, rows) => {
+          if (err) return res.json([]);
+          return res.json((rows || []).map(r => ({ klucz: r.klucz, rodzaj: r.rodzaj })));
         }
       );
 
@@ -799,6 +828,36 @@ module.exports = (db) => {
           return res.json({ status: 'success', message: 'Usunięto regułę.' });
         }
       );
+
+    } else if (action === 'ds_pomin') {
+      const klucz = String(d.klucz || '').trim();
+      if (!klucz) return res.json({ status: 'error', message: 'Brak identyfikatora pozycji.' });
+      db.query(
+        `INSERT INTO DoSprawdzeniaPominiete (tenant_id, klucz, rodzaj, pominiete_przez, data)
+         VALUES (?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE pominiete_przez = VALUES(pominiete_przez), data = NOW()`,
+        [tenant_id, klucz, String(d.rodzaj || '').slice(0, 20), String(d.pracownik || '').slice(0, 120)],
+        (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', message: 'Pominięto pozycję.' });
+        }
+      );
+
+    } else if (action === 'ds_przywroc') {
+      // klucz pojedynczy lub 'ALL' = przywróć wszystkie pominięte w salonie
+      if (String(d.klucz || '').toUpperCase() === 'ALL') {
+        db.query(`DELETE FROM DoSprawdzeniaPominiete WHERE tenant_id = ?`, [tenant_id], (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', message: 'Przywrócono wszystkie pominięte pozycje.' });
+        });
+      } else {
+        const klucz = String(d.klucz || '').trim();
+        if (!klucz) return res.json({ status: 'error', message: 'Brak identyfikatora pozycji.' });
+        db.query(`DELETE FROM DoSprawdzeniaPominiete WHERE tenant_id = ? AND klucz = ?`, [tenant_id, klucz], (err) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', message: 'Przywrócono pozycję.' });
+        });
+      }
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja klienci POST: ' + action });
