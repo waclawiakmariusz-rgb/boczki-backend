@@ -14650,37 +14650,123 @@ function ladujBooksyDzis() {
         .catch(() => { box.innerHTML = '<div style="padding:30px; text-align:center; color:#dc2626;">Błąd połączenia.</div>'; });
 }
 
+// Stan widoku: ostatnio pobrane wizyty + zbiór ukrytych pracowników (filtr kafelkami).
+let _booksyDane = [];
+let _booksyUkryci = new Set();
+
+// Stała pastelowa para kolorów (tło, tekst) na podstawie nazwy pracownika.
+function booksyKolor(nazwa) {
+    const palety = [
+        ['#eafaf4', '#16a06a'], ['#eef2ff', '#6366f1'], ['#fff1f4', '#e8568f'],
+        ['#fff7ed', '#ea8a3c'], ['#f0f9ff', '#0ea5e9'], ['#f5f3ff', '#8b5cf6'],
+        ['#fefce8', '#ca8a04'], ['#f0fdf4', '#22a06b'], ['#fdf2f8', '#db2777']
+    ];
+    let h = 0;
+    for (let i = 0; i < nazwa.length; i++) h = (h * 31 + nazwa.charCodeAt(i)) >>> 0;
+    return palety[h % palety.length];
+}
+
+function booksyInicjaly(nazwa) {
+    const cz = String(nazwa || '').trim().split(/\s+/).filter(Boolean);
+    if (!cz.length) return '?';
+    return (cz[0][0] + (cz[1] ? cz[1][0] : '')).toUpperCase();
+}
+
+// Pokaż/ukryj wizyty danego pracownika (kafelek u góry).
+function booksyToggleProw(nazwa) {
+    if (_booksyUkryci.has(nazwa)) _booksyUkryci.delete(nazwa);
+    else _booksyUkryci.add(nazwa);
+    renderujBooksyDzis(_booksyDane, true);
+}
+
+function booksyPokazWszystkich() {
+    _booksyUkryci.clear();
+    renderujBooksyDzis(_booksyDane, true);
+}
+
 function renderujBooksyDzis(wizyty, skonfigurowane) {
     const box = document.getElementById('booksy-dzis-content');
     if (!box) return;
+    _booksyDane = wizyty || [];
     const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
     if (!skonfigurowane) {
-        box.innerHTML = '<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:18px; color:#9a3412; font-size:14px;">'
+        box.innerHTML = '<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:14px; padding:18px; color:#9a3412; font-size:14px;">'
             + 'Integracja z Booksy nie jest jeszcze skonfigurowana na serwerze. Skontaktuj się z administratorem.</div>';
         return;
     }
-    if (!wizyty.length) {
-        box.innerHTML = '<div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:30px; text-align:center; color:#64748b;">'
-            + '📭 Brak zapisanych wizyt na dziś.<br><span style="font-size:13px;">Jeśli ktoś właśnie się zapisał, kliknij „Pobierz z Booksy".</span></div>';
+    if (!_booksyDane.length) {
+        box.innerHTML = '<div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:16px; padding:36px; text-align:center; color:#64748b;">'
+            + '<div style="font-size:34px; margin-bottom:6px;">🌿</div>'
+            + '<div style="font-weight:600; color:#475569;">Na dziś nie ma jeszcze żadnych wizyt.</div>'
+            + '<div style="font-size:13px; margin-top:4px;">Gdy ktoś się zapisze, pojawi się tutaj. Możesz też kliknąć „Pobierz z Booksy".</div></div>';
         return;
     }
 
-    let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
-    wizyty.forEach(w => {
-        const godz = esc(w.godz_od || '') + (w.godz_do ? ' – ' + esc(w.godz_do) : '');
-        const tel = w.telefon ? '<a href="tel:' + esc(String(w.telefon).replace(/\s/g,'')) + '" style="color:#16a06a; text-decoration:none;">📞 ' + esc(w.telefon) + '</a>' : '';
-        html += '<div style="display:flex; align-items:flex-start; gap:14px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.03);">'
-            + '<div style="min-width:104px; font-weight:800; color:#16a06a; font-size:15px;">' + (godz || '—') + '</div>'
-            + '<div style="flex:1;">'
-            +   '<div style="font-weight:700; color:#0f172a; font-size:15px;">' + esc(w.klient || '— (bez nazwiska)') + '</div>'
-            +   (w.zabieg ? '<div style="color:#475569; font-size:13px; margin-top:2px;">' + esc(w.zabieg) + '</div>' : '')
-            +   '<div style="color:#94a3b8; font-size:12px; margin-top:4px;">' + (w.pracownik ? '👩‍⚕️ ' + esc(w.pracownik) : '') + (w.pracownik && tel ? ' · ' : '') + tel + '</div>'
-            + '</div></div>';
+    // Grupowanie po pracowniku
+    const grupy = {};
+    _booksyDane.forEach(w => {
+        const p = String(w.pracownik || '').trim() || 'Bez przypisania';
+        (grupy[p] = grupy[p] || []).push(w);
     });
-    html += '</div>';
-    html += '<div style="text-align:right; color:#94a3b8; font-size:12px; margin-top:12px;">Razem: ' + wizyty.length + '</div>';
-    box.innerHTML = html;
+    const nazwy = Object.keys(grupy).sort((a, b) => a.localeCompare(b, 'pl'));
+
+    // Kafelki pracowników (klik = pokaż/ukryj)
+    let chips = '<div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:18px;">';
+    nazwy.forEach(n => {
+        const [bg, fg] = booksyKolor(n);
+        const ukryty = _booksyUkryci.has(n);
+        const ile = grupy[n].length;
+        chips += '<div onclick="booksyToggleProw(\'' + esc(n).replace(/'/g, "\\'") + '\')" '
+            + 'style="display:flex; align-items:center; gap:9px; cursor:pointer; user-select:none; '
+            + 'padding:8px 14px 8px 8px; border-radius:999px; border:1.5px solid ' + (ukryty ? '#e2e8f0' : fg + '33') + '; '
+            + 'background:' + (ukryty ? '#f8fafc' : bg) + '; opacity:' + (ukryty ? '.5' : '1') + '; transition:.15s;">'
+            +   '<div style="width:30px; height:30px; border-radius:50%; background:' + fg + '; color:#fff; '
+            +     'display:flex; align-items:center; justify-content:center; font-weight:700; font-size:12px;">' + esc(booksyInicjaly(n)) + '</div>'
+            +   '<span style="font-weight:600; font-size:14px; color:' + (ukryty ? '#94a3b8' : '#334155') + ';">' + esc(n) + '</span>'
+            +   '<span style="font-size:12px; font-weight:700; color:' + fg + '; background:#fff; padding:1px 8px; border-radius:999px;">' + ile + '</span>'
+            + '</div>';
+    });
+    if (_booksyUkryci.size > 0) {
+        chips += '<div onclick="booksyPokazWszystkich()" style="display:flex; align-items:center; padding:8px 14px; border-radius:999px; '
+            + 'border:1.5px dashed #cbd5e1; cursor:pointer; font-size:13px; color:#64748b; font-weight:600;">↺ Pokaż wszystkich</div>';
+    }
+    chips += '</div>';
+
+    // Karty per pracownik
+    const widoczni = nazwy.filter(n => !_booksyUkryci.has(n));
+    let karty = '';
+    let razem = 0;
+    if (!widoczni.length) {
+        karty = '<div style="text-align:center; color:#94a3b8; padding:24px;">Wszyscy ukryci — kliknij kafelek, aby pokazać wizyty.</div>';
+    }
+    widoczni.forEach(n => {
+        const [bg, fg] = booksyKolor(n);
+        const lista = grupy[n].slice().sort((a, b) => String(a.godz_od || '').localeCompare(String(b.godz_od || '')));
+        razem += lista.length;
+        karty += '<div style="background:#fff; border:1px solid #eef2f6; border-radius:18px; padding:6px 6px 10px; box-shadow:0 2px 10px rgba(15,23,42,.04); margin-bottom:16px; overflow:hidden;">'
+            + '<div style="display:flex; align-items:center; gap:11px; padding:12px 14px; background:' + bg + '; border-radius:14px; margin-bottom:6px;">'
+            +   '<div style="width:34px; height:34px; border-radius:50%; background:' + fg + '; color:#fff; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;">' + esc(booksyInicjaly(n)) + '</div>'
+            +   '<div style="font-weight:700; color:#0f172a; font-size:15px;">' + esc(n) + '</div>'
+            +   '<div style="margin-left:auto; font-size:12px; color:' + fg + '; font-weight:700;">' + lista.length + (lista.length === 1 ? ' wizyta' : ' wizyt') + '</div>'
+            + '</div>';
+        lista.forEach(w => {
+            const godz = esc(w.godz_od || '') + (w.godz_do ? ' – ' + esc(w.godz_do) : '');
+            const tel = w.telefon ? '<a href="tel:' + esc(String(w.telefon).replace(/\s/g,'')) + '" style="color:' + fg + '; text-decoration:none; font-weight:600;">📞 ' + esc(w.telefon) + '</a>' : '';
+            karty += '<div style="display:flex; align-items:center; gap:14px; padding:11px 14px; border-bottom:1px solid #f4f6f9;">'
+                + '<div style="min-width:96px; font-weight:700; color:' + fg + '; font-size:14px;">' + (godz || '—') + '</div>'
+                + '<div style="flex:1;">'
+                +   '<div style="font-weight:600; color:#0f172a; font-size:14px;">' + esc(w.klient || '— (bez nazwiska)') + '</div>'
+                +   (w.zabieg ? '<div style="color:#64748b; font-size:12.5px; margin-top:1px;">' + esc(w.zabieg) + '</div>' : '')
+                + '</div>'
+                + (tel ? '<div style="font-size:12.5px; white-space:nowrap;">' + tel + '</div>' : '')
+                + '</div>';
+        });
+        karty += '</div>';
+    });
+
+    box.innerHTML = chips + karty
+        + '<div style="text-align:right; color:#94a3b8; font-size:12px; margin-top:4px;">Pokazano wizyt: ' + razem + ' / ' + _booksyDane.length + '</div>';
 }
 
 function odswiezBooksy(btn) {
