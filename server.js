@@ -297,6 +297,7 @@ const featuresRoutes   = require('./routes/features')(db);
 const dokumentyDodatkoweRoutes = require('./routes/dokumenty_dodatkowe')(db);
 const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
 const gusRoutes        = require('./routes/gus')(db);
+const booksyRoutes     = require('./routes/booksy')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -330,6 +331,7 @@ app.use('/api', featuresRoutes);
 app.use('/api', dokumentyDodatkoweRoutes);
 app.use('/api', ustawieniaZadatkiRoutes);
 app.use('/api', gusRoutes);
+app.use('/api', booksyRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -458,6 +460,7 @@ app.get('/api', (req, res) => {
         'get_features_catalog': '/api/features?action=get_features_catalog&tenant_id=' + tenant_id,
         'get_typy_dokumentow': '/api/dokumenty_dodatkowe?action=get_typy_dokumentow&tenant_id=' + tenant_id,
         'get_dokumenty_klienta': '/api/dokumenty_dodatkowe?action=get_dokumenty_klienta&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
+        'booksy_dzis': '/api/booksy?action=booksy_dzis&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
     };
 
     if (getActions[action]) {
@@ -526,6 +529,7 @@ app.post('/api', (req, res) => {
     const usersActions = ['verify_pin', 'get_pin_users', 'get_admin_users', 'add_admin_user', 'delete_admin_user'];
     const featuresActions = ['toggle_feature'];
     const dokumentyDodatkoweActions = ['add_typ_dokumentu', 'save_dokument_klienta', 'delete_dokument_klienta'];
+    const booksyActions = ['booksy_refresh', 'booksy_preview'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -566,6 +570,9 @@ app.post('/api', (req, res) => {
     } else if (dokumentyDodatkoweActions.includes(action)) {
         req.url = '/dokumenty_dodatkowe';
         return dokumentyDodatkoweRoutes(req, res, () => {});
+    } else if (booksyActions.includes(action)) {
+        req.url = '/booksy';
+        return booksyRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });

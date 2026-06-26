@@ -7075,6 +7075,31 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 </div>
 
+<div id="booksy-dzis" class="section">
+    <div class="header">
+        <h1>📅 Dziś w lokalu</h1>
+        <button onclick="odswiezBooksy(this)" class="btn-primary" style="width:auto;">🔄 Pobierz z Booksy</button>
+    </div>
+    <p style="color:#64748b; font-size:15px; margin:-6px 0 18px;">
+        Lista wizyt zapisanych na dziś — na podstawie powiadomień z Booksy. Aktualizuje się sama co kilka minut.
+    </p>
+    <div id="booksy-dzis-content">
+        <div style="padding:40px; text-align:center; color:#999;">⏳ Wczytuję…</div>
+    </div>
+
+    <details style="margin-top:28px; border-top:1px dashed #e2e8f0; padding-top:16px;">
+        <summary style="cursor:pointer; color:#94a3b8; font-size:13px;">🛠 Narzędzie: sprawdź odczyt maila Booksy</summary>
+        <p style="color:#64748b; font-size:13px; margin:10px 0;">
+            Wklej treść maila z Booksy (temat + treść), aby zobaczyć, jak system go rozumie. Nic nie zapisuje.
+        </p>
+        <input id="booksy-prev-subject" placeholder="Temat maila" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:7px; margin-bottom:8px; font-size:13px;">
+        <input id="booksy-prev-from" placeholder="Nadawca (nazwa, opcjonalnie)" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:7px; margin-bottom:8px; font-size:13px;">
+        <textarea id="booksy-prev-text" placeholder="Treść maila (tekst)" rows="7" style="width:100%; padding:9px; border:1px solid #cbd5e1; border-radius:7px; font-size:13px; font-family:inherit;"></textarea>
+        <button onclick="booksyPodglad()" class="btn-primary" style="width:auto; margin-top:8px;">Sprawdź odczyt</button>
+        <pre id="booksy-prev-out" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:7px; padding:12px; margin-top:10px; font-size:12px; overflow:auto; display:none;"></pre>
+    </details>
+</div>
+
 <div id="awaryjna-zmiana" class="section">
     <div class="header">
 	<input type="text" id="search-emergency" onkeyup="_db('aw',filtrujAwaryjne)"
@@ -7527,6 +7552,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="ds-quick-tile" onclick="pokaz('do-sprawdzenia',null)">
           <div class="ds-tile-icon" style="background:#e8f7ef;color:#2fae6a;">🔎</div>
           <div><strong>Do sprawdzenia</strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
+        </div>
+        <div class="ds-quick-tile" onclick="pokaz('booksy-dzis',null)">
+          <div class="ds-tile-icon" style="background:#eafaf4;color:#16a06a;">📅</div>
+          <div><strong>Dziś w lokalu</strong><span>Wizyty z Booksy na dzisiaj</span></div>
         </div>
       </div>
     </div>
@@ -14605,6 +14634,80 @@ function dsProfil(id, nazwa) {
     }
 }
 
+// ==========================================
+// DZIŚ W LOKALU (Booksy)
+// ==========================================
+function ladujBooksyDzis() {
+    const box = document.getElementById('booksy-dzis-content');
+    if (!box) return;
+    box.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">⏳ Wczytuję…</div>';
+    fetch(API_URL + '?action=booksy_dzis')
+        .then(r => r.json())
+        .then(d => {
+            if (d.status !== 'success') { box.innerHTML = '<div style="padding:30px; text-align:center; color:#dc2626;">' + (d.message || 'Błąd wczytywania.') + '</div>'; return; }
+            renderujBooksyDzis(d.wizyty || [], d.skonfigurowane);
+        })
+        .catch(() => { box.innerHTML = '<div style="padding:30px; text-align:center; color:#dc2626;">Błąd połączenia.</div>'; });
+}
+
+function renderujBooksyDzis(wizyty, skonfigurowane) {
+    const box = document.getElementById('booksy-dzis-content');
+    if (!box) return;
+    const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    if (!skonfigurowane) {
+        box.innerHTML = '<div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:18px; color:#9a3412; font-size:14px;">'
+            + 'Integracja z Booksy nie jest jeszcze skonfigurowana na serwerze. Skontaktuj się z administratorem.</div>';
+        return;
+    }
+    if (!wizyty.length) {
+        box.innerHTML = '<div style="background:#f8fafc; border:1px dashed #cbd5e1; border-radius:10px; padding:30px; text-align:center; color:#64748b;">'
+            + '📭 Brak zapisanych wizyt na dziś.<br><span style="font-size:13px;">Jeśli ktoś właśnie się zapisał, kliknij „Pobierz z Booksy".</span></div>';
+        return;
+    }
+
+    let html = '<div style="display:flex; flex-direction:column; gap:10px;">';
+    wizyty.forEach(w => {
+        const godz = esc(w.godz_od || '') + (w.godz_do ? ' – ' + esc(w.godz_do) : '');
+        const tel = w.telefon ? '<a href="tel:' + esc(String(w.telefon).replace(/\s/g,'')) + '" style="color:#16a06a; text-decoration:none;">📞 ' + esc(w.telefon) + '</a>' : '';
+        html += '<div style="display:flex; align-items:flex-start; gap:14px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px 16px; box-shadow:0 1px 2px rgba(0,0,0,.03);">'
+            + '<div style="min-width:104px; font-weight:800; color:#16a06a; font-size:15px;">' + (godz || '—') + '</div>'
+            + '<div style="flex:1;">'
+            +   '<div style="font-weight:700; color:#0f172a; font-size:15px;">' + esc(w.klient || '— (bez nazwiska)') + '</div>'
+            +   (w.zabieg ? '<div style="color:#475569; font-size:13px; margin-top:2px;">' + esc(w.zabieg) + '</div>' : '')
+            +   '<div style="color:#94a3b8; font-size:12px; margin-top:4px;">' + (w.pracownik ? '👩‍⚕️ ' + esc(w.pracownik) : '') + (w.pracownik && tel ? ' · ' : '') + tel + '</div>'
+            + '</div></div>';
+    });
+    html += '</div>';
+    html += '<div style="text-align:right; color:#94a3b8; font-size:12px; margin-top:12px;">Razem: ' + wizyty.length + '</div>';
+    box.innerHTML = html;
+}
+
+function odswiezBooksy(btn) {
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Pobieram…'; }
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'booksy_refresh' }) })
+        .then(r => r.json())
+        .then(d => {
+            if (btn) { btn.disabled = false; btn.textContent = '🔄 Pobierz z Booksy'; }
+            if (d.status === 'success') { ladujBooksyDzis(); }
+            else alert(d.message || 'Nie udało się pobrać z Booksy.');
+        })
+        .catch(() => { if (btn) { btn.disabled = false; btn.textContent = '🔄 Pobierz z Booksy'; } alert('Błąd połączenia.'); });
+}
+
+function booksyPodglad() {
+    const out = document.getElementById('booksy-prev-out');
+    const subject = (document.getElementById('booksy-prev-subject') || {}).value || '';
+    const fromName = (document.getElementById('booksy-prev-from') || {}).value || '';
+    const text = (document.getElementById('booksy-prev-text') || {}).value || '';
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'booksy_preview', subject: subject, fromName: fromName, text: text }) })
+        .then(r => r.json())
+        .then(d => {
+            if (out) { out.style.display = 'block'; out.textContent = JSON.stringify(d.wynik || d, null, 2); }
+        })
+        .catch(() => { if (out) { out.style.display = 'block'; out.textContent = 'Błąd połączenia.'; } });
+}
+
 // Pod-zakładki widoku Klienci: 'kartoteka' | 'karnety'
 function przelaczTabKlienci(tab) {
     const tabKart = document.getElementById('ktab-kartoteka');
@@ -15230,6 +15333,7 @@ function pokaz(id, b) {
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
+    if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -15357,6 +15461,7 @@ function pokaz(id, b) {
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
+    if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -15620,6 +15725,7 @@ function pokaz(id, b) {
     if (id === 'setup-sugestie') pobierzReguly();
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
+    if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
