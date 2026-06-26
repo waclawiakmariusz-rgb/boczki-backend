@@ -14779,12 +14779,7 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
     let dataTxt = '';
     try { dataTxt = dzis.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
     catch (e) { dataTxt = dzis.toISOString().slice(0, 10); }
-    const brandSvg = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">'
-        + '<path d="M5 17C5 9 11 4 19 4c0 8-5 14-13 14a8 8 0 0 1-1-.06Z" stroke="#B65C72" stroke-width="1.4" fill="#F6E7EA"/>'
-        + '<path d="M6 18c2-5 6-9 11-11" stroke="#B65C72" stroke-width="1.4" stroke-linecap="round"/></svg>';
-    const naglowek = '<div class="brand">' + brandSvg
-        + '<div><div class="name">estelio</div><div class="sub">Dziś w lokalu</div></div></div>'
-        + '<div class="head"><div>'
+    const naglowek = '<div class="head"><div>'
         +   '<h1>Dziś w lokalu</h1>'
         +   '<div class="date">' + esc(dataTxt) + '</div>'
         +   '<div class="sync"><span class="dot"></span>Na żywo z Booksy</div>'
