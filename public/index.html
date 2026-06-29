@@ -7642,7 +7642,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="ds-tile-icon" style="background:#e8f7ef;color:#2fae6a;">🔎</div>
           <div><strong>Do sprawdzenia</strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
         </div>
-        <div class="ds-quick-tile" onclick="pokaz('booksy-dzis',null)">
+        <div class="ds-quick-tile" id="ds-tile-booksy" style="display:none;" onclick="pokaz('booksy-dzis',null)">
           <div class="ds-tile-icon" style="background:#eafaf4;color:#16a06a;">📅</div>
           <div><strong>Dziś w lokalu</strong><span>Wizyty z Booksy na dzisiaj</span></div>
         </div>
@@ -11587,6 +11587,7 @@ function uruchomAplikacjePracownika(imie, rola) {
         catch (e) { window.tenantFeatures = []; }
     }
     if (typeof aktualizujMenuFeatures === 'function') aktualizujMenuFeatures();
+    if (typeof aktualizujBooksyWidocznosc === 'function') aktualizujBooksyWidocznosc();
 
     // Odpalamy docelowe zaciąganie danych
     initApp();
@@ -12416,6 +12417,8 @@ function zaladujPulpit() {
 
     const kpiTime = document.getElementById('ds-kpi-time');
     if (kpiTime) kpiTime.textContent = 'Aktualizacja: ' + timeStr;
+
+    if (typeof aktualizujBooksyWidocznosc === 'function') aktualizujBooksyWidocznosc();
 
     const fmtPLN = v => {
         const n = parseFloat(v) || 0;
@@ -14726,9 +14729,25 @@ function dsProfil(id, nazwa) {
 // ==========================================
 // DZIŚ W LOKALU (Booksy)
 // ==========================================
+// Moduł Booksy jest dostępny tylko dla salonu z podpiętą skrzynką (na razie boczki).
+// Gdy zrobimy obsługę wielu salonów, wystarczy podmienić ten warunek na sprawdzenie
+// konfiguracji/feature-flag, a reszta UI zostaje bez zmian.
+const BOOKSY_TENANT_DOZWOLONY = 'boczki-salon-glowny-001';
+function booksyDostepne() {
+    return (typeof uz_tenantId === 'function' ? uz_tenantId() : (localStorage.getItem('boczki_tenant_id') || '')) === BOOKSY_TENANT_DOZWOLONY;
+}
+function aktualizujBooksyWidocznosc() {
+    const tile = document.getElementById('ds-tile-booksy');
+    if (tile) tile.style.display = booksyDostepne() ? '' : 'none';
+}
+
 function ladujBooksyDzis() {
     const box = document.getElementById('booksy-dzis-content');
     if (!box) return;
+    if (!booksyDostepne()) {
+        box.innerHTML = '<div style="padding:30px; text-align:center; color:#94a3b8;">Ten widok nie jest dostępny dla tego konta.</div>';
+        return;
+    }
     box.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">⏳ Wczytuję…</div>';
     fetch(API_URL + '?action=booksy_dzis')
         .then(r => r.json())
