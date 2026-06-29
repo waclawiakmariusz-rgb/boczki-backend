@@ -25,10 +25,24 @@ function dataZTekstu(dzien, miesiacNazwa, rok) {
   return `${rok}-${dwa(m)}-${dwa(parseInt(dzien, 10))}`;
 }
 
+// Wzorce maila "zmiana" (przełożenie/edycja terminu). Booksy używa kilku sformułowań:
+//   "Zmiany w rezerwacji ..."                       (klasyczny — stara godzina w temacie)
+//   "X: zmienił rezerwację" / "zmieniła rezerwację" (przełożenie — stary termin w treści)
+//   "X: zmienił dane rezerwacji"
+//   "X: potwierdzenie propozycji zmiany terminu"    (tylko nowy termin)
+//   treść: "przesunął/przesunęła swoją wizytę ... z dnia ... na inny termin"
+const ZMIANA_WZORCE = [
+  /Zmiany w rezerwacji/i,
+  /zmieni(ł|ła|li|l)\s+(dane\s+)?rezerwacj/i,
+  /przesun(ął|ęła|eli|al|ela)\s+swoj/i,
+  /potwierdzenie propozycji zmiany terminu/i,
+  /potwierdzi(ł|ła|l)\s+Twoją propozycję/i
+];
+
 function rozpoznajTyp(subject, text) {
   const s = (subject || '') + '\n' + (text || '');
   if (/odwoła|odwolanie|Odwołanie/i.test(s)) return 'odwolanie';
-  if (/Zmiany w rezerwacji|zmienił dane rezerwacji|zmienil dane rezerwacji/i.test(s)) return 'zmiana';
+  if (ZMIANA_WZORCE.some(re => re.test(s))) return 'zmiana';
   if (/nowa rezerwacja/i.test(s)) return 'nowa';
   return 'nieznany';
 }
@@ -45,6 +59,16 @@ function kanoniczna(text) {
 function staraZTematu(subject) {
   const re = /(\d{1,2})\s+([A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ]+)\s+(\d{4})\s+o\s+(\d{1,2}:\d{2})/;
   const m = re.exec(subject || '');
+  if (!m) return { data: null, godzOd: null };
+  return { data: dataZTekstu(m[1], m[2], m[3]), godzOd: m[4] };
+}
+
+// Stara wizyta z TREŚCI maila o przełożeniu ("zmienił rezerwację"):
+//   "...przesunął swoją wizytę ... z dnia<dzień tyg>, 20 maja 2026<10:00>na inny termin."
+// Uwaga: w treści tekstowej Booksy fragmenty bywają sklejone (brak spacji) — stąd \s* zamiast \s+.
+function staraZTresci(text) {
+  const re = /z\s*dnia\s*[A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ]+,\s*(\d{1,2})\s+([A-Za-zżźćńółęąśŻŹĆĄŚĘŁÓŃ]+)\s+(\d{4})\s*(\d{1,2}:\d{2})\s*na\b/i;
+  const m = re.exec(text || '');
   if (!m) return { data: null, godzOd: null };
   return { data: dataZTekstu(m[1], m[2], m[3]), godzOd: m[4] };
 }
@@ -132,7 +156,10 @@ function parseBooksyEmail({ subject = '', fromName = '', text = '' } = {}) {
     staraSlotKey: null
   };
   if (typ === 'zmiana') {
-    const st = staraZTematu(subject);
+    // Stary termin: najpierw z treści (przełożenie "z dnia ... na inny termin"),
+    // w razie braku — z tematu (klasyczne "Zmiany w rezerwacji ... o GG:MM").
+    let st = staraZTresci(text);
+    if (!st.data) st = staraZTematu(subject);
     wynik.staraSlotKey = slotKey(st.data, st.godzOd, pracownik);
   }
   return wynik;
