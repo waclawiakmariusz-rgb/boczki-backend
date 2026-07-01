@@ -7171,6 +7171,22 @@ document.addEventListener('DOMContentLoaded', () => {
       #bk-wrap .boards{grid-template-columns:1fr}
       #bk-wrap .tel span{display:none}
     }
+    /* Dark mode — nadpisanie zmiennych + kilku zakodowanych jasnych kolorów. */
+    body.dark-mode #bk-wrap{
+      --cream:#1E1819;--paper:#282022;--ink:#F0E7E8;--muted:#A89A9C;--hair:#3A2F31;
+      --rose:#D08095;--rose-deep:#B85E74;--rose-soft:#3A252A;--gold:#CDAA62;--gold-soft:#37301B;
+      --sage:#8FB093;--sage-soft:#243024;
+      --c-ender:#D08095;--c-ender-bg:#3A252A;--c-hitech:#7FB3AE;--c-hitech-bg:#1F302E;
+      --c-konsult:#CDAA62;--c-konsult-bg:#37301B;--c-lifting:#B79AC2;--c-lifting-bg:#2E2634;
+      --c-adipo:#DA9A72;--c-adipo-bg:#38291E;--c-depil:#BBA99F;--c-depil-bg:#2C2622;
+    }
+    body.dark-mode #bk-wrap .chip b{background:rgba(255,255,255,.12)}
+    body.dark-mode #bk-wrap .appt:hover{background:#2F2628}
+    body.dark-mode #bk-wrap .appt+.appt{border-top-color:#332A2C}
+    body.dark-mode #bk-wrap .badge.maybe{border-color:#5A3A42}
+    body.dark-mode #bk-wrap .badge.new{color:var(--gold)}
+    body.dark-mode #bk-wrap .tel:hover{border-color:#4A2F36}
+    body.dark-mode #bk-wrap .empty{background:var(--paper)}
     </style>
     <div id="booksy-dzis-content">
         <div style="padding:40px; text-align:center; color:#999;">⏳ Wczytuję…</div>
