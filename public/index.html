@@ -7064,7 +7064,6 @@ document.addEventListener('DOMContentLoaded', () => {
 <!-- Do sprawdzenia — pomocny przegląd dla recepcji (link tylko z Pulpitu, NIE w menu po lewej) -->
 <div id="do-sprawdzenia" class="section">
     <style>
-    #do-sprawdzenia .dsx-sub{color:#64748b;font-size:15px;margin:-6px 0 18px}
     #do-sprawdzenia .dsx-summary{background:#fff;border:1px solid #eef2f7;border-radius:14px;padding:14px 16px;margin-bottom:18px;color:#475569}
     #do-sprawdzenia .dsx-summary.ok{background:#f3fbf6;border-color:#cdeede;color:#2fae6a;font-weight:700;text-align:center}
     #do-sprawdzenia .dsx-summary.err{background:#fef2f2;border-color:#fecaca;color:#b91c1c;font-weight:600;text-align:center}
@@ -7093,10 +7092,10 @@ document.addEventListener('DOMContentLoaded', () => {
     #do-sprawdzenia .dsx-btn:hover{background:#e2e8f0}
     #do-sprawdzenia .dsx-btn.act{background:#eef6ff;color:#2563eb;border-color:#bfdbfe}
     #do-sprawdzenia .dsx-btn.act:hover{background:#dbeafe}
+    #do-sprawdzenia .dsx-single{display:inline-block;background:#eef2f7;color:#64748b;border:1px solid #e2e8f0;border-radius:6px;padding:1px 7px;font-size:11.5px;font-weight:600;margin-top:3px}
     #do-sprawdzenia .dsx-pom{margin-top:6px;color:#94a3b8;font-size:13px}
     #do-sprawdzenia .dsx-pom summary{cursor:pointer;text-align:center;padding:6px}
     #do-sprawdzenia .dsx-pom a{color:#b87080;font-weight:600}
-    body.dark-mode #do-sprawdzenia .dsx-sub{color:#94a3b8}
     body.dark-mode #do-sprawdzenia .dsx-summary{background:#1e293b;border-color:#334155;color:#cbd5e1}
     body.dark-mode #do-sprawdzenia .dsx-summary.ok{background:#0f2a1d;border-color:#14532d;color:#4ade80}
     body.dark-mode #do-sprawdzenia .dsx-summary.err{background:#2b1214;border-color:#7f1d1d;color:#f87171}
@@ -7116,14 +7115,12 @@ document.addEventListener('DOMContentLoaded', () => {
     body.dark-mode #do-sprawdzenia .dsx-btn:hover{background:#475569}
     body.dark-mode #do-sprawdzenia .dsx-btn.act{background:#1e3a5f;color:#93c5fd;border-color:#1d4ed8}
     body.dark-mode #do-sprawdzenia .dsx-btn.act:hover{background:#1d4ed8}
+    body.dark-mode #do-sprawdzenia .dsx-single{background:#334155;color:#cbd5e1;border-color:#475569}
     </style>
     <div class="header">
         <h1>🔎 Do sprawdzenia</h1>
         <button onclick="ladujDoSprawdzenia()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
-    <p class="dsx-sub">
-        Spokojny przegląd rzeczy, które warto ogarnąć — żeby nic nie umknęło. To tylko podpowiedzi, nic się nie psuje.
-    </p>
     <div id="ds-spr-content">
         <div style="padding:40px; text-align:center; color:#999;">⏳ Sprawdzam…</div>
     </div>
@@ -14730,18 +14727,30 @@ function renderujDoSprawdzenia(box, d) {
     )).join('');
 
     // Sekcja 3 — karnety, z akcjami wprost z panelu (przedłuż / zakończ)
+    const fmtData = (iso) => {
+        const parts = String(iso || '').split('-');
+        return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : (iso || '');
+    };
     const html3 = wygasajace.map(w => {
-        const parts = String(w.data_waznosci).split('-');
-        const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : w.data_waznosci;
+        const dataFmt = fmtData(w.data_waznosci);
         let badge, klasa;
         if (w.diff < 0) { badge = `wygasł ${Math.abs(w.diff)} dni temu`; klasa = 'dsx-crit'; }
         else if (w.diff === 0) { badge = 'wygasa DZIŚ'; klasa = 'dsx-warn'; }
         else { badge = `wygasa za ${w.diff} dni`; klasa = 'dsx-warn'; }
         const gr = esc(w.grupa_id || '');
         const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
+        // Pojedynczy zabieg (brak mnogości typu "10x" w szczegółach) — klient mógł go
+        // wykorzystać już w dniu zakupu, więc "wygasa" bywa tu fałszywym alarmem.
+        const mnog = String(w.szczegoly || w.zabieg || '').match(/(\d+)\s*x/i);
+        const pojedynczy = !mnog || parseInt(mnog[1], 10) <= 1;
+        const infoPoj = pojedynczy
+            ? `<br><span class="dsx-single" title="To pojedynczy zabieg, nie karnet wielorazowy — klient mógł go wykorzystać w dniu zakupu. Jeśli tak, po prostu Zakończ.">1× pojedynczy — mógł być wykorzystany w dniu zakupu${w.data_zakupu ? ' (' + escHtml(fmtData(w.data_zakupu)) + ')' : ''}</span>`
+            : '';
         return wiersz(
             klientLink(w.klient, String(w.id_klienta || '').trim() || w.id_dopasowane || ''),
-            escHtml(w.zabieg || 'karnet'),
+            escHtml(w.zabieg || 'karnet')
+                + (w.szczegoly ? ` <span class="dsx-mut">· ${escHtml(w.szczegoly)}</span>` : '')
+                + infoPoj,
             `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
             btnP(30) + btnP(60) + btnP(90)
                 + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
@@ -14752,7 +14761,7 @@ function renderujDoSprawdzenia(box, d) {
     const lacznie = dawne.length + bezKlienta.length + wygasajace.length;
     const podsumowanie = lacznie === 0
         ? `<div class="dsx-summary ok">🎉 Wszystko ogarnięte — nic nie wymaga teraz uwagi.</div>`
-        : `<div class="dsx-summary">Znalazłem <strong>${lacznie}</strong> ${lacznie === 1 ? 'rzecz' : 'rzeczy'} do spokojnego sprawdzenia. Kliknij w nazwisko, żeby wejść w kartę klienta.</div>`;
+        : `<div class="dsx-summary"><strong>${lacznie}</strong> ${lacznie === 1 ? 'rzecz' : 'rzeczy'} do sprawdzenia. Kliknij w nazwisko, żeby wejść w kartę klienta.</div>`;
 
     // Lista pominiętych — kto, kiedy, z możliwością pojedynczego przywrócenia.
     let pomHtml = '';

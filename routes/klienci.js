@@ -280,7 +280,8 @@ module.exports = (db) => {
           AND (DATEDIFF(CURDATE(), z.data_wplaty) >= 45 OR COALESCE(z.id_klienta, '') = '')
         ORDER BY z.data_wplaty ASC`;
       const qKarnety = `
-        SELECT s.id, s.klient, s.id_klienta, s.zabieg, s.grupa_id,
+        SELECT s.id, s.klient, s.id_klienta, s.zabieg, s.szczegoly, s.grupa_id,
+               DATE_FORMAT(s.data_sprzedazy, '%Y-%m-%d') AS data_zakupu,
                DATE_FORMAT(s.data_waznosci, '%Y-%m-%d') AS data_waznosci,
                DATEDIFF(s.data_waznosci, CURDATE()) AS diff,
                (SELECT k.id_klienta FROM Klienci k
@@ -307,8 +308,8 @@ module.exports = (db) => {
               })),
               karnety: (karnety || []).map(r => ({
                 id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
-                zabieg: r.zabieg || '', grupa_id: r.grupa_id || null,
-                data_waznosci: r.data_waznosci, diff: Number(r.diff),
+                zabieg: r.zabieg || '', szczegoly: r.szczegoly || '', grupa_id: r.grupa_id || null,
+                data_zakupu: r.data_zakupu, data_waznosci: r.data_waznosci, diff: Number(r.diff),
                 id_dopasowane: String(r.id_dopasowane || '')
               })),
               pominiete: (pominiete || []).map(r => ({
