@@ -14997,6 +14997,13 @@ function renderujBooksyDokumenty(el, wizyty, jutro) {
         return;
     }
 
+    // Tylko nierozpoznani klienci lub zabiegi oznaczone jako pierwsza wizyta.
+    wizyty = wizyty.filter(w => !w.id_klienta || /pierwsza\s+wizyta/i.test(w.zabieg || ''));
+    if (!wizyty.length) {
+        el.innerHTML = html + '<div class="dempty">Wszyscy jutrzejsi klienci są rozpoznani i nie ma pierwszych wizyt — brak dokumentów do przygotowania.</div></div>';
+        return;
+    }
+
     // Chipsy: jakie typy zabiegów będą jutro (ile sztuk).
     const licz = {};
     wizyty.forEach(w => {
