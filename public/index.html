@@ -14752,7 +14752,7 @@ function renderujDoSprawdzenia(box, d) {
                 + (w.szczegoly ? ` <span class="dsx-mut">· ${escHtml(w.szczegoly)}</span>` : '')
                 + infoPoj,
             `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
-            btnP(30) + btnP(60) + btnP(90)
+            btnP(7) + btnP(14) + btnP(30)
                 + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
                 + btnPomin(w.id, 'karnet')
         );
