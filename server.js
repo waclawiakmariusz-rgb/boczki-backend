@@ -461,6 +461,7 @@ app.get('/api', (req, res) => {
         'get_typy_dokumentow': '/api/dokumenty_dodatkowe?action=get_typy_dokumentow&tenant_id=' + tenant_id,
         'get_dokumenty_klienta': '/api/dokumenty_dodatkowe?action=get_dokumenty_klienta&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
         'booksy_dzis': '/api/booksy?action=booksy_dzis&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
+        'booksy_dokumenty': '/api/booksy?action=booksy_dokumenty&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
     };
 
     if (getActions[action]) {

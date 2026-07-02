@@ -137,6 +137,56 @@ function slotKey(data, godzOd, pracownik) {
   return `${data} ${godzOd} ${(pracownik || '').toLowerCase().replace(/\s+/g, ' ').trim()}`;
 }
 
+// Rezerwacja może mieć KILKA usług w jednym mailu (~26% maili). Każda usługa to blok:
+//   <nazwa zabiegu>            (bywa sklejona: "0 minut\t<nazwa>" po "Czas oczekiwania:")
+//   [<cena> zł,]               (opcjonalna; czasem cena i godziny w jednej linii)
+//   <HH:MM - HH:MM>
+//   pracownik:
+//   <imię i nazwisko>
+// Zwraca [{ zabieg, godzOd, godzDo, pracownik }] — po jednym na usługę.
+function uslugiZTekstu(text) {
+  if (!text) return [];
+  const linie = text.split(/\r?\n/);
+  const uslugi = [];
+  let blokStart = 0;
+  for (let i = 0; i < linie.length; i++) {
+    const mp = /pracownik:\s*(.*)/i.exec(linie[i]);
+    if (!mp) continue;
+    let prac = (mp[1] || '').trim();
+    let j = i + 1;
+    while (!prac && j < linie.length) { prac = linie[j].trim(); j++; }
+
+    // Godziny usługi: najbliższa (idąc wstecz) linia z zakresem HH:MM - HH:MM.
+    // Linię kanoniczną z datą (zawiera rok) pomijamy — to zakres CAŁEJ rezerwacji.
+    let godzOd = null, godzDo = null, czasIdx = -1;
+    for (let k = i - 1; k >= blokStart; k--) {
+      const lk = linie[k] || '';
+      if (/\d{4}/.test(lk)) continue;
+      const mt = /(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})/.exec(lk);
+      if (mt) { godzOd = mt[1]; godzDo = mt[2]; czasIdx = k; break; }
+    }
+
+    // Nazwa zabiegu: najbliższa sensowna linia przed godzinami.
+    let zabieg = null;
+    for (let k = (czasIdx >= 0 ? czasIdx - 1 : i - 1); k >= blokStart; k--) {
+      const lk = String(linie[k] || '').trim();
+      if (!lk || lk === 'None') continue;
+      if (/^\d+,\d{2}\s*zł/i.test(lk)) continue;
+      if (/^czas oczekiwania:/i.test(lk)) continue;
+      const gm = /minut\t+(.+)/.exec(lk);
+      if (gm) { zabieg = gm[1].trim(); break; }
+      if (/^\d/.test(lk)) continue;
+      if (/https?:\/\//i.test(lk) || /@/.test(lk)) continue;
+      zabieg = lk;
+      break;
+    }
+
+    if (godzOd) uslugi.push({ zabieg: zabieg || null, godzOd, godzDo, pracownik: prac || null });
+    blokStart = j;
+  }
+  return uslugi;
+}
+
 // Główna funkcja. Wejście: { subject, fromName, text } (text = czysty tekst maila).
 function parseBooksyEmail({ subject = '', fromName = '', text = '' } = {}) {
   const typ = rozpoznajTyp(subject, text);
@@ -161,6 +211,27 @@ function parseBooksyEmail({ subject = '', fromName = '', text = '' } = {}) {
     let st = staraZTresci(text);
     if (!st.data) st = staraZTematu(subject);
     wynik.staraSlotKey = slotKey(st.data, st.godzOd, pracownik);
+  }
+
+  // Lista usług (rezerwacja wielousługowa = kilka wizyt). Fallback: pojedyncza
+  // usługa z pól top-level, żeby zachować dotychczasowe zachowanie.
+  const bloki = uslugiZTekstu(text);
+  const widziane = new Set();
+  wynik.uslugi = [];
+  for (const u of bloki) {
+    const sk = slotKey(kan.data, u.godzOd, u.pracownik || pracownik);
+    if (!sk || widziane.has(sk)) continue;
+    widziane.add(sk);
+    wynik.uslugi.push({
+      zabieg: u.zabieg, godzOd: u.godzOd, godzDo: u.godzDo,
+      pracownik: u.pracownik || pracownik, dataWizyty: kan.data, slotKey: sk
+    });
+  }
+  if (!wynik.uslugi.length && wynik.slotKey) {
+    wynik.uslugi.push({
+      zabieg: wynik.zabieg, godzOd: kan.godzOd, godzDo: kan.godzDo,
+      pracownik, dataWizyty: kan.data, slotKey: wynik.slotKey
+    });
   }
   return wynik;
 }

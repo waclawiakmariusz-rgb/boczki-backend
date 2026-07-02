@@ -63,55 +63,92 @@ module.exports = (db) => {
   );
 
   // ==========================================
-  // UPSERT pojedynczej wizyty (callback-based)
+  // UPSERT wizyty (callback-based). Rezerwacja może mieć KILKA usług (w.uslugi)
+  // — każda usługa to osobny wiersz/slot. Fallback na pola top-level dla
+  // starych wyników parsera bez uslugi[].
   // ==========================================
+  function uslugiZ(w) {
+    if (w.uslugi && w.uslugi.length) return w.uslugi;
+    if (!w.slotKey) return [];
+    return [{ zabieg: w.zabieg, godzOd: w.godzOd, godzDo: w.godzDo, pracownik: w.pracownik, dataWizyty: w.dataWizyty, slotKey: w.slotKey }];
+  }
+
   function upsertWizyta(tenant_id, w, uid, cb) {
-    // Odwołanie: oznacz pasujący slot jako 'odwolana'. Bez slotKey nie ma czego oznaczyć.
+    const uslugi = uslugiZ(w);
+
+    // Odwołanie: oznacz KAŻDĄ usługę rezerwacji jako 'odwolana'.
     if (w.typ === 'odwolanie') {
-      if (!w.slotKey) return cb();
-      return db.query(
-        `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW() WHERE tenant_id=? AND slot_key=?`,
-        [tenant_id, w.slotKey],
-        () => cb()
-      );
+      const odwolaj = (i) => {
+        if (i >= uslugi.length) return cb();
+        if (!uslugi[i].slotKey) return odwolaj(i + 1);
+        db.query(
+          `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW() WHERE tenant_id=? AND slot_key=?`,
+          [tenant_id, uslugi[i].slotKey],
+          () => odwolaj(i + 1)
+        );
+      };
+      return odwolaj(0);
     }
 
-    // nowa / zmiana: musi być slotKey (data+godzina+pracownik z linii kanonicznej).
     if (w.typ !== 'nowa' && w.typ !== 'zmiana') return cb();
-    if (!w.slotKey || !w.dataWizyty || !w.godzOd) return cb();
 
-    db.query(
-      `INSERT INTO WizytyBooksy
-         (tenant_id, slot_key, klient, telefon, email, data_wizyty, godz_od, godz_do, zabieg, pracownik, status, zrodlo_uid, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'zapisana', ?, NOW())
-       ON DUPLICATE KEY UPDATE
-         klient      = COALESCE(NULLIF(VALUES(klient), ''), klient),
-         telefon     = COALESCE(NULLIF(VALUES(telefon), ''), telefon),
-         email       = COALESCE(NULLIF(VALUES(email), ''), email),
-         data_wizyty = VALUES(data_wizyty),
-         godz_od     = VALUES(godz_od),
-         godz_do     = COALESCE(NULLIF(VALUES(godz_do), ''), godz_do),
-         zabieg      = COALESCE(NULLIF(VALUES(zabieg), ''), zabieg),
-         pracownik   = COALESCE(NULLIF(VALUES(pracownik), ''), pracownik),
-         status      = 'zapisana',
-         zrodlo_uid  = VALUES(zrodlo_uid),
-         updated_at  = NOW()`,
-      [
-        tenant_id, w.slotKey, w.klient || '', w.telefon || '', w.email || '',
-        w.dataWizyty, w.godzOd, w.godzDo || '', w.zabieg || '', w.pracownik || '', uid || null
-      ],
-      () => {
-        // Zmiana godziny: stary slot oznacz jako odwołany.
-        if (w.typ === 'zmiana' && w.staraSlotKey && w.staraSlotKey !== w.slotKey) {
-          return db.query(
+    const noweSloty = uslugi.filter(u => u.slotKey).map(u => u.slotKey);
+
+    // Po wstawieniu nowych slotów: przełożenie -> odwołaj STARE sloty rezerwacji.
+    // Znamy stary slot pierwszej usługi (staraSlotKey); pozostałe usługi tej samej
+    // rezerwacji rozpoznajemy po wspólnym zrodlo_uid wiersza ze starym slotem.
+    const zamknijStare = () => {
+      if (!(w.typ === 'zmiana' && w.staraSlotKey && !noweSloty.includes(w.staraSlotKey))) return cb();
+      db.query(
+        `SELECT zrodlo_uid FROM WizytyBooksy WHERE tenant_id=? AND slot_key=?`,
+        [tenant_id, w.staraSlotKey],
+        (err, rows) => {
+          const uidStary = (!err && rows && rows.length) ? rows[0].zrodlo_uid : null;
+          if (uidStary != null && noweSloty.length) {
+            return db.query(
+              `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW()
+                WHERE tenant_id=? AND status='zapisana' AND zrodlo_uid=? AND slot_key NOT IN (?)`,
+              [tenant_id, uidStary, noweSloty],
+              () => cb()
+            );
+          }
+          db.query(
             `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW() WHERE tenant_id=? AND slot_key=?`,
             [tenant_id, w.staraSlotKey],
             () => cb()
           );
         }
-        cb();
-      }
-    );
+      );
+    };
+
+    const wstaw = (i) => {
+      if (i >= uslugi.length) return zamknijStare();
+      const u = uslugi[i];
+      if (!u.slotKey || !u.dataWizyty || !u.godzOd) return wstaw(i + 1);
+      db.query(
+        `INSERT INTO WizytyBooksy
+           (tenant_id, slot_key, klient, telefon, email, data_wizyty, godz_od, godz_do, zabieg, pracownik, status, zrodlo_uid, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'zapisana', ?, NOW())
+         ON DUPLICATE KEY UPDATE
+           klient      = COALESCE(NULLIF(VALUES(klient), ''), klient),
+           telefon     = COALESCE(NULLIF(VALUES(telefon), ''), telefon),
+           email       = COALESCE(NULLIF(VALUES(email), ''), email),
+           data_wizyty = VALUES(data_wizyty),
+           godz_od     = VALUES(godz_od),
+           godz_do     = COALESCE(NULLIF(VALUES(godz_do), ''), godz_do),
+           zabieg      = COALESCE(NULLIF(VALUES(zabieg), ''), zabieg),
+           pracownik   = COALESCE(NULLIF(VALUES(pracownik), ''), pracownik),
+           status      = 'zapisana',
+           zrodlo_uid  = VALUES(zrodlo_uid),
+           updated_at  = NOW()`,
+        [
+          tenant_id, u.slotKey, w.klient || '', w.telefon || '', w.email || '',
+          u.dataWizyty, u.godzOd, u.godzDo || '', u.zabieg || '', u.pracownik || '', uid || null
+        ],
+        () => wstaw(i + 1)
+      );
+    };
+    wstaw(0);
   }
 
   // ==========================================
@@ -218,48 +255,97 @@ module.exports = (db) => {
   }
 
   // ==========================================
-  // GET /booksy — booksy_dzis
+  // GET /booksy — booksy_dzis, booksy_dokumenty
   // ==========================================
+  // Wizyty danego dnia + skojarzenie z kartoteką Estelio:
+  //   1) po telefonie (ostatnie 9 cyfr, ignorując spacje/+48) — pewne,
+  //   2) zapasowo po imieniu i nazwisku — orientacyjne.
+  function wizytyDnia(tenant_id, whereData, params, cb) {
+    db.query(
+      `SELECT w.slot_key, w.klient, w.telefon, w.email, w.data_wizyty, w.godz_od, w.godz_do, w.zabieg, w.pracownik, w.status,
+         (SELECT k.id_klienta FROM Klienci k
+            WHERE k.tenant_id = w.tenant_id AND w.telefon <> ''
+              AND LENGTH(REGEXP_REPLACE(k.telefon, '[^0-9]', '')) >= 9
+              AND RIGHT(REGEXP_REPLACE(k.telefon, '[^0-9]', ''), 9) = RIGHT(REGEXP_REPLACE(w.telefon, '[^0-9]', ''), 9)
+            LIMIT 1) AS id_tel,
+         (SELECT k.id_klienta FROM Klienci k
+            WHERE k.tenant_id = w.tenant_id AND w.klient <> ''
+              AND LOWER(TRIM(k.imie_nazwisko)) = LOWER(TRIM(w.klient))
+            LIMIT 1) AS id_nazwa
+         FROM WizytyBooksy w
+        WHERE w.tenant_id = ? AND ${whereData} AND w.status = 'zapisana'
+        ORDER BY w.godz_od ASC, w.pracownik ASC`,
+      params,
+      (err, rows) => {
+        if (err) return cb(err);
+        const wizyty = (rows || []).map(r => {
+          const idTel = r.id_tel != null ? String(r.id_tel) : '';
+          const idNaz = r.id_nazwa != null ? String(r.id_nazwa) : '';
+          const id_klienta = idTel || idNaz;
+          const dopasowano = idTel ? 'telefon' : (idNaz ? 'nazwa' : null);
+          const { id_tel, id_nazwa, ...reszta } = r;
+          return { ...reszta, id_klienta, dopasowano };
+        });
+        cb(null, wizyty);
+      }
+    );
+  }
+
   router.get('/booksy', (req, res) => {
     const tenant_id = req.query.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
     const action = req.query.action;
+    const data = req.query.data && /^\d{4}-\d{2}-\d{2}$/.test(req.query.data) ? req.query.data : null;
 
     if (action === 'booksy_dzis') {
-      const data = req.query.data && /^\d{4}-\d{2}-\d{2}$/.test(req.query.data) ? req.query.data : null;
       const where = data ? 'w.data_wizyty = ?' : 'w.data_wizyty = CURDATE()';
       const params = data ? [tenant_id, data] : [tenant_id];
-      // Skojarzenie wizyty z kartoteką Estelio:
-      //   1) po telefonie (ostatnie 9 cyfr, ignorując spacje/+48) — pewne,
-      //   2) zapasowo po imieniu i nazwisku — orientacyjne.
-      return db.query(
-        `SELECT w.slot_key, w.klient, w.telefon, w.email, w.data_wizyty, w.godz_od, w.godz_do, w.zabieg, w.pracownik, w.status,
-           (SELECT k.id_klienta FROM Klienci k
-              WHERE k.tenant_id = w.tenant_id AND w.telefon <> ''
-                AND LENGTH(REGEXP_REPLACE(k.telefon, '[^0-9]', '')) >= 9
-                AND RIGHT(REGEXP_REPLACE(k.telefon, '[^0-9]', ''), 9) = RIGHT(REGEXP_REPLACE(w.telefon, '[^0-9]', ''), 9)
-              LIMIT 1) AS id_tel,
-           (SELECT k.id_klienta FROM Klienci k
-              WHERE k.tenant_id = w.tenant_id AND w.klient <> ''
-                AND LOWER(TRIM(k.imie_nazwisko)) = LOWER(TRIM(w.klient))
-              LIMIT 1) AS id_nazwa
-           FROM WizytyBooksy w
-          WHERE w.tenant_id = ? AND ${where} AND w.status = 'zapisana'
-          ORDER BY w.godz_od ASC, w.pracownik ASC`,
-        params,
-        (err, rows) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          const wizyty = (rows || []).map(r => {
-            const idTel = r.id_tel != null ? String(r.id_tel) : '';
-            const idNaz = r.id_nazwa != null ? String(r.id_nazwa) : '';
-            const id_klienta = idTel || idNaz;
-            const dopasowano = idTel ? 'telefon' : (idNaz ? 'nazwa' : null);
-            const { id_tel, id_nazwa, ...reszta } = r;
-            return { ...reszta, id_klienta, dopasowano };
-          });
+      return wizytyDnia(tenant_id, where, params, (err, wizyty) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        return res.json({ status: 'success', wizyty, skonfigurowane: !!(IMAP_USER && IMAP_PASS) });
+      });
+    }
+
+    // Wizyty na wskazany dzień (domyślnie JUTRO) + status dokumentów rozpoznanych
+    // klientów (RODO z Klienci, dodatkowe dokumenty z Dokumenty_Dodatkowe_Klienta)
+    // — do widoku "Dokumenty do przygotowania na jutro".
+    if (action === 'booksy_dokumenty') {
+      const where = data ? 'w.data_wizyty = ?' : 'w.data_wizyty = DATE_ADD(CURDATE(), INTERVAL 1 DAY)';
+      const params = data ? [tenant_id, data] : [tenant_id];
+      return wizytyDnia(tenant_id, where, params, (err, wizyty) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        const ids = [...new Set(wizyty.filter(w => w.id_klienta).map(w => String(w.id_klienta)))];
+        if (!ids.length) {
+          wizyty.forEach(w => { w.rodo = null; w.dokumenty = []; });
           return res.json({ status: 'success', wizyty, skonfigurowane: !!(IMAP_USER && IMAP_PASS) });
         }
-      );
+        db.query(
+          `SELECT id_klienta, rodo FROM Klienci WHERE tenant_id = ? AND id_klienta IN (?)`,
+          [tenant_id, ids],
+          (e2, kl) => {
+            const rodoMap = {};
+            (kl || []).forEach(k => {
+              const v = String(k.rodo || '').toUpperCase();
+              rodoMap[String(k.id_klienta)] = (v === 'TAK' || v === '1' || v === 'TRUE');
+            });
+            db.query(
+              `SELECT id_klienta, typ_nazwa FROM Dokumenty_Dodatkowe_Klienta WHERE tenant_id = ? AND id_klienta IN (?)`,
+              [tenant_id, ids],
+              (e3, dk) => {
+                const dokMap = {};
+                (dk || []).forEach(d => { (dokMap[String(d.id_klienta)] = dokMap[String(d.id_klienta)] || []).push(d.typ_nazwa); });
+                wizyty.forEach(w => {
+                  if (w.id_klienta) {
+                    w.rodo = rodoMap[String(w.id_klienta)] || false;
+                    w.dokumenty = dokMap[String(w.id_klienta)] || [];
+                  } else { w.rodo = null; w.dokumenty = []; }
+                });
+                return res.json({ status: 'success', wizyty, skonfigurowane: !!(IMAP_USER && IMAP_PASS) });
+              }
+            );
+          }
+        );
+      });
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja GET booksy: ' + action });

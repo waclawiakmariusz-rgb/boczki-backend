@@ -7163,6 +7163,18 @@ document.addEventListener('DOMContentLoaded', () => {
     #bk-wrap .legend .item{display:flex;align-items:center;gap:6px}
     #bk-wrap .legend .sw{width:11px;height:11px;border-radius:3px}
     #bk-wrap .empty{background:#fff;border:1px dashed var(--hair);border-radius:16px;padding:40px;text-align:center;color:var(--muted)}
+    /* Dokumenty do przygotowania na jutro */
+    #bk-wrap .docs{margin-top:30px;background:var(--paper);border:1px solid var(--hair);border-radius:18px;padding:20px 22px}
+    #bk-wrap .docs h2{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--ink);line-height:1.1}
+    #bk-wrap .docs .dsub{font-size:12.5px;color:var(--muted);margin-top:3px;margin-bottom:14px;text-transform:capitalize}
+    #bk-wrap .docs .chips{margin-bottom:14px}
+    #bk-wrap .drow{display:flex;gap:14px;padding:12px 4px;border-top:1px solid var(--hair);align-items:flex-start}
+    #bk-wrap .drow .dbody{flex:1;min-width:0}
+    #bk-wrap .dpills{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+    #bk-wrap .dpill{font-size:11px;font-weight:600;padding:3px 10px;border-radius:16px;background:var(--rose-soft);color:var(--rose-deep);display:inline-flex;align-items:center;gap:5px}
+    #bk-wrap .dpill.start{background:var(--gold-soft);color:#9A7A24}
+    #bk-wrap .dpill.okk{background:var(--sage-soft);color:var(--sage)}
+    #bk-wrap .docs .dempty{padding:16px 4px;color:var(--muted);font-size:13px;border-top:1px solid var(--hair)}
     @media(max-width:820px){
       #bk-wrap{padding:18px 14px}
       #bk-wrap .head h1{font-size:34px}
@@ -7187,6 +7199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     body.dark-mode #bk-wrap .badge.new{color:var(--gold)}
     body.dark-mode #bk-wrap .tel:hover{border-color:#4A2F36}
     body.dark-mode #bk-wrap .empty{background:var(--paper)}
+    body.dark-mode #bk-wrap .dpill.start{color:var(--gold)}
     </style>
     <div id="booksy-dzis-content">
         <div style="padding:40px; text-align:center; color:#999;">⏳ Wczytuję…</div>
@@ -14845,7 +14858,9 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
             + '<div class="empty"><div style="font-size:30px; margin-bottom:8px;">🌿</div>'
             + '<div style="font-weight:600; color:var(--ink); font-size:16px;">Na dziś nie ma jeszcze żadnych wizyt.</div>'
             + '<div style="font-size:13px; margin-top:5px;">Gdy ktoś się zapisze, pojawi się tutaj. Możesz też kliknąć „Pobierz z Booksy".</div></div>'
+            + '<div id="bk-docs"></div>'
             + wrapClose;
+        ladujBooksyDokumenty();
         return;
     }
 
@@ -14945,7 +14960,100 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
     });
     boards += '</div>';
 
-    box.innerHTML = wrapOpen + naglowek + summary + chipsHtml + boards + legenda + wrapClose;
+    box.innerHTML = wrapOpen + naglowek + summary + chipsHtml + boards + '<div id="bk-docs"></div>' + legenda + wrapClose;
+    ladujBooksyDokumenty();
+}
+
+// „Dokumenty do przygotowania na jutro" — pobiera jutrzejsze wizyty z Booksy
+// wraz z informacją o RODO i podpisanych dokumentach dodatkowych klienta.
+function ladujBooksyDokumenty() {
+    const el = document.getElementById('bk-docs');
+    if (!el) return;
+    const jutro = new Date();
+    jutro.setDate(jutro.getDate() + 1);
+    const pad = (n) => String(n).padStart(2, '0');
+    const iso = jutro.getFullYear() + '-' + pad(jutro.getMonth() + 1) + '-' + pad(jutro.getDate());
+    fetch(API_URL + '?action=booksy_dokumenty&data=' + iso)
+        .then(r => r.json())
+        .then(d => {
+            if (d.status !== 'success') { el.innerHTML = ''; return; }
+            renderujBooksyDokumenty(el, d.wizyty || [], jutro);
+        })
+        .catch(() => { el.innerHTML = ''; });
+}
+
+function renderujBooksyDokumenty(el, wizyty, jutro) {
+    const esc = booksyEsc;
+    let dataTxt = '';
+    try { dataTxt = jutro.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }); }
+    catch (e) { dataTxt = jutro.toISOString().slice(0, 10); }
+
+    let html = '<div class="docs">'
+        + '<h2>📄 Dokumenty do przygotowania na jutro</h2>'
+        + '<div class="dsub">' + esc(dataTxt) + '</div>';
+
+    if (!wizyty.length) {
+        el.innerHTML = html + '<div class="dempty">Na jutro nie ma jeszcze wizyt z Booksy.</div></div>';
+        return;
+    }
+
+    // Chipsy: jakie typy zabiegów będą jutro (ile sztuk).
+    const licz = {};
+    wizyty.forEach(w => {
+        const z = String(w.zabieg || '').trim() || 'Inne';
+        licz[z] = (licz[z] || 0) + 1;
+    });
+    const klucze = Object.keys(licz).sort((a, b) => licz[b] - licz[a] || a.localeCompare(b, 'pl'));
+    html += '<div class="chips">';
+    klucze.forEach(z => {
+        const kat = booksyKategoria(z);
+        html += '<span class="chip" style="color:var(' + kat.col + ');background:var(' + kat.col + '-bg)">'
+            + esc(z) + '<b>' + licz[z] + '</b></span>';
+    });
+    html += '</div>';
+
+    wizyty.forEach(w => {
+        const kat = booksyKategoria(w.zabieg);
+        const nazwaKl = w.klient || '— bez nazwiska';
+        let badge;
+        if (w.id_klienta) {
+            badge = (w.dopasowano === 'telefon')
+                ? '<span class="badge ok">✓ klient</span>'
+                : '<span class="badge maybe">≈ w bazie?</span>';
+        } else {
+            badge = '<span class="badge new">nowy klient</span>';
+        }
+
+        const dokumenty = (w.dokumenty || []).map(x => String(x || '').toLowerCase());
+        let pills = '';
+        if (!w.id_klienta) {
+            pills += '<span class="dpill start">★ PAKIET STARTOWY</span>'
+                + '<span class="dpill">Karta klienta (założenie kartoteki)</span>'
+                + '<span class="dpill">Regulamin + wyciąg</span>'
+                + '<span class="dpill">Zgody RODO</span>'
+                + '<span class="dpill">Zgoda na zabieg — ' + esc(kat.label) + '</span>'
+                + '<span class="dpill">Zgoda na fotografię (przed/po)</span>';
+        } else {
+            const brakRodo = !w.rodo;
+            const brakZgodyZabieg = !dokumenty.some(x => x.includes('zgoda na zabieg'));
+            if (brakRodo) pills += '<span class="dpill">Zgody RODO — brak podpisu</span>';
+            if (brakZgodyZabieg) pills += '<span class="dpill">Zgoda na zabieg — ' + esc(kat.label) + '</span>';
+            if (!brakRodo && !brakZgodyZabieg) pills += '<span class="dpill okk">✓ komplet dokumentów</span>';
+        }
+
+        const desc = w.zabieg ? '<span class="desc">' + esc(w.zabieg) + '</span>' : '';
+        const chip = '<span class="cat" style="color:var(' + kat.col + ');background:var(' + kat.col + '-bg)">' + esc(kat.label) + '</span>';
+        html += '<div class="drow">'
+            + '<div class="time">' + esc(w.godz_od || '—') + (w.godz_do ? '<div class="end">' + esc(w.godz_do) + '</div>' : '') + '</div>'
+            + '<div class="dbody">'
+            +   '<div class="row1"><span class="cname anon">' + esc(nazwaKl) + '</span>' + badge + '</div>'
+            +   '<div class="row2">' + chip + desc + '</div>'
+            +   '<div class="dpills">' + pills + '</div>'
+            + '</div>'
+            + '</div>';
+    });
+
+    el.innerHTML = html + '</div>';
 }
 
 function odswiezBooksy(btn) {
