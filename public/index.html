@@ -7063,11 +7063,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- Do sprawdzenia — pomocny przegląd dla recepcji (link tylko z Pulpitu, NIE w menu po lewej) -->
 <div id="do-sprawdzenia" class="section">
+    <style>
+    #do-sprawdzenia .dsx-sub{color:#64748b;font-size:15px;margin:-6px 0 18px}
+    #do-sprawdzenia .dsx-summary{background:#fff;border:1px solid #eef2f7;border-radius:14px;padding:14px 16px;margin-bottom:18px;color:#475569}
+    #do-sprawdzenia .dsx-summary.ok{background:#f3fbf6;border-color:#cdeede;color:#2fae6a;font-weight:700;text-align:center}
+    #do-sprawdzenia .dsx-summary.err{background:#fef2f2;border-color:#fecaca;color:#b91c1c;font-weight:600;text-align:center}
+    #do-sprawdzenia .dsx-card{border:1px solid;border-radius:16px;overflow:hidden;margin-bottom:18px;box-shadow:0 2px 10px rgba(0,0,0,0.03)}
+    #do-sprawdzenia .dsx-card.warn{background:#fffaf2;border-color:#f1d9b0}
+    #do-sprawdzenia .dsx-card.ok{background:#f3fbf6;border-color:#cdeede}
+    #do-sprawdzenia .dsx-head{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,0.07)}
+    #do-sprawdzenia .dsx-head .ico{font-size:22px}
+    #do-sprawdzenia .dsx-head .tt{font-weight:800;color:#1f2937;font-size:16px}
+    #do-sprawdzenia .dsx-head .dd{color:#64748b;font-size:13px}
+    #do-sprawdzenia .dsx-head .suma{color:#b45309;font-weight:700;font-size:13px;white-space:nowrap}
+    #do-sprawdzenia .dsx-cnt{color:#fff;font-weight:800;border-radius:999px;min-width:30px;height:30px;padding:0 10px;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+    #do-sprawdzenia .dsx-cnt.warn{background:#b45309}
+    #do-sprawdzenia .dsx-cnt.ok{background:#2fae6a}
+    #do-sprawdzenia .dsx-row{display:flex;align-items:center;gap:14px;padding:11px 16px;border-bottom:1px solid rgba(0,0,0,0.04);flex-wrap:wrap}
+    #do-sprawdzenia .dsx-l{min-width:170px}
+    #do-sprawdzenia .dsx-m{flex:1;min-width:150px;color:#334155}
+    #do-sprawdzenia .dsx-r{min-width:130px;text-align:right}
+    #do-sprawdzenia .dsx-a{display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap}
+    #do-sprawdzenia .dsx-warn{color:#b45309;font-weight:700;font-size:13px}
+    #do-sprawdzenia .dsx-crit{color:#b91c1c;font-weight:700;font-size:13px}
+    #do-sprawdzenia .dsx-mut{color:#94a3b8;font-size:12px}
+    #do-sprawdzenia .dsx-emp{padding:16px;color:#2fae6a;font-weight:600}
+    #do-sprawdzenia .dsx-klient{color:#b87080;font-weight:700;text-decoration:none}
+    #do-sprawdzenia .dsx-btn{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;border-radius:8px;padding:5px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+    #do-sprawdzenia .dsx-btn:hover{background:#e2e8f0}
+    #do-sprawdzenia .dsx-btn.act{background:#eef6ff;color:#2563eb;border-color:#bfdbfe}
+    #do-sprawdzenia .dsx-btn.act:hover{background:#dbeafe}
+    #do-sprawdzenia .dsx-pom{margin-top:6px;color:#94a3b8;font-size:13px}
+    #do-sprawdzenia .dsx-pom summary{cursor:pointer;text-align:center;padding:6px}
+    #do-sprawdzenia .dsx-pom a{color:#b87080;font-weight:600}
+    body.dark-mode #do-sprawdzenia .dsx-sub{color:#94a3b8}
+    body.dark-mode #do-sprawdzenia .dsx-summary{background:#1e293b;border-color:#334155;color:#cbd5e1}
+    body.dark-mode #do-sprawdzenia .dsx-summary.ok{background:#0f2a1d;border-color:#14532d;color:#4ade80}
+    body.dark-mode #do-sprawdzenia .dsx-summary.err{background:#2b1214;border-color:#7f1d1d;color:#f87171}
+    body.dark-mode #do-sprawdzenia .dsx-card.warn{background:#241b0e;border-color:#5b4310}
+    body.dark-mode #do-sprawdzenia .dsx-card.ok{background:#0f2a1d;border-color:#14532d}
+    body.dark-mode #do-sprawdzenia .dsx-head{border-bottom-color:rgba(255,255,255,0.08)}
+    body.dark-mode #do-sprawdzenia .dsx-head .tt{color:#f8fafc}
+    body.dark-mode #do-sprawdzenia .dsx-head .dd{color:#94a3b8}
+    body.dark-mode #do-sprawdzenia .dsx-head .suma{color:#fbbf24}
+    body.dark-mode #do-sprawdzenia .dsx-row{border-bottom-color:rgba(255,255,255,0.06)}
+    body.dark-mode #do-sprawdzenia .dsx-m{color:#cbd5e1}
+    body.dark-mode #do-sprawdzenia .dsx-warn{color:#fbbf24}
+    body.dark-mode #do-sprawdzenia .dsx-crit{color:#f87171}
+    body.dark-mode #do-sprawdzenia .dsx-mut{color:#64748b}
+    body.dark-mode #do-sprawdzenia .dsx-emp{color:#4ade80}
+    body.dark-mode #do-sprawdzenia .dsx-btn{background:#334155;color:#cbd5e1;border-color:#475569}
+    body.dark-mode #do-sprawdzenia .dsx-btn:hover{background:#475569}
+    body.dark-mode #do-sprawdzenia .dsx-btn.act{background:#1e3a5f;color:#93c5fd;border-color:#1d4ed8}
+    body.dark-mode #do-sprawdzenia .dsx-btn.act:hover{background:#1d4ed8}
+    </style>
     <div class="header">
         <h1>🔎 Do sprawdzenia</h1>
         <button onclick="ladujDoSprawdzenia()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
-    <p style="color:#64748b; font-size:15px; margin:-6px 0 18px;">
+    <p class="dsx-sub">
         Spokojny przegląd rzeczy, które warto ogarnąć — żeby nic nie umknęło. To tylko podpowiedzi, nic się nie psuje.
     </p>
     <div id="ds-spr-content">
@@ -7669,7 +7723,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="ds-quick-tile" onclick="pokaz('do-sprawdzenia',null)">
           <div class="ds-tile-icon" style="background:#e8f7ef;color:#2fae6a;">🔎</div>
-          <div><strong>Do sprawdzenia</strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
+          <div><strong>Do sprawdzenia <span id="ds-tile-spr-badge" style="display:none;background:#b45309;color:#fff;border-radius:999px;padding:1px 8px;font-size:12px;font-weight:800;margin-left:4px;vertical-align:middle;"></span></strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
         </div>
         <div class="ds-quick-tile" id="ds-tile-booksy" style="display:none;" onclick="pokaz('booksy-dzis',null)">
           <div class="ds-tile-icon" style="background:#eafaf4;color:#16a06a;">📅</div>
@@ -12552,6 +12606,29 @@ function zaladujPulpit() {
             }).catch(() => {});
     }, 600);
 
+    // ── Badge „Do sprawdzenia" na kafelku — lekki fetch (3 małe zapytania SQL) ──
+    setTimeout(() => {
+        const pokazBadge = (d) => {
+            const badge = document.getElementById('ds-tile-spr-badge');
+            if (!badge || !d) return;
+            const pomSet = new Set((d.pominiete || []).map(p => String(p.rodzaj || '') + '|' + String(p.klucz)));
+            const n = (d.zadatki || []).filter(r => !pomSet.has('zadatek|' + String(r.id))).length
+                    + (d.karnety || []).filter(w => !pomSet.has('karnet|' + String(w.id))).length;
+            badge.textContent = n;
+            badge.style.display = n > 0 ? 'inline-block' : 'none';
+        };
+        const cache = window.__ds_spr_cache;
+        if (cache && (Date.now() - cache.t) < 60000) { pokazBadge(cache.data); return; }
+        fetch(API_URL + '?action=ds_przeglad')
+            .then(r => r.json())
+            .then(d => {
+                if (d && d.status === 'success') {
+                    window.__ds_spr_cache = { t: Date.now(), data: d };
+                    pokazBadge(d);
+                }
+            }).catch(() => {});
+    }, 700);
+
     // ── Wymaga uwagi: niski stan + zadatki + urodziny + brak dokumentów ──
     // Optymalizacja 2026-05-05: cache 60s + defer 800ms (4 ciężkie fetche jednocześnie
     // blokowały UI; user widział „...". Teraz pulpit renderuje się od razu, sekcja
@@ -12661,10 +12738,16 @@ function __ds_renderUwaga(payload) {
             });
         }
 
-        // Wygasające/wygasłe karnety (≤14 dni, nie oznaczone jako zakończone)
-        const wygKarnety = (typeof policzWygasajaceKarnety === 'function')
+        // Wygasające/wygasłe karnety (≤14 dni, nie oznaczone jako zakończone).
+        // Spójność z panelem "Do sprawdzenia": pozycje pominięte tam nie alarmują też tutaj.
+        let wygKarnety = (typeof policzWygasajaceKarnety === 'function')
             ? policzWygasajaceKarnety(Array.isArray(sprzedaz) ? sprzedaz : [])
             : [];
+        const __sprCache = window.__ds_spr_cache;
+        if (__sprCache && __sprCache.data && Array.isArray(__sprCache.data.pominiete)) {
+            const pomKarnety = new Set(__sprCache.data.pominiete.filter(p => p.rodzaj === 'karnet').map(p => String(p.klucz)));
+            wygKarnety = wygKarnety.filter(w => !pomKarnety.has(String(w.id)));
+        }
         if (wygKarnety.length > 0) {
             const n = wygKarnety.length;
             const wygasle = wygKarnety.filter(w => w.diff < 0).length;
@@ -14496,10 +14579,15 @@ function _karnetAction(payload) {
             alert(d.message || 'Gotowe.');
             if (d.status === 'success') {
                 historiaDane = [];
-                // Odśwież kontekst: lista wygasających karnetów albo otwarty profil klienta
+                // Odśwież kontekst: panel Do sprawdzenia (aktywna sekcja ma priorytet,
+                // bo style.display ukrytych tabów potrafi zostać 'block'), potem
+                // lista wygasających karnetów albo otwarty profil klienta.
+                const sprPanel = document.getElementById('do-sprawdzenia');
                 const tabKarn = document.getElementById('ktab-karnety');
                 const profilOtwarty = document.getElementById('widok-szczegolow-klienta');
-                if (tabKarn && tabKarn.style.display === 'block') {
+                if (sprPanel && sprPanel.classList.contains('active')) {
+                    ladujDoSprawdzenia();
+                } else if (tabKarn && tabKarn.style.display === 'block') {
                     renderWygasajaceKarnety();
                 } else if (profilOtwarty && profilOtwarty.style.display === 'block') {
                     odswiezProfilAktualnegoKlienta();
@@ -14555,139 +14643,183 @@ function policzWygasajaceKarnety(rows) {
 }
 
 // === "Do sprawdzenia" — pomocny przegląd dla recepcji (link tylko z Pulpitu) ===
+// Dane liczy backend (ds_przeglad — 3 lekkie zapytania SQL zamiast całej historii sprzedaży).
 function ladujDoSprawdzenia() {
     const box = document.getElementById('ds-spr-content');
     if (!box) return;
     box.innerHTML = '<div style="padding:40px; text-align:center; color:#999;">⏳ Sprawdzam…</div>';
 
-    Promise.all([
-        fetch(API_URL + '?action=full_sales_history').then(r => r.json()).catch(() => []),
-        fetch(API_URL + '?action=get_all_deposits').then(r => r.json()).catch(() => []),
-        fetch(API_URL + '?action=ds_get_pominiete').then(r => r.json()).catch(() => [])
-    ]).then(([historia, zadatki, pominiete]) => {
-        historia = Array.isArray(historia) ? historia : [];
-        zadatki = Array.isArray(zadatki) ? zadatki : [];
-        pominiete = Array.isArray(pominiete) ? pominiete : [];
-        const pominieteSet = new Set(pominiete.map(p => String(p.klucz)));
+    fetch(API_URL + '?action=ds_przeglad')
+        .then(r => r.json())
+        .then(d => {
+            if (!d || d.status !== 'success') throw new Error((d && d.message) || 'Błąd danych');
+            window.__ds_spr_cache = { t: Date.now(), data: d };
+            renderujDoSprawdzenia(box, d);
+        })
+        .catch(() => {
+            // Błąd pobierania NIE może udawać "wszystko ok" — pokazujemy wprost.
+            box.innerHTML = '<div class="dsx-summary err">⚠️ Nie udało się pobrać danych — kliknij „Odśwież". Do tego czasu nie wiadomo, czy coś czeka na sprawdzenie.</div>';
+        });
+}
 
-        const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
-        const aktywny = (r) => { const st = String(r.status || '').toUpperCase().trim(); return st === 'AKTYWNY' || st === ''; };
-        const jestWplata = (r) => String(r.typ || '').toUpperCase().includes('WP');
-        const zl = (v) => (parseFloat(v) || 0).toFixed(2) + ' zł';
-        const norm = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
-        const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+function renderujDoSprawdzenia(box, d) {
+    const zadatki = Array.isArray(d.zadatki) ? d.zadatki : [];
+    const karnety = Array.isArray(d.karnety) ? d.karnety : [];
+    const pominiete = Array.isArray(d.pominiete) ? d.pominiete : [];
+    // Klucz pominięcia = para (rodzaj, id) — id zadatku i id sprzedaży nie mogą się mylić.
+    const pomSet = new Set(pominiete.map(p => String(p.rodzaj || '') + '|' + String(p.klucz)));
+    const pomin = (id, rodzaj) => !pomSet.has(rodzaj + '|' + String(id));
+    const zl = (v) => (parseFloat(v) || 0).toFixed(2) + ' zł';
+    const esc = (s) => String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
-        // Mapa nazwisko -> id_klienta (backfill dla zadatków z pustym id_klienta).
-        // Źródła: historia sprzedaży + kartoteka (jeśli już wczytana).
-        const mapaNazwaId = {};
-        historia.forEach(s => { const id = String(s.id_klienta || '').trim(); if (id && s.klient) { const k = norm(s.klient); if (!mapaNazwaId[k]) mapaNazwaId[k] = id; } });
-        (window.wszyscyKlienciDane || []).forEach(k => { if (k && k.id && k.nazwa) { const n = norm(k.nazwa); if (!mapaNazwaId[n]) mapaNazwaId[n] = String(k.id); } });
-        const znajdzId = (r) => String(r.id_klienta || '').trim() || mapaNazwaId[norm(r.klient)] || '';
+    // Nazwisko zawsze klikalne: jeśli mamy id — przejdź wprost, w innym razie szukaj po nazwisku.
+    const klientLink = (nazwa, id) =>
+        `<a href="javascript:void(0)" class="dsx-klient" onclick="dsProfil('${esc(id)}','${esc(nazwa)}')">${escHtml(nazwa || '—')}</a>`;
 
-        // Nazwisko zawsze klikalne: jeśli mamy id — przejdź wprost, w innym razie szukaj po nazwisku.
-        const klientLink = (nazwa, id) =>
-            `<a href="javascript:void(0)" onclick="dsProfil('${esc(id)}','${esc(nazwa)}')" style="color:#b87080; font-weight:700; text-decoration:none;">${nazwa || '—'}</a>`;
+    const maId = (r) => String(r.id_klienta || '').trim() !== '';
+    // Sekcja 1: podpięte do karty i czekające 45+ dni. Sekcja 2: bez karty.
+    // Rozłączne — jeden zadatek nie pojawia się w dwóch sekcjach naraz.
+    const dawne = zadatki.filter(r => maId(r) && r.dni >= 45 && pomin(r.id, 'zadatek')).sort((a, b) => b.dni - a.dni);
+    const bezKlienta = zadatki.filter(r => !maId(r) && pomin(r.id, 'zadatek'));
+    const wygasajace = karnety.filter(w => pomin(w.id, 'karnet'));
 
-        const pomin = (r) => !pominieteSet.has(String(r.id));
+    const sekcja = (icon, tytul, opis, n, pustyTekst, wierszeHtml, extraHead) => {
+        const stan = n > 0 ? 'warn' : 'ok';
+        return `<div class="dsx-card ${stan}">
+            <div class="dsx-head">
+                <span class="ico">${icon}</span>
+                <div style="flex:1;">
+                    <div class="tt">${tytul}</div>
+                    <div class="dd">${opis}</div>
+                </div>
+                ${extraHead || ''}
+                <span class="dsx-cnt ${stan}">${n}</span>
+            </div>
+            ${n === 0 ? `<div class="dsx-emp">✓ ${pustyTekst}</div>` : wierszeHtml}
+        </div>`;
+    };
 
-        // 1) Zadatki długo czekające (AKTYWNY, starsze niż 45 dni)
-        const dawne = zadatki.filter(r => jestWplata(r) && aktywny(r) && pomin(r)).map(r => {
-            const d = new Date(r.data); d.setHours(0, 0, 0, 0);
-            const dni = isNaN(d.getTime()) ? 0 : Math.round((dzis - d) / 86400000);
-            return Object.assign({}, r, { dni });
-        }).filter(r => r.dni >= 45).sort((a, b) => b.dni - a.dni);
+    const btnPomin = (klucz, rodzaj) =>
+        `<button class="dsx-btn" onclick="dsPomin('${esc(klucz)}','${esc(rodzaj)}',this)" title="Oznacz jako nieaktualne — zniknie z panelu dla całego salonu">✕ Pomiń</button>`;
 
-        // 2) Zadatki bez podpiętego klienta (puste id_klienta) — ten sam typ błędu co Pani Wiśniewska
-        const bezKlienta = zadatki.filter(r => jestWplata(r) && aktywny(r) && pomin(r) && !String(r.id_klienta || '').trim());
+    const wiersz = (lewo, srodek, prawo, akcje) => `
+        <div class="dsx-row">
+            <div class="dsx-l">${lewo}</div>
+            <div class="dsx-m">${srodek}</div>
+            <div class="dsx-r">${prawo}</div>
+            <div class="dsx-a">${akcje || ''}</div>
+        </div>`;
 
-        // 3) Karnety wygasające / wygasłe (≤14 dni)
-        const karnety = ((typeof policzWygasajaceKarnety === 'function') ? policzWygasajaceKarnety(historia) : []).filter(pomin);
+    // Sekcja 1 — zadatki 45+ dni (z sumą zalegającej kwoty w nagłówku)
+    const sumaDawne = dawne.reduce((s, r) => s + (parseFloat(r.kwota) || 0), 0);
+    const html1 = dawne.map(r => wiersz(
+        klientLink(r.klient, r.id_klienta),
+        `${escHtml(r.cel || 'zadatek')} · <strong>${zl(r.kwota)}</strong>`,
+        `<span class="dsx-warn">czeka ${r.dni} dni</span>`,
+        btnPomin(r.id, 'zadatek')
+    )).join('');
 
-        const sekcja = (icon, tytul, opis, n, pustyTekst, wierszeHtml) => {
-            const kolor = n > 0 ? '#b45309' : '#2fae6a';
-            const tlo = n > 0 ? '#fffaf2' : '#f3fbf6';
-            const ramka = n > 0 ? '#f1d9b0' : '#cdeede';
-            const naglowek = `
-                <div style="display:flex; align-items:center; gap:12px; padding:14px 16px; border-bottom:1px solid ${ramka};">
-                    <span style="font-size:22px;">${icon}</span>
-                    <div style="flex:1;">
-                        <div style="font-weight:800; color:#1f2937; font-size:16px;">${tytul}</div>
-                        <div style="color:#64748b; font-size:13px;">${opis}</div>
-                    </div>
-                    <span style="background:${kolor}; color:#fff; font-weight:800; border-radius:999px; min-width:30px; height:30px; padding:0 10px; display:inline-flex; align-items:center; justify-content:center; font-size:14px;">${n}</span>
-                </div>`;
-            const tresc = n === 0
-                ? `<div style="padding:16px; color:#2fae6a; font-weight:600;">✓ ${pustyTekst}</div>`
-                : wierszeHtml;
-            return `<div style="background:${tlo}; border:1px solid ${ramka}; border-radius:16px; overflow:hidden; margin-bottom:18px; box-shadow:0 2px 10px rgba(0,0,0,0.03);">${naglowek}${tresc}</div>`;
-        };
+    // Sekcja 2 — zadatki bez karty; gdy backend znalazł kartę po nazwisku → „Podepnij kartę"
+    const html2 = bezKlienta.map(r => wiersz(
+        klientLink(r.klient, r.id_dopasowane || ''),
+        `${escHtml(r.cel || 'zadatek')} · <strong>${zl(r.kwota)}</strong>`
+            + (r.id_dopasowane ? ` <span class="dsx-mut">— jest karta o tym nazwisku</span>` : ''),
+        `<span class="dsx-warn">brak karty klienta</span>`,
+        (r.id_dopasowane ? `<button class="dsx-btn act" onclick="dsPrzypiszZadatek('${esc(r.id)}','${esc(r.id_dopasowane)}',this)" title="Podepnij ten zadatek do znalezionej karty klienta">🔗 Podepnij kartę</button>` : '')
+            + btnPomin(r.id, 'zadatek')
+    )).join('');
 
-        const btnPomin = (klucz, rodzaj) =>
-            `<button onclick="dsPomin('${esc(klucz)}','${esc(rodzaj)}',this)" title="Oznacz jako nieaktualne — zniknie z panelu dla całego salonu"
-                style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:5px 10px; font-size:12px; cursor:pointer; white-space:nowrap;">✕ Pomiń</button>`;
+    // Sekcja 3 — karnety, z akcjami wprost z panelu (przedłuż / zakończ)
+    const html3 = wygasajace.map(w => {
+        const parts = String(w.data_waznosci).split('-');
+        const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : w.data_waznosci;
+        let badge, klasa;
+        if (w.diff < 0) { badge = `wygasł ${Math.abs(w.diff)} dni temu`; klasa = 'dsx-crit'; }
+        else if (w.diff === 0) { badge = 'wygasa DZIŚ'; klasa = 'dsx-warn'; }
+        else { badge = `wygasa za ${w.diff} dni`; klasa = 'dsx-warn'; }
+        const gr = esc(w.grupa_id || '');
+        const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
+        return wiersz(
+            klientLink(w.klient, String(w.id_klienta || '').trim() || w.id_dopasowane || ''),
+            escHtml(w.zabieg || 'karnet'),
+            `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
+            btnP(30) + btnP(60) + btnP(90)
+                + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
+                + btnPomin(w.id, 'karnet')
+        );
+    }).join('');
 
-        const wiersz = (lewo, srodek, prawo, akcje) => `
-            <div style="display:flex; align-items:center; gap:14px; padding:11px 16px; border-bottom:1px solid rgba(0,0,0,0.04); flex-wrap:wrap;">
-                <div style="min-width:170px;">${lewo}</div>
-                <div style="flex:1; min-width:150px; color:#334155;">${srodek}</div>
-                <div style="min-width:130px; text-align:right;">${prawo}</div>
-                <div style="min-width:80px; text-align:right;">${akcje || ''}</div>
-            </div>`;
+    const lacznie = dawne.length + bezKlienta.length + wygasajace.length;
+    const podsumowanie = lacznie === 0
+        ? `<div class="dsx-summary ok">🎉 Wszystko ogarnięte — nic nie wymaga teraz uwagi.</div>`
+        : `<div class="dsx-summary">Znalazłem <strong>${lacznie}</strong> ${lacznie === 1 ? 'rzecz' : 'rzeczy'} do spokojnego sprawdzenia. Kliknij w nazwisko, żeby wejść w kartę klienta.</div>`;
 
-        // Render sekcji 1
-        const html1 = dawne.map(r => wiersz(
-            klientLink(r.klient, znajdzId(r)),
-            `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
-            `<span style="color:#b45309; font-weight:700; font-size:13px;">czeka ${r.dni} dni</span>`,
-            btnPomin(r.id, 'zadatek')
-        )).join('');
-
-        // Render sekcji 2
-        const html2 = bezKlienta.map(r => wiersz(
-            klientLink(r.klient, znajdzId(r)),
-            `<span style="color:#475569;">${r.cel || 'zadatek'}</span> · <strong>${zl(r.kwota)}</strong>`,
-            `<span style="color:#b45309; font-weight:700; font-size:13px;">brak karty klienta</span>`,
-            btnPomin(r.id, 'zadatek')
-        )).join('');
-
-        // Render sekcji 3
-        const html3 = karnety.map(w => {
-            const parts = String(w.data_waznosci).split('-');
-            const dataFmt = parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : w.data_waznosci;
-            let badge, kolor;
-            if (w.diff < 0) { badge = `wygasł ${Math.abs(w.diff)} dni temu`; kolor = '#b91c1c'; }
-            else if (w.diff === 0) { badge = 'wygasa DZIŚ'; kolor = '#b45309'; }
-            else { badge = `wygasa za ${w.diff} dni`; kolor = '#b45309'; }
+    // Lista pominiętych — kto, kiedy, z możliwością pojedynczego przywrócenia.
+    let pomHtml = '';
+    if (pominiete.length) {
+        const opisPozycji = (p) => {
+            const kl = String(p.klucz);
+            let zr = null;
+            if (p.rodzaj === 'karnet') zr = karnety.find(w => String(w.id) === kl);
+            if (!zr) zr = zadatki.find(r => String(r.id) === kl);
+            const ikona = p.rodzaj === 'karnet' ? '🎟️' : '💳';
+            const label = zr ? `${escHtml(zr.klient || '—')} — ${escHtml(zr.cel || zr.zabieg || '')}` : '<i>(pozycja już nieaktualna)</i>';
+            const kto = p.pominiete_przez ? ` · ${escHtml(p.pominiete_przez)}` : '';
             return wiersz(
-                klientLink(w.klient, String(w.id_klienta || '').trim() || mapaNazwaId[norm(w.klient)] || ''),
-                `<span style="color:#475569;">${w.zabieg || 'karnet'}</span>`,
-                `<span style="color:${kolor}; font-weight:700; font-size:13px;">${badge}<br><small style="color:#94a3b8;">${dataFmt}</small></span>`,
-                btnPomin(w.id, 'karnet')
+                `${ikona} ${label}`,
+                `<span class="dsx-mut">pominięto ${escHtml(p.data || '')}${kto}</span>`,
+                '',
+                `<button class="dsx-btn" onclick="dsPrzywrocJedna('${esc(p.klucz)}')">↩ Przywróć</button>`
             );
-        }).join('');
+        };
+        const n = pominiete.length;
+        const slowo = n === 1 ? 'pozycję' : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? 'pozycje' : 'pozycji');
+        pomHtml = `<details class="dsx-pom">
+            <summary>Pominięto ${n} ${slowo} jako nieaktualne — pokaż / ukryj</summary>
+            <div style="margin-top:8px;">
+                ${pominiete.map(opisPozycji).join('')}
+                <div style="text-align:center; margin-top:10px;"><a href="javascript:void(0)" onclick="dsPrzywrocWszystkie()">↩ Przywróć wszystkie</a></div>
+            </div>
+        </details>`;
+    }
 
-        const lacznie = dawne.length + bezKlienta.length + karnety.length;
-        const podsumowanie = lacznie === 0
-            ? `<div style="background:#f3fbf6; border:1px solid #cdeede; border-radius:14px; padding:18px; margin-bottom:18px; color:#2fae6a; font-weight:700; text-align:center;">🎉 Wszystko ogarnięte — nic nie wymaga teraz uwagi.</div>`
-            : `<div style="background:#fff; border:1px solid #eef2f7; border-radius:14px; padding:14px 16px; margin-bottom:18px; color:#475569;">Znalazłem <strong>${lacznie}</strong> ${lacznie === 1 ? 'rzecz' : 'rzeczy'} do spokojnego sprawdzenia. Kliknij w nazwisko, żeby wejść w kartę klienta.</div>`;
+    box.innerHTML =
+        podsumowanie +
+        sekcja('💳', 'Zadatki, które długo czekają',
+            'Klient wpłacił zadatek ponad 45 dni temu i jeszcze z niego nie skorzystał — może warto przypomnieć albo umówić wizytę.',
+            dawne.length, 'Żaden zadatek nie zalega.', html1,
+            dawne.length ? `<span class="suma">łącznie ${zl(sumaDawne)}</span>` : '') +
+        sekcja('🔗', 'Zadatki bez podpiętej karty klienta',
+            'Te wpłaty nie są powiązane z kartoteką — łatwo wtedy o pomyłkę przy rozliczaniu. Warto sprawdzić i przypisać klienta.',
+            bezKlienta.length, 'Wszystkie zadatki mają przypisanego klienta.', html2) +
+        sekcja('🎟️', 'Karnety na wyczerpaniu lub wygasłe',
+            'Karnety, które kończą się w ciągu 14 dni lub już wygasły — dobry moment, żeby zaproponować przedłużenie.',
+            wygasajace.length, 'Żaden karnet nie wygasa w najbliższym czasie.', html3) +
+        pomHtml;
+}
 
-        box.innerHTML =
-            podsumowanie +
-            sekcja('💳', 'Zadatki, które długo czekają',
-                'Klient wpłacił zadatek ponad 45 dni temu i jeszcze z niego nie skorzystał — może warto przypomnieć albo umówić wizytę.',
-                dawne.length, 'Żaden zadatek nie zalega.', html1) +
-            sekcja('🔗', 'Zadatki bez podpiętej karty klienta',
-                'Te wpłaty nie są powiązane z kartoteką — łatwo wtedy o pomyłkę przy rozliczaniu. Warto sprawdzić i przypisać klienta.',
-                bezKlienta.length, 'Wszystkie zadatki mają przypisanego klienta.', html2) +
-            sekcja('🎟️', 'Karnety na wyczerpaniu lub wygasłe',
-                'Karnety, które kończą się w ciągu 14 dni lub już wygasły — dobry moment, żeby zaproponować przedłużenie.',
-                karnety.length, 'Żaden karnet nie wygasa w najbliższym czasie.', html3) +
-            (pominiete.length
-                ? `<div style="text-align:center; margin-top:6px; color:#94a3b8; font-size:13px;">Pominięto ${pominiete.length} ${pominiete.length === 1 ? 'pozycję' : 'pozycji'} jako nieaktualne. <a href="javascript:void(0)" onclick="dsPrzywrocWszystkie()" style="color:#b87080; font-weight:600;">Przywróć wszystkie</a></div>`
-                : '');
-    }).catch(() => {
-        box.innerHTML = '<div style="padding:30px; text-align:center; color:#b91c1c;">Nie udało się pobrać danych. Spróbuj „Odśwież”.</div>';
-    });
+// Podepnij zadatek bez karty do klienta znalezionego po nazwisku.
+function dsPrzypiszZadatek(idZadatku, idKlienta, el) {
+    if (!confirm('Podpiąć ten zadatek do znalezionej karty klienta?')) return;
+    if (el) { el.disabled = true; el.textContent = '…'; }
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'ds_przypisz_zadatek', id: idZadatku, id_klienta: idKlienta, pracownik: (typeof currentUser !== 'undefined' ? currentUser : '') }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') { ladujDoSprawdzenia(); }
+            else { alert(d.message || 'Nie udało się podpiąć.'); if (el) { el.disabled = false; el.textContent = '🔗 Podepnij kartę'; } }
+        })
+        .catch(() => { alert('Błąd połączenia.'); if (el) { el.disabled = false; el.textContent = '🔗 Podepnij kartę'; } });
+}
+
+// Przywróć pojedynczą pominiętą pozycję.
+function dsPrzywrocJedna(klucz) {
+    fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'ds_przywroc', klucz: klucz }) })
+        .then(r => r.json())
+        .then(d => {
+            if (d.status === 'success') { ladujDoSprawdzenia(); }
+            else alert(d.message || 'Nie udało się przywrócić.');
+        })
+        .catch(() => alert('Błąd połączenia.'));
 }
 
 // Oznacz pozycję panelu jako nieaktualną — znika dla całego salonu (zapis w bazie).

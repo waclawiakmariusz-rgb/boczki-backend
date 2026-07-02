@@ -257,13 +257,67 @@ module.exports = (db) => {
 
     } else if (action === 'ds_get_pominiete') {
       db.query(
-        `SELECT klucz, rodzaj FROM DoSprawdzeniaPominiete WHERE tenant_id = ?`,
+        `SELECT klucz, rodzaj, pominiete_przez, DATE_FORMAT(data, '%Y-%m-%d %H:%i') AS data FROM DoSprawdzeniaPominiete WHERE tenant_id = ?`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
-          return res.json((rows || []).map(r => ({ klucz: r.klucz, rodzaj: r.rodzaj })));
+          return res.json((rows || []).map(r => ({ klucz: r.klucz, rodzaj: r.rodzaj, pominiete_przez: r.pominiete_przez || '', data: r.data })));
         }
       );
+
+    } else if (action === 'ds_przeglad') {
+      // Panel "Do sprawdzenia" — 3 lekkie zapytania w SQL zamiast pobierania
+      // całej historii sprzedaży i wszystkich zadatków na front.
+      // id_dopasowane = karta klienta znaleziona po nazwisku (backfill pustego id_klienta).
+      const qZadatki = `
+        SELECT z.id, z.id_klienta, z.klient, z.kwota, z.cel,
+               DATEDIFF(CURDATE(), z.data_wplaty) AS dni,
+               (SELECT k.id_klienta FROM Klienci k
+                 WHERE k.tenant_id = z.tenant_id AND LOWER(k.imie_nazwisko) = LOWER(z.klient)
+                   AND (k.status = 'AKTYWNY' OR k.status IS NULL) LIMIT 1) AS id_dopasowane
+        FROM Zadatki z
+        WHERE z.tenant_id = ? AND z.typ = 'WPŁATA' AND (z.status = 'AKTYWNY' OR z.status IS NULL OR z.status = '')
+          AND (DATEDIFF(CURDATE(), z.data_wplaty) >= 45 OR COALESCE(z.id_klienta, '') = '')
+        ORDER BY z.data_wplaty ASC`;
+      const qKarnety = `
+        SELECT s.id, s.klient, s.id_klienta, s.zabieg, s.grupa_id,
+               DATE_FORMAT(s.data_waznosci, '%Y-%m-%d') AS data_waznosci,
+               DATEDIFF(s.data_waznosci, CURDATE()) AS diff,
+               (SELECT k.id_klienta FROM Klienci k
+                 WHERE k.tenant_id = s.tenant_id AND LOWER(k.imie_nazwisko) = LOWER(s.klient)
+                   AND (k.status = 'AKTYWNY' OR k.status IS NULL) LIMIT 1) AS id_dopasowane
+        FROM Sprzedaz s
+        WHERE s.tenant_id = ? AND COALESCE(s.status, '') != 'USUNIĘTY'
+          AND s.data_waznosci IS NOT NULL AND s.karnet_zamkniety_w IS NULL
+          AND DATEDIFF(s.data_waznosci, CURDATE()) <= 14
+        ORDER BY diff ASC`;
+      const qPominiete = `SELECT klucz, rodzaj, pominiete_przez, DATE_FORMAT(data, '%Y-%m-%d %H:%i') AS data FROM DoSprawdzeniaPominiete WHERE tenant_id = ?`;
+      db.query(qZadatki, [tenant_id], (e1, zadatki) => {
+        if (e1) return res.json({ status: 'error', message: e1.message });
+        db.query(qKarnety, [tenant_id], (e2, karnety) => {
+          if (e2) return res.json({ status: 'error', message: e2.message });
+          db.query(qPominiete, [tenant_id], (e3, pominiete) => {
+            if (e3) return res.json({ status: 'error', message: e3.message });
+            return res.json({
+              status: 'success',
+              zadatki: (zadatki || []).map(r => ({
+                id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
+                kwota: parseFloat(r.kwota) || 0, cel: r.cel || '', dni: Number(r.dni) || 0,
+                id_dopasowane: String(r.id_dopasowane || '')
+              })),
+              karnety: (karnety || []).map(r => ({
+                id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
+                zabieg: r.zabieg || '', grupa_id: r.grupa_id || null,
+                data_waznosci: r.data_waznosci, diff: Number(r.diff),
+                id_dopasowane: String(r.id_dopasowane || '')
+              })),
+              pominiete: (pominiete || []).map(r => ({
+                klucz: r.klucz, rodzaj: r.rodzaj, pominiete_przez: r.pominiete_przez || '', data: r.data
+              }))
+            });
+          });
+        });
+      });
 
     } else if (action === 'get_client_memo') {
       const parametr = req.query.klient;
@@ -858,6 +912,26 @@ module.exports = (db) => {
           return res.json({ status: 'success', message: 'Przywrócono pozycję.' });
         });
       }
+
+    } else if (action === 'ds_przypisz_zadatek') {
+      // Podpięcie zadatku bez id_klienta do istniejącej karty (panel "Do sprawdzenia").
+      const idZadatku = String(d.id || '').trim();
+      const idKlienta = String(d.id_klienta || '').trim();
+      if (!idZadatku || !idKlienta) return res.json({ status: 'error', message: 'Brak id zadatku lub id klienta.' });
+      db.query(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, idKlienta], (err, rows) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        if (!rows.length) return res.json({ status: 'error', message: 'Nie znaleziono karty klienta.' });
+        db.query(
+          `UPDATE Zadatki SET id_klienta = ? WHERE tenant_id = ? AND id = ? AND COALESCE(id_klienta, '') = ''`,
+          [idKlienta, tenant_id, idZadatku],
+          (err2, result) => {
+            if (err2) return res.json({ status: 'error', message: err2.message });
+            if (!result.affectedRows) return res.json({ status: 'error', message: 'Zadatek ma już podpiętą kartę albo nie istnieje.' });
+            zapiszLog(tenant_id, 'PODPIĘCIE ZADATKU DO KARTY', d.pracownik || 'Admin', `Zadatek ${idZadatku} → klient ${rows[0].imie_nazwisko} (ID ${idKlienta})`);
+            return res.json({ status: 'success', message: 'Podpięto zadatek do karty klienta.' });
+          }
+        );
+      });
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja klienci POST: ' + action });
