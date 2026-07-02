@@ -211,6 +211,10 @@ function parseBooksyEmail({ subject = '', fromName = '', text = '' } = {}) {
     let st = staraZTresci(text);
     if (!st.data) st = staraZTematu(subject);
     wynik.staraSlotKey = slotKey(st.data, st.godzOd, pracownik);
+    // Surowa stara data/godzina — przełożenie może zmienić też PRACOWNIKA,
+    // wtedy staraSlotKey (z nowym pracownikiem) nie trafia w stary wiersz.
+    wynik.staraData = st.data;
+    wynik.staraGodzOd = st.godzOd;
   }
 
   // Lista usług (rezerwacja wielousługowa = kilka wizyt). Fallback: pojedyncza

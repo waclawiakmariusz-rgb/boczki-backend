@@ -94,35 +94,73 @@ module.exports = (db) => {
 
     const noweSloty = uslugi.filter(u => u.slotKey).map(u => u.slotKey);
 
-    // Po wstawieniu nowych slotów: przełożenie -> odwołaj STARE sloty rezerwacji.
-    // Znamy stary slot pierwszej usługi (staraSlotKey); pozostałe usługi tej samej
-    // rezerwacji rozpoznajemy po wspólnym zrodlo_uid wiersza ze starym slotem.
-    const zamknijStare = () => {
-      if (!(w.typ === 'zmiana' && w.staraSlotKey && !noweSloty.includes(w.staraSlotKey))) return cb();
+    // Identyfikacja klienta między wpisami: telefon, w razie braku nazwisko.
+    const identKol = (w.telefon && String(w.telefon).trim()) ? 'telefon'
+                   : (w.klient && String(w.klient).trim()) ? 'klient' : null;
+    const identVal = identKol ? String(w[identKol]).trim() : null;
+
+    // Zmiana pracownika w Booksy = drugi mail "nowa rezerwacja" z nowym pracownikiem,
+    // BEZ odwołania starego przypisania. Klient nie może być w dwóch miejscach naraz:
+    // odwołaj jego inne aktywne wpisy o tych samych terminach (data + godz_od).
+    const zamknijKolizje = (next) => {
+      const terminy = uslugi.filter(u => u.slotKey && u.dataWizyty && u.godzOd).map(u => [u.dataWizyty, u.godzOd]);
+      if (!identKol || !terminy.length || !noweSloty.length) return next();
       db.query(
-        `SELECT zrodlo_uid FROM WizytyBooksy WHERE tenant_id=? AND slot_key=?`,
-        [tenant_id, w.staraSlotKey],
-        (err, rows) => {
-          const uidStary = (!err && rows && rows.length) ? rows[0].zrodlo_uid : null;
-          if (uidStary != null && noweSloty.length) {
-            return db.query(
-              `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW()
-                WHERE tenant_id=? AND status='zapisana' AND zrodlo_uid=? AND slot_key NOT IN (?)`,
-              [tenant_id, uidStary, noweSloty],
-              () => cb()
-            );
-          }
-          db.query(
-            `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW() WHERE tenant_id=? AND slot_key=?`,
-            [tenant_id, w.staraSlotKey],
-            () => cb()
-          );
-        }
+        `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW()
+          WHERE tenant_id=? AND status='zapisana' AND ${identKol}=? AND (data_wizyty, godz_od) IN (?) AND slot_key NOT IN (?)`,
+        [tenant_id, identVal, terminy, noweSloty],
+        () => next()
       );
     };
 
+    // Po wstawieniu nowych slotów: przełożenie -> odwołaj STARE sloty rezerwacji.
+    // Stary wiersz szukamy po staraSlotKey, a gdy przełożenie zmieniło też pracownika
+    // (klucz z nowym pracownikiem nie trafia) — po kliencie i starym terminie.
+    // Pozostałe usługi tej samej rezerwacji rozpoznajemy po wspólnym zrodlo_uid.
+    const zamknijStare = () => {
+      if (!(w.typ === 'zmiana' && w.staraSlotKey && !noweSloty.includes(w.staraSlotKey))) return cb();
+      const znajdzStary = (dalej) => {
+        db.query(
+          `SELECT slot_key, zrodlo_uid, telefon, klient FROM WizytyBooksy WHERE tenant_id=? AND slot_key=?`,
+          [tenant_id, w.staraSlotKey],
+          (err, rows) => {
+            // Wiersz pod staraSlotKey musi należeć do TEGO klienta — klucz budowany
+            // z nowym pracownikiem może przypadkiem trafić w slot innej osoby.
+            if (!err && rows && rows.length) {
+              const r = rows[0];
+              const tenSam = !identKol || String(r[identKol] || '').trim() === identVal;
+              if (tenSam) return dalej(r);
+            }
+            if (!identKol || !w.staraData || !w.staraGodzOd) return dalej(null);
+            db.query(
+              `SELECT slot_key, zrodlo_uid FROM WizytyBooksy
+                WHERE tenant_id=? AND status='zapisana' AND data_wizyty=? AND godz_od=? AND ${identKol}=? LIMIT 1`,
+              [tenant_id, w.staraData, w.staraGodzOd, identVal],
+              (e2, r2) => dalej((!e2 && r2 && r2.length) ? r2[0] : null)
+            );
+          }
+        );
+      };
+      znajdzStary((stary) => {
+        if (!stary) return cb();
+        if (stary.zrodlo_uid != null && noweSloty.length) {
+          return db.query(
+            `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW()
+              WHERE tenant_id=? AND status='zapisana' AND zrodlo_uid=? AND slot_key NOT IN (?)`,
+            [tenant_id, stary.zrodlo_uid, noweSloty],
+            () => cb()
+          );
+        }
+        db.query(
+          `UPDATE WizytyBooksy SET status='odwolana', updated_at=NOW() WHERE tenant_id=? AND slot_key=?`,
+          [tenant_id, stary.slot_key],
+          () => cb()
+        );
+      });
+    };
+
     const wstaw = (i) => {
-      if (i >= uslugi.length) return zamknijStare();
+      if (i >= uslugi.length) return zamknijKolizje(zamknijStare);
       const u = uslugi[i];
       if (!u.slotKey || !u.dataWizyty || !u.godzOd) return wstaw(i + 1);
       db.query(

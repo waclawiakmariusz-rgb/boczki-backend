@@ -40,7 +40,7 @@ function q(sql, p) { return new Promise((res, rej) => db.query(sql, p, (e, r) =>
   } finally { lock.release(); await client.logout(); }
   maile.sort((a, b) => a.uid - b.uid);
 
-  // Replay w pamięci (mirror upsertWizyta, per USŁUGA): slotKey -> { status, klient, data, uid }
+  // Replay w pamięci (mirror upsertWizyta, per USŁUGA): slotKey -> { status, klient, data, uid, ident }
   const stan = new Map();
   for (const { uid, w } of maile) {
     const uslugi = (w.uslugi && w.uslugi.length) ? w.uslugi
@@ -50,17 +50,38 @@ function q(sql, p) { return new Promise((res, rej) => db.query(sql, p, (e, r) =>
       continue;
     }
     if (w.typ !== 'nowa' && w.typ !== 'zmiana') continue;
-    const noweSloty = new Set();
+    const ident = (w.telefon && String(w.telefon).trim()) || (w.klient && String(w.klient).trim()) || null;
+    const noweSloty = new Set(), terminy = new Set();
     for (const u of uslugi) {
       if (!u.slotKey || !u.dataWizyty || !u.godzOd) continue;
       noweSloty.add(u.slotKey);
-      stan.set(u.slotKey, { status: 'zapisana', klient: w.klient || '', data: u.dataWizyty, godz: u.godzOd, prac: u.pracownik || '', uid });
+      terminy.add(u.dataWizyty + ' ' + u.godzOd);
+      stan.set(u.slotKey, { status: 'zapisana', klient: w.klient || '', data: u.dataWizyty, godz: u.godzOd, prac: u.pracownik || '', uid, ident });
+    }
+    // Zmiana pracownika = nowy mail bez odwołania starego: klient nie może być
+    // w dwóch miejscach naraz — odwołaj jego inne wpisy o tych samych terminach.
+    if (ident && noweSloty.size) {
+      for (const [sk, v] of stan) {
+        if (v.status === 'zapisana' && !noweSloty.has(sk) && v.ident === ident && terminy.has(v.data + ' ' + v.godz)) v.status = 'odwolana';
+      }
     }
     // Przełożenie: odwołaj stare sloty rezerwacji (po wspólnym uid maila-źródła).
-    if (w.typ === 'zmiana' && w.staraSlotKey && !noweSloty.has(w.staraSlotKey) && stan.has(w.staraSlotKey)) {
-      const uidStary = stan.get(w.staraSlotKey).uid;
-      for (const [sk, v] of stan) {
-        if (v.status === 'zapisana' && v.uid === uidStary && !noweSloty.has(sk)) v.status = 'odwolana';
+    // Gdy przełożenie zmieniło też pracownika, staraSlotKey nie trafia — szukaj
+    // starego wpisu po kliencie i starym terminie.
+    if (w.typ === 'zmiana' && w.staraSlotKey && !noweSloty.has(w.staraSlotKey)) {
+      let stary = stan.get(w.staraSlotKey);
+      // Klucz z nowym pracownikiem może trafić w slot INNEGO klienta — weryfikuj.
+      if (stary && ident && stary.ident && stary.ident !== ident) stary = null;
+      if (!stary && ident && w.staraData && w.staraGodzOd) {
+        for (const v of stan.values()) {
+          if (v.status === 'zapisana' && v.ident === ident && v.data === w.staraData && v.godz === w.staraGodzOd) { stary = v; break; }
+        }
+      }
+      if (stary) {
+        const uidStary = stary.uid;
+        for (const [sk, v] of stan) {
+          if (v.status === 'zapisana' && v.uid === uidStary && !noweSloty.has(sk)) v.status = 'odwolana';
+        }
       }
     }
   }
