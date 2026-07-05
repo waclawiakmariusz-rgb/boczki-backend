@@ -14568,10 +14568,7 @@ function renderKarnetInfo(t, grupaId, liczba) {
         ${badge}${nota}
         <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value${gidArg}); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; width:104px; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 10px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
             <option value="">＋ Przedłuż ▾</option>
-            <option value="2">+2 dni</option>
-            <option value="7">+7 dni</option>
-            <option value="14">+14 dni</option>
-            <option value="30">+30 dni</option>
+            ${opcjeDniPrzedluzenia()}
         </select>
         <button onclick="zakonczKarnet('${t.id}'${gidArg})" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
     </div>`;
@@ -14600,6 +14597,14 @@ function _karnetAction(payload) {
             }
         })
         .catch(() => alert('Błąd połączenia.'));
+}
+
+function opcjeDniPrzedluzenia() {
+    // Lista zamiast wpisywania z ręki: 1–31 dni co 1, dalej tygodniowo do 90.
+    const dni = [];
+    for (let i = 1; i <= 31; i++) dni.push(i);
+    [35, 42, 49, 56, 60, 70, 80, 90].forEach(n => dni.push(n));
+    return dni.map(n => `<option value="${n}" style="color:#334155;background:#fff;">+${n} ${n === 1 ? 'dzień' : 'dni'}</option>`).join('');
 }
 
 function przedluzKarnet(id, aktualnaData, dni, grupaId) {
@@ -14747,6 +14752,7 @@ function renderujDoSprawdzenia(box, d) {
         else { badge = `wygasa za ${w.diff} dni`; klasa = 'dsx-warn'; }
         const gr = esc(w.grupa_id || '');
         const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
+        const selP = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;" title="Przedłuż o dowolną liczbę dni" onchange="if(this.value){przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">+ inne ▾</option>${opcjeDniPrzedluzenia()}</select>`;
         // Pojedynczy zabieg (brak mnogości typu "10x" w szczegółach) — klient mógł go
         // wykorzystać już w dniu zakupu, więc "wygasa" bywa tu fałszywym alarmem.
         const mnog = String(w.szczegoly || w.zabieg || '').match(/(\d+)\s*x/i);
@@ -14760,7 +14766,7 @@ function renderujDoSprawdzenia(box, d) {
                 + (w.szczegoly ? ` <span class="dsx-mut">· ${escHtml(w.szczegoly)}</span>` : '')
                 + infoPoj,
             `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
-            btnP(7) + btnP(14) + btnP(30)
+            btnP(7) + btnP(14) + btnP(28) + selP
                 + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
                 + btnPomin(w.id, 'karnet')
         );
@@ -15287,7 +15293,9 @@ function renderWygasajaceKarnety() {
                     <div style="flex:1; min-width:140px; color:#334155;">${w.zabieg || '—'}</div>
                     <div style="min-width:150px; color:${kolor}; font-weight:700; font-size:13px;">${badge} (${dataFmt})</div>
                     <div style="display:flex; gap:8px;">
-                        <button onclick="przedluzKarnet('${w.id}', '${w.data_waznosci}')" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Przedłuż</button>
+                        <select onchange="if(this.value){przedluzKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none;">
+                            <option value="" style="color:#334155;background:#fff;">Przedłuż ▾</option>${opcjeDniPrzedluzenia()}
+                        </select>
                         <button onclick="zakonczKarnet('${w.id}')" style="background:#e2e8f0; color:#475569; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Zakończ</button>
                     </div>
                 </div>`;
