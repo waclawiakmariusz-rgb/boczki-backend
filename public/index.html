@@ -14135,6 +14135,14 @@ function otworzProfil(idKlienta) {
     }
 
     const nazwaKlienta = klientObj.nazwa;
+    // Odświeżenie już otwartego profilu (np. po akcji na karnecie) nie może
+    // zrzucać z aktywnej zakładki (np. Wizyty) z powrotem na Podsumowanie.
+    const tabyProfilu = ['podsumowanie','wizyty','produkty','zadatki','analityki','dokumenty'];
+    let tabStart = 'podsumowanie';
+    if (window.aktualnyProfilKlientId == idKlienta && document.getElementById('widok-szczegolow-klienta').style.display === 'block') {
+        const widoczny = tabyProfilu.find(t => { const el = document.getElementById('tab-profil-' + t); return el && el.style.display !== 'none'; });
+        if (widoczny) tabStart = widoczny;
+    }
     window.aktualnyProfilKlientNazwa = nazwaKlienta;
     window.aktualnyProfilKlientId = idKlienta;
 
@@ -14164,8 +14172,8 @@ function otworzProfil(idKlienta) {
     // Alarm BAN + badge statusu (USUNIETY/ZANONIMIZOWANY/ZMARLY)
     if (typeof aktualizujAlarmKlienta === 'function') aktualizujAlarmKlienta();
 
-    // Reset tabów do Podsumowanie
-    przelaczTabProfilu('podsumowanie', document.querySelector('.pp-tab'));
+    // Nowo otwarty profil startuje od Podsumowania; odświeżenie zostaje na bieżącej zakładce
+    przelaczTabProfilu(tabStart, document.querySelectorAll('.pp-tab')[tabyProfilu.indexOf(tabStart)] || document.querySelector('.pp-tab'));
 
     // Ustawienie wskaźników ładowania
     const metaDiv = document.getElementById('profil-meta');
