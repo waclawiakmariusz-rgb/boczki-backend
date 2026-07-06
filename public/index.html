@@ -7401,18 +7401,22 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 <div style="margin-top:10px;">
     <label>Ważność (od daty zakupu):</label>
-    <select id="def_waznosc" style="width:100%;">
+    <select id="def_waznosc" style="width:100%;" onchange="toggleWaznoscManual(this.value)">
         <option value="7" selected>7 dni</option>
         <option value="14">14 dni</option>
-        <option value="30">30 dni</option>
+        <option value="28">28 dni</option>
         <option value="60">60 dni</option>
         <option value="90">90 dni</option>
         <option value="120">120 dni</option>
         <option value="150">150 dni</option>
         <option value="180">180 dni</option>
         <option value="365">365 dni</option>
+        <option value="MANUAL">Ręczne (wybierz liczbę dni)</option>
         <option value="">Bezterminowo</option>
     </select>
+    <div id="def_waznosc_manual_box" style="display:none; margin-top:6px;">
+        <select id="def_waznosc_manual" style="width:100%;"></select>
+    </div>
 </div>
 <div style="margin-top:10px; grid-column: span 2;">
     <label>Typ zabiegu:</label>
@@ -14752,7 +14756,7 @@ function renderujDoSprawdzenia(box, d) {
         else { badge = `wygasa za ${w.diff} dni`; klasa = 'dsx-warn'; }
         const gr = esc(w.grupa_id || '');
         const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
-        const selP = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;" title="Przedłuż o dowolną liczbę dni" onchange="if(this.value){przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">+ inne ▾</option>${opcjeDniPrzedluzenia()}</select>`;
+        const selP = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:64px;padding:5px 6px;" title="Przedłuż o dowolną liczbę dni" onchange="if(this.value){przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">+ inne ▾</option>${opcjeDniPrzedluzenia()}</select>`;
         // Pojedynczy zabieg (brak mnogości typu "10x" w szczegółach) — klient mógł go
         // wykorzystać już w dniu zakupu, więc "wygasa" bywa tu fałszywym alarmem.
         const mnog = String(w.szczegoly || w.zabieg || '').match(/(\d+)\s*x/i);
@@ -15293,7 +15297,7 @@ function renderWygasajaceKarnety() {
                     <div style="flex:1; min-width:140px; color:#334155;">${w.zabieg || '—'}</div>
                     <div style="min-width:150px; color:${kolor}; font-weight:700; font-size:13px;">${badge} (${dataFmt})</div>
                     <div style="display:flex; gap:8px;">
-                        <select onchange="if(this.value){przedluzKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none;">
+                        <select onchange="if(this.value){przedluzKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 8px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none; width:92px;">
                             <option value="" style="color:#334155;background:#fff;">Przedłuż ▾</option>${opcjeDniPrzedluzenia()}
                         </select>
                         <button onclick="zakonczKarnet('${w.id}')" style="background:#e2e8f0; color:#475569; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Zakończ</button>
@@ -17141,9 +17145,14 @@ function dodajDefinicje(e, typ) {
         const typSel = document.getElementById('def_typ_zabiegu');
         p.typ_zabiegu = typSel ? typSel.value : '';
 
-        // Ważność (dni od daty zakupu; puste = bezterminowo)
+        // Ważność (dni od daty zakupu; puste = bezterminowo; MANUAL = liczba z drugiej listy)
         const wazSel = document.getElementById('def_waznosc');
-        p.waznosc_dni = wazSel ? wazSel.value : '';
+        let wazVal = wazSel ? wazSel.value : '';
+        if (wazVal === 'MANUAL') {
+            const wazMan = document.getElementById('def_waznosc_manual');
+            wazVal = wazMan ? wazMan.value : '';
+        }
+        p.waznosc_dni = wazVal;
 
         if(isEdit) {
             p.old_kategoria = document.getElementById('edit_old_kat').value;
@@ -18622,9 +18631,26 @@ function renderTabelaZabiegow(zabiegi) {
     const typSel = document.getElementById('def_typ_zabiegu');
     if (typSel) typSel.value = typZabiegu || '';
 
-    // Ustaw ważność ('' = bezterminowo)
+    // Ustaw ważność ('' = bezterminowo); wartość spoza listy (np. stare 30 dni) → tryb Ręczne
     const wazSel = document.getElementById('def_waznosc');
-    if (wazSel) wazSel.value = (waznosc === undefined || waznosc === null) ? '' : String(waznosc);
+    if (wazSel) {
+        const wazV = (waznosc === undefined || waznosc === null) ? '' : String(waznosc);
+        wazSel.value = wazV;
+        if (wazSel.value !== wazV) {
+            wazSel.value = 'MANUAL';
+            toggleWaznoscManual('MANUAL');
+            const wazMan = document.getElementById('def_waznosc_manual');
+            if (wazMan) {
+                wazMan.value = wazV;
+                if (wazMan.value !== wazV) {
+                    wazMan.insertAdjacentHTML('beforeend', `<option value="${wazV}">${wazV} dni</option>`);
+                    wazMan.value = wazV;
+                }
+            }
+        } else {
+            toggleWaznoscManual(wazSel.value);
+        }
+    }
 
     // Ustaw ukryte pola (do identyfikacji rekordu)
     document.getElementById('edit_old_kat').value = k;
@@ -18638,6 +18664,23 @@ function renderTabelaZabiegow(zabiegi) {
     document.getElementById('form-zabieg').scrollIntoView({behavior: "smooth"});
 }
 
+        function toggleWaznoscManual(v) {
+            const box = document.getElementById('def_waznosc_manual_box');
+            const sel = document.getElementById('def_waznosc_manual');
+            if (!box || !sel) return;
+            if (v === 'MANUAL') {
+                if (!sel.options.length) {
+                    let h = '';
+                    for (let i = 1; i <= 90; i++) h += `<option value="${i}">${i} ${i === 1 ? 'dzień' : 'dni'}</option>`;
+                    sel.innerHTML = h;
+                    sel.value = '28';
+                }
+                box.style.display = '';
+            } else {
+                box.style.display = 'none';
+            }
+        }
+
         function anulujEdycjeZabiegu() {
             document.getElementById('form-zabieg').reset();
             document.getElementById('edit_old_kat').value = "";
@@ -18646,6 +18689,7 @@ function renderTabelaZabiegow(zabiegi) {
             if (typSel) typSel.value = '';
             const wazSel = document.getElementById('def_waznosc');
             if (wazSel) wazSel.value = '7';
+            toggleWaznoscManual('7');
             document.getElementById('btn-zabieg-submit').innerText = "Dodaj";
             document.getElementById('btn-zabieg-submit').style.background = "var(--primary)";
             document.getElementById('btn-zabieg-cancel').style.display = "none";
