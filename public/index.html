@@ -14973,12 +14973,6 @@ function booksyEsc(s) {
     return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-function booksyInicjaly(nazwa) {
-    const cz = String(nazwa || '').trim().split(/\s+/).filter(Boolean);
-    if (!cz.length) return '?';
-    return (cz[0][0] + (cz[1] ? cz[1][0] : '')).toUpperCase();
-}
-
 // Minuty od północy z napisu "HH:MM" (lub null).
 function booksyMin(s) {
     const m = String(s || '').match(/(\d{1,2}):(\d{2})/);
@@ -15079,72 +15073,9 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
         chipsHtml += '</div>';
     }
 
-    // Grupowanie po pracowniku.
-    const grupy = {};
-    _booksyDane.forEach(w => {
-        const p = String(w.pracownik || '').trim() || 'Bez przypisania';
-        (grupy[p] = grupy[p] || []).push(w);
-    });
-    const nazwy = Object.keys(grupy).sort((a, b) => a.localeCompare(b, 'pl'));
-    const teraz = dzis.getHours() * 60 + dzis.getMinutes();
-    const avaKlasy = ['a', 'b', 'c', 'd'];
-
-    let boards = '<div class="boards">';
-    nazwy.forEach((n, idx) => {
-        const lista = grupy[n].slice().sort((a, b) => (booksyMin(a.godz_od) || 0) - (booksyMin(b.godz_od) || 0));
-        const ava = avaKlasy[idx % avaKlasy.length];
-        boards += '<div class="board"><div class="board-head">'
-            + '<div class="ava ' + ava + '">' + esc(booksyInicjaly(n)) + '</div>'
-            + '<div class="who"><div class="n">' + esc(n) + '</div></div>'
-            + '<div class="count">' + lista.length + (lista.length === 1 ? ' wizyta' : ' wizyt') + '</div>'
-            + '</div><div class="list">';
-
-        let wstawionoNow = false;
-        lista.forEach(w => {
-            const start = booksyMin(w.godz_od);
-            const koniec = booksyMin(w.godz_do);
-            if (!wstawionoNow && start != null && start >= teraz) {
-                boards += '<div class="nowline"><span class="lab">● TERAZ ' + mm(teraz) + '</span><span class="ln"></span></div>';
-                wstawionoNow = true;
-            }
-            const live = (start != null && koniec != null && teraz >= start && teraz < koniec);
-            const nazwaKl = w.klient || '— bez nazwiska';
-            let cname, badge;
-            if (w.id_klienta) {
-                const arg = esc(String(w.id_klienta)).replace(/'/g, "\\'");
-                const argN = esc(nazwaKl).replace(/'/g, "\\'");
-                cname = '<a class="cname" href="javascript:void(0)" onclick="dsProfil(\'' + arg + '\',\'' + argN + '\')">' + esc(nazwaKl) + '</a>';
-                badge = (w.dopasowano === 'telefon')
-                    ? '<span class="badge ok">✓ klient</span>'
-                    : '<span class="badge maybe">≈ w bazie?</span>';
-            } else {
-                cname = '<span class="cname anon">' + esc(nazwaKl) + '</span>';
-                badge = '<span class="badge new">nowy klient</span>';
-            }
-            // Konsultacja/pierwsza wizyta = dokumenty do przygotowania, nawet gdy klient
-            // jest rozpoznany (np. założony przy wpłacie zadatku, bez podpisanych dokumentów).
-            if (/pierwsza\s+wizyta|konsultacj/i.test(w.zabieg || '')) {
-                badge += '<span class="badge pw">PW — przygotuj dokumenty</span>';
-            }
-            const kat = booksyKategoria(w.zabieg);
-            const chip = '<span class="cat" style="color:var(' + kat.col + ');background:var(' + kat.col + '-bg)">' + esc(kat.label) + '</span>';
-            const desc = w.zabieg ? '<span class="desc">' + esc(w.zabieg) + '</span>' : '';
-            const czas = '<div class="time">' + esc(w.godz_od || '—') + (w.godz_do ? '<div class="end">' + esc(w.godz_do) + '</div>' : '') + '</div>';
-            const tel = w.telefon
-                ? '<a class="tel" href="tel:' + esc(String(w.telefon).replace(/\s/g, '')) + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg><span>' + esc(w.telefon) + '</span></a>'
-                : '';
-            boards += '<div class="appt' + (live ? ' live' : '') + '">'
-                + czas
-                + '<div class="body"><div class="row1">' + cname + badge + '</div>'
-                + '<div class="row2">' + chip + desc + '</div></div>'
-                + tel
-                + '</div>';
-        });
-        boards += '</div></div>';
-    });
-    boards += '</div>';
-
-    box.innerHTML = wrapOpen + naglowek + summary + chipsHtml + boards + '<div id="bk-docs"></div>' + legenda + wrapClose;
+    // Imienne listy wizyt per pracownik celowo ukryte (2026-07-06): integracja
+    // mailowa jest stratna, szczegóły bywały mylące — pokazujemy tylko agregaty.
+    box.innerHTML = wrapOpen + naglowek + summary + chipsHtml + '<div id="bk-docs"></div>' + legenda + wrapClose;
     ladujBooksyDokumenty();
 }
 
