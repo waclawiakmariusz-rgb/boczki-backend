@@ -7201,6 +7201,7 @@ document.addEventListener('DOMContentLoaded', () => {
     #bk-wrap .badge.ok{color:var(--sage);background:var(--sage-soft)}
     #bk-wrap .badge.new{color:#9A7A24;background:var(--gold-soft)}
     #bk-wrap .badge.maybe{color:var(--rose-deep);background:transparent;border:1px solid #E6BCC6}
+    #bk-wrap .badge.pw{color:#7C3AED;background:#EDE9FE}
     #bk-wrap .badge .ic{width:11px;height:11px}
     #bk-wrap .row2{display:flex;align-items:center;gap:8px;margin-top:7px;flex-wrap:wrap}
     #bk-wrap .cat{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:7px}
@@ -7248,6 +7249,7 @@ document.addEventListener('DOMContentLoaded', () => {
     body.dark-mode #bk-wrap .appt+.appt{border-top-color:#332A2C}
     body.dark-mode #bk-wrap .badge.maybe{border-color:#5A3A42}
     body.dark-mode #bk-wrap .badge.new{color:var(--gold)}
+    body.dark-mode #bk-wrap .badge.pw{color:#C4B5FD;background:#3B2A63}
     body.dark-mode #bk-wrap .tel:hover{border-color:#4A2F36}
     body.dark-mode #bk-wrap .empty{background:var(--paper)}
     body.dark-mode #bk-wrap .dpill.start{color:var(--gold)}
@@ -15102,6 +15104,11 @@ function renderujBooksyDzis(wizyty, skonfigurowane) {
                 cname = '<span class="cname anon">' + esc(nazwaKl) + '</span>';
                 badge = '<span class="badge new">nowy klient</span>';
             }
+            // Konsultacja/pierwsza wizyta = dokumenty do przygotowania, nawet gdy klient
+            // jest rozpoznany (np. założony przy wpłacie zadatku, bez podpisanych dokumentów).
+            if (/pierwsza\s+wizyta|konsultacj/i.test(w.zabieg || '')) {
+                badge += '<span class="badge pw">PW — przygotuj dokumenty</span>';
+            }
             const kat = booksyKategoria(w.zabieg);
             const chip = '<span class="cat" style="color:var(' + kat.col + ');background:var(' + kat.col + '-bg)">' + esc(kat.label) + '</span>';
             const desc = w.zabieg ? '<span class="desc">' + esc(w.zabieg) + '</span>' : '';
@@ -15157,8 +15164,9 @@ function renderujBooksyDokumenty(el, wizyty, jutro) {
         return;
     }
 
-    // Tylko nierozpoznani klienci lub zabiegi oznaczone jako pierwsza wizyta.
-    wizyty = wizyty.filter(w => !w.id_klienta || /pierwsza\s+wizyta/i.test(w.zabieg || ''));
+    // Nierozpoznani klienci oraz pierwsze wizyty/konsultacje — te drugie także dla
+    // rozpoznanych (karta z zadatku nie oznacza podpisanych dokumentów).
+    wizyty = wizyty.filter(w => !w.id_klienta || /pierwsza\s+wizyta|konsultacj/i.test(w.zabieg || ''));
     if (!wizyty.length) {
         el.innerHTML = html + '<div class="dempty">Wszyscy jutrzejsi klienci są rozpoznani i nie ma pierwszych wizyt — brak dokumentów do przygotowania.</div></div>';
         return;
@@ -15189,6 +15197,9 @@ function renderujBooksyDokumenty(el, wizyty, jutro) {
                 : '<span class="badge maybe">≈ w bazie?</span>';
         } else {
             badge = '<span class="badge new">nowy klient</span>';
+        }
+        if (/pierwsza\s+wizyta|konsultacj/i.test(w.zabieg || '')) {
+            badge += '<span class="badge pw">PW</span>';
         }
 
         const dokumenty = (w.dokumenty || []).map(x => String(x || '').toLowerCase());
