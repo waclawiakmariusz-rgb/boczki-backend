@@ -7989,7 +7989,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div id="tab-profil-produkty" style="display:none;">
                         <details class="history-group group-kosm" open>
                             <summary class="history-summary"><div class="summary-title txt-kosm">🛍️ Kosmetyki <span id="cnt-kosm" class="count-badge">0 poz.</span></div></summary>
-                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th></tr></thead><tbody id="tabela-kosmetyki"></tbody></table></div>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data</th><th>Produkt</th><th>Ilość</th><th>Kwota</th><th>Płatność</th><th style="width:70px;"></th></tr></thead><tbody id="tabela-kosmetyki"></tbody></table></div>
                         </details>
                     </div>
 
@@ -15393,7 +15393,7 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
     if (transakcje.length === 0 && fraza !== "") {
         const info = `<div style="padding:18px; text-align:center; color:#999; background:#fff; border-radius:18px; border:1px solid #efe5e8;">Brak wyników dla: "<b>${frazaSzukania}</b>"</div>`;
         if (containerTypow) containerTypow.innerHTML = info;
-        if (tKosm) tKosm.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:15px; color:#999;">Brak wyników dla: "<b>${frazaSzukania}</b>"</td></tr>`;
+        if (tKosm) tKosm.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:15px; color:#999;">Brak wyników dla: "<b>${frazaSzukania}</b>"</td></tr>`;
         return;
     }
 
@@ -15428,6 +15428,14 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
     // Grupy zabiegów per typ (z snapshotu w bazie lub fallback po nazwie)
     const groupedByType = {}; // { typ → [htmlRow, ...] }
+
+    // Mapa zwrotów: id oryginalnej sprzedaży → suma już zwróconych zł.
+    // Budowana z pełnego historiaDane (nie z przefiltrowanych transakcji),
+    // żeby szukajka nie zaniżała sumy i nie odblokowała podwójnego zwrotu.
+    const zwrotyMap = {};
+    historiaDane.forEach(r => {
+        if (r.zwrot_do_id) zwrotyMap[r.zwrot_do_id] = (zwrotyMap[r.zwrot_do_id] || 0) + Math.abs(parseFloat(r.kwota) || 0);
+    });
 
     jednostki.forEach(u => {
         const t = u.rep;
@@ -15472,7 +15480,7 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
             glownyWierszStyl = "border:none;";
             wierszKomentarza = `
                 <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td colspan="5" style="padding: 0 10px 15px 10px; color:#64748b; font-size:13px; font-style:italic;">
+                    <td colspan="6" style="padding: 0 10px 15px 10px; color:#64748b; font-size:13px; font-style:italic;">
                         💬 ${t.komentarz}
                     </td>
                 </tr>
@@ -15481,18 +15489,37 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
         const karnetInfo = (typeof renderKarnetInfo === 'function') ? renderKarnetInfo(t, grupaId, liczba) : '';
 
+        // Zwrot: ujemny wpis (zwrot_do_id) — czerwona kwota + plakietka.
+        const jestZwrot = !!t.zwrot_do_id || String(t.zabieg || '').startsWith('ZWROT');
+        const kwotaKolor = (parseFloat(t.kwota) < 0 || jestZwrot) ? '#b91c1c' : '#166534';
+
         // Plakietka "× N" przy nazwie zabiegu dla scalonej grupy powieleń.
-        const nazwaZabieguHtml = (liczba > 1)
+        let nazwaZabieguHtml = (liczba > 1)
             ? `${t.zabieg} <span style="display:inline-block; margin-left:6px; padding:1px 7px; border-radius:10px; background:#ede9fe; color:#6d28d9; font-size:12px; font-weight:600;">× ${liczba}</span>`
             : t.zabieg;
+        if (jestZwrot) {
+            nazwaZabieguHtml = `<span style="display:inline-block; margin-right:6px; padding:1px 7px; border-radius:10px; background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:800;">↩ ZWROT</span>${String(t.zabieg || '').replace(/^ZWROT:\s*/, '')}`;
+        }
+
+        // Kolumna Akcja — przycisk zwrotu (pojedyncze pozycje z dodatnią kwotą).
+        let akcjaHtml = '';
+        if (!u.grupa && !jestZwrot && parseFloat(t.kwota) > 0) {
+            const pozostaloDoZwrotu = Math.round(((parseFloat(t.kwota) || 0) - (zwrotyMap[t.id] || 0)) * 100) / 100;
+            if (pozostaloDoZwrotu > 0) {
+                akcjaHtml = `<button onclick="otworzZwrot('${String(t.id).replace(/'/g, '')}')" title="Zwrot (pełny lub częściowy)" style="background:#fff; border:1px solid #fecaca; color:#b91c1c; border-radius:8px; padding:3px 8px; font-size:12px; font-weight:700; cursor:pointer;">↩ Zwrot</button>`;
+            } else {
+                akcjaHtml = `<span style="font-size:11px; color:#b91c1c; font-weight:700;">zwrócono</span>`;
+            }
+        }
 
         const html = `
             <tr style="${glownyWierszStyl}">
                 <td style="padding:10px; width:90px; vertical-align:top;">${t.data}</td>
                 <td style="padding:10px; font-weight:500; vertical-align:top;">${nazwaZabieguHtml}${karnetInfo}</td>
                 <td style="padding:10px; color:#666; vertical-align:top;">${t.szczegoly || '-'}</td>
-                <td style="padding:10px; font-weight:bold; color:#166534; width:80px; vertical-align:top;">${kwota}</td>
+                <td style="padding:10px; font-weight:bold; color:${kwotaKolor}; width:80px; vertical-align:top;">${kwota}</td>
                 <td style="padding:10px; ${stylPlatnosci}; width:80px; vertical-align:top;">${platnosc}</td>
+                <td style="padding:10px 6px; width:70px; vertical-align:top; text-align:right;">${akcjaHtml}</td>
             </tr>
             ${wierszKomentarza}
         `;
@@ -15548,7 +15575,7 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
                 </summary>
                 <div class="table-container">
                     <table class="modern-table">
-                        <thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th></tr></thead>
+                        <thead><tr><th>Data</th><th>Zabieg</th><th>Szczegóły</th><th>Kwota</th><th>Płatność</th><th style="width:70px;"></th></tr></thead>
                         <tbody>${wiersze.join('')}</tbody>
                     </table>
                 </div>
@@ -15564,7 +15591,7 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
 
     // Obsługa pustych (gdy nie szukamy)
     if (fraza === "") {
-        if (cKosm === 0 && tKosm) tKosm.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
+        if (cKosm === 0 && tKosm) tKosm.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:15px; color:#999;'>Brak produktów.</td></tr>";
 
         // Liczba wizyt — wykluczamy rekordy z platnosc='Portfel' żeby nie liczyć
         // tej samej wizyty podwójnie (gdy klient płaci część zadatkiem,
@@ -29427,6 +29454,56 @@ initTheme();
     </div>
 </div>
 
+<!-- Modal: Zwrot sprzedaży (profil klienta) -->
+<style>
+body.dark-mode #zwrot-modal-card { background:#1e293b !important; color:#e2e8f0 !important; }
+body.dark-mode #zwrot-modal-card h3 { color:#e2e8f0 !important; }
+body.dark-mode #zwrot-modal-card input, body.dark-mode #zwrot-modal-card select, body.dark-mode #zwrot-modal-card textarea { background:#0f172a !important; color:#e2e8f0 !important; border-color:#334155 !important; }
+body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#334155 !important; color:#cbd5e1 !important; }
+</style>
+<div id="zwrot-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
+    <div id="zwrot-modal-card" style="background:#fff; border-radius:18px; padding:24px; width:94%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,.25); margin-bottom:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h3 style="margin:0; font-size:17px;">↩ Zwrot sprzedaży</h3>
+            <button onclick="zamknijZwrot()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8;">✕</button>
+        </div>
+        <div id="zwrot-info-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; font-size:13px; color:#334155; margin-bottom:14px; line-height:1.6;"></div>
+
+        <label style="display:block; font-size:13px; font-weight:700; color:#475569; margin-bottom:6px;">Kwota zwrotu (zł)</label>
+        <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <input type="number" id="zwrot-kwota" step="0.01" min="0.01" style="flex:1; padding:10px 12px; border:1px solid #e2e8f0; border-radius:10px; font-size:15px; font-weight:700; box-sizing:border-box;">
+            <button onclick="zwrotCalosc()" style="background:#f1f5f9; border:1px solid #e2e8f0; border-radius:10px; padding:0 16px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">Całość</button>
+        </div>
+
+        <label style="display:block; font-size:13px; font-weight:700; color:#475569; margin-bottom:6px;">Sposób zwrotu</label>
+        <select id="zwrot-metoda" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:14px; box-sizing:border-box;">
+            <option value="Karta">💳 Karta</option>
+            <option value="Gotówka">💵 Gotówka</option>
+            <option value="Przelew">🏦 Przelew</option>
+        </select>
+
+        <div id="zwrot-stan-box" style="display:none; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:12px; padding:12px 14px; margin-bottom:14px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:700; color:#166534; cursor:pointer;">
+                <input type="checkbox" id="zwrot-przywroc-stan" checked style="width:17px; height:17px;">
+                Produkt wraca na stan magazynu
+            </label>
+            <div id="zwrot-ilosc-row" style="display:flex; align-items:center; gap:8px; margin-top:8px;">
+                <span style="font-size:13px; color:#166534;">Ilość:</span>
+                <input type="number" id="zwrot-ilosc" step="1" min="1" style="width:70px; padding:6px 8px; border:1px solid #bbf7d0; border-radius:8px; font-size:14px; font-weight:700;">
+                <span id="zwrot-ilosc-max" style="font-size:12px; color:#16a34a;"></span>
+            </div>
+        </div>
+
+        <label style="display:block; font-size:13px; font-weight:700; color:#475569; margin-bottom:6px;">Powód zwrotu (widoczny w historii klienta) <span style="color:#b91c1c;">*</span></label>
+        <textarea id="zwrot-powod" rows="2" placeholder="np. zwrot kosmetyku — klientce nie odpowiada zapach" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:10px; font-size:14px; margin-bottom:16px; box-sizing:border-box; resize:vertical;"></textarea>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button onclick="zamknijZwrot()" style="background:#f1f5f9; border:0; border-radius:10px; padding:10px 18px; font-size:14px; font-weight:600; cursor:pointer;">Anuluj</button>
+            <button id="zwrot-zapisz-btn" onclick="zapiszZwrot()" style="background:#b91c1c; color:#fff; border:0; border-radius:10px; padding:10px 20px; font-size:14px; font-weight:700; cursor:pointer;">↩ Zarejestruj zwrot</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Powiel miesiąc (Koszty) -->
 <div id="kp_powiel_overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.45); z-index:10030; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:16px; padding:28px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
@@ -30438,6 +30515,121 @@ async function foto_usun(typ, id, idKlienta) {
     foto_ladujGalerie(idKlienta);
   } catch (e) {
     alert('Błąd połączenia: ' + e.message);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ZWROT SPRZEDAŻY — ujemny wpis z dzisiejszą datą (stare raporty
+// nietknięte). Otwierany z historii w profilu klienta (przycisk ↩).
+// ═══════════════════════════════════════════════════════════════
+let zwrotAktualny = null; // { id, kwota, pozostalo, zabieg, data, jestProdukt, iloscOryg }
+
+function otworzZwrot(idSprzedazy) {
+  const t = (historiaDane || []).find(r => String(r.id) === String(idSprzedazy));
+  if (!t) { alert('Nie znaleziono transakcji. Odśwież profil.'); return; }
+
+  const kwotaOryg = parseFloat(t.kwota) || 0;
+  let zwrocono = 0;
+  (historiaDane || []).forEach(r => {
+    if (r.zwrot_do_id && String(r.zwrot_do_id) === String(t.id)) zwrocono += Math.abs(parseFloat(r.kwota) || 0);
+  });
+  const pozostalo = Math.round((kwotaOryg - zwrocono) * 100) / 100;
+  if (pozostalo <= 0) { alert('Ta pozycja została już w całości zwrócona.'); return; }
+
+  const mProd = String(t.zabieg || '').match(/^(Kosmetyk|Suplement):\s*(.+)$/i);
+  const mIl = String(t.szczegoly || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+  const iloscOryg = mIl ? parseFloat(mIl[1].replace(',', '.')) : 0;
+  const jestProdukt = !!(mProd && iloscOryg > 0);
+
+  zwrotAktualny = { id: t.id, kwota: kwotaOryg, pozostalo, zabieg: t.zabieg, data: String(t.data || '').slice(0, 10), jestProdukt, iloscOryg };
+
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;');
+  document.getElementById('zwrot-info-box').innerHTML =
+    `<b>${esc(t.zabieg)}</b><br>` +
+    `Zakup z ${esc(zwrotAktualny.data)} za <b>${kwotaOryg.toFixed(2)} zł</b> (${esc(t.platnosc || '-')})` +
+    (zwrocono > 0 ? `<br><span style="color:#b91c1c;">Już zwrócono: ${zwrocono.toFixed(2)} zł — pozostało ${pozostalo.toFixed(2)} zł</span>` : '');
+
+  const kwotaInput = document.getElementById('zwrot-kwota');
+  kwotaInput.value = pozostalo.toFixed(2);
+  kwotaInput.max = pozostalo;
+  document.getElementById('zwrot-metoda').value = 'Karta';
+  document.getElementById('zwrot-powod').value = '';
+
+  const stanBox = document.getElementById('zwrot-stan-box');
+  stanBox.style.display = jestProdukt ? 'block' : 'none';
+  if (jestProdukt) {
+    document.getElementById('zwrot-przywroc-stan').checked = true;
+    const il = document.getElementById('zwrot-ilosc');
+    il.value = iloscOryg;
+    il.max = iloscOryg;
+    document.getElementById('zwrot-ilosc-max').textContent = `(zakupiono ${iloscOryg} szt)`;
+    document.getElementById('zwrot-ilosc-row').style.display = 'flex';
+  }
+
+  document.getElementById('zwrot-modal-overlay').style.display = 'flex';
+}
+
+function zamknijZwrot() {
+  document.getElementById('zwrot-modal-overlay').style.display = 'none';
+  zwrotAktualny = null;
+}
+
+function zwrotCalosc() {
+  if (zwrotAktualny) document.getElementById('zwrot-kwota').value = zwrotAktualny.pozostalo.toFixed(2);
+}
+
+async function zapiszZwrot() {
+  if (!zwrotAktualny) return;
+  const kwota = parseFloat(String(document.getElementById('zwrot-kwota').value).replace(',', '.'));
+  const metoda = document.getElementById('zwrot-metoda').value;
+  const powod = document.getElementById('zwrot-powod').value.trim();
+
+  if (!(kwota > 0)) { alert('Podaj kwotę zwrotu.'); return; }
+  if (kwota > zwrotAktualny.pozostalo + 0.001) { alert(`Maksymalnie do zwrotu: ${zwrotAktualny.pozostalo.toFixed(2)} zł.`); return; }
+  if (!powod) { alert('Podaj powód zwrotu — notatka będzie widoczna w historii klienta.'); return; }
+
+  const przywrocStan = zwrotAktualny.jestProdukt && document.getElementById('zwrot-przywroc-stan').checked;
+  let iloscZwrotu = null;
+  if (przywrocStan) {
+    iloscZwrotu = parseFloat(String(document.getElementById('zwrot-ilosc').value).replace(',', '.'));
+    if (!(iloscZwrotu > 0) || iloscZwrotu > zwrotAktualny.iloscOryg) {
+      alert(`Ilość do przywrócenia: od 1 do ${zwrotAktualny.iloscOryg} szt.`); return;
+    }
+  }
+
+  if (!confirm(`Zarejestrować zwrot ${kwota.toFixed(2)} zł (${metoda})${przywrocStan ? ` + ${iloscZwrotu} szt na stan` : ''}?`)) return;
+
+  const btn = document.getElementById('zwrot-zapisz-btn');
+  btn.disabled = true; btn.textContent = '⏳...';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'add_zwrot',
+        id: zwrotAktualny.id,
+        kwota: kwota,
+        metoda: metoda,
+        powod: powod,
+        przywroc_stan: przywrocStan,
+        ilosc_zwrotu: przywrocStan ? iloscZwrotu : null,
+        pracownik: typeof currentUser !== 'undefined' ? currentUser : 'Admin'
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    alert(d.message || 'Zwrot zarejestrowany.');
+    zamknijZwrot();
+    // Odśwież historię profilu (nowy wpis ZWROT + zaktualizowane przyciski)
+    const idK = window.aktualnyProfilKlientId;
+    const nazwaK = window.aktualnyProfilKlientNazwa;
+    fetch(API_URL + '?action=full_sales_history').then(x => x.json()).then(dane => {
+      historiaDane = dane;
+      if (idK && typeof przetwarzajHistorieKlienta === 'function') przetwarzajHistorieKlienta(idK, nazwaK);
+    });
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '↩ Zarejestruj zwrot';
   }
 }
 </script>

@@ -74,6 +74,18 @@ module.exports = (db) => {
       }
     }
   );
+  // Sprzedaz.zwrot_do_id — ID oryginalnej sprzedaży, której dotyczy zwrot.
+  // Wpis zwrotu ma ujemną kwotę i dzisiejszą datę (stare raporty nietknięte).
+  // NULL = zwykła sprzedaż. Suma zwrotów do jednego ID nie może przekroczyć
+  // kwoty oryginału (walidacja w add_zwrot).
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN zwrot_do_id VARCHAR(50) NULL`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.zwrot_do_id:', err.message);
+      }
+    }
+  );
 
   // Normalizuje ważność z formularza: '' / null / undefined / 0 / nie-liczba → null
   // (bezterminowo). Inaczej dodatnia liczba całkowita dni.
@@ -306,7 +318,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez, grupa_id FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez, grupa_id, zwrot_do_id FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -318,7 +330,8 @@ module.exports = (db) => {
             data_waznosci: r.data_waznosci ? toDateStr(r.data_waznosci) : null,
             karnet_zamkniety_w: r.karnet_zamkniety_w || null,
             karnet_zamkniety_przez: r.karnet_zamkniety_przez || null,
-            grupa_id: r.grupa_id || null
+            grupa_id: r.grupa_id || null,
+            zwrot_do_id: r.zwrot_do_id || null
           })));
         }
       );
@@ -858,6 +871,94 @@ module.exports = (db) => {
               }
 
               return res.json({ status: 'success', message: 'Transakcja pomyślnie usunięta.' + restoreMsg });
+            }
+          );
+        }
+      );
+
+    // --- ADD_ZWROT ---
+    // Zwrot (pełny lub częściowy) do istniejącej sprzedaży. NIE modyfikuje
+    // oryginału — tworzy NOWY wpis z ujemną kwotą i dzisiejszą datą, więc
+    // historyczne raporty pozostają nietknięte, a utarg dnia zwrotu maleje.
+    } else if (action === 'add_zwrot') {
+      const pracownik = d.pracownik || 'Admin';
+      const metoda = String(d.metoda || '').trim();
+      const powod = String(d.powod || '').trim();
+
+      let _kwotaZwrotu;
+      try { _kwotaZwrotu = parseKwota(d.kwota, 'kwota zwrotu'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      if (!(_kwotaZwrotu > 0)) return res.json({ status: 'error', message: 'Kwota zwrotu musi być większa od zera.' });
+      if (!['Gotówka', 'Karta', 'Przelew'].includes(metoda)) return res.json({ status: 'error', message: 'Wybierz sposób zwrotu: Gotówka, Karta lub Przelew.' });
+      if (!powod) return res.json({ status: 'error', message: 'Podaj powód zwrotu (notatka będzie widoczna w historii klienta).' });
+
+      db.query(
+        `SELECT id, klient, id_klienta, zabieg, kwota, szczegoly, typ_zabiegu, kategoria_produktu, data_sprzedazy, zwrot_do_id FROM Sprzedaz WHERE tenant_id = ? AND id = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
+        [tenant_id, d.id],
+        (err, rows) => {
+          if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono transakcji o takim ID.' });
+          const orig = rows[0];
+          if (orig.zwrot_do_id || String(orig.zabieg || '').startsWith('ZWROT')) {
+            return res.json({ status: 'error', message: 'Nie można zrobić zwrotu do zwrotu.' });
+          }
+          const kwotaOryg = parseFloat(orig.kwota) || 0;
+          if (!(kwotaOryg > 0)) return res.json({ status: 'error', message: 'Ta pozycja nie ma dodatniej kwoty — zwrot niemożliwy.' });
+
+          // Suma dotychczasowych zwrotów do tej sprzedaży (kwoty ujemne)
+          db.query(
+            `SELECT COALESCE(SUM(kwota), 0) AS suma FROM Sprzedaz WHERE tenant_id = ? AND zwrot_do_id = ? AND COALESCE(status, '') != 'USUNIĘTY'`,
+            [tenant_id, orig.id],
+            (err2, rows2) => {
+              if (err2) return res.json({ status: 'error', message: err2.message });
+              const juzZwrocono = Math.abs(parseFloat(rows2[0].suma) || 0);
+              const doZwrotu = Math.round((kwotaOryg - juzZwrocono) * 100) / 100;
+              if (_kwotaZwrotu > doZwrotu + 0.001) {
+                return res.json({ status: 'error', message: `Kwota zwrotu za wysoka. Zakup: ${kwotaOryg.toFixed(2)} zł, już zwrócono: ${juzZwrocono.toFixed(2)} zł, pozostało do zwrotu: ${doZwrotu.toFixed(2)} zł.` });
+              }
+
+              // Produkt (Kosmetyk:/Suplement:) — opcjonalny przywrót na stan magazynu
+              const zab = String(orig.zabieg || '');
+              const mProd = zab.match(/^(Kosmetyk|Suplement):\s*(.+)$/i);
+              const mIl = String(orig.szczegoly || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i);
+              const iloscOryg = mIl ? parseFloat(mIl[1].replace(',', '.')) : 0;
+              const jestProdukt = !!(mProd && iloscOryg > 0);
+              const przywrocStan = jestProdukt && !!d.przywroc_stan;
+              let iloscZwrotu = 0;
+              if (przywrocStan) {
+                iloscZwrotu = d.ilosc_zwrotu !== undefined && d.ilosc_zwrotu !== null && d.ilosc_zwrotu !== ''
+                  ? parseFloat(String(d.ilosc_zwrotu).replace(',', '.'))
+                  : iloscOryg;
+                if (!(iloscZwrotu > 0) || iloscZwrotu > iloscOryg) {
+                  return res.json({ status: 'error', message: `Nieprawidłowa ilość do przywrócenia na stan (zakup: ${iloscOryg} szt).` });
+                }
+              }
+
+              const dataOryg = orig.data_sprzedazy instanceof Date
+                ? orig.data_sprzedazy.toISOString().slice(0, 10)
+                : String(orig.data_sprzedazy).slice(0, 10);
+              let szczegolyZwrotu = `Zwrot ${_kwotaZwrotu >= doZwrotu - 0.001 && juzZwrocono === 0 ? 'całości' : 'częściowy'} do zakupu z ${dataOryg}`;
+              if (jestProdukt) {
+                szczegolyZwrotu += przywrocStan ? ` • ${iloscZwrotu} szt wraca na stan` : ' • produkt NIE wraca na stan (0 szt)';
+              }
+
+              const now = new Date();
+              const uniqueId = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 15);
+              db.query(
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, zwrot_do_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, now, orig.klient, 'ZWROT: ' + orig.zabieg, pracownik, -_kwotaZwrotu, powod, szczegolyZwrotu, metoda, orig.id_klienta || '', pracownik, orig.typ_zabiegu || null, orig.kategoria_produktu || null, orig.id],
+                (err3) => {
+                  if (err3) return res.json({ status: 'error', message: err3.message });
+                  zapiszLog(tenant_id, 'ZWROT SPRZEDAŻY', pracownik, `Klient: ${orig.klient} | ${orig.zabieg} | Zwrot: ${_kwotaZwrotu.toFixed(2)} zł (${metoda}) | Powód: ${powod} | Do zakupu ID: ${orig.id}${przywrocStan ? ` | +${iloscZwrotu} szt na stan` : ''}`);
+
+                  const finish = (stanMsg) => res.json({ status: 'success', message: `Zwrot ${_kwotaZwrotu.toFixed(2)} zł zarejestrowany.` + (stanMsg || '') });
+                  if (przywrocStan) {
+                    przywrocDoMagazynu(tenant_id, mProd[2].trim(), iloscZwrotu, pracownik, (errM) => {
+                      finish(errM ? ' UWAGA: nie udało się przywrócić stanu magazynu — sprawdź partie ręcznie.' : ` Produkt wrócił na stan (+${iloscZwrotu} szt).`);
+                    });
+                  } else {
+                    finish();
+                  }
+                }
+              );
             }
           );
         }

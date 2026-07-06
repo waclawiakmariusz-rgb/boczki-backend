@@ -523,7 +523,7 @@ app.post('/api', (req, res) => {
 
     // Mapowanie akcji na route handlery
     const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry', 'hide_reorder', 'unhide_reorder'];
-    const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service', 'extend_karnet', 'close_karnet', 'reopen_karnet'];
+    const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_zwrot', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service', 'extend_karnet', 'close_karnet', 'reopen_karnet'];
     const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule', 'soft_delete_client', 'anonymize_client', 'mark_deceased', 'set_warning', 'clear_warning', 'restore_client', 'mark_retail_proposed', 'unmark_retail_proposed', 'ds_pomin', 'ds_przywroc', 'ds_przypisz_zadatek'];
     const rodoActions = ['save_rodo', 'update_consents'];
     const urodzinyActions = ['add_birthday', 'edit_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
