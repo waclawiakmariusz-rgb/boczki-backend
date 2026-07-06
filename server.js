@@ -298,6 +298,7 @@ const dokumentyDodatkoweRoutes = require('./routes/dokumenty_dodatkowe')(db);
 const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
 const gusRoutes        = require('./routes/gus')(db);
 const booksyRoutes     = require('./routes/booksy')(db);
+const fotoRoutes       = require('./routes/foto')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -332,6 +333,7 @@ app.use('/api', dokumentyDodatkoweRoutes);
 app.use('/api', ustawieniaZadatkiRoutes);
 app.use('/api', gusRoutes);
 app.use('/api', booksyRoutes);
+app.use('/api', fotoRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -463,6 +465,8 @@ app.get('/api', (req, res) => {
         'get_dokumenty_klienta': '/api/dokumenty_dodatkowe?action=get_dokumenty_klienta&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
         'booksy_dzis': '/api/booksy?action=booksy_dzis&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
         'booksy_dokumenty': '/api/booksy?action=booksy_dokumenty&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
+        'foto_status': '/api/foto?action=foto_status&tenant_id=' + tenant_id,
+        'foto_sesje': '/api/foto?action=foto_sesje&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : ''),
     };
 
     if (getActions[action]) {
@@ -532,6 +536,7 @@ app.post('/api', (req, res) => {
     const featuresActions = ['toggle_feature'];
     const dokumentyDodatkoweActions = ['add_typ_dokumentu', 'save_dokument_klienta', 'delete_dokument_klienta'];
     const booksyActions = ['booksy_refresh', 'booksy_preview'];
+    const fotoActions = ['foto_token', 'foto_usun'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -575,6 +580,9 @@ app.post('/api', (req, res) => {
     } else if (booksyActions.includes(action)) {
         req.url = '/booksy';
         return booksyRoutes(req, res, () => {});
+    } else if (fotoActions.includes(action)) {
+        req.url = '/foto';
+        return fotoRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });

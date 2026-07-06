@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Estelio — Foto przed/po</title>
+<style>
+  * { box-sizing: border-box; }
+  body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0F172A; font-family: 'Segoe UI', system-ui, sans-serif; color: #E2E8F0; }
+
+  /* ── Ekrany ── */
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 50; background: #0F172A; }
+  .screen.visible { display: flex; }
+  .logo { font-size: 26px; font-weight: 800; letter-spacing: .5px; margin-bottom: 6px; }
+  .logo b { color: #A78BFA; }
+  .card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 20px; width: 100%; max-width: 380px; margin-top: 14px; }
+  .card h2 { margin: 0 0 4px; font-size: 17px; }
+  .muted { color: #94A3B8; font-size: 13px; }
+  .info-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #273449; font-size: 14px; text-align: left; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row b { text-align: right; }
+  select, input[type=password], input[type=tel] {
+    width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #475569;
+    background: #0F172A; color: #E2E8F0; font-size: 16px; appearance: auto;
+  }
+  .btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 12px; background: #7C3AED; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .btn:active { transform: scale(.98); }
+  .btn[disabled] { opacity: .5; }
+  .err { color: #FCA5A5; font-size: 13px; margin-top: 10px; min-height: 16px; }
+
+  /* ── Aparat ── */
+  #screen-camera { display: none; position: fixed; inset: 0; background: #000; z-index: 10; }
+  #screen-camera.visible { display: block; }
+  video { width: 100%; height: 100%; object-fit: cover; position: absolute; z-index: 1; }
+
+  .top-bar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 35; pointer-events: none;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px) 12px 26px;
+    background: linear-gradient(rgba(0,0,0,.65), transparent);
+    text-shadow: 1px 1px 3px rgba(0,0,0,.9); text-align: center;
+  }
+  .top-bar .t1 { font-size: 15px; font-weight: 800; letter-spacing: .5px; }
+  .top-bar .t2 { font-size: 12px; color: #DDD6FE; margin-top: 2px; }
+
+  .overlay {
+    position: absolute; inset: 0; pointer-events: none; z-index: 10; opacity: .5;
+    background-repeat: no-repeat; background-position: center; background-size: 85% auto;
+    transform-origin: center center; transition: background-image .3s ease-in-out, transform .1s linear;
+  }
+
+  .level-crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 300px; height: 300px; z-index: 15; display: none; pointer-events: none; }
+  .cross-line-v { position: absolute; top: 50px; bottom: 50px; left: 50%; width: 4px; background: rgba(255,0,0,.6); transform: translateX(-50%); border-radius: 2px; transition: background-color .3s; box-shadow: 0 0 5px rgba(0,0,0,.5); }
+  .cross-line-h { position: absolute; left: 50px; right: 50px; top: 50%; height: 4px; background: rgba(255,0,0,.6); transform: translateY(-50%); border-radius: 2px; transition: background-color .3s; box-shadow: 0 0 5px rgba(0,0,0,.5); }
+  .cross-center { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; background: #fff; border-radius: 50%; transform: translate(-50%,-50%); box-shadow: 0 0 5px #000; }
+  .cross-label { position: absolute; color: #fff; font-size: 10px; font-weight: bold; text-shadow: 1px 1px 2px #000; opacity: .8; }
+  .label-v { top: 20px; left: 50%; transform: translateX(-50%); }
+  .label-h { right: 10px; top: 50%; transform: translateY(-50%); }
+
+  #tilt-warning {
+    position: absolute; top: 18%; width: 100%; text-align: center; color: #ff3333;
+    font-weight: 900; font-size: 22px; text-shadow: 2px 2px 0 #000; z-index: 40; display: none;
+    text-transform: uppercase; background: rgba(0,0,0,.6); padding: 8px 0; pointer-events: none;
+  }
+
+  .scale-control { position: absolute; bottom: 250px; left: 50%; transform: translateX(-50%); width: 78%; max-width: 300px; z-index: 25; text-align: center; margin-bottom: env(safe-area-inset-bottom, 10px); }
+  .scale-label { color: #fff; font-size: 12px; margin-bottom: 4px; text-shadow: 1px 1px 2px #000; font-weight: bold; }
+  input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 24px; width: 24px; border-radius: 50%; background: #fff; cursor: pointer; margin-top: -10px; box-shadow: 0 2px 6px rgba(0,0,0,.5); }
+  input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(255,255,255,.5); border-radius: 2px; }
+
+  .pose-selector { position: absolute; bottom: 190px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; z-index: 25; background: rgba(0,0,0,.6); padding: 8px; border-radius: 25px; width: 95%; max-width: 450px; justify-content: center; margin-bottom: env(safe-area-inset-bottom, 10px); }
+  .pose-btn { position: relative; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.5); padding: 8px 4px; border-radius: 15px; font-size: 11px; cursor: pointer; flex: 1; text-align: center; white-space: nowrap; }
+  .pose-btn.active { background: #fff; color: #000; font-weight: bold; border-color: #fff; }
+  .pose-count { position: absolute; top: -7px; right: -3px; background: #22C55E; color: #fff; font-size: 10px; font-weight: 800; min-width: 16px; height: 16px; line-height: 16px; border-radius: 8px; padding: 0 3px; display: none; }
+
+  .shutter-btn { position: absolute; bottom: 90px; left: 50%; transform: translateX(-50%); width: 80px; height: 80px; border-radius: 50%; background: #fff; border: 5px solid rgba(255,255,255,.3); z-index: 20; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,.5); margin-bottom: env(safe-area-inset-bottom, 15px); }
+  .shutter-btn:active { transform: translateX(-50%) scale(.9); }
+  .shutter-btn[disabled] { opacity: .4; }
+
+  .side-btn { position: absolute; bottom: 105px; z-index: 20; width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); background: rgba(0,0,0,.55); color: #fff; font-size: 20px; cursor: pointer; margin-bottom: env(safe-area-inset-bottom, 15px); }
+  #share-btn { right: calc(50% - 130px); display: none; }
+  #retry-btn { left: calc(50% - 130px); display: none; background: rgba(220,38,38,.75); font-size: 12px; font-weight: 800; }
+
+  #toast { position: fixed; top: 28%; left: 50%; transform: translate(-50%,-50%); background: rgba(0,0,0,.85); color: #fff; padding: 18px 24px; border-radius: 16px; font-size: 17px; font-weight: 800; text-align: center; z-index: 200; display: none; border: 2px solid #fff; max-width: 82%; }
+  #toast.ok { color: #4ADE80; }
+  #toast.bad { color: #FCA5A5; }
+
+  #upload-status { position: absolute; top: calc(env(safe-area-inset-top, 0px) + 58px); right: 10px; z-index: 36; background: rgba(0,0,0,.6); border-radius: 12px; padding: 5px 10px; font-size: 12px; font-weight: 700; display: none; }
+</style>
+</head>
+<body>
+
+<!-- ── EKRAN 1: ładowanie / błąd tokenu ── -->
+<div class="screen visible" id="screen-load">
+  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="card">
+    <h2 id="load-msg">Sprawdzam link…</h2>
+    <div class="muted" id="load-sub">Chwileczkę.</div>
+  </div>
+</div>
+
+<!-- ── EKRAN 2: info + wykonawca + PIN ── -->
+<div class="screen" id="screen-pin">
+  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="card">
+    <div class="info-row"><span class="muted">Salon</span><b id="i-salon">—</b></div>
+    <div class="info-row"><span class="muted">Klient</span><b id="i-klient">—</b></div>
+    <div class="info-row"><span class="muted">Sesja</span><b id="i-opis">—</b></div>
+  </div>
+  <div class="card">
+    <h2>Kto wykonuje zdjęcia?</h2>
+    <div class="muted">Wykonawca zostanie zapisany przy każdym zdjęciu.</div>
+    <select id="p-pracownik"><option value="">— wybierz pracownika —</option></select>
+    <input type="password" id="p-pin" inputmode="numeric" autocomplete="off" placeholder="PIN pracownika">
+    <button class="btn" id="p-btn" onclick="potwierdzPin()">Potwierdź i włącz aparat</button>
+    <div class="err" id="p-err"></div>
+  </div>
+</div>
+
+<!-- ── EKRAN 3: aparat ── -->
+<div id="screen-camera">
+  <video id="video" autoplay playsinline muted></video>
+
+  <div class="top-bar">
+    <div class="t1" id="c-title">FOTO PRZED/PO</div>
+    <div class="t2" id="c-sub"></div>
+  </div>
+  <div id="upload-status"></div>
+
+  <div class="overlay" id="overlay-layer"></div>
+  <div id="tilt-warning">KRZYWO!</div>
+
+  <div class="level-crosshair" id="level-ui">
+    <div class="cross-line-v" id="line-v"></div>
+    <div class="cross-label label-v">BOKI</div>
+    <div class="cross-line-h" id="line-h"></div>
+    <div class="cross-label label-h">POCHYLENIE</div>
+    <div class="cross-center"></div>
+  </div>
+
+  <div class="scale-control">
+    <label class="scale-label">Dopasuj wzrost klientki</label>
+    <input type="range" id="ghost-scale" min="0.7" max="1.3" step="0.01" value="1" oninput="updateGhostScale(this.value)">
+  </div>
+
+  <div class="pose-selector" id="pose-selector"></div>
+
+  <button class="side-btn" id="retry-btn" onclick="ponowWysylke()">PONÓW</button>
+  <button class="shutter-btn" id="shutter" onclick="takePhoto()"></button>
+  <button class="side-btn" id="share-btn" onclick="udostepnijOstatnie()" title="Udostępnij ostatnie zdjęcie">📤</button>
+
+  <canvas id="canvas" style="display:none;"></canvas>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ══ Stan globalny ══
+  const params = new URLSearchParams(location.search);
+  const tokenStart = params.get('t') || '';
+  let token2 = null;              // token z potwierdzonym wykonawcą
+  let salonNazwa = '';
+  let klientNazwa = '';
+  let sesjaOpis = '';
+  let wykonawca = '';
+  let stream = null;
+  let sensorOk = false;           // czy w ogóle dostajemy dane z żyroskopu
+  let isTilted = false;           // aktualny stan poziomicy
+  let lastOriginalBlob = null;    // pełna rozdzielczość — do Web Share
+  let lastFilename = '';
+  let doWyslania = [];            // kolejka nieudanych uploadów [{blob, poza}]
+  let liczniki = {};              // poza → liczba wysłanych
+
+  const poses = {
+    front: { img: '/foto/body4.png',    suffix: 'PRZOD',     label: 'PRZÓD' },
+    sideL: { img: '/foto/body-l.png',   suffix: 'BOK-LEWO',  label: 'BOK L' },
+    sideR: { img: '/foto/body-p.png',   suffix: 'BOK-PRAWO', label: 'BOK P' },
+    back:  { img: '/foto/body-tyl.png', suffix: 'TYL',       label: 'TYŁ' },
+    face:  { img: '/foto/face.png',     suffix: 'TWARZ',     label: 'TWARZ' }
+  };
+  let currentPose = 'front';
+  const MAX_TILT_PITCH = 10, MAX_TILT_ROLL = 8;
+
+  const $ = (id) => document.getElementById(id);
+  function pokazEkran(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+    $('screen-camera').classList.remove('visible');
+    const el = $(id);
+    el.classList.add('visible');
+  }
+  function toast(msg, cls, ms) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.className = cls || '';
+    t.style.display = 'block';
+    clearTimeout(t._tm);
+    t._tm = setTimeout(() => { t.style.display = 'none'; }, ms || 2500);
+  }
+
+  // ══ EKRAN 1 → 2: weryfikacja tokenu ══
+  async function init() {
+    if (!tokenStart) {
+      $('load-msg').textContent = 'Brak kodu w linku';
+      $('load-sub').textContent = 'Zeskanuj kod QR wygenerowany w Estelio na komputerze.';
+      return;
+    }
+    try {
+      const r = await fetch('/api/foto/mobile-info?t=' + encodeURIComponent(tokenStart));
+      const d = await r.json();
+      if (d.status !== 'success') {
+        $('load-msg').textContent = 'Link nieaktywny';
+        $('load-sub').textContent = d.message || 'Wygeneruj nowy kod QR na komputerze.';
+        return;
+      }
+      salonNazwa = d.salon || 'Salon';
+      klientNazwa = d.klient || '';
+      sesjaOpis = d.opis || '';
+      $('i-salon').textContent = salonNazwa;
+      $('i-klient').textContent = klientNazwa;
+      $('i-opis').textContent = sesjaOpis;
+      const sel = $('p-pracownik');
+      (d.pracownicy || []).forEach(p => {
+        const o = document.createElement('option');
+        o.value = p; o.textContent = p;
+        sel.appendChild(o);
+      });
+      pokazEkran('screen-pin');
+    } catch (e) {
+      $('load-msg').textContent = 'Błąd połączenia';
+      $('load-sub').textContent = 'Sprawdź internet w telefonie i odśwież stronę.';
+    }
+  }
+
+  // ══ EKRAN 2 → 3: PIN wykonawcy ══
+  async function potwierdzPin() {
+    const pracownik = $('p-pracownik').value;
+    const pin = $('p-pin').value.trim();
+    const err = $('p-err');
+    err.textContent = '';
+    if (!pracownik) { err.textContent = 'Wybierz pracownika.'; return; }
+    if (!pin) { err.textContent = 'Podaj PIN.'; return; }
+    $('p-btn').disabled = true;
+    try {
+      const r = await fetch('/api/foto/potwierdz', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ t: tokenStart, pracownik, pin })
+      });
+      const d = await r.json();
+      if (d.status !== 'success') { err.textContent = d.message || 'Błąd weryfikacji.'; $('p-btn').disabled = false; return; }
+      token2 = d.token2;
+      wykonawca = d.wykonawca;
+      startAparat();   // wywołane z gestu użytkownika — iOS pozwoli na kamerę i sensory
+    } catch (e) {
+      err.textContent = 'Błąd połączenia. Spróbuj ponownie.';
+      $('p-btn').disabled = false;
+    }
+  }
+
+  // ══ EKRAN 3: aparat ══
+  function startAparat() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+    $('screen-camera').classList.add('visible');
+    $('c-title').textContent = (salonNazwa || 'FOTO').toUpperCase();
+    $('c-sub').textContent = `${klientNazwa} · ${sesjaOpis} · 📸 ${wykonawca}`;
+    zbudujPoseButtons();
+    setPose('front');
+    startCamera();
+    startSensory();
+  }
+
+  function zbudujPoseButtons() {
+    const box = $('pose-selector');
+    box.innerHTML = '';
+    Object.keys(poses).forEach(key => {
+      const b = document.createElement('button');
+      b.className = 'pose-btn' + (key === currentPose ? ' active' : '');
+      b.id = 'pose-btn-' + key;
+      b.innerHTML = poses[key].label + '<span class="pose-count" id="pose-count-' + key + '"></span>';
+      b.onclick = () => setPose(key);
+      box.appendChild(b);
+    });
+  }
+
+  function setPose(poseName) {
+    currentPose = poseName;
+    $('overlay-layer').style.backgroundImage = `url('${poses[poseName].img}')`;
+    document.querySelectorAll('.pose-btn').forEach(btn => btn.classList.remove('active'));
+    const b = $('pose-btn-' + poseName);
+    if (b) b.classList.add('active');
+  }
+
+  function updateGhostScale(v) { $('overlay-layer').style.transform = `scale(${v})`; }
+
+  const video = $('video');
+  async function startCamera() {
+    if (stream) return; // pojedynczy lifecycle — nie otwieraj kamery drugi raz
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: 'environment', width: { ideal: 4096 }, height: { ideal: 2160 } }
+      });
+      video.srcObject = stream;
+      video.onloadedmetadata = () => video.play();
+    } catch (err) {
+      toast('Błąd kamery: ' + (err.message || 'sprawdź uprawnienia'), 'bad', 4000);
+    }
+  }
+
+  // ── Poziomica ──
+  function startSensory() {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(resp => {
+        if (resp === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+      }).catch(() => {});
+    } else {
+      window.addEventListener('deviceorientation', handleOrientation);
+    }
+  }
+
+  function handleOrientation(e) {
+    const beta = e.beta, gamma = e.gamma;
+    if (beta === null || gamma === null) return;
+    sensorOk = true;
+    $('level-ui').style.display = 'block';
+
+    // face = telefon na płasko (beta→0), reszta = pionowo (beta→90)
+    const tiltPitch = (currentPose === 'face') ? beta : beta - 90;
+    const tiltRoll = gamma;
+    const isBadPitch = Math.abs(tiltPitch) > MAX_TILT_PITCH;
+    const isBadRoll = Math.abs(tiltRoll) > MAX_TILT_ROLL;
+
+    $('line-h').style.backgroundColor = isBadPitch ? '#ff3333' : '#00ff00';
+    $('line-v').style.backgroundColor = isBadRoll ? '#ff3333' : '#00ff00';
+    isTilted = isBadPitch || isBadRoll;
+    $('tilt-warning').style.display = isTilted ? 'block' : 'none';
+  }
+
+  // ── Zdjęcie: WYSIWYG (kadr = to co widać na ekranie przy object-fit:cover) ──
+  function takePhoto() {
+    if (!video.videoWidth) { toast('Kamera jeszcze startuje…', 'bad'); return; }
+    if (sensorOk && isTilted) { toast('KRZYWO! Wyprostuj telefon i spróbuj ponownie.', 'bad'); return; }
+
+    const vw = video.videoWidth, vh = video.videoHeight;
+    const cw = window.innerWidth, ch = window.innerHeight;
+    const scale = Math.max(cw / vw, ch / vh);
+    const visW = Math.round(cw / scale), visH = Math.round(ch / scale);
+    const sx = Math.round((vw - visW) / 2), sy = Math.round((vh - visH) / 2);
+
+    const canvas = $('canvas');
+    canvas.width = visW; canvas.height = visH;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, sx, sy, visW, visH, 0, 0, visW, visH);
+
+    // Watermark: nazwa salonu + data (prawy dolny róg)
+    const now = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    const dataStr = `${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`;
+    const fontSize = Math.max(18, Math.floor(canvas.width / 35));
+    ctx.font = `bold ${fontSize}px sans-serif`;
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText(`${salonNazwa} · ${dataStr}`, canvas.width * 0.97, canvas.height * 0.97);
+
+    // Flash
+    const flash = document.createElement('div');
+    flash.style.cssText = 'position:fixed;inset:0;background:#fff;z-index:100;transition:opacity .4s;';
+    document.body.appendChild(flash);
+    setTimeout(() => { flash.style.opacity = 0; setTimeout(() => flash.remove(), 400); }, 50);
+
+    const poza = poses[currentPose].suffix;
+    lastFilename = `foto-${pad(now.getDate())}-${pad(now.getMonth() + 1)}-${now.getFullYear()}_${pad(now.getHours())}${pad(now.getMinutes())}_${poza}.jpg`;
+
+    // Oryginał (pełny kadr, q .92) — do opcjonalnego udostępnienia
+    canvas.toBlob((blob) => { lastOriginalBlob = blob; $('share-btn').style.display = 'block'; }, 'image/jpeg', 0.92);
+
+    // Odchudzona wersja na serwer: max 1600 px dłuższy bok, q .8
+    let uw = visW, uh = visH;
+    const maxSide = Math.max(uw, uh);
+    if (maxSide > 1600) { const k = 1600 / maxSide; uw = Math.round(uw * k); uh = Math.round(uh * k); }
+    const c2 = document.createElement('canvas');
+    c2.width = uw; c2.height = uh;
+    c2.getContext('2d').drawImage(canvas, 0, 0, uw, uh);
+    c2.toBlob((blob) => wyslij(blob, poza), 'image/jpeg', 0.8);
+  }
+
+  // ── Upload ──
+  let uploadWToku = 0;
+  function statusUpload() {
+    const el = $('upload-status');
+    if (uploadWToku > 0) { el.style.display = 'block'; el.textContent = '⬆️ wysyłam… (' + uploadWToku + ')'; }
+    else { el.style.display = 'none'; }
+    $('retry-btn').style.display = doWyslania.length ? 'block' : 'none';
+    if (doWyslania.length) $('retry-btn').textContent = 'PONÓW (' + doWyslania.length + ')';
+  }
+
+  async function wyslij(blob, poza) {
+    uploadWToku++; statusUpload();
+    try {
+      const fd = new FormData();
+      fd.append('t', token2);
+      fd.append('poza', poza);
+      fd.append('foto', blob, 'foto.jpg');
+      const r = await fetch('/api/foto/upload', { method: 'POST', body: fd });
+      const d = await r.json();
+      if (d.status !== 'success') throw new Error(d.message || 'Błąd zapisu');
+      liczniki[poza] = (liczniki[poza] || 0) + 1;
+      odswiezLiczniki();
+      toast('✓ Zapisano na serwerze (' + poza + ')', 'ok', 1600);
+    } catch (e) {
+      doWyslania.push({ blob, poza });
+      toast('Nie wysłano — ' + (e.message || 'brak internetu') + '. Użyj PONÓW.', 'bad', 3500);
+    }
+    uploadWToku--; statusUpload();
+  }
+
+  async function ponowWysylke() {
+    const kolejka = doWyslania.splice(0);
+    statusUpload();
+    for (const item of kolejka) await wyslij(item.blob, item.poza);
+  }
+
+  function odswiezLiczniki() {
+    Object.keys(poses).forEach(key => {
+      const n = liczniki[poses[key].suffix] || 0;
+      const el = $('pose-count-' + key);
+      if (el) { el.textContent = n; el.style.display = n ? 'inline-block' : 'none'; }
+    });
+  }
+
+  // ── Web Share oryginału (opcjonalnie) ──
+  async function udostepnijOstatnie() {
+    if (!lastOriginalBlob) return;
+    const file = new File([lastOriginalBlob], lastFilename, { type: 'image/jpeg' });
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: 'Foto ' + klientNazwa }); } catch (e) {}
+    } else {
+      const url = URL.createObjectURL(lastOriginalBlob);
+      const a = document.createElement('a');
+      a.href = url; a.download = lastFilename;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

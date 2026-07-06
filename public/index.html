@@ -7733,6 +7733,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="ds-tile-icon" style="background:#eafaf4;color:#16a06a;">📅</div>
           <div><strong>Dziś w lokalu</strong><span>Wizyty z Booksy na dzisiaj</span></div>
         </div>
+        <div class="ds-quick-tile" id="ds-tile-foto" style="display:none;" onclick="foto_otworzZPulpitu()">
+          <div class="ds-tile-icon" style="background:#f3e8ff;color:#7c3aed;">📷</div>
+          <div><strong>Foto przed/po</strong><span>Zdjęcia klienta — kod QR na telefon</span></div>
+        </div>
       </div>
     </div>
 
@@ -8042,6 +8046,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <button onclick="dd_openModal()" style="background:#0ea5e9; color:#fff; border:0; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">+ Dodaj dokument</button>
                             </div>
                             <div id="dd-lista" style="display:flex; flex-direction:column; gap:8px;">
+                                <div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>
+                            </div>
+                        </div>
+
+                        <!-- ===== Foto przed/po (dodatek płatny foto_przed_po) ===== -->
+                        <div id="foto-profil-box" style="display:none; margin-top:24px; border-top:1px solid #efe5e8; padding-top:18px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                                <div style="font-size:16px; font-weight:700; color:#2c3242;">📷 Foto przed/po</div>
+                                <button onclick="foto_otworz(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">+ Nowa sesja (kod QR)</button>
+                            </div>
+                            <div id="foto-galeria" style="display:flex; flex-direction:column; gap:10px;">
                                 <div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>
                             </div>
                         </div>
@@ -11675,6 +11690,7 @@ function uruchomAplikacjePracownika(imie, rola) {
     }
     if (typeof aktualizujMenuFeatures === 'function') aktualizujMenuFeatures();
     if (typeof aktualizujBooksyWidocznosc === 'function') aktualizujBooksyWidocznosc();
+    if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
 
     // Odpalamy docelowe zaciąganie danych
     initApp();
@@ -11811,6 +11827,7 @@ function addonsToggle(featureKey, enable, nazwa, cenaZl) {
         }
         localStorage.setItem('boczki_features', JSON.stringify(window.tenantFeatures));
         aktualizujMenuFeatures();
+        if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
         addonsZaladuj(); // przerysuj listę
     })
     .catch(err => alert('Błąd: ' + err));
@@ -15781,6 +15798,9 @@ function przelaczTabProfilu(tabId, btn) {
     if (btn) { btn.classList.add('pp-tab-active'); btn.classList.add('profil-tab-active'); }
     if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof dd_loadDokumenty === 'function') {
         dd_loadDokumenty(window.aktualnyProfilKlientId);
+    }
+    if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof foto_profilTab === 'function') {
+        foto_profilTab(window.aktualnyProfilKlientId);
     }
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
@@ -29345,6 +29365,68 @@ initTheme();
 </div>
 
 
+<!-- Modal: Foto przed/po (dodatek foto_przed_po) -->
+<style>
+  body.dark-mode #foto-modal-card { background:#1e293b !important; }
+  body.dark-mode #foto-modal-card h3 { color:#c4b5fd !important; }
+  body.dark-mode #foto-modal-card label, body.dark-mode #foto-modal-card p { color:#cbd5e1 !important; }
+  body.dark-mode #foto-modal-card input { background:#0f172a !important; color:#e2e8f0 !important; border-color:#475569 !important; }
+  body.dark-mode #foto-qr-box { background:#f8fafc !important; }
+  body.dark-mode #foto-profil-box > div:first-child > div:first-child { color:#e2e8f0; }
+  body.dark-mode .foto-sesja-card { background:#1e293b !important; border-color:#334155 !important; }
+  body.dark-mode .foto-sesja-card .foto-sesja-tytul { color:#e2e8f0 !important; }
+  .foto-klient-wynik:hover { background:#f3e8ff; }
+  body.dark-mode .foto-klient-wynik { color:#e2e8f0; }
+  body.dark-mode .foto-klient-wynik:hover { background:#3b2a63; }
+</style>
+<div id="foto-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
+    <div id="foto-modal-card" style="background:#fff; width:95%; max-width:520px; padding:25px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,0.2); margin-bottom:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:18px;">
+            <div>
+                <h3 style="margin:0; color:#7c3aed;">📷 Foto przed/po</h3>
+                <p id="foto-modal-client" style="margin:5px 0 0 0; font-size:13px; color:#64748b; font-weight:600;"></p>
+            </div>
+            <button onclick="foto_zamknij()" style="border:none; background:none; font-size:24px; color:#94a3b8; cursor:pointer;">&times;</button>
+        </div>
+
+        <!-- Krok 1: wybór klienta (tylko wejście z Pulpitu) -->
+        <div id="foto-krok-klient" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Wybierz klienta:</label>
+            <input id="foto_klient_szukaj" oninput="foto_filtrujKlientow(this.value)" placeholder="Zacznij pisać imię i nazwisko..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            <div id="foto_klient_wyniki" style="margin-top:6px; max-height:240px; overflow-y:auto;"></div>
+        </div>
+
+        <!-- Krok 2: opis sesji -->
+        <div id="foto-krok-sesja" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Opis sesji:</label>
+            <input id="foto_opis" list="foto-opis-podpowiedzi" placeholder="np. przed serią endermologii" autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            <datalist id="foto-opis-podpowiedzi">
+                <option value="przed serią endermologii"></option>
+                <option value="po serii endermologii"></option>
+                <option value="przed serią zabiegów"></option>
+                <option value="po serii zabiegów"></option>
+                <option value="kontrola w trakcie serii"></option>
+            </datalist>
+            <p style="font-size:12px; color:#94a3b8; margin:8px 0 0 0;">Kod QR otworzy aparat na telefonie. Wykonawca zdjęć potwierdzi się PIN-em — przy każdym zdjęciu zapisujemy kto je zrobił.</p>
+            <button onclick="foto_generujQR()" id="foto-generuj-btn" style="width:100%; margin-top:14px; background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:pointer;">📱 Generuj kod QR</button>
+        </div>
+
+        <!-- Krok 3: kod QR -->
+        <div id="foto-krok-qr" style="display:none; text-align:center;">
+            <div id="foto-rodo-warn" style="display:none; background:#fef3c7; border:1px solid #f59e0b; color:#92400e; border-radius:10px; padding:10px 14px; font-size:13px; font-weight:600; text-align:left; margin-bottom:12px;">⚠️ Ten klient nie ma w systemie dokumentu „Zgoda na fotografię (przed/po)". Uzupełnij zgodę w zakładce Dokumenty przed wykonaniem zdjęć.</div>
+            <div id="foto-qr-box" style="display:inline-block; background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:12px;">
+                <img id="foto-qr-img" alt="Kod QR" style="width:240px; height:240px; display:block;">
+            </div>
+            <div id="foto-qr-opis" style="font-size:14px; font-weight:700; color:#334155; margin-top:10px;"></div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:4px;">Zeskanuj telefonem (aparat systemowy). Kod ważny 4 godziny.</div>
+            <div style="display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
+                <a id="foto-qr-link" href="#" target="_blank" rel="noopener" style="background:#f1f5f9; color:#334155; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; text-decoration:none;">🔗 Otwórz link</a>
+                <button onclick="foto_resetDoOpisu()" style="background:#f1f5f9; border:0; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer;">↺ Nowy kod / inny opis</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Powiel miesiąc (Koszty) -->
 <div id="kp_powiel_overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.45); z-index:10030; align-items:center; justify-content:center;">
     <div style="background:white; border-radius:16px; padding:28px; width:340px; box-shadow:0 20px 60px rgba(0,0,0,.25);">
@@ -30151,6 +30233,211 @@ async function dd_addNowyTyp() {
     }
   } catch (err) {
     alert('Błąd połączenia: ' + err.message);
+  }
+}
+
+/* ============================================================
+   FOTO PRZED/PO — dodatek płatny (feature_key: foto_przed_po)
+   Desktop: generowanie kodu QR + galeria sesji na profilu klienta.
+   Telefon: public/foto.html (aparat, PIN wykonawcy, upload).
+   ============================================================ */
+const FOTO_FEATURE_KEY = 'foto_przed_po';
+let foto_klient = { id: null, nazwa: '' };
+
+function foto_enabled() {
+  return typeof hasFeature === 'function' && hasFeature(FOTO_FEATURE_KEY);
+}
+
+// Pokaż/ukryj kafel na Pulpicie i sekcję na profilu — wołane po loginie i po toggle_feature
+function foto_aktualizujWidocznosc() {
+  const on = foto_enabled();
+  const tile = document.getElementById('ds-tile-foto');
+  if (tile) tile.style.display = on ? '' : 'none';
+  const box = document.getElementById('foto-profil-box');
+  if (box) box.style.display = on ? '' : 'none';
+}
+
+// Hook z przelaczTabProfilu — zakładka Dokumenty na profilu klienta
+function foto_profilTab(idKlienta) {
+  foto_aktualizujWidocznosc();
+  if (foto_enabled()) foto_ladujGalerie(idKlienta);
+}
+
+function foto_pokazKrok(krok) {
+  ['foto-krok-klient', 'foto-krok-sesja', 'foto-krok-qr'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (id === 'foto-krok-' + krok) ? 'block' : 'none';
+  });
+}
+
+// Otwarcie z profilu klienta — klient już wybrany
+function foto_otworz(idKlienta, nazwa) {
+  if (!foto_enabled()) { alert('Dodatek „Foto przed/po" nie jest aktywny. Włącz go w Administracja → Dodatki.'); return; }
+  if (!idKlienta) { alert('Brak wybranego klienta.'); return; }
+  foto_klient = { id: idKlienta, nazwa: nazwa || '' };
+  document.getElementById('foto-modal-client').textContent = foto_klient.nazwa;
+  document.getElementById('foto_opis').value = '';
+  document.getElementById('foto-rodo-warn').style.display = 'none';
+  foto_pokazKrok('sesja');
+  document.getElementById('foto-modal-overlay').style.display = 'flex';
+}
+
+// Otwarcie z kafla na Pulpicie — najpierw wybór klienta
+function foto_otworzZPulpitu() {
+  if (!foto_enabled()) return;
+  foto_klient = { id: null, nazwa: '' };
+  document.getElementById('foto-modal-client').textContent = '';
+  document.getElementById('foto_klient_szukaj').value = '';
+  document.getElementById('foto_klient_wyniki').innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Zacznij pisać, aby wyszukać klienta.</div>';
+  foto_pokazKrok('klient');
+  document.getElementById('foto-modal-overlay').style.display = 'flex';
+  // Doładuj bazę klientów jeśli jeszcze nie ma jej w pamięci
+  if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) {
+    fetch(API_URL + '?action=get_clients')
+      .then(r => r.json())
+      .then(d => { if (d && d.klienci) window.wszyscyKlienciDane = d.klienci; })
+      .catch(() => {});
+  }
+}
+
+function foto_zamknij() {
+  document.getElementById('foto-modal-overlay').style.display = 'none';
+}
+
+function foto_filtrujKlientow(fraza) {
+  const box = document.getElementById('foto_klient_wyniki');
+  const q = String(fraza || '').trim().toLowerCase();
+  if (q.length < 2) { box.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Wpisz min. 2 znaki.</div>'; return; }
+  const dane = window.wszyscyKlienciDane || [];
+  const wyniki = dane.filter(k => String(k.nazwa || '').toLowerCase().includes(q) || String(k.telefon || '').includes(q)).slice(0, 8);
+  if (!wyniki.length) { box.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Brak wyników.</div>'; return; }
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  box.innerHTML = wyniki.map((k, i) => `
+    <div class="foto-klient-wynik" data-foto-kw="${i}" style="padding:9px 10px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; gap:8px;">
+      <span style="font-weight:600;">${esc(k.nazwa)}</span><span style="color:#94a3b8; font-size:12px;">${esc(k.telefon || '')}</span>
+    </div>`).join('');
+  box.querySelectorAll('[data-foto-kw]').forEach(el => {
+    const k = wyniki[parseInt(el.getAttribute('data-foto-kw'), 10)];
+    el.addEventListener('click', () => {
+      foto_klient = { id: k.id, nazwa: k.nazwa };
+      document.getElementById('foto-modal-client').textContent = k.nazwa;
+      document.getElementById('foto_opis').value = '';
+      document.getElementById('foto-rodo-warn').style.display = 'none';
+      foto_pokazKrok('sesja');
+    });
+  });
+}
+
+function foto_resetDoOpisu() {
+  document.getElementById('foto-rodo-warn').style.display = 'none';
+  foto_pokazKrok('sesja');
+}
+
+async function foto_generujQR() {
+  const opis = document.getElementById('foto_opis').value.trim();
+  if (!opis) { alert('Podaj opis sesji (np. „przed serią endermologii").'); return; }
+  if (!foto_klient.id) { alert('Brak wybranego klienta.'); return; }
+  const btn = document.getElementById('foto-generuj-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generuję…';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'foto_token',
+        id_klienta: foto_klient.id,
+        klient: foto_klient.nazwa,
+        opis: opis,
+        user_log: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    document.getElementById('foto-qr-img').src = d.qr;
+    document.getElementById('foto-qr-link').href = d.url;
+    document.getElementById('foto-qr-opis').textContent = foto_klient.nazwa + ' — ' + opis;
+    document.getElementById('foto-rodo-warn').style.display = d.rodo_ok ? 'none' : 'block';
+    foto_pokazKrok('qr');
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '📱 Generuj kod QR';
+  }
+}
+
+// Dokleja tenant_id + session_token do URL-a pliku (img nie wysyła nagłówków)
+function foto_plikUrl(baseUrl) {
+  const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
+  const session_token = localStorage.getItem('boczki_session_token') || '';
+  const sep = baseUrl.includes('?') ? '&' : '?';
+  return `${baseUrl}${sep}tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`;
+}
+
+async function foto_ladujGalerie(idKlienta) {
+  const cont = document.getElementById('foto-galeria');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>';
+  try {
+    const r = await fetch(API_URL + '?action=foto_sesje&id_klienta=' + encodeURIComponent(idKlienta));
+    const d = await r.json();
+    const sesje = (d && d.data) || [];
+    if (!sesje.length) {
+      cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:10px 4px; font-style:italic;">Brak sesji foto. Kliknij „+ Nowa sesja (kod QR)" i zrób zdjęcia telefonem.</div>';
+      return;
+    }
+    const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    cont.innerHTML = sesje.map((s, si) => {
+      const data = s.created_at ? String(s.created_at).slice(0, 10) : '';
+      const zdjecia = (s.zdjecia || []).map((z, zi) => `
+        <div style="position:relative; display:inline-block;">
+          <img data-foto-full="${si}:${zi}" src="${foto_plikUrl(z.url_mini)}" alt="${esc(z.poza)}" title="${esc(z.poza)} — ${esc(z.pracownik)}" loading="lazy" style="width:86px; height:86px; object-fit:cover; border-radius:10px; cursor:pointer; border:1px solid #e2e8f0;">
+          <button data-foto-del-z="${si}:${zi}" title="Usuń zdjęcie" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; border:0; background:#fee2e2; color:#b91c1c; font-size:11px; font-weight:800; cursor:pointer; line-height:1;">✕</button>
+          <div style="position:absolute; left:3px; bottom:3px; background:rgba(0,0,0,.6); color:#fff; font-size:9px; font-weight:700; border-radius:6px; padding:1px 5px;">${esc(z.poza)}</div>
+        </div>`).join('');
+      return `
+        <div class="foto-sesja-card" style="border:1px solid #efe5e8; border-radius:12px; padding:12px 14px; background:#fff;">
+          <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+            <div>
+              <div class="foto-sesja-tytul" style="font-size:14px; font-weight:700; color:#1f2430;">📷 ${esc(s.opis)}</div>
+              <div style="font-size:12px; color:#6b7280; margin-top:2px;">${data} · zdjęcia: ${esc(s.pracownik || '?')} · ${(s.zdjecia || []).length} szt.</div>
+            </div>
+            <button data-foto-del-s="${si}" style="background:#fee2e2; color:#b91c1c; border:0; padding:6px 12px; border-radius:7px; font-size:12px; cursor:pointer; font-weight:600;">🗑️ Usuń sesję</button>
+          </div>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">${zdjecia}</div>
+        </div>`;
+    }).join('');
+    cont.querySelectorAll('[data-foto-full]').forEach(img => {
+      const [si, zi] = img.getAttribute('data-foto-full').split(':').map(Number);
+      img.addEventListener('click', () => window.open(foto_plikUrl(sesje[si].zdjecia[zi].url), '_blank', 'noopener'));
+    });
+    cont.querySelectorAll('[data-foto-del-z]').forEach(btn => {
+      const [si, zi] = btn.getAttribute('data-foto-del-z').split(':').map(Number);
+      btn.addEventListener('click', () => foto_usun('zdjecie', sesje[si].zdjecia[zi].id, idKlienta));
+    });
+    cont.querySelectorAll('[data-foto-del-s]').forEach(btn => {
+      const si = parseInt(btn.getAttribute('data-foto-del-s'), 10);
+      btn.addEventListener('click', () => foto_usun('sesja', sesje[si].id, idKlienta));
+    });
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#dc2626; font-size:13px; padding:8px 4px;">Błąd ładowania galerii.</div>';
+  }
+}
+
+async function foto_usun(typ, id, idKlienta) {
+  const co = typ === 'sesja' ? 'całą sesję (ze wszystkimi zdjęciami)' : 'to zdjęcie';
+  if (!confirm('Na pewno usunąć ' + co + '?')) return;
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'foto_usun', typ: typ, id: id,
+        user_log: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    foto_ladujGalerie(idKlienta);
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
   }
 }
 </script>
