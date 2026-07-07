@@ -11,7 +11,7 @@ const multer = require('multer');
 const Jimp = require('jimp');
 const path = require('path');
 const fs = require('fs');
-const { createHmac, randomUUID } = require('crypto');
+const { createHmac, createHash, randomBytes, randomUUID } = require('crypto');
 const QRCode = require('qrcode');
 const { validateTenantAccess, makePublicLimiter } = require('./sessions');
 const { makeZapiszLog } = require('./logi');
@@ -19,6 +19,7 @@ const { makeHasFeature } = require('./features');
 
 const FEATURE_KEY = 'foto_przed_po';
 const TOKEN_TTL_MS = 4 * 60 * 60 * 1000;          // 4 godziny
+const POTWIERDZENIE_TTL_MS = 14 * 60 * 60 * 1000; // PIN raz dziennie (14 h pokrywa dzień pracy)
 const QUOTA_MAX_B = 2 * 1024 * 1024 * 1024;       // 2 GB na salon
 const BOCZKI_TENANT = 'boczki-salon-glowny-001';
 
@@ -118,6 +119,22 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
     if (e) console.error('[foto] Migracja FotoZdjecia:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS FotoUrzadzenia (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      token_hash CHAR(64) NOT NULL,
+      nazwa VARCHAR(120) DEFAULT '',
+      sparowal VARCHAR(120) DEFAULT '',
+      wykonawca VARCHAR(120) DEFAULT '',
+      potwierdzono_do DATETIME NULL,
+      ostatnio_uzyte DATETIME NULL,
+      status VARCHAR(20) DEFAULT 'AKTYWNE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_token_hash (token_hash),
+      KEY idx_tenant (tenant_id)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[foto] Migracja FotoUrzadzenia:', e.message);
+  });
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
       VALUES (?, ?, ?, 500, 'AKTYWNY', 10)
       ON DUPLICATE KEY UPDATE feature_key = feature_key`,
@@ -129,6 +146,34 @@ module.exports = (db) => {
       ON DUPLICATE KEY UPDATE tenant_id = tenant_id`,
     [BOCZKI_TENANT, FEATURE_KEY],
     (e) => { if (e) console.error('[foto] Seed gratis Boczki:', e.message); });
+
+  // ─── Sparowane urządzenia (telefon salonu bez QR) ────────────
+  function hashDT(dt) { return createHash('sha256').update(String(dt)).digest('hex'); }
+
+  async function urzadzenieZTokena(dt) {
+    if (!dt || typeof dt !== 'string' || dt.length < 32 || dt.length > 128) return null;
+    const rows = await q(`SELECT * FROM FotoUrzadzenia WHERE token_hash = ? AND status = 'AKTYWNE' LIMIT 1`, [hashDT(dt)]);
+    return rows[0] || null;
+  }
+
+  function dzienPotwierdzony(u) {
+    return !!(u && u.wykonawca && u.potwierdzono_do && new Date(u.potwierdzono_do).getTime() > Date.now());
+  }
+
+  async function weryfikujPin(tenant_id, pracownik, pin) {
+    const rows = await q(
+      `SELECT imie_login, haslo_pin FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?) LIMIT 1`,
+      [tenant_id, pracownik]);
+    return rows.length && String(rows[0].haslo_pin).trim() === String(pin).trim();
+  }
+
+  async function rodoOkKlienta(tenant_id, idKlienta) {
+    const rodo = await q(
+      `SELECT COUNT(*) AS n FROM Dokumenty_Dodatkowe_Klienta
+        WHERE tenant_id = ? AND id_klienta = ? AND typ_nazwa LIKE '%fotograf%'`,
+      [tenant_id, idKlienta]).catch(() => [{ n: 0 }]);
+    return Number(rodo[0].n) > 0 ? 1 : 0;
+  }
 
   function wymagajFeature(tenant_id, res, next) {
     hasFeature(tenant_id, FEATURE_KEY, (ok) => {
@@ -178,6 +223,14 @@ module.exports = (db) => {
         }
         // Pokaż tylko sesje z co najmniej 1 zdjęciem (puste = token wygenerowany, nic nie zrobiono)
         return res.json({ status: 'success', data: [...mapa.values()].filter(s => s.zdjecia.length) });
+      } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
+    } else if (action === 'foto_urzadzenia') {
+      try {
+        const rows = await q(
+          `SELECT id, nazwa, sparowal, wykonawca, potwierdzono_do, ostatnio_uzyte, created_at
+             FROM FotoUrzadzenia WHERE tenant_id = ? AND status = 'AKTYWNE' ORDER BY created_at DESC`, [tenant_id]);
+        return res.json({ status: 'success', data: rows });
       } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
     } else {
@@ -250,6 +303,19 @@ module.exports = (db) => {
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       })();
 
+    } else if (action === 'foto_urzadzenie_usun') {
+      const id = parseInt(d.id, 10);
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      if (!id) return res.json({ status: 'error', message: 'Brak id urządzenia.' });
+      (async () => {
+        try {
+          const r = await q(`UPDATE FotoUrzadzenia SET status = 'UNIEWAZNIONE' WHERE tenant_id = ? AND id = ?`, [tenant_id, id]);
+          if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono urządzenia.' });
+          zapiszLog(tenant_id, 'FOTO URZĄDZENIE', kto, `Unieważniono sparowany telefon #${id}`);
+          return res.json({ status: 'success' });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      })();
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja foto POST: ' + action });
     }
@@ -294,7 +360,121 @@ module.exports = (db) => {
         return res.json({ status: 'error', message: 'Błędny PIN!' });
       }
       const token2 = makeToken(Object.assign({}, payload, { w: pracownik.slice(0, 80) }));
-      return res.json({ status: 'success', token2, wykonawca: pracownik });
+
+      // Opcjonalne parowanie telefonu: „Zapamiętaj ten telefon" — PIN już zweryfikowany
+      let device_token = null;
+      if (req.body.zapamietaj) {
+        device_token = randomBytes(32).toString('hex');
+        const nazwa = String(req.body.urzadzenie || '').trim().slice(0, 120) || ('Telefon (' + pracownik + ')');
+        await q(
+          `INSERT INTO FotoUrzadzenia (tenant_id, token_hash, nazwa, sparowal, wykonawca, potwierdzono_do)
+           VALUES (?, ?, ?, ?, ?, FROM_UNIXTIME(?))`,
+          [payload.t, hashDT(device_token), nazwa, pracownik, pracownik, Math.floor((Date.now() + POTWIERDZENIE_TTL_MS) / 1000)]);
+        zapiszLog(payload.t, 'FOTO URZĄDZENIE', pracownik, `Sparowano telefon: ${nazwa}`);
+      }
+      return res.json({ status: 'success', token2, wykonawca: pracownik, device_token });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // ==========================================
+  // Sparowany telefon — flow bez QR (device_token w localStorage telefonu)
+  // ==========================================
+
+  // GET /foto/urzadzenie?dt=... — stan urządzenia (routing ekranów na telefonie)
+  router.get('/foto/urzadzenie', async (req, res) => {
+    try {
+      const u = await urzadzenieZTokena(req.query.dt);
+      if (!u) return res.json({ status: 'error', message: 'Telefon nie jest sparowany albo dostęp cofnięto. Zeskanuj kod QR z komputera, aby sparować ponownie.' });
+      const [prac, lic] = await Promise.all([
+        q(`SELECT imie_login FROM Użytkownicy WHERE tenant_id = ? ORDER BY imie_login`, [u.tenant_id]),
+        q(`SELECT nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`, [u.tenant_id])
+      ]);
+      return res.json({
+        status: 'success',
+        salon: (lic[0] && lic[0].nazwa_salonu) || '',
+        nazwa: u.nazwa,
+        potwierdzony: dzienPotwierdzony(u) ? 1 : 0,
+        wykonawca: dzienPotwierdzony(u) ? u.wykonawca : null,
+        pracownicy: prac.map(r => String(r.imie_login || '').trim()).filter(Boolean)
+      });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // POST /foto/dzien — { dt, pracownik, pin } → potwierdzenie wykonawcy na dziś
+  router.post('/foto/dzien', pinLimiter, async (req, res) => {
+    try {
+      const u = await urzadzenieZTokena(req.body.dt);
+      if (!u) return res.json({ status: 'error', message: 'Telefon nie jest sparowany albo dostęp cofnięto. Zeskanuj kod QR z komputera.' });
+      const pracownik = String(req.body.pracownik || '').trim();
+      const pin = String(req.body.pin || '').trim();
+      if (!pracownik || !pin) return res.json({ status: 'error', message: 'Wybierz pracownika i podaj PIN.' });
+      if (!(await weryfikujPin(u.tenant_id, pracownik, pin))) return res.json({ status: 'error', message: 'Błędny PIN!' });
+      await q(
+        `UPDATE FotoUrzadzenia SET wykonawca = ?, potwierdzono_do = FROM_UNIXTIME(?), ostatnio_uzyte = NOW() WHERE id = ?`,
+        [pracownik.slice(0, 120), Math.floor((Date.now() + POTWIERDZENIE_TTL_MS) / 1000), u.id]);
+      return res.json({ status: 'success', wykonawca: pracownik });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // GET /foto/klienci?dt=...&q=... — wyszukiwarka klientek (wymaga potwierdzonego dnia)
+  router.get('/foto/klienci', async (req, res) => {
+    try {
+      const u = await urzadzenieZTokena(req.query.dt);
+      if (!u) return res.json({ status: 'error', message: 'Telefon nie jest sparowany albo dostęp cofnięto.' });
+      if (!dzienPotwierdzony(u)) return res.json({ status: 'error', message: 'Potwierdź się PIN-em, aby wyszukiwać klientki.', wymaga_pin: 1 });
+      const fraza = String(req.query.q || '').trim();
+      if (fraza.length < 2) return res.json({ status: 'success', data: [] });
+      wymagajFeature(u.tenant_id, res, async () => {
+        const like = '%' + fraza.replace(/[%_]/g, '') + '%';
+        const rows = await q(
+          `SELECT id_klienta, imie_nazwisko, telefon FROM Klienci
+            WHERE tenant_id = ? AND data_usuniecia IS NULL AND (imie_nazwisko LIKE ? OR telefon LIKE ?)
+            ORDER BY imie_nazwisko LIMIT 10`,
+          [u.tenant_id, like, like]);
+        await q(`UPDATE FotoUrzadzenia SET ostatnio_uzyte = NOW() WHERE id = ?`, [u.id]).catch(() => {});
+        return res.json({
+          status: 'success',
+          data: rows.map(r => ({
+            id: r.id_klienta,
+            nazwa: r.imie_nazwisko,
+            tel: r.telefon ? String(r.telefon).replace(/\d(?=\d{3})/g, '•') : ''
+          }))
+        });
+      });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // POST /foto/start — { dt, id_klienta, opis } → token2 sesji foto (bez QR)
+  router.post('/foto/start', async (req, res) => {
+    try {
+      const u = await urzadzenieZTokena(req.body.dt);
+      if (!u) return res.json({ status: 'error', message: 'Telefon nie jest sparowany albo dostęp cofnięto.' });
+      if (!dzienPotwierdzony(u)) return res.json({ status: 'error', message: 'Potwierdź się PIN-em, aby zacząć sesję.', wymaga_pin: 1 });
+      const idKlienta = String(req.body.id_klienta || '').trim();
+      const opis = String(req.body.opis || '').trim();
+      if (!idKlienta) return res.json({ status: 'error', message: 'Wybierz klientkę.' });
+      if (!opis) return res.json({ status: 'error', message: 'Podaj opis sesji (np. „przed serią endermologii").' });
+      wymagajFeature(u.tenant_id, res, async () => {
+        const kl = await q(
+          `SELECT imie_nazwisko FROM Klienci WHERE tenant_id = ? AND id_klienta = ? AND data_usuniecia IS NULL LIMIT 1`,
+          [u.tenant_id, idKlienta]);
+        if (!kl.length) return res.json({ status: 'error', message: 'Nie znaleziono klientki.' });
+        const [lic, rodo_ok] = await Promise.all([
+          q(`SELECT nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`, [u.tenant_id]),
+          rodoOkKlienta(u.tenant_id, idKlienta)
+        ]);
+        const token2 = makeToken({
+          t: u.tenant_id, k: idKlienta, n: String(kl[0].imie_nazwisko || '').slice(0, 120),
+          o: opis.slice(0, 160), s: randomUUID(), g: u.wykonawca, w: u.wykonawca,
+          exp: Date.now() + TOKEN_TTL_MS
+        });
+        await q(`UPDATE FotoUrzadzenia SET ostatnio_uzyte = NOW() WHERE id = ?`, [u.id]).catch(() => {});
+        return res.json({
+          status: 'success', token2, rodo_ok,
+          klient: kl[0].imie_nazwisko, opis, wykonawca: u.wykonawca,
+          salon: (lic[0] && lic[0].nazwa_salonu) || ''
+        });
+      });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 

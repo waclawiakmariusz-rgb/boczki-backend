@@ -8138,6 +8138,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div id="addons-info" style="margin-top:20px; padding:14px 18px; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; font-size:13px; color:#78350f;">
                     💡 Aktywacja dodatku zwiększa miesięczną fakturę o podaną kwotę. Możesz w każdej chwili wyłączyć dodatek — zostanie naliczone tylko do końca bieżącego okresu rozliczeniowego.
                 </div>
+
+                <!-- Foto przed/po: sparowane telefony (widoczne gdy dodatek aktywny) -->
+                <div id="foto-urzadzenia-panel" class="card" style="display:none; margin-top:20px; padding:18px 22px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                        <div>
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">📱 Sparowane telefony — Foto przed/po</div>
+                            <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Telefony zapamiętane przy sesji foto (bez kodu QR). Unieważnij, jeśli telefon zginął lub pracownik odszedł.</div>
+                        </div>
+                        <button onclick="foto_ladujUrzadzenia()" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
+                    </div>
+                    <div id="foto-urzadzenia-list" style="margin-top:10px;"></div>
+                </div>
             </div>
 
             <!-- Sekcja Dodatku Testowego (widoczna gdy feature 'demo_dodatek' aktywne) -->
@@ -11761,6 +11773,7 @@ function addonsZaladuj() {
                 return;
             }
             lista.innerHTML = d.data.map(f => addonsRenderRow(f)).join('');
+            if (typeof foto_ladujUrzadzenia === 'function') foto_ladujUrzadzenia();
         })
         .catch(err => {
             lista.innerHTML = '<div style="padding:20px; color:#dc2626;">Błąd połączenia: ' + escHtml(String(err)) + '</div>';
@@ -30371,6 +30384,57 @@ async function foto_generujQR() {
   } finally {
     btn.disabled = false; btn.textContent = '📱 Generuj kod QR';
   }
+}
+
+// ── Sparowane telefony (panel w sekcji Dodatki) ──
+async function foto_ladujUrzadzenia() {
+  const panel = document.getElementById('foto-urzadzenia-panel');
+  const list = document.getElementById('foto-urzadzenia-list');
+  if (!panel || !list) return;
+  if (!foto_enabled()) { panel.style.display = 'none'; return; }
+  panel.style.display = 'block';
+  list.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Ładowanie…</div>';
+  try {
+    const r = await fetch(API_URL + '?action=foto_urzadzenia');
+    const d = await r.json();
+    if (d.status !== 'success') { list.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+    const rows = d.data || [];
+    if (!rows.length) {
+      list.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak sparowanych telefonów. Telefon paruje się przy sesji QR — checkbox „Zapamiętaj ten telefon".</div>';
+      return;
+    }
+    const dt = (s) => s ? String(s).replace('T', ' ').slice(0, 16) : '—';
+    list.innerHTML = rows.map(u => `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 4px; border-bottom:1px solid #efe5e8;">
+        <div>
+          <div style="font-size:14px; font-weight:700;">${escHtml(u.nazwa || 'Telefon')}</div>
+          <div style="font-size:12px; color:#6b7280; margin-top:2px;">sparował: ${escHtml(u.sparowal || '?')} · ${dt(u.created_at)} · ostatnio użyty: ${dt(u.ostatnio_uzyte)} · dziś jako: ${escHtml(u.wykonawca || '—')}</div>
+        </div>
+        <button data-foto-urz="${u.id}" style="background:#fee2e2; color:#b91c1c; border:0; padding:7px 14px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer;">✕ Unieważnij</button>
+      </div>`).join('');
+    list.querySelectorAll('[data-foto-urz]').forEach(btn => {
+      btn.addEventListener('click', () => foto_urzadzenieUsun(parseInt(btn.getAttribute('data-foto-urz'), 10)));
+    });
+  } catch (e) {
+    list.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd połączenia.</div>';
+  }
+}
+
+async function foto_urzadzenieUsun(id) {
+  if (!confirm('Unieważnić ten telefon? Nie będzie mógł robić zdjęć bez ponownego sparowania kodem QR.')) return;
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'foto_urzadzenie_usun',
+        id: id,
+        user_log: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    foto_ladujUrzadzenia();
+  } catch (e) { alert('Błąd połączenia: ' + e.message); }
 }
 
 // Dokleja tenant_id + session_token do URL-a pliku (img nie wysyła nagłówków)

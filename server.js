@@ -467,6 +467,7 @@ app.get('/api', (req, res) => {
         'booksy_dokumenty': '/api/booksy?action=booksy_dokumenty&tenant_id=' + tenant_id + (req.query.data ? '&data=' + encodeURIComponent(req.query.data) : ''),
         'foto_status': '/api/foto?action=foto_status&tenant_id=' + tenant_id,
         'foto_sesje': '/api/foto?action=foto_sesje&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : ''),
+        'foto_urzadzenia': '/api/foto?action=foto_urzadzenia&tenant_id=' + tenant_id,
     };
 
     if (getActions[action]) {
@@ -536,7 +537,7 @@ app.post('/api', (req, res) => {
     const featuresActions = ['toggle_feature'];
     const dokumentyDodatkoweActions = ['add_typ_dokumentu', 'save_dokument_klienta', 'delete_dokument_klienta'];
     const booksyActions = ['booksy_refresh', 'booksy_preview'];
-    const fotoActions = ['foto_token', 'foto_usun'];
+    const fotoActions = ['foto_token', 'foto_usun', 'foto_urzadzenie_usun'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';

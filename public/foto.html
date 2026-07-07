@@ -19,10 +19,15 @@
   .info-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #273449; font-size: 14px; text-align: left; }
   .info-row:last-child { border-bottom: none; }
   .info-row b { text-align: right; }
-  select, input[type=password], input[type=tel] {
+  select, input[type=password], input[type=tel], input[type=search], input[type=text] {
     width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #475569;
     background: #0F172A; color: #E2E8F0; font-size: 16px; appearance: auto;
   }
+  #k-wyniki { max-height: 40vh; overflow-y: auto; margin-top: 4px; }
+  .k-wynik { padding: 11px 4px; border-bottom: 1px solid #273449; font-size: 15px; cursor: pointer; text-align: left; }
+  .k-wynik:active { background: #273449; }
+  .chk-row { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 14px; color: #CBD5E1; cursor: pointer; text-align: left; }
+  .chk-row input { width: 19px; height: 19px; accent-color: #7C3AED; flex-shrink: 0; }
   .btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 12px; background: #7C3AED; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
   .btn:active { transform: scale(.98); }
   .btn[disabled] { opacity: .5; }
@@ -112,14 +117,58 @@
     <div class="muted">Wykonawca zostanie zapisany przy każdym zdjęciu.</div>
     <select id="p-pracownik"><option value="">— wybierz pracownika —</option></select>
     <input type="password" id="p-pin" inputmode="numeric" autocomplete="off" placeholder="PIN pracownika">
+    <label class="chk-row" id="p-zapamietaj-row">
+      <input type="checkbox" id="p-zapamietaj" checked>
+      Zapamiętaj ten telefon — następne sesje bez kodu QR
+    </label>
     <button class="btn" id="p-btn" onclick="potwierdzPin()">Potwierdź i włącz aparat</button>
     <div class="err" id="p-err"></div>
   </div>
 </div>
 
+<!-- ── EKRAN 2b: sparowany telefon — potwierdzenie wykonawcy na dziś ── -->
+<div class="screen" id="screen-dzien">
+  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="card">
+    <h2 id="d-salon">Salon</h2>
+    <div class="muted">Telefon sparowany. Potwierdź, kto dziś robi zdjęcia — wystarczy raz dziennie.</div>
+    <select id="d-pracownik"><option value="">— wybierz pracownika —</option></select>
+    <input type="password" id="d-pin" inputmode="numeric" autocomplete="off" placeholder="PIN pracownika">
+    <button class="btn" id="d-btn" onclick="potwierdzDzien()">Potwierdź na dziś</button>
+    <div class="err" id="d-err"></div>
+  </div>
+</div>
+
+<!-- ── EKRAN 2c: sparowany telefon — wybór klientki + opis sesji ── -->
+<div class="screen" id="screen-klient">
+  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="card" style="text-align:left;">
+    <h2>Nowa sesja foto</h2>
+    <div class="muted" id="k-wykonawca-info"></div>
+    <input type="search" id="k-szukaj" autocomplete="off" placeholder="🔍 Klientka (nazwisko lub telefon)" oninput="szukajKlientek()">
+    <div id="k-wyniki"></div>
+    <div id="k-wybrana" style="display:none; margin-top:10px; padding:10px 12px; background:#0F172A; border:1px solid #7C3AED; border-radius:10px; font-size:15px;">
+      👤 <b id="k-wybrana-nazwa"></b>
+    </div>
+    <input type="text" id="k-opis" list="opis-podpowiedzi" autocomplete="off" placeholder="Opis sesji, np. przed serią endermologii">
+    <datalist id="opis-podpowiedzi">
+      <option value="przed serią endermologii"></option>
+      <option value="po serii endermologii"></option>
+      <option value="przed serią zabiegów"></option>
+      <option value="po serii zabiegów"></option>
+      <option value="kontrola w trakcie serii"></option>
+    </datalist>
+    <button class="btn" id="k-btn" onclick="startSesjaParowana()">📷 Włącz aparat</button>
+    <div class="err" id="k-err"></div>
+  </div>
+  <button onclick="pokazEkran('screen-dzien')" style="margin-top:14px; background:none; border:none; color:#94A3B8; font-size:13px; text-decoration:underline; cursor:pointer;">Zmień wykonawcę (PIN)</button>
+</div>
+
 <!-- ── EKRAN 3: aparat ── -->
 <div id="screen-camera">
   <video id="video" autoplay playsinline muted></video>
+
+  <button id="koniec-btn" onclick="zakonczSesje()" style="display:none; position:absolute; top:calc(env(safe-area-inset-top, 0px) + 8px); left:10px; z-index:40; background:rgba(0,0,0,.55); color:#fff; border:1px solid rgba(255,255,255,.5); border-radius:20px; padding:8px 14px; font-size:13px; font-weight:700; cursor:pointer;">✕ Zakończ</button>
 
   <div class="top-bar">
     <div class="t1" id="c-title">FOTO PRZED/PO</div>
@@ -158,6 +207,11 @@
   // ══ Stan globalny ══
   const params = new URLSearchParams(location.search);
   const tokenStart = params.get('t') || '';
+  const DT_KEY = 'estelio_foto_dt';
+  let deviceToken = null;         // token sparowanego telefonu (localStorage)
+  try { deviceToken = localStorage.getItem(DT_KEY); } catch (e) {}
+  let trybParowany = false;
+  let wybranaKlientka = null;     // {id, nazwa}
   let token2 = null;              // token z potwierdzonym wykonawcą
   let salonNazwa = '';
   let klientNazwa = '';
@@ -182,6 +236,7 @@
   const MAX_TILT_PITCH = 12.5, MAX_TILT_ROLL = 10;
 
   const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function pokazEkran(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
     $('screen-camera').classList.remove('visible');
@@ -197,13 +252,24 @@
     t._tm = setTimeout(() => { t.style.display = 'none'; }, ms || 2500);
   }
 
-  // ══ EKRAN 1 → 2: weryfikacja tokenu ══
+  // ══ EKRAN 1: routing — QR / sparowany telefon / brak ══
+  function wypelnijPracownikow(selectId, lista) {
+    const sel = $(selectId);
+    (lista || []).forEach(p => {
+      const o = document.createElement('option');
+      o.value = p; o.textContent = p;
+      sel.appendChild(o);
+    });
+  }
+
   async function init() {
-    if (!tokenStart) {
-      $('load-msg').textContent = 'Brak kodu w linku';
-      $('load-sub').textContent = 'Zeskanuj kod QR wygenerowany w Estelio na komputerze.';
-      return;
-    }
+    if (tokenStart) return initQR();
+    if (deviceToken) return initParowany();
+    $('load-msg').textContent = 'Brak kodu w linku';
+    $('load-sub').textContent = 'Zeskanuj kod QR wygenerowany w Estelio na komputerze. Przy pierwszej sesji zaznacz „Zapamiętaj ten telefon" — kolejne uruchomisz już bez QR.';
+  }
+
+  async function initQR() {
     try {
       const r = await fetch('/api/foto/mobile-info?t=' + encodeURIComponent(tokenStart));
       const d = await r.json();
@@ -218,17 +284,161 @@
       $('i-salon').textContent = salonNazwa;
       $('i-klient').textContent = klientNazwa;
       $('i-opis').textContent = sesjaOpis;
-      const sel = $('p-pracownik');
-      (d.pracownicy || []).forEach(p => {
-        const o = document.createElement('option');
-        o.value = p; o.textContent = p;
-        sel.appendChild(o);
-      });
+      wypelnijPracownikow('p-pracownik', d.pracownicy);
+      if (deviceToken) {
+        // telefon już sparowany — nie twórz duplikatu
+        $('p-zapamietaj').checked = false;
+        $('p-zapamietaj-row').style.display = 'none';
+      }
       pokazEkran('screen-pin');
     } catch (e) {
       $('load-msg').textContent = 'Błąd połączenia';
       $('load-sub').textContent = 'Sprawdź internet w telefonie i odśwież stronę.';
     }
+  }
+
+  // ══ Tryb sparowany: routing po stanie urządzenia ══
+  async function initParowany() {
+    try {
+      const r = await fetch('/api/foto/urzadzenie?dt=' + encodeURIComponent(deviceToken));
+      const d = await r.json();
+      if (d.status !== 'success') {
+        try { localStorage.removeItem(DT_KEY); } catch (e) {}
+        $('load-msg').textContent = 'Telefon niesparowany';
+        $('load-sub').textContent = d.message || 'Zeskanuj kod QR z komputera, aby sparować ponownie.';
+        return;
+      }
+      trybParowany = true;
+      salonNazwa = d.salon || 'Salon';
+      $('d-salon').textContent = salonNazwa;
+      wypelnijPracownikow('d-pracownik', d.pracownicy);
+      if (d.potwierdzony) {
+        wykonawca = d.wykonawca;
+        pokazEkranKlient();
+      } else {
+        pokazEkran('screen-dzien');
+      }
+    } catch (e) {
+      $('load-msg').textContent = 'Błąd połączenia';
+      $('load-sub').textContent = 'Sprawdź internet w telefonie i odśwież stronę.';
+    }
+  }
+
+  async function potwierdzDzien() {
+    const pracownik = $('d-pracownik').value;
+    const pin = $('d-pin').value.trim();
+    const err = $('d-err');
+    err.textContent = '';
+    if (!pracownik) { err.textContent = 'Wybierz pracownika.'; return; }
+    if (!pin) { err.textContent = 'Podaj PIN.'; return; }
+    $('d-btn').disabled = true;
+    try {
+      const r = await fetch('/api/foto/dzien', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dt: deviceToken, pracownik, pin })
+      });
+      const d = await r.json();
+      $('d-btn').disabled = false;
+      if (d.status !== 'success') { err.textContent = d.message || 'Błąd weryfikacji.'; return; }
+      wykonawca = d.wykonawca;
+      $('d-pin').value = '';
+      pokazEkranKlient();
+    } catch (e) {
+      err.textContent = 'Błąd połączenia. Spróbuj ponownie.';
+      $('d-btn').disabled = false;
+    }
+  }
+
+  function pokazEkranKlient() {
+    $('k-wykonawca-info').textContent = '📸 Wykonawca: ' + wykonawca;
+    wybranaKlientka = null;
+    $('k-szukaj').value = '';
+    $('k-wyniki').innerHTML = '';
+    $('k-wybrana').style.display = 'none';
+    $('k-opis').value = '';
+    $('k-err').textContent = '';
+    pokazEkran('screen-klient');
+  }
+
+  let szukajTimer = null;
+  function szukajKlientek() {
+    clearTimeout(szukajTimer);
+    szukajTimer = setTimeout(async () => {
+      const fraza = $('k-szukaj').value.trim();
+      const box = $('k-wyniki');
+      if (fraza.length < 2) { box.innerHTML = ''; return; }
+      try {
+        const r = await fetch('/api/foto/klienci?dt=' + encodeURIComponent(deviceToken) + '&q=' + encodeURIComponent(fraza));
+        const d = await r.json();
+        if (d.status !== 'success') {
+          if (d.wymaga_pin) { pokazEkran('screen-dzien'); return; }
+          box.innerHTML = '<div class="muted" style="padding:8px 0;">' + esc(d.message || 'Błąd.') + '</div>';
+          return;
+        }
+        box.innerHTML = '';
+        if (!(d.data || []).length) { box.innerHTML = '<div class="muted" style="padding:8px 0;">Brak wyników.</div>'; return; }
+        d.data.forEach(k => {
+          const el = document.createElement('div');
+          el.className = 'k-wynik';
+          el.innerHTML = '<b>' + esc(k.nazwa) + '</b>' + (k.tel ? ' <span class="muted">' + esc(k.tel) + '</span>' : '');
+          el.onclick = () => wybierzKlientke(k);
+          box.appendChild(el);
+        });
+      } catch (e) {
+        box.innerHTML = '<div class="muted" style="padding:8px 0;">Błąd połączenia.</div>';
+      }
+    }, 300);
+  }
+
+  function wybierzKlientke(k) {
+    wybranaKlientka = k;
+    $('k-szukaj').value = '';
+    $('k-wyniki').innerHTML = '';
+    $('k-wybrana-nazwa').textContent = k.nazwa;
+    $('k-wybrana').style.display = 'block';
+    $('k-err').textContent = '';
+    $('k-opis').focus();
+  }
+
+  async function startSesjaParowana() {
+    const err = $('k-err');
+    err.textContent = '';
+    if (!wybranaKlientka) { err.textContent = 'Najpierw wyszukaj i wybierz klientkę.'; return; }
+    const opis = $('k-opis').value.trim();
+    if (!opis) { err.textContent = 'Podaj opis sesji (np. „przed serią endermologii").'; return; }
+    $('k-btn').disabled = true;
+    try {
+      const r = await fetch('/api/foto/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dt: deviceToken, id_klienta: wybranaKlientka.id, opis })
+      });
+      const d = await r.json();
+      $('k-btn').disabled = false;
+      if (d.status !== 'success') {
+        if (d.wymaga_pin) { pokazEkran('screen-dzien'); return; }
+        err.textContent = d.message || 'Błąd.';
+        return;
+      }
+      token2 = d.token2;
+      klientNazwa = d.klient || wybranaKlientka.nazwa;
+      sesjaOpis = d.opis || opis;
+      wykonawca = d.wykonawca || wykonawca;
+      if (d.salon) salonNazwa = d.salon;
+      startAparat();   // wywołane z gestu użytkownika — iOS pozwoli na kamerę i sensory
+      if (!d.rodo_ok) toast('⚠️ Brak podpisanej zgody na fotografowanie w kartotece klientki.', 'bad', 4500);
+    } catch (e) {
+      err.textContent = 'Błąd połączenia. Spróbuj ponownie.';
+      $('k-btn').disabled = false;
+    }
+  }
+
+  function zakonczSesje() {
+    if (uploadWToku > 0 || doWyslania.length) {
+      if (!confirm('Są niewysłane zdjęcia. Na pewno zakończyć sesję?')) return;
+    }
+    location.reload();
   }
 
   // ══ EKRAN 2 → 3: PIN wykonawcy ══
@@ -244,13 +454,17 @@
       const r = await fetch('/api/foto/potwierdz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ t: tokenStart, pracownik, pin })
+        body: JSON.stringify({ t: tokenStart, pracownik, pin, zapamietaj: $('p-zapamietaj').checked ? 1 : 0 })
       });
       const d = await r.json();
       if (d.status !== 'success') { err.textContent = d.message || 'Błąd weryfikacji.'; $('p-btn').disabled = false; return; }
       token2 = d.token2;
       wykonawca = d.wykonawca;
+      if (d.device_token) {
+        try { localStorage.setItem(DT_KEY, d.device_token); deviceToken = d.device_token; trybParowany = true; } catch (e) {}
+      }
       startAparat();   // wywołane z gestu użytkownika — iOS pozwoli na kamerę i sensory
+      if (d.device_token) toast('✓ Telefon zapamiętany — następnym razem otwórz tę stronę bez kodu QR.', 'ok', 3800);
     } catch (e) {
       err.textContent = 'Błąd połączenia. Spróbuj ponownie.';
       $('p-btn').disabled = false;
@@ -263,6 +477,7 @@
     $('screen-camera').classList.add('visible');
     $('c-title').textContent = (salonNazwa || 'FOTO').toUpperCase();
     $('c-sub').textContent = `${klientNazwa} · ${sesjaOpis} · 📸 ${wykonawca}`;
+    $('koniec-btn').style.display = trybParowany ? 'block' : 'none';
     zbudujPoseButtons();
     setPose('front');
     startCamera();
