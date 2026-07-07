@@ -567,14 +567,27 @@ module.exports = (db) => {
                 const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
                 if (rowsL && rowsL[0]) return insertWithTyp(typZab, obliczDataWaznosci(now, rowsL[0].waznosc_dni));
                 // Dopłata (portfel/zadatek): kategoria "X Dopłata" nie istnieje w Uslugi —
-                // dziedziczymy typ_zabiegu z kategorii bazowej X, żeby snapshot nie był NULL.
+                // dziedziczymy typ_zabiegu, żeby snapshot nie był NULL.
                 // Dopłata nie tworzy własnej ważności (data_waznosci = NULL).
                 const m = String(poz.kategoria || '').match(/^(.+)\s+Dopłata$/);
                 if (!m) return insertWithTyp(null, null);
-                db.query(
+                const bazowa = m[1];
+                const fallbackKategoria = () => db.query(
                   `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND typ_zabiegu IS NOT NULL LIMIT 1`,
-                  [tenant_id, m[1]],
+                  [tenant_id, bazowa],
                   (errB, rowsB) => insertWithTyp((rowsB && rowsB[0] && rowsB[0].typ_zabiegu) || null, null)
+                );
+                // Najpierw pozycja zabiegu głównego z TEGO SAMEGO paragonu — kategorie
+                // z mieszanymi typami (np. Adipologie twarz/ciało) wymagają dokładnego wariantu.
+                const siostrzana = pozycje.find(p2 => p2 !== poz && String(p2.kategoria || '').trim() === bazowa.trim());
+                if (!siostrzana) return fallbackKategoria();
+                db.query(
+                  `SELECT typ_zabiegu FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?) AND typ_zabiegu IS NOT NULL LIMIT 1`,
+                  [tenant_id, bazowa, siostrzana.wariant || ''],
+                  (errS, rowsS) => {
+                    if (rowsS && rowsS[0]) return insertWithTyp(rowsS[0].typ_zabiegu, null);
+                    fallbackKategoria();
+                  }
                 );
               }
             );
