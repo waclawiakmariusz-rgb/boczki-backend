@@ -4,34 +4,49 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Estelio — Foto przed/po</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --primary: #b87080;
+    --primary-dark: #a05e6e;
+    --primary-glow: rgba(184, 112, 128, 0.25);
+    --bg-body: #fdf8f5;
+    --text-dark: #2d3748;
+    --text-muted: #8b95a5;
+    --border-soft: #f3e3e8;
+  }
   * { box-sizing: border-box; }
-  body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: #0F172A; font-family: 'Segoe UI', system-ui, sans-serif; color: #E2E8F0; }
+  body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; background: var(--bg-body); font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; color: var(--text-dark); }
 
   /* ── Ekrany ── */
-  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 50; background: #0F172A; }
+  .screen { position: fixed; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; z-index: 50; background: var(--bg-body); overflow-y: auto; }
   .screen.visible { display: flex; }
-  .logo { font-size: 26px; font-weight: 800; letter-spacing: .5px; margin-bottom: 6px; }
-  .logo b { color: #A78BFA; }
-  .card { background: #1E293B; border: 1px solid #334155; border-radius: 16px; padding: 20px; width: 100%; max-width: 380px; margin-top: 14px; }
-  .card h2 { margin: 0 0 4px; font-size: 17px; }
-  .muted { color: #94A3B8; font-size: 13px; }
-  .info-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px solid #273449; font-size: 14px; text-align: left; }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 600; letter-spacing: .5px; margin-bottom: 4px; color: var(--text-dark); }
+  .logo b { color: var(--primary); font-weight: 600; }
+  .logo-sub { font-size: 12px; color: var(--text-muted); letter-spacing: .18em; text-transform: uppercase; margin-bottom: 8px; }
+  .card { background: #fff; border: 1px solid var(--border-soft); border-radius: 24px; padding: 22px; width: 100%; max-width: 380px; margin-top: 14px; box-shadow: 0 15px 35px rgba(0,0,0,.04), 0 5px 15px rgba(0,0,0,.03); }
+  .card h2 { margin: 0 0 4px; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; color: var(--text-dark); }
+  .muted { color: var(--text-muted); font-size: 13px; }
+  .info-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #faf1f4; font-size: 14px; text-align: left; }
   .info-row:last-child { border-bottom: none; }
-  .info-row b { text-align: right; }
+  .info-row b { text-align: right; color: var(--text-dark); }
   select, input[type=password], input[type=tel], input[type=search], input[type=text] {
-    width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #475569;
-    background: #0F172A; color: #E2E8F0; font-size: 16px; appearance: auto;
+    width: 100%; padding: 13px 14px; margin-top: 10px; border-radius: 16px; border: 1px solid #eadfe3;
+    background: #fdfafb; color: var(--text-dark); font-size: 16px; font-family: inherit; appearance: auto;
   }
+  select:focus, input:focus { outline: none; background: #fff; border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-glow); }
   #k-wyniki { max-height: 40vh; overflow-y: auto; margin-top: 4px; }
-  .k-wynik { padding: 11px 4px; border-bottom: 1px solid #273449; font-size: 15px; cursor: pointer; text-align: left; }
-  .k-wynik:active { background: #273449; }
-  .chk-row { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 14px; color: #CBD5E1; cursor: pointer; text-align: left; }
-  .chk-row input { width: 19px; height: 19px; accent-color: #7C3AED; flex-shrink: 0; }
-  .btn { width: 100%; margin-top: 14px; padding: 14px; border: none; border-radius: 12px; background: #7C3AED; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+  .k-wynik { padding: 12px 6px; border-bottom: 1px solid #faf1f4; font-size: 15px; cursor: pointer; text-align: left; border-radius: 10px; }
+  .k-wynik:active { background: #fff0f3; }
+  .chk-row { display: flex; align-items: center; gap: 9px; margin-top: 12px; font-size: 13.5px; color: #6b7280; cursor: pointer; text-align: left; }
+  .chk-row input { width: 19px; height: 19px; accent-color: var(--primary); flex-shrink: 0; }
+  .btn { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 12px 25px -5px var(--primary-glow); }
   .btn:active { transform: scale(.98); }
   .btn[disabled] { opacity: .5; }
-  .err { color: #FCA5A5; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .link-btn { margin-top: 16px; background: none; border: none; color: var(--text-muted); font-size: 13px; font-family: inherit; text-decoration: underline; cursor: pointer; }
 
   /* ── Aparat ── */
   #screen-camera { display: none; position: fixed; inset: 0; background: #000; z-index: 10; }
@@ -97,7 +112,8 @@
 
 <!-- ── EKRAN 1: ładowanie / błąd tokenu ── -->
 <div class="screen visible" id="screen-load">
-  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="logo">est<b>elio</b></div>
+  <div class="logo-sub">📷 foto przed / po</div>
   <div class="card">
     <h2 id="load-msg">Sprawdzam link…</h2>
     <div class="muted" id="load-sub">Chwileczkę.</div>
@@ -106,7 +122,8 @@
 
 <!-- ── EKRAN 2: info + wykonawca + PIN ── -->
 <div class="screen" id="screen-pin">
-  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="logo">est<b>elio</b></div>
+  <div class="logo-sub">📷 foto przed / po</div>
   <div class="card">
     <div class="info-row"><span class="muted">Salon</span><b id="i-salon">—</b></div>
     <div class="info-row"><span class="muted">Klient</span><b id="i-klient">—</b></div>
@@ -128,7 +145,8 @@
 
 <!-- ── EKRAN 2b: sparowany telefon — potwierdzenie wykonawcy na dziś ── -->
 <div class="screen" id="screen-dzien">
-  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="logo">est<b>elio</b></div>
+  <div class="logo-sub">📷 foto przed / po</div>
   <div class="card">
     <h2 id="d-salon">Salon</h2>
     <div class="muted">Telefon sparowany. Potwierdź, kto dziś robi zdjęcia — wystarczy raz dziennie.</div>
@@ -141,13 +159,14 @@
 
 <!-- ── EKRAN 2c: sparowany telefon — wybór klientki + opis sesji ── -->
 <div class="screen" id="screen-klient">
-  <div class="logo">est<b>elio</b> · 📷 foto przed/po</div>
+  <div class="logo">est<b>elio</b></div>
+  <div class="logo-sub">📷 foto przed / po</div>
   <div class="card" style="text-align:left;">
     <h2>Nowa sesja foto</h2>
     <div class="muted" id="k-wykonawca-info"></div>
     <input type="search" id="k-szukaj" autocomplete="off" placeholder="🔍 Klientka (nazwisko lub telefon)" oninput="szukajKlientek()">
     <div id="k-wyniki"></div>
-    <div id="k-wybrana" style="display:none; margin-top:10px; padding:10px 12px; background:#0F172A; border:1px solid #7C3AED; border-radius:10px; font-size:15px;">
+    <div id="k-wybrana" style="display:none; margin-top:10px; padding:11px 14px; background:#fff0f3; border:1px solid var(--primary); border-radius:14px; font-size:15px; color:var(--text-dark);">
       👤 <b id="k-wybrana-nazwa"></b>
     </div>
     <input type="text" id="k-opis" list="opis-podpowiedzi" autocomplete="off" placeholder="Opis sesji, np. przed serią endermologii">
@@ -161,7 +180,7 @@
     <button class="btn" id="k-btn" onclick="startSesjaParowana()">📷 Włącz aparat</button>
     <div class="err" id="k-err"></div>
   </div>
-  <button onclick="pokazEkran('screen-dzien')" style="margin-top:14px; background:none; border:none; color:#94A3B8; font-size:13px; text-decoration:underline; cursor:pointer;">Zmień wykonawcę (PIN)</button>
+  <button onclick="pokazEkran('screen-dzien')" class="link-btn">Zmień wykonawcę (PIN)</button>
 </div>
 
 <!-- ── EKRAN 3: aparat ── -->
