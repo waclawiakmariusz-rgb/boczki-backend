@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Estelio — Płatność online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #b87080;
+    --primary-dark: #a05e6e;
+    --primary-glow: rgba(184, 112, 128, 0.25);
+    --bg-body: #fdf8f5;
+    --text-dark: #2d3748;
+    --text-muted: #8b95a5;
+    --border-soft: #f3e3e8;
+  }
+  * { box-sizing: border-box; }
+  body, html { margin: 0; padding: 0; min-height: 100%; background: var(--bg-body); font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; color: var(--text-dark); }
+  .wrap { max-width: 440px; margin: 0 auto; padding: 34px 20px 50px; text-align: center; }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 600; letter-spacing: .5px; color: var(--text-dark); }
+  .logo b { color: var(--primary); font-weight: 600; }
+  .logo-sub { font-size: 12px; color: var(--text-muted); letter-spacing: .18em; text-transform: uppercase; margin: 4px 0 8px; }
+  .card { background: #fff; border: 1px solid var(--border-soft); border-radius: 24px; padding: 22px; margin-top: 14px; box-shadow: 0 15px 35px rgba(0,0,0,.04), 0 5px 15px rgba(0,0,0,.03); text-align: left; }
+  .card h2 { margin: 0 0 4px; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; text-align: center; }
+  .muted { color: var(--text-muted); font-size: 13px; }
+  .center { text-align: center; }
+  .kwota { font-family: 'Cormorant Garamond', serif; font-size: 40px; font-weight: 600; color: var(--primary-dark); text-align: center; margin: 6px 0 2px; }
+  .info-row { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0; border-bottom: 1px solid #faf1f4; font-size: 14px; }
+  .info-row:last-child { border-bottom: none; }
+  .info-row b { text-align: right; }
+  input[type=text], input[type=tel] {
+    width: 100%; padding: 13px 14px; margin-top: 10px; border-radius: 16px; border: 1px solid #eadfe3;
+    background: #fdfafb; color: var(--text-dark); font-size: 16px; font-family: inherit;
+  }
+  input:focus { outline: none; background: #fff; border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-glow); }
+  .reg-toggle { width: 100%; margin-top: 14px; padding: 12px 14px; border: 1px solid var(--border-soft); border-radius: 16px; background: #fdfafb; color: var(--text-dark); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+  .reg-toggle span.arr { transition: transform .2s; color: var(--text-muted); }
+  .reg-toggle.open span.arr { transform: rotate(180deg); }
+  #reg-tresc { display: none; margin-top: 10px; max-height: 280px; overflow-y: auto; padding: 14px; border: 1px solid var(--border-soft); border-radius: 16px; background: #fdfafb; font-size: 13px; line-height: 1.55; white-space: pre-wrap; color: #4a5568; }
+  #reg-tresc.open { display: block; }
+  .chk-row { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; font-size: 13.5px; color: #4a5568; cursor: pointer; }
+  .chk-row input { width: 19px; height: 19px; accent-color: var(--primary); flex-shrink: 0; margin-top: 1px; }
+  .btn { width: 100%; margin-top: 16px; padding: 15px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 12px 25px -5px var(--primary-glow); }
+  .btn:active { transform: scale(.98); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 16px; text-align: center; }
+  .ok-badge { display: inline-block; background: #ecfdf3; color: #157f3d; border: 1px solid #bbe7cb; border-radius: 12px; padding: 6px 12px; font-size: 13px; font-weight: 600; margin: 8px 0 2px; }
+  .tpay-note { margin-top: 12px; font-size: 12px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">est<b>elio</b></div>
+  <div class="logo-sub">płatność online</div>
+
+  <!-- ładowanie / błąd -->
+  <div class="card" id="c-load">
+    <h2 id="load-msg">Sprawdzam link…</h2>
+    <div class="muted center" id="load-sub">Chwileczkę.</div>
+  </div>
+
+  <!-- główna karta -->
+  <div class="card" id="c-main" style="display:none">
+    <h2 id="m-salon">—</h2>
+    <div class="muted center" id="m-opis"></div>
+    <div class="kwota" id="m-kwota" style="display:none"></div>
+
+    <div id="m-dane-podglad" style="display:none">
+      <div class="info-row"><span class="muted">Imię i nazwisko</span><b id="m-imie">—</b></div>
+      <div class="info-row" id="m-tel-row"><span class="muted">Telefon</span><b id="m-tel">—</b></div>
+    </div>
+
+    <div id="m-dane-form" style="display:none">
+      <div class="muted" style="margin-top:8px">Podaj swoje dane — będą przypisane do tej płatności.</div>
+      <input type="text" id="f-imie" placeholder="Imię i nazwisko" autocomplete="name" maxlength="255">
+      <input type="tel" id="f-tel" placeholder="Numer telefonu" autocomplete="tel" maxlength="20">
+    </div>
+
+    <div id="m-zaakceptowana" style="display:none" class="center">
+      <div class="ok-badge">✓ Regulamin zaakceptowany</div>
+      <div class="muted" id="m-zaakceptowana-kiedy"></div>
+    </div>
+
+    <div id="m-akcept-box">
+      <button type="button" class="reg-toggle" id="reg-toggle">Regulamin salonu <span class="arr">▾</span></button>
+      <div id="reg-tresc"></div>
+      <label class="chk-row">
+        <input type="checkbox" id="chk-regulamin">
+        <span>Oświadczam, że zapoznałam/em się z regulaminem salonu i akceptuję jego postanowienia.</span>
+      </label>
+    </div>
+
+    <button class="btn" id="btn-zaplac" disabled>Przejdź do płatności</button>
+    <div class="err" id="m-err"></div>
+    <div class="tpay-note">Płatność realizuje tpay — po kliknięciu przejdziesz na bezpieczną stronę płatności.</div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var token = new URLSearchParams(location.search).get('t') || '';
+  var info = null;
+
+  function el(id) { return document.getElementById(id); }
+  function pokazBlad(msg) {
+    el('load-msg').textContent = 'Ten link nie działa';
+    el('load-sub').textContent = msg || 'Poproś salon o nowy link.';
+    el('c-load').style.display = '';
+    el('c-main').style.display = 'none';
+  }
+
+  function odswiezPrzycisk() {
+    var btn = el('btn-zaplac');
+    if (info && info.zaakceptowana) { btn.disabled = false; return; }
+    var ok = el('chk-regulamin').checked;
+    if (info && info.tryb === 'formularz') {
+      ok = ok && el('f-imie').value.trim().length >= 3 && el('f-tel').value.replace(/\D/g, '').length >= 9;
+    }
+    btn.disabled = !ok;
+  }
+
+  el('reg-toggle').addEventListener('click', function () {
+    this.classList.toggle('open');
+    el('reg-tresc').classList.toggle('open');
+  });
+  el('chk-regulamin').addEventListener('change', odswiezPrzycisk);
+  el('f-imie').addEventListener('input', odswiezPrzycisk);
+  el('f-tel').addEventListener('input', odswiezPrzycisk);
+
+  el('btn-zaplac').addEventListener('click', function () {
+    var btn = this;
+    el('m-err').textContent = '';
+    if (info && info.zaakceptowana && info.tpay_link) { location.href = info.tpay_link; return; }
+    btn.disabled = true;
+    btn.textContent = 'Przetwarzam…';
+    var body = { t: token };
+    if (info.tryb === 'formularz') {
+      body.imie_nazwisko = el('f-imie').value.trim();
+      body.telefon = el('f-tel').value.trim();
+    }
+    fetch('/api/zgoda/akceptuj', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      if (d.status === 'success' && d.tpay_link) {
+        btn.textContent = 'Przenoszę do tpay…';
+        location.href = d.tpay_link;
+      } else {
+        btn.textContent = 'Przejdź do płatności';
+        el('m-err').textContent = d.message || 'Coś poszło nie tak. Spróbuj ponownie.';
+        odswiezPrzycisk();
+      }
+    }).catch(function () {
+      btn.textContent = 'Przejdź do płatności';
+      el('m-err').textContent = 'Brak połączenia. Spróbuj ponownie.';
+      odswiezPrzycisk();
+    });
+  });
+
+  if (!token) { pokazBlad('Brak tokenu w adresie.'); return; }
+
+  fetch('/api/zgoda/info?t=' + encodeURIComponent(token))
+    .then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (d.status !== 'success') { pokazBlad(d.message); return; }
+      info = d;
+      el('c-load').style.display = 'none';
+      el('c-main').style.display = '';
+      el('m-salon').textContent = d.salon || 'Twój salon';
+      el('m-opis').textContent = d.opis || '';
+      if (d.kwota !== null && d.kwota !== undefined) {
+        el('m-kwota').style.display = '';
+        el('m-kwota').textContent = Number(d.kwota).toFixed(2).replace('.', ',') + ' zł';
+      }
+      el('reg-tresc').textContent = d.regulamin || '';
+
+      if (d.zaakceptowana) {
+        el('m-zaakceptowana').style.display = '';
+        if (d.zaakceptowano_at) {
+          el('m-zaakceptowana-kiedy').textContent = 'Data akceptacji: ' + String(d.zaakceptowano_at).replace('T', ' ').slice(0, 16);
+        }
+        el('m-akcept-box').style.display = 'none';
+        if (d.imie_nazwisko) {
+          el('m-dane-podglad').style.display = '';
+          el('m-imie').textContent = d.imie_nazwisko;
+          el('m-tel').textContent = d.telefon_mask || '—';
+        }
+        el('btn-zaplac').disabled = false;
+        return;
+      }
+
+      if (d.tryb === 'podglad') {
+        el('m-dane-podglad').style.display = '';
+        el('m-imie').textContent = d.imie_nazwisko || '—';
+        el('m-tel').textContent = d.telefon_mask || '—';
+      } else {
+        el('m-dane-form').style.display = '';
+      }
+    })
+    .catch(function () { pokazBlad('Brak połączenia z serwerem. Odśwież stronę.'); });
+})();
+</script>
+</body>
+</html>

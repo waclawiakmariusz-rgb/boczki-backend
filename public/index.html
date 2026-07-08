@@ -5538,6 +5538,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <li><button onclick="pokaz('setup-pracownicy', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Pracownicy</span></button></li>
                         <li><button onclick="pokaz('setup-sugestie', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>Sugestia</span></button></li>
 						<li><button onclick="pokaz('slownik', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>Kosmetyki</span></button></li>
+							<li id="menu-platnosc-link" style="display:none;"><button onclick="pokaz('sekcja-platnosc-link', this); zg_zaladujSekcje();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Płatności online</span></button></li>
 							<li id="menu-dodatki" style="display:none;"><button onclick="pokaz('addons', this); addonsZaladuj();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Dodatki</span></button></li>
                     </ul>
                 </li>
@@ -7738,6 +7739,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="ds-tile-icon" style="background:#f3e8ff;color:#7c3aed;">📷</div>
           <div><strong>Foto przed/po</strong><span>Zdjęcia klienta — kod QR na telefon</span></div>
         </div>
+        <div class="ds-quick-tile" id="ds-tile-zgody" style="display:none;" onclick="zg_otworzZPulpitu()">
+          <div class="ds-tile-icon" style="background:#e7f6f2;color:#0f9d8a;">🔗</div>
+          <div><strong>Link do płatności</strong><span>tpay z akceptacją regulaminu</span></div>
+        </div>
       </div>
     </div>
 
@@ -8061,6 +8066,17 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>
                             </div>
                         </div>
+
+                        <!-- ===== Płatności online tpay (dodatek platnosc_link) ===== -->
+                        <div id="zgody-profil-box" style="display:none; margin-top:24px; border-top:1px solid #efe5e8; padding-top:18px;">
+                            <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:12px;">
+                                <div style="font-size:16px; font-weight:700; color:#2c3242;">🔗 Płatności online (tpay)</div>
+                                <button onclick="zg_otworz(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">+ Link do płatności</button>
+                            </div>
+                            <div id="zgody-profil-lista" style="display:flex; flex-direction:column; gap:8px;">
+                                <div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -8149,6 +8165,39 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button onclick="foto_ladujUrzadzenia()" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
                     </div>
                     <div id="foto-urzadzenia-list" style="margin-top:10px;"></div>
+                </div>
+            </div>
+
+            <!-- Sekcja: Płatności online tpay (dodatek platnosc_link) -->
+            <div id="sekcja-platnosc-link" class="section">
+                <div class="header" style="margin-bottom:20px;">
+                    <div>
+                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">Płatności online (tpay)</h1>
+                        <p style="margin:6px 0 0 0; color:#6b7280; font-size:14px;">Linki do płatności z akceptacją regulaminu — klient potwierdza regulamin, zanim przejdzie do tpay.</p>
+                    </div>
+                    <button onclick="zg_otworzZPulpitu()" style="background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer;">+ Nowy link do płatności</button>
+                </div>
+
+                <div class="card" style="padding:18px 22px; margin-bottom:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                        <div>
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">📜 Regulamin płatności</div>
+                            <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Ten tekst zobaczy klient przed płatnością. Zapisujemy kto i kiedy go zaakceptował (wraz z wersją treści).</div>
+                        </div>
+                    </div>
+                    <textarea id="zg-regulamin-tresc" rows="10" placeholder="Wklej treść regulaminu salonu (np. zasady zadatków)..." style="width:100%; box-sizing:border-box; margin-top:10px; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; line-height:1.55; resize:vertical;"></textarea>
+                    <div style="display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;">
+                        <button onclick="zg_zapiszRegulamin()" id="zg-regulamin-btn" style="background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">💾 Zapisz regulamin</button>
+                        <span id="zg-regulamin-status" style="font-size:12.5px; color:#6b7280;"></span>
+                    </div>
+                </div>
+
+                <div class="card" style="padding:18px 22px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🧾 Wygenerowane linki</div>
+                        <button onclick="zg_zaladujListe()" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
+                    </div>
+                    <div id="zg-lista" style="margin-top:10px;"></div>
                 </div>
             </div>
 
@@ -11704,6 +11753,7 @@ function uruchomAplikacjePracownika(imie, rola) {
     if (typeof aktualizujMenuFeatures === 'function') aktualizujMenuFeatures();
     if (typeof aktualizujBooksyWidocznosc === 'function') aktualizujBooksyWidocznosc();
     if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
+    if (typeof zg_aktualizujWidocznosc === 'function') zg_aktualizujWidocznosc();
 
     // Odpalamy docelowe zaciąganie danych
     initApp();
@@ -11842,6 +11892,7 @@ function addonsToggle(featureKey, enable, nazwa, cenaZl) {
         localStorage.setItem('boczki_features', JSON.stringify(window.tenantFeatures));
         aktualizujMenuFeatures();
         if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
+        if (typeof zg_aktualizujWidocznosc === 'function') zg_aktualizujWidocznosc();
         addonsZaladuj(); // przerysuj listę
     })
     .catch(err => alert('Błąd: ' + err));
@@ -15773,6 +15824,9 @@ function przelaczTabProfilu(tabId, btn) {
     }
     if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof foto_profilTab === 'function') {
         foto_profilTab(window.aktualnyProfilKlientId);
+    }
+    if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof zg_profilTab === 'function') {
+        zg_profilTab(window.aktualnyProfilKlientId);
     }
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
@@ -29399,6 +29453,67 @@ initTheme();
     </div>
 </div>
 
+<!-- Modal: Link do płatności tpay (dodatek platnosc_link) -->
+<style>
+  body.dark-mode #zg-modal-card { background:#1e293b !important; }
+  body.dark-mode #zg-modal-card h3 { color:#5eead4 !important; }
+  body.dark-mode #zg-modal-card label, body.dark-mode #zg-modal-card p { color:#cbd5e1 !important; }
+  body.dark-mode #zg-modal-card input { background:#0f172a !important; color:#e2e8f0 !important; border-color:#475569 !important; }
+  body.dark-mode #zgody-profil-box > div:first-child > div:first-child { color:#e2e8f0; }
+  .zg-klient-wynik:hover { background:#e7f6f2; }
+  body.dark-mode .zg-klient-wynik { color:#e2e8f0; }
+  body.dark-mode .zg-klient-wynik:hover { background:#134e4a; }
+</style>
+<div id="zg-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
+    <div id="zg-modal-card" style="background:#fff; width:95%; max-width:520px; padding:25px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,0.2); margin-bottom:30px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:18px;">
+            <div>
+                <h3 style="margin:0; color:#0f9d8a;">🔗 Link do płatności (tpay)</h3>
+                <p id="zg-modal-client" style="margin:5px 0 0 0; font-size:13px; color:#64748b; font-weight:600;"></p>
+            </div>
+            <button onclick="zg_zamknij()" style="border:none; background:none; font-size:24px; color:#94a3b8; cursor:pointer;">&times;</button>
+        </div>
+
+        <!-- Krok 1: wybór klienta (wejście z Pulpitu / sekcji) -->
+        <div id="zg-krok-klient" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Wybierz klienta:</label>
+            <input id="zg_klient_szukaj" oninput="zg_filtrujKlientow(this.value)" placeholder="Zacznij pisać imię i nazwisko..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            <div id="zg_klient_wyniki" style="margin-top:6px; max-height:240px; overflow-y:auto;"></div>
+            <button onclick="zg_wybierzSpozaBazy()" style="width:100%; margin-top:12px; background:#f1f5f9; color:#334155; border:1px dashed #cbd5e1; border-radius:10px; padding:11px; font-size:13.5px; font-weight:600; cursor:pointer;">👤 Osoba spoza bazy (np. napisała przez Instagram) →</button>
+        </div>
+
+        <!-- Krok 2: dane płatności -->
+        <div id="zg-krok-dane" style="display:none;">
+            <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Link do płatności z panelu tpay:</label>
+            <input id="zg_tpay_link" placeholder="https://secure.tpay.com/..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            <div style="display:flex; gap:10px; margin-top:12px;">
+                <div style="flex:1;">
+                    <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Kwota (zł, opcjonalnie):</label>
+                    <input id="zg_kwota" type="number" step="0.01" min="0.01" placeholder="np. 100" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+                </div>
+                <div style="flex:2;">
+                    <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Czego dotyczy (opcjonalnie):</label>
+                    <input id="zg_opis" placeholder="np. zadatek na zabieg 15.07" autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+                </div>
+            </div>
+            <p style="font-size:12px; color:#94a3b8; margin:10px 0 0 0;">Klient najpierw potwierdzi zapoznanie się z regulaminem salonu, a dopiero potem przejdzie do płatności tpay. Zapisujemy kto, kiedy i z jakiego adresu IP zaakceptował.</p>
+            <button onclick="zg_generuj()" id="zg-generuj-btn" style="width:100%; margin-top:14px; background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:12px; font-size:14px; font-weight:700; cursor:pointer;">🔗 Generuj link Estelio</button>
+        </div>
+
+        <!-- Krok 3: wynik -->
+        <div id="zg-krok-wynik" style="display:none; text-align:center;">
+            <div style="font-size:40px;">✅</div>
+            <div style="font-size:15px; font-weight:700; color:#334155; margin-top:6px;">Link gotowy — wyślij go klientowi</div>
+            <div id="zg-wynik-link" style="margin-top:12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px; font-size:12.5px; color:#334155; word-break:break-all; text-align:left;"></div>
+            <div style="font-size:12px; color:#94a3b8; margin-top:6px;">Link ważny 7 dni. Klient zobaczy regulamin i kwotę, a po akceptacji przejdzie do tpay.</div>
+            <div style="display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
+                <button onclick="zg_kopiuj()" id="zg-kopiuj-btn" style="background:#0f9d8a; color:#fff; border:0; border-radius:8px; padding:10px 18px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj link</button>
+                <button onclick="zg_resetDoDanych()" style="background:#f1f5f9; border:0; border-radius:8px; padding:9px 14px; font-size:13px; font-weight:600; cursor:pointer;">↺ Nowy link</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Zwrot sprzedaży (profil klienta) -->
 <style>
 body.dark-mode #zwrot-modal-card { background:#1e293b !important; color:#e2e8f0 !important; }
@@ -30511,6 +30626,288 @@ async function foto_usun(typ, id, idKlienta) {
     foto_ladujGalerie(idKlienta);
   } catch (e) {
     alert('Błąd połączenia: ' + e.message);
+  }
+}
+
+/* ============================================================
+   LINK DO PŁATNOŚCI TPAY — dodatek (feature_key: platnosc_link)
+   Pracownik wkleja link tpay → Estelio generuje /platnosc.html?t=...
+   Klient akceptuje regulamin (zapis: kto, kiedy, IP) → redirect do tpay.
+   ============================================================ */
+const ZG_FEATURE_KEY = 'platnosc_link';
+let zg_klient = { id: null, nazwa: '' };
+let zg_ostatniLink = '';
+
+function zg_enabled() {
+  return typeof hasFeature === 'function' && hasFeature(ZG_FEATURE_KEY);
+}
+
+// Pokaż/ukryj kafel na Pulpicie, box na profilu i pozycję w menu Administracji
+function zg_aktualizujWidocznosc() {
+  const on = zg_enabled();
+  ['ds-tile-zgody', 'zgody-profil-box', 'menu-platnosc-link'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = on ? '' : 'none';
+  });
+}
+
+// Hook z przelaczTabProfilu — zakładka Dokumenty na profilu klienta
+function zg_profilTab(idKlienta) {
+  zg_aktualizujWidocznosc();
+  if (zg_enabled()) zg_profilLista(idKlienta);
+}
+
+function zg_pokazKrok(krok) {
+  ['zg-krok-klient', 'zg-krok-dane', 'zg-krok-wynik'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = (id === 'zg-krok-' + krok) ? 'block' : 'none';
+  });
+}
+
+function zg_wyczyscDane() {
+  document.getElementById('zg_tpay_link').value = '';
+  document.getElementById('zg_kwota').value = '';
+  document.getElementById('zg_opis').value = '';
+}
+
+// Otwarcie z profilu klienta — klient już wybrany (wariant 1)
+function zg_otworz(idKlienta, nazwa) {
+  if (!zg_enabled()) { alert('Dodatek „Link do płatności z regulaminem" nie jest aktywny.'); return; }
+  if (!idKlienta) { alert('Brak wybranego klienta.'); return; }
+  zg_klient = { id: idKlienta, nazwa: nazwa || '' };
+  document.getElementById('zg-modal-client').textContent = zg_klient.nazwa;
+  zg_wyczyscDane();
+  zg_pokazKrok('dane');
+  document.getElementById('zg-modal-overlay').style.display = 'flex';
+}
+
+// Otwarcie z Pulpitu / sekcji — najpierw wybór klienta lub „osoba spoza bazy"
+function zg_otworzZPulpitu() {
+  if (!zg_enabled()) { alert('Dodatek „Link do płatności z regulaminem" nie jest aktywny.'); return; }
+  zg_klient = { id: null, nazwa: '' };
+  document.getElementById('zg-modal-client').textContent = '';
+  document.getElementById('zg_klient_szukaj').value = '';
+  document.getElementById('zg_klient_wyniki').innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Zacznij pisać, aby wyszukać klienta.</div>';
+  zg_pokazKrok('klient');
+  document.getElementById('zg-modal-overlay').style.display = 'flex';
+  if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) {
+    fetch(API_URL + '?action=get_clients')
+      .then(r => r.json())
+      .then(d => { if (d && d.klienci) window.wszyscyKlienciDane = d.klienci; })
+      .catch(() => {});
+  }
+}
+
+// Wariant 2 — osoba spoza bazy: dane wpisze sama na stronie płatności
+function zg_wybierzSpozaBazy() {
+  zg_klient = { id: null, nazwa: '' };
+  document.getElementById('zg-modal-client').textContent = 'Osoba spoza bazy — dane wpisze sama przy płatności';
+  zg_wyczyscDane();
+  zg_pokazKrok('dane');
+}
+
+function zg_zamknij() {
+  document.getElementById('zg-modal-overlay').style.display = 'none';
+}
+
+function zg_filtrujKlientow(fraza) {
+  const box = document.getElementById('zg_klient_wyniki');
+  const q = String(fraza || '').trim().toLowerCase();
+  if (q.length < 2) { box.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Wpisz min. 2 znaki.</div>'; return; }
+  const dane = window.wszyscyKlienciDane || [];
+  const wyniki = dane.filter(k => String(k.nazwa || '').toLowerCase().includes(q) || String(k.telefon || '').includes(q)).slice(0, 8);
+  if (!wyniki.length) { box.innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Brak wyników.</div>'; return; }
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  box.innerHTML = wyniki.map((k, i) => `
+    <div class="zg-klient-wynik" data-zg-kw="${i}" style="padding:9px 10px; border-radius:8px; cursor:pointer; font-size:14px; display:flex; justify-content:space-between; gap:8px;">
+      <span style="font-weight:600;">${esc(k.nazwa)}</span><span style="color:#94a3b8; font-size:12px;">${esc(k.telefon || '')}</span>
+    </div>`).join('');
+  box.querySelectorAll('[data-zg-kw]').forEach(el => {
+    const k = wyniki[parseInt(el.getAttribute('data-zg-kw'), 10)];
+    el.addEventListener('click', () => {
+      zg_klient = { id: k.id, nazwa: k.nazwa };
+      document.getElementById('zg-modal-client').textContent = k.nazwa;
+      zg_wyczyscDane();
+      zg_pokazKrok('dane');
+    });
+  });
+}
+
+function zg_resetDoDanych() {
+  zg_wyczyscDane();
+  zg_pokazKrok('dane');
+}
+
+async function zg_generuj() {
+  const tpayLink = document.getElementById('zg_tpay_link').value.trim();
+  if (!tpayLink) { alert('Wklej link do płatności z panelu tpay.'); return; }
+  const btn = document.getElementById('zg-generuj-btn');
+  btn.disabled = true; btn.textContent = '⏳ Generuję…';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'zgoda_utworz',
+        id_klienta: zg_klient.id || '',
+        tpay_link: tpayLink,
+        kwota: document.getElementById('zg_kwota').value.trim(),
+        opis: document.getElementById('zg_opis').value.trim(),
+        user_log: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    zg_ostatniLink = d.url;
+    document.getElementById('zg-wynik-link').textContent = d.url;
+    zg_pokazKrok('wynik');
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '🔗 Generuj link Estelio';
+  }
+}
+
+function zg_kopiujTekst(tekst, btn) {
+  const gotowe = () => {
+    if (!btn) return;
+    const stary = btn.textContent;
+    btn.textContent = '✓ Skopiowano';
+    setTimeout(() => { btn.textContent = stary; }, 1500);
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(tekst).then(gotowe).catch(() => prompt('Skopiuj link ręcznie:', tekst));
+  } else {
+    prompt('Skopiuj link ręcznie:', tekst);
+  }
+}
+
+function zg_kopiuj() {
+  zg_kopiujTekst(zg_ostatniLink, document.getElementById('zg-kopiuj-btn'));
+}
+
+// ── Render wiersza linku (wspólny dla profilu i sekcji Administracji) ──
+function zg_renderWiersz(z, pokazKlienta) {
+  const esc = (s) => String(s == null ? '' : s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const dt = (s) => s ? String(s).replace('T', ' ').slice(0, 16) : '';
+  let badge, extra = '';
+  if (z.status === 'ZAAKCEPTOWANA') {
+    badge = '<span style="background:#dcfce7; color:#15803d; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">✓ ZAAKCEPTOWANA</span>';
+    extra = `<span style="color:#15803d;">akceptacja: ${dt(z.zaakceptowano_at)}</span>`;
+  } else if (z.status === 'ANULOWANA') {
+    badge = '<span style="background:#f1f5f9; color:#64748b; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">ANULOWANA</span>';
+  } else if (z.wygasly) {
+    badge = '<span style="background:#fef3c7; color:#92400e; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">WYGASŁ</span>';
+  } else {
+    badge = '<span style="background:#e0f2fe; color:#0369a1; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">OCZEKUJE</span>';
+  }
+  const kwota = (z.kwota !== null && z.kwota !== undefined && z.kwota !== '') ? Number(z.kwota).toFixed(2).replace('.', ',') + ' zł' : '—';
+  const kto = pokazKlienta ? `<b>${esc(z.imie_nazwisko || 'osoba spoza bazy')}</b> · ` : '';
+  const przyciski = [];
+  if (z.url) przyciski.push(`<button data-zg-copy="${esc(z.url)}" style="background:#e7f6f2; color:#0f766e; border:0; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer;">📋 Kopiuj link</button>`);
+  if (z.status === 'OCZEKUJACA' && !z.wygasly) przyciski.push(`<button data-zg-anuluj="${z.id}" style="background:#fee2e2; color:#b91c1c; border:0; padding:6px 12px; border-radius:7px; font-size:12px; font-weight:600; cursor:pointer;">✕ Anuluj</button>`);
+  return `
+    <div class="zg-wiersz" style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 4px; border-bottom:1px solid #efe5e8;">
+      <div>
+        <div style="font-size:13.5px; color:#1f2430;">${kto}${badge} <b style="margin-left:6px;">${kwota}</b>${z.opis ? ' · ' + esc(z.opis) : ''}</div>
+        <div style="font-size:12px; color:#6b7280; margin-top:2px;">utworzył: ${esc(z.utworzyl || '?')} · ${dt(z.created_at)} ${extra}</div>
+      </div>
+      <div style="display:flex; gap:6px;">${przyciski.join('')}</div>
+    </div>`;
+}
+
+function zg_podepnijAkcje(cont, refresh) {
+  cont.querySelectorAll('[data-zg-copy]').forEach(btn => {
+    btn.addEventListener('click', () => zg_kopiujTekst(btn.getAttribute('data-zg-copy'), btn));
+  });
+  cont.querySelectorAll('[data-zg-anuluj]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Anulować ten link? Klient nie będzie mógł go już użyć.')) return;
+      try {
+        const r = await fetch(API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'zgoda_anuluj', id: parseInt(btn.getAttribute('data-zg-anuluj'), 10), user_log: typeof currentUser !== 'undefined' ? currentUser : '' })
+        });
+        const d = await r.json();
+        if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+        refresh();
+      } catch (e) { alert('Błąd połączenia: ' + e.message); }
+    });
+  });
+}
+
+// ── Lista na profilu klienta (zakładka Dokumenty) ──
+async function zg_profilLista(idKlienta) {
+  const cont = document.getElementById('zgody-profil-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:8px 4px;">Ładowanie...</div>';
+  try {
+    const r = await fetch(API_URL + '?action=zgody_lista&id_klienta=' + encodeURIComponent(idKlienta));
+    const d = await r.json();
+    const rows = (d && d.data) || [];
+    if (!rows.length) {
+      cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:10px 4px; font-style:italic;">Brak płatności online. Kliknij „+ Link do płatności", wklej link tpay i wyślij klientowi.</div>';
+      return;
+    }
+    cont.innerHTML = rows.map(z => zg_renderWiersz(z, false)).join('');
+    zg_podepnijAkcje(cont, () => zg_profilLista(idKlienta));
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#dc2626; font-size:13px; padding:8px 4px;">Błąd ładowania.</div>';
+  }
+}
+
+// ── Sekcja Administracja → Płatności online ──
+function zg_zaladujSekcje() {
+  if (!zg_enabled()) return;
+  fetch(API_URL + '?action=zgody_regulamin_get')
+    .then(r => r.json())
+    .then(d => {
+      const ta = document.getElementById('zg-regulamin-tresc');
+      if (ta && d.status === 'success') ta.value = d.tresc || '';
+      const st = document.getElementById('zg-regulamin-status');
+      if (st) st.textContent = (d.tresc && d.tresc.trim()) ? '' : '⚠️ Regulamin pusty — bez niego nie wygenerujesz linku.';
+    })
+    .catch(() => {});
+  zg_zaladujListe();
+}
+
+async function zg_zapiszRegulamin() {
+  const tresc = document.getElementById('zg-regulamin-tresc').value.trim();
+  if (!tresc) { alert('Treść regulaminu nie może być pusta.'); return; }
+  const btn = document.getElementById('zg-regulamin-btn');
+  btn.disabled = true; btn.textContent = '⏳ Zapisuję…';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'zgody_regulamin_zapisz', tresc: tresc, user_log: typeof currentUser !== 'undefined' ? currentUser : '' })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }
+    const st = document.getElementById('zg-regulamin-status');
+    if (st) { st.textContent = '✓ Zapisano.'; setTimeout(() => { st.textContent = ''; }, 3000); }
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = '💾 Zapisz regulamin';
+  }
+}
+
+async function zg_zaladujListe() {
+  const cont = document.getElementById('zg-lista');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Ładowanie…</div>';
+  try {
+    const r = await fetch(API_URL + '?action=zgody_lista');
+    const d = await r.json();
+    if (d.status !== 'success') { cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+    const rows = d.data || [];
+    if (!rows.length) {
+      cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak wygenerowanych linków.</div>';
+      return;
+    }
+    cont.innerHTML = rows.map(z => zg_renderWiersz(z, true)).join('');
+    zg_podepnijAkcje(cont, zg_zaladujListe);
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd połączenia.</div>';
   }
 }
 

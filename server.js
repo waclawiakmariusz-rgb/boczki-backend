@@ -299,6 +299,7 @@ const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
 const gusRoutes        = require('./routes/gus')(db);
 const booksyRoutes     = require('./routes/booksy')(db);
 const fotoRoutes       = require('./routes/foto')(db);
+const zgodyRoutes      = require('./routes/zgody')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -334,6 +335,7 @@ app.use('/api', ustawieniaZadatkiRoutes);
 app.use('/api', gusRoutes);
 app.use('/api', booksyRoutes);
 app.use('/api', fotoRoutes);
+app.use('/api', zgodyRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -468,6 +470,9 @@ app.get('/api', (req, res) => {
         'foto_status': '/api/foto?action=foto_status&tenant_id=' + tenant_id,
         'foto_sesje': '/api/foto?action=foto_sesje&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : ''),
         'foto_urzadzenia': '/api/foto?action=foto_urzadzenia&tenant_id=' + tenant_id,
+        'zgody_status': '/api/zgody?action=zgody_status&tenant_id=' + tenant_id,
+        'zgody_regulamin_get': '/api/zgody?action=zgody_regulamin_get&tenant_id=' + tenant_id,
+        'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : ''),
     };
 
     if (getActions[action]) {
@@ -538,6 +543,7 @@ app.post('/api', (req, res) => {
     const dokumentyDodatkoweActions = ['add_typ_dokumentu', 'save_dokument_klienta', 'delete_dokument_klienta'];
     const booksyActions = ['booksy_refresh', 'booksy_preview'];
     const fotoActions = ['foto_token', 'foto_usun', 'foto_urzadzenie_usun'];
+    const zgodyActions = ['zgoda_utworz', 'zgoda_anuluj', 'zgody_regulamin_zapisz'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -584,6 +590,9 @@ app.post('/api', (req, res) => {
     } else if (fotoActions.includes(action)) {
         req.url = '/foto';
         return fotoRoutes(req, res, () => {});
+    } else if (zgodyActions.includes(action)) {
+        req.url = '/zgody';
+        return zgodyRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
