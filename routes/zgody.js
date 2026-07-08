@@ -186,13 +186,26 @@ module.exports = (db) => {
     } else if (action === 'zgody_lista') {
       try {
         const idKlienta = req.query.id_klienta;
-        const paramy = idKlienta ? [tenant_id, String(idKlienta)] : [tenant_id];
+        const szukaj = String(req.query.szukaj || '').trim().slice(0, 100);
+        const NA_STRONE = 20;
+        const strona = Math.max(1, parseInt(req.query.strona, 10) || 1);
+
+        let where = 'WHERE tenant_id = ?';
+        const paramy = [tenant_id];
+        if (idKlienta) { where += ' AND id_klienta = ?'; paramy.push(String(idKlienta)); }
+        if (szukaj) {
+          where += ' AND imie_nazwisko LIKE ?';
+          paramy.push('%' + szukaj.replace(/[%_\\]/g, '\\$&') + '%');
+        }
+
+        const [{ razem }] = await q(`SELECT COUNT(*) AS razem FROM ZgodyPlatnosci ${where}`, paramy);
+        const stron = Math.max(1, Math.ceil(razem / NA_STRONE));
         const rows = await q(
           `SELECT id, id_klienta, imie_nazwisko, telefon, kwota, opis, tpay_link, status,
                   zaakceptowano_at, utworzyl, created_at
-             FROM ZgodyPlatnosci
-            WHERE tenant_id = ? ${idKlienta ? 'AND id_klienta = ?' : ''}
-            ORDER BY created_at DESC, id DESC LIMIT 200`, paramy);
+             FROM ZgodyPlatnosci ${where}
+            ORDER BY created_at DESC, id DESC
+            LIMIT ${NA_STRONE} OFFSET ${(Math.min(strona, stron) - 1) * NA_STRONE}`, paramy);
         // Dla oczekujących odtwarzamy link (exp liczony od created_at — kopiowanie z listy nie przedłuża ważności)
         const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
         const host = req.get('host');
@@ -202,7 +215,7 @@ module.exports = (db) => {
           if (exp <= Date.now()) { z.wygasly = 1; continue; }
           z.url = `${proto}://${host}/platnosc.html?t=${encodeURIComponent(makeToken({ t: tenant_id, id: z.id, exp }))}`;
         }
-        return res.json({ status: 'success', data: rows });
+        return res.json({ status: 'success', data: rows, razem, strona: Math.min(strona, stron), stron });
       } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
     } else {

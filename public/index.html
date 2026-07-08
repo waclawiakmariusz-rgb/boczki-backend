@@ -8198,9 +8198,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="card" style="padding:18px 22px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
                         <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🧾 Wygenerowane linki</div>
-                        <button onclick="zg_zaladujListe()" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
+                        <button onclick="zg_zaladujListe(1)" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
                     </div>
+                    <input type="text" id="zg-lista-szukaj" placeholder="🔍 Szukaj po imieniu i nazwisku…" oninput="zg_szukajDebounce()" style="width:100%; box-sizing:border-box; margin-top:8px; padding:9px 12px; border:1px solid #e5e7eb; border-radius:10px; font-size:13.5px; font-family:inherit;">
                     <div id="zg-lista" style="margin-top:10px;"></div>
+                    <div id="zg-lista-pager" style="display:none; justify-content:center; align-items:center; gap:12px; margin-top:12px;">
+                        <button onclick="zg_zaladujListe(zg_listaStrona - 1)" id="zg-pager-prev" style="background:#f1f5f9; border:0; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;">‹ Poprzednia</button>
+                        <span id="zg-pager-info" style="font-size:12.5px; color:#6b7280;"></span>
+                        <button onclick="zg_zaladujListe(zg_listaStrona + 1)" id="zg-pager-next" style="background:#f1f5f9; border:0; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;">Następna ›</button>
+                    </div>
                 </div>
             </div>
 
@@ -30875,7 +30881,7 @@ function zg_zaladujSekcje() {
       if (st) st.textContent = jest ? '' : '⚠️ Regulamin pusty — bez niego nie wygenerujesz linku.';
     })
     .catch(() => {});
-  zg_zaladujListe();
+  zg_zaladujListe(1);
 }
 
 async function zg_zapiszRegulamin() {
@@ -30900,22 +30906,50 @@ async function zg_zapiszRegulamin() {
   }
 }
 
-async function zg_zaladujListe() {
+let zg_listaStrona = 1;
+let zg_szukajTimer = null;
+
+function zg_szukajDebounce() {
+  clearTimeout(zg_szukajTimer);
+  zg_szukajTimer = setTimeout(() => zg_zaladujListe(1), 350);
+}
+
+async function zg_zaladujListe(strona) {
   const cont = document.getElementById('zg-lista');
   if (!cont) return;
+  zg_listaStrona = Math.max(1, strona || zg_listaStrona || 1);
+  const pager = document.getElementById('zg-lista-pager');
+  const szukajEl = document.getElementById('zg-lista-szukaj');
+  const szukaj = szukajEl ? szukajEl.value.trim() : '';
   cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Ładowanie…</div>';
   try {
-    const r = await fetch(API_URL + '?action=zgody_lista');
+    const r = await fetch(API_URL + '?action=zgody_lista&strona=' + zg_listaStrona + (szukaj ? '&szukaj=' + encodeURIComponent(szukaj) : ''));
     const d = await r.json();
-    if (d.status !== 'success') { cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+    if (d.status !== 'success') { if (pager) pager.style.display = 'none'; cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
     const rows = d.data || [];
+    zg_listaStrona = d.strona || 1;
     if (!rows.length) {
-      cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak wygenerowanych linków.</div>';
+      if (pager) pager.style.display = 'none';
+      cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">' + (szukaj ? 'Brak wyników dla „' + escHtml(szukaj) + '”.' : 'Brak wygenerowanych linków.') + '</div>';
       return;
     }
     cont.innerHTML = rows.map(z => zg_renderWiersz(z, true)).join('');
-    zg_podepnijAkcje(cont, zg_zaladujListe);
+    zg_podepnijAkcje(cont, () => zg_zaladujListe(zg_listaStrona));
+    const stron = d.stron || 1;
+    if (pager) {
+      if (stron > 1) {
+        pager.style.display = 'flex';
+        document.getElementById('zg-pager-info').textContent = 'Strona ' + zg_listaStrona + ' z ' + stron + ' (' + (d.razem || rows.length) + ')';
+        document.getElementById('zg-pager-prev').disabled = zg_listaStrona <= 1;
+        document.getElementById('zg-pager-next').disabled = zg_listaStrona >= stron;
+        document.getElementById('zg-pager-prev').style.opacity = zg_listaStrona <= 1 ? '.45' : '1';
+        document.getElementById('zg-pager-next').style.opacity = zg_listaStrona >= stron ? '.45' : '1';
+      } else {
+        pager.style.display = 'none';
+      }
+    }
   } catch (e) {
+    if (pager) pager.style.display = 'none';
     cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd połączenia.</div>';
   }
 }

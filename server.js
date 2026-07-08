@@ -472,7 +472,7 @@ app.get('/api', (req, res) => {
         'foto_urzadzenia': '/api/foto?action=foto_urzadzenia&tenant_id=' + tenant_id,
         'zgody_status': '/api/zgody?action=zgody_status&tenant_id=' + tenant_id,
         'zgody_regulamin_get': '/api/zgody?action=zgody_regulamin_get&tenant_id=' + tenant_id,
-        'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : ''),
+        'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : '') + (req.query.szukaj ? '&szukaj=' + encodeURIComponent(req.query.szukaj) : '') + (req.query.strona ? '&strona=' + encodeURIComponent(req.query.strona) : ''),
     };
 
     if (getActions[action]) {
