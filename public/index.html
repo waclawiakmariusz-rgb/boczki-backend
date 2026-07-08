@@ -8182,10 +8182,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
                         <div>
                             <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">📜 Regulamin płatności</div>
-                            <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Ten tekst zobaczy klient przed płatnością. Zapisujemy kto i kiedy go zaakceptował (wraz z wersją treści).</div>
+                            <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Klient zobaczy regulamin przed płatnością. Zapisujemy kto i kiedy go zaakceptował. Klienci z podpisanym już oświadczeniem w salonie nie zobaczą tego kroku wcale.</div>
                         </div>
                     </div>
-                    <textarea id="zg-regulamin-tresc" rows="10" placeholder="Wklej treść regulaminu salonu (np. zasady zadatków)..." style="width:100%; box-sizing:border-box; margin-top:10px; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; line-height:1.55; resize:vertical;"></textarea>
+                    <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">Link do regulaminu na stronie WWW (zalecane):</label>
+                    <input id="zg-regulamin-url" placeholder="https://www.twojsalon.pl/regulamin/" autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                    <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">…lub wklejona treść (pokazywana tylko, gdy brak linku):</label>
+                    <textarea id="zg-regulamin-tresc" rows="6" placeholder="Wklej treść regulaminu salonu (np. zasady zadatków)..." style="width:100%; box-sizing:border-box; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; line-height:1.55; resize:vertical;"></textarea>
                     <div style="display:flex; align-items:center; gap:12px; margin-top:10px; flex-wrap:wrap;">
                         <button onclick="zg_zapiszRegulamin()" id="zg-regulamin-btn" style="background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">💾 Zapisz regulamin</button>
                         <span id="zg-regulamin-status" style="font-size:12.5px; color:#6b7280;"></span>
@@ -30862,9 +30865,14 @@ function zg_zaladujSekcje() {
     .then(r => r.json())
     .then(d => {
       const ta = document.getElementById('zg-regulamin-tresc');
-      if (ta && d.status === 'success') ta.value = d.tresc || '';
+      const ur = document.getElementById('zg-regulamin-url');
+      if (d.status === 'success') {
+        if (ta) ta.value = d.tresc || '';
+        if (ur) ur.value = d.url || '';
+      }
       const st = document.getElementById('zg-regulamin-status');
-      if (st) st.textContent = (d.tresc && d.tresc.trim()) ? '' : '⚠️ Regulamin pusty — bez niego nie wygenerujesz linku.';
+      const jest = (d.url && d.url.trim()) || (d.tresc && d.tresc.trim());
+      if (st) st.textContent = jest ? '' : '⚠️ Regulamin pusty — bez niego nie wygenerujesz linku.';
     })
     .catch(() => {});
   zg_zaladujListe();
@@ -30872,13 +30880,14 @@ function zg_zaladujSekcje() {
 
 async function zg_zapiszRegulamin() {
   const tresc = document.getElementById('zg-regulamin-tresc').value.trim();
-  if (!tresc) { alert('Treść regulaminu nie może być pusta.'); return; }
+  const url = document.getElementById('zg-regulamin-url').value.trim();
+  if (!tresc && !url) { alert('Podaj link do regulaminu na stronie WWW lub wklej jego treść.'); return; }
   const btn = document.getElementById('zg-regulamin-btn');
   btn.disabled = true; btn.textContent = '⏳ Zapisuję…';
   try {
     const r = await fetch(API_URL, {
       method: 'POST',
-      body: JSON.stringify({ action: 'zgody_regulamin_zapisz', tresc: tresc, user_log: typeof currentUser !== 'undefined' ? currentUser : '' })
+      body: JSON.stringify({ action: 'zgody_regulamin_zapisz', tresc: tresc, url: url, user_log: typeof currentUser !== 'undefined' ? currentUser : '' })
     });
     const d = await r.json();
     if (d.status !== 'success') { alert('Błąd: ' + (d.message || 'nieznany')); return; }

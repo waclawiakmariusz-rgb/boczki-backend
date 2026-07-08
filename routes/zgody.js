@@ -111,11 +111,16 @@ module.exports = (db) => {
       id INT AUTO_INCREMENT PRIMARY KEY,
       tenant_id VARCHAR(64) NOT NULL,
       tresc MEDIUMTEXT,
+      url VARCHAR(500) DEFAULT '',
       updated_by VARCHAR(120) DEFAULT '',
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       UNIQUE KEY uk_tenant (tenant_id)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
-    if (e) console.error('[zgody] Migracja TenantRegulaminy:', e.message);
+    if (e) return console.error('[zgody] Migracja TenantRegulaminy:', e.message);
+    // istniejące instalacje: dołóż kolumnę url (regulamin jako link do strony WWW salonu)
+    db.query(`ALTER TABLE TenantRegulaminy ADD COLUMN url VARCHAR(500) DEFAULT ''`, (e2) => {
+      if (e2 && e2.code !== 'ER_DUP_FIELDNAME') console.error('[zgody] ALTER TenantRegulaminy.url:', e2.message);
+    });
   });
   // status UKRYTY — inne salony nie widzą dodatku w Administracja→Dodatki (pilot u Boczków);
   // rozszerzenie na wszystkich = zmiana statusu na AKTYWNY
@@ -138,9 +143,22 @@ module.exports = (db) => {
     });
   }
 
+  // Regulamin: link do strony WWW salonu (url, preferowany) lub wklejona treść (tresc)
   async function pobierzRegulamin(tenant_id) {
-    const rows = await q(`SELECT tresc FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [tenant_id]);
-    return (rows[0] && String(rows[0].tresc || '').trim()) || '';
+    const rows = await q(`SELECT tresc, url FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [tenant_id]);
+    const tresc = (rows[0] && String(rows[0].tresc || '').trim()) || '';
+    const url = (rows[0] && String(rows[0].url || '').trim()) || '';
+    return { tresc, url, ok: !!(tresc || url) };
+  }
+
+  // Klient z bazy, który podpisał już regulamin w salonie (Rejestr_Oświadczeń) —
+  // nie pokazujemy mu ponownie kroku akceptacji na stronie płatności
+  async function regulaminPodpisany(tenant_id, id_klienta) {
+    if (!id_klienta) return false;
+    const rows = await q(
+      `SELECT id FROM \`Rejestr_Oświadczeń\` WHERE tenant_id = ? AND id_klienta = ? AND zapoznanie_z_regulaminem = 'TAK' LIMIT 1`,
+      [tenant_id, String(id_klienta)]);
+    return rows.length > 0;
   }
 
   // ==========================================
@@ -154,15 +172,15 @@ module.exports = (db) => {
     if (action === 'zgody_status') {
       hasFeature(tenant_id, FEATURE_KEY, async (enabled) => {
         try {
-          const tresc = await pobierzRegulamin(tenant_id);
-          return res.json({ status: 'success', enabled: enabled ? 1 : 0, regulamin_ok: tresc ? 1 : 0 });
+          const reg = await pobierzRegulamin(tenant_id);
+          return res.json({ status: 'success', enabled: enabled ? 1 : 0, regulamin_ok: reg.ok ? 1 : 0 });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
     } else if (action === 'zgody_regulamin_get') {
       try {
-        const tresc = await pobierzRegulamin(tenant_id);
-        return res.json({ status: 'success', tresc });
+        const reg = await pobierzRegulamin(tenant_id);
+        return res.json({ status: 'success', tresc: reg.tresc, url: reg.url });
       } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
     } else if (action === 'zgody_lista') {
@@ -213,8 +231,8 @@ module.exports = (db) => {
 
       wymagajFeature(tenant_id, res, async () => {
         try {
-          const regulamin = await pobierzRegulamin(tenant_id);
-          if (!regulamin) return res.json({ status: 'error', message: 'Najpierw uzupełnij regulamin w Administracja → Regulamin płatności.' });
+          const reg = await pobierzRegulamin(tenant_id);
+          if (!reg.ok) return res.json({ status: 'error', message: 'Najpierw uzupełnij regulamin w Administracja → Regulamin płatności.' });
 
           let imie = '', telefon = '';
           if (idKlienta) {
@@ -255,15 +273,20 @@ module.exports = (db) => {
 
     } else if (action === 'zgody_regulamin_zapisz') {
       const tresc = String(d.tresc || '').trim();
+      const url = String(d.url || '').trim().slice(0, 500);
       const kto = String(d.user_log || d.pracownik || '').trim();
-      if (!tresc) return res.json({ status: 'error', message: 'Treść regulaminu nie może być pusta.' });
+      if (!tresc && !url) return res.json({ status: 'error', message: 'Podaj link do regulaminu na stronie WWW lub wklej jego treść.' });
       if (tresc.length > 200000) return res.json({ status: 'error', message: 'Regulamin jest za długi.' });
+      if (url) {
+        let u; try { u = new URL(url); } catch (e) { u = null; }
+        if (!u || u.protocol !== 'https:') return res.json({ status: 'error', message: 'Link do regulaminu musi być prawidłowym adresem https://...' });
+      }
       wymagajFeature(tenant_id, res, async () => {
         try {
           await q(
-            `INSERT INTO TenantRegulaminy (tenant_id, tresc, updated_by) VALUES (?, ?, ?)
-             ON DUPLICATE KEY UPDATE tresc = VALUES(tresc), updated_by = VALUES(updated_by)`,
-            [tenant_id, tresc, kto.slice(0, 120)]);
+            `INSERT INTO TenantRegulaminy (tenant_id, tresc, url, updated_by) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE tresc = VALUES(tresc), url = VALUES(url), updated_by = VALUES(updated_by)`,
+            [tenant_id, tresc, url, kto.slice(0, 120)]);
           zapiszLog(tenant_id, 'PŁATNOŚĆ LINK', kto, 'Zaktualizowano regulamin płatności');
           return res.json({ status: 'success' });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
@@ -288,9 +311,10 @@ module.exports = (db) => {
       const z = rows[0];
       if (z.status === 'ANULOWANA') return res.json({ status: 'error', message: 'Ten link został anulowany przez salon. Poproś o nowy link.' });
 
-      const [lic, regulamin] = await Promise.all([
+      const [lic, reg, podpisany] = await Promise.all([
         q(`SELECT nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`, [payload.t]),
-        pobierzRegulamin(payload.t)
+        pobierzRegulamin(payload.t),
+        regulaminPodpisany(payload.t, z.id_klienta)
       ]);
       const zaakceptowana = z.status === 'ZAAKCEPTOWANA';
       return res.json({
@@ -301,7 +325,10 @@ module.exports = (db) => {
         telefon_mask: z.id_klienta || zaakceptowana ? maskujTelefon(z.telefon) : '',
         kwota: z.kwota !== null ? Number(z.kwota) : null,
         opis: z.opis || '',
-        regulamin,
+        regulamin: reg.tresc,
+        regulamin_url: reg.url,
+        // klient podpisał już regulamin w salonie → strona nie pokazuje kroku akceptacji
+        regulamin_podpisany: podpisany ? 1 : 0,
         zaakceptowana: zaakceptowana ? 1 : 0,
         zaakceptowano_at: z.zaakceptowano_at,
         // link tpay ujawniamy dopiero PO akceptacji regulaminu
@@ -324,8 +351,8 @@ module.exports = (db) => {
         return res.json({ status: 'success', tpay_link: z.tpay_link, juz_zaakceptowana: 1 });
       }
 
-      const regulamin = await pobierzRegulamin(payload.t);
-      if (!regulamin) return res.json({ status: 'error', message: 'Salon nie udostępnił regulaminu. Skontaktuj się z salonem.' });
+      const reg = await pobierzRegulamin(payload.t);
+      if (!reg.ok) return res.json({ status: 'error', message: 'Salon nie udostępnił regulaminu. Skontaktuj się z salonem.' });
 
       let idKlienta = z.id_klienta;
       let imie = z.imie_nazwisko;
@@ -357,7 +384,8 @@ module.exports = (db) => {
 
       const ip = String(req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim().slice(0, 64);
       const ua = String(req.headers['user-agent'] || '').slice(0, 255);
-      const hash = createHash('sha256').update(regulamin).digest('hex');
+      // dowód wersji: hash wklejonej treści, a przy regulaminie-linku — hash adresu URL
+      const hash = createHash('sha256').update(reg.tresc || reg.url).digest('hex');
 
       const r = await q(
         `UPDATE ZgodyPlatnosci

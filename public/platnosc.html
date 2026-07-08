@@ -86,6 +86,7 @@
 
     <div id="m-akcept-box">
       <button type="button" class="reg-toggle" id="reg-toggle">Regulamin salonu <span class="arr">▾</span></button>
+      <a id="reg-link" class="reg-toggle" style="display:none; text-decoration:none;" target="_blank" rel="noopener">Regulamin salonu <span class="arr" style="transform:none;">↗</span></a>
       <div id="reg-tresc"></div>
       <label class="chk-row">
         <input type="checkbox" id="chk-regulamin">
@@ -115,7 +116,8 @@
   function odswiezPrzycisk() {
     var btn = el('btn-zaplac');
     if (info && info.zaakceptowana) { btn.disabled = false; return; }
-    var ok = el('chk-regulamin').checked;
+    // regulamin podpisany wcześniej w salonie — krok akceptacji pominięty, checkbox niewymagany
+    var ok = (info && info.regulamin_podpisany) ? true : el('chk-regulamin').checked;
     if (info && info.tryb === 'formularz') {
       ok = ok && el('f-imie').value.trim().length >= 3 && el('f-tel').value.replace(/\D/g, '').length >= 9;
     }
@@ -176,7 +178,14 @@
         el('m-kwota').style.display = '';
         el('m-kwota').textContent = Number(d.kwota).toFixed(2).replace('.', ',') + ' zł';
       }
-      el('reg-tresc').textContent = d.regulamin || '';
+      if (d.regulamin_url) {
+        // regulamin jako link do strony WWW salonu — zamiast rozwijanej treści
+        el('reg-link').href = d.regulamin_url;
+        el('reg-link').style.display = 'flex';
+        el('reg-toggle').style.display = 'none';
+      } else {
+        el('reg-tresc').textContent = d.regulamin || '';
+      }
 
       if (d.zaakceptowana) {
         el('m-zaakceptowana').style.display = '';
@@ -200,6 +209,12 @@
       } else {
         el('m-dane-form').style.display = '';
       }
+
+      if (d.regulamin_podpisany) {
+        // klient podpisał regulamin w salonie — bez ponownego kroku akceptacji
+        el('m-akcept-box').style.display = 'none';
+      }
+      odswiezPrzycisk();
     })
     .catch(function () { pokazBlad('Brak połączenia z serwerem. Odśwież stronę.'); });
 })();
