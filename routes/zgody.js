@@ -47,6 +47,19 @@ function verifyToken(token) {
   return payload;
 }
 
+// Naprawa linku skopiowanego z paska adresu panelu tpay zamiast przyciskiem "Kopiuj":
+// SPA tpay przepisuje adres na ?h<hash> (bez "=") i dokleja #pagepanel-... — taka forma
+// działa tylko w zalogowanej przeglądarce pracownika, u klienta daje "Puste parametry".
+function normalizujTpayLink(link) {
+  const s = String(link || '').trim();
+  let u;
+  try { u = new URL(s); } catch (e) { return s; }
+  u.hash = '';
+  const m = u.search.match(/^\?h([0-9a-fA-F]{40})$/);
+  if (m) u.search = '?h=' + m[1];
+  return u.toString();
+}
+
 // Tylko prawdziwe linki tpay — inaczej strona byłaby otwartym przekierowaniem
 function tpayLinkOk(link) {
   let u;
@@ -189,7 +202,7 @@ module.exports = (db) => {
     const action = d.action;
 
     if (action === 'zgoda_utworz') {
-      const tpayLink = String(d.tpay_link || '').trim();
+      const tpayLink = normalizujTpayLink(d.tpay_link);
       const idKlienta = String(d.id_klienta || '').trim();
       const kwota = d.kwota !== undefined && d.kwota !== null && String(d.kwota).trim() !== ''
         ? Number(String(d.kwota).replace(',', '.')) : null;
