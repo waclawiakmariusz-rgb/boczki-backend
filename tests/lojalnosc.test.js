@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 12 wpisów-wypełniaczy na init fabryki (CREATE ×10 + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 12 }, () => ({ rows: [] }));
+// 13 wpisów-wypełniaczy na init fabryki (CREATE ×10 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 13 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };

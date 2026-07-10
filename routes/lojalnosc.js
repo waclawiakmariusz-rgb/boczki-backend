@@ -387,7 +387,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uk_ref (tenant_id, zrodlo, ref_id),
       KEY idx_klient (tenant_id, id_klienta)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Punkty:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Ustawienia (
@@ -396,7 +396,7 @@ module.exports = (db) => {
       nazwa_klubu VARCHAR(120) DEFAULT 'Klub',
       updated_by VARCHAR(120) DEFAULT '',
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Ustawienia:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Konta (
@@ -411,7 +411,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uk_konto (tenant_id, id_klienta),
       KEY idx_telefon (telefon)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Konta:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Nagrody (
@@ -426,7 +426,7 @@ module.exports = (db) => {
       sortowanie INT DEFAULT 100,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       KEY idx_tenant (tenant_id, status)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Nagrody:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Odbiory (
@@ -444,7 +444,7 @@ module.exports = (db) => {
       KEY idx_tenant_status (tenant_id, status),
       KEY idx_klient (tenant_id, id_klienta),
       KEY idx_kod (tenant_id, kod)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Odbiory:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Promocje (
@@ -462,7 +462,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       KEY idx_tenant (tenant_id, status)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Promocje:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Zgloszenia (
@@ -476,7 +476,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       obsluzono_at DATETIME NULL,
       KEY idx_tenant_status (tenant_id, status)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Zgloszenia:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Push (
@@ -489,7 +489,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       KEY idx_tenant (tenant_id),
       KEY idx_klient (tenant_id, id_klienta)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Push:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Kampanie (
@@ -509,7 +509,7 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       KEY idx_tenant_status (tenant_id, status),
       KEY idx_due (status, wyslij_at)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie:', e.message);
   });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Wnioski (
@@ -523,9 +523,28 @@ module.exports = (db) => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       obsluzono_at DATETIME NULL,
       KEY idx_tenant_status (tenant_id, status)
-    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Wnioski:', e.message);
   });
+  // Collation MUSI zgadzać się z rdzeniem Estelio (Klienci = utf8mb4_unicode_ci),
+  // inaczej JOIN-y padają na "Illegal mix of collations". Konwertujemy istniejące
+  // tabele tylko gdy trzeba (jeden SELECT do information_schema przy starcie).
+  const LOJ_TABELE = ['Lojalnosc_Punkty', 'Lojalnosc_Ustawienia', 'Lojalnosc_Konta', 'Lojalnosc_Nagrody',
+    'Lojalnosc_Odbiory', 'Lojalnosc_Promocje', 'Lojalnosc_Zgloszenia', 'Lojalnosc_Push', 'Lojalnosc_Kampanie', 'Lojalnosc_Wnioski'];
+  db.query(
+    `SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (${LOJ_TABELE.map(() => '?').join(',')})`,
+    LOJ_TABELE,
+    (e, rows) => {
+      if (e || !Array.isArray(rows)) return;
+      rows.filter(r => String(r.TABLE_COLLATION) !== 'utf8mb4_unicode_ci').forEach(r => {
+        db.query(`ALTER TABLE \`${r.TABLE_NAME}\` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e2) => {
+          if (e2) console.error(`[lojalnosc] CONVERT ${r.TABLE_NAME}:`, e2.message);
+          else console.log(`[lojalnosc] Skonwertowano ${r.TABLE_NAME} do utf8mb4_unicode_ci`);
+        });
+      });
+    }
+  );
   // Targetowanie promocji + auto-push + zdjęcie kampanii + bonus powitalny (ALTER-y idempotentne)
   [
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_typ VARCHAR(20) DEFAULT 'WSZYSCY'`,
