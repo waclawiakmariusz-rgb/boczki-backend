@@ -1,16 +1,14 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#fbf8f7"/>
-  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#eee5e9" stroke-width="8"/>
-  <!-- Diament w palecie Estelio Premium -->
-  <g>
-    <polygon points="256,432 96,208 160,128 352,128 416,208" fill="#e8568f"/>
-    <polygon points="256,432 96,208 176,208" fill="#d94b83"/>
-    <polygon points="256,432 416,208 336,208" fill="#d94b83"/>
-    <polygon points="176,208 256,432 336,208" fill="#ef7ba7"/>
-    <polygon points="160,128 176,208 96,208" fill="#ef7ba7"/>
-    <polygon points="352,128 416,208 336,208" fill="#ef7ba7"/>
-    <polygon points="160,128 256,128 176,208" fill="#f7a6c4"/>
-    <polygon points="256,128 352,128 336,208" fill="#f7a6c4"/>
-    <polygon points="256,128 336,208 176,208" fill="#fdeef4"/>
+  <rect width="512" height="512" rx="112" fill="#f8f1ea"/>
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#ecdfd2" stroke-width="8"/>
+  <!-- Złoty kwiat na burgundowym medalionie — Estelio Loyalty -->
+  <circle cx="256" cy="256" r="150" fill="#6f2136"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#c9a227" stroke-width="6" opacity=".7"/>
+  <g fill="#e8c766">
+    <path d="M256 156 C280 200 280 228 256 256 C232 228 232 200 256 156 Z"/>
+    <path d="M256 356 C280 312 280 284 256 256 C232 284 232 312 256 356 Z"/>
+    <path d="M156 256 C200 232 228 232 256 256 C228 280 200 280 156 256 Z"/>
+    <path d="M356 256 C312 232 284 232 256 256 C284 280 312 280 356 256 Z"/>
   </g>
+  <circle cx="256" cy="256" r="17" fill="#f8f1ea"/>
 </svg>

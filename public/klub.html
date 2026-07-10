@@ -7,7 +7,7 @@
 <link rel="manifest" href="/klub-manifest.json">
 <link rel="icon" type="image/svg+xml" href="/klub-icon.svg">
 <link rel="apple-touch-icon" href="/klub-icon.svg">
-<meta name="theme-color" content="#e8568f">
+<meta name="theme-color" content="#6f2136">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -15,44 +15,47 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  /* Język wizualny Estelio Premium — tokeny z design/makiety/estelio_premium_*.html */
+  /* Język wizualny „Estelio Loyalty" — burgund + złoto + krem,
+     wg design/makiety/estelio_lojalnosciowa_wiz/ */
   :root {
-    --bg: #fbf8f7;
-    --panel: #ffffff;
-    --panel-soft: #fff8fb;
-    --stroke: #eee5e9;
-    --stroke-2: #f4ecef;
-    --text: #1f2430;
-    --muted: #7b8091;
-    --muted-2: #9aa0b1;
-    --primary: #e8568f;
-    --primary-dark: #d94b83;
-    --primary-soft: #fdeef4;
-    --primary-glow: rgba(232, 86, 143, .28);
-    --gold: #f4c12a;
-    --gold-soft: #fff7de;
-    --green: #29b35f;
-    --green-soft: #dff5e7;
+    --bg: #f8f1ea;
+    --panel: #fffdf9;
+    --panel-soft: #fbf4ec;
+    --stroke: #ecdfd2;
+    --stroke-2: #f3e9dd;
+    --text: #3b2a2f;
+    --muted: #8a7a72;
+    --muted-2: #ab9c92;
+    --primary: #6f2136;
+    --primary-dark: #571a2b;
+    --primary-soft: #f6e7ea;
+    --primary-glow: rgba(111, 33, 54, .25);
+    --gold: #c9a227;
+    --gold-dark: #a97f1c;
+    --gold-soft: #f9efd8;
+    --green: #2e9e5b;
+    --green-soft: #e2f3e8;
     --violet: #8f6cf1;
     --violet-soft: #efe8ff;
-    --red-soft: #ffe9e9;
-    --shadow: 0 10px 28px rgba(39, 31, 52, .05);
-    --shadow-lift: 0 18px 40px rgba(39, 31, 52, .09);
+    --red-soft: #f9e3e3;
+    --shadow: 0 10px 28px rgba(84, 48, 48, .06);
+    --shadow-lift: 0 18px 40px rgba(84, 48, 48, .11);
     --r-xxl: 26px; --r-xl: 22px; --r-lg: 18px; --r-md: 16px; --r-sm: 14px; --r-xs: 12px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body, html { margin: 0; padding: 0; min-height: 100%; color: var(--text); font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; }
   body {
     background: var(--bg);
-    background-image: radial-gradient(640px 320px at 85% -60px, rgba(232, 86, 143, .07), transparent 70%),
-                      radial-gradient(520px 300px at -10% 12%, rgba(244, 193, 42, .05), transparent 70%);
+    background-image: radial-gradient(640px 340px at 88% -60px, rgba(201, 162, 39, .09), transparent 70%),
+                      radial-gradient(520px 300px at -12% 14%, rgba(111, 33, 54, .05), transparent 70%);
     background-repeat: no-repeat;
   }
+  .zloto { background: linear-gradient(160deg, #d9b545 10%, #a97f1c 55%, #d9b545 90%); -webkit-background-clip: text; background-clip: text; color: transparent; }
   .screen { display: none; flex-direction: column; align-items: center; padding: 24px 20px 40px; min-height: 100vh; }
   .screen.visible { display: flex; animation: fadeUp .45s cubic-bezier(.22,.9,.36,1); }
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
   .center { justify-content: center; text-align: center; }
-  .logo-znak { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(145deg, var(--primary-soft), #fff); border: 1px solid var(--stroke); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 12px; }
+  .logo-znak { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(150deg, #fffdf7, var(--gold-soft)); border: 1px solid #e4cf9a; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 12px; color: var(--gold-dark); }
   .logo { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 600; letter-spacing: -.02em; color: var(--text); line-height: 1.1; }
   .logo b { color: var(--primary); font-weight: 600; }
   .logo-sub { font-size: 10px; color: var(--muted-2); letter-spacing: .22em; text-transform: uppercase; font-weight: 700; margin-top: 6px; }
@@ -77,16 +80,31 @@
 
   /* ── Główny układ z tabami ── */
   #screen-main { padding-bottom: 112px; }
-  .main-head { width: 100%; max-width: 440px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: calc(env(safe-area-inset-top, 0px) + 8px); }
-  .main-head .hi { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-weight: 600; letter-spacing: -.02em; }
-  .main-head .muted { font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; font-weight: 700; color: var(--muted-2); }
-  .saldo-card { position: relative; overflow: hidden; width: 100%; max-width: 440px; margin-top: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: var(--r-xxl); padding: 26px 24px 24px; color: #fff; box-shadow: 0 22px 44px -12px var(--primary-glow); text-align: center; }
-  .saldo-card::before { content: ""; position: absolute; top: -70px; right: -50px; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,.22), transparent 65%); pointer-events: none; }
-  .saldo-card::after { content: "✦"; position: absolute; left: 18px; bottom: 12px; font-size: 15px; opacity: .35; }
-  .saldo-card .lbl { font-size: 10.5px; letter-spacing: .24em; text-transform: uppercase; font-weight: 700; opacity: .85; }
-  .saldo-card .val { font-size: 54px; font-weight: 800; letter-spacing: -.035em; line-height: 1.1; text-shadow: 0 2px 12px rgba(0,0,0,.08); }
-  .saldo-card .val small { font-size: 19px; font-weight: 600; opacity: .9; letter-spacing: 0; }
-  .saldo-card .rule { margin-top: 7px; font-size: 12.5px; opacity: .88; }
+  .brand-bar { position: relative; width: 100%; max-width: 440px; margin-top: calc(env(safe-area-inset-top, 0px) + 8px); text-align: center; }
+  .brand-bar .b-znak { color: var(--gold-dark); font-size: 15px; letter-spacing: .1em; }
+  .brand-bar .b-nazwa { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); line-height: 1.15; }
+  .brand-bar .b-sub { font-size: 9px; letter-spacing: .34em; text-transform: uppercase; font-weight: 700; color: var(--gold-dark); margin-top: 2px; }
+  .dzwonek { position: absolute; right: 0; top: 6px; background: none; border: none; font-size: 22px; color: var(--primary); cursor: pointer; padding: 6px; }
+  .dzwonek .kropka { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); border: 1.5px solid var(--bg); display: none; }
+  .hi-blok { width: 100%; max-width: 440px; margin-top: 16px; }
+  .hi-blok .hi { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 600; letter-spacing: -.01em; color: var(--primary); }
+  .hi-blok .hi-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+  .saldo-card { position: relative; overflow: hidden; width: 100%; max-width: 440px; margin-top: 16px; background: linear-gradient(140deg, #7c2740 0%, var(--primary) 45%, #521827 100%); border-radius: var(--r-xxl); padding: 24px 24px 22px; color: #fff; box-shadow: 0 22px 44px -12px var(--primary-glow); text-align: left; }
+  .saldo-card::before { content: ""; position: absolute; top: -60px; right: -60px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(201,162,39,.28), transparent 62%); pointer-events: none; }
+  .saldo-card::after { content: "🎁"; position: absolute; right: 22px; bottom: 16px; font-size: 34px; opacity: .85; filter: sepia(1) saturate(3) hue-rotate(-12deg); }
+  .saldo-card .lbl { font-size: 12px; letter-spacing: .12em; font-weight: 600; color: #f3d9a4; }
+  .saldo-card .val { font-family: 'Cormorant Garamond', serif; font-size: 58px; font-weight: 600; letter-spacing: .01em; line-height: 1.05; color: #e8c766; text-shadow: 0 2px 14px rgba(0,0,0,.25); }
+  .saldo-card .val small { font-size: 22px; font-weight: 500; color: #e8c766; letter-spacing: 0; }
+  .saldo-card .zl { margin-top: 2px; font-size: 15px; color: #f0e2cc; }
+  .saldo-card .rule { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,.75); }
+  /* Kafle szybkich akcji („Co chcesz zrobić?") */
+  .akcje-tytul { width: 100%; max-width: 440px; margin: 20px 0 10px; font-size: 17px; font-weight: 700; color: var(--text); }
+  .akcje { width: 100%; max-width: 440px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .akcja { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); padding: 14px; cursor: pointer; box-shadow: var(--shadow); font-family: inherit; text-align: left; transition: transform .15s; }
+  .akcja:active { transform: scale(.97); }
+  .akcja .a-ico { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .akcja .a-tit { font-weight: 700; font-size: 14px; color: var(--text); }
+  .akcja .a-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
   .sekcja { width: 100%; max-width: 440px; margin-top: 20px; animation: fadeUp .5s cubic-bezier(.22,.9,.36,1) both; }
   .sekcja:nth-of-type(2) { animation-delay: .06s; }
   .sekcja:nth-of-type(3) { animation-delay: .12s; }
@@ -106,36 +124,41 @@
   .promo.dnia { border: 1px solid #f2d488; background: linear-gradient(180deg, #fffdf4, #fff); }
   .promo.dnia .p-tit::before { content: "🔥 TYLKO TERAZ"; display: inline-block; background: var(--gold-soft); color: #a8730a; border: 1px solid #f2d488; font-size: 10px; font-weight: 800; letter-spacing: .08em; padding: 3px 9px; border-radius: 999px; margin-right: 8px; vertical-align: 2px; }
 
-  /* Nagrody */
-  .nagroda { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); padding: 12px; display: flex; gap: 12px; align-items: center; margin-bottom: 10px; box-shadow: var(--shadow); }
-  .nagroda img { width: 58px; height: 58px; border-radius: var(--r-sm); object-fit: cover; background: var(--primary-soft); flex-shrink: 0; }
-  .nagroda .n-emoji { width: 58px; height: 58px; border-radius: var(--r-sm); background: linear-gradient(145deg, var(--primary-soft), #fff); border: 1px solid var(--stroke-2); display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  /* Nagrody — duże karty jak w wizualizacji (zdjęcie z lewej, serif, burgundowa pigułka) */
+  .nagroda { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-xl); padding: 14px; display: flex; gap: 14px; align-items: center; margin-bottom: 12px; box-shadow: var(--shadow); }
+  .nagroda img { width: 96px; height: 96px; border-radius: var(--r-md); object-fit: cover; background: var(--primary-soft); flex-shrink: 0; }
+  .nagroda .n-emoji { width: 96px; height: 96px; border-radius: var(--r-md); background: linear-gradient(150deg, var(--gold-soft), #fffdf7); border: 1px solid #ecdbb2; display: flex; align-items: center; justify-content: center; font-size: 38px; flex-shrink: 0; }
   .nagroda .n-txt { flex: 1; min-width: 0; }
-  .nagroda .n-tit { font-weight: 700; font-size: 14px; letter-spacing: -.01em; }
-  .nagroda .n-koszt { display: inline-block; font-size: 11px; color: var(--primary-dark); background: var(--primary-soft); font-weight: 800; margin-top: 4px; padding: 2px 9px; border-radius: 999px; letter-spacing: .03em; }
-  .nagroda .n-opis { font-size: 12px; color: var(--muted); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nagroda .n-tit { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 19px; line-height: 1.2; color: var(--text); }
+  .nagroda .n-koszt { display: inline-block; font-size: 12px; color: #fff; background: var(--primary); font-weight: 700; margin-top: 6px; padding: 4px 13px; border-radius: 999px; letter-spacing: .04em; }
+  .nagroda .n-opis { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .n-btn { flex-shrink: 0; border: none; border-radius: var(--r-xs); padding: 10px 15px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; transition: transform .15s; }
   .n-btn:active { transform: scale(.95); }
   .n-btn.ok { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; box-shadow: 0 10px 20px -8px var(--primary-glow); }
   .n-btn.lock { background: var(--stroke-2); color: var(--muted-2); cursor: default; }
   .progress-box { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); padding: 15px 16px; margin-bottom: 12px; box-shadow: var(--shadow); }
   .progress-bar { height: 10px; background: var(--stroke-2); border-radius: 999px; overflow: hidden; margin-top: 10px; }
-  .progress-bar div { height: 100%; background: linear-gradient(90deg, var(--primary), #f79ec0); border-radius: 999px; transition: width .8s cubic-bezier(.22,.9,.36,1); }
+  .progress-bar div { height: 100%; background: linear-gradient(90deg, var(--primary), #9e3450); border-radius: 999px; transition: width .8s cubic-bezier(.22,.9,.36,1); }
   .kod-box { width: 100%; background: var(--gold-soft); border: 1.5px dashed #ecc86a; border-radius: var(--r-lg); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
   .kod-box .kod { font-size: 22px; font-weight: 800; letter-spacing: 3.5px; color: #8a6410; }
   .kod-box .k-txt { flex: 1; min-width: 0; font-size: 12px; color: #a08a4e; line-height: 1.45; }
   .kod-box button { background: none; border: none; color: var(--muted-2); font-size: 12px; text-decoration: underline; cursor: pointer; flex-shrink: 0; font-family: inherit; }
 
-  /* Historia / profil */
+  /* Historia / profil — grupowanie po miesiącach jak w wizualizacji */
   .hist { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-xl); padding: 6px 16px; box-shadow: var(--shadow); }
+  .hist-mies { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--primary); padding: 14px 0 4px; }
   .hist-row { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--stroke-2); font-size: 14px; }
   .hist-row:last-child { border-bottom: none; }
-  .hist-ico { flex-shrink: 0; width: 36px; height: 36px; border-radius: var(--r-xs); background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 16px; }
-  .hist-ico.z-SPRZEDAZ { background: var(--primary-soft); }
-  .hist-ico.z-RECZNE { background: var(--gold-soft); }
-  .hist-ico.z-NAGRODA { background: var(--violet-soft); }
-  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE { background: var(--red-soft); }
+  .hist-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; font-size: 17px; }
+  .hist-ico.z-SPRZEDAZ { background: var(--gold-soft); }
+  .hist-ico.z-RECZNE, .hist-ico.z-BONUS { background: var(--gold-soft); }
+  .hist-ico.z-NAGRODA { background: var(--primary-soft); }
+  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE, .hist-ico.z-KOREKTA { background: var(--red-soft); }
   .hist-ico.z-EDYCJA { background: var(--stroke-2); }
+  .hist-suma { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; background: linear-gradient(140deg, #fdf7ea, #fbf1dd); border: 1px solid #ecd9ac; border-radius: var(--r-md); padding: 12px 15px; }
+  .hist-suma .s-ico { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid #ecd9ac; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .hist-suma .s-tit { flex: 1; font-weight: 700; font-size: 13.5px; color: #7a5c1c; }
+  .hist-suma .s-kwoty { text-align: right; font-size: 13px; font-weight: 800; line-height: 1.45; }
   .hist-txt { flex: 1; min-width: 0; }
   .hist-txt .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -.005em; }
   .hist-txt .d { font-size: 11.5px; color: var(--muted-2); margin-top: 1px; }
@@ -150,13 +173,14 @@
   #install-hint { display: none; width: 100%; max-width: 440px; margin-top: 14px; background: var(--panel-soft); border: 1.5px dashed #f0cdda; border-radius: var(--r-lg); padding: 15px 16px; font-size: 13px; color: var(--muted); text-align: left; line-height: 1.55; }
   #install-hint b { color: var(--primary); }
 
-  /* Bottom tabs */
-  .tabs { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(255,255,255,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--stroke); border-radius: var(--r-xl) var(--r-xl) 0 0; display: none; justify-content: space-around; padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); box-shadow: 0 -12px 34px rgba(39,31,52,.07); z-index: 60; }
+  /* Bottom tabs — jak w wizualizacji: cienkie ikony, aktywna burgund z kreską u góry */
+  .tabs { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(252,247,240,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--stroke); display: none; justify-content: space-around; padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); box-shadow: 0 -12px 34px rgba(84,48,48,.07); z-index: 60; }
   .tabs.visible { display: flex; }
-  .tab { background: none; border: none; font-family: inherit; text-align: center; cursor: pointer; color: #c9bcc3; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; padding: 6px 16px; border-radius: var(--r-sm); transition: color .2s, background .2s; }
-  .tab .ico { display: block; font-size: 21px; margin-bottom: 2px; filter: grayscale(45%); opacity: .75; transition: filter .2s, opacity .2s; }
-  .tab.active { color: var(--primary-dark); background: var(--primary-soft); }
+  .tab { position: relative; background: none; border: none; font-family: inherit; text-align: center; cursor: pointer; color: #b3a49a; font-size: 11px; font-weight: 600; letter-spacing: .03em; padding: 8px 18px 4px; transition: color .2s; }
+  .tab .ico { display: block; font-size: 21px; margin-bottom: 2px; filter: grayscale(65%); opacity: .6; transition: filter .2s, opacity .2s; }
+  .tab.active { color: var(--primary); font-weight: 700; }
   .tab.active .ico { filter: none; opacity: 1; }
+  .tab.active::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 34px; height: 3px; border-radius: 0 0 4px 4px; background: var(--primary); }
 
   /* Modal */
   .modal { position: fixed; inset: 0; background: rgba(31, 22, 30, .45); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); z-index: 90; display: none; justify-content: center; align-items: center; padding: 20px; }
@@ -191,7 +215,7 @@
 
 <!-- ── Aktywacja konta (wejście z QR od recepcji: /klub.html?a=token) ── -->
 <div id="screen-aktywacja" class="screen center">
-  <div class="logo-znak">💎</div>
+  <div class="logo-znak">✦</div>
   <div class="logo"><b id="akt-nazwa">Klub</b></div>
   <div class="logo-sub">program lojalnościowy</div>
   <div class="card">
@@ -207,7 +231,7 @@
 
 <!-- ── Logowanie ── -->
 <div id="screen-login" class="screen center">
-  <div class="logo-znak">💎</div>
+  <div class="logo-znak">✦</div>
   <div class="logo"><b>Klub</b></div>
   <div class="logo-sub">program lojalnościowy</div>
   <div class="card">
@@ -260,17 +284,31 @@
 
 <!-- ── Ekran główny (taby) ── -->
 <div id="screen-main" class="screen">
-  <div class="main-head">
-    <div class="hi" id="m-hello">Cześć!</div>
-    <div class="muted" id="m-klub-head">Klub</div>
+  <div class="brand-bar">
+    <div class="b-znak">✦</div>
+    <div class="b-nazwa" id="m-klub-head">Klub</div>
+    <div class="b-sub">program lojalnościowy</div>
+    <button class="dzwonek" onclick="przejdzDoWiadomosci()" title="Wiadomości od salonu">🔔<span class="kropka" id="dzwonek-kropka"></span></button>
+  </div>
+  <div class="hi-blok">
+    <div class="hi"><span id="m-hello">Cześć!</span> ✨</div>
+    <div class="hi-sub">Cieszymy się, że jesteś z nami.</div>
   </div>
 
   <!-- TAB: Start -->
   <div id="tab-start" class="tabpage visible">
     <div class="saldo-card">
-      <div class="lbl" id="m-klub">Klub</div>
+      <div class="lbl">Twoje punkty</div>
       <div class="val"><span id="m-saldo">0</span> <small>pkt</small></div>
+      <div class="zl" id="m-saldo-zl" style="display:none;"></div>
       <div class="rule" id="m-zasada"></div>
+    </div>
+    <div class="akcje-tytul">Co chcesz zrobić?</div>
+    <div class="akcje">
+      <button class="akcja" onclick="tab('nagrody')"><span class="a-ico">🎁</span><span><span class="a-tit">Nagrody</span><br><span class="a-sub">Wymień punkty</span></span></button>
+      <button class="akcja" onclick="przejdzDoHistorii()"><span class="a-ico">🕐</span><span><span class="a-tit">Historia</span><br><span class="a-sub">Twoje aktywności</span></span></button>
+      <button class="akcja" onclick="przejdzDoWiadomosci()"><span class="a-ico">📬</span><span><span class="a-tit">Wiadomości</span><br><span class="a-sub">Od Twojego salonu</span></span></button>
+      <button class="akcja" onclick="pokazZasady()"><span class="a-ico">✨</span><span><span class="a-tit">Jak to działa?</span><br><span class="a-sub">Zasady programu</span></span></button>
     </div>
     <div class="sekcja" id="sek-promocje" style="display:none;">
       <h3>Dla Ciebie</h3>
@@ -678,9 +716,18 @@ function animujSaldo(el, cel) {
 function renderAll() {
   const d = dane;
   document.getElementById('m-hello').textContent = d.imie ? ('Cześć, ' + d.imie + '!') : 'Cześć!';
-  document.getElementById('m-klub').textContent = d.nazwa_klubu || 'Klub';
-  document.getElementById('m-klub-head').textContent = '💎 ' + (d.nazwa_klubu || 'Klub');
+  document.getElementById('m-klub-head').textContent = d.nazwa_klubu || 'Klub';
   animujSaldo(document.getElementById('m-saldo'), d.saldo || 0);
+  // Zamiast zmyślonego kursu „≈ zł" (system nie definiuje wartości punktu):
+  // pokazujemy najbliższą osiągalną nagrodę — realną wartość salda.
+  const zlEl = document.getElementById('m-saldo-zl');
+  if (zlEl) {
+    const osiagalne = (d.nagrody || []).filter(n => n.dostepna && n.koszt_pkt <= (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo));
+    if (osiagalne.length) {
+      zlEl.textContent = '🎁 Stać Cię już na: ' + osiagalne.sort((a, b) => b.koszt_pkt - a.koszt_pkt)[0].nazwa;
+      zlEl.style.display = 'block';
+    } else zlEl.style.display = 'none';
+  }
   document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
   const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
   document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
@@ -737,9 +784,32 @@ async function biore() {
 }
 
 // ── Wiadomości od salonu (kampanie — kanał gwarantowany, bez zgód i pushа) ──
+function przejdzDoWiadomosci() {
+  tab('start');
+  const sek = document.getElementById('sek-wiadomosci');
+  if (sek && sek.style.display !== 'none') sek.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  else toast('📬 Brak wiadomości od salonu — zajrzyj wkrótce.');
+  // oznacz jako przeczytane → kropka na dzwonku gaśnie
+  const maxId = Math.max(0, ...((dane && dane.wiadomosci) || []).map(w => Number(w.id) || 0));
+  if (maxId) localStorage.setItem('klub_msg_seen', String(maxId));
+  const kropka = document.getElementById('dzwonek-kropka');
+  if (kropka) kropka.style.display = 'none';
+}
+function przejdzDoHistorii() {
+  tab('profil');
+  const el = document.getElementById('m-hist');
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 function renderWiadomosci(wiadomosci) {
   const sek = document.getElementById('sek-wiadomosci');
   const box = document.getElementById('m-wiadomosci');
+  // Kropka na dzwonku, gdy są wiadomości nowsze niż ostatnio widziane
+  const kropka = document.getElementById('dzwonek-kropka');
+  if (kropka) {
+    const maxId = Math.max(0, ...wiadomosci.map(w => Number(w.id) || 0));
+    const widziane = parseInt(localStorage.getItem('klub_msg_seen'), 10) || 0;
+    kropka.style.display = maxId > widziane ? 'block' : 'none';
+  }
   if (!wiadomosci.length) { sek.style.display = 'none'; return; }
   sek.style.display = 'block';
   box.innerHTML = wiadomosci.map(w => {
@@ -834,25 +904,45 @@ function renderKody(odbiory) {
   });
 }
 
-// ── Historia ──
+// ── Historia — grupowanie po miesiącach + podsumowanie (jak w wizualizacji) ──
 function renderHistoria(wpisy) {
   const box = document.getElementById('m-hist');
   if (!wpisy.length) {
     box.innerHTML = '<div class="pusto">Jeszcze pusto — punkty pojawią się po najbliższej wizycie. 💫</div>';
     return;
   }
-  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : (z === 'NAGRODA' ? '🎁' : '⚙️')));
-  box.innerHTML = wpisy.map(w => {
+  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : (z === 'BONUS' ? '🎂' : (z === 'NAGRODA' ? '🎁' : '⚙️'))));
+  const MIESIACE = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+  let html = '', biezacyKlucz = null, sumaPlus = 0, sumaMinus = 0, biezacaNazwa = '';
+  const zamknijMiesiac = () => {
+    if (biezacyKlucz === null) return;
+    html += '<div class="hist-suma"><div class="s-ico">⭐</div>'
+      + '<div class="s-tit">Podsumowanie<br><span style="font-weight:600; color:#a08a4e; font-size:12px;">' + biezacaNazwa + '</span></div>'
+      + '<div class="s-kwoty">' + (sumaPlus ? '<span class="plus">+' + sumaPlus + ' pkt</span><br>' : '') + (sumaMinus ? '<span class="minus">−' + sumaMinus + ' pkt</span>' : '') + '</div></div>';
+    sumaPlus = 0; sumaMinus = 0;
+  };
+  wpisy.forEach(w => {
     const dt = w.data ? new Date(w.data) : null;
-    const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
-    const plus = (w.zmiana || 0) >= 0;
+    const ok = dt && !isNaN(dt.getTime());
+    const klucz = ok ? (dt.getFullYear() + '-' + dt.getMonth()) : 'inne';
+    if (klucz !== biezacyKlucz) {
+      zamknijMiesiac();
+      biezacyKlucz = klucz;
+      biezacaNazwa = ok ? (MIESIACE[dt.getMonth()] + ' ' + dt.getFullYear()) : 'Pozostałe';
+      html += '<div class="hist-mies">' + biezacaNazwa + '</div>';
+    }
+    const z = Number(w.zmiana) || 0;
+    if (z >= 0) sumaPlus += z; else sumaMinus += -z;
+    const dstr = ok ? dt.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
     const zrodloKl = /^[A-Z]+$/.test(String(w.zrodlo || '')) ? ' z-' + w.zrodlo : '';
-    return '<div class="hist-row">'
+    html += '<div class="hist-row">'
       + '<div class="hist-ico' + zrodloKl + '">' + ikona(w.zrodlo) + '</div>'
       + '<div class="hist-txt"><div class="t">' + esc(w.powod || 'Punkty') + '</div><div class="d">' + dstr + '</div></div>'
-      + '<div class="hist-pkt ' + (plus ? 'plus' : 'minus') + '">' + (plus ? '+' : '') + (w.zmiana || 0) + '</div>'
+      + '<div class="hist-pkt ' + (z >= 0 ? 'plus' : 'minus') + '">' + (z >= 0 ? '+' : '') + z + ' pkt</div>'
       + '</div>';
-  }).join('');
+  });
+  zamknijMiesiac();
+  box.innerHTML = html;
 }
 
 // ── Zasady / FAQ ──
