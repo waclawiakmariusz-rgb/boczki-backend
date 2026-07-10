@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 13 wpisów-wypełniaczy na init fabryki (CREATE ×10 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 13 }, () => ({ rows: [] }));
+// 14 wpisów-wypełniaczy na init fabryki (CREATE ×11 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 14 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -851,6 +851,41 @@ describe('POST /api/lojalnosc — kampanie', () => {
         const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc')
             .send({ action: 'loj_kampania_wycofaj', tenant_id: 't-loj-kw2', id: 5, user_log: 'Szefowa' });
         expect(r2.body.status).toBe('error');
+    });
+
+    test('edycja ZAPLANOWANEJ podmienia treść i termin; wysłanej nie da się edytować', async () => {
+        const dbOk = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc').send({
+            ...valid, tenant_id: 't-loj-ke1', id: 4, tytul: 'Poprawiony', wyslij_at: '2026-08-02T09:00'
+        });
+        expect(r1.body.status).toBe('success');
+        const upd = dbOk.query.mock.calls.find(c => /UPDATE Lojalnosc_Kampanie SET tytul/.test(c[0]));
+        expect(upd[0]).toMatch(/status = 'PLANOWANA'/);
+        const dbJuz = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbJuz)).post('/api/lojalnosc').send({
+            ...valid, tenant_id: 't-loj-ke2', id: 4, wyslij_at: '2026-08-02T09:00'
+        });
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('odczyt wiadomości zapisuje się idempotentnie', async () => {
+        const ses = makeKlubToken({ t: 't-loj-od1', k: '42', typ: 'ses', exp: Date.now() + 60000 });
+        const db = mockDb(...INIT, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(db)).post('/api/klub/wiadomosc_odczyt').send({ session: ses, kampania_id: 9 });
+        expect(r1.body.status).toBe('success');
+        const dbDup = mockDb(...INIT, { err: { code: 'ER_DUP_ENTRY', message: 'dup' } });
+        const r2 = await request(buildApp(dbDup)).post('/api/klub/wiadomosc_odczyt').send({ session: ses, kampania_id: 9 });
+        expect(r2.body.status).toBe('success'); // duplikat = już policzone, bez błędu
+    });
+
+    test('lista członków tylko dla admina', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz1&user_log=Recepcja');
+        expect(res.body.status).toBe('error');
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id_klienta: '42', klient: 'Anna', saldo: 10, ma_push: 1, dolaczyl: '2026-07-10' }] });
+        const r2 = await request(buildApp(dbOk)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz2&user_log=Szefowa');
+        expect(r2.body.status).toBe('success');
+        expect(r2.body.czlonkowie).toHaveLength(1);
     });
 
     test('anulowanie działa tylko dla PLANOWANEJ', async () => {

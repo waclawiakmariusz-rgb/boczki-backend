@@ -8261,6 +8261,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">🎁 Nagrody</button>
                     <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">📣 Promocje</button>
                     <button class="klubadm-tab" data-kt="kampanie" onclick="klubadm_tab('kampanie', this)">📬 Kampanie</button>
+                    <button class="klubadm-tab" data-kt="czlonkowie" onclick="klubadm_tab('czlonkowie', this)">👥 Członkowie</button>
                     <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">🧾 Odbiory i zgłoszenia <span id="klubadm-badge" style="display:none; background:#dc2626; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px;"></span></button>
                     <button class="klubadm-tab" data-kt="statystyki" onclick="klubadm_tab('statystyki', this)">📊 Statystyki</button>
                 </div>
@@ -8365,8 +8366,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 <!-- Tab: Kampanie (targetowany push + wiadomość w apce, harmonogram) -->
                 <div id="klubadm-kampanie" class="klubadm-page" style="display:none;">
                     <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">Nowa kampania</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafia jako push na telefony (u tych, którzy włączyli powiadomienia) i jako wiadomość w apce do wszystkich z segmentu — widoczna 30 dni.</div>
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-k-form-tytul">Nowa kampania</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafia jako push na telefony (u tych, którzy włączyli powiadomienia) i jako wiadomość w apce do wszystkich z segmentu.</div>
+                        <input type="hidden" id="klubadm-k-id">
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">
+                            <span style="font-size:11.5px; color:#9ca3af; align-self:center;">Szablony:</span>
+                            <button onclick="klubadm_szablon('reaktywacja')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Dawno Cię nie było</button>
+                            <button onclick="klubadm_szablon('vip')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Podziękowanie VIP</button>
+                            <button onclick="klubadm_szablon('terminy')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Wolne terminy</button>
+                            <button onclick="klubadm_szablon('nowosc')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Nowość w salonie</button>
+                            <button onclick="klubadm_szablon('nagrody')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Przypomnij o nagrodach</button>
+                        </div>
                         <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:12px;">
                             <input id="klubadm-k-tytul" maxlength="100" placeholder="Tytuł (np. Weekend -15%)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                             <input id="klubadm-k-tresc" maxlength="300" placeholder="Treść wiadomości" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
@@ -8394,10 +8404,38 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input id="klubadm-k-termin" type="datetime-local" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" onfocus="document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;">
                             <label style="font-size:12.5px; color:#475569; font-weight:600;">Widoczna w apce przez <input id="klubadm-k-widoczna" type="number" min="1" max="90" value="30" style="width:64px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;"> dni</label>
                             <button onclick="klubadm_zapiszKampanie()" id="klubadm-k-btn" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">📬 Wyślij / zaplanuj</button>
+                            <button onclick="klubadm_resetKampania()" id="klubadm-k-anuluj-ed" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
                         </div>
                         <div id="klubadm-k-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
+                        <!-- Podgląd „jak zobaczy to klientka" — karta 1:1 ze skrzynki w apce -->
+                        <div style="margin-top:14px; padding:14px; background:#f8f1ea; border:1px solid #ecdfd2; border-radius:14px; max-width:400px;">
+                            <div style="font-size:11px; color:#ab9c92; letter-spacing:.1em; text-transform:uppercase; font-weight:700; margin-bottom:8px;">Podgląd w aplikacji</div>
+                            <div style="background:#fffdf9; border:1px solid #ecdfd2; border-radius:16px; overflow:hidden; box-shadow:0 6px 16px rgba(84,48,48,.06);">
+                                <img id="klubadm-k-pod-img" src="" alt="" style="display:none; width:100%; max-height:110px; object-fit:cover;">
+                                <div style="padding:12px 15px;">
+                                    <div style="display:flex; justify-content:space-between; gap:8px; align-items:baseline;">
+                                        <b id="klubadm-k-pod-tytul" style="font-size:14px; color:#3b2a2f;">Tytuł wiadomości</b>
+                                        <span style="font-size:11px; color:#ab9c92; flex-shrink:0;">dziś</span>
+                                    </div>
+                                    <div id="klubadm-k-pod-tresc" style="font-size:12.5px; color:#4a5261; margin-top:4px; line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">Treść wiadomości pojawi się tutaj…</div>
+                                    <div style="font-size:11.5px; color:#6f2136; font-weight:700; margin-top:6px;">Czytaj całość ›</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div class="card" style="padding:10px 22px;"><div id="klubadm-k-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                </div>
+
+                <!-- Tab: Członkowie Klubu -->
+                <div id="klubadm-czlonkowie" class="klubadm-page" style="display:none;">
+                    <div class="card" style="padding:18px 22px;">
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">Członkowie Klubu <span id="klubadm-cz-licznik" style="font-size:14px; color:#6b7280;"></span></div>
+                            <input id="klubadm-cz-szukaj" placeholder="🔍 Szukaj po nazwisku lub telefonie…" oninput="klubadm_filtrujCzlonkow()" style="width:260px; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                        </div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klientki z aktywnym kontem w aplikacji — saldo, ostatnia wizyta i czy dostają powiadomienia.</div>
+                        <div id="klubadm-cz-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                    </div>
                 </div>
 
                 <!-- Tab: Odbiory i zgłoszenia -->
@@ -30789,9 +30827,15 @@ function klubadm_init() {
   klubadm_zaladujNagrody();
   klubadm_zaladujPromocje();
   klubadm_zaladujKampanie();
+  klubadm_zaladujCzlonkow();
   klubadm_zaladujOdbiory();
   if (!klubadm_zainicjowane) {
     klubadm_zainicjowane = true;
+    // Live podgląd kampanii „jak zobaczy klientka"
+    ['klubadm-k-tytul', 'klubadm-k-tresc', 'klubadm-k-img'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener('input', klubadm_podgladKampanii);
+    });
     const mSel = document.getElementById('klubadm-st-mies');
     const rSel = document.getElementById('klubadm-st-rok');
     if (mSel && rSel) {
@@ -31080,6 +31124,68 @@ async function klubadm_zapiszPromocje() {
 }
 
 // ── Kampanie ──
+let klubadm_kampanieCache = [];
+
+// Szablony gotowców — klik wypełnia formularz, admin tylko podmienia szczegóły
+const KLUBADM_SZABLONY = {
+  reaktywacja: { tytul: 'Tęsknimy za Tobą!', tresc: 'Minęło już trochę czasu od Twojej ostatniej wizyty. Wpadnij do nas — Twoje punkty czekają, a kalendarz mamy otwarty.', segment: ['BRAK_WIZYTY', '', 60] },
+  vip:         { tytul: 'Dziękujemy, że jesteś z nami', tresc: 'Jesteś jedną z naszych najwierniejszych klientek. W podziękowaniu zajrzyj do katalogu nagród — uzbierane punkty czekają na wymianę.', segment: ['PUNKTY_MIN', '100', 90] },
+  terminy:     { tytul: 'Wolne terminy w tym tygodniu', tresc: 'Zwolniło się kilka okienek w najbliższych dniach. Napisz lub zadzwoń, a znajdziemy godzinę idealną dla Ciebie.', segment: ['WSZYSCY', '', 90] },
+  nowosc:      { tytul: 'Nowość w naszym salonie', tresc: 'Wprowadziłyśmy nowy zabieg — pytaj o szczegóły przy najbliższej wizycie albo odezwij się do nas już teraz.', segment: ['WSZYSCY', '', 90] },
+  nagrody:     { tytul: 'Twoje punkty czekają', tresc: 'Sprawdź katalog nagród w aplikacji — być może stać Cię już na coś przyjemnego. Punkty nie przepadają, ale po co mają leżeć?', segment: ['PUNKTY_MIN', '50', 90] },
+};
+function klubadm_szablon(klucz) {
+  const s = KLUBADM_SZABLONY[klucz];
+  if (!s) return;
+  document.getElementById('klubadm-k-tytul').value = s.tytul;
+  document.getElementById('klubadm-k-tresc').value = s.tresc;
+  klubadm_segUstaw('k', s.segment[0], s.segment[1], s.segment[2]);
+  klubadm_podgladKampanii();
+}
+
+function klubadm_podgladKampanii() {
+  const t = document.getElementById('klubadm-k-tytul').value.trim();
+  const tr = document.getElementById('klubadm-k-tresc').value.trim();
+  const img = document.getElementById('klubadm-k-img').value.trim();
+  document.getElementById('klubadm-k-pod-tytul').textContent = t || 'Tytuł wiadomości';
+  document.getElementById('klubadm-k-pod-tresc').textContent = tr || 'Treść wiadomości pojawi się tutaj…';
+  const pi = document.getElementById('klubadm-k-pod-img');
+  if (img) { pi.src = img; pi.style.display = 'block'; pi.onerror = () => pi.style.display = 'none'; }
+  else pi.style.display = 'none';
+}
+
+function klubadm_edytujKampanie(id) {
+  const k = klubadm_kampanieCache.find(x => x.id === id);
+  if (!k) return;
+  document.getElementById('klubadm-k-id').value = k.id;
+  document.getElementById('klubadm-k-tytul').value = k.tytul;
+  document.getElementById('klubadm-k-tresc').value = k.tresc;
+  document.getElementById('klubadm-k-img').value = k.img_url || '';
+  klubadm_podglad('klubadm-k-img');
+  klubadm_segUstaw('k', k.segment_typ, k.segment_wartosc, k.segment_dni);
+  document.getElementById('klubadm-k-widoczna').value = k.widoczna_dni || 30;
+  const dt = new Date(k.wyslij_at);
+  document.getElementById('klubadm-k-termin').value = isNaN(dt.getTime()) ? '' :
+    dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0') + 'T' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+  document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;
+  document.getElementById('klubadm-k-form-tytul').textContent = 'Edytuj zaplanowaną kampanię';
+  document.getElementById('klubadm-k-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-k-anuluj-ed').style.display = 'inline-block';
+  klubadm_podgladKampanii();
+  document.getElementById('klubadm-k-form-tytul').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function klubadm_resetKampania() {
+  ['klubadm-k-id','klubadm-k-tytul','klubadm-k-tresc','klubadm-k-img','klubadm-k-termin'].forEach(id => document.getElementById(id).value = '');
+  klubadm_podglad('klubadm-k-img');
+  klubadm_segUstaw('k', 'WSZYSCY', '', 90);
+  document.getElementById('klubadm-k-widoczna').value = 30;
+  document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
+  document.getElementById('klubadm-k-form-tytul').textContent = 'Nowa kampania';
+  document.getElementById('klubadm-k-btn').textContent = '📬 Wyślij / zaplanuj';
+  document.getElementById('klubadm-k-anuluj-ed').style.display = 'none';
+  klubadm_podgladKampanii();
+}
+
 async function klubadm_zaladujKampanie() {
   const box = document.getElementById('klubadm-k-lista');
   if (!box) return;
@@ -31088,6 +31194,7 @@ async function klubadm_zaladujKampanie() {
   const status = document.getElementById('klubadm-k-status');
   if (status && !d.push_skonfigurowany) status.textContent = 'ℹ️ Push nieskonfigurowany (brak kluczy VAPID) — kampanie dotrą tylko jako wiadomości w apce.';
   const kampanie = d.kampanie || [];
+  klubadm_kampanieCache = kampanie;
   if (!kampanie.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Jeszcze żadnej kampanii.</div>'; return; }
   const KOLOR = { PLANOWANA: '#b45309', WYSLANA: '#0f766e', ANULOWANA: '#9ca3af', WYCOFANA: '#9ca3af', BLAD: '#dc2626', WYSYLANIE: '#7c3aed' };
   box.innerHTML = kampanie.map(k => {
@@ -31103,9 +31210,9 @@ async function klubadm_zaladujKampanie() {
       <div style="min-width:0;">
         <b>${escHtml(k.tytul)}</b> <span style="color:${KOLOR[k.status] || '#475569'}; font-size:11.5px; font-weight:700;">${k.status}</span>
         <div style="font-size:12px; color:#9ca3af;">${escHtml(k.tresc)}</div>
-        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow : ''}${widocznaTxt}</div>
+        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow + ' · 👁 odczytało: ' + (k.odczytania || 0) : ''}${widocznaTxt}</div>
       </div>
-      ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
+      ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8; flex-shrink:0;" onclick="klubadm_edytujKampanie(${k.id})">✏️ Edytuj</button><button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
       ${k.status === 'WYSLANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="if(confirm('Wycofać kampanię? Zniknie z aplikacji u wszystkich klientów (wysłanych pushy nie da się cofnąć).')) klubadm_wycofajKampanie(${k.id})">Wycofaj</button>` : ''}
     </div>`;
   }).join('');
@@ -31122,8 +31229,11 @@ async function klubadm_zapiszKampanie() {
   if (!plan && !confirm('Wysłać kampanię TERAZ?\n\n„' + tytul + '"\n' + tresc + '\nDo: ' + klubadm_opisSegmentu(seg.segment_typ, seg.segment_wartosc, seg.segment_dni))) return;
   const btn = document.getElementById('klubadm-k-btn');
   btn.disabled = true; status.textContent = '⏳…';
+  const editId = document.getElementById('klubadm-k-id').value;
+  if (editId && !plan) { status.textContent = 'Edytowana kampania musi mieć termin (albo anuluj ją i wyślij nową „teraz").'; btn.disabled = false; return; }
   const d = await klubadm_apiPost({
     action: 'loj_kampania_zapisz', tytul, tresc,
+    id: editId || null,
     img_url: document.getElementById('klubadm-k-img').value.trim(),
     segment_typ: seg.segment_typ, segment_wartosc: seg.segment_wartosc, segment_dni: seg.segment_dni,
     widoczna_dni: document.getElementById('klubadm-k-widoczna').value,
@@ -31132,16 +31242,39 @@ async function klubadm_zapiszKampanie() {
   btn.disabled = false;
   if (d && d.status === 'success') {
     status.textContent = d.zaplanowana ? ('✅ Zaplanowano na ' + d.wyslij_at + '.') : `✅ Wysłano — push dotarł do ${d.dostarczono}/${d.subskrypcji} urządzeń, wiadomość widoczna w apce.`;
-    document.getElementById('klubadm-k-tytul').value = '';
-    document.getElementById('klubadm-k-tresc').value = '';
-    document.getElementById('klubadm-k-img').value = '';
-    klubadm_podglad('klubadm-k-img');
-    document.getElementById('klubadm-k-termin').value = '';
-    document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
+    klubadm_resetKampania();
     klubadm_zaladujKampanie();
   } else {
     status.textContent = 'Błąd: ' + ((d && d.message) || 'połączenia');
   }
+}
+
+// ── Członkowie Klubu ──
+let klubadm_czlonkowieCache = [];
+async function klubadm_zaladujCzlonkow() {
+  const box = document.getElementById('klubadm-cz-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_czlonkowie').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  klubadm_czlonkowieCache = d.czlonkowie || [];
+  const licznik = document.getElementById('klubadm-cz-licznik');
+  if (licznik) licznik.textContent = '(' + klubadm_czlonkowieCache.length + ')';
+  klubadm_filtrujCzlonkow();
+}
+function klubadm_filtrujCzlonkow() {
+  const box = document.getElementById('klubadm-cz-lista');
+  const fraza = (document.getElementById('klubadm-cz-szukaj').value || '').toLowerCase().trim();
+  const lista = klubadm_czlonkowieCache.filter(c =>
+    !fraza || String(c.klient || '').toLowerCase().includes(fraza) || String(c.telefon || '').includes(fraza));
+  if (!lista.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">' + (klubadm_czlonkowieCache.length ? 'Brak wyników.' : 'Nikt jeszcze nie dołączył — wyślij pierwszej klientce QR z profilu albo udostępnij link rejestracyjny.') + '</div>'; return; }
+  const dataFmt = (x) => x ? new Date(x).toLocaleDateString('pl-PL') : '—';
+  box.innerHTML = lista.map(c => `<div class="klubadm-row">
+    <div style="min-width:0;">
+      <b>${escHtml(c.klient || ('Klient ' + c.id_klienta))}</b>${c.ma_push ? ' <span title="ma powiadomienia" style="font-size:11px; color:#0284c7; font-weight:800;">PUSH</span>' : ''}
+      <div style="font-size:12px; color:#9ca3af;">${escHtml(c.telefon || '')} · dołączyła ${dataFmt(c.dolaczyl)} · ostatnia wizyta: ${dataFmt(c.ostatnia_wizyta)}</div>
+    </div>
+    <div style="flex-shrink:0; text-align:right;"><b style="color:#c54f7f; font-size:15px;">${c.saldo} pkt</b></div>
+  </div>`).join('');
 }
 async function klubadm_anulujKampanie(id) {
   if (!confirm('Anulować zaplanowaną kampanię?')) return;

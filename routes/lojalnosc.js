@@ -525,6 +525,16 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Kampanie_Odczyty (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      kampania_id INT NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_odczyt (tenant_id, kampania_id, id_klienta)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie_Odczyty:', e.message);
+  });
   db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Wnioski (
       id INT AUTO_INCREMENT PRIMARY KEY,
       tenant_id VARCHAR(64) NOT NULL,
@@ -956,14 +966,37 @@ module.exports = (db) => {
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
+    } else if (action === 'loj_czlonkowie') {
+      // Kto dołączył do Klubu: saldo, ostatnia wizyta, push — ocena pilota jednym rzutem oka
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT A.id_klienta, A.created_at AS dolaczyl, A.ostatnie_logowanie,
+                  K.imie_nazwisko AS klient, K.telefon,
+                  (SELECT COALESCE(SUM(P.zmiana), 0) FROM Lojalnosc_Punkty P WHERE P.tenant_id = A.tenant_id AND P.id_klienta = A.id_klienta) AS saldo,
+                  (SELECT MAX(S.data_sprzedazy) FROM Sprzedaz S WHERE S.tenant_id = A.tenant_id AND S.id_klienta = A.id_klienta AND COALESCE(S.status,'') != 'USUNIĘTY') AS ostatnia_wizyta,
+                  EXISTS(SELECT 1 FROM Lojalnosc_Push PU WHERE PU.tenant_id = A.tenant_id AND PU.id_klienta = A.id_klienta) AS ma_push
+             FROM Lojalnosc_Konta A
+             LEFT JOIN Klienci K ON K.tenant_id = A.tenant_id AND K.id_klienta = A.id_klienta
+            WHERE A.tenant_id = ? AND A.status = 'AKTYWNE'
+            ORDER BY A.created_at DESC LIMIT 500`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', czlonkowie: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
     } else if (action === 'loj_kampanie') {
       const kto = String(req.query.user_log || '').trim();
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, widoczna_dni, wyslij_at, status,
-                  wyslano_at, odbiorcow, dostarczono, utworzyl, created_at
-             FROM Lojalnosc_Kampanie WHERE tenant_id = ?
-            ORDER BY (status = 'PLANOWANA') DESC, COALESCE(wyslano_at, wyslij_at) DESC LIMIT 50`,
+          `SELECT K.id, K.tytul, K.tresc, K.img_url, K.segment_typ, K.segment_wartosc, K.segment_dni, K.widoczna_dni,
+                  K.wyslij_at, K.status, K.wyslano_at, K.odbiorcow, K.dostarczono, K.utworzyl, K.created_at,
+                  (SELECT COUNT(*) FROM Lojalnosc_Kampanie_Odczyty O WHERE O.tenant_id = K.tenant_id AND O.kampania_id = K.id) AS odczytania
+             FROM Lojalnosc_Kampanie K WHERE K.tenant_id = ?
+            ORDER BY (K.status = 'PLANOWANA') DESC, COALESCE(K.wyslano_at, K.wyslij_at) DESC LIMIT 50`,
           [tenant_id],
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
@@ -1385,6 +1418,20 @@ module.exports = (db) => {
       }
       maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, async () => {
         try {
+          // Edycja ZAPLANOWANEJ (jeszcze niewysłanej) kampanii — d.id + nowy termin wymagany
+          const editId = parseInt(d.id, 10);
+          if (editId) {
+            if (!wyslijAt) return res.json({ status: 'error', message: 'Przy edycji zaplanowanej kampanii podaj termin wysyłki.' });
+            const r = await q(
+              `UPDATE Lojalnosc_Kampanie SET tytul = ?, tresc = ?, img_url = ?, segment_typ = ?, segment_wartosc = ?,
+                      segment_dni = ?, widoczna_dni = ?, wyslij_at = ?
+                WHERE tenant_id = ? AND id = ? AND status = 'PLANOWANA'`,
+              [tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, widocznaDni, wyslijAt, tenant_id, editId]
+            );
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Tę kampanię można edytować tylko przed wysyłką.' });
+            zapiszLog(tenant_id, 'KLUB KAMPANIA EDYCJA', kto, `#${editId} „${tytul}" na ${wyslijAt}`);
+            return res.json({ status: 'success', zaplanowana: 1, wyslij_at: wyslijAt });
+          }
           const teraz = !wyslijAt;
           const wynik = await q(
             `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, widoczna_dni, wyslij_at, status, utworzyl)
@@ -1743,6 +1790,22 @@ module.exports = (db) => {
       zapiszLog(p.t, 'KLUB BIORĘ', 'Klient (apka)', `Klient ${p.k}: „${promocja.tytul}"`);
       return res.json({ status: 'success', message: 'Zgłoszenie wysłane! Salon skontaktuje się z Tobą.' });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  // Odczyt wiadomości (klientka otworzyła pełną treść) — statystyka dla panelu.
+  // Idempotentnie po (kampania, klient); fire-and-forget, nie blokuje apki.
+  router.post('/klub/wiadomosc_odczyt', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA' });
+    const kampaniaId = parseInt((req.body || {}).kampania_id, 10);
+    if (!kampaniaId) return res.json({ status: 'error', message: 'Brak kampanii.' });
+    try {
+      await q(
+        `INSERT INTO Lojalnosc_Kampanie_Odczyty (tenant_id, kampania_id, id_klienta) VALUES (?, ?, ?)`,
+        [p.t, kampaniaId, p.k]
+      ).catch((e) => { if (e && e.code !== 'ER_DUP_ENTRY') throw e; });
+      return res.json({ status: 'success' });
+    } catch (e) { return res.json({ status: 'success' }); }
   });
 
   // Zapis subskrypcji Web Push (zgoda marketingowa = moment włączenia powiadomień)

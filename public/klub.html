@@ -163,6 +163,10 @@
   .hist-pkt { font-weight: 800; flex-shrink: 0; font-size: 14.5px; }
   .plus { color: var(--green); } .minus { color: #d64545; }
   .pusto { padding: 26px 12px; text-align: center; color: var(--muted); font-size: 13.5px; width: 100%; line-height: 1.6; }
+  /* Wiadomości: karta-zajawka, klik otwiera pełną treść w oknie */
+  .wiad-karta { background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); overflow: hidden; margin-bottom: 10px; box-shadow: var(--shadow); cursor: pointer; transition: transform .15s; }
+  .wiad-karta:active { transform: scale(.985); }
+  .wiad-zajawka { font-size: 13px; color: #4a5261; margin-top: 4px; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
   .menu-list { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-xl); margin-bottom: 14px; overflow: hidden; box-shadow: var(--shadow); }
   .menu-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 16px 18px; border: none; border-bottom: 1px solid var(--stroke-2); background: var(--panel); font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; text-align: left; transition: background .15s; }
   .menu-item:active { background: var(--panel-soft); }
@@ -389,6 +393,16 @@
   <div id="m-kod-wielki"></div>
   <div class="muted" style="font-size:12px;">Punkty zejdą z konta dopiero przy wydaniu nagrody.<br>Kod znajdziesz też w zakładce Nagrody.</div>
   <button class="btn" onclick="zamknij('m-kod')">Super!</button>
+</div></div>
+
+<!-- Modal: pełna wiadomość od salonu -->
+<div id="m-wiad" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-wiad')">✕</button>
+  <h3 id="m-wiad-tytul"></h3>
+  <div id="m-wiad-data" class="muted" style="font-size:12px; margin-bottom:8px;"></div>
+  <img id="m-wiad-img" class="m-img" style="display:none;" alt="">
+  <div id="m-wiad-tresc" style="font-size:14.5px; line-height:1.7; color:#4a5261; white-space:pre-wrap;"></div>
+  <button class="btn ghost" onclick="zamknij('m-wiad')">Zamknij</button>
 </div></div>
 
 <!-- Modal: tekst (zasady/FAQ) -->
@@ -836,19 +850,36 @@ function renderWiadomosci(wiadomosci) {
   }
   if (!wiadomosci.length) { sek.style.display = 'none'; return; }
   sek.style.display = 'block';
+  // Karta = zajawka (2 linie treści); pełna wiadomość otwiera się w oknie
   box.innerHTML = wiadomosci.map(w => {
     const dt = w.data ? new Date(w.data) : null;
     const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) : '';
-    return '<div style="background:var(--panel); border:1px solid var(--stroke); border-radius:var(--r-lg); overflow:hidden; margin-bottom:10px; box-shadow:var(--shadow);">'
-      + (w.img_url ? '<img src="' + esc(w.img_url) + '" alt="" style="width:100%; max-height:160px; object-fit:cover; display:block;" onerror="this.style.display=\'none\'">' : '')
-      + '<div style="padding:14px 16px;">'
+    return '<div class="wiad-karta" onclick="otworzWiadomosc(' + Number(w.id) + ')">'
+      + (w.img_url ? '<img src="' + esc(w.img_url) + '" alt="" style="width:100%; max-height:120px; object-fit:cover; display:block;" onerror="this.style.display=\'none\'">' : '')
+      + '<div style="padding:13px 16px;">'
       + '<div style="display:flex; justify-content:space-between; gap:8px; align-items:baseline;">'
       + '<b style="font-size:14px;">' + esc(w.tytul) + '</b>'
       + '<span style="font-size:11.5px; color:var(--muted-2); flex-shrink:0;">' + dstr + '</span>'
       + '</div>'
-      + '<div style="font-size:13px; color:#4a5261; margin-top:4px; line-height:1.5;">' + esc(w.tresc) + '</div>'
+      + '<div class="wiad-zajawka">' + esc(w.tresc) + '</div>'
+      + '<div style="font-size:12px; color:var(--primary); font-weight:700; margin-top:6px;">Czytaj całość ›</div>'
       + '</div></div>';
   }).join('');
+}
+
+function otworzWiadomosc(id) {
+  const w = ((dane && dane.wiadomosci) || []).find(x => Number(x.id) === id);
+  if (!w) return;
+  const dt = w.data ? new Date(w.data) : null;
+  document.getElementById('m-wiad-tytul').textContent = w.tytul;
+  document.getElementById('m-wiad-data').textContent = dt && !isNaN(dt.getTime())
+    ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const img = document.getElementById('m-wiad-img');
+  if (w.img_url) { img.src = w.img_url; img.style.display = 'block'; } else img.style.display = 'none';
+  document.getElementById('m-wiad-tresc').textContent = w.tresc;
+  document.getElementById('m-wiad').classList.add('visible');
+  // Statystyka odczytań dla salonu (fire-and-forget, idempotentna po stronie serwera)
+  api('/wiadomosc_odczyt', { session: localStorage.getItem(LS_SESJA), kampania_id: id }).catch(() => {});
 }
 
 // ── Nagrody ──
