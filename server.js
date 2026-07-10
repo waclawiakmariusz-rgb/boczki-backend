@@ -477,6 +477,11 @@ app.get('/api', (req, res) => {
         'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : '') + (req.query.szukaj ? '&szukaj=' + encodeURIComponent(req.query.szukaj) : '') + (req.query.strona ? '&strona=' + encodeURIComponent(req.query.strona) : ''),
         'loj_klient': '/api/lojalnosc?action=loj_klient&tenant_id=' + tenant_id + '&id_klienta=' + encodeURIComponent(req.query.id_klienta || ''),
         'loj_ustawienia': '/api/lojalnosc?action=loj_ustawienia&tenant_id=' + tenant_id,
+        'loj_nagrody_admin': '/api/lojalnosc?action=loj_nagrody_admin&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_promocje_admin': '/api/lojalnosc?action=loj_promocje_admin&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_odbiory': '/api/lojalnosc?action=loj_odbiory&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_zgloszenia': '/api/lojalnosc?action=loj_zgloszenia&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_statystyki': '/api/lojalnosc?action=loj_statystyki&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || '') + (req.query.rok ? '&rok=' + encodeURIComponent(req.query.rok) : '') + (req.query.miesiac ? '&miesiac=' + encodeURIComponent(req.query.miesiac) : ''),
     };
 
     if (getActions[action]) {
@@ -548,7 +553,9 @@ app.post('/api', (req, res) => {
     const booksyActions = ['booksy_refresh', 'booksy_preview'];
     const fotoActions = ['foto_token', 'foto_usun', 'foto_urzadzenie_usun'];
     const zgodyActions = ['zgoda_utworz', 'zgoda_anuluj', 'zgody_regulamin_zapisz'];
-    const lojalnoscActions = ['loj_punkty_reczne', 'loj_ustawienia_zapisz', 'loj_aktywacja_token'];
+    const lojalnoscActions = ['loj_punkty_reczne', 'loj_ustawienia_zapisz', 'loj_aktywacja_token',
+        'loj_nagroda_zapisz', 'loj_nagroda_status', 'loj_promocja_zapisz', 'loj_promocja_status',
+        'loj_odbior_rozstrzygnij', 'loj_zgloszenie_obsluz', 'loj_push_wyslij'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';

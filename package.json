@@ -33,7 +33,8 @@
     "nodemailer": "^8.0.5",
     "pdf-lib": "^1.17.1",
     "qrcode": "^1.5.4",
-    "stripe": "^22.0.1"
+    "stripe": "^22.0.1",
+    "web-push": "^3.6.7"
   },
   "devDependencies": {
     "jest": "^30.3.0",

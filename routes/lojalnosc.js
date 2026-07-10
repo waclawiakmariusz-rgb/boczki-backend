@@ -62,6 +62,32 @@ function normalizujTelefon(t) {
   return String(t || '').replace(/\D/g, '').slice(-9);
 }
 
+// Kod odbioru nagrody: 6 znaków bez mylących (0/O, 1/I/L, Q)
+const KOD_ZNAKI = 'ABCDEFGHJKMNPRSTUWXYZ23456789';
+function generujKod() {
+  let s = '';
+  for (let i = 0; i < 6; i++) s += KOD_ZNAKI[Math.floor(Math.random() * KOD_ZNAKI.length)];
+  return s;
+}
+
+// ─── Web Push (VAPID) — opcjonalny. Brak kluczy w env → push wyłączony,
+// reszta Klubu działa normalnie (wzorzec Stripe w features.js).
+let webpush = null;
+try {
+  if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+    webpush = require('web-push');
+    webpush.setVapidDetails(
+      'mailto:' + (clean(process.env.VAPID_CONTACT) || 'kontakt@estelio.com.pl'),
+      clean(process.env.VAPID_PUBLIC_KEY),
+      clean(process.env.VAPID_PRIVATE_KEY)
+    );
+  }
+} catch (e) {
+  console.warn('[lojalnosc] web-push niedostępny:', e.message);
+  webpush = null;
+}
+function vapidPublic() { return webpush ? clean(process.env.VAPID_PUBLIC_KEY) : ''; }
+
 // Cache flagi feature per tenant — hook odpala się przy KAŻDEJ sprzedaży,
 // nie chcemy dodatkowego SELECT-a na każdy paragon salonu bez Klubu.
 const featureCache = new Map(); // tenant_id → { t, on }
@@ -303,6 +329,84 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Konta:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Nagrody (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      nazwa VARCHAR(160) NOT NULL,
+      opis VARCHAR(500) DEFAULT '',
+      koszt_pkt INT NOT NULL,
+      ilosc INT NULL,
+      img_url VARCHAR(500) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'AKTYWNA',
+      sortowanie INT DEFAULT 100,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tenant (tenant_id, status)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Nagrody:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Odbiory (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      nagroda_id INT NOT NULL,
+      nagroda_nazwa VARCHAR(160) DEFAULT '',
+      koszt_pkt INT NOT NULL,
+      kod CHAR(6) NOT NULL,
+      status VARCHAR(20) DEFAULT 'OCZEKUJE',
+      wydal VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      rozstrzygnieto_at DATETIME NULL,
+      KEY idx_tenant_status (tenant_id, status),
+      KEY idx_klient (tenant_id, id_klienta),
+      KEY idx_kod (tenant_id, kod)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Odbiory:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Promocje (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      tytul VARCHAR(200) NOT NULL,
+      opis VARCHAR(300) DEFAULT '',
+      tresc TEXT,
+      img_url VARCHAR(500) DEFAULT '',
+      data_od DATE NULL,
+      data_do DATE NULL,
+      promocja_dnia TINYINT DEFAULT 0,
+      status VARCHAR(20) DEFAULT 'AKTYWNA',
+      sortowanie INT DEFAULT 100,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY idx_tenant (tenant_id, status)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Promocje:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Zgloszenia (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      promocja_id INT NOT NULL,
+      promocja_tytul VARCHAR(200) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'NOWE',
+      obsluzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      obsluzono_at DATETIME NULL,
+      KEY idx_tenant_status (tenant_id, status)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Zgloszenia:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Push (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      endpoint VARCHAR(500) NOT NULL,
+      p256dh VARCHAR(255) NOT NULL,
+      auth VARCHAR(255) NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tenant (tenant_id),
+      KEY idx_klient (tenant_id, id_klienta)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Push:', e.message);
+  });
   // status UKRYTY — inne salony nie widzą dodatku (pilot u Boczków), jak platnosc_link
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
       VALUES (?, ?, ?, 0, 'UKRYTY', 12)
@@ -424,6 +528,122 @@ module.exports = (db) => {
         }
       );
 
+    } else if (action === 'loj_nagrody_admin') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT N.id, N.nazwa, N.opis, N.koszt_pkt, N.ilosc, N.img_url, N.status, N.sortowanie,
+                  (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status = 'WYDANE') AS wydane,
+                  (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status = 'OCZEKUJE') AS oczekuje
+             FROM Lojalnosc_Nagrody N WHERE tenant_id = ? AND status != 'ARCHIWUM'
+            ORDER BY sortowanie ASC, id DESC`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', nagrody: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
+    } else if (action === 'loj_promocje_admin') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, tytul, opis, tresc, img_url, data_od, data_do, promocja_dnia, status, sortowanie
+             FROM Lojalnosc_Promocje WHERE tenant_id = ? AND status != 'ARCHIWUM'
+            ORDER BY sortowanie ASC, id DESC`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', promocje: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
+    } else if (action === 'loj_odbiory') {
+      // Oczekujące odbiory + ostatnio rozstrzygnięte, z nazwiskiem klienta
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT O.id, O.id_klienta, O.nagroda_nazwa, O.koszt_pkt, O.kod, O.status, O.created_at, O.rozstrzygnieto_at, O.wydal,
+                  K.imie_nazwisko AS klient
+             FROM Lojalnosc_Odbiory O
+             LEFT JOIN Klienci K ON K.tenant_id = O.tenant_id AND K.id_klienta = O.id_klienta
+            WHERE O.tenant_id = ?
+            ORDER BY (O.status = 'OCZEKUJE') DESC, O.id DESC LIMIT 100`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', odbiory: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
+    } else if (action === 'loj_zgloszenia') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT Z.id, Z.id_klienta, Z.promocja_tytul, Z.status, Z.created_at, Z.obsluzono_at, Z.obsluzyl,
+                  K.imie_nazwisko AS klient, K.telefon
+             FROM Lojalnosc_Zgloszenia Z
+             LEFT JOIN Klienci K ON K.tenant_id = Z.tenant_id AND K.id_klienta = Z.id_klienta
+            WHERE Z.tenant_id = ?
+            ORDER BY (Z.status = 'NOWE') DESC, Z.id DESC LIMIT 100`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', zgloszenia: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
+    } else if (action === 'loj_statystyki') {
+      // Statystyki miesiąca: punkty przyznane/odjęte, konta, top klienci, wydane nagrody
+      const kto = String(req.query.user_log || '').trim();
+      const rok = parseInt(req.query.rok, 10) || new Date().getFullYear();
+      const miesiac = parseInt(req.query.miesiac, 10) || (new Date().getMonth() + 1);
+      wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const mies = await q(
+            `SELECT COALESCE(SUM(CASE WHEN zmiana > 0 THEN zmiana ELSE 0 END), 0) AS przyznane,
+                    COALESCE(SUM(CASE WHEN zmiana < 0 THEN -zmiana ELSE 0 END), 0) AS odjete,
+                    COUNT(DISTINCT id_klienta) AS klienci
+               FROM Lojalnosc_Punkty WHERE tenant_id = ? AND YEAR(created_at) = ? AND MONTH(created_at) = ?`,
+            [tenant_id, rok, miesiac]
+          );
+          const konta = await q(
+            `SELECT COUNT(*) AS n FROM Lojalnosc_Konta WHERE tenant_id = ? AND status = 'AKTYWNE'`, [tenant_id]
+          ).catch(() => [{ n: 0 }]);
+          const push = await q(
+            `SELECT COUNT(DISTINCT id_klienta) AS n FROM Lojalnosc_Push WHERE tenant_id = ?`, [tenant_id]
+          ).catch(() => [{ n: 0 }]);
+          const top = await q(
+            `SELECT P.id_klienta, K.imie_nazwisko AS klient, SUM(P.zmiana) AS saldo
+               FROM Lojalnosc_Punkty P
+               LEFT JOIN Klienci K ON K.tenant_id = P.tenant_id AND K.id_klienta = P.id_klienta
+              WHERE P.tenant_id = ? GROUP BY P.id_klienta, K.imie_nazwisko
+              ORDER BY saldo DESC LIMIT 5`,
+            [tenant_id]
+          ).catch(() => []);
+          const nagrodyM = await q(
+            `SELECT nagroda_nazwa, COUNT(*) AS n FROM Lojalnosc_Odbiory
+              WHERE tenant_id = ? AND status = 'WYDANE' AND YEAR(rozstrzygnieto_at) = ? AND MONTH(rozstrzygnieto_at) = ?
+              GROUP BY nagroda_nazwa ORDER BY n DESC LIMIT 10`,
+            [tenant_id, rok, miesiac]
+          ).catch(() => []);
+          return res.json({
+            status: 'success', rok, miesiac,
+            przyznane: Number((mies[0] || {}).przyznane) || 0,
+            odjete: Number((mies[0] || {}).odjete) || 0,
+            klienci_aktywni_mc: Number((mies[0] || {}).klienci) || 0,
+            konta_aktywne: Number((konta[0] || {}).n) || 0,
+            push_subskrypcje: Number((push[0] || {}).n) || 0,
+            top_klienci: Array.isArray(top) ? top : [],
+            nagrody_wydane_mc: Array.isArray(nagrodyM) ? nagrodyM : []
+          });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      });
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja GET lojalnosc: ' + action });
     }
@@ -524,6 +744,212 @@ module.exports = (db) => {
                 klient: klient.imie_nazwisko || ''
               });
             } catch (e) { return res.json({ status: 'error', message: e.message }); }
+          }
+        );
+      }));
+
+    } else if (action === 'loj_nagroda_zapisz') {
+      // Insert (bez id) lub update (z id). Zdjęcie: URL (upload plików = później).
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const nazwa = String(d.nazwa || '').trim().slice(0, 160);
+      const opis = String(d.opis || '').trim().slice(0, 500);
+      const koszt = parseInt(d.koszt_pkt, 10);
+      const ilosc = (d.ilosc === '' || d.ilosc == null) ? null : parseInt(d.ilosc, 10);
+      const img = String(d.img_url || '').trim().slice(0, 500);
+      const sort = parseInt(d.sortowanie, 10) || 100;
+      if (!nazwa) return res.json({ status: 'error', message: 'Podaj nazwę nagrody.' });
+      if (!Number.isFinite(koszt) || koszt < 1 || koszt > 1000000) return res.json({ status: 'error', message: 'Koszt w punktach: liczba od 1.' });
+      if (ilosc !== null && (!Number.isFinite(ilosc) || ilosc < 0)) return res.json({ status: 'error', message: 'Ilość: puste (bez limitu) lub liczba ≥ 0.' });
+      if (img && !/^https?:\/\//.test(img)) return res.json({ status: 'error', message: 'Zdjęcie: podaj pełny adres URL (https://...).' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        const id = parseInt(d.id, 10);
+        if (id) {
+          db.query(
+            `UPDATE Lojalnosc_Nagrody SET nazwa = ?, opis = ?, koszt_pkt = ?, ilosc = ?, img_url = ?, sortowanie = ? WHERE tenant_id = ? AND id = ?`,
+            [nazwa, opis, koszt, ilosc, img, sort, tenant_id, id],
+            (err, r) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono nagrody.' });
+              zapiszLog(tenant_id, 'KLUB NAGRODA', kto, `Edycja: ${nazwa} (${koszt} pkt)`);
+              return res.json({ status: 'success' });
+            }
+          );
+        } else {
+          db.query(
+            `INSERT INTO Lojalnosc_Nagrody (tenant_id, nazwa, opis, koszt_pkt, ilosc, img_url, sortowanie, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'AKTYWNA')`,
+            [tenant_id, nazwa, opis, koszt, ilosc, img, sort],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'KLUB NAGRODA', kto, `Dodano: ${nazwa} (${koszt} pkt)`);
+              return res.json({ status: 'success' });
+            }
+          );
+        }
+      }));
+
+    } else if (action === 'loj_nagroda_status') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      const status = String(d.status || '').toUpperCase();
+      if (!id || !['AKTYWNA', 'UKRYTA', 'ARCHIWUM'].includes(status)) return res.json({ status: 'error', message: 'Nieprawidłowe dane.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Nagrody SET status = ? WHERE tenant_id = ? AND id = ?`,
+          [status, tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono nagrody.' });
+            zapiszLog(tenant_id, 'KLUB NAGRODA', kto, `Status #${id} → ${status}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_promocja_zapisz') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const tytul = String(d.tytul || '').trim().slice(0, 200);
+      const opis = String(d.opis || '').trim().slice(0, 300);
+      const tresc = String(d.tresc || '').trim().slice(0, 20000);
+      const img = String(d.img_url || '').trim().slice(0, 500);
+      const dataOd = String(d.data_od || '').trim() || null;
+      const dataDo = String(d.data_do || '').trim() || null;
+      const dnia = d.promocja_dnia ? 1 : 0;
+      const sort = parseInt(d.sortowanie, 10) || 100;
+      const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
+      if (!tytul) return res.json({ status: 'error', message: 'Podaj tytuł promocji.' });
+      if ((dataOd && !DATA_RE.test(dataOd)) || (dataDo && !DATA_RE.test(dataDo))) return res.json({ status: 'error', message: 'Daty w formacie RRRR-MM-DD.' });
+      if (img && !/^https?:\/\//.test(img)) return res.json({ status: 'error', message: 'Zdjęcie: podaj pełny adres URL (https://...).' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        const id = parseInt(d.id, 10);
+        if (id) {
+          db.query(
+            `UPDATE Lojalnosc_Promocje SET tytul = ?, opis = ?, tresc = ?, img_url = ?, data_od = ?, data_do = ?, promocja_dnia = ?, sortowanie = ? WHERE tenant_id = ? AND id = ?`,
+            [tytul, opis, tresc, img, dataOd, dataDo, dnia, sort, tenant_id, id],
+            (err, r) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono promocji.' });
+              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Edycja: ${tytul}`);
+              return res.json({ status: 'success' });
+            }
+          );
+        } else {
+          db.query(
+            `INSERT INTO Lojalnosc_Promocje (tenant_id, tytul, opis, tresc, img_url, data_od, data_do, promocja_dnia, sortowanie, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNA')`,
+            [tenant_id, tytul, opis, tresc, img, dataOd, dataDo, dnia, sort],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Dodano: ${tytul}${dnia ? ' [promocja dnia]' : ''}`);
+              return res.json({ status: 'success' });
+            }
+          );
+        }
+      }));
+
+    } else if (action === 'loj_promocja_status') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      const status = String(d.status || '').toUpperCase();
+      if (!id || !['AKTYWNA', 'UKRYTA', 'ARCHIWUM'].includes(status)) return res.json({ status: 'error', message: 'Nieprawidłowe dane.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Promocje SET status = ? WHERE tenant_id = ? AND id = ?`,
+          [status, tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono promocji.' });
+            zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Status #${id} → ${status}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_odbior_rozstrzygnij') {
+      // WYDANE → dopiero teraz punkty schodzą z ledgera (idempotentnie po ref ODB@id).
+      // ODRZUCONE → rezerwacja znika, punkty wracają do dyspozycji klienta.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      const decyzja = String(d.decyzja || '').toUpperCase();
+      if (!id || !['WYDANE', 'ODRZUCONE'].includes(decyzja)) return res.json({ status: 'error', message: 'Nieprawidłowe dane.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, id_klienta, nagroda_nazwa, koszt_pkt, kod, status FROM Lojalnosc_Odbiory WHERE tenant_id = ? AND id = ? LIMIT 1`,
+          [tenant_id, id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            const odbior = Array.isArray(rows) ? rows[0] : null;
+            if (!odbior) return res.json({ status: 'error', message: 'Nie znaleziono odbioru.' });
+            if (odbior.status !== 'OCZEKUJE') return res.json({ status: 'error', message: 'Ten odbiór jest już rozstrzygnięty (' + odbior.status + ').' });
+            db.query(
+              `UPDATE Lojalnosc_Odbiory SET status = ?, wydal = ?, rozstrzygnieto_at = NOW() WHERE tenant_id = ? AND id = ? AND status = 'OCZEKUJE'`,
+              [decyzja, kto.slice(0, 120), tenant_id, id],
+              (err2, r2) => {
+                if (err2) return res.json({ status: 'error', message: err2.message });
+                if (!r2.affectedRows) return res.json({ status: 'error', message: 'Odbiór został właśnie rozstrzygnięty przez kogoś innego.' });
+                if (decyzja === 'WYDANE') {
+                  db.query(
+                    `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+                     VALUES (?, ?, ?, ?, 'NAGRODA', ?, ?)`,
+                    [tenant_id, odbior.id_klienta, -Math.abs(Number(odbior.koszt_pkt) || 0), ('Nagroda: ' + odbior.nagroda_nazwa).slice(0, 250), 'ODB@' + id, kto.slice(0, 120)],
+                    (err3) => {
+                      if (err3 && err3.code !== 'ER_DUP_ENTRY') console.error('[lojalnosc] ledger nagroda:', err3.message);
+                    }
+                  );
+                }
+                zapiszLog(tenant_id, 'KLUB ODBIÓR ' + decyzja, kto, `Klient ${odbior.id_klienta}: ${odbior.nagroda_nazwa} (${odbior.koszt_pkt} pkt), kod ${odbior.kod}`);
+                return res.json({ status: 'success' });
+              }
+            );
+          }
+        );
+      });
+
+    } else if (action === 'loj_zgloszenie_obsluz') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak zgłoszenia.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Zgloszenia SET status = 'OBSLUZONE', obsluzyl = ?, obsluzono_at = NOW() WHERE tenant_id = ? AND id = ? AND status = 'NOWE'`,
+          [kto.slice(0, 120), tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Zgłoszenie już obsłużone.' });
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_push_wyslij') {
+      // Wysyłka powiadomienia do wszystkich subskrybentów salonu.
+      // Martwe subskrypcje (410/404) są sprzątane automatycznie.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const tytul = String(d.tytul || '').trim().slice(0, 100);
+      const tresc = String(d.tresc || '').trim().slice(0, 300);
+      if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść powiadomienia.' });
+      if (!webpush) return res.json({ status: 'error', message: 'Powiadomienia push nie są skonfigurowane na serwerze (brak kluczy VAPID w env).' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, endpoint, p256dh, auth FROM Lojalnosc_Push WHERE tenant_id = ?`,
+          [tenant_id],
+          async (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            const subs = Array.isArray(rows) ? rows : [];
+            if (!subs.length) return res.json({ status: 'error', message: 'Żaden klient nie włączył jeszcze powiadomień w apce.' });
+            const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html' });
+            let ok = 0, martwe = 0;
+            await Promise.all(subs.map(s =>
+              webpush.sendNotification(
+                { endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } },
+                payload
+              ).then(() => { ok++; }).catch(e2 => {
+                if (e2 && (e2.statusCode === 404 || e2.statusCode === 410)) {
+                  martwe++;
+                  db.query(`DELETE FROM Lojalnosc_Push WHERE id = ?`, [s.id], () => {});
+                }
+              })
+            ));
+            zapiszLog(tenant_id, 'KLUB PUSH', kto, `„${tytul}" — dostarczono ${ok}/${subs.length}${martwe ? `, wyczyszczono ${martwe} martwych` : ''}`);
+            return res.json({ status: 'success', dostarczono: ok, wszystkich: subs.length });
           }
         );
       }));
@@ -641,16 +1067,66 @@ module.exports = (db) => {
       );
       const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
+      // Faza 3: nagrody + moje oczekujące odbiory (saldo dostępne = saldo − rezerwacje)
+      const rezRows = await q(
+        `SELECT COALESCE(SUM(koszt_pkt), 0) AS rez FROM Lojalnosc_Odbiory WHERE tenant_id = ? AND id_klienta = ? AND status = 'OCZEKUJE'`,
+        [p.t, p.k]
+      ).catch(() => [{ rez: 0 }]);
+      const nagrodyRows = await q(
+        `SELECT id, nazwa, opis, koszt_pkt, ilosc, img_url,
+                (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status IN ('OCZEKUJE','WYDANE')) AS zajete
+           FROM Lojalnosc_Nagrody N
+          WHERE tenant_id = ? AND status = 'AKTYWNA'
+          ORDER BY sortowanie ASC, koszt_pkt ASC`,
+        [p.t]
+      ).catch(() => []);
+      const odbioryRows = await q(
+        `SELECT id, nagroda_nazwa, koszt_pkt, kod, status, created_at, rozstrzygnieto_at
+           FROM Lojalnosc_Odbiory WHERE tenant_id = ? AND id_klienta = ?
+          ORDER BY id DESC LIMIT 10`,
+        [p.t, p.k]
+      ).catch(() => []);
+      // Faza 4: aktywne promocje w oknie dat
+      const promocjeRows = await q(
+        `SELECT id, tytul, opis, tresc, img_url, promocja_dnia, data_od, data_do
+           FROM Lojalnosc_Promocje
+          WHERE tenant_id = ? AND status = 'AKTYWNA'
+            AND (data_od IS NULL OR data_od <= CURDATE())
+            AND (data_do IS NULL OR data_do >= CURDATE())
+          ORDER BY promocja_dnia DESC, sortowanie ASC, id DESC LIMIT 20`,
+        [p.t]
+      ).catch(() => []);
+      const saldo = Number((Array.isArray(sRows) && sRows[0] || {}).saldo) || 0;
+      const zarezerwowane = Number((Array.isArray(rezRows) && rezRows[0] || {}).rez) || 0;
       const odp = {
         status: 'success',
         imie: String(klient.imie_nazwisko || '').split(' ')[0] || '',
-        saldo: Number((Array.isArray(sRows) && sRows[0] || {}).saldo) || 0,
+        saldo,
+        saldo_dostepne: saldo - zarezerwowane,
         wpisy: (Array.isArray(wRows) ? wRows : []).map(w => ({
           zmiana: Number(w.zmiana) || 0,
           powod: w.powod || '',
           zrodlo: w.zrodlo || '',
           data: w.created_at
         })),
+        nagrody: (Array.isArray(nagrodyRows) ? nagrodyRows : []).map(n => ({
+          id: n.id,
+          nazwa: n.nazwa,
+          opis: n.opis || '',
+          koszt_pkt: Number(n.koszt_pkt) || 0,
+          img_url: n.img_url || '',
+          dostepna: (n.ilosc == null || Number(n.zajete) < Number(n.ilosc)) ? 1 : 0
+        })),
+        odbiory: (Array.isArray(odbioryRows) ? odbioryRows : []).map(o => ({
+          id: o.id, nagroda: o.nagroda_nazwa, koszt_pkt: Number(o.koszt_pkt) || 0,
+          kod: o.kod, status: o.status, data: o.created_at
+        })),
+        promocje: (Array.isArray(promocjeRows) ? promocjeRows : []).map(pr => ({
+          id: pr.id, tytul: pr.tytul, opis: pr.opis || '', tresc: pr.tresc || '',
+          img_url: pr.img_url || '', promocja_dnia: Number(pr.promocja_dnia) ? 1 : 0,
+          data_do: pr.data_do
+        })),
+        push_vapid: vapidPublic(),
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1
       };
@@ -663,6 +1139,118 @@ module.exports = (db) => {
       console.error('[lojalnosc] me:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
     }
+  });
+
+  // Odbiór nagrody: rezerwuje punkty (saldo dostępne maleje), generuje kod.
+  // Punkty schodzą z ledgera dopiero gdy recepcja/admin oznaczy WYDANE.
+  router.post('/klub/nagroda_odbierz', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    const nagrodaId = parseInt((req.body || {}).nagroda_id, 10);
+    if (!nagrodaId) return res.json({ status: 'error', message: 'Brak nagrody.' });
+    try {
+      const nRows = await q(
+        `SELECT id, nazwa, koszt_pkt, ilosc,
+                (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status IN ('OCZEKUJE','WYDANE')) AS zajete
+           FROM Lojalnosc_Nagrody N WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNA' LIMIT 1`,
+        [p.t, nagrodaId]
+      );
+      const nagroda = Array.isArray(nRows) ? nRows[0] : null;
+      if (!nagroda) return res.json({ status: 'error', message: 'Ta nagroda nie jest już dostępna.' });
+      if (nagroda.ilosc != null && Number(nagroda.zajete) >= Number(nagroda.ilosc)) {
+        return res.json({ status: 'error', message: 'Nagroda chwilowo wyczerpana.' });
+      }
+      const mojeRows = await q(
+        `SELECT COUNT(*) AS n, COALESCE(SUM(koszt_pkt), 0) AS rez FROM Lojalnosc_Odbiory
+          WHERE tenant_id = ? AND id_klienta = ? AND status = 'OCZEKUJE'`,
+        [p.t, p.k]
+      );
+      const moje = (Array.isArray(mojeRows) && mojeRows[0]) || { n: 0, rez: 0 };
+      if (Number(moje.n) >= 3) return res.json({ status: 'error', message: 'Masz już 3 nagrody czekające na odbiór — odbierz je w salonie lub anuluj.' });
+      const sRows = await q(`SELECT COALESCE(SUM(zmiana), 0) AS saldo FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ?`, [p.t, p.k]);
+      const dostepne = (Number((sRows[0] || {}).saldo) || 0) - (Number(moje.rez) || 0);
+      const koszt = Number(nagroda.koszt_pkt) || 0;
+      if (dostepne < koszt) return res.json({ status: 'error', message: `Za mało punktów (masz ${dostepne} dostępnych, potrzeba ${koszt}).` });
+      const kod = generujKod();
+      await q(
+        `INSERT INTO Lojalnosc_Odbiory (tenant_id, id_klienta, nagroda_id, nagroda_nazwa, koszt_pkt, kod, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'OCZEKUJE')`,
+        [p.t, p.k, nagrodaId, nagroda.nazwa, koszt, kod]
+      );
+      zapiszLog(p.t, 'KLUB ODBIÓR ZGŁOSZONY', 'Klient (apka)', `Klient ${p.k}: ${nagroda.nazwa} (${koszt} pkt), kod ${kod}`);
+      return res.json({ status: 'success', kod, message: 'Pokaż ten kod w salonie, aby odebrać nagrodę.' });
+    } catch (e) {
+      console.error('[lojalnosc] nagroda_odbierz:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
+  // Anulowanie własnego oczekującego odbioru — zwalnia rezerwację punktów
+  router.post('/klub/odbior_anuluj', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    const id = parseInt((req.body || {}).odbior_id, 10);
+    if (!id) return res.json({ status: 'error', message: 'Brak odbioru.' });
+    try {
+      const r = await q(
+        `UPDATE Lojalnosc_Odbiory SET status = 'ANULOWANY', rozstrzygnieto_at = NOW()
+          WHERE tenant_id = ? AND id = ? AND id_klienta = ? AND status = 'OCZEKUJE'`,
+        [p.t, id, p.k]
+      );
+      if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie można anulować tego odbioru.' });
+      return res.json({ status: 'success' });
+    } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  // „BIORĘ" przy promocji dnia → zgłoszenie dla salonu (jedno aktywne per klient+promocja)
+  router.post('/klub/promocja_biore', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    const promocjaId = parseInt((req.body || {}).promocja_id, 10);
+    if (!promocjaId) return res.json({ status: 'error', message: 'Brak promocji.' });
+    try {
+      const prRows = await q(
+        `SELECT id, tytul FROM Lojalnosc_Promocje
+          WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNA'
+            AND (data_od IS NULL OR data_od <= CURDATE())
+            AND (data_do IS NULL OR data_do >= CURDATE()) LIMIT 1`,
+        [p.t, promocjaId]
+      );
+      const promocja = Array.isArray(prRows) ? prRows[0] : null;
+      if (!promocja) return res.json({ status: 'error', message: 'Ta promocja już nie obowiązuje.' });
+      const dupRows = await q(
+        `SELECT id FROM Lojalnosc_Zgloszenia WHERE tenant_id = ? AND id_klienta = ? AND promocja_id = ? AND status = 'NOWE' LIMIT 1`,
+        [p.t, p.k, promocjaId]
+      );
+      if (Array.isArray(dupRows) && dupRows.length) {
+        return res.json({ status: 'success', message: 'Twoje zgłoszenie już czeka — salon się odezwie.' });
+      }
+      await q(
+        `INSERT INTO Lojalnosc_Zgloszenia (tenant_id, id_klienta, promocja_id, promocja_tytul, status) VALUES (?, ?, ?, ?, 'NOWE')`,
+        [p.t, p.k, promocjaId, promocja.tytul]
+      );
+      zapiszLog(p.t, 'KLUB BIORĘ', 'Klient (apka)', `Klient ${p.k}: „${promocja.tytul}"`);
+      return res.json({ status: 'success', message: 'Zgłoszenie wysłane! Salon skontaktuje się z Tobą.' });
+    } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  // Zapis subskrypcji Web Push (zgoda marketingowa = moment włączenia powiadomień)
+  router.post('/klub/push_zapisz', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    const sub = (req.body || {}).subscription || {};
+    const endpoint = String(sub.endpoint || '').slice(0, 500);
+    const p256dh = String((sub.keys || {}).p256dh || '').slice(0, 255);
+    const auth = String((sub.keys || {}).auth || '').slice(0, 255);
+    if (!/^https:\/\//.test(endpoint) || !p256dh || !auth) return res.json({ status: 'error', message: 'Nieprawidłowa subskrypcja.' });
+    try {
+      await q(`DELETE FROM Lojalnosc_Push WHERE tenant_id = ? AND endpoint = ?`, [p.t, endpoint]);
+      await q(
+        `INSERT INTO Lojalnosc_Push (tenant_id, id_klienta, endpoint, p256dh, auth) VALUES (?, ?, ?, ?, ?)`,
+        [p.t, p.k, endpoint, p256dh, auth]
+      );
+      return res.json({ status: 'success' });
+    } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
   });
 
   return router;

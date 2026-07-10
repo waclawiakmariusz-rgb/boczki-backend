@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 5 wpisów-wypełniaczy na init fabryki (CREATE ×3 + seed ×2)
-const INIT = [{ rows: [] }, { rows: [] }, { rows: [] }, { rows: [] }, { rows: [] }];
+// 10 wpisów-wypełniaczy na init fabryki (CREATE ×8 + seed ×2)
+const INIT = Array.from({ length: 10 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -514,5 +514,209 @@ describe('POST /api/klub/me', () => {
         const res = await request(buildApp(db)).post('/api/klub/me').send({ session: sesja() });
         expect(res.body.status).toBe('error');
         expect(res.body.code).toBe('SESJA');
+    });
+});
+
+// ═══════════════════ FAZY 3-4 — nagrody, promocje, push ═══════════════════
+
+const SESJA = () => makeKlubToken({ t: 't-klub-n', k: '42', typ: 'ses', exp: Date.now() + 60000 });
+
+// ─── POST /klub/nagroda_odbierz ───────────────────────────────
+describe('POST /api/klub/nagroda_odbierz', () => {
+    const NAGRODA = { rows: [{ id: 1, nazwa: 'Henna gratis', koszt_pkt: 50, ilosc: null, zajete: 0 }] };
+
+    test('rezerwuje nagrodę i zwraca kod odbioru', async () => {
+        const db = mockDb(
+            ...INIT,
+            NAGRODA,
+            { rows: [{ n: 0, rez: 0 }] },     // moje oczekujące
+            { rows: [{ saldo: 80 }] },
+            { rows: { affectedRows: 1 } }      // INSERT odbiór
+        );
+        const res = await request(buildApp(db)).post('/api/klub/nagroda_odbierz')
+            .send({ session: SESJA(), nagroda_id: 1 });
+        expect(res.body.status).toBe('success');
+        expect(res.body.kod).toMatch(/^[A-Z2-9]{6}$/);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Odbiory/.test(c[0]));
+        expect(ins[1][4]).toBe(50); // koszt_pkt snapshot
+    });
+
+    test('za mało dostępnych punktów (rezerwacje liczą się do salda)', async () => {
+        const db = mockDb(
+            ...INIT,
+            NAGRODA,
+            { rows: [{ n: 1, rez: 40 }] },    // 40 pkt już zarezerwowane
+            { rows: [{ saldo: 80 }] }          // dostępne = 40 < 50
+        );
+        const res = await request(buildApp(db)).post('/api/klub/nagroda_odbierz')
+            .send({ session: SESJA(), nagroda_id: 1 });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/za mało/i);
+    });
+
+    test('limit 3 oczekujących odbiorów na klienta', async () => {
+        const db = mockDb(...INIT, NAGRODA, { rows: [{ n: 3, rez: 150 }] });
+        const res = await request(buildApp(db)).post('/api/klub/nagroda_odbierz')
+            .send({ session: SESJA(), nagroda_id: 1 });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/3 nagrody/i);
+    });
+
+    test('nagroda z wyczerpanym limitem → odmowa', async () => {
+        const db = mockDb(...INIT, { rows: [{ id: 1, nazwa: 'X', koszt_pkt: 50, ilosc: 2, zajete: 2 }] });
+        const res = await request(buildApp(db)).post('/api/klub/nagroda_odbierz')
+            .send({ session: SESJA(), nagroda_id: 1 });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/wyczerpana/i);
+    });
+
+    test('bez sesji → SESJA', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/klub/nagroda_odbierz').send({ session: 'zly', nagroda_id: 1 });
+        expect(res.body.code).toBe('SESJA');
+    });
+});
+
+// ─── POST loj_odbior_rozstrzygnij (panel) ─────────────────────
+describe('POST /api/lojalnosc — loj_odbior_rozstrzygnij', () => {
+    const ODBIOR = { rows: [{ id: 7, id_klienta: '42', nagroda_nazwa: 'Henna', koszt_pkt: 50, kod: 'ABC234', status: 'OCZEKUJE' }] };
+    const valid = { action: 'loj_odbior_rozstrzygnij', tenant_id: 't-loj-odb', id: 7, decyzja: 'WYDANE', user_log: 'Szefowa' };
+
+    test('WYDANE zdejmuje punkty z ledgera (zrodlo NAGRODA, ref ODB@id)', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, ODBIOR, { rows: { affectedRows: 1 } }, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins).toBeTruthy();
+        expect(ins[1][2]).toBe(-50);
+        expect(ins[1][4]).toBe('ODB@7');
+        expect(ins[0]).toMatch(/'NAGRODA'/);
+    });
+
+    test('ODRZUCONE nie dotyka ledgera', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, ODBIOR, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-odb2', decyzja: 'ODRZUCONE' });
+        expect(res.body.status).toBe('success');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+
+    test('już rozstrzygnięty → odmowa (bez podwójnego zdjęcia punktów)', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id: 7, id_klienta: '42', nagroda_nazwa: 'X', koszt_pkt: 50, kod: 'ABC234', status: 'WYDANE' }] });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-odb3' });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('recepcja NIE rozstrzyga (pilot admin-only)', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-odb4' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+});
+
+// ─── POST /klub/promocja_biore ────────────────────────────────
+describe('POST /api/klub/promocja_biore', () => {
+    test('tworzy zgłoszenie dla salonu', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ id: 3, tytul: 'Środa -20%' }] },  // promocja aktywna
+            { rows: [] },                                  // brak duplikatu
+            { rows: { affectedRows: 1 } }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/promocja_biore')
+            .send({ session: SESJA(), promocja_id: 3 });
+        expect(res.body.status).toBe('success');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Zgloszenia/.test(c[0]))).toBe(true);
+    });
+
+    test('duplikat zgłoszenia → sukces bez drugiego INSERTa', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ id: 3, tytul: 'Środa -20%' }] },
+            { rows: [{ id: 99 }] }                         // już jest NOWE
+        );
+        const res = await request(buildApp(db)).post('/api/klub/promocja_biore')
+            .send({ session: SESJA(), promocja_id: 3 });
+        expect(res.body.status).toBe('success');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Zgloszenia/.test(c[0]))).toBe(false);
+    });
+
+    test('promocja nieaktywna/po terminie → odmowa', async () => {
+        const db = mockDb(...INIT, { rows: [] });
+        const res = await request(buildApp(db)).post('/api/klub/promocja_biore')
+            .send({ session: SESJA(), promocja_id: 3 });
+        expect(res.body.status).toBe('error');
+    });
+});
+
+// ─── POST /klub/push_zapisz ───────────────────────────────────
+describe('POST /api/klub/push_zapisz', () => {
+    test('zapisuje poprawną subskrypcję', async () => {
+        const db = mockDb(...INIT, { rows: { affectedRows: 0 } }, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/klub/push_zapisz').send({
+            session: SESJA(),
+            subscription: { endpoint: 'https://fcm.googleapis.com/x', keys: { p256dh: 'k1', auth: 'k2' } }
+        });
+        expect(res.body.status).toBe('success');
+    });
+
+    test('odrzuca endpoint nie-https', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/klub/push_zapisz').send({
+            session: SESJA(),
+            subscription: { endpoint: 'http://zly.example', keys: { p256dh: 'k1', auth: 'k2' } }
+        });
+        expect(res.body.status).toBe('error');
+    });
+});
+
+// ─── POST loj_nagroda_zapisz / loj_push_wyslij (panel) ────────
+describe('POST /api/lojalnosc — zarządzanie treścią', () => {
+    test('admin dodaje nagrodę', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_zapisz', tenant_id: 't-loj-ng1',
+            nazwa: 'Henna gratis', koszt_pkt: 50, ilosc: '', user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('success');
+    });
+
+    test('odrzuca koszt 0 pkt', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_zapisz', tenant_id: 't-loj-ng2',
+            nazwa: 'X', koszt_pkt: 0, user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('odrzuca zdjęcie nie będące URL-em', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_zapisz', tenant_id: 't-loj-ng3',
+            nazwa: 'X', koszt_pkt: 10, img_url: 'javascript:alert(1)', user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('admin dodaje promocję z datami i BIORĘ', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_promocja_zapisz', tenant_id: 't-loj-pr1',
+            tytul: 'Środa -20%', data_od: '2026-07-15', data_do: '2026-07-15', promocja_dnia: 1, user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Promocje/.test(c[0]));
+        expect(ins[1][7]).toBe(1); // promocja_dnia
+    });
+
+    test('push bez kluczy VAPID w env → czytelny błąd', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_push_wyslij', tenant_id: 't-loj-ps1',
+            tytul: 'Hej', tresc: 'Promocja!', user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/VAPID|skonfigurowane/i);
     });
 });

@@ -47,20 +47,56 @@
   .btn { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 12px 25px -5px var(--primary-glow); }
   .btn:active { transform: scale(.98); }
   .btn[disabled] { opacity: .5; }
+  .btn.ghost { background: #fff; color: var(--primary); border: 1px solid #e8c6d4; box-shadow: none; }
   .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 16px; }
   .link-btn { margin-top: 14px; background: none; border: none; color: var(--text-muted); font-size: 13px; font-family: inherit; text-decoration: underline; cursor: pointer; }
 
-  /* ── Ekran główny ── */
-  .main-head { width: 100%; max-width: 420px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: calc(env(safe-area-inset-top, 0px) + 6px); }
+  /* ── Główny układ z tabami ── */
+  #screen-main { padding-bottom: 110px; }
+  .main-head { width: 100%; max-width: 440px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: calc(env(safe-area-inset-top, 0px) + 6px); }
   .main-head .hi { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; }
-  .saldo-card { width: 100%; max-width: 420px; margin-top: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 26px; padding: 26px 24px; color: #fff; box-shadow: 0 18px 35px -8px var(--primary-glow); text-align: center; }
+  .saldo-card { width: 100%; max-width: 440px; margin-top: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 26px; padding: 24px; color: #fff; box-shadow: 0 18px 35px -8px var(--primary-glow); text-align: center; }
   .saldo-card .lbl { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
-  .saldo-card .val { font-size: 52px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; }
+  .saldo-card .val { font-size: 50px; font-weight: 800; letter-spacing: -.03em; line-height: 1.12; }
   .saldo-card .val small { font-size: 20px; font-weight: 600; opacity: .9; }
   .saldo-card .rule { margin-top: 6px; font-size: 12.5px; opacity: .85; }
-  .sekcja { width: 100%; max-width: 420px; margin-top: 18px; }
-  .sekcja h3 { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; margin: 0 0 8px; }
-  .hist { background: #fff; border: 1px solid var(--border-soft); border-radius: 20px; padding: 6px 16px; }
+  .sekcja { width: 100%; max-width: 440px; margin-top: 18px; }
+  .sekcja h3 { font-family: 'Cormorant Garamond', serif; font-size: 21px; font-weight: 600; margin: 0 0 10px; display: flex; align-items: baseline; justify-content: space-between; }
+  .sekcja h3 .wiecej { font-family: 'DM Sans', sans-serif; font-size: 12.5px; color: var(--primary); font-weight: 700; background: none; border: none; cursor: pointer; }
+  .tabpage { display: none; width: 100%; max-width: 440px; flex-direction: column; align-items: center; }
+  .tabpage.visible { display: flex; }
+
+  /* Promocje */
+  .promo { width: 100%; background: #fff; border: 1px solid var(--border-soft); border-radius: 20px; overflow: hidden; margin-bottom: 12px; cursor: pointer; box-shadow: 0 6px 18px rgba(0,0,0,.03); }
+  .promo:active { transform: scale(.99); }
+  .promo img { width: 100%; height: 130px; object-fit: cover; display: block; background: #f6ecef; }
+  .promo .p-con { padding: 13px 16px 14px; }
+  .promo .p-tit { font-weight: 700; font-size: 15px; }
+  .promo .p-desc { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; line-height: 1.45; }
+  .promo.dnia { border: 2px solid #f0b64d; background: #fffdf6; }
+  .promo.dnia .p-tit::before { content: "🔥 TYLKO TERAZ · "; color: var(--primary); font-size: 12px; letter-spacing: .04em; }
+
+  /* Nagrody */
+  .nagroda { width: 100%; background: #fff; border: 1px solid var(--border-soft); border-radius: 18px; padding: 12px; display: flex; gap: 12px; align-items: center; margin-bottom: 10px; box-shadow: 0 4px 12px rgba(0,0,0,.03); }
+  .nagroda img { width: 58px; height: 58px; border-radius: 14px; object-fit: cover; background: #f6ecef; flex-shrink: 0; }
+  .nagroda .n-emoji { width: 58px; height: 58px; border-radius: 14px; background: #fdf3f5; display: flex; align-items: center; justify-content: center; font-size: 26px; flex-shrink: 0; }
+  .nagroda .n-txt { flex: 1; min-width: 0; }
+  .nagroda .n-tit { font-weight: 700; font-size: 14px; }
+  .nagroda .n-koszt { font-size: 12.5px; color: var(--primary); font-weight: 700; margin-top: 2px; }
+  .nagroda .n-opis { font-size: 12px; color: var(--text-muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .n-btn { flex-shrink: 0; border: none; border-radius: 12px; padding: 9px 14px; font-size: 12.5px; font-weight: 700; font-family: inherit; cursor: pointer; }
+  .n-btn.ok { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: #fff; }
+  .n-btn.lock { background: #f2edef; color: #b3a8ad; cursor: default; }
+  .progress-box { width: 100%; background: #fff; border: 1px solid var(--border-soft); border-radius: 18px; padding: 14px 16px; margin-bottom: 12px; }
+  .progress-bar { height: 9px; background: #f4e7eb; border-radius: 6px; overflow: hidden; margin-top: 9px; }
+  .progress-bar div { height: 100%; background: linear-gradient(90deg, var(--primary), #e3aab6); border-radius: 6px; transition: width .4s; }
+  .kod-box { width: 100%; background: #fffdf6; border: 2px dashed #f0b64d; border-radius: 18px; padding: 13px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; }
+  .kod-box .kod { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: var(--primary-dark); font-family: 'DM Sans', monospace; }
+  .kod-box .k-txt { flex: 1; min-width: 0; font-size: 12px; color: #7b6a3f; }
+  .kod-box button { background: none; border: none; color: #b3a8ad; font-size: 12px; text-decoration: underline; cursor: pointer; flex-shrink: 0; }
+
+  /* Historia / profil */
+  .hist { width: 100%; background: #fff; border: 1px solid var(--border-soft); border-radius: 20px; padding: 6px 16px; }
   .hist-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #faf1f4; font-size: 14px; }
   .hist-row:last-child { border-bottom: none; }
   .hist-ico { flex-shrink: 0; width: 34px; height: 34px; border-radius: 12px; background: #fdf3f5; display: flex; align-items: center; justify-content: center; font-size: 16px; }
@@ -69,9 +105,32 @@
   .hist-txt .d { font-size: 11.5px; color: var(--text-muted); }
   .hist-pkt { font-weight: 800; flex-shrink: 0; }
   .plus { color: #0f766e; } .minus { color: #b91c1c; }
-  .pusto { padding: 22px 10px; text-align: center; color: var(--text-muted); font-size: 13.5px; }
-  #install-hint { display: none; width: 100%; max-width: 420px; margin-top: 16px; background: #fff; border: 1px dashed #e3c7cf; border-radius: 18px; padding: 14px 16px; font-size: 13px; color: #6b7280; text-align: left; }
+  .pusto { padding: 22px 10px; text-align: center; color: var(--text-muted); font-size: 13.5px; width: 100%; }
+  .menu-list { width: 100%; background: #fff; border: 1px solid var(--border-soft); border-radius: 20px; margin-bottom: 14px; overflow: hidden; }
+  .menu-item { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 15px 18px; border: none; border-bottom: 1px solid #faf1f4; background: #fff; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text-dark); cursor: pointer; text-align: left; }
+  .menu-item:last-child { border-bottom: none; }
+  .menu-item .arrow { color: #d9cdd2; font-size: 13px; }
+  #install-hint { display: none; width: 100%; max-width: 440px; margin-top: 14px; background: #fff; border: 1px dashed #e3c7cf; border-radius: 18px; padding: 14px 16px; font-size: 13px; color: #6b7280; text-align: left; }
   #install-hint b { color: var(--primary); }
+
+  /* Bottom tabs */
+  .tabs { position: fixed; bottom: 0; left: 0; right: 0; background: #fff; border-top: 1px solid var(--border-soft); border-radius: 22px 22px 0 0; display: none; justify-content: space-around; padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); box-shadow: 0 -10px 30px rgba(0,0,0,.06); z-index: 60; }
+  .tabs.visible { display: flex; }
+  .tab { background: none; border: none; font-family: inherit; text-align: center; cursor: pointer; color: #c4b6bc; font-size: 11px; font-weight: 700; padding: 5px 14px; border-radius: 14px; }
+  .tab .ico { display: block; font-size: 22px; margin-bottom: 2px; }
+  .tab.active { color: var(--primary); background: #fdf3f5; }
+
+  /* Modal */
+  .modal { position: fixed; inset: 0; background: rgba(45,25,32,.5); backdrop-filter: blur(4px); z-index: 90; display: none; justify-content: center; align-items: center; padding: 20px; }
+  .modal.visible { display: flex; }
+  .box { background: #fff; width: 100%; max-width: 380px; border-radius: 24px; padding: 22px; max-height: 82vh; overflow-y: auto; position: relative; }
+  .box h3 { margin: 0 0 6px; font-family: 'Cormorant Garamond', serif; font-size: 22px; padding-right: 30px; }
+  .close-x { position: absolute; top: 12px; right: 16px; background: none; border: none; font-size: 24px; color: #c4b6bc; cursor: pointer; line-height: 1; }
+  .box img.m-img { width: 100%; border-radius: 14px; margin: 8px 0; }
+  #m-promo-tresc { font-size: 14px; line-height: 1.6; color: #4a5261; }
+  #m-promo-tresc img { max-width: 100%; border-radius: 10px; }
+  #m-kod-wielki { text-align: center; font-size: 40px; font-weight: 800; letter-spacing: 6px; color: var(--primary-dark); margin: 14px 0; }
+  .toast { position: fixed; top: calc(env(safe-area-inset-top, 0px) + 14px); left: 50%; transform: translateX(-50%); background: #fff; border: 1px solid var(--border-soft); border-radius: 16px; box-shadow: 0 14px 34px rgba(0,0,0,.14); padding: 13px 18px; font-size: 13.5px; font-weight: 600; z-index: 120; max-width: 88%; display: none; }
   #loader { position: fixed; inset: 0; background: rgba(253,248,245,.92); z-index: 100; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 14px; }
   #loader.visible { display: flex; }
   .spin { width: 38px; height: 38px; border: 4px solid var(--border-soft); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s infinite linear; }
@@ -81,6 +140,7 @@
 <body>
 
 <div id="loader"><div class="spin"></div><div class="muted">Chwileczkę…</div></div>
+<div id="toast" class="toast"></div>
 
 <!-- ── Aktywacja konta (wejście z QR od recepcji: /klub.html?a=token) ── -->
 <div id="screen-aktywacja" class="screen center">
@@ -112,35 +172,133 @@
   </div>
 </div>
 
-<!-- ── Ekran główny ── -->
+<!-- ── Ekran główny (taby) ── -->
 <div id="screen-main" class="screen">
   <div class="main-head">
     <div class="hi" id="m-hello">Cześć!</div>
-    <button class="link-btn" style="margin:0;" onclick="wyloguj()">Wyloguj</button>
+    <div class="muted" id="m-klub-head">Klub</div>
   </div>
-  <div class="saldo-card">
-    <div class="lbl" id="m-klub">Klub</div>
-    <div class="val"><span id="m-saldo">0</span> <small>pkt</small></div>
-    <div class="rule" id="m-zasada">Punkty naliczają się automatycznie przy każdej wizycie.</div>
+
+  <!-- TAB: Start -->
+  <div id="tab-start" class="tabpage visible">
+    <div class="saldo-card">
+      <div class="lbl" id="m-klub">Klub</div>
+      <div class="val"><span id="m-saldo">0</span> <small>pkt</small></div>
+      <div class="rule" id="m-zasada"></div>
+    </div>
+    <div class="sekcja" id="sek-promocje" style="display:none;">
+      <h3>Dla Ciebie</h3>
+      <div id="m-promocje"></div>
+    </div>
+    <div class="sekcja" id="sek-progress" style="display:none;">
+      <h3>Najbliższa nagroda</h3>
+      <div class="progress-box">
+        <div style="display:flex; justify-content:space-between; font-size:13.5px; font-weight:700;"><span id="pg-nazwa"></span><span id="pg-pkt" style="color:var(--primary);"></span></div>
+        <div class="progress-bar"><div id="pg-bar" style="width:0%"></div></div>
+        <div id="pg-info" class="muted" style="margin-top:7px; font-size:12px;"></div>
+      </div>
+    </div>
+    <div class="sekcja" id="sek-polecane" style="display:none;">
+      <h3>Polecane nagrody <button class="wiecej" onclick="tab('nagrody')">Wszystkie →</button></h3>
+      <div id="m-polecane"></div>
+    </div>
   </div>
-  <div class="sekcja">
-    <h3>Historia punktów</h3>
-    <div class="hist" id="m-hist"><div class="pusto">Ładowanie…</div></div>
+
+  <!-- TAB: Nagrody -->
+  <div id="tab-nagrody" class="tabpage">
+    <div class="sekcja" id="sek-kody" style="display:none; margin-top:6px;">
+      <h3>Twoje kody odbioru</h3>
+      <div id="m-kody"></div>
+    </div>
+    <div class="sekcja" style="margin-top:6px;">
+      <h3>Katalog nagród <span class="muted" style="font-size:12.5px;" id="m-dostepne"></span></h3>
+      <div id="m-nagrody"><div class="pusto">Ładowanie…</div></div>
+    </div>
   </div>
-  <div id="install-hint"></div>
+
+  <!-- TAB: Profil -->
+  <div id="tab-profil" class="tabpage">
+    <div class="sekcja" style="margin-top:6px;">
+      <h3>Twój profil</h3>
+      <div class="menu-list">
+        <button class="menu-item" id="btn-push" onclick="wlaczPush()" style="display:none;"><span style="color:var(--primary);">🔔 Włącz powiadomienia o promocjach</span><span class="arrow">➤</span></button>
+        <button class="menu-item" onclick="pokazZasady()"><span>📘 Jak zbierać punkty?</span><span class="arrow">➤</span></button>
+        <button class="menu-item" onclick="pokazFaq()"><span>❓ Pytania i odpowiedzi</span><span class="arrow">➤</span></button>
+      </div>
+    </div>
+    <div class="sekcja">
+      <h3>Historia punktów</h3>
+      <div class="hist" id="m-hist"><div class="pusto">Ładowanie…</div></div>
+    </div>
+    <div id="install-hint"></div>
+    <button class="btn ghost" style="max-width:440px;" onclick="wyloguj()">Wyloguj się</button>
+  </div>
 </div>
+
+<!-- Bottom tabs -->
+<div id="tabs" class="tabs">
+  <button class="tab active" data-tab="start" onclick="tab('start')"><span class="ico">🏠</span>Start</button>
+  <button class="tab" data-tab="nagrody" onclick="tab('nagrody')"><span class="ico">🎁</span>Nagrody</button>
+  <button class="tab" data-tab="profil" onclick="tab('profil')"><span class="ico">👤</span>Profil</button>
+</div>
+
+<!-- Modal: promocja -->
+<div id="m-promo" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-promo')">✕</button>
+  <h3 id="m-promo-tytul"></h3>
+  <img id="m-promo-img" class="m-img" style="display:none;" alt="">
+  <div id="m-promo-opis" class="muted" style="font-weight:600; margin-bottom:8px;"></div>
+  <div id="m-promo-tresc"></div>
+  <button class="btn" id="m-promo-biore" style="display:none; background:#0f9d6a;" onclick="biore()">BIORĘ! (płatność w salonie)</button>
+  <button class="btn ghost" onclick="zamknij('m-promo')">Zamknij</button>
+</div></div>
+
+<!-- Modal: kod odbioru -->
+<div id="m-kod" class="modal"><div class="box" style="text-align:center;">
+  <button class="close-x" onclick="zamknij('m-kod')">✕</button>
+  <h3 style="padding-right:0;">🎁 Nagroda zarezerwowana!</h3>
+  <div class="muted">Pokaż ten kod w salonie, aby odebrać:</div>
+  <div id="m-kod-wielki"></div>
+  <div class="muted" style="font-size:12px;">Punkty zejdą z konta dopiero przy wydaniu nagrody.<br>Kod znajdziesz też w zakładce Nagrody.</div>
+  <button class="btn" onclick="zamknij('m-kod')">Super!</button>
+</div></div>
+
+<!-- Modal: tekst (zasady/FAQ) -->
+<div id="m-text" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-text')">✕</button>
+  <h3 id="m-text-tytul"></h3>
+  <div id="m-text-tresc" style="font-size:14px; line-height:1.65; color:#4a5261;"></div>
+  <button class="btn ghost" onclick="zamknij('m-text')">Zamknij</button>
+</div></div>
 
 <script>
 const API = '/api/klub';
 const LS_SESJA = 'klub_session';
 let deferredInstall = null;
+let dane = null;          // ostatnia odpowiedź /me
+let promoOtwarta = null;  // promocja w modalu
 
 function pokaz(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
   document.getElementById(id).classList.add('visible');
+  document.getElementById('tabs').classList.toggle('visible', id === 'screen-main');
 }
+function tab(nazwa) {
+  document.querySelectorAll('.tabpage').forEach(t => t.classList.remove('visible'));
+  document.getElementById('tab-' + nazwa).classList.add('visible');
+  document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === nazwa));
+  window.scrollTo(0, 0);
+}
+function zamknij(id) { document.getElementById(id).classList.remove('visible'); }
 function loader(on) { document.getElementById('loader').classList.toggle('visible', !!on); }
 function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
 
 async function api(path, body) {
   const r = await fetch(API + path, {
@@ -158,9 +316,12 @@ window.addEventListener('load', async () => {
   }
   const aktToken = new URLSearchParams(location.search).get('a');
   if (aktToken) return startAktywacja(aktToken);
-  const sesja = localStorage.getItem(LS_SESJA);
-  if (sesja) return wczytajKonto();
+  if (localStorage.getItem(LS_SESJA)) return wczytajKonto();
   pokaz('screen-login');
+});
+// Świeże saldo po powrocie do apki
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && dane && localStorage.getItem(LS_SESJA)) wczytajKonto(true);
 });
 
 // ── Aktywacja ──
@@ -231,43 +392,182 @@ async function zaloguj() {
 
 function wyloguj() {
   localStorage.removeItem(LS_SESJA);
+  dane = null;
   pokaz('screen-login');
 }
 
 // ── Ekran główny ──
-async function wczytajKonto() {
-  loader(true);
+async function wczytajKonto(cicho) {
+  if (!cicho) loader(true);
   try {
     const d = await api('/me', { session: localStorage.getItem(LS_SESJA) });
     loader(false);
     if (d.status !== 'success') {
+      if (cicho) return;
       if (d.code === 'SESJA') localStorage.removeItem(LS_SESJA);
       pokaz('screen-login');
       if (d.message) document.getElementById('log-err').textContent = d.message;
       return;
     }
     if (d.session_nowy) localStorage.setItem(LS_SESJA, d.session_nowy);
-    document.getElementById('m-hello').textContent = d.imie ? ('Cześć, ' + d.imie + '!') : 'Cześć!';
-    document.getElementById('m-klub').textContent = d.nazwa_klubu || 'Klub';
-    document.getElementById('m-saldo').textContent = d.saldo || 0;
-    document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt — naliczane automatycznie.';
-    renderHistoria(d.wpisy || []);
-    pokazInstallHint();
+    const stareSaldo = dane ? dane.saldo : null;
+    dane = d;
+    renderAll();
+    if (stareSaldo !== null && d.saldo > stareSaldo) toast('✨ +' + (d.saldo - stareSaldo) + ' pkt od ostatniej wizyty!');
     pokaz('screen-main');
   } catch (e) {
     loader(false);
+    if (cicho) return;
     pokaz('screen-login');
     document.getElementById('log-err').textContent = 'Błąd połączenia. Spróbuj ponownie.';
   }
 }
 
+function renderAll() {
+  const d = dane;
+  document.getElementById('m-hello').textContent = d.imie ? ('Cześć, ' + d.imie + '!') : 'Cześć!';
+  document.getElementById('m-klub').textContent = d.nazwa_klubu || 'Klub';
+  document.getElementById('m-klub-head').textContent = '💎 ' + (d.nazwa_klubu || 'Klub');
+  document.getElementById('m-saldo').textContent = d.saldo || 0;
+  document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
+  const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
+  document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
+  renderPromocje(d.promocje || []);
+  renderNagrody(d.nagrody || [], d.saldo_dostepne != null ? d.saldo_dostepne : (d.saldo || 0));
+  renderKody(d.odbiory || []);
+  renderHistoria(d.wpisy || []);
+  renderPush();
+  pokazInstallHint();
+}
+
+// ── Promocje ──
+function renderPromocje(promocje) {
+  const sek = document.getElementById('sek-promocje');
+  const box = document.getElementById('m-promocje');
+  if (!promocje.length) { sek.style.display = 'none'; return; }
+  sek.style.display = 'block';
+  box.innerHTML = '';
+  promocje.forEach(p => {
+    const el = document.createElement('div');
+    el.className = 'promo' + (p.promocja_dnia ? ' dnia' : '');
+    el.onclick = () => otworzPromo(p.id);
+    el.innerHTML = (p.img_url ? '<img src="' + esc(p.img_url) + '" onerror="this.style.display=\'none\'" alt="">' : '')
+      + '<div class="p-con"><div class="p-tit"></div><div class="p-desc"></div></div>';
+    el.querySelector('.p-tit').textContent = p.tytul;
+    el.querySelector('.p-desc').textContent = p.opis || '';
+    box.appendChild(el);
+  });
+}
+function otworzPromo(id) {
+  const p = (dane.promocje || []).find(x => x.id === id);
+  if (!p) return;
+  promoOtwarta = p;
+  document.getElementById('m-promo-tytul').textContent = p.tytul;
+  document.getElementById('m-promo-opis').textContent = p.opis || '';
+  const img = document.getElementById('m-promo-img');
+  if (p.img_url) { img.src = p.img_url; img.style.display = 'block'; } else img.style.display = 'none';
+  // treść tworzy admin salonu w panelu (zaufane źródło w obrębie tenanta)
+  document.getElementById('m-promo-tresc').innerHTML = p.tresc || 'Szczegóły w salonie.';
+  document.getElementById('m-promo-biore').style.display = p.promocja_dnia ? 'block' : 'none';
+  document.getElementById('m-promo').classList.add('visible');
+}
+async function biore() {
+  if (!promoOtwarta) return;
+  const btn = document.getElementById('m-promo-biore');
+  btn.disabled = true;
+  try {
+    const d = await api('/promocja_biore', { session: localStorage.getItem(LS_SESJA), promocja_id: promoOtwarta.id });
+    if (d.status === 'success') { zamknij('m-promo'); toast(d.message || 'Zgłoszenie wysłane!'); }
+    else toast(d.message || 'Nie udało się wysłać zgłoszenia.');
+  } catch (e) { toast('Błąd połączenia.'); }
+  finally { btn.disabled = false; }
+}
+
+// ── Nagrody ──
+function kartaNagrody(n, dostepne) {
+  const stac = dostepne >= n.koszt_pkt && n.dostepna;
+  const el = document.createElement('div');
+  el.className = 'nagroda';
+  el.innerHTML = (n.img_url
+      ? '<img src="' + esc(n.img_url) + '" onerror="this.outerHTML=\'<div class=&quot;n-emoji&quot;>🎁</div>\'" alt="">'
+      : '<div class="n-emoji">🎁</div>')
+    + '<div class="n-txt"><div class="n-tit"></div><div class="n-koszt">' + n.koszt_pkt + ' pkt</div><div class="n-opis"></div></div>'
+    + '<button class="n-btn ' + (stac ? 'ok' : 'lock') + '">' + (!n.dostepna ? 'Brak' : (stac ? 'Odbierz' : 'za ' + (n.koszt_pkt - dostepne) + ' pkt')) + '</button>';
+  el.querySelector('.n-tit').textContent = n.nazwa;
+  el.querySelector('.n-opis').textContent = n.opis || '';
+  if (stac) el.querySelector('button').onclick = () => odbierz(n);
+  return el;
+}
+function renderNagrody(nagrody, dostepne) {
+  const box = document.getElementById('m-nagrody');
+  const polecaneSek = document.getElementById('sek-polecane');
+  const polecaneBox = document.getElementById('m-polecane');
+  box.innerHTML = ''; polecaneBox.innerHTML = '';
+  if (!nagrody.length) {
+    box.innerHTML = '<div class="pusto">Salon nie dodał jeszcze nagród — wpadnij tu niedługo. 💫</div>';
+    polecaneSek.style.display = 'none';
+    document.getElementById('sek-progress').style.display = 'none';
+    return;
+  }
+  nagrody.forEach(n => box.appendChild(kartaNagrody(n, dostepne)));
+  polecaneSek.style.display = 'block';
+  nagrody.slice(0, 2).forEach(n => polecaneBox.appendChild(kartaNagrody(n, dostepne)));
+  // pasek postępu do najtańszej nieosiągniętej nagrody (lub osiągniętej — 100%)
+  const cel = nagrody.filter(n => n.dostepna).sort((a, b) => a.koszt_pkt - b.koszt_pkt)
+    .find(n => n.koszt_pkt > dostepne) || nagrody.filter(n => n.dostepna)[0];
+  const sekP = document.getElementById('sek-progress');
+  if (!cel) { sekP.style.display = 'none'; return; }
+  sekP.style.display = 'block';
+  const proc = Math.min(100, Math.round((dostepne / cel.koszt_pkt) * 100));
+  document.getElementById('pg-nazwa').textContent = cel.nazwa;
+  document.getElementById('pg-pkt').textContent = Math.min(dostepne, cel.koszt_pkt) + ' / ' + cel.koszt_pkt + ' pkt';
+  document.getElementById('pg-bar').style.width = proc + '%';
+  document.getElementById('pg-info').textContent = proc >= 100
+    ? 'Masz dość punktów — odbierz w zakładce Nagrody! 🎉'
+    : ('Brakuje Ci ' + (cel.koszt_pkt - dostepne) + ' pkt — to ok. ' + Math.ceil((cel.koszt_pkt - dostepne) / (dane.pkt_za_10zl || 1)) * 10 + ' zł wydane w salonie.');
+}
+async function odbierz(n) {
+  if (!confirm('Zarezerwować nagrodę „' + n.nazwa + '" za ' + n.koszt_pkt + ' pkt?\nOdbierzesz ją w salonie, pokazując kod.')) return;
+  loader(true);
+  try {
+    const d = await api('/nagroda_odbierz', { session: localStorage.getItem(LS_SESJA), nagroda_id: n.id });
+    loader(false);
+    if (d.status !== 'success') { toast(d.message || 'Nie udało się.'); return; }
+    document.getElementById('m-kod-wielki').textContent = d.kod;
+    document.getElementById('m-kod').classList.add('visible');
+    wczytajKonto(true);
+  } catch (e) { loader(false); toast('Błąd połączenia.'); }
+}
+function renderKody(odbiory) {
+  const sek = document.getElementById('sek-kody');
+  const box = document.getElementById('m-kody');
+  const oczekuje = odbiory.filter(o => o.status === 'OCZEKUJE');
+  if (!oczekuje.length) { sek.style.display = 'none'; return; }
+  sek.style.display = 'block';
+  box.innerHTML = '';
+  oczekuje.forEach(o => {
+    const el = document.createElement('div');
+    el.className = 'kod-box';
+    el.innerHTML = '<div class="kod">' + esc(o.kod) + '</div><div class="k-txt"></div><button>anuluj</button>';
+    el.querySelector('.k-txt').textContent = o.nagroda + ' · ' + o.koszt_pkt + ' pkt';
+    el.querySelector('button').onclick = async () => {
+      if (!confirm('Anulować rezerwację „' + o.nagroda + '"? Punkty wrócą do dyspozycji.')) return;
+      const d = await api('/odbior_anuluj', { session: localStorage.getItem(LS_SESJA), odbior_id: o.id });
+      if (d.status === 'success') { toast('Anulowano.'); wczytajKonto(true); }
+      else toast(d.message || 'Nie udało się anulować.');
+    };
+    box.appendChild(el);
+  });
+}
+
+// ── Historia ──
 function renderHistoria(wpisy) {
   const box = document.getElementById('m-hist');
   if (!wpisy.length) {
     box.innerHTML = '<div class="pusto">Jeszcze pusto — punkty pojawią się po najbliższej wizycie. 💫</div>';
     return;
   }
-  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : '⚙️'));
+  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : (z === 'NAGRODA' ? '🎁' : '⚙️')));
   box.innerHTML = wpisy.map(w => {
     const dt = w.data ? new Date(w.data) : null;
     const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
@@ -280,11 +580,75 @@ function renderHistoria(wpisy) {
   }).join('');
 }
 
+// ── Zasady / FAQ ──
+function pokazZasady() {
+  const pkt = dane ? (dane.pkt_za_10zl || 1) : 1;
+  document.getElementById('m-text-tytul').textContent = '📘 Jak zbierać punkty?';
+  document.getElementById('m-text-tresc').innerHTML =
+    '<p><b>Punkty naliczają się same</b> — za każde wydane 10 zł w salonie dostajesz ' + pkt + ' pkt. Nie musisz niczego pokazywać ani skanować.</p>'
+    + '<p>Punkty wymieniasz na nagrody z katalogu: rezerwujesz nagrodę w aplikacji, dostajesz kod, pokazujesz go w salonie — i gotowe.</p>'
+    + '<p>Punkty nie przepadają. Zwrot zakupu pomniejsza punkty naliczone za tę transakcję.</p>';
+  document.getElementById('m-text').classList.add('visible');
+}
+function pokazFaq() {
+  document.getElementById('m-text-tytul').textContent = '❓ Pytania i odpowiedzi';
+  document.getElementById('m-text-tresc').innerHTML =
+    '<p><b>Zapomniałam PIN-u — co robić?</b><br>Poproś recepcję o nowy kod QR — ustawisz PIN od nowa.</p>'
+    + '<p><b>Czy punkty wygasają?</b><br>Nie, są ważne bezterminowo.</p>'
+    + '<p><b>Kiedy dochodzą punkty?</b><br>Od razu po wizycie, gdy salon zarejestruje sprzedaż.</p>'
+    + '<p><b>Zarezerwowałam nagrodę, ale się rozmyśliłam.</b><br>Anuluj kod w zakładce Nagrody — punkty wrócą do dyspozycji.</p>';
+  document.getElementById('m-text').classList.add('visible');
+}
+
+// ── Web Push ──
+function pushWspierany() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+async function renderPush() {
+  const btn = document.getElementById('btn-push');
+  if (!btn) return;
+  if (!dane || !dane.push_vapid || !pushWspierany()) { btn.style.display = 'none'; return; }
+  btn.style.display = 'flex';
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub && Notification.permission === 'granted') {
+      btn.innerHTML = '<span style="color:#0f766e;">🔔 Powiadomienia włączone ✓</span><span class="arrow"></span>';
+      btn.onclick = null;
+    }
+  } catch (e) { /* zostaje przycisk włączania */ }
+}
+function b64doUint8(b64) {
+  const padding = '='.repeat((4 - b64.length % 4) % 4);
+  const base64 = (b64 + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const raw = atob(base64);
+  const arr = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) arr[i] = raw.charCodeAt(i);
+  return arr;
+}
+async function wlaczPush() {
+  if (!dane || !dane.push_vapid) return;
+  try {
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') { toast('Brak zgody na powiadomienia w przeglądarce.'); return; }
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: b64doUint8(dane.push_vapid)
+    });
+    const d = await api('/push_zapisz', { session: localStorage.getItem(LS_SESJA), subscription: sub.toJSON() });
+    if (d.status === 'success') { toast('🔔 Powiadomienia włączone!'); renderPush(); }
+    else toast(d.message || 'Nie udało się zapisać subskrypcji.');
+  } catch (e) {
+    toast('Nie udało się włączyć powiadomień' + (/iPhone|iPad/.test(navigator.userAgent) ? ' — na iPhone zainstaluj najpierw apkę na ekran główny.' : '.'));
+  }
+}
+
 // ── Instalacja PWA ──
 window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; pokazInstallHint(); });
 function pokazInstallHint() {
   const hint = document.getElementById('install-hint');
-  if (!hint || !document.getElementById('screen-main')) return;
+  if (!hint) return;
   const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
   if (standalone) { hint.style.display = 'none'; return; }
   const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -292,7 +656,7 @@ function pokazInstallHint() {
     hint.innerHTML = '<b>📲 Zainstaluj aplikację</b> — saldo punktów zawsze pod ręką. <button class="btn" style="margin-top:10px; padding:11px;" onclick="instaluj()">Dodaj do ekranu głównego</button>';
     hint.style.display = 'block';
   } else if (isIos) {
-    hint.innerHTML = '<b>📲 Dodaj do ekranu głównego:</b> dotknij przycisku „Udostępnij" na dole przeglądarki, a potem wybierz „Do ekranu początkowego".';
+    hint.innerHTML = '<b>📲 Dodaj do ekranu głównego:</b> dotknij przycisku „Udostępnij" na dole przeglądarki, a potem wybierz „Do ekranu początkowego". Dzięki temu zadziałają też powiadomienia.';
     hint.style.display = 'block';
   }
 }

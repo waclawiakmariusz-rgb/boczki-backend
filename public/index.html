@@ -8247,6 +8247,141 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             </div>
 
+            <!-- Sekcja: Klub (dodatek lojalnosc) — zarządzanie treścią, PILOT ADMIN-ONLY -->
+            <style>
+              .klubadm-tab { background:#fff; border:1px solid #efe5e8; border-radius:12px; padding:10px 16px; font-size:13.5px; font-weight:700; color:#6b7280; cursor:pointer; font-family:inherit; }
+              .klubadm-tab-active { background:#c54f7f; border-color:#c54f7f; color:#fff; }
+              .klubadm-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #f5eef1; font-size:13.5px; flex-wrap:wrap; }
+              .klubadm-row:last-child { border-bottom:none; }
+              .klubadm-btn { border:0; border-radius:8px; padding:7px 13px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+              body.dark-mode .klubadm-tab { background:#1e293b; border-color:#334155; color:#cbd5e1; }
+              body.dark-mode .klubadm-tab-active { background:#c54f7f; border-color:#c54f7f; color:#fff; }
+              body.dark-mode .klubadm-row { border-bottom-color:#334155; }
+            </style>
+            <div id="klub-admin" class="section">
+                <div class="header" style="margin-bottom:16px;">
+                    <div>
+                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">💎 Klub — program lojalnościowy</h1>
+                        <p style="margin:6px 0 0 0; color:#6b7280; font-size:14px;">Punkty naliczają się automatycznie z paragonów. Tu zarządzasz nagrodami, promocjami i odbiorem nagród.</p>
+                    </div>
+                </div>
+
+                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
+                    <button class="klubadm-tab klubadm-tab-active" data-kt="ustawienia" onclick="klubadm_tab('ustawienia', this)">⚙️ Ustawienia</button>
+                    <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">🎁 Nagrody</button>
+                    <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">📣 Promocje</button>
+                    <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">🧾 Odbiory i zgłoszenia <span id="klubadm-badge" style="display:none; background:#dc2626; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px;"></span></button>
+                    <button class="klubadm-tab" data-kt="statystyki" onclick="klubadm_tab('statystyki', this)">📊 Statystyki</button>
+                </div>
+
+                <!-- Tab: Ustawienia -->
+                <div id="klubadm-ustawienia" class="klubadm-page">
+                    <div class="card" style="padding:18px 22px; max-width:560px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:10px;">Zasady programu</div>
+                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:10px 0 5px;">Nazwa klubu (widoczna dla klientów w aplikacji):</label>
+                        <input id="klubadm-nazwa" maxlength="120" placeholder="np. Klub Boczki" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">Punkty za każde 10 zł wydane w salonie:</label>
+                        <input id="klubadm-pkt" type="number" min="0" max="100" step="1" style="width:120px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Przykład: przy „1" paragon na 250 zł daje 25 pkt. Zmiana działa od nowych paragonów — nic nie przelicza się wstecz.</div>
+                        <div style="display:flex; align-items:center; gap:12px; margin-top:14px;">
+                            <button onclick="klubadm_zapiszUstawienia()" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">💾 Zapisz</button>
+                            <span id="klubadm-ust-status" style="font-size:12.5px; color:#6b7280;"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Nagrody -->
+                <div id="klubadm-nagrody" class="klubadm-page" style="display:none;">
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-n-form-tytul">Dodaj nagrodę</div>
+                        <input type="hidden" id="klubadm-n-id">
+                        <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; margin-top:10px;">
+                            <input id="klubadm-n-nazwa" maxlength="160" placeholder="Nazwa (np. Henna gratis)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <input id="klubadm-n-koszt" type="number" min="1" placeholder="Koszt (pkt)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <input id="klubadm-n-ilosc" type="number" min="0" placeholder="Ilość (puste = ∞)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        </div>
+                        <input id="klubadm-n-img" placeholder="Link do zdjęcia (https://… — opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <input id="klubadm-n-opis" maxlength="500" placeholder="Krótki opis (opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <div style="display:flex; gap:10px; margin-top:12px;">
+                            <button onclick="klubadm_zapiszNagrode()" id="klubadm-n-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj nagrodę</button>
+                            <button onclick="klubadm_resetNagroda()" id="klubadm-n-anuluj" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:10px 22px;"><div id="klubadm-n-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                </div>
+
+                <!-- Tab: Promocje -->
+                <div id="klubadm-promocje" class="klubadm-page" style="display:none;">
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-p-form-tytul">Dodaj promocję</div>
+                        <input type="hidden" id="klubadm-p-id">
+                        <input id="klubadm-p-tytul" maxlength="200" placeholder="Tytuł (np. Środa -20% na masaże)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <input id="klubadm-p-opis" maxlength="300" placeholder="Krótki opis pod tytułem" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <input id="klubadm-p-img" placeholder="Link do zdjęcia (https://… — opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <textarea id="klubadm-p-tresc" rows="5" placeholder="Pełna treść promocji (może zawierać proste HTML: <b>, <br>, listy)…" style="width:100%; box-sizing:border-box; margin-top:10px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; resize:vertical;"></textarea>
+                        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Od: <input id="klubadm-p-od" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
+                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Do: <input id="klubadm-p-do" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
+                            <label style="font-size:13px; color:#b45309; font-weight:700; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-dnia" type="checkbox" style="width:17px; height:17px; accent-color:#c54f7f;"> 🔥 Promocja z przyciskiem „BIORĘ"</label>
+                        </div>
+                        <div style="display:flex; gap:10px; margin-top:12px;">
+                            <button onclick="klubadm_zapiszPromocje()" id="klubadm-p-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj promocję</button>
+                            <button onclick="klubadm_resetPromocja()" id="klubadm-p-anuluj" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
+                        </div>
+                    </div>
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🔔 Powiadomienie push do klientów</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafi do wszystkich, którzy włączyli powiadomienia w aplikacji.</div>
+                        <div style="display:grid; grid-template-columns:1fr 2fr auto; gap:10px; margin-top:10px;">
+                            <input id="klubadm-push-tytul" maxlength="100" placeholder="Tytuł" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <input id="klubadm-push-tresc" maxlength="300" placeholder="Treść powiadomienia" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <button onclick="klubadm_wyslijPush()" id="klubadm-push-btn" style="background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:10px 18px; font-size:13.5px; font-weight:700; cursor:pointer;">Wyślij</button>
+                        </div>
+                        <div id="klubadm-push-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
+                    </div>
+                    <div class="card" style="padding:10px 22px;"><div id="klubadm-p-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                </div>
+
+                <!-- Tab: Odbiory i zgłoszenia -->
+                <div id="klubadm-odbiory" class="klubadm-page" style="display:none;">
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">🎁 Odbiory nagród</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient pokazuje kod z aplikacji — sprawdź kod, wydaj nagrodę i kliknij „Wydaj". Punkty zejdą z jego konta dopiero wtedy.</div>
+                        <div id="klubadm-odbiory-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                    </div>
+                    <div class="card" style="padding:18px 22px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">🔥 Zgłoszenia „BIORĘ"</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient kliknął BIORĘ przy promocji — skontaktuj się i oznacz jako obsłużone.</div>
+                        <div id="klubadm-zgloszenia-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                    </div>
+                </div>
+
+                <!-- Tab: Statystyki -->
+                <div id="klubadm-statystyki" class="klubadm-page" style="display:none;">
+                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
+                        <select id="klubadm-st-mies" onchange="klubadm_zaladujStatystyki()" style="padding:9px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></select>
+                        <select id="klubadm-st-rok" onchange="klubadm_zaladujStatystyki()" style="padding:9px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></select>
+                    </div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:16px;">
+                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-przyznane" style="font-size:26px; font-weight:800; color:#0f766e;">–</div><div style="font-size:12px; color:#6b7280;">pkt przyznane (m-c)</div></div>
+                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-odjete" style="font-size:26px; font-weight:800; color:#b91c1c;">–</div><div style="font-size:12px; color:#6b7280;">pkt odjęte (m-c)</div></div>
+                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-klienci" style="font-size:26px; font-weight:800; color:#c54f7f;">–</div><div style="font-size:12px; color:#6b7280;">klientów z ruchem (m-c)</div></div>
+                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-konta" style="font-size:26px; font-weight:800; color:#7c3aed;">–</div><div style="font-size:12px; color:#6b7280;">kont w aplikacji</div></div>
+                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-push" style="font-size:26px; font-weight:800; color:#0284c7;">–</div><div style="font-size:12px; color:#6b7280;">z powiadomieniami</div></div>
+                    </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
+                        <div class="card" style="padding:18px 22px; margin:0;">
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:600; margin-bottom:8px;">🏆 Top klienci (saldo)</div>
+                            <div id="klubadm-st-top" style="font-size:13.5px;"></div>
+                        </div>
+                        <div class="card" style="padding:18px 22px; margin:0;">
+                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:600; margin-bottom:8px;">🎁 Wydane nagrody (m-c)</div>
+                            <div id="klubadm-st-nagrody" style="font-size:13.5px;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
 			<div class="header"><h1>Dziennik Zdarzeń</h1>
 			<button onclick="kopiujLogiDoSchowka()" title="Kopiuj logi konsoli do schowka" 
@@ -11797,6 +11932,9 @@ function uruchomAplikacjePracownika(imie, rola) {
 // (label, ikona, id sekcji do której prowadzi przycisk)
 const FEATURE_MENU_CONFIG = {
     'demo_dodatek': { label: 'Dodatek!', icon: '🎁', sectionId: 'demo-dodatek' },
+    // adminOnly: pozycja menu widoczna wyłącznie dla roli admin/megaadmin (pilot Klubu)
+    // init: dodatkowe wywołanie przy wejściu w sekcję (doładowanie danych)
+    'lojalnosc': { label: 'Klub', icon: '💎', sectionId: 'klub-admin', adminOnly: true, init: 'klubadm_init()' },
     // Przykład gdy dodajesz nowy w przyszłości:
     // 'sms_marketing':    { label: 'SMS Marketing', icon: '📱', sectionId: 'sms-marketing' },
     // 'advanced_reports': { label: 'Raporty Pro',   icon: '📊', sectionId: 'advanced-reports' },
@@ -11820,8 +11958,14 @@ function aktualizujMenuFeatures() {
     const submenu = document.getElementById('sub-estelio-plus');
     if (!grupa || !submenu) return;
 
-    // Bierzemy tylko te aktywne featury, które mają zdefiniowany wpis w FEATURE_MENU_CONFIG
-    const widoczne = features.filter(k => FEATURE_MENU_CONFIG[k]);
+    // Bierzemy tylko te aktywne featury, które mają zdefiniowany wpis w FEATURE_MENU_CONFIG.
+    // adminOnly (pilot Klubu): pozycja tylko dla roli admin/megaadmin.
+    const widoczne = features.filter(k => {
+        const cfg = FEATURE_MENU_CONFIG[k];
+        if (!cfg) return false;
+        if (cfg.adminOnly && !(typeof loj_admin === 'function' && loj_admin())) return false;
+        return true;
+    });
 
     if (widoczne.length === 0) {
         grupa.style.display = 'none';
@@ -11832,7 +11976,8 @@ function aktualizujMenuFeatures() {
     grupa.style.display = '';
     submenu.innerHTML = widoczne.map(k => {
         const cfg = FEATURE_MENU_CONFIG[k];
-        return `<li><button onclick="pokaz('${cfg.sectionId}', this)"><span class="nav-label">${cfg.icon} ${escHtml(cfg.label)}</span></button></li>`;
+        const initCall = cfg.init ? ' ' + cfg.init + ';' : '';
+        return `<li><button onclick="pokaz('${cfg.sectionId}', this);${initCall}"><span class="nav-label">${cfg.icon} ${escHtml(cfg.label)}</span></button></li>`;
     }).join('');
 }
 
@@ -30556,6 +30701,296 @@ async function loj_zapiszReczne() {
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Zapisz'; }
   }
+}
+
+/* ── Sekcja „Klub" w panelu (zarządzanie treścią, admin-only) ── */
+let klubadm_zainicjowane = false;
+
+function klubadm_apiGet(action, params) {
+  const u = API_URL + '?action=' + action + '&user_log=' + encodeURIComponent(typeof currentUser !== 'undefined' ? currentUser : '') + (params || '');
+  return fetch(u).then(r => r.json());
+}
+function klubadm_apiPost(body) {
+  body.user_log = typeof currentUser !== 'undefined' ? currentUser : '';
+  return fetch(API_URL, { method: 'POST', body: JSON.stringify(body) }).then(r => r.json());
+}
+
+function klubadm_init() {
+  klubadm_zaladujUstawienia();
+  klubadm_zaladujNagrody();
+  klubadm_zaladujPromocje();
+  klubadm_zaladujOdbiory();
+  if (!klubadm_zainicjowane) {
+    klubadm_zainicjowane = true;
+    const mSel = document.getElementById('klubadm-st-mies');
+    const rSel = document.getElementById('klubadm-st-rok');
+    if (mSel && rSel) {
+      const MIES = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
+      mSel.innerHTML = MIES.map((m, i) => `<option value="${i + 1}">${m}</option>`).join('');
+      mSel.value = new Date().getMonth() + 1;
+      const rokTeraz = new Date().getFullYear();
+      let opts = '';
+      for (let r = rokTeraz; r >= rokTeraz - 2; r--) opts += `<option value="${r}">${r}</option>`;
+      rSel.innerHTML = opts;
+    }
+  }
+  klubadm_zaladujStatystyki();
+}
+
+function klubadm_tab(nazwa, btn) {
+  document.querySelectorAll('.klubadm-page').forEach(p => p.style.display = 'none');
+  const page = document.getElementById('klubadm-' + nazwa);
+  if (page) page.style.display = 'block';
+  document.querySelectorAll('.klubadm-tab').forEach(b => b.classList.remove('klubadm-tab-active'));
+  if (btn) btn.classList.add('klubadm-tab-active');
+}
+
+// ── Ustawienia ──
+async function klubadm_zaladujUstawienia() {
+  try {
+    const d = await fetch(API_URL + '?action=loj_ustawienia').then(r => r.json());
+    if (d.status !== 'success') return;
+    const n = document.getElementById('klubadm-nazwa');
+    const p = document.getElementById('klubadm-pkt');
+    if (n) n.value = d.ustawienia.nazwa_klubu || 'Klub';
+    if (p) p.value = d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1;
+  } catch (e) {}
+}
+async function klubadm_zapiszUstawienia() {
+  const status = document.getElementById('klubadm-ust-status');
+  status.textContent = '⏳ Zapisywanie…';
+  const d = await klubadm_apiPost({
+    action: 'loj_ustawienia_zapisz',
+    nazwa_klubu: document.getElementById('klubadm-nazwa').value.trim(),
+    pkt_za_10zl: document.getElementById('klubadm-pkt').value
+  }).catch(() => null);
+  status.textContent = (d && d.status === 'success') ? '✅ Zapisano.' : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Nagrody ──
+let klubadm_nagrodyCache = [];
+async function klubadm_zaladujNagrody() {
+  const box = document.getElementById('klubadm-n-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_nagrody_admin').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  klubadm_nagrodyCache = d.nagrody || [];
+  if (!klubadm_nagrodyCache.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Brak nagród — dodaj pierwszą powyżej. Klienci zobaczą ją w aplikacji od razu.</div>'; return; }
+  box.innerHTML = klubadm_nagrodyCache.map(n => {
+    const ukryta = n.status === 'UKRYTA';
+    return `<div class="klubadm-row" style="${ukryta ? 'opacity:.5;' : ''}">
+      <div style="min-width:0;">
+        <b>${escHtml(n.nazwa)}</b> <span style="color:#c54f7f; font-weight:700;">${n.koszt_pkt} pkt</span>${ukryta ? ' <span style="font-size:11px; color:#b45309;">(ukryta)</span>' : ''}
+        <div style="font-size:12px; color:#9ca3af;">${n.ilosc == null ? 'bez limitu' : 'limit: ' + n.ilosc}${n.oczekuje > 0 ? ' · czeka: ' + n.oczekuje : ''}${n.wydane > 0 ? ' · wydano: ' + n.wydane : ''}</div>
+      </div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujNagrode(${n.id})">✏️ Edytuj</button>
+        <button class="klubadm-btn" style="background:#f8fafc; color:#475569;" onclick="klubadm_statusNagrody(${n.id}, '${ukryta ? 'AKTYWNA' : 'UKRYTA'}')">${ukryta ? 'Pokaż' : 'Ukryj'}</button>
+        <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Przenieść nagrodę do archiwum?')) klubadm_statusNagrody(${n.id}, 'ARCHIWUM')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function klubadm_edytujNagrode(id) {
+  const n = klubadm_nagrodyCache.find(x => x.id === id);
+  if (!n) return;
+  document.getElementById('klubadm-n-id').value = n.id;
+  document.getElementById('klubadm-n-nazwa').value = n.nazwa;
+  document.getElementById('klubadm-n-koszt').value = n.koszt_pkt;
+  document.getElementById('klubadm-n-ilosc').value = n.ilosc == null ? '' : n.ilosc;
+  document.getElementById('klubadm-n-img').value = n.img_url || '';
+  document.getElementById('klubadm-n-opis').value = n.opis || '';
+  document.getElementById('klubadm-n-form-tytul').textContent = 'Edytuj nagrodę';
+  document.getElementById('klubadm-n-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-n-anuluj').style.display = 'inline-block';
+}
+function klubadm_resetNagroda() {
+  ['klubadm-n-id','klubadm-n-nazwa','klubadm-n-koszt','klubadm-n-ilosc','klubadm-n-img','klubadm-n-opis'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('klubadm-n-form-tytul').textContent = 'Dodaj nagrodę';
+  document.getElementById('klubadm-n-btn').textContent = '+ Dodaj nagrodę';
+  document.getElementById('klubadm-n-anuluj').style.display = 'none';
+}
+async function klubadm_zapiszNagrode() {
+  const d = await klubadm_apiPost({
+    action: 'loj_nagroda_zapisz',
+    id: document.getElementById('klubadm-n-id').value || null,
+    nazwa: document.getElementById('klubadm-n-nazwa').value.trim(),
+    koszt_pkt: document.getElementById('klubadm-n-koszt').value,
+    ilosc: document.getElementById('klubadm-n-ilosc').value,
+    img_url: document.getElementById('klubadm-n-img').value.trim(),
+    opis: document.getElementById('klubadm-n-opis').value.trim()
+  }).catch(() => null);
+  if (d && d.status === 'success') { klubadm_resetNagroda(); klubadm_zaladujNagrody(); }
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_statusNagrody(id, status) {
+  const d = await klubadm_apiPost({ action: 'loj_nagroda_status', id, status }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujNagrody();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Promocje ──
+let klubadm_promocjeCache = [];
+async function klubadm_zaladujPromocje() {
+  const box = document.getElementById('klubadm-p-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_promocje_admin').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  klubadm_promocjeCache = d.promocje || [];
+  if (!klubadm_promocjeCache.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Brak promocji — dodaj pierwszą powyżej.</div>'; return; }
+  const dataFmt = (x) => x ? String(x).slice(0, 10) : '';
+  box.innerHTML = klubadm_promocjeCache.map(p => {
+    const ukryta = p.status === 'UKRYTA';
+    const okres = (p.data_od || p.data_do) ? `${dataFmt(p.data_od) || '…'} – ${dataFmt(p.data_do) || '…'}` : 'bezterminowo';
+    return `<div class="klubadm-row" style="${ukryta ? 'opacity:.5;' : ''}">
+      <div style="min-width:0;">
+        ${p.promocja_dnia ? '🔥 ' : ''}<b>${escHtml(p.tytul)}</b>${ukryta ? ' <span style="font-size:11px; color:#b45309;">(ukryta)</span>' : ''}
+        <div style="font-size:12px; color:#9ca3af;">${escHtml(p.opis || '')} · ${okres}</div>
+      </div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_pushZPromocji(${p.id})">🔔 PUSH</button>
+        <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujPromocje(${p.id})">✏️ Edytuj</button>
+        <button class="klubadm-btn" style="background:#f8fafc; color:#475569;" onclick="klubadm_statusPromocji(${p.id}, '${ukryta ? 'AKTYWNA' : 'UKRYTA'}')">${ukryta ? 'Pokaż' : 'Ukryj'}</button>
+        <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Przenieść promocję do archiwum?')) klubadm_statusPromocji(${p.id}, 'ARCHIWUM')">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function klubadm_edytujPromocje(id) {
+  const p = klubadm_promocjeCache.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('klubadm-p-id').value = p.id;
+  document.getElementById('klubadm-p-tytul').value = p.tytul;
+  document.getElementById('klubadm-p-opis').value = p.opis || '';
+  document.getElementById('klubadm-p-img').value = p.img_url || '';
+  document.getElementById('klubadm-p-tresc').value = p.tresc || '';
+  document.getElementById('klubadm-p-od').value = p.data_od ? String(p.data_od).slice(0, 10) : '';
+  document.getElementById('klubadm-p-do').value = p.data_do ? String(p.data_do).slice(0, 10) : '';
+  document.getElementById('klubadm-p-dnia').checked = !!Number(p.promocja_dnia);
+  document.getElementById('klubadm-p-form-tytul').textContent = 'Edytuj promocję';
+  document.getElementById('klubadm-p-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-p-anuluj').style.display = 'inline-block';
+}
+function klubadm_resetPromocja() {
+  ['klubadm-p-id','klubadm-p-tytul','klubadm-p-opis','klubadm-p-img','klubadm-p-tresc','klubadm-p-od','klubadm-p-do'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('klubadm-p-dnia').checked = false;
+  document.getElementById('klubadm-p-form-tytul').textContent = 'Dodaj promocję';
+  document.getElementById('klubadm-p-btn').textContent = '+ Dodaj promocję';
+  document.getElementById('klubadm-p-anuluj').style.display = 'none';
+}
+async function klubadm_zapiszPromocje() {
+  const d = await klubadm_apiPost({
+    action: 'loj_promocja_zapisz',
+    id: document.getElementById('klubadm-p-id').value || null,
+    tytul: document.getElementById('klubadm-p-tytul').value.trim(),
+    opis: document.getElementById('klubadm-p-opis').value.trim(),
+    img_url: document.getElementById('klubadm-p-img').value.trim(),
+    tresc: document.getElementById('klubadm-p-tresc').value,
+    data_od: document.getElementById('klubadm-p-od').value,
+    data_do: document.getElementById('klubadm-p-do').value,
+    promocja_dnia: document.getElementById('klubadm-p-dnia').checked ? 1 : 0
+  }).catch(() => null);
+  if (d && d.status === 'success') { klubadm_resetPromocja(); klubadm_zaladujPromocje(); }
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_statusPromocji(id, status) {
+  const d = await klubadm_apiPost({ action: 'loj_promocja_status', id, status }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujPromocje();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+function klubadm_pushZPromocji(id) {
+  const p = klubadm_promocjeCache.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('klubadm-push-tytul').value = ('🔥 ' + p.tytul).slice(0, 100);
+  document.getElementById('klubadm-push-tresc').value = (p.opis || 'Sprawdź szczegóły w aplikacji!').slice(0, 300);
+  document.getElementById('klubadm-push-tytul').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function klubadm_wyslijPush() {
+  const tytul = document.getElementById('klubadm-push-tytul').value.trim();
+  const tresc = document.getElementById('klubadm-push-tresc').value.trim();
+  const status = document.getElementById('klubadm-push-status');
+  if (!tytul || !tresc) { status.textContent = 'Podaj tytuł i treść.'; return; }
+  if (!confirm('Wysłać powiadomienie push do wszystkich klientów z aplikacją?\n\n„' + tytul + '"\n' + tresc)) return;
+  const btn = document.getElementById('klubadm-push-btn');
+  btn.disabled = true; status.textContent = '⏳ Wysyłanie…';
+  const d = await klubadm_apiPost({ action: 'loj_push_wyslij', tytul, tresc }).catch(() => null);
+  btn.disabled = false;
+  status.textContent = (d && d.status === 'success')
+    ? `✅ Dostarczono ${d.dostarczono}/${d.wszystkich} subskrypcji.`
+    : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Odbiory + zgłoszenia ──
+async function klubadm_zaladujOdbiory() {
+  const boxO = document.getElementById('klubadm-odbiory-lista');
+  const boxZ = document.getElementById('klubadm-zgloszenia-lista');
+  if (!boxO || !boxZ) return;
+  const [dO, dZ] = await Promise.all([
+    klubadm_apiGet('loj_odbiory').catch(() => null),
+    klubadm_apiGet('loj_zgloszenia').catch(() => null)
+  ]);
+  let nowe = 0;
+  if (dO && dO.status === 'success') {
+    const odbiory = dO.odbiory || [];
+    const oczekuje = odbiory.filter(o => o.status === 'OCZEKUJE');
+    nowe += oczekuje.length;
+    const reszta = odbiory.filter(o => o.status !== 'OCZEKUJE').slice(0, 10);
+    const wiersz = (o, akcje) => `<div class="klubadm-row">
+      <div style="min-width:0;"><b>${escHtml(o.klient || ('Klient ' + o.id_klienta))}</b> · ${escHtml(o.nagroda_nazwa)} <span style="color:#c54f7f; font-weight:700;">${o.koszt_pkt} pkt</span>
+        <div style="font-size:12px; color:#9ca3af;">kod: <b style="letter-spacing:2px; color:#475569;">${escHtml(o.kod)}</b> · ${o.status !== 'OCZEKUJE' ? o.status + (o.wydal ? ' (' + escHtml(o.wydal) + ')' : '') : new Date(o.created_at).toLocaleDateString('pl-PL')}</div>
+      </div>${akcje}</div>`;
+    boxO.innerHTML = (oczekuje.length ? oczekuje.map(o => wiersz(o, `<div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e;" onclick="klubadm_rozstrzygnij(${o.id}, 'WYDANE')">✅ Wydaj</button>
+        <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Odrzucić ten odbiór? Punkty wrócą do klienta.')) klubadm_rozstrzygnij(${o.id}, 'ODRZUCONE')">Odrzuć</button>
+      </div>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak oczekujących odbiorów.</div>')
+      + (reszta.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio rozstrzygnięte</div>' + reszta.map(o => wiersz(o, '')).join('') : '');
+  }
+  if (dZ && dZ.status === 'success') {
+    const zgl = dZ.zgloszenia || [];
+    const noweZ = zgl.filter(z => z.status === 'NOWE');
+    nowe += noweZ.length;
+    const stare = zgl.filter(z => z.status !== 'NOWE').slice(0, 5);
+    const wierszZ = (z, akcja) => `<div class="klubadm-row">
+      <div style="min-width:0;"><b>${escHtml(z.klient || ('Klient ' + z.id_klienta))}</b>${z.telefon ? ' · 📞 ' + escHtml(z.telefon) : ''}
+        <div style="font-size:12px; color:#9ca3af;">„${escHtml(z.promocja_tytul)}" · ${new Date(z.created_at).toLocaleDateString('pl-PL')}${z.status !== 'NOWE' ? ' · obsłużone' + (z.obsluzyl ? ' (' + escHtml(z.obsluzyl) + ')' : '') : ''}</div>
+      </div>${akcja}</div>`;
+    boxZ.innerHTML = (noweZ.length ? noweZ.map(z => wierszZ(z, `<button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e; flex-shrink:0;" onclick="klubadm_obsluzZgloszenie(${z.id})">✅ Obsłużone</button>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych zgłoszeń.</div>')
+      + (stare.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stare.map(z => wierszZ(z, '')).join('') : '');
+  }
+  const badge = document.getElementById('klubadm-badge');
+  if (badge) { badge.textContent = nowe; badge.style.display = nowe > 0 ? 'inline-block' : 'none'; }
+}
+async function klubadm_rozstrzygnij(id, decyzja) {
+  const d = await klubadm_apiPost({ action: 'loj_odbior_rozstrzygnij', id, decyzja }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujOdbiory();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_obsluzZgloszenie(id) {
+  const d = await klubadm_apiPost({ action: 'loj_zgloszenie_obsluz', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujOdbiory();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Statystyki ──
+async function klubadm_zaladujStatystyki() {
+  const mies = document.getElementById('klubadm-st-mies');
+  const rok = document.getElementById('klubadm-st-rok');
+  if (!mies || !rok) return;
+  const d = await klubadm_apiGet('loj_statystyki', '&miesiac=' + mies.value + '&rok=' + rok.value).catch(() => null);
+  if (!d || d.status !== 'success') return;
+  document.getElementById('klubadm-st-przyznane').textContent = d.przyznane;
+  document.getElementById('klubadm-st-odjete').textContent = d.odjete;
+  document.getElementById('klubadm-st-klienci').textContent = d.klienci_aktywni_mc;
+  document.getElementById('klubadm-st-konta').textContent = d.konta_aktywne;
+  document.getElementById('klubadm-st-push').textContent = d.push_subskrypcje;
+  const top = document.getElementById('klubadm-st-top');
+  top.innerHTML = (d.top_klienci || []).length
+    ? d.top_klienci.map((k, i) => `<div class="klubadm-row"><span>${i + 1}. ${escHtml(k.klient || ('Klient ' + k.id_klienta))}</span><b style="color:#c54f7f;">${k.saldo} pkt</b></div>`).join('')
+    : '<div style="color:#9ca3af; font-size:13px;">Jeszcze brak danych.</div>';
+  const ng = document.getElementById('klubadm-st-nagrody');
+  ng.innerHTML = (d.nagrody_wydane_mc || []).length
+    ? d.nagrody_wydane_mc.map(n => `<div class="klubadm-row"><span>${escHtml(n.nagroda_nazwa)}</span><b>${n.n}×</b></div>`).join('')
+    : '<div style="color:#9ca3af; font-size:13px;">W tym miesiącu nic nie wydano.</div>';
 }
 
 /* ============================================================
