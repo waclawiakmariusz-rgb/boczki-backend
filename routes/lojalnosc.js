@@ -568,6 +568,7 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN img_url VARCHAR(500) DEFAULT ''`,
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN bonus_powitalny_pkt INT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Wnioski ADD COLUMN typ VARCHAR(20) DEFAULT 'KONTO'`,
+    `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN widoczna_dni INT DEFAULT 30`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -959,7 +960,7 @@ module.exports = (db) => {
       const kto = String(req.query.user_log || '').trim();
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslij_at, status,
+          `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, widoczna_dni, wyslij_at, status,
                   wyslano_at, odbiorcow, dostarczono, utworzyl, created_at
              FROM Lojalnosc_Kampanie WHERE tenant_id = ?
             ORDER BY (status = 'PLANOWANA') DESC, COALESCE(wyslano_at, wyslij_at) DESC LIMIT 50`,
@@ -1371,6 +1372,8 @@ module.exports = (db) => {
       const tresc = String(d.tresc || '').trim().slice(0, 300);
       const img = String(d.img_url || '').trim().slice(0, 500);
       const seg = normalizujSegment(d);
+      const widocznaDniRaw = parseInt(d.widoczna_dni, 10);
+      const widocznaDni = Number.isFinite(widocznaDniRaw) && widocznaDniRaw >= 1 && widocznaDniRaw <= 90 ? widocznaDniRaw : 30;
       let wyslijAt = String(d.wyslij_at || '').trim();
       if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
       if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
@@ -1384,11 +1387,11 @@ module.exports = (db) => {
         try {
           const teraz = !wyslijAt;
           const wynik = await q(
-            `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslij_at, status, utworzyl)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ${teraz ? 'NOW()' : '?'}, ?, ?)`,
+            `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, widoczna_dni, wyslij_at, status, utworzyl)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${teraz ? 'NOW()' : '?'}, ?, ?)`,
             teraz
-              ? [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, 'WYSYLANIE', kto.slice(0, 120)]
-              : [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, wyslijAt, 'PLANOWANA', kto.slice(0, 120)]
+              ? [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, widocznaDni, 'WYSYLANIE', kto.slice(0, 120)]
+              : [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, widocznaDni, wyslijAt, 'PLANOWANA', kto.slice(0, 120)]
           );
           if (!teraz) {
             zapiszLog(tenant_id, 'KLUB KAMPANIA ZAPLANOWANA', kto, `„${tytul}" na ${wyslijAt} [${opisSegmentu({ segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni })}]`);
@@ -1414,6 +1417,25 @@ module.exports = (db) => {
             if (err) return res.json({ status: 'error', message: err.message });
             if (!r.affectedRows) return res.json({ status: 'error', message: 'Tej kampanii nie da się już anulować.' });
             zapiszLog(tenant_id, 'KLUB KAMPANIA ANULOWANA', kto, `#${id}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_kampania_wycofaj') {
+      // Wycofanie WYSŁANEJ kampanii — znika ze skrzynek w apce natychmiast.
+      // Pushów, które już dotarły na telefony, cofnąć się nie da.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak kampanii.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Kampanie SET status = 'WYCOFANA' WHERE tenant_id = ? AND id = ? AND status = 'WYSLANA'`,
+          [tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Można wycofać tylko wysłaną kampanię.' });
+            zapiszLog(tenant_id, 'KLUB KAMPANIA WYCOFANA', kto, `#${id} — usunięta ze skrzynek w apce`);
             return res.json({ status: 'success' });
           }
         );
@@ -1577,7 +1599,8 @@ module.exports = (db) => {
       const kampanieRows = await q(
         `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslano_at
            FROM Lojalnosc_Kampanie
-          WHERE tenant_id = ? AND status = 'WYSLANA' AND wyslano_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          WHERE tenant_id = ? AND status = 'WYSLANA'
+            AND wyslano_at >= DATE_SUB(NOW(), INTERVAL COALESCE(widoczna_dni, 30) DAY)
           ORDER BY wyslano_at DESC LIMIT 10`,
         [p.t]
       ).catch(() => []);

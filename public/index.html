@@ -8402,6 +8402,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="teraz" checked style="accent-color:#c54f7f;"> Wyślij teraz</label>
                             <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="plan" style="accent-color:#c54f7f;"> Zaplanuj:</label>
                             <input id="klubadm-k-termin" type="datetime-local" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" onfocus="document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;">
+                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Widoczna w apce przez <input id="klubadm-k-widoczna" type="number" min="1" max="90" value="30" style="width:64px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;"> dni</label>
                             <button onclick="klubadm_zapiszKampanie()" id="klubadm-k-btn" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">📬 Wyślij / zaplanuj</button>
                         </div>
                         <div id="klubadm-k-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
@@ -31098,18 +31099,24 @@ async function klubadm_zaladujKampanie() {
   if (status && !d.push_skonfigurowany) status.textContent = 'ℹ️ Push nieskonfigurowany (brak kluczy VAPID) — kampanie dotrą tylko jako wiadomości w apce.';
   const kampanie = d.kampanie || [];
   if (!kampanie.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Jeszcze żadnej kampanii.</div>'; return; }
-  const KOLOR = { PLANOWANA: '#b45309', WYSLANA: '#0f766e', ANULOWANA: '#9ca3af', BLAD: '#dc2626', WYSYLANIE: '#7c3aed' };
+  const KOLOR = { PLANOWANA: '#b45309', WYSLANA: '#0f766e', ANULOWANA: '#9ca3af', WYCOFANA: '#9ca3af', BLAD: '#dc2626', WYSYLANIE: '#7c3aed' };
   box.innerHTML = kampanie.map(k => {
     const kiedy = k.status === 'PLANOWANA'
       ? '🕐 ' + new Date(k.wyslij_at).toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
       : (k.wyslano_at ? new Date(k.wyslano_at).toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+    let widocznaTxt = '';
+    if (k.status === 'WYSLANA' && k.wyslano_at) {
+      const koniec = new Date(new Date(k.wyslano_at).getTime() + (k.widoczna_dni || 30) * 24 * 3600 * 1000);
+      widocznaTxt = ' · w apce do ' + koniec.toLocaleDateString('pl-PL');
+    }
     return `<div class="klubadm-row">
       <div style="min-width:0;">
         <b>${escHtml(k.tytul)}</b> <span style="color:${KOLOR[k.status] || '#475569'}; font-size:11.5px; font-weight:700;">${k.status}</span>
         <div style="font-size:12px; color:#9ca3af;">${escHtml(k.tresc)}</div>
-        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow : ''}</div>
+        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow : ''}${widocznaTxt}</div>
       </div>
       ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
+      ${k.status === 'WYSLANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="if(confirm('Wycofać kampanię? Zniknie z aplikacji u wszystkich klientów (wysłanych pushy nie da się cofnąć).')) klubadm_wycofajKampanie(${k.id})">Wycofaj</button>` : ''}
     </div>`;
   }).join('');
 }
@@ -31129,6 +31136,7 @@ async function klubadm_zapiszKampanie() {
     action: 'loj_kampania_zapisz', tytul, tresc,
     img_url: document.getElementById('klubadm-k-img').value.trim(),
     segment_typ: seg.segment_typ, segment_wartosc: seg.segment_wartosc, segment_dni: seg.segment_dni,
+    widoczna_dni: document.getElementById('klubadm-k-widoczna').value,
     wyslij_at: plan ? termin : ''
   }).catch(() => null);
   btn.disabled = false;
@@ -31148,6 +31156,11 @@ async function klubadm_zapiszKampanie() {
 async function klubadm_anulujKampanie(id) {
   if (!confirm('Anulować zaplanowaną kampanię?')) return;
   const d = await klubadm_apiPost({ action: 'loj_kampania_anuluj', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujKampanie();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_wycofajKampanie(id) {
+  const d = await klubadm_apiPost({ action: 'loj_kampania_wycofaj', id }).catch(() => null);
   if (d && d.status === 'success') klubadm_zaladujKampanie();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
 }

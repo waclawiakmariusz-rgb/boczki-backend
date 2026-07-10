@@ -826,6 +826,33 @@ describe('POST /api/lojalnosc — kampanie', () => {
         expect(res.body.message).toMatch(/uprawnień/i);
     });
 
+    test('widoczność w apce trafia do zapisu (dni 1-90, default 30)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1, insertId: 7 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ ...valid, tenant_id: 't-loj-km8', wyslij_at: '2026-08-01T10:00', widoczna_dni: 7 });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Kampanie/.test(c[0]));
+        expect(ins[1]).toContain(7);
+        const db2 = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1, insertId: 8 } });
+        await request(buildApp(db2)).post('/api/lojalnosc')
+            .send({ ...valid, tenant_id: 't-loj-km9', wyslij_at: '2026-08-01T10:00', widoczna_dni: 500 });
+        const ins2 = db2.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Kampanie/.test(c[0]));
+        expect(ins2[1]).toContain(30); // poza zakresem → default
+    });
+
+    test('wycofanie WYSLANEJ usuwa ją ze skrzynek; nie-wysłanej się nie da', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_wycofaj', tenant_id: 't-loj-kw1', id: 5, user_log: 'Szefowa' });
+        expect(r1.body.status).toBe('success');
+        const upd = dbOk.query.mock.calls.find(c => /SET status = 'WYCOFANA'/.test(c[0]));
+        expect(upd[0]).toMatch(/status = 'WYSLANA'/); // tylko wysłane
+        const dbNie = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_wycofaj', tenant_id: 't-loj-kw2', id: 5, user_log: 'Szefowa' });
+        expect(r2.body.status).toBe('error');
+    });
+
     test('anulowanie działa tylko dla PLANOWANEJ', async () => {
         const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
         const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
