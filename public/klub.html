@@ -197,6 +197,10 @@
       <h3>Dla Ciebie</h3>
       <div id="m-promocje"></div>
     </div>
+    <div class="sekcja" id="sek-wiadomosci" style="display:none;">
+      <h3>📬 Wiadomości od salonu</h3>
+      <div id="m-wiadomosci"></div>
+    </div>
     <div class="sekcja" id="sek-progress" style="display:none;">
       <h3>Najbliższa nagroda</h3>
       <div class="progress-box">
@@ -482,6 +486,7 @@ function renderAll() {
   const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
   document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
   renderPromocje(d.promocje || []);
+  renderWiadomosci(d.wiadomosci || []);
   renderNagrody(d.nagrody || [], d.saldo_dostepne != null ? d.saldo_dostepne : (d.saldo || 0));
   renderKody(d.odbiory || []);
   renderHistoria(d.wpisy || []);
@@ -530,6 +535,25 @@ async function biore() {
     else toast(d.message || 'Nie udało się wysłać zgłoszenia.');
   } catch (e) { toast('Błąd połączenia.'); }
   finally { btn.disabled = false; }
+}
+
+// ── Wiadomości od salonu (kampanie — kanał gwarantowany, bez zgód i pushа) ──
+function renderWiadomosci(wiadomosci) {
+  const sek = document.getElementById('sek-wiadomosci');
+  const box = document.getElementById('m-wiadomosci');
+  if (!wiadomosci.length) { sek.style.display = 'none'; return; }
+  sek.style.display = 'block';
+  box.innerHTML = wiadomosci.map(w => {
+    const dt = w.data ? new Date(w.data) : null;
+    const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) : '';
+    return '<div style="background:#fff; border:1px solid var(--border-soft); border-radius:18px; padding:14px 16px; margin-bottom:10px;">'
+      + '<div style="display:flex; justify-content:space-between; gap:8px; align-items:baseline;">'
+      + '<b style="font-size:14px;">' + esc(w.tytul) + '</b>'
+      + '<span style="font-size:11.5px; color:var(--text-muted); flex-shrink:0;">' + dstr + '</span>'
+      + '</div>'
+      + '<div style="font-size:13px; color:#4a5261; margin-top:4px; line-height:1.5;">' + esc(w.tresc) + '</div>'
+      + '</div>';
+  }).join('');
 }
 
 // ── Nagrody ──

@@ -88,6 +88,58 @@ try {
 }
 function vapidPublic() { return webpush ? clean(process.env.VAPID_PUBLIC_KEY) : ''; }
 
+// ─── Segmenty kampanii/promocji ───────────────────────────────
+// WSZYSCY | PUNKTY_MIN (saldo >= wartość) | ZABIEG (zabieg/typ w ostatnich N dniach)
+// | BRAK_WIZYTY (żadnej sprzedaży od N dni — odzyskiwanie klientek)
+const SEGMENT_TYPY = new Set(['WSZYSCY', 'PUNKTY_MIN', 'ZABIEG', 'BRAK_WIZYTY']);
+
+function normalizujSegment(d) {
+  const typ = String(d.segment_typ || 'WSZYSCY').toUpperCase().trim();
+  if (!SEGMENT_TYPY.has(typ)) return null;
+  const wartosc = String(d.segment_wartosc || '').trim().slice(0, 160);
+  const dni = parseInt(d.segment_dni, 10);
+  if (typ === 'PUNKTY_MIN' && !(parseInt(wartosc, 10) >= 1)) return null;
+  if (typ === 'ZABIEG' && !wartosc) return null;
+  const dniOk = Number.isFinite(dni) && dni >= 1 && dni <= 730 ? dni : 90;
+  return { typ, wartosc, dni: (typ === 'ZABIEG' || typ === 'BRAK_WIZYTY') ? dniOk : null };
+}
+
+// Ocena segmentu po stronie JS — dla /klub/me (fakty klienta pobrane raz).
+// fakty: { saldo, sprzedaze: [{zabieg, typ_zabiegu, data}], teraz: Date }
+function pasujeSegment(seg, fakty) {
+  const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
+  if (typ === 'WSZYSCY') return true;
+  const teraz = (fakty && fakty.teraz) || new Date();
+  if (typ === 'PUNKTY_MIN') {
+    return (Number(fakty && fakty.saldo) || 0) >= (parseInt(seg.segment_wartosc, 10) || 0);
+  }
+  const dni = parseInt(seg.segment_dni, 10) || 90;
+  const cutoff = teraz.getTime() - dni * 24 * 60 * 60 * 1000;
+  const sprzedaze = (fakty && fakty.sprzedaze) || [];
+  if (typ === 'ZABIEG') {
+    const szukane = String(seg.segment_wartosc || '').toLowerCase().trim();
+    if (!szukane) return false;
+    return sprzedaze.some(s => {
+      const kiedy = new Date(s.data).getTime();
+      if (!(kiedy >= cutoff)) return false;
+      return String(s.typ_zabiegu || '').toLowerCase().trim() === szukane
+        || String(s.zabieg || '').toLowerCase().includes(szukane);
+    });
+  }
+  if (typ === 'BRAK_WIZYTY') {
+    return !sprzedaze.some(s => new Date(s.data).getTime() >= cutoff);
+  }
+  return false;
+}
+
+function opisSegmentu(seg) {
+  const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
+  if (typ === 'PUNKTY_MIN') return `saldo >= ${seg.segment_wartosc} pkt`;
+  if (typ === 'ZABIEG') return `po zabiegu "${seg.segment_wartosc}" (${seg.segment_dni || 90} dni)`;
+  if (typ === 'BRAK_WIZYTY') return `bez wizyty od ${seg.segment_dni || 90} dni`;
+  return 'wszyscy klienci';
+}
+
 // Cache flagi feature per tenant — hook odpala się przy KAŻDEJ sprzedaży,
 // nie chcemy dodatkowego SELECT-a na każdy paragon salonu bez Klubu.
 const featureCache = new Map(); // tenant_id → { t, on }
@@ -407,6 +459,36 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Push:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Kampanie (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      tytul VARCHAR(100) NOT NULL,
+      tresc VARCHAR(300) NOT NULL,
+      segment_typ VARCHAR(20) DEFAULT 'WSZYSCY',
+      segment_wartosc VARCHAR(160) DEFAULT '',
+      segment_dni INT NULL,
+      wyslij_at DATETIME NOT NULL,
+      status VARCHAR(20) DEFAULT 'PLANOWANA',
+      wyslano_at DATETIME NULL,
+      odbiorcow INT DEFAULT 0,
+      dostarczono INT DEFAULT 0,
+      utworzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tenant_status (tenant_id, status),
+      KEY idx_due (status, wyslij_at)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie:', e.message);
+  });
+  // Targetowanie promocji + auto-push w dniu startu (ALTER-y idempotentne)
+  [
+    `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_typ VARCHAR(20) DEFAULT 'WSZYSCY'`,
+    `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_wartosc VARCHAR(160) DEFAULT ''`,
+    `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_dni INT NULL`,
+    `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_przy_starcie TINYINT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_wyslany TINYINT DEFAULT 0`,
+  ].forEach(sql => db.query(sql, (e) => {
+    if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER Promocje:', e.message);
+  }));
   // status UKRYTY — inne salony nie widzą dodatku (pilot u Boczków), jak platnosc_link
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
       VALUES (?, ?, ?, 0, 'UKRYTY', 12)
@@ -459,6 +541,130 @@ module.exports = (db) => {
       }
       next();
     });
+  }
+
+  // ─── Kampanie: segmenty po stronie SQL (do wysyłki) ─────────
+  // Zwraca listę id_klienta pasujących do segmentu, albo null = wszyscy.
+  async function segmentIds(tenant_id, seg) {
+    const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
+    if (typ === 'WSZYSCY') return null;
+    if (typ === 'PUNKTY_MIN') {
+      const prog = parseInt(seg.segment_wartosc, 10) || 0;
+      const rows = await q(
+        `SELECT id_klienta FROM Lojalnosc_Punkty WHERE tenant_id = ? GROUP BY id_klienta HAVING SUM(zmiana) >= ?`,
+        [tenant_id, prog]
+      );
+      return (Array.isArray(rows) ? rows : []).map(r => String(r.id_klienta));
+    }
+    const dni = parseInt(seg.segment_dni, 10) || 90;
+    if (typ === 'ZABIEG') {
+      const w = String(seg.segment_wartosc || '').trim();
+      const rows = await q(
+        `SELECT DISTINCT id_klienta FROM Sprzedaz
+          WHERE tenant_id = ? AND COALESCE(status,'') != 'USUNIĘTY' AND kwota > 0 AND COALESCE(id_klienta,'') != ''
+            AND data_sprzedazy >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            AND (LOWER(COALESCE(typ_zabiegu,'')) = LOWER(?) OR zabieg LIKE CONCAT('%', ?, '%'))`,
+        [tenant_id, dni, w, w]
+      );
+      return (Array.isArray(rows) ? rows : []).map(r => String(r.id_klienta));
+    }
+    if (typ === 'BRAK_WIZYTY') {
+      // Tylko klienci z kontem Klubu (do nich w ogóle możemy dotrzeć)
+      const rows = await q(
+        `SELECT K.id_klienta FROM Lojalnosc_Konta K
+          WHERE K.tenant_id = ? AND K.status = 'AKTYWNE'
+            AND NOT EXISTS (
+              SELECT 1 FROM Sprzedaz S
+               WHERE S.tenant_id = K.tenant_id AND S.id_klienta = K.id_klienta
+                 AND COALESCE(S.status,'') != 'USUNIĘTY' AND S.kwota > 0
+                 AND S.data_sprzedazy >= DATE_SUB(NOW(), INTERVAL ? DAY))`,
+        [tenant_id, dni]
+      );
+      return (Array.isArray(rows) ? rows : []).map(r => String(r.id_klienta));
+    }
+    return [];
+  }
+
+  // Wysyłka push do klientów (idKlienci=null → wszyscy subskrybenci salonu).
+  // Bez kluczy VAPID zwraca 0/0 — kampania i tak dociera skrzynką w apce.
+  async function wyslijPushDoKlientow(tenant_id, idKlienci, tytul, tresc) {
+    const subs = await q(
+      `SELECT id, id_klienta, endpoint, p256dh, auth FROM Lojalnosc_Push WHERE tenant_id = ?`,
+      [tenant_id]
+    ).catch(() => []);
+    const cel = (Array.isArray(subs) ? subs : []).filter(s =>
+      idKlienci === null || idKlienci.includes(String(s.id_klienta)));
+    if (!webpush || !cel.length) return { dostarczono: 0, subskrypcji: cel.length };
+    const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html' });
+    let ok = 0;
+    await Promise.all(cel.map(s =>
+      webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
+        .then(() => { ok++; })
+        .catch(e2 => {
+          if (e2 && (e2.statusCode === 404 || e2.statusCode === 410)) {
+            db.query(`DELETE FROM Lojalnosc_Push WHERE id = ?`, [s.id], () => {});
+          }
+        })
+    ));
+    return { dostarczono: ok, subskrypcji: cel.length };
+  }
+
+  // Wykonanie kampanii (już ZACLAIMOWANEJ — status WYSYLANIE).
+  async function wykonajKampanie(k) {
+    try {
+      const ids = await segmentIds(k.tenant_id, k);
+      const odbiorcow = ids === null ? -1 : ids.length; // -1 = wszyscy (liczbę pokaże liczba subskrypcji)
+      const wynik = await wyslijPushDoKlientow(k.tenant_id, ids, k.tytul, k.tresc);
+      await q(
+        `UPDATE Lojalnosc_Kampanie SET status = 'WYSLANA', wyslano_at = NOW(), odbiorcow = ?, dostarczono = ? WHERE id = ?`,
+        [odbiorcow === -1 ? wynik.subskrypcji : odbiorcow, wynik.dostarczono, k.id]
+      );
+      zapiszLog(k.tenant_id, 'KLUB KAMPANIA', k.utworzyl || 'System',
+        `„${k.tytul}" [${opisSegmentu({ segment_typ: k.segment_typ, segment_wartosc: k.segment_wartosc, segment_dni: k.segment_dni })}] — push ${wynik.dostarczono}/${wynik.subskrypcji}, widoczna w apce 30 dni`);
+      return wynik;
+    } catch (e) {
+      console.error('[lojalnosc] wykonajKampanie:', e.message);
+      await q(`UPDATE Lojalnosc_Kampanie SET status = 'BLAD' WHERE id = ?`, [k.id]).catch(() => {});
+      return { dostarczono: 0, subskrypcji: 0 };
+    }
+  }
+
+  // ─── Scheduler (co 60 s): zaplanowane kampanie + auto-push promocji w dniu startu.
+  // Baza jest WSPÓLNA dla dev i prod (dwie instancje Node!) — dlatego każdą robotę
+  // najpierw atomowo claimujemy UPDATE-em; wygrywa jedna instancja.
+  async function tickHarmonogramu() {
+    try {
+      const due = await q(
+        `SELECT * FROM Lojalnosc_Kampanie WHERE status = 'PLANOWANA' AND wyslij_at <= NOW() LIMIT 20`, []
+      ).catch(() => []);
+      for (const k of (Array.isArray(due) ? due : [])) {
+        const r = await q(
+          `UPDATE Lojalnosc_Kampanie SET status = 'WYSYLANIE' WHERE id = ? AND status = 'PLANOWANA'`, [k.id]
+        ).catch(() => null);
+        if (r && r.affectedRows) await wykonajKampanie(k);
+      }
+      const promocje = await q(
+        `SELECT id, tenant_id, tytul, opis, segment_typ, segment_wartosc, segment_dni FROM Lojalnosc_Promocje
+          WHERE push_przy_starcie = 1 AND push_wyslany = 0 AND status = 'AKTYWNA'
+            AND (data_od IS NULL OR data_od <= CURDATE()) LIMIT 20`, []
+      ).catch(() => []);
+      for (const p of (Array.isArray(promocje) ? promocje : [])) {
+        const r = await q(
+          `UPDATE Lojalnosc_Promocje SET push_wyslany = 1 WHERE id = ? AND push_wyslany = 0`, [p.id]
+        ).catch(() => null);
+        if (!r || !r.affectedRows) continue;
+        const ids = await segmentIds(p.tenant_id, p).catch(() => []);
+        const wynik = await wyslijPushDoKlientow(p.tenant_id, ids, '🔥 ' + p.tytul, p.opis || 'Sprawdź szczegóły w aplikacji!');
+        zapiszLog(p.tenant_id, 'KLUB PUSH PROMOCJI', 'System', `Auto-push startu „${p.tytul}" — ${wynik.dostarczono}/${wynik.subskrypcji}`);
+      }
+    } catch (e) { console.error('[lojalnosc] tickHarmonogramu:', e.message); }
+  }
+  // W testach (jest) NIE startujemy pętli — trzymałaby proces przy życiu.
+  if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') {
+    const timer = setInterval(tickHarmonogramu, 60 * 1000);
+    if (timer.unref) timer.unref();
+    const pierwszy = setTimeout(tickHarmonogramu, 5000); // pierwszy przebieg ~5 s po starcie
+    if (pierwszy.unref) pierwszy.unref();
   }
 
   // ─── GET /lojalnosc ───
@@ -644,6 +850,22 @@ module.exports = (db) => {
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
+    } else if (action === 'loj_kampanie') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslij_at, status,
+                  wyslano_at, odbiorcow, dostarczono, utworzyl, created_at
+             FROM Lojalnosc_Kampanie WHERE tenant_id = ?
+            ORDER BY (status = 'PLANOWANA') DESC, COALESCE(wyslano_at, wyslij_at) DESC LIMIT 50`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', kampanie: Array.isArray(rows) ? rows : [], push_skonfigurowany: webpush ? 1 : 0 });
+          }
+        );
+      });
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja GET lojalnosc: ' + action });
     }
@@ -815,30 +1037,36 @@ module.exports = (db) => {
       const dataDo = String(d.data_do || '').trim() || null;
       const dnia = d.promocja_dnia ? 1 : 0;
       const sort = parseInt(d.sortowanie, 10) || 100;
+      const pushStart = d.push_przy_starcie ? 1 : 0;
+      const seg = normalizujSegment(d);
       const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
       if (!tytul) return res.json({ status: 'error', message: 'Podaj tytuł promocji.' });
+      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
       if ((dataOd && !DATA_RE.test(dataOd)) || (dataDo && !DATA_RE.test(dataDo))) return res.json({ status: 'error', message: 'Daty w formacie RRRR-MM-DD.' });
       if (img && !/^https?:\/\//.test(img)) return res.json({ status: 'error', message: 'Zdjęcie: podaj pełny adres URL (https://...).' });
       maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
         const id = parseInt(d.id, 10);
         if (id) {
           db.query(
-            `UPDATE Lojalnosc_Promocje SET tytul = ?, opis = ?, tresc = ?, img_url = ?, data_od = ?, data_do = ?, promocja_dnia = ?, sortowanie = ? WHERE tenant_id = ? AND id = ?`,
-            [tytul, opis, tresc, img, dataOd, dataDo, dnia, sort, tenant_id, id],
+            `UPDATE Lojalnosc_Promocje SET tytul = ?, opis = ?, tresc = ?, img_url = ?, data_od = ?, data_do = ?, promocja_dnia = ?, sortowanie = ?,
+                    segment_typ = ?, segment_wartosc = ?, segment_dni = ?, push_przy_starcie = ? WHERE tenant_id = ? AND id = ?`,
+            [tytul, opis, tresc, img, dataOd, dataDo, dnia, sort, seg.typ, seg.wartosc, seg.dni, pushStart, tenant_id, id],
             (err, r) => {
               if (err) return res.json({ status: 'error', message: err.message });
               if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono promocji.' });
-              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Edycja: ${tytul}`);
+              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Edycja: ${tytul} [${opisSegmentu({ segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni })}]`);
               return res.json({ status: 'success' });
             }
           );
         } else {
           db.query(
-            `INSERT INTO Lojalnosc_Promocje (tenant_id, tytul, opis, tresc, img_url, data_od, data_do, promocja_dnia, sortowanie, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNA')`,
-            [tenant_id, tytul, opis, tresc, img, dataOd, dataDo, dnia, sort],
+            `INSERT INTO Lojalnosc_Promocje (tenant_id, tytul, opis, tresc, img_url, data_od, data_do, promocja_dnia, sortowanie, status,
+                    segment_typ, segment_wartosc, segment_dni, push_przy_starcie)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNA', ?, ?, ?, ?)`,
+            [tenant_id, tytul, opis, tresc, img, dataOd, dataDo, dnia, sort, seg.typ, seg.wartosc, seg.dni, pushStart],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
-              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Dodano: ${tytul}${dnia ? ' [promocja dnia]' : ''}`);
+              zapiszLog(tenant_id, 'KLUB PROMOCJA', kto, `Dodano: ${tytul}${dnia ? ' [promocja dnia]' : ''}${pushStart ? ' [auto-push przy starcie]' : ''} [${opisSegmentu({ segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni })}]`);
               return res.json({ status: 'success' });
             }
           );
@@ -953,6 +1181,60 @@ module.exports = (db) => {
           }
         );
       }));
+
+    } else if (action === 'loj_kampania_zapisz') {
+      // Kampania = push (jeśli skonfigurowany) + wiadomość w apce przez 30 dni.
+      // Bez wyslij_at → wykonanie od razu; z terminem → PLANOWANA (scheduler co 60 s).
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const tytul = String(d.tytul || '').trim().slice(0, 100);
+      const tresc = String(d.tresc || '').trim().slice(0, 300);
+      const seg = normalizujSegment(d);
+      let wyslijAt = String(d.wyslij_at || '').trim();
+      if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
+      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
+      if (wyslijAt) {
+        const m = wyslijAt.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+        if (!m) return res.json({ status: 'error', message: 'Termin wysyłki w formacie data + godzina.' });
+        wyslijAt = `${m[1]} ${m[2]}:00`;
+      }
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const teraz = !wyslijAt;
+          const wynik = await q(
+            `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslij_at, status, utworzyl)
+             VALUES (?, ?, ?, ?, ?, ?, ${teraz ? 'NOW()' : '?'}, ?, ?)`,
+            teraz
+              ? [tenant_id, tytul, tresc, seg.typ, seg.wartosc, seg.dni, 'WYSYLANIE', kto.slice(0, 120)]
+              : [tenant_id, tytul, tresc, seg.typ, seg.wartosc, seg.dni, wyslijAt, 'PLANOWANA', kto.slice(0, 120)]
+          );
+          if (!teraz) {
+            zapiszLog(tenant_id, 'KLUB KAMPANIA ZAPLANOWANA', kto, `„${tytul}" na ${wyslijAt} [${opisSegmentu({ segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni })}]`);
+            return res.json({ status: 'success', zaplanowana: 1, wyslij_at: wyslijAt });
+          }
+          const rezultat = await wykonajKampanie({
+            id: wynik.insertId, tenant_id, tytul, tresc,
+            segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni, utworzyl: kto
+          });
+          return res.json({ status: 'success', dostarczono: rezultat.dostarczono, subskrypcji: rezultat.subskrypcji });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      }));
+
+    } else if (action === 'loj_kampania_anuluj') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak kampanii.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Kampanie SET status = 'ANULOWANA' WHERE tenant_id = ? AND id = ? AND status = 'PLANOWANA'`,
+          [tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Tej kampanii nie da się już anulować.' });
+            zapiszLog(tenant_id, 'KLUB KAMPANIA ANULOWANA', kto, `#${id}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja POST lojalnosc: ' + action });
@@ -1086,9 +1368,10 @@ module.exports = (db) => {
           ORDER BY id DESC LIMIT 10`,
         [p.t, p.k]
       ).catch(() => []);
-      // Faza 4: aktywne promocje w oknie dat
+      // Faza 4: aktywne promocje w oknie dat (z targetowaniem — filtr niżej)
       const promocjeRows = await q(
-        `SELECT id, tytul, opis, tresc, img_url, promocja_dnia, data_od, data_do
+        `SELECT id, tytul, opis, tresc, img_url, promocja_dnia, data_od, data_do,
+                segment_typ, segment_wartosc, segment_dni
            FROM Lojalnosc_Promocje
           WHERE tenant_id = ? AND status = 'AKTYWNA'
             AND (data_od IS NULL OR data_od <= CURDATE())
@@ -1098,6 +1381,23 @@ module.exports = (db) => {
       ).catch(() => []);
       const saldo = Number((Array.isArray(sRows) && sRows[0] || {}).saldo) || 0;
       const zarezerwowane = Number((Array.isArray(rezRows) && rezRows[0] || {}).rez) || 0;
+      // Kampanie: fakty klienta pobrane RAZ (sprzedaże 365 dni) → ocena segmentów w JS.
+      // Ten sam filtr działa dla targetowanych promocji i skrzynki wiadomości.
+      const faktySprzedaze = await q(
+        `SELECT zabieg, typ_zabiegu, data_sprzedazy AS data FROM Sprzedaz
+          WHERE tenant_id = ? AND id_klienta = ? AND COALESCE(status,'') != 'USUNIĘTY' AND kwota > 0
+            AND data_sprzedazy >= DATE_SUB(NOW(), INTERVAL 365 DAY)
+          ORDER BY data_sprzedazy DESC LIMIT 300`,
+        [p.t, p.k]
+      ).catch(() => []);
+      const fakty = { saldo, sprzedaze: Array.isArray(faktySprzedaze) ? faktySprzedaze : [], teraz: new Date() };
+      const kampanieRows = await q(
+        `SELECT id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslano_at
+           FROM Lojalnosc_Kampanie
+          WHERE tenant_id = ? AND status = 'WYSLANA' AND wyslano_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+          ORDER BY wyslano_at DESC LIMIT 10`,
+        [p.t]
+      ).catch(() => []);
       const odp = {
         status: 'success',
         imie: String(klient.imie_nazwisko || '').split(' ')[0] || '',
@@ -1121,11 +1421,16 @@ module.exports = (db) => {
           id: o.id, nagroda: o.nagroda_nazwa, koszt_pkt: Number(o.koszt_pkt) || 0,
           kod: o.kod, status: o.status, data: o.created_at
         })),
-        promocje: (Array.isArray(promocjeRows) ? promocjeRows : []).map(pr => ({
-          id: pr.id, tytul: pr.tytul, opis: pr.opis || '', tresc: pr.tresc || '',
-          img_url: pr.img_url || '', promocja_dnia: Number(pr.promocja_dnia) ? 1 : 0,
-          data_do: pr.data_do
-        })),
+        promocje: (Array.isArray(promocjeRows) ? promocjeRows : [])
+          .filter(pr => pasujeSegment(pr, fakty))
+          .map(pr => ({
+            id: pr.id, tytul: pr.tytul, opis: pr.opis || '', tresc: pr.tresc || '',
+            img_url: pr.img_url || '', promocja_dnia: Number(pr.promocja_dnia) ? 1 : 0,
+            data_do: pr.data_do
+          })),
+        wiadomosci: (Array.isArray(kampanieRows) ? kampanieRows : [])
+          .filter(k => pasujeSegment(k, fakty))
+          .map(k => ({ id: k.id, tytul: k.tytul, tresc: k.tresc, data: k.wyslano_at })),
         push_vapid: vapidPublic(),
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1
@@ -1262,3 +1567,5 @@ module.exports.wyczyscCacheLoj = wyczyscCacheLoj;
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.makeKlubToken = makeKlubToken;   // testy
 module.exports.normalizujTelefon = normalizujTelefon;
+module.exports.pasujeSegment = pasujeSegment;       // testy
+module.exports.normalizujSegment = normalizujSegment;

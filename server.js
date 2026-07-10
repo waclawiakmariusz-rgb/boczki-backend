@@ -482,6 +482,7 @@ app.get('/api', (req, res) => {
         'loj_odbiory': '/api/lojalnosc?action=loj_odbiory&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_zgloszenia': '/api/lojalnosc?action=loj_zgloszenia&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_statystyki': '/api/lojalnosc?action=loj_statystyki&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || '') + (req.query.rok ? '&rok=' + encodeURIComponent(req.query.rok) : '') + (req.query.miesiac ? '&miesiac=' + encodeURIComponent(req.query.miesiac) : ''),
+        'loj_kampanie': '/api/lojalnosc?action=loj_kampanie&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
     };
 
     if (getActions[action]) {
@@ -555,7 +556,8 @@ app.post('/api', (req, res) => {
     const zgodyActions = ['zgoda_utworz', 'zgoda_anuluj', 'zgody_regulamin_zapisz'];
     const lojalnoscActions = ['loj_punkty_reczne', 'loj_ustawienia_zapisz', 'loj_aktywacja_token',
         'loj_nagroda_zapisz', 'loj_nagroda_status', 'loj_promocja_zapisz', 'loj_promocja_status',
-        'loj_odbior_rozstrzygnij', 'loj_zgloszenie_obsluz', 'loj_push_wyslij'];
+        'loj_odbior_rozstrzygnij', 'loj_zgloszenie_obsluz', 'loj_push_wyslij',
+        'loj_kampania_zapisz', 'loj_kampania_anuluj'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';

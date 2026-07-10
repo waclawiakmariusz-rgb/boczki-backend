@@ -8270,6 +8270,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="klubadm-tab klubadm-tab-active" data-kt="ustawienia" onclick="klubadm_tab('ustawienia', this)">⚙️ Ustawienia</button>
                     <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">🎁 Nagrody</button>
                     <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">📣 Promocje</button>
+                    <button class="klubadm-tab" data-kt="kampanie" onclick="klubadm_tab('kampanie', this)">📬 Kampanie</button>
                     <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">🧾 Odbiory i zgłoszenia <span id="klubadm-badge" style="display:none; background:#dc2626; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px;"></span></button>
                     <button class="klubadm-tab" data-kt="statystyki" onclick="klubadm_tab('statystyki', this)">📊 Statystyki</button>
                 </div>
@@ -8324,6 +8325,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label style="font-size:12.5px; color:#475569; font-weight:600;">Do: <input id="klubadm-p-do" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
                             <label style="font-size:13px; color:#b45309; font-weight:700; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-dnia" type="checkbox" style="width:17px; height:17px; accent-color:#c54f7f;"> 🔥 Promocja z przyciskiem „BIORĘ"</label>
                         </div>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:10px;">
+                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Kto widzi:</span>
+                            <select id="klubadm-seg-typ-p" onchange="klubadm_segPola('p')" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                                <option value="WSZYSCY">Wszyscy klienci</option>
+                                <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
+                                <option value="ZABIEG">Po zabiegu …</option>
+                                <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                            </select>
+                            <input id="klubadm-seg-wart-p" style="display:none; width:180px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                            <input id="klubadm-seg-dni-p" type="number" min="1" max="730" value="90" style="display:none; width:90px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" title="okno dni">
+                            <label style="font-size:13px; color:#7c3aed; font-weight:700; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-pushstart" type="checkbox" style="width:17px; height:17px; accent-color:#7c3aed;"> 🔔 Wyślij push automatycznie w dniu startu</label>
+                        </div>
                         <div style="display:flex; gap:10px; margin-top:12px;">
                             <button onclick="klubadm_zapiszPromocje()" id="klubadm-p-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj promocję</button>
                             <button onclick="klubadm_resetPromocja()" id="klubadm-p-anuluj" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
@@ -8340,6 +8353,38 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div id="klubadm-push-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
                     </div>
                     <div class="card" style="padding:10px 22px;"><div id="klubadm-p-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                </div>
+
+                <!-- Tab: Kampanie (targetowany push + wiadomość w apce, harmonogram) -->
+                <div id="klubadm-kampanie" class="klubadm-page" style="display:none;">
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">Nowa kampania</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafia jako push na telefony (u tych, którzy włączyli powiadomienia) i jako wiadomość w apce do wszystkich z segmentu — widoczna 30 dni.</div>
+                        <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:12px;">
+                            <input id="klubadm-k-tytul" maxlength="100" placeholder="Tytuł (np. Weekend -15%)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <input id="klubadm-k-tresc" maxlength="300" placeholder="Treść wiadomości" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:10px;">
+                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Do kogo:</span>
+                            <select id="klubadm-seg-typ-k" onchange="klubadm_segPola('k')" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                                <option value="WSZYSCY">Wszyscy klienci</option>
+                                <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
+                                <option value="ZABIEG">Po zabiegu …</option>
+                                <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                            </select>
+                            <input id="klubadm-seg-wart-k" style="display:none; width:180px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                            <input id="klubadm-seg-dni-k" type="number" min="1" max="730" value="90" style="display:none; width:90px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" title="okno dni">
+                        </div>
+                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Kiedy:</span>
+                            <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="teraz" checked style="accent-color:#c54f7f;"> Wyślij teraz</label>
+                            <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="plan" style="accent-color:#c54f7f;"> Zaplanuj:</label>
+                            <input id="klubadm-k-termin" type="datetime-local" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" onfocus="document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;">
+                            <button onclick="klubadm_zapiszKampanie()" id="klubadm-k-btn" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">📬 Wyślij / zaplanuj</button>
+                        </div>
+                        <div id="klubadm-k-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
+                    </div>
+                    <div class="card" style="padding:10px 22px;"><div id="klubadm-k-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
                 </div>
 
                 <!-- Tab: Odbiory i zgłoszenia -->
@@ -30719,6 +30764,7 @@ function klubadm_init() {
   klubadm_zaladujUstawienia();
   klubadm_zaladujNagrody();
   klubadm_zaladujPromocje();
+  klubadm_zaladujKampanie();
   klubadm_zaladujOdbiory();
   if (!klubadm_zainicjowane) {
     klubadm_zainicjowane = true;
@@ -30856,6 +30902,35 @@ async function klubadm_zaladujPromocje() {
     </div>`;
   }).join('');
 }
+// Wspólny UI segmentu (kampania: 'k', promocja: 'p') — pola zależne od typu
+function klubadm_segPola(x) {
+  const typ = document.getElementById('klubadm-seg-typ-' + x).value;
+  const wart = document.getElementById('klubadm-seg-wart-' + x);
+  const dni = document.getElementById('klubadm-seg-dni-' + x);
+  wart.style.display = (typ === 'PUNKTY_MIN' || typ === 'ZABIEG') ? 'inline-block' : 'none';
+  dni.style.display = (typ === 'ZABIEG' || typ === 'BRAK_WIZYTY') ? 'inline-block' : 'none';
+  wart.placeholder = typ === 'PUNKTY_MIN' ? 'np. 100 (pkt)' : 'nazwa/typ zabiegu, np. endermologia';
+}
+function klubadm_segCzytaj(x) {
+  return {
+    segment_typ: document.getElementById('klubadm-seg-typ-' + x).value,
+    segment_wartosc: document.getElementById('klubadm-seg-wart-' + x).value.trim(),
+    segment_dni: document.getElementById('klubadm-seg-dni-' + x).value
+  };
+}
+function klubadm_segUstaw(x, typ, wartosc, dni) {
+  document.getElementById('klubadm-seg-typ-' + x).value = typ || 'WSZYSCY';
+  document.getElementById('klubadm-seg-wart-' + x).value = wartosc || '';
+  document.getElementById('klubadm-seg-dni-' + x).value = dni || 90;
+  klubadm_segPola(x);
+}
+function klubadm_opisSegmentu(typ, wartosc, dni) {
+  if (typ === 'PUNKTY_MIN') return 'saldo ≥ ' + wartosc + ' pkt';
+  if (typ === 'ZABIEG') return 'po zabiegu „' + wartosc + '" (' + (dni || 90) + ' dni)';
+  if (typ === 'BRAK_WIZYTY') return 'bez wizyty od ' + (dni || 90) + ' dni';
+  return 'wszyscy';
+}
+
 function klubadm_edytujPromocje(id) {
   const p = klubadm_promocjeCache.find(x => x.id === id);
   if (!p) return;
@@ -30867,6 +30942,8 @@ function klubadm_edytujPromocje(id) {
   document.getElementById('klubadm-p-od').value = p.data_od ? String(p.data_od).slice(0, 10) : '';
   document.getElementById('klubadm-p-do').value = p.data_do ? String(p.data_do).slice(0, 10) : '';
   document.getElementById('klubadm-p-dnia').checked = !!Number(p.promocja_dnia);
+  document.getElementById('klubadm-p-pushstart').checked = !!Number(p.push_przy_starcie);
+  klubadm_segUstaw('p', p.segment_typ, p.segment_wartosc, p.segment_dni);
   document.getElementById('klubadm-p-form-tytul').textContent = 'Edytuj promocję';
   document.getElementById('klubadm-p-btn').textContent = '💾 Zapisz zmiany';
   document.getElementById('klubadm-p-anuluj').style.display = 'inline-block';
@@ -30874,11 +30951,14 @@ function klubadm_edytujPromocje(id) {
 function klubadm_resetPromocja() {
   ['klubadm-p-id','klubadm-p-tytul','klubadm-p-opis','klubadm-p-img','klubadm-p-tresc','klubadm-p-od','klubadm-p-do'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('klubadm-p-dnia').checked = false;
+  document.getElementById('klubadm-p-pushstart').checked = false;
+  klubadm_segUstaw('p', 'WSZYSCY', '', 90);
   document.getElementById('klubadm-p-form-tytul').textContent = 'Dodaj promocję';
   document.getElementById('klubadm-p-btn').textContent = '+ Dodaj promocję';
   document.getElementById('klubadm-p-anuluj').style.display = 'none';
 }
 async function klubadm_zapiszPromocje() {
+  const seg = klubadm_segCzytaj('p');
   const d = await klubadm_apiPost({
     action: 'loj_promocja_zapisz',
     id: document.getElementById('klubadm-p-id').value || null,
@@ -30888,9 +30968,72 @@ async function klubadm_zapiszPromocje() {
     tresc: document.getElementById('klubadm-p-tresc').value,
     data_od: document.getElementById('klubadm-p-od').value,
     data_do: document.getElementById('klubadm-p-do').value,
-    promocja_dnia: document.getElementById('klubadm-p-dnia').checked ? 1 : 0
+    promocja_dnia: document.getElementById('klubadm-p-dnia').checked ? 1 : 0,
+    push_przy_starcie: document.getElementById('klubadm-p-pushstart').checked ? 1 : 0,
+    segment_typ: seg.segment_typ, segment_wartosc: seg.segment_wartosc, segment_dni: seg.segment_dni
   }).catch(() => null);
   if (d && d.status === 'success') { klubadm_resetPromocja(); klubadm_zaladujPromocje(); }
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Kampanie ──
+async function klubadm_zaladujKampanie() {
+  const box = document.getElementById('klubadm-k-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_kampanie').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  const status = document.getElementById('klubadm-k-status');
+  if (status && !d.push_skonfigurowany) status.textContent = 'ℹ️ Push nieskonfigurowany (brak kluczy VAPID) — kampanie dotrą tylko jako wiadomości w apce.';
+  const kampanie = d.kampanie || [];
+  if (!kampanie.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Jeszcze żadnej kampanii.</div>'; return; }
+  const KOLOR = { PLANOWANA: '#b45309', WYSLANA: '#0f766e', ANULOWANA: '#9ca3af', BLAD: '#dc2626', WYSYLANIE: '#7c3aed' };
+  box.innerHTML = kampanie.map(k => {
+    const kiedy = k.status === 'PLANOWANA'
+      ? '🕐 ' + new Date(k.wyslij_at).toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : (k.wyslano_at ? new Date(k.wyslano_at).toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
+    return `<div class="klubadm-row">
+      <div style="min-width:0;">
+        <b>${escHtml(k.tytul)}</b> <span style="color:${KOLOR[k.status] || '#475569'}; font-size:11.5px; font-weight:700;">${k.status}</span>
+        <div style="font-size:12px; color:#9ca3af;">${escHtml(k.tresc)}</div>
+        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow : ''}</div>
+      </div>
+      ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
+    </div>`;
+  }).join('');
+}
+async function klubadm_zapiszKampanie() {
+  const tytul = document.getElementById('klubadm-k-tytul').value.trim();
+  const tresc = document.getElementById('klubadm-k-tresc').value.trim();
+  const status = document.getElementById('klubadm-k-status');
+  if (!tytul || !tresc) { status.textContent = 'Podaj tytuł i treść.'; return; }
+  const plan = document.querySelector('input[name=klubadm-k-kiedy]:checked').value === 'plan';
+  const termin = document.getElementById('klubadm-k-termin').value;
+  if (plan && !termin) { status.textContent = 'Wybierz datę i godzinę wysyłki.'; return; }
+  const seg = klubadm_segCzytaj('k');
+  if (!plan && !confirm('Wysłać kampanię TERAZ?\n\n„' + tytul + '"\n' + tresc + '\nDo: ' + klubadm_opisSegmentu(seg.segment_typ, seg.segment_wartosc, seg.segment_dni))) return;
+  const btn = document.getElementById('klubadm-k-btn');
+  btn.disabled = true; status.textContent = '⏳…';
+  const d = await klubadm_apiPost({
+    action: 'loj_kampania_zapisz', tytul, tresc,
+    segment_typ: seg.segment_typ, segment_wartosc: seg.segment_wartosc, segment_dni: seg.segment_dni,
+    wyslij_at: plan ? termin : ''
+  }).catch(() => null);
+  btn.disabled = false;
+  if (d && d.status === 'success') {
+    status.textContent = d.zaplanowana ? ('✅ Zaplanowano na ' + d.wyslij_at + '.') : `✅ Wysłano — push dotarł do ${d.dostarczono}/${d.subskrypcji} urządzeń, wiadomość widoczna w apce.`;
+    document.getElementById('klubadm-k-tytul').value = '';
+    document.getElementById('klubadm-k-tresc').value = '';
+    document.getElementById('klubadm-k-termin').value = '';
+    document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
+    klubadm_zaladujKampanie();
+  } else {
+    status.textContent = 'Błąd: ' + ((d && d.message) || 'połączenia');
+  }
+}
+async function klubadm_anulujKampanie(id) {
+  if (!confirm('Anulować zaplanowaną kampanię?')) return;
+  const d = await klubadm_apiPost({ action: 'loj_kampania_anuluj', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujKampanie();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
 }
 async function klubadm_statusPromocji(id, status) {

@@ -11,7 +11,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { mockDb, mockDbAlways } = require('./helpers/mockDb');
 const lojalnoscFactory = require('../routes/lojalnosc');
-const { makeLojalnosc, obliczPunkty, wyczyscCacheLoj, makeKlubToken, normalizujTelefon } = lojalnoscFactory;
+const { makeLojalnosc, obliczPunkty, wyczyscCacheLoj, makeKlubToken, normalizujTelefon, pasujeSegment } = lojalnoscFactory;
 
 function buildApp(db) {
     const app = express();
@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 10 wpisów-wypełniaczy na init fabryki (CREATE ×8 + seed ×2)
-const INIT = Array.from({ length: 10 }, () => ({ rows: [] }));
+// 11 wpisów-wypełniaczy na init fabryki (CREATE ×9 + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 11 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -718,5 +718,132 @@ describe('POST /api/lojalnosc — zarządzanie treścią', () => {
         });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/VAPID|skonfigurowane/i);
+    });
+});
+
+// ═══════════════════ KAMPANIE — segmenty i harmonogram ═══════════════════
+
+// ─── pasujeSegment (ocena po stronie JS dla /klub/me) ─────────
+describe('pasujeSegment', () => {
+    const TERAZ = new Date('2026-07-10T12:00:00');
+    const fakty = (saldo, sprzedaze) => ({ saldo, sprzedaze, teraz: TERAZ });
+
+    test('WSZYSCY pasuje zawsze', () => {
+        expect(pasujeSegment({ segment_typ: 'WSZYSCY' }, fakty(0, []))).toBe(true);
+    });
+    test('PUNKTY_MIN: 120 pkt vs próg 100 → tak; 80 vs 100 → nie', () => {
+        const seg = { segment_typ: 'PUNKTY_MIN', segment_wartosc: '100' };
+        expect(pasujeSegment(seg, fakty(120, []))).toBe(true);
+        expect(pasujeSegment(seg, fakty(80, []))).toBe(false);
+    });
+    test('ZABIEG: dopasowanie po typ_zabiegu i po nazwie (LIKE), okno dni respektowane', () => {
+        const seg = { segment_typ: 'ZABIEG', segment_wartosc: 'endermologia', segment_dni: 90 };
+        const swiezy = [{ zabieg: 'Endermologia całe ciało', typ_zabiegu: null, data: '2026-07-01' }];
+        const poTypie = [{ zabieg: 'Pakiet X', typ_zabiegu: 'Endermologia', data: '2026-06-20' }];
+        const stary = [{ zabieg: 'Endermologia', typ_zabiegu: null, data: '2026-01-01' }];
+        expect(pasujeSegment(seg, fakty(0, swiezy))).toBe(true);
+        expect(pasujeSegment(seg, fakty(0, poTypie))).toBe(true);
+        expect(pasujeSegment(seg, fakty(0, stary))).toBe(false);
+    });
+    test('BRAK_WIZYTY: ostatnia wizyta starsza niż okno → tak; świeża → nie', () => {
+        const seg = { segment_typ: 'BRAK_WIZYTY', segment_dni: 60 };
+        expect(pasujeSegment(seg, fakty(0, [{ zabieg: 'X', data: '2026-03-01' }]))).toBe(true);
+        expect(pasujeSegment(seg, fakty(0, [{ zabieg: 'X', data: '2026-07-05' }]))).toBe(false);
+    });
+});
+
+// ─── POST loj_kampania_zapisz / anuluj ────────────────────────
+describe('POST /api/lojalnosc — kampanie', () => {
+    const valid = {
+        action: 'loj_kampania_zapisz', tenant_id: 't-loj-km1',
+        tytul: 'Weekend -15%', tresc: 'Tylko sob-nd na masaże!',
+        segment_typ: 'WSZYSCY', user_log: 'Szefowa'
+    };
+
+    test('wysyłka natychmiastowa: kampania WYSLANA, wiadomość w apce mimo braku VAPID', async () => {
+        const db = mockDb(
+            ...INIT,
+            FEATURE_ON,
+            ROLA_ADMIN,
+            { rows: { affectedRows: 1, insertId: 5 } }, // INSERT kampania (WYSYLANIE)
+            { rows: [] },                                // SELECT subskrypcje push (brak)
+            { rows: { affectedRows: 1 } }                // UPDATE → WYSLANA
+        );
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
+        expect(res.body.status).toBe('success');
+        expect(res.body.dostarczono).toBe(0); // brak VAPID/subów — ale kampania jest WYSLANA (skrzynka w apce)
+        const upd = db.query.mock.calls.find(c => /SET status = 'WYSLANA'/.test(c[0]));
+        expect(upd).toBeTruthy();
+    });
+
+    test('zaplanowana: status PLANOWANA, bez wysyłki', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1, insertId: 6 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ ...valid, tenant_id: 't-loj-km2', wyslij_at: '2026-07-15T10:30' });
+        expect(res.body.status).toBe('success');
+        expect(res.body.zaplanowana).toBe(1);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Kampanie/.test(c[0]));
+        expect(ins[1]).toContain('2026-07-15 10:30:00');
+        expect(ins[1]).toContain('PLANOWANA');
+        expect(db.query.mock.calls.some(c => /SET status = 'WYSLANA'/.test(c[0]))).toBe(false);
+    });
+
+    test('segment PUNKTY_MIN bez progu → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ ...valid, tenant_id: 't-loj-km3', segment_typ: 'PUNKTY_MIN', segment_wartosc: '' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/segment/i);
+    });
+
+    test('zły format terminu → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ ...valid, tenant_id: 't-loj-km4', wyslij_at: 'jutro rano' });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('recepcja NIE tworzy kampanii', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-km5' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('anulowanie działa tylko dla PLANOWANEJ', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_anuluj', tenant_id: 't-loj-km6', id: 5, user_log: 'Szefowa' });
+        expect(r1.body.status).toBe('success');
+        const dbJuz = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbJuz)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_anuluj', tenant_id: 't-loj-km7', id: 5, user_log: 'Szefowa' });
+        expect(r2.body.status).toBe('error');
+    });
+});
+
+// ─── /klub/me — wiadomości i targetowane promocje ─────────────
+describe('POST /api/klub/me — kampanie w apce', () => {
+    test('wiadomość WSZYSCY widoczna; promocja PUNKTY_MIN ukryta gdy saldo za małe', async () => {
+        const sesja = makeKlubToken({ t: 't-klub-w', k: '42', typ: 'ses', exp: Date.now() + 80 * 24 * 60 * 60 * 1000 });
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ status: 'AKTYWNE' }] },
+            { rows: [{ imie_nazwisko: 'Anna Kowalska', telefon: '500123456', status: '', zmarly: 0 }] },
+            { rows: [{ saldo: 30 }] },                    // saldo klienta: 30
+            { rows: [] },                                  // wpisy
+            { rows: [] },                                  // ustawienia
+            { rows: [{ rez: 0 }] },                        // rezerwacje
+            { rows: [] },                                  // nagrody
+            { rows: [] },                                  // odbiory
+            { rows: [{ id: 1, tytul: 'VIP tylko', opis: '', tresc: '', img_url: '', promocja_dnia: 0, data_od: null, data_do: null, segment_typ: 'PUNKTY_MIN', segment_wartosc: '100', segment_dni: null }] },
+            { rows: [] },                                  // fakty sprzedaże
+            { rows: [{ id: 9, tytul: 'Hej!', tresc: 'Zapraszamy', segment_typ: 'WSZYSCY', segment_wartosc: '', segment_dni: null, wyslano_at: '2026-07-09' }] }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/me').send({ session: sesja });
+        expect(res.body.status).toBe('success');
+        expect(res.body.promocje).toHaveLength(0);        // VIP odfiltrowana (30 < 100 pkt)
+        expect(res.body.wiadomosci).toHaveLength(1);      // kampania dla wszystkich widoczna
+        expect(res.body.wiadomosci[0].tytul).toBe('Hej!');
     });
 });
