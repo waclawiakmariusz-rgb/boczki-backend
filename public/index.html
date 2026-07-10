@@ -8284,10 +8284,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">Punkty za każde 10 zł wydane w salonie:</label>
                         <input id="klubadm-pkt" type="number" min="0" max="100" step="1" style="width:120px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                         <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Przykład: przy „1" paragon na 250 zł daje 25 pkt. Zmiana działa od nowych paragonów — nic nie przelicza się wstecz.</div>
+                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">🎁 Bonus powitalny za rejestrację online (pkt, 0 = brak):</label>
+                        <input id="klubadm-bonus" type="number" min="0" max="1000" step="1" style="width:120px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Dostają go tylko NOWE osoby rejestrujące się z linku (np. z Instagrama) — dobra zachęta do relacji.</div>
                         <div style="display:flex; align-items:center; gap:12px; margin-top:14px;">
                             <button onclick="klubadm_zapiszUstawienia()" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">💾 Zapisz</button>
                             <span id="klubadm-ust-status" style="font-size:12.5px; color:#6b7280;"></span>
                         </div>
+                    </div>
+                    <div class="card" style="padding:18px 22px; max-width:560px; margin-top:16px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🔗 Link rejestracyjny (Instagram, ulotki)</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Publiczny, bezterminowy link do zakładania kont. Nowa osoba dostaje konto od ręki (+bonus), istniejąca klientka trafia do „Wniosków" — dla bezpieczeństwa jej danych.</div>
+                        <button onclick="klubadm_linkRejestracyjny()" style="margin-top:12px; background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:10px 20px; font-size:13.5px; font-weight:700; cursor:pointer;">Pokaż link i QR</button>
+                        <div id="klubadm-rejlink-area" style="display:none; margin-top:12px;"></div>
                     </div>
                 </div>
 
@@ -8407,10 +8416,16 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient pokazuje kod z aplikacji — sprawdź kod, wydaj nagrodę i kliknij „Wydaj". Punkty zejdą z jego konta dopiero wtedy.</div>
                         <div id="klubadm-odbiory-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
                     </div>
-                    <div class="card" style="padding:18px 22px;">
+                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
                         <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">🔥 Zgłoszenia „BIORĘ"</div>
                         <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient kliknął BIORĘ przy promocji — skontaktuj się i oznacz jako obsłużone.</div>
                         <div id="klubadm-zgloszenia-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                    </div>
+                    <div class="card" style="padding:18px 22px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">📥 Wnioski o konto / reset PIN-u</div>
+                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Istniejące klientki z rejestracji online i zapomniane PIN-y. Link aktywacyjny wysyłasz SMS-em <b>na numer z kartoteki</b> — zeskanuj QR telefonem salonu, a SMS napisze się sam.</div>
+                        <div id="klubadm-wnioski-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                        <div id="klubadm-wniosek-sms" style="display:none; margin-top:12px; padding:14px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px;"></div>
                     </div>
                 </div>
 
@@ -30811,8 +30826,10 @@ async function klubadm_zaladujUstawienia() {
     if (d.status !== 'success') return;
     const n = document.getElementById('klubadm-nazwa');
     const p = document.getElementById('klubadm-pkt');
+    const b = document.getElementById('klubadm-bonus');
     if (n) n.value = d.ustawienia.nazwa_klubu || 'Klub';
     if (p) p.value = d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1;
+    if (b) b.value = d.ustawienia.bonus_powitalny_pkt != null ? d.ustawienia.bonus_powitalny_pkt : 0;
   } catch (e) {}
 }
 async function klubadm_zapiszUstawienia() {
@@ -30821,9 +30838,26 @@ async function klubadm_zapiszUstawienia() {
   const d = await klubadm_apiPost({
     action: 'loj_ustawienia_zapisz',
     nazwa_klubu: document.getElementById('klubadm-nazwa').value.trim(),
-    pkt_za_10zl: document.getElementById('klubadm-pkt').value
+    pkt_za_10zl: document.getElementById('klubadm-pkt').value,
+    bonus_powitalny_pkt: document.getElementById('klubadm-bonus').value
   }).catch(() => null);
   status.textContent = (d && d.status === 'success') ? '✅ Zapisano.' : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_linkRejestracyjny() {
+  const area = document.getElementById('klubadm-rejlink-area');
+  area.style.display = 'block';
+  area.innerHTML = '<div style="color:#9ca3af; font-size:13px;">⏳ Generuję…</div>';
+  const d = await klubadm_apiPost({ action: 'loj_rejestracja_link' }).catch(() => null);
+  if (!d || d.status !== 'success') { area.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  area.innerHTML =
+    '<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">'
+    + '<img src="' + d.qr + '" alt="QR rejestracyjny" style="width:170px; border:1px solid #e2e8f0; border-radius:12px; background:#fff;">'
+    + '<div style="flex:1; min-width:220px;">'
+    + '<div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:5px;">Link (wklej w bio na IG / w relację):</div>'
+    + '<textarea readonly onclick="this.select()" style="width:100%; box-sizing:border-box; height:74px; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-size:11.5px; font-family:monospace; resize:none;">' + escHtml(d.url) + '</textarea>'
+    + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.url).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano link.\'))" style="margin-top:8px; background:#f1f5f9; border:0; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj link</button>'
+    + '<div style="font-size:11.5px; color:#9ca3af; margin-top:8px;">Link jest bezterminowy — możesz go używać wszędzie. QR nadaje się też na ulotkę czy naklejkę przy recepcji.</div>'
+    + '</div></div>';
 }
 
 // ── Nagrody ──
@@ -31144,11 +31178,29 @@ async function klubadm_zaladujOdbiory() {
   const boxO = document.getElementById('klubadm-odbiory-lista');
   const boxZ = document.getElementById('klubadm-zgloszenia-lista');
   if (!boxO || !boxZ) return;
-  const [dO, dZ] = await Promise.all([
+  const [dO, dZ, dW] = await Promise.all([
     klubadm_apiGet('loj_odbiory').catch(() => null),
-    klubadm_apiGet('loj_zgloszenia').catch(() => null)
+    klubadm_apiGet('loj_zgloszenia').catch(() => null),
+    klubadm_apiGet('loj_wnioski').catch(() => null)
   ]);
   let nowe = 0;
+  const boxW = document.getElementById('klubadm-wnioski-lista');
+  if (boxW && dW && dW.status === 'success') {
+    const wnioski = dW.wnioski || [];
+    const noweW = wnioski.filter(w => w.status === 'NOWY');
+    nowe += noweW.length;
+    const stareW = wnioski.filter(w => w.status !== 'NOWY').slice(0, 5);
+    const typTxt = (w) => w.typ === 'RESET' ? '<span style="background:#fff0df; color:#b45309; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">RESET PIN</span>' : '<span style="background:#e5efff; color:#1d4ed8; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">NOWE KONTO</span>';
+    const wierszW = (w, akcje) => `<div class="klubadm-row">
+      <div style="min-width:0;">${typTxt(w)} <b>${escHtml(w.klient_kartoteka || w.imie || ('Klient ' + w.id_klienta))}</b>
+        <div style="font-size:12px; color:#9ca3af;">${w.imie && w.klient_kartoteka && w.imie !== w.klient_kartoteka ? 'wpisano we wniosku: ' + escHtml(w.imie) + ' · ' : ''}${new Date(w.created_at).toLocaleDateString('pl-PL')}${w.status !== 'NOWY' ? ' · ' + w.status + (w.obsluzyl ? ' (' + escHtml(w.obsluzyl) + ')' : '') : ''}</div>
+      </div>${akcje}</div>`;
+    boxW.innerHTML = (noweW.length ? noweW.map(w => wierszW(w, `<div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_wyslijWniosek(${w.id})">📲 Wyślij SMS</button>
+        <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Odrzucić wniosek?')) klubadm_odrzucWniosek(${w.id})">Odrzuć</button>
+      </div>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych wniosków.</div>')
+      + (stareW.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stareW.map(w => wierszW(w, '')).join('') : '');
+  }
   if (dO && dO.status === 'success') {
     const odbiory = dO.odbiory || [];
     const oczekuje = odbiory.filter(o => o.status === 'OCZEKUJE');
@@ -31179,6 +31231,29 @@ async function klubadm_zaladujOdbiory() {
   const badge = document.getElementById('klubadm-badge');
   if (badge) { badge.textContent = nowe; badge.style.display = nowe > 0 ? 'inline-block' : 'none'; }
 }
+async function klubadm_wyslijWniosek(id) {
+  const area = document.getElementById('klubadm-wniosek-sms');
+  area.style.display = 'block';
+  area.innerHTML = '<div style="color:#9ca3af; font-size:13px;">⏳ Przygotowuję SMS…</div>';
+  const d = await klubadm_apiPost({ action: 'loj_wniosek_wyslij', id }).catch(() => null);
+  if (!d || d.status !== 'success') { area.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  area.innerHTML =
+    '<div style="font-size:13px; font-weight:700; color:#5b21b6; margin-bottom:8px;">📲 SMS dla: ' + escHtml(d.klient || '') + ' (' + escHtml(d.telefon || '') + ')</div>'
+    + '<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">'
+    + (d.qr_sms ? '<div style="text-align:center;"><img src="' + d.qr_sms + '" alt="QR SMS" style="width:150px; border:1px solid #ddd6fe; border-radius:12px; background:#fff;"><div style="font-size:11px; color:#7c3aed; font-weight:700; margin-top:4px;">Zeskanuj telefonem salonu<br>— SMS napisze się sam</div></div>' : '')
+    + '<div style="flex:1; min-width:200px;">'
+    + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.tresc_sms).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano treść SMS-a.\'))" style="display:block; width:100%; background:#fff; border:1px solid #ddd6fe; color:#5b21b6; border-radius:8px; padding:9px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj treść SMS-a</button>'
+    + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.url).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano link.\'))" style="display:block; width:100%; margin-top:8px; background:#fff; border:1px solid #e2e8f0; color:#475569; border-radius:8px; padding:9px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj sam link</button>'
+    + '<div style="font-size:11.5px; color:#9ca3af; margin-top:8px;">Link ważny 7 dni. Wniosek oznaczony jako wysłany.</div>'
+    + '</div></div>';
+  klubadm_zaladujOdbiory();
+}
+async function klubadm_odrzucWniosek(id) {
+  const d = await klubadm_apiPost({ action: 'loj_wniosek_odrzuc', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujOdbiory();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
 async function klubadm_rozstrzygnij(id, decyzja) {
   const d = await klubadm_apiPost({ action: 'loj_odbior_rozstrzygnij', id, decyzja }).catch(() => null);
   if (d && d.status === 'success') klubadm_zaladujOdbiory();

@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 11 wpisów-wypełniaczy na init fabryki (CREATE ×9 + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 11 }, () => ({ rows: [] }));
+// 12 wpisów-wypełniaczy na init fabryki (CREATE ×10 + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 12 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -894,6 +894,112 @@ describe('upload grafik Klubu', () => {
             segment_typ: 'WSZYSCY', img_url: 'javascript:alert(1)', user_log: 'Szefowa'
         });
         expect(r2.body.status).toBe('error');
+    });
+});
+
+// ─── Rejestracja online (link IG) + reset PIN ─────────────────
+describe('POST /api/klub/rejestracja', () => {
+    const REJ = () => makeKlubToken({ t: 't-rej-a', k: 'rejestracja', typ: 'rej', exp: Date.now() + 60000 });
+    const valid = () => ({ token: REJ(), imie: 'Nowa Osoba', telefon: '511 222 333', pin: '1234', zgoda: true });
+
+    test('nowy numer → kartoteka + konto + bonus + sesja od ręki', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [] },                              // brak konta na ten numer
+            { rows: [] },                              // brak klientki w kartotece
+            { rows: [{ maxId: 41 }] },                 // MAX id_klienta
+            { rows: { affectedRows: 1 } },             // INSERT Klienci
+            { rows: { affectedRows: 1 } },             // INSERT Konta
+            { rows: [{ bonus_powitalny_pkt: 20 }] },   // ustawienia bonusu
+            { rows: { affectedRows: 1 } }              // INSERT bonus do ledgera
+        );
+        const res = await request(buildApp(db)).post('/api/klub/rejestracja').send(valid());
+        expect(res.body.status).toBe('success');
+        expect(res.body.kod).toBe('NOWE');
+        expect(res.body.session).toBeTruthy();
+        expect(res.body.bonus).toBe(20);
+        const insK = db.query.mock.calls.find(c => /INSERT INTO Klienci/.test(c[0]));
+        expect(insK[1][2]).toBe('42');                 // nowe id = MAX+1
+        const insB = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(insB[1][2]).toBe(20);
+        expect(insB[0]).toMatch(/powitalny/i);   // powód w SQL
+        expect(insB[1][3]).toBe('REJ@42');       // idempotencja per klient
+    });
+
+    test('numer istniejącej klientki → wniosek, konto NIE powstaje', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [] },                                                     // brak konta
+            { rows: [{ id_klienta: '7', telefon: '511-222-333', status: '', zmarly: 0 }] }, // jest w kartotece
+            { rows: [] },                                                     // brak duplikatu wniosku
+            { rows: { affectedRows: 1 } }                                     // INSERT wniosek
+        );
+        const res = await request(buildApp(db)).post('/api/klub/rejestracja').send(valid());
+        expect(res.body.status).toBe('success');
+        expect(res.body.kod).toBe('WNIOSEK');
+        expect(res.body.session).toBeUndefined();
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Wnioski/.test(c[0]))).toBe(true);
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]))).toBe(false);
+    });
+
+    test('numer z istniejącym kontem → komunikat, bez zmian', async () => {
+        const db = mockDb(...INIT, { rows: [{ id: 1 }] });
+        const res = await request(buildApp(db)).post('/api/klub/rejestracja').send(valid());
+        expect(res.body.kod).toBe('MASZ_KONTO');
+    });
+
+    test('token sesyjny NIE działa jako rejestracyjny', async () => {
+        const db = mockDbAlways([]);
+        const zly = makeKlubToken({ t: 't-rej-a', k: '42', typ: 'ses', exp: Date.now() + 60000 });
+        const res = await request(buildApp(db)).post('/api/klub/rejestracja').send({ ...valid(), token: zly });
+        expect(res.body.status).toBe('error');
+    });
+});
+
+describe('POST /api/klub/reset_pin', () => {
+    test('konto istnieje → wniosek RESET; brak konta → TA SAMA odpowiedź (bez enumeracji)', async () => {
+        const dbJest = mockDb(
+            ...INIT,
+            { rows: [{ tenant_id: 't-rp-a', id_klienta: '42' }] },
+            { rows: [] },                              // brak duplikatu
+            { rows: { affectedRows: 1 } }              // INSERT wniosek
+        );
+        const r1 = await request(buildApp(dbJest)).post('/api/klub/reset_pin').send({ telefon: '500123456' });
+        const dbBrak = mockDb(...INIT, { rows: [] });
+        const r2 = await request(buildApp(dbBrak)).post('/api/klub/reset_pin').send({ telefon: '500123456' });
+        expect(r1.body.status).toBe('success');
+        expect(r2.body.status).toBe('success');
+        expect(r1.body.message).toBe(r2.body.message);
+        expect(dbJest.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Wnioski/.test(c[0]))).toBe(true);
+        expect(dbBrak.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Wnioski/.test(c[0]))).toBe(false);
+    });
+});
+
+describe('POST /api/lojalnosc — loj_wniosek_wyslij', () => {
+    test('generuje link aktywacyjny + SMS na numer Z KARTOTEKI', async () => {
+        const db = mockDb(
+            ...INIT,
+            ROLA_ADMIN,
+            { rows: [{ id: 3, id_klienta: '42', imie: 'Anna', typ: 'KONTO', status: 'NOWY' }] },
+            { rows: [{ id_klienta: '42', imie_nazwisko: 'Anna Kowalska', telefon: '500 123 456', status: '', zmarly: 0 }] },
+            { rows: { affectedRows: 1 } }
+        );
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_wniosek_wyslij', tenant_id: 't-ww-a', id: 3, user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('success');
+        expect(res.body.telefon).toBe('500 123 456');   // numer z kartoteki, nie z wniosku
+        expect(res.body.url).toMatch(/\/klub\.html\?a=/);
+        expect(res.body.sms_uri).toMatch(/^sms:500123456\?body=/);
+        expect(res.body.qr_sms).toMatch(/^data:image\/png/);
+    });
+
+    test('recepcja NIE wyśle (RBAC)', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_wniosek_wyslij', tenant_id: 't-ww-b', id: 3, user_log: 'Recepcja'
+        });
+        expect(res.body.status).toBe('error');
     });
 });
 

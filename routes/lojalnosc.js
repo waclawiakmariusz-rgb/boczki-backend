@@ -512,7 +512,21 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie:', e.message);
   });
-  // Targetowanie promocji + auto-push w dniu startu + zdjęcie kampanii (ALTER-y idempotentne)
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Wnioski (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      telefon VARCHAR(20) NOT NULL,
+      imie VARCHAR(120) DEFAULT '',
+      id_klienta VARCHAR(64) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'NOWY',
+      obsluzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      obsluzono_at DATETIME NULL,
+      KEY idx_tenant_status (tenant_id, status)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Wnioski:', e.message);
+  });
+  // Targetowanie promocji + auto-push + zdjęcie kampanii + bonus powitalny (ALTER-y idempotentne)
   [
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_typ VARCHAR(20) DEFAULT 'WSZYSCY'`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_wartosc VARCHAR(160) DEFAULT ''`,
@@ -520,6 +534,8 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_przy_starcie TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_wyslany TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN img_url VARCHAR(500) DEFAULT ''`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN bonus_powitalny_pkt INT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Wnioski ADD COLUMN typ VARCHAR(20) DEFAULT 'KONTO'`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -753,7 +769,7 @@ module.exports = (db) => {
 
     } else if (action === 'loj_ustawienia') {
       db.query(
-        `SELECT pkt_za_10zl, nazwa_klubu, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
+        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
@@ -762,11 +778,31 @@ module.exports = (db) => {
             status: 'success',
             ustawienia: {
               pkt_za_10zl: parseInt(u.pkt_za_10zl, 10) || 1,
-              nazwa_klubu: u.nazwa_klubu || 'Klub'
+              nazwa_klubu: u.nazwa_klubu || 'Klub',
+              bonus_powitalny_pkt: parseInt(u.bonus_powitalny_pkt, 10) || 0
             }
           });
         }
       );
+
+    } else if (action === 'loj_wnioski') {
+      // Wnioski o konto z rejestracji online (istniejące klientki)
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT W.id, W.telefon, W.imie, W.id_klienta, W.typ, W.status, W.created_at, W.obsluzyl, W.obsluzono_at,
+                  K.imie_nazwisko AS klient_kartoteka, K.telefon AS telefon_kartoteka
+             FROM Lojalnosc_Wnioski W
+             LEFT JOIN Klienci K ON K.tenant_id = W.tenant_id AND K.id_klienta = W.id_klienta
+            WHERE W.tenant_id = ?
+            ORDER BY (W.status = 'NOWY') DESC, W.id DESC LIMIT 100`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', wnioski: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
 
     } else if (action === 'loj_nagrody_admin') {
       const kto = String(req.query.user_log || '').trim();
@@ -951,20 +987,93 @@ module.exports = (db) => {
       // RBAC: tylko admin — pilot Klubu w całości admin-only
       const kto = String(d.user_log || d.pracownik || '').trim();
       const pkt = parseInt(d.pkt_za_10zl, 10);
+      const bonus = parseInt(d.bonus_powitalny_pkt, 10) || 0;
       const nazwa = String(d.nazwa_klubu || 'Klub').trim().slice(0, 120) || 'Klub';
       if (!Number.isFinite(pkt) || pkt < 0 || pkt > 100) {
         return res.json({ status: 'error', message: 'Punkty za 10 zł: liczba 0–100.' });
       }
+      if (bonus < 0 || bonus > 1000) return res.json({ status: 'error', message: 'Bonus powitalny: 0–1000 pkt.' });
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, updated_by)
-           VALUES (?, ?, ?, ?)
-           ON DUPLICATE KEY UPDATE pkt_za_10zl = VALUES(pkt_za_10zl), nazwa_klubu = VALUES(nazwa_klubu), updated_by = VALUES(updated_by)`,
-          [tenant_id, pkt, nazwa, kto],
+          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, updated_by)
+           VALUES (?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE pkt_za_10zl = VALUES(pkt_za_10zl), nazwa_klubu = VALUES(nazwa_klubu),
+             bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), updated_by = VALUES(updated_by)`,
+          [tenant_id, pkt, nazwa, bonus, kto],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}`);
+            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}`);
             return res.json({ status: 'success', message: 'Zapisano ustawienia Klubu.' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_rejestracja_link') {
+      // Stały link/QR do rejestracji online (IG bio, relacje, ulotki). Token
+      // identyfikuje tylko salon — może wisieć publicznie latami.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const token = makeKlubToken({ t: tenant_id, k: 'rejestracja', typ: 'rej', exp: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000 });
+          const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+          const host = req.get('host');
+          const url = `${proto}://${host}/klub.html?r=${encodeURIComponent(token)}`;
+          const qr = await QRCode.toDataURL(url, { margin: 1, width: 320 });
+          return res.json({ status: 'success', url, qr });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      }));
+
+    } else if (action === 'loj_wniosek_wyslij') {
+      // Recepcja/admin wysyła link aktywacyjny NA NUMER Z KARTOTEKI (SMS ręczny, bez kosztów)
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak wniosku.' });
+      wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const wRows = await q(`SELECT id, id_klienta, imie, typ, status FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, id]);
+          const wniosek = Array.isArray(wRows) ? wRows[0] : null;
+          if (!wniosek) return res.json({ status: 'error', message: 'Nie znaleziono wniosku.' });
+          if (wniosek.status !== 'NOWY') return res.json({ status: 'error', message: 'Wniosek już obsłużony.' });
+          const kRows = await q(`SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, String(wniosek.id_klienta)]);
+          const klient = Array.isArray(kRows) ? kRows[0] : null;
+          if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Kartoteka klientki niedostępna.' });
+          const payload = { t: tenant_id, k: String(wniosek.id_klienta), typ: 'akt', exp: Date.now() + AKTYWACJA_TTL_MS };
+          const token = makeKlubToken(payload);
+          const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+          const host = req.get('host');
+          const url = `${proto}://${host}/klub.html?a=${encodeURIComponent(token)}`;
+          const telKartoteka = String(klient.telefon || '').trim();
+          const trescSms = String(wniosek.typ) === 'RESET'
+            ? `Twoj link do ustawienia nowego PIN-u w programie lojalnosciowym: ${url} (wazny 7 dni)`
+            : `Twoj link do aktywacji konta w programie lojalnosciowym: ${url} (wazny 7 dni)`;
+          await q(`UPDATE Lojalnosc_Wnioski SET status = 'WYSLANY', obsluzyl = ?, obsluzono_at = NOW() WHERE tenant_id = ? AND id = ? AND status = 'NOWY'`, [kto.slice(0, 120), tenant_id, id]);
+          zapiszLog(tenant_id, 'KLUB WNIOSEK WYSLANY', kto, `Klient ${wniosek.id_klienta} (${klient.imie_nazwisko || ''}) — link aktywacyjny na numer z kartoteki`);
+          const smsUri = 'sms:' + telKartoteka.replace(/[^+\d]/g, '') + '?body=' + encodeURIComponent(trescSms);
+          // QR z sms: — recepcja na komputerze skanuje telefonem salonu i SMS pisze się sam
+          const qrSms = await QRCode.toDataURL(smsUri, { margin: 1, width: 280 }).catch(() => '');
+          return res.json({
+            status: 'success', url,
+            telefon: telKartoteka,
+            klient: klient.imie_nazwisko || '',
+            sms_uri: smsUri,
+            qr_sms: qrSms,
+            tresc_sms: trescSms
+          });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      });
+
+    } else if (action === 'loj_wniosek_odrzuc') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak wniosku.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Wnioski SET status = 'ODRZUCONY', obsluzyl = ?, obsluzono_at = NOW() WHERE tenant_id = ? AND id = ? AND status = 'NOWY'`,
+          [kto.slice(0, 120), tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Wniosek już obsłużony.' });
+            return res.json({ status: 'success' });
           }
         );
       });
@@ -1592,6 +1701,134 @@ module.exports = (db) => {
       );
       return res.json({ status: 'success' });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  // ─── Rejestracja z publicznego linku (IG/QR — token typ 'rej' identyfikuje salon) ───
+  // Zasada bezpieczeństwa: NOWY numer → konto od ręki (nie ma czego wykraść);
+  // numer ISTNIEJĄCEJ klientki → wniosek, a link aktywacyjny recepcja wysyła
+  // SMS-em NA NUMER Z KARTOTEKI (nie wpisany przez wnioskodawcę).
+
+  // Dane do ekranu rejestracji (nazwa klubu, regulamin, bonus)
+  router.post('/klub/rej_info', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).token, 'rej');
+    if (!p) return res.json({ status: 'error', message: 'Link rejestracyjny jest nieprawidłowy. Poproś salon o aktualny.' });
+    try {
+      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const rRows = await q(`SELECT url FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const ust = (Array.isArray(uRows) && uRows[0]) || {};
+      return res.json({
+        status: 'success',
+        nazwa_klubu: ust.nazwa_klubu || 'Klub',
+        pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
+        bonus_powitalny: parseInt(ust.bonus_powitalny_pkt, 10) || 0,
+        regulamin_url: String(((Array.isArray(rRows) && rRows[0]) || {}).url || '').trim()
+      });
+    } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  router.post('/klub/rejestracja', loginLimiter, async (req, res) => {
+    const d = req.body || {};
+    const p = verifyKlubToken(d.token, 'rej');
+    if (!p) return res.json({ status: 'error', message: 'Link rejestracyjny jest nieprawidłowy. Poproś salon o aktualny.' });
+    const imie = String(d.imie || '').trim().slice(0, 120);
+    const tel = normalizujTelefon(d.telefon);
+    const pin = String(d.pin || '').trim();
+    if (imie.length < 3) return res.json({ status: 'error', message: 'Podaj imię i nazwisko.' });
+    if (tel.length < 9) return res.json({ status: 'error', message: 'Podaj poprawny numer telefonu.' });
+    if (!/^\d{4,6}$/.test(pin)) return res.json({ status: 'error', message: 'PIN musi mieć 4–6 cyfr.' });
+    if (!d.zgoda) return res.json({ status: 'error', message: 'Wymagana akceptacja regulaminu programu.' });
+    try {
+      // Konto na ten numer już istnieje → do logowania (właściciel telefonu i tak zna swój stan)
+      const kontaRows = await q(
+        `SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND telefon = ? AND status = 'AKTYWNE' LIMIT 1`,
+        [p.t, tel]
+      );
+      if (Array.isArray(kontaRows) && kontaRows.length) {
+        return res.json({ status: 'success', kod: 'MASZ_KONTO', message: 'Ten numer ma już konto — zaloguj się swoim PIN-em. Jeśli go nie pamiętasz, poproś salon o nowy link.' });
+      }
+      // Czy numer należy do istniejącej klientki? (porównanie po znormalizowanych cyfrach)
+      const klienciRows = await q(
+        `SELECT id_klienta, telefon, status, zmarly FROM Klienci
+          WHERE tenant_id = ? AND COALESCE(telefon, '') != ''`,
+        [p.t]
+      ).catch(() => []);
+      const istniejaca = (Array.isArray(klienciRows) ? klienciRows : [])
+        .find(k => klientAktywny(k) && normalizujTelefon(k.telefon) === tel);
+      if (istniejaca) {
+        // Wniosek (bez duplikatu NOWY dla tego numeru)
+        const dup = await q(
+          `SELECT id FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND telefon = ? AND status = 'NOWY' LIMIT 1`,
+          [p.t, tel]
+        ).catch(() => []);
+        if (!(Array.isArray(dup) && dup.length)) {
+          await q(
+            `INSERT INTO Lojalnosc_Wnioski (tenant_id, telefon, imie, id_klienta, status) VALUES (?, ?, ?, ?, 'NOWY')`,
+            [p.t, tel, imie, String(istniejaca.id_klienta)]
+          );
+          zapiszLog(p.t, 'KLUB WNIOSEK O KONTO', 'Klient (rejestracja)', `${imie}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)} — dopasowano do kartoteki ${istniejaca.id_klienta}`);
+        }
+        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Znamy się już! Dla bezpieczeństwa salon wyśle Ci SMS z linkiem aktywacyjnym — zwykle w ciągu dnia.' });
+      }
+      // Nowa osoba → kartoteka + konto od ręki (+ ewentualny bonus powitalny)
+      const maxRows = await q(
+        `SELECT MAX(CAST(id_klienta AS UNSIGNED)) AS maxId FROM Klienci WHERE tenant_id = ?`, [p.t]
+      );
+      const noweId = String((Number((maxRows[0] || {}).maxId) || 0) + 1);
+      const hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      await q(
+        `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki)
+         VALUES (?, ?, ?, ?, ?, NOW(), 'BRAK', 'Rejestracja online (Klub)')`,
+        [randomUUID(), p.t, noweId, imie, tel]
+      );
+      await q(
+        `INSERT INTO Lojalnosc_Konta (tenant_id, id_klienta, telefon, pin_hash, status, zgoda_regulamin_at)
+         VALUES (?, ?, ?, ?, 'AKTYWNE', NOW())`,
+        [p.t, noweId, tel, hash]
+      );
+      const uRows = await q(`SELECT bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const bonus = parseInt(((Array.isArray(uRows) && uRows[0]) || {}).bonus_powitalny_pkt, 10) || 0;
+      if (bonus > 0) {
+        await q(
+          `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+           VALUES (?, ?, ?, 'Bonus powitalny 🎉', 'BONUS', ?, 'System')`,
+          [p.t, noweId, bonus, 'REJ@' + noweId]
+        ).catch(() => {});
+      }
+      zapiszLog(p.t, 'KLUB REJESTRACJA ONLINE', 'Klient (apka)', `${imie} — nowa kartoteka ${noweId}${bonus ? `, bonus ${bonus} pkt` : ''}`);
+      const session = makeKlubToken({ t: p.t, k: noweId, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
+      return res.json({ status: 'success', kod: 'NOWE', session, imie: imie.split(' ')[0], bonus });
+    } catch (e) {
+      console.error('[lojalnosc] rejestracja:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
+  // „Zapomniałam PIN-u" — bez tokenu i bez tenant: szukamy kont po numerze we
+  // wszystkich salonach, tworzymy wniosek RESET. Odpowiedź ZAWSZE identyczna
+  // (nie zdradzamy, czy numer ma konto). Link i tak pójdzie na numer z kartoteki.
+  router.post('/klub/reset_pin', loginLimiter, async (req, res) => {
+    const tel = normalizujTelefon((req.body || {}).telefon);
+    const ODP = { status: 'success', message: 'Jeśli ten numer ma u nas konto, salon wyśle SMS z linkiem do ustawienia nowego PIN-u — zwykle w ciągu dnia.' };
+    if (tel.length < 9) return res.json({ status: 'error', message: 'Podaj poprawny numer telefonu.' });
+    try {
+      const konta = await q(
+        `SELECT tenant_id, id_klienta FROM Lojalnosc_Konta WHERE telefon = ? AND status = 'AKTYWNE' LIMIT 5`,
+        [tel]
+      ).catch(() => []);
+      for (const konto of (Array.isArray(konta) ? konta : [])) {
+        const dup = await q(
+          `SELECT id FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND telefon = ? AND typ = 'RESET' AND status = 'NOWY' LIMIT 1`,
+          [konto.tenant_id, tel]
+        ).catch(() => []);
+        if (Array.isArray(dup) && dup.length) continue;
+        await q(
+          `INSERT INTO Lojalnosc_Wnioski (tenant_id, telefon, imie, id_klienta, typ, status) VALUES (?, ?, '', ?, 'RESET', 'NOWY')`,
+          [konto.tenant_id, tel, String(konto.id_klienta)]
+        ).catch(() => {});
+        zapiszLog(konto.tenant_id, 'KLUB WNIOSEK RESET PIN', 'Klient (apka)', `Klient ${konto.id_klienta}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)}`);
+      }
+      return res.json(ODP);
+    } catch (e) { return res.json(ODP); }
   });
 
   // ─── Upload grafiki z panelu (multipart — poza dispatcherem JSON) ───

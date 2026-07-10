@@ -217,7 +217,44 @@
     <input type="password" id="log-pin" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="current-password">
     <button class="btn" id="log-btn" onclick="zaloguj()">Zaloguj się</button>
     <div class="err" id="log-err"></div>
-    <div class="muted" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod QR przy najbliższej wizycie.</div>
+    <button class="btn ghost" id="log-rejestracja" style="display:none;" onclick="startRejestracja(localStorage.getItem('klub_rej'))">✨ Nie masz konta? Załóż je</button>
+    <div class="muted" id="log-brak-konta" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod QR przy najbliższej wizycie.</div>
+    <button class="link-btn" onclick="pokazResetPin()">Nie pamiętam PIN-u</button>
+    <div id="reset-box" style="display:none; margin-top:10px; text-align:left;">
+      <div class="muted">Podaj numer telefonu — salon wyśle Ci SMS z linkiem do ustawienia nowego PIN-u.</div>
+      <input type="tel" id="reset-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
+      <button class="btn" id="reset-btn" onclick="wyslijResetPin()" style="margin-top:10px;">Wyślij prośbę</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rejestracja online (wejście z publicznego linku: /klub.html?r=token) ── -->
+<div id="screen-rejestracja" class="screen center">
+  <div class="logo-znak">✨</div>
+  <div class="logo"><b id="rej-nazwa">Klub</b></div>
+  <div class="logo-sub">dołącz do programu</div>
+  <div class="card">
+    <h2>Załóż konto</h2>
+    <div class="muted">Zbieraj punkty za wizyty i wymieniaj je na nagrody.</div>
+    <div id="rej-bonus" style="display:none; margin-top:12px; background:var(--gold-soft); border:1px solid #f2d488; border-radius:var(--r-sm); padding:10px 14px; font-size:13px; font-weight:700; color:#a8730a;"></div>
+    <input type="tel" id="rej-imie" placeholder="Imię i nazwisko" autocomplete="name" style="letter-spacing:0;">
+    <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
+    <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
+    <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+    <label class="chk-row"><input type="checkbox" id="rej-zgoda"><span>Akceptuję <a id="rej-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
+    <button class="btn" id="rej-btn" onclick="zarejestruj()">Załóż konto</button>
+    <div class="err" id="rej-err"></div>
+    <button class="link-btn" onclick="pokaz('screen-login')">Mam już konto — zaloguj mnie</button>
+  </div>
+</div>
+
+<!-- ── Wniosek przyjęty (istniejąca klientka — czeka na SMS od salonu) ── -->
+<div id="screen-wniosek" class="screen center">
+  <div class="logo-znak">💌</div>
+  <div class="card" style="text-align:center;">
+    <h2>Znamy się już! 🌸</h2>
+    <div class="muted" style="margin-top:6px;">Ten numer jest w naszej kartotece. Dla bezpieczeństwa Twoich danych salon wyśle Ci <b>SMS z linkiem aktywacyjnym</b> — zwykle jeszcze tego samego dnia. Po kliknięciu ustawisz PIN i konto będzie gotowe.</div>
+    <button class="btn ghost" onclick="pokaz('screen-login')">Rozumiem</button>
   </div>
 </div>
 
@@ -409,9 +446,87 @@ window.addEventListener('load', async () => {
   if (slabaPrzegladarka()) document.getElementById('browser-hint').style.display = 'block';
   const aktToken = new URLSearchParams(location.search).get('a');
   if (aktToken) return startAktywacja(aktToken);
+  const rejToken = new URLSearchParams(location.search).get('r');
+  if (rejToken) {
+    localStorage.setItem('klub_rej', rejToken); // link publiczny — zapamiętujemy, żeby „Załóż konto" działało też później
+    if (!localStorage.getItem(LS_SESJA)) return startRejestracja(rejToken);
+  }
   if (localStorage.getItem(LS_SESJA)) return wczytajKonto();
+  pokazZalozKonto();
   pokaz('screen-login');
 });
+
+// ── Rejestracja online (publiczny link z IG/QR) ──
+let rejestracjaToken = null;
+function pokazZalozKonto() {
+  const maRej = !!localStorage.getItem('klub_rej');
+  const btn = document.getElementById('log-rejestracja');
+  const txt = document.getElementById('log-brak-konta');
+  if (btn) btn.style.display = maRej ? 'block' : 'none';
+  if (txt) txt.style.display = maRej ? 'none' : 'block';
+}
+async function startRejestracja(token) {
+  if (!token) { pokaz('screen-login'); return; }
+  rejestracjaToken = token;
+  loader(true);
+  try {
+    const d = await api('/rej_info', { token });
+    loader(false);
+    if (d.status !== 'success') {
+      localStorage.removeItem('klub_rej');
+      pokaz('screen-login');
+      document.getElementById('log-err').textContent = d.message || 'Link rejestracyjny nieaktualny.';
+      return;
+    }
+    document.getElementById('rej-nazwa').textContent = d.nazwa_klubu || 'Klub';
+    const bonus = document.getElementById('rej-bonus');
+    if (d.bonus_powitalny > 0) {
+      bonus.textContent = '🎁 Bonus na start: +' + d.bonus_powitalny + ' pkt za założenie konta!';
+      bonus.style.display = 'block';
+    } else bonus.style.display = 'none';
+    const reg = document.getElementById('rej-regulamin');
+    if (d.regulamin_url) { reg.href = d.regulamin_url; }
+    else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
+    history.replaceState(null, '', '/klub.html');
+    pokaz('screen-rejestracja');
+  } catch (e) {
+    loader(false);
+    pokaz('screen-login');
+    document.getElementById('log-err').textContent = 'Błąd połączenia. Spróbuj ponownie.';
+  }
+}
+async function zarejestruj() {
+  const imie = document.getElementById('rej-imie').value.trim();
+  const tel = document.getElementById('rej-tel').value.trim();
+  const pin = document.getElementById('rej-pin').value.trim();
+  const pin2 = document.getElementById('rej-pin2').value.trim();
+  const zgoda = document.getElementById('rej-zgoda').checked;
+  const err = document.getElementById('rej-err');
+  err.textContent = '';
+  if (imie.length < 3) { err.textContent = 'Podaj imię i nazwisko.'; return; }
+  if (tel.replace(/\D/g, '').length < 9) { err.textContent = 'Podaj poprawny numer telefonu.'; return; }
+  if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'PIN musi mieć 4–6 cyfr.'; return; }
+  if (pin !== pin2) { err.textContent = 'PIN-y różnią się od siebie.'; return; }
+  if (!zgoda) { err.textContent = 'Zaakceptuj regulamin programu.'; return; }
+  const btn = document.getElementById('rej-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/rejestracja', { token: rejestracjaToken, imie, telefon: tel, pin, zgoda: true });
+    if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się założyć konta.'; return; }
+    if (d.kod === 'NOWE') {
+      localStorage.setItem(LS_SESJA, d.session);
+      swiezaAktywacja = true;
+      if (d.bonus > 0) setTimeout(() => toast('🎁 Bonus powitalny: +' + d.bonus + ' pkt!'), 900);
+      wczytajKonto();
+    } else if (d.kod === 'WNIOSEK') {
+      pokaz('screen-wniosek');
+    } else { // MASZ_KONTO
+      pokaz('screen-login');
+      document.getElementById('log-err').textContent = d.message || 'Masz już konto — zaloguj się.';
+    }
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
+}
 // Świeże saldo po powrocie do apki
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && dane && localStorage.getItem(LS_SESJA)) wczytajKonto(true);
@@ -487,7 +602,32 @@ async function zaloguj() {
 function wyloguj() {
   localStorage.removeItem(LS_SESJA);
   dane = null;
+  pokazZalozKonto();
   pokaz('screen-login');
+}
+
+// ── „Nie pamiętam PIN-u" — wniosek o reset, SMS wyśle salon (na numer z kartoteki) ──
+function pokazResetPin() {
+  const box = document.getElementById('reset-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  const tel = document.getElementById('log-tel').value.trim();
+  if (tel) document.getElementById('reset-tel').value = tel;
+}
+async function wyslijResetPin() {
+  const tel = document.getElementById('reset-tel').value.trim();
+  const err = document.getElementById('log-err');
+  err.textContent = '';
+  if (tel.replace(/\D/g, '').length < 9) { err.textContent = 'Podaj poprawny numer telefonu.'; return; }
+  const btn = document.getElementById('reset-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/reset_pin', { telefon: tel });
+    if (d.status === 'success') {
+      document.getElementById('reset-box').style.display = 'none';
+      toast('💌 ' + (d.message || 'Prośba wysłana — wypatruj SMS-a od salonu.'));
+    } else err.textContent = d.message || 'Nie udało się wysłać prośby.';
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
 }
 
 // ── Ekran główny ──
