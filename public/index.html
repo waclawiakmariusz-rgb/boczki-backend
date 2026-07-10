@@ -8231,177 +8231,209 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <!-- Sekcja: Klub (dodatek lojalnosc) — zarządzanie treścią, PILOT ADMIN-ONLY -->
             <style>
-              .klubadm-tab { background:#fff; border:1px solid #efe5e8; border-radius:12px; padding:10px 16px; font-size:13.5px; font-weight:700; color:#6b7280; cursor:pointer; font-family:inherit; }
-              .klubadm-tab-active { background:#c54f7f; border-color:#c54f7f; color:#fff; }
+              /* Sekcja Klub — spokojny, jednolity system: serif w nagłówkach, mikro-etykiety,
+                 jedna rodzina przycisków, formularze chowane pod „+ Dodaj…" */
+              .klubadm-tab { background:transparent; border:none; border-bottom:2.5px solid transparent; border-radius:0; padding:10px 4px 12px; margin-right:22px; font-size:13.5px; font-weight:600; color:#8a8f9c; cursor:pointer; font-family:inherit; letter-spacing:.01em; transition:color .15s; }
+              .klubadm-tab:hover { color:#c54f7f; }
+              .klubadm-tab-active { color:#c54f7f; font-weight:700; border-bottom-color:#c54f7f; }
+              .klubadm-karta { background:#fff; border:1px solid #efe5e8; border-radius:18px; padding:20px 24px; box-shadow:0 8px 24px rgba(33,31,53,.04); }
+              .klubadm-h { font-family:'Cormorant Garamond',serif; font-size:1.25rem; font-weight:600; color:#2c3242; }
+              .klubadm-pod { font-size:12.5px; color:#8a8f9c; margin-top:3px; line-height:1.5; }
+              .klubadm-label { display:block; font-size:11px; font-weight:700; color:#8a8f9c; text-transform:uppercase; letter-spacing:.08em; margin:14px 0 6px; }
+              .klubadm-input, .klubadm-select, .klubadm-area { box-sizing:border-box; padding:10px 12px; border:1px solid #e7dfe3; border-radius:10px; font-size:13.5px; font-family:inherit; background:#fdfcfc; color:#2c3242; transition:border-color .15s, box-shadow .15s; }
+              .klubadm-input:focus, .klubadm-select:focus, .klubadm-area:focus { outline:none; border-color:#c54f7f; box-shadow:0 0 0 3px rgba(197,79,127,.08); background:#fff; }
+              .klubadm-btn { border:0; border-radius:8px; padding:7px 13px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+              .klubadm-glowny { background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+              .klubadm-glowny:hover { background:#b04370; }
+              .klubadm-drugi { background:#fff; color:#c54f7f; border:1px solid #ecd3de; border-radius:10px; padding:10px 18px; font-size:13.5px; font-weight:700; cursor:pointer; font-family:inherit; }
+              .klubadm-cichy { background:#f4f1f2; color:#6b7280; border:0; border-radius:10px; padding:10px 16px; font-size:13px; font-weight:600; cursor:pointer; font-family:inherit; }
+              .klubadm-chip { background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb; border-radius:999px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
+              .klubadm-chip:hover { background:#f6e7ee; }
               .klubadm-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #f5eef1; font-size:13.5px; flex-wrap:wrap; }
               .klubadm-row:last-child { border-bottom:none; }
-              .klubadm-btn { border:0; border-radius:8px; padding:7px 13px; font-size:12px; font-weight:700; cursor:pointer; font-family:inherit; }
-              body.dark-mode .klubadm-tab { background:#1e293b; border-color:#334155; color:#cbd5e1; }
-              body.dark-mode .klubadm-tab-active { background:#c54f7f; border-color:#c54f7f; color:#fff; }
+              .klubadm-form { border:1.5px dashed #ecd3de; border-radius:14px; background:#fdfbfc; margin-bottom:16px; }
+              .klubadm-form > summary { list-style:none; cursor:pointer; padding:13px 18px; font-size:13.5px; font-weight:700; color:#c54f7f; display:flex; align-items:center; gap:8px; }
+              .klubadm-form > summary::-webkit-details-marker { display:none; }
+              .klubadm-form > summary::before { content:"＋"; font-size:16px; font-weight:400; }
+              .klubadm-form[open] > summary::before { content:"−"; }
+              .klubadm-form[open] { background:#fff; border-style:solid; border-color:#efe5e8; }
+              .klubadm-form-cialo { padding:2px 18px 18px; }
+              body.dark-mode .klubadm-tab { color:#94a3b8; }
+              body.dark-mode .klubadm-tab-active { color:#f490b3; border-bottom-color:#f490b3; }
+              body.dark-mode .klubadm-karta { background:#1e293b; border-color:#334155; }
+              body.dark-mode .klubadm-h { color:#e2e8f0; }
+              body.dark-mode .klubadm-input, body.dark-mode .klubadm-select, body.dark-mode .klubadm-area { background:#0f172a; border-color:#475569; color:#e2e8f0; }
+              body.dark-mode .klubadm-form { background:#1e293b; border-color:#475569; }
               body.dark-mode .klubadm-row { border-bottom-color:#334155; }
             </style>
             <div id="klub-admin" class="section">
-                <div class="header" style="margin-bottom:16px;">
-                    <div>
-                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">💎 Klub — program lojalnościowy</h1>
-                        <p style="margin:6px 0 0 0; color:#6b7280; font-size:14px;">Punkty naliczają się automatycznie z paragonów. Tu zarządzasz nagrodami, promocjami i odbiorem nagród.</p>
-                    </div>
+                <div style="margin-bottom:6px;">
+                    <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0; letter-spacing:-.01em;">Klub <span style="color:#c54f7f;">·</span> program lojalnościowy</h1>
+                    <p style="margin:6px 0 0 0; color:#8a8f9c; font-size:13.5px;">Punkty naliczają się automatycznie z paragonów członkiniom Klubu.</p>
                 </div>
 
-                <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;">
-                    <button class="klubadm-tab klubadm-tab-active" data-kt="ustawienia" onclick="klubadm_tab('ustawienia', this)">⚙️ Ustawienia</button>
-                    <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">🎁 Nagrody</button>
-                    <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">📣 Promocje</button>
-                    <button class="klubadm-tab" data-kt="kampanie" onclick="klubadm_tab('kampanie', this)">📬 Kampanie</button>
-                    <button class="klubadm-tab" data-kt="czlonkowie" onclick="klubadm_tab('czlonkowie', this)">👥 Członkowie</button>
-                    <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">🧾 Odbiory i zgłoszenia <span id="klubadm-badge" style="display:none; background:#dc2626; color:#fff; border-radius:10px; padding:1px 7px; font-size:11px;"></span></button>
-                    <button class="klubadm-tab" data-kt="statystyki" onclick="klubadm_tab('statystyki', this)">📊 Statystyki</button>
+                <div style="display:flex; flex-wrap:wrap; border-bottom:1px solid #efe5e8; margin-bottom:20px;">
+                    <button class="klubadm-tab klubadm-tab-active" data-kt="statystyki" onclick="klubadm_tab('statystyki', this)">Przegląd</button>
+                    <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">Nagrody</button>
+                    <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">Promocje</button>
+                    <button class="klubadm-tab" data-kt="kampanie" onclick="klubadm_tab('kampanie', this)">Kampanie</button>
+                    <button class="klubadm-tab" data-kt="czlonkowie" onclick="klubadm_tab('czlonkowie', this)">Członkowie</button>
+                    <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">Do obsłużenia <span id="klubadm-badge" style="display:none; background:#c54f7f; color:#fff; border-radius:999px; padding:1px 8px; font-size:11px; vertical-align:1px;"></span></button>
+                    <button class="klubadm-tab" data-kt="ustawienia" onclick="klubadm_tab('ustawienia', this)">Ustawienia</button>
                 </div>
 
                 <!-- Tab: Ustawienia -->
-                <div id="klubadm-ustawienia" class="klubadm-page">
-                    <div class="card" style="padding:18px 22px; max-width:560px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:10px;">Zasady programu</div>
-                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:10px 0 5px;">Nazwa klubu (widoczna dla klientów w aplikacji):</label>
-                        <input id="klubadm-nazwa" maxlength="120" placeholder="np. Klub Boczki" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">Punkty za każde 10 zł wydane w salonie:</label>
-                        <input id="klubadm-pkt" type="number" min="0" max="100" step="1" style="width:120px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Przykład: przy „1" paragon na 250 zł daje 25 pkt. Zmiana działa od nowych paragonów — nic nie przelicza się wstecz.</div>
-                        <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin:12px 0 5px;">🎁 Bonus powitalny za rejestrację online (pkt, 0 = brak):</label>
-                        <input id="klubadm-bonus" type="number" min="0" max="1000" step="1" style="width:120px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <div style="font-size:12px; color:#9ca3af; margin-top:6px;">Dostają go tylko NOWE osoby rejestrujące się z linku (np. z Instagrama) — dobra zachęta do relacji.</div>
-                        <div style="display:flex; align-items:center; gap:12px; margin-top:14px;">
-                            <button onclick="klubadm_zapiszUstawienia()" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">💾 Zapisz</button>
-                            <span id="klubadm-ust-status" style="font-size:12.5px; color:#6b7280;"></span>
+                <div id="klubadm-ustawienia" class="klubadm-page" style="display:none;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:16px; max-width:960px;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">Zasady programu</div>
+                            <label class="klubadm-label">Nazwa klubu (widzą ją klientki w aplikacji)</label>
+                            <input id="klubadm-nazwa" maxlength="120" placeholder="np. Klub Boczki" class="klubadm-input" style="width:100%;">
+                            <label class="klubadm-label">Punkty za każde 10 zł</label>
+                            <input id="klubadm-pkt" type="number" min="0" max="100" step="1" class="klubadm-input" style="width:110px;">
+                            <div class="klubadm-pod">Przy „1" paragon na 250 zł daje 25 pkt. Zmiana działa tylko dla nowych paragonów.</div>
+                            <label class="klubadm-label">Bonus powitalny za rejestrację online (0 = brak)</label>
+                            <input id="klubadm-bonus" type="number" min="0" max="1000" step="1" class="klubadm-input" style="width:110px;">
+                            <div class="klubadm-pod">Dostają go tylko nowe osoby z linku rejestracyjnego — dobra zachęta w relacji na IG.</div>
+                            <div style="display:flex; align-items:center; gap:12px; margin-top:18px;">
+                                <button onclick="klubadm_zapiszUstawienia()" class="klubadm-glowny">Zapisz ustawienia</button>
+                                <span id="klubadm-ust-status" style="font-size:12.5px; color:#8a8f9c;"></span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="card" style="padding:18px 22px; max-width:560px; margin-top:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🔗 Link rejestracyjny (Instagram, ulotki)</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Publiczny, bezterminowy link do zakładania kont. Nowa osoba dostaje konto od ręki (+bonus), istniejąca klientka trafia do „Wniosków" — dla bezpieczeństwa jej danych.</div>
-                        <button onclick="klubadm_linkRejestracyjny()" style="margin-top:12px; background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:10px 20px; font-size:13.5px; font-weight:700; cursor:pointer;">Pokaż link i QR</button>
-                        <div id="klubadm-rejlink-area" style="display:none; margin-top:12px;"></div>
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">Link rejestracyjny</div>
+                            <div class="klubadm-pod">Publiczny, bezterminowy link do zakładania kont — do bio na Instagramie, relacji i ulotek. Nowa osoba dostaje konto od ręki, istniejąca klientka trafia do „Do obsłużenia".</div>
+                            <button onclick="klubadm_linkRejestracyjny()" class="klubadm-drugi" style="margin-top:14px;">Pokaż link i kod QR</button>
+                            <div id="klubadm-rejlink-area" style="display:none; margin-top:12px;"></div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Tab: Nagrody -->
                 <div id="klubadm-nagrody" class="klubadm-page" style="display:none;">
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-n-form-tytul">Dodaj nagrodę</div>
-                        <input type="hidden" id="klubadm-n-id">
-                        <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:10px; margin-top:10px;">
-                            <input id="klubadm-n-nazwa" maxlength="160" placeholder="Nazwa (np. Henna gratis)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <input id="klubadm-n-koszt" type="number" min="1" placeholder="Koszt (pkt)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <input id="klubadm-n-ilosc" type="number" min="0" placeholder="Ilość (puste = ∞)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                    <details class="klubadm-form" id="klubadm-n-form-box">
+                        <summary><span id="klubadm-n-form-tytul">Dodaj nagrodę</span></summary>
+                        <div class="klubadm-form-cialo">
+                            <input type="hidden" id="klubadm-n-id">
+                            <div style="display:grid; grid-template-columns:2fr 1fr 1fr; gap:12px;">
+                                <div><label class="klubadm-label" style="margin-top:6px;">Nazwa</label><input id="klubadm-n-nazwa" maxlength="160" placeholder="np. Henna gratis" class="klubadm-input" style="width:100%;"></div>
+                                <div><label class="klubadm-label" style="margin-top:6px;">Koszt (pkt)</label><input id="klubadm-n-koszt" type="number" min="1" placeholder="np. 500" class="klubadm-input" style="width:100%;"></div>
+                                <div><label class="klubadm-label" style="margin-top:6px;">Ilość (puste = bez limitu)</label><input id="klubadm-n-ilosc" type="number" min="0" placeholder="∞" class="klubadm-input" style="width:100%;"></div>
+                            </div>
+                            <label class="klubadm-label">Zdjęcie</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="klubadm-n-img" onchange="klubadm_podglad(this.id)" placeholder="Wgraj plik albo wklej link https://…" class="klubadm-input" style="flex:1;">
+                                <button onclick="klubadm_wgraj('klubadm-n-img')" class="klubadm-cichy" style="white-space:nowrap;">Wgraj z dysku</button>
+                                <img id="klubadm-n-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e7dfe3;">
+                            </div>
+                            <label class="klubadm-label">Krótki opis (opcjonalnie)</label>
+                            <input id="klubadm-n-opis" maxlength="500" placeholder="np. Relaksujący dodatek do dowolnego zabiegu" class="klubadm-input" style="width:100%;">
+                            <div style="display:flex; gap:10px; margin-top:16px;">
+                                <button onclick="klubadm_zapiszNagrode()" id="klubadm-n-btn" class="klubadm-glowny">Dodaj nagrodę</button>
+                                <button onclick="klubadm_resetNagroda()" id="klubadm-n-anuluj" class="klubadm-cichy" style="display:none;">Anuluj edycję</button>
+                            </div>
                         </div>
-                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-                            <input id="klubadm-n-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie: wgraj plik → albo wklej link https://…" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <button onclick="klubadm_wgraj('klubadm-n-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
-                            <img id="klubadm-n-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
-                        </div>
-                        <input id="klubadm-n-opis" maxlength="500" placeholder="Krótki opis (opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <div style="display:flex; gap:10px; margin-top:12px;">
-                            <button onclick="klubadm_zapiszNagrode()" id="klubadm-n-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj nagrodę</button>
-                            <button onclick="klubadm_resetNagroda()" id="klubadm-n-anuluj" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
-                        </div>
-                    </div>
-                    <div class="card" style="padding:10px 22px;"><div id="klubadm-n-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                    </details>
+                    <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-n-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
                 </div>
 
                 <!-- Tab: Promocje -->
                 <div id="klubadm-promocje" class="klubadm-page" style="display:none;">
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-p-form-tytul">Dodaj promocję</div>
-                        <input type="hidden" id="klubadm-p-id">
-                        <input id="klubadm-p-tytul" maxlength="200" placeholder="Tytuł (np. Środa -20% na masaże)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <input id="klubadm-p-opis" maxlength="300" placeholder="Krótki opis pod tytułem" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-                            <input id="klubadm-p-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie: wgraj plik → albo wklej link https://…" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <button onclick="klubadm_wgraj('klubadm-p-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
-                            <img id="klubadm-p-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
+                    <details class="klubadm-form" id="klubadm-p-form-box">
+                        <summary><span id="klubadm-p-form-tytul">Dodaj promocję</span></summary>
+                        <div class="klubadm-form-cialo">
+                            <input type="hidden" id="klubadm-p-id">
+                            <label class="klubadm-label" style="margin-top:6px;">Tytuł</label>
+                            <input id="klubadm-p-tytul" maxlength="200" placeholder="np. Środa −20% na masaże" class="klubadm-input" style="width:100%;">
+                            <label class="klubadm-label">Krótki opis (pod tytułem)</label>
+                            <input id="klubadm-p-opis" maxlength="300" placeholder="Jedno zdanie zachęty" class="klubadm-input" style="width:100%;">
+                            <label class="klubadm-label">Zdjęcie</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="klubadm-p-img" onchange="klubadm_podglad(this.id)" placeholder="Wgraj plik albo wklej link https://…" class="klubadm-input" style="flex:1;">
+                                <button onclick="klubadm_wgraj('klubadm-p-img')" class="klubadm-cichy" style="white-space:nowrap;">Wgraj z dysku</button>
+                                <img id="klubadm-p-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e7dfe3;">
+                            </div>
+                            <label class="klubadm-label">Pełna treść</label>
+                            <textarea id="klubadm-p-tresc" rows="4" placeholder="Szczegóły promocji (może zawierać proste HTML: <b>, <br>)…" class="klubadm-area" style="width:100%; resize:vertical;"></textarea>
+                            <label class="klubadm-label">Publikacja</label>
+                            <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap;">
+                                <label style="font-size:12.5px; color:#475569; font-weight:600;">Od <input id="klubadm-p-od" type="date" class="klubadm-input"></label>
+                                <label style="font-size:12.5px; color:#475569; font-weight:600;">Do <input id="klubadm-p-do" type="date" class="klubadm-input"></label>
+                                <label style="font-size:13px; color:#475569; font-weight:600; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-dnia" type="checkbox" style="width:16px; height:16px; accent-color:#c54f7f;"> przycisk „BIORĘ" (zgłoszenie do salonu)</label>
+                                <label style="font-size:13px; color:#475569; font-weight:600; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-pushstart" type="checkbox" style="width:16px; height:16px; accent-color:#c54f7f;"> push automatycznie w dniu startu</label>
+                            </div>
+                            <label class="klubadm-label">Kto widzi</label>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <select id="klubadm-seg-typ-p" onchange="klubadm_segPola('p')" class="klubadm-select">
+                                    <option value="WSZYSCY">Wszyscy klienci</option>
+                                    <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
+                                    <option value="ZABIEG">Po zabiegu …</option>
+                                    <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                                </select>
+                                <input id="klubadm-seg-wart-p" class="klubadm-input" style="display:none; width:190px;">
+                                <input id="klubadm-seg-dni-p" type="number" min="1" max="730" value="90" class="klubadm-input" style="display:none; width:90px;" title="okno dni">
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:16px;">
+                                <button onclick="klubadm_zapiszPromocje()" id="klubadm-p-btn" class="klubadm-glowny">Dodaj promocję</button>
+                                <button onclick="klubadm_resetPromocja()" id="klubadm-p-anuluj" class="klubadm-cichy" style="display:none;">Anuluj edycję</button>
+                            </div>
                         </div>
-                        <textarea id="klubadm-p-tresc" rows="5" placeholder="Pełna treść promocji (może zawierać proste HTML: <b>, <br>, listy)…" style="width:100%; box-sizing:border-box; margin-top:10px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; resize:vertical;"></textarea>
-                        <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-top:12px;">
-                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Od: <input id="klubadm-p-od" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
-                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Do: <input id="klubadm-p-do" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
-                            <label style="font-size:13px; color:#b45309; font-weight:700; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-dnia" type="checkbox" style="width:17px; height:17px; accent-color:#c54f7f;"> 🔥 Promocja z przyciskiem „BIORĘ"</label>
-                        </div>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:10px;">
-                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Kto widzi:</span>
-                            <select id="klubadm-seg-typ-p" onchange="klubadm_segPola('p')" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
-                                <option value="WSZYSCY">Wszyscy klienci</option>
-                                <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
-                                <option value="ZABIEG">Po zabiegu …</option>
-                                <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
-                            </select>
-                            <input id="klubadm-seg-wart-p" style="display:none; width:180px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
-                            <input id="klubadm-seg-dni-p" type="number" min="1" max="730" value="90" style="display:none; width:90px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" title="okno dni">
-                            <label style="font-size:13px; color:#7c3aed; font-weight:700; display:flex; align-items:center; gap:7px; cursor:pointer;"><input id="klubadm-p-pushstart" type="checkbox" style="width:17px; height:17px; accent-color:#7c3aed;"> 🔔 Wyślij push automatycznie w dniu startu</label>
-                        </div>
-                        <div style="display:flex; gap:10px; margin-top:12px;">
-                            <button onclick="klubadm_zapiszPromocje()" id="klubadm-p-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj promocję</button>
-                            <button onclick="klubadm_resetPromocja()" id="klubadm-p-anuluj" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
-                        </div>
-                    </div>
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🔔 Powiadomienie push do klientów</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafi do wszystkich, którzy włączyli powiadomienia w aplikacji.</div>
-                        <div style="display:grid; grid-template-columns:1fr 2fr auto; gap:10px; margin-top:10px;">
-                            <input id="klubadm-push-tytul" maxlength="100" placeholder="Tytuł" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <input id="klubadm-push-tresc" maxlength="300" placeholder="Treść powiadomienia" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <button onclick="klubadm_wyslijPush()" id="klubadm-push-btn" style="background:#7c3aed; color:#fff; border:0; border-radius:10px; padding:10px 18px; font-size:13.5px; font-weight:700; cursor:pointer;">Wyślij</button>
-                        </div>
-                        <div id="klubadm-push-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
-                    </div>
-                    <div class="card" style="padding:10px 22px;"><div id="klubadm-p-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                    </details>
+                    <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-p-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
                 </div>
 
-                <!-- Tab: Kampanie (targetowany push + wiadomość w apce, harmonogram) -->
+                <!-- Tab: Kampanie (formularz + podgląd obok siebie, lista niżej) -->
                 <div id="klubadm-kampanie" class="klubadm-page" style="display:none;">
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;" id="klubadm-k-form-tytul">Nowa kampania</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-top:3px;">Trafia jako push na telefony (u tych, którzy włączyli powiadomienia) i jako wiadomość w apce do wszystkich z segmentu.</div>
-                        <input type="hidden" id="klubadm-k-id">
-                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:10px;">
-                            <span style="font-size:11.5px; color:#9ca3af; align-self:center;">Szablony:</span>
-                            <button onclick="klubadm_szablon('reaktywacja')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Dawno Cię nie było</button>
-                            <button onclick="klubadm_szablon('vip')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Podziękowanie VIP</button>
-                            <button onclick="klubadm_szablon('terminy')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Wolne terminy</button>
-                            <button onclick="klubadm_szablon('nowosc')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Nowość w salonie</button>
-                            <button onclick="klubadm_szablon('nagrody')" class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;">Przypomnij o nagrodach</button>
+                    <div style="display:grid; grid-template-columns:minmax(420px, 1.6fr) minmax(280px, 1fr); gap:16px; align-items:start; margin-bottom:16px;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h" id="klubadm-k-form-tytul">Nowa kampania</div>
+                            <div class="klubadm-pod">Push na telefony z powiadomieniami + wiadomość w aplikacji dla wszystkich z wybranej grupy.</div>
+                            <input type="hidden" id="klubadm-k-id">
+                            <label class="klubadm-label">Zacznij od szablonu</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                                <button onclick="klubadm_szablon('reaktywacja')" class="klubadm-chip">Dawno Cię nie było</button>
+                                <button onclick="klubadm_szablon('vip')" class="klubadm-chip">Podziękowanie VIP</button>
+                                <button onclick="klubadm_szablon('terminy')" class="klubadm-chip">Wolne terminy</button>
+                                <button onclick="klubadm_szablon('nowosc')" class="klubadm-chip">Nowość w salonie</button>
+                                <button onclick="klubadm_szablon('nagrody')" class="klubadm-chip">Przypomnij o nagrodach</button>
+                            </div>
+                            <label class="klubadm-label">Tytuł</label>
+                            <input id="klubadm-k-tytul" maxlength="100" placeholder="np. Weekend −15%" class="klubadm-input" style="width:100%;">
+                            <label class="klubadm-label">Treść wiadomości</label>
+                            <textarea id="klubadm-k-tresc" maxlength="300" rows="3" placeholder="Krótko i po ludzku — jak SMS do klientki" class="klubadm-area" style="width:100%; resize:vertical;"></textarea>
+                            <label class="klubadm-label">Zdjęcie (opcjonalnie — pokaże się w powiadomieniu i w apce)</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="klubadm-k-img" onchange="klubadm_podglad(this.id)" placeholder="Wgraj plik albo wklej link https://…" class="klubadm-input" style="flex:1;">
+                                <button onclick="klubadm_wgraj('klubadm-k-img')" class="klubadm-cichy" style="white-space:nowrap;">Wgraj z dysku</button>
+                                <img id="klubadm-k-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e7dfe3;">
+                            </div>
+                            <label class="klubadm-label">Do kogo</label>
+                            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                                <select id="klubadm-seg-typ-k" onchange="klubadm_segPola('k')" class="klubadm-select">
+                                    <option value="WSZYSCY">Wszyscy klienci</option>
+                                    <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
+                                    <option value="ZABIEG">Po zabiegu …</option>
+                                    <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                                </select>
+                                <input id="klubadm-seg-wart-k" class="klubadm-input" style="display:none; width:190px;">
+                                <input id="klubadm-seg-dni-k" type="number" min="1" max="730" value="90" class="klubadm-input" style="display:none; width:90px;" title="okno dni">
+                            </div>
+                            <label class="klubadm-label">Kiedy i jak długo</label>
+                            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+                                <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="teraz" checked style="accent-color:#c54f7f;"> teraz</label>
+                                <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="plan" style="accent-color:#c54f7f;"> zaplanuj:</label>
+                                <input id="klubadm-k-termin" type="datetime-local" class="klubadm-input" onfocus="document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;">
+                                <label style="font-size:12.5px; color:#475569; font-weight:600;">w apce przez <input id="klubadm-k-widoczna" type="number" min="1" max="90" value="30" class="klubadm-input" style="width:64px;"> dni</label>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:18px; align-items:center;">
+                                <button onclick="klubadm_zapiszKampanie()" id="klubadm-k-btn" class="klubadm-glowny">Wyślij / zaplanuj</button>
+                                <button onclick="klubadm_resetKampania()" id="klubadm-k-anuluj-ed" class="klubadm-cichy" style="display:none;">Anuluj edycję</button>
+                            </div>
+                            <div id="klubadm-k-status" style="font-size:12.5px; color:#8a8f9c; margin-top:10px;"></div>
                         </div>
-                        <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:12px;">
-                            <input id="klubadm-k-tytul" maxlength="100" placeholder="Tytuł (np. Weekend -15%)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <input id="klubadm-k-tresc" maxlength="300" placeholder="Treść wiadomości" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        </div>
-                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
-                            <input id="klubadm-k-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie (opcjonalnie): pokaże się w powiadomieniu i w apce" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                            <button onclick="klubadm_wgraj('klubadm-k-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
-                            <img id="klubadm-k-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
-                        </div>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:10px;">
-                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Do kogo:</span>
-                            <select id="klubadm-seg-typ-k" onchange="klubadm_segPola('k')" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
-                                <option value="WSZYSCY">Wszyscy klienci</option>
-                                <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
-                                <option value="ZABIEG">Po zabiegu …</option>
-                                <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
-                            </select>
-                            <input id="klubadm-seg-wart-k" style="display:none; width:180px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
-                            <input id="klubadm-seg-dni-k" type="number" min="1" max="730" value="90" style="display:none; width:90px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" title="okno dni">
-                        </div>
-                        <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:12px;">
-                            <span style="font-size:12.5px; font-weight:700; color:#475569;">Kiedy:</span>
-                            <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="teraz" checked style="accent-color:#c54f7f;"> Wyślij teraz</label>
-                            <label style="font-size:13px; display:flex; align-items:center; gap:6px; cursor:pointer;"><input type="radio" name="klubadm-k-kiedy" value="plan" style="accent-color:#c54f7f;"> Zaplanuj:</label>
-                            <input id="klubadm-k-termin" type="datetime-local" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;" onfocus="document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;">
-                            <label style="font-size:12.5px; color:#475569; font-weight:600;">Widoczna w apce przez <input id="klubadm-k-widoczna" type="number" min="1" max="90" value="30" style="width:64px; padding:8px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;"> dni</label>
-                            <button onclick="klubadm_zapiszKampanie()" id="klubadm-k-btn" style="background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">📬 Wyślij / zaplanuj</button>
-                            <button onclick="klubadm_resetKampania()" id="klubadm-k-anuluj-ed" style="display:none; background:#f1f5f9; border:0; border-radius:10px; padding:10px 16px; font-size:13.5px; font-weight:600; cursor:pointer;">Anuluj edycję</button>
-                        </div>
-                        <div id="klubadm-k-status" style="font-size:12.5px; color:#6b7280; margin-top:8px;"></div>
-                        <!-- Podgląd „jak zobaczy to klientka" — karta 1:1 ze skrzynki w apce -->
-                        <div style="margin-top:14px; padding:14px; background:#f8f1ea; border:1px solid #ecdfd2; border-radius:14px; max-width:400px;">
-                            <div style="font-size:11px; color:#ab9c92; letter-spacing:.1em; text-transform:uppercase; font-weight:700; margin-bottom:8px;">Podgląd w aplikacji</div>
+                        <!-- Podgląd „jak zobaczy to klientka" — przyklejony obok formularza -->
+                        <div style="position:sticky; top:16px; padding:16px; background:#f8f1ea; border:1px solid #ecdfd2; border-radius:16px;">
+                            <div style="font-size:10.5px; color:#ab9c92; letter-spacing:.14em; text-transform:uppercase; font-weight:700; margin-bottom:10px;">Tak zobaczy to klientka</div>
                             <div style="background:#fffdf9; border:1px solid #ecdfd2; border-radius:16px; overflow:hidden; box-shadow:0 6px 16px rgba(84,48,48,.06);">
                                 <img id="klubadm-k-pod-img" src="" alt="" style="display:none; width:100%; max-height:110px; object-fit:cover;">
                                 <div style="padding:12px 15px;">
@@ -8415,61 +8447,63 @@ document.addEventListener('DOMContentLoaded', () => {
                             </div>
                         </div>
                     </div>
-                    <div class="card" style="padding:10px 22px;"><div id="klubadm-k-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                    <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-k-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
                 </div>
 
                 <!-- Tab: Członkowie Klubu -->
                 <div id="klubadm-czlonkowie" class="klubadm-page" style="display:none;">
-                    <div class="card" style="padding:18px 22px;">
-                        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px;">
-                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">Członkowie Klubu <span id="klubadm-cz-licznik" style="font-size:14px; color:#6b7280;"></span></div>
-                            <input id="klubadm-cz-szukaj" placeholder="🔍 Szukaj po nazwisku lub telefonie…" oninput="klubadm_filtrujCzlonkow()" style="width:260px; padding:9px 12px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13px;">
+                    <div class="klubadm-karta">
+                        <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;">
+                            <div class="klubadm-h">Członkowie <span id="klubadm-cz-licznik" style="font-family:'DM Sans',sans-serif; font-size:13px; color:#8a8f9c; font-weight:600;"></span></div>
+                            <input id="klubadm-cz-szukaj" placeholder="Szukaj po nazwisku lub telefonie…" oninput="klubadm_filtrujCzlonkow()" class="klubadm-input" style="width:280px;">
                         </div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klientki z aktywnym kontem w aplikacji — saldo, ostatnia wizyta i czy dostają powiadomienia.</div>
+                        <div class="klubadm-pod" style="margin-bottom:6px;">Klientki z aktywnym kontem w aplikacji — saldo, ostatnia wizyta i znacznik powiadomień.</div>
                         <div id="klubadm-cz-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
                     </div>
                 </div>
 
-                <!-- Tab: Odbiory i zgłoszenia -->
+                <!-- Tab: Do obsłużenia (odbiory, BIORĘ, wnioski) -->
                 <div id="klubadm-odbiory" class="klubadm-page" style="display:none;">
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">🎁 Odbiory nagród</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient pokazuje kod z aplikacji — sprawdź kod, wydaj nagrodę i kliknij „Wydaj". Punkty zejdą z jego konta dopiero wtedy.</div>
-                        <div id="klubadm-odbiory-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
-                    </div>
-                    <div class="card" style="padding:18px 22px; margin-bottom:16px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">🔥 Zgłoszenia „BIORĘ"</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Klient kliknął BIORĘ przy promocji — skontaktuj się i oznacz jako obsłużone.</div>
-                        <div id="klubadm-zgloszenia-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
-                    </div>
-                    <div class="card" style="padding:18px 22px;">
-                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600; margin-bottom:8px;">📥 Wnioski o konto / reset PIN-u</div>
-                        <div style="font-size:12.5px; color:#6b7280; margin-bottom:10px;">Istniejące klientki z rejestracji online i zapomniane PIN-y. Link aktywacyjny wysyłasz SMS-em <b>na numer z kartoteki</b> — zeskanuj QR telefonem salonu, a SMS napisze się sam.</div>
-                        <div id="klubadm-wnioski-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
-                        <div id="klubadm-wniosek-sms" style="display:none; margin-top:12px; padding:14px; background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px;"></div>
+                    <div style="display:grid; gap:16px;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">Odbiory nagród</div>
+                            <div class="klubadm-pod" style="margin-bottom:6px;">Klientka pokazuje kod z aplikacji — wydaj nagrodę i kliknij „Wydaj". Punkty zejdą z konta dopiero wtedy.</div>
+                            <div id="klubadm-odbiory-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                        </div>
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">Zgłoszenia „BIORĘ"</div>
+                            <div class="klubadm-pod" style="margin-bottom:6px;">Klientka kliknęła BIORĘ przy promocji — skontaktuj się i oznacz jako obsłużone.</div>
+                            <div id="klubadm-zgloszenia-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                        </div>
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">Wnioski o konto i reset PIN-u</div>
+                            <div class="klubadm-pod" style="margin-bottom:6px;">Link aktywacyjny wysyłasz SMS-em <b>na numer z kartoteki</b> — zeskanuj kod QR telefonem salonu, a SMS napisze się sam.</div>
+                            <div id="klubadm-wnioski-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                            <div id="klubadm-wniosek-sms" style="display:none; margin-top:12px; padding:14px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:12px;"></div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Tab: Statystyki -->
-                <div id="klubadm-statystyki" class="klubadm-page" style="display:none;">
-                    <div style="display:flex; gap:10px; align-items:center; margin-bottom:14px;">
-                        <select id="klubadm-st-mies" onchange="klubadm_zaladujStatystyki()" style="padding:9px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></select>
-                        <select id="klubadm-st-rok" onchange="klubadm_zaladujStatystyki()" style="padding:9px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></select>
+                <!-- Tab: Przegląd (statystyki) — domyślny -->
+                <div id="klubadm-statystyki" class="klubadm-page">
+                    <div style="display:flex; gap:8px; align-items:center; margin-bottom:14px;">
+                        <select id="klubadm-st-mies" onchange="klubadm_zaladujStatystyki()" class="klubadm-select"></select>
+                        <select id="klubadm-st-rok" onchange="klubadm_zaladujStatystyki()" class="klubadm-select"></select>
                     </div>
-                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px, 1fr)); gap:12px; margin-bottom:16px;">
-                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-przyznane" style="font-size:26px; font-weight:800; color:#0f766e;">–</div><div style="font-size:12px; color:#6b7280;">pkt przyznane (m-c)</div></div>
-                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-odjete" style="font-size:26px; font-weight:800; color:#b91c1c;">–</div><div style="font-size:12px; color:#6b7280;">pkt odjęte (m-c)</div></div>
-                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-klienci" style="font-size:26px; font-weight:800; color:#c54f7f;">–</div><div style="font-size:12px; color:#6b7280;">klientów z ruchem (m-c)</div></div>
-                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-konta" style="font-size:26px; font-weight:800; color:#7c3aed;">–</div><div style="font-size:12px; color:#6b7280;">kont w aplikacji</div></div>
-                        <div class="card" style="padding:16px; text-align:center; margin:0;"><div id="klubadm-st-push" style="font-size:26px; font-weight:800; color:#0284c7;">–</div><div style="font-size:12px; color:#6b7280;">z powiadomieniami</div></div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px;">
+                        <div class="klubadm-karta" style="padding:16px; text-align:center;"><div id="klubadm-st-przyznane" style="font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:600; color:#2c3242;">–</div><div style="font-size:11.5px; color:#8a8f9c; letter-spacing:.03em;">pkt przyznane (m-c)</div></div>
+                        <div class="klubadm-karta" style="padding:16px; text-align:center;"><div id="klubadm-st-odjete" style="font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:600; color:#2c3242;">–</div><div style="font-size:11.5px; color:#8a8f9c; letter-spacing:.03em;">pkt odjęte (m-c)</div></div>
+                        <div class="klubadm-karta" style="padding:16px; text-align:center;"><div id="klubadm-st-klienci" style="font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:600; color:#c54f7f;">–</div><div style="font-size:11.5px; color:#8a8f9c; letter-spacing:.03em;">klientek z ruchem (m-c)</div></div>
+                        <div class="klubadm-karta" style="padding:16px; text-align:center;"><div id="klubadm-st-konta" style="font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:600; color:#c54f7f;">–</div><div style="font-size:11.5px; color:#8a8f9c; letter-spacing:.03em;">kont w aplikacji</div></div>
+                        <div class="klubadm-karta" style="padding:16px; text-align:center;"><div id="klubadm-st-push" style="font-family:'Cormorant Garamond',serif; font-size:30px; font-weight:600; color:#2c3242;">–</div><div style="font-size:11.5px; color:#8a8f9c; letter-spacing:.03em;">z powiadomieniami</div></div>
                     </div>
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
-                        <div class="card" style="padding:18px 22px; margin:0;">
-                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:600; margin-bottom:8px;">🏆 Top klienci (saldo)</div>
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h" style="margin-bottom:6px;">Top klientki</div>
                             <div id="klubadm-st-top" style="font-size:13.5px;"></div>
                         </div>
-                        <div class="card" style="padding:18px 22px; margin:0;">
-                            <div style="font-family:'Cormorant Garamond',serif; font-size:1.2rem; font-weight:600; margin-bottom:8px;">🎁 Wydane nagrody (m-c)</div>
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h" style="margin-bottom:6px;">Wydane nagrody w miesiącu</div>
                             <div id="klubadm-st-nagrody" style="font-size:13.5px;"></div>
                         </div>
                     </div>
@@ -30926,16 +30960,20 @@ function klubadm_edytujNagrode(id) {
   document.getElementById('klubadm-n-img').value = n.img_url || '';
   document.getElementById('klubadm-n-opis').value = n.opis || '';
   document.getElementById('klubadm-n-form-tytul').textContent = 'Edytuj nagrodę';
-  document.getElementById('klubadm-n-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-n-btn').textContent = 'Zapisz zmiany';
   document.getElementById('klubadm-n-anuluj').style.display = 'inline-block';
   klubadm_podglad('klubadm-n-img');
+  const boxN = document.getElementById('klubadm-n-form-box');
+  if (boxN) { boxN.open = true; boxN.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 function klubadm_resetNagroda() {
   ['klubadm-n-id','klubadm-n-nazwa','klubadm-n-koszt','klubadm-n-ilosc','klubadm-n-img','klubadm-n-opis'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('klubadm-n-form-tytul').textContent = 'Dodaj nagrodę';
-  document.getElementById('klubadm-n-btn').textContent = '+ Dodaj nagrodę';
+  document.getElementById('klubadm-n-btn').textContent = 'Dodaj nagrodę';
   document.getElementById('klubadm-n-anuluj').style.display = 'none';
   klubadm_podglad('klubadm-n-img');
+  const boxN = document.getElementById('klubadm-n-form-box');
+  if (boxN) boxN.open = false;
 }
 async function klubadm_zapiszNagrode() {
   const d = await klubadm_apiPost({
@@ -30975,7 +31013,7 @@ async function klubadm_zaladujPromocje() {
         <div style="font-size:12px; color:#9ca3af;">${escHtml(p.opis || '')} · ${okres}</div>
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
-        <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_pushZPromocji(${p.id})">🔔 PUSH</button>
+        <button class="klubadm-btn" style="background:#fbf7f9; color:#c54f7f; border:1px solid #f3e6eb;" onclick="klubadm_pushZPromocji(${p.id})">Kampania</button>
         <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujPromocje(${p.id})">✏️ Edytuj</button>
         <button class="klubadm-btn" style="background:#f8fafc; color:#475569;" onclick="klubadm_statusPromocji(${p.id}, '${ukryta ? 'AKTYWNA' : 'UKRYTA'}')">${ukryta ? 'Pokaż' : 'Ukryj'}</button>
         <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Przenieść promocję do archiwum?')) klubadm_statusPromocji(${p.id}, 'ARCHIWUM')">🗑</button>
@@ -31082,9 +31120,11 @@ function klubadm_edytujPromocje(id) {
   document.getElementById('klubadm-p-pushstart').checked = !!Number(p.push_przy_starcie);
   klubadm_segUstaw('p', p.segment_typ, p.segment_wartosc, p.segment_dni);
   document.getElementById('klubadm-p-form-tytul').textContent = 'Edytuj promocję';
-  document.getElementById('klubadm-p-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-p-btn').textContent = 'Zapisz zmiany';
   document.getElementById('klubadm-p-anuluj').style.display = 'inline-block';
   klubadm_podglad('klubadm-p-img');
+  const boxP = document.getElementById('klubadm-p-form-box');
+  if (boxP) { boxP.open = true; boxP.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
 }
 function klubadm_resetPromocja() {
   ['klubadm-p-id','klubadm-p-tytul','klubadm-p-opis','klubadm-p-img','klubadm-p-tresc','klubadm-p-od','klubadm-p-do'].forEach(id => document.getElementById(id).value = '');
@@ -31092,9 +31132,11 @@ function klubadm_resetPromocja() {
   document.getElementById('klubadm-p-pushstart').checked = false;
   klubadm_segUstaw('p', 'WSZYSCY', '', 90);
   document.getElementById('klubadm-p-form-tytul').textContent = 'Dodaj promocję';
-  document.getElementById('klubadm-p-btn').textContent = '+ Dodaj promocję';
+  document.getElementById('klubadm-p-btn').textContent = 'Dodaj promocję';
   document.getElementById('klubadm-p-anuluj').style.display = 'none';
   klubadm_podglad('klubadm-p-img');
+  const boxP = document.getElementById('klubadm-p-form-box');
+  if (boxP) boxP.open = false;
 }
 async function klubadm_zapiszPromocje() {
   const seg = klubadm_segCzytaj('p');
@@ -31161,7 +31203,7 @@ function klubadm_edytujKampanie(id) {
     dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0') + 'T' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
   document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;
   document.getElementById('klubadm-k-form-tytul').textContent = 'Edytuj zaplanowaną kampanię';
-  document.getElementById('klubadm-k-btn').textContent = '💾 Zapisz zmiany';
+  document.getElementById('klubadm-k-btn').textContent = 'Zapisz zmiany';
   document.getElementById('klubadm-k-anuluj-ed').style.display = 'inline-block';
   klubadm_podgladKampanii();
   document.getElementById('klubadm-k-form-tytul').scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -31173,7 +31215,7 @@ function klubadm_resetKampania() {
   document.getElementById('klubadm-k-widoczna').value = 30;
   document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
   document.getElementById('klubadm-k-form-tytul').textContent = 'Nowa kampania';
-  document.getElementById('klubadm-k-btn').textContent = '📬 Wyślij / zaplanuj';
+  document.getElementById('klubadm-k-btn').textContent = 'Wyślij / zaplanuj';
   document.getElementById('klubadm-k-anuluj-ed').style.display = 'none';
   klubadm_podgladKampanii();
 }
@@ -31284,26 +31326,20 @@ async function klubadm_statusPromocji(id, status) {
   if (d && d.status === 'success') klubadm_zaladujPromocje();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
 }
+// „PUSH" przy promocji: wypełnia formularz KAMPANII jej treścią i przenosi do zakładki
+// (kampania = push + wiadomość w apce; osobny formularz push został wycofany jako duplikat)
 function klubadm_pushZPromocji(id) {
   const p = klubadm_promocjeCache.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('klubadm-push-tytul').value = ('🔥 ' + p.tytul).slice(0, 100);
-  document.getElementById('klubadm-push-tresc').value = (p.opis || 'Sprawdź szczegóły w aplikacji!').slice(0, 300);
-  document.getElementById('klubadm-push-tytul').scrollIntoView({ behavior: 'smooth', block: 'center' });
-}
-async function klubadm_wyslijPush() {
-  const tytul = document.getElementById('klubadm-push-tytul').value.trim();
-  const tresc = document.getElementById('klubadm-push-tresc').value.trim();
-  const status = document.getElementById('klubadm-push-status');
-  if (!tytul || !tresc) { status.textContent = 'Podaj tytuł i treść.'; return; }
-  if (!confirm('Wysłać powiadomienie push do wszystkich klientów z aplikacją?\n\n„' + tytul + '"\n' + tresc)) return;
-  const btn = document.getElementById('klubadm-push-btn');
-  btn.disabled = true; status.textContent = '⏳ Wysyłanie…';
-  const d = await klubadm_apiPost({ action: 'loj_push_wyslij', tytul, tresc }).catch(() => null);
-  btn.disabled = false;
-  status.textContent = (d && d.status === 'success')
-    ? `✅ Dostarczono ${d.dostarczono}/${d.wszystkich} subskrypcji.`
-    : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+  const tabBtn = document.querySelector('.klubadm-tab[data-kt="kampanie"]');
+  klubadm_tab('kampanie', tabBtn);
+  document.getElementById('klubadm-k-tytul').value = p.tytul.slice(0, 100);
+  document.getElementById('klubadm-k-tresc').value = (p.opis || 'Sprawdź szczegóły w aplikacji!').slice(0, 300);
+  document.getElementById('klubadm-k-img').value = p.img_url || '';
+  klubadm_podglad('klubadm-k-img');
+  klubadm_segUstaw('k', p.segment_typ, p.segment_wartosc, p.segment_dni);
+  klubadm_podgladKampanii();
+  document.getElementById('klubadm-k-tytul').scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 // ── Odbiory + zgłoszenia ──
