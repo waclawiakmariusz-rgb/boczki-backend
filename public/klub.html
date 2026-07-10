@@ -84,14 +84,14 @@
   .brand-bar .b-znak { color: var(--gold-dark); font-size: 15px; letter-spacing: .1em; }
   .brand-bar .b-nazwa { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); line-height: 1.15; }
   .brand-bar .b-sub { font-size: 9px; letter-spacing: .34em; text-transform: uppercase; font-weight: 700; color: var(--gold-dark); margin-top: 2px; }
-  .dzwonek { position: absolute; right: 0; top: 6px; background: none; border: none; font-size: 22px; color: var(--primary); cursor: pointer; padding: 6px; }
+  .dzwonek { position: absolute; right: 0; top: 8px; background: none; border: none; color: var(--primary); cursor: pointer; padding: 6px; line-height: 0; }
   .dzwonek .kropka { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); border: 1.5px solid var(--bg); display: none; }
   .hi-blok { width: 100%; max-width: 440px; margin-top: 16px; }
   .hi-blok .hi { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 600; letter-spacing: -.01em; color: var(--primary); }
   .hi-blok .hi-sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
   .saldo-card { position: relative; overflow: hidden; width: 100%; max-width: 440px; margin-top: 16px; background: linear-gradient(140deg, #7c2740 0%, var(--primary) 45%, #521827 100%); border-radius: var(--r-xxl); padding: 24px 24px 22px; color: #fff; box-shadow: 0 22px 44px -12px var(--primary-glow); text-align: left; }
   .saldo-card::before { content: ""; position: absolute; top: -60px; right: -60px; width: 240px; height: 240px; border-radius: 50%; background: radial-gradient(circle, rgba(201,162,39,.28), transparent 62%); pointer-events: none; }
-  .saldo-card::after { content: "🎁"; position: absolute; right: 22px; bottom: 16px; font-size: 34px; opacity: .85; filter: sepia(1) saturate(3) hue-rotate(-12deg); }
+  .saldo-card .s-prezent { position: absolute; right: 20px; bottom: 14px; color: #d9b545; opacity: .75; pointer-events: none; }
   .saldo-card .lbl { font-size: 12px; letter-spacing: .12em; font-weight: 600; color: #f3d9a4; }
   .saldo-card .val { font-family: 'Cormorant Garamond', serif; font-size: 58px; font-weight: 600; letter-spacing: .01em; line-height: 1.05; color: #e8c766; text-shadow: 0 2px 14px rgba(0,0,0,.25); }
   .saldo-card .val small { font-size: 22px; font-weight: 500; color: #e8c766; letter-spacing: 0; }
@@ -102,7 +102,7 @@
   .akcje { width: 100%; max-width: 440px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .akcja { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); padding: 14px; cursor: pointer; box-shadow: var(--shadow); font-family: inherit; text-align: left; transition: transform .15s; }
   .akcja:active { transform: scale(.97); }
-  .akcja .a-ico { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .akcja .a-ico { flex-shrink: 0; width: 46px; height: 46px; border-radius: 50%; background: var(--primary-soft); display: flex; align-items: center; justify-content: center; color: var(--primary); }
   .akcja .a-tit { font-weight: 700; font-size: 14px; color: var(--text); }
   .akcja .a-sub { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
   .sekcja { width: 100%; max-width: 440px; margin-top: 20px; animation: fadeUp .5s cubic-bezier(.22,.9,.36,1) both; }
@@ -122,12 +122,12 @@
   .promo .p-tit { font-weight: 700; font-size: 15px; letter-spacing: -.01em; }
   .promo .p-desc { font-size: 12.5px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
   .promo.dnia { border: 1px solid #f2d488; background: linear-gradient(180deg, #fffdf4, #fff); }
-  .promo.dnia .p-tit::before { content: "🔥 TYLKO TERAZ"; display: inline-block; background: var(--gold-soft); color: #a8730a; border: 1px solid #f2d488; font-size: 10px; font-weight: 800; letter-spacing: .08em; padding: 3px 9px; border-radius: 999px; margin-right: 8px; vertical-align: 2px; }
+  .promo.dnia .p-tit::before { content: "TYLKO TERAZ"; display: inline-block; background: var(--gold-soft); color: #a8730a; border: 1px solid #f2d488; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 3px 10px; border-radius: 999px; margin-right: 8px; vertical-align: 2px; }
 
   /* Nagrody — duże karty jak w wizualizacji (zdjęcie z lewej, serif, burgundowa pigułka) */
   .nagroda { width: 100%; background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-xl); padding: 14px; display: flex; gap: 14px; align-items: center; margin-bottom: 12px; box-shadow: var(--shadow); }
   .nagroda img { width: 96px; height: 96px; border-radius: var(--r-md); object-fit: cover; background: var(--primary-soft); flex-shrink: 0; }
-  .nagroda .n-emoji { width: 96px; height: 96px; border-radius: var(--r-md); background: linear-gradient(150deg, var(--gold-soft), #fffdf7); border: 1px solid #ecdbb2; display: flex; align-items: center; justify-content: center; font-size: 38px; flex-shrink: 0; }
+  .nagroda .n-emoji { width: 96px; height: 96px; border-radius: var(--r-md); background: linear-gradient(150deg, var(--gold-soft), #fffdf7); border: 1px solid #ecdbb2; display: flex; align-items: center; justify-content: center; color: var(--gold-dark); flex-shrink: 0; }
   .nagroda .n-txt { flex: 1; min-width: 0; }
   .nagroda .n-tit { font-family: 'Cormorant Garamond', serif; font-weight: 600; font-size: 19px; line-height: 1.2; color: var(--text); }
   .nagroda .n-koszt { display: inline-block; font-size: 12px; color: #fff; background: var(--primary); font-weight: 700; margin-top: 6px; padding: 4px 13px; border-radius: 999px; letter-spacing: .04em; }
@@ -149,14 +149,12 @@
   .hist-mies { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; color: var(--primary); padding: 14px 0 4px; }
   .hist-row { display: flex; align-items: center; gap: 11px; padding: 12px 0; border-bottom: 1px solid var(--stroke-2); font-size: 14px; }
   .hist-row:last-child { border-bottom: none; }
-  .hist-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; font-size: 17px; }
-  .hist-ico.z-SPRZEDAZ { background: var(--gold-soft); }
-  .hist-ico.z-RECZNE, .hist-ico.z-BONUS { background: var(--gold-soft); }
-  .hist-ico.z-NAGRODA { background: var(--primary-soft); }
-  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE, .hist-ico.z-KOREKTA { background: var(--red-soft); }
-  .hist-ico.z-EDYCJA { background: var(--stroke-2); }
+  .hist-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
+  .hist-ico.z-NAGRODA { background: var(--primary-soft); color: var(--primary); }
+  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE, .hist-ico.z-KOREKTA { background: var(--red-soft); color: #b2453c; }
+  .hist-ico.z-EDYCJA { background: var(--stroke-2); color: var(--muted); }
   .hist-suma { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; background: linear-gradient(140deg, #fdf7ea, #fbf1dd); border: 1px solid #ecd9ac; border-radius: var(--r-md); padding: 12px 15px; }
-  .hist-suma .s-ico { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid #ecd9ac; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .hist-suma .s-ico { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid #ecd9ac; display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
   .hist-suma .s-tit { flex: 1; font-weight: 700; font-size: 13.5px; color: #7a5c1c; }
   .hist-suma .s-kwoty { text-align: right; font-size: 13px; font-weight: 800; line-height: 1.45; }
   .hist-txt { flex: 1; min-width: 0; }
@@ -177,9 +175,9 @@
   .tabs { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(252,247,240,.92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--stroke); display: none; justify-content: space-around; padding: 6px 10px calc(env(safe-area-inset-bottom, 0px) + 10px); box-shadow: 0 -12px 34px rgba(84,48,48,.07); z-index: 60; }
   .tabs.visible { display: flex; }
   .tab { position: relative; background: none; border: none; font-family: inherit; text-align: center; cursor: pointer; color: #b3a49a; font-size: 11px; font-weight: 600; letter-spacing: .03em; padding: 8px 18px 4px; transition: color .2s; }
-  .tab .ico { display: block; font-size: 21px; margin-bottom: 2px; filter: grayscale(65%); opacity: .6; transition: filter .2s, opacity .2s; }
+  .tab .ico { display: flex; justify-content: center; margin-bottom: 3px; opacity: .65; transition: opacity .2s; }
   .tab.active { color: var(--primary); font-weight: 700; }
-  .tab.active .ico { filter: none; opacity: 1; }
+  .tab.active .ico { opacity: 1; }
   .tab.active::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 34px; height: 3px; border-radius: 0 0 4px 4px; background: var(--primary); }
 
   /* Modal */
@@ -288,7 +286,7 @@
     <div class="b-znak">✦</div>
     <div class="b-nazwa" id="m-klub-head">Klub</div>
     <div class="b-sub">program lojalnościowy</div>
-    <button class="dzwonek" onclick="przejdzDoWiadomosci()" title="Wiadomości od salonu">🔔<span class="kropka" id="dzwonek-kropka"></span></button>
+    <button class="dzwonek" onclick="przejdzDoWiadomosci()" title="Wiadomości od salonu"><span data-iko="bell" data-s="23"></span><span class="kropka" id="dzwonek-kropka"></span></button>
   </div>
   <div class="hi-blok">
     <div class="hi"><span id="m-hello">Cześć!</span> ✨</div>
@@ -298,6 +296,7 @@
   <!-- TAB: Start -->
   <div id="tab-start" class="tabpage visible">
     <div class="saldo-card">
+      <span class="s-prezent" data-iko="gift" data-s="52"></span>
       <div class="lbl">Twoje punkty</div>
       <div class="val"><span id="m-saldo">0</span> <small>pkt</small></div>
       <div class="zl" id="m-saldo-zl" style="display:none;"></div>
@@ -305,17 +304,17 @@
     </div>
     <div class="akcje-tytul">Co chcesz zrobić?</div>
     <div class="akcje">
-      <button class="akcja" onclick="tab('nagrody')"><span class="a-ico">🎁</span><span><span class="a-tit">Nagrody</span><br><span class="a-sub">Wymień punkty</span></span></button>
-      <button class="akcja" onclick="przejdzDoHistorii()"><span class="a-ico">🕐</span><span><span class="a-tit">Historia</span><br><span class="a-sub">Twoje aktywności</span></span></button>
-      <button class="akcja" onclick="przejdzDoWiadomosci()"><span class="a-ico">📬</span><span><span class="a-tit">Wiadomości</span><br><span class="a-sub">Od Twojego salonu</span></span></button>
-      <button class="akcja" onclick="pokazZasady()"><span class="a-ico">✨</span><span><span class="a-tit">Jak to działa?</span><br><span class="a-sub">Zasady programu</span></span></button>
+      <button class="akcja" onclick="tab('nagrody')"><span class="a-ico" data-iko="gift"></span><span><span class="a-tit">Nagrody</span><br><span class="a-sub">Wymień punkty</span></span></button>
+      <button class="akcja" onclick="przejdzDoHistorii()"><span class="a-ico" data-iko="clock"></span><span><span class="a-tit">Historia</span><br><span class="a-sub">Twoje aktywności</span></span></button>
+      <button class="akcja" onclick="przejdzDoWiadomosci()"><span class="a-ico" data-iko="mail"></span><span><span class="a-tit">Wiadomości</span><br><span class="a-sub">Od Twojego salonu</span></span></button>
+      <button class="akcja" onclick="pokazZasady()"><span class="a-ico" data-iko="spark"></span><span><span class="a-tit">Jak to działa?</span><br><span class="a-sub">Zasady programu</span></span></button>
     </div>
     <div class="sekcja" id="sek-promocje" style="display:none;">
       <h3>Dla Ciebie</h3>
       <div id="m-promocje"></div>
     </div>
     <div class="sekcja" id="sek-wiadomosci" style="display:none;">
-      <h3>📬 Wiadomości od salonu</h3>
+      <h3>Wiadomości od salonu</h3>
       <div id="m-wiadomosci"></div>
     </div>
     <div class="sekcja" id="sek-progress" style="display:none;">
@@ -349,9 +348,9 @@
     <div class="sekcja" style="margin-top:6px;">
       <h3>Twój profil</h3>
       <div class="menu-list">
-        <button class="menu-item" id="btn-push" onclick="wlaczPush()" style="display:none;"><span style="color:var(--primary);">🔔 Włącz powiadomienia o promocjach</span><span class="arrow">➤</span></button>
-        <button class="menu-item" onclick="pokazZasady()"><span>📘 Jak zbierać punkty?</span><span class="arrow">➤</span></button>
-        <button class="menu-item" onclick="pokazFaq()"><span>❓ Pytania i odpowiedzi</span><span class="arrow">➤</span></button>
+        <button class="menu-item" id="btn-push" onclick="wlaczPush()" style="display:none;"><span style="color:var(--primary); display:flex; align-items:center; gap:10px;"><span data-iko="bell" data-s="19"></span>Włącz powiadomienia o promocjach</span><span class="arrow">›</span></button>
+        <button class="menu-item" onclick="pokazZasady()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="spark" data-s="19" style="color:var(--gold-dark);"></span>Jak zbierać punkty?</span><span class="arrow">›</span></button>
+        <button class="menu-item" onclick="pokazFaq()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="info" data-s="19" style="color:var(--gold-dark);"></span>Pytania i odpowiedzi</span><span class="arrow">›</span></button>
       </div>
     </div>
     <div class="sekcja">
@@ -365,9 +364,9 @@
 
 <!-- Bottom tabs -->
 <div id="tabs" class="tabs">
-  <button class="tab active" data-tab="start" onclick="tab('start')"><span class="ico">🏠</span>Start</button>
-  <button class="tab" data-tab="nagrody" onclick="tab('nagrody')"><span class="ico">🎁</span>Nagrody</button>
-  <button class="tab" data-tab="profil" onclick="tab('profil')"><span class="ico">👤</span>Profil</button>
+  <button class="tab active" data-tab="start" onclick="tab('start')"><span class="ico" data-iko="home"></span>Start</button>
+  <button class="tab" data-tab="nagrody" onclick="tab('nagrody')"><span class="ico" data-iko="gift"></span>Nagrody</button>
+  <button class="tab" data-tab="profil" onclick="tab('profil')"><span class="ico" data-iko="user"></span>Profil</button>
 </div>
 
 <!-- Modal: promocja -->
@@ -384,7 +383,8 @@
 <!-- Modal: kod odbioru -->
 <div id="m-kod" class="modal"><div class="box" style="text-align:center;">
   <button class="close-x" onclick="zamknij('m-kod')">✕</button>
-  <h3 style="padding-right:0;">🎁 Nagroda zarezerwowana!</h3>
+  <div style="color:var(--gold-dark); margin-bottom:4px;"><span data-iko="gift" data-s="40"></span></div>
+  <h3 style="padding-right:0;">Nagroda zarezerwowana!</h3>
   <div class="muted">Pokaż ten kod w salonie, aby odebrać:</div>
   <div id="m-kod-wielki"></div>
   <div class="muted" style="font-size:12px;">Punkty zejdą z konta dopiero przy wydaniu nagrody.<br>Kod znajdziesz też w zakładce Nagrody.</div>
@@ -401,10 +401,10 @@
 
 <!-- Modal: propozycja powiadomień (jeden dotyk, pokazywana raz) -->
 <div id="m-push-prop" class="modal"><div class="box" style="text-align:center;">
-  <div style="font-size:44px; margin-bottom:6px;">🔔</div>
+  <div style="color:var(--gold-dark); margin-bottom:6px;"><span data-iko="bell" data-s="42"></span></div>
   <h3 style="padding-right:0;">Bądź na bieżąco!</h3>
   <div class="muted" style="line-height:1.55;">Włącz powiadomienia, a damy Ci znać o promocjach i nowych punktach. Jeden dotyk — bez żadnej konfiguracji.</div>
-  <button class="btn" onclick="zamknij('m-push-prop'); wlaczPush();">🔔 Włącz powiadomienia</button>
+  <button class="btn" onclick="zamknij('m-push-prop'); wlaczPush();">Włącz powiadomienia</button>
   <button class="btn ghost" onclick="zamknij('m-push-prop')">Może później</button>
 </div></div>
 
@@ -430,6 +430,28 @@
 <script>
 const API = '/api/klub';
 const LS_SESJA = 'klub_session';
+
+// ── Ikony liniowe (SVG, kontur, currentColor) — elegancka kreska zamiast emoji ──
+const IKONY = {
+  home:  '<path d="M3.5 10.5 12 4l8.5 6.5M5.5 9.5V20h13V9.5"/>',
+  gift:  '<path d="M5 12v8h14v-8M3.5 8h17v4h-17zM12 8v12M12 8c-1.2-3.2-5.8-3.4-5.8-.6 0 .4.2.6.6.6H12zM12 8c1.2-3.2 5.8-3.4 5.8-.6 0 .4-.2.6-.6.6H12z"/>',
+  user:  '<circle cx="12" cy="8" r="3.6"/><path d="M4.8 20c1.4-3.9 4-5.6 7.2-5.6s5.8 1.7 7.2 5.6"/>',
+  clock: '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.2V12l3.2 2"/>',
+  mail:  '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m4 7.5 8 5.8 8-5.8"/>',
+  bell:  '<path d="M6.2 9.5a5.8 5.8 0 0 1 11.6 0c0 4.6 1.8 5.7 1.8 6.7H4.4c0-1 1.8-2.1 1.8-6.7Z"/><path d="M10.4 19.5a1.7 1.7 0 0 0 3.2 0"/>',
+  bag:   '<path d="M5.5 8.5h13l.9 11.5H4.6L5.5 8.5Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>',
+  undo:  '<path d="M9 13.5 4.5 9 9 4.5"/><path d="M4.5 9H14a5.5 5.5 0 0 1 0 11h-3"/>',
+  star:  '<path d="m12 4 2 5.1 5.5.4-4.2 3.6 1.3 5.4L12 15.6l-4.6 2.9 1.3-5.4L4.5 9.5 10 9.1 12 4Z"/>',
+  cake:  '<path d="M4.5 20h15M5.5 20v-6.5A1.5 1.5 0 0 1 7 12h10a1.5 1.5 0 0 1 1.5 1.5V20M12 12V9"/><circle cx="12" cy="6.6" r="1.1"/>',
+  spark: '<path d="M12 3.5 13.7 9 19.2 10.7 13.7 12.4 12 17.9 10.3 12.4 4.8 10.7 10.3 9 12 3.5Z"/>',
+  tune:  '<path d="M4 8h9M17.5 8H20M15.5 5.8v4.4M4 16h2.5M11 16h9M8.8 13.8v4.4"/>',
+  info:  '<circle cx="12" cy="12" r="8.5"/><path d="M12 10.8v5M12 7.8h.01"/>',
+};
+function iko(nazwa, rozmiar) {
+  const s = rozmiar || 22;
+  return '<svg viewBox="0 0 24 24" width="' + s + '" height="' + s + '" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (IKONY[nazwa] || IKONY.spark) + '</svg>';
+}
+
 let deferredInstall = null;
 let dane = null;          // ostatnia odpowiedź /me
 let promoOtwarta = null;  // promocja w modalu
@@ -481,6 +503,8 @@ function kopiujLink() {
 }
 
 window.addEventListener('load', async () => {
+  // Wypełnij liniowe ikony w statycznym HTML (elementy z data-iko)
+  document.querySelectorAll('[data-iko]').forEach(el => { el.innerHTML = iko(el.dataset.iko, el.dataset.s); });
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/klub-sw.js').catch(() => {});
   }
@@ -724,7 +748,7 @@ function renderAll() {
   if (zlEl) {
     const osiagalne = (d.nagrody || []).filter(n => n.dostepna && n.koszt_pkt <= (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo));
     if (osiagalne.length) {
-      zlEl.textContent = '🎁 Stać Cię już na: ' + osiagalne.sort((a, b) => b.koszt_pkt - a.koszt_pkt)[0].nazwa;
+      zlEl.textContent = 'Stać Cię już na: ' + osiagalne.sort((a, b) => b.koszt_pkt - a.koszt_pkt)[0].nazwa;
       zlEl.style.display = 'block';
     } else zlEl.style.display = 'none';
   }
@@ -832,14 +856,22 @@ function kartaNagrody(n, dostepne) {
   const stac = dostepne >= n.koszt_pkt && n.dostepna;
   const el = document.createElement('div');
   el.className = 'nagroda';
-  el.innerHTML = (n.img_url
-      ? '<img src="' + esc(n.img_url) + '" onerror="this.outerHTML=\'<div class=&quot;n-emoji&quot;>🎁</div>\'" alt="">'
-      : '<div class="n-emoji">🎁</div>')
+  el.innerHTML = '<div class="n-emoji">' + iko('gift', 36) + '</div>'
     + '<div class="n-txt"><div class="n-tit"></div><div class="n-koszt">' + n.koszt_pkt + ' pkt</div><div class="n-opis"></div></div>'
     + '<button class="n-btn ' + (stac ? 'ok' : 'lock') + '">' + (!n.dostepna ? 'Brak' : (stac ? 'Odbierz' : 'za ' + (n.koszt_pkt - dostepne) + ' pkt')) + '</button>';
+  // Zdjęcie zamiast ikony; błąd ładowania = powrót do eleganckiej kreski
+  if (n.img_url) {
+    const zast = el.querySelector('.n-emoji');
+    const img = document.createElement('img');
+    img.alt = '';
+    img.onerror = () => { if (img.parentNode) el.replaceChild(zast, img); };
+    img.src = n.img_url;
+    el.replaceChild(img, zast);
+  }
   el.querySelector('.n-tit').textContent = n.nazwa;
   el.querySelector('.n-opis').textContent = n.opis || '';
-  if (stac) el.querySelector('button').onclick = () => odbierz(n);
+  const btn = el.querySelector('button');
+  if (stac) btn.onclick = () => odbierz(n);
   return el;
 }
 function renderNagrody(nagrody, dostepne) {
@@ -911,12 +943,12 @@ function renderHistoria(wpisy) {
     box.innerHTML = '<div class="pusto">Jeszcze pusto — punkty pojawią się po najbliższej wizycie. 💫</div>';
     return;
   }
-  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : (z === 'BONUS' ? '🎂' : (z === 'NAGRODA' ? '🎁' : '⚙️'))));
+  const ikona = (z) => iko(z === 'SPRZEDAZ' ? 'bag' : (z === 'ZWROT' ? 'undo' : (z === 'RECZNE' ? 'star' : (z === 'BONUS' ? 'cake' : (z === 'NAGRODA' ? 'gift' : 'tune')))), 19);
   const MIESIACE = ['Styczeń','Luty','Marzec','Kwiecień','Maj','Czerwiec','Lipiec','Sierpień','Wrzesień','Październik','Listopad','Grudzień'];
   let html = '', biezacyKlucz = null, sumaPlus = 0, sumaMinus = 0, biezacaNazwa = '';
   const zamknijMiesiac = () => {
     if (biezacyKlucz === null) return;
-    html += '<div class="hist-suma"><div class="s-ico">⭐</div>'
+    html += '<div class="hist-suma"><div class="s-ico">' + iko('star', 17) + '</div>'
       + '<div class="s-tit">Podsumowanie<br><span style="font-weight:600; color:#a08a4e; font-size:12px;">' + biezacaNazwa + '</span></div>'
       + '<div class="s-kwoty">' + (sumaPlus ? '<span class="plus">+' + sumaPlus + ' pkt</span><br>' : '') + (sumaMinus ? '<span class="minus">−' + sumaMinus + ' pkt</span>' : '') + '</div></div>';
     sumaPlus = 0; sumaMinus = 0;
@@ -948,7 +980,7 @@ function renderHistoria(wpisy) {
 // ── Zasady / FAQ ──
 function pokazZasady() {
   const pkt = dane ? (dane.pkt_za_10zl || 1) : 1;
-  document.getElementById('m-text-tytul').textContent = '📘 Jak zbierać punkty?';
+  document.getElementById('m-text-tytul').textContent = 'Jak zbierać punkty?';
   document.getElementById('m-text-tresc').innerHTML =
     '<p><b>Punkty naliczają się same</b> — za każde wydane 10 zł w salonie dostajesz ' + pkt + ' pkt. Nie musisz niczego pokazywać ani skanować.</p>'
     + '<p>Punkty wymieniasz na nagrody z katalogu: rezerwujesz nagrodę w aplikacji, dostajesz kod, pokazujesz go w salonie — i gotowe.</p>'
@@ -956,7 +988,7 @@ function pokazZasady() {
   document.getElementById('m-text').classList.add('visible');
 }
 function pokazFaq() {
-  document.getElementById('m-text-tytul').textContent = '❓ Pytania i odpowiedzi';
+  document.getElementById('m-text-tytul').textContent = 'Pytania i odpowiedzi';
   document.getElementById('m-text-tresc').innerHTML =
     '<p><b>Zapomniałam PIN-u — co robić?</b><br>Poproś recepcję o nowy kod QR — ustawisz PIN od nowa.</p>'
     + '<p><b>Czy punkty wygasają?</b><br>Nie, są ważne bezterminowo.</p>'
