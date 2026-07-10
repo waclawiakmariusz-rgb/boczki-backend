@@ -6,17 +6,17 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => { /* passthrough — wymagany handler dla instalowalności */ });
 
 self.addEventListener('push', (event) => {
-  let dane = { title: '💎 Klub', body: 'Masz nową wiadomość od salonu.', url: '/klub.html' };
+  let dane = { title: '💎 Klub', body: 'Masz nową wiadomość od salonu.', url: '/klub.html', image: '' };
   try { dane = Object.assign(dane, event.data.json()); } catch (e) { /* payload nie-JSON → domyślne */ }
-  event.waitUntil(
-    self.registration.showNotification(dane.title, {
-      body: dane.body,
-      icon: '/klub-icon.svg',
-      badge: '/klub-icon.svg',
-      vibrate: [200, 100, 200],
-      data: { url: dane.url || '/klub.html' }
-    })
-  );
+  const opcje = {
+    body: dane.body,
+    icon: '/klub-icon.svg',
+    badge: '/klub-icon.svg',
+    vibrate: [200, 100, 200],
+    data: { url: dane.url || '/klub.html' }
+  };
+  if (dane.image) opcje.image = dane.image; // duża grafika w powiadomieniu (Android Chrome)
+  event.waitUntil(self.registration.showNotification(dane.title, opcje));
 });
 
 self.addEventListener('notificationclick', (event) => {

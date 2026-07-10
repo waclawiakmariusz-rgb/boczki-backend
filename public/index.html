@@ -8301,7 +8301,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             <input id="klubadm-n-koszt" type="number" min="1" placeholder="Koszt (pkt)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                             <input id="klubadm-n-ilosc" type="number" min="0" placeholder="Ilość (puste = ∞)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                         </div>
-                        <input id="klubadm-n-img" placeholder="Link do zdjęcia (https://… — opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                            <input id="klubadm-n-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie: wgraj plik → albo wklej link https://…" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <button onclick="klubadm_wgraj('klubadm-n-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
+                            <img id="klubadm-n-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
+                        </div>
                         <input id="klubadm-n-opis" maxlength="500" placeholder="Krótki opis (opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                         <div style="display:flex; gap:10px; margin-top:12px;">
                             <button onclick="klubadm_zapiszNagrode()" id="klubadm-n-btn" style="background:#0f9d6a; color:#fff; border:0; border-radius:10px; padding:10px 22px; font-size:13.5px; font-weight:700; cursor:pointer;">+ Dodaj nagrodę</button>
@@ -8318,7 +8322,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <input type="hidden" id="klubadm-p-id">
                         <input id="klubadm-p-tytul" maxlength="200" placeholder="Tytuł (np. Środa -20% na masaże)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                         <input id="klubadm-p-opis" maxlength="300" placeholder="Krótki opis pod tytułem" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
-                        <input id="klubadm-p-img" placeholder="Link do zdjęcia (https://… — opcjonalnie)" style="width:100%; box-sizing:border-box; margin-top:10px; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                            <input id="klubadm-p-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie: wgraj plik → albo wklej link https://…" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <button onclick="klubadm_wgraj('klubadm-p-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
+                            <img id="klubadm-p-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
+                        </div>
                         <textarea id="klubadm-p-tresc" rows="5" placeholder="Pełna treść promocji (może zawierać proste HTML: <b>, <br>, listy)…" style="width:100%; box-sizing:border-box; margin-top:10px; padding:12px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:13.5px; font-family:inherit; resize:vertical;"></textarea>
                         <div style="display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin-top:12px;">
                             <label style="font-size:12.5px; color:#475569; font-weight:600;">Od: <input id="klubadm-p-od" type="date" style="padding:8px; border:1.5px solid #e2e8f0; border-radius:8px;"></label>
@@ -8363,6 +8371,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         <div style="display:grid; grid-template-columns:1fr 2fr; gap:10px; margin-top:12px;">
                             <input id="klubadm-k-tytul" maxlength="100" placeholder="Tytuł (np. Weekend -15%)" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
                             <input id="klubadm-k-tresc" maxlength="300" placeholder="Treść wiadomości" style="padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                        </div>
+                        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+                            <input id="klubadm-k-img" onchange="klubadm_podglad(this.id)" placeholder="Zdjęcie (opcjonalnie): pokaże się w powiadomieniu i w apce" style="flex:1; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;">
+                            <button onclick="klubadm_wgraj('klubadm-k-img')" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 14px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap;">📁 Wgraj z dysku</button>
+                            <img id="klubadm-k-img-pod" alt="" style="display:none; width:40px; height:40px; border-radius:8px; object-fit:cover; border:1px solid #e2e8f0;">
                         </div>
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; padding:10px 12px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:10px;">
                             <span style="font-size:12.5px; font-weight:700; color:#475569;">Do kogo:</span>
@@ -30849,12 +30862,14 @@ function klubadm_edytujNagrode(id) {
   document.getElementById('klubadm-n-form-tytul').textContent = 'Edytuj nagrodę';
   document.getElementById('klubadm-n-btn').textContent = '💾 Zapisz zmiany';
   document.getElementById('klubadm-n-anuluj').style.display = 'inline-block';
+  klubadm_podglad('klubadm-n-img');
 }
 function klubadm_resetNagroda() {
   ['klubadm-n-id','klubadm-n-nazwa','klubadm-n-koszt','klubadm-n-ilosc','klubadm-n-img','klubadm-n-opis'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('klubadm-n-form-tytul').textContent = 'Dodaj nagrodę';
   document.getElementById('klubadm-n-btn').textContent = '+ Dodaj nagrodę';
   document.getElementById('klubadm-n-anuluj').style.display = 'none';
+  klubadm_podglad('klubadm-n-img');
 }
 async function klubadm_zapiszNagrode() {
   const d = await klubadm_apiPost({
@@ -30902,6 +30917,62 @@ async function klubadm_zaladujPromocje() {
     </div>`;
   }).join('');
 }
+// ── Upload grafiki z dysku (nagroda/promocja/kampania) ──
+// Jeden ukryty <input type=file>; wybór pliku → POST multipart → URL wpada do inputa.
+let klubadm_wgrajCel = null;
+function klubadm_wgraj(inputId) {
+  klubadm_wgrajCel = inputId;
+  let picker = document.getElementById('klubadm-plik-picker');
+  if (!picker) {
+    picker = document.createElement('input');
+    picker.type = 'file';
+    picker.id = 'klubadm-plik-picker';
+    picker.accept = 'image/jpeg,image/png,image/webp';
+    picker.style.display = 'none';
+    picker.addEventListener('change', klubadm_wgrajWyslij);
+    document.body.appendChild(picker);
+  }
+  picker.value = '';
+  picker.click();
+}
+async function klubadm_wgrajWyslij() {
+  const picker = document.getElementById('klubadm-plik-picker');
+  const plik = picker.files && picker.files[0];
+  const cel = document.getElementById(klubadm_wgrajCel);
+  if (!plik || !cel) return;
+  if (plik.size > 5 * 1024 * 1024) { alert('Plik za duży — maksymalnie 5 MB.'); return; }
+  const staryPlaceholder = cel.placeholder;
+  cel.placeholder = '⏳ Wgrywanie…'; cel.value = '';
+  try {
+    const fd = new FormData();
+    fd.append('tenant_id', localStorage.getItem('boczki_tenant_id'));
+    fd.append('user_log', typeof currentUser !== 'undefined' ? currentUser : '');
+    fd.append('plik', plik);
+    // Multipart idzie bezpośrednio na endpoint (dispatcher /api obsługuje tylko JSON)
+    const sToken = localStorage.getItem('boczki_session_token');
+    const r = await fetch(API_URL + '/lojalnosc/upload', {
+      method: 'POST', body: fd,
+      headers: sToken ? { 'x-session-token': sToken } : {}
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      cel.value = d.url;
+      klubadm_podglad(klubadm_wgrajCel);
+    } else {
+      alert('Błąd wgrywania: ' + (d.message || 'nieznany'));
+    }
+  } catch (e) { alert('Błąd połączenia: ' + e.message); }
+  finally { cel.placeholder = staryPlaceholder; }
+}
+function klubadm_podglad(inputId) {
+  const cel = document.getElementById(inputId);
+  const pod = document.getElementById(inputId + '-pod');
+  if (!pod) return;
+  const u = (cel.value || '').trim();
+  if (u) { pod.src = u; pod.style.display = 'inline-block'; }
+  else { pod.style.display = 'none'; }
+}
+
 // Wspólny UI segmentu (kampania: 'k', promocja: 'p') — pola zależne od typu
 function klubadm_segPola(x) {
   const typ = document.getElementById('klubadm-seg-typ-' + x).value;
@@ -30947,6 +31018,7 @@ function klubadm_edytujPromocje(id) {
   document.getElementById('klubadm-p-form-tytul').textContent = 'Edytuj promocję';
   document.getElementById('klubadm-p-btn').textContent = '💾 Zapisz zmiany';
   document.getElementById('klubadm-p-anuluj').style.display = 'inline-block';
+  klubadm_podglad('klubadm-p-img');
 }
 function klubadm_resetPromocja() {
   ['klubadm-p-id','klubadm-p-tytul','klubadm-p-opis','klubadm-p-img','klubadm-p-tresc','klubadm-p-od','klubadm-p-do'].forEach(id => document.getElementById(id).value = '');
@@ -30956,6 +31028,7 @@ function klubadm_resetPromocja() {
   document.getElementById('klubadm-p-form-tytul').textContent = 'Dodaj promocję';
   document.getElementById('klubadm-p-btn').textContent = '+ Dodaj promocję';
   document.getElementById('klubadm-p-anuluj').style.display = 'none';
+  klubadm_podglad('klubadm-p-img');
 }
 async function klubadm_zapiszPromocje() {
   const seg = klubadm_segCzytaj('p');
@@ -31015,6 +31088,7 @@ async function klubadm_zapiszKampanie() {
   btn.disabled = true; status.textContent = '⏳…';
   const d = await klubadm_apiPost({
     action: 'loj_kampania_zapisz', tytul, tresc,
+    img_url: document.getElementById('klubadm-k-img').value.trim(),
     segment_typ: seg.segment_typ, segment_wartosc: seg.segment_wartosc, segment_dni: seg.segment_dni,
     wyslij_at: plan ? termin : ''
   }).catch(() => null);
@@ -31023,6 +31097,8 @@ async function klubadm_zapiszKampanie() {
     status.textContent = d.zaplanowana ? ('✅ Zaplanowano na ' + d.wyslij_at + '.') : `✅ Wysłano — push dotarł do ${d.dostarczono}/${d.subskrypcji} urządzeń, wiadomość widoczna w apce.`;
     document.getElementById('klubadm-k-tytul').value = '';
     document.getElementById('klubadm-k-tresc').value = '';
+    document.getElementById('klubadm-k-img').value = '';
+    klubadm_podglad('klubadm-k-img');
     document.getElementById('klubadm-k-termin').value = '';
     document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
     klubadm_zaladujKampanie();

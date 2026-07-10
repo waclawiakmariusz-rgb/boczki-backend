@@ -11,6 +11,9 @@
 // razem z tymi fazami — nie zakładamy schematu na zapas.
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 const { randomUUID, createHmac } = require('crypto');
 const bcrypt = require('bcrypt');
 const QRCode = require('qrcode');
@@ -18,6 +21,31 @@ const { makePublicLimiter } = require('./sessions');
 const { makeZapiszLog } = require('./logi');
 
 const FEATURE_KEY = 'lojalnosc';
+
+// ─── Upload grafik (nagrody/promocje/kampanie) ────────────────
+// Pliki poza repo (UPLOADS_DIR jak w foto.js), publiczne serwowanie przez
+// GET /api/klub/img/... — treść marketingowa salonu, bez danych osobowych.
+function uploadsRootLoj() { return process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads'); }
+const IMG_PLIK_REGEX = /^[a-f0-9-]{36}\.(jpg|png|webp)$/;
+
+function klubImgDir(tenant_id) {
+  if (!isValidTenantId(tenant_id)) throw new Error('Nieprawidłowy tenant_id');
+  const dir = path.join(uploadsRootLoj(), tenant_id, 'klub');
+  const resolved = path.resolve(dir);
+  const rootResolved = path.resolve(uploadsRootLoj());
+  if (!resolved.startsWith(rootResolved + path.sep)) throw new Error('Path traversal wykryty');
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+const uploadImg = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const ok = /^image\/(jpeg|jpg|png|webp)$/i.test(file.mimetype);
+    cb(ok ? null : new Error('Dozwolone tylko obrazy JPEG, PNG lub WebP (max 5 MB).'), ok);
+  },
+});
 const BOCZKI_TENANT = 'boczki-salon-glowny-001';
 const MAX_RECZNE = 1000;           // limit pojedynczej ręcznej korekty punktów
 const FEATURE_CACHE_TTL_MS = 60 * 1000;
@@ -130,6 +158,11 @@ function pasujeSegment(seg, fakty) {
     return !sprzedaze.some(s => new Date(s.data).getTime() >= cutoff);
   }
   return false;
+}
+
+// Zdjęcie: pełny URL albo ścieżka z naszego uploadu
+function imgUrlOk(u) {
+  return !u || /^https?:\/\//.test(u) || /^\/api\/klub\/img\//.test(u);
 }
 
 function opisSegmentu(seg) {
@@ -479,15 +512,16 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kampanie:', e.message);
   });
-  // Targetowanie promocji + auto-push w dniu startu (ALTER-y idempotentne)
+  // Targetowanie promocji + auto-push w dniu startu + zdjęcie kampanii (ALTER-y idempotentne)
   [
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_typ VARCHAR(20) DEFAULT 'WSZYSCY'`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_wartosc VARCHAR(160) DEFAULT ''`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN segment_dni INT NULL`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_przy_starcie TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Promocje ADD COLUMN push_wyslany TINYINT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN img_url VARCHAR(500) DEFAULT ''`,
   ].forEach(sql => db.query(sql, (e) => {
-    if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER Promocje:', e.message);
+    if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
   // status UKRYTY — inne salony nie widzą dodatku (pilot u Boczków), jak platnosc_link
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
@@ -587,7 +621,7 @@ module.exports = (db) => {
 
   // Wysyłka push do klientów (idKlienci=null → wszyscy subskrybenci salonu).
   // Bez kluczy VAPID zwraca 0/0 — kampania i tak dociera skrzynką w apce.
-  async function wyslijPushDoKlientow(tenant_id, idKlienci, tytul, tresc) {
+  async function wyslijPushDoKlientow(tenant_id, idKlienci, tytul, tresc, img) {
     const subs = await q(
       `SELECT id, id_klienta, endpoint, p256dh, auth FROM Lojalnosc_Push WHERE tenant_id = ?`,
       [tenant_id]
@@ -595,7 +629,7 @@ module.exports = (db) => {
     const cel = (Array.isArray(subs) ? subs : []).filter(s =>
       idKlienci === null || idKlienci.includes(String(s.id_klienta)));
     if (!webpush || !cel.length) return { dostarczono: 0, subskrypcji: cel.length };
-    const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html' });
+    const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html', image: img || '' });
     let ok = 0;
     await Promise.all(cel.map(s =>
       webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
@@ -614,7 +648,7 @@ module.exports = (db) => {
     try {
       const ids = await segmentIds(k.tenant_id, k);
       const odbiorcow = ids === null ? -1 : ids.length; // -1 = wszyscy (liczbę pokaże liczba subskrypcji)
-      const wynik = await wyslijPushDoKlientow(k.tenant_id, ids, k.tytul, k.tresc);
+      const wynik = await wyslijPushDoKlientow(k.tenant_id, ids, k.tytul, k.tresc, k.img_url || '');
       await q(
         `UPDATE Lojalnosc_Kampanie SET status = 'WYSLANA', wyslano_at = NOW(), odbiorcow = ?, dostarczono = ? WHERE id = ?`,
         [odbiorcow === -1 ? wynik.subskrypcji : odbiorcow, wynik.dostarczono, k.id]
@@ -854,7 +888,7 @@ module.exports = (db) => {
       const kto = String(req.query.user_log || '').trim();
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `SELECT id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslij_at, status,
+          `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslij_at, status,
                   wyslano_at, odbiorcow, dostarczono, utworzyl, created_at
              FROM Lojalnosc_Kampanie WHERE tenant_id = ?
             ORDER BY (status = 'PLANOWANA') DESC, COALESCE(wyslano_at, wyslij_at) DESC LIMIT 50`,
@@ -982,7 +1016,7 @@ module.exports = (db) => {
       if (!nazwa) return res.json({ status: 'error', message: 'Podaj nazwę nagrody.' });
       if (!Number.isFinite(koszt) || koszt < 1 || koszt > 1000000) return res.json({ status: 'error', message: 'Koszt w punktach: liczba od 1.' });
       if (ilosc !== null && (!Number.isFinite(ilosc) || ilosc < 0)) return res.json({ status: 'error', message: 'Ilość: puste (bez limitu) lub liczba ≥ 0.' });
-      if (img && !/^https?:\/\//.test(img)) return res.json({ status: 'error', message: 'Zdjęcie: podaj pełny adres URL (https://...).' });
+      if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
       maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
         const id = parseInt(d.id, 10);
         if (id) {
@@ -1043,7 +1077,7 @@ module.exports = (db) => {
       if (!tytul) return res.json({ status: 'error', message: 'Podaj tytuł promocji.' });
       if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
       if ((dataOd && !DATA_RE.test(dataOd)) || (dataDo && !DATA_RE.test(dataDo))) return res.json({ status: 'error', message: 'Daty w formacie RRRR-MM-DD.' });
-      if (img && !/^https?:\/\//.test(img)) return res.json({ status: 'error', message: 'Zdjęcie: podaj pełny adres URL (https://...).' });
+      if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
       maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
         const id = parseInt(d.id, 10);
         if (id) {
@@ -1188,10 +1222,12 @@ module.exports = (db) => {
       const kto = String(d.user_log || d.pracownik || '').trim();
       const tytul = String(d.tytul || '').trim().slice(0, 100);
       const tresc = String(d.tresc || '').trim().slice(0, 300);
+      const img = String(d.img_url || '').trim().slice(0, 500);
       const seg = normalizujSegment(d);
       let wyslijAt = String(d.wyslij_at || '').trim();
       if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
       if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
+      if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
       if (wyslijAt) {
         const m = wyslijAt.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
         if (!m) return res.json({ status: 'error', message: 'Termin wysyłki w formacie data + godzina.' });
@@ -1201,18 +1237,18 @@ module.exports = (db) => {
         try {
           const teraz = !wyslijAt;
           const wynik = await q(
-            `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslij_at, status, utworzyl)
-             VALUES (?, ?, ?, ?, ?, ?, ${teraz ? 'NOW()' : '?'}, ?, ?)`,
+            `INSERT INTO Lojalnosc_Kampanie (tenant_id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslij_at, status, utworzyl)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ${teraz ? 'NOW()' : '?'}, ?, ?)`,
             teraz
-              ? [tenant_id, tytul, tresc, seg.typ, seg.wartosc, seg.dni, 'WYSYLANIE', kto.slice(0, 120)]
-              : [tenant_id, tytul, tresc, seg.typ, seg.wartosc, seg.dni, wyslijAt, 'PLANOWANA', kto.slice(0, 120)]
+              ? [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, 'WYSYLANIE', kto.slice(0, 120)]
+              : [tenant_id, tytul, tresc, img, seg.typ, seg.wartosc, seg.dni, wyslijAt, 'PLANOWANA', kto.slice(0, 120)]
           );
           if (!teraz) {
             zapiszLog(tenant_id, 'KLUB KAMPANIA ZAPLANOWANA', kto, `„${tytul}" na ${wyslijAt} [${opisSegmentu({ segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni })}]`);
             return res.json({ status: 'success', zaplanowana: 1, wyslij_at: wyslijAt });
           }
           const rezultat = await wykonajKampanie({
-            id: wynik.insertId, tenant_id, tytul, tresc,
+            id: wynik.insertId, tenant_id, tytul, tresc, img_url: img,
             segment_typ: seg.typ, segment_wartosc: seg.wartosc, segment_dni: seg.dni, utworzyl: kto
           });
           return res.json({ status: 'success', dostarczono: rezultat.dostarczono, subskrypcji: rezultat.subskrypcji });
@@ -1392,7 +1428,7 @@ module.exports = (db) => {
       ).catch(() => []);
       const fakty = { saldo, sprzedaze: Array.isArray(faktySprzedaze) ? faktySprzedaze : [], teraz: new Date() };
       const kampanieRows = await q(
-        `SELECT id, tytul, tresc, segment_typ, segment_wartosc, segment_dni, wyslano_at
+        `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslano_at
            FROM Lojalnosc_Kampanie
           WHERE tenant_id = ? AND status = 'WYSLANA' AND wyslano_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
           ORDER BY wyslano_at DESC LIMIT 10`,
@@ -1430,7 +1466,7 @@ module.exports = (db) => {
           })),
         wiadomosci: (Array.isArray(kampanieRows) ? kampanieRows : [])
           .filter(k => pasujeSegment(k, fakty))
-          .map(k => ({ id: k.id, tytul: k.tytul, tresc: k.tresc, data: k.wyslano_at })),
+          .map(k => ({ id: k.id, tytul: k.tytul, tresc: k.tresc, img_url: k.img_url || '', data: k.wyslano_at })),
         push_vapid: vapidPublic(),
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1
@@ -1556,6 +1592,46 @@ module.exports = (db) => {
       );
       return res.json({ status: 'success' });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
+  });
+
+  // ─── Upload grafiki z panelu (multipart — poza dispatcherem JSON) ───
+  // Front POST-uje bezpośrednio na /api/lojalnosc/upload z polami tenant_id,
+  // user_log i plikiem "plik". RBAC admin + feature sprawdzane PO multerze.
+  router.post('/lojalnosc/upload', (req, res) => {
+    uploadImg.single('plik')(req, res, (errM) => {
+      if (errM) return res.json({ status: 'error', message: errM.message || 'Błąd przesyłania pliku.' });
+      const tenant_id = String((req.body || {}).tenant_id || '').trim();
+      const kto = String((req.body || {}).user_log || '').trim();
+      if (!isValidTenantId(tenant_id)) return res.json({ status: 'error', message: 'Brak tenant_id' });
+      if (!req.file || !req.file.buffer) return res.json({ status: 'error', message: 'Nie wybrano pliku.' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        try {
+          const ext = /png$/i.test(req.file.mimetype) ? 'png' : (/webp$/i.test(req.file.mimetype) ? 'webp' : 'jpg');
+          const nazwa = randomUUID() + '.' + ext;
+          fs.writeFileSync(path.join(klubImgDir(tenant_id), nazwa), req.file.buffer);
+          const url = `/api/klub/img/${tenant_id}/${nazwa}`;
+          zapiszLog(tenant_id, 'KLUB GRAFIKA', kto, `Wgrano ${nazwa} (${Math.round(req.file.size / 1024)} KB)`);
+          return res.json({ status: 'success', url });
+        } catch (e) {
+          console.error('[lojalnosc] upload:', e.message);
+          return res.json({ status: 'error', message: 'Nie udało się zapisać pliku na serwerze.' });
+        }
+      }));
+    });
+  });
+
+  // Publiczne serwowanie grafik Klubu (treść marketingowa salonu — widzą ją
+  // klienci w apce i w powiadomieniach; nazwy plików to losowe UUID-y).
+  router.get('/klub/img/:tenant/:plik', (req, res) => {
+    const tenant = String(req.params.tenant || '');
+    const plik = String(req.params.plik || '');
+    if (!isValidTenantId(tenant) || !IMG_PLIK_REGEX.test(plik)) return res.status(404).end();
+    try {
+      const pelna = path.join(klubImgDir(tenant), plik);
+      if (!fs.existsSync(pelna)) return res.status(404).end();
+      res.set('Cache-Control', 'public, max-age=86400');
+      return res.sendFile(path.resolve(pelna));
+    } catch (e) { return res.status(404).end(); }
   });
 
   return router;

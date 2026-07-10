@@ -822,6 +822,81 @@ describe('POST /api/lojalnosc — kampanie', () => {
     });
 });
 
+// ─── Upload grafik + serwowanie ───────────────────────────────
+describe('upload grafik Klubu', () => {
+    const os = require('os');
+    const fs = require('fs');
+    const path = require('path');
+    const TMP = path.join(os.tmpdir(), 'klub-test-uploads-' + process.pid);
+    const JPG = Buffer.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46]);
+
+    beforeAll(() => { process.env.UPLOADS_DIR = TMP; });
+    afterAll(() => {
+        delete process.env.UPLOADS_DIR;
+        try { fs.rmSync(TMP, { recursive: true, force: true }); } catch (e) {}
+    });
+
+    test('admin wgrywa JPG → dostaje URL, plik ląduje na dysku', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc/upload')
+            .field('tenant_id', 't-loj-up1').field('user_log', 'Szefowa')
+            .attach('plik', JPG, { filename: 'foto.jpg', contentType: 'image/jpeg' });
+        expect(res.body.status).toBe('success');
+        expect(res.body.url).toMatch(/^\/api\/klub\/img\/t-loj-up1\/[a-f0-9-]{36}\.jpg$/);
+        const nazwa = res.body.url.split('/').pop();
+        expect(fs.existsSync(path.join(TMP, 't-loj-up1', 'klub', nazwa))).toBe(true);
+    });
+
+    test('plik nie-obraz → odmowa (fileFilter)', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc/upload')
+            .field('tenant_id', 't-loj-up2').field('user_log', 'Szefowa')
+            .attach('plik', Buffer.from('#!/bin/sh'), { filename: 'zly.sh', contentType: 'application/x-sh' });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('recepcja NIE wgra pliku (RBAC)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc/upload')
+            .field('tenant_id', 't-loj-up3').field('user_log', 'Recepcja')
+            .attach('plik', JPG, { filename: 'foto.jpg', contentType: 'image/jpeg' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('serwowanie: poprawny plik → 200, zła nazwa/traversal → 404', async () => {
+        const db = mockDbAlways([]);
+        const app = buildApp(db);
+        const dir = path.join(TMP, 't-loj-up4', 'klub');
+        fs.mkdirSync(dir, { recursive: true });
+        const nazwa = '00000000-0000-4000-8000-000000000000.jpg';
+        fs.writeFileSync(path.join(dir, nazwa), JPG);
+        const ok = await request(app).get('/api/klub/img/t-loj-up4/' + nazwa);
+        expect(ok.status).toBe(200);
+        const zly = await request(app).get('/api/klub/img/t-loj-up4/..%2F..%2Fsekret.jpg');
+        expect(zly.status).toBe(404);
+        const zly2 = await request(app).get('/api/klub/img/t-loj-up4/dowolny.jpg');
+        expect(zly2.status).toBe(404);
+    });
+
+    test('kampania przyjmuje zdjęcie z uploadu, odrzuca javascript:', async () => {
+        const dbOk = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN,
+            { rows: { affectedRows: 1, insertId: 9 } }, { rows: [] }, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_zapisz', tenant_id: 't-loj-up5', tytul: 'X', tresc: 'Y',
+            segment_typ: 'WSZYSCY', img_url: '/api/klub/img/t-loj-up5/00000000-0000-4000-8000-000000000000.jpg',
+            user_log: 'Szefowa'
+        });
+        expect(r1.body.status).toBe('success');
+        const dbZly = mockDbAlways([]);
+        const r2 = await request(buildApp(dbZly)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_zapisz', tenant_id: 't-loj-up6', tytul: 'X', tresc: 'Y',
+            segment_typ: 'WSZYSCY', img_url: 'javascript:alert(1)', user_log: 'Szefowa'
+        });
+        expect(r2.body.status).toBe('error');
+    });
+});
+
 // ─── /klub/me — wiadomości i targetowane promocje ─────────────
 describe('POST /api/klub/me — kampanie w apce', () => {
     test('wiadomość WSZYSCY widoczna; promocja PUNKTY_MIN ukryta gdy saldo za małe', async () => {
