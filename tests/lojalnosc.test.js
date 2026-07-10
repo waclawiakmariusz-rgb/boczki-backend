@@ -47,8 +47,10 @@ describe('obliczPunkty', () => {
 
 // ─── Hook: naliczZaSprzedaz ───────────────────────────────────
 describe('makeLojalnosc — naliczZaSprzedaz', () => {
-    test('nalicza punkty przy aktywnym feature (95 zł → +9)', () => {
-        const db = mockDb(FEATURE_ON, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } });
+    const KONTO_OK = { rows: [{ id: 1 }] };
+
+    test('nalicza punkty CZŁONKOWI Klubu (95 zł → +9)', () => {
+        const db = mockDb(FEATURE_ON, KONTO_OK, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } });
         makeLojalnosc(db).naliczZaSprzedaz('t-loj-a', { saleId: 'S1', id_klienta: '42', kwota: 95, opis: 'Botoks', pracownik: 'Anna' });
         const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
         expect(ins).toBeTruthy();
@@ -56,6 +58,12 @@ describe('makeLojalnosc — naliczZaSprzedaz', () => {
         expect(ins[1][2]).toBe(9);         // zmiana
         expect(ins[1][4]).toBe('SPRZEDAZ');
         expect(ins[1][5]).toBe('S1');      // ref_id = id sprzedaży
+    });
+
+    test('klient BEZ konta Klubu → zero punktów (decyzja: punkty od dołączenia)', () => {
+        const db = mockDb(FEATURE_ON, { rows: [] });
+        makeLojalnosc(db).naliczZaSprzedaz('t-loj-a2', { saleId: 'S1', id_klienta: '42', kwota: 95 });
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
     });
 
     test('feature wyłączony → tylko 1 zapytanie, brak INSERT', () => {
@@ -80,7 +88,7 @@ describe('makeLojalnosc — naliczZaSprzedaz', () => {
     });
 
     test('duplikat (ER_DUP_ENTRY) nie wybucha — idempotencja retry', () => {
-        const db = mockDb(FEATURE_ON, { rows: [{ pkt_za_10zl: 1 }] }, { err: { code: 'ER_DUP_ENTRY', message: 'dup' } });
+        const db = mockDb(FEATURE_ON, { rows: [{ id: 1 }] }, { rows: [{ pkt_za_10zl: 1 }] }, { err: { code: 'ER_DUP_ENTRY', message: 'dup' } });
         expect(() => makeLojalnosc(db).naliczZaSprzedaz('t-loj-e', { saleId: 'S1', id_klienta: '42', kwota: 95 })).not.toThrow();
     });
 
@@ -237,12 +245,13 @@ describe('POST /api/lojalnosc — loj_punkty_reczne', () => {
         user_log: 'Anna',
     };
 
-    test('zapisuje ręczne punkty (admin, klient istnieje, feature aktywny)', async () => {
+    test('zapisuje ręczne punkty (admin, klient jest CZŁONKIEM)', async () => {
         const db = mockDb(
             ...INIT,
             FEATURE_ON,
             ROLA_ADMIN,                            // RBAC: pilot admin-only
             { rows: [{ id_klienta: '42' }] },      // klient istnieje
+            { rows: [{ id: 1 }] },                 // ma konto Klubu
             { rows: { affectedRows: 1 } }          // INSERT ledger
         );
         const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
@@ -250,6 +259,13 @@ describe('POST /api/lojalnosc — loj_punkty_reczne', () => {
         const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
         expect(ins[1][2]).toBe(50);
         expect(ins[0]).toMatch(/'RECZNE'/); // zrodlo wpisane w SQL, ref_id = losowy UUID
+    });
+
+    test('ręczne punkty dla klienta BEZ konta → czytelna odmowa', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: [{ id_klienta: '42' }] }, { rows: [] });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-s3' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/nie dołączył/i);
     });
 
     test('recepcja NIE może dodać punktów ręcznie (pilot admin-only)', async () => {

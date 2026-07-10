@@ -30712,7 +30712,12 @@ function loj_zaladuj(idKlienta) {
       const nazwaEl = document.getElementById('klub-nazwa');
       if (nazwaEl && d.ustawienia && d.ustawienia.nazwa_klubu) nazwaEl.textContent = d.ustawienia.nazwa_klubu;
       const zasadaEl = document.getElementById('klub-zasada');
-      if (zasadaEl && d.ustawienia) zasadaEl.textContent = '10 zł = ' + (d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie z paragonów';
+      if (zasadaEl && d.ustawienia) {
+        zasadaEl.textContent = d.ma_konto
+          ? ('10 zł = ' + (d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie z paragonów')
+          : '⚠️ Klient nie dołączył do Klubu — punkty naliczą się dopiero po aktywacji konta (📲 Aplikacja).';
+        zasadaEl.style.color = d.ma_konto ? '' : '#b45309';
+      }
       if (histEl) {
         const wpisy = (d.wpisy || []).slice(0, 5);
         if (!wpisy.length) {

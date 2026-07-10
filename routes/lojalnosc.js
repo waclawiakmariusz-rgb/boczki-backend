@@ -235,7 +235,17 @@ function makeLojalnosc(db) {
     );
   }
 
-  // Sprzedaż z id_klienta → +punkty. ref_id = id wiersza Sprzedaz.
+  // Czy klient DOŁĄCZYŁ do programu (aktywne konto w apce) — decyzja usera
+  // 2026-07-10: punkty naliczają się wyłącznie członkom, nie całej kartotece.
+  function maKontoKlubu(tenant_id, id_klienta, cb) {
+    db.query(
+      `SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? AND status = 'AKTYWNE' LIMIT 1`,
+      [tenant_id, String(id_klienta)],
+      (err, rows) => cb(!err && Array.isArray(rows) && rows.length > 0)
+    );
+  }
+
+  // Sprzedaż z id_klienta → +punkty, ale TYLKO gdy klient jest członkiem Klubu.
   function naliczZaSprzedaz(tenant_id, dane) {
     try {
       const idK = String((dane && dane.id_klienta) || '').trim();
@@ -244,10 +254,13 @@ function makeLojalnosc(db) {
       if (!((parseFloat(dane.kwota) || 0) > 0)) return;
       maFeature(tenant_id, (on) => {
         if (!on) return;
-        pobierzMnoznik(tenant_id, (mnoznik) => {
-          const pkt = obliczPunkty(dane.kwota, mnoznik);
-          if (pkt <= 0) return;
-          wpis(tenant_id, idK, pkt, dane.opis || 'Sprzedaż', 'SPRZEDAZ', saleId, dane.pracownik);
+        maKontoKlubu(tenant_id, idK, (czlonek) => {
+          if (!czlonek) return;
+          pobierzMnoznik(tenant_id, (mnoznik) => {
+            const pkt = obliczPunkty(dane.kwota, mnoznik);
+            if (pkt <= 0) return;
+            wpis(tenant_id, idK, pkt, dane.opis || 'Sprzedaż', 'SPRZEDAZ', saleId, dane.pracownik);
+          });
         });
       });
     } catch (e) { console.error('[lojalnosc] naliczZaSprzedaz:', e.message); }
@@ -350,7 +363,7 @@ function makeLojalnosc(db) {
     } catch (e) { console.error('[lojalnosc] skorygujEdycje:', e.message); }
   }
 
-  return { naliczZaSprzedaz, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje };
+  return { naliczZaSprzedaz, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje, maKontoKlubu };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -763,20 +776,23 @@ module.exports = (db) => {
                   [tenant_id],
                   (err3, uRows) => {
                     const ust = (!err3 && Array.isArray(uRows) && uRows[0]) ? uRows[0] : {};
-                    return res.json({
-                      status: 'success',
-                      saldo: Number((sRows[0] || {}).saldo) || 0,
-                      wpisy: (Array.isArray(wRows) ? wRows : []).map(w => ({
-                        zmiana: Number(w.zmiana) || 0,
-                        powod: w.powod || '',
-                        zrodlo: w.zrodlo || '',
-                        pracownik: w.pracownik || '',
-                        data: w.created_at
-                      })),
-                      ustawienia: {
-                        pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
-                        nazwa_klubu: ust.nazwa_klubu || 'Klub'
-                      }
+                    hook.maKontoKlubu(tenant_id, idK, (czlonek) => {
+                      return res.json({
+                        status: 'success',
+                        saldo: Number((sRows[0] || {}).saldo) || 0,
+                        ma_konto: czlonek ? 1 : 0,
+                        wpisy: (Array.isArray(wRows) ? wRows : []).map(w => ({
+                          zmiana: Number(w.zmiana) || 0,
+                          powod: w.powod || '',
+                          zrodlo: w.zrodlo || '',
+                          pracownik: w.pracownik || '',
+                          data: w.created_at
+                        })),
+                        ustawienia: {
+                          pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
+                          nazwa_klubu: ust.nazwa_klubu || 'Klub'
+                        }
+                      });
                     });
                   }
                 );
@@ -988,16 +1004,19 @@ module.exports = (db) => {
           (err, rows) => {
             if (err) return res.json({ status: 'error', message: err.message });
             if (!Array.isArray(rows) || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta w kartotece.' });
-            db.query(
-              `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
-               VALUES (?, ?, ?, ?, 'RECZNE', ?, ?)`,
-              [tenant_id, idK, zmiana, powod.slice(0, 250), randomUUID(), kto.slice(0, 120)],
-              (err2) => {
-                if (err2) return res.json({ status: 'error', message: err2.message });
-                zapiszLog(tenant_id, 'KLUB PUNKTY RĘCZNE', kto, `Klient ${idK}: ${zmiana > 0 ? '+' : ''}${zmiana} pkt | ${powod}`);
-                return res.json({ status: 'success', message: 'Punkty zapisane.' });
-              }
-            );
+            hook.maKontoKlubu(tenant_id, idK, (czlonek) => {
+              if (!czlonek) return res.json({ status: 'error', message: 'Ten klient nie dołączył jeszcze do Klubu — najpierw aktywuj mu konto (przycisk „📲 Aplikacja"), potem przyznawaj punkty.' });
+              db.query(
+                `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+                 VALUES (?, ?, ?, ?, 'RECZNE', ?, ?)`,
+                [tenant_id, idK, zmiana, powod.slice(0, 250), randomUUID(), kto.slice(0, 120)],
+                (err2) => {
+                  if (err2) return res.json({ status: 'error', message: err2.message });
+                  zapiszLog(tenant_id, 'KLUB PUNKTY RĘCZNE', kto, `Klient ${idK}: ${zmiana > 0 ? '+' : ''}${zmiana} pkt | ${powod}`);
+                  return res.json({ status: 'success', message: 'Punkty zapisane.' });
+                }
+              );
+            });
           }
         );
       }));
