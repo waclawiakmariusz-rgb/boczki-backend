@@ -142,6 +142,13 @@
 <div id="loader"><div class="spin"></div><div class="muted">Chwileczkę…</div></div>
 <div id="toast" class="toast"></div>
 
+<!-- Baner: słaba przeglądarka (WebView / Opera Mini) — apka działa, ale powiadomienia nie -->
+<div id="browser-hint" style="display:none; position:fixed; top:0; left:0; right:0; z-index:80; background:#fffdf6; border-bottom:1px solid #f0b64d; padding:10px 14px calc(10px); font-size:12.5px; color:#7b6a3f; text-align:center;">
+  Ta przeglądarka ma ograniczenia — <b>otwórz w Chrome</b>, żeby wszystko działało najlepiej.
+  <button onclick="kopiujLink()" style="margin-left:6px; background:#fff; border:1px solid #e3c98a; border-radius:8px; padding:4px 10px; font-size:12px; font-weight:700; color:#7b6a3f; cursor:pointer;">📋 Kopiuj link</button>
+  <button onclick="document.getElementById('browser-hint').style.display='none'" style="margin-left:4px; background:none; border:none; font-size:14px; color:#c9b98a; cursor:pointer;">✕</button>
+</div>
+
 <!-- ── Aktywacja konta (wejście z QR od recepcji: /klub.html?a=token) ── -->
 <div id="screen-aktywacja" class="screen center">
   <div class="logo">💎 <b id="akt-nazwa">Klub</b></div>
@@ -271,6 +278,31 @@
   <button class="btn ghost" onclick="zamknij('m-text')">Zamknij</button>
 </div></div>
 
+<!-- Modal: propozycja powiadomień (jeden dotyk, pokazywana raz) -->
+<div id="m-push-prop" class="modal"><div class="box" style="text-align:center;">
+  <div style="font-size:44px; margin-bottom:6px;">🔔</div>
+  <h3 style="padding-right:0;">Bądź na bieżąco!</h3>
+  <div class="muted" style="line-height:1.55;">Włącz powiadomienia, a damy Ci znać o promocjach i nowych punktach. Jeden dotyk — bez żadnej konfiguracji.</div>
+  <button class="btn" onclick="zamknij('m-push-prop'); wlaczPush();">🔔 Włącz powiadomienia</button>
+  <button class="btn ghost" onclick="zamknij('m-push-prop')">Może później</button>
+</div></div>
+
+<!-- Modal: pomoc gdy powiadomienia zablokowane w przeglądarce -->
+<div id="m-push-help" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-push-help')">✕</button>
+  <h3>🔕 Powiadomienia są zablokowane</h3>
+  <div style="font-size:14px; line-height:1.7; color:#4a5261;">
+    Przeglądarka zapamiętała wcześniejszą odmowę. Odblokujesz je w 10 sekund:
+    <ol style="padding-left:20px; margin:10px 0;">
+      <li>Dotknij <b>ikony kłódki</b> (lub suwaków) przy adresie strony u góry.</li>
+      <li>Wybierz <b>Uprawnienia → Powiadomienia</b>.</li>
+      <li>Przestaw na <b>Zezwalaj</b> i odśwież stronę.</li>
+    </ol>
+    Potem kliknij 🔔 jeszcze raz — i gotowe.
+  </div>
+  <button class="btn ghost" onclick="zamknij('m-push-help')">Zamknij</button>
+</div></div>
+
 <script>
 const API = '/api/klub';
 const LS_SESJA = 'klub_session';
@@ -310,10 +342,25 @@ async function api(path, body) {
 }
 
 // ── Start ──
+// Słabe środowiska: wbudowane przeglądarki aplikacji (Messenger/Instagram itp.),
+// Opera Mini, WebView z QR-skanera — apka działa, ale push nie. Podpowiadamy Chrome.
+function slabaPrzegladarka() {
+  const ua = navigator.userAgent || '';
+  if (/(FBAN|FBAV|Instagram|Messenger|Line\/|WhatsApp|Snapchat|TikTok|; wv\)|Opera Mini|OPiOS)/i.test(ua)) return true;
+  if (!('serviceWorker' in navigator)) return true;
+  return false;
+}
+function kopiujLink() {
+  const url = location.origin + '/klub.html';
+  if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Skopiowano — wklej w Chrome.')).catch(() => prompt('Skopiuj adres:', url));
+  else prompt('Skopiuj adres:', url);
+}
+
 window.addEventListener('load', async () => {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/klub-sw.js').catch(() => {});
   }
+  if (slabaPrzegladarka()) document.getElementById('browser-hint').style.display = 'block';
   const aktToken = new URLSearchParams(location.search).get('a');
   if (aktToken) return startAktywacja(aktToken);
   if (localStorage.getItem(LS_SESJA)) return wczytajKonto();
@@ -366,6 +413,7 @@ async function aktywuj() {
     if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się aktywować konta.'; return; }
     localStorage.setItem(LS_SESJA, d.session);
     history.replaceState(null, '', '/klub.html'); // sprzątamy jednorazowy token z adresu
+    swiezaAktywacja = true; // najlepszy moment na propozycję powiadomień — klient jest przy recepcji
     wczytajKonto();
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
@@ -415,6 +463,7 @@ async function wczytajKonto(cicho) {
     renderAll();
     if (stareSaldo !== null && d.saldo > stareSaldo) toast('✨ +' + (d.saldo - stareSaldo) + ' pkt od ostatniej wizyty!');
     pokaz('screen-main');
+    pushOnboarding();
   } catch (e) {
     loader(false);
     if (cicho) return;
@@ -601,8 +650,27 @@ function pokazFaq() {
 }
 
 // ── Web Push ──
+let swiezaAktywacja = false;
+
 function pushWspierany() {
   return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+// Propozycja powiadomień w dobrym momencie: zaraz po aktywacji konta (zawsze)
+// albo raz przy pierwszym wejściu. Nie nagabuje: „Może później" = koniec pytań,
+// przycisk w Profilu zostaje na zawsze.
+async function pushOnboarding() {
+  try {
+    if (!dane || !dane.push_vapid || !pushWspierany()) return;
+    if (Notification.permission === 'denied') return; // bez sensu proponować — pomoc jest pod 🔔 w Profilu
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (sub && Notification.permission === 'granted') return; // już włączone
+    if (!swiezaAktywacja && localStorage.getItem('klub_push_prop')) return;
+    swiezaAktywacja = false;
+    localStorage.setItem('klub_push_prop', '1');
+    document.getElementById('m-push-prop').classList.add('visible');
+  } catch (e) { /* propozycja to bonus — nigdy nie blokuje apki */ }
 }
 async function renderPush() {
   const btn = document.getElementById('btn-push');
@@ -628,9 +696,15 @@ function b64doUint8(b64) {
 }
 async function wlaczPush() {
   if (!dane || !dane.push_vapid) return;
+  // Zgoda już wcześniej zablokowana → od razu instrukcja odblokowania, bez pustego błędu
+  if (Notification.permission === 'denied') {
+    document.getElementById('m-push-help').classList.add('visible');
+    return;
+  }
   try {
     const perm = await Notification.requestPermission();
-    if (perm !== 'granted') { toast('Brak zgody na powiadomienia w przeglądarce.'); return; }
+    if (perm === 'denied') { document.getElementById('m-push-help').classList.add('visible'); return; }
+    if (perm !== 'granted') { toast('Nie wybrano zgody — kliknij 🔔 i wybierz „Zezwól".'); return; }
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
@@ -640,7 +714,11 @@ async function wlaczPush() {
     if (d.status === 'success') { toast('🔔 Powiadomienia włączone!'); renderPush(); }
     else toast(d.message || 'Nie udało się zapisać subskrypcji.');
   } catch (e) {
-    toast('Nie udało się włączyć powiadomień' + (/iPhone|iPad/.test(navigator.userAgent) ? ' — na iPhone zainstaluj najpierw apkę na ekran główny.' : '.'));
+    if (/iPhone|iPad/.test(navigator.userAgent)) {
+      toast('Na iPhone najpierw dodaj apkę do ekranu głównego (Udostępnij → Do ekranu początkowego).');
+    } else {
+      document.getElementById('m-push-help').classList.add('visible');
+    }
   }
 }
 
