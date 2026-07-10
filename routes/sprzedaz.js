@@ -6,10 +6,14 @@ const express = require('express');
 const { parseKwota, parseIlosc, parseNumOpt } = require('./utils');
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { makeLojalnosc } = require('./lojalnosc');
 
 module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
+  // Hook Klubu (dodatek lojalnosc) — fire-and-forget, NIGDY nie blokuje sprzedaży.
+  // Wołany przez setImmediate PO wysłaniu odpowiedzi, żeby nie opóźniać paragonu.
+  const lojalnosc = makeLojalnosc(db);
 
   // Idempotentna migracja — kolumna rozróżniająca Kosmetyk vs Suplement.
   // Wartości: 'Kosmetyk' (default dla sprzedaży typu kosmetyk), 'Suplement' (typ='Witaminy'
@@ -412,6 +416,10 @@ module.exports = (db) => {
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
               zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${zabiegNazwaFinal} | ${d.kwota} zł`);
+              const lojOpis = zabiegNazwaFinal;
+              setImmediate(() => lojalnosc.naliczZaSprzedaz(tenant_id, {
+                saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaAdd, opis: lojOpis, pracownik: sprzedawca
+              }));
               return res.json({ status: 'success', message: 'Sprzedaż zarejestrowana!' });
             }
           );
@@ -554,7 +562,15 @@ module.exports = (db) => {
               db.query(
                 `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci, grupa_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null, poz.grupaId || null],
-                nextPoz
+                (errIns) => {
+                  if (!errIns) {
+                    const lojOpis = zapisKategoria;
+                    setImmediate(() => lojalnosc.naliczZaSprzedaz(tenant_id, {
+                      saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaPoz, opis: lojOpis, pracownik: sprzedawcyStr
+                    }));
+                  }
+                  nextPoz();
+                }
               );
             };
             if (poz.typ === 'Kosmetyk') {
@@ -736,6 +752,7 @@ module.exports = (db) => {
                 (err2) => {
                   if (err2) return res.json({ status: 'error', message: err2.message });
                   zapiszLog(tenant_id, 'EDYCJA SPRZEDAŻY', d.pracownik, zmiany.length > 0 ? zmiany.join(' | ') : 'Edycja danych (bez kluczowych zmian)');
+                  setImmediate(() => lojalnosc.skorygujEdycje(tenant_id, d.id, _kwotaEdit, d.pracownik));
 
                 // Korekta magazynu + ewentualna aktualizacja mixu — po pomyślnym UPDATE
                 const aktualizujMix = (cb) => {
@@ -846,6 +863,7 @@ module.exports = (db) => {
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               zapiszLog(tenant_id, 'USUNIĘCIE SPRZEDAŻY', pracownik, `Klient: ${row.klient} | Usługa: ${row.zabieg} | Kwota: ${row.kwota} zł | ID: ${d.id}`);
+              setImmediate(() => lojalnosc.kompensujUsuniecie(tenant_id, d.id, pracownik));
 
               // Przywrócenie stanu magazynu, jeśli to była sprzedaż kosmetyku
               const kosm = parsujKosmetyk(row.zabieg, row.szczegoly);
@@ -961,6 +979,10 @@ module.exports = (db) => {
                 (err3) => {
                   if (err3) return res.json({ status: 'error', message: err3.message });
                   zapiszLog(tenant_id, 'ZWROT SPRZEDAŻY', pracownik, `Klient: ${orig.klient} | ${orig.zabieg} | Zwrot: ${_kwotaZwrotu.toFixed(2)} zł (${metoda}) | Powód: ${powod} | Do zakupu ID: ${orig.id}${przywrocStan ? ` | +${iloscZwrotu} szt na stan` : ''}`);
+                  setImmediate(() => lojalnosc.naliczZaZwrot(tenant_id, {
+                    zwrotId: uniqueId, saleId: orig.id, id_klienta: orig.id_klienta,
+                    kwotaZwrotu: _kwotaZwrotu, opis: 'ZWROT: ' + orig.zabieg, pracownik
+                  }));
 
                   const finish = (stanMsg) => res.json({ status: 'success', message: `Zwrot ${_kwotaZwrotu.toFixed(2)} zł zarejestrowany.` + (stanMsg || '') });
                   if (przywrocStan) {
@@ -1006,6 +1028,7 @@ module.exports = (db) => {
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               zapiszLog(tenant_id, 'AWARIA EDYCJA', d.pracownik, `ALARMOWA MODYFIKACJA ID:${d.id} | ZMIANY: ${logSzczegoly.join(' || ')} | ${snapshot}`);
+              setImmediate(() => lojalnosc.skorygujEdycje(tenant_id, d.id, _kwotaEmerg, d.pracownik));
               return res.json({ status: 'success', message: 'KOREKTA ZAPISANA. ZDARZENIE ZALOGOWANE.' });
             }
           );

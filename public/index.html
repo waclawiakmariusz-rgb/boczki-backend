@@ -7957,6 +7957,29 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="font-size:15px; font-weight:700; margin-bottom:10px; color:#0f766e;">📞 Historia kontaktów</div>
                                 <div id="profil-retencja-content" style="font-size:13px; color:#115e59; line-height:1.55;">Ładowanie...</div>
                             </div>
+
+                            <!-- Klub — dodatek płatny (feature_key: lojalnosc). Punkty z paragonów. -->
+                            <div id="klub-profil-box" style="display:none; background:linear-gradient(180deg,#fffafc 0%,#fff5f9 100%); border:1px solid #f3d9e3; border-radius:18px; padding:18px 18px 16px;">
+                                <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                                    <div style="font-size:15px; font-weight:700; color:#2c3242;">💎 <span id="klub-nazwa">Klub</span></div>
+                                    <div style="display:flex; gap:6px;">
+                                        <button onclick="loj_generujAktywacje()" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">📲 Aplikacja</button>
+                                        <button onclick="loj_toggleReczne()" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">± Punkty</button>
+                                    </div>
+                                </div>
+                                <div id="klub-aktywacja-area" style="display:none; margin-bottom:10px; padding:12px; background:#fff; border:1px solid #f3e6eb; border-radius:12px;"></div>
+                                <div id="klub-saldo" style="font-size:26px; font-weight:800; letter-spacing:-.03em; color:#c54f7f;">–</div>
+                                <div id="klub-zasada" style="margin-top:2px; color:#a2a7b8; font-size:12px;"></div>
+                                <div id="klub-reczne-form" style="display:none; margin-top:12px; padding:12px; background:#fff; border:1px solid #f3e6eb; border-radius:12px;">
+                                    <input id="klub-zmiana" type="number" step="1" placeholder="Punkty, np. 50 lub -20" style="width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #efe5e8; border-radius:8px; font-size:13px; margin-bottom:8px;">
+                                    <input id="klub-powod" type="text" maxlength="250" placeholder="Powód (np. opinia Google)" style="width:100%; box-sizing:border-box; padding:9px 10px; border:1px solid #efe5e8; border-radius:8px; font-size:13px; margin-bottom:8px;">
+                                    <div style="display:flex; gap:8px;">
+                                        <button id="klub-zapisz-btn" onclick="loj_zapiszReczne()" style="flex:1; background:#c54f7f; color:#fff; border:0; border-radius:10px; padding:9px 0; font-size:13px; font-weight:700; cursor:pointer;">Zapisz</button>
+                                        <button onclick="loj_toggleReczne()" style="background:#fff; border:1px solid #efe5e8; color:#7b8091; border-radius:10px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer;">Anuluj</button>
+                                    </div>
+                                </div>
+                                <div id="klub-historia" style="margin-top:10px; font-size:12.5px; color:#4c5364;"></div>
+                            </div>
                         </div>
 
                         <!-- Notatki -->
@@ -15836,6 +15859,9 @@ function przelaczTabProfilu(tabId, btn) {
     }
     if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof zg_profilTab === 'function') {
         zg_profilTab(window.aktualnyProfilKlientId);
+    }
+    if (tabId === 'podsumowanie' && window.aktualnyProfilKlientId && typeof loj_profilTab === 'function') {
+        loj_profilTab(window.aktualnyProfilKlientId);
     }
 }
       //  function wyloguj() { localStorage.removeItem('boczki_user'); location.reload(); }
@@ -29413,6 +29439,13 @@ initTheme();
   .foto-klient-wynik:hover { background:#f3e8ff; }
   body.dark-mode .foto-klient-wynik { color:#e2e8f0; }
   body.dark-mode .foto-klient-wynik:hover { background:#3b2a63; }
+  /* Klub (dodatek lojalnosc) — kafel na profilu klienta w dark mode */
+  body.dark-mode #klub-profil-box { background:#1e293b !important; border-color:#334155 !important; }
+  body.dark-mode #klub-profil-box #klub-nazwa, body.dark-mode #klub-profil-box > div:first-child { color:#e2e8f0; }
+  body.dark-mode #klub-reczne-form { background:#0f172a !important; border-color:#334155 !important; }
+  body.dark-mode #klub-reczne-form input { background:#0f172a; color:#e2e8f0; border-color:#475569 !important; }
+  body.dark-mode #klub-historia { color:#cbd5e1; }
+  body.dark-mode #klub-historia > div { border-bottom-color:#334155 !important; }
 </style>
 <div id="foto-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
     <div id="foto-modal-card" style="background:#fff; width:95%; max-width:520px; padding:25px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,0.2); margin-bottom:30px;">
@@ -30379,6 +30412,149 @@ async function dd_addNowyTyp() {
     }
   } catch (err) {
     alert('Błąd połączenia: ' + err.message);
+  }
+}
+
+/* ============================================================
+   KLUB — dodatek płatny (feature_key: lojalnosc)
+   Faza 1: punkty naliczane automatycznie z paragonów (backend,
+   routes/lojalnosc.js), kafel salda + historia + ręczne akcje
+   na profilu klienta (zakładka Podsumowanie).
+   ============================================================ */
+const LOJ_FEATURE_KEY = 'lojalnosc';
+
+function loj_enabled() {
+  return typeof hasFeature === 'function' && hasFeature(LOJ_FEATURE_KEY);
+}
+
+// Pilot: Klub w panelu widoczny TYLKO dla admina (decyzja usera 2026-07-10).
+// Backend i tak wymusza rolę przy akcjach zapisu — to jest warstwa UI.
+function loj_admin() {
+  const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+  return rola === 'admin' || rola === 'megaadmin';
+}
+
+// Hook z przelaczTabProfilu — zakładka Podsumowanie na profilu klienta
+function loj_profilTab(idKlienta) {
+  const box = document.getElementById('klub-profil-box');
+  if (!box) return;
+  if (!loj_enabled() || !loj_admin()) { box.style.display = 'none'; return; }
+  box.style.display = '';
+  const qrArea = document.getElementById('klub-aktywacja-area');
+  if (qrArea) qrArea.style.display = 'none';
+  loj_zaladuj(idKlienta);
+}
+
+// Jednorazowy QR/link aktywacyjny apki klienta (ważny 7 dni)
+async function loj_generujAktywacje() {
+  const area = document.getElementById('klub-aktywacja-area');
+  if (!area) return;
+  area.style.display = 'block';
+  area.innerHTML = '<div style="color:#a2a7b8; font-size:12.5px; padding:6px 0;">⏳ Generuję kod…</div>';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'loj_aktywacja_token',
+        id_klienta: window.aktualnyProfilKlientId,
+        user_log: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') {
+      area.innerHTML = '<div style="color:#b91c1c; font-size:12.5px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>';
+      return;
+    }
+    const wygasa = d.wygasa ? new Date(d.wygasa).toLocaleDateString('pl-PL') : '';
+    area.innerHTML =
+      (d.ma_konto ? '<div style="color:#b45309; font-size:12px; margin-bottom:6px;">⚠️ Klient ma już konto — nowy kod zresetuje jego PIN.</div>' : '') +
+      '<div style="text-align:center;"><img src="' + d.qr + '" alt="QR aktywacyjny" style="width:200px; max-width:100%; border:1px solid #f3e6eb; border-radius:12px; background:#fff;"></div>' +
+      '<div style="font-size:12px; color:#4c5364; margin-top:8px;">Klient skanuje kod telefonem i ustawia PIN. Link ważny do <b>' + wygasa + '</b>.</div>' +
+      '<div style="margin-top:8px; display:flex; gap:8px;">' +
+      '<button onclick="navigator.clipboard.writeText(\'' + d.url.replace(/'/g, "\\'") + '\').then(()=>alert(\'Skopiowano link.\'))" style="flex:1; background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:8px 0; font-size:12px; font-weight:700; cursor:pointer;">📋 Kopiuj link</button>' +
+      '<button onclick="document.getElementById(\'klub-aktywacja-area\').style.display=\'none\'" style="background:#fff; border:1px solid #efe5e8; color:#7b8091; border-radius:10px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer;">Zamknij</button>' +
+      '</div>';
+  } catch (e) {
+    area.innerHTML = '<div style="color:#b91c1c; font-size:12.5px;">Błąd połączenia: ' + escHtml(e.message) + '</div>';
+  }
+}
+
+function loj_zaladuj(idKlienta) {
+  const saldoEl = document.getElementById('klub-saldo');
+  const histEl = document.getElementById('klub-historia');
+  if (saldoEl) saldoEl.textContent = '…';
+  if (histEl) histEl.innerHTML = '';
+  fetch(API_URL + '?action=loj_klient&id_klienta=' + encodeURIComponent(idKlienta))
+    .then(r => r.json())
+    .then(d => {
+      // Profil mógł się zmienić w trakcie pobierania — nie nadpisujemy cudzych danych
+      if (String(window.aktualnyProfilKlientId) !== String(idKlienta)) return;
+      if (!d || d.status !== 'success') { if (saldoEl) saldoEl.textContent = '—'; return; }
+      if (saldoEl) saldoEl.textContent = (d.saldo || 0) + ' pkt';
+      const nazwaEl = document.getElementById('klub-nazwa');
+      if (nazwaEl && d.ustawienia && d.ustawienia.nazwa_klubu) nazwaEl.textContent = d.ustawienia.nazwa_klubu;
+      const zasadaEl = document.getElementById('klub-zasada');
+      if (zasadaEl && d.ustawienia) zasadaEl.textContent = '10 zł = ' + (d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie z paragonów';
+      if (histEl) {
+        const wpisy = (d.wpisy || []).slice(0, 5);
+        if (!wpisy.length) {
+          histEl.innerHTML = '<div style="color:#a2a7b8;">Brak wpisów — punkty pojawią się przy najbliższej sprzedaży.</div>';
+          return;
+        }
+        histEl.innerHTML = wpisy.map(w => {
+          const dt = w.data ? new Date(w.data) : null;
+          const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL') : '';
+          const kol = (w.zmiana || 0) >= 0 ? '#0f766e' : '#b91c1c';
+          const znak = (w.zmiana || 0) > 0 ? '+' : '';
+          return '<div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb;">'
+            + '<span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
+            + '<span style="color:#a2a7b8; flex-shrink:0;">' + dstr + '</span>'
+            + '<b style="color:' + kol + '; flex-shrink:0;">' + znak + (w.zmiana || 0) + '</b>'
+            + '</div>';
+        }).join('');
+      }
+    })
+    .catch(() => { if (saldoEl) saldoEl.textContent = '—'; });
+}
+
+function loj_toggleReczne() {
+  const f = document.getElementById('klub-reczne-form');
+  if (!f) return;
+  f.style.display = (f.style.display === 'none') ? 'block' : 'none';
+}
+
+async function loj_zapiszReczne() {
+  const zmiana = parseInt(document.getElementById('klub-zmiana').value, 10);
+  const powod = document.getElementById('klub-powod').value.trim();
+  if (!Number.isFinite(zmiana) || zmiana === 0) { alert('Podaj liczbę punktów różną od zera (np. 50 lub -20).'); return; }
+  if (!powod) { alert('Podaj powód — będzie widoczny w historii punktów klienta.'); return; }
+  const btn = document.getElementById('klub-zapisz-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'loj_punkty_reczne',
+        id_klienta: window.aktualnyProfilKlientId,
+        zmiana: zmiana,
+        powod: powod,
+        user_log: typeof currentUser !== 'undefined' ? currentUser : '',
+        pracownik: typeof currentUser !== 'undefined' ? currentUser : ''
+      })
+    });
+    const d = await r.json();
+    if (d.status === 'success') {
+      document.getElementById('klub-zmiana').value = '';
+      document.getElementById('klub-powod').value = '';
+      loj_toggleReczne();
+      loj_zaladuj(window.aktualnyProfilKlientId);
+    } else {
+      alert('Błąd: ' + (d.message || 'nieznany'));
+    }
+  } catch (e) {
+    alert('Błąd połączenia: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Zapisz'; }
   }
 }
 

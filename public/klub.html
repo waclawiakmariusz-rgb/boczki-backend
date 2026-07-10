@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Klub — program lojalnościowy</title>
+<link rel="manifest" href="/klub-manifest.json">
+<link rel="icon" type="image/svg+xml" href="/klub-icon.svg">
+<link rel="apple-touch-icon" href="/klub-icon.svg">
+<meta name="theme-color" content="#b87080">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Estetyka Estelio — paleta i typografia jak public/foto.html */
+  :root {
+    --primary: #b87080;
+    --primary-dark: #a05e6e;
+    --primary-glow: rgba(184, 112, 128, 0.25);
+    --bg-body: #fdf8f5;
+    --text-dark: #2d3748;
+    --text-muted: #8b95a5;
+    --border-soft: #f3e3e8;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body, html { margin: 0; padding: 0; min-height: 100%; background: var(--bg-body); font-family: 'DM Sans', 'Segoe UI', system-ui, sans-serif; color: var(--text-dark); }
+  .screen { display: none; flex-direction: column; align-items: center; padding: 24px 20px 40px; min-height: 100vh; }
+  .screen.visible { display: flex; }
+  .center { justify-content: center; text-align: center; }
+  .logo { font-family: 'Cormorant Garamond', serif; font-size: 34px; font-weight: 600; letter-spacing: .5px; color: var(--text-dark); }
+  .logo b { color: var(--primary); font-weight: 600; }
+  .logo-sub { font-size: 12px; color: var(--text-muted); letter-spacing: .18em; text-transform: uppercase; margin-top: 2px; }
+  .card { background: #fff; border: 1px solid var(--border-soft); border-radius: 24px; padding: 22px; width: 100%; max-width: 380px; margin-top: 16px; box-shadow: 0 15px 35px rgba(0,0,0,.04), 0 5px 15px rgba(0,0,0,.03); }
+  .card h2 { margin: 0 0 4px; font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 600; }
+  .muted { color: var(--text-muted); font-size: 13px; }
+  input[type=password], input[type=tel] {
+    width: 100%; padding: 13px 14px; margin-top: 10px; border-radius: 16px; border: 1px solid #eadfe3;
+    background: #fdfafb; color: var(--text-dark); font-size: 16px; font-family: inherit; text-align: center; letter-spacing: 1px;
+  }
+  input:focus { outline: none; background: #fff; border-color: var(--primary); box-shadow: 0 8px 20px var(--primary-glow); }
+  .chk-row { display: flex; align-items: flex-start; gap: 9px; margin-top: 14px; font-size: 13.5px; color: #6b7280; cursor: pointer; text-align: left; }
+  .chk-row input { width: 19px; height: 19px; accent-color: var(--primary); flex-shrink: 0; margin-top: 1px; }
+  .chk-row a { color: var(--primary); font-weight: 600; }
+  .btn { width: 100%; margin-top: 16px; padding: 14px; border: none; border-radius: 16px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: #fff; font-size: 16px; font-weight: 700; font-family: inherit; cursor: pointer; box-shadow: 0 12px 25px -5px var(--primary-glow); }
+  .btn:active { transform: scale(.98); }
+  .btn[disabled] { opacity: .5; }
+  .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 16px; }
+  .link-btn { margin-top: 14px; background: none; border: none; color: var(--text-muted); font-size: 13px; font-family: inherit; text-decoration: underline; cursor: pointer; }
+
+  /* ── Ekran główny ── */
+  .main-head { width: 100%; max-width: 420px; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: calc(env(safe-area-inset-top, 0px) + 6px); }
+  .main-head .hi { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; }
+  .saldo-card { width: 100%; max-width: 420px; margin-top: 14px; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); border-radius: 26px; padding: 26px 24px; color: #fff; box-shadow: 0 18px 35px -8px var(--primary-glow); text-align: center; }
+  .saldo-card .lbl { font-size: 12px; letter-spacing: .18em; text-transform: uppercase; opacity: .85; }
+  .saldo-card .val { font-size: 52px; font-weight: 800; letter-spacing: -.03em; line-height: 1.15; }
+  .saldo-card .val small { font-size: 20px; font-weight: 600; opacity: .9; }
+  .saldo-card .rule { margin-top: 6px; font-size: 12.5px; opacity: .85; }
+  .sekcja { width: 100%; max-width: 420px; margin-top: 18px; }
+  .sekcja h3 { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 600; margin: 0 0 8px; }
+  .hist { background: #fff; border: 1px solid var(--border-soft); border-radius: 20px; padding: 6px 16px; }
+  .hist-row { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-bottom: 1px solid #faf1f4; font-size: 14px; }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-ico { flex-shrink: 0; width: 34px; height: 34px; border-radius: 12px; background: #fdf3f5; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .hist-txt { flex: 1; min-width: 0; }
+  .hist-txt .t { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hist-txt .d { font-size: 11.5px; color: var(--text-muted); }
+  .hist-pkt { font-weight: 800; flex-shrink: 0; }
+  .plus { color: #0f766e; } .minus { color: #b91c1c; }
+  .pusto { padding: 22px 10px; text-align: center; color: var(--text-muted); font-size: 13.5px; }
+  #install-hint { display: none; width: 100%; max-width: 420px; margin-top: 16px; background: #fff; border: 1px dashed #e3c7cf; border-radius: 18px; padding: 14px 16px; font-size: 13px; color: #6b7280; text-align: left; }
+  #install-hint b { color: var(--primary); }
+  #loader { position: fixed; inset: 0; background: rgba(253,248,245,.92); z-index: 100; display: none; justify-content: center; align-items: center; flex-direction: column; gap: 14px; }
+  #loader.visible { display: flex; }
+  .spin { width: 38px; height: 38px; border: 4px solid var(--border-soft); border-top: 4px solid var(--primary); border-radius: 50%; animation: spin 1s infinite linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="spin"></div><div class="muted">Chwileczkę…</div></div>
+
+<!-- ── Aktywacja konta (wejście z QR od recepcji: /klub.html?a=token) ── -->
+<div id="screen-aktywacja" class="screen center">
+  <div class="logo">💎 <b id="akt-nazwa">Klub</b></div>
+  <div class="logo-sub">program lojalnościowy</div>
+  <div class="card">
+    <h2 id="akt-hello">Witaj!</h2>
+    <div class="muted">Ustaw swój PIN — będziesz nim logować się do aplikacji razem z numerem telefonu.</div>
+    <input type="password" id="akt-pin" inputmode="numeric" maxlength="6" placeholder="PIN (4–6 cyfr)" autocomplete="new-password">
+    <input type="password" id="akt-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+    <label class="chk-row"><input type="checkbox" id="akt-zgoda"><span>Akceptuję <a id="akt-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
+    <button class="btn" id="akt-btn" onclick="aktywuj()">Aktywuj konto</button>
+    <div class="err" id="akt-err"></div>
+  </div>
+</div>
+
+<!-- ── Logowanie ── -->
+<div id="screen-login" class="screen center">
+  <div class="logo">💎 <b>Klub</b></div>
+  <div class="logo-sub">program lojalnościowy</div>
+  <div class="card">
+    <h2>Zaloguj się</h2>
+    <div class="muted">Numer telefonu podany w salonie i Twój PIN.</div>
+    <input type="tel" id="log-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
+    <input type="password" id="log-pin" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="current-password">
+    <button class="btn" id="log-btn" onclick="zaloguj()">Zaloguj się</button>
+    <div class="err" id="log-err"></div>
+    <div class="muted" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod QR przy najbliższej wizycie.</div>
+  </div>
+</div>
+
+<!-- ── Ekran główny ── -->
+<div id="screen-main" class="screen">
+  <div class="main-head">
+    <div class="hi" id="m-hello">Cześć!</div>
+    <button class="link-btn" style="margin:0;" onclick="wyloguj()">Wyloguj</button>
+  </div>
+  <div class="saldo-card">
+    <div class="lbl" id="m-klub">Klub</div>
+    <div class="val"><span id="m-saldo">0</span> <small>pkt</small></div>
+    <div class="rule" id="m-zasada">Punkty naliczają się automatycznie przy każdej wizycie.</div>
+  </div>
+  <div class="sekcja">
+    <h3>Historia punktów</h3>
+    <div class="hist" id="m-hist"><div class="pusto">Ładowanie…</div></div>
+  </div>
+  <div id="install-hint"></div>
+</div>
+
+<script>
+const API = '/api/klub';
+const LS_SESJA = 'klub_session';
+let deferredInstall = null;
+
+function pokaz(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('visible'));
+  document.getElementById(id).classList.add('visible');
+}
+function loader(on) { document.getElementById('loader').classList.toggle('visible', !!on); }
+function esc(s) { return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+async function api(path, body) {
+  const r = await fetch(API + path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body || {})
+  });
+  return r.json();
+}
+
+// ── Start ──
+window.addEventListener('load', async () => {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/klub-sw.js').catch(() => {});
+  }
+  const aktToken = new URLSearchParams(location.search).get('a');
+  if (aktToken) return startAktywacja(aktToken);
+  const sesja = localStorage.getItem(LS_SESJA);
+  if (sesja) return wczytajKonto();
+  pokaz('screen-login');
+});
+
+// ── Aktywacja ──
+let aktywacjaToken = null;
+async function startAktywacja(token) {
+  aktywacjaToken = token;
+  loader(true);
+  try {
+    const d = await api('/info', { token });
+    loader(false);
+    if (d.status !== 'success') {
+      pokaz('screen-login');
+      document.getElementById('log-err').textContent = d.message || 'Link aktywacyjny wygasł.';
+      return;
+    }
+    document.getElementById('akt-nazwa').textContent = d.nazwa_klubu || 'Klub';
+    document.getElementById('akt-hello').textContent = d.imie ? ('Witaj, ' + d.imie + '!') : 'Witaj!';
+    const reg = document.getElementById('akt-regulamin');
+    if (d.regulamin_url) { reg.href = d.regulamin_url; }
+    else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
+    pokaz('screen-aktywacja');
+  } catch (e) {
+    loader(false);
+    pokaz('screen-login');
+    document.getElementById('log-err').textContent = 'Błąd połączenia. Spróbuj ponownie.';
+  }
+}
+
+async function aktywuj() {
+  const pin = document.getElementById('akt-pin').value.trim();
+  const pin2 = document.getElementById('akt-pin2').value.trim();
+  const zgoda = document.getElementById('akt-zgoda').checked;
+  const err = document.getElementById('akt-err');
+  err.textContent = '';
+  if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'PIN musi mieć 4–6 cyfr.'; return; }
+  if (pin !== pin2) { err.textContent = 'PIN-y różnią się od siebie.'; return; }
+  if (!zgoda) { err.textContent = 'Zaakceptuj regulamin programu.'; return; }
+  const btn = document.getElementById('akt-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/aktywuj', { token: aktywacjaToken, pin, zgoda: true });
+    if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się aktywować konta.'; return; }
+    localStorage.setItem(LS_SESJA, d.session);
+    history.replaceState(null, '', '/klub.html'); // sprzątamy jednorazowy token z adresu
+    wczytajKonto();
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
+}
+
+// ── Logowanie ──
+async function zaloguj() {
+  const tel = document.getElementById('log-tel').value.trim();
+  const pin = document.getElementById('log-pin').value.trim();
+  const err = document.getElementById('log-err');
+  err.textContent = '';
+  if (tel.replace(/\D/g, '').length < 9) { err.textContent = 'Podaj poprawny numer telefonu.'; return; }
+  if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'PIN ma 4–6 cyfr.'; return; }
+  const btn = document.getElementById('log-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/login', { telefon: tel, pin });
+    if (d.status !== 'success') { err.textContent = d.message || 'Błędne dane.'; return; }
+    localStorage.setItem(LS_SESJA, d.session);
+    wczytajKonto();
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
+}
+
+function wyloguj() {
+  localStorage.removeItem(LS_SESJA);
+  pokaz('screen-login');
+}
+
+// ── Ekran główny ──
+async function wczytajKonto() {
+  loader(true);
+  try {
+    const d = await api('/me', { session: localStorage.getItem(LS_SESJA) });
+    loader(false);
+    if (d.status !== 'success') {
+      if (d.code === 'SESJA') localStorage.removeItem(LS_SESJA);
+      pokaz('screen-login');
+      if (d.message) document.getElementById('log-err').textContent = d.message;
+      return;
+    }
+    if (d.session_nowy) localStorage.setItem(LS_SESJA, d.session_nowy);
+    document.getElementById('m-hello').textContent = d.imie ? ('Cześć, ' + d.imie + '!') : 'Cześć!';
+    document.getElementById('m-klub').textContent = d.nazwa_klubu || 'Klub';
+    document.getElementById('m-saldo').textContent = d.saldo || 0;
+    document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt — naliczane automatycznie.';
+    renderHistoria(d.wpisy || []);
+    pokazInstallHint();
+    pokaz('screen-main');
+  } catch (e) {
+    loader(false);
+    pokaz('screen-login');
+    document.getElementById('log-err').textContent = 'Błąd połączenia. Spróbuj ponownie.';
+  }
+}
+
+function renderHistoria(wpisy) {
+  const box = document.getElementById('m-hist');
+  if (!wpisy.length) {
+    box.innerHTML = '<div class="pusto">Jeszcze pusto — punkty pojawią się po najbliższej wizycie. 💫</div>';
+    return;
+  }
+  const ikona = (z) => z === 'SPRZEDAZ' ? '🛍️' : (z === 'ZWROT' ? '↩️' : (z === 'RECZNE' ? '⭐' : '⚙️'));
+  box.innerHTML = wpisy.map(w => {
+    const dt = w.data ? new Date(w.data) : null;
+    const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const plus = (w.zmiana || 0) >= 0;
+    return '<div class="hist-row">'
+      + '<div class="hist-ico">' + ikona(w.zrodlo) + '</div>'
+      + '<div class="hist-txt"><div class="t">' + esc(w.powod || 'Punkty') + '</div><div class="d">' + dstr + '</div></div>'
+      + '<div class="hist-pkt ' + (plus ? 'plus' : 'minus') + '">' + (plus ? '+' : '') + (w.zmiana || 0) + '</div>'
+      + '</div>';
+  }).join('');
+}
+
+// ── Instalacja PWA ──
+window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferredInstall = e; pokazInstallHint(); });
+function pokazInstallHint() {
+  const hint = document.getElementById('install-hint');
+  if (!hint || !document.getElementById('screen-main')) return;
+  const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if (standalone) { hint.style.display = 'none'; return; }
+  const isIos = /iPhone|iPad|iPod/.test(navigator.userAgent);
+  if (deferredInstall) {
+    hint.innerHTML = '<b>📲 Zainstaluj aplikację</b> — saldo punktów zawsze pod ręką. <button class="btn" style="margin-top:10px; padding:11px;" onclick="instaluj()">Dodaj do ekranu głównego</button>';
+    hint.style.display = 'block';
+  } else if (isIos) {
+    hint.innerHTML = '<b>📲 Dodaj do ekranu głównego:</b> dotknij przycisku „Udostępnij" na dole przeglądarki, a potem wybierz „Do ekranu początkowego".';
+    hint.style.display = 'block';
+  }
+}
+async function instaluj() {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  pokazInstallHint();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "Klub",
+  "short_name": "Klub",
+  "description": "Program lojalnościowy Twojego salonu",
+  "start_url": "/klub.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#fdf8f5",
+  "theme_color": "#b87080",
+  "icons": [
+    { "src": "/klub-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/klub-icon.svg", "sizes": "192x192", "type": "image/svg+xml" },
+    { "src": "/klub-icon.svg", "sizes": "512x512", "type": "image/svg+xml" }
+  ]
+}

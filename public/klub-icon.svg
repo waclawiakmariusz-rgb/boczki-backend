@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#fdf8f5"/>
+  <rect x="24" y="24" width="464" height="464" rx="96" fill="none" stroke="#f3e3e8" stroke-width="8"/>
+  <!-- Diament w palecie Estelio -->
+  <g>
+    <polygon points="256,432 96,208 160,128 352,128 416,208" fill="#b87080"/>
+    <polygon points="256,432 96,208 176,208" fill="#a05e6e"/>
+    <polygon points="256,432 416,208 336,208" fill="#a05e6e"/>
+    <polygon points="176,208 256,432 336,208" fill="#cf8a99"/>
+    <polygon points="160,128 176,208 96,208" fill="#cf8a99"/>
+    <polygon points="352,128 416,208 336,208" fill="#cf8a99"/>
+    <polygon points="160,128 256,128 176,208" fill="#e3aab6"/>
+    <polygon points="256,128 352,128 336,208" fill="#e3aab6"/>
+    <polygon points="256,128 336,208 176,208" fill="#f0c7d0"/>
+  </g>
+</svg>

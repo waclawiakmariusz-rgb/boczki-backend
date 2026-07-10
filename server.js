@@ -300,6 +300,7 @@ const gusRoutes        = require('./routes/gus')(db);
 const booksyRoutes     = require('./routes/booksy')(db);
 const fotoRoutes       = require('./routes/foto')(db);
 const zgodyRoutes      = require('./routes/zgody')(db);
+const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 
 // ==========================================
 // REJESTRACJA ROUTERÓW
@@ -336,6 +337,7 @@ app.use('/api', gusRoutes);
 app.use('/api', booksyRoutes);
 app.use('/api', fotoRoutes);
 app.use('/api', zgodyRoutes);
+app.use('/api', lojalnoscRoutes);
 
 // ==========================================
 // MIDDLEWARE WERYFIKACJI SESJI
@@ -473,6 +475,8 @@ app.get('/api', (req, res) => {
         'zgody_status': '/api/zgody?action=zgody_status&tenant_id=' + tenant_id,
         'zgody_regulamin_get': '/api/zgody?action=zgody_regulamin_get&tenant_id=' + tenant_id,
         'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : '') + (req.query.szukaj ? '&szukaj=' + encodeURIComponent(req.query.szukaj) : '') + (req.query.strona ? '&strona=' + encodeURIComponent(req.query.strona) : ''),
+        'loj_klient': '/api/lojalnosc?action=loj_klient&tenant_id=' + tenant_id + '&id_klienta=' + encodeURIComponent(req.query.id_klienta || ''),
+        'loj_ustawienia': '/api/lojalnosc?action=loj_ustawienia&tenant_id=' + tenant_id,
     };
 
     if (getActions[action]) {
@@ -544,6 +548,7 @@ app.post('/api', (req, res) => {
     const booksyActions = ['booksy_refresh', 'booksy_preview'];
     const fotoActions = ['foto_token', 'foto_usun', 'foto_urzadzenie_usun'];
     const zgodyActions = ['zgoda_utworz', 'zgoda_anuluj', 'zgody_regulamin_zapisz'];
+    const lojalnoscActions = ['loj_punkty_reczne', 'loj_ustawienia_zapisz', 'loj_aktywacja_token'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -593,6 +598,9 @@ app.post('/api', (req, res) => {
     } else if (zgodyActions.includes(action)) {
         req.url = '/zgody';
         return zgodyRoutes(req, res, () => {});
+    } else if (lojalnoscActions.includes(action)) {
+        req.url = '/lojalnosc';
+        return lojalnoscRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });

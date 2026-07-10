@@ -29,11 +29,14 @@ describe('POST /api/sprzedaz — delete_sale + magazyn', () => {
             action: 'delete_sale', tenant_id: TENANT, id: 'S1', pracownik: 'Marta'
         });
         expect(res.body.status).toBe('success');
-        // 3 zapytania handlera = SELECT + UPDATE + Log (pomijamy idempotentne ALTER TABLE z ładowania modułu).
-        const handlerCalls = db.query.mock.calls.filter(c => !/^\s*ALTER\s+TABLE/i.test(String(c[0] || '')));
+        // 3 zapytania handlera = SELECT + UPDATE + Log. Pomijamy idempotentne ALTER TABLE
+        // z ładowania modułu oraz post-response hook Klubu (Tenant_Features / Lojalnosc_*).
+        const handlerCalls = db.query.mock.calls.filter(c =>
+            !/^\s*ALTER\s+TABLE/i.test(String(c[0] || '')) &&
+            !/Tenant_Features|Lojalnosc_/i.test(String(c[0] || '')));
         expect(handlerCalls.length).toBe(3);
         const sqls = db.query.mock.calls.map(c => c[0]);
-        expect(sqls.some(s => /Magazyn/.test(s))).toBe(false);
+        expect(sqls.some(s => /Magazyn\b/.test(s))).toBe(false);
     });
 
     test('kosmetyk — przywraca ilość do najstarszej partii', async () => {
