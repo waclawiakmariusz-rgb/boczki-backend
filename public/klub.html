@@ -239,7 +239,7 @@
     <input type="password" id="log-pin" inputmode="numeric" maxlength="6" placeholder="PIN" autocomplete="current-password">
     <button class="btn" id="log-btn" onclick="zaloguj()">Zaloguj się</button>
     <div class="err" id="log-err"></div>
-    <button class="btn ghost" id="log-rejestracja" style="display:none;" onclick="startRejestracja(localStorage.getItem('klub_rej'))">✨ Nie masz konta? Załóż je</button>
+    <button class="btn ghost" id="log-rejestracja" style="display:none;" onclick="startRejestracja(localStorage.getItem('klub_rej'))">Nie masz konta? Załóż je</button>
     <div class="muted" id="log-brak-konta" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod QR przy najbliższej wizycie.</div>
     <button class="link-btn" onclick="pokazResetPin()">Nie pamiętam PIN-u</button>
     <div id="reset-box" style="display:none; margin-top:10px; text-align:left;">
@@ -252,7 +252,7 @@
 
 <!-- ── Rejestracja online (wejście z publicznego linku: /klub.html?r=token) ── -->
 <div id="screen-rejestracja" class="screen center">
-  <div class="logo-znak">✨</div>
+  <div class="logo-znak">✦</div>
   <div class="logo"><b id="rej-nazwa">Klub</b></div>
   <div class="logo-sub">dołącz do programu</div>
   <div class="card">
@@ -272,9 +272,9 @@
 
 <!-- ── Wniosek przyjęty (istniejąca klientka — czeka na SMS od salonu) ── -->
 <div id="screen-wniosek" class="screen center">
-  <div class="logo-znak">💌</div>
+  <div class="logo-znak"><span data-iko="mail" data-s="28"></span></div>
   <div class="card" style="text-align:center;">
-    <h2>Znamy się już! 🌸</h2>
+    <h2>Znamy się już!</h2>
     <div class="muted" style="margin-top:6px;">Ten numer jest w naszej kartotece. Dla bezpieczeństwa Twoich danych salon wyśle Ci <b>SMS z linkiem aktywacyjnym</b> — zwykle jeszcze tego samego dnia. Po kliknięciu ustawisz PIN i konto będzie gotowe.</div>
     <button class="btn ghost" onclick="pokaz('screen-login')">Rozumiem</button>
   </div>
@@ -289,7 +289,7 @@
     <button class="dzwonek" onclick="przejdzDoWiadomosci()" title="Wiadomości od salonu"><span data-iko="bell" data-s="23"></span><span class="kropka" id="dzwonek-kropka"></span></button>
   </div>
   <div class="hi-blok">
-    <div class="hi"><span id="m-hello">Cześć!</span> ✨</div>
+    <div class="hi"><span id="m-hello">Cześć!</span></div>
     <div class="hi-sub">Cieszymy się, że jesteś z nami.</div>
   </div>
 
@@ -581,7 +581,7 @@ async function zarejestruj() {
     if (d.kod === 'NOWE') {
       localStorage.setItem(LS_SESJA, d.session);
       swiezaAktywacja = true;
-      if (d.bonus > 0) setTimeout(() => toast('🎁 Bonus powitalny: +' + d.bonus + ' pkt!'), 900);
+      if (d.bonus > 0) setTimeout(() => toast('Bonus powitalny: +' + d.bonus + ' pkt!'), 900);
       wczytajKonto();
     } else if (d.kod === 'WNIOSEK') {
       pokaz('screen-wniosek');
@@ -689,7 +689,7 @@ async function wyslijResetPin() {
     const d = await api('/reset_pin', { telefon: tel });
     if (d.status === 'success') {
       document.getElementById('reset-box').style.display = 'none';
-      toast('💌 ' + (d.message || 'Prośba wysłana — wypatruj SMS-a od salonu.'));
+      toast(d.message || 'Prośba wysłana — wypatruj SMS-a od salonu.');
     } else err.textContent = d.message || 'Nie udało się wysłać prośby.';
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
@@ -712,7 +712,7 @@ async function wczytajKonto(cicho) {
     const stareSaldo = dane ? dane.saldo : null;
     dane = d;
     renderAll();
-    if (stareSaldo !== null && d.saldo > stareSaldo) toast('✨ +' + (d.saldo - stareSaldo) + ' pkt od ostatniej wizyty!');
+    if (stareSaldo !== null && d.saldo > stareSaldo) toast('+' + (d.saldo - stareSaldo) + ' pkt od ostatniej wizyty!');
     pokaz('screen-main');
     pushOnboarding();
   } catch (e) {
@@ -812,7 +812,7 @@ function przejdzDoWiadomosci() {
   tab('start');
   const sek = document.getElementById('sek-wiadomosci');
   if (sek && sek.style.display !== 'none') sek.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  else toast('📬 Brak wiadomości od salonu — zajrzyj wkrótce.');
+  else toast('Brak wiadomości od salonu — zajrzyj wkrótce.');
   // oznacz jako przeczytane → kropka na dzwonku gaśnie
   const maxId = Math.max(0, ...((dane && dane.wiadomosci) || []).map(w => Number(w.id) || 0));
   if (maxId) localStorage.setItem('klub_msg_seen', String(maxId));
