@@ -1053,6 +1053,66 @@ describe('POST /api/klub/reset_pin', () => {
     });
 });
 
+// ─── POST /klub/zmien_pin ─────────────────────────────────────
+describe('POST /api/klub/zmien_pin', () => {
+    const HASH_1234 = bcrypt.hashSync('1234', 4);
+    const sesja = () => makeKlubToken({ t: 't-zp-a', k: '42', typ: 'ses', exp: Date.now() + 60 * 60 * 1000 });
+
+    test('poprawny stary PIN → nowy hash w bazie', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ pin_hash: HASH_1234 }] },
+            { rows: { affectedRows: 1 } }              // UPDATE pin_hash
+        );
+        const res = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: sesja(), stary_pin: '1234', nowy_pin: '5678' });
+        expect(res.body.status).toBe('success');
+        const upd = db.query.mock.calls.find(c => /UPDATE Lojalnosc_Konta SET pin_hash/.test(c[0]));
+        expect(upd).toBeTruthy();
+        expect(bcrypt.compareSync('5678', upd[1][0])).toBe(true);   // zapisany hash pasuje do NOWEGO PIN-u
+        expect(upd[1][1]).toBe('t-zp-a');
+        expect(upd[1][2]).toBe('42');
+    });
+
+    test('błędny stary PIN → odmowa, bez UPDATE', async () => {
+        const db = mockDb(...INIT, { rows: [{ pin_hash: HASH_1234 }] });
+        const res = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: sesja(), stary_pin: '9999', nowy_pin: '5678' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/obecny pin/i);
+        expect(db.query.mock.calls.some(c => /UPDATE Lojalnosc_Konta SET pin_hash/.test(c[0]))).toBe(false);
+    });
+
+    test('nowy PIN spoza 4–6 cyfr lub równy staremu → odmowa', async () => {
+        const db = mockDbAlways([]);
+        const r1 = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: sesja(), stary_pin: '1234', nowy_pin: 'abc' });
+        const r2 = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: sesja(), stary_pin: '1234', nowy_pin: '1234' });
+        expect(r1.body.status).toBe('error');
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('bez sesji / zły typ tokenu → SESJA', async () => {
+        const db = mockDbAlways([]);
+        const r1 = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ stary_pin: '1234', nowy_pin: '5678' });
+        const akt = makeKlubToken({ t: 't-zp-a', k: '42', typ: 'akt', exp: Date.now() + 60000 });
+        const r2 = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: akt, stary_pin: '1234', nowy_pin: '5678' });
+        expect(r1.body.code).toBe('SESJA');
+        expect(r2.body.code).toBe('SESJA');
+    });
+
+    test('konto nieaktywne → SESJA, bez UPDATE', async () => {
+        const db = mockDb(...INIT, { rows: [] });
+        const res = await request(buildApp(db)).post('/api/klub/zmien_pin')
+            .send({ session: sesja(), stary_pin: '1234', nowy_pin: '5678' });
+        expect(res.body.code).toBe('SESJA');
+        expect(db.query.mock.calls.some(c => /UPDATE Lojalnosc_Konta SET pin_hash/.test(c[0]))).toBe(false);
+    });
+});
+
 describe('POST /api/lojalnosc — loj_wniosek_wyslij', () => {
     test('generuje link aktywacyjny + SMS na numer Z KARTOTEKI', async () => {
         const db = mockDb(

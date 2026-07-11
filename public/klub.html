@@ -355,6 +355,7 @@
         <button class="menu-item" id="btn-push" onclick="wlaczPush()" style="display:none;"><span style="color:var(--primary); display:flex; align-items:center; gap:10px;"><span data-iko="bell" data-s="19"></span>Włącz powiadomienia o promocjach</span><span class="arrow">›</span></button>
         <button class="menu-item" onclick="pokazZasady()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="spark" data-s="19" style="color:var(--gold-dark);"></span>Jak zbierać punkty?</span><span class="arrow">›</span></button>
         <button class="menu-item" onclick="pokazFaq()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="info" data-s="19" style="color:var(--gold-dark);"></span>Pytania i odpowiedzi</span><span class="arrow">›</span></button>
+        <button class="menu-item" onclick="otworzZmianePin()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="lock" data-s="19" style="color:var(--gold-dark);"></span>Zmień PIN</span><span class="arrow">›</span></button>
       </div>
     </div>
     <div class="sekcja">
@@ -382,6 +383,19 @@
   <div id="m-promo-tresc"></div>
   <button class="btn" id="m-promo-biore" style="display:none; background:#0f9d6a;" onclick="biore()">BIORĘ! (płatność w salonie)</button>
   <button class="btn ghost" onclick="zamknij('m-promo')">Zamknij</button>
+</div></div>
+
+<!-- Modal: zmiana PIN-u -->
+<div id="m-pin" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-pin')">✕</button>
+  <h3>Zmień PIN</h3>
+  <div class="muted">Podaj obecny PIN i ustaw nowy (4–6 cyfr).</div>
+  <input type="password" id="zp-stary" inputmode="numeric" maxlength="6" placeholder="Obecny PIN" autocomplete="current-password">
+  <input type="password" id="zp-nowy" inputmode="numeric" maxlength="6" placeholder="Nowy PIN (4–6 cyfr)" autocomplete="new-password">
+  <input type="password" id="zp-nowy2" inputmode="numeric" maxlength="6" placeholder="Powtórz nowy PIN" autocomplete="new-password">
+  <div class="err" id="zp-err"></div>
+  <button class="btn" id="zp-btn" onclick="zmienPinWyslij()">Zmień PIN</button>
+  <button class="btn ghost" onclick="zamknij('m-pin')">Anuluj</button>
 </div></div>
 
 <!-- Modal: kod odbioru -->
@@ -460,6 +474,7 @@ const IKONY = {
   spark: '<path d="M12 3.5 13.7 9 19.2 10.7 13.7 12.4 12 17.9 10.3 12.4 4.8 10.7 10.3 9 12 3.5Z"/>',
   tune:  '<path d="M4 8h9M17.5 8H20M15.5 5.8v4.4M4 16h2.5M11 16h9M8.8 13.8v4.4"/>',
   info:  '<circle cx="12" cy="12" r="8.5"/><path d="M12 10.8v5M12 7.8h.01"/>',
+  lock:  '<rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5M12 14v2.5"/>',
 };
 function iko(nazwa, rozmiar) {
   const s = rozmiar || 22;
@@ -514,6 +529,40 @@ function kopiujLink() {
   const url = location.origin + '/klub.html';
   if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Skopiowano — wklej w Chrome.')).catch(() => prompt('Skopiuj adres:', url));
   else prompt('Skopiuj adres:', url);
+}
+
+// ── Zmiana PIN-u (Profil) ──
+function otworzZmianePin() {
+  ['zp-stary', 'zp-nowy', 'zp-nowy2'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('zp-err').textContent = '';
+  document.getElementById('m-pin').classList.add('visible');
+}
+async function zmienPinWyslij() {
+  const stary = document.getElementById('zp-stary').value.trim();
+  const nowy = document.getElementById('zp-nowy').value.trim();
+  const nowy2 = document.getElementById('zp-nowy2').value.trim();
+  const err = document.getElementById('zp-err');
+  err.textContent = '';
+  if (!stary) { err.textContent = 'Podaj obecny PIN.'; return; }
+  if (!/^\d{4,6}$/.test(nowy)) { err.textContent = 'Nowy PIN musi mieć 4–6 cyfr.'; return; }
+  if (nowy !== nowy2) { err.textContent = 'Nowe PIN-y różnią się od siebie.'; return; }
+  if (stary === nowy) { err.textContent = 'Nowy PIN musi różnić się od obecnego.'; return; }
+  const btn = document.getElementById('zp-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/zmien_pin', { session: localStorage.getItem(LS_SESJA), stary_pin: stary, nowy_pin: nowy });
+    btn.disabled = false;
+    if (d.status !== 'success') {
+      if (d.code === 'SESJA') { zamknij('m-pin'); wyloguj(); return; }
+      err.textContent = d.message || 'Nie udało się zmienić PIN-u.';
+      return;
+    }
+    zamknij('m-pin');
+    toast(d.message || 'PIN zmieniony.');
+  } catch (e) {
+    btn.disabled = false;
+    err.textContent = 'Błąd połączenia. Spróbuj ponownie.';
+  }
 }
 
 window.addEventListener('load', async () => {

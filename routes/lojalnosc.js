@@ -1955,6 +1955,35 @@ module.exports = (db) => {
     } catch (e) { return res.json(ODP); }
   });
 
+  // Zmiana PIN-u przez zalogowanego klienta: obecny PIN + nowy (bez linku,
+  // bez recepcji). loginLimiter — obecny PIN można bruteforce'ować jak login.
+  router.post('/klub/zmien_pin', loginLimiter, async (req, res) => {
+    const d = req.body || {};
+    const p = verifyKlubToken(d.session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    const stary = String(d.stary_pin || '').trim();
+    const nowy = String(d.nowy_pin || '').trim();
+    if (!/^\d{4,6}$/.test(nowy)) return res.json({ status: 'error', message: 'Nowy PIN musi mieć 4–6 cyfr.' });
+    if (stary === nowy) return res.json({ status: 'error', message: 'Nowy PIN musi różnić się od obecnego.' });
+    try {
+      const rows = await q(
+        `SELECT pin_hash FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? AND status = 'AKTYWNE' LIMIT 1`,
+        [p.t, p.k]
+      );
+      const konto = Array.isArray(rows) ? rows[0] : null;
+      if (!konto) return res.json({ status: 'error', code: 'SESJA', message: 'Konto nieaktywne. Skontaktuj się z salonem.' });
+      const ok = await bcrypt.compare(stary, String(konto.pin_hash || '')).catch(() => false);
+      if (!ok) return res.json({ status: 'error', message: 'Obecny PIN jest błędny.' });
+      const hash = await bcrypt.hash(nowy, BCRYPT_ROUNDS);
+      await q(`UPDATE Lojalnosc_Konta SET pin_hash = ? WHERE tenant_id = ? AND id_klienta = ?`, [hash, p.t, p.k]);
+      zapiszLog(p.t, 'KLUB ZMIANA PIN', 'Klient (apka)', `Klient ${p.k}`);
+      return res.json({ status: 'success', message: 'PIN zmieniony. Od teraz loguj się nowym PIN-em.' });
+    } catch (e) {
+      console.error('[lojalnosc] zmien_pin:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
   // ─── Upload grafiki z panelu (multipart — poza dispatcherem JSON) ───
   // Front POST-uje bezpośrednio na /api/lojalnosc/upload z polami tenant_id,
   // user_log i plikiem "plik". RBAC admin + feature sprawdzane PO multerze.
