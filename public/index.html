@@ -29739,6 +29739,9 @@ initTheme();
 
         <!-- Krok 2: opis sesji -->
         <div id="foto-krok-sesja" style="display:none;">
+            <div id="foto-parowany-hint" style="display:none; background:#f0fdf4; border:1px solid #86efac; color:#166534; border-radius:10px; padding:10px 14px; font-size:13px; margin-bottom:14px;">
+                📱 <b>Bez kodu QR:</b> salon ma sparowany telefon (<span id="foto-parowany-nazwy"></span>). Wystarczy otworzyć na nim apkę <b>Estelio Foto</b> — klientkę i opis wybiera się na telefonie. Kod QR poniżej to opcja awaryjna (np. inny telefon).
+            </div>
             <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Opis sesji:</label>
             <input id="foto_opis" list="foto-opis-podpowiedzi" placeholder="np. przed serią endermologii" autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
             <datalist id="foto-opis-podpowiedzi">
@@ -31490,6 +31493,25 @@ function foto_pokazKrok(krok) {
   });
 }
 
+// Podpowiedź „bez kodu QR" — jeśli salon ma sparowany telefon, QR jest zbędny
+let foto_parowaneCache = null;   // { kiedy: ts, nazwy: [] }
+async function foto_pokazParowanyHint() {
+  const hint = document.getElementById('foto-parowany-hint');
+  if (!hint) return;
+  try {
+    if (!foto_parowaneCache || (Date.now() - foto_parowaneCache.kiedy) > 60000) {
+      const r = await fetch(API_URL + '?action=foto_urzadzenia');
+      const d = await r.json();
+      if (d.status !== 'success') return;
+      foto_parowaneCache = { kiedy: Date.now(), nazwy: (d.data || []).map(u => u.nazwa || 'Telefon') };
+    }
+    const nazwy = foto_parowaneCache.nazwy;
+    if (!nazwy.length) { hint.style.display = 'none'; return; }
+    document.getElementById('foto-parowany-nazwy').textContent = nazwy.slice(0, 3).join(', ') + (nazwy.length > 3 ? '…' : '');
+    hint.style.display = 'block';
+  } catch (e) { /* podpowiedź jest opcjonalna — cisza */ }
+}
+
 // Otwarcie z profilu klienta — klient już wybrany
 function foto_otworz(idKlienta, nazwa) {
   if (!foto_enabled()) { alert('Dodatek „Foto przed/po" nie jest aktywny. Włącz go w Administracja → Dodatki.'); return; }
@@ -31500,6 +31522,7 @@ function foto_otworz(idKlienta, nazwa) {
   document.getElementById('foto-rodo-warn').style.display = 'none';
   foto_pokazKrok('sesja');
   document.getElementById('foto-modal-overlay').style.display = 'flex';
+  foto_pokazParowanyHint();
 }
 
 // Otwarcie z kafla na Pulpicie — najpierw wybór klienta
@@ -31511,6 +31534,7 @@ function foto_otworzZPulpitu() {
   document.getElementById('foto_klient_wyniki').innerHTML = '<div style="color:#94a3b8; font-size:13px; padding:6px 2px;">Zacznij pisać, aby wyszukać klienta.</div>';
   foto_pokazKrok('klient');
   document.getElementById('foto-modal-overlay').style.display = 'flex';
+  foto_pokazParowanyHint();
   // Doładuj bazę klientów jeśli jeszcze nie ma jej w pamięci
   if (!window.wszyscyKlienciDane || !window.wszyscyKlienciDane.length) {
     fetch(API_URL + '?action=get_clients')

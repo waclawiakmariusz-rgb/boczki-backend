@@ -1,0 +1,15 @@
+{
+  "name": "Estelio Foto",
+  "short_name": "Foto",
+  "description": "Zdjęcia przed/po — telefon salonu",
+  "start_url": "/foto.html",
+  "scope": "/foto.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#fdf8f5",
+  "theme_color": "#b87080",
+  "icons": [
+    { "src": "/foto-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/foto-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

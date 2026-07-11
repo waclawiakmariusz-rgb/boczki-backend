@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Estelio — Foto przed/po</title>
+<meta name="theme-color" content="#b87080">
+<link rel="manifest" href="/foto-manifest.json">
+<link rel="icon" href="/foto-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/foto-icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -47,6 +51,22 @@
   .btn[disabled] { opacity: .5; }
   .err { color: #c0392b; font-size: 13px; margin-top: 10px; min-height: 16px; }
   .link-btn { margin-top: 16px; background: none; border: none; color: var(--text-muted); font-size: 13px; font-family: inherit; text-decoration: underline; cursor: pointer; }
+
+  /* ── Chipsy opisu sesji ── */
+  .opis-chipsy { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .opis-chip {
+    flex: 1 1 auto; padding: 11px 10px; border-radius: 14px; border: 1px solid #eadfe3;
+    background: #fdfafb; color: var(--text-dark); font-size: 14px; font-weight: 600; font-family: inherit; cursor: pointer; white-space: nowrap;
+  }
+  .opis-chip.active { background: var(--primary); border-color: var(--primary); color: #fff; box-shadow: 0 8px 20px var(--primary-glow); }
+
+  /* ── Podpowiedź „Dodaj do ekranu głównego" ── */
+  #a2hs-hint {
+    display: none; width: 100%; max-width: 380px; margin-top: 12px; padding: 13px 16px;
+    background: #fff; border: 1px dashed var(--primary); border-radius: 18px; text-align: left; font-size: 13.5px; color: var(--text-dark);
+  }
+  #a2hs-hint .btn { margin-top: 10px; padding: 11px; font-size: 14px; }
+  #a2hs-hint .link-btn { margin-top: 8px; display: block; margin-left: auto; margin-right: auto; }
 
   /* ── Aparat ── */
   #screen-camera { display: none; position: fixed; inset: 0; background: #000; z-index: 10; }
@@ -169,7 +189,12 @@
     <div id="k-wybrana" style="display:none; margin-top:10px; padding:11px 14px; background:#fff0f3; border:1px solid var(--primary); border-radius:14px; font-size:15px; color:var(--text-dark);">
       👤 <b id="k-wybrana-nazwa"></b>
     </div>
-    <input type="text" id="k-opis" list="opis-podpowiedzi" autocomplete="off" placeholder="Opis sesji, np. przed serią endermologii">
+    <div class="opis-chipsy" id="k-chipsy">
+      <button type="button" class="opis-chip" onclick="ustawOpis(this, 'przed serią zabiegów')">przed serią</button>
+      <button type="button" class="opis-chip" onclick="ustawOpis(this, 'po serii zabiegów')">po serii</button>
+      <button type="button" class="opis-chip" onclick="ustawOpis(this, 'kontrola w trakcie serii')">kontrola</button>
+    </div>
+    <input type="text" id="k-opis" list="opis-podpowiedzi" autocomplete="off" placeholder="…albo wpisz własny opis" oninput="odznaczChipsy()">
     <datalist id="opis-podpowiedzi">
       <option value="przed serią endermologii"></option>
       <option value="po serii endermologii"></option>
@@ -179,6 +204,12 @@
     </datalist>
     <button class="btn" id="k-btn" onclick="startSesjaParowana()">📷 Włącz aparat</button>
     <div class="err" id="k-err"></div>
+  </div>
+  <div id="a2hs-hint">
+    <b>Dodaj apkę Foto na ekran główny</b> — następnym razem otworzysz ją jednym tapnięciem, bez wpisywania adresu.
+    <button class="btn" id="a2hs-btn" style="display:none;" onclick="a2hsZainstaluj()">Dodaj skrót</button>
+    <div class="muted" id="a2hs-instrukcja" style="margin-top:6px;">W menu przeglądarki (⋮ lub przycisk „Udostępnij") wybierz <b>„Dodaj do ekranu głównego"</b>.</div>
+    <button class="link-btn" onclick="a2hsSchowaj()">Nie pokazuj więcej</button>
   </div>
   <button onclick="pokazEkran('screen-dzien')" class="link-btn">Zmień wykonawcę (PIN)</button>
 </div>
@@ -377,7 +408,50 @@
     $('k-wybrana').style.display = 'none';
     $('k-opis').value = '';
     $('k-err').textContent = '';
+    odznaczChipsy();
+    pokazA2HS();
     pokazEkran('screen-klient');
+  }
+
+  // ── Chipsy opisu sesji — jeden tap zamiast pisania ──
+  function ustawOpis(el, tekst) {
+    odznaczChipsy();
+    el.classList.add('active');
+    $('k-opis').value = tekst;
+    $('k-err').textContent = '';
+  }
+  function odznaczChipsy() {
+    document.querySelectorAll('#k-chipsy .opis-chip').forEach(c => c.classList.remove('active'));
+  }
+
+  // ── „Dodaj do ekranu głównego" — skrót do apki Foto ──
+  const A2HS_OFF_KEY = 'estelio_foto_a2hs_off';
+  let a2hsPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    a2hsPrompt = e;
+    const btn = $('a2hs-btn');
+    if (btn) { btn.style.display = 'block'; $('a2hs-instrukcja').style.display = 'none'; }
+  });
+  window.addEventListener('appinstalled', () => { a2hsSchowaj(); toast('✓ Skrót dodany — apka Foto jest na ekranie głównym.', 'ok', 3500); });
+  function jestStandalone() {
+    return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || window.navigator.standalone === true;
+  }
+  function pokazA2HS() {
+    let off = false;
+    try { off = localStorage.getItem(A2HS_OFF_KEY) === '1'; } catch (e) {}
+    $('a2hs-hint').style.display = (!off && !jestStandalone()) ? 'block' : 'none';
+  }
+  async function a2hsZainstaluj() {
+    if (!a2hsPrompt) return;
+    a2hsPrompt.prompt();
+    try { await a2hsPrompt.userChoice; } catch (e) {}
+    a2hsPrompt = null;
+    $('a2hs-btn').style.display = 'none';
+  }
+  function a2hsSchowaj() {
+    try { localStorage.setItem(A2HS_OFF_KEY, '1'); } catch (e) {}
+    $('a2hs-hint').style.display = 'none';
   }
 
   let szukajTimer = null;
@@ -417,7 +491,6 @@
     $('k-wybrana-nazwa').textContent = k.nazwa;
     $('k-wybrana').style.display = 'block';
     $('k-err').textContent = '';
-    $('k-opis').focus();
   }
 
   async function startSesjaParowana() {
@@ -425,7 +498,7 @@
     err.textContent = '';
     if (!wybranaKlientka) { err.textContent = 'Najpierw wyszukaj i wybierz klientkę.'; return; }
     const opis = $('k-opis').value.trim();
-    if (!opis) { err.textContent = 'Podaj opis sesji (np. „przed serią endermologii").'; return; }
+    if (!opis) { err.textContent = 'Wybierz opis sesji (przycisk powyżej) albo wpisz własny.'; return; }
     $('k-btn').disabled = true;
     try {
       const r = await fetch('/api/foto/start', {
