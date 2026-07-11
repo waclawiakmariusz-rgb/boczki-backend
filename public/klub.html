@@ -6,7 +6,7 @@
 <title>Klub — program lojalnościowy</title>
 <link rel="manifest" href="/klub-manifest.json">
 <link rel="icon" type="image/svg+xml" href="/klub-icon.svg">
-<link rel="apple-touch-icon" href="/klub-icon.svg">
+<link rel="apple-touch-icon" href="/klub-icon-180.png">
 <meta name="theme-color" content="#6f2136">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -62,7 +62,7 @@
   .card { background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-xxl); padding: 24px 22px; width: 100%; max-width: 380px; margin-top: 18px; box-shadow: var(--shadow); }
   .card h2 { margin: 0 0 4px; font-family: 'Cormorant Garamond', serif; font-size: 24px; font-weight: 600; letter-spacing: -.01em; }
   .muted { color: var(--muted); font-size: 13px; line-height: 1.55; }
-  input[type=password], input[type=tel] {
+  input[type=password], input[type=tel], input[type=text] {
     width: 100%; padding: 14px; margin-top: 10px; border-radius: var(--r-md); border: 1px solid var(--stroke);
     background: #fdfbfc; color: var(--text); font-size: 16px; font-family: inherit; text-align: center; letter-spacing: 1px;
     transition: border-color .2s, box-shadow .2s, background .2s;
@@ -263,7 +263,7 @@
     <h2>Załóż konto</h2>
     <div class="muted">Zbieraj punkty za wizyty i wymieniaj je na nagrody.</div>
     <div id="rej-bonus" style="display:none; margin-top:12px; background:var(--gold-soft); border:1px solid #f2d488; border-radius:var(--r-sm); padding:10px 14px; font-size:13px; font-weight:700; color:#a8730a;"></div>
-    <input type="tel" id="rej-imie" placeholder="Imię i nazwisko" autocomplete="name" style="letter-spacing:0;">
+    <input type="text" id="rej-imie" placeholder="Imię i nazwisko" autocomplete="name" style="letter-spacing:0;">
     <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
     <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
     <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
@@ -505,6 +505,13 @@ function toast(msg) {
   t.textContent = msg; t.style.display = 'block';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { t.style.display = 'none'; }, 3500);
+}
+
+// Safari (iPhone) nie parsuje 'YYYY-MM-DD HH:MM:SS' z MySQL — zamiana spacji na 'T'
+function dataZ(s) {
+  if (!s) return null;
+  const d = new Date(String(s).replace(' ', 'T'));
+  return isNaN(d.getTime()) ? null : d;
 }
 
 async function api(path, body) {
@@ -901,8 +908,8 @@ function renderWiadomosci(wiadomosci) {
   sek.style.display = 'block';
   // Karta = zajawka (2 linie treści); pełna wiadomość otwiera się w oknie
   box.innerHTML = wiadomosci.map(w => {
-    const dt = w.data ? new Date(w.data) : null;
-    const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) : '';
+    const dt = dataZ(w.data);
+    const dstr = dt ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) : '';
     return '<div class="wiad-karta" onclick="otworzWiadomosc(' + Number(w.id) + ')">'
       + (w.img_url ? '<img src="' + esc(w.img_url) + '" alt="" style="width:100%; max-height:120px; object-fit:cover; display:block;" onerror="this.style.display=\'none\'">' : '')
       + '<div style="padding:13px 16px;">'
@@ -919,9 +926,9 @@ function renderWiadomosci(wiadomosci) {
 function otworzWiadomosc(id) {
   const w = ((dane && dane.wiadomosci) || []).find(x => Number(x.id) === id);
   if (!w) return;
-  const dt = w.data ? new Date(w.data) : null;
+  const dt = dataZ(w.data);
   document.getElementById('m-wiad-tytul').textContent = w.tytul;
-  document.getElementById('m-wiad-data').textContent = dt && !isNaN(dt.getTime())
+  document.getElementById('m-wiad-data').textContent = dt
     ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
   const img = document.getElementById('m-wiad-img');
   if (w.img_url) { img.src = w.img_url; img.style.display = 'block'; } else img.style.display = 'none';
@@ -1034,8 +1041,8 @@ function renderHistoria(wpisy) {
     sumaPlus = 0; sumaMinus = 0;
   };
   wpisy.forEach(w => {
-    const dt = w.data ? new Date(w.data) : null;
-    const ok = dt && !isNaN(dt.getTime());
+    const dt = dataZ(w.data);
+    const ok = !!dt;
     const klucz = ok ? (dt.getFullYear() + '-' + dt.getMonth()) : 'inne';
     if (klucz !== biezacyKlucz) {
       zamknijMiesiac();
