@@ -1505,19 +1505,23 @@ module.exports = (db) => {
     const p = verifyKlubToken((req.body || {}).token, 'akt');
     if (!p) return res.json({ status: 'error', message: 'Link aktywacyjny jest nieprawidłowy lub wygasł. Poproś salon o nowy.' });
     try {
-      const kRows = await q(`SELECT imie_nazwisko, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]);
+      const kRows = await q(`SELECT imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]);
       const klient = Array.isArray(kRows) ? kRows[0] : null;
       if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Link nieaktualny. Poproś salon o nowy.' });
       const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const rRows = await q(`SELECT url, tresc FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
       const reg = (Array.isArray(rRows) && rRows[0]) || {};
+      // Czy numer ma już PIN w apce (inny salon) i nie ma jeszcze konta w TYM salonie?
+      // Wtedy aktywacja dziedziczy istniejący PIN — klient nie ustawia nowego.
+      const dziedziczy = await pinDoOdziedziczenia(normalizujTelefon(klient.telefon), p.t, p.k);
       return res.json({
         status: 'success',
         imie: String(klient.imie_nazwisko || '').split(' ')[0] || '',
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
-        regulamin_url: String(reg.url || '').trim()
+        regulamin_url: String(reg.url || '').trim(),
+        dziedziczy_pin: dziedziczy ? 1 : 0
       });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
   });
@@ -1529,30 +1533,75 @@ module.exports = (db) => {
     const p = verifyKlubToken(d.token, 'akt');
     if (!p) return res.json({ status: 'error', message: 'Link aktywacyjny jest nieprawidłowy lub wygasł. Poproś salon o nowy.' });
     const pin = String(d.pin || '').trim();
-    if (!/^\d{4,6}$/.test(pin)) return res.json({ status: 'error', message: 'PIN musi mieć 4–6 cyfr.' });
     if (!d.zgoda) return res.json({ status: 'error', message: 'Wymagana akceptacja regulaminu programu.' });
     try {
       const kRows = await q(`SELECT imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]);
       const klient = Array.isArray(kRows) ? kRows[0] : null;
       if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Link nieaktualny. Poproś salon o nowy.' });
-      const hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      const tel = normalizujTelefon(klient.telefon);
+      // Numer ma już PIN w apce (inny salon)? Nowe konto dziedziczy go — jeden PIN na numer.
+      const odziedziczony = await pinDoOdziedziczenia(tel, p.t, p.k);
+      let hash = odziedziczony;
+      if (!hash) {
+        if (!/^\d{4,6}$/.test(pin)) return res.json({ status: 'error', message: 'PIN musi mieć 4–6 cyfr.' });
+        hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      }
       await q(
         `INSERT INTO Lojalnosc_Konta (tenant_id, id_klienta, telefon, pin_hash, status, zgoda_regulamin_at)
          VALUES (?, ?, ?, ?, 'AKTYWNE', NOW())
          ON DUPLICATE KEY UPDATE telefon = VALUES(telefon), pin_hash = VALUES(pin_hash), status = 'AKTYWNE', zgoda_regulamin_at = NOW()`,
-        [p.t, p.k, normalizujTelefon(klient.telefon), hash]
+        [p.t, p.k, tel, hash]
       );
-      zapiszLog(p.t, 'KLUB AKTYWACJA KONTA', 'Klient (apka)', `Klient ${p.k} (${klient.imie_nazwisko || ''}) aktywował konto Klubu`);
+      zapiszLog(p.t, 'KLUB AKTYWACJA KONTA', 'Klient (apka)', `Klient ${p.k} (${klient.imie_nazwisko || ''}) aktywował konto Klubu${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
       const session = makeKlubToken({ t: p.t, k: p.k, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
-      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '' });
+      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
     } catch (e) {
       console.error('[lojalnosc] aktywuj:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
     }
   });
 
+  // Wspólna tożsamość klienta = numer telefonu. Jeden numer może mieć konto
+  // w kilku salonach (osobne saldo/nagrody per salon, wspólne logowanie).
+  // Zwraca dla każdego AKTYWNEGO konta numeru: tenant, nazwa salonu, saldo, pin_hash.
+  async function salonyKlienta(tel) {
+    const konta = await q(
+      `SELECT tenant_id, id_klienta, pin_hash FROM Lojalnosc_Konta WHERE telefon = ? AND status = 'AKTYWNE' LIMIT 20`,
+      [tel]
+    ).catch(() => []);
+    const out = [];
+    for (const k of (Array.isArray(konta) ? konta : [])) {
+      const lic = await q(`SELECT nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`, [k.tenant_id]).catch(() => []);
+      const sal = await q(`SELECT COALESCE(SUM(zmiana), 0) AS saldo FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ?`, [k.tenant_id, k.id_klienta]).catch(() => []);
+      out.push({
+        tenant: k.tenant_id,
+        id_klienta: String(k.id_klienta),
+        nazwa: (Array.isArray(lic) && lic[0] && lic[0].nazwa_salonu) || 'Salon',
+        saldo: Number((Array.isArray(sal) && sal[0] || {}).saldo) || 0,
+        pin_hash: k.pin_hash
+      });
+    }
+    return out;
+  }
+
+  // PIN do odziedziczenia: gdy numer ma już PIN w apce (inny salon), a w TYM salonie
+  // klient nie ma jeszcze konta — nowe konto przejmuje ten sam PIN (jeden PIN na numer).
+  // Świadomie działa TYLKO w jedną stronę: tworzone nowe konto = istniejący PIN.
+  // Nigdy nie nadpisuje kont w innych salonach (brak zapisu cross-tenant = bezpieczeństwo).
+  async function pinDoOdziedziczenia(tel, tenant, idKlienta) {
+    if (!tel || tel.length < 9) return null;
+    const juzTu = await q(`SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant, idKlienta]).catch(() => []);
+    if (Array.isArray(juzTu) && juzTu.length) return null;   // ponowna aktywacja = reset PIN w tym salonie, nie dziedziczymy
+    const inne = await q(
+      `SELECT pin_hash FROM Lojalnosc_Konta WHERE telefon = ? AND status = 'AKTYWNE' AND tenant_id <> ? AND pin_hash <> '' LIMIT 1`,
+      [tel, tenant]
+    ).catch(() => []);
+    return (Array.isArray(inne) && inne[0] && inne[0].pin_hash) ? inne[0].pin_hash : null;
+  }
+
   // Logowanie: telefon + PIN. Komunikat błędu celowo jednakowy dla złego
   // telefonu i złego PIN-u (nie zdradzamy, czy numer istnieje w bazie).
+  // Zwraca PACZKĘ salonów tego numeru dopasowanych PIN-em — front sam wybiera/przełącza.
   router.post('/klub/login', loginLimiter, async (req, res) => {
     const d = req.body || {};
     const tel = normalizujTelefon(d.telefon);
@@ -1560,21 +1609,29 @@ module.exports = (db) => {
     const blednedane = () => res.json({ status: 'error', message: 'Błędny numer telefonu lub PIN.' });
     if (tel.length < 9 || !/^\d{4,6}$/.test(pin)) return blednedane();
     try {
-      const konta = await q(
-        `SELECT tenant_id, id_klienta, pin_hash FROM Lojalnosc_Konta WHERE telefon = ? AND status = 'AKTYWNE' LIMIT 10`,
-        [tel]
-      );
+      const wszystkie = await salonyKlienta(tel);
+      if (!wszystkie.length) return blednedane();
       const pasujace = [];
-      for (const konto of (Array.isArray(konta) ? konta : [])) {
-        const ok = await bcrypt.compare(pin, String(konto.pin_hash || '')).catch(() => false);
-        if (ok) pasujace.push(konto);
+      let innePinem = 0;
+      for (const s of wszystkie) {
+        const ok = await bcrypt.compare(pin, String(s.pin_hash || '')).catch(() => false);
+        if (ok) pasujace.push(s); else innePinem++;
       }
-      if (pasujace.length === 0) return blednedane();
-      if (pasujace.length > 1) return res.json({ status: 'error', message: 'Ten numer ma konta w kilku salonach. Poproś swój salon o nowy link aktywacyjny.' });
-      const konto = pasujace[0];
-      db.query(`UPDATE Lojalnosc_Konta SET ostatnie_logowanie = NOW() WHERE tenant_id = ? AND id_klienta = ?`, [konto.tenant_id, konto.id_klienta], () => {});
-      const session = makeKlubToken({ t: konto.tenant_id, k: konto.id_klienta, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
-      return res.json({ status: 'success', session });
+      if (!pasujace.length) return blednedane();
+      for (const s of pasujace) {
+        db.query(`UPDATE Lojalnosc_Konta SET ostatnie_logowanie = NOW() WHERE tenant_id = ? AND id_klienta = ?`, [s.tenant, s.id_klienta], () => {});
+      }
+      const salony = pasujace.map(s => ({
+        tenant: s.tenant, nazwa: s.nazwa, saldo: s.saldo,
+        session: makeKlubToken({ t: s.tenant, k: s.id_klienta, typ: 'ses', exp: Date.now() + SESJA_TTL_MS })
+      }));
+      return res.json({
+        status: 'success',
+        salony,
+        domyslny: salony[0].tenant,
+        inne_pinem: innePinem,          // konta tego numeru z INNYM PIN-em (do dołączenia osobnym logowaniem)
+        session: salony[0].session      // wsteczna zgodność ze starszym frontem
+      });
     } catch (e) {
       console.error('[lojalnosc] login:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
@@ -1688,6 +1745,18 @@ module.exports = (db) => {
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1
       };
+      // Przełącznik salonów: wszystkie salony tego numeru (nazwy + saldo, BEZ tokenów).
+      // Tokeny do przełączania klient dostaje wyłącznie przy logowaniu (PIN) — stąd
+      // przejęcie jednej sesji nie daje dostępu do pozostałych salonów.
+      const telRows = await q(`SELECT telefon FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]).catch(() => []);
+      const telNorm = normalizujTelefon((Array.isArray(telRows) && telRows[0] || {}).telefon);
+      if (telNorm) {
+        const moje = await salonyKlienta(telNorm);
+        odp.moje_salony = moje.map(s => ({ tenant: s.tenant, nazwa: s.nazwa, saldo: s.saldo, aktywny: s.tenant === p.t ? 1 : 0 }));
+      } else {
+        odp.moje_salony = [];
+      }
+      odp.tenant = p.t;
       // Przedłużenie sesji, gdy zbliża się wygaśnięcie — klient nie wylatuje z apki
       if (p.exp - Date.now() < SESJA_ODSWIEZ_MS) {
         odp.session_nowy = makeKlubToken({ t: p.t, k: p.k, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
@@ -1898,7 +1967,13 @@ module.exports = (db) => {
         `SELECT MAX(CAST(id_klienta AS UNSIGNED)) AS maxId FROM Klienci WHERE tenant_id = ?`, [p.t]
       );
       const noweId = String((Number((maxRows[0] || {}).maxId) || 0) + 1);
-      const hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      // Numer ma już PIN w apce (inny salon)? Nowe konto dziedziczy go — jeden PIN na numer.
+      const inneKonto = await q(
+        `SELECT pin_hash FROM Lojalnosc_Konta WHERE telefon = ? AND status = 'AKTYWNE' AND pin_hash <> '' LIMIT 1`,
+        [tel]
+      ).catch(() => []);
+      const odziedziczony = (Array.isArray(inneKonto) && inneKonto[0] && inneKonto[0].pin_hash) || null;
+      const hash = odziedziczony || await bcrypt.hash(pin, BCRYPT_ROUNDS);
       await q(
         `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki)
          VALUES (?, ?, ?, ?, ?, NOW(), 'BRAK', 'Rejestracja online (Klub)')`,
@@ -1918,9 +1993,9 @@ module.exports = (db) => {
           [p.t, noweId, bonus, 'REJ@' + noweId]
         ).catch(() => {});
       }
-      zapiszLog(p.t, 'KLUB REJESTRACJA ONLINE', 'Klient (apka)', `${imie} — nowa kartoteka ${noweId}${bonus ? `, bonus ${bonus} pkt` : ''}`);
+      zapiszLog(p.t, 'KLUB REJESTRACJA ONLINE', 'Klient (apka)', `${imie} — nowa kartoteka ${noweId}${bonus ? `, bonus ${bonus} pkt` : ''}${odziedziczony ? ', PIN z aplikacji' : ''}`);
       const session = makeKlubToken({ t: p.t, k: noweId, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
-      return res.json({ status: 'success', kod: 'NOWE', session, imie: imie.split(' ')[0], bonus });
+      return res.json({ status: 'success', kod: 'NOWE', session, imie: imie.split(' ')[0], bonus, pin_dziedziczony: odziedziczony ? 1 : 0 });
     } catch (e) {
       console.error('[lojalnosc] rejestracja:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });

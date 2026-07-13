@@ -444,42 +444,107 @@ describe('POST /api/klub/aktywuj', () => {
             .send({ token: token(), pin: '1234', zgoda: false });
         expect(res.body.status).toBe('error');
     });
-});
 
-// ─── POST /klub/login ─────────────────────────────────────────
-describe('POST /api/klub/login', () => {
-    const HASH_1234 = bcrypt.hashSync('1234', 4); // niskie rundy — szybkie testy
-
-    test('poprawny telefon + PIN → sesja', async () => {
+    test('numer ma już PIN w innym salonie → nowe konto DZIEDZICZY hash (PIN opcjonalny)', async () => {
+        const HASH_EXIST = bcrypt.hashSync('1234', 4);
         const db = mockDb(
             ...INIT,
-            { rows: [{ tenant_id: 't-klub-b', id_klienta: '42', pin_hash: HASH_1234 }] },
-            { rows: { affectedRows: 1 } }   // UPDATE ostatnie_logowanie
+            KLIENT_OK,                              // Klienci (imie, telefon, status, zmarly)
+            { rows: [] },                           // juzTu — brak konta w TYM salonie
+            { rows: [{ pin_hash: HASH_EXIST }] },   // inne — PIN z innego salonu numeru
+            { rows: { affectedRows: 1 } },          // INSERT konta
+            { rows: { affectedRows: 1 } }           // zapiszLog
+        );
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj')
+            .send({ token: token(), pin: '', zgoda: true });   // klient NIE podaje PIN-u
+        expect(res.body.status).toBe('success');
+        expect(res.body.pin_dziedziczony).toBe(1);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]));
+        expect(ins[1][3]).toBe(HASH_EXIST);         // dokładnie odziedziczony hash, nie nowy bcrypt
+    });
+
+    test('brak PIN-u w apce i pusty PIN w formularzu → odmowa (PIN wymagany)', async () => {
+        const db = mockDb(
+            ...INIT,
+            KLIENT_OK,        // Klienci
+            { rows: [] },     // juzTu
+            { rows: [] }      // inne — nigdzie nie ma PIN-u do odziedziczenia
+        );
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj')
+            .send({ token: token(), pin: '', zgoda: true });
+        expect(res.body.status).toBe('error');
+    });
+});
+
+// ─── POST /klub/login (wspólna tożsamość: numer = jedna tożsamość, wiele salonów) ───
+describe('POST /api/klub/login', () => {
+    const HASH_1234 = bcrypt.hashSync('1234', 4); // niskie rundy — szybkie testy
+    const HASH_9999 = bcrypt.hashSync('9999', 4);
+
+    test('jeden salon → paczka z jednym salonem + sesja', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ tenant_id: 't-klub-b', id_klienta: '42', pin_hash: HASH_1234 }] }, // konta numeru
+            { rows: [{ nazwa_salonu: 'Salon Boczki' }] },                                  // Licencje
+            { rows: [{ saldo: 120 }] },                                                    // saldo
+            { rows: { affectedRows: 1 } }                                                  // UPDATE ostatnie_logowanie
         );
         const res = await request(buildApp(db)).post('/api/klub/login')
             .send({ telefon: '+48 500 123 456', pin: '1234' });
         expect(res.body.status).toBe('success');
-        expect(res.body.session).toBeTruthy();
+        expect(res.body.salony).toHaveLength(1);
+        expect(res.body.salony[0].nazwa).toBe('Salon Boczki');
+        expect(res.body.salony[0].saldo).toBe(120);
+        expect(res.body.salony[0].session).toBeTruthy();
+        expect(res.body.session).toBeTruthy();   // wsteczna zgodność ze starszym frontem
     });
 
-    test('zły PIN → ten sam ogólny komunikat co nieznany telefon', async () => {
-        const dbZlyPin = mockDb(...INIT, { rows: [{ tenant_id: 't-klub-b', id_klienta: '42', pin_hash: HASH_1234 }] });
-        const r1 = await request(buildApp(dbZlyPin)).post('/api/klub/login').send({ telefon: '500123456', pin: '9999' });
-        const dbBrakTel = mockDb(...INIT, { rows: [] });
-        const r2 = await request(buildApp(dbBrakTel)).post('/api/klub/login').send({ telefon: '500123456', pin: '1234' });
+    test('ten sam numer w DWÓCH salonach z tym samym PIN-em → paczka 2 salonów (koniec blokady)', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [
+                { tenant_id: 't-a', id_klienta: '42', pin_hash: HASH_1234 },
+                { tenant_id: 't-b', id_klienta: '7', pin_hash: HASH_1234 }
+            ] },
+            { rows: [{ nazwa_salonu: 'Salon A' }] }, { rows: [{ saldo: 100 }] },
+            { rows: [{ nazwa_salonu: 'Salon B' }] }, { rows: [{ saldo: 50 }] },
+            { rows: { affectedRows: 1 } }, { rows: { affectedRows: 1 } }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/login').send({ telefon: '500123456', pin: '1234' });
+        expect(res.body.status).toBe('success');
+        expect(res.body.salony).toHaveLength(2);
+        expect(res.body.salony.map(s => s.nazwa).sort()).toEqual(['Salon A', 'Salon B']);
+        expect(res.body.inne_pinem).toBe(0);
+    });
+
+    test('drugi salon ma INNY PIN → w paczce tylko dopasowany, inne_pinem liczy resztę', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [
+                { tenant_id: 't-a', id_klienta: '42', pin_hash: HASH_1234 },
+                { tenant_id: 't-b', id_klienta: '7', pin_hash: HASH_9999 }
+            ] },
+            { rows: [{ nazwa_salonu: 'Salon A' }] }, { rows: [{ saldo: 0 }] },
+            { rows: [{ nazwa_salonu: 'Salon B' }] }, { rows: [{ saldo: 0 }] },
+            { rows: { affectedRows: 1 } }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/login').send({ telefon: '500123456', pin: '1234' });
+        expect(res.body.status).toBe('success');
+        expect(res.body.salony).toHaveLength(1);
+        expect(res.body.salony[0].nazwa).toBe('Salon A');
+        expect(res.body.inne_pinem).toBe(1);
+    });
+
+    test('zły PIN i nieznany numer → ten sam ogólny komunikat (bez enumeracji)', async () => {
+        const dbZly = mockDb(...INIT,
+            { rows: [{ tenant_id: 't-a', id_klienta: '42', pin_hash: HASH_1234 }] },
+            { rows: [{ nazwa_salonu: 'A' }] }, { rows: [{ saldo: 0 }] });
+        const r1 = await request(buildApp(dbZly)).post('/api/klub/login').send({ telefon: '500123456', pin: '9999' });
+        const dbBrak = mockDb(...INIT, { rows: [] });
+        const r2 = await request(buildApp(dbBrak)).post('/api/klub/login').send({ telefon: '500123456', pin: '1234' });
         expect(r1.body.status).toBe('error');
         expect(r2.body.status).toBe('error');
-        expect(r1.body.message).toBe(r2.body.message); // brak enumeracji numerów
-    });
-
-    test('dwa konta z tym samym telefonem i PIN-em → odmowa z prośbą o link', async () => {
-        const db = mockDb(...INIT, { rows: [
-            { tenant_id: 't-klub-b', id_klienta: '42', pin_hash: HASH_1234 },
-            { tenant_id: 't-klub-c', id_klienta: '7', pin_hash: HASH_1234 }
-        ] });
-        const res = await request(buildApp(db)).post('/api/klub/login').send({ telefon: '500123456', pin: '1234' });
-        expect(res.body.status).toBe('error');
-        expect(res.body.message).toMatch(/kilku salonach/i);
+        expect(r1.body.message).toBe(r2.body.message);
     });
 });
 
@@ -505,6 +570,36 @@ describe('POST /api/klub/me', () => {
         // Zapytania parametryzowane id_klienta Z TOKENU
         const saldoCall = db.query.mock.calls.find(c => /SUM\(zmiana\)/.test(c[0]));
         expect(saldoCall[1]).toEqual(['t-klub-d', '42']);
+    });
+
+    test('zwraca moje_salony (przełącznik) — wszystkie salony numeru, bieżący oznaczony', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ status: 'AKTYWNE' }] },                       // konto
+            KLIENT_OK,                                               // klient
+            { rows: [{ saldo: 120 }] },                              // saldo
+            { rows: [] },                                            // wpisy
+            { rows: [{ nazwa_klubu: 'Klub', pkt_za_10zl: 1 }] },     // ustawienia
+            { rows: [{ rez: 0 }] },                                  // rezerwacje
+            { rows: [] }, { rows: [] }, { rows: [] },                // nagrody / odbiory / promocje
+            { rows: [] }, { rows: [] },                              // fakty / kampanie
+            { rows: [{ telefon: '500 123 456' }] },                  // telRows (numer konta)
+            { rows: [                                                // salonyKlienta: konta numeru
+                { tenant_id: 't-klub-d', id_klienta: '42', pin_hash: 'x' },
+                { tenant_id: 't-inny', id_klienta: '9', pin_hash: 'y' }
+            ] },
+            { rows: [{ nazwa_salonu: 'Salon D' }] }, { rows: [{ saldo: 120 }] },
+            { rows: [{ nazwa_salonu: 'Salon Inny' }] }, { rows: [{ saldo: 30 }] }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/me').send({ session: sesja() });
+        expect(res.body.status).toBe('success');
+        expect(res.body.moje_salony).toHaveLength(2);
+        const biez = res.body.moje_salony.find(s => s.tenant === 't-klub-d');
+        expect(biez.aktywny).toBe(1);
+        expect(biez.nazwa).toBe('Salon D');
+        expect(res.body.moje_salony.find(s => s.tenant === 't-inny').aktywny).toBe(0);
+        // moje_salony NIE zawiera tokenów sesji (izolacja: przełączanie wymaga logowania PIN-em)
+        expect(res.body.moje_salony.every(s => s.session === undefined)).toBe(true);
     });
 
     test('zły token → kod SESJA', async () => {
@@ -983,9 +1078,10 @@ describe('POST /api/klub/rejestracja', () => {
     test('nowy numer → kartoteka + konto + bonus + sesja od ręki', async () => {
         const db = mockDb(
             ...INIT,
-            { rows: [] },                              // brak konta na ten numer
+            { rows: [] },                              // brak konta na ten numer (MASZ_KONTO)
             { rows: [] },                              // brak klientki w kartotece
             { rows: [{ maxId: 41 }] },                 // MAX id_klienta
+            { rows: [] },                              // inne konto numeru (PIN do odziedziczenia) — brak
             { rows: { affectedRows: 1 } },             // INSERT Klienci
             { rows: { affectedRows: 1 } },             // INSERT Konta
             { rows: [{ bonus_powitalny_pkt: 20 }] },   // ustawienia bonusu

@@ -84,6 +84,17 @@
   .brand-bar .b-znak { color: var(--gold-dark); font-size: 15px; letter-spacing: .1em; }
   .brand-bar .b-nazwa { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); line-height: 1.15; }
   .brand-bar .b-sub { font-size: 9px; letter-spacing: .34em; text-transform: uppercase; font-weight: 700; color: var(--gold-dark); margin-top: 2px; }
+  .salon-pill { margin: 8px auto 0; display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--stroke); border-radius: 999px; padding: 5px 13px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--primary); cursor: pointer; box-shadow: var(--shadow); }
+  .salon-pill .salon-pill-caret { color: var(--gold-dark); font-size: 10px; }
+  .salon-row { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 14px; border: 1px solid var(--stroke); border-radius: var(--r-md); background: var(--panel); margin-bottom: 10px; cursor: pointer; font-family: inherit; text-align: left; transition: transform .15s; }
+  .salon-row:active { transform: scale(.985); }
+  .salon-row.akt { border-color: var(--primary); background: var(--primary-soft); }
+  .salon-row .s-ikona { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
+  .salon-row .s-info { flex: 1; min-width: 0; }
+  .salon-row .s-nazwa { font-weight: 700; font-size: 14.5px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .salon-row .s-saldo { font-size: 12.5px; color: var(--muted); margin-top: 1px; }
+  .salon-row .s-znak { flex-shrink: 0; font-size: 12px; font-weight: 800; color: var(--primary); }
+  .salon-row .s-znak.zamek { color: var(--muted-2); }
   .dzwonek { position: absolute; right: 0; top: 8px; background: none; border: none; color: var(--primary); cursor: pointer; padding: 6px; line-height: 0; }
   .dzwonek .kropka { position: absolute; top: 4px; right: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--gold); border: 1.5px solid var(--bg); display: none; }
   .hi-blok { width: 100%; max-width: 440px; margin-top: 16px; }
@@ -222,9 +233,11 @@
   <div class="logo-sub">program lojalnościowy</div>
   <div class="card">
     <h2 id="akt-hello">Witaj!</h2>
-    <div class="muted">Ustaw swój PIN — będziesz nim logować się do aplikacji razem z numerem telefonu.</div>
-    <input type="password" id="akt-pin" inputmode="numeric" maxlength="6" placeholder="PIN (4–6 cyfr)" autocomplete="new-password">
-    <input type="password" id="akt-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+    <div class="muted" id="akt-pin-hint">Ustaw swój PIN — będziesz nim logować się do aplikacji razem z numerem telefonu.</div>
+    <div id="akt-pin-box">
+      <input type="password" id="akt-pin" inputmode="numeric" maxlength="6" placeholder="PIN (4–6 cyfr)" autocomplete="new-password">
+      <input type="password" id="akt-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+    </div>
     <label class="chk-row"><input type="checkbox" id="akt-zgoda"><span>Akceptuję <a id="akt-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
     <button class="btn" id="akt-btn" onclick="aktywuj()">Aktywuj konto</button>
     <div class="err" id="akt-err"></div>
@@ -290,6 +303,7 @@
     <div class="b-znak">✦</div>
     <div class="b-nazwa" id="m-klub-head">Klub</div>
     <div class="b-sub">program lojalnościowy</div>
+    <button class="salon-pill" id="salon-pill" style="display:none;" onclick="otworzSalony()"><span data-iko="home" data-s="14"></span><span id="salon-pill-nazwa">Salon</span><span class="salon-pill-caret">▾</span></button>
     <button class="dzwonek" onclick="przejdzDoWiadomosci()" title="Wiadomości od salonu"><span data-iko="bell" data-s="23"></span><span class="kropka" id="dzwonek-kropka"></span></button>
   </div>
   <div class="hi-blok">
@@ -374,6 +388,14 @@
   <button class="tab" data-tab="profil" onclick="tab('profil')"><span class="ico" data-iko="user"></span>Profil</button>
 </div>
 
+<!-- Modal: przełącznik salonów (wspólna tożsamość — kilka salonów pod jednym numerem) -->
+<div id="m-salony" class="modal"><div class="box">
+  <button class="close-x" onclick="zamknij('m-salony')">✕</button>
+  <h3>Twoje salony</h3>
+  <div class="muted" style="margin-bottom:12px;">Punkty i nagrody są osobne w każdym salonie. Wybierz, który chcesz zobaczyć.</div>
+  <div id="m-salony-lista"></div>
+</div></div>
+
 <!-- Modal: promocja -->
 <div id="m-promo" class="modal"><div class="box">
   <button class="close-x" onclick="zamknij('m-promo')">✕</button>
@@ -457,7 +479,29 @@
 
 <script>
 const API = '/api/klub';
-const LS_SESJA = 'klub_session';
+const LS_SESJA = 'klub_session';       // aktywny token sesji (bieżący salon)
+const LS_BUNDLE = 'klub_salony';       // paczka {tenant,nazwa,session,saldo} — wszystkie salony numeru
+
+// ── Paczka salonów (wspólna tożsamość: jeden numer, wiele salonów) ──
+function wczytajBundle() {
+  try { const a = JSON.parse(localStorage.getItem(LS_BUNDLE) || '[]'); return Array.isArray(a) ? a : []; }
+  catch (e) { return []; }
+}
+function zapiszBundle(arr) {
+  try { localStorage.setItem(LS_BUNDLE, JSON.stringify(Array.isArray(arr) ? arr : [])); } catch (e) {}
+}
+// Utrzymuje w paczce wpis dla bieżącego salonu z aktualnym tokenem (działa też po
+// aktywacji/rejestracji, gdzie logowanie nie budowało paczki). Odświeża nazwy/salda z /me.
+function upewnijBundle(d) {
+  if (!d || !d.tenant) return;
+  const bundle = wczytajBundle();
+  const akt = localStorage.getItem(LS_SESJA);
+  let wpis = bundle.find(b => b.tenant === d.tenant);
+  const nazwaBiez = (d.moje_salony || []).find(s => s.tenant === d.tenant);
+  if (wpis) { wpis.session = akt; if (nazwaBiez) { wpis.nazwa = nazwaBiez.nazwa; wpis.saldo = nazwaBiez.saldo; } }
+  else bundle.push({ tenant: d.tenant, nazwa: (nazwaBiez && nazwaBiez.nazwa) || (d.nazwa_klubu || 'Salon'), session: akt, saldo: d.saldo || 0 });
+  zapiszBundle(bundle);
+}
 
 // ── Ikony liniowe (SVG, kontur, currentColor) — elegancka kreska zamiast emoji ──
 const IKONY = {
@@ -649,6 +693,7 @@ async function zarejestruj() {
     const d = await api('/rejestracja', { token: rejestracjaToken, imie, telefon: tel, pin, zgoda: true });
     if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się założyć konta.'; return; }
     if (d.kod === 'NOWE') {
+      zapiszBundle([]);                            // start od czysta — nowa tożsamość na tym urządzeniu
       localStorage.setItem(LS_SESJA, d.session);
       swiezaAktywacja = true;
       if (d.bonus > 0) setTimeout(() => toast('Bonus powitalny: +' + d.bonus + ' pkt!'), 900);
@@ -669,6 +714,7 @@ document.addEventListener('visibilitychange', () => {
 
 // ── Aktywacja ──
 let aktywacjaToken = null;
+let aktDziedziczyPin = false;
 async function startAktywacja(token) {
   aktywacjaToken = token;
   loader(true);
@@ -682,6 +728,13 @@ async function startAktywacja(token) {
     }
     document.getElementById('akt-nazwa').textContent = d.nazwa_klubu || 'Klub';
     document.getElementById('akt-hello').textContent = d.imie ? ('Witaj, ' + d.imie + '!') : 'Witaj!';
+    // Numer ma już PIN w apce (inny salon) → dziedziczymy, klient nie ustawia nowego
+    aktDziedziczyPin = !!d.dziedziczy_pin;
+    document.getElementById('akt-pin-box').style.display = aktDziedziczyPin ? 'none' : 'block';
+    document.getElementById('akt-pin-hint').textContent = aktDziedziczyPin
+      ? 'Masz już PIN w aplikacji Estelio — potwierdź tylko regulamin, aby dołączyć ten salon.'
+      : 'Ustaw swój PIN — będziesz nim logować się do aplikacji razem z numerem telefonu.';
+    document.getElementById('akt-btn').textContent = aktDziedziczyPin ? 'Dołącz do Klubu' : 'Aktywuj konto';
     const reg = document.getElementById('akt-regulamin');
     if (d.regulamin_url) { reg.href = d.regulamin_url; }
     else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
@@ -699,17 +752,21 @@ async function aktywuj() {
   const zgoda = document.getElementById('akt-zgoda').checked;
   const err = document.getElementById('akt-err');
   err.textContent = '';
-  if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'PIN musi mieć 4–6 cyfr.'; return; }
-  if (pin !== pin2) { err.textContent = 'PIN-y różnią się od siebie.'; return; }
+  if (!aktDziedziczyPin) {
+    if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'PIN musi mieć 4–6 cyfr.'; return; }
+    if (pin !== pin2) { err.textContent = 'PIN-y różnią się od siebie.'; return; }
+  }
   if (!zgoda) { err.textContent = 'Zaakceptuj regulamin programu.'; return; }
   const btn = document.getElementById('akt-btn');
   btn.disabled = true;
   try {
-    const d = await api('/aktywuj', { token: aktywacjaToken, pin, zgoda: true });
+    const d = await api('/aktywuj', { token: aktywacjaToken, pin: aktDziedziczyPin ? '' : pin, zgoda: true });
     if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się aktywować konta.'; return; }
+    zapiszBundle([]);                              // start od czysta — paczka mogła być z innego numeru na tym urządzeniu
     localStorage.setItem(LS_SESJA, d.session);
     history.replaceState(null, '', '/klub.html'); // sprzątamy jednorazowy token z adresu
     swiezaAktywacja = true; // najlepszy moment na propozycję powiadomień — klient jest przy recepcji
+    if (d.pin_dziedziczony) setTimeout(() => toast('Dołączono salon — logujesz się swoim dotychczasowym PIN-em.'), 900);
     wczytajKonto();
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
@@ -728,7 +785,12 @@ async function zaloguj() {
   try {
     const d = await api('/login', { telefon: tel, pin });
     if (d.status !== 'success') { err.textContent = d.message || 'Błędne dane.'; return; }
-    localStorage.setItem(LS_SESJA, d.session);
+    // Paczka salonów: wszystkie salony numeru dopasowane PIN-em (może być 1 lub kilka)
+    const salony = Array.isArray(d.salony) && d.salony.length ? d.salony : (d.session ? [{ tenant: d.domyslny || '', nazwa: 'Salon', session: d.session, saldo: 0 }] : []);
+    if (!salony.length) { err.textContent = 'Błędne dane.'; return; }
+    zapiszBundle(salony);
+    localStorage.setItem(LS_SESJA, salony[0].session);
+    if (d.inne_pinem > 0) setTimeout(() => toast('Masz też konto w innym salonie z innym PIN-em — zaloguj się jego PIN-em, aby je dodać.'), 1200);
     wczytajKonto();
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
@@ -736,9 +798,44 @@ async function zaloguj() {
 
 function wyloguj() {
   localStorage.removeItem(LS_SESJA);
+  localStorage.removeItem(LS_BUNDLE);
   dane = null;
   pokazZalozKonto();
   pokaz('screen-login');
+}
+
+// ── Przełącznik salonów ──
+function otworzSalony() {
+  const box = document.getElementById('m-salony-lista');
+  const lista = (dane && dane.moje_salony) || [];
+  const bundle = wczytajBundle();
+  box.innerHTML = '';
+  lista.forEach(s => {
+    const maToken = bundle.some(b => b.tenant === s.tenant && b.session);
+    const el = document.createElement('button');
+    el.className = 'salon-row' + (s.aktywny ? ' akt' : '');
+    el.innerHTML = '<span class="s-ikona">' + iko('home', 18) + '</span>'
+      + '<span class="s-info"><span class="s-nazwa"></span><span class="s-saldo">' + (s.saldo || 0) + ' pkt</span></span>'
+      + '<span class="s-znak' + (s.aktywny ? '' : (maToken ? '' : ' zamek')) + '">' + (s.aktywny ? 'tu jesteś' : (maToken ? 'pokaż ›' : 'zaloguj')) + '</span>';
+    el.querySelector('.s-nazwa').textContent = s.nazwa || 'Salon';
+    el.onclick = () => przelaczSalon(s.tenant);
+    box.appendChild(el);
+  });
+  document.getElementById('m-salony').classList.add('visible');
+}
+function przelaczSalon(tenant) {
+  if (dane && dane.tenant === tenant) { zamknij('m-salony'); return; }
+  const wpis = wczytajBundle().find(b => b.tenant === tenant && b.session);
+  zamknij('m-salony');
+  if (wpis) {
+    localStorage.setItem(LS_SESJA, wpis.session);
+    dane = null;
+    wczytajKonto();
+  } else {
+    // Salon bez zapisanego tokenu (inny PIN / dołączony poza tą sesją) → logowanie
+    pokaz('screen-login');
+    document.getElementById('log-err').textContent = 'Zaloguj się PIN-em tego salonu, aby go dodać.';
+  }
 }
 
 // ── „Nie pamiętam PIN-u" — wniosek o reset, SMS wyśle salon (na numer z kartoteki) ──
@@ -781,6 +878,7 @@ async function wczytajKonto(cicho) {
     if (d.session_nowy) localStorage.setItem(LS_SESJA, d.session_nowy);
     const stareSaldo = dane ? dane.saldo : null;
     dane = d;
+    upewnijBundle(d);
     renderAll();
     if (stareSaldo !== null && d.saldo > stareSaldo) toast('+' + (d.saldo - stareSaldo) + ' pkt od ostatniej wizyty!');
     pokaz('screen-main');
@@ -811,6 +909,16 @@ function renderAll() {
   const d = dane;
   document.getElementById('m-hello').textContent = d.imie ? ('Cześć, ' + d.imie + '!') : 'Cześć!';
   document.getElementById('m-klub-head').textContent = d.nazwa_klubu || 'Klub';
+  // Pigułka przełącznika salonów — tylko gdy numer ma konto w >1 salonie
+  const pill = document.getElementById('salon-pill');
+  if (pill) {
+    const salony = d.moje_salony || [];
+    if (salony.length > 1) {
+      const biez = salony.find(s => s.aktywny) || salony[0];
+      document.getElementById('salon-pill-nazwa').textContent = biez.nazwa || 'Salon';
+      pill.style.display = 'inline-flex';
+    } else pill.style.display = 'none';
+  }
   animujSaldo(document.getElementById('m-saldo'), d.saldo || 0);
   // Zamiast zmyślonego kursu „≈ zł" (system nie definiuje wartości punktu):
   // pokazujemy najbliższą osiągalną nagrodę — realną wartość salda.
