@@ -1130,6 +1130,49 @@ describe('POST /api/klub/rejestracja', () => {
     });
 });
 
+describe('POST /api/klub/kosmetyki', () => {
+    const sesja = () => makeKlubToken({ t: 't-kos', k: '42', typ: 'ses', exp: Date.now() + 60 * 60 * 1000 });
+    const daysAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 19).replace('T', ' ');
+
+    test('grupuje per produkt, liczy zakupy, przypomnienie 80–200 dni', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ status: 'AKTYWNE' }] },                       // konto aktywne
+            { rows: [                                                // Sprzedaz (kosmetyki+suplementy)
+                { zabieg: 'Kosmetyk: Krem X', szczegoly: '1 szt.', kategoria_produktu: 'Kosmetyk', data_sprzedazy: daysAgo(120) },
+                { zabieg: 'Kosmetyk: Krem X', szczegoly: '1 szt.', kategoria_produktu: 'Kosmetyk', data_sprzedazy: daysAgo(90) },
+                { zabieg: 'Suplement: Omega', szczegoly: '1 szt.', kategoria_produktu: 'Suplement', data_sprzedazy: daysAgo(10) }
+            ] }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/kosmetyki').send({ session: sesja() });
+        expect(res.body.status).toBe('success');
+        expect(res.body.produkty).toHaveLength(2);
+        const krem = res.body.produkty.find(p => p.nazwa === 'Krem X');
+        const omega = res.body.produkty.find(p => p.nazwa === 'Omega');
+        expect(krem.ile_razy).toBe(2);
+        expect(krem.typ).toBe('kosmetyk');
+        expect(krem.przypomnienie).toBe(true);      // ostatni zakup ~90 dni temu → w oknie 80–200
+        expect(omega.typ).toBe('suplement');
+        expect(omega.przypomnienie).toBe(false);    // 10 dni temu → za wcześnie
+        // scope po tokenie: zapytanie Sprzedaz z id_klienta '42' z tokenu
+        const sql = db.query.mock.calls.find(c => /FROM Sprzedaz/.test(c[0]));
+        expect(sql[1]).toEqual(['t-kos', '42']);
+    });
+
+    test('konto nieaktywne → SESJA', async () => {
+        const db = mockDb(...INIT, { rows: [] });
+        const res = await request(buildApp(db)).post('/api/klub/kosmetyki').send({ session: sesja() });
+        expect(res.body.code).toBe('SESJA');
+        expect(db.query.mock.calls.some(c => /FROM Sprzedaz/.test(c[0]))).toBe(false);
+    });
+
+    test('zły token → SESJA', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/klub/kosmetyki').send({ session: 'abc.def' });
+        expect(res.body.code).toBe('SESJA');
+    });
+});
+
 describe('POST /api/klub/reset_pin', () => {
     test('konto istnieje → wniosek RESET; brak konta → TA SAMA odpowiedź (bez enumeracji)', async () => {
         const dbJest = mockDb(

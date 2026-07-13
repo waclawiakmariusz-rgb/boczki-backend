@@ -381,12 +381,33 @@
     <div id="install-hint"></div>
     <button class="btn ghost" style="max-width:440px;" onclick="wyloguj()">Wyloguj się</button>
   </div>
+
+  <!-- TAB: Kosmetyki (historia zakupów produktów + przypomnienia o uzupełnieniu) -->
+  <div id="tab-kosmetyki" class="tabpage">
+    <style>
+      #tab-kosmetyki .kos-karta { background: var(--panel); border: 1px solid var(--stroke); border-radius: var(--r-lg); padding: 13px 15px; margin-bottom: 10px; box-shadow: var(--shadow); display: flex; align-items: center; gap: 12px; }
+      #tab-kosmetyki .kos-karta .k-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 12px; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
+      #tab-kosmetyki .kos-karta .k-txt { flex: 1; min-width: 0; }
+      #tab-kosmetyki .kos-karta .k-nazwa { font-weight: 700; font-size: 14.5px; color: var(--text); overflow-wrap: anywhere; }
+      #tab-kosmetyki .kos-karta .k-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+      #tab-kosmetyki .kos-przypom { background: var(--gold-soft); border-color: #ecc86a; }
+      #tab-kosmetyki .kos-przypom .k-ico { background: #fff; }
+      #tab-kosmetyki .kos-badge { flex-shrink: 0; font-size: 11px; font-weight: 800; color: #8a6410; background: #fff; border: 1px solid #ecc86a; border-radius: 999px; padding: 3px 10px; }
+      #tab-kosmetyki .kos-naglowek { font-weight: 700; font-size: 14px; margin: 6px 0 8px; }
+    </style>
+    <div class="sekcja" style="margin-top:6px;">
+      <h3>Twoje kosmetyki</h3>
+      <div class="muted" style="margin-bottom:10px;">Produkty kupione u nas — z delikatnym przypomnieniem, gdy warto uzupełnić.</div>
+      <div id="kos-body"><div class="pusto">Ładowanie…</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- Bottom tabs -->
 <div id="tabs" class="tabs">
   <button class="tab active" data-tab="start" onclick="tab('start')"><span class="ico" data-iko="home"></span>Start</button>
   <button class="tab" data-tab="nagrody" onclick="tab('nagrody')"><span class="ico" data-iko="gift"></span>Nagrody</button>
+  <button class="tab" data-tab="kosmetyki" onclick="tab('kosmetyki')"><span class="ico" data-iko="bottle"></span>Kosmetyki</button>
   <button class="tab" data-tab="profil" onclick="tab('profil')"><span class="ico" data-iko="user"></span>Profil</button>
 </div>
 
@@ -529,6 +550,7 @@ const IKONY = {
   star:  '<path d="m12 4 2 5.1 5.5.4-4.2 3.6 1.3 5.4L12 15.6l-4.6 2.9 1.3-5.4L4.5 9.5 10 9.1 12 4Z"/>',
   cake:  '<path d="M4.5 20h15M5.5 20v-6.5A1.5 1.5 0 0 1 7 12h10a1.5 1.5 0 0 1 1.5 1.5V20M12 12V9"/><circle cx="12" cy="6.6" r="1.1"/>',
   spark: '<path d="M12 3.5 13.7 9 19.2 10.7 13.7 12.4 12 17.9 10.3 12.4 4.8 10.7 10.3 9 12 3.5Z"/>',
+  bottle: '<path d="M10 3h4v3h-4z"/><path d="M8.5 9.4A3 3 0 0 1 10 6.8V6h4v.8a3 3 0 0 1 1.5 2.6v9.6a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2z"/><path d="M8.5 13h7"/>',
   tune:  '<path d="M4 8h9M17.5 8H20M15.5 5.8v4.4M4 16h2.5M11 16h9M8.8 13.8v4.4"/>',
   info:  '<circle cx="12" cy="12" r="8.5"/><path d="M12 10.8v5M12 7.8h.01"/>',
   lock:  '<rect x="5.5" y="10.5" width="13" height="9" rx="2"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5M12 14v2.5"/>',
@@ -551,6 +573,7 @@ function tab(nazwa) {
   document.querySelectorAll('.tabpage').forEach(t => t.classList.remove('visible'));
   document.getElementById('tab-' + nazwa).classList.add('visible');
   document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === nazwa));
+  if (nazwa === 'kosmetyki') zaladujKosmetyki();
   window.scrollTo(0, 0);
 }
 function zamknij(id) { document.getElementById(id).classList.remove('visible'); }
@@ -815,6 +838,47 @@ function wyloguj() {
   dane = null;
   pokazZalozKonto();
   pokaz('screen-login');
+}
+
+// ── Zakładka Kosmetyki: historia zakupów produktów + przypomnienia o uzupełnieniu ──
+async function zaladujKosmetyki() {
+  const box = document.getElementById('kos-body');
+  box.innerHTML = '<div class="pusto">Ładowanie…</div>';
+  try {
+    const d = await api('/kosmetyki', { session: localStorage.getItem(LS_SESJA) });
+    if (d.status !== 'success') {
+      if (d.code === 'SESJA') { wyloguj(); return; }
+      box.innerHTML = '<div class="pusto">Nie udało się wczytać. Spróbuj później.</div>';
+      return;
+    }
+    const prod = d.produkty || [];
+    if (!prod.length) {
+      box.innerHTML = '<div class="pusto">Jeszcze nic tu nie ma — Twoje zakupy kosmetyków pojawią się po wizycie. ✨</div>';
+      return;
+    }
+    const fmt = (iso) => { const dt = dataZ(iso); return dt ? dt.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'; };
+    const razy = (n) => n === 1 ? 'kupiony raz' : ('kupiony ' + n + '×');
+    const ikoP = (p) => iko(p.typ === 'suplement' ? 'spark' : 'bottle', 20);
+    const przypom = prod.filter(p => p.przypomnienie);
+    let html = '';
+    if (przypom.length) {
+      html += '<div class="kos-naglowek" style="color:#8a6410;">Może czas uzupełnić?</div>';
+      przypom.forEach(p => {
+        html += '<div class="kos-karta kos-przypom"><span class="k-ico">' + ikoP(p) + '</span>'
+          + '<div class="k-txt"><div class="k-nazwa">' + esc(p.nazwa) + '</div><div class="k-meta">Ostatnio ' + p.dni_temu + ' dni temu — może się kończy?</div></div>'
+          + '<span class="kos-badge">Uzupełnij?</span></div>';
+      });
+      html += '<div style="height:6px;"></div>';
+    }
+    html += '<div class="kos-naglowek" style="color:var(--text);">Wszystkie zakupy</div>';
+    prod.forEach(p => {
+      html += '<div class="kos-karta"><span class="k-ico">' + ikoP(p) + '</span>'
+        + '<div class="k-txt"><div class="k-nazwa">' + esc(p.nazwa) + '</div><div class="k-meta">Ostatnio: ' + fmt(p.ostatni_zakup) + ' · ' + razy(p.ile_razy) + '</div></div></div>';
+    });
+    box.innerHTML = html;
+  } catch (e) {
+    box.innerHTML = '<div class="pusto">Błąd połączenia.</div>';
+  }
 }
 
 // ── Przełącznik salonów ──

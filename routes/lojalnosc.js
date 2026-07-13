@@ -1768,6 +1768,62 @@ module.exports = (db) => {
     }
   });
 
+  // Historia zakupów produktów (kosmetyki + suplementy) klientki + przypomnienia
+  // o ponownym zakupie — te same dane co profil w panelu (Sprzedaz), scope po TOKENIE
+  // (id_klienta z p.k, nigdy z żądania). BEZ kwot — tylko nazwa, data, liczba zakupów.
+  // Przypomnienie 80–200 dni od ostatniego zakupu (jak "Zapytaj o zużycie" w profilu).
+  router.post('/klub/kosmetyki', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    try {
+      // konto musi być aktywne (spójnie z /me — dezaktywowany członek zostaje wylogowany)
+      const aRows = await q(`SELECT status FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]);
+      const konto = Array.isArray(aRows) ? aRows[0] : null;
+      if (!konto || String(konto.status).toUpperCase() !== 'AKTYWNE') {
+        return res.json({ status: 'error', code: 'SESJA', message: 'Konto nieaktywne. Skontaktuj się z salonem.' });
+      }
+      const rows = await q(
+        `SELECT zabieg, szczegoly, kategoria_produktu, data_sprzedazy FROM Sprzedaz
+          WHERE tenant_id = ? AND id_klienta = ? AND COALESCE(status,'') NOT IN ('USUNIĘTY','SCALONY')
+            AND ( LOWER(zabieg) LIKE '%kosmetyk%' OR LOWER(zabieg) LIKE '%suplement%'
+                  OR LOWER(COALESCE(kategoria_produktu,'')) IN ('kosmetyk','suplement')
+                  OR LOWER(COALESCE(szczegoly,'')) LIKE '%szt%' )
+          ORDER BY data_sprzedazy ASC`,
+        [p.t, p.k]
+      ).catch(() => []);
+
+      const mapa = new Map();   // nazwa → { nazwa, typ, ostatni(ms), ile }
+      (Array.isArray(rows) ? rows : []).forEach(r => {
+        const zL = String(r.zabieg || '').toLowerCase();
+        const isSup = zL.includes('suplement') || String(r.kategoria_produktu || '').toLowerCase() === 'suplement';
+        const nazwa = String(r.zabieg || '').replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim() || String(r.zabieg || '').trim();
+        if (!nazwa) return;
+        const t = new Date(String(r.data_sprzedazy || '').replace(' ', 'T')).getTime();
+        const czas = isNaN(t) ? 0 : t;
+        const klucz = (isSup ? 'S|' : 'K|') + nazwa.toLowerCase();
+        const w = mapa.get(klucz);
+        if (!w) mapa.set(klucz, { nazwa, typ: isSup ? 'suplement' : 'kosmetyk', ostatni: czas, ile: 1 });
+        else { w.ile++; if (czas > w.ostatni) w.ostatni = czas; }
+      });
+
+      const teraz = Date.now();
+      const produkty = [...mapa.values()].map(w => {
+        const dni = w.ostatni ? Math.floor((teraz - w.ostatni) / 86400000) : null;
+        return {
+          nazwa: w.nazwa, typ: w.typ, ile_razy: w.ile,
+          ostatni_zakup: w.ostatni ? new Date(w.ostatni).toISOString().slice(0, 10) : null,
+          dni_temu: dni,
+          przypomnienie: dni != null && dni >= 80 && dni <= 200
+        };
+      }).sort((a, b) => (b.ostatni_zakup || '').localeCompare(a.ostatni_zakup || ''));
+
+      return res.json({ status: 'success', produkty });
+    } catch (e) {
+      console.error('[lojalnosc] kosmetyki:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
   // Odbiór nagrody: rezerwuje punkty (saldo dostępne maleje), generuje kod.
   // Punkty schodzą z ledgera dopiero gdy recepcja/admin oznaczy WYDANE.
   router.post('/klub/nagroda_odbierz', klubLimiter, async (req, res) => {
