@@ -818,6 +818,15 @@ module.exports = (db) => {
           const koszty = parseAmount((kosztRows[0] || {}).suma);
 
           const parsujSzt = (s) => { const m = String(s || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i); return m ? (parseFloat(m[1].replace(',', '.')) || 1) : 1; };
+          // „Adipologie dopłata" to nie osobny zabieg, tylko dopłata do „Adipologie"
+          // (zabieg rozbity na zadatek + dopłatę). Scalamy obrót do zabiegu bazowego,
+          // ale dopłaty NIE liczymy jako osobnego wykonania (liczba). Sam „Dopłata" bez
+          // nazwy zabiegu przed spójką zostaje osobną pozycją.
+          const bazaZabiegu = (nazwa) => {
+            const s = String(nazwa || '').trim();
+            const m = s.match(/^(.+?)[\s\-–—:]+dop[łl]at\w*/i);
+            return (m && m[1].trim()) ? { baza: m[1].trim(), doplata: true } : { baza: s, doplata: false };
+          };
           const czyExcl = (p) => { const s = String(p || '').toLowerCase(); return s.includes('ręczne') || s.includes('reczne') || s.includes('system'); };
           const czyExclCash = (p) => { const s = String(p || '').toLowerCase(); return s === 'mix' || s.includes('portfel') || s.includes('ręczne') || s.includes('reczne') || s.includes('system'); };
 
@@ -853,12 +862,15 @@ module.exports = (db) => {
                 bucket[czysta].szt += parsujSzt(row.szczegoly); bucket[czysta].obrot += amount;
                 obrotProdukty += amount;
               } else {
-                if (!uslugi[zabieg]) uslugi[zabieg] = { liczba: 0, obrot: 0 };
-                uslugi[zabieg].liczba++; uslugi[zabieg].obrot += amount;
+                const bz = bazaZabiegu(zabieg);
+                if (!uslugi[bz.baza]) uslugi[bz.baza] = { liczba: 0, obrot: 0 };
+                if (!bz.doplata) uslugi[bz.baza].liczba++;
+                uslugi[bz.baza].obrot += amount;
                 obrotUslugi += amount;
                 const typ = String(row.typ_zabiegu || '').trim() || '— bez typu —';
                 if (!typy[typ]) typy[typ] = { liczba: 0, obrot: 0 };
-                typy[typ].liczba++; typy[typ].obrot += amount;
+                if (!bz.doplata) typy[typ].liczba++;
+                typy[typ].obrot += amount;
               }
             }
 

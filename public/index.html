@@ -9452,6 +9452,10 @@ ANALIZA MANAGER
         #an_view-audyt .aud-kpi .v { font-size:24px; font-weight:800; margin-top:4px; }
         #an_view-audyt table.aud { width:100%; border-collapse:collapse; font-size:14px; }
         #an_view-audyt table.aud th { background:#f3f4f6; text-transform:uppercase; font-size:11px; color:#6b7280; padding:10px; text-align:left; letter-spacing:.5px; }
+        #an_view-audyt table.aud th.aud-th { cursor:pointer; user-select:none; white-space:nowrap; transition:background .15s; }
+        #an_view-audyt table.aud th.aud-th:hover { background:#e5e9f0; color:#334155; }
+        #an_view-audyt .aud-arrow { color:var(--primary); font-size:11px; font-weight:800; }
+        body.dark-mode #an_view-audyt table.aud th.aud-th:hover { background:#1e293b; color:#e2e8f0; }
         #an_view-audyt table.aud td { padding:9px 10px; border-top:1px solid #eef2f7; vertical-align:middle; }
         #an_view-audyt table.aud td.num, #an_view-audyt table.aud th.num { text-align:right; white-space:nowrap; }
         #an_view-audyt table.aud tr:last-child td { border-bottom:none; }
@@ -24157,6 +24161,48 @@ if (inputNazwaCheck) {
                 }).catch(() => { body.innerHTML = '<div style="padding:20px; color:#dc2626;">Błąd połączenia.</div>'; });
         }
 
+        // Rejestr sortowalnych tabel audytu — klik w nagłówek sortuje bez ponownego fetchu.
+        let an_audytTab = {};
+        let an_audytTabId = 0;
+        function an_audytBudujTabele(naglowki, wiersze) {
+            if (!wiersze.length) return '<div class="aud-empty">Brak danych w tym okresie.</div>';
+            const id = ++an_audytTabId;
+            an_audytTab[id] = { naglowki: naglowki, wiersze: wiersze, sortCol: -1, sortDir: -1 };
+            let h = '<div style="overflow-x:auto;"><table class="aud" id="aud-tab-' + id + '"><thead><tr>';
+            naglowki.forEach((n, i) => {
+                h += '<th class="aud-th ' + (n.num ? 'num' : '') + '" onclick="an_audytSort(' + id + ',' + i + ')" title="Kliknij, aby posortować">' + n.t + '<span class="aud-arrow" data-col="' + i + '"></span></th>';
+            });
+            return h + '</tr></thead><tbody id="aud-tbody-' + id + '">' + an_audytWierszeHtml(id) + '</tbody></table></div>';
+        }
+        function an_audytWierszeHtml(id) {
+            const t = an_audytTab[id];
+            let rows = t.wiersze;
+            if (t.sortCol >= 0) {
+                const c = t.sortCol, dir = t.sortDir;
+                rows = rows.slice().sort((a, b) => {
+                    const va = a[c].v, vb = b[c].v;
+                    if (typeof va === 'number' && typeof vb === 'number') return (va - vb) * dir;
+                    return String(va).localeCompare(String(vb), 'pl') * dir;
+                });
+            }
+            let h = '';
+            rows.forEach(w => { h += '<tr>'; w.forEach((c, i) => h += '<td class="' + (t.naglowki[i].num ? 'num' : '') + '">' + c.h + '</td>'); h += '</tr>'; });
+            return h;
+        }
+        function an_audytSort(id, col) {
+            const t = an_audytTab[id];
+            if (!t) return;
+            if (t.sortCol === col) t.sortDir = -t.sortDir; else { t.sortCol = col; t.sortDir = -1; }  // 1. klik = malejąco
+            const tbody = document.getElementById('aud-tbody-' + id);
+            if (tbody) tbody.innerHTML = an_audytWierszeHtml(id);
+            const tab = document.getElementById('aud-tab-' + id);
+            if (tab) {
+                tab.querySelectorAll('.aud-arrow').forEach(a => a.textContent = '');
+                const arr = tab.querySelector('.aud-arrow[data-col="' + col + '"]');
+                if (arr) arr.textContent = t.sortDir === 1 ? ' ▲' : ' ▼';
+            }
+        }
+
         function an_audytRender(d) {
             const pln = an_formatPLN;
             const esc = (typeof escHtml === 'function') ? escHtml : (s => String(s == null ? '' : s));
@@ -24164,20 +24210,19 @@ if (inputNazwaCheck) {
             const okresLabel = d.tryb === 'rok' ? ('Rok ' + d.okres) : (() => { const p = String(d.okres).split('-'); return AN_MIES[parseInt(p[1], 10)] + ' ' + p[0]; })();
             document.getElementById('aud-tytul').textContent = 'Okres: ' + okresLabel + ' · przychód i zysk liczone jak w Podsumowaniu miesiąca; udział % liczony w obrocie sprzedanych pozycji.';
 
+            an_audytTab = {}; an_audytTabId = 0;   // reset rejestru sortowalnych tabel przy każdym renderze
             const kpiCard = (t, v, c) => '<div class="card" style="border-left:4px solid ' + c + ';"><div class="kpi-title">' + t + '</div><div class="v" style="color:' + c + ';">' + v + '</div></div>';
             const card = (title, inner) => '<div class="card"><h3 style="margin:0 0 12px 0;">' + title + '</h3>' + inner + '</div>';
             const barCell = (u) => '<div style="font-weight:700;">' + pct(u) + '</div><div class="aud-bar"><div style="width:' + Math.min(100, Number(u) || 0) + '%;"></div></div>';
-            const empty = '<div class="aud-empty">Brak danych w tym okresie.</div>';
-
-            // tabela: naglowki = [{t, num}], wiersze = [[cell,...]]
-            const tabela = (naglowki, wiersze) => {
-                if (!wiersze.length) return empty;
-                let h = '<div style="overflow-x:auto;"><table class="aud"><thead><tr>';
-                naglowki.forEach(n => h += '<th class="' + (n.num ? 'num' : '') + '">' + n.t + '</th>');
-                h += '</tr></thead><tbody>';
-                wiersze.forEach(w => { h += '<tr>'; w.forEach((c, i) => h += '<td class="' + (naglowki[i].num ? 'num' : '') + '">' + c + '</td>'); h += '</tr>'; });
-                return h + '</tbody></table></div>';
-            };
+            const tabela = an_audytBudujTabele;
+            // komórki: {h: html, v: wartość do sortowania}
+            const cT = (s) => ({ h: esc(s), v: String(s == null ? '' : s).toLowerCase() });
+            const cN = (n) => ({ h: (Number(n) || 0).toLocaleString('pl-PL'), v: Number(n) || 0 });
+            const cPln = (n) => ({ h: pln(n), v: Number(n) || 0 });
+            const cUd = (u) => ({ h: barCell(u), v: Number(u) || 0 });
+            const cZysk = (n) => ({ h: '<b style="color:' + (n >= 0 ? '#16a34a' : '#dc2626') + '">' + pln(n) + '</b>', v: Number(n) || 0 });
+            const cMarza = (n) => ({ h: pct(n), v: Number(n) || 0 });
+            const cGodz = (h24) => ({ h: String(h24).padStart(2, '0') + ':00', v: Number(h24) || 0 });
 
             const k = d.kpi;
             const zc = k.zysk >= 0 ? '#16a34a' : '#dc2626';
@@ -24194,46 +24239,46 @@ if (inputNazwaCheck) {
             if (d.miesiace) {
                 html += '<div style="margin-top:10px;">' + card('Miesiąc po miesiącu', tabela(
                     [{ t: 'Miesiąc' }, { t: 'Przychód', num: 1 }, { t: 'Koszty', num: 1 }, { t: 'Zysk', num: 1 }, { t: 'Marża', num: 1 }],
-                    d.miesiace.filter(m => m.rev !== 0 || m.cost !== 0).map(m => [esc(m.miesiac), pln(m.rev), pln(m.cost), '<b style="color:' + (m.zysk >= 0 ? '#16a34a' : '#dc2626') + '">' + pln(m.zysk) + '</b>', pct(m.marza)])
+                    d.miesiace.filter(m => m.rev !== 0 || m.cost !== 0).map(m => [cT(m.miesiac), cPln(m.rev), cPln(m.cost), cZysk(m.zysk), cMarza(m.marza)])
                 )) + '</div>';
             }
 
             html += '<div class="aud-grid2" style="margin-top:16px;">';
             html += card('Usługi (zabiegi)', tabela(
                 [{ t: 'Zabieg' }, { t: 'Ilość', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Śr. cena', num: 1 }, { t: 'Udział', num: 1 }],
-                d.uslugi.map(u => [esc(u.nazwa), u.liczba, pln(u.obrot), pln(u.srednia), barCell(u.udzial)])
+                d.uslugi.map(u => [cT(u.nazwa), cN(u.liczba), cPln(u.obrot), cPln(u.srednia), cUd(u.udzial)])
             ));
             html += card('Wg typu zabiegu', tabela(
                 [{ t: 'Typ' }, { t: 'Ilość', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
-                d.typy.map(u => [esc(u.nazwa), u.liczba, pln(u.obrot), barCell(u.udzial)])
+                d.typy.map(u => [cT(u.nazwa), cN(u.liczba), cPln(u.obrot), cUd(u.udzial)])
             ));
             html += '</div>';
 
             html += '<div class="aud-grid2" style="margin-top:16px;">';
             html += card('Kosmetyki', tabela(
                 [{ t: 'Produkt' }, { t: 'Szt.', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
-                d.kosmetyki.map(u => [esc(u.nazwa), u.szt, pln(u.obrot), barCell(u.udzial)])
+                d.kosmetyki.map(u => [cT(u.nazwa), cN(u.szt), cPln(u.obrot), cUd(u.udzial)])
             ));
             html += card('Suplementy', tabela(
                 [{ t: 'Produkt' }, { t: 'Szt.', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
-                d.suplementy.map(u => [esc(u.nazwa), u.szt, pln(u.obrot), barCell(u.udzial)])
+                d.suplementy.map(u => [cT(u.nazwa), cN(u.szt), cPln(u.obrot), cUd(u.udzial)])
             ));
             html += '</div>';
 
             html += '<div class="aud-grid2" style="margin-top:16px;">';
             html += card('Rozkład godzinowy', tabela(
                 [{ t: 'Godzina' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
-                d.godziny.filter(g => g.liczba > 0).map(g => [String(g.godzina).padStart(2, '0') + ':00', g.liczba, pln(g.obrot)])
+                d.godziny.filter(g => g.liczba > 0).map(g => [cGodz(g.godzina), cN(g.liczba), cPln(g.obrot)])
             ));
             html += card('Dni tygodnia', tabela(
                 [{ t: 'Dzień' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
-                d.dni.filter(g => g.liczba > 0).map(g => [esc(g.dzien), g.liczba, pln(g.obrot)])
+                d.dni.filter(g => g.liczba > 0).map(g => [cT(g.dzien), cN(g.liczba), cPln(g.obrot)])
             ));
             html += '</div>';
 
             html += '<div style="margin-top:16px;">' + card('Metody płatności', tabela(
                 [{ t: 'Metoda' }, { t: 'Kwota', num: 1 }, { t: 'Udział', num: 1 }],
-                d.platnosci.map(p => [esc(p.metoda), pln(p.kwota), barCell(p.udzial)])
+                d.platnosci.map(p => [cT(p.metoda), cPln(p.kwota), cUd(p.udzial)])
             )) + '</div>';
 
             document.getElementById('aud-body').innerHTML = html;
