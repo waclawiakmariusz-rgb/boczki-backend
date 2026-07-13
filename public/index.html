@@ -24164,6 +24164,7 @@ if (inputNazwaCheck) {
         // Rejestr sortowalnych tabel audytu — klik w nagłówek sortuje bez ponownego fetchu.
         let an_audytTab = {};
         let an_audytTabId = 0;
+        let an_audytGodzChart = null, an_audytDniChart = null;   // instancje Chart.js (godziny / dni)
         function an_audytBudujTabele(naglowki, wiersze) {
             if (!wiersze.length) return '<div class="aud-empty">Brak danych w tym okresie.</div>';
             const id = ++an_audytTabId;
@@ -24221,7 +24222,6 @@ if (inputNazwaCheck) {
             const cPln = (n) => ({ h: pln(n), v: Number(n) || 0 });
             const cUd = (u) => ({ h: barCell(u), v: Number(u) || 0 });
             const cZysk = (n) => ({ h: '<b style="color:' + (n >= 0 ? '#16a34a' : '#dc2626') + '">' + pln(n) + '</b>', v: Number(n) || 0 });
-            const cMarza = (n) => ({ h: pct(n), v: Number(n) || 0 });
             const cGodz = (h24) => ({ h: String(h24).padStart(2, '0') + ':00', v: Number(h24) || 0 });
 
             const k = d.kpi;
@@ -24230,7 +24230,6 @@ if (inputNazwaCheck) {
                 + kpiCard('Przychód', pln(k.przychod), '#3b82f6')
                 + kpiCard('Koszty', pln(k.koszty), '#b91c1c')
                 + kpiCard('Zysk', pln(k.zysk), zc)
-                + kpiCard('Marża', pct(k.marza), '#8b5cf6')
                 + kpiCard('Transakcje', k.transakcje, '#0ea5e9')
                 + kpiCard('Śr. paragon', pln(k.sredniParagon), '#f59e0b')
                 + '</div>';
@@ -24238,8 +24237,8 @@ if (inputNazwaCheck) {
 
             if (d.miesiace) {
                 html += '<div style="margin-top:10px;">' + card('Miesiąc po miesiącu', tabela(
-                    [{ t: 'Miesiąc' }, { t: 'Przychód', num: 1 }, { t: 'Koszty', num: 1 }, { t: 'Zysk', num: 1 }, { t: 'Marża', num: 1 }],
-                    d.miesiace.filter(m => m.rev !== 0 || m.cost !== 0).map(m => [cT(m.miesiac), cPln(m.rev), cPln(m.cost), cZysk(m.zysk), cMarza(m.marza)])
+                    [{ t: 'Miesiąc' }, { t: 'Przychód', num: 1 }, { t: 'Koszty', num: 1 }, { t: 'Zysk', num: 1 }],
+                    d.miesiace.filter(m => m.rev !== 0 || m.cost !== 0).map(m => [cT(m.miesiac), cPln(m.rev), cPln(m.cost), cZysk(m.zysk)])
                 )) + '</div>';
             }
 
@@ -24265,15 +24264,11 @@ if (inputNazwaCheck) {
             ));
             html += '</div>';
 
+            const maGodz = (d.godziny || []).some(g => g.liczba > 0);
+            const maDni = (d.dni || []).some(g => g.liczba > 0);
             html += '<div class="aud-grid2" style="margin-top:16px;">';
-            html += card('Rozkład godzinowy', tabela(
-                [{ t: 'Godzina' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
-                d.godziny.filter(g => g.liczba > 0).map(g => [cGodz(g.godzina), cN(g.liczba), cPln(g.obrot)])
-            ));
-            html += card('Dni tygodnia', tabela(
-                [{ t: 'Dzień' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
-                d.dni.filter(g => g.liczba > 0).map(g => [cT(g.dzien), cN(g.liczba), cPln(g.obrot)])
-            ));
+            html += card('Rozkład godzinowy (obrót)', maGodz ? '<div style="position:relative; height:280px;"><canvas id="aud-godz-chart"></canvas></div>' : '<div class="aud-empty">Brak danych w tym okresie.</div>');
+            html += card('Dni tygodnia (obrót)', maDni ? '<div style="position:relative; height:280px;"><canvas id="aud-dni-chart"></canvas></div>' : '<div class="aud-empty">Brak danych w tym okresie.</div>');
             html += '</div>';
 
             html += '<div style="margin-top:16px;">' + card('Metody płatności', tabela(
@@ -24282,6 +24277,40 @@ if (inputNazwaCheck) {
             )) + '</div>';
 
             document.getElementById('aud-body').innerHTML = html;
+            an_audytRysujWykresy(d);
+        }
+
+        // Wykresy słupkowe (obrót per godzina / dzień) — jak w raporcie rocznym.
+        function an_audytBarChart(canvas, labels, obroty, liczby, kolor) {
+            return new Chart(canvas.getContext('2d'), {
+                type: 'bar',
+                data: { labels: labels, datasets: [{ label: 'Obrót', data: obroty, backgroundColor: kolor, borderRadius: 4, maxBarThickness: 46 }] },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: {
+                            label: (c) => 'Obrót: ' + an_formatPLN(c.parsed.y),
+                            afterLabel: (c) => (liczby[c.dataIndex] || 0) + ' transakcji'
+                        } }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#f3f4f6' }, ticks: { callback: (v) => new Intl.NumberFormat('pl-PL', { notation: 'compact' }).format(v) + ' zł' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+        function an_audytRysujWykresy(d) {
+            if (typeof Chart === 'undefined') return;
+            if (an_audytGodzChart) { an_audytGodzChart.destroy(); an_audytGodzChart = null; }
+            if (an_audytDniChart) { an_audytDniChart.destroy(); an_audytDniChart = null; }
+            const godz = (d.godziny || []).filter(g => g.liczba > 0);
+            const cg = document.getElementById('aud-godz-chart');
+            if (cg && godz.length) an_audytGodzChart = an_audytBarChart(cg, godz.map(g => String(g.godzina).padStart(2, '0') + ':00'), godz.map(g => g.obrot), godz.map(g => g.liczba), '#ec4899');
+            const dni = (d.dni || []).filter(x => x.liczba > 0);
+            const cd = document.getElementById('aud-dni-chart');
+            if (cd && dni.length) an_audytDniChart = an_audytBarChart(cd, dni.map(x => x.dzien), dni.map(x => x.obrot), dni.map(x => x.liczba), '#8b5cf6');
         }
 
         function an_audytDrukuj() {

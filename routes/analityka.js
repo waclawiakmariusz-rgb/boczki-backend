@@ -926,7 +926,7 @@ module.exports = (db) => {
             const NAZWY = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
             miesiaceArr = Object.keys(perMonth).sort().map(m => {
               const rev = zaokr(perMonth[m].rev), cost = zaokr(perMonth[m].cost), zysk = zaokr(rev - cost);
-              return { miesiac: NAZWY[parseInt(m, 10)], rev, cost, zysk, marza: rev > 0 ? Math.round((zysk / rev) * 1000) / 10 : 0 };
+              return { miesiac: NAZWY[parseInt(m, 10)], rev, cost, zysk };
             });
           }
 
@@ -936,7 +936,6 @@ module.exports = (db) => {
               tryb, okres,
               kpi: {
                 przychod: zaokr(utarg), koszty: zaokr(koszty), zysk,
-                marza: utarg > 0 ? Math.round((zysk / utarg) * 1000) / 10 : 0,
                 transakcje: liczbaTx, sredniParagon: liczbaTx > 0 ? zaokr(utarg / liczbaTx) : 0,
                 obrotUslugi: zaokr(obrotUslugi), obrotProdukty: zaokr(obrotProdukty)
               },
