@@ -1321,18 +1321,25 @@ function renderHistoria(wpisy) {
 // ── Zasady / FAQ ──
 function pokazZasady() {
   const pkt = dane ? (dane.pkt_za_10zl || 1) : 1;
+  const doData = (dane && dane.punkty_do) ? dataZ(dane.punkty_do) : null;
   document.getElementById('m-text-tytul').textContent = 'Jak zbierać punkty?';
   document.getElementById('m-text-tresc').innerHTML =
     '<p><b>Punkty naliczają się same</b> — za każde wydane 10 zł w salonie dostajesz ' + pkt + ' pkt. Nie musisz niczego pokazywać ani skanować.</p>'
     + '<p>Punkty wymieniasz na nagrody z katalogu: rezerwujesz nagrodę w aplikacji, dostajesz kod, pokazujesz go w salonie — i gotowe.</p>'
-    + '<p>Punkty nie przepadają. Zwrot zakupu pomniejsza punkty naliczone za tę transakcję.</p>';
+    + (doData
+        ? '<p><b>Punkty są ważne do ' + doData.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) + '</b> — potem naliczają się od nowa, więc warto wykorzystać je przed końcem roku. Zwrot zakupu pomniejsza punkty z tej transakcji.</p>'
+        : '<p>Punkty nie przepadają. Zwrot zakupu pomniejsza punkty naliczone za tę transakcję.</p>');
   document.getElementById('m-text').classList.add('visible');
 }
 function pokazFaq() {
+  const doData = (dane && dane.punkty_do) ? dataZ(dane.punkty_do) : null;
+  const wygasaja = doData
+    ? 'Tak — wszystkie punkty są ważne do ' + doData.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }) + ' i 1 stycznia naliczają się od nowa. Wykorzystaj je przed końcem roku!'
+    : 'Nie, są ważne bezterminowo.';
   document.getElementById('m-text-tytul').textContent = 'Pytania i odpowiedzi';
   document.getElementById('m-text-tresc').innerHTML =
-    '<p><b>Zapomniałam PIN-u — co robić?</b><br>Poproś recepcję o nowy kod QR — ustawisz PIN od nowa.</p>'
-    + '<p><b>Czy punkty wygasają?</b><br>Nie, są ważne bezterminowo.</p>'
+    '<p><b>Zapomniałam PIN-u — co robić?</b><br>Na ekranie logowania wybierz „Nie pamiętam PIN-u" albo poproś recepcję o nowy kod — ustawisz PIN od nowa.</p>'
+    + '<p><b>Czy punkty wygasają?</b><br>' + wygasaja + '</p>'
     + '<p><b>Kiedy dochodzą punkty?</b><br>Od razu po wizycie, gdy salon zarejestruje sprzedaż.</p>'
     + '<p><b>Zarezerwowałam nagrodę, ale się rozmyśliłam.</b><br>Anuluj kod w zakładce Nagrody — punkty wrócą do dyspozycji.</p>';
   document.getElementById('m-text').classList.add('visible');
