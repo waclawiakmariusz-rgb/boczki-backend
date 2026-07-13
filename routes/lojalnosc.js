@@ -1824,12 +1824,17 @@ module.exports = (db) => {
       const klient = Array.isArray(kRows) ? kRows[0] : null;
       if (!klientAktywny(klient)) return res.json({ status: 'error', code: 'SESJA', message: 'Konto nieaktywne. Skontaktuj się z salonem.' });
       const sRows = await q(`SELECT COALESCE(SUM(zmiana), 0) AS saldo FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ?`, [p.t, p.k]);
+      // Historia dla klientki: NIE pokazujemy wpisu wygaśnięcia (rodziłby złość — „−180 wygasło").
+      // Przy resecie rocznym (filtr niżej) zostają tylko wpisy z bieżącego roku → wygląda jak
+      // świeży start, a nie kara. Saldo i tak spójne (suma księgi = punkty bieżącego sezonu).
       const wRows = await q(
-        `SELECT zmiana, powod, zrodlo, created_at FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ? ORDER BY id DESC LIMIT 20`,
+        `SELECT zmiana, powod, zrodlo, created_at FROM Lojalnosc_Punkty
+          WHERE tenant_id = ? AND id_klienta = ? AND zrodlo <> 'WYGASNIECIE' ORDER BY id DESC LIMIT 20`,
         [p.t, p.k]
       );
       const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
+      const rokStartMs = new Date(new Date().getFullYear(), 0, 1).getTime();
       // Faza 3: nagrody + moje oczekujące odbiory (saldo dostępne = saldo − rezerwacje)
       const rezRows = await q(
         `SELECT COALESCE(SUM(koszt_pkt), 0) AS rez FROM Lojalnosc_Odbiory WHERE tenant_id = ? AND id_klienta = ? AND status = 'OCZEKUJE'`,
@@ -1885,12 +1890,14 @@ module.exports = (db) => {
         imie: String(klient.imie_nazwisko || '').split(' ')[0] || '',
         saldo,
         saldo_dostepne: saldo - zarezerwowane,
-        wpisy: (Array.isArray(wRows) ? wRows : []).map(w => ({
-          zmiana: Number(w.zmiana) || 0,
-          powod: w.powod || '',
-          zrodlo: w.zrodlo || '',
-          data: w.created_at
-        })),
+        wpisy: (Array.isArray(wRows) ? wRows : [])
+          .filter(w => !Number(ust.reset_roczny) || new Date(String(w.created_at || '').replace(' ', 'T')).getTime() >= rokStartMs)
+          .map(w => ({
+            zmiana: Number(w.zmiana) || 0,
+            powod: w.powod || '',
+            zrodlo: w.zrodlo || '',
+            data: w.created_at
+          })),
         nagrody: (Array.isArray(nagrodyRows) ? nagrodyRows : []).map(n => ({
           id: n.id,
           nazwa: n.nazwa,
