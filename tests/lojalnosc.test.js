@@ -1173,6 +1173,45 @@ describe('POST /api/klub/kosmetyki', () => {
     });
 });
 
+describe('Reset roczny punktów', () => {
+    test('_tickResetRoczny wygasza dodatnie saldo z poprzednich lat (ref idempotentny)', async () => {
+        const rok = new Date().getFullYear();
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ tenant_id: 't-reset' }] },        // salony z resetem, jeszcze nie w tym roku
+            { rows: { affectedRows: 1 } },                // atomowy claim
+            { rows: [{ id_klienta: '42', saldo: 180 }] }, // konta z dodatnim saldem sprzed roku
+            { rows: { affectedRows: 1 } },                // INSERT WYGASNIECIE
+            { rows: { affectedRows: 1 } }                 // zapiszLog
+        );
+        const router = lojalnoscFactory(db);
+        await router._tickResetRoczny();
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]) && /WYGASNIECIE/.test(c[0]));
+        expect(ins).toBeTruthy();
+        expect(ins[1][2]).toBe(-180);                    // zmiana = −saldo
+        expect(ins[1][3]).toBe('WYGAS@' + rok + '@42');  // idempotencja per rok+klient
+    });
+
+    test('brak salonów z resetem → żadnych wygaśnięć', async () => {
+        const db = mockDb(...INIT, { rows: [] });
+        const router = lojalnoscFactory(db);
+        await router._tickResetRoczny();
+        expect(db.query.mock.calls.some(c => /WYGASNIECIE/.test(c[0]))).toBe(false);
+    });
+
+    test('loj_ustawienia_zapisz zapisuje reset_roczny (admin)', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_ustawienia_zapisz', tenant_id: 't-set', user_log: 'Szefowa',
+            nazwa_klubu: 'Klub', pkt_za_10zl: 1, bonus_powitalny_pkt: 0, reset_roczny: 1
+        });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Ustawienia/.test(c[0]));
+        expect(/reset_roczny/.test(ins[0])).toBe(true);
+        expect(ins[1][4]).toBe(1);   // reset_roczny=1 w parametrach
+    });
+});
+
 describe('Kod aktywacyjny od recepcji', () => {
     // ── Panel: generowanie kodu (admin) ──
     test('loj_kod_aktywacyjny generuje 4-znakowy kod dla numeru z kartoteki', async () => {

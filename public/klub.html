@@ -164,7 +164,7 @@
   .hist-row:last-child { border-bottom: none; }
   .hist-ico { flex-shrink: 0; width: 40px; height: 40px; border-radius: 50%; background: var(--gold-soft); display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
   .hist-ico.z-NAGRODA { background: var(--primary-soft); color: var(--primary); }
-  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE, .hist-ico.z-KOREKTA { background: var(--red-soft); color: #b2453c; }
+  .hist-ico.z-ZWROT, .hist-ico.z-USUNIECIE, .hist-ico.z-KOREKTA, .hist-ico.z-WYGASNIECIE { background: var(--red-soft); color: #b2453c; }
   .hist-ico.z-EDYCJA { background: var(--stroke-2); color: var(--muted); }
   .hist-suma { display: flex; align-items: center; gap: 12px; margin: 10px 0 12px; background: linear-gradient(140deg, #fdf7ea, #fbf1dd); border: 1px solid #ecd9ac; border-radius: var(--r-md); padding: 12px 15px; }
   .hist-suma .s-ico { width: 38px; height: 38px; border-radius: 50%; background: #fff; border: 1px solid #ecd9ac; display: flex; align-items: center; justify-content: center; color: var(--gold-dark); }
@@ -1053,7 +1053,9 @@ function renderAll() {
       zlEl.style.display = 'block';
     } else zlEl.style.display = 'none';
   }
-  document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
+  let zasada = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
+  if (d.punkty_do) { const dtw = dataZ(d.punkty_do); if (dtw) zasada += ' · ważne do ' + dtw.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }); }
+  document.getElementById('m-zasada').textContent = zasada;
   const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
   document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
   renderPromocje(d.promocje || []);

@@ -599,6 +599,8 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN bonus_powitalny_pkt INT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Wnioski ADD COLUMN typ VARCHAR(20) DEFAULT 'KONTO'`,
     `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN widoczna_dni INT DEFAULT 30`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN reset_roczny TINYINT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN ostatni_reset_rok INT DEFAULT 0`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -742,11 +744,46 @@ module.exports = (db) => {
     }
   }
 
+  // Reset roczny: 1 stycznia punkty z poprzednich lat wygasają (dopisujemy WYGASNIECIE
+  // = −saldo, żeby saldo spadło do zera). Idempotentne: ostatni_reset_rok (claim per salon)
+  // + UNIQUE(tenant, zrodlo, ref_id) na wpisie. Wspólna baza dev+prod → atomowy claim.
+  async function tickResetRoczny() {
+    const rok = new Date().getFullYear();
+    const salony = await q(
+      `SELECT tenant_id FROM Lojalnosc_Ustawienia WHERE reset_roczny = 1 AND COALESCE(ostatni_reset_rok, 0) < ? LIMIT 50`, [rok]
+    ).catch(() => []);
+    for (const s of (Array.isArray(salony) ? salony : [])) {
+      const claim = await q(
+        `UPDATE Lojalnosc_Ustawienia SET ostatni_reset_rok = ? WHERE tenant_id = ? AND reset_roczny = 1 AND COALESCE(ostatni_reset_rok, 0) < ?`,
+        [rok, s.tenant_id, rok]
+      ).catch(() => null);
+      if (!claim || !claim.affectedRows) continue;   // inna instancja już przejęła
+      const start = `${rok}-01-01 00:00:00`;
+      const konta = await q(
+        `SELECT id_klienta, SUM(zmiana) AS saldo FROM Lojalnosc_Punkty
+          WHERE tenant_id = ? AND created_at < ? GROUP BY id_klienta HAVING saldo > 0`, [s.tenant_id, start]
+      ).catch(() => []);
+      let ile = 0;
+      for (const k of (Array.isArray(konta) ? konta : [])) {
+        const saldo = Number(k.saldo) || 0;
+        if (saldo <= 0) continue;
+        const ins = await q(
+          `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+           VALUES (?, ?, ?, 'Punkty wygasły (koniec roku)', 'WYGASNIECIE', ?, 'System')`,
+          [s.tenant_id, String(k.id_klienta), -saldo, `WYGAS@${rok}@${k.id_klienta}`]
+        ).catch(() => null);
+        if (ins) ile++;
+      }
+      zapiszLog(s.tenant_id, 'KLUB RESET ROCZNY', 'System', `Punkty z ${rok - 1} wygasły — ${ile} kont`);
+    }
+  }
+
   // ─── Scheduler (co 60 s): zaplanowane kampanie + auto-push promocji w dniu startu.
   // Baza jest WSPÓLNA dla dev i prod (dwie instancje Node!) — dlatego każdą robotę
   // najpierw atomowo claimujemy UPDATE-em; wygrywa jedna instancja.
   async function tickHarmonogramu() {
     try {
+      await tickResetRoczny();
       const due = await q(
         `SELECT * FROM Lojalnosc_Kampanie WHERE status = 'PLANOWANA' AND wyslij_at <= NOW() LIMIT 20`, []
       ).catch(() => []);
@@ -835,7 +872,7 @@ module.exports = (db) => {
 
     } else if (action === 'loj_ustawienia') {
       db.query(
-        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
+        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
@@ -845,7 +882,8 @@ module.exports = (db) => {
             ustawienia: {
               pkt_za_10zl: parseInt(u.pkt_za_10zl, 10) || 1,
               nazwa_klubu: u.nazwa_klubu || 'Klub',
-              bonus_powitalny_pkt: parseInt(u.bonus_powitalny_pkt, 10) || 0
+              bonus_powitalny_pkt: parseInt(u.bonus_powitalny_pkt, 10) || 0,
+              reset_roczny: Number(u.reset_roczny) ? 1 : 0
             }
           });
         }
@@ -1081,20 +1119,24 @@ module.exports = (db) => {
       const pkt = parseInt(d.pkt_za_10zl, 10);
       const bonus = parseInt(d.bonus_powitalny_pkt, 10) || 0;
       const nazwa = String(d.nazwa_klubu || 'Klub').trim().slice(0, 120) || 'Klub';
+      const resetRoczny = (d.reset_roczny === 1 || d.reset_roczny === '1' || d.reset_roczny === true) ? 1 : 0;
       if (!Number.isFinite(pkt) || pkt < 0 || pkt > 100) {
         return res.json({ status: 'error', message: 'Punkty za 10 zł: liczba 0–100.' });
       }
       if (bonus < 0 || bonus > 1000) return res.json({ status: 'error', message: 'Bonus powitalny: 0–1000 pkt.' });
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, updated_by)
-           VALUES (?, ?, ?, ?, ?)
+          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, ostatni_reset_rok, updated_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE pkt_za_10zl = VALUES(pkt_za_10zl), nazwa_klubu = VALUES(nazwa_klubu),
-             bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), updated_by = VALUES(updated_by)`,
-          [tenant_id, pkt, nazwa, bonus, kto],
+             bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), reset_roczny = VALUES(reset_roczny), updated_by = VALUES(updated_by),
+             ostatni_reset_rok = IF(COALESCE(ostatni_reset_rok, 0) = 0 AND VALUES(reset_roczny) = 1, VALUES(ostatni_reset_rok), ostatni_reset_rok)`,
+          // Przy PIERWSZYM włączeniu resetu ustawiamy ostatni_reset_rok = bieżący rok, żeby NIE
+          // wygasić od razu tegorocznych punktów — pierwsze wygaśnięcie dopiero 1 stycznia.
+          [tenant_id, pkt, nazwa, bonus, resetRoczny, new Date().getFullYear(), kto],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}`);
+            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}, reset_roczny=${resetRoczny}`);
             return res.json({ status: 'success', message: 'Zapisano ustawienia Klubu.' });
           }
         );
@@ -1786,7 +1828,7 @@ module.exports = (db) => {
         `SELECT zmiana, powod, zrodlo, created_at FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ? ORDER BY id DESC LIMIT 20`,
         [p.t, p.k]
       );
-      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
       // Faza 3: nagrody + moje oczekujące odbiory (saldo dostępne = saldo − rezerwacje)
       const rezRows = await q(
@@ -1873,7 +1915,9 @@ module.exports = (db) => {
           .map(k => ({ id: k.id, tytul: k.tytul, tresc: k.tresc, img_url: k.img_url || '', data: k.wyslano_at })),
         push_vapid: vapidPublic(),
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
-        pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1
+        pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
+        // Reset roczny: punkty ważne do 31.12 bieżącego roku (motywacja: wykorzystaj przed końcem roku)
+        punkty_do: Number(ust.reset_roczny) ? (new Date().getFullYear() + '-12-31') : null
       };
       // Przełącznik salonów: wszystkie salony tego numeru (nazwy + saldo, BEZ tokenów).
       // Tokeny do przełączania klient dostaje wyłącznie przy logowaniu (PIN) — stąd
@@ -2285,6 +2329,7 @@ module.exports = (db) => {
     } catch (e) { return res.status(404).end(); }
   });
 
+  router._tickResetRoczny = tickResetRoczny;   // hook do testów resetu rocznego
   return router;
 };
 
