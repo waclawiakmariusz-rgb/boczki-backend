@@ -5512,6 +5512,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
             Zaawansowane
         </li>
         <li><button class="nav-btn" onclick="pokaz('yearly', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4"/><path d="M3 10h18"/><path d="M8 2v4"/><path d="M17 14h-5"/><path d="M9 14h.01"/></svg>Rok</span></button></li>
+        <li><button class="nav-btn" onclick="pokaz('audyt', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h2"/><path d="M8 17h5"/><path d="m14 15 2 2 3-3"/></svg>Audyt pełny</span></button></li>
         <li><button class="nav-btn" onclick="pokaz('costs', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>Koszty</span></button></li>
         <li><button class="nav-btn" onclick="pokaz('treatment_analysis', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m18 2 4 4"/><path d="m17 7 3-3"/><path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5"/><path d="m9 11 4 4"/><path d="m5 19-3 3"/><path d="m14 4 6 6"/></svg>Analiza Zabiegu</span></button></li>
         <li><button class="nav-btn" onclick="pokaz('analiza-konsultacji', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="m11 17 2 2a1 1 0 1 0 3-3"/><path d="m14 14 2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4"/><path d="M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3"/><path d="M3 4h8"/></svg>Analiza Konsultacji</span></button></li>
@@ -9444,6 +9445,54 @@ ANALIZA MANAGER
     </div>
 </div>
     
+    <div id="an_view-audyt" style="display:none; padding-bottom:50px;">
+      <style>
+        #an_view-audyt .aud-kpi { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:14px; margin:14px 0 8px; }
+        #an_view-audyt .aud-kpi .card { text-align:center; padding:16px; }
+        #an_view-audyt .aud-kpi .v { font-size:24px; font-weight:800; margin-top:4px; }
+        #an_view-audyt table.aud { width:100%; border-collapse:collapse; font-size:14px; }
+        #an_view-audyt table.aud th { background:#f3f4f6; text-transform:uppercase; font-size:11px; color:#6b7280; padding:10px; text-align:left; letter-spacing:.5px; }
+        #an_view-audyt table.aud td { padding:9px 10px; border-top:1px solid #eef2f7; vertical-align:middle; }
+        #an_view-audyt table.aud td.num, #an_view-audyt table.aud th.num { text-align:right; white-space:nowrap; }
+        #an_view-audyt table.aud tr:last-child td { border-bottom:none; }
+        #an_view-audyt .aud-bar { height:6px; background:#eef2f7; border-radius:99px; overflow:hidden; margin-top:4px; min-width:60px; }
+        #an_view-audyt .aud-bar>div { height:100%; background:linear-gradient(90deg,var(--primary),#f9a8c4); }
+        #an_view-audyt .aud-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+        #an_view-audyt .aud-empty { color:#94a3b8; font-size:13px; padding:14px; text-align:center; }
+        @media (max-width:900px){ #an_view-audyt .aud-grid2 { grid-template-columns:1fr; } }
+        body.dark-mode #an_view-audyt table.aud th { background:#0f172a; color:#94a3b8; }
+        body.dark-mode #an_view-audyt table.aud td { border-top-color:#334155; color:#cbd5e1; }
+        @media print {
+          body[data-print-section="audyt"] * { visibility:hidden; }
+          body[data-print-section="audyt"] #an_view-audyt, body[data-print-section="audyt"] #an_view-audyt * { visibility:visible; }
+          body[data-print-section="audyt"] #an_view-audyt { position:absolute; left:0; top:0; width:100%; padding:0; }
+          body[data-print-section="audyt"] .an-audyt-noprint { display:none !important; }
+          body[data-print-section="audyt"] .card { box-shadow:none !important; border:1px solid #ddd; break-inside:avoid; page-break-inside:avoid; }
+          body[data-print-section="audyt"] .aud-grid2 { display:block !important; }
+          body[data-print-section="audyt"] .aud-grid2 > .card { margin-bottom:12px; }
+        }
+      </style>
+
+      <div class="header-flex an-audyt-noprint" style="margin-bottom:12px; gap:10px; flex-wrap:wrap; align-items:center;">
+        <div>
+          <h2 style="margin:0;">Audyt pełny</h2>
+          <p style="margin:4px 0 0 0; opacity:.7; font-size:13px;">Sprzedaż usług i produktów, udział procentowy, zysk i marża — miesiąc lub rok.</p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <div style="display:inline-flex; border:1px solid #e2e8f0; border-radius:10px; overflow:hidden;">
+            <button type="button" id="aud-tryb-m" onclick="an_audytTryb('miesiac')" style="border:0; padding:8px 14px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer;">Miesiąc</button>
+            <button type="button" id="aud-tryb-r" onclick="an_audytTryb('rok')" style="border:0; padding:8px 14px; background:#fff; color:#334155; font-weight:700; cursor:pointer;">Rok</button>
+          </div>
+          <select id="aud-okres" onchange="an_audytGeneruj()" style="padding:8px; border-radius:8px; border:1px solid #ddd; font-size:15px;"></select>
+          <button type="button" onclick="an_audytGeneruj()" style="padding:8px 14px; border:0; border-radius:8px; background:#0f172a; color:#fff; font-weight:700; cursor:pointer;">Odśwież</button>
+          <button type="button" onclick="an_audytDrukuj()" style="padding:8px 14px; border:0; border-radius:8px; background:var(--primary); color:#fff; font-weight:700; cursor:pointer;">🖨️ Drukuj / PDF</button>
+        </div>
+      </div>
+
+      <div id="aud-tytul" style="font-size:13px; color:#64748b; margin-bottom:10px;"></div>
+      <div id="aud-body"><div class="aud-empty" style="padding:40px;">Wybierz okres…</div></div>
+    </div>
+
     <div id="an_view-treatment-analysis" style="display:none; padding-bottom: 50px;">
     <div class="dash-header" style="margin-bottom: 20px;">
         <div class="header-left">
@@ -16543,7 +16592,7 @@ function pokaz(id, b) {
     // recepcja musi widzieć stan kosmetyków przed sprzedażą.
     const __ANALIZA_RESTRICTED = new Set([
         'summary', 'monthly_report', 'dashboard',
-        'yearly', 'costs', 'treatment_analysis', 'bi', 'zadania',
+        'yearly', 'audyt', 'costs', 'treatment_analysis', 'bi', 'zadania',
         'analiza-konsultacji', 'odprawa',
         'widok-pracownicy-targety', 'widok-targety'
     ]);
@@ -16566,10 +16615,10 @@ function pokaz(id, b) {
         el.classList.remove('active');
         el.style.display = 'none'; // 🟢 TWARDE UKRYCIE WIDOKÓW
     });
-    
+
     const analizaViews = [
-        'an_view-dashboard', 'an_view-summary', 'an_view-monthly-report', 
-        'an_view-yearly', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs',
+        'an_view-dashboard', 'an_view-summary', 'an_view-monthly-report',
+        'an_view-yearly', 'an_view-audyt', 'an_view-treatment-analysis', 'an_view-bi', 'an_view-costs',
         'an_view-zadania'
     ];
     analizaViews.forEach(viewId => {
@@ -16672,6 +16721,7 @@ function pokaz(id, b) {
     if (id === 'bi') an_loadBiData();
     if (id === 'costs') an_loadCostsView();
     if (id === 'yearly') an_initYearSelect();
+    if (id === 'audyt') an_audytInit();
     if (id === 'zadania') zd_init();
     if (id === 'analiza-konsultacji') {
         akon_uruchomAplikacje();
@@ -24051,6 +24101,151 @@ if (inputNazwaCheck) {
             document.getElementById('an_year-month-count').innerText = `(Podzielono przez ${divider} mies.)`;
         }
         
+        // ===== AUDYT PEŁNY (get_full_audit) — sprzedaż usług/produktów, udział %, zysk =====
+        let an_audytTrybState = 'miesiac';
+        let an_audytMonths = null;   // cache listy 'YYYY-MM'
+        const AN_MIES = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+
+        function an_audytInit() {
+            an_audytTrybState = 'miesiac';
+            an_audytUstawTrybUI();
+            an_audytPopulujOkres(() => an_audytGeneruj());
+        }
+        function an_audytUstawTrybUI() {
+            const m = document.getElementById('aud-tryb-m'), r = document.getElementById('aud-tryb-r');
+            if (!m || !r) return;
+            const aktM = an_audytTrybState === 'miesiac';
+            m.style.background = aktM ? 'var(--primary)' : '#fff'; m.style.color = aktM ? '#fff' : '#334155';
+            r.style.background = aktM ? '#fff' : 'var(--primary)'; r.style.color = aktM ? '#334155' : '#fff';
+        }
+        function an_audytTryb(t) {
+            if (t === an_audytTrybState) return;
+            an_audytTrybState = t;
+            an_audytUstawTrybUI();
+            an_audytPopulujOkres(() => an_audytGeneruj());
+        }
+        function an_audytPopulujOkres(cb) {
+            const sel = document.getElementById('aud-okres');
+            const wypelnij = () => {
+                const months = (an_audytMonths || []).slice();
+                if (an_audytTrybState === 'miesiac') {
+                    if (!months.length) { const n = new Date(); months.push(n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0')); }
+                    sel.innerHTML = months.map(m => { const p = m.split('-'); return '<option value="' + m + '">' + AN_MIES[parseInt(p[1], 10)] + ' ' + p[0] + '</option>'; }).join('');
+                } else {
+                    let lata = [...new Set(months.map(m => m.split('-')[0]))];
+                    if (!lata.length) lata = [String(new Date().getFullYear())];
+                    lata.sort((a, b) => b - a);
+                    sel.innerHTML = lata.map(y => '<option value="' + y + '">' + y + '</option>').join('');
+                }
+                if (cb) cb();
+            };
+            if (an_audytMonths) return wypelnij();
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_months' }) })
+                .then(r => r.json()).then(res => { an_audytMonths = (res && res.months) || []; wypelnij(); })
+                .catch(() => { an_audytMonths = []; wypelnij(); });
+        }
+        function an_audytGeneruj() {
+            const tryb = an_audytTrybState;
+            const okres = document.getElementById('aud-okres').value;
+            if (!okres) return;
+            const body = document.getElementById('aud-body');
+            body.innerHTML = '<div class="aud-empty" style="padding:40px;">Liczenie…</div>';
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'get_full_audit', tryb: tryb, okres: okres }) })
+                .then(r => r.json()).then(res => {
+                    if (res.status !== 'success') { body.innerHTML = '<div style="padding:20px; color:#dc2626;">Błąd: ' + escHtml(res.message || 'nieznany') + '</div>'; return; }
+                    an_audytRender(res.data);
+                }).catch(() => { body.innerHTML = '<div style="padding:20px; color:#dc2626;">Błąd połączenia.</div>'; });
+        }
+
+        function an_audytRender(d) {
+            const pln = an_formatPLN;
+            const esc = (typeof escHtml === 'function') ? escHtml : (s => String(s == null ? '' : s));
+            const pct = (x) => (Number(x) || 0).toLocaleString('pl-PL', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + '%';
+            const okresLabel = d.tryb === 'rok' ? ('Rok ' + d.okres) : (() => { const p = String(d.okres).split('-'); return AN_MIES[parseInt(p[1], 10)] + ' ' + p[0]; })();
+            document.getElementById('aud-tytul').textContent = 'Okres: ' + okresLabel + ' · przychód i zysk liczone jak w Podsumowaniu miesiąca; udział % liczony w obrocie sprzedanych pozycji.';
+
+            const kpiCard = (t, v, c) => '<div class="card" style="border-left:4px solid ' + c + ';"><div class="kpi-title">' + t + '</div><div class="v" style="color:' + c + ';">' + v + '</div></div>';
+            const card = (title, inner) => '<div class="card"><h3 style="margin:0 0 12px 0;">' + title + '</h3>' + inner + '</div>';
+            const barCell = (u) => '<div style="font-weight:700;">' + pct(u) + '</div><div class="aud-bar"><div style="width:' + Math.min(100, Number(u) || 0) + '%;"></div></div>';
+            const empty = '<div class="aud-empty">Brak danych w tym okresie.</div>';
+
+            // tabela: naglowki = [{t, num}], wiersze = [[cell,...]]
+            const tabela = (naglowki, wiersze) => {
+                if (!wiersze.length) return empty;
+                let h = '<div style="overflow-x:auto;"><table class="aud"><thead><tr>';
+                naglowki.forEach(n => h += '<th class="' + (n.num ? 'num' : '') + '">' + n.t + '</th>');
+                h += '</tr></thead><tbody>';
+                wiersze.forEach(w => { h += '<tr>'; w.forEach((c, i) => h += '<td class="' + (naglowki[i].num ? 'num' : '') + '">' + c + '</td>'); h += '</tr>'; });
+                return h + '</tbody></table></div>';
+            };
+
+            const k = d.kpi;
+            const zc = k.zysk >= 0 ? '#16a34a' : '#dc2626';
+            let html = '<div class="aud-kpi">'
+                + kpiCard('Przychód', pln(k.przychod), '#3b82f6')
+                + kpiCard('Koszty', pln(k.koszty), '#b91c1c')
+                + kpiCard('Zysk', pln(k.zysk), zc)
+                + kpiCard('Marża', pct(k.marza), '#8b5cf6')
+                + kpiCard('Transakcje', k.transakcje, '#0ea5e9')
+                + kpiCard('Śr. paragon', pln(k.sredniParagon), '#f59e0b')
+                + '</div>';
+            html += '<div style="font-size:12px; color:#94a3b8; margin:2px 0 6px;">Obrót usług: ' + pln(k.obrotUslugi) + ' · obrót produktów: ' + pln(k.obrotProdukty) + '</div>';
+
+            if (d.miesiace) {
+                html += '<div style="margin-top:10px;">' + card('Miesiąc po miesiącu', tabela(
+                    [{ t: 'Miesiąc' }, { t: 'Przychód', num: 1 }, { t: 'Koszty', num: 1 }, { t: 'Zysk', num: 1 }, { t: 'Marża', num: 1 }],
+                    d.miesiace.filter(m => m.rev !== 0 || m.cost !== 0).map(m => [esc(m.miesiac), pln(m.rev), pln(m.cost), '<b style="color:' + (m.zysk >= 0 ? '#16a34a' : '#dc2626') + '">' + pln(m.zysk) + '</b>', pct(m.marza)])
+                )) + '</div>';
+            }
+
+            html += '<div class="aud-grid2" style="margin-top:16px;">';
+            html += card('Usługi (zabiegi)', tabela(
+                [{ t: 'Zabieg' }, { t: 'Ilość', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Śr. cena', num: 1 }, { t: 'Udział', num: 1 }],
+                d.uslugi.map(u => [esc(u.nazwa), u.liczba, pln(u.obrot), pln(u.srednia), barCell(u.udzial)])
+            ));
+            html += card('Wg typu zabiegu', tabela(
+                [{ t: 'Typ' }, { t: 'Ilość', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
+                d.typy.map(u => [esc(u.nazwa), u.liczba, pln(u.obrot), barCell(u.udzial)])
+            ));
+            html += '</div>';
+
+            html += '<div class="aud-grid2" style="margin-top:16px;">';
+            html += card('Kosmetyki', tabela(
+                [{ t: 'Produkt' }, { t: 'Szt.', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
+                d.kosmetyki.map(u => [esc(u.nazwa), u.szt, pln(u.obrot), barCell(u.udzial)])
+            ));
+            html += card('Suplementy', tabela(
+                [{ t: 'Produkt' }, { t: 'Szt.', num: 1 }, { t: 'Obrót', num: 1 }, { t: 'Udział', num: 1 }],
+                d.suplementy.map(u => [esc(u.nazwa), u.szt, pln(u.obrot), barCell(u.udzial)])
+            ));
+            html += '</div>';
+
+            html += '<div class="aud-grid2" style="margin-top:16px;">';
+            html += card('Rozkład godzinowy', tabela(
+                [{ t: 'Godzina' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
+                d.godziny.filter(g => g.liczba > 0).map(g => [String(g.godzina).padStart(2, '0') + ':00', g.liczba, pln(g.obrot)])
+            ));
+            html += card('Dni tygodnia', tabela(
+                [{ t: 'Dzień' }, { t: 'Transakcje', num: 1 }, { t: 'Obrót', num: 1 }],
+                d.dni.filter(g => g.liczba > 0).map(g => [esc(g.dzien), g.liczba, pln(g.obrot)])
+            ));
+            html += '</div>';
+
+            html += '<div style="margin-top:16px;">' + card('Metody płatności', tabela(
+                [{ t: 'Metoda' }, { t: 'Kwota', num: 1 }, { t: 'Udział', num: 1 }],
+                d.platnosci.map(p => [esc(p.metoda), pln(p.kwota), barCell(p.udzial)])
+            )) + '</div>';
+
+            document.getElementById('aud-body').innerHTML = html;
+        }
+
+        function an_audytDrukuj() {
+            document.body.setAttribute('data-print-section', 'audyt');
+            const sprzataj = () => { document.body.removeAttribute('data-print-section'); window.removeEventListener('afterprint', sprzataj); };
+            window.addEventListener('afterprint', sprzataj);
+            setTimeout(() => { window.print(); setTimeout(sprzataj, 3000); }, 60);
+        }
+
         function an_renderYearlyChart(labels, revData, costData, profitData) {
             const ctx = document.getElementById('an_yearlyChart').getContext('2d');
             if (an_yearlyChartInstance) an_yearlyChartInstance.destroy();

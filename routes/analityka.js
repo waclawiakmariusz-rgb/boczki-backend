@@ -35,6 +35,9 @@ module.exports = (db) => {
     return 'Inne';
   };
 
+  // Promise-owy wrapper (analityka jest read-only — na błędzie degradujemy do []).
+  const qA = (sql, params) => new Promise((resolve) => db.query(sql, params, (e, r) => resolve(e ? [] : (r || []))));
+
   // Helper: pobierz koszty danego miesiąca
   function pobierzKoszt(tenant_id, miesiac, callback) {
     db.query(
@@ -776,6 +779,163 @@ module.exports = (db) => {
           );
         }
       );
+
+    } else if (action === 'get_full_audit' || action === 'an_get_full_audit') {
+      // Pełny audyt miesiąca/roku: KPI (przychód/koszty/zysk/marża), rozbicie usług,
+      // typów zabiegów, kosmetyków, suplementów z % udziałem w OBROCIE, rozkład godzin
+      // i dni tygodnia, metody płatności, oraz miesiąc-po-miesiącu (tryb roczny).
+      // „Przychód/utarg" liczony spójnie z Podsumowaniem miesiąca (mix przez Platnosci,
+      // pomijany w Sprzedazy/Zadatkach — inwariant finansowy d4bfcad).
+      const tryb = String(d.tryb || 'miesiac');
+      const okres = String(d.okres || '').trim();
+      const rok = tryb === 'rok';
+      if (rok ? !/^\d{4}$/.test(okres) : !/^\d{4}-\d{2}$/.test(okres)) {
+        return res.json({ status: 'error', message: 'Nieprawidłowy okres.' });
+      }
+      const whS = rok ? `YEAR(data_sprzedazy) = ?` : `DATE_FORMAT(data_sprzedazy, '%Y-%m') = ?`;
+      const whP = rok ? `YEAR(data_platnosci) = ?` : `DATE_FORMAT(data_platnosci, '%Y-%m') = ?`;
+      const whZ = rok ? `YEAR(data_wplaty) = ?` : `DATE_FORMAT(data_wplaty, '%Y-%m') = ?`;
+      const whK = rok ? `YEAR(data_kosztu) = ?` : `DATE_FORMAT(data_kosztu, '%Y-%m') = ?`;
+
+      (async () => {
+        try {
+          const supRows = await qA(`SELECT DISTINCT LOWER(TRIM(nazwa_produktu)) AS nazwa FROM Magazyn WHERE tenant_id = ? AND TRIM(typ) = 'Witaminy'`, [tenant_id]);
+          const suplementSet = new Set(supRows.map(r => r.nazwa));
+
+          const sprzedaz = await qA(
+            `SELECT data_sprzedazy, zabieg, kwota, platnosc, status, kategoria_produktu, typ_zabiegu, szczegoly
+               FROM Sprzedaz WHERE tenant_id = ? AND ${whS} AND COALESCE(status,'') NOT IN ('USUNIĘTY','SCALONY')`,
+            [tenant_id, okres]);
+          const platnosci = await qA(
+            `SELECT data_platnosci, metoda_platnosci, kwota FROM Platnosci
+              WHERE tenant_id = ? AND ${whP} AND COALESCE(status,'') != 'USUNIĘTY'`,
+            [tenant_id, okres]);
+          const zadatki = await qA(
+            `SELECT data_wplaty, kwota, metoda, status, typ FROM Zadatki
+              WHERE tenant_id = ? AND ${whZ} AND typ = 'WPŁATA'`,
+            [tenant_id, okres]);
+          const kosztRows = await qA(`SELECT COALESCE(SUM(kwota),0) AS suma FROM Koszty WHERE tenant_id = ? AND ${whK}`, [tenant_id, okres]);
+          const koszty = parseAmount((kosztRows[0] || {}).suma);
+
+          const parsujSzt = (s) => { const m = String(s || '').match(/(\d+(?:[.,]\d+)?)\s*szt/i); return m ? (parseFloat(m[1].replace(',', '.')) || 1) : 1; };
+          const czyExcl = (p) => { const s = String(p || '').toLowerCase(); return s.includes('ręczne') || s.includes('reczne') || s.includes('system'); };
+          const czyExclCash = (p) => { const s = String(p || '').toLowerCase(); return s === 'mix' || s.includes('portfel') || s.includes('ręczne') || s.includes('reczne') || s.includes('system'); };
+
+          const uslugi = {}, typy = {}, kosmetyki = {}, suplementy = {}, godziny = {}, dni = {};
+          const platMet = { Gotówka: 0, Karta: 0, Blik: 0, Przelew: 0, MediRaty: 0, TubaPay: 0, Inne: 0 };
+          const perMonth = {};
+          for (let i = 1; i <= 12; i++) perMonth[String(i).padStart(2, '0')] = { rev: 0, cost: 0 };
+          let utarg = 0, obrotUslugi = 0, obrotProdukty = 0, liczbaTx = 0;
+
+          sprzedaz.forEach(row => {
+            const dt = new Date(row.data_sprzedazy);
+            const amount = parseAmount(row.kwota);
+            const zabieg = String(row.zabieg || 'Inne').trim();
+            const zL = zabieg.toLowerCase();
+            let isSup = zL.includes('suplement') || String(row.kategoria_produktu || '').toLowerCase() === 'suplement';
+            const isKosm = isSup || zL.includes('kosmetyk') || zL.includes('krem');
+            if (isKosm && !isSup && suplementSet.size > 0) {
+              const clean = zabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim().toLowerCase();
+              if (suplementSet.has(clean)) isSup = true;
+            }
+            const czysta = zabieg.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim() || zabieg;
+
+            // OBRÓT (co sprzedaliśmy) — pomija tylko techniczne (ręczne/system)
+            if (!czyExcl(row.platnosc) && amount > 0) {
+              const g = dt.getHours(), dz = dt.getDay();
+              if (!godziny[g]) godziny[g] = { liczba: 0, obrot: 0 };
+              godziny[g].liczba++; godziny[g].obrot += amount;
+              if (!dni[dz]) dni[dz] = { liczba: 0, obrot: 0 };
+              dni[dz].liczba++; dni[dz].obrot += amount;
+              if (isKosm) {
+                const bucket = isSup ? suplementy : kosmetyki;
+                if (!bucket[czysta]) bucket[czysta] = { szt: 0, obrot: 0 };
+                bucket[czysta].szt += parsujSzt(row.szczegoly); bucket[czysta].obrot += amount;
+                obrotProdukty += amount;
+              } else {
+                if (!uslugi[zabieg]) uslugi[zabieg] = { liczba: 0, obrot: 0 };
+                uslugi[zabieg].liczba++; uslugi[zabieg].obrot += amount;
+                obrotUslugi += amount;
+                const typ = String(row.typ_zabiegu || '').trim() || '— bez typu —';
+                if (!typy[typ]) typy[typ] = { liczba: 0, obrot: 0 };
+                typy[typ].liczba++; typy[typ].obrot += amount;
+              }
+            }
+
+            // UTARG (wpływy) — jak Podsumowanie miesiąca: pomija mix/portfel/ręczne/system
+            if (!czyExclCash(row.platnosc) && amount > 0) {
+              platMet[classifyPayment(row.platnosc)] += amount; utarg += amount; liczbaTx++;
+              perMonth[String(dt.getMonth() + 1).padStart(2, '0')].rev += amount;
+            }
+          });
+
+          platnosci.forEach(row => {
+            const met = String(row.metoda_platnosci || '').toLowerCase();
+            if (met.includes('portfel')) return;
+            const amount = parseAmount(row.kwota);
+            if (amount <= 0) return;
+            const dt = new Date(row.data_platnosci);
+            platMet[classifyPayment(met)] += amount; utarg += amount; liczbaTx++;
+            perMonth[String(dt.getMonth() + 1).padStart(2, '0')].rev += amount;
+          });
+
+          zadatki.forEach(row => {
+            const status = String(row.status || '').toUpperCase();
+            if (status === 'USUNIĘTY' || status === 'SCALONY') return;
+            const met = String(row.metoda || '').toLowerCase();
+            if (met === 'mix' || met.includes('ręczne') || met.includes('reczne') || met.includes('system')) return;
+            const amount = parseAmount(row.kwota);
+            if (amount <= 0) return;
+            const dt = new Date(row.data_wplaty);
+            platMet[classifyPayment(met)] += amount; utarg += amount; liczbaTx++;
+            perMonth[String(dt.getMonth() + 1).padStart(2, '0')].rev += amount;
+          });
+
+          if (rok) {
+            const kmc = await qA(`SELECT DATE_FORMAT(data_kosztu,'%m') AS m, SUM(kwota) AS total FROM Koszty WHERE tenant_id = ? AND YEAR(data_kosztu) = ? GROUP BY m`, [tenant_id, okres]);
+            kmc.forEach(r => { if (perMonth[r.m]) perMonth[r.m].cost = parseAmount(r.total); });
+          }
+
+          const zaokr = (x) => Math.round((Number(x) || 0) * 100) / 100;
+          const obrotItems = obrotUslugi + obrotProdukty;
+          const pct = (x, base) => base > 0 ? Math.round((x / base) * 1000) / 10 : 0;
+
+          const uslugiArr = Object.entries(uslugi).map(([nazwa, v]) => ({ nazwa, liczba: v.liczba, obrot: zaokr(v.obrot), srednia: v.liczba ? zaokr(v.obrot / v.liczba) : 0, udzial: pct(v.obrot, obrotItems) })).sort((a, b) => b.obrot - a.obrot);
+          const typyArr = Object.entries(typy).map(([nazwa, v]) => ({ nazwa, liczba: v.liczba, obrot: zaokr(v.obrot), udzial: pct(v.obrot, obrotItems) })).sort((a, b) => b.obrot - a.obrot);
+          const kosmArr = Object.entries(kosmetyki).map(([nazwa, v]) => ({ nazwa, szt: zaokr(v.szt), obrot: zaokr(v.obrot), udzial: pct(v.obrot, obrotItems) })).sort((a, b) => b.obrot - a.obrot);
+          const supArr = Object.entries(suplementy).map(([nazwa, v]) => ({ nazwa, szt: zaokr(v.szt), obrot: zaokr(v.obrot), udzial: pct(v.obrot, obrotItems) })).sort((a, b) => b.obrot - a.obrot);
+          const godzArr = []; for (let h = 0; h < 24; h++) { const g = godziny[h] || { liczba: 0, obrot: 0 }; godzArr.push({ godzina: h, liczba: g.liczba, obrot: zaokr(g.obrot) }); }
+          const DNI = ['Niedziela', 'Poniedziałek', 'Wtorek', 'Środa', 'Czwartek', 'Piątek', 'Sobota'];
+          const dniArr = [1, 2, 3, 4, 5, 6, 0].map(idx => { const g = dni[idx] || { liczba: 0, obrot: 0 }; return { dzien: DNI[idx], liczba: g.liczba, obrot: zaokr(g.obrot) }; });
+          const platArr = Object.entries(platMet).filter(([, v]) => v > 0).map(([metoda, kwota]) => ({ metoda, kwota: zaokr(kwota), udzial: pct(kwota, utarg) })).sort((a, b) => b.kwota - a.kwota);
+
+          let miesiaceArr = null;
+          if (rok) {
+            const NAZWY = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+            miesiaceArr = Object.keys(perMonth).sort().map(m => {
+              const rev = zaokr(perMonth[m].rev), cost = zaokr(perMonth[m].cost), zysk = zaokr(rev - cost);
+              return { miesiac: NAZWY[parseInt(m, 10)], rev, cost, zysk, marza: rev > 0 ? Math.round((zysk / rev) * 1000) / 10 : 0 };
+            });
+          }
+
+          const zysk = zaokr(utarg - koszty);
+          return res.json({
+            status: 'success', data: {
+              tryb, okres,
+              kpi: {
+                przychod: zaokr(utarg), koszty: zaokr(koszty), zysk,
+                marza: utarg > 0 ? Math.round((zysk / utarg) * 1000) / 10 : 0,
+                transakcje: liczbaTx, sredniParagon: liczbaTx > 0 ? zaokr(utarg / liczbaTx) : 0,
+                obrotUslugi: zaokr(obrotUslugi), obrotProdukty: zaokr(obrotProdukty)
+              },
+              uslugi: uslugiArr, typy: typyArr, kosmetyki: kosmArr, suplementy: supArr,
+              godziny: godzArr, dni: dniArr, platnosci: platArr, miesiace: miesiaceArr
+            }
+          });
+        } catch (e) {
+          return res.json({ status: 'error', message: e.message });
+        }
+      })();
 
     } else if (action === 'get_treatment_analysis' || action === 'an_get_treatment_analysis') {
       const selectedYear = String(d.year || new Date().getFullYear());
