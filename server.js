@@ -560,7 +560,8 @@ app.post('/api', (req, res) => {
         'loj_nagroda_zapisz', 'loj_nagroda_status', 'loj_promocja_zapisz', 'loj_promocja_status',
         'loj_odbior_rozstrzygnij', 'loj_zgloszenie_obsluz', 'loj_push_wyslij',
         'loj_kampania_zapisz', 'loj_kampania_anuluj', 'loj_kampania_wycofaj',
-        'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc'];
+        'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc',
+        'loj_kod_aktywacyjny', 'loj_app_qr'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';

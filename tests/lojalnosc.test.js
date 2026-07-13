@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 14 wpisów-wypełniaczy na init fabryki (CREATE ×11 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 14 }, () => ({ rows: [] }));
+// 15 wpisów-wypełniaczy na init fabryki (CREATE ×12 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 15 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -1170,6 +1170,88 @@ describe('POST /api/klub/kosmetyki', () => {
         const db = mockDbAlways([]);
         const res = await request(buildApp(db)).post('/api/klub/kosmetyki').send({ session: 'abc.def' });
         expect(res.body.code).toBe('SESJA');
+    });
+});
+
+describe('Kod aktywacyjny od recepcji', () => {
+    // ── Panel: generowanie kodu (admin) ──
+    test('loj_kod_aktywacyjny generuje 4-znakowy kod dla numeru z kartoteki', async () => {
+        const db = mockDb(
+            ...INIT,
+            FEATURE_ON,                                                                    // maFeatureLubBlad
+            ROLA_ADMIN,                                                                    // wymagajAdmina
+            { rows: [{ id_klienta: '42', imie_nazwisko: 'Anna Kowalska', telefon: '500 123 456', status: '', zmarly: 0 }] }, // Klienci
+            { rows: { affectedRows: 0 } },                                                 // UPDATE anuluj poprzednie kody
+            { rows: [] },                                                                  // sprawdzenie kolizji (brak)
+            { rows: { affectedRows: 1 } },                                                 // INSERT kod
+            { rows: [] },                                                                  // kontoRows
+            { rows: { affectedRows: 1 } }                                                  // zapiszLog
+        );
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_kod_aktywacyjny', tenant_id: 't-kod-gen', id_klienta: '42', user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('success');
+        expect(res.body.kod).toMatch(/^[A-Z0-9]{4}$/);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Kody/.test(c[0]));
+        expect(ins[1][0]).toBe('t-kod-gen');
+        expect(ins[1][1]).toBe('42');
+        expect(ins[1][3]).toBe('500123456');   // telefon znormalizowany
+    });
+
+    test('recepcja NIE wygeneruje kodu (RBAC admin)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_kod_aktywacyjny', tenant_id: 't-kod-r', id_klienta: '42', user_log: 'Recepcja'
+        });
+        expect(res.body.status).toBe('error');
+    });
+
+    // ── Apka: aktywacja kodem (numer + kod + PIN) ──
+    test('poprawny numer + kod + PIN → konto i sesja; kod oznaczony UZYTY', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ id: 1, tenant_id: 't-kod', id_klienta: '42', kod: '7K2M', proby: 0 }] },  // kody dla numeru
+            { rows: [{ imie_nazwisko: 'Anna Kowalska', telefon: '500123456', status: '', zmarly: 0 }] }, // Klienci
+            { rows: [] },                          // juzTu (pinDoOdziedziczenia)
+            { rows: [] },                          // inne
+            { rows: { affectedRows: 1 } },         // INSERT konta
+            { rows: { affectedRows: 1 } },         // UPDATE kod UZYTY
+            { rows: { affectedRows: 1 } }          // zapiszLog
+        );
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj_kod')
+            .send({ telefon: '500 123 456', kod: '7k2m', pin: '1234', zgoda: true });  // małe litery kodu — normalizowane
+        expect(res.body.status).toBe('success');
+        expect(res.body.session).toBeTruthy();
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]));
+        expect(bcrypt.compareSync('1234', ins[1][3])).toBe(true);
+        expect(db.query.mock.calls.some(c => /Lojalnosc_Kody SET status = 'UZYTY'/.test(c[0]))).toBe(true);
+    });
+
+    test('zły kod → odmowa i licznik prób rośnie; konto nie powstaje', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ id: 5, tenant_id: 't-kod', id_klienta: '9', kod: 'AAAA', proby: 0 }] },  // aktywny kod numeru, ale inny
+            { rows: { affectedRows: 1 } }          // UPDATE proby (bezpiecznik)
+        );
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj_kod')
+            .send({ telefon: '500123456', kod: 'ZZZZ', pin: '1234', zgoda: true });
+        expect(res.body.status).toBe('error');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]))).toBe(false);
+        expect(db.query.mock.calls.some(c => /Lojalnosc_Kody SET proby/.test(c[0]))).toBe(true);
+    });
+
+    test('brak aktywnego kodu dla numeru → odmowa', async () => {
+        const db = mockDb(...INIT, { rows: [] });
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj_kod')
+            .send({ telefon: '500123456', kod: '7K2M', pin: '1234', zgoda: true });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('brak zgody na regulamin → odmowa (bez zapytań do bazy)', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj_kod')
+            .send({ telefon: '500123456', kod: '7K2M', pin: '1234' });
+        expect(res.body.status).toBe('error');
     });
 });
 

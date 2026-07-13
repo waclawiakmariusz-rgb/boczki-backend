@@ -259,7 +259,18 @@
     <button class="btn" id="log-btn" onclick="zaloguj()">Zaloguj się</button>
     <div class="err" id="log-err"></div>
     <button class="btn ghost" id="log-rejestracja" style="display:none;" onclick="startRejestracja(localStorage.getItem('klub_rej'))">Nie masz konta? Załóż je</button>
-    <div class="muted" id="log-brak-konta" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod QR przy najbliższej wizycie.</div>
+    <button class="btn ghost" onclick="pokazKodBox()" style="margin-top:10px;">Mam kod od recepcji</button>
+    <div class="muted" id="log-brak-konta" style="margin-top:10px;">Nie masz konta? Poproś recepcję o kod do aplikacji przy najbliższej wizycie.</div>
+    <div id="kod-box" style="display:none; margin-top:10px; text-align:left;">
+      <div class="muted">Wpisz numer telefonu i kod, który podała recepcja, a potem ustaw swój PIN.</div>
+      <input type="tel" id="kod-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
+      <input type="text" id="kod-kod" maxlength="8" placeholder="Kod od recepcji" autocomplete="off" style="text-transform:uppercase; letter-spacing:3px;">
+      <input type="password" id="kod-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
+      <input type="password" id="kod-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+      <label class="chk-row"><input type="checkbox" id="kod-zgoda"><span>Akceptuję regulamin programu lojalnościowego salonu.</span></label>
+      <div class="err" id="kod-err"></div>
+      <button class="btn" id="kod-btn" onclick="aktywujKodem()" style="margin-top:4px;">Aktywuj konto</button>
+    </div>
     <button class="link-btn" onclick="pokazResetPin()">Nie pamiętam PIN-u</button>
     <div id="reset-box" style="display:none; margin-top:10px; text-align:left;">
       <div class="muted">Podaj numer telefonu — salon wyśle Ci SMS z linkiem do ustawienia nowego PIN-u.</div>
@@ -921,6 +932,41 @@ function pokazResetPin() {
   box.style.display = box.style.display === 'none' ? 'block' : 'none';
   const tel = document.getElementById('log-tel').value.trim();
   if (tel) document.getElementById('reset-tel').value = tel;
+}
+
+// ── Aktywacja krótkim kodem od recepcji (numer + kod + PIN) ──
+function pokazKodBox() {
+  const box = document.getElementById('kod-box');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+  const tel = document.getElementById('log-tel').value.trim();
+  if (tel) document.getElementById('kod-tel').value = tel;
+  if (box.style.display === 'block') document.getElementById('kod-kod').focus();
+}
+async function aktywujKodem() {
+  const tel = document.getElementById('kod-tel').value.trim();
+  const kod = document.getElementById('kod-kod').value.trim();
+  const pin = document.getElementById('kod-pin').value.trim();
+  const pin2 = document.getElementById('kod-pin2').value.trim();
+  const zgoda = document.getElementById('kod-zgoda').checked;
+  const err = document.getElementById('kod-err');
+  err.textContent = '';
+  if (tel.replace(/\D/g, '').length < 9) { err.textContent = 'Podaj poprawny numer telefonu.'; return; }
+  if (kod.length < 3) { err.textContent = 'Wpisz kod od recepcji.'; return; }
+  if (!/^\d{4,6}$/.test(pin)) { err.textContent = 'Ustaw PIN: 4–6 cyfr.'; return; }
+  if (pin !== pin2) { err.textContent = 'PIN-y różnią się od siebie.'; return; }
+  if (!zgoda) { err.textContent = 'Zaakceptuj regulamin programu.'; return; }
+  const btn = document.getElementById('kod-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/aktywuj_kod', { telefon: tel, kod: kod, pin: pin, zgoda: true });
+    if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się aktywować konta.'; return; }
+    zapiszBundle([]);                              // start od czysta — nowa tożsamość na tym urządzeniu
+    localStorage.setItem(LS_SESJA, d.session);
+    swiezaAktywacja = true;
+    if (d.pin_dziedziczony) setTimeout(() => toast('Użyliśmy Twojego dotychczasowego PIN-u z aplikacji.'), 900);
+    wczytajKonto();
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
 }
 async function wyslijResetPin() {
   const tel = document.getElementById('reset-tel').value.trim();

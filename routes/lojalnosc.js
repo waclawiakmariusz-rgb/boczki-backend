@@ -50,6 +50,9 @@ const BOCZKI_TENANT = 'boczki-salon-glowny-001';
 const MAX_RECZNE = 1000;           // limit pojedynczej ręcznej korekty punktów
 const FEATURE_CACHE_TTL_MS = 60 * 1000;
 const AKTYWACJA_TTL_MS = 7 * 24 * 60 * 60 * 1000;   // link aktywacyjny: 7 dni
+const KOD_AKT_DL = 4;                               // długość kodu aktywacyjnego od recepcji
+const KOD_AKT_TTL_MS = 6 * 60 * 60 * 1000;          // kod aktywacyjny ważny 6 h
+const KOD_AKT_MAX_PROBY = 5;                        // po tylu błędnych próbach kod się spala
 const SESJA_TTL_MS = 90 * 24 * 60 * 60 * 1000;      // sesja klienta w apce: 90 dni
 const SESJA_ODSWIEZ_MS = 30 * 24 * 60 * 60 * 1000;  // odśwież token, gdy zostało < 30 dni
 const BCRYPT_ROUNDS = 10;
@@ -549,11 +552,28 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Wnioski:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Kody (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      kod VARCHAR(8) NOT NULL,
+      telefon VARCHAR(20) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'NOWY',
+      proby INT DEFAULT 0,
+      expires_at DATETIME NULL,
+      utworzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_kod (tenant_id, kod, status),
+      KEY idx_tel (telefon, status),
+      KEY idx_klient (tenant_id, id_klienta)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kody:', e.message);
+  });
   // Collation MUSI zgadzać się z rdzeniem Estelio (Klienci = utf8mb4_unicode_ci),
   // inaczej JOIN-y padają na "Illegal mix of collations". Konwertujemy istniejące
   // tabele tylko gdy trzeba (jeden SELECT do information_schema przy starcie).
   const LOJ_TABELE = ['Lojalnosc_Punkty', 'Lojalnosc_Ustawienia', 'Lojalnosc_Konta', 'Lojalnosc_Nagrody',
-    'Lojalnosc_Odbiory', 'Lojalnosc_Promocje', 'Lojalnosc_Zgloszenia', 'Lojalnosc_Push', 'Lojalnosc_Kampanie', 'Lojalnosc_Wnioski'];
+    'Lojalnosc_Odbiory', 'Lojalnosc_Promocje', 'Lojalnosc_Zgloszenia', 'Lojalnosc_Push', 'Lojalnosc_Kampanie', 'Lojalnosc_Wnioski', 'Lojalnosc_Kody'];
   db.query(
     `SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (${LOJ_TABELE.map(() => '?').join(',')})`,
@@ -1185,6 +1205,61 @@ module.exports = (db) => {
         );
       }));
 
+    } else if (action === 'loj_kod_aktywacyjny') {
+      // Krótki kod (4 znaki) do wpisania w apce — recepcja na komputerze odczytuje go
+      // klientce, ta wpisuje NUMER + KOD u siebie i ustawia PIN. Kod wiąże się z numerem
+      // z kartoteki, jest jednorazowy, krótko ważny i spala się po kilku błędach —
+      // dlatego mimo 4 znaków jest praktycznie nie do zgadnięcia (jak PIN karty).
+      const idK = String(d.id_klienta || '').trim();
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      if (!idK) return res.json({ status: 'error', message: 'Brak id_klienta' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const rows = await q(`SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, idK]);
+          const klient = Array.isArray(rows) ? rows[0] : null;
+          if (!klient) return res.json({ status: 'error', message: 'Nie znaleziono klienta w kartotece.' });
+          if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Konto Klubu niedostępne dla tego klienta (status kartoteki).' });
+          const tel = normalizujTelefon(klient.telefon);
+          if (tel.length < 9) return res.json({ status: 'error', message: 'Klientka nie ma poprawnego numeru w kartotece — uzupełnij numer, żeby wydać kod.' });
+          await q(`UPDATE Lojalnosc_Kody SET status = 'ANULOWANY' WHERE tenant_id = ? AND id_klienta = ? AND status = 'NOWY'`, [tenant_id, idK]).catch(() => {});
+          let kod = null;
+          for (let i = 0; i < 12; i++) {
+            let k = '';
+            for (let j = 0; j < KOD_AKT_DL; j++) k += KOD_ZNAKI[Math.floor(Math.random() * KOD_ZNAKI.length)];
+            const kol = await q(`SELECT id FROM Lojalnosc_Kody WHERE tenant_id = ? AND kod = ? AND status = 'NOWY' AND expires_at > NOW() LIMIT 1`, [tenant_id, k]).catch(() => []);
+            if (!(Array.isArray(kol) && kol.length)) { kod = k; break; }
+          }
+          if (!kod) return res.json({ status: 'error', message: 'Nie udało się wygenerować kodu — spróbuj ponownie.' });
+          await q(
+            `INSERT INTO Lojalnosc_Kody (tenant_id, id_klienta, kod, telefon, status, proby, expires_at, utworzyl)
+             VALUES (?, ?, ?, ?, 'NOWY', 0, FROM_UNIXTIME(?), ?)`,
+            [tenant_id, idK, kod, tel, Math.floor((Date.now() + KOD_AKT_TTL_MS) / 1000), kto.slice(0, 120)]
+          );
+          const kontoRows = await q(`SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, idK]).catch(() => []);
+          zapiszLog(tenant_id, 'KLUB KOD AKTYWACYJNY', kto, `Klient ${idK} (${klient.imie_nazwisko || ''})`);
+          return res.json({
+            status: 'success', kod,
+            klient: klient.imie_nazwisko || '',
+            telefon_masked: tel.replace(/\d(?=\d{3})/g, '•'),
+            wazny_godz: Math.round(KOD_AKT_TTL_MS / 3600000),
+            ma_konto: (Array.isArray(kontoRows) && kontoRows.length) ? 1 : 0
+          });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      }));
+
+    } else if (action === 'loj_app_qr') {
+      // Stały QR/plakat do apki (bez tokenu) — do wydruku i powieszenia na ladzie.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+          const host = req.get('host');
+          const url = `${proto}://${host}/klub.html`;
+          const qr = await QRCode.toDataURL(url, { margin: 1, width: 360 });
+          return res.json({ status: 'success', url, qr });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      }));
+
     } else if (action === 'loj_nagroda_zapisz') {
       // Insert (bez id) lub update (z id). Zdjęcie: URL (upload plików = później).
       const kto = String(d.user_log || d.pracownik || '').trim();
@@ -1557,6 +1632,61 @@ module.exports = (db) => {
       return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
     } catch (e) {
       console.error('[lojalnosc] aktywuj:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
+  // Aktywacja krótkim kodem od recepcji: NUMER + KOD + PIN. Kod musi pasować do numeru
+  // (wiązanie z kartoteką), być NOWY i nieprzeterminowany. Po kilku błędach kod się spala.
+  // loginLimiter chroni przed enumeracją; dzięki temu 4-znakowy kod jest bezpieczny.
+  router.post('/klub/aktywuj_kod', loginLimiter, async (req, res) => {
+    const d = req.body || {};
+    const tel = normalizujTelefon(d.telefon);
+    const kod = String(d.kod || '').trim().toUpperCase().replace(/\s/g, '');
+    const pin = String(d.pin || '').trim();
+    if (tel.length < 9) return res.json({ status: 'error', message: 'Podaj poprawny numer telefonu.' });
+    if (kod.length < 3) return res.json({ status: 'error', message: 'Podaj kod od recepcji.' });
+    if (!d.zgoda) return res.json({ status: 'error', message: 'Wymagana akceptacja regulaminu programu.' });
+    const zle = () => res.json({ status: 'error', message: 'Zły numer lub kod, albo kod wygasł. Poproś recepcję o nowy.' });
+    try {
+      const kody = await q(
+        `SELECT id, tenant_id, id_klienta, kod, proby FROM Lojalnosc_Kody
+          WHERE telefon = ? AND status = 'NOWY' AND expires_at > NOW() LIMIT 10`,
+        [tel]
+      ).catch(() => []);
+      const lista = Array.isArray(kody) ? kody : [];
+      const trafiony = lista.find(k => String(k.kod).toUpperCase() === kod);
+      if (!trafiony) {
+        // bezpiecznik: po zbyt wielu błędach spal aktywne kody tego numeru
+        for (const k of lista) {
+          const proby = (Number(k.proby) || 0) + 1;
+          if (proby >= KOD_AKT_MAX_PROBY) await q(`UPDATE Lojalnosc_Kody SET status = 'ANULOWANY' WHERE id = ?`, [k.id]).catch(() => {});
+          else await q(`UPDATE Lojalnosc_Kody SET proby = ? WHERE id = ?`, [proby, k.id]).catch(() => {});
+        }
+        return zle();
+      }
+      const kRows = await q(`SELECT imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [trafiony.tenant_id, String(trafiony.id_klienta)]);
+      const klient = Array.isArray(kRows) ? kRows[0] : null;
+      if (!klientAktywny(klient)) { await q(`UPDATE Lojalnosc_Kody SET status = 'ANULOWANY' WHERE id = ?`, [trafiony.id]).catch(() => {}); return zle(); }
+      // PIN dziedziczony, jeśli numer ma już konto w innym salonie (jeden PIN na numer)
+      const odziedziczony = await pinDoOdziedziczenia(tel, trafiony.tenant_id, String(trafiony.id_klienta));
+      let hash = odziedziczony;
+      if (!hash) {
+        if (!/^\d{4,6}$/.test(pin)) return res.json({ status: 'error', message: 'Ustaw PIN: 4–6 cyfr.' });
+        hash = await bcrypt.hash(pin, BCRYPT_ROUNDS);
+      }
+      await q(
+        `INSERT INTO Lojalnosc_Konta (tenant_id, id_klienta, telefon, pin_hash, status, zgoda_regulamin_at)
+         VALUES (?, ?, ?, ?, 'AKTYWNE', NOW())
+         ON DUPLICATE KEY UPDATE telefon = VALUES(telefon), pin_hash = VALUES(pin_hash), status = 'AKTYWNE', zgoda_regulamin_at = NOW()`,
+        [trafiony.tenant_id, String(trafiony.id_klienta), tel, hash]
+      );
+      await q(`UPDATE Lojalnosc_Kody SET status = 'UZYTY' WHERE id = ?`, [trafiony.id]).catch(() => {});
+      zapiszLog(trafiony.tenant_id, 'KLUB AKTYWACJA KODEM', 'Klient (apka)', `Klient ${trafiony.id_klienta}${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
+      const session = makeKlubToken({ t: trafiony.tenant_id, k: String(trafiony.id_klienta), typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
+      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
+    } catch (e) {
+      console.error('[lojalnosc] aktywuj_kod:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
     }
   });

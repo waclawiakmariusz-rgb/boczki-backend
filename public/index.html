@@ -7946,7 +7946,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
                                     <div style="font-size:15px; font-weight:700; color:#2c3242;">💎 <span id="klub-nazwa">Klub</span></div>
                                     <div style="display:flex; gap:6px;">
-                                        <button onclick="loj_generujAktywacje()" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">📲 Aplikacja</button>
+                                        <button onclick="loj_generujKod()" style="background:#c54f7f; border:1px solid #c54f7f; color:#fff; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">🔢 Kod do apki</button>
+                                        <button onclick="loj_generujAktywacje()" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">📲 QR</button>
                                         <button onclick="loj_toggleReczne()" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer;">± Punkty</button>
                                     </div>
                                 </div>
@@ -8306,6 +8307,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <div class="klubadm-pod">Publiczny, bezterminowy link do zakładania kont — do bio na Instagramie, relacji i ulotek. Nowa osoba dostaje konto od ręki, istniejąca klientka trafia do „Do obsłużenia".</div>
                             <button onclick="klubadm_linkRejestracyjny()" class="klubadm-drugi" style="margin-top:14px;">Pokaż link i kod QR</button>
                             <div id="klubadm-rejlink-area" style="display:none; margin-top:12px;"></div>
+                        </div>
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h">QR na ladę (plakat)</div>
+                            <div class="klubadm-pod">Stały kod QR do aplikacji — wydrukuj i połóż przy recepcji. Klientka skanuje go swoim telefonem, żeby otworzyć apkę, a potem wpisuje krótki kod, który jej podasz. Kod QR jest stały i nie zawiera żadnych danych.</div>
+                            <button onclick="klubadm_appQr()" class="klubadm-drugi" style="margin-top:14px;">Pokaż QR na ladę</button>
+                            <div id="klubadm-appqr-area" style="display:none; margin-top:12px;"></div>
                         </div>
                     </div>
                 </div>
@@ -30990,6 +30997,31 @@ function loj_profilTab(idKlienta) {
   loj_zaladuj(idKlienta);
 }
 
+// Krótki kod (4 znaki) do wpisania w apce — recepcja odczytuje klientce (bez pokazywania QR z monitora)
+async function loj_generujKod() {
+  const area = document.getElementById('klub-aktywacja-area');
+  if (!area) return;
+  area.style.display = 'block';
+  area.innerHTML = '<div style="color:#a2a7b8; font-size:12.5px; padding:6px 0;">⏳ Generuję kod…</div>';
+  try {
+    const r = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'loj_kod_aktywacyjny', id_klienta: window.aktualnyProfilKlientId, user_log: typeof currentUser !== 'undefined' ? currentUser : '' })
+    });
+    const d = await r.json();
+    if (d.status !== 'success') { area.innerHTML = '<div style="color:#b91c1c; font-size:12.5px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+    area.innerHTML =
+      (d.ma_konto ? '<div style="color:#b45309; font-size:12px; margin-bottom:6px;">⚠️ Klient ma już konto — kod pozwoli mu ustawić PIN na nowo.</div>' : '') +
+      '<div style="text-align:center; font-size:12px; color:#7b8091;">Podaj klientce ten kod. W apce wybiera „Mam kod od recepcji", wpisuje swój numer i kod, ustawia PIN.</div>' +
+      '<div style="text-align:center; font-size:34px; font-weight:900; letter-spacing:8px; color:#c54f7f; background:#fff; border:1.5px dashed #e8c6d4; border-radius:12px; padding:12px; margin:10px 0;">' + escHtml(d.kod) + '</div>' +
+      '<div style="text-align:center; font-size:11.5px; color:#a2a7b8;">Dla numeru ' + escHtml(d.telefon_masked || '') + ' · ważny ' + (d.wazny_godz || 6) + ' h · jednorazowy</div>' +
+      '<div style="margin-top:8px; display:flex; gap:8px;">' +
+      '<button onclick="navigator.clipboard.writeText(\'' + escHtml(d.kod) + '\').then(()=>alert(\'Skopiowano kod.\'))" style="flex:1; background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:8px 0; font-size:12px; font-weight:700; cursor:pointer;">📋 Kopiuj kod</button>' +
+      '<button onclick="document.getElementById(\'klub-aktywacja-area\').style.display=\'none\'" style="background:#fff; border:1px solid #efe5e8; color:#7b8091; border-radius:10px; padding:8px 14px; font-size:12px; font-weight:700; cursor:pointer;">Zamknij</button>' +
+      '</div>';
+  } catch (e) { area.innerHTML = '<div style="color:#b91c1c; font-size:12.5px;">Błąd połączenia: ' + escHtml(e.message) + '</div>'; }
+}
+
 // Jednorazowy QR/link aktywacyjny apki klienta (ważny 7 dni)
 async function loj_generujAktywacje() {
   const area = document.getElementById('klub-aktywacja-area');
@@ -31196,6 +31228,45 @@ async function klubadm_linkRejestracyjny() {
     + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.url).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano link.\'))" style="margin-top:8px; background:#f1f5f9; border:0; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj link</button>'
     + '<div style="font-size:11.5px; color:#9ca3af; margin-top:8px;">Link jest bezterminowy — możesz go używać wszędzie. QR nadaje się też na ulotkę czy naklejkę przy recepcji.</div>'
     + '</div></div>';
+}
+
+// Stały QR do aplikacji na ladę (plakat)
+let klubadm_appQrLast = null;
+async function klubadm_appQr() {
+  const area = document.getElementById('klubadm-appqr-area');
+  area.style.display = 'block';
+  area.innerHTML = '<div style="color:#9ca3af; font-size:13px;">⏳ Generuję…</div>';
+  const d = await klubadm_apiPost({ action: 'loj_app_qr' }).catch(() => null);
+  if (!d || d.status !== 'success') { area.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  klubadm_appQrLast = d;
+  area.innerHTML =
+    '<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">'
+    + '<img src="' + d.qr + '" alt="QR do aplikacji" style="width:200px; border:1px solid #e2e8f0; border-radius:12px; background:#fff;">'
+    + '<div style="flex:1; min-width:220px;">'
+    + '<div style="font-size:12px; font-weight:700; color:#475569; margin-bottom:5px;">Adres aplikacji:</div>'
+    + '<textarea readonly onclick="this.select()" style="width:100%; box-sizing:border-box; height:50px; padding:8px; border:1px solid #e2e8f0; border-radius:8px; font-size:11.5px; font-family:monospace; resize:none;">' + escHtml(d.url) + '</textarea>'
+    + '<button onclick="klubadm_appQrDruk()" style="margin-top:8px; background:#c54f7f; color:#fff; border:0; border-radius:8px; padding:9px 16px; font-size:13px; font-weight:700; cursor:pointer;">🖨️ Drukuj plakat</button>'
+    + '<div style="font-size:11.5px; color:#9ca3af; margin-top:8px;">Wydrukuj, wytnij i połóż przy recepcji. QR jest stały — nie zawiera żadnych danych klienta.</div>'
+    + '</div></div>';
+}
+function klubadm_appQrDruk() {
+  const d = klubadm_appQrLast;
+  if (!d) return;
+  const w = window.open('', '_blank');
+  if (!w) { alert('Zezwól na wyskakujące okna, aby wydrukować plakat.'); return; }
+  const nazwa = (document.getElementById('klub-nazwa') && document.getElementById('klub-nazwa').textContent) || 'Klub';
+  w.document.write(
+    '<html><head><meta charset="utf-8"><title>Plakat — aplikacja ' + escHtml(nazwa) + '</title></head>'
+    + '<body style="text-align:center; font-family:sans-serif; padding:48px 24px; color:#2c3242;">'
+    + '<div style="font-size:14px; letter-spacing:3px; text-transform:uppercase; color:#c54f7f; font-weight:800;">' + escHtml(nazwa) + '</div>'
+    + '<h1 style="font-size:30px; margin:10px 0 6px;">Zeskanuj i zbieraj punkty</h1>'
+    + '<div style="font-size:15px; color:#555; margin-bottom:22px;">Otwórz aplikację telefonem, a resztę załatwisz przy recepcji.</div>'
+    + '<img src="' + d.qr + '" style="width:340px; max-width:80%;">'
+    + '<div style="font-size:13px; color:#888; margin-top:16px;">' + escHtml(d.url) + '</div>'
+    + '<scr' + 'ipt>window.onload=function(){setTimeout(function(){window.focus();window.print();},300)};</scr' + 'ipt>'
+    + '</body></html>'
+  );
+  w.document.close();
 }
 
 // ── Nagrody ──
