@@ -33065,7 +33065,7 @@ body.dark-mode .est-typing { background: #0f172a; }
             <button class="est-sug" onclick="estAsk('Co to są zadatki?')">💳 Zadatki</button>
             <button class="est-sug" onclick="estAsk('Magazyn — pilnowanie zapasów')">📦 Magazyn</button>
             <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
-            <button class="est-sug" onclick="window.open('/Estelio_Przewodnik_Pracownik_2026-06-08.html','_blank')">📖 Pełny przewodnik</button>
+            <button class="est-sug" onclick="window.open('/estelio_pomoc_f.html','_blank')">📖 Pełny przewodnik</button>
         </div>
 
         <div id="est-help-input-row">
@@ -33100,16 +33100,23 @@ const EST_KB = [];
    UWAGA: przy publikacji nowej datowanej wersji przewodnika trzeba
    podmienić EST_GUIDE_URL (jedno miejsce).
    ---------------------------------------------------------- */
-const EST_GUIDE_URL = '/Estelio_Przewodnik_Pracownik_2026-06-08.html';
+const EST_GUIDE_URL = '/estelio_pomoc_f.html';
 let EST_KB_GUIDE = [];
 
 // Mapa: id sekcji w przewodniku → kategoria (do EST_SECTION_TO_CAT bonusu)
 const EST_GUIDE_CAT_MAP = {
     logowanie: 'Ogólne', pulpit: 'Ogólne', sprzedaz: 'Sprzedaż',
-    zadatki: 'Sprzedaż', kosmetyki: 'Sprzedaż', klienci: 'Klienci',
-    urodziny: 'Klienci', dokumenty: 'Klienci', magazyn: 'Magazyn',
+    zadatki: 'Sprzedaż', kosmetyki: 'Sprzedaż', zwroty: 'Sprzedaż', karnety: 'Sprzedaż',
+    klienci: 'Klienci', urodziny: 'Klienci', dokumenty: 'Klienci', magazyn: 'Magazyn',
     inwentaryzacja: 'Magazyn', zadania: 'Ogólne', konsultacje: 'Sprzedaż',
-    zebranie: 'Analityka', retencja: 'Analityka', wskazowki: 'Ogólne', faq: 'Ogólne'
+    zebranie: 'Analityka', retencja: 'Analityka',
+    'admin-przeglad': 'Ogólne', 'admin-dostepy': 'Ogólne', 'admin-katalog': 'Sprzedaż',
+    'admin-rabaty': 'Sprzedaż', 'admin-sugestie': 'Sprzedaż', 'admin-dodatki': 'Ogólne',
+    'dodatek-foto': 'Klienci', 'dodatek-klub': 'Klienci', 'dodatek-platnosc': 'Sprzedaż',
+    analiza: 'Analityka', 'analiza-pracownik': 'Analityka', targety: 'Analityka',
+    koszty: 'Analityka', dziennik: 'Analityka', rozliczenia: 'Ogólne', esti: 'Ogólne',
+    'role-start': 'Ogólne', slowniczek: 'Ogólne', bezpieczenstwo: 'Ogólne',
+    wskazowki: 'Ogólne', faq: 'Ogólne'
 };
 
 // Krótkie słowa (<4 znaki) które MIMO TO są znaczące — bez tej listy
