@@ -221,6 +221,10 @@ app.get('/blog/:slug', (req, res, next) => {
 // Stary /klub.html DALEJ działa (statyka) — nie tłuczemy wysłanych linków, QR i zainstalowanych PWA.
 app.get(['/klub', '/klub/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'klub.html')));
 
+// Ładny adres przewodnika/pomocy: /pomoc i /pomoc/ serwują estelio_pomoc_f.html (źródło Esti).
+// Stary /estelio_pomoc_f.html dalej działa (statyka).
+app.get(['/pomoc', '/pomoc/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_f.html')));
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 

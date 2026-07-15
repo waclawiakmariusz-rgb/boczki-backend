@@ -11256,7 +11256,8 @@ let wciecieLogow = "";
         // Wrapper robił JSON.parse na ich HTML-u, parse padał i podmieniał odpowiedź
         // na awaryjny JSON {"status":"error",...} — przez co Esti nigdy nie dostała
         // przewodnika i zawsze odpowiadała fallbackiem "napisz email".
-        if (/\.html(\?|#|$)/.test(urlStr)) {
+        // /pomoc/ = ładny adres przewodnika (Esti go fetchuje) — też musi ominąć wrapper.
+        if (/\.html(\?|#|$)/.test(urlStr) || /\/pomoc\//.test(urlStr)) {
             return oldFetch(...args);
         }
 
@@ -33065,7 +33066,7 @@ body.dark-mode .est-typing { background: #0f172a; }
             <button class="est-sug" onclick="estAsk('Co to są zadatki?')">💳 Zadatki</button>
             <button class="est-sug" onclick="estAsk('Magazyn — pilnowanie zapasów')">📦 Magazyn</button>
             <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
-            <button class="est-sug" onclick="window.open('/estelio_pomoc_f.html','_blank')">📖 Pełny przewodnik</button>
+            <button class="est-sug" onclick="window.open('/pomoc/','_blank')">📖 Pełny przewodnik</button>
         </div>
 
         <div id="est-help-input-row">
@@ -33100,7 +33101,7 @@ const EST_KB = [];
    UWAGA: przy publikacji nowej datowanej wersji przewodnika trzeba
    podmienić EST_GUIDE_URL (jedno miejsce).
    ---------------------------------------------------------- */
-const EST_GUIDE_URL = '/estelio_pomoc_f.html';
+const EST_GUIDE_URL = '/pomoc/';
 let EST_KB_GUIDE = [];
 
 // Mapa: id sekcji w przewodniku → kategoria (do EST_SECTION_TO_CAT bonusu)
