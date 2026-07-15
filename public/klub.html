@@ -1241,7 +1241,7 @@ function renderNagrody(nagrody, dostepne) {
   document.getElementById('pg-bar').style.width = proc + '%';
   document.getElementById('pg-info').textContent = proc >= 100
     ? 'Masz dość punktów — odbierz w zakładce Nagrody! 🎉'
-    : ('Brakuje Ci ' + (cel.koszt_pkt - dostepne) + ' pkt — to ok. ' + Math.ceil((cel.koszt_pkt - dostepne) / (dane.pkt_za_10zl || 1)) * 10 + ' zł wydane w salonie.');
+    : ('Brakuje Ci ' + (cel.koszt_pkt - dostepne) + ' pkt.');
 }
 async function odbierz(n) {
   if (!confirm('Zarezerwować nagrodę „' + n.nazwa + '" za ' + n.koszt_pkt + ' pkt?\nOdbierzesz ją w salonie, pokazując kod.')) return;
