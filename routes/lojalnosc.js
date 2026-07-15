@@ -710,7 +710,7 @@ module.exports = (db) => {
     const cel = (Array.isArray(subs) ? subs : []).filter(s =>
       idKlienci === null || idKlienci.includes(String(s.id_klienta)));
     if (!webpush || !cel.length) return { dostarczono: 0, subskrypcji: cel.length };
-    const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html', image: img || '' });
+    const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub/', image: img || '' });
     let ok = 0;
     await Promise.all(cel.map(s =>
       webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, payload)
@@ -1151,7 +1151,7 @@ module.exports = (db) => {
           const token = makeKlubToken({ t: tenant_id, k: 'rejestracja', typ: 'rej', exp: Date.now() + 10 * 365 * 24 * 60 * 60 * 1000 });
           const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
           const host = req.get('host');
-          const url = `${proto}://${host}/klub.html?r=${encodeURIComponent(token)}`;
+          const url = `${proto}://${host}/klub/?r=${encodeURIComponent(token)}`;
           const qr = await QRCode.toDataURL(url, { margin: 1, width: 320 });
           return res.json({ status: 'success', url, qr });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
@@ -1175,7 +1175,7 @@ module.exports = (db) => {
           const token = makeKlubToken(payload);
           const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
           const host = req.get('host');
-          const url = `${proto}://${host}/klub.html?a=${encodeURIComponent(token)}`;
+          const url = `${proto}://${host}/klub/?a=${encodeURIComponent(token)}`;
           const telKartoteka = String(klient.telefon || '').trim();
           const trescSms = String(wniosek.typ) === 'RESET'
             ? `Twoj link do ustawienia nowego PIN-u w programie lojalnosciowym: ${url} (wazny 7 dni)`
@@ -1233,7 +1233,7 @@ module.exports = (db) => {
               const token = makeKlubToken(payload);
               const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
               const host = req.get('host');
-              const url = `${proto}://${host}/klub.html?a=${encodeURIComponent(token)}`;
+              const url = `${proto}://${host}/klub/?a=${encodeURIComponent(token)}`;
               const qr = await QRCode.toDataURL(url, { margin: 1, width: 320 });
               zapiszLog(tenant_id, 'KLUB LINK AKTYWACYJNY', kto, `Klient ${idK} (${klient.imie_nazwisko || ''})${(Array.isArray(konto) && konto.length) ? ' — reset PIN (konto istniało)' : ''}`);
               return res.json({
@@ -1296,7 +1296,7 @@ module.exports = (db) => {
         try {
           const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
           const host = req.get('host');
-          const url = `${proto}://${host}/klub.html`;
+          const url = `${proto}://${host}/klub/`;
           const qr = await QRCode.toDataURL(url, { margin: 1, width: 360 });
           return res.json({ status: 'success', url, qr });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
@@ -1495,7 +1495,7 @@ module.exports = (db) => {
             if (err) return res.json({ status: 'error', message: err.message });
             const subs = Array.isArray(rows) ? rows : [];
             if (!subs.length) return res.json({ status: 'error', message: 'Żaden klient nie włączył jeszcze powiadomień w apce.' });
-            const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub.html' });
+            const payload = JSON.stringify({ title: tytul, body: tresc, url: '/klub/' });
             let ok = 0, martwe = 0;
             await Promise.all(subs.map(s =>
               webpush.sendNotification(

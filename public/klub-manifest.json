@@ -2,7 +2,7 @@
   "name": "Klub",
   "short_name": "Klub",
   "description": "Program lojalnościowy Twojego salonu",
-  "start_url": "/klub.html",
+  "start_url": "/klub/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#f8f1ea",

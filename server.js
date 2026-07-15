@@ -217,6 +217,10 @@ app.get('/blog/:slug', (req, res, next) => {
   app.get(oldUrl, (req, res) => res.redirect(301, oldUrl.replace('.html', '')));
 });
 
+// Ładny adres apki Klubu: /klub i /klub/ serwują klub.html.
+// Stary /klub.html DALEJ działa (statyka) — nie tłuczemy wysłanych linków, QR i zainstalowanych PWA.
+app.get(['/klub', '/klub/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'klub.html')));
+
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));
 

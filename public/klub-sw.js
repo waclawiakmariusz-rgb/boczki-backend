@@ -6,14 +6,14 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', () => { /* passthrough — wymagany handler dla instalowalności */ });
 
 self.addEventListener('push', (event) => {
-  let dane = { title: '💎 Klub', body: 'Masz nową wiadomość od salonu.', url: '/klub.html', image: '' };
+  let dane = { title: '💎 Klub', body: 'Masz nową wiadomość od salonu.', url: '/klub/', image: '' };
   try { dane = Object.assign(dane, event.data.json()); } catch (e) { /* payload nie-JSON → domyślne */ }
   const opcje = {
     body: dane.body,
     icon: '/klub-icon.svg',
     badge: '/klub-icon.svg',
     vibrate: [200, 100, 200],
-    data: { url: dane.url || '/klub.html' }
+    data: { url: dane.url || '/klub/' }
   };
   if (dane.image) opcje.image = dane.image; // duża grafika w powiadomieniu (Android Chrome)
   event.waitUntil(self.registration.showNotification(dane.title, opcje));
@@ -21,7 +21,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/klub.html';
+  const url = (event.notification.data && event.notification.data.url) || '/klub/';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) => {
       for (const c of lista) {

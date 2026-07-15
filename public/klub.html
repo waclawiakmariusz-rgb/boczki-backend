@@ -228,7 +228,7 @@
   <button onclick="document.getElementById('browser-hint').style.display='none'" style="margin-left:4px; background:none; border:none; font-size:14px; color:#c9b98a; cursor:pointer;">✕</button>
 </div>
 
-<!-- ── Aktywacja konta (wejście z QR od recepcji: /klub.html?a=token) ── -->
+<!-- ── Aktywacja konta (wejście z QR od recepcji: /klub/?a=token) ── -->
 <div id="screen-aktywacja" class="screen center">
   <div class="logo-znak">✦</div>
   <div class="logo"><b id="akt-nazwa">Klub</b></div>
@@ -280,7 +280,7 @@
   </div>
 </div>
 
-<!-- ── Rejestracja online (wejście z publicznego linku: /klub.html?r=token) ── -->
+<!-- ── Rejestracja online (wejście z publicznego linku: /klub/?r=token) ── -->
 <div id="screen-rejestracja" class="screen center">
   <div class="logo-znak">✦</div>
   <div class="logo"><b id="rej-nazwa">Klub</b></div>
@@ -624,7 +624,7 @@ function slabaPrzegladarka() {
   return false;
 }
 function kopiujLink() {
-  const url = location.origin + '/klub.html';
+  const url = location.origin + '/klub/';
   if (navigator.clipboard) navigator.clipboard.writeText(url).then(() => toast('Skopiowano — wklej w Chrome.')).catch(() => prompt('Skopiuj adres:', url));
   else prompt('Skopiuj adres:', url);
 }
@@ -713,7 +713,7 @@ async function startRejestracja(token) {
     const reg = document.getElementById('rej-regulamin');
     if (d.regulamin_url) { reg.href = d.regulamin_url; }
     else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
-    history.replaceState(null, '', '/klub.html');
+    history.replaceState(null, '', '/klub/');
     pokaz('screen-rejestracja');
   } catch (e) {
     loader(false);
@@ -811,7 +811,7 @@ async function aktywuj() {
     if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się aktywować konta.'; return; }
     zapiszBundle([]);                              // start od czysta — paczka mogła być z innego numeru na tym urządzeniu
     localStorage.setItem(LS_SESJA, d.session);
-    history.replaceState(null, '', '/klub.html'); // sprzątamy jednorazowy token z adresu
+    history.replaceState(null, '', '/klub/'); // sprzątamy jednorazowy token z adresu
     swiezaAktywacja = true; // najlepszy moment na propozycję powiadomień — klient jest przy recepcji
     if (d.pin_dziedziczony) setTimeout(() => toast('Dołączono salon — logujesz się swoim dotychczasowym PIN-em.'), 900);
     wczytajKonto();

@@ -377,7 +377,7 @@ describe('POST /api/lojalnosc — loj_aktywacja_token', () => {
         );
         const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
         expect(res.body.status).toBe('success');
-        expect(res.body.url).toMatch(/\/klub\.html\?a=/);
+        expect(res.body.url).toMatch(/\/klub\/\?a=/);
         expect(res.body.qr).toMatch(/^data:image\/png/);
         expect(res.body.ma_konto).toBe(0);
     });
@@ -1387,7 +1387,7 @@ describe('POST /api/lojalnosc — loj_wniosek_wyslij', () => {
         });
         expect(res.body.status).toBe('success');
         expect(res.body.telefon).toBe('500 123 456');   // numer z kartoteki, nie z wniosku
-        expect(res.body.url).toMatch(/\/klub\.html\?a=/);
+        expect(res.body.url).toMatch(/\/klub\/\?a=/);
         expect(res.body.sms_uri).toMatch(/^sms:500123456\?body=/);
         expect(res.body.qr_sms).toMatch(/^data:image\/png/);
     });
