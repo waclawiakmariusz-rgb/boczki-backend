@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Klub Estelio — przewodnik dla recepcji</title>
+<style>
+  :root{
+    --bg:#f8f1ea; --panel:#fffdf9; --ink:#3b2a2f; --muted:#8a7a72; --line:#ecdfd2;
+    --primary:#6f2136; --primary2:#571a2b; --gold:#c9a227; --gold-soft:#f6eccf;
+    --green:#0f766e; --blue:#1d4ed8; --red:#c0392b;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:16px;line-height:1.62;-webkit-text-size-adjust:100%}
+  .wrap{max-width:900px;margin:0 auto;padding:0 18px 90px}
+  h1,h2,h3{font-family:Georgia,"Times New Roman",serif;color:var(--primary);line-height:1.25;font-weight:700}
+  header.top{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;padding:34px 18px 30px;text-align:center}
+  header.top .znak{font-size:30px;color:var(--gold)}
+  header.top h1{color:#fff;margin:8px 0 4px;font-size:30px}
+  header.top p{margin:0;opacity:.9;font-size:15px}
+  header.top .kto{margin-top:12px;display:inline-block;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.25);
+    border-radius:999px;padding:5px 15px;font-size:13.5px}
+  .toc{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 22px;margin:26px 0}
+  .toc h2{margin:0 0 10px;font-size:18px}
+  .toc ol{margin:0;padding-left:22px}
+  .toc a{color:var(--primary);text-decoration:none}
+  .toc a:hover{text-decoration:underline}
+  h2.sekcja{margin:44px 0 6px;font-size:24px;border-bottom:2px solid var(--gold);padding-bottom:8px}
+  h3{font-size:18.5px;margin:26px 0 6px;color:var(--primary2)}
+  p{margin:10px 0}
+  .lead{color:var(--muted);font-size:15px;margin-top:2px}
+  ul,ol{margin:10px 0;padding-left:22px}
+  li{margin:5px 0}
+  b,strong{color:var(--primary2)}
+  code{background:var(--gold-soft);border:1px solid #e8d9a8;border-radius:6px;padding:1px 6px;font-size:14px;
+    font-family:"Courier New",monospace;color:#7a5a12}
+  .scen{background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--gold);
+    border-radius:12px;padding:16px 20px;margin:18px 0;box-shadow:0 2px 10px rgba(84,48,48,.05)}
+  .scen .tag{display:inline-block;background:var(--gold-soft);color:#7a5a12;border-radius:999px;
+    padding:2px 12px;font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px}
+  .scen h3{margin:0 0 6px;font-size:17px;color:var(--primary)}
+  .kroki{counter-reset:k;list-style:none;padding-left:0;margin:12px 0}
+  .kroki li{counter-increment:k;position:relative;padding-left:38px;margin:9px 0}
+  .kroki li::before{content:counter(k);position:absolute;left:0;top:1px;width:26px;height:26px;
+    background:var(--primary);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-size:13.5px;font-weight:700;font-family:Georgia,serif}
+  .tip,.uwaga,.info{border-radius:12px;padding:13px 17px;margin:16px 0;font-size:14.7px}
+  .tip{background:#eafaf5;border:1px solid #b7e5d9;color:#0b5c53}
+  .uwaga{background:#fdecea;border:1px solid #f3c0ba;color:#8a2418}
+  .info{background:#eef4ff;border:1px solid #cad9f7;color:#1e3a8a}
+  .tip b,.uwaga b,.info b{color:inherit}
+  .pill{display:inline-block;background:var(--primary);color:#fff;border-radius:999px;padding:2px 11px;font-size:13px;font-weight:700}
+  .pill.g{background:var(--green)} .pill.b{background:var(--blue)} .pill.gold{background:var(--gold);color:#4a370a}
+  table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:10px 13px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--gold-soft);color:#6a4e12;font-family:Georgia,serif}
+  tr:last-child td{border-bottom:none}
+  .rozmowa{background:#fbf5ef;border:1px dashed #e0cdbd;border-radius:12px;padding:12px 16px;margin:12px 0;font-style:italic;color:#6b544a}
+  .rozmowa b{font-style:normal}
+  .naglowek-app{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .emoji{font-size:20px}
+  footer{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:13.5px;text-align:center}
+  a.gora{display:inline-block;margin-top:10px;color:var(--muted);text-decoration:none;font-size:13px}
+  @media print{header.top{background:var(--primary)!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .scen,.tip,.uwaga,.info,th{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="znak">✦</div>
+  <h1>Klub Estelio</h1>
+  <p>Przewodnik po aplikacji lojalnościowej — wszystkie ścieżki klientki i recepcji</p>
+  <div class="kto">Dla Marty i Ani 💛</div>
+</header>
+
+<div class="wrap">
+
+<p class="lead">Ten przewodnik pokazuje krok po kroku, jak działa Klub — co widzi klientka w aplikacji na telefonie i co robicie Wy przy ladzie. Przykłady są z życia salonu, więc traktujcie to jak ściągawkę do codziennej pracy. Nie trzeba niczego umieć na pamięć — wróćcie tu, kiedy nie wiecie, co kliknąć.</p>
+
+<div class="toc">
+  <h2>Spis treści</h2>
+  <ol>
+    <li><a href="#czym-jest">Czym jest Klub w dwóch zdaniach</a></li>
+    <li><a href="#apka">Co widzi klientka w aplikacji</a></li>
+    <li><a href="#dolaczenie">Jak klientka dołącza do Klubu (3 drogi)</a></li>
+    <li><a href="#punkty">Skąd biorą się punkty</a></li>
+    <li><a href="#nagrody">Odbiór nagrody przy ladzie</a></li>
+    <li><a href="#sytuacje">Codzienne sytuacje przy recepcji</a></li>
+    <li><a href="#panel">Panel Klubu (ustawia właścicielka)</a></li>
+    <li><a href="#wzrost">Funkcje, które nakręcają ruch</a></li>
+    <li><a href="#faq">Najczęstsze pytania i problemy</a></li>
+    <li><a href="#sciagawka">Ściągawka — szybkie akcje</a></li>
+  </ol>
+</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="czym-jest">1. Czym jest Klub w dwóch zdaniach</h2>
+<p>Klub to darmowa aplikacja na telefon klientki (nic nie instaluje ze sklepu — otwiera stronę <code>estelio.com.pl/klub</code> i „dodaje do ekranu głównego"). Za wydane w salonie pieniądze <b>sama zbiera punkty</b>, które wymienia na nagrody.</p>
+<p>Najważniejsze: <b>punkty naliczają się automatycznie z paragonów</b>. Nie musicie nic klikać ani liczyć — wystarczy, że klientka ma konto w Klubie i normalnie sprzedajecie jej zabieg. Reszta dzieje się sama.</p>
+<div class="tip"><b>Zasada numer jeden:</b> Wasza rola to głównie <b>zapisać klientkę do Klubu</b> i <b>wydać nagrodę</b>, gdy przyjdzie po odbiór. Zbieranie punktów robi system.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="apka">2. Co widzi klientka w aplikacji</h2>
+<p>Żebyście wiedziały, o czym mówi klientka („nie widzę tu punktów", „gdzie jest ta nagroda?"), oto jej ekrany:</p>
+
+<h3>🏠 Ekran główny</h3>
+<ul>
+  <li><b>Twoje punkty</b> — duża liczba, aktualne saldo. Pod spodem podpowiedź <i>„Stać Cię już na: …"</i> z najlepszą nagrodą w zasięgu.</li>
+  <li><b>Baner „🔥 Punkty ×2 do…"</b> — pojawia się tylko, gdy trwa akcja podwójnych punktów (o tym w części 8).</li>
+  <li><b>Karta poziomu</b> (Srebro / Złoto / Diament) z paskiem „do wyższego brakuje X zł" — tylko jeśli salon ma włączone poziomy.</li>
+  <li><b>Promocje</b> i <b>Wiadomości od salonu</b> — kafelki z aktualnymi akcjami.</li>
+  <li>Szybkie akcje: Nagrody, Historia, Wiadomości, „Jak to działa?".</li>
+</ul>
+
+<h3>🎁 Nagrody</h3>
+<p>Lista nagród z ceną w punktach. Na górze „Polecane" (do 3, wybiera je salon). Klientka klika nagrodę → <b>„Odbierz"</b> → aplikacja pokazuje <b>6-znakowy kod</b> (np. <code>K7RM2X</code>) i rezerwuje punkty. Z tym kodem przychodzi do Was.</p>
+
+<h3>📬 Wiadomości</h3>
+<p>Skrzynka z kampaniami od salonu (np. „Weekend −15% na masaże"). Klientka klika, żeby przeczytać całość.</p>
+
+<h3>🧴 Kosmetyki</h3>
+<p>Historia kupionych u Was kosmetyków i suplementów + przypomnienie „Może czas uzupełnić?" (gdy mija ~3–6 miesięcy od zakupu). Bez cen — sama nazwa i data.</p>
+
+<h3>💌 Poleć koleżankę</h3>
+<p>Jeśli salon włączył nagrodę za polecenia — klientka ma tu swój <b>kod polecający</b> i przycisk „Udostępnij".</p>
+
+<h3>👤 Profil</h3>
+<p>„Zmień PIN", „Jak zbierać punkty?", pytania i odpowiedzi, włączenie powiadomień, wylogowanie.</p>
+
+<div class="info"><b>Ten sam numer, kilka salonów.</b> Jeśli klientka chodzi też do innego salonu z Estelio, w aplikacji ma <b>przełącznik salonów</b> u góry — jeden login, a punkty każdego salonu osobno. PIN ma <b>jeden na numer telefonu</b>.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="dolaczenie">3. Jak klientka dołącza do Klubu (3 drogi)</h2>
+<p>To najczęstsza rzecz, którą będziecie robić. Są trzy drogi — na co dzień używajcie <b>pierwszej</b>.</p>
+
+<div class="scen">
+  <span class="tag">Droga 1 — najprostsza, przy ladzie</span>
+  <h3>Kod od recepcji (4 znaki)</h3>
+  <p>Klientka jest już w naszej kartotece (albo właśnie ją zakładacie przy sprzedaży) i chce mieć apkę.</p>
+  <ol class="kroki">
+    <li>Wejdźcie w <b>profil klientki</b> → kafel <b>Klub</b> → przycisk <b>🔢 Kod do apki</b>.</li>
+    <li>System pokaże duży <b>4-znakowy kod</b> (np. <code>H7K2</code>), ważny 6 godzin.</li>
+    <li>Podyktujcie klientce: adres <code>estelio.com.pl/klub</code>, jej <b>numer telefonu</b>, ten <b>kod</b> i niech <b>ustawi własny PIN</b>.</li>
+    <li>Gotowe — konto działa od razu, punkty zaczną się naliczać.</li>
+  </ol>
+  <div class="rozmowa"><b>Ania:</b> „Pani Kasiu, mamy aplikację, w której zbiera Pani punkty za wizyty. Proszę wejść na telefonie na estelio.com.pl/klub, wpisać swój numer i kod <b>H7K2</b>, a potem ustawić PIN — taki, żeby Pani zapamiętała."</div>
+  <div class="tip"><b>Dlaczego to bezpieczne mimo 4 znaków?</b> Kod działa tylko z <b>numerem klientki z kartoteki</b>, jest jednorazowy, wygasa po 6 h i „spala się" po 5 błędnych próbach. Jak PIN do karty.</div>
+</div>
+
+<div class="scen">
+  <span class="tag">Droga 2 — plakat / lada</span>
+  <h3>QR na ladzie</h3>
+  <p>W Ustawieniach Klubu można wydrukować <b>plakat z QR</b> (do postawienia na ladzie). Klientka skanuje telefonem, trafia do apki i zapisuje się sama. Świetne, gdy macie kolejkę i nie ma czasu dyktować kodu.</p>
+</div>
+
+<div class="scen">
+  <span class="tag">Droga 3 — z internetu (Instagram, ulotka)</span>
+  <h3>Link rejestracyjny</h3>
+  <p>Stały link/QR (z Ustawień) do wrzucenia w bio na Instagramie albo na ulotce. Kto się zapisze:</p>
+  <ul>
+    <li><b>Zupełnie nowa osoba</b> → konto zakłada się od ręki (i dostaje bonus powitalny, jeśli włączony).</li>
+    <li><b>Ktoś, kto jest już w naszej kartotece</b> → system tworzy <b>wniosek</b> (dla bezpieczeństwa nie zakłada konta od ręki). Wniosek zobaczycie w panelu w „Do obsłużenia" — wtedy wysyłacie jej link aktywacyjny na numer z kartoteki.</li>
+  </ul>
+</div>
+
+<div class="uwaga"><b>Klientka nie pamięta PIN-u?</b> W aplikacji na ekranie logowania jest „Nie pamiętam PIN-u". Zgłoszenie trafia do Was do „Do obsłużenia" — wysyłacie jej nowy link aktywacyjny, na którym ustawi PIN od nowa. <b>Nie podajcie nikomu cudzego PIN-u</b> — Wy go nie widzicie, klientka ustawia go sama.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="punkty">4. Skąd biorą się punkty</h2>
+<p>Punkty nalicza <b>system, sam, z paragonów</b> — o ile klientka <b>ma aktywne konto w Klubie</b>. Klientka bez konta nie zbiera punktów (dopóki jej nie zapiszecie).</p>
+
+<table>
+  <tr><th>Sytuacja</th><th>Co się dzieje z punktami</th></tr>
+  <tr><td>Normalna sprzedaż zabiegu / kosmetyku</td><td><b>+ punkty</b> (domyślnie 10 zł = 1 pkt, salon ustala przelicznik)</td></tr>
+  <tr><td>Zadatek / wpłata z góry</td><td><b>Bez punktów</b> — punkty dopiero przy realizacji zabiegu</td></tr>
+  <tr><td>Zwrot sprzedaży</td><td><b>− punkty</b> proporcjonalnie (system cofa sam)</td></tr>
+  <tr><td>Poprawka/usunięcie paragonu</td><td>System sam koryguje saldo</td></tr>
+  <tr><td>Trwa akcja „Punkty ×2"</td><td>Do zwykłych punktów dochodzi <b>bonus mnożnika</b></td></tr>
+  <tr><td>Prezent z automatu (urodziny itp.)</td><td><b>+ punkty</b> jako prezent — widoczne w historii</td></tr>
+  <tr><td>Polecenie koleżanki (po jej 1. wizycie)</td><td><b>+ punkty dla obu</b> pań</td></tr>
+</table>
+
+<div class="rozmowa"><b>Pani Ola:</b> „A dostałam punkty za tę zaliczkę na piątek?" <br><b>Marta:</b> „Punkty naliczą się w piątek, jak zrobimy zabieg — od zaliczki jeszcze nie, żeby się nie dublowały."</div>
+
+<div class="info"><b>Klientka pyta, ile ma punktów?</b> Ma to w apce na ekranie głównym. Wy też podejrzycie w profilu klientki (kafel Klub). Nie musicie nic dodawać ręcznie — punkty już tam są.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="nagrody">5. Odbiór nagrody przy ladzie</h2>
+<p>Klientka uzbierała punkty i chce odebrać nagrodę. W aplikacji klika „Odbierz" i pokazuje Wam <b>6-znakowy kod</b>. Wasza rola:</p>
+
+<div class="scen">
+  <span class="tag">Sytuacja przy ladzie</span>
+  <h3>Pani Wiśniewska przychodzi po darmowy masaż za punkty</h3>
+  <ol class="kroki">
+    <li>Klientka pokazuje w apce kod odbioru, np. <code>M4T9RK</code> (albo go czyta).</li>
+    <li>W panelu wejdźcie w <b>Klub → „Do obsłużenia"</b> — zobaczycie tam jej zgłoszenie z tym kodem i nazwą nagrody.</li>
+    <li>Wydajecie nagrodę (masaż) i klikacie <b>„Wydane"</b> — dopiero teraz punkty schodzą z jej konta.</li>
+    <li>Jeśli coś nie gra (pomyłka, klientka rezygnuje) — klikacie <b>„Odrzuć"</b>, a punkty wracają jej do puli.</li>
+  </ol>
+  <div class="tip"><b>Punkty rezerwują się z chwilą kliknięcia „Odbierz" w apce</b>, ale schodzą dopiero, gdy zaznaczycie „Wydane". Dzięki temu klientka nie wyda tych samych punktów dwa razy, a Wy macie kontrolę nad realnym wydaniem nagrody.</div>
+</div>
+
+<div class="uwaga"><b>Nie ma kodu na liście „Do obsłużenia"?</b> Możliwe, że klientka jeszcze nie kliknęła „Odbierz" w apce (sam kod nic nie robi, dopóki nie potwierdzi w telefonie), albo odbiór już rozliczyłyście. Poproście, żeby w apce weszła w Nagrody i potwierdziła odbiór.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="sytuacje">6. Codzienne sytuacje przy recepcji</h2>
+<p>Zebrane najczęstsze rozmowy i co wtedy zrobić.</p>
+
+<div class="scen">
+  <span class="tag">Sytuacja</span>
+  <h3>„Biorę tę promocję z aplikacji"</h3>
+  <p>Gdy klientka w apce kliknie „BIORĘ" przy promocji, u Was w „Do obsłużenia" pojawia się jej zgłoszenie. Realizujecie promocję na wizycie i oznaczacie zgłoszenie jako obsłużone.</p>
+</div>
+
+<div class="scen">
+  <span class="tag">Sytuacja</span>
+  <h3>„Mam konto, ale w innym salonie u Was to działało inaczej"</h3>
+  <p>Jeśli chodzi też do innego salonu w Estelio — to <b>ten sam login i PIN</b>, a w apce ma przełącznik salonów. U nas widzi <b>nasze</b> punkty i nagrody. Nic nie musicie robić — po prostu upewnijcie się, że jest przełączona na „Boczki".</p>
+</div>
+
+<div class="scen">
+  <span class="tag">Sytuacja</span>
+  <h3>„Kupiłam krem 3 miesiące temu, przypomniało mi się"</h3>
+  <p>To działanie zakładki <b>Kosmetyki</b> w apce — sama dostaje przypomnienie o uzupełnieniu. Możecie to wykorzystać do sprzedaży: „Widzę, że czas na nowy krem — mamy go na stanie."</p>
+</div>
+
+<div class="scen">
+  <span class="tag">Sytuacja</span>
+  <h3>„Poleciłam koleżankę, kiedy dostanę punkty?"</h3>
+  <p>Punkty (dla obu pań) naliczą się <b>automatycznie po pierwszej płatnej wizycie poleconej koleżanki</b> — nie po samym założeniu konta. Warunki: koleżanka założyła konto z jej kodem i przyszła na zabieg. Nic nie klikacie — system rozlicza to sam przy sprzedaży.</p>
+</div>
+
+<div class="scen">
+  <span class="tag">Sytuacja</span>
+  <h3>„Zwracam ten krem, co kupiłam wczoraj"</h3>
+  <p>Robicie zwrot normalnie. System sam odejmie punkty naliczone za tę sprzedaż (proporcjonalnie do kwoty zwrotu). Nie ma czym się przejmować.</p>
+</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="panel">7. Panel Klubu (ustawia właścicielka)</h2>
+<p>Konfigurację Klubu — nagrody, promocje, ceny punktów, akcje — ustawia się w panelu w sekcji <b>💎 Klub</b> (menu „Moje Estelio+"). W pilocie dostęp ma <b>konto administratora (właścicielka)</b>. Poniżej, żebyście wiedziały, co się gdzie kryje i mogły podpowiedzieć szefowej.</p>
+
+<table>
+  <tr><th>Zakładka</th><th>Do czego służy</th></tr>
+  <tr><td><b>Przegląd</b></td><td>Statystyki Klubu — ile osób, ile punktów, odbiory.</td></tr>
+  <tr><td><b>Nagrody</b></td><td>Dodawanie nagród (nazwa, koszt w punktach, zdjęcie). Można oznaczyć do 3 jako <b>Polecane</b> (widoczne na górze w apce).</td></tr>
+  <tr><td><b>Promocje</b></td><td>Akcje pokazywane w apce (opcjonalnie „promocja dnia", auto-powiadomienie na starcie, targetowanie do grupy).</td></tr>
+  <tr><td><b>Kampanie</b></td><td>Wiadomość + powiadomienie push do wybranej grupy. Można wysłać teraz albo zaplanować, edytować już wysłaną, wycofać lub skasować.</td></tr>
+  <tr><td><b>Mnożniki ×2</b></td><td>Okna „podwójnych punktów" (np. weekend). Patrz część 8.</td></tr>
+  <tr><td><b>Automaty</b></td><td>Kampanie, które wysyłają się same przy zdarzeniu (urodziny, brak wizyty…). Patrz część 8.</td></tr>
+  <tr><td><b>Poziomy</b></td><td>Srebro / Złoto / Diament wg rocznych wydatków. Patrz część 8.</td></tr>
+  <tr><td><b>Członkowie</b></td><td>Lista osób w Klubie: saldo, ostatnia wizyta, wyszukiwarka.</td></tr>
+  <tr><td><b>Do obsłużenia</b></td><td>Odbiory nagród, zgłoszenia „BIORĘ", wnioski o konto i o reset PIN. <b>To zaglądajcie codziennie.</b></td></tr>
+  <tr><td><b>Ustawienia</b></td><td>Nazwa klubu, ile punktów za 10 zł, bonus powitalny, reset roczny, nagroda za polecenie, link/QR rejestracyjny, QR na ladę.</td></tr>
+</table>
+
+<div class="info"><b>Segmenty (do kogo wysłać).</b> Przy kampaniach i promocjach można wybrać grupę: <i>wszyscy</i>, <i>saldo punktów powyżej…</i>, <i>po zabiegu…</i> albo <i>bez wizyty od X dni</i>. Dzięki temu np. akcja „wróć do nas" leci tylko do tych, których dawno nie było.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="wzrost">8. Funkcje, które nakręcają ruch</h2>
+<p>Cztery narzędzia, które sprawiają, że Klub sam przyprowadza klientki. Ustawia je właścicielka, ale warto, żebyście rozumiały, o co chodzi — bo klientki będą o to pytać.</p>
+
+<h3>🔥 Mnożnik punktów (×2)</h3>
+<p>Okno czasowe, w którym każda złotówka daje więcej punktów. W apce klientki widzą wtedy baner <b>„Punkty ×2 do niedzieli"</b>. Świetne, żeby sztucznie zrobić szczyt w martwy dzień albo w grudniu.</p>
+<div class="rozmowa"><b>Przykład:</b> Właścicielka ustawia „×2 od piątku do niedzieli". W weekend Pani Kasia wydaje 200 zł i zamiast 20 pkt dostaje 40. Klientki widzą baner i celowo umawiają się na weekend.</div>
+
+<h3>⏰ Automaty (wysyłają się same)</h3>
+<p>Ustawiane raz, działają w kółko. Każdy automat może dać klientce <b>prezent punktowy</b> i wysłać powiadomienie. Typy:</p>
+<table>
+  <tr><th>Automat</th><th>Kiedy się odpala</th><th>Przykład</th></tr>
+  <tr><td>🎂 Urodziny</td><td>W dniu urodzin klientki (rozpoznaje po numerze telefonu z kartoteki)</td><td>„Wszystkiego najlepszego! Mamy dla Ciebie prezent — zapraszamy 🎂"</td></tr>
+  <tr><td>💔 Dawno Cię nie było</td><td>Gdy od ostatniej wizyty minie np. 60 dni</td><td>„Tęsknimy! Wróć na podwójne punkty 💕"</td></tr>
+  <tr><td>🎉 Rocznica</td><td>W rocznicę pierwszej wizyty</td><td>„Rok razem! Odbierz prezent na kolejnej wizycie 🎉"</td></tr>
+  <tr><td>🏁 Blisko nagrody</td><td>Gdy do nagrody brakuje niewiele punktów</td><td>„Jesteś tuż-tuż! Wpadnij i odbierz nagrodę szybciej 🏁"</td></tr>
+  <tr><td>⭐ Awans poziomu</td><td>Gdy klientka wejdzie na wyższy poziom klubu</td><td>„Gratulacje, awans! Dziękujemy, że jesteś z nami ⭐"</td></tr>
+</table>
+<div class="uwaga"><b>Ważne przy urodzinach:</b> automat dopasowuje klientkę <b>po numerze telefonu</b> zapisanym przy dacie urodzin. Zadziała tylko, gdy klientka ma uzupełnioną datę urodzin i ten sam numer w kartotece. Dlatego warto pilnować, żeby dane w kartotece były kompletne.</div>
+
+<h3>⭐ Poziomy (Srebro / Złoto / Diament)</h3>
+<p>Poziom liczy się z <b>wydatków klientki w danym roku</b>. W apce widzi swój status i „ile brakuje do wyższego poziomu" — co ją motywuje, żeby wydać trochę więcej. Poziom nie znika, gdy skasują się punkty na koniec roku (to osobna rzecz).</p>
+<div class="rozmowa"><b>Pani Wiśniewska:</b> „Aplikacja pisze, że mam Srebro i brakuje mi 200 zł do Złota." <br><b>Ania:</b> „Tak! Na Złocie ma Pani zniżkę na każdy zabieg — warto dobić."</div>
+
+<h3>💌 Poleć koleżankę</h3>
+<p>Gdy właścicielka ustawi nagrodę za polecenie, klientka ma w apce swój <b>kod</b>. Podaje go koleżance; koleżanka zakłada konto z tym kodem i po <b>pierwszej wizycie obie dostają punkty</b>. Wszystko rozlicza się samo — Wy nic nie wpisujecie.</p>
+<div class="rozmowa"><b>Przykład:</b> Pani Ola daje koleżance kod <code>KWIAT</code>. Koleżanka zakłada konto, wpisuje kod i przychodzi na oczyszczanie. Po tej wizycie obie panie dostają np. po 50 pkt.</div>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="faq">9. Najczęstsze pytania i problemy</h2>
+
+<h3>„Nie widzę swoich punktów w aplikacji"</h3>
+<p>Sprawdźcie, czy jest zalogowana na <b>właściwy salon</b> (przełącznik u góry) i czy w ogóle <b>ma aktywne konto</b> w Klubie u nas. Punkty naliczają się tylko członkom — jeśli konto założyła dziś, punkty są od dzisiejszych paragonów.</p>
+
+<h3>„Zapisałam się z Instagrama, ale nie mam konta, tylko jakiś wniosek"</h3>
+<p>To znaczy, że jej numer był już w naszej kartotece. Wejdźcie w „Do obsłużenia", znajdźcie wniosek i wyślijcie jej link aktywacyjny (albo szybciej — dajcie kod z profilu, Droga 1).</p>
+
+<h3>„Kod odbioru nie działa"</h3>
+<p>Kod odbioru nagrody działa u <b>Was w panelu</b> („Do obsłużenia"), nie wpisuje się go w apce. Klientka tylko go pokazuje. Jeśli go nie ma na liście — patrz uwaga w części 5.</p>
+
+<h3>„Powiadomienia nie przychodzą"</h3>
+<p>Powiadomienia (push) to bonus — nie zawsze zadziałają (zależy od telefonu i zgody klientki). Nawet bez nich <b>wiadomości i prezenty są widoczne w apce</b>. Jeśli push nie działa w całym salonie, to temat dla właścicielki (klucze techniczne) — nie Wasz problem przy ladzie.</p>
+
+<h3>„Punkty się skasowały!"</h3>
+<p>Jeśli salon ma włączony <b>reset roczny</b>, punkty kasują się <b>1 stycznia</b> (i naliczają od zera). To celowe — motywuje, żeby wykorzystać punkty przed końcem roku. W apce klientka widzi „ważne do 31 grudnia". Poziom i historia zostają.</p>
+
+<h3>„Chcę zmienić PIN"</h3>
+<p>Klientka robi to sama: Profil → „Zmień PIN". Podaje stary i nowy. Wy nie ustawiacie cudzych PIN-ów.</p>
+
+<!-- ============================================================ -->
+<h2 class="sekcja" id="sciagawka">10. Ściągawka — szybkie akcje</h2>
+<table>
+  <tr><th>Chcę…</th><th>Robię…</th></tr>
+  <tr><td>Zapisać klientkę do Klubu</td><td>Profil klientki → kafel Klub → <b>🔢 Kod do apki</b> → dyktuję numer + kod + niech ustawi PIN</td></tr>
+  <tr><td>Wydać nagrodę</td><td>Klub → <b>Do obsłużenia</b> → znajdź kod → <b>Wydane</b></td></tr>
+  <tr><td>Obsłużyć „BIORĘ" z promocji</td><td>Klub → <b>Do obsłużenia</b> → oznacz obsłużone</td></tr>
+  <tr><td>Pomóc z zapomnianym PIN-em</td><td>Klientka klika „Nie pamiętam PIN-u" → wniosek w <b>Do obsłużenia</b> → wyślij link aktywacyjny</td></tr>
+  <tr><td>Sprawdzić punkty klientki</td><td>Profil klientki → kafel Klub (albo klientka w apce)</td></tr>
+  <tr><td>Naliczyć punkty za zabieg</td><td><b>Nic</b> — nalicza się same z paragonu</td></tr>
+  <tr><td>Dać komuś kod na plakacie</td><td>Wskaż <b>QR na ladzie</b> — zapisze się sama</td></tr>
+</table>
+
+<div class="tip"><b>Złota zasada:</b> gdy nie wiecie, co zrobić — zajrzyjcie do <b>„Do obsłużenia"</b>. Prawie wszystko, co wymaga Waszej reakcji (odbiory, zgłoszenia, wnioski), ląduje właśnie tam.</div>
+
+<p style="margin-top:26px">Dziękujemy, dziewczyny! Klub jest po to, żeby klientki wracały częściej i chętniej — a większość roboty robi za Was system. 💛</p>
+<a class="gora" href="#">↑ Wróć na górę</a>
+
+<footer>
+  Przewodnik po aplikacji lojalnościowej Klub Estelio · dla recepcji salonu Boczki<br>
+  Adres apki dla klientek: <b>estelio.com.pl/klub</b>
+</footer>
+
+</div>
+</body>
+</html>
