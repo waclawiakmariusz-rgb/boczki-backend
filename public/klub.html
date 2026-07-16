@@ -1053,9 +1053,7 @@ function renderAll() {
       zlEl.style.display = 'block';
     } else zlEl.style.display = 'none';
   }
-  let zasada = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
-  if (d.punkty_do) { const dtw = dataZ(d.punkty_do); if (dtw) zasada += ' · ważne do ' + dtw.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long' }); }
-  document.getElementById('m-zasada').textContent = zasada;
+  document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
   const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
   document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
   renderPromocje(d.promocje || []);
