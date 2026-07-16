@@ -31291,10 +31291,11 @@ async function klubadm_zaladujNagrody() {
     const ukryta = n.status === 'UKRYTA';
     return `<div class="klubadm-row" style="${ukryta ? 'opacity:.5;' : ''}">
       <div style="min-width:0;">
-        <b>${escHtml(n.nazwa)}</b> <span style="color:#c54f7f; font-weight:700;">${n.koszt_pkt} pkt</span>${ukryta ? ' <span style="font-size:11px; color:#b45309;">(ukryta)</span>' : ''}
+        <b>${escHtml(n.nazwa)}</b> <span style="color:#c54f7f; font-weight:700;">${n.koszt_pkt} pkt</span>${Number(n.polecana) ? ' <span style="font-size:11px; color:#d97706; font-weight:700;">★ polecana</span>' : ''}${ukryta ? ' <span style="font-size:11px; color:#b45309;">(ukryta)</span>' : ''}
         <div style="font-size:12px; color:#9ca3af;">${n.ilosc == null ? 'bez limitu' : 'limit: ' + n.ilosc}${n.oczekuje > 0 ? ' · czeka: ' + n.oczekuje : ''}${n.wydane > 0 ? ' · wydano: ' + n.wydane : ''}</div>
       </div>
       <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:${Number(n.polecana) ? '#fffbeb' : '#f8fafc'}; color:#b45309;" onclick="klubadm_togglePolecana(${n.id}, ${Number(n.polecana) ? 0 : 1})" title="Polecane widać na ekranie głównym apki (max 3)">${Number(n.polecana) ? '★ Polecana' : '☆ Poleć'}</button>
         <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujNagrode(${n.id})">✏️ Edytuj</button>
         <button class="klubadm-btn" style="background:#f8fafc; color:#475569;" onclick="klubadm_statusNagrody(${n.id}, '${ukryta ? 'AKTYWNA' : 'UKRYTA'}')">${ukryta ? 'Pokaż' : 'Ukryj'}</button>
         <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Przenieść nagrodę do archiwum?')) klubadm_statusNagrody(${n.id}, 'ARCHIWUM')">🗑</button>
@@ -31344,6 +31345,11 @@ async function klubadm_statusNagrody(id, status) {
   const d = await klubadm_apiPost({ action: 'loj_nagroda_status', id, status }).catch(() => null);
   if (d && d.status === 'success') klubadm_zaladujNagrody();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_togglePolecana(id, polecana) {
+  const d = await klubadm_apiPost({ action: 'loj_nagroda_polecana', id, polecana }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujNagrody();
+  else alert(((d && d.message) || 'Błąd połączenia.'));
 }
 
 // ── Promocje ──

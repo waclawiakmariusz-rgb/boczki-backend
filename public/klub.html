@@ -1227,8 +1227,14 @@ function renderNagrody(nagrody, dostepne) {
     return;
   }
   nagrody.forEach(n => box.appendChild(kartaNagrody(n, dostepne)));
-  polecaneSek.style.display = 'block';
-  nagrody.slice(0, 2).forEach(n => polecaneBox.appendChild(kartaNagrody(n, dostepne)));
+  // Polecane: te oznaczone przez salon (max 3). Gdy salon nic nie wskazał — 3 najtańsze.
+  let polecane = nagrody.filter(n => n.polecana);
+  if (!polecane.length) polecane = nagrody.slice().sort((a, b) => a.koszt_pkt - b.koszt_pkt);
+  polecane = polecane.slice(0, 3);
+  if (polecane.length) {
+    polecaneSek.style.display = 'block';
+    polecane.forEach(n => polecaneBox.appendChild(kartaNagrody(n, dostepne)));
+  } else polecaneSek.style.display = 'none';
   // pasek postępu do najtańszej nieosiągniętej nagrody (lub osiągniętej — 100%)
   const cel = nagrody.filter(n => n.dostepna).sort((a, b) => a.koszt_pkt - b.koszt_pkt)
     .find(n => n.koszt_pkt > dostepne) || nagrody.filter(n => n.dostepna)[0];

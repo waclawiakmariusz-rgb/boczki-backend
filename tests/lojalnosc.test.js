@@ -1173,6 +1173,45 @@ describe('POST /api/klub/kosmetyki', () => {
     });
 });
 
+describe('Polecane nagrody (loj_nagroda_polecana)', () => {
+    test('oznacza jako polecaną gdy < 3 już polecanych', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: [{ n: 1 }] }, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_polecana', tenant_id: 't-pol', id: 5, polecana: 1, user_log: 'Admin'
+        });
+        expect(res.body.status).toBe('success');
+        const upd = db.query.mock.calls.find(c => /Lojalnosc_Nagrody SET polecana/.test(c[0]));
+        expect(upd[1]).toEqual([1, 't-pol', 5]);
+    });
+
+    test('limit 3 — czwarta polecana → odmowa, bez UPDATE', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: [{ n: 3 }] });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_polecana', tenant_id: 't-pol', id: 9, polecana: 1, user_log: 'Admin'
+        });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/maksymalnie 3/i);
+        expect(db.query.mock.calls.some(c => /Lojalnosc_Nagrody SET polecana/.test(c[0]))).toBe(false);
+    });
+
+    test('odznaczenie polecanej nie sprawdza limitu', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_polecana', tenant_id: 't-pol', id: 5, polecana: 0, user_log: 'Admin'
+        });
+        expect(res.body.status).toBe('success');
+        expect(db.query.mock.calls.some(c => /SELECT COUNT\(\*\) AS n FROM Lojalnosc_Nagrody/.test(c[0]))).toBe(false);
+    });
+
+    test('recepcja NIE przełączy (RBAC admin)', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_nagroda_polecana', tenant_id: 't-pol', id: 5, polecana: 1, user_log: 'Recepcja'
+        });
+        expect(res.body.status).toBe('error');
+    });
+});
+
 describe('Reset roczny punktów', () => {
     test('_tickResetRoczny wygasza dodatnie saldo z poprzednich lat (ref idempotentny)', async () => {
         const rok = new Date().getFullYear();

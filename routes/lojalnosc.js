@@ -601,6 +601,7 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Kampanie ADD COLUMN widoczna_dni INT DEFAULT 30`,
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN reset_roczny TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN ostatni_reset_rok INT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Nagrody ADD COLUMN polecana TINYINT DEFAULT 0`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -912,7 +913,7 @@ module.exports = (db) => {
       const kto = String(req.query.user_log || '').trim();
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `SELECT N.id, N.nazwa, N.opis, N.koszt_pkt, N.ilosc, N.img_url, N.status, N.sortowanie,
+          `SELECT N.id, N.nazwa, N.opis, N.koszt_pkt, N.ilosc, N.img_url, N.status, N.sortowanie, N.polecana,
                   (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status = 'WYDANE') AS wydane,
                   (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status = 'OCZEKUJE') AS oczekuje
              FROM Lojalnosc_Nagrody N WHERE tenant_id = ? AND status != 'ARCHIWUM'
@@ -1357,6 +1358,27 @@ module.exports = (db) => {
             return res.json({ status: 'success' });
           }
         );
+      });
+
+    } else if (action === 'loj_nagroda_polecana') {
+      // Admin oznacza/odznacza nagrodę jako „polecana" (max 3 pokazywane w apce na Start).
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      const polecana = (d.polecana === 1 || d.polecana === '1' || d.polecana === true) ? 1 : 0;
+      if (!id) return res.json({ status: 'error', message: 'Brak nagrody.' });
+      wymagajAdmina(tenant_id, kto, res, async () => {
+        try {
+          if (polecana) {
+            const cnt = await q(`SELECT COUNT(*) AS n FROM Lojalnosc_Nagrody WHERE tenant_id = ? AND polecana = 1 AND id <> ?`, [tenant_id, id]);
+            if (Number((cnt[0] || {}).n) >= 3) {
+              return res.json({ status: 'error', message: 'Możesz polecić maksymalnie 3 nagrody. Odznacz najpierw jedną z polecanych.' });
+            }
+          }
+          const r = await q(`UPDATE Lojalnosc_Nagrody SET polecana = ? WHERE tenant_id = ? AND id = ?`, [polecana, tenant_id, id]);
+          if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono nagrody.' });
+          zapiszLog(tenant_id, 'KLUB NAGRODA', kto, `Polecana #${id} → ${polecana ? 'TAK' : 'nie'}`);
+          return res.json({ status: 'success', polecana });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
     } else if (action === 'loj_promocja_zapisz') {
@@ -1841,7 +1863,7 @@ module.exports = (db) => {
         [p.t, p.k]
       ).catch(() => [{ rez: 0 }]);
       const nagrodyRows = await q(
-        `SELECT id, nazwa, opis, koszt_pkt, ilosc, img_url,
+        `SELECT id, nazwa, opis, koszt_pkt, ilosc, img_url, polecana,
                 (SELECT COUNT(*) FROM Lojalnosc_Odbiory O WHERE O.tenant_id = N.tenant_id AND O.nagroda_id = N.id AND O.status IN ('OCZEKUJE','WYDANE')) AS zajete
            FROM Lojalnosc_Nagrody N
           WHERE tenant_id = ? AND status = 'AKTYWNA'
@@ -1904,6 +1926,7 @@ module.exports = (db) => {
           opis: n.opis || '',
           koszt_pkt: Number(n.koszt_pkt) || 0,
           img_url: n.img_url || '',
+          polecana: Number(n.polecana) ? 1 : 0,
           dostepna: (n.ilosc == null || Number(n.zajete) < Number(n.ilosc)) ? 1 : 0
         })),
         odbiory: (Array.isArray(odbioryRows) ? odbioryRows : []).map(o => ({
