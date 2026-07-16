@@ -31556,11 +31556,17 @@ function klubadm_edytujKampanie(id) {
   klubadm_podglad('klubadm-k-img');
   klubadm_segUstaw('k', k.segment_typ, k.segment_wartosc, k.segment_dni);
   document.getElementById('klubadm-k-widoczna').value = k.widoczna_dni || 30;
-  const dt = new Date(k.wyslij_at);
-  document.getElementById('klubadm-k-termin').value = isNaN(dt.getTime()) ? '' :
-    dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0') + 'T' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
-  document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;
-  document.getElementById('klubadm-k-form-tytul').textContent = 'Edytuj zaplanowaną kampanię';
+  if (k.status === 'WYSLANA') {
+    // Edycja wysłanej = tylko poprawka treści (segment i termin są już nieistotne).
+    document.querySelector('input[name=klubadm-k-kiedy][value=teraz]').checked = true;
+    document.getElementById('klubadm-k-form-tytul').textContent = 'Edytuj wysłaną kampanię (treść)';
+  } else {
+    const dt = new Date(k.wyslij_at);
+    document.getElementById('klubadm-k-termin').value = isNaN(dt.getTime()) ? '' :
+      dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0') + 'T' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+    document.querySelector('input[name=klubadm-k-kiedy][value=plan]').checked = true;
+    document.getElementById('klubadm-k-form-tytul').textContent = 'Edytuj zaplanowaną kampanię';
+  }
   document.getElementById('klubadm-k-btn').textContent = 'Zapisz zmiany';
   document.getElementById('klubadm-k-anuluj-ed').style.display = 'inline-block';
   klubadm_podgladKampanii();
@@ -31604,8 +31610,11 @@ async function klubadm_zaladujKampanie() {
         <div style="font-size:12px; color:#9ca3af;">${escHtml(k.tresc)}</div>
         <div style="font-size:11.5px; color:#9ca3af;">${klubadm_opisSegmentu(k.segment_typ, k.segment_wartosc, k.segment_dni)} · ${kiedy}${k.status === 'WYSLANA' ? ' · push ' + k.dostarczono + '/' + k.odbiorcow + ' · 👁 odczytało: ' + (k.odczytania || 0) : ''}${widocznaTxt}</div>
       </div>
-      ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8; flex-shrink:0;" onclick="klubadm_edytujKampanie(${k.id})">✏️ Edytuj</button><button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
-      ${k.status === 'WYSLANA' ? `<button class="klubadm-btn" style="background:#fef2f2; color:#dc2626; flex-shrink:0;" onclick="if(confirm('Wycofać kampanię? Zniknie z aplikacji u wszystkich klientów (wysłanych pushy nie da się cofnąć).')) klubadm_wycofajKampanie(${k.id})">Wycofaj</button>` : ''}
+      <div style="display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; justify-content:flex-end;">
+        ${k.status === 'PLANOWANA' ? `<button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujKampanie(${k.id})">✏️ Edytuj</button><button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="klubadm_anulujKampanie(${k.id})">Anuluj</button>` : ''}
+        ${k.status === 'WYSLANA' ? `<button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujKampanie(${k.id})">✏️ Edytuj</button><button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Wycofać kampanię? Zniknie z aplikacji u wszystkich klientów (wysłanych pushy nie da się cofnąć).')) klubadm_wycofajKampanie(${k.id})">Wycofaj</button>` : ''}
+        <button class="klubadm-btn" style="background:#f1f5f9; color:#64748b;" title="Skasuj kampanię z listy" onclick="klubadm_kasujKampanie(${k.id})">🗑</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -31614,16 +31623,24 @@ async function klubadm_zapiszKampanie() {
   const tresc = document.getElementById('klubadm-k-tresc').value.trim();
   const status = document.getElementById('klubadm-k-status');
   if (!tytul || !tresc) { status.textContent = 'Podaj tytuł i treść.'; return; }
+  const editId = document.getElementById('klubadm-k-id').value;
+  const edytowana = editId ? klubadm_kampanieCache.find(x => String(x.id) === String(editId)) : null;
+  const edycjaWyslanej = !!(edytowana && edytowana.status === 'WYSLANA');
   const plan = document.querySelector('input[name=klubadm-k-kiedy]:checked').value === 'plan';
   const termin = document.getElementById('klubadm-k-termin').value;
-  if (plan && !termin) { status.textContent = 'Wybierz datę i godzinę wysyłki.'; return; }
   const seg = klubadm_segCzytaj('k');
-  if (!plan && !confirm('Wysłać kampanię TERAZ?\n\n„' + tytul + '"\n' + tresc + '\nDo: ' + klubadm_opisSegmentu(seg.segment_typ, seg.segment_wartosc, seg.segment_dni))) return;
+  if (!edycjaWyslanej) {
+    if (plan && !termin) { status.textContent = 'Wybierz datę i godzinę wysyłki.'; return; }
+    if (!plan && !confirm('Wysłać kampanię TERAZ?\n\n„' + tytul + '"\n' + tresc + '\nDo: ' + klubadm_opisSegmentu(seg.segment_typ, seg.segment_wartosc, seg.segment_dni))) return;
+    if (editId && !plan) { status.textContent = 'Edytowana kampania musi mieć termin (albo anuluj ją i wyślij nową „teraz").'; return; }
+  }
   const btn = document.getElementById('klubadm-k-btn');
   btn.disabled = true; status.textContent = '⏳…';
-  const editId = document.getElementById('klubadm-k-id').value;
-  if (editId && !plan) { status.textContent = 'Edytowana kampania musi mieć termin (albo anuluj ją i wyślij nową „teraz").'; btn.disabled = false; return; }
-  const d = await klubadm_apiPost({
+  const d = await klubadm_apiPost(edycjaWyslanej ? {
+    action: 'loj_kampania_edytuj', id: editId, tytul, tresc,
+    img_url: document.getElementById('klubadm-k-img').value.trim(),
+    widoczna_dni: document.getElementById('klubadm-k-widoczna').value
+  } : {
     action: 'loj_kampania_zapisz', tytul, tresc,
     id: editId || null,
     img_url: document.getElementById('klubadm-k-img').value.trim(),
@@ -31633,7 +31650,8 @@ async function klubadm_zapiszKampanie() {
   }).catch(() => null);
   btn.disabled = false;
   if (d && d.status === 'success') {
-    status.textContent = d.zaplanowana ? ('✅ Zaplanowano na ' + d.wyslij_at + '.') : `✅ Wysłano — push dotarł do ${d.dostarczono}/${d.subskrypcji} urządzeń, wiadomość widoczna w apce.`;
+    status.textContent = d.edytowana ? '✅ Zapisano — nowa treść jest już widoczna w apce.'
+      : d.zaplanowana ? ('✅ Zaplanowano na ' + d.wyslij_at + '.') : `✅ Wysłano — push dotarł do ${d.dostarczono}/${d.subskrypcji} urządzeń, wiadomość widoczna w apce.`;
     klubadm_resetKampania();
     klubadm_zaladujKampanie();
   } else {
@@ -31676,6 +31694,12 @@ async function klubadm_anulujKampanie(id) {
 }
 async function klubadm_wycofajKampanie(id) {
   const d = await klubadm_apiPost({ action: 'loj_kampania_wycofaj', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujKampanie();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_kasujKampanie(id) {
+  if (!confirm('Skasować kampanię na stałe? Zniknie z listy, a jeśli była wysłana — także ze skrzynek w apce (wysłanych pushy nie da się cofnąć).')) return;
+  const d = await klubadm_apiPost({ action: 'loj_kampania_kasuj', id }).catch(() => null);
   if (d && d.status === 'success') klubadm_zaladujKampanie();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
 }

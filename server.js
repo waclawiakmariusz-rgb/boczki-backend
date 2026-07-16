@@ -567,7 +567,7 @@ app.post('/api', (req, res) => {
     const lojalnoscActions = ['loj_punkty_reczne', 'loj_ustawienia_zapisz', 'loj_aktywacja_token',
         'loj_nagroda_zapisz', 'loj_nagroda_status', 'loj_nagroda_polecana', 'loj_promocja_zapisz', 'loj_promocja_status',
         'loj_odbior_rozstrzygnij', 'loj_zgloszenie_obsluz', 'loj_push_wyslij',
-        'loj_kampania_zapisz', 'loj_kampania_anuluj', 'loj_kampania_wycofaj',
+        'loj_kampania_zapisz', 'loj_kampania_anuluj', 'loj_kampania_wycofaj', 'loj_kampania_edytuj', 'loj_kampania_kasuj',
         'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc',
         'loj_kod_aktywacyjny', 'loj_app_qr'];
 

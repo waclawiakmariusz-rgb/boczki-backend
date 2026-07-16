@@ -1627,6 +1627,51 @@ module.exports = (db) => {
         );
       });
 
+    } else if (action === 'loj_kampania_edytuj') {
+      // Poprawka treści już WYSŁANEJ kampanii — zmiana widoczna od razu w skrzynkach w apce
+      // (apka czyta wiersz na żywo). Segmentu i terminu nie ruszamy — kampania już poszła.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      const tytul = String(d.tytul || '').trim().slice(0, 100);
+      const tresc = String(d.tresc || '').trim().slice(0, 300);
+      const img = String(d.img_url || '').trim().slice(0, 500);
+      const widocznaDniRaw = parseInt(d.widoczna_dni, 10);
+      const widocznaDni = Number.isFinite(widocznaDniRaw) && widocznaDniRaw >= 1 && widocznaDniRaw <= 90 ? widocznaDniRaw : 30;
+      if (!id) return res.json({ status: 'error', message: 'Brak kampanii.' });
+      if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
+      if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Kampanie SET tytul = ?, tresc = ?, img_url = ?, widoczna_dni = ?
+            WHERE tenant_id = ? AND id = ? AND status = 'WYSLANA'`,
+          [tytul, tresc, img, widocznaDni, tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Edytować treść można tylko w wysłanej kampanii.' });
+            zapiszLog(tenant_id, 'KLUB KAMPANIA EDYCJA TREŚCI', kto, `#${id} „${tytul}"`);
+            return res.json({ status: 'success', edytowana: 1 });
+          }
+        );
+      });
+
+    } else if (action === 'loj_kampania_kasuj') {
+      // Trwałe skasowanie — znika z listy w panelu, a jeśli była wysłana, także ze skrzynek w apce.
+      // Pushów, które już dotarły na telefony, cofnąć się nie da.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak kampanii.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(`DELETE FROM Lojalnosc_Kampanie_Odczyty WHERE tenant_id = ? AND kampania_id = ?`, [tenant_id, id], (e1) => {
+          if (e1) return res.json({ status: 'error', message: e1.message });
+          db.query(`DELETE FROM Lojalnosc_Kampanie WHERE tenant_id = ? AND id = ?`, [tenant_id, id], (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono kampanii.' });
+            zapiszLog(tenant_id, 'KLUB KAMPANIA SKASOWANA', kto, `#${id}`);
+            return res.json({ status: 'success' });
+          });
+        });
+      });
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja POST lojalnosc: ' + action });
     }

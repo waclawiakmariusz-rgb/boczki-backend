@@ -993,6 +993,67 @@ describe('POST /api/lojalnosc — kampanie', () => {
             .send({ action: 'loj_kampania_anuluj', tenant_id: 't-loj-km7', id: 5, user_log: 'Szefowa' });
         expect(r2.body.status).toBe('error');
     });
+
+    test('edycja treści WYSŁANEJ kampanii — UPDATE tylko WYSLANA, bez ruszania segmentu/terminu', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_edytuj', tenant_id: 't-loj-ked1', id: 5,
+            tytul: 'Poprawka', tresc: 'Nowa treść', widoczna_dni: 14, user_log: 'Szefowa'
+        });
+        expect(r1.body.status).toBe('success');
+        expect(r1.body.edytowana).toBe(1);
+        const upd = dbOk.query.mock.calls.find(c => /UPDATE Lojalnosc_Kampanie SET tytul/.test(c[0]));
+        expect(upd[0]).toMatch(/status = 'WYSLANA'/);
+        expect(upd[0]).not.toMatch(/segment_typ/);
+        const dbNie = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_edytuj', tenant_id: 't-loj-ked2', id: 5,
+            tytul: 'X', tresc: 'Y', user_log: 'Szefowa'
+        });
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('edycja treści bez tytułu/treści → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_edytuj', tenant_id: 't-loj-ked3', id: 5, tytul: '', tresc: '', user_log: 'Szefowa'
+        });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/tytuł i treść/i);
+    });
+
+    test('edycja treści tylko dla admina', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({
+            action: 'loj_kampania_edytuj', tenant_id: 't-loj-ked4', id: 5,
+            tytul: 'X', tresc: 'Y', user_log: 'Recepcja'
+        });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('kasowanie kampanii usuwa odczyty i wiersz; brak wiersza → error', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 3 } }, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_kasuj', tenant_id: 't-loj-kk1', id: 5, user_log: 'Szefowa' });
+        expect(r1.body.status).toBe('success');
+        const delOdczyty = dbOk.query.mock.calls.find(c => /DELETE FROM Lojalnosc_Kampanie_Odczyty/.test(c[0]));
+        const delKamp = dbOk.query.mock.calls.find(c => /DELETE FROM Lojalnosc_Kampanie WHERE/.test(c[0]));
+        expect(delOdczyty).toBeTruthy();
+        expect(delKamp).toBeTruthy();
+        const dbNie = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } }, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_kasuj', tenant_id: 't-loj-kk2', id: 5, user_log: 'Szefowa' });
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('kasowanie tylko dla admina', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ action: 'loj_kampania_kasuj', tenant_id: 't-loj-kk3', id: 5, user_log: 'Recepcja' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
 });
 
 // ─── Upload grafik + serwowanie ───────────────────────────────
