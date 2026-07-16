@@ -224,6 +224,24 @@ function makeLojalnosc(db) {
     );
   }
 
+  // Jedno zapytanie: bazowy przelicznik (pkt/10 zł) + ewentualny aktywny mnożnik czasowy
+  // (np. „weekend punktów ×2"). Trzyma liczbę zapytań naliczania bez zmian.
+  function pobierzNaliczanie(tenant_id, cb) {
+    db.query(
+      `SELECT
+         (SELECT pkt_za_10zl FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1) AS pkt_za_10zl,
+         (SELECT mnoznik FROM Lojalnosc_Mnozniki WHERE tenant_id = ? AND aktywny = 1
+            AND NOW() BETWEEN data_od AND data_do ORDER BY mnoznik DESC LIMIT 1) AS czasowy`,
+      [tenant_id, tenant_id],
+      (err, rows) => {
+        if (err || !Array.isArray(rows) || !rows.length) return cb(1, 1);
+        const base = parseInt(rows[0].pkt_za_10zl, 10);
+        const cz = parseFloat(rows[0].czasowy);
+        cb(Number.isFinite(base) ? base : 1, Number.isFinite(cz) && cz > 1 ? cz : 1);
+      }
+    );
+  }
+
   function wpis(tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik) {
     const z = Math.trunc(Number(zmiana) || 0);
     if (!z) return;
@@ -248,6 +266,34 @@ function makeLojalnosc(db) {
     );
   }
 
+  // Domknięcie polecenia „poleć koleżankę": przy PIERWSZYM realnym zakupie poleconej
+  // obie strony dostają punkty (polecenie_pkt z ustawień). Atomowy claim statusu → raz.
+  // Wołane z hooka sprzedaży, więc recepcja nic dodatkowo nie klika.
+  function sprawdzPolecenie(tenant_id, poleconaId, pracownik) {
+    db.query(
+      `SELECT P.id, P.polecajaca_id, U.polecenie_pkt
+         FROM Lojalnosc_Polecenia P
+         JOIN Lojalnosc_Ustawienia U ON U.tenant_id = P.tenant_id
+        WHERE P.tenant_id = ? AND P.polecona_id = ? AND P.status = 'OCZEKUJE' LIMIT 1`,
+      [tenant_id, String(poleconaId)],
+      (err, rows) => {
+        if (err || !Array.isArray(rows) || !rows.length) return;
+        const r = rows[0];
+        const pkt = parseInt(r.polecenie_pkt, 10) || 0;
+        if (pkt <= 0) return;   // salon nie włączył nagrody za polecenia
+        db.query(
+          `UPDATE Lojalnosc_Polecenia SET status = 'ZREALIZOWANE', zrealizowano_at = NOW() WHERE id = ? AND status = 'OCZEKUJE'`,
+          [r.id],
+          (e2, u) => {
+            if (e2 || !u || !u.affectedRows) return;   // inna instancja już domknęła
+            wpis(tenant_id, r.polecajaca_id, pkt, 'Polecenie koleżanki 💗', 'POLECENIE', 'PIN@' + r.id, 'System');
+            wpis(tenant_id, poleconaId, pkt, 'Bonus za dołączenie z polecenia 💗', 'POLECENIE', 'POUT@' + r.id, 'System');
+          }
+        );
+      }
+    );
+  }
+
   // Sprzedaż z id_klienta → +punkty, ale TYLKO gdy klient jest członkiem Klubu.
   function naliczZaSprzedaz(tenant_id, dane) {
     try {
@@ -259,10 +305,19 @@ function makeLojalnosc(db) {
         if (!on) return;
         maKontoKlubu(tenant_id, idK, (czlonek) => {
           if (!czlonek) return;
-          pobierzMnoznik(tenant_id, (mnoznik) => {
+          pobierzNaliczanie(tenant_id, (mnoznik, czasowy) => {
             const pkt = obliczPunkty(dane.kwota, mnoznik);
             if (pkt <= 0) return;
             wpis(tenant_id, idK, pkt, dane.opis || 'Sprzedaż', 'SPRZEDAZ', saleId, dane.pracownik);
+            // Mnożnik czasowy → osobna linia bonusowa (baza korekt/zwrotów zostaje czysta).
+            if (czasowy > 1) {
+              const bonus = Math.floor(pkt * czasowy) - pkt;
+              if (bonus > 0) {
+                const etyk = Number.isInteger(czasowy) ? '×' + czasowy : '×' + czasowy.toFixed(1);
+                wpis(tenant_id, idK, bonus, 'Bonus ' + etyk + ' — ' + (dane.opis || 'Sprzedaż'), 'MNOZNIK', saleId, dane.pracownik);
+              }
+            }
+            sprawdzPolecenie(tenant_id, idK, dane.pracownik);   // domknij ew. polecenie
           });
         });
       });
@@ -318,10 +373,11 @@ function makeLojalnosc(db) {
           `SELECT id_klienta, SUM(zmiana) AS suma FROM Lojalnosc_Punkty
             WHERE tenant_id = ?
               AND ((zrodlo = 'SPRZEDAZ' AND ref_id = ?)
+                   OR (zrodlo = 'MNOZNIK' AND ref_id = ?)
                    OR (zrodlo = 'EDYCJA' AND ref_id LIKE CONCAT('E@', ?, '@%'))
                    OR (zrodlo = 'ZWROT'  AND ref_id LIKE CONCAT(?, '@%')))
             GROUP BY id_klienta`,
-          [tenant_id, sid, sid, sid],
+          [tenant_id, sid, sid, sid, sid],
           (err, rows) => {
             if (err || !Array.isArray(rows) || !rows.length) return;
             rows.forEach(r => {
@@ -569,11 +625,83 @@ module.exports = (db) => {
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
     if (e) console.error('[lojalnosc] Migracja Lojalnosc_Kody:', e.message);
   });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Mnozniki (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      mnoznik DECIMAL(4,2) NOT NULL DEFAULT 2.00,
+      opis VARCHAR(120) DEFAULT '',
+      data_od DATETIME NOT NULL,
+      data_do DATETIME NOT NULL,
+      aktywny TINYINT DEFAULT 1,
+      utworzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_okno (tenant_id, aktywny, data_od, data_do)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Mnozniki:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Automaty (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      typ VARCHAR(20) NOT NULL,
+      aktywny TINYINT DEFAULT 0,
+      tytul VARCHAR(100) NOT NULL,
+      tresc VARCHAR(300) NOT NULL,
+      img_url VARCHAR(500) DEFAULT '',
+      bonus_pkt INT DEFAULT 0,
+      param_dni INT DEFAULT 60,
+      ostatni_bieg DATE NULL,
+      utworzyl VARCHAR(120) DEFAULT '',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_typ (tenant_id, typ),
+      KEY idx_bieg (aktywny, ostatni_bieg)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Automaty:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Automaty_Log (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      automat_id INT NOT NULL,
+      id_klienta VARCHAR(64) NOT NULL,
+      ref VARCHAR(60) NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uk_wyslano (tenant_id, automat_id, id_klienta, ref)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Automaty_Log:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Poziomy (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      nazwa VARCHAR(60) NOT NULL,
+      prog_zl_rocznie INT NOT NULL DEFAULT 0,
+      kolor VARCHAR(20) DEFAULT '#c54f7f',
+      perk VARCHAR(200) DEFAULT '',
+      sortowanie INT DEFAULT 100,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      KEY idx_tenant (tenant_id, prog_zl_rocznie)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Poziomy:', e.message);
+  });
+  db.query(`CREATE TABLE IF NOT EXISTS Lojalnosc_Polecenia (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(64) NOT NULL,
+      polecajaca_id VARCHAR(64) NOT NULL,
+      polecona_id VARCHAR(64) NOT NULL,
+      kod VARCHAR(12) DEFAULT '',
+      status VARCHAR(20) DEFAULT 'OCZEKUJE',
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      zrealizowano_at DATETIME NULL,
+      UNIQUE KEY uk_polecona (tenant_id, polecona_id),
+      KEY idx_polecajaca (tenant_id, polecajaca_id),
+      KEY idx_status (tenant_id, status)
+    ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`, (e) => {
+    if (e) console.error('[lojalnosc] Migracja Lojalnosc_Polecenia:', e.message);
+  });
   // Collation MUSI zgadzać się z rdzeniem Estelio (Klienci = utf8mb4_unicode_ci),
   // inaczej JOIN-y padają na "Illegal mix of collations". Konwertujemy istniejące
   // tabele tylko gdy trzeba (jeden SELECT do information_schema przy starcie).
   const LOJ_TABELE = ['Lojalnosc_Punkty', 'Lojalnosc_Ustawienia', 'Lojalnosc_Konta', 'Lojalnosc_Nagrody',
-    'Lojalnosc_Odbiory', 'Lojalnosc_Promocje', 'Lojalnosc_Zgloszenia', 'Lojalnosc_Push', 'Lojalnosc_Kampanie', 'Lojalnosc_Wnioski', 'Lojalnosc_Kody'];
+    'Lojalnosc_Odbiory', 'Lojalnosc_Promocje', 'Lojalnosc_Zgloszenia', 'Lojalnosc_Push', 'Lojalnosc_Kampanie', 'Lojalnosc_Wnioski', 'Lojalnosc_Kody', 'Lojalnosc_Mnozniki', 'Lojalnosc_Automaty', 'Lojalnosc_Automaty_Log', 'Lojalnosc_Poziomy', 'Lojalnosc_Polecenia'];
   db.query(
     `SELECT TABLE_NAME, TABLE_COLLATION FROM information_schema.TABLES
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN (${LOJ_TABELE.map(() => '?').join(',')})`,
@@ -602,6 +730,8 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN reset_roczny TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN ostatni_reset_rok INT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Nagrody ADD COLUMN polecana TINYINT DEFAULT 0`,
+    `ALTER TABLE Lojalnosc_Konta ADD COLUMN kod_polec VARCHAR(12) DEFAULT ''`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN polecenie_pkt INT DEFAULT 0`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -745,6 +875,173 @@ module.exports = (db) => {
     }
   }
 
+  // ─── Kampanie-automaty (wyzwalane zdarzeniem) ───────────────
+  // Raz dziennie: dla każdego aktywnego automatu znajdź pasujących członków,
+  // daj prezent punktowy (jeśli ustawiony) + push. Log deduplikuje (raz na okazję).
+  const MIESIACE_PL = ['Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+  const AUTOMAT_TYPY = ['URODZINY', 'WINBACK', 'ROCZNICA', 'PROG_NAGRODY', 'AWANS'];
+  function dzienUrodzin(s) {
+    const str = String(s || '').trim();
+    const iso = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) return { d: parseInt(iso[3], 10), m: parseInt(iso[2], 10) };
+    const ddmm = str.match(/^(\d{1,2})[.\-/](\d{1,2})/);
+    if (ddmm) return { d: parseInt(ddmm[1], 10), m: parseInt(ddmm[2], 10) };
+    return null;
+  }
+
+  // Kogo automat powiadamia DZIŚ (bez deduplikacji Logiem) → [{id_klienta, ref}]
+  async function kandydaciAutomatu(a) {
+    const t = a.tenant_id;
+    const teraz = new Date();
+    const rok = teraz.getFullYear();
+    if (a.typ === 'WINBACK') {
+      const n = Math.max(7, parseInt(a.param_dni, 10) || 60);
+      const rows = await q(
+        `SELECT K.id_klienta, DATE_FORMAT(MAX(S.data_sprzedazy), '%Y-%m-%d') AS ost
+           FROM Lojalnosc_Konta K
+           JOIN Sprzedaz S ON S.tenant_id = K.tenant_id AND S.id_klienta = K.id_klienta
+                AND COALESCE(S.status,'') != 'USUNIĘTY' AND S.kwota > 0
+          WHERE K.tenant_id = ? AND K.status = 'AKTYWNE'
+          GROUP BY K.id_klienta
+         HAVING MAX(S.data_sprzedazy) <= DATE_SUB(CURDATE(), INTERVAL ? DAY)
+            AND MAX(S.data_sprzedazy) >= DATE_SUB(CURDATE(), INTERVAL 365 DAY)`,
+        [t, n]
+      ).catch(() => []);
+      return (Array.isArray(rows) ? rows : []).map(r => ({ id_klienta: String(r.id_klienta), ref: 'W@' + r.ost }));
+    }
+    if (a.typ === 'ROCZNICA') {
+      const rows = await q(
+        `SELECT K.id_klienta
+           FROM Lojalnosc_Konta K
+           JOIN Sprzedaz S ON S.tenant_id = K.tenant_id AND S.id_klienta = K.id_klienta
+                AND COALESCE(S.status,'') != 'USUNIĘTY' AND S.kwota > 0
+          WHERE K.tenant_id = ? AND K.status = 'AKTYWNE'
+          GROUP BY K.id_klienta
+         HAVING DATE_FORMAT(MIN(S.data_sprzedazy), '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+            AND YEAR(MIN(S.data_sprzedazy)) < ?`,
+        [t, rok]
+      ).catch(() => []);
+      return (Array.isArray(rows) ? rows : []).map(r => ({ id_klienta: String(r.id_klienta), ref: 'R@' + rok }));
+    }
+    if (a.typ === 'PROG_NAGRODY') {
+      const prog = Math.max(1, parseInt(a.param_dni, 10) || 30);
+      const nagrody = await q(
+        `SELECT id, koszt_pkt FROM Lojalnosc_Nagrody WHERE tenant_id = ? AND status = 'AKTYWNA' AND koszt_pkt > 0 ORDER BY koszt_pkt ASC`,
+        [t]
+      ).catch(() => []);
+      const listaN = Array.isArray(nagrody) ? nagrody : [];
+      if (!listaN.length) return [];
+      const salda = await q(
+        `SELECT P.id_klienta, SUM(P.zmiana) AS saldo
+           FROM Lojalnosc_Punkty P
+           JOIN Lojalnosc_Konta K ON K.tenant_id = P.tenant_id AND K.id_klienta = P.id_klienta AND K.status = 'AKTYWNE'
+          WHERE P.tenant_id = ?
+          GROUP BY P.id_klienta`,
+        [t]
+      ).catch(() => []);
+      const out = [];
+      for (const s of (Array.isArray(salda) ? salda : [])) {
+        const saldo = Number(s.saldo) || 0;
+        const cel = listaN.find(n => Number(n.koszt_pkt) > saldo && (Number(n.koszt_pkt) - saldo) <= prog);
+        if (cel) out.push({ id_klienta: String(s.id_klienta), ref: 'P@' + cel.id });
+      }
+      return out;
+    }
+    if (a.typ === 'URODZINY') {
+      const tabela = MIESIACE_PL[teraz.getMonth()];
+      const czlonkowie = await q(
+        `SELECT id_klienta, telefon FROM Lojalnosc_Konta WHERE tenant_id = ? AND status = 'AKTYWNE' AND COALESCE(telefon,'') <> ''`,
+        [t]
+      ).catch(() => []);
+      if (!Array.isArray(czlonkowie) || !czlonkowie.length) return [];
+      // Urodziny trzymane w miesięcznych tabelach (klucz: nazwisko/telefon, brak id_klienta) → match po telefonie
+      const urodz = await q(`SELECT nr_telefonu, telefon, data_urodzin FROM \`${tabela}\` WHERE tenant_id = ?`, [t]).catch(() => []);
+      const dzis = teraz.getDate(), mies = teraz.getMonth() + 1;
+      const telDzis = new Set();
+      for (const u of (Array.isArray(urodz) ? urodz : [])) {
+        const d = dzienUrodzin(u.data_urodzin);
+        if (!d || d.d !== dzis || d.m !== mies) continue;
+        const a1 = normalizujTelefon(u.nr_telefonu), a2 = normalizujTelefon(u.telefon);
+        if (a1) telDzis.add(a1);
+        if (a2) telDzis.add(a2);
+      }
+      if (!telDzis.size) return [];
+      return czlonkowie
+        .filter(c => telDzis.has(normalizujTelefon(c.telefon)))
+        .map(c => ({ id_klienta: String(c.id_klienta), ref: 'U@' + rok }));
+    }
+    if (a.typ === 'AWANS') {
+      // Awans poziomu: klientka przekroczyła próg wydatków w tym roku → gratulacje (raz na poziom/rok)
+      const poziomy = await q(
+        `SELECT id, prog_zl_rocznie FROM Lojalnosc_Poziomy WHERE tenant_id = ? AND prog_zl_rocznie > 0 ORDER BY prog_zl_rocznie ASC`,
+        [t]
+      ).catch(() => []);
+      const lp = Array.isArray(poziomy) ? poziomy : [];
+      if (!lp.length) return [];
+      const wyd = await q(
+        `SELECT S.id_klienta, SUM(S.kwota) AS wydane
+           FROM Sprzedaz S
+           JOIN Lojalnosc_Konta K ON K.tenant_id = S.tenant_id AND K.id_klienta = S.id_klienta AND K.status = 'AKTYWNE'
+          WHERE S.tenant_id = ? AND COALESCE(S.status,'') != 'USUNIĘTY' AND S.kwota > 0 AND YEAR(S.data_sprzedazy) = ?
+          GROUP BY S.id_klienta`,
+        [t, rok]
+      ).catch(() => []);
+      const out = [];
+      for (const w of (Array.isArray(wyd) ? wyd : [])) {
+        const wydane = Number(w.wydane) || 0;
+        let top = null;
+        for (const p of lp) if (wydane >= Number(p.prog_zl_rocznie)) top = p;
+        if (top) out.push({ id_klienta: String(w.id_klienta), ref: 'AV@' + top.id + '@' + rok });
+      }
+      return out;
+    }
+    return [];
+  }
+
+  async function wykonajAutomat(a) {
+    try {
+      const kand = await kandydaciAutomatu(a);
+      if (!kand.length) return 0;
+      const nowi = [];
+      for (const k of kand) {
+        const ins = await q(
+          `INSERT IGNORE INTO Lojalnosc_Automaty_Log (tenant_id, automat_id, id_klienta, ref) VALUES (?, ?, ?, ?)`,
+          [a.tenant_id, a.id, k.id_klienta, k.ref]
+        ).catch(() => null);
+        if (ins && ins.affectedRows) nowi.push(k);   // tylko realnie nowi (nie powiadomieni)
+      }
+      if (!nowi.length) return 0;
+      const bonus = parseInt(a.bonus_pkt, 10) || 0;
+      if (bonus > 0) {
+        for (const k of nowi) {
+          await q(
+            `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+             VALUES (?, ?, ?, ?, 'AUTOMAT', ?, 'System')`,
+            [a.tenant_id, k.id_klienta, bonus, String(a.tytul || 'Prezent').slice(0, 250), 'A' + a.id + '@' + k.id_klienta + '@' + k.ref]
+          ).catch(() => {});
+        }
+      }
+      const wynik = await wyslijPushDoKlientow(a.tenant_id, nowi.map(k => k.id_klienta), a.tytul, a.tresc, a.img_url || '');
+      zapiszLog(a.tenant_id, 'KLUB AUTOMAT', 'System',
+        `${a.typ} „${a.tytul}" — ${nowi.length} klientów${bonus > 0 ? (' · +' + bonus + ' pkt każdemu') : ''} · push ${wynik.dostarczono}/${wynik.subskrypcji}`);
+      return nowi.length;
+    } catch (e) { console.error('[lojalnosc] wykonajAutomat:', e.message); return 0; }
+  }
+
+  // Raz dziennie na automat (atomowy claim ostatni_bieg — wspólna baza dev+prod)
+  async function tickAutomaty() {
+    const due = await q(
+      `SELECT * FROM Lojalnosc_Automaty WHERE aktywny = 1 AND (ostatni_bieg IS NULL OR ostatni_bieg < CURDATE()) LIMIT 50`, []
+    ).catch(() => []);
+    for (const a of (Array.isArray(due) ? due : [])) {
+      const claim = await q(
+        `UPDATE Lojalnosc_Automaty SET ostatni_bieg = CURDATE()
+          WHERE id = ? AND aktywny = 1 AND (ostatni_bieg IS NULL OR ostatni_bieg < CURDATE())`, [a.id]
+      ).catch(() => null);
+      if (claim && claim.affectedRows) await wykonajAutomat(a);
+    }
+  }
+
   // Reset roczny: 1 stycznia punkty z poprzednich lat wygasają (dopisujemy WYGASNIECIE
   // = −saldo, żeby saldo spadło do zera). Idempotentne: ostatni_reset_rok (claim per salon)
   // + UNIQUE(tenant, zrodlo, ref_id) na wpisie. Wspólna baza dev+prod → atomowy claim.
@@ -785,6 +1082,7 @@ module.exports = (db) => {
   async function tickHarmonogramu() {
     try {
       await tickResetRoczny();
+      await tickAutomaty();
       const due = await q(
         `SELECT * FROM Lojalnosc_Kampanie WHERE status = 'PLANOWANA' AND wyslij_at <= NOW() LIMIT 20`, []
       ).catch(() => []);
@@ -873,7 +1171,7 @@ module.exports = (db) => {
 
     } else if (action === 'loj_ustawienia') {
       db.query(
-        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
+        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, polecenie_pkt, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
@@ -884,7 +1182,8 @@ module.exports = (db) => {
               pkt_za_10zl: parseInt(u.pkt_za_10zl, 10) || 1,
               nazwa_klubu: u.nazwa_klubu || 'Klub',
               bonus_powitalny_pkt: parseInt(u.bonus_powitalny_pkt, 10) || 0,
-              reset_roczny: Number(u.reset_roczny) ? 1 : 0
+              reset_roczny: Number(u.reset_roczny) ? 1 : 0,
+              polecenie_pkt: parseInt(u.polecenie_pkt, 10) || 0
             }
           });
         }
@@ -1064,6 +1363,51 @@ module.exports = (db) => {
         );
       });
 
+    } else if (action === 'loj_mnozniki') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, mnoznik, opis, data_od, data_do, aktywny,
+                  (aktywny = 1 AND NOW() BETWEEN data_od AND data_do) AS trwa,
+                  (data_od > NOW()) AS przyszly
+             FROM Lojalnosc_Mnozniki WHERE tenant_id = ?
+            ORDER BY data_od DESC LIMIT 50`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', mnozniki: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
+    } else if (action === 'loj_automaty') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT A.id, A.typ, A.aktywny, A.tytul, A.tresc, A.img_url, A.bonus_pkt, A.param_dni, A.ostatni_bieg,
+                  (SELECT COUNT(*) FROM Lojalnosc_Automaty_Log L WHERE L.tenant_id = A.tenant_id AND L.automat_id = A.id) AS wyslano_razem
+             FROM Lojalnosc_Automaty A WHERE A.tenant_id = ? ORDER BY A.typ`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', automaty: Array.isArray(rows) ? rows : [], push_skonfigurowany: webpush ? 1 : 0 });
+          }
+        );
+      });
+
+    } else if (action === 'loj_poziomy') {
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT id, nazwa, prog_zl_rocznie, kolor, perk FROM Lojalnosc_Poziomy WHERE tenant_id = ? ORDER BY prog_zl_rocznie ASC LIMIT 20`,
+          [tenant_id],
+          (err, rows) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            return res.json({ status: 'success', poziomy: Array.isArray(rows) ? rows : [] });
+          }
+        );
+      });
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja GET lojalnosc: ' + action });
     }
@@ -1121,23 +1465,25 @@ module.exports = (db) => {
       const bonus = parseInt(d.bonus_powitalny_pkt, 10) || 0;
       const nazwa = String(d.nazwa_klubu || 'Klub').trim().slice(0, 120) || 'Klub';
       const resetRoczny = (d.reset_roczny === 1 || d.reset_roczny === '1' || d.reset_roczny === true) ? 1 : 0;
+      const poleceniePkt = Math.max(0, Math.min(100000, parseInt(d.polecenie_pkt, 10) || 0));
       if (!Number.isFinite(pkt) || pkt < 0 || pkt > 100) {
         return res.json({ status: 'error', message: 'Punkty za 10 zł: liczba 0–100.' });
       }
       if (bonus < 0 || bonus > 1000) return res.json({ status: 'error', message: 'Bonus powitalny: 0–1000 pkt.' });
       wymagajAdmina(tenant_id, kto, res, () => {
         db.query(
-          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, ostatni_reset_rok, updated_by)
-           VALUES (?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, polecenie_pkt, ostatni_reset_rok, updated_by)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
            ON DUPLICATE KEY UPDATE pkt_za_10zl = VALUES(pkt_za_10zl), nazwa_klubu = VALUES(nazwa_klubu),
-             bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), reset_roczny = VALUES(reset_roczny), updated_by = VALUES(updated_by),
+             bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), reset_roczny = VALUES(reset_roczny),
+             polecenie_pkt = VALUES(polecenie_pkt), updated_by = VALUES(updated_by),
              ostatni_reset_rok = IF(COALESCE(ostatni_reset_rok, 0) = 0 AND VALUES(reset_roczny) = 1, VALUES(ostatni_reset_rok), ostatni_reset_rok)`,
           // Przy PIERWSZYM włączeniu resetu ustawiamy ostatni_reset_rok = bieżący rok, żeby NIE
           // wygasić od razu tegorocznych punktów — pierwsze wygaśnięcie dopiero 1 stycznia.
-          [tenant_id, pkt, nazwa, bonus, resetRoczny, new Date().getFullYear(), kto],
+          [tenant_id, pkt, nazwa, bonus, resetRoczny, poleceniePkt, new Date().getFullYear(), kto],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}, reset_roczny=${resetRoczny}`);
+            zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}, reset_roczny=${resetRoczny}, polecenie=${poleceniePkt}`);
             return res.json({ status: 'success', message: 'Zapisano ustawienia Klubu.' });
           }
         );
@@ -1672,6 +2018,162 @@ module.exports = (db) => {
         });
       });
 
+    } else if (action === 'loj_mnoznik_zapisz') {
+      // Okno mnożnika punktów (np. „weekend ×2"). Zderza się przy naliczaniu sprzedaży.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const editId = parseInt(d.id, 10) || 0;
+      const mnoznik = Math.round((parseFloat(String(d.mnoznik).replace(',', '.')) || 0) * 100) / 100;
+      const opis = String(d.opis || '').trim().slice(0, 120);
+      const aktywny = Number(d.aktywny) === 0 ? 0 : 1;
+      const norm = (v) => {
+        const m = String(v || '').trim().match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
+        return m ? `${m[1]} ${m[2]}:00` : null;
+      };
+      const od = norm(d.data_od), doo = norm(d.data_do);
+      if (!(mnoznik >= 1.1 && mnoznik <= 10)) return res.json({ status: 'error', message: 'Mnożnik z zakresu 1,1–10 (np. 2 = punkty ×2).' });
+      if (!od || !doo) return res.json({ status: 'error', message: 'Podaj początek i koniec okna (data + godzina).' });
+      if (doo <= od) return res.json({ status: 'error', message: 'Koniec musi być po początku.' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        if (editId) {
+          db.query(
+            `UPDATE Lojalnosc_Mnozniki SET mnoznik = ?, opis = ?, data_od = ?, data_do = ?, aktywny = ?
+              WHERE tenant_id = ? AND id = ?`,
+            [mnoznik, opis, od, doo, aktywny, tenant_id, editId],
+            (err, r) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono mnożnika.' });
+              zapiszLog(tenant_id, 'KLUB MNOZNIK EDYCJA', kto, `#${editId} ×${mnoznik} ${od}→${doo}`);
+              return res.json({ status: 'success' });
+            }
+          );
+        } else {
+          db.query(
+            `INSERT INTO Lojalnosc_Mnozniki (tenant_id, mnoznik, opis, data_od, data_do, aktywny, utworzyl)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [tenant_id, mnoznik, opis, od, doo, aktywny, kto.slice(0, 120)],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'KLUB MNOZNIK', kto, `×${mnoznik} ${od}→${doo} ${opis}`);
+              return res.json({ status: 'success' });
+            }
+          );
+        }
+      }));
+
+    } else if (action === 'loj_mnoznik_usun') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak mnożnika.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `DELETE FROM Lojalnosc_Mnozniki WHERE tenant_id = ? AND id = ?`,
+          [tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono mnożnika.' });
+            zapiszLog(tenant_id, 'KLUB MNOZNIK USUNIETY', kto, `#${id}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_automat_zapisz') {
+      // Automat wyzwalany zdarzeniem (urodziny / brak wizyty / rocznica / próg nagrody).
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const typ = String(d.typ || '').toUpperCase().trim();
+      const tytul = String(d.tytul || '').trim().slice(0, 100);
+      const tresc = String(d.tresc || '').trim().slice(0, 300);
+      const img = String(d.img_url || '').trim().slice(0, 500);
+      const bonus = Math.max(0, Math.min(100000, parseInt(d.bonus_pkt, 10) || 0));
+      const aktywny = Number(d.aktywny) ? 1 : 0;
+      const paramDni = Math.max(1, Math.min(3650, parseInt(d.param_dni, 10) || (typ === 'PROG_NAGRODY' ? 30 : 60)));
+      if (!AUTOMAT_TYPY.includes(typ)) return res.json({ status: 'error', message: 'Nieznany typ automatu.' });
+      if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
+      if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `INSERT INTO Lojalnosc_Automaty (tenant_id, typ, aktywny, tytul, tresc, img_url, bonus_pkt, param_dni, utworzyl)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON DUPLICATE KEY UPDATE aktywny = VALUES(aktywny), tytul = VALUES(tytul), tresc = VALUES(tresc),
+             img_url = VALUES(img_url), bonus_pkt = VALUES(bonus_pkt), param_dni = VALUES(param_dni)`,
+          [tenant_id, typ, aktywny, tytul, tresc, img, bonus, paramDni, kto.slice(0, 120)],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'KLUB AUTOMAT ZAPIS', kto, `${typ} „${tytul}" ${aktywny ? 'WŁ' : 'wył'}${bonus ? ' +' + bonus + 'pkt' : ''}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      }));
+
+    } else if (action === 'loj_automat_status') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const typ = String(d.typ || '').toUpperCase().trim();
+      const aktywny = Number(d.aktywny) ? 1 : 0;
+      if (!AUTOMAT_TYPY.includes(typ)) return res.json({ status: 'error', message: 'Nieznany typ automatu.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `UPDATE Lojalnosc_Automaty SET aktywny = ? WHERE tenant_id = ? AND typ = ?`,
+          [aktywny, tenant_id, typ],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Najpierw zapisz treść automatu.' });
+            zapiszLog(tenant_id, 'KLUB AUTOMAT ' + (aktywny ? 'WŁĄCZONY' : 'WYŁĄCZONY'), kto, typ);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'loj_poziom_zapisz') {
+      // Poziom klubu (Srebro/Złoto/Diament…) — próg wg rocznych wydatków klientki.
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const editId = parseInt(d.id, 10) || 0;
+      const nazwa = String(d.nazwa || '').trim().slice(0, 60);
+      const prog = Math.max(0, Math.min(10000000, parseInt(d.prog_zl_rocznie, 10) || 0));
+      const kolor = /^#[0-9a-fA-F]{3,8}$/.test(String(d.kolor || '').trim()) ? String(d.kolor).trim() : '#c54f7f';
+      const perk = String(d.perk || '').trim().slice(0, 200);
+      if (!nazwa) return res.json({ status: 'error', message: 'Podaj nazwę poziomu.' });
+      maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
+        if (editId) {
+          db.query(
+            `UPDATE Lojalnosc_Poziomy SET nazwa = ?, prog_zl_rocznie = ?, kolor = ?, perk = ? WHERE tenant_id = ? AND id = ?`,
+            [nazwa, prog, kolor, perk, tenant_id, editId],
+            (err, r) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono poziomu.' });
+              zapiszLog(tenant_id, 'KLUB POZIOM EDYCJA', kto, `#${editId} ${nazwa} (${prog} zł)`);
+              return res.json({ status: 'success' });
+            }
+          );
+        } else {
+          db.query(
+            `INSERT INTO Lojalnosc_Poziomy (tenant_id, nazwa, prog_zl_rocznie, kolor, perk, sortowanie) VALUES (?, ?, ?, ?, ?, ?)`,
+            [tenant_id, nazwa, prog, kolor, perk, prog],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'KLUB POZIOM', kto, `${nazwa} (${prog} zł)`);
+              return res.json({ status: 'success' });
+            }
+          );
+        }
+      }));
+
+    } else if (action === 'loj_poziom_usun') {
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      const id = parseInt(d.id, 10);
+      if (!id) return res.json({ status: 'error', message: 'Brak poziomu.' });
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `DELETE FROM Lojalnosc_Poziomy WHERE tenant_id = ? AND id = ?`,
+          [tenant_id, id],
+          (err, r) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (!r.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono poziomu.' });
+            zapiszLog(tenant_id, 'KLUB POZIOM USUNIETY', kto, `#${id}`);
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja POST lojalnosc: ' + action });
     }
@@ -1899,7 +2401,7 @@ module.exports = (db) => {
           WHERE tenant_id = ? AND id_klienta = ? AND zrodlo <> 'WYGASNIECIE' ORDER BY id DESC LIMIT 20`,
         [p.t, p.k]
       );
-      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny, polecenie_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
       const rokStartMs = new Date(new Date().getFullYear(), 0, 1).getTime();
       // Faza 3: nagrody + moje oczekujące odbiory (saldo dostępne = saldo − rezerwacje)
@@ -1952,6 +2454,41 @@ module.exports = (db) => {
           ORDER BY wyslano_at DESC LIMIT 10`,
         [p.t]
       ).catch(() => []);
+      // Mnożnik punktów aktywny teraz (np. „weekend ×2") → baner w apce
+      const mnoznikRows = await q(
+        `SELECT mnoznik, opis, data_do FROM Lojalnosc_Mnozniki
+          WHERE tenant_id = ? AND aktywny = 1 AND NOW() BETWEEN data_od AND data_do
+          ORDER BY mnoznik DESC LIMIT 1`,
+        [p.t]
+      ).catch(() => []);
+      const mn = (Array.isArray(mnoznikRows) && mnoznikRows[0]) || null;
+      // Poziom klubu: liczony z wydatków klientki w bieżącym roku (nie z punktów — poziom
+      // nie znika przy resecie punktów). Widoczny tylko gdy salon zdefiniował poziomy.
+      const wydRows = await q(
+        `SELECT COALESCE(SUM(kwota), 0) AS wydane FROM Sprzedaz
+          WHERE tenant_id = ? AND id_klienta = ? AND COALESCE(status,'') != 'USUNIĘTY' AND kwota > 0
+            AND YEAR(data_sprzedazy) = YEAR(CURDATE())`,
+        [p.t, p.k]
+      ).catch(() => [{ wydane: 0 }]);
+      const poziomyRows = await q(
+        `SELECT nazwa, prog_zl_rocznie, kolor, perk FROM Lojalnosc_Poziomy WHERE tenant_id = ? ORDER BY prog_zl_rocznie ASC`,
+        [p.t]
+      ).catch(() => []);
+      const wydane = Math.round(Number((Array.isArray(wydRows) && wydRows[0] || {}).wydane) || 0);
+      const listaPoz = Array.isArray(poziomyRows) ? poziomyRows : [];
+      let poziom = null;
+      if (listaPoz.length) {
+        let obecny = null, nastepny = null;
+        for (const pz of listaPoz) { if (wydane >= Number(pz.prog_zl_rocznie)) obecny = pz; }
+        for (const pz of listaPoz) { if (Number(pz.prog_zl_rocznie) > wydane) { nastepny = pz; break; } }
+        poziom = {
+          nazwa: obecny ? obecny.nazwa : null,
+          kolor: obecny ? (obecny.kolor || '#c54f7f') : '#9ca3af',
+          perk: obecny ? (obecny.perk || '') : '',
+          wydane,
+          nastepny: nastepny ? { nazwa: nastepny.nazwa, prog: Number(nastepny.prog_zl_rocznie), brakuje: Math.max(0, Number(nastepny.prog_zl_rocznie) - wydane) } : null
+        };
+      }
       const odp = {
         status: 'success',
         imie: String(klient.imie_nazwisko || '').split(' ')[0] || '',
@@ -1992,7 +2529,14 @@ module.exports = (db) => {
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
         // Reset roczny: punkty ważne do 31.12 bieżącego roku (motywacja: wykorzystaj przed końcem roku)
-        punkty_do: Number(ust.reset_roczny) ? (new Date().getFullYear() + '-12-31') : null
+        punkty_do: Number(ust.reset_roczny) ? (new Date().getFullYear() + '-12-31') : null,
+        // Mnożnik czasowy — apka pokazuje baner „Punkty ×2 do …"
+        mnoznik_aktywny: (mn && Number(mn.mnoznik) > 1)
+          ? { mnoznik: Number(mn.mnoznik), opis: mn.opis || '', data_do: mn.data_do }
+          : null,
+        poziom,
+        // „Poleć koleżankę" widoczne w apce tylko gdy salon ustawił nagrodę
+        polecenia_on: (parseInt(ust.polecenie_pkt, 10) || 0) > 0 ? 1 : 0
       };
       // Przełącznik salonów: wszystkie salony tego numeru (nazwy + saldo, BEZ tokenów).
       // Tokeny do przełączania klient dostaje wyłącznie przy logowaniu (PIN) — stąd
@@ -2289,6 +2833,17 @@ module.exports = (db) => {
          VALUES (?, ?, ?, ?, 'AKTYWNE', NOW())`,
         [p.t, noweId, tel, hash]
       );
+      // Kod polecający (opcjonalny) — łączy nową klientkę z polecającą; nagroda po 1. zakupie.
+      const kodPol = String(d.kod_polecajacy || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+      if (kodPol) {
+        const wl = await q(`SELECT id_klienta FROM Lojalnosc_Konta WHERE tenant_id = ? AND kod_polec = ? AND status = 'AKTYWNE' LIMIT 1`, [p.t, kodPol]).catch(() => []);
+        const owner = (Array.isArray(wl) && wl[0]) ? String(wl[0].id_klienta) : null;
+        if (owner && owner !== noweId) {
+          await q(`INSERT IGNORE INTO Lojalnosc_Polecenia (tenant_id, polecajaca_id, polecona_id, kod, status) VALUES (?, ?, ?, ?, 'OCZEKUJE')`,
+            [p.t, owner, noweId, kodPol]).catch(() => {});
+          zapiszLog(p.t, 'KLUB POLECENIE', 'Klient (apka)', `${imie} dołączyła z kodu ${kodPol} (polecająca ${owner})`);
+        }
+      }
       const uRows = await q(`SELECT bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const bonus = parseInt(((Array.isArray(uRows) && uRows[0]) || {}).bonus_powitalny_pkt, 10) || 0;
       if (bonus > 0) {
@@ -2364,6 +2919,51 @@ module.exports = (db) => {
     }
   });
 
+  // „Poleć koleżankę": zwraca kod polecający klientki (generuje przy pierwszym wejściu)
+  // + nagrodę za polecenie i licznik już poleconych. Kod = 5 znaków bez mylących.
+  function generujKodPolec() {
+    let s = '';
+    for (let i = 0; i < 5; i++) s += KOD_ZNAKI[Math.floor(Math.random() * KOD_ZNAKI.length)];
+    return s;
+  }
+  router.post('/klub/polecenia', klubLimiter, async (req, res) => {
+    const p = verifyKlubToken((req.body || {}).session, 'ses');
+    if (!p) return res.json({ status: 'error', code: 'SESJA', message: 'Sesja wygasła. Zaloguj się ponownie.' });
+    try {
+      const aRows = await q(`SELECT status, kod_polec FROM Lojalnosc_Konta WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [p.t, p.k]);
+      const konto = Array.isArray(aRows) ? aRows[0] : null;
+      if (!konto || String(konto.status).toUpperCase() !== 'AKTYWNE') {
+        return res.json({ status: 'error', code: 'SESJA', message: 'Konto nieaktywne. Skontaktuj się z salonem.' });
+      }
+      const uRows = await q(`SELECT polecenie_pkt, nazwa_klubu FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const ust = (Array.isArray(uRows) && uRows[0]) || {};
+      const pkt = parseInt(ust.polecenie_pkt, 10) || 0;
+      let kod = String(konto.kod_polec || '').trim();
+      if (!kod) {
+        for (let i = 0; i < 8 && !kod; i++) {
+          const kand = generujKodPolec();
+          const ex = await q(`SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND kod_polec = ? LIMIT 1`, [p.t, kand]).catch(() => []);
+          if (Array.isArray(ex) && ex.length) continue;   // kolizja — losuj ponownie
+          await q(`UPDATE Lojalnosc_Konta SET kod_polec = ? WHERE tenant_id = ? AND id_klienta = ?`, [kand, p.t, p.k]).catch(() => {});
+          kod = kand;
+        }
+      }
+      const stat = await q(
+        `SELECT status, COUNT(*) AS n FROM Lojalnosc_Polecenia WHERE tenant_id = ? AND polecajaca_id = ? GROUP BY status`,
+        [p.t, p.k]
+      ).catch(() => []);
+      let zrealizowane = 0, oczekujace = 0;
+      for (const s of (Array.isArray(stat) ? stat : [])) {
+        if (String(s.status) === 'ZREALIZOWANE') zrealizowane = Number(s.n) || 0;
+        else if (String(s.status) === 'OCZEKUJE') oczekujace = Number(s.n) || 0;
+      }
+      return res.json({ status: 'success', kod, polecenie_pkt: pkt, zrealizowane, oczekujace, nazwa_klubu: ust.nazwa_klubu || 'Klub' });
+    } catch (e) {
+      console.error('[lojalnosc] polecenia:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
   // ─── Upload grafiki z panelu (multipart — poza dispatcherem JSON) ───
   // Front POST-uje bezpośrednio na /api/lojalnosc/upload z polami tenant_id,
   // user_log i plikiem "plik". RBAC admin + feature sprawdzane PO multerze.
@@ -2405,6 +3005,9 @@ module.exports = (db) => {
   });
 
   router._tickResetRoczny = tickResetRoczny;   // hook do testów resetu rocznego
+  router._tickAutomaty = tickAutomaty;         // hooki automatów (testy)
+  router._wykonajAutomat = wykonajAutomat;
+  router._kandydaciAutomatu = kandydaciAutomatu;
   return router;
 };
 

@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 15 wpisów-wypełniaczy na init fabryki (CREATE ×12 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 15 }, () => ({ rows: [] }));
+// 20 wpisów-wypełniaczy na init fabryki (CREATE ×17 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 20 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -96,6 +96,25 @@ describe('makeLojalnosc — naliczZaSprzedaz', () => {
         const db = mockDbAlways({ affectedRows: 1 }); // każdy SELECT dostaje obiekt zamiast tablicy
         expect(() => makeLojalnosc(db).naliczZaSprzedaz('t-loj-f', { saleId: 'S1', id_klienta: '42', kwota: 95 })).not.toThrow();
         expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+
+    test('mnożnik czasowy ×2 → osobna linia bonusowa MNOZNIK', () => {
+        const db = mockDb(FEATURE_ON, KONTO_OK, { rows: [{ pkt_za_10zl: 1, czasowy: 2 }] }, { rows: { affectedRows: 1 } }, { rows: { affectedRows: 1 } });
+        makeLojalnosc(db).naliczZaSprzedaz('t-loj-mn', { saleId: 'S9', id_klienta: '42', kwota: 100, opis: 'Zabieg', pracownik: 'Anna' });
+        const inserts = db.query.mock.calls.filter(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        const base = inserts.find(c => c[1][4] === 'SPRZEDAZ');
+        const bonus = inserts.find(c => c[1][4] === 'MNOZNIK');
+        expect(base[1][2]).toBe(10);       // 100 zł / 10 × 1 = 10 pkt
+        expect(bonus[1][2]).toBe(10);      // ×2 → +10 bonusu
+        expect(bonus[1][5]).toBe('S9');    // ref_id = sprzedaż (cofane przy usunięciu)
+    });
+
+    test('brak aktywnego mnożnika (czasowy=null) → tylko linia SPRZEDAZ', () => {
+        const db = mockDb(FEATURE_ON, KONTO_OK, { rows: [{ pkt_za_10zl: 1, czasowy: null }] }, { rows: { affectedRows: 1 } });
+        makeLojalnosc(db).naliczZaSprzedaz('t-loj-mn2', { saleId: 'S10', id_klienta: '42', kwota: 100 });
+        const inserts = db.query.mock.calls.filter(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(inserts).toHaveLength(1);
+        expect(inserts[0][1][4]).toBe('SPRZEDAZ');
     });
 });
 
@@ -583,6 +602,9 @@ describe('POST /api/klub/me', () => {
             { rows: [{ rez: 0 }] },                                  // rezerwacje
             { rows: [] }, { rows: [] }, { rows: [] },                // nagrody / odbiory / promocje
             { rows: [] }, { rows: [] },                              // fakty / kampanie
+            { rows: [] },                                            // mnoznik czasowy
+            { rows: [{ wydane: 0 }] },                               // wydatki roczne (poziom)
+            { rows: [] },                                            // poziomy (brak)
             { rows: [{ telefon: '500 123 456' }] },                  // telRows (numer konta)
             { rows: [                                                // salonyKlienta: konta numeru
                 { tenant_id: 't-klub-d', id_klienta: '42', pin_hash: 'x' },
@@ -1053,6 +1075,273 @@ describe('POST /api/lojalnosc — kampanie', () => {
             .send({ action: 'loj_kampania_kasuj', tenant_id: 't-loj-kk3', id: 5, user_log: 'Recepcja' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
+    });
+});
+
+// ─── Mnożniki punktów ─────────────────────────────────────────
+describe('POST /api/lojalnosc — mnożniki punktów', () => {
+    const baza = {
+        action: 'loj_mnoznik_zapisz', tenant_id: 't-loj-mnz', user_log: 'Szefowa',
+        mnoznik: 2, opis: 'Weekend ×2', data_od: '2026-08-01T00:00', data_do: '2026-08-03T23:59'
+    };
+
+    test('admin dodaje mnożnik ×2 → INSERT z okna dat', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1, insertId: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send(baza);
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Mnozniki/.test(c[0]));
+        expect(ins[1]).toContain(2);
+        expect(ins[1]).toContain('2026-08-01 00:00:00');
+    });
+
+    test('mnożnik poza zakresem (11) → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, mnoznik: 11 });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/zakres/i);
+    });
+
+    test('koniec przed początkiem → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, data_do: '2026-07-01T00:00' });
+        expect(res.body.status).toBe('error');
+    });
+
+    test('recepcja NIE dodaje mnożnika', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('usunięcie mnożnika (admin) → DELETE; brak → error', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
+            .send({ action: 'loj_mnoznik_usun', tenant_id: 't-loj-mnz2', id: 3, user_log: 'Szefowa' });
+        expect(r1.body.status).toBe('success');
+        const dbNie = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc')
+            .send({ action: 'loj_mnoznik_usun', tenant_id: 't-loj-mnz3', id: 3, user_log: 'Szefowa' });
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('lista mnożników tylko dla admina', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_mnozniki&tenant_id=t-loj-mnz4&user_log=Recepcja');
+        expect(res.body.status).toBe('error');
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id: 1, mnoznik: 2, opis: 'X', trwa: 1 }] });
+        const r2 = await request(buildApp(dbOk)).get('/api/lojalnosc?action=loj_mnozniki&tenant_id=t-loj-mnz5&user_log=Szefowa');
+        expect(r2.body.status).toBe('success');
+        expect(r2.body.mnozniki).toHaveLength(1);
+    });
+});
+
+// ─── Kampanie-automaty ────────────────────────────────────────
+describe('POST /api/lojalnosc — automaty', () => {
+    const baza = {
+        action: 'loj_automat_zapisz', tenant_id: 't-loj-au', user_log: 'Szefowa',
+        typ: 'WINBACK', tytul: 'Wróć do nas', tresc: 'Dawno Cię nie było!', bonus_pkt: 20, param_dni: 60, aktywny: 1
+    };
+
+    test('admin zapisuje automat WINBACK (upsert)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send(baza);
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Automaty/.test(c[0]));
+        expect(ins[0]).toMatch(/ON DUPLICATE KEY UPDATE/);
+        expect(ins[1]).toContain('WINBACK');
+        expect(ins[1]).toContain(20);
+    });
+
+    test('nieznany typ → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, typ: 'COKOLWIEK' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/typ/i);
+    });
+
+    test('recepcja NIE zapisuje automatu', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('włączenie/wyłączenie automatu; brak zapisanego → error', async () => {
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const r1 = await request(buildApp(dbOk)).post('/api/lojalnosc')
+            .send({ action: 'loj_automat_status', tenant_id: 't-loj-au2', typ: 'URODZINY', aktywny: 1, user_log: 'Szefowa' });
+        expect(r1.body.status).toBe('success');
+        const dbNie = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 0 } });
+        const r2 = await request(buildApp(dbNie)).post('/api/lojalnosc')
+            .send({ action: 'loj_automat_status', tenant_id: 't-loj-au3', typ: 'URODZINY', aktywny: 1, user_log: 'Szefowa' });
+        expect(r2.body.status).toBe('error');
+    });
+
+    test('lista automatów tylko dla admina', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_automaty&tenant_id=t-loj-au4&user_log=Recepcja');
+        expect(res.body.status).toBe('error');
+        const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id: 1, typ: 'WINBACK', aktywny: 1, tytul: 'X' }] });
+        const r2 = await request(buildApp(dbOk)).get('/api/lojalnosc?action=loj_automaty&tenant_id=t-loj-au5&user_log=Szefowa');
+        expect(r2.body.status).toBe('success');
+        expect(r2.body.automaty).toHaveLength(1);
+    });
+
+    test('silnik: kandydaci WINBACK mapują ref = W@<ostatnia wizyta>', async () => {
+        const db = mockDb(...INIT, { rows: [{ id_klienta: '42', ost: '2026-05-01' }] });
+        const router = lojalnoscFactory(db);
+        const kand = await router._kandydaciAutomatu({ tenant_id: 't', typ: 'WINBACK', param_dni: 60 });
+        expect(kand).toEqual([{ id_klienta: '42', ref: 'W@2026-05-01' }]);
+    });
+
+    test('silnik: wykonajAutomat daje bonus i loguje wysyłkę (push 0 bez VAPID)', async () => {
+        const db = mockDb(...INIT,
+            { rows: [{ id_klienta: '42', ost: '2026-05-01' }] }, // kandydaci
+            { rows: { affectedRows: 1 } },                        // INSERT IGNORE Log (nowy)
+            { rows: { affectedRows: 1 } },                        // INSERT Punkty (bonus)
+            { rows: [] },                                         // SELECT Lojalnosc_Push
+            { rows: { affectedRows: 1 } }                         // zapiszLog
+        );
+        const router = lojalnoscFactory(db);
+        const ile = await router._wykonajAutomat({ id: 5, tenant_id: 't', typ: 'WINBACK', param_dni: 60, bonus_pkt: 20, tytul: 'Wróć', tresc: 'Tęsknimy', img_url: '' });
+        expect(ile).toBe(1);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins[1][2]).toBe(20);            // zmiana = bonus
+        expect(ins[0]).toMatch(/'AUTOMAT'/);   // zrodlo (literał w SQL)
+        expect(ins[1][4]).toBe('A5@42@W@2026-05-01'); // ref_id idempotentny
+    });
+
+    test('silnik: klient już powiadomiony (Log IGNORE, affectedRows 0) → brak bonusu i pushu', async () => {
+        const db = mockDb(...INIT,
+            { rows: [{ id_klienta: '42', ost: '2026-05-01' }] }, // kandydaci
+            { rows: { affectedRows: 0 } }                         // INSERT IGNORE Log — duplikat
+        );
+        const router = lojalnoscFactory(db);
+        const ile = await router._wykonajAutomat({ id: 5, tenant_id: 't', typ: 'WINBACK', param_dni: 60, bonus_pkt: 20, tytul: 'Wróć', tresc: 'x', img_url: '' });
+        expect(ile).toBe(0);
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+});
+
+// ─── Poziomy klubu ────────────────────────────────────────────
+describe('POST /api/lojalnosc — poziomy', () => {
+    const baza = { action: 'loj_poziom_zapisz', tenant_id: 't-loj-pz', user_log: 'Szefowa', nazwa: 'Złoto', prog_zl_rocznie: 1500, kolor: '#d4af37', perk: '-10%' };
+
+    test('admin dodaje poziom', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send(baza);
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Poziomy/.test(c[0]));
+        expect(ins[1]).toContain('Złoto');
+        expect(ins[1]).toContain(1500);
+    });
+
+    test('bez nazwy → walidacja', async () => {
+        const db = mockDbAlways([]);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, nazwa: '  ' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/nazwę/i);
+    });
+
+    test('recepcja NIE dodaje poziomu', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/uprawnień/i);
+    });
+
+    test('usunięcie poziomu (admin)', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc').send({ action: 'loj_poziom_usun', tenant_id: 't-loj-pz2', id: 4, user_log: 'Szefowa' });
+        expect(res.body.status).toBe('success');
+    });
+
+    test('/me zwraca poziom + ile brakuje do następnego', async () => {
+        const sesja = makeKlubToken({ t: 't-pz', k: '42', typ: 'ses', exp: Date.now() + 80 * 24 * 3600 * 1000 });
+        const db = mockDb(...INIT,
+            { rows: [{ status: 'AKTYWNE' }] },                                  // konto
+            { rows: [{ imie_nazwisko: 'Anna K', status: '', zmarly: 0 }] },     // klient
+            { rows: [{ saldo: 50 }] },                                          // saldo
+            { rows: [] }, { rows: [] },                                         // wpisy / ustawienia
+            { rows: [{ rez: 0 }] },                                             // rezerwacje
+            { rows: [] }, { rows: [] }, { rows: [] },                           // nagrody / odbiory / promocje
+            { rows: [] }, { rows: [] },                                         // fakty / kampanie
+            { rows: [] },                                                       // mnoznik
+            { rows: [{ wydane: 800 }] },                                        // wydatki roczne
+            { rows: [                                                           // poziomy
+                { nazwa: 'Srebro', prog_zl_rocznie: 500, kolor: '#999', perk: 'x' },
+                { nazwa: 'Złoto', prog_zl_rocznie: 1500, kolor: '#d4af37', perk: 'y' }
+            ] }
+        );
+        const res = await request(buildApp(db)).post('/api/klub/me').send({ session: sesja });
+        expect(res.body.status).toBe('success');
+        expect(res.body.poziom.nazwa).toBe('Srebro');
+        expect(res.body.poziom.nastepny.nazwa).toBe('Złoto');
+        expect(res.body.poziom.nastepny.brakuje).toBe(700);   // 1500 − 800
+    });
+
+    test('silnik: automat AWANS → ref = AV@<poziom>@<rok> dla najwyższego osiągniętego', async () => {
+        const rok = new Date().getFullYear();
+        const db = mockDb(...INIT,
+            { rows: [{ id: 1, prog_zl_rocznie: 500 }, { id: 2, prog_zl_rocznie: 1500 }] }, // poziomy
+            { rows: [{ id_klienta: '42', wydane: 800 }] }                                  // wydatki roczne
+        );
+        const router = lojalnoscFactory(db);
+        const kand = await router._kandydaciAutomatu({ tenant_id: 't', typ: 'AWANS' });
+        expect(kand).toEqual([{ id_klienta: '42', ref: 'AV@1@' + rok }]);   // 800 zł → Srebro (id 1)
+    });
+});
+
+// ─── Poleć koleżankę ──────────────────────────────────────────
+describe('poleć koleżankę', () => {
+    test('hook: pierwszy zakup poleconej nagradza OBIE strony punktami', () => {
+        const db = mockDb(
+            FEATURE_ON, { rows: [{ id: 1 }] }, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } }, // accrual
+            { rows: [{ id: 9, polecajaca_id: '10', polecenie_pkt: 50 }] }, // sprawdzPolecenie SELECT
+            { rows: { affectedRows: 1 } },                                  // UPDATE claim
+            { rows: { affectedRows: 1 } },                                  // wpis polecajaca
+            { rows: { affectedRows: 1 } }                                   // wpis polecona
+        );
+        makeLojalnosc(db).naliczZaSprzedaz('t', { saleId: 'S1', id_klienta: '42', kwota: 100, opis: 'Zabieg', pracownik: 'Anna' });
+        const pol = db.query.mock.calls.filter(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]) && c[1] && c[1][4] === 'POLECENIE');
+        expect(pol.length).toBe(2);
+        expect(pol.every(c => c[1][2] === 50)).toBe(true);
+        expect(pol.map(c => c[1][1]).sort()).toEqual(['10', '42']);   // polecająca + polecona
+    });
+
+    test('hook: bez skonfigurowanej nagrody (polecenie_pkt=0) → brak wypłaty', () => {
+        const db = mockDb(
+            FEATURE_ON, { rows: [{ id: 1 }] }, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } },
+            { rows: [{ id: 9, polecajaca_id: '10', polecenie_pkt: 0 }] } // sprawdzPolecenie → pkt 0
+        );
+        makeLojalnosc(db).naliczZaSprzedaz('t', { saleId: 'S1', id_klienta: '42', kwota: 100 });
+        const pol = db.query.mock.calls.filter(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]) && c[1] && c[1][4] === 'POLECENIE');
+        expect(pol.length).toBe(0);
+    });
+
+    test('/klub/polecenia zwraca kod, nagrodę i licznik poleconych', async () => {
+        const ses = makeKlubToken({ t: 't-pol', k: '42', typ: 'ses', exp: Date.now() + 60000 });
+        const db = mockDb(...INIT,
+            { rows: [{ status: 'AKTYWNE', kod_polec: 'ABCDE' }] },              // konto (kod już jest)
+            { rows: [{ polecenie_pkt: 50, nazwa_klubu: 'Klub' }] },             // ustawienia
+            { rows: [{ status: 'ZREALIZOWANE', n: 2 }, { status: 'OCZEKUJE', n: 1 }] } // statystyki
+        );
+        const res = await request(buildApp(db)).post('/api/klub/polecenia').send({ session: ses });
+        expect(res.body.status).toBe('success');
+        expect(res.body.kod).toBe('ABCDE');
+        expect(res.body.polecenie_pkt).toBe(50);
+        expect(res.body.zrealizowane).toBe(2);
+        expect(res.body.oczekujace).toBe(1);
+    });
+
+    test('ustawienia zapisują polecenie_pkt', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/lojalnosc')
+            .send({ action: 'loj_ustawienia_zapisz', tenant_id: 't-uppol', user_log: 'Szefowa', pkt_za_10zl: 1, polecenie_pkt: 50 });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Ustawienia/.test(c[0]));
+        expect(ins[1]).toContain(50);
     });
 });
 

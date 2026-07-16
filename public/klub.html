@@ -293,6 +293,7 @@
     <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
     <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
     <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+    <input type="text" id="rej-ref" maxlength="12" placeholder="Kod polecający (jeśli masz)" autocomplete="off" style="letter-spacing:.08em; text-transform:uppercase;">
     <label class="chk-row"><input type="checkbox" id="rej-zgoda"><span>Akceptuję <a id="rej-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
     <button class="btn" id="rej-btn" onclick="zarejestruj()">Załóż konto</button>
     <div class="err" id="rej-err"></div>
@@ -333,6 +334,8 @@
       <div class="zl" id="m-saldo-zl" style="display:none;"></div>
       <div class="rule" id="m-zasada"></div>
     </div>
+    <div id="m-mnoznik" style="display:none;"></div>
+    <div id="m-poziom" style="display:none;"></div>
     <div class="akcje-tytul">Co chcesz zrobić?</div>
     <div class="akcje">
       <button class="akcja" onclick="tab('nagrody')"><span class="a-ico" data-iko="gift"></span><span><span class="a-tit">Nagrody</span><br><span class="a-sub">Wymień punkty</span></span></button>
@@ -382,6 +385,7 @@
         <button class="menu-item" id="btn-push" onclick="wlaczPush()" style="display:none;"><span style="color:var(--primary); display:flex; align-items:center; gap:10px;"><span data-iko="bell" data-s="19"></span>Włącz powiadomienia o promocjach</span><span class="arrow">›</span></button>
         <button class="menu-item" onclick="pokazZasady()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="spark" data-s="19" style="color:var(--gold-dark);"></span>Jak zbierać punkty?</span><span class="arrow">›</span></button>
         <button class="menu-item" onclick="pokazFaq()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="info" data-s="19" style="color:var(--gold-dark);"></span>Pytania i odpowiedzi</span><span class="arrow">›</span></button>
+        <button class="menu-item" id="btn-polecenia" onclick="tab('polecenia')" style="display:none;"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="gift" data-s="19" style="color:var(--primary);"></span>Poleć koleżankę</span><span class="arrow">›</span></button>
         <button class="menu-item" onclick="otworzZmianePin()"><span style="display:flex; align-items:center; gap:10px;"><span data-iko="lock" data-s="19" style="color:var(--gold-dark);"></span>Zmień PIN</span><span class="arrow">›</span></button>
       </div>
     </div>
@@ -391,6 +395,25 @@
     </div>
     <div id="install-hint"></div>
     <button class="btn ghost" style="max-width:440px;" onclick="wyloguj()">Wyloguj się</button>
+  </div>
+
+  <!-- TAB: Poleć koleżankę -->
+  <div id="tab-polecenia" class="tabpage">
+    <div class="sekcja" style="margin-top:6px;">
+      <h3>Poleć koleżankę 💌</h3>
+      <div style="font-size:13.5px; color:var(--muted); line-height:1.55;" id="pol-opis">Ładowanie…</div>
+    </div>
+    <div id="pol-karta" style="display:none;">
+      <div class="saldo-card" style="text-align:center;">
+        <div class="lbl">Twój kod polecający</div>
+        <div class="val" style="letter-spacing:.14em; font-variant-numeric:tabular-nums;" id="pol-kod">—</div>
+        <div style="display:flex; gap:8px; justify-content:center; margin-top:14px; flex-wrap:wrap;">
+          <button class="btn" style="max-width:200px;" onclick="udostepnijKod()">Udostępnij</button>
+          <button class="btn ghost" style="max-width:150px;" onclick="kopiujKod()">Kopiuj</button>
+        </div>
+      </div>
+      <div class="sekcja"><div style="font-size:13px; color:var(--muted);" id="pol-licznik"></div></div>
+    </div>
   </div>
 
   <!-- TAB: Kosmetyki (historia zakupów produktów + przypomnienia o uzupełnieniu) -->
@@ -585,7 +608,41 @@ function tab(nazwa) {
   document.getElementById('tab-' + nazwa).classList.add('visible');
   document.querySelectorAll('.tabs .tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-tab') === nazwa));
   if (nazwa === 'kosmetyki') zaladujKosmetyki();
+  if (nazwa === 'polecenia') zaladujPolecenia();
   window.scrollTo(0, 0);
+}
+let POL_STATE = { kod: '', pkt: 0, url: '' };
+async function zaladujPolecenia() {
+  const opis = document.getElementById('pol-opis');
+  const karta = document.getElementById('pol-karta');
+  const ses = localStorage.getItem(LS_SESJA);
+  if (!ses) { opis.textContent = 'Zaloguj się, aby zobaczyć swój kod.'; return; }
+  try {
+    const d = await api('/polecenia', { session: ses });
+    if (!d || d.status !== 'success') { opis.textContent = 'Nie udało się wczytać. Spróbuj później.'; if (karta) karta.style.display = 'none'; return; }
+    POL_STATE.kod = d.kod || '';
+    POL_STATE.pkt = d.polecenie_pkt || 0;
+    POL_STATE.url = location.origin + '/klub/?ref=' + encodeURIComponent(POL_STATE.kod);
+    opis.innerHTML = 'Podaj koleżance swój kod. Gdy założy konto w aplikacji i przyjdzie na pierwszą wizytę, <b>obie dostajecie ' + POL_STATE.pkt + ' pkt</b> 💗';
+    document.getElementById('pol-kod').textContent = POL_STATE.kod || '—';
+    document.getElementById('pol-licznik').textContent = d.zrealizowane
+      ? ('Poleciłaś już: ' + d.zrealizowane + (d.oczekujace ? (' · w toku: ' + d.oczekujace) : ''))
+      : (d.oczekujace ? ('W toku: ' + d.oczekujace + ' — nagroda po pierwszej wizycie koleżanki.') : 'Jeszcze nikogo nie poleciłaś — zacznij już dziś!');
+    if (karta) karta.style.display = 'block';
+  } catch (e) { opis.textContent = 'Nie udało się wczytać.'; }
+}
+function tekstUdostepnienia() {
+  return 'Dołącz do naszego klubu i odbierz punkty! Użyj mojego kodu: ' + POL_STATE.kod + '\n' + POL_STATE.url;
+}
+async function udostepnijKod() {
+  const txt = tekstUdostepnienia();
+  if (navigator.share) { try { await navigator.share({ title: 'Klub', text: txt, url: POL_STATE.url }); return; } catch (e) {} }
+  kopiujKod();
+}
+function kopiujKod() {
+  const txt = tekstUdostepnienia();
+  if (navigator.clipboard) navigator.clipboard.writeText(txt).then(() => toast('Skopiowano — wyślij koleżance ✨')).catch(() => toast('Twój kod: ' + POL_STATE.kod));
+  else toast('Twój kod: ' + POL_STATE.kod);
 }
 function zamknij(id) { document.getElementById(id).classList.remove('visible'); }
 function loader(on) { document.getElementById('loader').classList.toggle('visible', !!on); }
@@ -713,6 +770,11 @@ async function startRejestracja(token) {
     const reg = document.getElementById('rej-regulamin');
     if (d.regulamin_url) { reg.href = d.regulamin_url; }
     else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
+    try {
+      const ref = new URLSearchParams(location.search).get('ref');
+      const refEl = document.getElementById('rej-ref');
+      if (ref && refEl) refEl.value = String(ref).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+    } catch (e) {}
     history.replaceState(null, '', '/klub/');
     pokaz('screen-rejestracja');
   } catch (e) {
@@ -737,7 +799,9 @@ async function zarejestruj() {
   const btn = document.getElementById('rej-btn');
   btn.disabled = true;
   try {
-    const d = await api('/rejestracja', { token: rejestracjaToken, imie, telefon: tel, pin, zgoda: true });
+    const refEl = document.getElementById('rej-ref');
+    const kodPol = refEl ? refEl.value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '') : '';
+    const d = await api('/rejestracja', { token: rejestracjaToken, imie, telefon: tel, pin, zgoda: true, kod_polecajacy: kodPol });
     if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się założyć konta.'; return; }
     if (d.kod === 'NOWE') {
       zapiszBundle([]);                            // start od czysta — nowa tożsamość na tym urządzeniu
@@ -1054,8 +1118,42 @@ function renderAll() {
     } else zlEl.style.display = 'none';
   }
   document.getElementById('m-zasada').textContent = 'Każde 10 zł w salonie = ' + (d.pkt_za_10zl != null ? d.pkt_za_10zl : 1) + ' pkt · naliczane automatycznie';
+  const mnBox = document.getElementById('m-mnoznik');
+  if (mnBox) {
+    const mn = d.mnoznik_aktywny;
+    if (mn && mn.mnoznik > 1) {
+      const x = Number.isInteger(mn.mnoznik) ? '×' + mn.mnoznik : '×' + String(mn.mnoznik).replace('.', ',');
+      const doTxt = mn.data_do ? (' do ' + dataZ(mn.data_do)) : '';
+      mnBox.innerHTML = '<div style="margin:14px 0 0; padding:13px 16px; border-radius:16px; background:linear-gradient(135deg,#fde68a,#fbbf24); color:#7c2d12; font-weight:800; text-align:center; box-shadow:0 3px 12px rgba(217,119,6,.28);">🔥 Punkty ' + x + doTxt + '!' +
+        (mn.opis ? '<div style="font-weight:600; font-size:12.5px; margin-top:3px; opacity:.85;">' + esc(mn.opis) + '</div>' : '') + '</div>';
+      mnBox.style.display = 'block';
+    } else mnBox.style.display = 'none';
+  }
+  const pzBox = document.getElementById('m-poziom');
+  if (pzBox) {
+    const pz = d.poziom;
+    if (pz && (pz.nazwa || pz.nastepny)) {
+      const kolor = pz.kolor || '#c54f7f';
+      let html = '<div style="margin:14px 0 0; padding:14px 16px; border-radius:16px; background:#fffdf9; border:1px solid #ecdfd2; box-shadow:0 2px 8px rgba(84,48,48,.05);">';
+      html += '<div style="display:flex; align-items:center; gap:9px;"><span style="width:12px; height:12px; border-radius:50%; background:' + kolor + '; flex-shrink:0;"></span>' +
+        '<b style="font-size:15px; color:' + kolor + ';">' + (pz.nazwa ? esc(pz.nazwa) : 'Twój poziom') + '</b>' +
+        '<span style="margin-left:auto; font-size:12px; color:#9ca3af;">w tym roku: ' + (pz.wydane || 0) + ' zł</span></div>';
+      if (pz.perk) html += '<div style="font-size:12.5px; color:#4a5261; margin-top:5px;">' + esc(pz.perk) + '</div>';
+      if (pz.nastepny) {
+        const prog = pz.nastepny.prog || 1;
+        const pct = Math.max(3, Math.min(100, Math.round((pz.wydane || 0) / prog * 100)));
+        html += '<div style="margin-top:11px;"><div style="height:8px; background:#f0e6dd; border-radius:99px; overflow:hidden;"><div style="height:100%; width:' + pct + '%; background:' + kolor + '; border-radius:99px;"></div></div>' +
+          '<div style="font-size:11.5px; color:#9ca3af; margin-top:5px;">Do poziomu <b style="color:#6f2136;">' + esc(pz.nastepny.nazwa) + '</b> brakuje ' + pz.nastepny.brakuje + ' zł</div></div>';
+      }
+      html += '</div>';
+      pzBox.innerHTML = html;
+      pzBox.style.display = 'block';
+    } else pzBox.style.display = 'none';
+  }
   const rez = (d.saldo || 0) - (d.saldo_dostepne != null ? d.saldo_dostepne : d.saldo);
   document.getElementById('m-dostepne').textContent = rez > 0 ? ('dostępne: ' + d.saldo_dostepne + ' pkt (' + rez + ' zarezerwowane)') : '';
+  const polBtn = document.getElementById('btn-polecenia');
+  if (polBtn) polBtn.style.display = d.polecenia_on ? '' : 'none';
   renderPromocje(d.promocje || []);
   renderWiadomosci(d.wiadomosci || []);
   renderNagrody(d.nagrody || [], d.saldo_dostepne != null ? d.saldo_dostepne : (d.saldo || 0));

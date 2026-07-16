@@ -8279,6 +8279,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="klubadm-tab" data-kt="nagrody" onclick="klubadm_tab('nagrody', this)">Nagrody</button>
                     <button class="klubadm-tab" data-kt="promocje" onclick="klubadm_tab('promocje', this)">Promocje</button>
                     <button class="klubadm-tab" data-kt="kampanie" onclick="klubadm_tab('kampanie', this)">Kampanie</button>
+                    <button class="klubadm-tab" data-kt="mnozniki" onclick="klubadm_tab('mnozniki', this)">Mnożniki ×2</button>
+                    <button class="klubadm-tab" data-kt="automaty" onclick="klubadm_tab('automaty', this)">Automaty</button>
+                    <button class="klubadm-tab" data-kt="poziomy" onclick="klubadm_tab('poziomy', this)">Poziomy</button>
                     <button class="klubadm-tab" data-kt="czlonkowie" onclick="klubadm_tab('czlonkowie', this)">Członkowie</button>
                     <button class="klubadm-tab" data-kt="odbiory" onclick="klubadm_tab('odbiory', this)">Do obsłużenia <span id="klubadm-badge" style="display:none; background:#c54f7f; color:#fff; border-radius:999px; padding:1px 8px; font-size:11px; vertical-align:1px;"></span></button>
                     <button class="klubadm-tab" data-kt="ustawienia" onclick="klubadm_tab('ustawienia', this)">Ustawienia</button>
@@ -8297,6 +8300,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="klubadm-label">Bonus powitalny za rejestrację online (0 = brak)</label>
                             <input id="klubadm-bonus" type="number" min="0" max="1000" step="1" class="klubadm-input" style="width:110px;">
                             <div class="klubadm-pod">Dostają go tylko nowe osoby z linku rejestracyjnego — dobra zachęta w relacji na IG.</div>
+                            <label class="klubadm-label">Nagroda za polecenie koleżanki (0 = wyłączone)</label>
+                            <input id="klubadm-polecenie" type="number" min="0" max="100000" step="1" class="klubadm-input" style="width:110px;">
+                            <div class="klubadm-pod">Ile punktów dostaną OBIE strony, gdy poleconą koleżanka zrobi pierwszy zakup. Klientka udostępnia swój kod z aplikacji; nagroda nalicza się automatycznie po realnej wizycie. 0 = funkcja ukryta w apce.</div>
                             <label class="klubadm-label" style="display:flex; align-items:center; gap:9px; margin-top:16px; cursor:pointer;">
                                 <input id="klubadm-reset" type="checkbox" style="width:18px; height:18px; accent-color:#c54f7f; flex-shrink:0;">
                                 <span>Punkty kasują się na koniec roku (1 stycznia)</span>
@@ -8461,6 +8467,70 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                     </div>
                     <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-k-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                </div>
+
+                <!-- Tab: Mnożniki punktów -->
+                <div id="klubadm-mnozniki" class="klubadm-page" style="display:none;">
+                    <div style="display:grid; grid-template-columns:minmax(340px, 1fr) minmax(320px, 1.5fr); gap:16px; align-items:start;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h" id="klubadm-mn-form-tytul">Nowy mnożnik punktów</div>
+                            <div class="klubadm-pod">W wybranym oknie czasu każda złotówka daje więcej punktów. Klientki widzą w apce baner „Punkty ×2" — sztuczny szczyt ruchu na życzenie (np. martwy wtorek albo grudzień).</div>
+                            <input type="hidden" id="klubadm-mn-id">
+                            <label class="klubadm-label">Mnożnik</label>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:6px;">
+                                <button type="button" onclick="document.getElementById('klubadm-mn-x').value=2" class="klubadm-chip">×2</button>
+                                <button type="button" onclick="document.getElementById('klubadm-mn-x').value=3" class="klubadm-chip">×3</button>
+                                <button type="button" onclick="document.getElementById('klubadm-mn-x').value=1.5" class="klubadm-chip">×1,5</button>
+                            </div>
+                            <input id="klubadm-mn-x" type="number" min="1.1" max="10" step="0.1" value="2" class="klubadm-input" style="width:120px;">
+                            <label class="klubadm-label">Opis (widoczny w apce, opcjonalnie)</label>
+                            <input id="klubadm-mn-opis" maxlength="120" placeholder="np. Weekend podwójnych punktów" class="klubadm-input" style="width:100%;">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                                <div><label class="klubadm-label">Od</label><input id="klubadm-mn-od" type="datetime-local" class="klubadm-input"></div>
+                                <div><label class="klubadm-label">Do</label><input id="klubadm-mn-do" type="datetime-local" class="klubadm-input"></div>
+                            </div>
+                            <div style="display:flex; gap:10px; margin-top:18px; align-items:center;">
+                                <button onclick="klubadm_zapiszMnoznik()" id="klubadm-mn-btn" class="klubadm-glowny">Dodaj mnożnik</button>
+                                <button onclick="klubadm_resetMnoznik()" id="klubadm-mn-anuluj-ed" class="klubadm-cichy" style="display:none;">Anuluj edycję</button>
+                            </div>
+                            <div id="klubadm-mn-status" style="font-size:12.5px; color:#8a8f9c; margin-top:10px;"></div>
+                        </div>
+                        <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-mn-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                    </div>
+                </div>
+
+                <!-- Tab: Automaty (kampanie wyzwalane zdarzeniem) -->
+                <div id="klubadm-automaty" class="klubadm-page" style="display:none;">
+                    <div class="klubadm-pod" style="margin-bottom:14px;">Ustaw raz — działają same. Automat wykrywa zdarzenie (urodziny, brak wizyty, rocznica, zbliżanie się do nagrody) i wysyła klientce powiadomienie w aplikacji, opcjonalnie z prezentem punktowym. Recepcja nic nie klika.</div>
+                    <div id="klubadm-au-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                </div>
+
+                <!-- Tab: Poziomy klubu -->
+                <div id="klubadm-poziomy" class="klubadm-page" style="display:none;">
+                    <div style="display:grid; grid-template-columns:minmax(320px, 1fr) minmax(320px, 1.4fr); gap:16px; align-items:start;">
+                        <div class="klubadm-karta">
+                            <div class="klubadm-h" id="klubadm-pz-form-tytul">Nowy poziom</div>
+                            <div class="klubadm-pod">Poziom liczony z wydatków klientki w bieżącym roku. W aplikacji widzi swój status i „ile brakuje do wyższego". Możesz połączyć z automatem „Awans poziomu".</div>
+                            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+                                <button type="button" onclick="klubadm_szablonPoziomy()" class="klubadm-chip">Wstaw przykład: Srebro/Złoto/Diament</button>
+                            </div>
+                            <input type="hidden" id="klubadm-pz-id">
+                            <label class="klubadm-label">Nazwa</label>
+                            <input id="klubadm-pz-nazwa" maxlength="60" placeholder="np. Złoto" class="klubadm-input" style="width:100%;">
+                            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                                <div><label class="klubadm-label">Próg (zł/rok)</label><input id="klubadm-pz-prog" type="number" min="0" value="0" class="klubadm-input" style="width:130px;"></div>
+                                <div><label class="klubadm-label">Kolor</label><input id="klubadm-pz-kolor" type="color" value="#c54f7f" class="klubadm-input" style="width:64px; height:38px; padding:2px;"></div>
+                            </div>
+                            <label class="klubadm-label">Korzyść (widoczna w apce, opcjonalnie)</label>
+                            <input id="klubadm-pz-perk" maxlength="200" placeholder="np. −10% na każdy zabieg" class="klubadm-input" style="width:100%;">
+                            <div style="display:flex; gap:10px; margin-top:18px; align-items:center;">
+                                <button onclick="klubadm_zapiszPoziom()" id="klubadm-pz-btn" class="klubadm-glowny">Dodaj poziom</button>
+                                <button onclick="klubadm_resetPoziom()" id="klubadm-pz-anuluj-ed" class="klubadm-cichy" style="display:none;">Anuluj edycję</button>
+                            </div>
+                            <div id="klubadm-pz-status" style="font-size:12.5px; color:#8a8f9c; margin-top:10px;"></div>
+                        </div>
+                        <div class="klubadm-karta" style="padding:10px 24px;"><div id="klubadm-pz-lista"><div style="padding:20px; text-align:center; color:#9ca3af;">Ładowanie…</div></div></div>
+                    </div>
                 </div>
 
                 <!-- Tab: Członkowie Klubu -->
@@ -31163,6 +31233,9 @@ function klubadm_init() {
   klubadm_zaladujNagrody();
   klubadm_zaladujPromocje();
   klubadm_zaladujKampanie();
+  klubadm_zaladujMnozniki();
+  klubadm_zaladujAutomaty();
+  klubadm_zaladujPoziomy();
   klubadm_zaladujCzlonkow();
   klubadm_zaladujOdbiory();
   if (!klubadm_zainicjowane) {
@@ -31208,6 +31281,8 @@ async function klubadm_zaladujUstawienia() {
     if (p) p.value = d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1;
     if (b) b.value = d.ustawienia.bonus_powitalny_pkt != null ? d.ustawienia.bonus_powitalny_pkt : 0;
     if (rs) rs.checked = !!Number(d.ustawienia.reset_roczny);
+    const pol = document.getElementById('klubadm-polecenie');
+    if (pol) pol.value = d.ustawienia.polecenie_pkt != null ? d.ustawienia.polecenie_pkt : 0;
   } catch (e) {}
 }
 async function klubadm_zapiszUstawienia() {
@@ -31218,7 +31293,8 @@ async function klubadm_zapiszUstawienia() {
     nazwa_klubu: document.getElementById('klubadm-nazwa').value.trim(),
     pkt_za_10zl: document.getElementById('klubadm-pkt').value,
     bonus_powitalny_pkt: document.getElementById('klubadm-bonus').value,
-    reset_roczny: document.getElementById('klubadm-reset').checked ? 1 : 0
+    reset_roczny: document.getElementById('klubadm-reset').checked ? 1 : 0,
+    polecenie_pkt: document.getElementById('klubadm-polecenie').value
   }).catch(() => null);
   status.textContent = (d && d.status === 'success') ? '✅ Zapisano.' : ('Błąd: ' + ((d && d.message) || 'połączenia'));
 }
@@ -31702,6 +31778,258 @@ async function klubadm_kasujKampanie(id) {
   const d = await klubadm_apiPost({ action: 'loj_kampania_kasuj', id }).catch(() => null);
   if (d && d.status === 'success') klubadm_zaladujKampanie();
   else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Mnożniki punktów ──
+let klubadm_mnoznikiCache = [];
+function klubadm_mnFmtX(m) { return Number.isInteger(Number(m)) ? '×' + Number(m) : '×' + String(m).replace('.', ','); }
+function klubadm_mnDataLoc(x) {
+  if (!x) return '';
+  const dt = new Date(String(x).replace(' ', 'T'));
+  return isNaN(dt.getTime()) ? '' : dt.toLocaleString('pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+function klubadm_mnToInput(x) {
+  const dt = new Date(String(x).replace(' ', 'T'));
+  if (isNaN(dt.getTime())) return '';
+  return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0') + 'T' + String(dt.getHours()).padStart(2, '0') + ':' + String(dt.getMinutes()).padStart(2, '0');
+}
+async function klubadm_zaladujMnozniki() {
+  const box = document.getElementById('klubadm-mn-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_mnozniki').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  const mn = d.mnozniki || [];
+  klubadm_mnoznikiCache = mn;
+  if (!mn.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Brak mnożników. Dodaj pierwszy — np. „weekend ×2".</div>'; return; }
+  box.innerHTML = mn.map(m => {
+    const trwa = Number(m.trwa) === 1, przyszly = Number(m.przyszly) === 1, wyl = Number(m.aktywny) === 0;
+    const stan = wyl ? '<span style="color:#9ca3af; font-weight:700;">WYŁĄCZONY</span>'
+      : trwa ? '<span style="color:#0f766e; font-weight:700;">🔥 TRWA</span>'
+      : przyszly ? '<span style="color:#b45309; font-weight:700;">zaplanowany</span>'
+      : '<span style="color:#9ca3af; font-weight:700;">zakończony</span>';
+    return `<div class="klubadm-row">
+      <div style="min-width:0;">
+        <b style="font-size:15px; color:#c54f7f;">${klubadm_mnFmtX(m.mnoznik)}</b> ${stan}
+        ${m.opis ? '<span style="color:#475569; font-size:12.5px;"> · ' + escHtml(m.opis) + '</span>' : ''}
+        <div style="font-size:11.5px; color:#9ca3af;">${klubadm_mnDataLoc(m.data_od)} → ${klubadm_mnDataLoc(m.data_do)}</div>
+      </div>
+      <div style="display:flex; gap:6px; flex-shrink:0;">
+        <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujMnoznik(${m.id})">✏️ Edytuj</button>
+        <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="klubadm_usunMnoznik(${m.id})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function klubadm_edytujMnoznik(id) {
+  const m = klubadm_mnoznikiCache.find(x => x.id === id);
+  if (!m) return;
+  document.getElementById('klubadm-mn-id').value = m.id;
+  document.getElementById('klubadm-mn-x').value = m.mnoznik;
+  document.getElementById('klubadm-mn-opis').value = m.opis || '';
+  document.getElementById('klubadm-mn-od').value = klubadm_mnToInput(m.data_od);
+  document.getElementById('klubadm-mn-do').value = klubadm_mnToInput(m.data_do);
+  document.getElementById('klubadm-mn-form-tytul').textContent = 'Edytuj mnożnik';
+  document.getElementById('klubadm-mn-btn').textContent = 'Zapisz zmiany';
+  document.getElementById('klubadm-mn-anuluj-ed').style.display = 'inline-block';
+  document.getElementById('klubadm-mn-form-tytul').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function klubadm_resetMnoznik() {
+  document.getElementById('klubadm-mn-id').value = '';
+  document.getElementById('klubadm-mn-x').value = 2;
+  document.getElementById('klubadm-mn-opis').value = '';
+  document.getElementById('klubadm-mn-od').value = '';
+  document.getElementById('klubadm-mn-do').value = '';
+  document.getElementById('klubadm-mn-form-tytul').textContent = 'Nowy mnożnik punktów';
+  document.getElementById('klubadm-mn-btn').textContent = 'Dodaj mnożnik';
+  document.getElementById('klubadm-mn-anuluj-ed').style.display = 'none';
+  document.getElementById('klubadm-mn-status').textContent = '';
+}
+async function klubadm_zapiszMnoznik() {
+  const status = document.getElementById('klubadm-mn-status');
+  const btn = document.getElementById('klubadm-mn-btn');
+  const od = document.getElementById('klubadm-mn-od').value;
+  const doo = document.getElementById('klubadm-mn-do').value;
+  if (!od || !doo) { status.textContent = 'Podaj początek i koniec okna.'; return; }
+  btn.disabled = true; status.textContent = '⏳…';
+  const d = await klubadm_apiPost({
+    action: 'loj_mnoznik_zapisz',
+    id: document.getElementById('klubadm-mn-id').value || null,
+    mnoznik: document.getElementById('klubadm-mn-x').value,
+    opis: document.getElementById('klubadm-mn-opis').value.trim(),
+    data_od: od, data_do: doo
+  }).catch(() => null);
+  btn.disabled = false;
+  if (d && d.status === 'success') { klubadm_resetMnoznik(); klubadm_zaladujMnozniki(); }
+  else status.textContent = 'Błąd: ' + ((d && d.message) || 'połączenia');
+}
+async function klubadm_usunMnoznik(id) {
+  if (!confirm('Usunąć ten mnożnik?')) return;
+  const d = await klubadm_apiPost({ action: 'loj_mnoznik_usun', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujMnozniki();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+
+// ── Automaty (kampanie wyzwalane zdarzeniem) ──
+const KLUBADM_AUTOMATY = [
+  { typ: 'URODZINY', ikona: '🎂', nazwa: 'Urodziny', kiedy: 'W dniu urodzin klientki (rozpoznaje po numerze telefonu z kartoteki).', param: null,
+    tytul: 'Wszystkiego najlepszego! 🎂', tresc: 'Z okazji urodzin mamy dla Ciebie prezent — zapraszamy do salonu!' },
+  { typ: 'WINBACK', ikona: '💔', nazwa: 'Dawno Cię nie było', kiedy: 'Gdy od ostatniej wizyty minie zadana liczba dni.',
+    param: { label: 'dni bez wizyty', min: 7, max: 365, def: 60 },
+    tytul: 'Tęsknimy! 💕', tresc: 'Dawno Cię u nas nie było — wróć na podwójne punkty i zadbaj o siebie.' },
+  { typ: 'ROCZNICA', ikona: '🎉', nazwa: 'Rocznica pierwszej wizyty', kiedy: 'W rocznicę pierwszej wizyty klientki.', param: null,
+    tytul: 'Rok razem! 🎉', tresc: 'Dziękujemy, że jesteś z nami rok! Odbierz mały prezent na kolejnej wizycie.' },
+  { typ: 'PROG_NAGRODY', ikona: '🏁', nazwa: 'Blisko nagrody', kiedy: 'Gdy do najbliższej nagrody brakuje niewielu punktów.',
+    param: { label: 'ile pkt do nagrody', min: 1, max: 1000, def: 30 },
+    tytul: 'Jesteś tuż-tuż! 🏁', tresc: 'Brakuje Ci już tylko kilku punktów do nagrody. Wpadnij i odbierz ją szybciej!' },
+  { typ: 'AWANS', ikona: '⭐', nazwa: 'Awans poziomu', kiedy: 'Gdy klientka wejdzie na wyższy poziom klubu (wg wydatków). Wymaga zdefiniowanych poziomów.', param: null,
+    tytul: 'Gratulacje, awans! ⭐', tresc: 'Właśnie wskoczyłaś na wyższy poziom klubu — dziękujemy, że jesteś z nami!' }
+];
+let klubadm_automatyCache = {};
+async function klubadm_zaladujAutomaty() {
+  const box = document.getElementById('klubadm-au-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_automaty').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  const byTyp = {};
+  (d.automaty || []).forEach(a => byTyp[a.typ] = a);
+  klubadm_automatyCache = byTyp;
+  const pushInfo = d.push_skonfigurowany ? '' : '<div style="font-size:11.5px; color:#b45309; margin-top:6px;">ℹ️ Push nieskonfigurowany — dopóki nie ma kluczy VAPID, automat działa przez prezent punktowy (widoczny w apce), bez powiadomienia na telefon.</div>';
+  box.innerHTML = '<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">' +
+    KLUBADM_AUTOMATY.map(def => {
+      const a = byTyp[def.typ] || {};
+      const on = Number(a.aktywny) === 1;
+      const tytul = a.tytul != null ? a.tytul : def.tytul;
+      const tresc = a.tresc != null ? a.tresc : def.tresc;
+      const bonus = a.bonus_pkt != null ? a.bonus_pkt : 0;
+      const paramVal = a.param_dni != null ? a.param_dni : (def.param ? def.param.def : '');
+      const p = 'klubadm-au-' + def.typ;
+      return `<div class="klubadm-karta" style="border-top:3px solid ${on ? '#0f766e' : '#e7dfe3'};">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+          <div><div class="klubadm-h" style="margin:0;">${def.ikona} ${def.nazwa}</div>
+            <div style="font-size:11.5px; color:#9ca3af; margin-top:2px;">${def.kiedy}</div></div>
+          <label style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:700; color:${on ? '#0f766e' : '#9ca3af'}; cursor:pointer; white-space:nowrap;">
+            <input type="checkbox" id="${p}-on" ${on ? 'checked' : ''} onchange="klubadm_toggleAutomat('${def.typ}', this.checked)" style="width:16px; height:16px; accent-color:#0f766e;"> ${on ? 'włączony' : 'wyłączony'}</label>
+        </div>
+        <label class="klubadm-label">Tytuł powiadomienia</label>
+        <input id="${p}-tytul" maxlength="100" value="${escHtml(tytul)}" class="klubadm-input" style="width:100%;">
+        <label class="klubadm-label">Treść</label>
+        <textarea id="${p}-tresc" maxlength="300" rows="2" class="klubadm-area" style="width:100%; resize:vertical;">${escHtml(tresc)}</textarea>
+        <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:flex-end;">
+          <div><label class="klubadm-label">Prezent (pkt, 0 = bez)</label>
+            <input id="${p}-bonus" type="number" min="0" max="100000" value="${bonus}" class="klubadm-input" style="width:110px;"></div>
+          ${def.param ? `<div><label class="klubadm-label">${def.param.label}</label>
+            <input id="${p}-param" type="number" min="${def.param.min}" max="${def.param.max}" value="${paramVal}" class="klubadm-input" style="width:130px;"></div>` : ''}
+        </div>
+        <div style="display:flex; gap:10px; margin-top:14px; align-items:center;">
+          <button onclick="klubadm_zapiszAutomat('${def.typ}')" class="klubadm-glowny">Zapisz</button>
+          <span style="font-size:11.5px; color:#9ca3af;">${a.wyslano_razem != null ? ('wysłano łącznie: ' + a.wyslano_razem) : ''}</span>
+        </div>
+        <div id="${p}-status" style="font-size:12px; color:#8a8f9c; margin-top:8px;"></div>
+      </div>`;
+    }).join('') + '</div>' + pushInfo;
+}
+async function klubadm_zapiszAutomat(typ) {
+  const p = 'klubadm-au-' + typ;
+  const def = KLUBADM_AUTOMATY.find(x => x.typ === typ);
+  const status = document.getElementById(p + '-status');
+  const tytul = document.getElementById(p + '-tytul').value.trim();
+  const tresc = document.getElementById(p + '-tresc').value.trim();
+  if (!tytul || !tresc) { status.textContent = 'Podaj tytuł i treść.'; return; }
+  status.textContent = '⏳…';
+  const body = {
+    action: 'loj_automat_zapisz', typ, tytul, tresc,
+    bonus_pkt: document.getElementById(p + '-bonus').value,
+    aktywny: document.getElementById(p + '-on').checked ? 1 : 0
+  };
+  if (def.param) body.param_dni = document.getElementById(p + '-param').value;
+  const d = await klubadm_apiPost(body).catch(() => null);
+  if (d && d.status === 'success') { status.textContent = '✅ Zapisano.'; klubadm_zaladujAutomaty(); }
+  else status.textContent = 'Błąd: ' + ((d && d.message) || 'połączenia');
+}
+async function klubadm_toggleAutomat(typ, on) {
+  // Jeśli automat nie był jeszcze zapisany — najpierw zapisz z bieżącej treści.
+  if (!klubadm_automatyCache[typ]) { await klubadm_zapiszAutomat(typ); return; }
+  const d = await klubadm_apiPost({ action: 'loj_automat_status', typ, aktywny: on ? 1 : 0 }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujAutomaty();
+  else { alert('Błąd: ' + ((d && d.message) || 'połączenia')); klubadm_zaladujAutomaty(); }
+}
+
+// ── Poziomy klubu ──
+let klubadm_poziomyCache = [];
+async function klubadm_zaladujPoziomy() {
+  const box = document.getElementById('klubadm-pz-lista');
+  if (!box) return;
+  const d = await klubadm_apiGet('loj_poziomy').catch(() => null);
+  if (!d || d.status !== 'success') { box.innerHTML = '<div style="padding:16px; color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+  klubadm_poziomyCache = d.poziomy || [];
+  if (!klubadm_poziomyCache.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">Brak poziomów. Dodaj pierwszy albo wstaw gotowy przykład.</div>'; return; }
+  box.innerHTML = klubadm_poziomyCache.map(p => `<div class="klubadm-row">
+    <div style="min-width:0; display:flex; align-items:center; gap:10px;">
+      <span style="width:14px; height:14px; border-radius:50%; background:${escHtml(p.kolor || '#c54f7f')}; flex-shrink:0; box-shadow:0 0 0 2px #fff, 0 0 0 3px ${escHtml(p.kolor || '#c54f7f')}33;"></span>
+      <div><b>${escHtml(p.nazwa)}</b> <span style="color:#9ca3af; font-size:12.5px;">od ${p.prog_zl_rocznie} zł/rok</span>
+        ${p.perk ? '<div style="font-size:12px; color:#475569;">' + escHtml(p.perk) + '</div>' : ''}</div>
+    </div>
+    <div style="display:flex; gap:6px; flex-shrink:0;">
+      <button class="klubadm-btn" style="background:#eff6ff; color:#1d4ed8;" onclick="klubadm_edytujPoziom(${p.id})">✏️ Edytuj</button>
+      <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="klubadm_usunPoziom(${p.id})">🗑</button>
+    </div>
+  </div>`).join('');
+}
+function klubadm_edytujPoziom(id) {
+  const p = klubadm_poziomyCache.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('klubadm-pz-id').value = p.id;
+  document.getElementById('klubadm-pz-nazwa').value = p.nazwa;
+  document.getElementById('klubadm-pz-prog').value = p.prog_zl_rocznie;
+  document.getElementById('klubadm-pz-kolor').value = /^#[0-9a-fA-F]{6}$/.test(p.kolor || '') ? p.kolor : '#c54f7f';
+  document.getElementById('klubadm-pz-perk').value = p.perk || '';
+  document.getElementById('klubadm-pz-form-tytul').textContent = 'Edytuj poziom';
+  document.getElementById('klubadm-pz-btn').textContent = 'Zapisz zmiany';
+  document.getElementById('klubadm-pz-anuluj-ed').style.display = 'inline-block';
+  document.getElementById('klubadm-pz-form-tytul').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+function klubadm_resetPoziom() {
+  document.getElementById('klubadm-pz-id').value = '';
+  document.getElementById('klubadm-pz-nazwa').value = '';
+  document.getElementById('klubadm-pz-prog').value = 0;
+  document.getElementById('klubadm-pz-kolor').value = '#c54f7f';
+  document.getElementById('klubadm-pz-perk').value = '';
+  document.getElementById('klubadm-pz-form-tytul').textContent = 'Nowy poziom';
+  document.getElementById('klubadm-pz-btn').textContent = 'Dodaj poziom';
+  document.getElementById('klubadm-pz-anuluj-ed').style.display = 'none';
+  document.getElementById('klubadm-pz-status').textContent = '';
+}
+async function klubadm_zapiszPoziom() {
+  const status = document.getElementById('klubadm-pz-status');
+  const nazwa = document.getElementById('klubadm-pz-nazwa').value.trim();
+  if (!nazwa) { status.textContent = 'Podaj nazwę poziomu.'; return; }
+  status.textContent = '⏳…';
+  const d = await klubadm_apiPost({
+    action: 'loj_poziom_zapisz',
+    id: document.getElementById('klubadm-pz-id').value || null,
+    nazwa,
+    prog_zl_rocznie: document.getElementById('klubadm-pz-prog').value,
+    kolor: document.getElementById('klubadm-pz-kolor').value,
+    perk: document.getElementById('klubadm-pz-perk').value.trim()
+  }).catch(() => null);
+  if (d && d.status === 'success') { klubadm_resetPoziom(); klubadm_zaladujPoziomy(); }
+  else status.textContent = 'Błąd: ' + ((d && d.message) || 'połączenia');
+}
+async function klubadm_usunPoziom(id) {
+  if (!confirm('Usunąć ten poziom?')) return;
+  const d = await klubadm_apiPost({ action: 'loj_poziom_usun', id }).catch(() => null);
+  if (d && d.status === 'success') klubadm_zaladujPoziomy();
+  else alert('Błąd: ' + ((d && d.message) || 'połączenia'));
+}
+async function klubadm_szablonPoziomy() {
+  if (!confirm('Dodać 3 przykładowe poziomy (Srebro 500 zł / Złoto 1500 zł / Diament 3000 zł)? Możesz je potem dowolnie zmienić.')) return;
+  const przyklady = [
+    { nazwa: 'Srebro', prog_zl_rocznie: 500, kolor: '#9ca3af', perk: 'Pierwszeństwo w rezerwacji' },
+    { nazwa: 'Złoto', prog_zl_rocznie: 1500, kolor: '#d4af37', perk: '−10% na każdy zabieg' },
+    { nazwa: 'Diament', prog_zl_rocznie: 3000, kolor: '#38bdf8', perk: '−15% + prezent urodzinowy' }
+  ];
+  for (const p of przyklady) { await klubadm_apiPost({ action: 'loj_poziom_zapisz', ...p }).catch(() => null); }
+  klubadm_zaladujPoziomy();
 }
 async function klubadm_statusPromocji(id, status) {
   const d = await klubadm_apiPost({ action: 'loj_promocja_status', id, status }).catch(() => null);
