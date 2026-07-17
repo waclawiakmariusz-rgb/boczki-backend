@@ -848,12 +848,13 @@ module.exports = (db) => {
       }
     );
   }
-  // Pilot: cały Klub w panelu widoczny/obsługiwany TYLKO przez admina (decyzja usera 2026-07-10)
-  const ROLE_ADMIN = new Set(['admin', 'megaadmin']);
+  // Dostęp do panelu Klubu: admin + recepcja (pełny dostęp — decyzja usera 2026-07-17).
+  // Wcześniej pilot był admin-only; recepcja obsługuje teraz Klub tak jak admin.
+  const ROLE_KLUB = new Set(['admin', 'megaadmin', 'recepcja']);
   function wymagajAdmina(tenant_id, kto, res, next) {
     pobierzRole(tenant_id, kto, (rola) => {
-      if (!rola || !ROLE_ADMIN.has(rola)) {
-        return res.json({ status: 'error', message: 'Brak uprawnień. Klub w pilocie obsługuje tylko admin.' });
+      if (!rola || !ROLE_KLUB.has(rola)) {
+        return res.json({ status: 'error', message: 'Brak uprawnień do panelu Klubu.' });
       }
       next();
     });

@@ -26,7 +26,8 @@ const INIT = Array.from({ length: 20 }, () => ({ rows: [] }));
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
 const ROLA_ADMIN = { rows: [{ rola: 'Admin' }] };       // duża litera — porównanie toLowerCase
-const ROLA_RECEPCJA = { rows: [{ rola: 'Recepcja' }] };
+const ROLA_RECEPCJA = { rows: [{ rola: 'Recepcja' }] };   // ma dostęp do Klubu (2026-07-17)
+const ROLA_INNA = { rows: [{ rola: 'Praktykantka' }] };   // rola spoza dostępu do Klubu
 
 beforeEach(() => wyczyscCacheLoj());
 
@@ -385,8 +386,8 @@ describe('POST /api/lojalnosc — loj_punkty_reczne', () => {
         expect(res.body.message).toMatch(/nie dołączył/i);
     });
 
-    test('recepcja NIE może dodać punktów ręcznie (pilot admin-only)', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE może dodać punktów ręcznie (pilot admin-only)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-s2' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -455,8 +456,8 @@ describe('POST /api/lojalnosc — loj_ustawienia_zapisz', () => {
         expect(res.body.message).toMatch(/uprawnień/i);
     });
 
-    test('recepcja NIE może zapisać ustawień (RBAC backendowy)', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+    test('praktykantka NIE może zapisać ustawień (RBAC backendowy)', async () => {
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -499,8 +500,8 @@ describe('POST /api/lojalnosc — loj_aktywacja_token', () => {
         expect(res.body.ma_konto).toBe(0);
     });
 
-    test('recepcja NIE wygeneruje linku (pilot admin-only)', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE wygeneruje linku (pilot admin-only)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-akt2' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -837,8 +838,8 @@ describe('POST /api/lojalnosc — loj_odbior_rozstrzygnij', () => {
         expect(res.body.status).toBe('error');
     });
 
-    test('recepcja NIE rozstrzyga (pilot admin-only)', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+    test('praktykantka NIE rozstrzyga (pilot admin-only)', async () => {
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-odb4' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -1034,8 +1035,8 @@ describe('POST /api/lojalnosc — kampanie', () => {
         expect(res.body.status).toBe('error');
     });
 
-    test('recepcja NIE tworzy kampanii', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE tworzy kampanii', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...valid, tenant_id: 't-loj-km5' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -1093,14 +1094,21 @@ describe('POST /api/lojalnosc — kampanie', () => {
         expect(r2.body.status).toBe('success'); // duplikat = już policzone, bez błędu
     });
 
-    test('lista członków tylko dla admina', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
-        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz1&user_log=Recepcja');
+    test('lista członków — admin i recepcja mają dostęp, inne role nie', async () => {
+        const db = mockDb(...INIT, ROLA_INNA);
+        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz1&user_log=Praktykantka');
         expect(res.body.status).toBe('error');
         const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id_klienta: '42', klient: 'Anna', saldo: 10, ma_push: 1, dolaczyl: '2026-07-10' }] });
         const r2 = await request(buildApp(dbOk)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz2&user_log=Szefowa');
         expect(r2.body.status).toBe('success');
         expect(r2.body.czlonkowie).toHaveLength(1);
+    });
+
+    test('RECEPCJA ma dostęp do panelu Klubu (2026-07-17)', async () => {
+        const db = mockDb(...INIT, ROLA_RECEPCJA, { rows: [{ id_klienta: '42', klient: 'Ola', saldo: 5, ma_push: 0, dolaczyl: '2026-07-15' }] });
+        const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_czlonkowie&tenant_id=t-loj-cz3&user_log=Recepcja');
+        expect(res.body.status).toBe('success');
+        expect(res.body.czlonkowie).toHaveLength(1);
     });
 
     test('anulowanie działa tylko dla PLANOWANEJ', async () => {
@@ -1143,7 +1151,7 @@ describe('POST /api/lojalnosc — kampanie', () => {
     });
 
     test('edycja treści tylko dla admina', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({
             action: 'loj_kampania_edytuj', tenant_id: 't-loj-ked4', id: 5,
             tytul: 'X', tresc: 'Y', user_log: 'Recepcja'
@@ -1168,7 +1176,7 @@ describe('POST /api/lojalnosc — kampanie', () => {
     });
 
     test('kasowanie tylko dla admina', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc')
             .send({ action: 'loj_kampania_kasuj', tenant_id: 't-loj-kk3', id: 5, user_log: 'Recepcja' });
         expect(res.body.status).toBe('error');
@@ -1205,8 +1213,8 @@ describe('POST /api/lojalnosc — mnożniki punktów', () => {
         expect(res.body.status).toBe('error');
     });
 
-    test('recepcja NIE dodaje mnożnika', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE dodaje mnożnika', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -1224,7 +1232,7 @@ describe('POST /api/lojalnosc — mnożniki punktów', () => {
     });
 
     test('lista mnożników tylko dla admina', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_mnozniki&tenant_id=t-loj-mnz4&user_log=Recepcja');
         expect(res.body.status).toBe('error');
         const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id: 1, mnoznik: 2, opis: 'X', trwa: 1 }] });
@@ -1258,8 +1266,8 @@ describe('POST /api/lojalnosc — automaty', () => {
         expect(res.body.message).toMatch(/typ/i);
     });
 
-    test('recepcja NIE zapisuje automatu', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE zapisuje automatu', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -1277,7 +1285,7 @@ describe('POST /api/lojalnosc — automaty', () => {
     });
 
     test('lista automatów tylko dla admina', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).get('/api/lojalnosc?action=loj_automaty&tenant_id=t-loj-au4&user_log=Recepcja');
         expect(res.body.status).toBe('error');
         const dbOk = mockDb(...INIT, ROLA_ADMIN, { rows: [{ id: 1, typ: 'WINBACK', aktywny: 1, tytul: 'X' }] });
@@ -1342,8 +1350,8 @@ describe('POST /api/lojalnosc — poziomy', () => {
         expect(res.body.message).toMatch(/nazwę/i);
     });
 
-    test('recepcja NIE dodaje poziomu', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE dodaje poziomu', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({ ...baza, user_log: 'Recepcja' });
         expect(res.body.status).toBe('error');
         expect(res.body.message).toMatch(/uprawnień/i);
@@ -1476,8 +1484,8 @@ describe('upload grafik Klubu', () => {
         expect(res.body.status).toBe('error');
     });
 
-    test('recepcja NIE wgra pliku (RBAC)', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE wgra pliku (RBAC)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc/upload')
             .field('tenant_id', 't-loj-up3').field('user_log', 'Recepcja')
             .attach('plik', JPG, { filename: 'foto.jpg', contentType: 'image/jpeg' });
@@ -1651,8 +1659,8 @@ describe('Polecane nagrody (loj_nagroda_polecana)', () => {
         expect(db.query.mock.calls.some(c => /SELECT COUNT\(\*\) AS n FROM Lojalnosc_Nagrody/.test(c[0]))).toBe(false);
     });
 
-    test('recepcja NIE przełączy (RBAC admin)', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+    test('praktykantka NIE przełączy (RBAC admin)', async () => {
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({
             action: 'loj_nagroda_polecana', tenant_id: 't-pol', id: 5, polecana: 1, user_log: 'Recepcja'
         });
@@ -1724,8 +1732,8 @@ describe('Kod aktywacyjny od recepcji', () => {
         expect(ins[1][3]).toBe('500123456');   // telefon znormalizowany
     });
 
-    test('recepcja NIE wygeneruje kodu (RBAC admin)', async () => {
-        const db = mockDb(...INIT, FEATURE_ON, ROLA_RECEPCJA);
+    test('praktykantka NIE wygeneruje kodu (RBAC admin)', async () => {
+        const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({
             action: 'loj_kod_aktywacyjny', tenant_id: 't-kod-r', id_klienta: '42', user_log: 'Recepcja'
         });
@@ -1879,8 +1887,8 @@ describe('POST /api/lojalnosc — loj_wniosek_wyslij', () => {
         expect(res.body.qr_sms).toMatch(/^data:image\/png/);
     });
 
-    test('recepcja NIE wyśle (RBAC)', async () => {
-        const db = mockDb(...INIT, ROLA_RECEPCJA);
+    test('praktykantka NIE wyśle (RBAC)', async () => {
+        const db = mockDb(...INIT, ROLA_INNA);
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({
             action: 'loj_wniosek_wyslij', tenant_id: 't-ww-b', id: 3, user_log: 'Recepcja'
         });

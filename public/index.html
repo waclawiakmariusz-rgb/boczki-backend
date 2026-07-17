@@ -31055,11 +31055,11 @@ function loj_enabled() {
   return typeof hasFeature === 'function' && hasFeature(LOJ_FEATURE_KEY);
 }
 
-// Pilot: Klub w panelu widoczny TYLKO dla admina (decyzja usera 2026-07-10).
-// Backend i tak wymusza rolę przy akcjach zapisu — to jest warstwa UI.
+// Klub w panelu: admin, megaadmin ORAZ recepcja (pełny dostęp — decyzja usera 2026-07-17).
+// Nazwa loj_admin() historyczna; backend też przepuszcza te role (wymagajAdmina/ROLE_KLUB).
 function loj_admin() {
   const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
-  return rola === 'admin' || rola === 'megaadmin';
+  return rola === 'admin' || rola === 'megaadmin' || rola === 'recepcja';
 }
 
 // Hook z przelaczTabProfilu — zakładka Podsumowanie na profilu klienta
