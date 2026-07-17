@@ -493,6 +493,9 @@ app.get('/api', (req, res) => {
         'loj_kampanie': '/api/lojalnosc?action=loj_kampanie&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_wnioski': '/api/lojalnosc?action=loj_wnioski&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_czlonkowie': '/api/lojalnosc?action=loj_czlonkowie&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_mnozniki': '/api/lojalnosc?action=loj_mnozniki&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_automaty': '/api/lojalnosc?action=loj_automaty&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
+        'loj_poziomy': '/api/lojalnosc?action=loj_poziomy&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
     };
 
     if (getActions[action]) {
