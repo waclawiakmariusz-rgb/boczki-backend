@@ -285,7 +285,9 @@
       <table>
         <tr><th>Sytuacja</th><th>Co się dzieje z punktami</th></tr>
         <tr><td>Normalna sprzedaż zabiegu / kosmetyku</td><td><b>+ punkty</b> (domyślnie 10 zł = 1 pkt; przelicznik ustala salon)</td></tr>
-        <tr><td>Zadatek / wpłata z góry</td><td><b>Bez punktów</b> — punkty dopiero przy realizacji zabiegu</td></tr>
+        <tr><td>Zadatek / wpłata z góry</td><td><b>+ punkty od razu</b> — każde przekazanie środków punktuje</td></tr>
+        <tr><td>Realizacja zabiegu opłaconego zadatkiem</td><td>Punkty tylko od <b>dopłaty</b> (nowych pieniędzy) — część z zadatku była już punktowana przy wpłacie, żeby nie zdublować</td></tr>
+        <tr><td>Zadatek zwrócony, przepadł za nieprzyjście lub usunięty</td><td><b>− punkty</b> — punkty naliczone przy wpłacie się cofają</td></tr>
         <tr><td>Zwrot sprzedaży</td><td><b>− punkty</b> proporcjonalnie (system cofa sam)</td></tr>
         <tr><td>Poprawka lub usunięcie paragonu</td><td>System sam koryguje saldo</td></tr>
         <tr><td>Trwa akcja „Punkty ×2"</td><td>Do zwykłych punktów dochodzi bonus mnożnika</td></tr>
@@ -299,9 +301,9 @@
         <div class="scenario-body">
           <div class="sample-call">
             <div class="sample-line"><div class="sample-who">Pani Ola</div><div class="sample-text">Dostałam punkty za tę zaliczkę na piątek?</div></div>
-            <div class="sample-line"><div class="sample-who">Marta</div><div class="sample-text">Punkty naliczą się w piątek, jak zrobimy zabieg — od zaliczki jeszcze nie, żeby się nie zdublowały.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta</div><div class="sample-text">Tak, punkty za zaliczkę już Pani wpadły. W piątek dojdą jeszcze za dopłatę, którą Pani wtedy ureguluje.</div></div>
           </div>
-          <div class="scenario-result">Zadatki nie są punktowane. Punkty wpadają przy realizacji zabiegu.</div>
+          <div class="scenario-result">Każda wpłata punktuje od razu. Przy realizacji punkty naliczają się już tylko od dopłaty — bez podwójnego liczenia.</div>
         </div>
       </div>
 
@@ -313,7 +315,7 @@
         </div>
       </div>
       <div class="step"><div class="num">1</div><div><strong>Zwróć pieniądze na terminalu</strong><span>Fizyczny zwrot na kartę robi terminal płatniczy — to on oddaje pieniądze.</span></div></div>
-      <div class="step"><div class="num">2</div><div><strong>Zarejestruj zwrot w Estelio</strong><span>Profil klientki → znajdź tę sprzedaż → <b>Zwrot</b>. Kwota = sama nadwyżka (np. 50 zł), sposób = <b>Karta</b>, powód = np. „nadpłata — zwrot na kartę".</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Zarejestruj zwrot w Estelio</strong><span>Profil klientki → przy tej sprzedaży kliknij <b>↩ Zwrot</b>. W okienku: kwota = sama nadwyżka (np. 50 zł), sposób = <b>Karta</b>, powód = np. „nadpłata — zwrot na kartę", potem <b>Zarejestruj zwrot</b>.</span></div></div>
       <div class="step"><div class="num">3</div><div><strong>Gotowe</strong><span>Powstaje ujemny wpis z dzisiejszą datą — utarg dnia maleje, stare raporty zostają nietknięte. Punkty za tę sprzedaż też skorygują się same.</span></div></div>
       <div class="warning"><strong>Pamiętaj o obu krokach.</strong> Zwrot na terminalu oddaje pieniądze, wpis w Estelio pilnuje, żeby utarg i raporty się zgadzały. System nie oddaje pieniędzy — tylko je rejestruje.</div>
 
@@ -377,7 +379,7 @@
       <div class="scenario">
         <span class="scenario-label">Sytuacja</span>
         <h4>„Zwracam ten krem, co kupiłam wczoraj"</h4>
-        <div class="scenario-body"><p>Robisz zwrot normalnie (profil klientki → sprzedaż → Zwrot; sposób = jak oddajesz pieniądze). System sam odejmie punkty naliczone za tę sprzedaż, proporcjonalnie do kwoty zwrotu. Jeśli to kosmetyk — wraca na stan.</p></div>
+        <div class="scenario-body"><p>Robisz zwrot z profilu klientki: przy tej sprzedaży kliknij <b>↩ Zwrot</b>, w okienku podaj kwotę (albo „Całość"), sposób zwrotu i powód, i zatwierdź. System sam odejmie punkty naliczone za tę sprzedaż, proporcjonalnie do kwoty zwrotu. Jeśli to kosmetyk — wraca na stan.</p></div>
       </div>
 
       <div class="scenario">
@@ -485,8 +487,8 @@
       <h3>Powiadomienia nie przychodzą</h3>
       <p>Powiadomienia (push) to bonus — nie zawsze zadziałają (zależy od telefonu i zgody klientki). Nawet bez nich wiadomości i prezenty są widoczne w aplikacji. Jeśli push nie działa w całym salonie, to temat techniczny dla właścicielki — nie Twój problem przy ladzie.</p>
 
-      <h3>Punkty się skasowały</h3>
-      <p>Jeśli salon ma włączony reset roczny, punkty kasują się 1 stycznia i naliczają od zera. To celowe — motywuje, żeby wykorzystać punkty przed końcem roku. W aplikacji klientka widzi „ważne do 31 grudnia". Poziom i historia zostają.</p>
+      <h3>Punkty kasują się na koniec roku</h3>
+      <p>Punkty kasują się 1 stycznia i naliczają od zera — to celowe, motywuje, żeby wykorzystać je przed końcem roku. W aplikacji klientka widzi „ważne do 31 grudnia". Poziom i historia zostają.</p>
     </section>
 
     <!-- 11 -->
@@ -502,7 +504,7 @@
       <h3>„Zapisałam się z Instagrama, ale mam tylko wniosek"</h3>
       <p>Numer był już w kartotece. Wejdź w „Do obsłużenia", znajdź wniosek i wyślij link aktywacyjny — albo daj kod z profilu.</p>
       <h3>„Czy zaliczka dała mi punkty?"</h3>
-      <p>Nie — punkty naliczają się przy realizacji zabiegu, nie od wpłaty.</p>
+      <p>Tak — każda wpłata, w tym zadatek, nalicza punkty od razu. Jeśli zaliczka zostanie zwrócona albo przepadnie za nieprzyjście, punkty się cofają. Przy realizacji zabiegu punkty dochodzą już tylko od dopłaty (żeby nie policzyć dwa razy).</p>
       <h3>„Chcę większy przelicznik / inne nagrody"</h3>
       <p>To ustawienia w panelu — przekaż właścicielce. Ty przy ladzie zapisujesz i wydajesz nagrody.</p>
     </section>
@@ -518,7 +520,7 @@
         <tr><td>Zapisać klientkę do Klubu</td><td>Profil klientki → kafel Klub → <b>Kod do apki</b> → dyktuję numer + kod + niech ustawi PIN</td></tr>
         <tr><td>Wydać nagrodę</td><td>Klub → <b>Do obsłużenia</b> → znajdź kod → <b>Wydane</b></td></tr>
         <tr><td>Obsłużyć „Biorę" z promocji</td><td>Klub → <b>Do obsłużenia</b> → oznacz obsłużone</td></tr>
-        <tr><td>Zrobić zwrot / nadpłatę na kartę</td><td>Terminal oddaje pieniądze → profil klientki → sprzedaż → <b>Zwrot</b> (kwota, sposób = Karta, powód)</td></tr>
+        <tr><td>Zrobić zwrot / nadpłatę na kartę</td><td>Terminal oddaje pieniądze → profil klientki → przy sprzedaży <b>↩ Zwrot</b> (kwota lub Całość, sposób = Karta, powód)</td></tr>
         <tr><td>Pomóc z zapomnianym PIN-em</td><td>Klientka klika „Nie pamiętam PIN-u" → wniosek w <b>Do obsłużenia</b> → wyślij link aktywacyjny</td></tr>
         <tr><td>Sprawdzić punkty klientki</td><td>Profil klientki → kafel Klub (albo klientka w aplikacji)</td></tr>
         <tr><td>Naliczyć punkty za zabieg</td><td><b>Nic</b> — naliczają się same z paragonu</td></tr>

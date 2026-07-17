@@ -301,6 +301,10 @@ function makeLojalnosc(db) {
       const saleId = String((dane && dane.saleId) || '').trim();
       if (!tenant_id || !idK || !saleId) return;
       if (!((parseFloat(dane.kwota) || 0) > 0)) return;
+      // Płatność zadatkiem/portfelem → punkty naliczono już przy WPŁACIE zadatku,
+      // więc realizacji NIE punktujemy ponownie (bez podwójnego liczenia).
+      const metoda = String((dane && dane.platnosc) || '').trim();
+      if (metoda === 'Zadatek' || metoda === 'Portfel') return;
       maFeature(tenant_id, (on) => {
         if (!on) return;
         maKontoKlubu(tenant_id, idK, (czlonek) => {
@@ -322,6 +326,72 @@ function makeLojalnosc(db) {
         });
       });
     } catch (e) { console.error('[lojalnosc] naliczZaSprzedaz:', e.message); }
+  }
+
+  // Wpłata zadatku = przekazanie środków → +punkty od razu (tylko członkom Klubu).
+  // Idempotentne po ref_id = id zadatku. Bazowy przelicznik, bez mnożnika czasowego.
+  function naliczZaZadatek(tenant_id, dane) {
+    try {
+      const idK = String((dane && dane.id_klienta) || '').trim();
+      const zadatekId = String((dane && dane.zadatekId) || '').trim();
+      if (!tenant_id || !idK || !zadatekId) return;
+      if (!((parseFloat(dane.kwota) || 0) > 0)) return;
+      maFeature(tenant_id, (on) => {
+        if (!on) return;
+        maKontoKlubu(tenant_id, idK, (czlonek) => {
+          if (!czlonek) return;
+          pobierzMnoznik(tenant_id, (mnoznik) => {
+            const pkt = obliczPunkty(dane.kwota, mnoznik);
+            if (pkt <= 0) return;
+            wpis(tenant_id, idK, pkt, dane.opis || 'Zadatek', 'ZADATEK', zadatekId, dane.pracownik);
+          });
+        });
+      });
+    } catch (e) { console.error('[lojalnosc] naliczZaZadatek:', e.message); }
+  }
+
+  // Reconcyliacja punktów zadatku po każdej zmianie (edycja kwoty, zwrot, przepadnięcie,
+  // usunięcie, scalanie). Punkty należą się dopóki zadatek jest AKTYWNY lub WYKORZYSTANY;
+  // ZWRÓCONY / PRZEPADŁ / USUNIĘTY / SCALONY → zerujemy. Dotyka tylko zadatków, które
+  // realnie punktowały przy wpłacie (mają wpis ZADATEK) — nie tworzy punktów wstecz.
+  function resyncZadatek(tenant_id, zadatekId) {
+    try {
+      const zid = String(zadatekId || '').trim();
+      if (!tenant_id || !zid) return;
+      maFeature(tenant_id, (on) => {
+        if (!on) return;
+        db.query(
+          `SELECT status, kwota, id_klienta FROM Zadatki WHERE tenant_id = ? AND id = ? LIMIT 1`,
+          [tenant_id, zid],
+          (e1, zr) => {
+            if (e1 || !Array.isArray(zr) || !zr.length) return;
+            const z = zr[0];
+            const idK = String(z.id_klienta || '').trim();
+            if (!idK) return;
+            const punktowalny = ['AKTYWNY', 'WYKORZYSTANY'].includes(String(z.status || '').toUpperCase());
+            db.query(
+              `SELECT COALESCE(SUM(zmiana), 0) AS suma, COUNT(*) AS n FROM Lojalnosc_Punkty
+                WHERE tenant_id = ? AND zrodlo IN ('ZADATEK','ZADATEK_KOR')
+                  AND (ref_id = ? OR ref_id LIKE CONCAT('ZK@', ?, '@%'))`,
+              [tenant_id, zid, zid],
+              (e2, sr) => {
+                if (e2 || !Array.isArray(sr) || !sr.length) return;
+                if (Number(sr[0].n) === 0) return;   // zadatek spoza programu — nie ruszamy
+                const obecnie = Number(sr[0].suma) || 0;
+                pobierzMnoznik(tenant_id, (mnoznik) => {
+                  const cel = punktowalny ? obliczPunkty(z.kwota, mnoznik) : 0;
+                  const delta = cel - obecnie;
+                  if (!delta) return;
+                  wpis(tenant_id, idK, delta,
+                    punktowalny ? 'Korekta zadatku' : 'Zadatek anulowany/przepadł',
+                    'ZADATEK_KOR', 'ZK@' + zid + '@' + Date.now(), 'System');
+                });
+              }
+            );
+          }
+        );
+      });
+    } catch (e) { console.error('[lojalnosc] resyncZadatek:', e.message); }
   }
 
   // Zwrot → -punkty, proporcjonalnie do kwoty zwrotu, z sufitem: nigdy nie
@@ -422,7 +492,7 @@ function makeLojalnosc(db) {
     } catch (e) { console.error('[lojalnosc] skorygujEdycje:', e.message); }
   }
 
-  return { naliczZaSprzedaz, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje, maKontoKlubu };
+  return { naliczZaSprzedaz, naliczZaZadatek, resyncZadatek, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje, maKontoKlubu };
 }
 
 // ─────────────────────────────────────────────────────────────

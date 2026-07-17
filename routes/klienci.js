@@ -6,11 +6,14 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { makeLojalnosc } = require('./lojalnosc');
 const { parseKwota, parseNumOpt } = require('./utils');
 
 module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
+  // Hook Klubu — punkty za zadatki (fire-and-forget, NIGDY nie blokuje operacji).
+  const lojalnosc = makeLojalnosc(db);
 
   // Idempotentna migracja: tabela na "zaproponowane" sugestie retail (kosmetyki).
   // Wpis = user kliknął "✓ Zaproponowane" przy danej sugestii — sugestia znika
@@ -500,6 +503,10 @@ module.exports = (db) => {
           [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda || '', d.cel || '', sprzedawcyStr],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
+            // Klub: wpłata zadatku = przekazanie środków → punkty (tylko członkom)
+            setImmediate(() => lojalnosc.naliczZaZadatek(tenant_id, {
+              zadatekId: id, id_klienta: d.id_klienta, kwota, opis: d.cel || 'Zadatek', pracownik: sprzedawcyStr
+            }));
 
             const zakoncz = () => {
               zapiszLog(tenant_id, 'WPŁATA ZADATKU', pracownik, `Klient: ${d.klient} | Kwota: ${d.kwota} zł | Metoda: ${d.metoda} | Obsługa: ${sprzedawcyStr}`);
@@ -549,6 +556,8 @@ module.exports = (db) => {
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'ROZLICZENIE ZADATKU', pracownik, `Akcja: ${d.typ} | ID: ${d.id_zadatku}`);
+            // Klub: zwrot / przepadnięcie zadatku → cofnięcie punktów za wpłatę
+            setImmediate(() => lojalnosc.resyncZadatek(tenant_id, d.id_zadatku));
             return res.json({ status: 'success', message: 'Status zmieniony na: ' + d.typ });
           }
         );
@@ -564,6 +573,7 @@ module.exports = (db) => {
             if (err) return res.json({ status: 'error', message: err.message });
             if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono aktywnego zadatku o podanym ID.' });
             zapiszLog(tenant_id, 'USUNIĘCIE ZADATKU (BŁĄD WPISU)', pracownik, `ID: ${d.id_zadatku} | Powód: ${String(d.powod).trim()}`);
+            setImmediate(() => lojalnosc.resyncZadatek(tenant_id, d.id_zadatku));   // Klub: cofnij punkty
             return res.json({ status: 'success', message: 'Zadatek oznaczony jako USUNIĘTY.' });
           }
         );
@@ -577,6 +587,7 @@ module.exports = (db) => {
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'KOREKTA ZADATKU', pracownik, `Zmiana kwoty: ${d.nowa_kwota} zł`);
+            setImmediate(() => lojalnosc.resyncZadatek(tenant_id, d.id_zadatku));   // Klub: dostrój punkty
             return res.json({ status: 'success', message: 'Zaktualizowano kwotę zadatku!' });
           }
         );
@@ -590,6 +601,7 @@ module.exports = (db) => {
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'EDYCJA ZADATKU', pracownik, `Kwota: ${d.nowa_kwota} zł | Status: ${d.nowy_status || 'bez zmian'}`);
+            setImmediate(() => lojalnosc.resyncZadatek(tenant_id, d.id_zadatku));   // Klub: dostrój/cofnij punkty wg nowej kwoty i statusu
             return res.json({ status: 'success', message: 'Zaktualizowano dane zadatku!' });
           }
         );
@@ -624,6 +636,11 @@ module.exports = (db) => {
                   return res.json({ status: 'error', message: err2.message });
                 }
                 zapiszLog(tenant_id, 'SCALENIE ZADATKÓW', d.pracownik, `Scalono ${idsFound.length} wpłat na sumę ${suma.toFixed(2)} zł dla ${d.klient}`);
+                // Klub: punkty przenoszą się ze scalonych zadatków na nowy (saldo bez zmian)
+                setImmediate(() => {
+                  idsFound.forEach(oid => lojalnosc.resyncZadatek(tenant_id, oid));
+                  lojalnosc.naliczZaZadatek(tenant_id, { zadatekId: mergeId, id_klienta: idKlientaDb, kwota: suma, opis: d.nowy_cel || 'Zadatek (scalony)', pracownik: d.pracownik });
+                });
                 return res.json({ status: 'success', message: `Pomyślnie scalono ${idsFound.length} pozycji w jedną kwotę: ${suma.toFixed(2)} zł` });
               }
             );

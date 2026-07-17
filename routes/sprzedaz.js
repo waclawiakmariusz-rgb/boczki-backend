@@ -418,7 +418,7 @@ module.exports = (db) => {
               zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${zabiegNazwaFinal} | ${d.kwota} zł`);
               const lojOpis = zabiegNazwaFinal;
               setImmediate(() => lojalnosc.naliczZaSprzedaz(tenant_id, {
-                saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaAdd, opis: lojOpis, pracownik: sprzedawca
+                saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaAdd, opis: lojOpis, pracownik: sprzedawca, platnosc: d.platnosc
               }));
               return res.json({ status: 'success', message: 'Sprzedaż zarejestrowana!' });
             }
@@ -549,6 +549,9 @@ module.exports = (db) => {
                   return res.json({ status: 'error', message: 'Błąd zapisu zadatku: ' + errZ.message });
                 }
                 zapiszLog(tenant_id, 'ZADATEK WPŁATA (multi)', sprzedawcyStr, `Klient: ${d.klient} | ${finalCel} | ${_kwotaPoz.toFixed(2)} zł | ${poz.platnosc || ''}`);
+                setImmediate(() => lojalnosc.naliczZaZadatek(tenant_id, {
+                  zadatekId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaPoz, opis: finalCel, pracownik: sprzedawcyStr
+                }));
                 nextPoz();
               }
             );
@@ -566,7 +569,7 @@ module.exports = (db) => {
                   if (!errIns) {
                     const lojOpis = zapisKategoria;
                     setImmediate(() => lojalnosc.naliczZaSprzedaz(tenant_id, {
-                      saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaPoz, opis: lojOpis, pracownik: sprzedawcyStr
+                      saleId: uniqueId, id_klienta: d.id_klienta, kwota: _kwotaPoz, opis: lojOpis, pracownik: sprzedawcyStr, platnosc: poz.platnosc
                     }));
                   }
                   nextPoz();

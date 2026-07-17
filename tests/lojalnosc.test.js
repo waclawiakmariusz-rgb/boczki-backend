@@ -220,6 +220,104 @@ describe('makeLojalnosc — usunięcie i edycja', () => {
     });
 });
 
+// ─── Hook: zadatki (punkty za przekazanie środków) ────────────
+describe('makeLojalnosc — zadatki', () => {
+    const KONTO_OK = { rows: [{ id: 1 }] };
+
+    test('wpłata zadatku nalicza punkty członkowi (100 zł → +10, zrodlo ZADATEK)', () => {
+        const db = mockDb(FEATURE_ON, KONTO_OK, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } });
+        makeLojalnosc(db).naliczZaZadatek('t-zad', { zadatekId: 'DEP1', id_klienta: '42', kwota: 100, opis: 'Zadatek', pracownik: 'Ania' });
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins[1][1]).toBe('42');
+        expect(ins[1][2]).toBe(10);
+        expect(ins[1][4]).toBe('ZADATEK');
+        expect(ins[1][5]).toBe('DEP1');
+    });
+
+    test('wpłata zadatku dla NIE-członka → zero punktów', () => {
+        const db = mockDb(FEATURE_ON, { rows: [] });
+        makeLojalnosc(db).naliczZaZadatek('t-zad2', { zadatekId: 'DEP1', id_klienta: '42', kwota: 100 });
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+
+    test('realizacja płacona zadatkiem/portfelem → BEZ punktów (już naliczone przy wpłacie)', () => {
+        const dbZad = mockDb();
+        makeLojalnosc(dbZad).naliczZaSprzedaz('t-zad3', { saleId: 'S1', id_klienta: '42', kwota: 300, platnosc: 'Zadatek' });
+        expect(dbZad._callIndex()).toBe(0);   // wychodzi przed jakimkolwiek zapytaniem
+        const dbPort = mockDb();
+        makeLojalnosc(dbPort).naliczZaSprzedaz('t-zad3', { saleId: 'S2', id_klienta: '42', kwota: 300, platnosc: 'Portfel' });
+        expect(dbPort._callIndex()).toBe(0);
+    });
+
+    test('realizacja płacona kartą (dopłata) → punkty normalnie', () => {
+        const db = mockDb(FEATURE_ON, KONTO_OK, { rows: [{ pkt_za_10zl: 1 }] }, { rows: { affectedRows: 1 } });
+        makeLojalnosc(db).naliczZaSprzedaz('t-zad4', { saleId: 'S1', id_klienta: '42', kwota: 50, opis: 'Dopłata', platnosc: 'Karta' });
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]) && c[1][4] === 'SPRZEDAZ');
+        expect(ins[1][2]).toBe(5);
+    });
+
+    test('zwrócony zadatek → cofnięcie punktów (delta do zera, zrodlo ZADATEK_KOR)', () => {
+        const db = mockDb(
+            FEATURE_ON,
+            { rows: [{ status: 'ZWRÓCONY', kwota: 100, id_klienta: '42' }] }, // SELECT Zadatki
+            { rows: [{ suma: 10, n: 1 }] },                                    // SUM dotychczasowych
+            { rows: [{ pkt_za_10zl: 1 }] },                                    // pobierzMnoznik
+            { rows: { affectedRows: 1 } }                                      // wpis korekty
+        );
+        makeLojalnosc(db).resyncZadatek('t-zad5', 'DEP1');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins[1][2]).toBe(-10);
+        expect(ins[1][4]).toBe('ZADATEK_KOR');
+    });
+
+    test('przepadnięcie (KARA) zadatku → cofnięcie punktów', () => {
+        const db = mockDb(
+            FEATURE_ON,
+            { rows: [{ status: 'PRZEPADŁ (KARA)', kwota: 200, id_klienta: '42' }] },
+            { rows: [{ suma: 20, n: 1 }] },
+            { rows: [{ pkt_za_10zl: 1 }] },
+            { rows: { affectedRows: 1 } }
+        );
+        makeLojalnosc(db).resyncZadatek('t-zad6', 'DEP1');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins[1][2]).toBe(-20);
+    });
+
+    test('edycja kwoty AKTYWNEGO zadatku (100→200) dostraja punkty (+10)', () => {
+        const db = mockDb(
+            FEATURE_ON,
+            { rows: [{ status: 'AKTYWNY', kwota: 200, id_klienta: '42' }] },
+            { rows: [{ suma: 10, n: 1 }] },
+            { rows: [{ pkt_za_10zl: 1 }] },
+            { rows: { affectedRows: 1 } }
+        );
+        makeLojalnosc(db).resyncZadatek('t-zad7', 'DEP1');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]));
+        expect(ins[1][2]).toBe(10);   // cel 20 − obecnie 10
+    });
+
+    test('WYKORZYSTANY zadatek zachowuje punkty (delta 0 → brak wpisu)', () => {
+        const db = mockDb(
+            FEATURE_ON,
+            { rows: [{ status: 'WYKORZYSTANY', kwota: 100, id_klienta: '42' }] },
+            { rows: [{ suma: 10, n: 1 }] },
+            { rows: [{ pkt_za_10zl: 1 }] }
+        );
+        makeLojalnosc(db).resyncZadatek('t-zad8', 'DEP1');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+
+    test('zadatek spoza programu (brak wpisu ZADATEK, n=0) → nic nie rusza', () => {
+        const db = mockDb(
+            FEATURE_ON,
+            { rows: [{ status: 'ZWRÓCONY', kwota: 100, id_klienta: '42' }] },
+            { rows: [{ suma: 0, n: 0 }] }
+        );
+        makeLojalnosc(db).resyncZadatek('t-zad9', 'DEP1');
+        expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]))).toBe(false);
+    });
+});
+
 // ─── GET loj_klient ───────────────────────────────────────────
 describe('GET /api/lojalnosc — loj_klient', () => {
     test('feature wyłączony → błąd „nie jest aktywny"', async () => {
