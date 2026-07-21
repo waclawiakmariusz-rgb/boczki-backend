@@ -4,3 +4,4 @@ node_modules/
 csv/
 uploads/**
 !uploads/.gitkeep
+scripts/backfill-waznosc-undo-*.json
