@@ -99,6 +99,45 @@ describe('add_sale — snapshot data_waznosci', () => {
     });
 });
 
+// ─── Bug rabatu: sufiks „[Rabat: -X%]" psuł dopasowanie waznosc_dni ──
+describe('add_multi_sale — ważność liczy się mimo rabatu', () => {
+    test('lookup Uslugi używa BAZOWEGO wariantu (bez sufiksu rabatu)', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'ciało', waznosc_dni: 90 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_multi_sale', tenant_id: TENANT, sprzedawca: ['Anna'], klient: 'Bielasz', id_klienta: '1230',
+            pozycje: [{ typ: 'Zabieg', kategoria: 'Endermologia Infinity', wariant: '15x [Rabat: -20%]', kwota: '800', platnosc: 'Karta' }],
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q).not.toBeNull();
+        expect(q.params).toContain('15x');                                       // dopasowanie po czystym wariancie
+        expect(q.params.some(p => String(p).includes('[Rabat'))).toBe(false);    // bez sufiksu
+        const ins = findQuery(db, 'INSERT INTO Sprzedaz');
+        expect(ins.params).toContain('15x [Rabat: -20%]');                       // szczegóły zapisane PEŁNE
+        expect(ins.params.some(p => /^\d{4}-\d{2}-\d{2}$/.test(String(p)))).toBe(true); // data ważności policzona
+    });
+
+    test('rabat urodzinowy z emoji też jest obcinany', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'ciało', waznosc_dni: 30 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_multi_sale', tenant_id: TENANT, sprzedawca: ['Anna'], klient: 'X', id_klienta: '1',
+            pozycje: [{ typ: 'Zabieg', kategoria: 'Storz', wariant: 'Uda przód/wewnętrzne/tył 5x [🎂 Urodziny: -15%]', kwota: '500', platnosc: 'Karta' }],
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q.params).toContain('Uda przód/wewnętrzne/tył 5x');
+        expect(q.params.some(p => String(p).includes('Urodziny'))).toBe(false);
+    });
+
+    test('wariant bez sufiksu przechodzi bez zmian', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'ciało', waznosc_dni: 90 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_multi_sale', tenant_id: TENANT, sprzedawca: ['Anna'], klient: 'X', id_klienta: '1',
+            pozycje: [{ typ: 'Zabieg', kategoria: 'Endermologia Infinity', wariant: '10x', kwota: '600', platnosc: 'Karta' }],
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q.params).toContain('10x');
+    });
+});
+
 // ─── extend_karnet / close_karnet / reopen_karnet ─────────────
 describe('akcje karnetów', () => {
     test('extend_karnet odrzuca złą datę', async () => {

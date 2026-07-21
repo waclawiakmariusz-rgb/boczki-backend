@@ -100,6 +100,14 @@ module.exports = (db) => {
     return n;
   }
 
+  // Wariant/nazwa bez doklejonego sufiksu rabatu — front dokleja np. " [Rabat: -20%]"
+  // albo " [🎂 Urodziny: -15%]". Ten sufiks psuł dopasowanie do katalogu Uslugi, przez co
+  // ważność (waznosc_dni) nie była liczona i data_waznosci zostawała NULL. Obcinamy TYLKO
+  // do dopasowania w Uslugi — zapisywana nazwa/szczegóły zostają pełne (z rabatem, do wyświetlania).
+  function bezSufiksuRabatu(w) {
+    return String(w == null ? '' : w).replace(/\s*\[[^\]]*\]\s*$/, '').trim();
+  }
+
   // Formatuje wartość kolumny DATE do 'YYYY-MM-DD' (sterownik bywa zwraca Date albo string).
   function toDateStr(v) {
     if (!v) return null;
@@ -435,7 +443,7 @@ module.exports = (db) => {
                     OR TRIM(kategoria) = TRIM(?))
              ORDER BY (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)) DESC
              LIMIT 1`,
-          [tenant_id, nazwa, nazwa, nazwa],
+          [tenant_id, bezSufiksuRabatu(nazwa), bezSufiksuRabatu(nazwa), bezSufiksuRabatu(nazwa)],
           (errL, rowsL) => {
             const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
             const wazDni = (rowsL && rowsL[0]) ? rowsL[0].waznosc_dni : null;
@@ -581,7 +589,7 @@ module.exports = (db) => {
             }
             db.query(
               `SELECT typ_zabiegu, waznosc_dni FROM Uslugi WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?) LIMIT 1`,
-              [tenant_id, poz.kategoria || '', poz.wariant || ''],
+              [tenant_id, poz.kategoria || '', bezSufiksuRabatu(poz.wariant)],
               (errL, rowsL) => {
                 const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
                 if (rowsL && rowsL[0]) return insertWithTyp(typZab, obliczDataWaznosci(now, rowsL[0].waznosc_dni));
