@@ -1612,11 +1612,18 @@ async function sprawdzVoucher() {
     window._zastosowanyVoucher = d.kod;
     infoEl.style.color = '#166534';
     infoEl.textContent = '✦ Kod ważny — ' + d.opis_rabatu;
-    document.getElementById('cena-display').textContent = d.cena_po_rabacie_display;
-    const orygEl = document.getElementById('cena-oryginalna');
-    orygEl.textContent = window._cenaBazowa || '';
-    orygEl.style.display = 'block';
-    if (window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i aktywuj salon';
+    if (d.trial) {
+      // Okres próbny: dziś 0 zł, brak przekreślonej ceny; pełna cena dopiero po trialu.
+      document.getElementById('cena-display').textContent = d.cena_po_rabacie_display;
+      document.getElementById('cena-oryginalna').style.display = 'none';
+      if (window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '🎁 Rozpocznij ' + d.trial_dni + ' dni za darmo';
+    } else {
+      document.getElementById('cena-display').textContent = d.cena_po_rabacie_display;
+      const orygEl = document.getElementById('cena-oryginalna');
+      orygEl.textContent = window._cenaBazowa || '';
+      orygEl.style.display = 'block';
+      if (window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_po_rabacie_display + ' i aktywuj salon';
+    }
   } catch {
     infoEl.style.color = '#991b1b';
     infoEl.textContent = '✗ Błąd połączenia.';

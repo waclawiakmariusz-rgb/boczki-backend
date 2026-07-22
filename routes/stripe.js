@@ -161,7 +161,10 @@ module.exports = (db) => {
         const wyczerpany = v.max_uzyc !== null && v.ilosc_uzyc >= v.max_uzyc;
 
         if (!wygasly && !wyczerpany) {
-          if (v.typ === 'procent') {
+          if (v.trial_dni && v.trial_dni > 0) {
+            // Kod z okresem próbnym — bez rabatu; pełna cena pobierze się po trialu.
+            cenaFinalna = cenaBazowa;
+          } else if (v.typ === 'procent') {
             cenaFinalna = Math.round(cenaBazowa * (1 - v.wartosc / 100));
           } else {
             cenaFinalna = Math.max(0, cenaBazowa - Math.round(v.wartosc * 100));
@@ -205,10 +208,13 @@ module.exports = (db) => {
             voucher: voucherInfo ? (voucherInfo.kod || '') : '',
           };
 
-          // Voucher → dynamiczny Stripe Coupon dolaczany do sesji.
+          // Kod z okresem próbnym → Stripe trial_period_days (darmowe N dni, potem pełna cena).
+          const trialDni = (voucherInfo && voucherInfo.trial_dni > 0) ? parseInt(voucherInfo.trial_dni, 10) : 0;
+
+          // Voucher rabatowy → dynamiczny Stripe Coupon dolaczany do sesji.
           // Bez tego Stripe pobiera pelne 79 zl mimo waznego vouchera w naszej bazie.
           let discounts;
-          if (voucherInfo) {
+          if (voucherInfo && !trialDni) {
             const couponOpts = {
               name: `Voucher ${voucherInfo.kod}`.slice(0, 40),
               metadata: { voucher_id: String(voucherInfo.id), voucher_kod: voucherInfo.kod || '' },
@@ -246,7 +252,13 @@ module.exports = (db) => {
             customer_email: email,
             // metadata na session i subscription — potrzebne w webhookach
             metadata: sessionMeta,
-            subscription_data: { metadata: sessionMeta },
+            subscription_data: {
+              metadata: sessionMeta,
+              // Okres próbny: darmowe N dni, potem AUTOMATYCZNIE pełna cena.
+              ...(trialDni ? { trial_period_days: trialDni } : {}),
+            },
+            // Przy trialu karta MUSI być pobrana z góry (inaczej brak czym obciążyć po okresie próbnym).
+            ...(trialDni ? { payment_method_collection: 'always' } : {}),
             ...(discounts ? { discounts } : {}),
             success_url: `${APP_URL()}/platnosc-sukces.html?session_id={CHECKOUT_SESSION_ID}`,
             cancel_url:  `${APP_URL()}/zamow.html?anulowano=1`,

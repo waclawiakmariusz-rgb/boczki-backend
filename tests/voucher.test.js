@@ -108,6 +108,24 @@ describe('GET /api/voucher/weryfikuj', () => {
         const res = await request(buildAdminApp(db)).get('/api/voucher/weryfikuj');
         expect(res.body.status).toBe('error');
     });
+
+    test('kod z okresem próbnym (trial) — zwraca trial + pełną cenę po okresie', async () => {
+        const db = mockDbAlways([{
+            id: 1, kod: 'START14', typ: 'procent', wartosc: 0,
+            czas_trwania: 'zawsze', czas_trwania_miesiecy: null,
+            max_uzyc: null, ilosc_uzyc: 0, aktywny: 1,
+            data_wygasniecia: null, trial_dni: 14,
+        }]);
+        const res = await request(buildAdminApp(db))
+            .get('/api/voucher/weryfikuj')
+            .query({ kod: 'START14' });
+        expect(res.body.status).toBe('ok');
+        expect(res.body.trial).toBe(1);
+        expect(res.body.trial_dni).toBe(14);
+        // po trialu płaci pełną cenę (brak rabatu)
+        expect(res.body.cena_po_rabacie_grosze).toBe(res.body.cena_oryginalna_grosze);
+        expect(res.body.opis_rabatu).toContain('14 dni za darmo');
+    });
 });
 
 // ─── POST /api/admin/voucher — tworzenie ──────────────────────

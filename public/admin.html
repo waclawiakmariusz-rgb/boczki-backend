@@ -715,19 +715,24 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
             <div class="form-group">
-              <label>Typ rabatu *</label>
-              <select id="v-typ">
+              <label>Typ kodu *</label>
+              <select id="v-typ" onchange="toggleVoucherTyp()">
                 <option value="procent">Procentowy (%)</option>
                 <option value="zlotowki">Kwotowy (zł)</option>
+                <option value="trial">Okres próbny (dni gratis)</option>
               </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="v-wartosc-box">
               <label>Wartość *</label>
               <input type="number" id="v-wartosc" placeholder="np. 20" min="0" step="0.01">
             </div>
+            <div class="form-group" id="v-trial-box" style="display:none;">
+              <label>Liczba dni gratis *</label>
+              <input type="number" id="v-trial-dni" value="14" min="1" max="365">
+            </div>
           </div>
 
-          <div class="form-group">
+          <div class="form-group" id="v-czas-box">
             <label>Czas trwania rabatu</label>
             <select id="v-czas" onchange="toggleMiesiacePole()">
               <option value="zawsze">Na zawsze (każde odnowienie)</option>
@@ -738,6 +743,10 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
           <div class="form-group" id="v-miesiecy-box" style="display:none;">
             <label>Liczba miesięcy</label>
             <input type="number" id="v-miesiecy" placeholder="np. 12" min="1" max="120" value="12">
+          </div>
+
+          <div class="form-group" id="v-trial-info" style="display:none; background:#eef4ff; border:1px solid #cad9f7; border-radius:8px; padding:10px 12px; font-size:13px; color:#1e3a8a;">
+            Salon korzysta za darmo przez podaną liczbę dni. Karta jest pobierana z góry, a po okresie próbnym Stripe <b>automatycznie</b> pobierze pełną cenę (79 zł/mies.). Można anulować w trakcie triala.
           </div>
 
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px;">
@@ -2284,12 +2293,16 @@ async function zaladujVouchery() {
 
   el.innerHTML = rows.map(v => {
     const aktywny = v.aktywny;
-    const typLabel = v.typ === 'procent' ? `${v.wartosc}%` : `${v.wartosc} zł`;
-    const czasLabel = v.czas_trwania === 'zawsze' ? 'na zawsze' : `${v.czas_trwania_miesiecy} mies.`;
+    const jestTrial = v.trial_dni && v.trial_dni > 0;
+    const typLabel = jestTrial
+      ? `${v.trial_dni} dni gratis, potem pełna cena`
+      : (v.typ === 'procent' ? `${v.wartosc}%` : `${v.wartosc} zł`);
+    const czasLabel = jestTrial ? 'okres próbny' : (v.czas_trwania === 'zawsze' ? 'na zawsze' : `${v.czas_trwania_miesiecy} mies.`);
     const limitLabel = v.max_uzyc !== null ? `${v.ilosc_uzyc}/${v.max_uzyc}` : `${v.ilosc_uzyc}/∞`;
     const wygasaLabel = v.data_wygasniecia
       ? `<span style="color:#f59e0b">wygasa: ${v.data_wygasniecia}</span>`
       : '';
+    const glowny = jestTrial ? typLabel : ('-' + typLabel);
 
     return `
       <div style="background:${aktywny ? 'var(--white)' : '#f8fafc'}; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); margin-bottom:12px; border-left:4px solid ${aktywny ? 'var(--primary)' : '#e2e8f0'};">
@@ -2297,7 +2310,7 @@ async function zaladujVouchery() {
           <div>
             <div style="font-family:monospace; font-size:16px; font-weight:800; letter-spacing:1px; color:${aktywny ? 'var(--primary)' : 'var(--muted)'};">${v.kod}</div>
             <div style="font-size:13px; color:var(--text); margin-top:4px;">
-              <strong>-${typLabel}</strong> &nbsp;·&nbsp; ${czasLabel} &nbsp;·&nbsp; użyć: ${limitLabel}
+              <strong>${glowny}</strong> &nbsp;·&nbsp; ${czasLabel} &nbsp;·&nbsp; użyć: ${limitLabel}
               ${wygasaLabel ? '&nbsp;·&nbsp;' + wygasaLabel : ''}
             </div>
             ${v.notatka ? `<div style="font-size:11px; color:var(--muted); margin-top:3px;">${v.notatka}</div>` : ''}
@@ -2317,30 +2330,50 @@ async function zaladujVouchery() {
   }).join('');
 }
 
+// Przełącza pola formularza między kodem rabatowym a okresem próbnym (trial).
+function toggleVoucherTyp() {
+  const trial = document.getElementById('v-typ').value === 'trial';
+  document.getElementById('v-wartosc-box').style.display = trial ? 'none' : '';
+  document.getElementById('v-trial-box').style.display = trial ? '' : 'none';
+  document.getElementById('v-czas-box').style.display = trial ? 'none' : '';
+  document.getElementById('v-trial-info').style.display = trial ? '' : 'none';
+  if (trial) document.getElementById('v-miesiecy-box').style.display = 'none';
+}
+
 async function utworzVoucher() {
   const errEl = document.getElementById('v-error');
   errEl.style.display = 'none';
 
   const kod = document.getElementById('v-kod').value.trim().toUpperCase();
   const typ = document.getElementById('v-typ').value;
+  const jestTrial = typ === 'trial';
   const wartosc = document.getElementById('v-wartosc').value;
+  const trial_dni = document.getElementById('v-trial-dni').value;
   const czas_trwania = document.getElementById('v-czas').value;
   const czas_trwania_miesiecy = document.getElementById('v-miesiecy').value;
   const max_uzyc = document.getElementById('v-maxuzyc').value;
   const notatka = document.getElementById('v-notatka').value;
   const data_wygasniecia = document.getElementById('v-wygasa').value;
 
-  if (!kod || !wartosc) {
-    errEl.style.display = 'block'; errEl.textContent = 'Podaj kod i wartość rabatu.'; return;
+  if (!kod) { errEl.style.display = 'block'; errEl.textContent = 'Podaj kod.'; return; }
+  if (jestTrial) {
+    const d = parseInt(trial_dni, 10);
+    if (!(d >= 1 && d <= 365)) { errEl.style.display = 'block'; errEl.textContent = 'Liczba dni gratis: 1–365.'; return; }
+  } else {
+    if (!wartosc) { errEl.style.display = 'block'; errEl.textContent = 'Podaj wartość rabatu.'; return; }
+    if (typ === 'procent' && (parseFloat(wartosc) <= 0 || parseFloat(wartosc) > 100)) {
+      errEl.style.display = 'block'; errEl.textContent = 'Procent musi być w zakresie 1–100.'; return;
+    }
   }
-  if (typ === 'procent' && (parseFloat(wartosc) <= 0 || parseFloat(wartosc) > 100)) {
-    errEl.style.display = 'block'; errEl.textContent = 'Procent musi być w zakresie 1–100.'; return;
-  }
+
+  const body = jestTrial
+    ? { kod, trial_dni, max_uzyc: max_uzyc || null, notatka, data_wygasniecia: data_wygasniecia || null }
+    : { kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy: czas_trwania === 'miesiecy' ? czas_trwania_miesiecy : null, max_uzyc: max_uzyc || null, notatka, data_wygasniecia: data_wygasniecia || null };
 
   const res = await fetch(`${API}/admin/voucher`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
-    body: JSON.stringify({ kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy: czas_trwania === 'miesiecy' ? czas_trwania_miesiecy : null, max_uzyc: max_uzyc || null, notatka, data_wygasniecia: data_wygasniecia || null })
+    body: JSON.stringify(body)
   }).then(r => r.json());
 
   if (res.status !== 'success') {

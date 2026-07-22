@@ -765,6 +765,11 @@ module.exports = (db) => {
   )`, (err) => {
     if (err) console.error('[admin] Błąd tworzenia tabeli Kody_rabatowe:', err.message);
   });
+  // Kod typu „okres próbny": trial_dni = liczba dni darmowego korzystania, potem pełna cena.
+  // Gdy ustawione (>0) — kod NIE jest rabatem, tylko trialem (Stripe trial_period_days).
+  db.query(`ALTER TABLE Kody_rabatowe ADD COLUMN trial_dni INT NULL`, (e) => {
+    if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[admin] ALTER Kody_rabatowe.trial_dni:', e.message);
+  });
 
   // GET /api/admin/vouchery — lista voucherów
   router.get('/admin/vouchery', requireAdmin, (req, res) => {
@@ -774,30 +779,44 @@ module.exports = (db) => {
     });
   });
 
-  // POST /api/admin/voucher — utwórz voucher
+  // POST /api/admin/voucher — utwórz voucher (rabatowy albo okres próbny/trial)
   router.post('/admin/voucher', requireAdmin, (req, res) => {
-    const { kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia } = req.body;
-    if (!kod || !typ || wartosc === undefined) return res.json({ status: 'error', message: 'Podaj kod, typ i wartość.' });
-    if (!['procent', 'zlotowki'].includes(typ)) return res.json({ status: 'error', message: 'Nieprawidłowy typ.' });
+    const { kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia, trial_dni } = req.body;
+    if (!kod) return res.json({ status: 'error', message: 'Podaj kod.' });
 
-    const ct = czas_trwania === 'miesiecy' ? 'miesiecy' : 'zawsze';
-    const ctMies = ct === 'miesiecy' ? (parseInt(czas_trwania_miesiecy) || 12) : null;
+    const trialDni = parseInt(trial_dni, 10);
+    const jestTrial = Number.isFinite(trialDni) && trialDni > 0;
+
+    // Wartości do zapisu — dla triala rabat jest zerowy (typ/wartosc to placeholdery, ignorowane przy checkout).
+    let insTyp, insWartosc, insCt, insCtMies, insTrial;
+    if (jestTrial) {
+      if (trialDni > 365) return res.json({ status: 'error', message: 'Okres próbny: 1–365 dni.' });
+      insTyp = 'procent'; insWartosc = 0; insCt = 'zawsze'; insCtMies = null; insTrial = trialDni;
+    } else {
+      if (!typ || wartosc === undefined) return res.json({ status: 'error', message: 'Podaj kod, typ i wartość.' });
+      if (!['procent', 'zlotowki'].includes(typ)) return res.json({ status: 'error', message: 'Nieprawidłowy typ.' });
+      insTyp = typ; insWartosc = parseFloat(wartosc);
+      insCt = czas_trwania === 'miesiecy' ? 'miesiecy' : 'zawsze';
+      insCtMies = insCt === 'miesiecy' ? (parseInt(czas_trwania_miesiecy) || 12) : null;
+      insTrial = null;
+    }
 
     db.query(
-      `INSERT INTO Kody_rabatowe (kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO Kody_rabatowe (kod, typ, wartosc, czas_trwania, czas_trwania_miesiecy, max_uzyc, notatka, data_wygasniecia, trial_dni)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
-        kod.trim().toUpperCase(), typ, parseFloat(wartosc), ct, ctMies,
+        kod.trim().toUpperCase(), insTyp, insWartosc, insCt, insCtMies,
         max_uzyc ? parseInt(max_uzyc) : null,
         notatka || null,
-        data_wygasniecia || null
+        data_wygasniecia || null,
+        insTrial
       ],
       (err) => {
         if (err) {
           if (err.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', message: 'Kod już istnieje.' });
           return res.json({ status: 'error', message: err.message });
         }
-        return res.json({ status: 'success', message: 'Voucher utworzony.' });
+        return res.json({ status: 'success', message: jestTrial ? `Kod z okresem próbnym (${trialDni} dni) utworzony.` : 'Voucher utworzony.' });
       }
     );
   });
@@ -839,6 +858,21 @@ module.exports = (db) => {
         }
         if (v.max_uzyc !== null && v.ilosc_uzyc >= v.max_uzyc) {
           return res.json({ status: 'error', message: 'Kod rabatowy został już w pełni wykorzystany.' });
+        }
+
+        // Kod z okresem próbnym — nie rabat, tylko trial: darmowe N dni, potem pełna cena.
+        if (v.trial_dni && v.trial_dni > 0) {
+          const dni = parseInt(v.trial_dni, 10);
+          return res.json({
+            status: 'ok',
+            kod: v.kod,
+            trial: 1,
+            trial_dni: dni,
+            cena_oryginalna_grosze: cena,
+            cena_po_rabacie_grosze: cena,   // po trialu płaci pełną cenę
+            cena_po_rabacie_display: (cena / 100).toFixed(0) + ' zł',
+            opis_rabatu: `${dni} dni za darmo, potem ${(cena / 100).toFixed(0)} zł/mies.`
+          });
         }
 
         let cenaPoRabacie;
