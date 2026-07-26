@@ -43,6 +43,9 @@ const APP_URL        = () => stripQuotes(process.env.APP_URL || 'https://estelio
 const CENA_GROSZE    = () => parseInt(process.env.STRIPE_CENA_GROSZE) || 7900;
 const NAZWA_PRODUKTU = () => process.env.STRIPE_NAZWA || 'Dostęp do systemu Estelio';
 const PRICE_ID       = () => stripQuotes(process.env.STRIPE_PRICE_ID || '');
+// Domyślny okres próbny dla KAŻDEGO nowego salonu (bez kodu). 0 = wyłączony.
+// Kod „okres próbny" z panelu admina może nadpisać liczbę dni; kod rabatowy wyłącza trial (płatność od razu).
+const DEFAULT_TRIAL_DNI = () => { const n = parseInt(process.env.STRIPE_TRIAL_DNI, 10); return Number.isFinite(n) ? n : 14; };
 
 // Wersje dokumentów prawnych — inkrementować przy każdej zmianie treści
 // Wersja jest zapisywana w bazie przy każdym zamówieniu jako dowód co klient zaakceptował
@@ -208,8 +211,13 @@ module.exports = (db) => {
             voucher: voucherInfo ? (voucherInfo.kod || '') : '',
           };
 
-          // Kod z okresem próbnym → Stripe trial_period_days (darmowe N dni, potem pełna cena).
-          const trialDni = (voucherInfo && voucherInfo.trial_dni > 0) ? parseInt(voucherInfo.trial_dni, 10) : 0;
+          // Okres próbny → Stripe trial_period_days (darmowe N dni, potem AUTOMATYCZNIE pełna cena).
+          // • bez kodu → domyślny trial dla każdego salonu (DEFAULT_TRIAL_DNI, np. 14 dni)
+          // • kod „okres próbny" → liczba dni z kodu (może się różnić od domyślnej)
+          // • kod rabatowy → brak trialu (płatność od razu, zniżka przez Stripe Coupon)
+          const trialDni = voucherInfo
+            ? (voucherInfo.trial_dni > 0 ? parseInt(voucherInfo.trial_dni, 10) : 0)
+            : DEFAULT_TRIAL_DNI();
 
           // Voucher rabatowy → dynamiczny Stripe Coupon dolaczany do sesji.
           // Bez tego Stripe pobiera pelne 79 zl mimo waznego vouchera w naszej bazie.
@@ -513,6 +521,7 @@ module.exports = (db) => {
       cena_display: (CENA_GROSZE() / 100).toFixed(0) + ' zł',
       nazwa: NAZWA_PRODUKTU(),
       aktywny: !!process.env.STRIPE_SECRET_KEY,
+      trial_dni: DEFAULT_TRIAL_DNI(),   // domyślny okres próbny dla każdego (0 = wyłączony)
     });
   });
 

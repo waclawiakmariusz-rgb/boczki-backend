@@ -166,6 +166,38 @@
   .hero-cta:hover { background: var(--rose-dark); transform: translateY(-1px); box-shadow: 0 6px 24px rgba(184,112,128,.4); }
   .social-proof { margin-top: 16px; font-size: .78rem; color: var(--text-muted); }
 
+  /* ── OKRES PRÓBNY — głośny baner „14 dni za darmo" ── */
+  .trial-shout {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: linear-gradient(135deg, var(--rose), var(--gold));
+    color: #fff; font-weight: 700;
+    padding: 10px 20px 10px 14px; border-radius: 999px;
+    font-size: .92rem; letter-spacing: .01em;
+    margin-bottom: 22px;
+    box-shadow: 0 8px 24px rgba(184,112,128,.35);
+    animation: trialPulse 2.6s ease-in-out infinite;
+  }
+  .trial-shout .tag {
+    background: #fff; color: var(--rose-dark);
+    font-weight: 800; border-radius: 999px;
+    padding: 3px 11px; font-size: .82rem; letter-spacing: .02em;
+    white-space: nowrap;
+  }
+  @keyframes trialPulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 8px 24px rgba(184,112,128,.35); }
+    50%      { transform: scale(1.03); box-shadow: 0 12px 34px rgba(201,169,110,.5); }
+  }
+  @media (prefers-reduced-motion: reduce) { .trial-shout { animation: none; } }
+  .trial-sub { margin-top: 14px; font-size: .82rem; color: var(--text-muted); line-height: 1.6; }
+  .trial-sub strong { color: var(--dark); font-weight: 600; }
+  /* Wstążka trialu w kaflu ceny formularza */
+  .trial-ribbon {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: linear-gradient(135deg, var(--rose), var(--gold));
+    color: #fff; font-weight: 700; font-size: .9rem;
+    padding: 8px 16px; border-radius: 999px; margin-bottom: 10px;
+  }
+
   /* right col – tablet mockup */
   .hero-right {
     position: relative; z-index: 1;
@@ -927,6 +959,10 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
 
   <div class="hero-left reveal">
     <p class="eyebrow">Oprogramowanie dla salonów kosmetycznych</p>
+    <div class="trial-shout">
+      <span class="tag">14 DNI ZA DARMO</span>
+      <span>Wypróbuj bez ryzyka 🎁</span>
+    </div>
     <h1>
       Więcej czasu dla Ciebie.<br>
       Mniej chaosu<br>
@@ -937,8 +973,11 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
       Sprzedaż, klienci, rozliczenia, analityka —
       zaprojektowane specjalnie dla branży beauty.
     </p>
-    <a class="hero-cta" href="#formularz">Zamów dostęp →</a>
-    <p style="margin-top:14px; font-size:.82rem; color:var(--text-muted);">
+    <a class="hero-cta" href="#formularz">🎁 Zacznij 14 dni za darmo →</a>
+    <p class="trial-sub">
+      <strong>Bez opłaty na start.</strong> Potem 79 zł/mies. — anuluj kiedy chcesz.
+    </p>
+    <p style="margin-top:10px; font-size:.82rem; color:var(--text-muted);">
       Masz już konto? <a href="/zaloguj" style="color:var(--rose); text-decoration:none; font-weight:500;">Zaloguj się →</a>
     </p>
   </div>
@@ -1212,15 +1251,16 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
 
       <!-- PRICE ANCHOR -->
       <div class="price-anchor">
+        <span class="trial-ribbon">🎁 Pierwsze 14 dni za darmo</span>
         <div class="pa-main">
           <span class="pa-amount">79 zł</span>
-          <span class="pa-period">/ miesiąc</span>
+          <span class="pa-period">/ miesiąc po okresie próbnym</span>
         </div>
-        <p class="pa-compare">Tyle co hybryda na jedną rękę, a ogarnia cały Twój salon.</p>
+        <p class="pa-compare">Wypróbuj bez ryzyka. Po 14 dniach zapłacisz tyle co za hybrydę na jedną rękę — a ogarniasz cały salon.</p>
         <div class="pa-tags">
-          <span class="pa-tag">Mniej niż 2 zł dziennie</span>
-          <span class="pa-tag">Płatność co miesiąc</span>
-          <span class="pa-tag">Bez ukrytych opłat</span>
+          <span class="pa-tag">14 dni za darmo</span>
+          <span class="pa-tag">Anuluj kiedy chcesz</span>
+          <span class="pa-tag">Bez opłaty na start</span>
         </div>
       </div>
 
@@ -1238,15 +1278,15 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
           <div class="how-step">
             <div class="how-num">2</div>
             <div>
-              <strong>Opłać dostęp</strong>
-              <span>Kartą, bezpiecznie przez Stripe.</span>
+              <strong>Rozpocznij 14 dni za darmo</strong>
+              <span>Podpinasz kartę przez Stripe, ale przez 14 dni nic nie płacisz.</span>
             </div>
           </div>
           <div class="how-step">
             <div class="how-num">3</div>
             <div>
               <strong>Zacznij od razu</strong>
-              <span>Link aktywacyjny trafia na Twój e-mail automatycznie.</span>
+              <span>Link aktywacyjny trafia na Twój e-mail automatycznie. Po 14 dniach — 79 zł/mies., anuluj kiedy chcesz.</span>
             </div>
           </div>
         </div>
@@ -1371,13 +1411,23 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
   <p class="section-eyebrow reveal" style="text-align:left;">Pytania i odpowiedzi</p>
   <h2 class="section-title reveal">Masz pytania?<br><em>Mamy odpowiedzi.</em></h2>
 
-  <div class="faq-item reveal" style="transition-delay:.04s">
+  <div class="faq-item reveal" style="transition-delay:.02s">
     <button class="faq-question" onclick="toggleFaq(this)">
-      Czy potrzebuję karty kredytowej, żeby zamówić dostęp?
+      Jak działa 14 dni za darmo?
       <span class="faq-icon">+</span>
     </button>
     <div class="faq-answer">
-      Nie — do zamówienia potrzebujesz tylko karty debetowej lub kredytowej. Płatność obsługuje bezpiecznie Stripe. To subskrypcja miesięczna — płacisz co miesiąc, bez ukrytych opłat i bez umowy na dłużej. Możesz zrezygnować w każdej chwili.
+      Zakładasz konto i podpinasz kartę, ale <strong>przez pierwsze 14 dni nie płacisz nic</strong> — masz pełny dostęp do wszystkich funkcji. Po okresie próbnym subskrypcja włącza się automatycznie za 79 zł/mies. Jeśli w trakcie 14 dni zrezygnujesz, nie pobierzemy ani grosza.
+    </div>
+  </div>
+
+  <div class="faq-item reveal" style="transition-delay:.04s">
+    <button class="faq-question" onclick="toggleFaq(this)">
+      Czy potrzebuję karty, żeby zacząć okres próbny?
+      <span class="faq-icon">+</span>
+    </button>
+    <div class="faq-answer">
+      Tak — podpięcie karty debetowej lub kredytowej jest potrzebne, żeby po 14 dniach dostęp włączył się bez przerwy. Ale <strong>w trakcie okresu próbnego karta nie jest obciążana</strong>. Płatność obsługuje bezpiecznie Stripe. To subskrypcja miesięczna — bez ukrytych opłat i bez umowy na dłużej, możesz zrezygnować w każdej chwili.
     </div>
   </div>
 
@@ -1554,15 +1604,25 @@ function toggleFaq(btn) {
 
 // ── Stripe config ────────────────────────────────────────────────
 fetch('/api/stripe/config').then(r => r.json()).then(d => {
+  window._trialDni = d.trial_dni > 0 ? d.trial_dni : 0;
   if (d.aktywny) {
     window._stripeAktywny = true;
     window._cenaBazowa = d.cena_display;
-    document.getElementById('form-title').textContent = 'Kup dostęp do Estelio';
-    document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą. Link aktywacyjny otrzymasz automatycznie na e-mail.';
-    document.getElementById('cena-display').textContent = d.cena_display;
+    if (window._trialDni) {
+      // Domyślny okres próbny dla każdego — dziś 0 zł, pełna cena dopiero po trialu.
+      window._btnDomyslny = '🎁 Rozpocznij ' + window._trialDni + ' dni za darmo';
+      document.getElementById('form-title').textContent = window._trialDni + ' dni Estelio za darmo';
+      document.getElementById('form-sub').textContent = 'Wypełnij formularz i podepnij kartę. Przez ' + window._trialDni + ' dni nie płacisz nic — potem 79 zł/mies., anuluj kiedy chcesz.';
+      document.getElementById('cena-display').textContent = 'Dziś 0 zł';
+    } else {
+      window._btnDomyslny = '💳 Zapłać ' + d.cena_display + ' i aktywuj salon';
+      document.getElementById('form-title').textContent = 'Kup dostęp do Estelio';
+      document.getElementById('form-sub').textContent = 'Wypełnij formularz i opłać dostęp kartą. Link aktywacyjny otrzymasz automatycznie na e-mail.';
+      document.getElementById('cena-display').textContent = d.cena_display;
+    }
     document.getElementById('cena-box').style.display = 'flex';
     document.getElementById('voucher-box').style.display = 'block';
-    document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + d.cena_display + ' i aktywuj salon';
+    document.getElementById('btn-wyslij').textContent = window._btnDomyslny;
   } else {
     window._stripeAktywny = false;
     window._cenaBazowa = d.cena_display;
@@ -1571,7 +1631,8 @@ fetch('/api/stripe/config').then(r => r.json()).then(d => {
     document.getElementById('cena-display').textContent = d.cena_display;
     document.getElementById('cena-box').style.display = 'flex';
     document.getElementById('voucher-box').style.display = 'block';
-    document.getElementById('btn-wyslij').textContent = '📩 Wyślij zgłoszenie';
+    window._btnDomyslny = '📩 Wyślij zgłoszenie';
+    document.getElementById('btn-wyslij').textContent = window._btnDomyslny;
   }
 }).catch(() => {
   window._stripeAktywny = false;
@@ -1604,9 +1665,10 @@ async function sprawdzVoucher() {
       infoEl.style.color = '#991b1b';
       infoEl.textContent = '✗ ' + d.message;
       window._zastosowanyVoucher = '';
-      document.getElementById('cena-display').textContent = window._cenaBazowa || '';
+      // Powrót do stanu domyślnego (trial dla każdego albo pełna cena, zależnie od konfiguracji).
+      document.getElementById('cena-display').textContent = window._trialDni ? 'Dziś 0 zł' : (window._cenaBazowa || '');
       document.getElementById('cena-oryginalna').style.display = 'none';
-      if (window._cenaBazowa && window._stripeAktywny) document.getElementById('btn-wyslij').textContent = '💳 Zapłać ' + window._cenaBazowa + ' i aktywuj salon';
+      if (window._stripeAktywny && window._btnDomyslny) document.getElementById('btn-wyslij').textContent = window._btnDomyslny;
       btn.disabled = false; return;
     }
     window._zastosowanyVoucher = d.kod;
