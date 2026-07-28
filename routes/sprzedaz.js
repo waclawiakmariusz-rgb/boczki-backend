@@ -436,7 +436,14 @@ module.exports = (db) => {
           return insertWithTyp(null, null);
         }
         const nazwa = String(d.zabieg_nazwa || '').trim();
-        db.query(
+        // Wariant siedzi w `szczegoly` — frontend wysyła nazwa=kategoria, szczegoly=wariant.
+        // '-' to placeholder selecta dla kategorii, która nie ma wariantów.
+        const wariantRaw = String(d.szczegoly || '').trim();
+        const wariant = wariantRaw === '-' ? '' : wariantRaw;
+
+        // Dopasowanie po samej nazwie — fallback dla wywołań bez szczegółów
+        // i nazw spoza cennika (np. "X Dopłata").
+        const lookupPoNazwie = () => db.query(
           `SELECT typ_zabiegu, waznosc_dni FROM Uslugi
              WHERE tenant_id = ?
                AND (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)
@@ -448,6 +455,23 @@ module.exports = (db) => {
             const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
             const wazDni = (rowsL && rowsL[0]) ? rowsL[0].waznosc_dni : null;
             insertWithTyp(typZab, obliczDataWaznosci(now, wazDni));
+          }
+        );
+
+        // NAJPIERW dokładne dopasowanie kategoria + wariant (jak add_multi_sale).
+        // Bez wariantu kategoria mająca warianty o różnych typach (np. Adipologia
+        // twarz/ciało) trafiała przez LIMIT 1 w losowy wiersz — stąd zabiegi
+        // wpadające do przypadkowych zakładek w profilu klienta.
+        db.query(
+          `SELECT typ_zabiegu, waznosc_dni FROM Uslugi
+             WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?)
+             LIMIT 1`,
+          [tenant_id, bezSufiksuRabatu(nazwa), bezSufiksuRabatu(wariant)],
+          (errE, rowsE) => {
+            if (rowsE && rowsE[0]) {
+              return insertWithTyp(rowsE[0].typ_zabiegu || null, obliczDataWaznosci(now, rowsE[0].waznosc_dni));
+            }
+            lookupPoNazwie();
           }
         );
       };
@@ -835,17 +859,33 @@ module.exports = (db) => {
                 updateSale(null);
               } else {
                 const nazwa = String(d.zabieg_nazwa || '').trim();
-                db.query(
+                // Wariant z `szczegoly` — bez niego kategoria z wariantami o różnych
+                // typach trafiała przez LIMIT 1 w losowy wiersz (ten sam bug co w add_sale).
+                const wariantRawE = String(d.szczegoly || '').trim();
+                const wariantE = wariantRawE === '-' ? '' : wariantRawE;
+
+                const lookupPoNazwieE = () => db.query(
                   `SELECT typ_zabiegu FROM Uslugi
                      WHERE tenant_id = ?
                        AND (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)
                             OR TRIM(kategoria) = TRIM(?))
                      ORDER BY (TRIM(CONCAT(kategoria,' ',COALESCE(wariant,''))) = TRIM(?)) DESC
                      LIMIT 1`,
-                  [tenant_id, nazwa, nazwa, nazwa],
+                  [tenant_id, bezSufiksuRabatu(nazwa), bezSufiksuRabatu(nazwa), bezSufiksuRabatu(nazwa)],
                   (errL, rowsL) => {
                     const typZab = (rowsL && rowsL[0] && rowsL[0].typ_zabiegu) || null;
                     updateSale(typZab);
+                  }
+                );
+
+                db.query(
+                  `SELECT typ_zabiegu FROM Uslugi
+                     WHERE tenant_id = ? AND TRIM(kategoria) = TRIM(?) AND TRIM(COALESCE(wariant,'')) = TRIM(?)
+                     LIMIT 1`,
+                  [tenant_id, bezSufiksuRabatu(nazwa), bezSufiksuRabatu(wariantE)],
+                  (errE, rowsE) => {
+                    if (rowsE && rowsE[0]) return updateSale(rowsE[0].typ_zabiegu || null);
+                    lookupPoNazwieE();
                   }
                 );
               }

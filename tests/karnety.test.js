@@ -185,3 +185,67 @@ describe('akcje karnetów', () => {
         expect(res.body.status).toBe('error');
     });
 });
+
+// ─── Bug „zabieg wpada w losową zakładkę": add_sale dopasowywał się po samej
+// kategorii (wariant siedzi w `szczegoly` i był ignorowany). Kategoria z wariantami
+// o różnych typach (np. Adipologia twarz/ciało) trafiała przez LIMIT 1 w losowy
+// wiersz Uslugi → losowy typ_zabiegu ORAZ losowa ważność karnetu.
+describe('add_sale — dopasowanie po kategorii ORAZ wariancie', () => {
+    test('wariant ze `szczegoly` trafia do zapytania o Uslugi', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'medycyna estetyczna', waznosc_dni: 60 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_sale', tenant_id: TENANT, typ_transakcji: 'Zabieg',
+            sprzedawca: ['Anna'], klient: 'Kowalska',
+            zabieg_nazwa: 'Lipoliza iniekcyjna', szczegoly: 'Brzuch',
+            kwota: '600', platnosc: 'Karta', pracownik: 'Anna',
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q).not.toBeNull();
+        // zapytanie MUSI zawężać po wariancie — inaczej wraca losowy wiersz kategorii
+        expect(q.sql).toContain("TRIM(COALESCE(wariant,'')) = TRIM(?)");
+        expect(q.params).toContain('Lipoliza iniekcyjna');
+        expect(q.params).toContain('Brzuch');
+        // typ z dopasowanego wariantu ląduje w snapshocie sprzedaży
+        const ins = findQuery(db, 'INSERT INTO Sprzedaz');
+        expect(ins.params).toContain('medycyna estetyczna');
+    });
+
+    test('placeholder "-" (kategoria bez wariantów) leci jako pusty wariant', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'twarz', waznosc_dni: null }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_sale', tenant_id: TENANT, typ_transakcji: 'Zabieg',
+            sprzedawca: ['Anna'], klient: 'X', zabieg_nazwa: 'Konsultacja', szczegoly: '-',
+            kwota: '100', platnosc: 'Karta', pracownik: 'Anna',
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q.params).toContain('');
+        expect(q.params).not.toContain('-');
+    });
+
+    test('sufiks rabatu w wariancie jest obcinany (spójnie z add_multi_sale)', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'ciało', waznosc_dni: 90 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_sale', tenant_id: TENANT, typ_transakcji: 'Zabieg',
+            sprzedawca: ['Anna'], klient: 'X',
+            zabieg_nazwa: 'Endermologia Infinity', szczegoly: '15x [Rabat: -20%]',
+            kwota: '800', platnosc: 'Karta', pracownik: 'Anna',
+        });
+        const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
+        expect(q.params).toContain('15x');
+        expect(q.params.some(p => String(p).includes('[Rabat'))).toBe(false);
+        // szczegóły zapisane PEŁNE (z rabatem) — obcinamy tylko do dopasowania
+        const ins = findQuery(db, 'INSERT INTO Sprzedaz');
+        expect(ins.params).toContain('15x [Rabat: -20%]');
+    });
+
+    test('Kosmetyk nadal nie dostaje typu (osobny box w profilu)', async () => {
+        const db = mockDbAlways([]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_sale', tenant_id: TENANT, typ_transakcji: 'Kosmetyk',
+            sprzedawca: ['Anna'], klient: 'X', zabieg_nazwa: 'Kosmetyk: Krem',
+            szczegoly: '2 szt.', produkt_nazwa: 'Krem', ilosc_sztuk: '2',
+            kwota: '120', platnosc: 'Karta', pracownik: 'Anna',
+        });
+        expect(findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi')).toBeNull();
+    });
+});
