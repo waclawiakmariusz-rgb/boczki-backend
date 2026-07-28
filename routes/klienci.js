@@ -15,6 +15,19 @@ module.exports = (db) => {
   // Hook Klubu — punkty za zadatki (fire-and-forget, NIGDY nie blokuje operacji).
   const lojalnosc = makeLojalnosc(db);
 
+  // Idempotentna migracja: znacznik bonu podarunkowego na zadatku.
+  // W salonie bon podarunkowy jest zapisywany jako zadatek — bez tej kolumny nie da się
+  // go odróżnić od zwykłej zaliczki na zabieg. Znacznik decyduje, czy wolno przepisać
+  // wpłatę na innego klienta (bon kupuje się często dla kogoś innego; zaliczka nie).
+  db.query(
+    `ALTER TABLE Zadatki ADD COLUMN bon TINYINT(1) NOT NULL DEFAULT 0`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[klienci] ALTER Zadatki.bon:', err.message);
+      }
+    }
+  );
+
   // Idempotentna migracja: tabela na "zaproponowane" sugestie retail (kosmetyki).
   // Wpis = user kliknął "✓ Zaproponowane" przy danej sugestii — sugestia znika
   // dla TEJ konkretnej transakcji (klient + kosmetyk + data_zakupu). Wraca przy
@@ -233,15 +246,15 @@ module.exports = (db) => {
       // Gdy znamy id_klienta, identyfikujemy WYŁĄCZNIE po ID
       // (zmiana imienia/nazwiska klientki nie rozłącza zadatków od profilu).
       const sql = id
-        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND id_klienta = ? ORDER BY data_wplaty DESC`
-        : `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy FROM Zadatki WHERE tenant_id = ? AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty DESC`;
+        ? `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy, bon FROM Zadatki WHERE tenant_id = ? AND id_klienta = ? ORDER BY data_wplaty DESC`
+        : `SELECT id, data_wplaty, typ, kwota, metoda, cel, status, pracownicy, bon FROM Zadatki WHERE tenant_id = ? AND LOWER(klient) = LOWER(?) ORDER BY data_wplaty DESC`;
       const params = id ? [tenant_id, id] : [tenant_id, nazwa];
 
       db.query(sql, params, (err, rows) => {
         if (err) return res.json({ saldo: 0, historia: [] });
         let saldo = 0;
         const historia = (rows || []).map(r => {
-          const row = { id: r.id, data: r.data_wplaty, typ: r.typ, kwota: parseFloat(r.kwota), metoda: r.metoda, cel: r.cel, status: r.status, pracownicy: r.pracownicy || '' };
+          const row = { id: r.id, data: r.data_wplaty, typ: r.typ, kwota: parseFloat(r.kwota), metoda: r.metoda, cel: r.cel, status: r.status, pracownicy: r.pracownicy || '', bon: r.bon ? 1 : 0 };
           if (row.typ === 'WPŁATA' && row.status === 'AKTYWNY') saldo += row.kwota;
           return row;
         });
@@ -499,8 +512,8 @@ module.exports = (db) => {
         }
 
         db.query(
-          `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?)`,
-          [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda || '', d.cel || '', sprzedawcyStr],
+          `INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy, bon) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?, ?)`,
+          [id, tenant_id, d.id_klienta || '', d.klient, kwota, d.metoda || '', d.cel || '', sprzedawcyStr, d.bon ? 1 : 0],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             // Klub: wpłata zadatku = przekazanie środków → punkty (tylko członkom)
@@ -603,6 +616,76 @@ module.exports = (db) => {
             zapiszLog(tenant_id, 'EDYCJA ZADATKU', pracownik, `Kwota: ${d.nowa_kwota} zł | Status: ${d.nowy_status || 'bez zmian'}`);
             setImmediate(() => lojalnosc.resyncZadatek(tenant_id, d.id_zadatku));   // Klub: dostrój/cofnij punkty wg nowej kwoty i statusu
             return res.json({ status: 'success', message: 'Zaktualizowano dane zadatku!' });
+          }
+        );
+
+      } else if (d.typ === 'OZNACZ_BON') {
+        // Oznaczenie istniejącego zadatku jako bon podarunkowy (lub cofnięcie oznaczenia).
+        // Potrzebne dla wpłat sprzed wprowadzenia znacznika — inaczej starego bonu
+        // (np. kupionego 3.07) nie dałoby się przepisać.
+        const czyBon = d.bon ? 1 : 0;
+        db.query(
+          `UPDATE Zadatki SET bon = ? WHERE tenant_id = ? AND id = ?`,
+          [czyBon, tenant_id, d.id_zadatku],
+          (err, result) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono zadatku o podanym ID.' });
+            zapiszLog(tenant_id, 'OZNACZENIE BONU', pracownik,
+              `ID: ${d.id_zadatku} | ${czyBon ? 'oznaczono jako BON PODARUNKOWY' : 'cofnięto oznaczenie bonu'}`);
+            return res.json({ status: 'success', message: czyBon ? 'Oznaczono jako bon podarunkowy.' : 'Cofnięto oznaczenie bonu.' });
+          }
+        );
+
+      } else if (d.typ === 'PRZEPISZ') {
+        // Przepisanie zadatku na innego klienta — np. bon kupiony na siebie i wręczony
+        // komuś innemu. Zmieniamy WYŁĄCZNIE właściciela; kwota, data i metoda zostają
+        // nietknięte, więc raport utargu z dnia wpłaty w ogóle się nie zmienia (inaczej
+        // niż przy obejściu „usuń u jednego, dodaj u drugiego", które zabiera wpis
+        // z raportu — wszystkie raporty pomijają status USUNIĘTY).
+        const nowyId = String(d.nowy_id_klienta || '').trim();
+        const nowyKlient = String(d.nowy_klient || '').trim();
+        if (!nowyId || !nowyKlient) {
+          return res.json({ status: 'error', message: 'Wskaż klienta, na którego przepisujemy zadatek.' });
+        }
+        if (!d.powod || String(d.powod).trim().length < 3) {
+          return res.json({ status: 'error', message: 'Podaj powód przepisania (min. 3 znaki).' });
+        }
+        // Zadatek musi istnieć i być AKTYWNY — rozliczonego/zwróconego nie przepisujemy.
+        db.query(
+          `SELECT id_klienta, klient, kwota, status, bon FROM Zadatki WHERE tenant_id = ? AND id = ? LIMIT 1`,
+          [tenant_id, d.id_zadatku],
+          (errSel, rowsSel) => {
+            if (errSel) return res.json({ status: 'error', message: errSel.message });
+            if (!rowsSel || !rowsSel.length) return res.json({ status: 'error', message: 'Nie znaleziono zadatku o podanym ID.' });
+            const z = rowsSel[0];
+            // Przepisywać wolno WYŁĄCZNIE bony podarunkowe. Zwykła zaliczka należy do
+            // konkretnej osoby i nie ma powodu, by wędrowała między kontami.
+            if (!z.bon) {
+              return res.json({ status: 'error', message: 'Przepisać można tylko bon podarunkowy. Ten wpis to zwykły zadatek — jeśli to bon, najpierw oznacz go jako bon.' });
+            }
+            if (String(z.status || '').toUpperCase() !== 'AKTYWNY') {
+              return res.json({ status: 'error', message: `Przepisać można tylko AKTYWNY zadatek (ten ma status: ${z.status || 'brak'}).` });
+            }
+            const staryId = String(z.id_klienta || '').trim();
+            if (staryId && staryId === nowyId) {
+              return res.json({ status: 'error', message: 'Zadatek już należy do tego klienta.' });
+            }
+            // Aktualizujemy OBA pola — rozliczanie zadatków dopasowuje klienta raz po
+            // id_klienta, a raz po nazwisku (sprzedaz.js), więc sama zmiana ID zostawiłaby
+            // wpis w niespójnym stanie.
+            db.query(
+              `UPDATE Zadatki SET id_klienta = ?, klient = ? WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNY'`,
+              [nowyId, nowyKlient, tenant_id, d.id_zadatku],
+              (err, result) => {
+                if (err) return res.json({ status: 'error', message: err.message });
+                if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie udało się przepisać — zadatek zmienił status.' });
+                zapiszLog(tenant_id, 'PRZEPISANIE ZADATKU', pracownik,
+                  `ID: ${d.id_zadatku} | Kwota: ${z.kwota} zł | Z: ${z.klient || '—'} (${staryId || 'brak ID'}) → Na: ${nowyKlient} (${nowyId}) | Powód: ${String(d.powod).trim()}`);
+                // Klub: punkty idą za środkami (decyzja usera 2026-07-28)
+                setImmediate(() => lojalnosc.przepiszZadatek(tenant_id, d.id_zadatku, staryId, nowyId, pracownik));
+                return res.json({ status: 'success', message: `Zadatek przepisany na: ${nowyKlient}.` });
+              }
+            );
           }
         );
 

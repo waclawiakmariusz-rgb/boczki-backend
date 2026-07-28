@@ -21396,6 +21396,24 @@ function otworzEdycjeZadatku(id, nazwaKlientaEncoded) {
     document.getElementById('de_klient_nazwa').value = nazwaKlienta;
     document.getElementById('de_kwota').value = h.kwota;
     document.getElementById('de_cel').value = h.cel;
+
+    // Sekcja „Przepisz na innego klienta" — czyścimy, żeby nie zostało nic
+    // z poprzednio otwieranego zadatku (ryzyko przepisania nie tego wpisu).
+    const przKlient = document.getElementById('de_przepisz_klient');
+    const przPowod  = document.getElementById('de_przepisz_powod');
+    if (przKlient) przKlient.value = '';
+    if (przPowod)  przPowod.value  = '';
+
+    // Przepisywać wolno WYŁĄCZNIE bony podarunkowe — zwykła zaliczka należy do
+    // konkretnej osoby. Dla nie-bonu pokazujemy zamiast tego opcję oznaczenia
+    // (bony sprzed wprowadzenia znacznika nie mają go ustawionego).
+    const czyBon = !!h.bon;
+    const boxPrzepisz = document.getElementById('de_box_przepisz');
+    const boxOznacz   = document.getElementById('de_box_oznacz');
+    if (boxPrzepisz) boxPrzepisz.style.display = czyBon ? '' : 'none';
+    if (boxOznacz)   boxOznacz.style.display   = czyBon ? 'none' : '';
+    const badge = document.getElementById('de_bon_badge');
+    if (badge) badge.style.display = czyBon ? 'inline-block' : 'none';
     
     // --- NOWA LOGIKA DATY DLA KALENDARZA ---
     const d = new Date(h.data);
@@ -21520,6 +21538,92 @@ function zapiszPelnaEdycjeZadatku(e) {
         }
     })
     .finally(() => { btn.innerText = oldText; btn.disabled = false; });
+}
+
+// Oznaczenie istniejącego zadatku jako bon podarunkowy. Potrzebne dla wpłat sprzed
+// wprowadzenia znacznika — bez tego starego bonu nie dałoby się przepisać.
+function oznaczZadatekJakoBon(czyBon) {
+    const id = document.getElementById('de_id').value;
+    if (!id) { alert("Błąd: brak ID zadatku."); return; }
+    if (czyBon && !confirm("Oznaczyć ten zadatek jako BON PODARUNKOWY?\n\nPotem będzie można przepisać go na inną osobę.")) return;
+
+    const btn = document.getElementById('btn-oznacz-bon');
+    const oldTxt = btn ? btn.innerText : '';
+    if (btn) { btn.innerText = "Zapisuję..."; btn.disabled = true; }
+
+    fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            action: 'manage_deposit',
+            typ: 'OZNACZ_BON',
+            id_zadatku: id,
+            bon: !!czyBon,
+            pracownik: currentUser
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            alert(d.message + "\n\nOtwórz zadatek ponownie, żeby zobaczyć opcję przepisania.");
+            zamknijEdycjeZadatku();
+            pobierzPortfel(document.getElementById('de_klient_nazwa').value);
+        } else {
+            alert("Błąd: " + d.message);
+        }
+    })
+    .catch(err => alert("Błąd połączenia: " + err))
+    .finally(() => { if (btn) { btn.innerText = oldTxt; btn.disabled = false; } });
+}
+
+// Przepisanie zadatku na innego klienta (np. bon kupiony na siebie, wręczony komuś).
+// Zmienia WYŁĄCZNIE właściciela — kwota, data i metoda zostają nietknięte, więc raport
+// utargu z dnia wpłaty się nie zmienia. To dlatego jest to bezpieczniejsze niż obejście
+// „usuń u jednego, dodaj u drugiego" (usunięty zadatek znika z raportów).
+function przepiszZadatekNaKlienta() {
+    const nazwa = (document.getElementById('de_przepisz_klient').value || '').trim();
+    const powod = (document.getElementById('de_przepisz_powod').value || '').trim();
+    if (!nazwa) { alert("Wpisz klienta, na którego przepisujemy zadatek."); return; }
+    if (powod.length < 3) { alert("Podaj powód przepisania (min. 3 znaki) — trafia do logu."); return; }
+
+    // Nazwisko → ID bierzemy z cache klientów (to samo źródło co podpowiedzi w polu).
+    const lista = window.wszyscyKlienciDane || [];
+    const dopasowani = lista.filter(k => String(k.nazwa || '').trim().toLowerCase() === nazwa.toLowerCase());
+    if (dopasowani.length === 0) { alert("Nie znaleziono klienta \"" + nazwa + "\".\n\nWybierz go z podpowiedzi (musi istnieć w kartotece)."); return; }
+    if (dopasowani.length > 1) { alert("Kilku klientów ma nazwę \"" + nazwa + "\" — nie wiadomo któremu przepisać. Rozróżnij ich w kartotece."); return; }
+    const nowy = dopasowani[0];
+
+    const kwota = document.getElementById('de_kwota').value;
+    const zKogo = document.getElementById('de_klient_nazwa').value;
+    if (!confirm("Przepisać zadatek " + kwota + " zł\n\nz: " + zKogo + "\nna: " + nowy.nazwa + "\n\nKwota, data i metoda płatności zostaną BEZ ZMIAN.")) return;
+
+    const btn = document.getElementById('btn-przepisz-zadatek');
+    const oldTxt = btn.innerText;
+    btn.innerText = "Przepisuję..."; btn.disabled = true;
+
+    fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+            action: 'manage_deposit',
+            typ: 'PRZEPISZ',
+            id_zadatku: document.getElementById('de_id').value,
+            nowy_id_klienta: nowy.id,
+            nowy_klient: nowy.nazwa,
+            powod: powod,
+            pracownik: currentUser
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            alert(d.message);
+            zamknijEdycjeZadatku();
+            pobierzPortfel(zKogo);   // odśwież portfel klienta, OD którego zadatek odszedł
+        } else {
+            alert("Błąd: " + d.message);
+        }
+    })
+    .catch(err => alert("Błąd połączenia: " + err))
+    .finally(() => { btn.innerText = oldTxt; btn.disabled = false; });
 }
 
 
@@ -21874,6 +21978,8 @@ function otworzWplateZadatku() {
     document.getElementById('dep_kwota').value = "";
     document.getElementById('dep_cel').value = "";
     document.getElementById('dep_metoda').value = "Gotówka"; // Domyślnie Gotówka
+    const depBon = document.getElementById('dep_bon');
+    if (depBon) depBon.checked = false;   // znacznik bonu nie może zostać z poprzedniej wpłaty
     
     // Reset pracowników
     wybraniSprzedawcyZadatek = [];
@@ -21990,6 +22096,7 @@ function wyslijZadatek(e) {
         kwota: kwota,
         cel: cel,
         metoda: metoda,
+        bon: document.getElementById('dep_bon') ? document.getElementById('dep_bon').checked : false,
         sprzedawcy: wybraniSprzedawcyZadatek,
         pracownik: currentUser
     };
@@ -29491,6 +29598,14 @@ initTheme();
                 <option value="Ręczne">✍️ Ręczne dodanie (Manualne)</option>
             </select>
 
+            <label style="display:flex; align-items:flex-start; gap:8px; background:#f0fdfa; border:1px solid #99f6e4; border-radius:8px; padding:10px; margin-bottom:12px; cursor:pointer;">
+                <input type="checkbox" id="dep_bon" style="margin-top:2px; width:16px; height:16px; cursor:pointer;">
+                <span style="font-size:12px; color:#115e59; line-height:1.4;">
+                    <b>🎁 To jest bon podarunkowy</b><br>
+                    <span style="color:#0f766e;">Zaznacz, gdy klient kupuje bon (często dla kogoś innego). Tylko bon można później przepisać na inną osobę.</span>
+                </span>
+            </label>
+
             <label style="font-size:12px; color:#6b7280; font-weight:bold;">Obsługa (Pracownicy):</label>
             <div style="border:1px solid #d1d5db; border-radius:6px; padding:4px; background:white; min-height:31px; margin-bottom:20px;">
                 <div id="dep_seller_tags_container" style="display:flex; flex-wrap:wrap; gap:4px; margin-bottom:4px;"></div>
@@ -30433,7 +30548,10 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
     <div class="edit-modal-card" style="background: white; width: 95%; max-width: 500px; padding: 25px; border-radius: 16px; box-shadow: 0 15px 40px rgba(0,0,0,0.2);">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;">
-            <h3 style="margin:0; color:#0f766e; font-size: 20px;">👛 Edycja Zadatku</h3>
+            <h3 style="margin:0; color:#0f766e; font-size: 20px;">
+                👛 Edycja Zadatku
+                <span id="de_bon_badge" style="display:none; font-size:11px; background:#0f766e; color:#fff; padding:3px 9px; border-radius:999px; vertical-align:middle; margin-left:6px;">🎁 BON</span>
+            </h3>
             <button onclick="zamknijEdycjeZadatku()" style="border:none; background:none; font-size:28px; color:#94a3b8; cursor:pointer;">&times;</button>
         </div>
 
@@ -30503,6 +30621,43 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
                                 🗑️ USUŃ (błąd wpisu)
                             </button>
                         </div>
+                    </div>
+                </details>
+            </div>
+
+            <div id="de_box_oznacz" style="display:none; border-top: 1px dashed #cbd5e1; padding-top:15px; margin-top:12px;">
+                <div style="background:#fffbeb; padding:10px; border-radius:8px; border:1px solid #fde68a;">
+                    <p style="font-size:11px; color:#92400e; margin:0 0 8px 0;">
+                        To jest zwykły zadatek, więc <b>nie można go przepisać</b> na inną osobę.
+                        Jeśli w rzeczywistości jest to <b>bon podarunkowy</b> (np. wpisany przed wprowadzeniem tej opcji) — oznacz go:
+                    </p>
+                    <button type="button" id="btn-oznacz-bon" onclick="oznaczZadatekJakoBon(true)"
+                            style="width:100%; padding:8px; background:#f59e0b; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">
+                        🎁 Oznacz jako bon podarunkowy
+                    </button>
+                </div>
+            </div>
+
+            <div id="de_box_przepisz" style="display:none; border-top: 1px dashed #cbd5e1; padding-top:15px; margin-top:12px;">
+                <details>
+                    <summary style="font-size:12px; color:#0f766e; font-weight:bold; cursor:pointer; list-style:none;">
+                        🔄 Przepisz bon na innego klienta ▼
+                    </summary>
+                    <div style="margin-top:15px; background:#f0fdfa; padding:10px; border-radius:8px; border:1px solid #99f6e4;">
+                        <p style="font-size:11px; color:#115e59; margin:0 0 10px 0;">
+                            Np. bon kupiony na siebie i wręczony komuś innemu. Kwota, data i metoda płatności
+                            <b>zostają bez zmian</b> — raport z dnia wpłaty się nie zmieni.
+                        </p>
+                        <label style="font-size:11px; font-weight:bold; color:#64748b; display:block; margin-bottom:4px;">Nowy właściciel zadatku:</label>
+                        <input type="text" id="de_przepisz_klient" list="lista-klientow" class="modern-form-control"
+                               placeholder="Zacznij pisać nazwisko..." style="margin-bottom:8px; font-size:13px;">
+                        <label style="font-size:11px; font-weight:bold; color:#64748b; display:block; margin-bottom:4px;">Powód (zapisywany w logu):</label>
+                        <input type="text" id="de_przepisz_powod" class="modern-form-control"
+                               placeholder="np. bon wręczony, zgoda Ola" style="margin-bottom:10px; font-size:13px;">
+                        <button type="button" id="btn-przepisz-zadatek" onclick="przepiszZadatekNaKlienta()"
+                                style="width:100%; padding:8px; background:#0f766e; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:12px;">
+                            🔄 Przepisz na wskazanego klienta
+                        </button>
                     </div>
                 </details>
             </div>

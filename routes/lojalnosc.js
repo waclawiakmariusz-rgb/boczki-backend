@@ -394,6 +394,42 @@ function makeLojalnosc(db) {
     } catch (e) { console.error('[lojalnosc] resyncZadatek:', e.message); }
   }
 
+  // Przepisanie zadatku na innego klienta (np. bon kupiony na siebie, wręczony komuś).
+  // Punkty idą ZA ŚRODKAMI (decyzja usera 2026-07-28): zdejmujemy saldo tego zadatku
+  // pierwotnemu klientowi i dopisujemy nowemu. Kwota i data zadatku się nie zmieniają,
+  // więc resyncZadatek (liczy deltę po kwocie, nie po kliencie) dalej działa poprawnie —
+  // po przepisaniu ewentualną korektę dostaje już nowy właściciel.
+  // Gdy nowy klient nie należy do Klubu, punkty tylko znikają pierwotnemu (nie ma ich komu dać).
+  function przepiszZadatek(tenant_id, zadatekId, staryIdKlienta, nowyIdKlienta, pracownik) {
+    try {
+      const zid = String(zadatekId || '').trim();
+      const stary = String(staryIdKlienta || '').trim();
+      const nowy = String(nowyIdKlienta || '').trim();
+      if (!tenant_id || !zid || !stary || !nowy || stary === nowy) return;
+      maFeature(tenant_id, (on) => {
+        if (!on) return;
+        // Saldo punktowe TEGO zadatku u pierwotnego klienta (wpłata + korekty + wcześniejsze przepisania)
+        db.query(
+          `SELECT COALESCE(SUM(zmiana), 0) AS suma FROM Lojalnosc_Punkty
+            WHERE tenant_id = ? AND id_klienta = ?
+              AND (ref_id = ? OR ref_id LIKE CONCAT('ZK@', ?, '@%') OR ref_id LIKE CONCAT('ZP@', ?, '@%'))`,
+          [tenant_id, stary, zid, zid, zid],
+          (e1, rows) => {
+            if (e1 || !Array.isArray(rows) || !rows.length) return;
+            const saldo = Math.trunc(Number(rows[0].suma) || 0);
+            if (saldo <= 0) return;   // zadatek spoza programu albo już rozliczony punktowo
+            const stempel = 'ZP@' + zid + '@' + Date.now();
+            wpis(tenant_id, stary, -saldo, 'Zadatek przepisany na innego klienta', 'ZADATEK_PRZ', stempel + '@OD', pracownik);
+            maKontoKlubu(tenant_id, nowy, (czlonek) => {
+              if (!czlonek) return;   // nowy klient poza Klubem — punkty przepadają, nie tworzymy ich w próżni
+              wpis(tenant_id, nowy, saldo, 'Zadatek przepisany od innego klienta', 'ZADATEK_PRZ', stempel + '@DO', pracownik);
+            });
+          }
+        );
+      });
+    } catch (e) { console.error('[lojalnosc] przepiszZadatek:', e.message); }
+  }
+
   // Zwrot → -punkty, proporcjonalnie do kwoty zwrotu, z sufitem: nigdy nie
   // zabieramy więcej niż naliczono za oryginał (minus wcześniejsze zwroty).
   // Sprzedaż sprzed startu Klubu (brak wpisu SPRZEDAZ) → brak kompensacji.
@@ -492,7 +528,7 @@ function makeLojalnosc(db) {
     } catch (e) { console.error('[lojalnosc] skorygujEdycje:', e.message); }
   }
 
-  return { naliczZaSprzedaz, naliczZaZadatek, resyncZadatek, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje, maKontoKlubu };
+  return { naliczZaSprzedaz, naliczZaZadatek, resyncZadatek, przepiszZadatek, naliczZaZwrot, kompensujUsuniecie, skorygujEdycje, maKontoKlubu };
 }
 
 // ─────────────────────────────────────────────────────────────
