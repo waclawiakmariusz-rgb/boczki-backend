@@ -7996,6 +7996,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <summary class="history-summary"><div class="summary-title" style="color:#991b1b;">📉 Utracone zadatki <span id="cnt-utracone" class="count-badge" style="background:#fee2e2;color:#991b1b;">0 poz.</span></div></summary>
                             <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-utracone"></tbody></table></div>
                         </details>
+                        <!-- Zwrócone zadatki — prośba recepcji 2026-07-29. Wcześniej widoczne były
+                             tylko utracone (KARA); zwroty znikały z widoku, mimo że są w bazie. -->
+                        <details class="history-group" style="border-left:5px solid #0369a1 !important;">
+                            <summary class="history-summary"><div class="summary-title" style="color:#0369a1;">↩️ Zwrócone zadatki <span id="cnt-zwrocone" class="count-badge" style="background:#e0f2fe;color:#0369a1;">0 poz.</span></div></summary>
+                            <div class="table-container"><table class="modern-table"><thead><tr><th>Data wpłaty</th><th>Tytuł / Cel</th><th>Kwota</th><th>Płatność</th><th style="text-align:right;">Akcja</th></tr></thead><tbody id="tabela-zwrocone"></tbody></table></div>
+                        </details>
                     </div>
 
                     <!-- ===== Tab: Produkty ===== -->
@@ -14103,11 +14109,17 @@ function sortujZamowienia(kolumna) {
 
 
 function przywrocZadatek(id) {
-    if(!confirm("Czy na pewno chcesz cofnąć utratę tego zadatku? \nKwota wróci na saldo dostępne klienta.")) return;
+    const zadatek = window.cacheZadatkow.find(x => x.id == id);
+    // Ta sama akcja obsługuje utracone (KARA) i zwrócone — komunikat musi pasować
+    // do sytuacji, bo przy zwrocie pieniądze fizycznie wyszły z salonu.
+    const st = String((zadatek && zadatek.status) || '').toUpperCase();
+    const czyZwrot = st.includes('ZWRÓC') || st.includes('ZWROC');
+    const pytanie = czyZwrot
+        ? "Czy na pewno chcesz cofnąć ZWROT tego zadatku?\n\nKwota wróci na saldo klienta — rób to tylko jeśli zwrot został wpisany przez pomyłkę (pieniądze NIE zostały fizycznie oddane)."
+        : "Czy na pewno chcesz cofnąć utratę tego zadatku? \nKwota wróci na saldo dostępne klienta.";
+    if(!confirm(pytanie)) return;
 
     document.body.style.cursor = 'wait';
-
-    const zadatek = window.cacheZadatkow.find(x => x.id == id);
     const celBezPrefiksu = String(zadatek.cel || '').replace(/^Przywrócony:\s*/i, '');
 
     fetch(API_URL, {
@@ -21234,6 +21246,9 @@ function pobierzPortfel(nazwaKlienta, preloadedData = null) {
     const lostContainer = document.getElementById('tabela-utracone');
     const balanceEl = document.getElementById('wallet-balance');
     const lostCountEl = document.getElementById('cnt-utracone');
+    // Zwrócone zadatki — osobna lista (prośba recepcji 2026-07-29).
+    const returnedContainer = document.getElementById('tabela-zwrocone');
+    const returnedCountEl = document.getElementById('cnt-zwrocone');
     
     const renderWalletUI = (d) => {
         const saldoFmt = parseFloat(d.saldo).toFixed(2).replace('.', ',') + ' zł';
@@ -21243,16 +21258,38 @@ function pobierzPortfel(nazwaKlienta, preloadedData = null) {
         listContainer.innerHTML = "";
         if(manualContainer) manualContainer.innerHTML = "";
         if(lostContainer) lostContainer.innerHTML = "";
-        
-        window.cacheZadatkow = d.historia; 
+        if(returnedContainer) returnedContainer.innerHTML = "";
+
+        window.cacheZadatkow = d.historia;
 
         const zadatkiNormalne = [];
         const zadatkiReczne = [];
         let cUtracone = 0;
+        let cZwrocone = 0;
 
         d.historia.forEach(h => {
             const status = String(h.status || "").toUpperCase();
             const metodaRaw = String(h.metoda || "").toLowerCase();
+
+            // Zwrócone klientowi — pieniądze wyszły z salonu, ale wpis ma zostać widoczny
+            // (inaczej zwrot znika bez śladu i nie da się go zweryfikować po fakcie).
+            if (status.includes("ZWRÓC") || status.includes("ZWROC")) {
+                cZwrocone++;
+                if(returnedContainer) {
+                    returnedContainer.innerHTML += `
+                        <tr>
+                            <td style="font-size:12px;">${new Date(h.data).toLocaleDateString()}</td>
+                            <td style="font-size:12px;">${h.cel}</td>
+                            <td style="color: #0369a1; font-weight: bold; font-size:13px;">${parseFloat(h.kwota).toFixed(2)} zł</td>
+                            <td style="font-size:12px;">${h.metoda}</td>
+                            <td style="text-align: right;">
+                                <button onclick="przywrocZadatek('${h.id}')" class="btn-mini" style="background:#e0f2fe; color:#0369a1; width:auto; padding:4px 8px; font-size:11px; font-weight:bold;">Cofnij</button>
+                            </td>
+                        </tr>
+                    `;
+                }
+                return;
+            }
 
             if (status.includes("PRZEPAD") || status.includes("KARA")) {
                 cUtracone++;
@@ -21283,6 +21320,9 @@ function pobierzPortfel(nazwaKlienta, preloadedData = null) {
 
         if(lostCountEl) lostCountEl.innerText = cUtracone + " poz.";
         if(cUtracone === 0 && lostContainer) lostContainer.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak utraconych zadatków.</td></tr>";
+
+        if(returnedCountEl) returnedCountEl.innerText = cZwrocone + " poz.";
+        if(cZwrocone === 0 && returnedContainer) returnedContainer.innerHTML = "<tr><td colspan='5' style='text-align:center; padding:15px; color:#999;'>Brak zwróconych zadatków.</td></tr>";
 
         function renderujKafelki(items, containerDiv, emptyMsg) {
             if(items.length === 0) {
@@ -21344,7 +21384,9 @@ function pobierzPortfel(nazwaKlienta, preloadedData = null) {
         if (skrotEl) {
             const aktywne = d.historia.filter(h => {
                 const st = String(h.status || '').toUpperCase();
-                return !st.includes('PRZEPAD') && !st.includes('KARA') && !st.includes('USUNIĘTY');
+                // Zwrócone też odpadają — pieniędzy już nie ma, więc nie mogą udawać salda.
+                return !st.includes('PRZEPAD') && !st.includes('KARA') && !st.includes('USUNIĘTY')
+                    && !st.includes('ZWRÓC') && !st.includes('ZWROC');
             }).slice(0, 4);
             skrotEl.innerHTML = aktywne.length
                 ? aktywne.map(h => `<div style="padding:3px 0; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between;"><span>${h.tytul || h.cel || '—'}</span><span style="font-weight:600; color:#1e293b;">${parseFloat(h.kwota||0).toFixed(2).replace('.',',')} zł</span></div>`).join('')
