@@ -8595,10 +8595,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
 			<div class="header"><h1>Dziennik Zdarzeń</h1>
-			<button onclick="kopiujLogiDoSchowka()" title="Kopiuj logi konsoli do schowka" 
-                    style="background:none; border:1px dashed #f59e0b; color:#d97706; font-size:11px; padding:4px 8px; border-radius:5px; cursor:pointer; font-weight:bold; font-family:monospace;">
-                🐞 admin mode
-            </button>
 			<button onclick="pobierzLogi()" class="btn-primary" style="width:auto;">Odśwież</button></div><div class="card"><table class="logs-table"><thead><tr><th>Data</th><th>Kto</th><th>Akcja</th><th>Opis</th></tr></thead><tbody id="logs-list"></tbody></table></div></div>
       
 		

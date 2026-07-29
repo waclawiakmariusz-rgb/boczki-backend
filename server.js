@@ -311,6 +311,32 @@ const zgodyRoutes      = require('./routes/zgody')(db);
 const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 
 // ==========================================
+// REJESTR BŁĘDÓW — każdy błąd API trafia do Dziennika Zdarzeń
+// ==========================================
+// Recepcja zgłasza „wyskoczył jakiś błąd" bez treści komunikatu, przez co diagnoza
+// jest zgadywanką. Podpinamy się pod res.json: gdy odpowiedź niesie status 'error',
+// zapisujemy ją do Logów razem z akcją, salonem i osobą. Jedno miejsce łapie błędy
+// ze WSZYSTKICH routerów — nie trzeba dotykać 121 istniejących wywołań.
+const zapiszBlad = require('./routes/logi').makeZapiszBlad(db);
+
+app.use('/api', (req, res, next) => {
+  const oryginalneJson = res.json.bind(res);
+  res.json = function (body) {
+    try {
+      if (body && (body.status === 'error' || body.error)) {
+        const tenant = (req.body && req.body.tenant_id) || (req.query && req.query.tenant_id);
+        const akcja  = (req.body && req.body.action) || (req.query && req.query.action) || req.path;
+        const kto    = (req.body && (req.body.pracownik || req.body.user_log)) ||
+                       (req.query && req.query.user_log) || '';
+        zapiszBlad(tenant, akcja, kto, body.message || body.error, req.method + ' ' + req.path);
+      }
+    } catch (e) { /* logowanie nie może zepsuć odpowiedzi */ }
+    return oryginalneJson(body);
+  };
+  next();
+});
+
+// ==========================================
 // REJESTRACJA ROUTERÓW
 // ==========================================
 app.use('/api', authRoutes);
@@ -649,6 +675,14 @@ app.use((req, res, next) => {
 // ==========================================
 app.use((err, req, res, next) => {
     console.error('[SERWER ERROR]', req.method, req.url, '→', err.message);
+    // Wyjątek nie przechodzi przez res.json z routera, więc zapisujemy go tutaj —
+    // inaczej najpoważniejsze błędy (500) byłyby jedynymi, których nie ma w dzienniku.
+    try {
+        const tenant = (req.body && req.body.tenant_id) || (req.query && req.query.tenant_id);
+        const akcja  = (req.body && req.body.action) || (req.query && req.query.action) || req.path;
+        const kto    = (req.body && (req.body.pracownik || req.body.user_log)) || '';
+        zapiszBlad(tenant, akcja, kto, 'CRASH: ' + err.message, req.method + ' ' + req.path);
+    } catch (e) { /* nie pogłębiamy awarii */ }
     if (res.headersSent) return next(err);
     if (req.path.startsWith('/api/')) {
         return res.status(500).json({
