@@ -2,11 +2,16 @@
 // RODO i zgody: get_consents, get_rodo, save_rodo, update_consents, get_all_rodo
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
 
 module.exports = (db) => {
+  // Router MUSI powstawać wewnątrz fabryki (jak w pozostałych routerach). Gdy siedział
+  // na poziomie modułu, każde kolejne wywołanie module.exports(db) dokładało handlery
+  // do TEGO SAMEGO routera — pierwsza instancja (ze swoim `db`) obsługiwała wszystkie
+  // żądania. W produkcji niewidoczne (fabryka wołana raz), ale w testach dawało
+  // „db.query nigdy nie wywołane" i byłaby to pułapka przy każdej kolejnej instancji.
+  const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
   // Helper: zaktualizuj flagę dokumentów w Klienci
@@ -55,6 +60,63 @@ module.exports = (db) => {
             kontakt_tel: r.kontakt_tel, news_email: r.newsletter_email,
             booksy_sms: r.booksy_sms, email_adres: r.email_adres,
             link_pdf: r.link_pdf || '', email_kontaktowy: r.email_kontaktowy || ''
+          });
+        }
+      );
+
+    } else if (action === 'sms_baza') {
+      // Baza do akcji marketingowych (prośba recepcji 2026-07-31).
+      // WAŻNE PRAWNIE: podstawą wysyłki marketingu jest zgoda MARKETINGOWA
+      // (newsletter_sms / newsletter_email), a NIE kontakt_tel — ta ostatnia dotyczy
+      // organizacji wizyt i nie uprawnia do reklamy. Dlatego kolumna jest wybierana
+      // z zamkniętej listy, a nie doklejana z parametru.
+      const KOLUMNY_ZGOD = {
+        sms:   { kolumna: 'newsletter_sms',    opis: 'Zgoda marketingowa SMS' },
+        email: { kolumna: 'newsletter_email',  opis: 'Zgoda marketingowa e-mail' },
+        tel:   { kolumna: 'kontakt_tel',       opis: 'Zgoda na kontakt telefoniczny (NIE marketing)' },
+      };
+      const wybor = KOLUMNY_ZGOD[String(req.query.zgoda || 'sms').toLowerCase()];
+      if (!wybor) return res.json({ status: 'error', message: 'Nieznany rodzaj zgody.' });
+
+      // Wykluczamy usuniętych, zanonimizowanych (RODO) i zmarłych — wysyłka do nich
+      // byłaby błędem, a przy zanonimizowanych też naruszeniem.
+      db.query(
+        `SELECT k.id_klienta, k.imie_nazwisko, k.telefon,
+                r.email_adres, r.email_kontaktowy, r.data_podpisu
+           FROM Rejestr_RODO r
+           JOIN Klienci k ON k.tenant_id = r.tenant_id AND k.id_klienta = r.id_klienta
+          WHERE r.tenant_id = ?
+            AND UPPER(TRIM(COALESCE(r.\`${wybor.kolumna}\`, ''))) = 'TAK'
+            AND (k.status IS NULL OR k.status = 'AKTYWNY')
+            AND COALESCE(k.zmarly, 0) = 0
+            AND k.data_usuniecia IS NULL
+          ORDER BY k.imie_nazwisko`,
+        [tenant_id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: 'Błąd bazy: ' + err.message });
+
+          const czyEmail = wybor.kolumna === 'newsletter_email';
+          const lista = (rows || []).map(r => {
+            const email = String(r.email_kontaktowy || r.email_adres || '').trim();
+            const telefon = String(r.telefon || '').trim();
+            return {
+              id_klienta: r.id_klienta,
+              klient: r.imie_nazwisko,
+              telefon,
+              email,
+              kontakt: czyEmail ? email : telefon,     // to, czego użyje wysyłka
+              data_zgody: r.data_podpisu ? String(r.data_podpisu).slice(0, 10) : '',
+            };
+          });
+          const zKontaktem = lista.filter(p => p.kontakt);
+          return res.json({
+            status: 'ok',
+            zgoda: wybor.kolumna,
+            opis_zgody: wybor.opis,
+            marketingowa: wybor.kolumna !== 'kontakt_tel',
+            razem: lista.length,
+            bez_kontaktu: lista.length - zKontaktem.length,
+            lista,
           });
         }
       );

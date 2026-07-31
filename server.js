@@ -484,6 +484,7 @@ app.get('/api', (req, res) => {
         'get_consents': '/api/rodo?action=get_consents&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
         'get_rodo': '/api/rodo?action=get_rodo&tenant_id=' + tenant_id + '&id=' + (req.query.id || ''),
         'get_all_rodo': '/api/rodo?action=get_all_rodo&tenant_id=' + tenant_id,
+        'sms_baza': '/api/rodo?action=sms_baza&tenant_id=' + tenant_id + '&zgoda=' + encodeURIComponent(req.query.zgoda || 'sms'),
         'get_retention': '/api/retencja?tenant_id=' + tenant_id,
         'get_months': '/api/analityka?action=get_months&tenant_id=' + tenant_id,
         'an_get_months': '/api/analityka?action=get_months&tenant_id=' + tenant_id,

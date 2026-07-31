@@ -5526,6 +5526,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 </li>
 
                 <li id="group-retention">
+					<button onclick="pokaz('sms-baza', this)" class="nav-single-btn" style="color:#7c3aed; border: 1px solid #7c3aed33;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>Baza do akcji SMS</span></button>
 					<button onclick="pokaz('retencja', this)" class="nav-single-btn" style="color:#10b981; border: 1px solid #10b98133;"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>Moduł Retencji</span></button>
 				</li>
                 <li id="group-config">
@@ -5677,6 +5678,40 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 </div>
 	<!-- koniec Co zamowic -->
 <!-- RETENCJA -->
+<!-- Baza do akcji SMS/e-mail — prośba recepcji 2026-07-31. Wcześniej nie było jak
+     zobaczyć, kto zgodził się na marketing: zgody czytały się tylko per profil. -->
+<div id="sms-baza" class="section">
+    <div class="header">
+        <h1>📣 Baza do akcji SMS</h1>
+        <button onclick="pobierzBazeSMS()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
+    </div>
+
+    <div class="card" style="border-left:5px solid #7c3aed;">
+        <div style="display:flex; flex-wrap:wrap; gap:15px; align-items:flex-end; margin-bottom:15px;">
+            <div>
+                <label>Rodzaj zgody:</label>
+                <select id="sms-zgoda" class="form-control" style="min-width:280px;" onchange="pobierzBazeSMS()">
+                    <option value="sms">📱 Zgoda marketingowa SMS</option>
+                    <option value="email">✉️ Zgoda marketingowa e-mail</option>
+                    <option value="tel">☎️ Zgoda na kontakt telefoniczny (nie marketing)</option>
+                </select>
+            </div>
+            <button onclick="kopiujKontaktySMS()" class="btn-primary" style="width:auto; background:#7c3aed;">📋 Kopiuj kontakty</button>
+            <button onclick="pobierzCSVSMS()" class="btn-primary" style="width:auto; background:#0f766e;">⬇️ Pobierz CSV</button>
+        </div>
+
+        <div id="sms-ostrzezenie" style="display:none; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:8px; padding:10px 12px; font-size:12.5px; margin-bottom:12px;"></div>
+        <div id="sms-podsumowanie" style="font-size:13px; color:#475569; margin-bottom:12px;">Wczytywanie...</div>
+
+        <div class="table-container">
+            <table class="modern-table">
+                <thead><tr><th>Klient</th><th>Telefon</th><th>E-mail</th><th>Data zgody</th></tr></thead>
+                <tbody id="sms-lista"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <div id="retencja" class="section">
     <div class="header">
         <h1>📞 Retencja Klientów</h1>
@@ -16376,6 +16411,10 @@ function pokaz(id, b) {
         pobierzSlownikSprzedazy();
     }
     if (id === 'logi') pobierzLogi();
+    if (id === 'sms-baza') {
+        console.log("📣 [BAZA SMS] Pobieram klientów ze zgodą marketingową...");
+        pobierzBazeSMS();
+    }
     if (id === 'historia') pobierzHistorie();
     if (id === 'sprzedaz') {
         console.log("💰 [SPRZEDAŻ] Inicjalizuję moduł sprzedaży...");
@@ -20669,6 +20708,87 @@ function ustawCzasRetencji(dni, btn) {
 }
 // optymalizacja 3.1
 
+
+// ── Baza do akcji SMS / e-mail (prośba recepcji 2026-07-31) ──────────────────
+// Recepcja nie miała jak zobaczyć, kto zgodził się na marketing — zgody czytały się
+// wyłącznie w profilu pojedynczego klienta. Tu dostaje gotową listę do wysyłki.
+window.__smsBaza = { lista: [], zgoda: 'sms' };
+
+function pobierzBazeSMS() {
+    const zgoda = document.getElementById('sms-zgoda').value;
+    const podsum = document.getElementById('sms-podsumowanie');
+    const tbody = document.getElementById('sms-lista');
+    const ostrz = document.getElementById('sms-ostrzezenie');
+    podsum.textContent = 'Wczytywanie...';
+    tbody.innerHTML = '';
+
+    fetch(API_URL + '?action=sms_baza&zgoda=' + encodeURIComponent(zgoda))
+        .then(r => r.json())
+        .then(d => {
+            if (!d || d.status !== 'ok') {
+                podsum.textContent = 'Błąd: ' + ((d && d.message) || 'nie udało się pobrać listy.');
+                return;
+            }
+            window.__smsBaza = { lista: d.lista || [], zgoda: zgoda };
+
+            // Zgoda na kontakt telefoniczny NIE jest podstawą do marketingu — ostrzegamy wprost,
+            // żeby nikt nie wysłał reklamy na tej podstawie.
+            if (!d.marketingowa) {
+                ostrz.style.display = 'block';
+                ostrz.innerHTML = '⚠️ <b>To nie jest zgoda marketingowa.</b> Zgoda na kontakt telefoniczny dotyczy spraw organizacyjnych (umawianie, zmiana wizyty). ' +
+                                  'Wysyłka oferty czy promocji na tej podstawie jest niedozwolona — do akcji reklamowych użyj zgody marketingowej SMS.';
+            } else {
+                ostrz.style.display = 'none';
+            }
+
+            const bezKontaktu = d.bez_kontaktu || 0;
+            podsum.innerHTML = '<b>' + escHtml(d.opis_zgody) + ':</b> ' + d.razem + ' os&oacute;b' +
+                (bezKontaktu ? ' &nbsp;·&nbsp; <span style="color:#b45309;">w tym ' + bezKontaktu + ' bez kontaktu (pominięte przy kopiowaniu)</span>' : '');
+
+            if (!d.lista.length) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#999;">Brak klientów z tą zgodą.</td></tr>';
+                return;
+            }
+            tbody.innerHTML = d.lista.map(p => `
+                <tr>
+                    <td style="font-size:12.5px;">${escHtml(p.klient || '')}</td>
+                    <td style="font-size:12.5px;">${escHtml(p.telefon || '—')}</td>
+                    <td style="font-size:12.5px;">${escHtml(p.email || '—')}</td>
+                    <td style="font-size:12px; color:#64748b;">${escHtml(p.data_zgody || '')}</td>
+                </tr>
+            `).join('');
+        })
+        .catch(err => { podsum.textContent = 'Błąd połączenia: ' + err; });
+}
+
+// Same kontakty (bez pustych) — do wklejenia w bramkę SMS / program pocztowy.
+function kopiujKontaktySMS() {
+    const kontakty = (window.__smsBaza.lista || []).map(p => p.kontakt).filter(Boolean);
+    if (!kontakty.length) { alert('Brak kontaktów do skopiowania.'); return; }
+    const tekst = kontakty.join(', ');
+    const info = 'Skopiowano ' + kontakty.length + ' kontakt(ów).';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tekst).then(() => alert('✅ ' + info))
+            .catch(() => prompt('Skopiuj ręcznie (Ctrl+C):', tekst));
+    } else {
+        prompt('Skopiuj ręcznie (Ctrl+C):', tekst);
+    }
+}
+
+function pobierzCSVSMS() {
+    const lista = window.__smsBaza.lista || [];
+    if (!lista.length) { alert('Brak danych do pobrania.'); return; }
+    const esc = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+    const wiersze = [['Klient', 'Telefon', 'E-mail', 'Data zgody'].map(esc).join(';')]
+        .concat(lista.map(p => [p.klient, p.telefon, p.email, p.data_zgody].map(esc).join(';')));
+    // BOM — bez niego Excel rozjeżdża polskie znaki
+    const blob = new Blob(['﻿' + wiersze.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'baza-' + window.__smsBaza.zgoda + '-' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+}
 
 function pobierzDaneDoRetencji() {
     document.getElementById('retencja-lista').innerHTML = '<tr><td colspan="4" style="text-align:center;">⏳ Pobieranie bazy historii, klientów, RODO i CRM...</td></tr>';
