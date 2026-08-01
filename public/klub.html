@@ -56,6 +56,8 @@
   @keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
   .center { justify-content: center; text-align: center; }
   .logo-znak { width: 68px; height: 68px; border-radius: 50%; background: linear-gradient(150deg, #fffdf7, var(--gold-soft)); border: 1px solid #e4cf9a; box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 12px; color: var(--gold-dark); }
+  /* Znak Estelio (sam lotos, bez napisu) w miejsce dekoracyjnej gwiazdki */
+  .logo-znak img { width: 40px; height: auto; display: block; }
   .logo { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 600; letter-spacing: -.02em; color: var(--text); line-height: 1.1; }
   .logo b { color: var(--primary); font-weight: 600; }
   .logo-sub { font-size: 10px; color: var(--muted-2); letter-spacing: .22em; text-transform: uppercase; font-weight: 700; margin-top: 6px; }
@@ -82,6 +84,7 @@
   #screen-main { padding-bottom: 112px; }
   .brand-bar { position: relative; width: 100%; max-width: 440px; margin-top: calc(env(safe-area-inset-top, 0px) + 8px); text-align: center; }
   .brand-bar .b-znak { color: var(--gold-dark); font-size: 15px; letter-spacing: .1em; }
+  .brand-bar .b-znak img { width: 34px; height: auto; display: inline-block; vertical-align: middle; }
   .brand-bar .b-nazwa { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--primary); line-height: 1.15; }
   .brand-bar .b-sub { font-size: 9px; letter-spacing: .34em; text-transform: uppercase; font-weight: 700; color: var(--gold-dark); margin-top: 2px; }
   .salon-pill { margin: 8px auto 0; display: inline-flex; align-items: center; gap: 6px; background: var(--panel); border: 1px solid var(--stroke); border-radius: 999px; padding: 5px 13px; font-family: inherit; font-size: 12.5px; font-weight: 700; color: var(--primary); cursor: pointer; box-shadow: var(--shadow); }
@@ -230,7 +233,7 @@
 
 <!-- ── Aktywacja konta (wejście z QR od recepcji: /klub/?a=token) ── -->
 <div id="screen-aktywacja" class="screen center">
-  <div class="logo-znak">✦</div>
+  <div class="logo-znak"><img src="/img/estelio-znak.png" alt="Estelio"></div>
   <div class="logo"><b id="akt-nazwa">Klub</b></div>
   <div class="logo-sub">program lojalnościowy</div>
   <div class="card">
@@ -248,7 +251,7 @@
 
 <!-- ── Logowanie ── -->
 <div id="screen-login" class="screen center">
-  <div class="logo-znak">✦</div>
+  <div class="logo-znak"><img src="/img/estelio-znak.png" alt="Estelio"></div>
   <div class="logo"><b>Klub</b></div>
   <div class="logo-sub">program lojalnościowy</div>
   <div class="card">
@@ -282,7 +285,7 @@
 
 <!-- ── Rejestracja online (wejście z publicznego linku: /klub/?r=token) ── -->
 <div id="screen-rejestracja" class="screen center">
-  <div class="logo-znak">✦</div>
+  <div class="logo-znak"><img src="/img/estelio-znak.png" alt="Estelio"></div>
   <div class="logo"><b id="rej-nazwa">Klub</b></div>
   <div class="logo-sub">dołącz do programu</div>
   <div class="card">
@@ -314,7 +317,7 @@
 <!-- ── Ekran główny (taby) ── -->
 <div id="screen-main" class="screen">
   <div class="brand-bar">
-    <div class="b-znak">✦</div>
+    <div class="b-znak"><img src="/img/estelio-znak.png" alt="Estelio"></div>
     <div class="b-nazwa" id="m-klub-head">Klub</div>
     <div class="b-sub">program lojalnościowy</div>
     <button class="salon-pill" id="salon-pill" style="display:none;" onclick="otworzSalony()"><span data-iko="home" data-s="14"></span><span id="salon-pill-nazwa">Salon</span><span class="salon-pill-caret">▾</span></button>
