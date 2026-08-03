@@ -3020,7 +3020,12 @@ module.exports = (db) => {
         // Komunikat CELOWO neutralny i taki sam jak przy dopasowaniu po numerze —
         // nie potwierdzamy, że osoba o tym imieniu i nazwisku jest już klientką salonu
         // (link rejestracyjny jest publiczny, więc nie może służyć do sprawdzania kartoteki).
-        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Dziękujemy! Salon potwierdzi zgłoszenie i wyśle Ci SMS z linkiem aktywacyjnym — zwykle w ciągu dnia.' });
+        //
+        // Bez obietnicy SMS-a i bez ram czasowych: wysyłka jest RĘCZNA (Estelio nie ma
+        // bramki SMS — przycisk w panelu tylko przygotowuje treść), więc system nie ma
+        // jak jej zagwarantować. Zdarzyło się, że klientka czekała na SMS, który nigdy
+        // nie przyszedł. Dajemy drugą drogę: poprosić o link w salonie.
+        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Zgłoszenie przyjęte. Konto aktywuje salon — link możesz też dostać od ręki, pytając przy najbliższej wizycie lub telefonicznie.' });
       }
       // Nowa osoba → kartoteka + konto od ręki (+ ewentualny bonus powitalny)
       const maxRows = await q(
@@ -3078,7 +3083,9 @@ module.exports = (db) => {
   // (nie zdradzamy, czy numer ma konto). Link i tak pójdzie na numer z kartoteki.
   router.post('/klub/reset_pin', loginLimiter, async (req, res) => {
     const tel = normalizujTelefon((req.body || {}).telefon);
-    const ODP = { status: 'success', message: 'Jeśli ten numer ma u nas konto, salon wyśle SMS z linkiem do ustawienia nowego PIN-u — zwykle w ciągu dnia.' };
+    // Jak wyżej: brak bramki SMS, wysyłka ręczna — nie obiecujemy SMS-a ani terminu.
+    // Zdanie zaczyna się od „Jeśli ten numer ma u nas konto", żeby nie potwierdzać istnienia konta.
+    const ODP = { status: 'success', message: 'Jeśli ten numer ma u nas konto, salon przekaże link do ustawienia nowego PIN-u. Możesz też poprosić o niego w salonie — telefonicznie lub przy najbliższej wizycie.' };
     if (tel.length < 9) return res.json({ status: 'error', message: 'Podaj poprawny numer telefonu.' });
     try {
       const konta = await q(

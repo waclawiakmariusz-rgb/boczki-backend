@@ -276,7 +276,7 @@
     </div>
     <button class="link-btn" onclick="pokazResetPin()">Nie pamiętam PIN-u</button>
     <div id="reset-box" style="display:none; margin-top:10px; text-align:left;">
-      <div class="muted">Podaj numer telefonu — salon wyśle Ci SMS z linkiem do ustawienia nowego PIN-u.</div>
+      <div class="muted">Podaj numer telefonu — salon przekaże Ci link do ustawienia nowego PIN-u. Możesz też poprosić o niego bezpośrednio w salonie.</div>
       <input type="tel" id="reset-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
       <button class="btn" id="reset-btn" onclick="wyslijResetPin()" style="margin-top:10px;">Wyślij prośbę</button>
     </div>
@@ -308,8 +308,8 @@
 <div id="screen-wniosek" class="screen center">
   <div class="logo-znak"><span data-iko="mail" data-s="28"></span></div>
   <div class="card" style="text-align:center;">
-    <h2>Znamy się już!</h2>
-    <div class="muted" style="margin-top:6px;">Ten numer jest w naszej kartotece. Dla bezpieczeństwa Twoich danych salon wyśle Ci <b>SMS z linkiem aktywacyjnym</b> — zwykle jeszcze tego samego dnia. Po kliknięciu ustawisz PIN i konto będzie gotowe.</div>
+    <h2>Zgłoszenie przyjęte</h2>
+    <div class="muted" style="margin-top:6px;">Dla bezpieczeństwa Twoich danych konto aktywuje salon — otrzymasz od nas <b>link aktywacyjny</b>, po kliknięciu ustawisz PIN i konto będzie gotowe.<br><br>Nie chcesz czekać? <b>Poproś o link przy najbliższej wizycie lub zadzwoń do salonu</b> — dostaniesz go od ręki.</div>
     <button class="btn ghost" onclick="pokaz('screen-login')">Rozumiem</button>
   </div>
 </div>
@@ -1046,7 +1046,7 @@ async function wyslijResetPin() {
     const d = await api('/reset_pin', { telefon: tel });
     if (d.status === 'success') {
       document.getElementById('reset-box').style.display = 'none';
-      toast(d.message || 'Prośba wysłana — wypatruj SMS-a od salonu.');
+      toast(d.message || 'Prośba przyjęta — salon przekaże Ci link. Możesz też zapytać o niego w salonie.');
     } else err.textContent = d.message || 'Nie udało się wysłać prośby.';
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
