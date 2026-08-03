@@ -1921,3 +1921,53 @@ describe('POST /api/klub/me — kampanie w apce', () => {
         expect(res.body.wiadomosci[0].tytul).toBe('Hej!');
     });
 });
+
+// ─── Rozpoznawanie tej samej osoby przy rejestracji online ───────────────────
+// Incydent 2026-08-03 (2. dzień Klubu): klientka zarejestrowała się podając INNY
+// numer telefonu niż miała w kartotece. Dopasowanie szło tylko po numerze, więc
+// system założył jej drugą kartotekę („Kamila Gozdur" ×2) i konto bez weryfikacji.
+const { kluczOsoby, toSamaOsoba } = require('../routes/lojalnosc');
+
+const taSama = (a, b) => toSamaOsoba(kluczOsoby(a), kluczOsoby(b));
+
+describe('Klub — dopasowanie osoby po imieniu i nazwisku', () => {
+    test('odwrócona kolejność członów to ta sama osoba', () => {
+        // W kartotece są oba warianty: „Kowalska Maria" i „Piotr Polit"
+        expect(taSama('Kamila Gozdur', 'Gozdur Kamila')).toBe(true);
+        expect(taSama('Maria Kowalska', 'Kowalska Maria')).toBe(true);
+    });
+
+    test('zdrobnienie i forma podstawowa to ta sama osoba', () => {
+        expect(taSama('Ania Nowak', 'Anna Nowak')).toBe(true);
+        expect(taSama('Kasia Wiśniewska', 'Katarzyna Wiśniewska')).toBe(true);
+        expect(taSama('Gosia Lewandowska', 'Małgorzata Lewandowska')).toBe(true);
+        expect(taSama('Ola Zielińska', 'Aleksandra Zielińska')).toBe(true);
+    });
+
+    test('literówka w imieniu lub nazwisku nie tworzy nowej osoby', () => {
+        expect(taSama('Kamilla Gozdur', 'Kamila Gozdur')).toBe(true);
+        expect(taSama('Kamila Gozdór', 'Kamila Gozdur')).toBe(true);
+        expect(taSama('Katarzyna Wisniewska', 'Katarzyna Wiśniewska')).toBe(true);   // bez ogonków
+    });
+
+    test('różne osoby pozostają różne', () => {
+        expect(taSama('Anna Nowak', 'Anna Kowalska')).toBe(false);
+        expect(taSama('Kamila Gozdur', 'Marta Gozdur')).toBe(false);
+        expect(taSama('Piotr Polit', 'Piotr Kowalski')).toBe(false);
+    });
+
+    test('krótkie nazwy nie są sklejane na siłę', () => {
+        // Przy 5 znakach jedna literówka zmieniłaby tożsamość — dlatego próg nie działa
+        expect(taSama('Ala Ba', 'Ola Ba')).toBe(false);
+    });
+
+    test('wielkość liter i interpunkcja nie mają znaczenia', () => {
+        expect(taSama('ANNA NOWAK', 'anna nowak')).toBe(true);
+        expect(taSama('Anna-Maria Nowak', 'Anna Maria Nowak')).toBe(true);
+    });
+
+    test('pusta nazwa nigdy się nie dopasowuje', () => {
+        expect(taSama('', 'Anna Nowak')).toBe(false);
+        expect(taSama('Anna Nowak', '')).toBe(false);
+    });
+});

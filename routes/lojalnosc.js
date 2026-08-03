@@ -93,6 +93,92 @@ function normalizujTelefon(t) {
   return String(t || '').replace(/\D/g, '').slice(-9);
 }
 
+// ─── Rozpoznawanie tej samej osoby po imieniu i nazwisku ─────────────────────
+// Powód (2026-08-03, 2. dzień Klubu): klientka zarejestrowała się online podając
+// INNY numer telefonu niż miała w kartotece. Dopasowanie szło wyłącznie po numerze,
+// więc system uznał ją za nową osobę — założył drugą kartotekę i dał konto od ręki
+// (duplikat „Kamila Gozdur"). Teraz sprawdzamy też imię i nazwisko.
+//
+// Musi znieść trzy rzeczy naraz:
+//   1. odwróconą kolejność — w kartotece jest i „Kowalska Maria", i „Piotr Polit",
+//   2. zdrobnienia — Ania/Anna, Kasia/Katarzyna, Gosia/Małgorzata,
+//   3. literówki — „Kamilla Gozdur", „Gozdór".
+function bezOgonkow(s) {
+  return String(s || '')
+    .replace(/ą/gi, 'a').replace(/ć/gi, 'c').replace(/ę/gi, 'e').replace(/ł/gi, 'l')
+    .replace(/ń/gi, 'n').replace(/ó/gi, 'o').replace(/ś/gi, 's').replace(/ż/gi, 'z').replace(/ź/gi, 'z');
+}
+
+// Zdrobnienie → forma podstawowa. Lista skrojona pod klientelę salonu (głównie kobiety),
+// z najczęstszymi męskimi. Nie musi być kompletna — nietrafione zdrobnienie oznacza tylko,
+// że klientka poczeka na SMS zamiast wejść od razu.
+const ZDROBNIENIA = {
+  anna: ['ania', 'anka', 'aneczka'], katarzyna: ['kasia', 'kaska', 'kasieńka'],
+  malgorzata: ['gosia', 'malgosia', 'gocha'], joanna: ['asia', 'aska', 'joasia'],
+  barbara: ['basia', 'baska'], aleksandra: ['ola', 'olka', 'oleńka'],
+  magdalena: ['magda', 'madzia'], izabela: ['iza', 'izka'], urszula: ['ula', 'ulka'],
+  zofia: ['zosia', 'zoska'], agnieszka: ['aga', 'agusia', 'agniecha'],
+  elzbieta: ['ela', 'elka', 'elzbietka'], krystyna: ['krysia', 'kryska'],
+  teresa: ['tereska', 'terenia'], danuta: ['danka', 'danusia'], jadwiga: ['jadzia'],
+  bozena: ['bozenka'], grazyna: ['grazynka'], irena: ['irka', 'irenka'],
+  miroslawa: ['mirka', 'mira'], wieslawa: ['wiesia', 'wieska'], stanislawa: ['stasia'],
+  halina: ['hala', 'halinka'], alicja: ['ala', 'alicjka'], emilia: ['emilka', 'mila'],
+  julia: ['jula', 'julka'], karolina: ['karolcia', 'karola'], natalia: ['natalka', 'nata'],
+  patrycja: ['pati', 'patrycjka'], paulina: ['paula', 'paulinka'], weronika: ['wera', 'weronka'],
+  monika: ['monia', 'monika'], beata: ['beatka'], dorota: ['dorotka', 'dosia'],
+  justyna: ['justysia'], marta: ['martusia'], renata: ['renatka'], sylwia: ['sylwka'],
+  ewa: ['ewka', 'ewelina'], marzena: ['marzenka'], kamila: ['kamilka'],
+  piotr: ['piotrek', 'pietrek'], pawel: ['pawelek'], tomasz: ['tomek', 'tomus'],
+  michal: ['michalek', 'misiek'], krzysztof: ['krzysiek', 'krzychu'], marcin: ['marcinek'],
+  jakub: ['kuba', 'kubus'], lukasz: ['lukaszek'], wojciech: ['wojtek'], andrzej: ['jedrek'],
+  grzegorz: ['grzesiek', 'grzes'], jan: ['janek', 'jasiu'], marek: ['mareczek'],
+  sebastian: ['sebek'], szymon: ['szymek'], bartosz: ['bartek'], maciej: ['maciek'],
+  przemyslaw: ['przemek'], radoslaw: ['radek'], slawomir: ['slawek'], zbigniew: ['zbyszek'],
+};
+const DO_PODSTAWOWEJ = (() => {
+  const m = {};
+  for (const [baza, formy] of Object.entries(ZDROBNIENIA)) { m[baza] = baza; formy.forEach(f => { m[f] = baza; }); }
+  return m;
+})();
+
+// Klucz porównawczy osoby: bez ogonków, bez interpunkcji, zdrobnienia sprowadzone
+// do formy podstawowej, człony POSORTOWANE — dzięki temu „Kowalska Maria" i
+// „Maria Kowalska" dają ten sam klucz.
+function kluczOsoby(nazwa) {
+  return bezOgonkow(nazwa).toLowerCase()
+    .replace(/[^a-z\s-]/g, ' ').replace(/-/g, ' ')
+    .split(/\s+/).filter(Boolean)
+    .map(t => DO_PODSTAWOWEJ[t] || t)
+    .sort()
+    .join('');
+}
+
+// Odległość Levenshteina — na tolerancję literówek („Kamilla", „Gozdór").
+function odlegloscLev(a, b) {
+  if (a === b) return 0;
+  if (!a.length || !b.length) return Math.max(a.length, b.length);
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// Czy to prawdopodobnie ta sama osoba? Próg rośnie z długością, żeby przy krótkich
+// nazwiskach nie zlepiać różnych ludzi.
+function toSamaOsoba(kluczA, kluczB) {
+  if (!kluczA || !kluczB) return false;
+  if (kluczA === kluczB) return true;
+  const dl = Math.min(kluczA.length, kluczB.length);
+  if (dl < 6) return false;                       // za krótkie — nie ryzykujemy
+  const prog = dl >= 14 ? 2 : 1;
+  return odlegloscLev(kluczA, kluczB) <= prog;
+}
+
 // Kod odbioru nagrody: 6 znaków bez mylących (0/O, 1/I/L, Q)
 const KOD_ZNAKI = 'ABCDEFGHJKMNPRSTUWXYZ23456789';
 function generujKod() {
@@ -2895,14 +2981,27 @@ module.exports = (db) => {
       if (Array.isArray(kontaRows) && kontaRows.length) {
         return res.json({ status: 'success', kod: 'MASZ_KONTO', message: 'Ten numer ma już konto — zaloguj się swoim PIN-em. Jeśli go nie pamiętasz, poproś salon o nowy link.' });
       }
-      // Czy numer należy do istniejącej klientki? (porównanie po znormalizowanych cyfrach)
+      // Kogo już mamy w kartotece? Bierzemy WSZYSTKICH aktywnych (także bez numeru —
+      // taką osobę da się rozpoznać po imieniu i nazwisku).
       const klienciRows = await q(
-        `SELECT id_klienta, telefon, status, zmarly FROM Klienci
-          WHERE tenant_id = ? AND COALESCE(telefon, '') != ''`,
+        `SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ?`,
         [p.t]
       ).catch(() => []);
-      const istniejaca = (Array.isArray(klienciRows) ? klienciRows : [])
-        .find(k => klientAktywny(k) && normalizujTelefon(k.telefon) === tel);
+      const aktywni = (Array.isArray(klienciRows) ? klienciRows : []).filter(klientAktywny);
+
+      // 1. Dopasowanie po numerze telefonu (najmocniejszy sygnał).
+      let istniejaca = aktywni.find(k => k.telefon && normalizujTelefon(k.telefon) === tel);
+
+      // 2. Numer nieznany → sprawdzamy imię i nazwisko (zdrobnienia + literówki).
+      //    To zamyka dziurę, przez którą powstał duplikat: ta sama osoba z nowym numerem
+      //    była traktowana jak ktoś zupełnie nowy.
+      let dopasowanoPoNazwisku = false;
+      if (!istniejaca) {
+        const kluczNowej = kluczOsoby(imie);
+        istniejaca = aktywni.find(k => toSamaOsoba(kluczNowej, kluczOsoby(k.imie_nazwisko)));
+        if (istniejaca) dopasowanoPoNazwisku = true;
+      }
+
       if (istniejaca) {
         // Wniosek (bez duplikatu NOWY dla tego numeru)
         const dup = await q(
@@ -2914,9 +3013,14 @@ module.exports = (db) => {
             `INSERT INTO Lojalnosc_Wnioski (tenant_id, telefon, imie, id_klienta, status) VALUES (?, ?, ?, ?, 'NOWY')`,
             [p.t, tel, imie, String(istniejaca.id_klienta)]
           );
-          zapiszLog(p.t, 'KLUB WNIOSEK O KONTO', 'Klient (rejestracja)', `${imie}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)} — dopasowano do kartoteki ${istniejaca.id_klienta}`);
+          zapiszLog(p.t, 'KLUB WNIOSEK O KONTO', 'Klient (rejestracja)',
+            `${imie}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)} — dopasowano do kartoteki ${istniejaca.id_klienta}` +
+            (dopasowanoPoNazwisku ? ' PO IMIENIU I NAZWISKU (podała INNY numer niż w kartotece — zweryfikuj tożsamość)' : ''));
         }
-        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Znamy się już! Dla bezpieczeństwa salon wyśle Ci SMS z linkiem aktywacyjnym — zwykle w ciągu dnia.' });
+        // Komunikat CELOWO neutralny i taki sam jak przy dopasowaniu po numerze —
+        // nie potwierdzamy, że osoba o tym imieniu i nazwisku jest już klientką salonu
+        // (link rejestracyjny jest publiczny, więc nie może służyć do sprawdzania kartoteki).
+        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Dziękujemy! Salon potwierdzi zgłoszenie i wyśle Ci SMS z linkiem aktywacyjnym — zwykle w ciągu dnia.' });
       }
       // Nowa osoba → kartoteka + konto od ręki (+ ewentualny bonus powitalny)
       const maxRows = await q(
@@ -3120,6 +3224,10 @@ module.exports = (db) => {
 
 module.exports.makeLojalnosc = makeLojalnosc;
 module.exports.obliczPunkty = obliczPunkty;
+// Wystawione do testów — od poprawności tego dopasowania zależy, czy rejestracja
+// online założy duplikat kartoteki.
+module.exports.kluczOsoby = kluczOsoby;
+module.exports.toSamaOsoba = toSamaOsoba;
 module.exports.wyczyscCacheLoj = wyczyscCacheLoj;
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.makeKlubToken = makeKlubToken;   // testy
