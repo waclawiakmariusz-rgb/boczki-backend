@@ -1736,7 +1736,13 @@ module.exports = (db) => {
           const wRows = await q(`SELECT id, id_klienta, imie, typ, status FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, id]);
           const wniosek = Array.isArray(wRows) ? wRows[0] : null;
           if (!wniosek) return res.json({ status: 'error', message: 'Nie znaleziono wniosku.' });
-          if (wniosek.status !== 'NOWY') return res.json({ status: 'error', message: 'Wniosek już obsłużony.' });
+          // Wolno wygenerować SMS ponownie dla wniosku już „wysłanego". Powód (2026-08-03):
+          // wysyłka jest RĘCZNA, a klik w przycisk od razu oznaczał wniosek jako obsłużony —
+          // wystarczyło kliknąć przez pomyłkę albo zamknąć okno przed wysłaniem i zgłoszenie
+          // znikało z listy, mimo że klientka nic nie dostała. Odrzucone/anulowane zostają zamknięte.
+          if (!['NOWY', 'WYSLANY'].includes(String(wniosek.status || '').toUpperCase())) {
+            return res.json({ status: 'error', message: 'Ten wniosek został zamknięty.' });
+          }
           const kRows = await q(`SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, String(wniosek.id_klienta)]);
           const klient = Array.isArray(kRows) ? kRows[0] : null;
           if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Kartoteka klientki niedostępna.' });

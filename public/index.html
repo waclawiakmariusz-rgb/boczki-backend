@@ -32401,6 +32401,17 @@ async function klubadm_zaladujOdbiory() {
   const boxO = document.getElementById('klubadm-odbiory-lista');
   const boxZ = document.getElementById('klubadm-zgloszenia-lista');
   if (!boxO || !boxZ) return;
+
+  // Data z godziną — w „Do obsłużenia" liczy się, o której przyszło zgłoszenie
+  // (recepcja widzi, czy klientka czeka 10 minut, czy od wczoraj).
+  // Musi stać TU, a nie w bloku wniosków: używają go też listy nagród i zgłoszeń,
+  // które renderują się w osobnych blokach.
+  const klubadm_dataGodz = (v) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d)) return escHtml(String(v));
+    return d.toLocaleString('pl-PL', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
   const [dO, dZ, dW] = await Promise.all([
     klubadm_apiGet('loj_odbiory').catch(() => null),
     klubadm_apiGet('loj_zgloszenia').catch(() => null),
@@ -32423,14 +32434,16 @@ async function klubadm_zaladujOdbiory() {
     const typTxt = (w) => w.typ === 'RESET' ? '<span style="background:#fff0df; color:#b45309; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">RESET PIN</span>' : '<span style="background:#e5efff; color:#1d4ed8; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">NOWE KONTO</span>';
     const wierszW = (w, akcje) => `<div class="klubadm-row">
       <div style="min-width:0;">${typTxt(w)} <b>${escHtml(w.klient_kartoteka || w.imie || ('Klient ' + w.id_klienta))}</b>
-        <div style="font-size:12px; color:#9ca3af;">${w.imie && w.klient_kartoteka && w.imie !== w.klient_kartoteka ? 'wpisano we wniosku: ' + escHtml(w.imie) + ' · ' : ''}${new Date(w.created_at).toLocaleDateString('pl-PL')}${w.status !== 'NOWY' ? ' · ' + w.status + (w.obsluzyl ? ' (' + escHtml(w.obsluzyl) + ')' : '') : ''}</div>
+        <div style="font-size:12px; color:#9ca3af;">${w.imie && w.klient_kartoteka && w.imie !== w.klient_kartoteka ? 'wpisano we wniosku: ' + escHtml(w.imie) + ' · ' : ''}${klubadm_dataGodz(w.created_at)}${w.status !== 'NOWY' ? ' · ' + w.status + (w.obsluzyl ? ' (' + escHtml(w.obsluzyl) + ')' : '') : ''}</div>
         ${klubadm_innyNumer(w) ? `<div style="font-size:11.5px; color:#b45309; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:5px 8px; margin-top:5px;">⚠️ Podała numer <b>${escHtml(w.telefon)}</b>, w kartotece jest <b>${escHtml(w.telefon_kartoteka || 'brak')}</b> — potwierdź tożsamość przed wysłaniem linku.</div>` : ''}
       </div>${akcje}</div>`;
     boxW.innerHTML = (noweW.length ? noweW.map(w => wierszW(w, `<div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_wyslijWniosek(${w.id})">📲 Wyślij SMS</button>
         <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Odrzucić wniosek?')) klubadm_odrzucWniosek(${w.id})">Odrzuć</button>
       </div>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych wniosków.</div>')
-      + (stareW.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stareW.map(w => wierszW(w, '')).join('') : '');
+      + (stareW.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stareW.map(w => wierszW(w, w.status === 'WYSLANY'
+        ? `<button class="klubadm-btn" style="background:#f8fafc; color:#475569; flex-shrink:0;" onclick="klubadm_wyslijWniosek(${w.id})" title="Pokaż link i treść SMS-a jeszcze raz (np. gdy wiadomość nie została wysłana)">📲 Pokaż SMS ponownie</button>`
+        : '')).join('') : '');
   }
   if (dO && dO.status === 'success') {
     const odbiory = dO.odbiory || [];
@@ -32439,7 +32452,7 @@ async function klubadm_zaladujOdbiory() {
     const reszta = odbiory.filter(o => o.status !== 'OCZEKUJE').slice(0, 10);
     const wiersz = (o, akcje) => `<div class="klubadm-row">
       <div style="min-width:0;"><b>${escHtml(o.klient || ('Klient ' + o.id_klienta))}</b> · ${escHtml(o.nagroda_nazwa)} <span style="color:#c54f7f; font-weight:700;">${o.koszt_pkt} pkt</span>
-        <div style="font-size:12px; color:#9ca3af;">kod: <b style="letter-spacing:2px; color:#475569;">${escHtml(o.kod)}</b> · ${o.status !== 'OCZEKUJE' ? o.status + (o.wydal ? ' (' + escHtml(o.wydal) + ')' : '') : new Date(o.created_at).toLocaleDateString('pl-PL')}</div>
+        <div style="font-size:12px; color:#9ca3af;">kod: <b style="letter-spacing:2px; color:#475569;">${escHtml(o.kod)}</b> · ${o.status !== 'OCZEKUJE' ? o.status + (o.wydal ? ' (' + escHtml(o.wydal) + ')' : '') : klubadm_dataGodz(o.created_at)}</div>
       </div>${akcje}</div>`;
     boxO.innerHTML = (oczekuje.length ? oczekuje.map(o => wiersz(o, `<div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e;" onclick="klubadm_rozstrzygnij(${o.id}, 'WYDANE')">✅ Wydaj</button>
@@ -32454,7 +32467,7 @@ async function klubadm_zaladujOdbiory() {
     const stare = zgl.filter(z => z.status !== 'NOWE').slice(0, 5);
     const wierszZ = (z, akcja) => `<div class="klubadm-row">
       <div style="min-width:0;"><b>${escHtml(z.klient || ('Klient ' + z.id_klienta))}</b>${z.telefon ? ' · 📞 ' + escHtml(z.telefon) : ''}
-        <div style="font-size:12px; color:#9ca3af;">„${escHtml(z.promocja_tytul)}" · ${new Date(z.created_at).toLocaleDateString('pl-PL')}${z.status !== 'NOWE' ? ' · obsłużone' + (z.obsluzyl ? ' (' + escHtml(z.obsluzyl) + ')' : '') : ''}</div>
+        <div style="font-size:12px; color:#9ca3af;">„${escHtml(z.promocja_tytul)}" · ${klubadm_dataGodz(z.created_at)}${z.status !== 'NOWE' ? ' · obsłużone' + (z.obsluzyl ? ' (' + escHtml(z.obsluzyl) + ')' : '') : ''}</div>
       </div>${akcja}</div>`;
     boxZ.innerHTML = (noweZ.length ? noweZ.map(z => wierszZ(z, `<button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e; flex-shrink:0;" onclick="klubadm_obsluzZgloszenie(${z.id})">✅ Obsłużone</button>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych zgłoszeń.</div>')
       + (stare.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stare.map(z => wierszZ(z, '')).join('') : '');
