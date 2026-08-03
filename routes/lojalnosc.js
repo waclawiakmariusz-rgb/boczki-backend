@@ -1382,6 +1382,35 @@ module.exports = (db) => {
         }
       );
 
+    } else if (action === 'loj_pulpit') {
+      // Liczniki spraw czekających na obsługę — pasek na Pulpicie.
+      // Powód (2026-08-03): zgłoszenia o konto widać było TYLKO po wejściu w sekcję Klub,
+      // więc klientka czekała na aktywację, o której nikt nie wiedział. Same liczby,
+      // bez danych osobowych — pasek ma tylko przypominać, że jest co zrobić.
+      const kto = String(req.query.user_log || '').trim();
+      wymagajAdmina(tenant_id, kto, res, () => {
+        db.query(
+          `SELECT
+             (SELECT COUNT(*) FROM Lojalnosc_Wnioski   WHERE tenant_id = ? AND status = 'NOWY')     AS wnioski,
+             (SELECT COUNT(*) FROM Lojalnosc_Odbiory   WHERE tenant_id = ? AND status = 'OCZEKUJE') AS odbiory,
+             (SELECT COUNT(*) FROM Lojalnosc_Zgloszenia WHERE tenant_id = ? AND status = 'NOWE')    AS zgloszenia`,
+          [tenant_id, tenant_id, tenant_id],
+          (err, rows) => {
+            // Brak tabel (Klub nigdy nieużywany) nie może wywracać Pulpitu — zwracamy zera.
+            if (err || !Array.isArray(rows) || !rows.length) {
+              return res.json({ status: 'success', wnioski: 0, odbiory: 0, zgloszenia: 0 });
+            }
+            const r = rows[0];
+            return res.json({
+              status: 'success',
+              wnioski: Number(r.wnioski) || 0,
+              odbiory: Number(r.odbiory) || 0,
+              zgloszenia: Number(r.zgloszenia) || 0,
+            });
+          }
+        );
+      });
+
     } else if (action === 'loj_wnioski') {
       // Wnioski o konto z rejestracji online (istniejące klientki)
       const kto = String(req.query.user_log || '').trim();

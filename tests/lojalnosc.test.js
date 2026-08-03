@@ -1971,3 +1971,46 @@ describe('Klub — dopasowanie osoby po imieniu i nazwisku', () => {
         expect(taSama('Anna Nowak', '')).toBe(false);
     });
 });
+
+// ─── loj_pulpit — liczniki spraw czekających na obsługę ──────────────────────
+// Powstało po incydencie 2026-08-03: zgłoszenia o konto widać było TYLKO po wejściu
+// w sekcję Klub, więc klientka czekała na aktywację, o której nikt nie wiedział.
+describe('GET /api/lojalnosc — loj_pulpit', () => {
+    const zapytaj = (db) => request(buildApp(db))
+        .get('/api/lojalnosc')
+        .query({ action: 'loj_pulpit', tenant_id: 't-loj-pulpit', user_log: 'Szefowa' });
+
+    test('zwraca liczniki wniosków, nagród i zgłoszeń', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: [{ wnioski: 3, odbiory: 2, zgloszenia: 1 }] });
+        const res = await zapytaj(db);
+        expect(res.body.status).toBe('success');
+        expect(res.body.wnioski).toBe(3);
+        expect(res.body.odbiory).toBe(2);
+        expect(res.body.zgloszenia).toBe(1);
+    });
+
+    test('liczy tylko sprawy NIEobsłużone', async () => {
+        const db = mockDb(...INIT, ROLA_ADMIN, { rows: [{ wnioski: 0, odbiory: 0, zgloszenia: 0 }] });
+        await zapytaj(db);
+        // uwaga: nazwa tabeli pada też w CREATE TABLE przy starcie modułu — bierzemy zapytanie liczące
+        const sql = db.query.mock.calls.map(c => String(c[0]))
+            .find(s => s.includes('COUNT(*)') && s.includes('Lojalnosc_Wnioski'));
+        expect(sql).toContain("status = 'NOWY'");        // wnioski o konto
+        expect(sql).toContain("status = 'OCZEKUJE'");    // nagrody do wydania
+        expect(sql).toContain("status = 'NOWE'");        // zgłoszenia z promocji
+    });
+
+    test('błąd bazy nie wywraca Pulpitu — zwraca zera', async () => {
+        // Salon, który nigdy nie używał Klubu, może nie mieć tych tabel.
+        const db = mockDb(...INIT, ROLA_ADMIN, { err: new Error('brak tabeli') });
+        const res = await zapytaj(db);
+        expect(res.body.status).toBe('success');
+        expect(res.body.wnioski).toBe(0);
+    });
+
+    test('brak uprawnień → błąd (pasek się nie pokaże)', async () => {
+        const db = mockDb(...INIT, { rows: [{ rola: 'Praktykantka' }] });
+        const res = await zapytaj(db);
+        expect(res.body.status).toBe('error');
+    });
+});

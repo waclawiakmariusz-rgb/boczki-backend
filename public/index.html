@@ -7703,6 +7703,14 @@ document.addEventListener('DOMContentLoaded', () => {
     <span style="font-weight:700; color:#9a3412;">🎂 Urodziny</span><span id="ds-urodziny-content" style="color:#7c2d12;"></span>
   </div>
 
+  <!-- Pasek Klubu: sprawy czekające na obsługę (wnioski o konto, nagrody, zgłoszenia BIORĘ).
+       Powstał 2026-08-03: zgłoszenia widać było tylko po wejściu w sekcję Klub, więc
+       klientka czekała na aktywację, o której nikt nie wiedział. Ukryty, gdy nie ma nic
+       do zrobienia albo dodatek jest wyłączony. -->
+  <div id="ds-klub-bar" style="display:none; background:linear-gradient(135deg,#faf5ff,#f3e8ff); border:1px solid #e9d5ff; border-radius:14px; padding:12px 16px; margin-bottom:16px; font-size:14px; cursor:pointer;" onclick="pokaz('klub-admin',null); if(typeof klubadm_init==='function') klubadm_init();" title="Otwórz panel Klubu">
+    <span style="font-weight:700; color:#6b21a8;">💎 Klub</span><span id="ds-klub-content" style="color:#7e22ce;"></span>
+  </div>
+
   <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje -->
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
     <div class="ds-section-head" id="ds-zadania-head" onclick="ds_zd_toggleCollapse(event)" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
@@ -13169,6 +13177,29 @@ function zaladujPulpit() {
                 }
             }).catch(() => {});
     }, 600);
+
+    // ── Pasek Klubu: co czeka na obsługę — defer 800ms, 3 zapytania COUNT ──
+    // Bez tego zgłoszenia o konto leżały niezauważone (widoczne tylko w sekcji Klub),
+    // a klientka czekała na aktywację, której nikt nie wysłał.
+    setTimeout(() => {
+        if (typeof hasFeature === 'function' && !hasFeature('lojalnosc')) return;   // dodatek wyłączony
+        fetch(API_URL + '?action=loj_pulpit&user_log=' + encodeURIComponent(currentUser || ''))
+            .then(r => r.json())
+            .then(d => {
+                if (!d || d.status !== 'success') return;                            // brak uprawnień → cicho
+                const parts = [];
+                if (d.wnioski)    parts.push(` &nbsp;<b>${d.wnioski}</b> ${d.wnioski === 1 ? 'osoba czeka' : 'os. czeka'} na aktywację konta`);
+                if (d.odbiory)    parts.push(` &nbsp;<b>${d.odbiory}</b> ${d.odbiory === 1 ? 'nagroda do wydania' : 'nagrody do wydania'}`);
+                if (d.zgloszenia) parts.push(` &nbsp;<b>${d.zgloszenia}</b> ${d.zgloszenia === 1 ? 'zgłoszenie z promocji' : 'zgłoszenia z promocji'}`);
+                if (!parts.length) return;                                           // nie ma nic — pasek zostaje ukryty
+                const bar = document.getElementById('ds-klub-bar');
+                const content = document.getElementById('ds-klub-content');
+                if (bar && content) {
+                    content.innerHTML = parts.join(' &nbsp;·');
+                    bar.style.display = 'block';
+                }
+            }).catch(() => {});
+    }, 800);
 
     // ── Badge „Do sprawdzenia" na kafelku — lekki fetch (3 małe zapytania SQL) ──
     setTimeout(() => {
