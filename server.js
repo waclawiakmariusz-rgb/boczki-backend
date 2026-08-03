@@ -519,7 +519,6 @@ app.get('/api', (req, res) => {
         'loj_statystyki': '/api/lojalnosc?action=loj_statystyki&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || '') + (req.query.rok ? '&rok=' + encodeURIComponent(req.query.rok) : '') + (req.query.miesiac ? '&miesiac=' + encodeURIComponent(req.query.miesiac) : ''),
         'loj_kampanie': '/api/lojalnosc?action=loj_kampanie&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_wnioski': '/api/lojalnosc?action=loj_wnioski&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
-        'loj_pulpit': '/api/lojalnosc?action=loj_pulpit&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_czlonkowie': '/api/lojalnosc?action=loj_czlonkowie&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_mnozniki': '/api/lojalnosc?action=loj_mnozniki&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
         'loj_automaty': '/api/lojalnosc?action=loj_automaty&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),

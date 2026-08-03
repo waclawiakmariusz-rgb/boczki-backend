@@ -5,3 +5,7 @@ csv/
 uploads/**
 !uploads/.gitkeep
 scripts/backfill-waznosc-undo-*.json
+
+design/
+.git-uszkodzony/
+*.sql.gz

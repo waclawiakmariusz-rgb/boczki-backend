@@ -1382,35 +1382,6 @@ module.exports = (db) => {
         }
       );
 
-    } else if (action === 'loj_pulpit') {
-      // Liczniki spraw czekających na obsługę — pasek na Pulpicie.
-      // Powód (2026-08-03): zgłoszenia o konto widać było TYLKO po wejściu w sekcję Klub,
-      // więc klientka czekała na aktywację, o której nikt nie wiedział. Same liczby,
-      // bez danych osobowych — pasek ma tylko przypominać, że jest co zrobić.
-      const kto = String(req.query.user_log || '').trim();
-      wymagajAdmina(tenant_id, kto, res, () => {
-        db.query(
-          `SELECT
-             (SELECT COUNT(*) FROM Lojalnosc_Wnioski   WHERE tenant_id = ? AND status = 'NOWY')     AS wnioski,
-             (SELECT COUNT(*) FROM Lojalnosc_Odbiory   WHERE tenant_id = ? AND status = 'OCZEKUJE') AS odbiory,
-             (SELECT COUNT(*) FROM Lojalnosc_Zgloszenia WHERE tenant_id = ? AND status = 'NOWE')    AS zgloszenia`,
-          [tenant_id, tenant_id, tenant_id],
-          (err, rows) => {
-            // Brak tabel (Klub nigdy nieużywany) nie może wywracać Pulpitu — zwracamy zera.
-            if (err || !Array.isArray(rows) || !rows.length) {
-              return res.json({ status: 'success', wnioski: 0, odbiory: 0, zgloszenia: 0 });
-            }
-            const r = rows[0];
-            return res.json({
-              status: 'success',
-              wnioski: Number(r.wnioski) || 0,
-              odbiory: Number(r.odbiory) || 0,
-              zgloszenia: Number(r.zgloszenia) || 0,
-            });
-          }
-        );
-      });
-
     } else if (action === 'loj_wnioski') {
       // Wnioski o konto z rejestracji online (istniejące klientki)
       const kto = String(req.query.user_log || '').trim();
@@ -1736,13 +1707,7 @@ module.exports = (db) => {
           const wRows = await q(`SELECT id, id_klienta, imie, typ, status FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, id]);
           const wniosek = Array.isArray(wRows) ? wRows[0] : null;
           if (!wniosek) return res.json({ status: 'error', message: 'Nie znaleziono wniosku.' });
-          // Wolno wygenerować SMS ponownie dla wniosku już „wysłanego". Powód (2026-08-03):
-          // wysyłka jest RĘCZNA, a klik w przycisk od razu oznaczał wniosek jako obsłużony —
-          // wystarczyło kliknąć przez pomyłkę albo zamknąć okno przed wysłaniem i zgłoszenie
-          // znikało z listy, mimo że klientka nic nie dostała. Odrzucone/anulowane zostają zamknięte.
-          if (!['NOWY', 'WYSLANY'].includes(String(wniosek.status || '').toUpperCase())) {
-            return res.json({ status: 'error', message: 'Ten wniosek został zamknięty.' });
-          }
+          if (wniosek.status !== 'NOWY') return res.json({ status: 'error', message: 'Wniosek już obsłużony.' });
           const kRows = await q(`SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, String(wniosek.id_klienta)]);
           const klient = Array.isArray(kRows) ? kRows[0] : null;
           if (!klientAktywny(klient)) return res.json({ status: 'error', message: 'Kartoteka klientki niedostępna.' });

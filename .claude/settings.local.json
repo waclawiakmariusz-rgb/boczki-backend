@@ -161,7 +161,12 @@
       "Bash(git show:*)",
       "PowerShell(node --check:*)",
       "PowerShell(npx jest:*)",
-      "Read(//c/Users/aaell/AppData/Local/Temp/claude/**)"
+      "Read(//c/Users/aaell/AppData/Local/Temp/claude/**)",
+      "PowerShell(Add-Type -AssemblyName System.Drawing; $p = \"public\\\\img\\\\estelio-logo.png\"; $img = [System.Drawing.Image]::FromFile\\(\\(Resolve-Path $p\\)\\); \"szerokosc: $\\($img.Width\\) x wysokosc: $\\($img.Height\\)\"; $img.Dispose\\(\\))",
+      "Bash(grep -E \"Tests:|Test Suites:\" /c/Users/aaell/AppData/Local/Temp/claude/C--Users-aaell-Desktop-aplikacje-boczki-na-bok-system-magazynowy-boczki-backend/0b306d2c-26fd-4092-b11f-cb26ffce466b/scratchpad/jest_dup.txt)",
+      "Bash(tail -5 /c/Users/aaell/AppData/Local/Temp/claude/C--Users-aaell-Desktop-aplikacje-boczki-na-bok-system-magazynowy-boczki-backend/0b306d2c-26fd-4092-b11f-cb26ffce466b/scratchpad/jest_dup.txt)",
+      "Bash(sed -n '/^function odlegloscLev/,/^}/p' routes/lojalnosc.js)",
+      "Bash(sed -n '/^function toSamaOsoba/,/^}/p' routes/lojalnosc.js)"
     ]
   }
 }
