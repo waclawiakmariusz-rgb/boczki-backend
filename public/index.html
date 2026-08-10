@@ -7703,6 +7703,14 @@ document.addEventListener('DOMContentLoaded', () => {
     <span style="font-weight:700; color:#9a3412;">🎂 Urodziny</span><span id="ds-urodziny-content" style="color:#7c2d12;"></span>
   </div>
 
+  <!-- Pasek Klubu: sprawy czekające na obsługę (wnioski o konto, nagrody, zgłoszenia BIORĘ).
+       Powstał 2026-08-03: zgłoszenia widać było tylko po wejściu w sekcję Klub, więc
+       klientka czekała na aktywację, o której nikt nie wiedział. Ukryty, gdy nie ma nic
+       do zrobienia albo dodatek jest wyłączony. -->
+  <div id="ds-klub-bar" style="display:none; background:linear-gradient(135deg,#faf5ff,#f3e8ff); border:1px solid #e9d5ff; border-radius:14px; padding:12px 16px; margin-bottom:16px; font-size:14px; cursor:pointer;" onclick="pokaz('klub-admin',null); if(typeof klubadm_init==='function') klubadm_init();" title="Otwórz panel Klubu">
+    <span style="font-weight:700; color:#6b21a8;">💎 Klub</span><span id="ds-klub-content" style="color:#7e22ce;"></span>
+  </div>
+
   <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje -->
   <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
     <div class="ds-section-head" id="ds-zadania-head" onclick="ds_zd_toggleCollapse(event)" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
@@ -8601,7 +8609,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         </div>
                         <div class="klubadm-karta">
                             <div class="klubadm-h">Wnioski o konto i reset PIN-u</div>
-                            <div class="klubadm-pod" style="margin-bottom:6px;">Link aktywacyjny wysyłasz SMS-em <b>na numer z kartoteki</b> — zeskanuj kod QR telefonem salonu, a SMS napisze się sam.</div>
+                            <div class="klubadm-pod" style="margin-bottom:6px;"><b>Estelio nie wysyła wiadomości.</b> Panel przygotuje treść i link aktywacyjny — <b>wysyłasz je sama</b> z telefonu salonu <b>na numer z kartoteki</b>. Najszybciej: zeskanuj kod QR telefonem, otworzy się gotowa wiadomość do wysłania.</div>
                             <div id="klubadm-wnioski-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
                             <div id="klubadm-wniosek-sms" style="display:none; margin-top:12px; padding:14px; background:#fbf7f9; border:1px solid #f3e6eb; border-radius:12px;"></div>
                         </div>
@@ -13169,6 +13177,29 @@ function zaladujPulpit() {
                 }
             }).catch(() => {});
     }, 600);
+
+    // ── Pasek Klubu: co czeka na obsługę — defer 800ms, 3 zapytania COUNT ──
+    // Bez tego zgłoszenia o konto leżały niezauważone (widoczne tylko w sekcji Klub),
+    // a klientka czekała na aktywację, której nikt nie wysłał.
+    setTimeout(() => {
+        if (typeof hasFeature === 'function' && !hasFeature('lojalnosc')) return;   // dodatek wyłączony
+        fetch(API_URL + '?action=loj_pulpit&user_log=' + encodeURIComponent(currentUser || ''))
+            .then(r => r.json())
+            .then(d => {
+                if (!d || d.status !== 'success') return;                            // brak uprawnień → cicho
+                const parts = [];
+                if (d.wnioski)    parts.push(` &nbsp;<b>${d.wnioski}</b> ${d.wnioski === 1 ? 'osoba czeka' : 'os. czeka'} na aktywację konta`);
+                if (d.odbiory)    parts.push(` &nbsp;<b>${d.odbiory}</b> ${d.odbiory === 1 ? 'nagroda do wydania' : 'nagrody do wydania'}`);
+                if (d.zgloszenia) parts.push(` &nbsp;<b>${d.zgloszenia}</b> ${d.zgloszenia === 1 ? 'zgłoszenie z promocji' : 'zgłoszenia z promocji'}`);
+                if (!parts.length) return;                                           // nie ma nic — pasek zostaje ukryty
+                const bar = document.getElementById('ds-klub-bar');
+                const content = document.getElementById('ds-klub-content');
+                if (bar && content) {
+                    content.innerHTML = parts.join(' &nbsp;·');
+                    bar.style.display = 'block';
+                }
+            }).catch(() => {});
+    }, 800);
 
     // ── Badge „Do sprawdzenia" na kafelku — lekki fetch (3 małe zapytania SQL) ──
     setTimeout(() => {
@@ -32370,6 +32401,17 @@ async function klubadm_zaladujOdbiory() {
   const boxO = document.getElementById('klubadm-odbiory-lista');
   const boxZ = document.getElementById('klubadm-zgloszenia-lista');
   if (!boxO || !boxZ) return;
+
+  // Data z godziną — w „Do obsłużenia" liczy się, o której przyszło zgłoszenie
+  // (recepcja widzi, czy klientka czeka 10 minut, czy od wczoraj).
+  // Musi stać TU, a nie w bloku wniosków: używają go też listy nagród i zgłoszeń,
+  // które renderują się w osobnych blokach.
+  const klubadm_dataGodz = (v) => {
+    if (!v) return '';
+    const d = new Date(v);
+    if (isNaN(d)) return escHtml(String(v));
+    return d.toLocaleString('pl-PL', { day: 'numeric', month: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  };
   const [dO, dZ, dW] = await Promise.all([
     klubadm_apiGet('loj_odbiory').catch(() => null),
     klubadm_apiGet('loj_zgloszenia').catch(() => null),
@@ -32392,14 +32434,16 @@ async function klubadm_zaladujOdbiory() {
     const typTxt = (w) => w.typ === 'RESET' ? '<span style="background:#fff0df; color:#b45309; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">RESET PIN</span>' : '<span style="background:#e5efff; color:#1d4ed8; font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:999px;">NOWE KONTO</span>';
     const wierszW = (w, akcje) => `<div class="klubadm-row">
       <div style="min-width:0;">${typTxt(w)} <b>${escHtml(w.klient_kartoteka || w.imie || ('Klient ' + w.id_klienta))}</b>
-        <div style="font-size:12px; color:#9ca3af;">${w.imie && w.klient_kartoteka && w.imie !== w.klient_kartoteka ? 'wpisano we wniosku: ' + escHtml(w.imie) + ' · ' : ''}${new Date(w.created_at).toLocaleDateString('pl-PL')}${w.status !== 'NOWY' ? ' · ' + w.status + (w.obsluzyl ? ' (' + escHtml(w.obsluzyl) + ')' : '') : ''}</div>
+        <div style="font-size:12px; color:#9ca3af;">${w.imie && w.klient_kartoteka && w.imie !== w.klient_kartoteka ? 'wpisano we wniosku: ' + escHtml(w.imie) + ' · ' : ''}${klubadm_dataGodz(w.created_at)}${w.status !== 'NOWY' ? ' · ' + w.status + (w.obsluzyl ? ' (' + escHtml(w.obsluzyl) + ')' : '') : ''}</div>
         ${klubadm_innyNumer(w) ? `<div style="font-size:11.5px; color:#b45309; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:5px 8px; margin-top:5px;">⚠️ Podała numer <b>${escHtml(w.telefon)}</b>, w kartotece jest <b>${escHtml(w.telefon_kartoteka || 'brak')}</b> — potwierdź tożsamość przed wysłaniem linku.</div>` : ''}
       </div>${akcje}</div>`;
     boxW.innerHTML = (noweW.length ? noweW.map(w => wierszW(w, `<div style="display:flex; gap:6px; flex-shrink:0;">
-        <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_wyslijWniosek(${w.id})">📲 Wyślij SMS</button>
+        <button class="klubadm-btn" style="background:#f5f3ff; color:#7c3aed;" onclick="klubadm_wyslijWniosek(${w.id})" title="Przygotuje treść wiadomości i link — wysyłasz ją sama z telefonu salonu">✉️ Przygotuj wiadomość</button>
         <button class="klubadm-btn" style="background:#fef2f2; color:#dc2626;" onclick="if(confirm('Odrzucić wniosek?')) klubadm_odrzucWniosek(${w.id})">Odrzuć</button>
       </div>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych wniosków.</div>')
-      + (stareW.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stareW.map(w => wierszW(w, '')).join('') : '');
+      + (stareW.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stareW.map(w => wierszW(w, w.status === 'WYSLANY'
+        ? `<button class="klubadm-btn" style="background:#f8fafc; color:#475569; flex-shrink:0;" onclick="klubadm_wyslijWniosek(${w.id})" title="Pokaż treść i link jeszcze raz — np. gdy wiadomość nie została wysłana">✉️ Pokaż ponownie</button>`
+        : '')).join('') : '');
   }
   if (dO && dO.status === 'success') {
     const odbiory = dO.odbiory || [];
@@ -32408,7 +32452,7 @@ async function klubadm_zaladujOdbiory() {
     const reszta = odbiory.filter(o => o.status !== 'OCZEKUJE').slice(0, 10);
     const wiersz = (o, akcje) => `<div class="klubadm-row">
       <div style="min-width:0;"><b>${escHtml(o.klient || ('Klient ' + o.id_klienta))}</b> · ${escHtml(o.nagroda_nazwa)} <span style="color:#c54f7f; font-weight:700;">${o.koszt_pkt} pkt</span>
-        <div style="font-size:12px; color:#9ca3af;">kod: <b style="letter-spacing:2px; color:#475569;">${escHtml(o.kod)}</b> · ${o.status !== 'OCZEKUJE' ? o.status + (o.wydal ? ' (' + escHtml(o.wydal) + ')' : '') : new Date(o.created_at).toLocaleDateString('pl-PL')}</div>
+        <div style="font-size:12px; color:#9ca3af;">kod: <b style="letter-spacing:2px; color:#475569;">${escHtml(o.kod)}</b> · ${o.status !== 'OCZEKUJE' ? o.status + (o.wydal ? ' (' + escHtml(o.wydal) + ')' : '') : klubadm_dataGodz(o.created_at)}</div>
       </div>${akcje}</div>`;
     boxO.innerHTML = (oczekuje.length ? oczekuje.map(o => wiersz(o, `<div style="display:flex; gap:6px; flex-shrink:0;">
         <button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e;" onclick="klubadm_rozstrzygnij(${o.id}, 'WYDANE')">✅ Wydaj</button>
@@ -32423,7 +32467,7 @@ async function klubadm_zaladujOdbiory() {
     const stare = zgl.filter(z => z.status !== 'NOWE').slice(0, 5);
     const wierszZ = (z, akcja) => `<div class="klubadm-row">
       <div style="min-width:0;"><b>${escHtml(z.klient || ('Klient ' + z.id_klienta))}</b>${z.telefon ? ' · 📞 ' + escHtml(z.telefon) : ''}
-        <div style="font-size:12px; color:#9ca3af;">„${escHtml(z.promocja_tytul)}" · ${new Date(z.created_at).toLocaleDateString('pl-PL')}${z.status !== 'NOWE' ? ' · obsłużone' + (z.obsluzyl ? ' (' + escHtml(z.obsluzyl) + ')' : '') : ''}</div>
+        <div style="font-size:12px; color:#9ca3af;">„${escHtml(z.promocja_tytul)}" · ${klubadm_dataGodz(z.created_at)}${z.status !== 'NOWE' ? ' · obsłużone' + (z.obsluzyl ? ' (' + escHtml(z.obsluzyl) + ')' : '') : ''}</div>
       </div>${akcja}</div>`;
     boxZ.innerHTML = (noweZ.length ? noweZ.map(z => wierszZ(z, `<button class="klubadm-btn" style="background:#ecfdf5; color:#0f766e; flex-shrink:0;" onclick="klubadm_obsluzZgloszenie(${z.id})">✅ Obsłużone</button>`)).join('') : '<div style="padding:12px; text-align:center; color:#9ca3af; font-size:13px;">Brak nowych zgłoszeń.</div>')
       + (stare.length ? '<div style="font-size:11.5px; color:#9ca3af; margin:12px 0 4px; text-transform:uppercase; letter-spacing:.06em;">Ostatnio obsłużone</div>' + stare.map(z => wierszZ(z, '')).join('') : '');
@@ -32438,13 +32482,13 @@ async function klubadm_wyslijWniosek(id) {
   const d = await klubadm_apiPost({ action: 'loj_wniosek_wyslij', id }).catch(() => null);
   if (!d || d.status !== 'success') { area.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
   area.innerHTML =
-    '<div style="font-size:13px; font-weight:700; color:#5b21b6; margin-bottom:8px;">📲 SMS dla: ' + escHtml(d.klient || '') + ' (' + escHtml(d.telefon || '') + ')</div>'
+    '<div style="font-size:13px; font-weight:700; color:#5b21b6; margin-bottom:8px;">✉️ Wiadomość do wysłania — ' + escHtml(d.klient || '') + ' (' + escHtml(d.telefon || '') + ')</div>'
     + '<div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">'
-    + (d.qr_sms ? '<div style="text-align:center;"><img src="' + d.qr_sms + '" alt="QR SMS" style="width:150px; border:1px solid #ddd6fe; border-radius:12px; background:#fff;"><div style="font-size:11px; color:#7c3aed; font-weight:700; margin-top:4px;">Zeskanuj telefonem salonu<br>— SMS napisze się sam</div></div>' : '')
+    + (d.qr_sms ? '<div style="text-align:center;"><img src="' + d.qr_sms + '" alt="QR SMS" style="width:150px; border:1px solid #ddd6fe; border-radius:12px; background:#fff;"><div style="font-size:11px; color:#7c3aed; font-weight:700; margin-top:4px;">Zeskanuj telefonem salonu<br>— treść wpisze się sama,<br><b>zostaje kliknąć „wyślij"</b></div></div>' : '')
     + '<div style="flex:1; min-width:200px;">'
-    + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.tresc_sms).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano treść SMS-a.\'))" style="display:block; width:100%; background:#fff; border:1px solid #ddd6fe; color:#5b21b6; border-radius:8px; padding:9px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj treść SMS-a</button>'
+    + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.tresc_sms).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano treść wiadomości — wklej ją i wyślij klientce.\'))" style="display:block; width:100%; background:#fff; border:1px solid #ddd6fe; color:#5b21b6; border-radius:8px; padding:9px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj treść wiadomości</button>'
     + '<button onclick="navigator.clipboard.writeText(' + JSON.stringify(d.url).replace(/"/g, '&quot;') + ').then(()=>alert(\'Skopiowano link.\'))" style="display:block; width:100%; margin-top:8px; background:#fff; border:1px solid #e2e8f0; color:#475569; border-radius:8px; padding:9px; font-size:13px; font-weight:700; cursor:pointer;">📋 Kopiuj sam link</button>'
-    + '<div style="font-size:11.5px; color:#b45309; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:6px 8px; margin-top:8px;"><b>⚠️ System nie wysyła SMS-a za Ciebie.</b> Skopiuj treść albo zeskanuj QR telefonem salonu i <b>wyślij wiadomość ręcznie</b> — inaczej klientka będzie czekać.</div>'
+    + '<div style="font-size:11.5px; color:#b45309; background:#fff7ed; border:1px solid #fed7aa; border-radius:6px; padding:6px 8px; margin-top:8px;"><b>⚠️ Estelio niczego nie wyśle za Ciebie.</b> Wiadomość musisz wysłać z telefonu salonu — inaczej klientka będzie czekać na link, który nigdy nie przyjdzie.</div>'
     + '<div style="font-size:11.5px; color:#9ca3af; margin-top:6px;">Link ważny 7 dni. Wniosek oznaczony jako wysłany.</div>'
     + '</div></div>';
   klubadm_zaladujOdbiory();
