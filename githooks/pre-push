@@ -1,0 +1,4 @@
+#!/bin/sh
+# Bezpiecznik przed wyslaniem zmian na GitHub. Wlaczany przez: npm run zabezpiecz
+# (ustawia core.hooksPath=githooks, dzieki czemu hook jest w repo i dziala na obu laptopach).
+exec node "$(git rev-parse --show-toplevel)/githooks/pre-push.js" "$@"

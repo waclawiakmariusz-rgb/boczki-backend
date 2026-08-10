@@ -5,8 +5,11 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "test": "jest --runInBand",
-    "test:watch": "jest --watch"
+    "test": "jest --runInBand --forceExit",
+    "test:watch": "jest --watch",
+    "start-pracy": "node narzedzia/praca-start.js",
+    "koniec-pracy": "node narzedzia/praca-koniec.js",
+    "zabezpiecz": "node narzedzia/zabezpiecz.js"
   },
   "jest": {
     "testEnvironment": "node",
