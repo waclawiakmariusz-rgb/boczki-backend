@@ -1,0 +1,5 @@
+# Hooki gita uruchamia powloka (sh). Plik z koncami linii CRLF wywala sie wtedy
+# na "bad interpreter: /bin/sh^M" - a hook, ktory sie nie uruchamia, nie chroni
+# przed niczym. Wymuszamy LF niezaleznie od ustawien systemu.
+githooks/** text eol=lf
+*.sh text eol=lf
