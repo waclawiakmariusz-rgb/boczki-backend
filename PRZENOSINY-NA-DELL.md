@@ -39,8 +39,13 @@ katalog pamięci pod nową nazwę.
 ```bash
 git clone https://github.com/waclawiakmariusz-rgb/boczki-backend.git
 cd boczki-backend
+git checkout dev      # WAZNE: klon ustawia main (produkcja), a pracujesz na dev
 npm install
 ```
+
+`main` to gałąź, którą wdraża Hostinger — czyli produkcja. Codzienna praca idzie
+na `dev`, a na `main` trafia dopiero to, co sprawdzone. Jeśli po klonie zostaniesz
+na `main`, każda Twoja zmiana będzie o krok od produkcji.
 
 ## 3. Trzy rzeczy, których git NIE przenosi
 
