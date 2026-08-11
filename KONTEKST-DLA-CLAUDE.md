@@ -310,6 +310,13 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 9. **`ALTER TABLE` w starcie modułu musi być idempotentny** — łapane po „Duplicate column".
 10. **Mocki testów**: `CREATE TABLE`/`ALTER` w fabryce zużywają pierwsze wywołania `db.query`,
     trzeba je uwzględnić w `mockDb`.
+11. **Naprawiając warstwę niżej, sprawdź najpierw, czy warstwa wyżej nie obchodziła tego błędu.**
+    Kosztowna lekcja z 2026-08-11: po naprawie strefy w bazie sprzedaż zaczęła pokazywać godziny
+    **o 2 h za późno** (wpłata 17:15 wyświetlana jako 19:15). Front miał funkcję
+    `utcTimeToLocal()` z komentarzem „Baza zapisuje godziny w UTC", która ręcznie dodawała offset —
+    dwa błędy się znosiły, a naprawa źródła odsłoniła kompensację. Przed taką zmianą **grepuj
+    front za** `UTC`, `offset`, `getTimezoneOffset`, `toISOString`. Dziś jest tam `godzinaZBazy()`,
+    która wyłącznie waliduje i formatuje — nic nie przelicza. Nie „naprawiaj" jej z powrotem.
 
 ---
 
@@ -320,11 +327,13 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 - Tag `ostatnia-dobra` wciąż wskazuje `eba4e8c` — **do przestawienia** po potwierdzeniu produkcji.
 - **Nie ufaj tym hashom po fakcie** — sprawdź `npm run start-pracy` albo `git log --oneline -5`.
 
-## Wdrożone na produkcję 2026-08-11 (zweryfikowane)
+## Wdrożone na produkcję 2026-08-11 (zweryfikowane, użytkownik potwierdził działanie)
 
-Potwierdzone przez pobranie `https://estelio.com.pl/pomoc/` — serwer wydaje treści z `7c79ff6`,
-czyli ma także wcześniejsze commity z tej listy:
+Potwierdzone przez pobranie `https://estelio.com.pl/pomoc/` oraz sprawdzenie przez użytkownika
+w panelu. Ostatni wdrożony commit: **`6907f82`**.
 
+0. **Godziny w Podsumowaniu sprzedaży** (`6907f82`) — naprawa regresji opisanej w pułapce nr 11.
+   Front przestał doliczać 2 h. **Nowe wpisy pokazują się poprawnie; stare zostają z czasem UTC.**
 1. **Czas polski w bazie** (`db-strefa.js`) — wymagało RESTARTU aplikacji, deploy go robi.
    Test: nowy wpis w Dzienniku Zdarzeń ma godzinę zgodną z zegarem.
 2. **Czytelne wpisy karnetów w Dzienniku** — było `KARNET ZAKOŃCZONY — ID:202608061754188-3`,
@@ -343,8 +352,14 @@ większej zmianie funkcjonalnej sprawdź, czy nie trzeba go poprawić — recepc
 jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
 
 ## Otwarte / niedokończone (nie zaczynaj bez rozmowy z użytkownikiem)
-- **Stare wpisy w Dzienniku mają czas UTC** — korekta to `UPDATE` na danych; decyzja nie zapadła;
-  wtedy backup bazy obowiązkowy.
+- **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
+  Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
+  z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
+  więc wymaga zgody): `git tag -f ostatnia-dobra main && git push -f origin ostatnia-dobra`.
+- **NIE prostujemy godzin w danych historycznych.** Użytkownik 2026-08-11, dosłownie:
+  *„ŻADNEGO COFANIA DANYCH!!!"*. Stare rekordy (Logi 13 399, Sprzedaz 3 242, Zadatki 1 107,
+  Platnosci 202) zostają z czasem UTC i pokazują godziny o 1–2 h za wcześnie — to zaakceptowane.
+  Liczy się wyłącznie poprawność nowych wpisów. **Nie proponuj migracji ponownie.**
 - **RBAC po stronie backendu** — front chroni menu Analiza/Zadania, ale backend historycznie
   przyjmował żądania bez sprawdzania roli. Luka zgłoszona 2026-04-30, **zweryfikuj stan**.
 - **Rozdzielenie Kosmetyki vs Suplementy** w `rap_module` i Targetach — dwa miejsca UI wciąż
