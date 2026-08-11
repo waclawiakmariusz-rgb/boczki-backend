@@ -3,7 +3,7 @@
 
 const request = require('supertest');
 const express = require('express');
-const { mockDbAlways } = require('./helpers/mockDb');
+const { mockDb, mockDbAlways } = require('./helpers/mockDb');
 
 function buildApp(db) {
     const app = express();
@@ -183,6 +183,102 @@ describe('akcje karnetów', () => {
             action: 'close_karnet', tenant_id: TENANT, id: 'NIEMA', pracownik: 'Anna',
         });
         expect(res.body.status).toBe('error');
+    });
+});
+
+// ─── Czytelność wpisów w Dzienniku Zdarzeń (zgłoszone 2026-08-11) ─────────────
+// Było: "KARNET ZAKOŃCZONY — ID:202608061754188-3" — recepcja nie wiedziała, czyj to karnet.
+describe('akcje karnetów — opis w Dzienniku Zdarzeń', () => {
+    const KARNET = {
+        klient: 'Karolina Bańdosz-Kotarak',
+        zabieg: 'Endermologia Alliance',
+        data_sprzedazy: '2026-08-06 17:54:18',
+        data_waznosci: '2026-08-13',
+    };
+
+    // Kolejność zapytań: 1) UPDATE, 2) SELECT po dane do opisu, 3) INSERT do Logi.
+    const dbZKarnetem = () => mockDb(
+        { rows: { affectedRows: 1 } },
+        { rows: [KARNET] },
+        { rows: { affectedRows: 1 } },
+    );
+
+    function opisZLogu(db) {
+        const wpis = findQuery(db, 'INSERT INTO Logi');
+        return wpis ? String(wpis.params[wpis.params.length - 1]) : null;
+    }
+
+    test('close_karnet: opis zawiera klientkę, zabieg i daty', async () => {
+        const db = dbZKarnetem();
+        const res = await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'close_karnet', tenant_id: TENANT, id: '202608061754188-3', pracownik: 'Gosia',
+        });
+        expect(res.body.status).toBe('success');
+
+        const opis = opisZLogu(db);
+        expect(opis).toContain('Karolina Bańdosz-Kotarak');
+        expect(opis).toContain('Endermologia Alliance');
+        expect(opis).toContain('sprzedaż 06.08.2026');
+        expect(opis).toContain('ważność do 13.08.2026');
+        expect(opis).toContain('ID:202608061754188-3');   // identyfikator zostaje — bywa potrzebny
+    });
+
+    test('daty w opisie są po polsku (DD.MM.RRRR), nie w formacie bazy', async () => {
+        const db = dbZKarnetem();
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'close_karnet', tenant_id: TENANT, id: 'S1', pracownik: 'Gosia',
+        });
+        const opis = opisZLogu(db);
+        expect(opis).not.toContain('2026-08-06');
+        expect(opis).not.toContain('17:54:18');
+    });
+
+    test('reopen_karnet też opisuje karnet po ludzku', async () => {
+        const db = dbZKarnetem();
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'reopen_karnet', tenant_id: TENANT, id: 'S1', pracownik: 'Gosia',
+        });
+        expect(opisZLogu(db)).toContain('Karolina Bańdosz-Kotarak');
+    });
+
+    test('extend_karnet pokazuje NOWĄ datę ważności', async () => {
+        const db = mockDb(
+            { rows: { affectedRows: 1 } },
+            { rows: [{ ...KARNET, data_waznosci: '2026-12-31' }] },   // rekord już po przedłużeniu
+            { rows: { affectedRows: 1 } },
+        );
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'extend_karnet', tenant_id: TENANT, id: 'S1', data_waznosci: '2026-12-31', pracownik: 'Gosia',
+        });
+        expect(opisZLogu(db)).toContain('ważność do 31.12.2026');
+    });
+
+    test('gdy danych karnetu brak — log powstaje mimo to, w starej formie', async () => {
+        // Zdarzenie MUSI trafić do Dziennika nawet bez ładnego opisu.
+        const db = mockDb(
+            { rows: { affectedRows: 1 } },
+            { rows: [] },                      // SELECT nic nie zwrócił
+            { rows: { affectedRows: 1 } },
+        );
+        const res = await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'close_karnet', tenant_id: TENANT, id: 'S1', pracownik: 'Gosia',
+        });
+        expect(res.body.status).toBe('success');
+        expect(opisZLogu(db)).toBe('ID:S1');
+    });
+
+    test('akcja grupowa podaje liczbę sztuk', async () => {
+        const db = mockDb(
+            { rows: { affectedRows: 3 } },
+            { rows: [KARNET] },
+            { rows: { affectedRows: 1 } },
+        );
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'close_karnet', tenant_id: TENANT, grupa_id: 'G7', pracownik: 'Gosia',
+        });
+        const opis = opisZLogu(db);
+        expect(opis).toContain('3 szt.');
+        expect(opis).toContain('GRUPA:G7');
     });
 });
 

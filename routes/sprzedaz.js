@@ -11,6 +11,47 @@ const { makeLojalnosc } = require('./lojalnosc');
 module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
+
+  // --- Czytelny opis karnetu do Dziennika Zdarzeń (2026-08-11) ---
+  // Dziennik czyta recepcja, nie programista, a wpisy przy karnetach wyglądały tak:
+  // "KARNET ZAKOŃCZONY — ID:202608061754188-3". Taki identyfikator nikomu nic nie mówi;
+  // żeby sprawdzić, czyj to karnet, trzeba było szukać w bazie. Dobieramy więc nazwisko
+  // klientki, nazwę zabiegu i daty. Identyfikator zostaje na końcu — bywa potrzebny
+  // przy reklamacjach i przy szukaniu konkretnej pozycji sprzedaży.
+
+  const dataPL = (v) => {
+    const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[3]}.${m[2]}.${m[1]}` : '';
+  };
+
+  /**
+   * Buduje opis w stylu:
+   *   "Karolina B. — Endermologia Alliance · sprzedaż 06.08.2026 · ważność do 13.08.2026 (ID:...)"
+   * Wołane PO wykonaniu UPDATE (rekord nadal istnieje), więc przy przedłużeniu pokazuje
+   * już nową datę ważności. Nie blokuje odpowiedzi dla recepcji — log leci obok.
+   */
+  function opisKarnetu(tenant_id, grupowe, warKol, warVal, sztuk, gotowe) {
+    const technicznie = grupowe ? `GRUPA:${warVal} (${sztuk} szt.)` : `ID:${warVal}`;
+    db.query(
+      `SELECT klient, zabieg, data_sprzedazy, data_waznosci FROM Sprzedaz
+        WHERE tenant_id = ? AND ${warKol} = ? ORDER BY data_sprzedazy LIMIT 1`,
+      [tenant_id, warVal],
+      (err, rows) => {
+        const r = Array.isArray(rows) ? rows[0] : null;
+        // Gdy czegoś zabraknie, zapisujemy log w starej formie — brak opisu nie może
+        // sprawić, że zdarzenie w ogóle nie trafi do Dziennika.
+        if (err || !r) return gotowe(technicznie);
+
+        const czesci = [`${r.klient || 'klient nieznany'} — ${r.zabieg || 'zabieg nieznany'}`];
+        if (grupowe) czesci.push(`${sztuk} szt.`);
+        if (dataPL(r.data_sprzedazy)) czesci.push(`sprzedaż ${dataPL(r.data_sprzedazy)}`);
+        if (dataPL(r.data_waznosci)) czesci.push(`ważność do ${dataPL(r.data_waznosci)}`);
+
+        gotowe(`${czesci.join(' · ')} (${technicznie})`);
+      }
+    );
+  }
+
   // Hook Klubu (dodatek lojalnosc) — fire-and-forget, NIGDY nie blokuje sprzedaży.
   // Wołany przez setImmediate PO wysłaniu odpowiedzi, żeby nie opóźniać paragonu.
   const lojalnosc = makeLojalnosc(db);
@@ -1185,7 +1226,9 @@ module.exports = (db) => {
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, `${grupowe ? 'GRUPA:' + d.grupa_id + ' (' + result.affectedRows + ' szt.)' : 'ID:' + d.id} | nowa ważność: ${nowaData}`);
+          // opisKarnetu czyta rekord PO update, więc "ważność do" pokazuje już nową datę.
+          opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
+            (opis) => zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, opis));
           return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
@@ -1201,7 +1244,8 @@ module.exports = (db) => {
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'KARNET ZAKOŃCZONY', d.pracownik, grupowe ? `GRUPA:${d.grupa_id} (${result.affectedRows} szt.)` : `ID:${d.id}`);
+          opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
+            (opis) => zapiszLog(tenant_id, 'KARNET ZAKOŃCZONY', d.pracownik, opis));
           return res.json({ status: 'success', message: 'Oznaczono karnet jako zakończony.' + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
@@ -1217,7 +1261,8 @@ module.exports = (db) => {
         (err, result) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
-          zapiszLog(tenant_id, 'KARNET PRZYWRÓCONY', d.pracownik, grupowe ? `GRUPA:${d.grupa_id} (${result.affectedRows} szt.)` : `ID:${d.id}`);
+          opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
+            (opis) => zapiszLog(tenant_id, 'KARNET PRZYWRÓCONY', d.pracownik, opis));
           return res.json({ status: 'success', message: 'Cofnięto oznaczenie zakończenia.' + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
