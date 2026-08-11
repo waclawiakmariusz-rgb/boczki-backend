@@ -9,3 +9,5 @@ scripts/backfill-waznosc-undo-*.json
 design/
 .git-uszkodzony/
 *.sql.gz
+
+memory-backup/
