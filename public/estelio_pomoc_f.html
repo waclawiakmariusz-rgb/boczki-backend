@@ -397,6 +397,15 @@
       </ul>
       <p>Klikasz na alert = przechodzisz do odpowiedniej sekcji, gdzie możesz to ogarnąć.</p>
 
+      <h3>Pasek "💎 Klub" — sprawy czekające na obsługę</h3>
+      <p>Jeśli salon korzysta z dodatku Klub, nad Pulpitem może pojawić się fioletowy pasek z liczbami: ile osób czeka na aktywację konta, ile nagród jest do wydania i ile zgłoszeń przyszło z promocji.</p>
+      <ul>
+        <li>Pasek pokazuje się <strong>tylko wtedy, gdy naprawdę jest co zrobić</strong> — przy pustej liście jest niewidoczny i nie zajmuje miejsca.</li>
+        <li>Kliknięcie przenosi do sekcji Klub, do zakładki „Do obsłużenia".</li>
+        <li>Widzą go osoby z dostępem do Klubu: administrator, właściciel i recepcja.</li>
+      </ul>
+      <p>Powstał po to, żeby zgłoszenia nie leżały niezauważone. Wcześniej widać je było dopiero po wejściu w sekcję Klub — a klientka w tym czasie czekała na aktywację, o której nikt nie wiedział.</p>
+
       <h3>Sekcja "💳 Ostatnie transakcje (dziś)"</h3>
       <p>Skrótowy podgląd ostatnich 5-10 transakcji dnia. Pełną listę masz w "Historii sprzedaży".</p>
 
@@ -1660,6 +1669,7 @@
         <li><strong>Pracownicy</strong> — lista osób przypisywanych do sprzedaży</li>
         <li><strong>Podpowiedzi (sugestie)</strong> — reguły dosprzedaży</li>
         <li><strong>Słownik kosmetyków</strong> — katalog produktów do sprzedaży</li>
+        <li><strong>Baza do akcji SMS</strong> — lista klientek, które zgodziły się na kontakt (patrz niżej)</li>
         <li><strong>Moje Estelio+ (Dodatki)</strong> — płatne rozszerzenia systemu</li>
       </ul>
 
@@ -1678,8 +1688,17 @@
           <tr><td>Słownik kosmetyków</td><td>—</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
           <tr><td>Moje Estelio+ (Dodatki)</td><td>—</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
           <tr><td>Analiza (wszystkie raporty)</td><td>—</td><td>—</td><td>—</td><td>✓</td><td>✓</td></tr>
+          <tr><td>Klub (program lojalnościowy)</td><td>—</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
         </tbody>
       </table>
+
+      <h3>Baza do akcji SMS — kto zgodził się na kontakt</h3>
+      <p>Przed wysłaniem jakiejkolwiek akcji marketingowej trzeba wiedzieć, kto w ogóle wyraził na to zgodę. Wcześniej dało się to sprawdzić wyłącznie otwierając profil każdej klientki po kolei — teraz jest jedna lista.</p>
+      <ul>
+        <li>Wybierasz rodzaj zgody: <strong>marketingowa e-mail</strong> albo <strong>na kontakt telefoniczny</strong> (ta druga nie jest zgodą marketingową!).</li>
+        <li>Dostajesz listę klientek, które taką zgodę mają — z możliwością pobrania pliku CSV do wysyłki.</li>
+      </ul>
+      <div class="warning"><strong>Zgoda na kontakt telefoniczny to nie zgoda marketingowa.</strong> Pierwsza pozwala zadzwonić w sprawie wizyty, druga — wysłać ofertę. Wysyłka reklamy do osoby, która zgodziła się tylko na kontakt organizacyjny, jest naruszeniem przepisów. System je rozdziela właśnie po to, żeby nie pomylić ich przy eksporcie.</div>
 
       <div class="warning"><strong>Jeśli widzisz „Brak uprawnień":</strong> to nie błąd — Twoja rola po prostu nie ma dostępu do tej sekcji. Jeśli naprawdę potrzebujesz wejść (np. masz dodać produkt do słownika, a nie masz dostępu), poproś managera o zmianę roli albo o wykonanie tego za Ciebie.</div>
 
@@ -2015,15 +2034,17 @@
         <li>Za każde wydane 10 zł klientka dostaje ustaloną liczbę punktów (stawkę ustawia salon).</li>
         <li>Punkty naliczają się <strong>wyłącznie członkiniom Klubu</strong> (klientkom z aktywnym kontem w aplikacji) — od momentu dołączenia.</li>
         <li>Zwrot sprzedaży automatycznie odejmuje punkty naliczone za tę transakcję. Edycja kwoty — koryguje. Wszystko bez udziału recepcji.</li>
-        <li>Punkty z wpłat zadatków się nie naliczają — dopiero z realnej sprzedaży.</li>
+        <li><strong>Zadatki też punktują — w momencie wpłaty.</strong> Zasada jest prosta: za każde przekazanie pieniędzy należą się punkty. Gdy klientka później realizuje zabieg opłacony zadatkiem lub portfelem, punkty <em>nie</em> naliczają się drugi raz — dostała je już przy wpłacie. Dopłata kartą czy gotówką punktuje normalnie.</li>
+        <li>Zadatek anulowany, zwrócony albo przepadły za nieprzyjście — punkty wracają do salonu, czyli znikają z konta klientki. Też automatycznie.</li>
       </ul>
 
       <div class="scenario">
         <span class="scenario-label">Zapisanie klientki do Klubu</span>
         <h4>Pani Anna przy kasie: „A co to za apka z punktami?"</h4>
         <div class="scenario-body">
-          <p>Marta otwiera profil Pani Anny → kafel <strong>Klub</strong> → „📲 Aplikacja — kod QR aktywacyjny". Na ekranie pojawia się kod QR.</p>
-          <p>Pani Anna skanuje go aparatem telefonu, na stronie ustawia swój PIN (4–6 cyfr) i akceptuje regulamin programu. Gotowe — widzi swoje konto.</p>
+          <p>Marta otwiera profil Pani Anny → kafel <strong>Klub</strong>. Są tam trzy przyciski: <strong>🔢 Kod do apki</strong>, <strong>📲 QR</strong> i <strong>± Punkty</strong>.</p>
+          <p>Klika <strong>📲 QR</strong>, Pani Anna skanuje kod aparatem telefonu, ustawia swój PIN (4–6 cyfr) i akceptuje regulamin programu. Gotowe — widzi swoje konto.</p>
+          <p>Gdyby Marta pracowała na komputerze stacjonarnym, z którego monitora niewygodnie skanować — klika <strong>🔢 Kod do apki</strong> i po prostu <em>odczytuje klientce czteroznakowy kod</em>. Klientka wpisuje w aplikacji swój numer, ten kod i nowy PIN.</p>
           <div class="scenario-result">Od tej chwili każdy paragon Pani Anny nalicza jej punkty automatycznie. Marta nie robi już nic — ani dziś, ani przy kolejnych wizytach.</div>
         </div>
       </div>
@@ -2036,6 +2057,8 @@
         <div class="feature"><div class="feature-icon">✉️</div><strong>Wiadomości od salonu</strong><span>Skrzynka kampanii — nowości, przypomnienia, życzenia. Dzwonek z kropką sygnalizuje nieprzeczytane</span></div>
         <div class="feature"><div class="feature-icon">🔔</div><strong>Powiadomienia push</strong><span>Opcjonalny bonus — klientka włącza jednym tapnięciem; bez zgody wszystko i tak czeka w skrzynce</span></div>
         <div class="feature"><div class="feature-icon">🔐</div><strong>Logowanie telefonem i PIN-em</strong><span>Zero haseł do zapamiętania; PIN można zmienić w Profilu, a zapomniany — odzyskać przez salon</span></div>
+        <div class="feature"><div class="feature-icon">🧴</div><strong>Moje kosmetyki</strong><span>Historia kupionych kosmetyków i suplementów z przypomnieniem „może czas uzupełnić?", gdy od zakupu minęło kilka miesięcy</span></div>
+        <div class="feature"><div class="feature-icon">🏆</div><strong>Status i postęp</strong><span>Aktualny poziom (np. Złoto) i informacja, ile jeszcze brakuje do następnego — jeśli salon włączył poziomy</span></div>
       </div>
 
       <div class="scenario">
@@ -2043,31 +2066,74 @@
         <h4>Pani Anna pokazuje kod „K7M2XA" — chce odebrać serum</h4>
         <div class="scenario-body">
           <p>Pani Anna uzbierała punkty i zarezerwowała w apce nagrodę „Serum Vagheggi". Przy wizycie pokazuje Marcie kod z telefonu.</p>
-          <p>Marta (a właściwie manager, bo sekcja Klub w panelu jest dla admina) otwiera <strong>Klub → Do obsłużenia</strong>, znajduje rezerwację z tym kodem i klika „Wydaj".</p>
+          <p>Marta otwiera <strong>Klub → Do obsłużenia</strong>, znajduje rezerwację z tym kodem i klika „✅ Wydaj". Recepcja ma do tego pełny dostęp — nie trzeba wołać managera.</p>
           <div class="scenario-result">Punkty schodzą z konta dopiero w momencie wydania (wcześniej były tylko zarezerwowane — gdyby klientka anulowała, wróciłyby w całości). Serum wydane, wpis w historii punktów klientki: „Nagroda: Serum Vagheggi −800 pkt".</div>
         </div>
       </div>
 
-      <h3>Jak klientki dołączają — trzy drogi</h3>
+      <h3>Jak klientki dołączają — cztery drogi</h3>
       <table>
         <thead><tr><th>Droga</th><th>Jak działa</th></tr></thead>
         <tbody>
-          <tr><td><strong>QR od recepcji</strong> (podstawowa)</td><td>Profil klientki → kafel Klub → kod QR aktywacyjny. Klientka skanuje przy kasie, ustawia PIN — minuta i gotowe.</td></tr>
+          <tr><td><strong>QR od recepcji</strong> (podstawowa)</td><td>Profil klientki → kafel Klub → <strong>📲 QR</strong>. Klientka skanuje przy kasie, ustawia PIN — minuta i gotowe.</td></tr>
+          <tr><td><strong>Kod odczytany na głos</strong> (gdy QR niewygodny)</td><td>Profil klientki → kafel Klub → <strong>🔢 Kod do apki</strong>. Czteroznakowy kod, który po prostu dyktujesz. Klientka w aplikacji podaje numer telefonu, kod i nowy PIN. Kod jest przypisany do numeru z kartoteki, ważny 6 godzin i unieważnia się po pięciu błędnych próbach — działa jak PIN do karty.</td></tr>
           <tr><td><strong>Link publiczny</strong> (Instagram, ulotki)</td><td>Salon ma stały link/QR do rejestracji online (generowany w ustawieniach Klubu — wrzuć do bio na IG). Nowa osoba zakłada konto sama i może dostać punkty powitalne na start.</td></tr>
-          <tr><td><strong>Wniosek</strong> (istniejąca klientka przez internet)</td><td>Gdy z linku rejestruje się numer, który już jest w kartotece, system nie zakłada konta od ręki — tworzy wniosek. Salon wysyła SMS z linkiem aktywacyjnym <em>na numer z kartoteki</em> (ochrona przed podszyciem się). W panelu jest gotowy kod QR, który wystarczy zeskanować telefonem salonu — SMS pisze się sam.</td></tr>
+          <tr><td><strong>Wniosek</strong> (istniejąca klientka przez internet)</td><td>Gdy z linku rejestruje się numer, który już jest w kartotece, system nie zakłada konta od ręki — tworzy wniosek do obsłużenia. Link aktywacyjny idzie <em>na numer z kartoteki</em>, co chroni przed podszyciem się pod klientkę.</td></tr>
         </tbody>
       </table>
 
-      <h3>Panel salonu (sekcja Klub — tylko admin)</h3>
+      <div class="warning"><strong>Estelio nie wysyła wiadomości za Ciebie.</strong> Przy wniosku panel <em>przygotowuje</em> treść i link aktywacyjny — wysyła je człowiek, z telefonu salonu. Najszybciej: zeskanuj pokazany kod QR telefonem, otworzy się gotowa wiadomość i zostaje kliknąć „wyślij". Jeśli tego nie zrobisz, klientka będzie czekać na link, który nigdy nie przyjdzie. Wniosek już obsłużony można pokazać ponownie przyciskiem „✉️ Pokaż ponownie" — np. gdy wiadomość jednak nie poszła.</div>
+
+      <h3>Panel salonu — sekcja Klub (admin, właściciel i <strong>recepcja</strong>)</h3>
+      <p>Klub obsługuje także recepcja — to zmiana względem pilotażu, gdy sekcja była tylko dla administratora. Kosmetolog, praktykantka i manager dostępu nie mają.</p>
       <ul>
         <li><strong>Przegląd</strong> — statystyki programu: członkinie, punkty, odbiory.</li>
-        <li><strong>Nagrody</strong> — katalog z cenami w punktach, limitami sztuk i grafikami.</li>
+        <li><strong>Nagrody</strong> — katalog z cenami w punktach, limitami sztuk i grafikami. Do trzech nagród możesz oznaczyć jako „★ polecane" — te pokażą się klientkom na wierzchu.</li>
         <li><strong>Promocje</strong> — oferty z targetowaniem (wszyscy / od X punktów / po konkretnym zabiegu / dawno niewidziane) i opcją „BIORĘ".</li>
         <li><strong>Kampanie</strong> — wiadomości do wybranego segmentu klientek: od razu albo zaplanowane na termin, z podglądem „tak zobaczy to klientka", licznikiem odczytań i możliwością wycofania.</li>
-        <li><strong>Członkowie</strong> — lista kont z saldami i ostatnią wizytą.</li>
-        <li><strong>Do obsłużenia</strong> — odbiory nagród, zgłoszenia „BIORĘ", wnioski o konto i resety PIN — wszystko z licznikiem przy zakładce.</li>
-        <li><strong>Ustawienia</strong> — nazwa klubu, przelicznik punktów, bonus powitalny, regulamin, link rejestracyjny.</li>
+        <li><strong>Mnożniki ×2</strong> — okno czasowe z podwójnymi punktami (patrz niżej).</li>
+        <li><strong>Automaty</strong> — pięć samoczynnych akcji nagradzających (patrz niżej).</li>
+        <li><strong>Poziomy</strong> — progi typu Srebro / Złoto / Diament wg rocznych wydatków.</li>
+        <li><strong>Członkowie</strong> — lista kont z saldami i ostatnią wizytą, z wyszukiwarką.</li>
+        <li><strong>Do obsłużenia</strong> — odbiory nagród, zgłoszenia „BIORĘ", wnioski o konto i resety PIN — wszystko z licznikiem przy zakładce i <strong>godziną zgłoszenia</strong>, żeby było widać, czy klientka czeka dziesięć minut, czy od wczoraj.</li>
+        <li><strong>Ustawienia</strong> — nazwa klubu, przelicznik punktów, bonus powitalny, punkty za polecenie, kasowanie punktów 1 stycznia, regulamin, link rejestracyjny, QR na ladę.</li>
       </ul>
+
+      <div class="tip"><strong>💡 Nie musisz wchodzić w Klub, żeby wiedzieć, że coś czeka.</strong> Gdy pojawi się nowy wniosek, nagroda do wydania albo zgłoszenie z promocji, na <strong>Pulpicie</strong> wyświetli się fioletowy pasek „💎 Klub" z liczbami. Gdy nie ma nic do zrobienia — pasek jest niewidoczny.</div>
+
+      <h3>Cztery narzędzia, które napędzają ruch</h3>
+      <p>Same punkty to za mało, żeby klientka wróciła w martwym tygodniu. Do tego służą cztery mechanizmy — wszystkie działają samoczynnie, po jednorazowym ustawieniu.</p>
+
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">🔥</div><strong>Mnożnik ×2</strong><span>Wskazujesz okno „od–do" (np. wtorek–czwartek w martwym tygodniu) i w tym czasie punkty naliczają się podwójnie. W aplikacji klientek pojawia się baner „Punkty ×2 do…"</span></div>
+        <div class="feature"><div class="feature-icon">🤖</div><strong>Automaty</strong><span>Pięć akcji, które same znajdują właściwe klientki i dopisują im punkty: urodziny, powrót po długiej przerwie, rocznica pierwszej wizyty, „brakuje Ci tylko X do nagrody" oraz awans na wyższy poziom</span></div>
+        <div class="feature"><div class="feature-icon">🏆</div><strong>Poziomy</strong><span>Srebro / Złoto / Diament wg <em>wydatków w bieżącym roku</em> — nie wg salda punktów. Klientka widzi swój status i ile brakuje do następnego progu</span></div>
+        <div class="feature"><div class="feature-icon">👯</div><strong>Poleć koleżankę</strong><span>Każda członkini ma własny kod polecający. Gdy polecona osoba zrobi pierwszy realny zakup, punkty dostają obie</span></div>
+      </div>
+
+      <div class="scenario">
+        <span class="scenario-label">Automat w praktyce</span>
+        <h4>Pani Ewa nie była od ośmiu miesięcy</h4>
+        <div class="scenario-body">
+          <p>Salon włączył automat „powrót po przerwie": klientka, która nie była dłużej niż pół roku, dostaje 200 punktów w prezencie i powiadomienie.</p>
+          <p>Nikt nie robi listy, nikt nie dzwoni. System sam raz dziennie sprawdza, komu się to należy, dopisuje punkty i wysyła wiadomość do aplikacji.</p>
+          <div class="scenario-result">Pani Ewa dostaje powód, żeby wrócić — a recepcja nie poświęciła na to ani minuty. W historii punktów widnieje wpis z nazwą automatu.</div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>Poleceń nie obsługuje recepcja.</strong> Kod polecający klientka wpisuje sama, przy zakładaniu konta w aplikacji. Punkty przyznają się dopiero przy pierwszym prawdziwym zakupie poleconej osoby — czyli nie da się „nabić" poleceń bez sprzedaży. Przy kasie nie robisz nic.</div>
+
+      <h3>Kasowanie punktów 1 stycznia (opcjonalne)</h3>
+      <p>W Ustawieniach Klubu można włączyć zerowanie punktów z początkiem roku. Sens jest handlowy: punkty, które „przepadną", motywują do wykorzystania ich w grudniu — a to zwykle najlepszy miesiąc salonu.</p>
+      <ul>
+        <li>Włączenie w trakcie roku <strong>nie kasuje bieżących punktów</strong> — pierwsze zerowanie nastąpi dopiero 1 stycznia następnego roku.</li>
+        <li>W aplikacji klientka widzi na karcie salda „ważne do 31 grudnia".</li>
+        <li>Po zerowaniu aplikacja pokazuje świeży start, a nie listę strat — celowo, żeby program nie kojarzył się z karą.</li>
+        <li>Poziomy liczą się od wydatków, nie od punktów, więc <strong>zerowanie punktów nie odbiera klientce statusu</strong>.</li>
+      </ul>
+
+      <h3>Jedna klientka, kilka salonów</h3>
+      <p>Jeśli klientka korzysta z kilku salonów działających na Estelio, ten sam numer telefonu daje jej jedną tożsamość i <strong>jeden PIN</strong> — w aplikacji przełącza się między salonami, bez wylogowywania. Punkty i nagrody są osobne dla każdego salonu; żaden salon nie widzi danych drugiego.</p>
 
       <h3>Ręczne punkty — wyjątek, nie reguła</h3>
       <p>Z kafla Klub na profilu klientki admin może dopisać lub odjąć punkty ręcznie (np. bonus za opinię w Google, rekompensata za wpadkę). Każda ręczna korekta wymaga powodu i zostaje w historii punktów klientki — widzi ją także sama klientka w apce.</p>
@@ -2317,8 +2383,13 @@
         <li>Dodanie i zmianę klienta.</li>
         <li>Ręczne zmiany stanu magazynu (z powodem) i archiwizację produktów.</li>
         <li>Operacje na zadatkach.</li>
+        <li>Operacje na karnetach — zakończenie, przywrócenie i przedłużenie ważności. Wpis podaje <strong>imię i nazwisko klientki oraz nazwę zabiegu</strong>, a nie sam numer sprzedaży, więc widać od razu, czego dotyczył.</li>
+        <li>Zdarzenia Klubu — wydanie nagrody, obsłużenie zgłoszenia, ręczna korekta punktów.</li>
+        <li>Dodanie i usunięcie konta pracownika, błędne próby PIN-u.</li>
         <li><strong>Alarmowe modyfikacje</strong> z edycji awaryjnej — wyraźnie oznaczone.</li>
       </ul>
+
+      <div class="tip"><strong>💡 Godziny są prawdziwe.</strong> Data i godzina wpisu to czas polski, zgodny z zegarem w salonie — łącznie ze zmianą czasu na letni i zimowy. Jeśli w starszych wpisach (sprzed sierpnia 2026) godzina wygląda na przesuniętą o dwie godziny wstecz, to pozostałość po wcześniejszym sposobie zapisu, a nie pomyłka pracownika.</div>
 
       <div class="scenario">
         <span class="scenario-label">Wyjaśnianie nieścisłości</span>
@@ -2501,6 +2572,11 @@
           <tr><td><strong>Dziś w lokalu</strong></td><td>Podgląd dzisiejszych wizyt z Booksy — kto i o której przychodzi (gdy salon ma podpiętą skrzynkę Booksy).</td></tr>
           <tr><td><strong>Klub / punkty</strong></td><td>Program lojalnościowy (dodatek): punkty naliczane automatycznie z paragonów członkiniom Klubu, wymieniane na nagrody w aplikacji klientki.</td></tr>
           <tr><td><strong>Kod odbioru</strong></td><td>6-znakowy kod, który klientka dostaje w apce Klubu po zarezerwowaniu nagrody — pokazuje go w salonie przy odbiorze.</td></tr>
+          <tr><td><strong>Kod do apki</strong></td><td>Czteroznakowy kod aktywacyjny, który recepcja odczytuje klientce na głos, gdy skanowanie QR z monitora jest niewygodne. Ważny 6 godzin, przypisany do numeru z kartoteki.</td></tr>
+          <tr><td><strong>Mnożnik ×2</strong></td><td>Okno czasowe ustawione przez salon, w którym punkty naliczają się podwójnie — sposób na ożywienie martwego tygodnia.</td></tr>
+          <tr><td><strong>Automat (Klub)</strong></td><td>Samoczynna akcja nagradzająca: urodziny, powrót po przerwie, rocznica, „brakuje Ci trochę do nagrody", awans na wyższy poziom. Działa raz dziennie, bez udziału recepcji.</td></tr>
+          <tr><td><strong>Poziom (Srebro/Złoto/Diament)</strong></td><td>Status klientki wyliczany z <em>wydatków w bieżącym roku</em>, nie z salda punktów. Kasowanie punktów 1 stycznia nie odbiera statusu.</td></tr>
+          <tr><td><strong>Kod polecający</strong></td><td>Indywidualny kod członkini Klubu. Gdy polecona osoba zrobi pierwszy zakup, punkty dostają obie strony. Recepcja niczego nie wpisuje.</td></tr>
           <tr><td><strong>Foto przed/po</strong></td><td>Dodatek do wystandaryzowanych zdjęć efektów zabiegów — telefon salonu z nakładkami póz i poziomicą, galeria na profilu klientki.</td></tr>
           <tr><td><strong>Link do płatności</strong></td><td>Dodatek: link tpay „opakowany" w akceptację regulaminu salonu — klientka najpierw potwierdza regulamin, potem płaci; system zapisuje kto/kiedy/z jakiego IP.</td></tr>
           <tr><td><strong>Estelio+ / Dodatki</strong></td><td>Płatne rozszerzenia systemu, które właściciel może włączać i wyłączać.</td></tr>
