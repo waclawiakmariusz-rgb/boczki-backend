@@ -258,6 +258,12 @@ if (process.env.DB_SOCKET) {
 }
 const db = mysql.createPool(dbConfig);
 
+// Serwer MySQL stoi w UTC, a system zapisuje czas funkcjami bazy (NOW(), CURDATE(),
+// CURRENT_TIMESTAMP w DEFAULT kolumn). Bez tego Dziennik Zdarzeń pokazywał godzinę
+// o 2 h wcześniejszą niż realna (zgłoszone 2026-08-11). Ustawiamy strefę na każdym
+// połączeniu z puli — szczegóły i powód offsetu zamiast 'Europe/Warsaw': db-strefa.js
+require('./db-strefa').podepnij(db);
+
 db.getConnection((err, connection) => {
     if (err) {
         console.error('Błąd połączenia z bazą danych:', err.message);
