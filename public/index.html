@@ -13126,7 +13126,7 @@ function zaladujPulpit() {
                 tbl.innerHTML = '<div style="color:#94a3b8;font-size:14px;padding:8px 0;">Brak transakcji dzisiaj</div>';
             } else {
                 const rows = last5.map(r => {
-                    const t = r.godzina ? utcTimeToLocal(r.godzina) : '—';
+                    const t = r.godzina ? godzinaZBazy(r.godzina) : '—';
                     const klient = escHtml(r.klient || '—');
                     const zabieg = escHtml(r.zabieg || '—');
                     const kwota = parseFloat(r.kwota) || 0;
@@ -18353,18 +18353,23 @@ function przywrocGrupowo(idsStr) {
 
 // --- NOWA LOGIKA PODSUMOWANIA (Z WYMUSZENIEM WYGLĄDU) ---
 
-// Helper: koryguje godzinę "HH:MM" z bazy danych do lokalnego czasu zegarka usera.
-// Baza zapisuje godziny w UTC. JS automatycznie zna offset strefy + DST przez
-// getTimezoneOffset() (zwraca minuty NA WSCHÓD od UTC z minusem — dlatego negujemy).
-// Polska latem (CEST) = UTC+2, zimą (CET) = UTC+1 → offsetHours odpowiednio +2/+1.
-function utcTimeToLocal(g) {
+// Helper: godzina "HH:MM" z bazy — pokazywana BEZ przeliczania.
+//
+// Do 2026-08-11 stała tu funkcja utcTimeToLocal(), która ręcznie dodawała offset
+// strefy, bo baza zapisywała czas w UTC (serwer MySQL stoi w UTC, a system zapisuje
+// datę funkcjami bazy). Były to więc DWA błędy, które się znosiły.
+//
+// 2026-08-11 naprawiono źródło: połączenia z bazą ustawiają czas polski (db-strefa.js),
+// więc NOW() zapisuje już prawidłową godzinę. Dodawanie offsetu tutaj zaczęło
+// PSUĆ wynik — wpłata z 17:15 pokazywała się jako 19:15. Stąd ta funkcja już nic
+// nie przelicza; zostaje wyłącznie jako miejsce walidacji i formatowania.
+//
+// UWAGA: rekordy zapisane PRZED tą naprawą mają w bazie czas UTC, więc ich godziny
+// wyświetlają się o 1–2 h za wcześnie. To kwestia danych historycznych, nie kodu.
+function godzinaZBazy(g) {
     if (!g || !g.includes(':')) return g || '--:--';
     const [h, m] = g.split(':');
-    const offsetHours = -new Date().getTimezoneOffset() / 60;
-    let hh = parseInt(h, 10) + offsetHours;
-    while (hh >= 24) hh -= 24;
-    while (hh < 0) hh += 24;
-    return String(Math.floor(hh)).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+    return String(parseInt(h, 10)).padStart(2, '0') + ':' + String(m).padStart(2, '0');
 }
 
 function zaladujPodsumowanieDnia() {
@@ -18519,7 +18524,7 @@ function generujNowaTabele(lista) {
 
         tbody.innerHTML += `
             <tr class="${rowClass}" style="border-bottom:1px solid #f1f5f9;">
-                <td style="padding:10px; opacity:0.7;">${utcTimeToLocal(r.godzina)}</td>
+                <td style="padding:10px; opacity:0.7;">${godzinaZBazy(r.godzina)}</td>
                 <td style="padding:10px; opacity:0.7;">${r.klient}</td>
                 <td style="padding:10px;">${nameHtml}</td>
                 <td style="padding:10px; ${amountStyle}">${kwota.toFixed(2)} zł</td>
@@ -18688,7 +18693,7 @@ function renderTabelaPodsumowania(lista) {
 
         tbody.innerHTML += `
             <tr class="${rowClass}" style="border-bottom:1px solid #f1f5f9;">
-                <td class="${dimmedClass}" style="padding:10px;">${utcTimeToLocal(r.godzina)}</td>
+                <td class="${dimmedClass}" style="padding:10px;">${godzinaZBazy(r.godzina)}</td>
                 <td class="${dimmedClass}" style="padding:10px;">${r.klient}</td>
                 <td style="padding:10px;">${nameHtml}</td>
                 <td style="padding:10px; ${amountStyle}">${kwota.toFixed(2)} zł</td>
@@ -24315,7 +24320,7 @@ if (inputNazwaCheck) {
 
                 tbody.innerHTML += `
                     <tr style="border-bottom: 1px solid #f1f5f9; height: 50px;" class="${rowClass}">
-                        <td style="padding: 10px; color: #64748b;">${utcTimeToLocal(r.godzina)}</td>
+                        <td style="padding: 10px; color: #64748b;">${godzinaZBazy(r.godzina)}</td>
                         <td style="padding: 10px; font-weight: 500; color: #334155;">${r.klient}</td>
                         <td style="padding: 10px;">${nameHtml}</td>
                         <td style="padding: 10px; ${amountStyle}">${an_formatPLN(kwota)}</td>
