@@ -315,15 +315,32 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 # 10. STAN NA 2026-08-11 I SPRAWY OTWARTE
 
-## Gałęzie
-- `main` = `6ffba35`, `dev` = `b882a0a` (dev o jeden commit dalej: ustawienia z DELL).
+## Gałęzie (stan na koniec dnia 2026-08-11)
+- `main` = `dev` = `origin/main` = `origin/dev` = **`7c79ff6`**. Gałęzie zrównane.
 - Tag `ostatnia-dobra` wciąż wskazuje `eba4e8c` — **do przestawienia** po potwierdzeniu produkcji.
+- **Nie ufaj tym hashom po fakcie** — sprawdź `npm run start-pracy` albo `git log --oneline -5`.
 
-## Czeka na wdrożenie (jest na `main`, NIE ma na produkcji)
-1. **Czas polski w bazie** (`db-strefa.js`) — wymaga RESTARTU aplikacji.
+## Wdrożone na produkcję 2026-08-11 (zweryfikowane)
+
+Potwierdzone przez pobranie `https://estelio.com.pl/pomoc/` — serwer wydaje treści z `7c79ff6`,
+czyli ma także wcześniejsze commity z tej listy:
+
+1. **Czas polski w bazie** (`db-strefa.js`) — wymagało RESTARTU aplikacji, deploy go robi.
+   Test: nowy wpis w Dzienniku Zdarzeń ma godzinę zgodną z zegarem.
 2. **Czytelne wpisy karnetów w Dzienniku** — było `KARNET ZAKOŃCZONY — ID:202608061754188-3`,
    jest nazwisko klientki, zabieg i daty. Helper `opisKarnetu` w `routes/sprzedaz.js`,
    dotyczy `close_karnet`, `reopen_karnet`, `extend_karnet`.
+3. **Zaktualizowany przewodnik** `public/estelio_pomoc_f.html` (adres `/pomoc/`) — commit
+   `7c79ff6`. Plik był z 15.07 i zawierał trzy twierdzenia NIEPRAWDZIWE, które poprawiono:
+   że zadatki nie punktują (punktują, od 17.07, przy wpłacie), że Klub jest tylko dla admina
+   (ma go też recepcja) i że „SMS pisze się sam" (Estelio nie wysyła wiadomości — panel
+   przygotowuje treść, wysyła człowiek). Dopisano funkcje z lipca i sierpnia: kod aktywacyjny
+   do odczytania na głos, mnożnik ×2, automaty, poziomy, polecenia, kasowanie punktów
+   1 stycznia, multi-salon, pasek Klubu na Pulpicie, Bazę do akcji SMS.
+
+**Wniosek na przyszłość:** przewodnik `/pomoc/` łatwo się rozjeżdża z systemem. Po każdej
+większej zmianie funkcjonalnej sprawdź, czy nie trzeba go poprawić — recepcja czyta go
+jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
 
 ## Otwarte / niedokończone (nie zaczynaj bez rozmowy z użytkownikiem)
 - **Stare wpisy w Dzienniku mają czas UTC** — korekta to `UPDATE` na danych; decyzja nie zapadła;
