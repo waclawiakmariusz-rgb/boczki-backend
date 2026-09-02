@@ -14476,16 +14476,18 @@ function filtrujListeKlientow() {
 }
 // --- OBSŁUGA SPISU ZADATKÓW ---
 let zadatkiCache = []; // Pamięć podręczna listy
+let zadatkiPage = 1;   // Bieżąca strona spisu
 
 function pobierzZadatkiWszystkie() {
     const tbody = document.getElementById('tabela-zadatki-body');
     tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#666;">⏳ Pobieranie listy wpłat...</td></tr>';
-    
+
     fetch(API_URL + "?action=get_all_deposits")
     .then(r => r.json())
     .then(d => {
-        zadatkiCache = d;
-        renderTabelaZadatkow(d);
+        // Usunięte zadatki (błąd wpisu) odfiltrowujemy raz, przy pobraniu
+        zadatkiCache = (Array.isArray(d) ? d : []).filter(r => !String(r.status || '').toUpperCase().includes('USUNI'));
+        renderTabelaZadatkow(1);
     })
     .catch(err => {
         console.error(err);
@@ -14493,19 +14495,35 @@ function pobierzZadatkiWszystkie() {
     });
 }
 
-function renderTabelaZadatkow(data) {
+function renderTabelaZadatkow(page) {
     const tbody = document.getElementById('tabela-zadatki-body');
-    tbody.innerHTML = "";
+    const pagBox = document.getElementById('zadatki-pagination');
 
-    if (!data || data.length === 0) {
+    // Filtrowanie wg szukajki (jak dotychczas)
+    const filter = (document.getElementById('zadatki-search').value || '').toLowerCase();
+    const filtered = !filter ? zadatkiCache : zadatkiCache.filter(r => {
+        const text = (r.klient + " " + r.kwota + " " + r.status + " " + r.cel + " " + r.metoda).toLowerCase();
+        return text.includes(filter);
+    });
+
+    if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Brak wpisów.</td></tr>';
+        pagBox.innerHTML = "";
         return;
     }
 
-    data.forEach(r => {
-        // Ukryj usunięte zadatki (błąd wpisu)
-        if (String(r.status || '').toUpperCase().includes('USUNI')) return;
+    // Paginacja — na telefonie rysowanie całej listy naraz wieszało system
+    const itemsPerPage = 20;
+    const totalPages = Math.ceil(filtered.length / itemsPerPage);
+    if (page < 1) page = 1;
+    if (page > totalPages) page = totalPages;
+    zadatkiPage = page;
+    const start = (page - 1) * itemsPerPage;
+    const pagedData = filtered.slice(start, start + itemsPerPage);
 
+    // Wiersze budujemy w jednym stringu (innerHTML += w pętli = wielokrotne przerysowania)
+    let rowsHTML = "";
+    pagedData.forEach(r => {
         // Formatowanie Daty
         const dateObj = new Date(r.data);
         const dataStr = dateObj.toLocaleDateString('pl-PL') + ' <small style="color:#999">' + dateObj.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</small>';
@@ -14514,7 +14532,7 @@ function renderTabelaZadatkow(data) {
         let statusClass = 'st-wykorzystany';
         let statusIcon = '🔒';
         const st = String(r.status).toUpperCase().trim();
-        
+
         if (st === 'AKTYWNY') { statusClass = 'st-aktywny'; statusIcon = '✅'; }
         else if (st === 'SCALONY') { statusClass = 'st-scalony'; statusIcon = '🔗'; }
         else if (st.includes('ZWROT') || st.includes('KARA')) { statusClass = 'st-zwrot'; statusIcon = '↩️'; }
@@ -14524,44 +14542,41 @@ function renderTabelaZadatkow(data) {
         const kwotaStyle = st === 'AKTYWNY' ? 'font-weight:bold; color:#166534;' : 'color:#94a3b8;';
 
         // Wiersz HTML
-        tbody.innerHTML += `
+        rowsHTML += `
         <tr style="border-bottom:1px solid #f1f5f9; transition:0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
             <td style="padding:12px;">${dataStr}</td>
             <td style="padding:12px;">
-                <span class="clickable-client" onclick="filtrujZadatkiPoKliencie('${r.klient}')" title="Pokaż tylko zadatki tego klienta">
-                    ${r.klient}
+                <span class="clickable-client" onclick="filtrujZadatkiPoKliencie(this.textContent.trim())" title="Pokaż tylko zadatki tego klienta">
+                    ${escHtml(r.klient)}
                 </span>
             </td>
             <td style="padding:12px; ${kwotaStyle}">${kwotaStr}</td>
             <td style="padding:12px; font-size:13px;">
-                <div>${r.typ}</div>
-                <div style="color:#64748b; font-size:11px;">${r.metoda}</div>
+                <div>${escHtml(r.typ)}</div>
+                <div style="color:#64748b; font-size:11px;">${escHtml(r.metoda)}</div>
             </td>
-            <td style="padding:12px; color:#334155;">${r.cel}</td>
+            <td style="padding:12px; color:#334155;">${escHtml(r.cel)}</td>
             <td style="padding:12px;">
-                <span class="badge-status ${statusClass}">${statusIcon} ${r.status}</span>
+                <span class="badge-status ${statusClass}">${statusIcon} ${escHtml(r.status)}</span>
             </td>
         </tr>
         `;
     });
+    tbody.innerHTML = rowsHTML;
+
+    // Przyciski paginacji (wzorzec jak w Historii sprzedaży)
+    let pagHTML = "";
+    if (totalPages > 1) {
+        pagHTML += `<button class="pagination-btn" onclick="renderTabelaZadatkow(${page - 1})" ${page === 1 ? 'disabled' : ''}>Poprzednia</button>`;
+        pagHTML += `<span style="font-size:14px; font-weight:bold;"> Strona ${page} z ${totalPages} </span>`;
+        pagHTML += `<button class="pagination-btn" onclick="renderTabelaZadatkow(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Następna</button>`;
+    }
+    pagBox.innerHTML = pagHTML;
 }
 
-// Funkcja filtrowania (Szukajka)
+// Funkcja filtrowania (Szukajka) — po zmianie filtra wracamy na 1. stronę
 function filtrujZadatkiUI() {
-    const input = document.getElementById('zadatki-search');
-    const filter = input.value.toLowerCase();
-
-    if (!filter) {
-        renderTabelaZadatkow(zadatkiCache);
-        return;
-    }
-
-    const filtered = zadatkiCache.filter(r => {
-        const text = (r.klient + " " + r.kwota + " " + r.status + " " + r.cel + " " + r.metoda).toLowerCase();
-        return text.includes(filter);
-    });
-
-    renderTabelaZadatkow(filtered);
+    renderTabelaZadatkow(1);
 }
 
 // Funkcja filtrowania po kliknięciu w nazwisko
