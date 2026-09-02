@@ -31559,10 +31559,10 @@ function loj_zaladuj(idKlienta) {
           const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL') : '';
           const kol = (w.zmiana || 0) >= 0 ? '#0f766e' : '#b91c1c';
           const znak = (w.zmiana || 0) > 0 ? '+' : '';
-          return '<div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb;">'
-            + '<span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
-            + '<span style="color:#a2a7b8; flex-shrink:0;">' + dstr + '</span>'
-            + '<b style="color:' + kol + '; flex-shrink:0;">' + znak + (w.zmiana || 0) + '</b>'
+          return '<div style="display:flex; align-items:baseline; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb;">'
+            + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
+            + '<span style="color:#a2a7b8; flex-shrink:0; min-width:74px; text-align:right;">' + dstr + '</span>'
+            + '<b style="color:' + kol + '; flex-shrink:0; min-width:40px; text-align:right;">' + znak + (w.zmiana || 0) + '</b>'
             + '</div>';
         }).join('');
       }
@@ -32280,10 +32280,10 @@ async function klubadm_czSzczegoly(rowEl) {
         const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL') : '';
         const kol = (w.zmiana || 0) >= 0 ? '#0f766e' : '#b91c1c';
         const znak = (w.zmiana || 0) > 0 ? '+' : '';
-        return '<div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb; font-size:12.5px;">'
-          + '<span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
-          + '<span style="color:#a2a7b8; flex-shrink:0;">' + dstr + '</span>'
-          + '<b style="color:' + kol + '; flex-shrink:0;">' + znak + (w.zmiana || 0) + '</b>'
+        return '<div style="display:flex; align-items:baseline; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb; font-size:12.5px;">'
+          + '<span style="flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
+          + '<span style="color:#a2a7b8; flex-shrink:0; min-width:74px; text-align:right;">' + dstr + '</span>'
+          + '<b style="color:' + kol + '; flex-shrink:0; min-width:40px; text-align:right;">' + znak + (w.zmiana || 0) + '</b>'
           + '</div>';
       }).join('');
       if (wpisy.length >= 20) html += '<div style="padding:5px 0 0; color:#a2a7b8; font-size:11.5px;">Ostatnie 20 wpisów — pełna historia w profilu klientki.</div>';
