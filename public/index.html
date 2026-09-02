@@ -3364,6 +3364,26 @@ body.dark-mode #zd-comments-list > div > div > span[style*="color:#1e40af"],
 body.dark-mode #zd-comments-list > div > div > span[style*="color: #1e40af"] { color: #93c5fd !important; }
 body.dark-mode #zd-comments-list > div > div[style*="color:#1f2430"],
 body.dark-mode #zd-comments-list > div > div[style*="color: #1f2430"] { color: #f8fafc !important; }
+/* ==========================================
+   🌙 AUDYT 2026-09-02: inline granatowe teksty niewidoczne na przyciemnionych kartach
+   ========================================== */
+/* Profil klienta — prawy panel „Szybkie akcje" (nagłówek + tytuły kafli) */
+body.dark-mode .pp-right-col [style*="color:#1f2430"] { color:#e2e8f0 !important; }
+/* Profil klienta — tab Podsumowanie: nagłówki kart (Dokumenty/Foto/Płatności),
+   Sugestie dla Recepcji, pozycje list dokumentów i płatności online */
+body.dark-mode #tab-profil-podsumowanie [style*="color:#2c3242"],
+body.dark-mode #tab-profil-podsumowanie [style*="color:#1f2430"] { color:#e2e8f0 !important; }
+/* Analiza → Pracownik: „Szczegóły transakcji pracownika" (pozycje, daty, kwoty dnia) */
+body.dark-mode #an_emp-debug-section [style*="color:#1f2430"] { color:#e2e8f0 !important; }
+/* Zadania — tabela: tytuł, opis, przypisani, terminy, kto wykonał, wiersz po terminie */
+body.dark-mode #zd-tbody td[style*="#1f2430"] { color:#f8fafc !important; }
+body.dark-mode #zd-tbody td[style*="#475569"],
+body.dark-mode #zd-tbody td[style*="#334155"] { color:#cbd5e1 !important; }
+body.dark-mode #zd-tbody div[style*="#1e40af"] { color:#93c5fd !important; }
+body.dark-mode #zd-tbody tr { border-bottom-color:#334155 !important; }
+body.dark-mode #zd-tbody tr[style*="#fef2f2"] { background:#3b1d1d !important; }
+body.dark-mode #zd-tbody span[style*="#fff3f8"] { background:#3f2937 !important; border-color:#5b3a4a !important; color:#f0abcb !important; }
+
 body.dark-mode #zd-comment-input { background: #0f172a !important; color: #f8fafc !important; border-color: #334155 !important; }
 body.dark-mode #zd-comment-input::placeholder { color: #64748b !important; }
 @keyframes bToastIn {
