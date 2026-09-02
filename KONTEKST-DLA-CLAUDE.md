@@ -373,8 +373,11 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   dwie odłożone słabości onboardingu.
 - **Wyścig onboardingu**: `invoice.paid` potrafi przyjść przed utworzeniem licencji → Stripe IDs
   gubią się w Licencjach; doraźnie backfill z dashboardu.
-- **Stare deploye Google Apps Script** po poprzedniej aplikacji lojalnościowej mogą wciąż działać
-  i wystawiać publicznie bazę telefonów i PIN-ów — **PILNE do sprawdzenia i wyłączenia.**
+- **Stare deploye Google Apps Script** — ~~PILNE~~ **ODWOŁANE 2026-09-02**: użytkownik wyjaśnił,
+  że stara apka lojalnościowa NIGDY nie miała danych realnych klientów — zatrzymała się na
+  testach, w środku są wyłącznie dane testowe. Brak wycieku, brak tematu RODO. Ewentualne
+  wyłączenie wdrożeń na koncie Google to zwykłe porządki, nie zagrożenie —
+  **nie podnosić tego ponownie jako pilnego.**
 - `sync-memory.ps1` na DELL (nieśledzony) — skrypt użytkownika do synchronizacji pamięci Claude,
   jeszcze nieprzejrzany; `memory-backup/` jest w `.gitignore`.
 
