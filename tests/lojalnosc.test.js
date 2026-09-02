@@ -11,7 +11,7 @@ const express = require('express');
 const bcrypt = require('bcrypt');
 const { mockDb, mockDbAlways } = require('./helpers/mockDb');
 const lojalnoscFactory = require('../routes/lojalnosc');
-const { makeLojalnosc, obliczPunkty, wyczyscCacheLoj, makeKlubToken, normalizujTelefon, pasujeSegment } = lojalnoscFactory;
+const { makeLojalnosc, obliczPunkty, wyczyscCacheLoj, makeKlubToken, normalizujTelefon, pasujeSegment, normalizujSegment } = lojalnoscFactory;
 
 function buildApp(db) {
     const app = express();
@@ -20,8 +20,8 @@ function buildApp(db) {
     return app;
 }
 
-// 20 wpisów-wypełniaczy na init fabryki (CREATE ×17 + SELECT collation + seed ×2; ALTER-y pomija mockDb)
-const INIT = Array.from({ length: 20 }, () => ({ rows: [] }));
+// 21 wpisów-wypełniaczy na init fabryki (CREATE ×17 + SELECT collation + SELECT segment_wartosc varchar + seed ×2; ALTER-y pomija mockDb)
+const INIT = Array.from({ length: 21 }, () => ({ rows: [] }));
 
 const FEATURE_ON = { rows: [{ feature_key: 'lojalnosc' }] };
 const FEATURE_OFF = { rows: [] };
@@ -981,6 +981,36 @@ describe('pasujeSegment', () => {
         const seg = { segment_typ: 'BRAK_WIZYTY', segment_dni: 60 };
         expect(pasujeSegment(seg, fakty(0, [{ zabieg: 'X', data: '2026-03-01' }]))).toBe(true);
         expect(pasujeSegment(seg, fakty(0, [{ zabieg: 'X', data: '2026-07-05' }]))).toBe(false);
+    });
+    test('OSOBY: id na liście → tak; spoza listy → nie; brak id_klienta w faktach → nie', () => {
+        const seg = { segment_typ: 'OSOBY', segment_wartosc: '42, 77,101-3' };
+        expect(pasujeSegment(seg, { ...fakty(0, []), id_klienta: '77' })).toBe(true);
+        expect(pasujeSegment(seg, { ...fakty(0, []), id_klienta: '101-3' })).toBe(true);
+        expect(pasujeSegment(seg, { ...fakty(0, []), id_klienta: '999' })).toBe(false);
+        expect(pasujeSegment(seg, fakty(0, []))).toBe(false); // stare fakty bez id_klienta
+    });
+});
+
+// ─── normalizujSegment — segment OSOBY (push testowy / wybrana grupka) ─────────
+describe('normalizujSegment — OSOBY', () => {
+    test('czyści CSV: trim, puste precz, deduplikacja', () => {
+        const seg = normalizujSegment({ segment_typ: 'OSOBY', segment_wartosc: ' 42, 77 ,,42, 101-3 ' });
+        expect(seg).toEqual({ typ: 'OSOBY', wartosc: '42,77,101-3', dni: null });
+    });
+    test('pusta lista osób → null (walidacja odrzuci zapis)', () => {
+        expect(normalizujSegment({ segment_typ: 'OSOBY', segment_wartosc: ' , , ' })).toBeNull();
+        expect(normalizujSegment({ segment_typ: 'OSOBY' })).toBeNull();
+    });
+    test('limit 200 osób', () => {
+        const duzo = Array.from({ length: 250 }, (_, i) => 'k' + i).join(',');
+        const seg = normalizujSegment({ segment_typ: 'OSOBY', segment_wartosc: duzo });
+        expect(seg.wartosc.split(',').length).toBe(200);
+    });
+    test('długa lista NIE jest ucinana do 160 znaków (jak stare segmenty)', () => {
+        const ids = Array.from({ length: 30 }, (_, i) => '20260806175418' + i).join(',');
+        const seg = normalizujSegment({ segment_typ: 'OSOBY', segment_wartosc: ids });
+        expect(seg.wartosc.length).toBeGreaterThan(160);
+        expect(seg.wartosc.split(',').length).toBe(30);
     });
 });
 

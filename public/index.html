@@ -8302,6 +8302,10 @@ document.addEventListener('DOMContentLoaded', () => {
               .klubadm-chip:hover { background:#f6e7ee; }
               .klubadm-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid #f5eef1; font-size:13.5px; flex-wrap:wrap; }
               .klubadm-row:last-child { border-bottom:none; }
+              .klubadm-osoba-row { padding:8px 10px; cursor:pointer; border-bottom:1px solid #f5eef1; font-size:13px; }
+              .klubadm-osoba-row:hover { background:#fbf7f9; }
+              .klubadm-osoba-chip { display:inline-flex; align-items:center; gap:6px; background:#fbf7f9; border:1px solid #e8c6d4; color:#8d3d5f; border-radius:999px; padding:4px 10px; font-size:12.5px; font-weight:600; }
+              .klubadm-osoba-chip b { color:#c54f7f; }
               .klubadm-form { border:1.5px dashed #ecd3de; border-radius:14px; background:#fdfbfc; margin-bottom:16px; }
               .klubadm-form > summary { list-style:none; cursor:pointer; padding:13px 18px; font-size:13.5px; font-weight:700; color:#c54f7f; display:flex; align-items:center; gap:8px; }
               .klubadm-form > summary::-webkit-details-marker { display:none; }
@@ -8317,6 +8321,10 @@ document.addEventListener('DOMContentLoaded', () => {
               body.dark-mode .klubadm-form { background:#1e293b; border-color:#475569; }
               body.dark-mode .klubadm-row { border-bottom-color:#334155; }
               body.dark-mode .klubadm-cz-det { border-bottom-color:#334155 !important; }
+              body.dark-mode .klubadm-osoba-row { border-bottom-color:#334155; }
+              body.dark-mode .klubadm-osoba-row:hover { background:#1e293b; }
+              body.dark-mode .klubadm-osoba-chip { background:#1e293b; border-color:#475569; color:#f490b3; }
+              body.dark-mode .klubadm-osoba-chip b { color:#f490b3; }
             </style>
             <div id="klub-admin" class="section">
                 <div style="margin-bottom:6px;">
@@ -8438,9 +8446,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
                                     <option value="ZABIEG">Po zabiegu …</option>
                                     <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                                    <option value="OSOBY">Wybrane klientki…</option>
                                 </select>
                                 <input id="klubadm-seg-wart-p" class="klubadm-input" style="display:none; width:190px;">
                                 <input id="klubadm-seg-dni-p" type="number" min="1" max="730" value="90" class="klubadm-input" style="display:none; width:90px;" title="okno dni">
+                            </div>
+                            <div id="klubadm-seg-osoby-p" style="display:none; margin-top:8px;">
+                                <input id="klubadm-seg-osoby-szukaj-p" class="klubadm-input" style="width:100%;" placeholder="🔍 Szukaj członkini Klubu (nazwisko lub telefon) i kliknij, żeby dodać…" oninput="klubadm_osobySzukaj('p')" autocomplete="off">
+                                <div id="klubadm-seg-osoby-wyniki-p"></div>
+                                <div id="klubadm-seg-osoby-chipy-p" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;"></div>
                             </div>
                             <div style="display:flex; gap:10px; margin-top:16px;">
                                 <button onclick="klubadm_zapiszPromocje()" id="klubadm-p-btn" class="klubadm-glowny">Dodaj promocję</button>
@@ -8483,9 +8497,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <option value="PUNKTY_MIN">Saldo punktów ≥ …</option>
                                     <option value="ZABIEG">Po zabiegu …</option>
                                     <option value="BRAK_WIZYTY">Bez wizyty od … dni</option>
+                                    <option value="OSOBY">Wybrane klientki…</option>
                                 </select>
                                 <input id="klubadm-seg-wart-k" class="klubadm-input" style="display:none; width:190px;">
                                 <input id="klubadm-seg-dni-k" type="number" min="1" max="730" value="90" class="klubadm-input" style="display:none; width:90px;" title="okno dni">
+                            </div>
+                            <div id="klubadm-seg-osoby-k" style="display:none; margin-top:8px;">
+                                <div class="klubadm-pod" style="margin-bottom:6px;">💡 Push testowy: wybierz tylko własne konto, sprawdź na swoim telefonie, a potem wyślij kampanię do wszystkich.</div>
+                                <input id="klubadm-seg-osoby-szukaj-k" class="klubadm-input" style="width:100%;" placeholder="🔍 Szukaj członkini Klubu (nazwisko lub telefon) i kliknij, żeby dodać…" oninput="klubadm_osobySzukaj('k')" autocomplete="off">
+                                <div id="klubadm-seg-osoby-wyniki-k"></div>
+                                <div id="klubadm-seg-osoby-chipy-k" style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;"></div>
                             </div>
                             <label class="klubadm-label">Kiedy i jak długo</label>
                             <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
@@ -31893,25 +31914,85 @@ function klubadm_segPola(x) {
   wart.style.display = (typ === 'PUNKTY_MIN' || typ === 'ZABIEG') ? 'inline-block' : 'none';
   dni.style.display = (typ === 'ZABIEG' || typ === 'BRAK_WIZYTY') ? 'inline-block' : 'none';
   wart.placeholder = typ === 'PUNKTY_MIN' ? 'np. 100 (pkt)' : 'nazwa/typ zabiegu, np. endermologia';
+  const osoby = document.getElementById('klubadm-seg-osoby-' + x);
+  if (osoby) {
+    osoby.style.display = (typ === 'OSOBY') ? 'block' : 'none';
+    if (typ === 'OSOBY') klubadm_osobyChipy(x);
+  }
 }
 function klubadm_segCzytaj(x) {
+  const typ = document.getElementById('klubadm-seg-typ-' + x).value;
   return {
-    segment_typ: document.getElementById('klubadm-seg-typ-' + x).value,
-    segment_wartosc: document.getElementById('klubadm-seg-wart-' + x).value.trim(),
+    segment_typ: typ,
+    segment_wartosc: typ === 'OSOBY'
+      ? klubadm_segOsoby[x].map(o => o.id).join(',')
+      : document.getElementById('klubadm-seg-wart-' + x).value.trim(),
     segment_dni: document.getElementById('klubadm-seg-dni-' + x).value
   };
 }
 function klubadm_segUstaw(x, typ, wartosc, dni) {
   document.getElementById('klubadm-seg-typ-' + x).value = typ || 'WSZYSCY';
-  document.getElementById('klubadm-seg-wart-' + x).value = wartosc || '';
+  if ((typ || '') === 'OSOBY') {
+    // Edycja: odtwórz chipy z CSV id, nazwiska dociągną się z listy członkiń
+    const ids = String(wartosc || '').split(',').map(s => s.trim()).filter(Boolean);
+    klubadm_segOsoby[x] = ids.map(id => ({ id, klient: id }));
+    document.getElementById('klubadm-seg-wart-' + x).value = '';
+    klubadm_osobyBaza().then(baza => {
+      const mapa = new Map(baza.map(c => [String(c.id_klienta), c.klient || ('Klient ' + c.id_klienta)]));
+      klubadm_segOsoby[x] = klubadm_segOsoby[x].map(o => ({ id: o.id, klient: mapa.get(o.id) || o.klient }));
+      klubadm_osobyChipy(x);
+    });
+  } else {
+    klubadm_segOsoby[x] = [];
+    document.getElementById('klubadm-seg-wart-' + x).value = wartosc || '';
+  }
   document.getElementById('klubadm-seg-dni-' + x).value = dni || 90;
   klubadm_segPola(x);
 }
 function klubadm_opisSegmentu(typ, wartosc, dni) {
+  if (typ === 'OSOBY') return 'wybrane klientki (' + String(wartosc || '').split(',').filter(s => s.trim()).length + ')';
   if (typ === 'PUNKTY_MIN') return 'saldo ≥ ' + wartosc + ' pkt';
   if (typ === 'ZABIEG') return 'po zabiegu „' + wartosc + '" (' + (dni || 90) + ' dni)';
   if (typ === 'BRAK_WIZYTY') return 'bez wizyty od ' + (dni || 90) + ' dni';
   return 'wszyscy';
+}
+
+// ── Segment „Wybrane klientki" (OSOBY) — push testowy / wybrana grupka ──
+let klubadm_segOsoby = { k: [], p: [] }; // wybrane: [{id, klient}]
+async function klubadm_osobyBaza() {
+  if (klubadm_czlonkowieCache.length) return klubadm_czlonkowieCache;
+  const d = await klubadm_apiGet('loj_czlonkowie').catch(() => null);
+  if (d && d.status === 'success') klubadm_czlonkowieCache = d.czlonkowie || [];
+  return klubadm_czlonkowieCache;
+}
+async function klubadm_osobySzukaj(x) {
+  const box = document.getElementById('klubadm-seg-osoby-wyniki-' + x);
+  const fraza = (document.getElementById('klubadm-seg-osoby-szukaj-' + x).value || '').toLowerCase().trim();
+  if (!fraza) { box.innerHTML = ''; return; }
+  const baza = await klubadm_osobyBaza();
+  const wybrane = new Set(klubadm_segOsoby[x].map(o => String(o.id)));
+  const pasuje = baza.filter(c => !wybrane.has(String(c.id_klienta))
+    && (String(c.klient || '').toLowerCase().includes(fraza) || String(c.telefon || '').includes(fraza))).slice(0, 8);
+  box.innerHTML = pasuje.length
+    ? pasuje.map(c => `<div class="klubadm-osoba-row" onclick="klubadm_osobaDodaj('${x}', this.dataset.id, this.dataset.n)" data-id="${escHtml(String(c.id_klienta))}" data-n="${escHtml(c.klient || ('Klient ' + c.id_klienta))}"><b>${escHtml(c.klient || ('Klient ' + c.id_klienta))}</b> <span style="color:#9ca3af; font-size:12px;">${escHtml(c.telefon || '')} · ${Number(c.saldo) || 0} pkt</span></div>`).join('')
+    : '<div style="padding:8px 10px; color:#9ca3af; font-size:12.5px;">Brak pasujących członkiń Klubu (wysyłka dociera tylko do osób z kontem w apce).</div>';
+}
+function klubadm_osobaDodaj(x, id, nazwa) {
+  klubadm_segOsoby[x].push({ id: String(id), klient: nazwa });
+  document.getElementById('klubadm-seg-osoby-szukaj-' + x).value = '';
+  document.getElementById('klubadm-seg-osoby-wyniki-' + x).innerHTML = '';
+  klubadm_osobyChipy(x);
+}
+function klubadm_osobaUsun(x, id) {
+  klubadm_segOsoby[x] = klubadm_segOsoby[x].filter(o => String(o.id) !== String(id));
+  klubadm_osobyChipy(x);
+}
+function klubadm_osobyChipy(x) {
+  const box = document.getElementById('klubadm-seg-osoby-chipy-' + x);
+  if (!box) return;
+  box.innerHTML = klubadm_segOsoby[x].length
+    ? klubadm_segOsoby[x].map(o => `<span class="klubadm-osoba-chip" data-id="${escHtml(o.id)}">${escHtml(o.klient)} <b style="cursor:pointer;" title="Usuń" onclick="klubadm_osobaUsun('${x}', this.parentElement.dataset.id)">✕</b></span>`).join('')
+    : '<span style="color:#9ca3af; font-size:12px;">Nikogo nie wybrano — wyszukaj klientkę powyżej i kliknij ją.</span>';
 }
 
 function klubadm_edytujPromocje(id) {
@@ -31948,6 +32029,7 @@ function klubadm_resetPromocja() {
 }
 async function klubadm_zapiszPromocje() {
   const seg = klubadm_segCzytaj('p');
+  if (seg.segment_typ === 'OSOBY' && !seg.segment_wartosc) { alert('Wybierz przynajmniej jedną klientkę (segment „Wybrane klientki").'); return; }
   const d = await klubadm_apiPost({
     action: 'loj_promocja_zapisz',
     id: document.getElementById('klubadm-p-id').value || null,
@@ -32080,6 +32162,7 @@ async function klubadm_zapiszKampanie() {
   const termin = document.getElementById('klubadm-k-termin').value;
   const seg = klubadm_segCzytaj('k');
   if (!edycjaWyslanej) {
+    if (seg.segment_typ === 'OSOBY' && !seg.segment_wartosc) { status.textContent = 'Wybierz przynajmniej jedną klientkę (segment „Wybrane klientki").'; return; }
     if (plan && !termin) { status.textContent = 'Wybierz datę i godzinę wysyłki.'; return; }
     if (!plan && !confirm('Wysłać kampanię TERAZ?\n\n„' + tytul + '"\n' + tresc + '\nDo: ' + klubadm_opisSegmentu(seg.segment_typ, seg.segment_wartosc, seg.segment_dni))) return;
     if (editId && !plan) { status.textContent = 'Edytowana kampania musi mieć termin (albo anuluj ją i wyślij nową „teraz").'; return; }

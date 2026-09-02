@@ -208,11 +208,18 @@ function vapidPublic() { return webpush ? clean(process.env.VAPID_PUBLIC_KEY) : 
 // ─── Segmenty kampanii/promocji ───────────────────────────────
 // WSZYSCY | PUNKTY_MIN (saldo >= wartość) | ZABIEG (zabieg/typ w ostatnich N dniach)
 // | BRAK_WIZYTY (żadnej sprzedaży od N dni — odzyskiwanie klientek)
-const SEGMENT_TYPY = new Set(['WSZYSCY', 'PUNKTY_MIN', 'ZABIEG', 'BRAK_WIZYTY']);
+// | OSOBY (konkretne id_klienta po przecinku — push testowy / wybrana grupka klientek)
+const SEGMENT_TYPY = new Set(['WSZYSCY', 'PUNKTY_MIN', 'ZABIEG', 'BRAK_WIZYTY', 'OSOBY']);
 
 function normalizujSegment(d) {
   const typ = String(d.segment_typ || 'WSZYSCY').toUpperCase().trim();
   if (!SEGMENT_TYPY.has(typ)) return null;
+  if (typ === 'OSOBY') {
+    // Lista id_klienta (CSV) — limit 200 osób; kolumna segment_wartosc jest po migracji TEXT
+    const ids = [...new Set(String(d.segment_wartosc || '').split(',').map(s => s.trim()).filter(Boolean))].slice(0, 200);
+    if (!ids.length) return null;
+    return { typ, wartosc: ids.join(','), dni: null };
+  }
   const wartosc = String(d.segment_wartosc || '').trim().slice(0, 160);
   const dni = parseInt(d.segment_dni, 10);
   if (typ === 'PUNKTY_MIN' && !(parseInt(wartosc, 10) >= 1)) return null;
@@ -226,6 +233,10 @@ function normalizujSegment(d) {
 function pasujeSegment(seg, fakty) {
   const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
   if (typ === 'WSZYSCY') return true;
+  if (typ === 'OSOBY') {
+    const idK = String((fakty && fakty.id_klienta) || '').trim();
+    return !!idK && String(seg.segment_wartosc || '').split(',').some(s => s.trim() === idK);
+  }
   const teraz = (fakty && fakty.teraz) || new Date();
   if (typ === 'PUNKTY_MIN') {
     return (Number(fakty && fakty.saldo) || 0) >= (parseInt(seg.segment_wartosc, 10) || 0);
@@ -256,6 +267,7 @@ function imgUrlOk(u) {
 
 function opisSegmentu(seg) {
   const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
+  if (typ === 'OSOBY') return `wybrane osoby (${String(seg.segment_wartosc || '').split(',').filter(s => s.trim()).length})`;
   if (typ === 'PUNKTY_MIN') return `saldo >= ${seg.segment_wartosc} pkt`;
   if (typ === 'ZABIEG') return `po zabiegu "${seg.segment_wartosc}" (${seg.segment_dni || 90} dni)`;
   if (typ === 'BRAK_WIZYTY') return `bez wizyty od ${seg.segment_dni || 90} dni`;
@@ -927,6 +939,22 @@ module.exports = (db) => {
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
+  // Segment OSOBY: lista id_klienta w segment_wartosc bywa długa — VARCHAR(160) → TEXT.
+  // Strażnik po information_schema (wzorzec collation), żeby nie przebudowywać tabel przy każdym starcie.
+  db.query(
+    `SELECT TABLE_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('Lojalnosc_Kampanie', 'Lojalnosc_Promocje')
+        AND COLUMN_NAME = 'segment_wartosc' AND DATA_TYPE = 'varchar'`,
+    (e, rows) => {
+      if (e) return console.error('[lojalnosc] Sprawdzenie segment_wartosc:', e.message);
+      (Array.isArray(rows) ? rows : []).forEach(r => {
+        db.query(`ALTER TABLE ${r.TABLE_NAME} MODIFY COLUMN segment_wartosc TEXT`, (e2) => {
+          if (e2) console.error(`[lojalnosc] MODIFY ${r.TABLE_NAME}.segment_wartosc:`, e2.message);
+          else console.log(`[lojalnosc] ${r.TABLE_NAME}.segment_wartosc → TEXT (segment OSOBY)`);
+        });
+      });
+    }
+  );
   // status UKRYTY — inne salony nie widzą dodatku (pilot u Boczków), jak platnosc_link
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
       VALUES (?, ?, ?, 0, 'UKRYTY', 12)
@@ -987,6 +1015,10 @@ module.exports = (db) => {
   async function segmentIds(tenant_id, seg) {
     const typ = String((seg && seg.segment_typ) || 'WSZYSCY').toUpperCase();
     if (typ === 'WSZYSCY') return null;
+    if (typ === 'OSOBY') {
+      // Lista wskazana ręcznie w panelu — bez zapytania do bazy
+      return String(seg.segment_wartosc || '').split(',').map(s => s.trim()).filter(Boolean);
+    }
     if (typ === 'PUNKTY_MIN') {
       const prog = parseInt(seg.segment_wartosc, 10) || 0;
       const rows = await q(
@@ -1969,7 +2001,7 @@ module.exports = (db) => {
       const seg = normalizujSegment(d);
       const DATA_RE = /^\d{4}-\d{2}-\d{2}$/;
       if (!tytul) return res.json({ status: 'error', message: 'Podaj tytuł promocji.' });
-      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
+      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów, nazwę zabiegu lub wybierz klientki).' });
       if ((dataOd && !DATA_RE.test(dataOd)) || (dataDo && !DATA_RE.test(dataDo))) return res.json({ status: 'error', message: 'Daty w formacie RRRR-MM-DD.' });
       if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
       maFeatureLubBlad(tenant_id, res, () => wymagajAdmina(tenant_id, kto, res, () => {
@@ -2122,7 +2154,7 @@ module.exports = (db) => {
       const widocznaDni = Number.isFinite(widocznaDniRaw) && widocznaDniRaw >= 1 && widocznaDniRaw <= 90 ? widocznaDniRaw : 30;
       let wyslijAt = String(d.wyslij_at || '').trim();
       if (!tytul || !tresc) return res.json({ status: 'error', message: 'Podaj tytuł i treść.' });
-      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów lub nazwę zabiegu).' });
+      if (!seg) return res.json({ status: 'error', message: 'Uzupełnij dane segmentu (np. próg punktów, nazwę zabiegu lub wybierz klientki).' });
       if (!imgUrlOk(img)) return res.json({ status: 'error', message: 'Zdjęcie: wgraj plik albo podaj pełny adres URL.' });
       if (wyslijAt) {
         const m = wyslijAt.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
@@ -2673,7 +2705,7 @@ module.exports = (db) => {
           ORDER BY data_sprzedazy DESC LIMIT 300`,
         [p.t, p.k]
       ).catch(() => []);
-      const fakty = { saldo, sprzedaze: Array.isArray(faktySprzedaze) ? faktySprzedaze : [], teraz: new Date() };
+      const fakty = { saldo, id_klienta: String(p.k), sprzedaze: Array.isArray(faktySprzedaze) ? faktySprzedaze : [], teraz: new Date() };
       const kampanieRows = await q(
         `SELECT id, tytul, tresc, img_url, segment_typ, segment_wartosc, segment_dni, wyslano_at
            FROM Lojalnosc_Kampanie
