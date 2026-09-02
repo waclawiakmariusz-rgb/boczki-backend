@@ -8316,6 +8316,7 @@ document.addEventListener('DOMContentLoaded', () => {
               body.dark-mode .klubadm-input, body.dark-mode .klubadm-select, body.dark-mode .klubadm-area { background:#0f172a; border-color:#475569; color:#e2e8f0; }
               body.dark-mode .klubadm-form { background:#1e293b; border-color:#475569; }
               body.dark-mode .klubadm-row { border-bottom-color:#334155; }
+              body.dark-mode .klubadm-cz-det { border-bottom-color:#334155 !important; }
             </style>
             <div id="klub-admin" class="section">
                 <div style="margin-bottom:6px;">
@@ -8587,10 +8588,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="klubadm-karta">
                         <div style="display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap;">
                             <div class="klubadm-h">Członkowie <span id="klubadm-cz-licznik" style="font-family:'DM Sans',sans-serif; font-size:13px; color:#8a8f9c; font-weight:600;"></span></div>
-                            <input id="klubadm-cz-szukaj" placeholder="Szukaj po nazwisku lub telefonie…" oninput="klubadm_filtrujCzlonkow()" class="klubadm-input" style="width:280px;">
+                            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <input id="klubadm-cz-szukaj" placeholder="Szukaj po nazwisku lub telefonie…" oninput="klubadm_filtrujCzlonkow()" class="klubadm-input" style="width:280px;">
+                                <select id="klubadm-cz-sort" onchange="klubadm_filtrujCzlonkow()" class="klubadm-select" style="width:auto;">
+                                    <option value="punkty">Najwięcej punktów</option>
+                                    <option value="dolaczyl">Ostatnio dołączyły</option>
+                                    <option value="wizyta">Ostatnia wizyta</option>
+                                    <option value="nazwisko">Alfabetycznie</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="klubadm-pod" style="margin-bottom:6px;">Klientki z aktywnym kontem w aplikacji — saldo, ostatnia wizyta i znacznik powiadomień.</div>
+                        <div class="klubadm-pod" style="margin-bottom:6px;">Klientki z aktywnym kontem w aplikacji — saldo, ostatnia wizyta i znacznik powiadomień. Kliknij klientkę, żeby zobaczyć historię punktów.</div>
                         <div id="klubadm-cz-lista"><div style="padding:16px; text-align:center; color:#9ca3af;">Ładowanie…</div></div>
+                        <div id="klubadm-cz-pag" class="pagination-container"></div>
                     </div>
                 </div>
 
@@ -32101,6 +32111,7 @@ async function klubadm_zapiszKampanie() {
 
 // ── Członkowie Klubu ──
 let klubadm_czlonkowieCache = [];
+let klubadm_czPage = 1;
 async function klubadm_zaladujCzlonkow() {
   const box = document.getElementById('klubadm-cz-lista');
   if (!box) return;
@@ -32111,20 +32122,95 @@ async function klubadm_zaladujCzlonkow() {
   if (licznik) licznik.textContent = '(' + klubadm_czlonkowieCache.length + ')';
   klubadm_filtrujCzlonkow();
 }
-function klubadm_filtrujCzlonkow() {
+function klubadm_filtrujCzlonkow(page) {
   const box = document.getElementById('klubadm-cz-lista');
+  const pagBox = document.getElementById('klubadm-cz-pag');
   const fraza = (document.getElementById('klubadm-cz-szukaj').value || '').toLowerCase().trim();
   const lista = klubadm_czlonkowieCache.filter(c =>
     !fraza || String(c.klient || '').toLowerCase().includes(fraza) || String(c.telefon || '').includes(fraza));
-  if (!lista.length) { box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">' + (klubadm_czlonkowieCache.length ? 'Brak wyników.' : 'Nikt jeszcze nie dołączył — wyślij pierwszej klientce QR z profilu albo udostępnij link rejestracyjny.') + '</div>'; return; }
+  if (!lista.length) {
+    box.innerHTML = '<div style="padding:16px; text-align:center; color:#9ca3af; font-size:13px;">' + (klubadm_czlonkowieCache.length ? 'Brak wyników.' : 'Nikt jeszcze nie dołączył — wyślij pierwszej klientce QR z profilu albo udostępnij link rejestracyjny.') + '</div>';
+    if (pagBox) pagBox.innerHTML = '';
+    return;
+  }
+
+  // Sortowanie — domyślnie najwięcej punktów na górze
+  const sortEl = document.getElementById('klubadm-cz-sort');
+  const sort = sortEl ? sortEl.value : 'punkty';
+  const czas = (x) => { const t = x ? new Date(x).getTime() : NaN; return isNaN(t) ? 0 : t; };
+  if (sort === 'punkty') lista.sort((a, b) => (Number(b.saldo) || 0) - (Number(a.saldo) || 0));
+  else if (sort === 'dolaczyl') lista.sort((a, b) => czas(b.dolaczyl) - czas(a.dolaczyl));
+  else if (sort === 'wizyta') lista.sort((a, b) => czas(b.ostatnia_wizyta) - czas(a.ostatnia_wizyta));
+  else if (sort === 'nazwisko') lista.sort((a, b) => String(a.klient || '').localeCompare(String(b.klient || ''), 'pl'));
+
+  // Paginacja (20 na stronę — jak Spis Zadatków)
+  const perPage = 20;
+  const totalPages = Math.ceil(lista.length / perPage);
+  page = page || 1;
+  if (page < 1) page = 1;
+  if (page > totalPages) page = totalPages;
+  klubadm_czPage = page;
+  const start = (page - 1) * perPage;
+
   const dataFmt = (x) => x ? new Date(x).toLocaleDateString('pl-PL') : '—';
-  box.innerHTML = lista.map(c => `<div class="klubadm-row">
-    <div style="min-width:0;">
-      <b>${escHtml(c.klient || ('Klient ' + c.id_klienta))}</b>${c.ma_push ? ' <span title="ma powiadomienia" style="font-size:11px; color:#0284c7; font-weight:800;">PUSH</span>' : ''}
-      <div style="font-size:12px; color:#9ca3af;">${escHtml(c.telefon || '')} · dołączyła ${dataFmt(c.dolaczyl)} · ostatnia wizyta: ${dataFmt(c.ostatnia_wizyta)}</div>
+  box.innerHTML = lista.slice(start, start + perPage).map(c => `<div>
+    <div class="klubadm-row" style="cursor:pointer;" onclick="klubadm_czSzczegoly(this)" data-id="${escHtml(String(c.id_klienta))}" title="Kliknij, aby zobaczyć historię punktów">
+      <div style="min-width:0;">
+        <b>${escHtml(c.klient || ('Klient ' + c.id_klienta))}</b>${c.ma_push ? ' <span title="ma powiadomienia" style="font-size:11px; color:#0284c7; font-weight:800;">PUSH</span>' : ''}
+        <div style="font-size:12px; color:#9ca3af;">${escHtml(c.telefon || '')} · dołączyła ${dataFmt(c.dolaczyl)} · ostatnia wizyta: ${dataFmt(c.ostatnia_wizyta)}</div>
+      </div>
+      <div style="flex-shrink:0; text-align:right;"><b style="color:#c54f7f; font-size:15px;">${c.saldo} pkt</b> <span style="color:#c9ced9; font-size:11px;">▾</span></div>
     </div>
-    <div style="flex-shrink:0; text-align:right;"><b style="color:#c54f7f; font-size:15px;">${c.saldo} pkt</b></div>
+    <div class="klubadm-cz-det" style="display:none; padding:4px 10px 14px; border-bottom:1px solid #f5eef1;"></div>
   </div>`).join('');
+
+  if (pagBox) {
+    let pagHTML = '';
+    if (totalPages > 1) {
+      pagHTML += `<button class="pagination-btn" onclick="klubadm_filtrujCzlonkow(${page - 1})" ${page === 1 ? 'disabled' : ''}>Poprzednia</button>`;
+      pagHTML += `<span style="font-size:14px; font-weight:bold;"> Strona ${page} z ${totalPages} </span>`;
+      pagHTML += `<button class="pagination-btn" onclick="klubadm_filtrujCzlonkow(${page + 1})" ${page === totalPages ? 'disabled' : ''}>Następna</button>`;
+    }
+    pagBox.innerHTML = pagHTML;
+  }
+}
+// Szczegóły klientki — historia punktów pod klikniętym wierszem (dane z loj_klient, jak kafel w profilu)
+async function klubadm_czSzczegoly(rowEl) {
+  const det = rowEl.nextElementSibling;
+  if (!det || !det.classList.contains('klubadm-cz-det')) return;
+  if (det.style.display !== 'none') { det.style.display = 'none'; return; }
+  det.style.display = 'block';
+  if (det.dataset.zaladowane) return; // już pobrane — tylko rozwiń
+  det.innerHTML = '<div style="padding:8px 0; color:#9ca3af; font-size:12.5px;">⏳ Ładowanie historii punktów…</div>';
+  const idK = rowEl.dataset.id;
+  try {
+    const r = await fetch(API_URL + '?action=loj_klient&id_klienta=' + encodeURIComponent(idK));
+    const d = await r.json();
+    if (!d || d.status !== 'success') { det.innerHTML = '<div style="padding:8px 0; color:#dc2626; font-size:12.5px;">Błąd: ' + escHtml((d && d.message) || 'połączenia') + '</div>'; return; }
+    const wpisy = d.wpisy || [];
+    let html = '';
+    if (!wpisy.length) {
+      html = '<div style="padding:6px 0; color:#a2a7b8; font-size:12.5px;">Brak wpisów — punkty pojawią się przy najbliższej sprzedaży.</div>';
+    } else {
+      html = wpisy.map(w => {
+        const dt = w.data ? new Date(w.data) : null;
+        const dstr = dt && !isNaN(dt.getTime()) ? dt.toLocaleDateString('pl-PL') : '';
+        const kol = (w.zmiana || 0) >= 0 ? '#0f766e' : '#b91c1c';
+        const znak = (w.zmiana || 0) > 0 ? '+' : '';
+        return '<div style="display:flex; justify-content:space-between; gap:8px; padding:4px 0; border-bottom:1px dashed #f3e6eb; font-size:12.5px;">'
+          + '<span style="min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">' + escHtml(w.powod || w.zrodlo || '') + '</span>'
+          + '<span style="color:#a2a7b8; flex-shrink:0;">' + dstr + '</span>'
+          + '<b style="color:' + kol + '; flex-shrink:0;">' + znak + (w.zmiana || 0) + '</b>'
+          + '</div>';
+      }).join('');
+      if (wpisy.length >= 20) html += '<div style="padding:5px 0 0; color:#a2a7b8; font-size:11.5px;">Ostatnie 20 wpisów — pełna historia w profilu klientki.</div>';
+    }
+    html += '<div style="margin-top:8px;"><button onclick="pokaz(\'klient-profil\'); setTimeout(() => otworzProfil(\'' + escHtml(idK) + '\'), 50);" style="background:#fff; border:1px solid #e8c6d4; color:#c54f7f; border-radius:10px; padding:7px 14px; font-size:12px; font-weight:700; cursor:pointer;">👤 Przejdź do profilu</button></div>';
+    det.innerHTML = html;
+    det.dataset.zaladowane = '1';
+  } catch (e) {
+    det.innerHTML = '<div style="padding:8px 0; color:#dc2626; font-size:12.5px;">Błąd połączenia: ' + escHtml(e.message) + '</div>';
+  }
 }
 async function klubadm_anulujKampanie(id) {
   if (!confirm('Anulować zaplanowaną kampanię?')) return;
