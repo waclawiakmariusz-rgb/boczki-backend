@@ -325,6 +325,50 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
+# 10a. STAN NA 2026-09-02 (nowszy — czytaj najpierw)
+
+Dzień pracy na HP. Wszystko poniżej **wdrożone na produkcję i potwierdzone oczami przez
+użytkownika**. `main` = `dev` = `66f9753`.
+
+## Co weszło 2026-09-02
+
+1. **Spis Zadatków — paginacja** (`547b630`): 20 wierszy/strona (wzorzec z Historii sprzedaży),
+   szukajka bez zmian; wcześniej cała lista renderowana naraz wieszała telefon.
+2. **Klub → Członkowie** (`2159ac8`): sortowanie (domyślnie najwięcej punktów), paginacja 20/str,
+   klik w klientkę rozwija historię punktów (akcja `loj_klient`, ostatnie 20 wpisów)
+   + przycisk „Przejdź do profilu".
+3. **Klub → segment OSOBY „Wybrane klientki"** (`c4a0370`) — **push testowy**: w kampaniach
+   i promocjach można wskazać konkretne członkinie (szukajka + chipy, limit 200); wysyłka
+   trafia tylko do nich. Scenariusz: kampania na własne konto → sprawdzenie na telefonie →
+   dopiero potem „Wszyscy". Backend: `normalizujSegment`/`pasujeSegment`/`segmentIds`/
+   `opisSegmentu` + `fakty.id_klienta` w `/klub/me`. **Migracja: `segment_wartosc`
+   VARCHAR(160)→TEXT** (Kampanie+Promocje), strażnik po information_schema — wykonana
+   na wspólnej bazie przy pierwszym starcie nowego kodu.
+   **UWAGA testy: INIT w `tests/lojalnosc.test.js` wzrósł 20→21** (nowy SELECT startowy).
+4. **Wyrównanie kolumn dat/punktów w historii Klubu** (`65d8187`) — opis flex:1, data i punkty
+   stałe kolumny do prawej (szczegóły Członkiń + kafel w profilu).
+5. **Dark mode — seria poprawek** (`b4abf17`, `647386c`, `66f9753`): karty Klubu dostały jasny
+   kolor tekstu (sekcja Klubu NIE jest `.card`, więc globalne reguły jej nie łapały — to była
+   przyczyna niewidocznych nazwisk), liczniki Przeglądu, oraz audyt całego pliku: łatki dla
+   profilu klienta (Szybkie akcje, tab Podsumowanie), Analiza→Pracownik (szczegóły transakcji)
+   i tabeli Zadań. Wzorzec łatek: `body.dark-mode <scope> [style*="color:#1f2430"]`.
+
+## Tagi (decyzja użytkownika 2026-09-02)
+
+- **`ostatnia-dobra-2026-09-02` = `66f9753`** — datowany punkt powrotu, produkcja potwierdzona.
+- **`ostatnia-dobra` ZOSTAJE na `6907f82`** — użytkownik świadomie nie przestawił ruchomego
+  tagu; punkty powrotu prowadzimy teraz przez tagi DATOWANE (`ostatnia-dobra-RRRR-MM-DD`,
+  zwykły push, starych nie kasujemy, min. 3 wersje). Konsekwencja: awaryjny revert
+  z `POWROT-AWARYJNY.md` (który używa `ostatnia-dobra`) cofnąłby też cały 2026-09-02 —
+  przy awarii rozważ revert do tagu datowanego zamiast ruchomego.
+
+## Sprawy zamknięte 2026-09-02
+
+- **Apps Script ODWOŁANE jako PILNE** — stara apka lojalnościowa nigdy nie miała danych
+  realnych klientów (tylko testy). Szczegóły w rozdz. 10, nie podnosić ponownie.
+
+---
+
 # 10. STAN NA 2026-08-11 I SPRAWY OTWARTE
 
 ## Gałęzie (stan na koniec dnia 2026-08-11)
