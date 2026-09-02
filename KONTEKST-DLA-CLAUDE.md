@@ -189,6 +189,11 @@ pierwszym wierszu**, puste tabele nie błądzą, więc błąd wychodzi długo po
 - Tag **`ostatnia-dobra`** — ruchomy, wskazuje ostatnią wersję **sprawdzoną oczami na produkcji**
   (nie „ostatnią wdrożoną" — ta różnica jest istotą incydentu z rozdziału 6). Przestawiać PO
   weryfikacji: `git tag -f ostatnia-dobra main && git push -f origin ostatnia-dobra`.
+  2026-09-02: przestawiony z `eba4e8c` (feralny commit) na `6907f82` (produkcja potwierdzona).
+- **ZASADA od 2026-09-02 (decyzja użytkownika): po każdym sprawdzonym oczami wdrożeniu dodajemy
+  DATOWANY tag `ostatnia-dobra-RRRR-MM-DD`** (zwykły push, bez `-f`) **i nie kasujemy starych** —
+  chcemy mieć zawsze co najmniej 3 dobre wersje do powrotu. Pierwszy taki tag:
+  `ostatnia-dobra-2026-09-02` = `6907f82`.
 - Tag `pre-fix-regres-sync-2026-08-10` — stan produkcji sprzed naprawy Klubu.
 - Procedura cofania: **`POWROT-AWARYJNY.md`** w repo (jedna komenda `git revert
   ostatnia-dobra..main`, bez `--force`, bez kasowania historii).
