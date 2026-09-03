@@ -4921,6 +4921,13 @@ body.dark-mode #widok-szczegolow-klienta .pp-hero-stats > div {
     background: linear-gradient(180deg,#243044 0%,#2a3650 100%) !important;
     border-color: #334155 !important;
 }
+/* Karta salda w zakładce Zadatki — ten sam jasny gradient, ale POZA .pp-hero-stats,
+   więc powyższa reguła jej nie łapała: tekst rozjaśniał się (reguła niżej), a tło
+   zostawało jasne → prawie biała kwota na jasnoróżowym tle była nieczytelna. */
+body.dark-mode #zadatki-saldo-card {
+    background: linear-gradient(180deg,#243044 0%,#2a3650 100%) !important;
+    border-color: #334155 !important;
+}
 
 /* Tabs — jaśniejszy szary dla lepszej widoczności */
 body.dark-mode .pp-tab { color: #e2e8f0 !important; }
@@ -8079,7 +8086,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     <!-- ===== Tab: Zadatki ===== -->
                     <div id="tab-profil-zadatki" style="display:none;">
-                        <div style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
+                        <div id="zadatki-saldo-card" style="background:linear-gradient(180deg,#fffafc 0%,#fff7fa 100%); border:1px solid #f3e6eb; border-radius:18px; padding:18px 20px; margin-bottom:14px; display:flex; align-items:center; justify-content:space-between;">
                             <div>
                                 <div style="font-size:13px; color:#7b8091; margin-bottom:4px;">Dostępne środki</div>
                                 <div id="wallet-balance-zadatki" style="font-size:24px; font-weight:800; color:#202534; letter-spacing:-.03em;">–</div>
