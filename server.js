@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1); // Hostinger używa reverse proxy — bez tego rate-limit nie działa poprawnie
-const { validateTenantAccess, initSessions } = require('./routes/sessions');
+const { validateTenantAccess, initSessions, touchSession } = require('./routes/sessions');
 
 // ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
 const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
@@ -395,6 +395,15 @@ const PUBLIC_PATHS = [
 ];
 
 app.use('/api', (req, res, next) => {
+  // Sesja jest "sliding" — KAŻDE żądanie z poprawnym tokenem przedłuża jej ważność (8h od
+  // ostatniej aktywności, nie od logowania). Celowo PRZED skipem poniżej: router kompatybilności
+  // (req.path === '/') obsługuje większość akcji w aplikacji (add_sale, get_clients itd.) i był
+  // dotąd całkiem pomijany przez ten middleware — bez tego touch() staff pracujący nieprzerwanie
+  // dłużej niż 8h i tak dostawałby "Sesja wygasła" przy akcjach, które faktycznie sprawdzają
+  // token (np. podgląd PDF w profilu klienta), mimo ciągłej aktywności w reszcie systemu.
+  const tokenAktywnosci = req.headers['x-session-token'];
+  if (tokenAktywnosci) touchSession(tokenAktywnosci);
+
   // Pomiń publiczne endpointy, panel Magdy, admina i router kompatybilności (req.path = '/')
   if (
     req.path === '/' ||

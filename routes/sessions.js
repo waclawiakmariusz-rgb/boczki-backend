@@ -109,6 +109,34 @@ function deleteSession(token) {
   persistDelete(token);
 }
 
+// ─── SLIDING EXPIRY ────────────────────────────────────────────
+// Bez tego 8h liczyło się od LOGOWANIA, nie od ostatniej aktywności — pracownik
+// pracujący nieprzerwanie dłużej niż 8h dostawał "Sesja wygasła" przy akcjach,
+// które faktycznie sprawdzają token (np. podgląd PDF w profilu klienta), mimo że
+// cały czas aktywnie korzystał z systemu. Ten sam wzorzec już działa dla sesji
+// billing (routes/billing.js) i admina (routes/admin.js) — tu brakowało go dla
+// zwykłych pracowników. Zapis do bazy jest throttlowany, żeby dziesiątki
+// requestów na minutę nie zasypywały bazy identycznymi UPDATE-ami.
+const TOUCH_PERSIST_THROTTLE_MS = 10 * 60 * 1000; // zapisuj przedłużenie do bazy co najwyżej raz na 10 min
+
+function touchSession(token) {
+  if (!token) return;
+  const s = sessions.get(token);
+  if (!s) return; // brak sesji albo już wygasła — getSession() i tak to obsłuży
+  const now = Date.now();
+  if (now > s.expires) return;
+  s.expires = now + SESSION_TTL;
+  if (!s._lastPersist || now - s._lastPersist > TOUCH_PERSIST_THROTTLE_MS) {
+    s._lastPersist = now;
+    if (_db) {
+      _db.query('UPDATE `Sesje` SET `expires` = FROM_UNIXTIME(?) WHERE `token` = ?',
+        [Math.floor(s.expires / 1000), token],
+        (err) => { if (err) console.error('[sessions touch persist]', err.message); }
+      );
+    }
+  }
+}
+
 // Sprawdź czy token pasuje do żądanego tenant_id
 // Zwraca: { valid: true, session } lub { valid: false, reason: 'expired'|'mismatch'|'missing' }
 function validateTenantAccess(token, tenant_id) {
@@ -241,6 +269,7 @@ module.exports = {
   createSession,
   getSession,
   deleteSession,
+  touchSession,
   validateTenantAccess,
   rateLimitLogin,
   rateLimitPin,
