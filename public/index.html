@@ -7076,7 +7076,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="historia" class="section">
                 <div class="header"><h1>Historia Sprzedaży</h1><button onclick="pobierzHistorie()" class="btn-primary" style="width:auto;">Odśwież</button></div>
                 <div class="card">
-                    <input type="text" id="historia-search" placeholder="Szukaj klienta, zabiegu, sprzedawcy..." onkeyup="_db('hist',()=>renderHistoriaTable(1))" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
+                    <input type="text" id="historia-search" placeholder="Szukaj klienta, zabiegu, sprzedawcy, komentarza..." onkeyup="_db('hist',()=>renderHistoriaTable(1))" style="width:100%; padding:10px; margin-bottom:15px; border:1px solid #ddd; border-radius:8px;">
                     <div class="table-container">
                         <table style="width:100%">
                             <thead><tr><th>Data</th><th>Klient</th><th>Zabieg / Produkt</th><th>Sprzedawca</th><th>Kwota</th><th>Komentarz</th></tr></thead>
@@ -17199,11 +17199,12 @@ function zamknijPopupAwaryjny() {
         function renderHistoriaTable(page) {
     const filter = document.getElementById('historia-search').value.toLowerCase();
     
-    // Filtrowanie (po staremu)
-    const filteredData = historiaDane.filter(r => 
-        String(r.klient).toLowerCase().includes(filter) || 
+    // Filtrowanie — też po komentarzu (np. żeby łatwo podliczyć sprzedane zdrapki po słowie w komentarzu)
+    const filteredData = historiaDane.filter(r =>
+        String(r.klient).toLowerCase().includes(filter) ||
         String(r.zabieg).toLowerCase().includes(filter) ||
-        String(r.sprzedawca).toLowerCase().includes(filter)
+        String(r.sprzedawca).toLowerCase().includes(filter) ||
+        String(r.komentarz || '').toLowerCase().includes(filter)
     );
 
     const tbody = document.getElementById('historia-list');
