@@ -31180,8 +31180,49 @@ function otworzDokumentPdf(baseUrl, ev) {
   const tenant_id = localStorage.getItem('boczki_tenant_id') || '';
   const session_token = localStorage.getItem('boczki_session_token') || '';
   const sep = baseUrl.includes('?') ? '&' : '?';
-  const fullUrl = `${baseUrl}${sep}tenant_id=${encodeURIComponent(tenant_id)}&session_token=${encodeURIComponent(session_token)}`;
-  window.open(fullUrl, '_blank', 'noopener');
+  const fullUrl = `${baseUrl}${sep}tenant_id=${encodeURIComponent(tenant_id)}`;
+
+  const bladDokumentu = (msg) => {
+    if (typeof pokazPowiadomienie === 'function') pokazPowiadomienie('error', 'Nie udało się otworzyć dokumentu', msg);
+    else alert(msg);
+  };
+
+  // Kartę otwieramy OD RAZU, synchronicznie w handlerze kliknięcia — inaczej przeglądarka
+  // zablokuje ją jako popup, bo sprawdzenie sesji poniżej jest asynchroniczne.
+  const okno = window.open('', '_blank', 'noopener');
+
+  // XMLHttpRequest (nie fetch!) — window.fetch jest w tej aplikacji podmienione globalnym
+  // wrapperem, który każdą odpowiedź czyta jako tekst i próbuje sparsować jako JSON;
+  // dla binarnego PDF-a zwróciłby uszkodzone dane. XHR omija ten wrapper.
+  const xhr = new XMLHttpRequest();
+  xhr.open('GET', fullUrl, true);
+  if (session_token) xhr.setRequestHeader('x-session-token', session_token);
+  xhr.responseType = 'blob';
+  xhr.onload = function () {
+    const typ = xhr.getResponseHeader('Content-Type') || '';
+    if (xhr.status === 200 && typ.includes('pdf')) {
+      const blobUrl = URL.createObjectURL(xhr.response);
+      if (okno) okno.location.href = blobUrl;
+      else window.open(blobUrl, '_blank', 'noopener'); // popup zablokowany — spróbuj jeszcze raz
+      return;
+    }
+    // Serwer zwrócił JSON zamiast pliku — najczęściej wygasła sesja (dawniej: czarna
+    // strona z surowym {"status":"error",...}). Zamykamy pustą kartę i pokazujemy toast.
+    if (okno) okno.close();
+    const reader = new FileReader();
+    reader.onload = function () {
+      let msg = 'Nie udało się otworzyć dokumentu.';
+      try { msg = JSON.parse(reader.result).message || msg; } catch (e) {}
+      bladDokumentu(msg);
+    };
+    reader.onerror = function () { bladDokumentu('Nie udało się otworzyć dokumentu.'); };
+    reader.readAsText(xhr.response);
+  };
+  xhr.onerror = function () {
+    if (okno) okno.close();
+    bladDokumentu('Brak połączenia z serwerem — sprawdź internet i spróbuj ponownie.');
+  };
+  xhr.send();
   return false;
 }
 
