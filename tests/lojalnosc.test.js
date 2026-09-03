@@ -592,6 +592,16 @@ describe('POST /api/klub/aktywuj', () => {
             .send({ token: token(), pin: '', zgoda: true });
         expect(res.body.status).toBe('error');
     });
+
+    test('aktywacja zamyka wiszący wniosek o konto/reset — inaczej Pulpit dalej pokazuje "czeka na aktywację" mimo aktywnego konta', async () => {
+        const db = mockDb(...INIT, KLIENT_OK, { rows: { affectedRows: 1 } });
+        const res = await request(buildApp(db)).post('/api/klub/aktywuj')
+            .send({ token: token(), pin: '1234', zgoda: true });
+        expect(res.body.status).toBe('success');
+        const zamkniecie = db.query.mock.calls.find(c => /UPDATE Lojalnosc_Wnioski SET status = 'AKTYWOWANE'/.test(c[0]));
+        expect(zamkniecie).toBeTruthy();
+        expect(zamkniecie[1]).toEqual(['t-klub-a', '42']);
+    });
 });
 
 // ─── POST /klub/login (wspólna tożsamość: numer = jedna tożsamość, wiele salonów) ───
@@ -1789,6 +1799,12 @@ describe('Kod aktywacyjny od recepcji', () => {
         const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]));
         expect(bcrypt.compareSync('1234', ins[1][3])).toBe(true);
         expect(db.query.mock.calls.some(c => /Lojalnosc_Kody SET status = 'UZYTY'/.test(c[0]))).toBe(true);
+        // Aktywacja "przy ladzie" kodem od recepcji też musi zamknąć wiszący wniosek —
+        // to dokładnie ten scenariusz ze zgłoszenia: klientka aktywowała konto na miejscu,
+        // a Pulpit i tak dalej pokazywał "czeka na aktywację".
+        const zamkniecie = db.query.mock.calls.find(c => /UPDATE Lojalnosc_Wnioski SET status = 'AKTYWOWANE'/.test(c[0]));
+        expect(zamkniecie).toBeTruthy();
+        expect(zamkniecie[1]).toEqual(['t-kod', '42']);
     });
 
     test('zły kod → odmowa i licznik prób rośnie; konto nie powstaje', async () => {

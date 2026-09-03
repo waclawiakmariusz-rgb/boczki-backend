@@ -2498,6 +2498,7 @@ module.exports = (db) => {
          ON DUPLICATE KEY UPDATE telefon = VALUES(telefon), pin_hash = VALUES(pin_hash), status = 'AKTYWNE', zgoda_regulamin_at = NOW()`,
         [p.t, p.k, tel, hash]
       );
+      await zamknijWnioskiPoAktywacji(p.t, p.k);
       zapiszLog(p.t, 'KLUB AKTYWACJA KONTA', 'Klient (apka)', `Klient ${p.k} (${klient.imie_nazwisko || ''}) aktywował konto Klubu${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
       const session = makeKlubToken({ t: p.t, k: p.k, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
       return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
@@ -2553,6 +2554,7 @@ module.exports = (db) => {
         [trafiony.tenant_id, String(trafiony.id_klienta), tel, hash]
       );
       await q(`UPDATE Lojalnosc_Kody SET status = 'UZYTY' WHERE id = ?`, [trafiony.id]).catch(() => {});
+      await zamknijWnioskiPoAktywacji(trafiony.tenant_id, String(trafiony.id_klienta));
       zapiszLog(trafiony.tenant_id, 'KLUB AKTYWACJA KODEM', 'Klient (apka)', `Klient ${trafiony.id_klienta}${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
       const session = makeKlubToken({ t: trafiony.tenant_id, k: String(trafiony.id_klienta), typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
       return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
@@ -2583,6 +2585,19 @@ module.exports = (db) => {
       });
     }
     return out;
+  }
+
+  // Zamyka wiszące wnioski (nowe konto / reset PIN-u) dla klienta, który właśnie sam
+  // aktywował konto — DOWOLNĄ ścieżką (link z SMS-a, kod od recepcji). Bez tego wniosek
+  // zostawał na zawsze status='NOWY': klientka miała już aktywne konto, a Pulpit dalej
+  // pokazywał "ktoś czeka na aktywację", zmuszając recepcję do ręcznego odklikania
+  // "Przygotuj wiadomość" tylko po to, żeby zgłoszenie zniknęło z listy.
+  async function zamknijWnioskiPoAktywacji(tenant, idKlienta) {
+    await q(
+      `UPDATE Lojalnosc_Wnioski SET status = 'AKTYWOWANE', obsluzyl = 'System (aktywacja)', obsluzono_at = NOW()
+        WHERE tenant_id = ? AND id_klienta = ? AND status = 'NOWY'`,
+      [tenant, idKlienta]
+    ).catch(() => {}); // nigdy nie blokuje samej aktywacji konta
   }
 
   // PIN do odziedziczenia: gdy numer ma już PIN w apce (inny salon), a w TYM salonie
