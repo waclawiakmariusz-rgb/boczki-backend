@@ -15552,7 +15552,8 @@ function dsPrzywrocWszystkie() {
 // więc najpierw przełączamy widok, potem czekamy aż wczyta się kartoteka).
 function dsProfil(id, nazwa) {
     const otworz = (realId) => {
-        pokaz('klient-profil', null); // ładuje listę klientów (zaladujKlientowDoKartoteki)
+        pokaz('klient-profil', null); // ładuje listę klientów (zaladujKlientowDoKartoteki) i czyści adres powrotny
+        window.profilPowrotSekcja = 'do-sprawdzenia'; // "Wróć" z profilu ma trafić tu, nie na listę klientów
         let pozostalo = 20;
         const proba = () => {
             const gotowe = window.wszyscyKlienciDane && window.wszyscyKlienciDane.find(k => k.id == realId);
@@ -16395,6 +16396,14 @@ function segregujHistorie(klient) {
 }
 
 function zamknijProfilKlienta() {
+    // Wejście z innej sekcji (np. "Do sprawdzenia") ustawia adres powrotny — "Wróć"
+    // ma trafić tam, skąd użytkownik przyszedł, a nie zawsze na listę klientów.
+    if (window.profilPowrotSekcja) {
+        const cel = window.profilPowrotSekcja;
+        window.profilPowrotSekcja = null;
+        pokaz(cel, null);
+        return;
+    }
     document.getElementById('widok-szczegolow-klienta').style.display = 'none';
     document.getElementById('widok-listy-klientow').style.display = 'block';
 }
@@ -16536,6 +16545,7 @@ function pokaz(id, b) {
         if (widokListy) widokListy.style.display = 'block';
         if (widokProfilu) widokProfilu.style.display = 'none';
         zaladujKlientowDoKartoteki();
+        window.profilPowrotSekcja = null; // domyślnie "Wróć" z profilu ma iść na listę klientów (nadpisuje np. dsProfil zaraz po tym wywołaniu)
     }
     if (id === 'awaryjna-zmiana') pobierzAwaryjneTransakcje();
 	//if (id == 'admin') zaladujModulAdmina();
@@ -16664,6 +16674,7 @@ function pokaz(id, b) {
         if (widokListy) widokListy.style.display = 'block';
         if (widokProfilu) widokProfilu.style.display = 'none';
         zaladujKlientowDoKartoteki();
+        window.profilPowrotSekcja = null; // domyślnie "Wróć" z profilu ma iść na listę klientów (nadpisuje np. dsProfil zaraz po tym wywołaniu)
     }
     if (id === 'awaryjna-zmiana') pobierzAwaryjneTransakcje();
     if (id === 'leady' && typeof leady_init === 'function') leady_init();
@@ -16928,6 +16939,7 @@ function pokaz(id, b) {
         if (widokListy) widokListy.style.display = 'block';
         if (widokProfilu) widokProfilu.style.display = 'none';
         zaladujKlientowDoKartoteki();
+        window.profilPowrotSekcja = null; // domyślnie "Wróć" z profilu ma iść na listę klientów (nadpisuje np. dsProfil zaraz po tym wywołaniu)
     }
     if (id === 'awaryjna-zmiana') pobierzAwaryjneTransakcje();
     if (id === 'leady' && typeof leady_init === 'function') leady_init();
