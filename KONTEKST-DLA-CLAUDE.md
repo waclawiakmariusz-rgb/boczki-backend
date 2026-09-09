@@ -167,6 +167,13 @@ pierwszym wierszu**, puste tabele nie błądzą, więc błąd wychodzi długo po
 - Nigdy nie pushuj na `dev` i `main` „przy okazji" w jednym ruchu. Synchronizacja gałęzi
   to osobna decyzja użytkownika.
 - `--force` na `main`: tylko po jawnej zgodzie i po utworzeniu tagu zabezpieczającego.
+- **Numer wersji na Pulpicie** (od 2026-09-09, decyzja użytkownika) — mały, wyciszony napis
+  „Estelio · wersja X.Y" na samym dole strony Pulpitu (klasa `.ds-wersja`, `index.html`,
+  szukaj `<!-- Numer wersji`). Cel: użytkownik dzwoni do recepcji, prosi o odczytanie numeru
+  z dołu Pulpitu, i tak sprawdza czy dana stacja ma świeżą wersję po wdrożeniu (bez zgadywania
+  po cache przeglądarki). **Podbijaj ten numer przy KAŻDYM pushu na `main`** (mały bump, np.
+  1.0→1.1; większa zmiana funkcjonalna → bump części całkowitej). Widoczny wyłącznie na
+  Pulpicie, nigdzie indziej w aplikacji.
 
 ## Deployment na produkcję
 
