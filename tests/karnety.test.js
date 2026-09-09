@@ -136,6 +136,21 @@ describe('add_multi_sale — ważność liczy się mimo rabatu', () => {
         const q = findQuery(db, 'SELECT typ_zabiegu, waznosc_dni FROM Uslugi');
         expect(q.params).toContain('10x');
     });
+
+    // Regresja 2026-09-09: data_sprzedazy szła jako obiekt Date z Node (parametr `?`) —
+    // mysql2 serializuje go wg strefy PROCESU Node (na serwerze: UTC), z pominięciem
+    // `SET time_zone` ustawionego na połączeniu przez db-strefa.js — Podsumowanie Dnia
+    // pokazywało sprzedaż ~2h wcześniej niż zadatki (te przez SQL NOW() miały dobrą godzinę).
+    test('data_sprzedazy zapisywana przez SQL NOW(), nie jako obiekt Date z Node', async () => {
+        const db = mockDbAlways([{ typ_zabiegu: 'ciało', waznosc_dni: 90 }]);
+        await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'add_multi_sale', tenant_id: TENANT, sprzedawca: ['Anna'], klient: 'X', id_klienta: '1',
+            pozycje: [{ typ: 'Zabieg', kategoria: 'Endermologia Infinity', wariant: '10x', kwota: '600', platnosc: 'Karta' }],
+        });
+        const ins = findQuery(db, 'INSERT INTO Sprzedaz');
+        expect(ins.sql).toMatch(/NOW\(\)/);
+        expect(ins.params.some(p => p instanceof Date)).toBe(false);
+    });
 });
 
 // ─── extend_karnet / close_karnet / reopen_karnet ─────────────

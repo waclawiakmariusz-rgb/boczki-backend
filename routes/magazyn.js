@@ -152,11 +152,13 @@ module.exports = (db) => {
         min = parseNumOpt(d.min, 0);
       } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
-      const now = new Date();
-      const id = now.getTime().toString();
+      const id = Date.now().toString();
+      // data_dodania przez SQL NOW() — obiekt Date z Node przekazany jako parametr wchodziłby
+      // ze złą godziną (mysql2 serializuje go wg strefy PROCESU Node, z pominięciem
+      // `SET time_zone` na połączeniu ustawionego przez db-strefa.js).
       db.query(
-        `INSERT INTO Magazyn (id, tenant_id, nazwa_produktu, typ, ilosc, min, jednostka, data_waznosci, cena_netto, cena_brutto, kategoria, kto_dodal, data_dodania) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [id, tenant_id, d.nazwa, d.typ || '', ilosc, min, d.jednostka || 'szt.', d.waznosc, netto, brutto, d.kategoria || '', d.pracownik, now],
+        `INSERT INTO Magazyn (id, tenant_id, nazwa_produktu, typ, ilosc, min, jednostka, data_waznosci, cena_netto, cena_brutto, kategoria, kto_dodal, data_dodania) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [id, tenant_id, d.nazwa, d.typ || '', ilosc, min, d.jednostka || 'szt.', d.waznosc, netto, brutto, d.kategoria || '', d.pracownik],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'PRZYJĘCIE TOWARU', d.pracownik, `${d.nazwa} (${d.ilosc} szt.) [${d.kategoria || ''}]`);

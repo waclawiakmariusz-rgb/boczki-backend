@@ -800,14 +800,15 @@ module.exports = (db) => {
 
                       if (saldo <= 0.01) return finalize();
 
-                      const dataTeraz = new Date();
                       const newZadatekId = randomUUID();
 
                       if (zadatek_action === 'zwroc') {
-                        // Dopisz WYPŁATĘ równą saldu — zeruje saldo
+                        // Dopisz WYPŁATĘ równą saldu — zeruje saldo. data_wplaty przez SQL NOW()
+                        // (obiekt Date z Node wszedłby ze złą godziną — mysql2 serializuje go
+                        // wg strefy PROCESU Node, z pominięciem `SET time_zone` z db-strefa.js).
                         db.query(
-                          `INSERT INTO Zadatki (id, tenant_id, data_wplaty, klient, id_klienta, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, ?, ?, ?, 'WYPŁATA', ?, 'System', 'Zwrot przy anonimizacji RODO', 'AKTYWNY', ?)`,
-                          [newZadatekId, tenant_id, dataTeraz, noweImie, id_klienta, saldo, kto],
+                          `INSERT INTO Zadatki (id, tenant_id, data_wplaty, klient, id_klienta, typ, kwota, metoda, cel, status, pracownicy) VALUES (?, ?, NOW(), ?, ?, 'WYPŁATA', ?, 'System', 'Zwrot przy anonimizacji RODO', 'AKTYWNY', ?)`,
+                          [newZadatekId, tenant_id, noweImie, id_klienta, saldo, kto],
                           () => finalize()
                         );
                       } else if (zadatek_action === 'przepadl') {

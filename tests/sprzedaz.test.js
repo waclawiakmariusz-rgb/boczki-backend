@@ -34,6 +34,18 @@ describe('POST /api/sprzedaz — add_sale (Zabieg)', () => {
         expect(res.body.status).toBe('success');
     });
 
+    // Regresja 2026-09-09: data_sprzedazy szła jako obiekt Date z Node (parametr `?`) —
+    // mysql2 serializuje go wg strefy PROCESU Node (na serwerze: UTC), z pominięciem
+    // `SET time_zone` ustawionego na połączeniu przez db-strefa.js. Sprzedaż wchodziła
+    // z godziną ~2h za wcześnie, mimo że Zadatki (przez SQL NOW()) miały już dobrą godzinę.
+    test('data_sprzedazy zapisywana przez SQL NOW(), nie jako obiekt Date z Node', async () => {
+        const db = mockDbAlways({ affectedRows: 1 });
+        await request(buildApp(db)).post('/api/sprzedaz').send(validPayload);
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Sprzedaz/.test(c[0]));
+        expect(ins[0]).toMatch(/NOW\(\)/);
+        expect(ins[1].some(p => p instanceof Date)).toBe(false);
+    });
+
     test('akceptuje kwotę z przecinkiem (249,99)', async () => {
         const db = mockDbAlways({ affectedRows: 1 });
         const res = await request(buildApp(db)).post('/api/sprzedaz').send({ ...validPayload, kwota: '249,99' });

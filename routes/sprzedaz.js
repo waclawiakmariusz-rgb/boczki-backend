@@ -460,8 +460,12 @@ module.exports = (db) => {
         // Dla Kosmetyków NULL (osobny box w profilu).
         const insertWithTyp = (typZab, dataWaznosci) => {
           db.query(
-            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
-            [uniqueId, tenant_id, now, d.klient, zabiegNazwaFinal, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab, kategoriaProduktuAdd, dataWaznosci || null],
+            // data_sprzedazy przez SQL NOW() (nie przez zmienną `now` z Node) — mysql2 serializuje
+            // obiekty Date wg strefy czasowej PROCESU Node (na serwerze: UTC), z pominięciem
+            // `SET time_zone` ustawionego na połączeniu (db-strefa.js) — sprzedaż wchodziła
+            // z godziną ~2h za wcześnie, mimo że ten sam fix już dawno działa dla Zadatków (NOW()).
+            `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, data_waznosci) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
+            [uniqueId, tenant_id, d.klient, zabiegNazwaFinal, sprzedawca, _kwotaAdd, d.komentarz || '', d.szczegoly || '', d.platnosc || '', d.id_klienta || '', d.pracownik || '', typZab, kategoriaProduktuAdd, dataWaznosci || null],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
               zapiszLog(tenant_id, 'SPRZEDAŻ', sprzedawca, `${d.klient} | ${zabiegNazwaFinal} | ${d.kwota} zł`);
@@ -569,8 +573,9 @@ module.exports = (db) => {
           const part = d.split_breakdown[si++];
           const splitId = uniqueIdBase + '-SPLIT-' + si;
           db.query(
-            `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, ?, ?, ?, ?, 'AKTYWNY')`,
-            [splitId, tenant_id, now, d.klient || '', part.method || '', parseFloat(part.amount) || 0],
+            // data_platnosci przez NOW() — patrz komentarz przy INSERT INTO Sprzedaz wyżej
+            `INSERT INTO Platnosci (id, tenant_id, data_platnosci, klient, metoda_platnosci, kwota, status) VALUES (?, ?, NOW(), ?, ?, ?, 'AKTYWNY')`,
+            [splitId, tenant_id, d.klient || '', part.method || '', parseFloat(part.amount) || 0],
             nextSplit
           );
         }
@@ -636,8 +641,9 @@ module.exports = (db) => {
           const doInsertPoz = () => {
             const insertWithTyp = (typZab, dataWaznosci) => {
               db.query(
-                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci, grupa_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [uniqueId, tenant_id, now, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null, poz.grupaId || null],
+                // data_sprzedazy przez NOW() — patrz komentarz przy pierwszym INSERT INTO Sprzedaz w tym pliku
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, id_zadatku, typ_zabiegu, kategoria_produktu, data_waznosci, grupa_id) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, d.klient, zapisKategoria, sprzedawcyStr, _kwotaPoz, poz.komentarz || '', zapisSzczegoly, poz.platnosc || '', d.id_klienta || '', d.pracownik || '', idZadatkuLog, typZab, kategoriaProduktu, dataWaznosci || null, poz.grupaId || null],
                 (errIns) => {
                   if (!errIns) {
                     const lojOpis = zapisKategoria;
@@ -1066,8 +1072,9 @@ module.exports = (db) => {
               const now = new Date();
               const uniqueId = now.toISOString().replace(/[-:.TZ]/g, '').slice(0, 15);
               db.query(
-                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, zwrot_do_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
-                [uniqueId, tenant_id, now, orig.klient, 'ZWROT: ' + orig.zabieg, pracownik, -_kwotaZwrotu, powod, szczegolyZwrotu, metoda, orig.id_klienta || '', pracownik, orig.typ_zabiegu || null, orig.kategoria_produktu || null, orig.id],
+                // data_sprzedazy przez NOW() — patrz komentarz przy pierwszym INSERT INTO Sprzedaz w tym pliku
+                `INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, status, platnosc, id_klienta, pracownik_dodajacy, typ_zabiegu, kategoria_produktu, zwrot_do_id) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?, ?)`,
+                [uniqueId, tenant_id, orig.klient, 'ZWROT: ' + orig.zabieg, pracownik, -_kwotaZwrotu, powod, szczegolyZwrotu, metoda, orig.id_klienta || '', pracownik, orig.typ_zabiegu || null, orig.kategoria_produktu || null, orig.id],
                 (err3) => {
                   if (err3) return res.json({ status: 'error', message: err3.message });
                   zapiszLog(tenant_id, 'ZWROT SPRZEDAŻY', pracownik, `Klient: ${orig.klient} | ${orig.zabieg} | Zwrot: ${_kwotaZwrotu.toFixed(2)} zł (${metoda}) | Powód: ${powod} | Do zakupu ID: ${orig.id}${przywrocStan ? ` | +${iloscZwrotu} szt na stan` : ''}`);

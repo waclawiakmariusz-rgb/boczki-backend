@@ -169,12 +169,14 @@ module.exports = (db) => {
       if (!klientVal) return res.json({ status: 'error', message: 'Podaj imię i nazwisko klienta.' });
       if (!d.data_konsultacji || isNaN(new Date(d.data_konsultacji).getTime())) return res.json({ status: 'error', message: 'Nieprawidłowa data konsultacji.' });
       if (safeNum(d.kwota_pakiet) < 0 || safeNum(d.kwota_reklama) < 0 || safeNum(d.kwota_upsell) < 0) return res.json({ status: 'error', message: 'Kwoty nie mogą być ujemne.' });
-      const now = new Date();
       // randomUUID zamiast timestampu z sekundową rozdzielczością (kolizje przy 2 zapisach w tej samej sekundzie)
       const uniqueID = randomUUID();
+      // data_wpisu przez SQL NOW() — obiekt Date z Node przekazany jako parametr wchodziłby
+      // ze złą godziną (mysql2 serializuje go wg strefy PROCESU Node, z pominięciem
+      // `SET time_zone` na połączeniu ustawionego przez db-strefa.js).
       db.query(
-        `INSERT INTO Wyniki_konsultacja (id, tenant_id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [uniqueID, tenant_id, now, d.data_konsultacji || null, d.zrodlo || '', d.obszar_reklamy || '', d.klient || '', d.telefon || '', d.zabiegi_cialo || '', d.zabiegi_twarz || '', safeNum(d.kwota_reklama), safeNum(d.kwota_pakiet), safeNum(d.kwota_upsell), d.kto || '', d.uwagi || '', d.typ_akcji || ''],
+        `INSERT INTO Wyniki_konsultacja (id, tenant_id, data_wpisu, data_konsultacji, zrodlo, obszar, klient, telefon, zabiegi_cialo, zabiegi_twarz, kwota_reklama, kwota_pakiet, upsell, kto_wykonal, uwagi, typ_akcji) VALUES (?, ?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [uniqueID, tenant_id, d.data_konsultacji || null, d.zrodlo || '', d.obszar_reklamy || '', d.klient || '', d.telefon || '', d.zabiegi_cialo || '', d.zabiegi_twarz || '', safeNum(d.kwota_reklama), safeNum(d.kwota_pakiet), safeNum(d.kwota_upsell), d.kto || '', d.uwagi || '', d.typ_akcji || ''],
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'KONSULTACJA NOWA', d.user_log || '', `Dodano: ${d.klient}, Kto: ${d.kto}, Pakiet: ${d.kwota_pakiet} zł`);
