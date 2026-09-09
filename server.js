@@ -94,21 +94,27 @@ app.use(express.json({ limit: '1mb' }));
 // Redirect strony głównej na zamów
 app.get('/', (req, res) => res.redirect(301, '/zamow.html'));
 
-// Numer wersji na Pulpicie — samoczynnie z hasha commita tego wdrożenia, żeby nie trzeba
-// było ręcznie pamiętać o podbijaniu numeru przy każdym pushu na main (2026-09-09, prośba
-// użytkownika). Liczone RAZ przy starcie procesu (restart = nowe wdrożenie i tak wymagany).
-// Git może być niedostępny w środowisku hostingu — awaryjnie pokazujemy datę startu procesu.
+// Numer wersji na Pulpicie — samoczynnie z daty/godziny startu procesu + hasha commita
+// tego wdrożenia, żeby nie trzeba było ręcznie pamiętać o podbijaniu numeru przy każdym
+// pushu na main (2026-09-09, prośba użytkownika; format daty zamiast słowa "build" —
+// druga prośba tego samego dnia). Liczone RAZ przy starcie procesu (restart = nowe
+// wdrożenie i tak wymagany). Git może być niedostępny w środowisku hostingu — wtedy
+// zostaje sama data, bez hasha.
 function ustalWersjeAplikacji() {
+    const data = new Date().toLocaleString('pl-PL', {
+        timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    });
     try {
         const hash = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim();
-        return hash || 'dev';
+        return hash ? `${data} · ${hash}` : data;
     } catch (e) {
-        console.warn('[wersja] git niedostępny, pokazuję datę startu procesu:', e.message);
-        return new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+        console.warn('[wersja] git niedostępny, pokazuję samą datę startu procesu:', e.message);
+        return data;
     }
 }
 const WERSJA_APLIKACJI = ustalWersjeAplikacji();
-console.log('[wersja] Uruchomiono build:', WERSJA_APLIKACJI);
+console.log('[wersja] Uruchomiono:', WERSJA_APLIKACJI);
 
 // index.html czytany i podmieniany RAZ przy starcie (nie przy każdym żądaniu) —
 // spójne z resztą aplikacji: zmiana kodu i tak wymaga restartu, żeby zadziałać.
