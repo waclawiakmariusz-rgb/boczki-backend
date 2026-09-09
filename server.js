@@ -3,6 +3,8 @@ const express = require('express');
 const mysql = require('mysql2');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
+const { execSync } = require('child_process');
 const rateLimit = require('express-rate-limit');
 
 const app = express();
@@ -92,8 +94,29 @@ app.use(express.json({ limit: '1mb' }));
 // Redirect strony głównej na zamów
 app.get('/', (req, res) => res.redirect(301, '/zamow.html'));
 
+// Numer wersji na Pulpicie — samoczynnie z hasha commita tego wdrożenia, żeby nie trzeba
+// było ręcznie pamiętać o podbijaniu numeru przy każdym pushu na main (2026-09-09, prośba
+// użytkownika). Liczone RAZ przy starcie procesu (restart = nowe wdrożenie i tak wymagany).
+// Git może być niedostępny w środowisku hostingu — awaryjnie pokazujemy datę startu procesu.
+function ustalWersjeAplikacji() {
+    try {
+        const hash = execSync('git rev-parse --short HEAD', { cwd: __dirname }).toString().trim();
+        return hash || 'dev';
+    } catch (e) {
+        console.warn('[wersja] git niedostępny, pokazuję datę startu procesu:', e.message);
+        return new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw' });
+    }
+}
+const WERSJA_APLIKACJI = ustalWersjeAplikacji();
+console.log('[wersja] Uruchomiono build:', WERSJA_APLIKACJI);
+
+// index.html czytany i podmieniany RAZ przy starcie (nie przy każdym żądaniu) —
+// spójne z resztą aplikacji: zmiana kodu i tak wymaga restartu, żeby zadziałać.
+const INDEX_HTML_PATH = path.join(__dirname, 'public', 'index.html');
+let INDEX_HTML_CACHE = fs.readFileSync(INDEX_HTML_PATH, 'utf8').replaceAll('__WERSJA__', WERSJA_APLIKACJI);
+
 // /zaloguj — główna aplikacja
-app.get('/zaloguj', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+app.get('/zaloguj', (req, res) => res.type('html').send(INDEX_HTML_CACHE));
 // Stary URL /index.html → redirect na /zaloguj
 app.get('/index.html', (req, res) => res.redirect(301, '/zaloguj'));
 
@@ -721,7 +744,6 @@ process.on('unhandledRejection', (reason) => {
 // ==========================================
 // KATALOGI WYMAGANE PRZEZ APLIKACJĘ
 // ==========================================
-const fs   = require('fs');
 const UPLOADS_ROOT = process.env.UPLOADS_DIR || path.join(__dirname, 'uploads');
 if (!fs.existsSync(UPLOADS_ROOT)) {
     fs.mkdirSync(UPLOADS_ROOT, { recursive: true });
