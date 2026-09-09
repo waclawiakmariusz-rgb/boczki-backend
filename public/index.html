@@ -31203,7 +31203,14 @@ function otworzDokumentPdf(baseUrl, ev) {
 
   // Kartę otwieramy OD RAZU, synchronicznie w handlerze kliknięcia — inaczej przeglądarka
   // zablokuje ją jako popup, bo sprawdzenie sesji poniżej jest asynchroniczne.
-  const okno = window.open('', '_blank', 'noopener');
+  // CELOWO bez 'noopener' — z tą flagą window.open() zwraca null w wielu przeglądarkach
+  // (Firefox zawsze, Chrome często), więc zmienna `okno` była pusta, karta zostawała
+  // trwale pustą zakładką (nic jej nie potrafiło ustawić na PDF ani zamknąć), a próba
+  // otwarcia PDF-a asynchronicznie w callbacku XHR i tak leciała w blokadę popupów
+  // przeglądarki (window.open spoza bezpośredniego kliknięcia = zawsze blokowane).
+  // Bezpieczne bez noopener: ta karta ładuje WYŁĄCZNIE nasz własny blob: z PDF-em,
+  // nigdy obcej treści — nie ma czego bronić przed tabnabbingiem.
+  const okno = window.open('', '_blank');
 
   // XMLHttpRequest (nie fetch!) — window.fetch jest w tej aplikacji podmienione globalnym
   // wrapperem, który każdą odpowiedź czyta jako tekst i próbuje sparsować jako JSON;
@@ -31217,7 +31224,7 @@ function otworzDokumentPdf(baseUrl, ev) {
     if (xhr.status === 200 && typ.includes('pdf')) {
       const blobUrl = URL.createObjectURL(xhr.response);
       if (okno) okno.location.href = blobUrl;
-      else window.open(blobUrl, '_blank', 'noopener'); // popup zablokowany — spróbuj jeszcze raz
+      else window.open(blobUrl, '_blank'); // ostatnia deska ratunku — zwykle i tak zablokowane poza kliknięciem
       return;
     }
     // Serwer zwrócił JSON zamiast pliku — najczęściej wygasła sesja (dawniej: czarna
