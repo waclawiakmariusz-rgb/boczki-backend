@@ -21454,20 +21454,41 @@ function zapiszNowegoKlienta(e) {
     // Teraz można zapisać bez zgody!
 
     // --- INTELIGENTNA WERYFIKACJA (DUPLIKATY) ---
+    // Dwa niezależne sygnały: podobieństwo imienia/nazwiska (zdrobnienia, literówki, szyk)
+    // ORAZ dokładny numer telefonu (niezależnie od prefiksu kraju). Samo nazwisko potrafi
+    // nie złapać tej samej osoby zapisanej w zupełnie innej pisowni (np. raz po polsku,
+    // raz w innym alfabecie/transliteracji) — telefon jest wtedy dużo pewniejszym tropem.
     if (window.wszyscyKlienciDane) {
-        const duplikat = window.wszyscyKlienciDane.find(k => {
+        const ostrzezenia = [];
+
+        const duplikatNazwa = window.wszyscyKlienciDane.find(k => {
             const nazwaWBazie = (typeof k === 'object') ? k.nazwa : k;
             const wynik = czyToTenSamKlient(nazwa, nazwaWBazie);
             return wynik && wynik.status;
         });
+        if (duplikatNazwa) {
+            const nazwaDuplikatu = (typeof duplikatNazwa === 'object') ? duplikatNazwa.nazwa : duplikatNazwa;
+            ostrzezenia.push(`podobne imię i nazwisko: "${nazwaDuplikatu}"`);
+        }
 
-        if (duplikat) {
-            const nazwaDuplikatu = (typeof duplikat === 'object') ? duplikat.nazwa : duplikat;
-            if (!confirm(`⚠️ UWAGA! Podobny klient "${nazwaDuplikatu}" już istnieje.\nCzy na pewno chcesz utworzyć nową kartotekę?`)) {
+        const telNorm = normalizujTelefonDoPorownania(tel);
+        if (telNorm.length >= 7) { // krótsze/puste nie liczymy — zbyt duże ryzyko fałszywych trafień
+            const duplikatTel = window.wszyscyKlienciDane.find(k =>
+                k.telefon && normalizujTelefonDoPorownania(k.telefon) === telNorm
+                && k !== duplikatNazwa // nie duplikuj tego samego ostrzeżenia dwa razy
+            );
+            if (duplikatTel) {
+                ostrzezenia.push(`ten sam numer telefonu co: "${duplikatTel.nazwa}"`);
+            }
+        }
+
+        if (ostrzezenia.length) {
+            const tresc = ostrzezenia.map(o => '• ' + o).join('\n');
+            if (!confirm(`⚠️ UWAGA! Możliwy duplikat klienta:\n${tresc}\n\nCzy na pewno chcesz utworzyć nową kartotekę?`)) {
                 return;
             }
 			// ZAPISUJEMY FAKT ZIGNOROWANIA OSTRZEŻENIA
-            wymuszonyDuplikat = `(Zignorowano alert o duplikacie z: ${nazwaDuplikatu})`;
+            wymuszonyDuplikat = `(Zignorowano ostrzeżenie o duplikacie: ${ostrzezenia.join('; ')})`;
         }
     }
 
@@ -23626,6 +23647,13 @@ function zamienKolejnoscUI() {
 }
 
 
+
+// Normalizacja numeru telefonu do porównań — usuwa wszystko oprócz cyfr i bierze
+// ostatnie 9 z nich, więc "+48 500 123 456", "48500123456" i "500-123-456" to ten sam
+// numer (ten sam wzorzec co już działa w Klubie — routes/lojalnosc.js normalizujTelefon).
+function normalizujTelefonDoPorownania(t) {
+    return String(t || '').replace(/\D/g, '').slice(-9);
+}
 
 // 8. Główna funkcja porównująca dwie osoby (z obsługą zdrobnień)
 function czyToTenSamKlient(wpisane, wBazie) {
