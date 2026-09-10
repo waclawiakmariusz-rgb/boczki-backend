@@ -9716,6 +9716,7 @@ ANALIZA MANAGER
             <select id="an_ta-treatment" onchange="an_loadTreatmentAnalysis()" style="padding:10px; border-radius:8px; border:1px solid var(--primary); color: var(--primary); min-width: 250px;">
                 <option value="">-- Wybierz zabieg z listy --</option>
             </select>
+            <button onclick="eksportujPelnyRaportSprzedazy(this)" class="btn-primary" style="width:auto; background:#374151; border-radius:8px; padding:10px 16px;">📊 Pełny raport (CSV)</button>
         </div>
     </div>
 
@@ -17039,6 +17040,120 @@ function pokaz(id, b) {
     setTimeout(() => { if (typeof pokazBannerPlatnosci === 'function') pokazBannerPlatnosci(); }, 500);
     // Klienci pobiorą się automatycznie, gdy otworzy się zakładka 'sprzedaz'
 }
+
+        // --- PEŁNY RAPORT SPRZEDAŻOWY (CSV) — Analiza Zabiegu ---
+        // Prośba użytkownika: eksport WSZYSTKICH zabiegów (i kosmetyków/suplementów) z całej
+        // historii sprzedaży — kwoty, miesiące, sumy całościowe i cząstkowe — pod analizę
+        // w zewnętrznym AI. Dwie sekcje w jednym pliku: gotowy pivot zabieg×miesiąc (do
+        // szybkiego spojrzenia) + surowe transakcje (żeby AI mogło samo liczyć, czego zechce).
+        function csvPole(v) {
+            const s = String(v ?? '');
+            return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+        }
+        function csvWiersz(pola) { return pola.map(csvPole).join(';'); }
+
+        // Ta sama reguła co w Analizie Zabiegu (routes/analityka.js normalizeName) —
+        // "Botoks" i "Botoks Dopłata" to ten sam zabieg, inaczej pivot dublowałby wiersze.
+        function raportNormalizujNazwe(nazwa) {
+            return String(nazwa || 'Inne').trim().replace(/(?:\s|-)*dopłata$/i, '').trim();
+        }
+        function raportKategoria(zabiegNorm) {
+            const low = zabiegNorm.toLowerCase();
+            if (low.startsWith('suplement')) return 'Suplement';
+            if (low.startsWith('kosmetyk')) return 'Kosmetyk';
+            return 'Zabieg';
+        }
+
+        function eksportujPelnyRaportSprzedazy(btn) {
+            const staryTekst = btn ? btn.innerText : '';
+            if (btn) { btn.disabled = true; btn.innerText = '⏳ Generuję...'; }
+
+            fetch(API_URL + "?action=full_sales_history").then(r => r.json()).then(dane => {
+                if (btn) { btn.disabled = false; btn.innerText = staryTekst; }
+                if (!Array.isArray(dane) || !dane.length) { alert('Brak danych sprzedażowych do wyeksportowania.'); return; }
+
+                // Odrzucamy Mix z sum — rozbicie jest już policzone osobno w Płatnościach,
+                // liczenie Mix RAZEM Z rozbiciem podwoiłoby utarg (ten sam inwariant co
+                // w raportach dziennych: metoda/platnosc==='mix' pomijana z agregacji).
+                const pivot = {}; // klucz "Kategoria|Zabieg" -> { miesiace:{ "RRRR-MM":{suma,liczba} }, sumaCalk, liczbaCalk }
+                const miesiaceSet = new Set();
+
+                dane.forEach(r => {
+                    const dt = new Date(r.data);
+                    if (isNaN(dt.getTime())) return;
+                    const rokMiesiac = dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+                    miesiaceSet.add(rokMiesiac);
+
+                    const zabiegNorm = raportNormalizujNazwe(r.zabieg);
+                    const kategoria = raportKategoria(zabiegNorm);
+                    const nazwaCzysta = kategoria === 'Zabieg' ? zabiegNorm : zabiegNorm.replace(/^(kosmetyk|suplement)\s*[:-]?\s*/i, '').trim() || zabiegNorm;
+                    const klucz = kategoria + '|' + nazwaCzysta;
+
+                    const kwota = parseFloat(r.kwota) || 0;
+                    const jestMix = String(r.platnosc || '').toLowerCase() === 'mix';
+
+                    if (!pivot[klucz]) pivot[klucz] = { kategoria, nazwa: nazwaCzysta, miesiace: {}, sumaCalk: 0, liczbaCalk: 0 };
+                    const p = pivot[klucz];
+                    if (!p.miesiace[rokMiesiac]) p.miesiace[rokMiesiac] = { suma: 0, liczba: 0 };
+                    p.miesiace[rokMiesiac].liczba++;
+                    p.liczbaCalk++;
+                    if (!jestMix) { p.miesiace[rokMiesiac].suma += kwota; p.sumaCalk += kwota; }
+                });
+
+                const miesiace = Array.from(miesiaceSet).sort();
+                const wierszePivot = Object.values(pivot).sort((a, b) =>
+                    a.kategoria === b.kategoria ? b.sumaCalk - a.sumaCalk : a.kategoria.localeCompare(b.kategoria));
+
+                const linie = [];
+                linie.push(csvWiersz(['Raport sprzedażowy Estelio — wygenerowano ' + new Date().toLocaleString('pl-PL')]));
+                linie.push(csvWiersz(['Metodologia: kwoty z płatnością Mix pominięte w sumach (rozbicie liczone osobno w Płatnościach — inaczej utarg liczyłby się podwójnie). Zadatki/Portfel wliczone jako przychód w miesiącu realizacji zabiegu.']));
+                linie.push('');
+
+                linie.push(csvWiersz(['=== PODSUMOWANIE: zabieg x miesiąc (suma kwot w zł) ===']));
+                const naglowekMies = miesiace.map(m => {
+                    const [y, mm] = m.split('-');
+                    return mm + '.' + y;
+                });
+                linie.push(csvWiersz(['Kategoria', 'Zabieg', ...naglowekMies, 'SUMA', 'Liczba transakcji']));
+
+                const sumyMiesieczne = {}; miesiace.forEach(m => sumyMiesieczne[m] = 0);
+                let sumaCalkowita = 0, liczbaCalkowita = 0;
+                wierszePivot.forEach(p => {
+                    const komorki = miesiace.map(m => (p.miesiace[m] ? p.miesiace[m].suma.toFixed(2) : '0.00'));
+                    miesiace.forEach(m => { if (p.miesiace[m]) sumyMiesieczne[m] += p.miesiace[m].suma; });
+                    sumaCalkowita += p.sumaCalk; liczbaCalkowita += p.liczbaCalk;
+                    linie.push(csvWiersz([p.kategoria, p.nazwa, ...komorki, p.sumaCalk.toFixed(2), p.liczbaCalk]));
+                });
+                linie.push(csvWiersz(['', 'SUMA MIESIĘCZNA', ...miesiace.map(m => sumyMiesieczne[m].toFixed(2)), sumaCalkowita.toFixed(2), liczbaCalkowita]));
+                linie.push('');
+
+                linie.push(csvWiersz(['=== SZCZEGÓŁY WSZYSTKICH TRANSAKCJI (' + dane.length + ' pozycji) ===']));
+                linie.push(csvWiersz(['Data', 'Rok-Miesiąc', 'Kategoria', 'Zabieg', 'Klient', 'Sprzedawca', 'Płatność', 'Kwota', 'Komentarz']));
+                dane.forEach(r => {
+                    const dt = new Date(r.data);
+                    const rokMiesiac = isNaN(dt.getTime()) ? '' : dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0');
+                    const zabiegNorm = raportNormalizujNazwe(r.zabieg);
+                    const kategoria = raportKategoria(zabiegNorm);
+                    linie.push(csvWiersz([
+                        r.data || '', rokMiesiac, kategoria, r.zabieg || '', r.klient || '',
+                        r.sprzedawca || '', r.platnosc || '', (parseFloat(r.kwota) || 0).toFixed(2), r.komentarz || ''
+                    ]));
+                });
+
+                const blob = new Blob(['﻿' + linie.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'raport-sprzedazowy-estelio-' + new Date().toISOString().slice(0, 10) + '.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }).catch(err => {
+                if (btn) { btn.disabled = false; btn.innerText = staryTekst; }
+                alert('Błąd pobierania danych do raportu: ' + err);
+            });
+        }
 
         // --- OBSŁUGA HISTORII I KARTOTEKI ---
         function pobierzHistorie() {
