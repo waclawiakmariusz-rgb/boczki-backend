@@ -286,3 +286,47 @@ describe('manage_deposit — bon podarunkowy', () => {
         expect(res.body.status).toBe('error');
     });
 });
+
+// ─── Telefon zawsze normalizowany (bez prefiksu kraju) ────────
+// Zgłoszenie: telefony komórkowe potrafią same podstawić prefiks (+48) przy
+// autouzupełnianiu, a zapisany z prefiksem numer później nie zgadza się z tym,
+// który klientka podaje sama w apce Klubu (ta sama funkcja normalizujTelefon
+// tam już działa — patrz tests/lojalnosc.test.js).
+describe('Telefon w kartotece — normalizacja prefiksu', () => {
+    test('add_client: numer z prefiksem +48 zapisany jako gołe 9 cyfr', async () => {
+        const db = mockDbAlways({ affectedRows: 1 });
+        const res = await request(buildApp(db)).post('/api/klienci').send({
+            action: 'add_client', tenant_id: TENANT,
+            klient: 'Kowalska Maria', telefon: '+48 500 123 456', pracownik: 'Anna',
+        });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Klienci/.test(c[0]));
+        expect(ins[1]).toContain('500123456');
+    });
+
+    test('add_client: numer z prefiksem 0048 zapisany jako gołe 9 cyfr', async () => {
+        const db = mockDbAlways({ affectedRows: 1 });
+        const res = await request(buildApp(db)).post('/api/klienci').send({
+            action: 'add_client', tenant_id: TENANT,
+            klient: 'Nowak Ewa', telefon: '0048500123456', pracownik: 'Anna',
+        });
+        expect(res.body.status).toBe('success');
+        const ins = db.query.mock.calls.find(c => /INSERT INTO Klienci/.test(c[0]));
+        expect(ins[1]).toContain('500123456');
+    });
+
+    test('edit_client_data: nowy numer z prefiksem zapisany bez niego', async () => {
+        const db = mockDb(
+            { rows: [] }, { rows: [] }, // 2 CREATE TABLE przy starcie fabryki klienci.js
+            { rows: [{ id_klienta: '1001', imie_nazwisko: 'Kowalska Maria', telefon: '500123456', notatki: '' }] },
+            { rows: { affectedRows: 1 } },
+        );
+        const res = await request(buildApp(db)).post('/api/klienci').send({
+            action: 'edit_client_data', tenant_id: TENANT,
+            id: '1001', nowa_nazwa: 'Kowalska Maria', nowy_telefon: '+48 500 999 888', pracownik: 'Anna',
+        });
+        expect(res.body.status).toBe('success');
+        const upd = db.query.mock.calls.find(c => /UPDATE Klienci SET/.test(c[0]));
+        expect(upd[1]).toContain('500999888');
+    });
+});

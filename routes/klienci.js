@@ -6,7 +6,7 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
-const { makeLojalnosc } = require('./lojalnosc');
+const { makeLojalnosc, normalizujTelefon } = require('./lojalnosc');
 const { parseKwota, parseNumOpt } = require('./utils');
 
 module.exports = (db) => {
@@ -376,9 +376,14 @@ module.exports = (db) => {
       generujNoweIdKlienta(tenant_id, (noweId) => {
         const id = randomUUID();
         const tekstZgody = d.zgoda_regulamin ? 'Regulamin + RODO' : 'BRAK (Do uzupełnienia)';
+        // Telefon zawsze przez normalizujTelefon (ten sam wzorzec co Klub) — telefony
+        // komórkowe potrafią same podstawić prefiks kraju (+48) przy autouzupełnianiu,
+        // a zapisany z prefiksem numer później nie zgadza się z tym, który klientka
+        // podaje sama w apce Klubu. Kartoteka ma być zawsze "gołym" numerem.
+        const telefonCzysty = normalizujTelefon(d.telefon);
         db.query(
           `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)`,
-          [id, tenant_id, String(noweId), d.klient, d.telefon || '', tekstZgody, 'Dodano przez: ' + (d.pracownik || '')],
+          [id, tenant_id, String(noweId), d.klient, telefonCzysty, tekstZgody, 'Dodano przez: ' + (d.pracownik || '')],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
@@ -398,7 +403,7 @@ module.exports = (db) => {
                   (errRodo) => {
                     if (errRodo) console.error('[add_client] Rejestr_RODO INSERT failed:', errRodo.message);
 
-                    let opisLogu = `Nowy klient: ${d.klient} (ID: ${noweId}) [Tel: ${d.telefon || 'brak'}]`;
+                    let opisLogu = `Nowy klient: ${d.klient} (ID: ${noweId}) [Tel: ${telefonCzysty || 'brak'}]`;
                     if (d.info_duplikat && d.info_duplikat !== '') opisLogu += ` UWAGA: ${d.info_duplikat}`;
                     zapiszLog(tenant_id, 'DODANIE KLIENTA', d.pracownik, opisLogu);
                     return res.json({ status: 'success', message: `Dodano klienta: ${d.klient} (ID: ${noweId})`, new_id: noweId, new_name: d.klient });
@@ -447,13 +452,16 @@ module.exports = (db) => {
             noweNotatki = noweNotatki ? noweNotatki + '\n' + wpisLogu : wpisLogu;
             zmianyOpis.push(`Nazwa: "${row.imie_nazwisko}" -> "${d.nowa_nazwa}"`);
           }
-          if (d.nowy_telefon && String(row.telefon) !== String(d.nowy_telefon)) {
-            zmianyOpis.push(`Tel: "${row.telefon}" -> "${d.nowy_telefon}"`);
+          // Telefon zawsze przez normalizujTelefon (patrz komentarz w add_client) — inaczej
+          // prefiks kraju podstawiony automatycznie przez telefon staje się częścią kartoteki.
+          const nowyTelefonCzysty = d.nowy_telefon ? normalizujTelefon(d.nowy_telefon) : '';
+          if (nowyTelefonCzysty && String(row.telefon) !== nowyTelefonCzysty) {
+            zmianyOpis.push(`Tel: "${row.telefon}" -> "${nowyTelefonCzysty}"`);
           }
 
           db.query(
             `UPDATE Klienci SET imie_nazwisko = ?, telefon = ?, notatki = ? WHERE tenant_id = ? AND id_klienta = ?`,
-            [d.nowa_nazwa, d.nowy_telefon || row.telefon, noweNotatki, tenant_id, d.id],
+            [d.nowa_nazwa, nowyTelefonCzysty || row.telefon, noweNotatki, tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               if (zmianyOpis.length > 0) zapiszLog(tenant_id, 'EDYCJA DANYCH KLIENTA', d.pracownik || 'Admin', `ID ${d.id}: ${zmianyOpis.join(' | ')}`);
