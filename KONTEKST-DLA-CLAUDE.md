@@ -5,7 +5,8 @@ nazywa się od ŚCIEŻKI projektu, a konta Windows są różne (`aaell` na HP, `
 więc Claude na DELL startuje bez żadnej wiedzy o tym projekcie. Poniżej wszystko, co potrzebne,
 żeby pracować sensownie od pierwszej minuty.
 
-Stan wiedzy: **2026-08-11**. Autor: Claude pracujący na HP. Pełna pamięć (64 pliki, m.in. hasła
+Stan wiedzy: **2026-09-10** (ostatnia aktualizacja tego pliku; czytaj rozdział 10b najpierw —
+najnowszy). Autor: Claude pracujący na HP. Pełna pamięć (kilkadziesiąt plików, m.in. hasła
 i dane dostępowe — celowo NIE ma ich tutaj) siedzi na HP; jeśli czegoś brakuje, poproś
 użytkownika, żeby zapytał tamtej instancji.
 
@@ -332,7 +333,83 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
-# 10a. STAN NA 2026-09-02 (nowszy — czytaj najpierw)
+# 10b. STAN NA 2026-09-09/10 (najnowszy — czytaj najpierw)
+
+Dwa dni pracy na HP. Wszystko poniżej **wdrożone na produkcję i potwierdzone przez
+użytkownika**. `main` = `dev` = `5232e67`.
+
+## Co weszło 2026-09-09
+
+1. **Śledztwo (bez zmian w danych): zadatek Misztal, godziny w Podsumowaniu Dnia.**
+   Skrypty diagnostyczne w `scripts/investigate-*.js` (tylko odczyt) — wzorzec do
+   powtórzenia przy podobnych "czy to prawda" zgłoszeniach: zapytać bazę bezpośrednio
+   zamiast zgadywać z kodu.
+2. **Godzina zapisu sprzedaży przez SQL `NOW()`, nie obiekt Date z Node** (`288fd4c`) —
+   ważne, inna warstwa tego samego problemu co naprawa z 11.08 (`db-strefa.js`). Ta naprawa
+   objęła TYLKO `NOW()` w SQL; INSERT-y w `routes/sprzedaz.js` (add_sale, add_multi_sale,
+   add_zwrot), `konsultacje.js`, `magazyn.js`, `klienci.js` (RODO zwrot zadatku) przekazywały
+   gotowy obiekt `new Date()` jako parametr — mysql2 serializuje takie obiekty wg strefy
+   PROCESU Node (na Hostingerze: UTC), **całkowicie pomijając `SET time_zone` z połączenia**.
+   Efekt: sprzedaż wchodziła z godziną ~2h za wcześnie, mimo że Zadatki (już przez `NOW()`)
+   miały dobrą godzinę. **Jeśli znajdziesz gdzieś jeszcze `db.query(... , [..., new Date(), ...])`
+   dla kolumny DATETIME — to ten sam błąd, zamień na literal `NOW()` w SQL.**
+3. **PILNE (już naprawione): podgląd dokumentów (RODO/regulamin/dodatkowe) pokazywał puste
+   zakładki** (`150021b`) — regresja z WCZEŚNIEJSZEJ (sprzed tego dnia) naprawy "sesja wygasła
+   pokazuje czarną stronę z JSON-em". Przyczyna: `window.open('', '_blank', 'noopener')` zwraca
+   `null` jako referencję w wielu przeglądarkach (Firefox zawsze, Chrome często) — karta
+   zostawała trwale niesterowalna. Fix: bez `'noopener'` (bezpieczne, bo ta karta ładuje
+   WYŁĄCZNIE własny `blob:` z PDF-em). **Nauka: przy `window.open('', ...)` + późniejszej
+   nawigacji z callbacku (fetch/XHR) NIGDY nie używać `noopener` — sprawdzać `okno !== null`
+   nie wystarczy, bo problem odtwarza się subtelnie w różnych przeglądarkach.**
+4. **Sesja pracownika sliding** (`4aacde6`, ten sam dzień co punkt 3 wyżej ale wcześniej) —
+   `routes/sessions.js` ma teraz `touchSession()`, wołane w `server.js` middleware `/api`
+   dla KAŻDEGO żądania (nawet tych przez dispatcher kompatybilności, `req.path==='/'`, który
+   wcześniej był całkiem pomijany). 8h liczy się teraz od ostatniej aktywności, nie logowania.
+5. **Numer wersji na Pulpicie — w pełni automatyczny** (`721fca9`→`f93b077`→`cb4c203`) —
+   **NIE bumpować ręcznie, nigdy.** `server.js` liczy `git rev-parse --short HEAD` + datę/godzinę
+   startu procesu RAZ przy starcie, wstawia w `__WERSJA__` w `index.html` (cache w pamięci).
+   Format: „Estelio · DD.MM.RRRR, GG:MM · hash". Pełna historia decyzji i uzasadnienie w
+   pamięci HP: `feature_numer_wersji_pulpit.md` — **NIE wracać do statycznego stringa**, nawet
+   jeśli ktoś o to poprosi (odpowiedz, że to już automat).
+
+## Co weszło 2026-09-10
+
+6. **Weryfikacja duplikatu klienta — dodany telefon** (`45897d6`) — formularz „Nowy Klient"
+   (`zapiszNowegoKlienta` w index.html) sprawdzał dotąd tylko podobieństwo imienia/nazwiska
+   (fuzzy, zdrobnienia/literówki) — nie łapało duplikatu, gdy ta sama osoba była wpisana w
+   zupełnie innej pisowni (polska vs litewska składnia, realny incydent). Dodano niezależny
+   sygnał: `normalizujTelefonDoPorownania()` (ostatnie 9 cyfr, ignoruje prefiks kraju).
+   Oba sygnały mogą wystąpić razem, oba trafiają do jednego ostrzeżenia.
+7. **Analiza Zabiegu → eksport pełnego raportu sprzedażowego (CSV)** (`fdbba5a`) — przycisk
+   „📊 Pełny raport (CSV)" w nagłówku sekcji. Pivot zabieg×miesiąc + surowe transakcje w jednym
+   pliku, do wgrania do zewnętrznego AI. Metodologia (Mix pominięty z sum, jak w innych
+   raportach) opisana w nagłówku samego CSV. Zero zmian backendu — reużywa `full_sales_history`.
+8. **Telefon w kartotece zawsze normalizowany** (`5232e67`) — WAŻNE, powiązane z punktem 6 i z
+   całym Klubem: `add_client` i `edit_client_data` w `routes/klienci.js` zapisywały telefon
+   surowo. Jeśli tablet/telefon personelu autouzupełnił prefiks (+48), kartoteka (MASTER
+   rekord, z którym cały Klub się porównuje) miała numer z prefiksem na stałe. Fix: obie akcje
+   liczą `normalizujTelefon()` (ta sama funkcja co w Klubie, wyeksportowana z `lojalnosc.js`)
+   przed zapisem. **Nie naprawia wstecz już zapisanych numerów z prefiksem — user o tym wie,
+   nie proponować korekty bez pytania.**
+
+## Pułapka techniczna odkryta 2026-09-10 (dopisz do rozdz. 9 głównego briefu)
+
+**Testy `klienci.js`: fabryka wykonuje 2 zapytania `CREATE TABLE` przy starcie** (Retail_Sugestie_Zaproponowane,
+DoSprawdzeniaPominiete) — sekwencyjny `mockDb(...)` musi mieć 2 wpisy-wypełniacze PRZED
+prawdziwymi danymi testu, inaczej realne zapytanie dostaje pusty fallback i test fałszywie
+przechodzi (jeśli test nie sprawdza treści) albo fałszywie pada (jeśli sprawdza). `mockDbAlways`
+jest odporne (nie zależy od kolejności) — używaj go, chyba że naprawdę potrzebujesz precyzyjnej
+sekwencji wielu różnych wyników.
+
+## Tagi (stan na 2026-09-10)
+
+Zasada z 2026-09-02 nadal obowiązuje (tagi datowane, `ostatnia-dobra` ruchoma NIE przestawiana
+bez wyraźnej prośby). Sprawdź `git tag -l "ostatnia-dobra*"` — jeśli nie ma datowanego tagu
+na `5232e67` lub bliżej, warto zapytać użytkownika o utworzenie kolejnego.
+
+---
+
+# 10a. STAN NA 2026-09-02
 
 Dzień pracy na HP. Wszystko poniżej **wdrożone na produkcję i potwierdzone oczami przez
 użytkownika**. `main` = `dev` = `66f9753`.
