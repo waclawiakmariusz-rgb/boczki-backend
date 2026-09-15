@@ -19215,7 +19215,7 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
             const s = document.getElementById('n_firma');
             s.innerHTML = '<option value="">-- Wybierz firmę --</option>';
             if (!slownikCache) return;
-            const firms = [...new Set(slownikCache.map(i => i.firma))].sort();
+            const firms = [...new Set(slownikCache.map(i => i.firma))].sort((a, b) => a.localeCompare(b));
             firms.forEach(f => { s.innerHTML += `<option value="${f}">${f}</option>`; });
         }
 
@@ -19232,7 +19232,7 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
 
             m.disabled = false;
             if (slownikCache) {
-                const modele = slownikCache.filter(i => i.firma === f).map(i => i.model).sort();
+                const modele = slownikCache.filter(i => i.firma === f).map(i => i.model).sort((a, b) => a.localeCompare(b));
                 modele.forEach(mod => { m.innerHTML += `<option value="${mod}">${mod}</option>`; });
             }
             generujNazwe();
