@@ -227,7 +227,6 @@ module.exports = (db) => {
           `SELECT DATE_FORMAT(created_at, '%Y-%m') AS miesiac,
                   COUNT(*) AS razem,
                   SUM(CASE WHEN status = 'ZAAKCEPTOWANA' THEN 1 ELSE 0 END) AS zaakceptowane,
-                  SUM(CASE WHEN status = 'ZAAKCEPTOWANA' THEN kwota ELSE 0 END) AS suma_zaakceptowanych,
                   SUM(CASE WHEN status = 'ANULOWANA' THEN 1 ELSE 0 END) AS anulowane,
                   SUM(CASE WHEN status = 'OCZEKUJACA' AND created_at <= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS wygasle,
                   SUM(CASE WHEN status = 'OCZEKUJACA' AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS oczekujace
