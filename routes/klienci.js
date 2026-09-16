@@ -15,6 +15,10 @@ module.exports = (db) => {
   // Hook Klubu — punkty za zadatki (fire-and-forget, NIGDY nie blokuje operacji).
   const lojalnosc = makeLojalnosc(db);
 
+  function q(sql, params) {
+    return new Promise((res, rej) => db.query(sql, params, (e, r) => e ? rej(e) : res(r)));
+  }
+
   // Idempotentna migracja: znacznik bonu podarunkowego na zadatku.
   // W salonie bon podarunkowy jest zapisywany jako zadatek — bez tej kolumny nie da się
   // go odróżnić od zwykłej zaliczki na zabieg. Znacznik decyduje, czy wolno przepisać
@@ -134,6 +138,85 @@ module.exports = (db) => {
           );
         }
       );
+
+    } else if (action === 'get_ranking_zabiegi') {
+      // Lista zabiegów/pakietów do chipa filtra w Rankingu — normalizacja jak w Analizie
+      // Zabiegu (routes/analityka.js normalizeName): "Botoks" i "Botoks Dopłata" to jedno.
+      (async () => {
+        try {
+          const od = req.query.od, doD = req.query.do;
+          let where = `WHERE tenant_id = ? AND COALESCE(status,'') != 'USUNIĘTY' AND kwota > 0 AND zabieg IS NOT NULL AND zabieg != ''`;
+          const paramy = [tenant_id];
+          if (od) { where += ' AND data_sprzedazy >= ?'; paramy.push(od); }
+          if (doD) { where += ' AND data_sprzedazy < DATE_ADD(?, INTERVAL 1 DAY)'; paramy.push(doD); }
+          const rows = await q(`SELECT zabieg FROM Sprzedaz ${where}`, paramy);
+          const mapa = new Map();
+          rows.forEach(r => {
+            const nazwa = String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim();
+            if (!nazwa) return;
+            mapa.set(nazwa, (mapa.get(nazwa) || 0) + 1);
+          });
+          const data = Array.from(mapa.entries())
+            .map(([nazwa, liczba]) => ({ nazwa, liczba }))
+            .sort((a, b) => b.liczba - a.liczba)
+            .slice(0, 150);
+          return res.json({ status: 'success', data });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      })();
+
+    } else if (action === 'get_client_ranking') {
+      // Ranking klientów wg wydanych kwot (Klienci → Ranking) — prośba recepcji.
+      // Celowo osobny endpoint/widok, nie dołożone do get_clients, żeby nie spowalniać
+      // głównej listy klientów. Kwota liczona bezpośrednio z Sprzedaz.kwota (bez łączenia
+      // z Platnosci) — ten sam wzorzec co roczne wydatki w Klubie (routes/lojalnosc.js),
+      // więc inwariant "pomijaj metoda=mix" tu nie ma zastosowania.
+      (async () => {
+        try {
+          const od = req.query.od, doD = req.query.do;
+          if (!od || !doD) return res.json({ status: 'error', message: 'Podaj zakres dat (od, do).' });
+          const zabiegFiltr = String(req.query.zabieg || '').trim();
+          const kierunek = req.query.sortuj === 'rosnaco' ? 1 : -1;
+          const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 200);
+          const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+
+          const rows = await q(
+            `SELECT id_klienta, kwota, zabieg FROM Sprzedaz
+              WHERE tenant_id = ? AND COALESCE(status,'') != 'USUNIĘTY' AND kwota > 0
+                AND id_klienta IS NOT NULL AND id_klienta != ''
+                AND data_sprzedazy >= ? AND data_sprzedazy < DATE_ADD(?, INTERVAL 1 DAY)`,
+            [tenant_id, od, doD]);
+
+          const suma = new Map(); // id_klienta -> { suma, liczba }
+          rows.forEach(r => {
+            if (zabiegFiltr) {
+              const nazwa = String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim();
+              if (nazwa !== zabiegFiltr) return;
+            }
+            const id = String(r.id_klienta);
+            const wpis = suma.get(id) || { suma: 0, liczba: 0 };
+            wpis.suma += Number(r.kwota) || 0;
+            wpis.liczba += 1;
+            suma.set(id, wpis);
+          });
+
+          const klienciRows = await q(
+            `SELECT id_klienta, imie_nazwisko, telefon FROM Klienci WHERE tenant_id = ? AND (status = 'AKTYWNY' OR status IS NULL)`,
+            [tenant_id]);
+          const klienciMap = new Map(klienciRows.map(k => [String(k.id_klienta), k]));
+
+          const lista = Array.from(suma.entries())
+            .filter(([id]) => klienciMap.has(id))
+            .map(([id, w]) => ({
+              id, nazwa: klienciMap.get(id).imie_nazwisko, telefon: klienciMap.get(id).telefon || '',
+              suma: Math.round(w.suma * 100) / 100, liczba: w.liczba
+            }))
+            .sort((a, b) => kierunek * (a.suma - b.suma));
+
+          const razem = lista.length;
+          const strona = lista.slice(offset, offset + limit);
+          return res.json({ status: 'success', data: strona, razem });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      })();
 
     } else if (action === 'get_client_profile_data') {
       const parametr = req.query.klient;
