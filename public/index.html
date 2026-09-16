@@ -8302,6 +8302,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         <button onclick="zg_zaladujListe(zg_listaStrona + 1)" id="zg-pager-next" style="background:#f1f5f9; border:0; border-radius:8px; padding:7px 14px; font-size:13px; font-weight:600; cursor:pointer;">Następna ›</button>
                     </div>
                 </div>
+
+                <div class="card" style="padding:18px 22px; margin-top:20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:4px;">
+                        <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">📊 Statystyki miesięczne</div>
+                        <button onclick="zg_zaladujStatystyki()" style="background:#f1f5f9; border:0; border-radius:8px; padding:8px 14px; font-size:12.5px; font-weight:600; cursor:pointer;">↺ Odśwież</button>
+                    </div>
+                    <div style="font-size:12px; color:#6b7280; margin:4px 0 12px;">„Zaakceptowano" = klient zaakceptował regulamin i został przekierowany do tpay — system nie ma potwierdzenia z tpay, że płatność faktycznie przeszła.</div>
+                    <div id="zg-statystyki" style="overflow-x:auto;"></div>
+                </div>
             </div>
 
             <!-- Sekcja Dodatku Testowego (widoczna gdy feature 'demo_dodatek' aktywne) -->
@@ -33507,6 +33516,59 @@ function zg_zaladujSekcje() {
     })
     .catch(() => {});
   zg_zaladujListe(1);
+  zg_zaladujStatystyki();
+}
+
+const zg_MIESIACE_PL = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
+
+async function zg_zaladujStatystyki() {
+  const cont = document.getElementById('zg-statystyki');
+  if (!cont) return;
+  cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Ładowanie…</div>';
+  try {
+    const r = await fetch(API_URL + '?action=zgody_statystyki');
+    const d = await r.json();
+    if (d.status !== 'success') { cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+    const rows = d.data || [];
+    if (!rows.length) { cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak jeszcze żadnych linków do płatności.</div>'; return; }
+
+    const th = (txt) => `<th style="text-align:right; padding:8px 10px; font-size:11.5px; font-weight:700; color:#8a8f9c; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap;">${txt}</th>`;
+    const td = (txt, kolor) => `<td style="text-align:right; padding:8px 10px; font-size:13.5px; ${kolor ? 'color:' + kolor + '; font-weight:700;' : ''}">${txt}</td>`;
+
+    let sumRazem = 0, sumZaakc = 0, sumWygasle = 0, sumAnul = 0, sumOczek = 0, sumKwota = 0;
+    const wiersze = rows.map(z => {
+      const [rok, mies] = String(z.miesiac).split('-');
+      const nazwaMies = zg_MIESIACE_PL[parseInt(mies, 10) - 1] || mies;
+      const razem = Number(z.razem) || 0, zaakc = Number(z.zaakceptowane) || 0, wygasle = Number(z.wygasle) || 0,
+            anul = Number(z.anulowane) || 0, oczek = Number(z.oczekujace) || 0, kwota = Number(z.suma_zaakceptowanych) || 0;
+      sumRazem += razem; sumZaakc += zaakc; sumWygasle += wygasle; sumAnul += anul; sumOczek += oczek; sumKwota += kwota;
+      return `<tr style="border-bottom:1px solid #f5eef1;">
+        <td style="padding:8px 10px; font-size:13.5px; white-space:nowrap;"><b>${nazwaMies} ${rok}</b></td>
+        ${td(razem)}
+        ${td(zaakc, zaakc ? '#15803d' : null)}
+        ${td(wygasle, wygasle ? '#92400e' : null)}
+        ${td(anul)}
+        ${td(oczek, oczek ? '#0369a1' : null)}
+        ${td(kwota ? kwota.toFixed(2).replace('.', ',') + ' zł' : '—')}
+      </tr>`;
+    }).join('');
+
+    cont.innerHTML = `
+      <table style="width:100%; border-collapse:collapse; min-width:640px;">
+        <thead><tr style="border-bottom:2px solid #efe5e8;">
+          <th style="text-align:left; padding:8px 10px; font-size:11.5px; font-weight:700; color:#8a8f9c; text-transform:uppercase; letter-spacing:.03em;">Miesiąc</th>
+          ${th('Utworzono')}${th('Zaakceptowano')}${th('Wygasło')}${th('Anulowano')}${th('Oczekuje')}${th('Kwota zaakc.')}
+        </tr></thead>
+        <tbody>${wiersze}
+          <tr style="border-top:2px solid #efe5e8;">
+            <td style="padding:9px 10px; font-size:13px;"><b>Razem</b></td>
+            ${td(`<b>${sumRazem}</b>`)}${td(`<b>${sumZaakc}</b>`, '#15803d')}${td(`<b>${sumWygasle}</b>`, '#92400e')}${td(`<b>${sumAnul}</b>`)}${td(`<b>${sumOczek}</b>`, '#0369a1')}${td(`<b>${sumKwota ? sumKwota.toFixed(2).replace('.', ',') + ' zł' : '—'}</b>`)}
+          </tr>
+        </tbody>
+      </table>`;
+  } catch (e) {
+    cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd połączenia.</div>';
+  }
 }
 
 async function zg_zapiszRegulamin() {

@@ -218,6 +218,26 @@ module.exports = (db) => {
         return res.json({ status: 'success', data: rows, razem, strona: Math.min(strona, stron), stron });
       } catch (e) { return res.json({ status: 'error', message: e.message }); }
 
+    } else if (action === 'zgody_statystyki') {
+      try {
+        // "wygasłe" nie jest kolumną — OCZEKUJACA liczy się jako wygasła, gdy created_at
+        // + TOKEN_TTL_MS (7 dni, patrz stała u góry pliku) minęło. INTERVAL musi być zgodny
+        // z TOKEN_TTL_MS, żeby nie rozjechać się z licznikiem na liście.
+        const rows = await q(
+          `SELECT DATE_FORMAT(created_at, '%Y-%m') AS miesiac,
+                  COUNT(*) AS razem,
+                  SUM(CASE WHEN status = 'ZAAKCEPTOWANA' THEN 1 ELSE 0 END) AS zaakceptowane,
+                  SUM(CASE WHEN status = 'ZAAKCEPTOWANA' THEN kwota ELSE 0 END) AS suma_zaakceptowanych,
+                  SUM(CASE WHEN status = 'ANULOWANA' THEN 1 ELSE 0 END) AS anulowane,
+                  SUM(CASE WHEN status = 'OCZEKUJACA' AND created_at <= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS wygasle,
+                  SUM(CASE WHEN status = 'OCZEKUJACA' AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 ELSE 0 END) AS oczekujace
+             FROM ZgodyPlatnosci
+            WHERE tenant_id = ?
+            GROUP BY miesiac
+            ORDER BY miesiac DESC`, [tenant_id]);
+        return res.json({ status: 'success', data: rows });
+      } catch (e) { return res.json({ status: 'error', message: e.message }); }
+
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja GET zgody: ' + action });
     }

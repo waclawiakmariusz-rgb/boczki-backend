@@ -554,6 +554,7 @@ app.get('/api', (req, res) => {
         'zgody_status': '/api/zgody?action=zgody_status&tenant_id=' + tenant_id,
         'zgody_regulamin_get': '/api/zgody?action=zgody_regulamin_get&tenant_id=' + tenant_id,
         'zgody_lista': '/api/zgody?action=zgody_lista&tenant_id=' + tenant_id + (req.query.id_klienta ? '&id_klienta=' + encodeURIComponent(req.query.id_klienta) : '') + (req.query.szukaj ? '&szukaj=' + encodeURIComponent(req.query.szukaj) : '') + (req.query.strona ? '&strona=' + encodeURIComponent(req.query.strona) : ''),
+        'zgody_statystyki': '/api/zgody?action=zgody_statystyki&tenant_id=' + tenant_id,
         'loj_klient': '/api/lojalnosc?action=loj_klient&tenant_id=' + tenant_id + '&id_klienta=' + encodeURIComponent(req.query.id_klienta || ''),
         'loj_ustawienia': '/api/lojalnosc?action=loj_ustawienia&tenant_id=' + tenant_id,
         'loj_nagrody_admin': '/api/lojalnosc?action=loj_nagrody_admin&tenant_id=' + tenant_id + '&user_log=' + encodeURIComponent(req.query.user_log || ''),
