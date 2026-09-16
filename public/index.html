@@ -15944,10 +15944,16 @@ function renderWygasajaceKarnety() {
     const box = document.getElementById('lista-wygasajacych');
     if (!box) return;
     box.innerHTML = '<div style="padding:18px; text-align:center; color:#999;">⏳ Ładowanie…</div>';
-    fetch(API_URL + '?action=full_sales_history')
+    // To samo źródło co panel "Do sprawdzenia" (ds_przeglad) — inaczej pozycja "pominięta"
+    // tam wciąż straszyła tutaj, bo to były dwa niezależne liczenia (zgłoszenie recepcji).
+    fetch(API_URL + '?action=ds_przeglad')
         .then(r => r.json())
         .then(d => {
-            const lista = policzWygasajaceKarnety(Array.isArray(d) ? d : []);
+            if (!d || d.status !== 'success') throw new Error((d && d.message) || 'Błąd danych');
+            const karnety = Array.isArray(d.karnety) ? d.karnety : [];
+            const pominiete = Array.isArray(d.pominiete) ? d.pominiete : [];
+            const pomSet = new Set(pominiete.filter(p => p.rodzaj === 'karnet').map(p => String(p.klucz)));
+            const lista = karnety.filter(w => !pomSet.has(String(w.id)));
             // Zaktualizuj licznik w pasku zakładek
             const badge = document.getElementById('ktab-badge-karnety');
             if (badge) badge.textContent = lista.length;
