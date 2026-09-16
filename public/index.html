@@ -33714,6 +33714,15 @@ async function rnk_zaladujZabiegi() {
     } catch (e) {}
 }
 
+// Kwoty widoczne tylko gdy CAŁY wybrany zakres mieści się w bieżącym miesiącu
+// kalendarzowym (prośba usera) — poza tym miesiącem widać tylko liczbę transakcji.
+function rnk_wBiezacymMiesiacu(dataStr) {
+    if (!dataStr) return false;
+    const teraz = new Date();
+    const curYM = teraz.getFullYear() + '-' + String(teraz.getMonth() + 1).padStart(2, '0');
+    return String(dataStr).slice(0, 7) === curYM;
+}
+
 async function rnk_zaladuj(odNowa) {
     const cont = document.getElementById('rnk-lista');
     if (!cont) return;
@@ -33721,6 +33730,7 @@ async function rnk_zaladuj(odNowa) {
     const od = document.getElementById('rnk-od').value, doD = document.getElementById('rnk-do').value;
     const zabieg = document.getElementById('rnk-zabieg').value;
     if (!od || !doD) { cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Wybierz zakres dat.</div>'; return; }
+    const pokazKwoty = rnk_wBiezacymMiesiacu(od) && rnk_wBiezacymMiesiacu(doD);
     if (odNowa) { cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Ładowanie…</div>'; rnk_zaladujZabiegi(); }
     try {
         const url = API_URL + '?action=get_client_ranking&od=' + od + '&do=' + doD + '&sortuj=' + rnk_sort +
@@ -33731,16 +33741,17 @@ async function rnk_zaladuj(odNowa) {
         const rows = d.data || [];
         rnk_razem = d.razem || 0;
         const pods = document.getElementById('rnk-podsumowanie');
-        if (pods) pods.textContent = rnk_razem ? ('Klientów spełniających kryteria: ' + rnk_razem) : '';
+        if (pods) pods.textContent = (rnk_razem ? ('Klientów spełniających kryteria: ' + rnk_razem) : '')
+            + (pokazKwoty ? '' : ' · 🔒 kwoty widoczne tylko dla zakresu w obrębie bieżącego miesiąca');
         if (odNowa) {
             if (!rows.length) {
                 cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak transakcji w wybranym okresie.</div>';
                 document.getElementById('rnk-wiecej-wrap').style.display = 'none';
                 return;
             }
-            cont.innerHTML = rows.map((z, i) => rnk_renderWiersz(z, i + 1)).join('');
+            cont.innerHTML = rows.map((z, i) => rnk_renderWiersz(z, i + 1, pokazKwoty)).join('');
         } else {
-            cont.insertAdjacentHTML('beforeend', rows.map((z, i) => rnk_renderWiersz(z, rnk_offset + i + 1)).join(''));
+            cont.insertAdjacentHTML('beforeend', rows.map((z, i) => rnk_renderWiersz(z, rnk_offset + i + 1, pokazKwoty)).join(''));
         }
         rnk_offset += rows.length;
         const wiecej = document.getElementById('rnk-wiecej-wrap');
@@ -33752,8 +33763,10 @@ async function rnk_zaladuj(odNowa) {
 
 function rnk_pokazWiecej() { rnk_zaladuj(false); }
 
-function rnk_renderWiersz(z, pozycja) {
-    const kwota = (Number(z.suma) || 0).toFixed(2).replace('.', ',') + ' zł';
+function rnk_renderWiersz(z, pozycja, pokazKwoty) {
+    const kwota = pokazKwoty
+        ? (Number(z.suma) || 0).toFixed(2).replace('.', ',') + ' zł'
+        : '<span style="color:#9ca3af; font-weight:600; font-size:12.5px;">🔒 ukryte</span>';
     return `<div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; padding:10px 4px; border-bottom:1px solid #efe5e8; cursor:pointer;" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${z.id}'), 50);">
         <div style="display:flex; align-items:center; gap:10px;">
             <span style="color:#9ca3af; font-size:12.5px; font-weight:700; min-width:24px;">#${pozycja}</span>
