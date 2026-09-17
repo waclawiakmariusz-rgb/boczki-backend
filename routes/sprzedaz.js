@@ -12,6 +12,10 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
+  function q(sql, params) {
+    return new Promise((res, rej) => db.query(sql, params, (e, r) => e ? rej(e) : res(r)));
+  }
+
   // --- Czytelny opis karnetu do Dziennika Zdarzeń (2026-08-11) ---
   // Dziennik czyta recepcja, nie programista, a wpisy przy karnetach wyglądały tak:
   // "KARNET ZAKOŃCZONY — ID:202608061754188-3". Taki identyfikator nikomu nic nie mówi;
@@ -1290,6 +1294,51 @@ module.exports = (db) => {
           return res.json({ status: 'success', message: `Zawieszono na ${dni} dni — ważność przesunięta do ${nowaData}` + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
+
+    // --- SUSPEND_ALL_KARNETY (Zawieś JEDNOCZEŚNIE wszystkie aktywne karnety klienta) ---
+    // Prośba recepcji, 2026-09-17: klientka z kilkoma różnymi karnetami (np. 6 typów
+    // zabiegów) wyjeżdża na tydzień — klikanie "Zawieś" osobno przy każdym groziło
+    // pominięciem któregoś. Każdy karnet liczy własną nową datę (własna dotychczasowa
+    // ważność + dni), nie jedną wspólną datę dla wszystkich.
+    } else if (action === 'suspend_all_karnety') {
+      (async () => {
+        try {
+          const id_klienta = String(d.id_klienta || '').trim();
+          const dni = parseInt(d.dni, 10);
+          if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+          if (!Number.isFinite(dni) || dni <= 0) return res.json({ status: 'error', message: 'Podaj liczbę dni zawieszenia.' });
+
+          const rows = await q(
+            `SELECT id, klient, zabieg, data_waznosci FROM Sprzedaz
+              WHERE tenant_id = ? AND id_klienta = ? AND COALESCE(status, '') != 'USUNIĘTY'
+                AND data_waznosci IS NOT NULL AND karnet_zamkniety_w IS NULL`,
+            [tenant_id, id_klienta]);
+
+          if (!rows.length) return res.json({ status: 'error', message: 'Brak aktywnych karnetów do zawieszenia.' });
+
+          const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+          for (const r of rows) {
+            let baza = r.data_waznosci ? new Date(r.data_waznosci) : new Date(dzis);
+            baza.setHours(0, 0, 0, 0);
+            if (baza < dzis) baza = new Date(dzis);
+            baza.setDate(baza.getDate() + dni);
+            await q(
+              `UPDATE Sprzedaz SET data_waznosci = ?, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL,
+                      zawieszenia_liczba = zawieszenia_liczba + 1, zawieszenia_dni_lacznie = zawieszenia_dni_lacznie + ?
+                WHERE tenant_id = ? AND id = ?`,
+              [toDateStr(baza), dni, tenant_id, r.id]);
+          }
+
+          const nazwaKlienta = rows[0].klient || id_klienta;
+          const listaZabiegow = rows.map(r => r.zabieg).filter(Boolean).join(', ');
+          zapiszLog(tenant_id, 'ZAWIESZENIE WSZYSTKICH KARNETÓW', d.pracownik,
+            `${nazwaKlienta} — ${rows.length} karnet(y) zawieszone na ${dni} dni (${listaZabiegow})`);
+
+          return res.json({ status: 'success', message: `Zawieszono ${rows.length} karnet(y) klientki ${nazwaKlienta} na ${dni} dni.` });
+        } catch (e) {
+          return res.json({ status: 'error', message: e.message });
+        }
+      })();
 
     // --- CLOSE_KARNET (Oznacz jako zakończony) ---
     } else if (action === 'close_karnet') {
