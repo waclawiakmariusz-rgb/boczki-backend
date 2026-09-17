@@ -7952,6 +7952,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span id="profil-ban-alarm-text"></span>
                             <button onclick="anulujBan()" style="background:#fff; color:#991b1b; border:1px solid #dc2626; border-radius:8px; padding:6px 12px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✅ Anuluj flagę</button>
                         </div>
+                        <div id="profil-odwolanie-info" style="display:none; background:#fffbeb; border:1.5px solid #f59e0b; color:#92400e; padding:9px 14px; border-radius:10px; font-weight:600; font-size:13px; margin-bottom:10px; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+                            <span id="profil-odwolanie-info-text"></span>
+                            <button onclick="otworzModalOdwolanieUlga()" style="background:#fff; color:#92400e; border:1px solid #f59e0b; border-radius:8px; padding:5px 11px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;">✎ Popraw</button>
+                        </div>
                         <div style="display:flex; align-items:center; gap:12px; margin-bottom:10px; flex-wrap:wrap;">
                             <div id="profil-naglowek" style="font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;"></div>
                             <span id="profil-vip-badge" style="display:none; background:#ffd6e4; color:#b74673; border-radius:10px; padding:5px 11px; font-size:13px; font-weight:800;">VIP</span>
@@ -7964,6 +7968,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                     <button onclick="otworzModalAnonimizacji()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#1f2430; border-bottom:1px solid #f3e8ed;">🔒 RODO — anonimizuj</button>
                                     <button onclick="otworzModalZmarly()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#1f2430; border-bottom:1px solid #f3e8ed;">⚰️ Oznacz jako zmarłego</button>
                                     <button onclick="otworzModalBan()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#b91c1c;">⚠️ Klient problematyczny</button>
+                                    <button onclick="otworzModalOdwolanieUlga()" class="akcje-item" style="display:block; width:100%; text-align:left; padding:10px 14px; border:0; background:none; cursor:pointer; font-size:13px; color:#b45309;">⏳ Odwołanie po czasie</button>
                                 </div>
                             </div>
                         </div>
@@ -15300,10 +15305,18 @@ function renderKarnetInfo(t, grupaId, liczba) {
     } else {
         badge = `<span style="background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px; font-weight:600;">✓ Ważny do ${dataFmt}</span>`;
     }
+    const zawieszen = Number(t.zawieszenia_liczba) || 0;
+    const zawieszBadge = zawieszen > 0
+        ? ` <span style="background:#ede9fe; color:#6d28d9; padding:2px 8px; border-radius:999px; font-weight:600;" title="Regulamin salonu pozwala na zawieszenie ważności">🕓 Zawieszano ${zawieszen}× (łącznie ${Number(t.zawieszenia_dni_lacznie) || 0} dni)</span>`
+        : '';
     return `<div style="margin-top:5px; font-size:12px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap; white-space:nowrap; overflow-x:auto;">
-        ${badge}${nota}
+        ${badge}${nota}${zawieszBadge}
         <select onchange="przedluzKarnet('${t.id}', '${t.data_waznosci}', this.value${gidArg}); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; width:104px; font-size:12px; font-weight:600; color:#a85c70; border:1px solid #e7cad2; border-radius:999px; padding:4px 10px; background:#fdf4f6; cursor:pointer; line-height:1.4;">
             <option value="">＋ Przedłuż ▾</option>
+            ${opcjeDniPrzedluzenia()}
+        </select>
+        <select onchange="zawiesKarnet('${t.id}', '${t.data_waznosci}', this.value${gidArg}); this.selectedIndex=0;" style="appearance:none; -webkit-appearance:none; -moz-appearance:none; flex:0 0 auto; width:104px; font-size:12px; font-weight:600; color:#6d28d9; border:1px solid #ddd6fe; border-radius:999px; padding:4px 10px; background:#f5f3ff; cursor:pointer; line-height:1.4;" title="Regulamin pozwala zawiesić ważność karnetu (np. wyjazd, choroba)">
+            <option value="">🕓 Zawieś ▾</option>
             ${opcjeDniPrzedluzenia()}
         </select>
         <button onclick="zakonczKarnet('${t.id}'${gidArg})" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
@@ -15354,6 +15367,20 @@ function przedluzKarnet(id, aktualnaData, dni, grupaId) {
     baza.setDate(baza.getDate() + liczbaDni);
     const nowa = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
     _karnetAction({ action: 'extend_karnet', id: id, grupa_id: grupaId || null, data_waznosci: nowa, pracownik: currentUser });
+}
+
+// Zawieszenie ważności — regulamin salonu to dopuszcza (np. wyjazd, choroba).
+// Mechanicznie jak Przedłuż (przesuwa datę), ale backend dodatkowo liczy ile razy
+// i na ile dni łącznie karnet był zawieszany (prośba recepcji).
+function zawiesKarnet(id, aktualnaData, dni, grupaId) {
+    const liczbaDni = parseInt(dni, 10);
+    if (!Number.isFinite(liczbaDni) || liczbaDni <= 0) return;
+    const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+    let baza = aktualnaData ? new Date(aktualnaData + 'T00:00:00') : dzis;
+    if (baza < dzis) baza = new Date(dzis.getTime());
+    baza.setDate(baza.getDate() + liczbaDni);
+    const nowa = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
+    _karnetAction({ action: 'suspend_karnet', id: id, grupa_id: grupaId || null, data_waznosci: nowa, dni: liczbaDni, pracownik: currentUser });
 }
 
 function zakonczKarnet(id, grupaId) {
@@ -15475,7 +15502,7 @@ function renderujDoSprawdzenia(box, d) {
             + btnPomin(r.id, 'zadatek')
     )).join('');
 
-    // Sekcja 3 — karnety, z akcjami wprost z panelu (przedłuż / zakończ)
+    // Sekcja 3 — karnety, z akcjami wprost z panelu (przedłuż / zawieś / zakończ)
     const fmtData = (iso) => {
         const parts = String(iso || '').split('-');
         return parts.length === 3 ? `${parts[2]}.${parts[1]}.${parts[0]}` : (iso || '');
@@ -15489,6 +15516,7 @@ function renderujDoSprawdzenia(box, d) {
         const gr = esc(w.grupa_id || '');
         const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
         const selP = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:64px;padding:5px 6px;" title="Przedłuż o dowolną liczbę dni" onchange="if(this.value){przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">+ inne ▾</option>${opcjeDniPrzedluzenia()}</select>`;
+        const selZaw = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:78px;padding:5px 6px;color:#6d28d9;" title="Zawieś ważność — regulamin salonu to dopuszcza (np. wyjazd, choroba)" onchange="if(this.value){zawiesKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">🕓 Zawieś ▾</option>${opcjeDniPrzedluzenia()}</select>`;
         // Pojedynczy zabieg (brak mnogości typu "10x" w szczegółach) — klient mógł go
         // wykorzystać już w dniu zakupu, więc "wygasa" bywa tu fałszywym alarmem.
         const mnog = String(w.szczegoly || w.zabieg || '').match(/(\d+)\s*x/i);
@@ -15496,13 +15524,17 @@ function renderujDoSprawdzenia(box, d) {
         const infoPoj = pojedynczy
             ? `<br><span class="dsx-single" title="To pojedynczy zabieg, nie karnet wielorazowy — klient mógł go wykorzystać w dniu zakupu. Jeśli tak, po prostu Zakończ.">1× pojedynczy — mógł być wykorzystany w dniu zakupu${w.data_zakupu ? ' (' + escHtml(fmtData(w.data_zakupu)) + ')' : ''}</span>`
             : '';
+        const zawieszen = Number(w.zawieszenia_liczba) || 0;
+        const infoZaw = zawieszen > 0
+            ? `<br><span class="dsx-mut" style="color:#6d28d9;">🕓 Zawieszano ${zawieszen}× (łącznie ${Number(w.zawieszenia_dni_lacznie) || 0} dni)</span>`
+            : '';
         return wiersz(
             klientLink(w.klient, String(w.id_klienta || '').trim() || w.id_dopasowane || ''),
             escHtml(w.zabieg || 'karnet')
                 + (w.szczegoly ? ` <span class="dsx-mut">· ${escHtml(w.szczegoly)}</span>` : '')
-                + infoPoj,
+                + infoPoj + infoZaw,
             `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
-            btnP(7) + btnP(14) + btnP(28) + selP
+            btnP(7) + btnP(14) + btnP(28) + selP + selZaw
                 + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
                 + btnPomin(w.id, 'karnet')
         );
@@ -15971,13 +16003,20 @@ function renderWygasajaceKarnety() {
                 const klientHtml = w.id_klienta
                     ? `<a href="javascript:void(0)" onclick="otworzProfil('${w.id_klienta}')" style="color:#b87080; font-weight:700; text-decoration:none;">${w.klient || '—'}</a>`
                     : `<span style="font-weight:700;">${w.klient || '—'}</span>`;
+                const zawieszen = Number(w.zawieszenia_liczba) || 0;
+                const zawieszInfo = zawieszen > 0
+                    ? `<div style="color:#6d28d9; font-size:11.5px; margin-top:2px;">🕓 Zawieszano ${zawieszen}× (łącznie ${Number(w.zawieszenia_dni_lacznie) || 0} dni)</div>`
+                    : '';
                 return `<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
                     <div style="min-width:160px;">${klientHtml}</div>
-                    <div style="flex:1; min-width:140px; color:#334155;">${w.zabieg || '—'}</div>
+                    <div style="flex:1; min-width:140px; color:#334155;">${w.zabieg || '—'}${zawieszInfo}</div>
                     <div style="min-width:150px; color:${kolor}; font-weight:700; font-size:13px;">${badge} (${dataFmt})</div>
                     <div style="display:flex; gap:8px;">
                         <select onchange="if(this.value){przedluzKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#b87080; color:#fff; border:none; border-radius:8px; padding:6px 8px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none; width:92px;">
                             <option value="" style="color:#334155;background:#fff;">Przedłuż ▾</option>${opcjeDniPrzedluzenia()}
+                        </select>
+                        <select onchange="if(this.value){zawiesKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#6d28d9; color:#fff; border:none; border-radius:8px; padding:6px 8px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none; width:92px;" title="Zawieś ważność — regulamin salonu to dopuszcza">
+                            <option value="" style="color:#334155;background:#fff;">Zawieś ▾</option>${opcjeDniPrzedluzenia()}
                         </select>
                         <button onclick="zakonczKarnet('${w.id}')" style="background:#e2e8f0; color:#475569; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Zakończ</button>
                     </div>
@@ -22954,6 +22993,58 @@ function anulujBan() {
     .catch(err => alert('Błąd: ' + err));
 }
 
+// ⏳ Odwołanie po czasie regulaminowym — jednorazowa ulga (prośba recepcji)
+function otworzModalOdwolanieUlga() {
+    toggleAkcjeKlienta();
+    const { id, nazwa } = _aktualnyKlientImie();
+    if (!id) return alert('Brak otwartego profilu klienta');
+    document.getElementById('sd-odw-imie').textContent = `${nazwa} (ID ${id})`;
+    const k = (window.wszyscyKlienciDane || []).find(x => String(x.id) === String(id));
+    const checkbox = document.getElementById('sd-odw-checkbox');
+    const dataPole = document.getElementById('sd-odw-data');
+    checkbox.checked = !!(k && k.odwolanie_ulga);
+    dataPole.value = (k && k.odwolanie_ulga_data) ? String(k.odwolanie_ulga_data).slice(0, 10) : new Date().toISOString().slice(0, 10);
+    sdOdwToggleData();
+    document.getElementById('sd-odw-overlay').style.display = 'flex';
+}
+
+function sdOdwToggleData() {
+    const checked = document.getElementById('sd-odw-checkbox').checked;
+    const wrap = document.getElementById('sd-odw-data-wrap');
+    wrap.style.opacity = checked ? '1' : '.4';
+    document.getElementById('sd-odw-data').disabled = !checked;
+}
+
+function zapiszOdwolanieUlga() {
+    const { id } = _aktualnyKlientImie();
+    const wykorzystano = document.getElementById('sd-odw-checkbox').checked;
+    const data = document.getElementById('sd-odw-data').value;
+    if (wykorzystano && !data) return alert('Podaj datę wykorzystania.');
+
+    fetch(API_URL, {
+        method: 'POST',
+        body: JSON.stringify({
+            action: wykorzystano ? 'set_odwolanie_ulga' : 'clear_odwolanie_ulga',
+            tenant_id: localStorage.getItem('boczki_tenant_id'),
+            user_log: currentUser,
+            id_klienta: id, data: data
+        })
+    })
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === 'success') {
+            zamknijModal('sd-odw-overlay');
+            const k = (window.wszyscyKlienciDane || []).find(x => String(x.id) === String(id));
+            if (k) { k.odwolanie_ulga = wykorzystano ? 1 : 0; k.odwolanie_ulga_data = wykorzystano ? data : null; }
+            if (typeof aktualizujAlarmKlienta === 'function') aktualizujAlarmKlienta();
+            if (typeof zaladujKlientowDoKartoteki === 'function') zaladujKlientowDoKartoteki(true);
+        } else {
+            alert('Błąd: ' + (d.message || 'nieznany'));
+        }
+    })
+    .catch(err => alert('Błąd: ' + err));
+}
+
 // Wyświetlanie alarmu BAN i badge statusu — wywoływane przy otwarciu profilu
 function aktualizujAlarmKlienta() {
     const id = window.aktualnyProfilKlientId;
@@ -22970,6 +23061,19 @@ function aktualizujAlarmKlienta() {
         if (txt) txt.textContent = `⚠ NIE OBSŁUGIWAĆ — ${k.ostrzezenie}`;
     } else {
         alarm.style.display = 'none';
+    }
+
+    // Info: odwołanie po czasie regulaminowym — jednorazowa ulga już wykorzystana
+    const odwInfo = document.getElementById('profil-odwolanie-info');
+    if (odwInfo) {
+        if (k.odwolanie_ulga) {
+            odwInfo.style.display = 'flex';
+            const txt = document.getElementById('profil-odwolanie-info-text');
+            const dataFmt = k.odwolanie_ulga_data ? String(k.odwolanie_ulga_data).slice(0, 10).split('-').reverse().join('.') : '—';
+            if (txt) txt.textContent = `⏳ Wykorzystała(a) już możliwość odwołania po czasie (${dataFmt}) — przy kolejnym potrącamy zadatek`;
+        } else {
+            odwInfo.style.display = 'none';
+        }
     }
 
     // Badge statusu (USUNIETY / ZANONIMIZOWANY / ZMARLY)
@@ -31006,6 +31110,28 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
     <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
       <button onclick="zamknijModal('sd-ban-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
       <button onclick="wykonajBan()" style="padding:10px 20px; border:0; background:#b91c1c; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">⚠️ Oznacz</button>
+    </div>
+  </div>
+</div>
+
+<!-- ⏳ Modal: Odwołanie po czasie regulaminowym -->
+<div id="sd-odw-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
+    <h3 style="margin-top:0; color:#b45309;">⏳ Odwołanie po czasie regulaminowym</h3>
+    <p style="font-size:13px; color:#6b7280;">Klientka ma jednorazową możliwość odwołania zabiegu poniżej 24h przed wizytą bez potrącenia zadatku. Przy kolejnym takim odwołaniu zadatek jest już potrącany.</p>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-odw-imie">—</span></p>
+    <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:600; color:#1f2430; margin:14px 0 10px; cursor:pointer;">
+      <input type="checkbox" id="sd-odw-checkbox" onchange="sdOdwToggleData()" style="width:18px; height:18px; cursor:pointer;">
+      Wykorzystała(a) już tę możliwość
+    </label>
+    <div id="sd-odw-data-wrap">
+      <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Data wykorzystania</label>
+      <input type="date" id="sd-odw-data" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px;">
+    </div>
+    <p style="font-size:11.5px; color:#9ca3af; margin-top:10px;">Odznacz checkbox i zapisz, żeby cofnąć flagę (np. przy omyłkowym zaznaczeniu innego klienta).</p>
+    <div style="display:flex; gap:10px; margin-top:14px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-odw-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="zapiszOdwolanieUlga()" style="padding:10px 20px; border:0; background:#b45309; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">💾 Zapisz</button>
     </div>
   </div>
 </div>

@@ -119,6 +119,25 @@ module.exports = (db) => {
       }
     }
   );
+  // Sprzedaz.zawieszenia_liczba / _dni_lacznie — regulamin salonu pozwala zawiesić
+  // ważność karnetu (np. wyjazd, choroba); do tej pory jedynym obejściem było ręczne
+  // "Przedłuż", bez śladu ile razy i na ile dni to robiono (prośba recepcji, 2026-09-17).
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN zawieszenia_liczba INT NOT NULL DEFAULT 0`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.zawieszenia_liczba:', err.message);
+      }
+    }
+  );
+  db.query(
+    `ALTER TABLE Sprzedaz ADD COLUMN zawieszenia_dni_lacznie INT NOT NULL DEFAULT 0`,
+    (err) => {
+      if (err && !/Duplicate column/i.test(err.message)) {
+        console.error('[sprzedaz] ALTER Sprzedaz.zawieszenia_dni_lacznie:', err.message);
+      }
+    }
+  );
   // Sprzedaz.zwrot_do_id — ID oryginalnej sprzedaży, której dotyczy zwrot.
   // Wpis zwrotu ma ujemną kwotę i dzisiejszą datę (stare raporty nietknięte).
   // NULL = zwykła sprzedaż. Suma zwrotów do jednego ID nie może przekroczyć
@@ -371,7 +390,7 @@ module.exports = (db) => {
 
     } else if (action === 'full_sales_history') {
       db.query(
-        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez, grupa_id, zwrot_do_id FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
+        `SELECT id, data_sprzedazy, klient, zabieg, sprzedawca, kwota, komentarz, szczegoly, platnosc, id_klienta, typ_zabiegu, kategoria_produktu, data_waznosci, karnet_zamkniety_w, karnet_zamkniety_przez, grupa_id, zwrot_do_id, zawieszenia_liczba, zawieszenia_dni_lacznie FROM Sprzedaz WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY' ORDER BY data_sprzedazy DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -384,7 +403,9 @@ module.exports = (db) => {
             karnet_zamkniety_w: r.karnet_zamkniety_w || null,
             karnet_zamkniety_przez: r.karnet_zamkniety_przez || null,
             grupa_id: r.grupa_id || null,
-            zwrot_do_id: r.zwrot_do_id || null
+            zwrot_do_id: r.zwrot_do_id || null,
+            zawieszenia_liczba: Number(r.zawieszenia_liczba) || 0,
+            zawieszenia_dni_lacznie: Number(r.zawieszenia_dni_lacznie) || 0
           })));
         }
       );
@@ -1237,6 +1258,36 @@ module.exports = (db) => {
           opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
             (opis) => zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, opis));
           return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
+        }
+      );
+
+    // --- SUSPEND_KARNET (Zawieś ważność — regulamin salonu to dopuszcza) ---
+    // Mechanicznie jak "Przedłuż" (przesuwa data_waznosci), ale dodatkowo liczy ile razy
+    // i na ile dni łącznie karnet był zawieszany — recepcja tego potrzebowała, "Przedłuż"
+    // było dotąd jedynym (nieśledzonym) obejściem.
+    } else if (action === 'suspend_karnet') {
+      const dni = parseInt(d.dni, 10);
+      if (!Number.isFinite(dni) || dni <= 0) {
+        return res.json({ status: 'error', message: 'Podaj liczbę dni zawieszenia.' });
+      }
+      const nowaData = toDateStr(d.data_waznosci);
+      if (!nowaData || !/^\d{4}-\d{2}-\d{2}$/.test(nowaData)) {
+        return res.json({ status: 'error', message: 'Nieprawidłowa data ważności (YYYY-MM-DD).' });
+      }
+      const grupowe = !!d.grupa_id;
+      const warKol = grupowe ? 'grupa_id' : 'id';
+      const warVal = grupowe ? d.grupa_id : d.id;
+      db.query(
+        `UPDATE Sprzedaz SET data_waznosci = ?, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL,
+                zawieszenia_liczba = zawieszenia_liczba + 1, zawieszenia_dni_lacznie = zawieszenia_dni_lacznie + ?
+          WHERE tenant_id = ? AND ${warKol} = ?`,
+        [nowaData, dni, tenant_id, warVal],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
+          opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
+            (opis) => zapiszLog(tenant_id, 'ZAWIESZENIE KARNETU', d.pracownik, `${opis} · zawieszono na ${dni} dni`));
+          return res.json({ status: 'success', message: `Zawieszono na ${dni} dni — ważność przesunięta do ${nowaData}` + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
         }
       );
 

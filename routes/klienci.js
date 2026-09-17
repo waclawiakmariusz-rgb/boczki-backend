@@ -32,6 +32,19 @@ module.exports = (db) => {
     }
   );
 
+  // Idempotentna migracja: jednorazowa "ulga" na odwołanie zabiegu po czasie regulaminowym
+  // (poniżej 24h przed wizytą) — prośba recepcji. Pierwsze takie odwołanie bez potrącenia
+  // zadatku, kolejne już z potrąceniem — flaga + data muszą być edytowalne (recepcja mogła
+  // omyłkowo zaznaczyć nie tego klienta).
+  db.query(
+    `ALTER TABLE Klienci ADD COLUMN odwolanie_ulga TINYINT(1) NOT NULL DEFAULT 0`,
+    (err) => { if (err && !/Duplicate column/i.test(err.message)) console.error('[klienci] ALTER Klienci.odwolanie_ulga:', err.message); }
+  );
+  db.query(
+    `ALTER TABLE Klienci ADD COLUMN odwolanie_ulga_data DATE DEFAULT NULL`,
+    (err) => { if (err && !/Duplicate column/i.test(err.message)) console.error('[klienci] ALTER Klienci.odwolanie_ulga_data:', err.message); }
+  );
+
   // Idempotentna migracja: tabela na "zaproponowane" sugestie retail (kosmetyki).
   // Wpis = user kliknął "✓ Zaproponowane" przy danej sugestii — sugestia znika
   // dla TEJ konkretnej transakcji (klient + kosmetyk + data_zakupu). Wraca przy
@@ -93,7 +106,7 @@ module.exports = (db) => {
       const showDeleted = String(req.query.showDeleted || '') === 'true';
       const filtrStatus = showDeleted ? '' : `AND (status = 'AKTYWNY' OR status IS NULL)`;
       db.query(
-        `SELECT id_klienta, imie_nazwisko, telefon, rodo, osw, status, ostrzezenie, zmarly, data_zgonu, data_usuniecia, kto_usunal, powod_usuniecia FROM Klienci WHERE tenant_id = ? ${filtrStatus} ORDER BY imie_nazwisko`,
+        `SELECT id_klienta, imie_nazwisko, telefon, rodo, osw, status, ostrzezenie, zmarly, data_zgonu, data_usuniecia, kto_usunal, powod_usuniecia, odwolanie_ulga, odwolanie_ulga_data FROM Klienci WHERE tenant_id = ? ${filtrStatus} ORDER BY imie_nazwisko`,
         [tenant_id],
         (err, klienci) => {
           if (err) return res.json({ klienci: [], zadatki: [] });
@@ -119,7 +132,9 @@ module.exports = (db) => {
                 data_zgonu: r.data_zgonu || null,
                 data_usuniecia: r.data_usuniecia || null,
                 kto_usunal: r.kto_usunal || null,
-                powod_usuniecia: r.powod_usuniecia || null
+                powod_usuniecia: r.powod_usuniecia || null,
+                odwolanie_ulga: r.odwolanie_ulga ? 1 : 0,
+                odwolanie_ulga_data: r.odwolanie_ulga_data || null
               }));
 
               db.query(
@@ -380,6 +395,7 @@ module.exports = (db) => {
         ORDER BY z.data_wplaty ASC`;
       const qKarnety = `
         SELECT s.id, s.klient, s.id_klienta, s.zabieg, s.szczegoly, s.grupa_id,
+               s.zawieszenia_liczba, s.zawieszenia_dni_lacznie,
                DATE_FORMAT(s.data_sprzedazy, '%Y-%m-%d') AS data_zakupu,
                DATE_FORMAT(s.data_waznosci, '%Y-%m-%d') AS data_waznosci,
                DATEDIFF(s.data_waznosci, CURDATE()) AS diff,
@@ -409,7 +425,9 @@ module.exports = (db) => {
                 id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
                 zabieg: r.zabieg || '', szczegoly: r.szczegoly || '', grupa_id: r.grupa_id || null,
                 data_zakupu: r.data_zakupu, data_waznosci: r.data_waznosci, diff: Number(r.diff),
-                id_dopasowane: String(r.id_dopasowane || '')
+                id_dopasowane: String(r.id_dopasowane || ''),
+                zawieszenia_liczba: Number(r.zawieszenia_liczba) || 0,
+                zawieszenia_dni_lacznie: Number(r.zawieszenia_dni_lacznie) || 0
               })),
               pominiete: (pominiete || []).map(r => ({
                 klucz: r.klucz, rodzaj: r.rodzaj, pominiete_przez: r.pominiete_przez || '', data: r.data
@@ -983,6 +1001,48 @@ module.exports = (db) => {
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
             zapiszLog(tenant_id, 'ANULOWANIE_BAN', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, stareOstrz }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'set_odwolanie_ulga') {
+      // ⏳ Jednorazowa "ulga" na odwołanie zabiegu po czasie regulaminowym wykorzystana
+      const id_klienta = d.id_klienta;
+      const data = d.data || null;
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+      if (!data) return res.json({ status: 'error', message: 'Podaj datę wykorzystania' });
+
+      db.query(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+
+        db.query(
+          `UPDATE Klienci SET odwolanie_ulga=1, odwolanie_ulga_data=? WHERE tenant_id=? AND id_klienta=?`,
+          [data, tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'ODWOLANIE_ULGA_USTAWIONA', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, data }));
+            return res.json({ status: 'success' });
+          }
+        );
+      });
+
+    } else if (action === 'clear_odwolanie_ulga') {
+      // Cofnij flagę — np. omyłkowo zaznaczono innego klienta
+      const id_klienta = d.id_klienta;
+      const kto = d.user_log || '';
+      if (!id_klienta) return res.json({ status: 'error', message: 'Brak id_klienta' });
+
+      db.query(`SELECT imie_nazwisko, odwolanie_ulga_data FROM Klienci WHERE tenant_id=? AND id_klienta=? LIMIT 1`, [tenant_id, id_klienta], (e, rows) => {
+        if (e || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta' });
+
+        db.query(
+          `UPDATE Klienci SET odwolanie_ulga=0, odwolanie_ulga_data=NULL WHERE tenant_id=? AND id_klienta=?`,
+          [tenant_id, id_klienta],
+          (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'ODWOLANIE_ULGA_COFNIETA', kto, JSON.stringify({ id_klienta, imie: rows[0].imie_nazwisko, staraData: rows[0].odwolanie_ulga_data }));
             return res.json({ status: 'success' });
           }
         );
