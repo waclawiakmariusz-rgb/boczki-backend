@@ -5,7 +5,7 @@ nazywa się od ŚCIEŻKI projektu, a konta Windows są różne (`aaell` na HP, `
 więc Claude na DELL startuje bez żadnej wiedzy o tym projekcie. Poniżej wszystko, co potrzebne,
 żeby pracować sensownie od pierwszej minuty.
 
-Stan wiedzy: **2026-09-10** (ostatnia aktualizacja tego pliku; czytaj rozdział 10b najpierw —
+Stan wiedzy: **2026-09-19** (ostatnia aktualizacja tego pliku; czytaj rozdział 10c najpierw —
 najnowszy). Autor: Claude pracujący na HP. Pełna pamięć (kilkadziesiąt plików, m.in. hasła
 i dane dostępowe — celowo NIE ma ich tutaj) siedzi na HP; jeśli czegoś brakuje, poproś
 użytkownika, żeby zapytał tamtej instancji.
@@ -333,7 +333,142 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
-# 10b. STAN NA 2026-09-09/10 (najnowszy — czytaj najpierw)
+# 10c. STAN NA 2026-09-15 do 2026-09-19 (najnowszy — czytaj najpierw)
+
+Cztery dni pracy na HP. **UWAGA, inaczej niż w poprzednich rozdziałach: NIC poniżej nie zostało
+jeszcze wdrożone na Hostinger ani potwierdzone przez użytkownika w przeglądarce.** Cała praca
+jest wypushowana do gita (`main` = `dev` = `4efd26a`), ale w żadnej z tych sesji nie zrobiliśmy
+`git pull` + restart na serwerze. **Zanim powiesz userowi "to już działa" — zapytaj, czy deploy
+się odbył.** Ostatni tag `ostatnia-dobra-*` to `ostatnia-dobra-2026-09-10`, czyli SPRZED tej
+całej serii zmian — nie zakładaj, że coś z poniższego jest bezpiecznym punktem powrotu.
+
+## Śledztwo bez zmian w kodzie (2026-09-15)
+
+Recepcja poprosiła o analizę modułu Konsultacji ("stary kod, może da się coś ulepszyć") —
+zrobiony pełny przegląd `routes/konsultacje.js` (682 linie), user po przeczytaniu raportu
+powiedział **"nie, nic tu nie zmieniaj"**. Nie ruszaj tego modułu bez nowej, wyraźnej prośby.
+Ustalenia z raportu (na wypadek gdyby temat wrócił): brak testów (`konsultacje.test.js` nie
+istnieje), 2 miejsca z cichym fałszywym `status:'success'` mimo błędu zapisu bazy
+(`kon_add_consultant`, `kon_toggle_campaign`), `odp_getReportData` robi 6 zapytań sekwencyjnie
+zamiast równolegle, ten sam endpoint miesza dane z 5 różnych tabel (Magazyn/Sprzedaz/Platnosci/
+Zadatki/Uslugi), martwe pole `telefon` w `Wyniki_konsultacja` (zapisywane, nigdy nie zbierane
+przez formularz), brak RBAC backendowego (tylko tenant_id+sesja, nie rola — to jednak znany
+dług całego systemu, nie specyfika tego modułu).
+
+## Co weszło 2026-09-15/16 — drobne poprawki + nowe moduły analityczne
+
+1. **Alfabetyczne sortowanie w Kosmetyki→Przyjęcie towaru** (`cdc8401`) — zwykłe `.sort()` na
+   liście firm/modeli sortowało po kodach znaków (wielkie/małe litery, polskie znaki), nie
+   alfabetycznie. Fix: `.sort((a,b)=>a.localeCompare(b))` — **ten wzorzec wraca jeszcze dwa razy
+   niżej w tym rozdziale, warto go zapamiętać jako domyślny sposób sortowania list PL w tym
+   projekcie.**
+2. **Statystyki miesięczne linków do płatności** (`f318c44`→`9c23d66`) — Administracja→Płatności
+   online, nowa karta pod listą/paginacją z tabelą miesięczną (utworzono/zaakceptowano/wygasło/
+   anulowano/oczekuje). **WAŻNE ograniczenie architektury, nie tego dodatku:** system NIE MA
+   webhooka z tpay potwierdzającego faktyczną płatność — status `ZAAKCEPTOWANA` znaczy tylko
+   "klient zaakceptował regulamin i został przekierowany do tpay", nie "zapłacił". UI to jasno
+   opisuje, ale jeśli ktoś zapyta "ile się faktycznie opłaciło" — to pytanie, na które ten
+   system nie potrafi dziś odpowiedzieć. Kolumna z sumą kwot była w pierwszej wersji, usunięta
+   na prośbę usera (`9c23d66`) — zostały tylko liczby.
+3. **Nowy moduł: Ranking klientów** (Klienci→Ranking, `3a41ad9`) — recepcja chciała sortować
+   klientów po wydanych kwotach; celowo NIE dołożone do istniejącej listy "Klienci" (obawa
+   o spowolnienie jej ładowania), tylko osobna pod-zakładka. User wprost powiedział, że myśli
+   o tym miejscu jako o "dziale do wszelkich analiz klientów, nie tylko sortowania" — stąd
+   dalsza rozbudowa w punkcie 7 poniżej. Wersja 1: wybierany zakres dat (nie ustalony z góry),
+   sort najwięcej/najmniej wydali, filtr po zabiegu/pakiecie (normalizacja nazwy jak w Analizie
+   Zabiegu — "Botoks" i "Botoks Dopłata" to jedno), Top 15 + "Pokaż więcej" (`43a48c2` zmieniło
+   z 20 na 15). Backend: `get_client_ranking`, `get_ranking_zabiegi` w `routes/klienci.js` —
+   kwota liczona wprost z `Sprzedaz.kwota` (ten sam wzorzec co roczne wydatki w Klubie,
+   `routes/lojalnosc.js`), inwariant "pomijaj metoda=mix" tu NIE ma zastosowania (nie łączy się
+   z `Platnosci`).
+4. **Ranking — kwoty tylko dla zakresu w obrębie bieżącego miesiąca** (`42f566f`) — kolejna
+   prośba usera: kwoty widoczne TYLKO gdy CAŁY wybrany zakres (i „od", i „do") mieści się
+   w aktualnym miesiącu kalendarzowym; poza tym — lista/sortowanie/liczba transakcji dalej
+   działają poprawnie (sortowanie po realnej kwocie), ale sama kwota jest zamaskowana „🔒
+   ukryte" z wyjaśnieniem w UI. Nie mylić z regułą "cały miesiąc od 1. dnia" — user to
+   sprecyzował: chodzi WYŁĄCZNIE o to, żeby zakres nie wychodził poza bieżący miesiąc, dzień
+   startowy może być dowolny.
+5. **Fix: Klienci→Wygasające karnety i Pulpit→Do sprawdzenia pokazywały RÓŻNE listy** (`6fb2655`)
+   — zgłoszenie recepcji. Przyczyna: dwa NIEZALEŻNE liczenia tego samego (Pulpit przez backend
+   `ds_przeglad`, Klienci-tab przez `full_sales_history` + liczenie w JS) — przycisk "Pomiń"
+   na Pulpicie działał tylko lokalnie, w drugim miejscu pominięta pozycja dalej straszyła. Fix:
+   `renderWygasajaceKarnety()` w index.html korzysta teraz z TEGO SAMEGO `ds_przeglad` co Pulpit
+   i tej samej listy pominiętych. **Wzorzec do zapamiętania: jeśli to samo pojęcie biznesowe
+   (tu: "karnet wygasający") jest liczone w dwóch miejscach dwoma różnymi zapytaniami — to
+   pytanie czasu, aż się rozjadą. Jedno źródło prawdy, nie dwa liczenia tej samej rzeczy.**
+
+## Co weszło 2026-09-17 — karnety: zawieszenie + flaga odwołania po czasie
+
+6. **Zawieszenie ważności karnetu — ile razy i na ile dni** (`13a0b3a`) — regulamin salonu
+   dopuszcza zawieszenie karnetu (np. wyjazd, choroba klientki), system tego wcześniej NIE
+   śledził — jedynym obejściem było ręczne "Przedłuż" bez żadnego śladu ile razy/na ile dni to
+   robiono. Nowy przycisk "🕓 Zawieś" (dropdown dni, reużywa `opcjeDniPrzedluzenia()`) obok
+   Przedłuż/Zakończ w **3 miejscach**: profil klienta (`renderKarnetInfo`), Pulpit→Do sprawdzenia,
+   Klienci→Wygasające karnety. Mechanicznie jak "Przedłuż" (przesuwa `data_waznosci`), ale
+   dodatkowo liczy `zawieszenia_liczba` i `zawieszenia_dni_lacznie` na `Sprzedaz` — widoczne jako
+   fioletowy znacznik przy karnecie. Nowa akcja `suspend_karnet` w `routes/sprzedaz.js`.
+   **PUŁAPKA PROCESOWA (moja, HP) — ważne dla ciebie:** ten sam commit `13a0b3a` przypadkowo
+   zawiera JESZCZE JEDNĄ, całkiem niezwiązaną funkcję: punkt 8 poniżej ("Odwołanie po czasie").
+   Zaimplementowałem ją wcześniej tego samego dnia, ale nigdy osobno nie scommitowałem —
+   przy kolejnym `git add` (do commita o zawieszeniu karnetów) poszła razem, bo dodawałem cały
+   plik `routes/klienci.js`, nie tylko nowe linie. **Jeśli szukasz funkcji "Odwołanie po czasie"
+   w historii gita — NIE ma dla niej osobnego commita, mimo mylącej nazwy siedzi wewnątrz
+   `13a0b3a`.** Nauka na przyszłość (dla mnie i dla Ciebie): przed `git add` na cały plik,
+   sprawdź `git diff <plik>` czy nie ma tam czegoś z zupełnie innego wątku pracy.
+7. **Zbiorowe zawieszenie WSZYSTKICH karnetów klienta naraz** (`b57e56f`, ten sam dzień) —
+   dalsza prośba recepcji: klientka z kilkoma różnymi karnetami (np. 6 typów zabiegów) wyjeżdża
+   na tydzień, klikanie "Zawieś" osobno przy każdym groziło pominięciem. Nowa opcja w menu
+   „⋮ Akcje" profilu: „🕓 Zawieś wszystkie karnety" — jedna liczba dni, backend liczy nową datę
+   OSOBNO dla każdego karnetu (każdy ma inną dotychczasową ważność). Nowa akcja
+   `suspend_all_karnety`.
+8. **Flaga „Odwołanie po czasie regulaminowym"** (kod wewnątrz `13a0b3a`, patrz pułapka wyżej) —
+   recepcja: klientki mają jednorazową możliwość odwołania zabiegu <24h przed wizytą bez
+   potrącenia zadatku; przy KOLEJNYM takim odwołaniu zadatek już się potrąca. Potrzebna flaga
+   w profilu, edytowalna (na wypadek pomyłkowego zaznaczenia nie tego klienta), z datą
+   wykorzystania. Menu Akcje profilu → „⏳ Odwołanie po czasie" → modal z checkboxem +
+   edytowalną datą. Zaznaczenie = ustawia flagę; odznaczenie + zapis = cofa (korekta pomyłki).
+   Żółty banner w nagłówku profilu gdy flaga aktywna, z przyciskiem „✎ Popraw". Kolumny
+   `odwolanie_ulga` / `odwolanie_ulga_data` na `Klienci`, akcje `set_odwolanie_ulga` /
+   `clear_odwolanie_ulga` w `routes/klienci.js`, log do Dziennika zdarzeń przy każdej zmianie.
+
+## Co weszło 2026-09-19 — Ranking: tryb "Aktywne pakiety"
+
+9. **Ranking → druga zakładka "🎟️ Aktywne pakiety"** (`255cf52`→`4efd26a`) — konkretny impuls:
+   recepcja sprzedaje urządzenie Alma i musi znaleźć WSZYSTKICH klientów z jeszcze
+   niewykorzystanym (niezakończonym) pakietem na to urządzenie — user wprost powiedział "nie ma
+   takiego miejsca, w którym łatwo można znaleźć osoby, które mają dostępne pakiety dowolnej
+   rzeczy". To realizacja zapowiedzi z punktu 3 (Ranking = dział do różnych analiz, nie tylko
+   sortowania po wydatkach). Inna logika niż "Wygasające karnety" (tam tylko okno ≤14 dni do
+   wygaśnięcia) — tu liczy się WYŁĄCZNIE `karnet_zamkniety_w IS NULL`, niezależnie od tego, czy
+   termin ważności już minął (bo przy sprzedaży urządzenia chodzi o kompletność, nie o pilność).
+   Lista zabiegów do wyboru — **rozwijana, alfabetyczna (`localeCompare`), NIE wpisywanie
+   z ręki** (user explicite tego chciał, ryzyko literówek/pominięcia wariantu nazwy) i dopasowanie
+   dokładne po znormalizowanej nazwie (nie `LIKE`) — inaczej niż `szukaj` w innych listach tego
+   projektu (np. lista klientów, płatności online), które celowo są wolnym tekstem. Nowe akcje
+   `get_aktywne_pakiety`, `get_pakiety_z_aktywnymi_lista` w `routes/klienci.js`. Fix `4efd26a`
+   tego samego dnia: wyniki grupowane po KLIENCIE (nie po transakcji) — ten sam klient z dwoma
+   osobnymi zakupami tego samego pakietu (np. różny rabat) pokazywał się dwa razy, myląc
+   liczenie „ile osób trzeba obdzwonić"; teraz jeden wiersz na osobę, wszystkie jej pasujące
+   pakiety w środku + telefon do kontaktu.
+
+## Potwierdzenie: pułapka testowa z ALTER TABLE — nie dotyczy (dobra wiadomość)
+
+Przy każdej z powyższych zmian dodawaliśmy nowe kolumny przez `ALTER TABLE ... ADD COLUMN`
+(idempotentne migracje przy starcie modułu) — **żadna nie wymagała specjalnych zabiegów
+w testach**, bo `tests/helpers/mockDb.js` ma regex `^ALTER TABLE` i takie zapytania NIE
+konsumują sekwencyjnej kolejki mocków (w przeciwieństwie do `CREATE TABLE`, patrz pułapka
+z 2026-09-10 niżej w rozdziale 10b — to ograniczenie dotyczy tylko `CREATE TABLE`).
+
+## Tagi i deploy (stan na 2026-09-19)
+
+**Nic z tego rozdziału nie jest wdrożone na Hostinger ani potwierdzone przez usera.** Ostatni
+tag `ostatnia-dobra-2026-09-10` jest już nieaktualny względem `main`/`dev` o 11 commitów.
+Zanim utworzysz kolejny tag — upewnij się, że deploy faktycznie się odbył i user zobaczył, że
+działa (zasada z 2026-09-02: tag DOPIERO po sprawdzonym deployu).
+
+---
+
+# 10b. STAN NA 2026-09-09/10
 
 Dwa dni pracy na HP. Wszystko poniżej **wdrożone na produkcję i potwierdzone przez
 użytkownika**. `main` = `dev` = `5232e67`.
