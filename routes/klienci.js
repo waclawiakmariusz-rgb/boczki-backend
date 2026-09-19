@@ -233,6 +233,68 @@ module.exports = (db) => {
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       })();
 
+    } else if (action === 'get_pakiety_z_aktywnymi_lista') {
+      // Lista do rozwijanego filtra w trybie "Aktywne pakiety" — TYLKO nazwy, które mają
+      // dziś co najmniej jeden niezakończony karnet (nie cała historia sprzedaży, jak w
+      // get_ranking_zabiegi) — inaczej lista byłaby zaśmiecona dawno zamkniętymi tematami.
+      // Sortowanie alfabetyczne przez localeCompare (nie zwykłe .sort() — psuje polskie znaki).
+      (async () => {
+        try {
+          const rows = await q(
+            `SELECT zabieg FROM Sprzedaz
+              WHERE tenant_id = ? AND COALESCE(status, '') != 'USUNIĘTY'
+                AND karnet_zamkniety_w IS NULL AND data_waznosci IS NOT NULL
+                AND zabieg IS NOT NULL AND zabieg != ''`,
+            [tenant_id]);
+          const mapa = new Map();
+          rows.forEach(r => {
+            const nazwa = String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim();
+            if (!nazwa) return;
+            mapa.set(nazwa, (mapa.get(nazwa) || 0) + 1);
+          });
+          const data = Array.from(mapa.entries())
+            .map(([nazwa, liczba]) => ({ nazwa, liczba }))
+            .sort((a, b) => a.nazwa.localeCompare(b.nazwa));
+          return res.json({ status: 'success', data });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      })();
+
+    } else if (action === 'get_aktywne_pakiety') {
+      // "Aktywne pakiety" (Klienci → Ranking) — prośba recepcji, 2026-09-19: przy sprzedaży
+      // urządzenia (np. Alma) trzeba znaleźć WSZYSTKICH klientów z niezakończonym karnetem
+      // danego typu, niezależnie od tego, czy termin ważności już minął — inaczej niż
+      // "Wygasające karnety" (tam liczy się tylko okno ≤14 dni do wygaśnięcia). Dopasowanie
+      // po ZNORMALIZOWANEJ nazwie (jak get_client_ranking), nie LIKE — user wybiera z listy
+      // rozwijanej, więc nazwa jest zawsze dokładna, bez literówek.
+      (async () => {
+        try {
+          const zabiegFiltr = String(req.query.zabieg || '').trim();
+          if (!zabiegFiltr) return res.json({ status: 'error', message: 'Wybierz zabieg/pakiet z listy.' });
+
+          const rows = await q(
+            `SELECT s.id, s.id_klienta, s.klient, s.zabieg, s.szczegoly,
+                    DATE_FORMAT(s.data_waznosci, '%Y-%m-%d') AS data_waznosci,
+                    DATEDIFF(s.data_waznosci, CURDATE()) AS diff,
+                    s.zawieszenia_liczba, s.zawieszenia_dni_lacznie
+               FROM Sprzedaz s
+              WHERE s.tenant_id = ? AND COALESCE(s.status, '') != 'USUNIĘTY'
+                AND s.karnet_zamkniety_w IS NULL AND s.data_waznosci IS NOT NULL
+              ORDER BY diff ASC`,
+            [tenant_id]);
+
+          const data = rows
+            .filter(r => String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim() === zabiegFiltr)
+            .map(r => ({
+              id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
+              zabieg: r.zabieg || '', szczegoly: r.szczegoly || '',
+              data_waznosci: r.data_waznosci, diff: r.diff === null ? null : Number(r.diff),
+              zawieszenia_liczba: Number(r.zawieszenia_liczba) || 0,
+              zawieszenia_dni_lacznie: Number(r.zawieszenia_dni_lacznie) || 0
+            }));
+          return res.json({ status: 'success', data, razem: data.length });
+        } catch (e) { return res.json({ status: 'error', message: e.message }); }
+      })();
+
     } else if (action === 'get_client_profile_data') {
       const parametr = req.query.klient;
       let id = '', nazwa = '';

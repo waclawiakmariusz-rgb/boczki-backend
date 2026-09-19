@@ -7615,27 +7615,48 @@ document.addEventListener('DOMContentLoaded', () => {
 		   <div id="ranking-klientow" class="section">
     <div class="header"><h1>Ranking klientów</h1></div>
 
-    <div class="card" style="padding:18px 22px; margin-bottom:20px;">
-        <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
-            <div><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Od:</label>
-                <input type="date" id="rnk-od" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></div>
-            <div><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Do:</label>
-                <input type="date" id="rnk-do" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></div>
-            <div style="min-width:220px;"><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Zabieg / pakiet:</label>
-                <select id="rnk-zabieg" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px; width:100%; box-sizing:border-box;"><option value="">Wszystkie</option></select></div>
-            <button onclick="rnk_zaladuj(true)" class="btn-primary" style="width:auto; margin:0; padding:10px 22px;">🔍 Pokaż</button>
+    <div class="filters" style="margin-bottom:16px;">
+        <button class="filter-btn active" id="rnk-tryb-btn-wydatki" onclick="rnk_przelaczTryb('wydatki')">💰 Wydatki</button>
+        <button class="filter-btn" id="rnk-tryb-btn-pakiety" onclick="rnk_przelaczTryb('pakiety')">🎟️ Aktywne pakiety</button>
+    </div>
+
+    <div id="rnk-tryb-wydatki">
+        <div class="card" style="padding:18px 22px; margin-bottom:20px;">
+            <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+                <div><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Od:</label>
+                    <input type="date" id="rnk-od" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></div>
+                <div><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Do:</label>
+                    <input type="date" id="rnk-do" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"></div>
+                <div style="min-width:220px;"><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Zabieg / pakiet:</label>
+                    <select id="rnk-zabieg" style="padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px; width:100%; box-sizing:border-box;"><option value="">Wszystkie</option></select></div>
+                <button onclick="rnk_zaladuj(true)" class="btn-primary" style="width:auto; margin:0; padding:10px 22px;">🔍 Pokaż</button>
+            </div>
+            <div class="filters" style="margin-top:14px;">
+                <button class="filter-btn active" data-rnk-sort="malejaco" onclick="rnk_ustawSort('malejaco', this)">💰 Najwięcej wydali</button>
+                <button class="filter-btn" data-rnk-sort="rosnaco" onclick="rnk_ustawSort('rosnaco', this)">🪙 Najmniej wydali</button>
+            </div>
         </div>
-        <div class="filters" style="margin-top:14px;">
-            <button class="filter-btn active" data-rnk-sort="malejaco" onclick="rnk_ustawSort('malejaco', this)">💰 Najwięcej wydali</button>
-            <button class="filter-btn" data-rnk-sort="rosnaco" onclick="rnk_ustawSort('rosnaco', this)">🪙 Najmniej wydali</button>
+
+        <div class="card">
+            <div id="rnk-podsumowanie" style="color:#6b7280; font-size:13px; margin-bottom:10px;"></div>
+            <div id="rnk-lista"></div>
+            <div id="rnk-wiecej-wrap" style="text-align:center; margin-top:16px; display:none;">
+                <button onclick="rnk_pokazWiecej()" id="rnk-wiecej-btn" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 22px; font-size:13px; font-weight:600; cursor:pointer;">Pokaż więcej</button>
+            </div>
         </div>
     </div>
 
-    <div class="card">
-        <div id="rnk-podsumowanie" style="color:#6b7280; font-size:13px; margin-bottom:10px;"></div>
-        <div id="rnk-lista"></div>
-        <div id="rnk-wiecej-wrap" style="text-align:center; margin-top:16px; display:none;">
-            <button onclick="rnk_pokazWiecej()" id="rnk-wiecej-btn" style="background:#f1f5f9; border:0; border-radius:8px; padding:10px 22px; font-size:13px; font-weight:600; cursor:pointer;">Pokaż więcej</button>
+    <div id="rnk-tryb-pakiety" style="display:none;">
+        <div class="card" style="padding:18px 22px; margin-bottom:20px;">
+            <div style="font-size:13px; color:#6b7280; margin-bottom:12px;">Szuka po nazwie zabiegu/pakietu (np. „Alma") wśród klientów, którzy mają jeszcze NIEZAKOŃCZONY karnet tego typu — niezależnie od tego, czy ważność już minęła. Przydatne np. przy sprzedaży urządzenia, żeby znaleźć wszystkich, którym jeszcze należą się wejścia.</div>
+            <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;">
+                <div style="flex:1; min-width:240px;"><label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Zabieg / pakiet:</label>
+                    <select id="rnk-pak-select" onchange="rnk_szukajPakietow()" style="width:100%; box-sizing:border-box; padding:9px 10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:13.5px;"><option value="">-- wybierz z listy --</option></select></div>
+            </div>
+        </div>
+        <div class="card">
+            <div id="rnk-pak-podsumowanie" style="color:#6b7280; font-size:13px; margin-bottom:10px;"></div>
+            <div id="rnk-pak-lista"></div>
         </div>
     </div>
 </div>
@@ -33864,6 +33885,7 @@ async function zg_zaladujListe(strona) {
 // widok (nie w liście "Klienci"), żeby nie obciążać jej ładowania.
 // ═══════════════════════════════════════════════════════════════
 let rnk_sort = 'malejaco', rnk_offset = 0, rnk_limit = 15, rnk_razem = 0, rnk_zabiegiZaladowane = false;
+let rnk_tryb = 'wydatki', rnk_pakZaladowane = false;
 
 function rnk_init() {
     const od = document.getElementById('rnk-od');
@@ -33872,6 +33894,74 @@ function rnk_init() {
     if (doEl && !doEl.value) doEl.value = new Date().toISOString().slice(0, 10);
     if (!rnk_zabiegiZaladowane) { rnk_zaladujZabiegi(); rnk_zabiegiZaladowane = true; }
     rnk_zaladuj(true);
+}
+
+// Tryb "Aktywne pakiety" — osobna analiza (prośba recepcji, 2026-09-19): szukanie
+// WSZYSTKICH klientów z niezakończonym karnetem danego typu (np. przy sprzedaży
+// urządzenia, żeby ustalić komu jeszcze należą się wejścia). Inna logika niż "Wydatki"
+// (tam liczy się kwota w zakresie dat, tu status karnetu — niezależnie od kwoty i daty).
+function rnk_przelaczTryb(tryb) {
+    rnk_tryb = tryb;
+    document.getElementById('rnk-tryb-btn-wydatki').classList.toggle('active', tryb === 'wydatki');
+    document.getElementById('rnk-tryb-btn-pakiety').classList.toggle('active', tryb === 'pakiety');
+    document.getElementById('rnk-tryb-wydatki').style.display = tryb === 'wydatki' ? 'block' : 'none';
+    document.getElementById('rnk-tryb-pakiety').style.display = tryb === 'pakiety' ? 'block' : 'none';
+    if (tryb === 'pakiety' && !rnk_pakZaladowane) {
+        rnk_pakZaladowane = true;
+        rnk_zaladujListePakietow();
+    }
+}
+
+async function rnk_zaladujListePakietow() {
+    const sel = document.getElementById('rnk-pak-select');
+    if (!sel) return;
+    try {
+        const r = await fetch(API_URL + '?action=get_pakiety_z_aktywnymi_lista');
+        const d = await r.json();
+        if (d.status !== 'success') return;
+        sel.innerHTML = '<option value="">-- wybierz z listy --</option>' + (d.data || []).map(z =>
+            `<option value="${escHtml(z.nazwa)}">${escHtml(z.nazwa)} (${z.liczba})</option>`).join('');
+    } catch (e) {}
+}
+
+async function rnk_szukajPakietow() {
+    const cont = document.getElementById('rnk-pak-lista');
+    const pods = document.getElementById('rnk-pak-podsumowanie');
+    if (!cont) return;
+    const zabieg = (document.getElementById('rnk-pak-select').value || '').trim();
+    if (!zabieg) { cont.innerHTML = ''; if (pods) pods.textContent = ''; return; }
+    cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; padding:6px 2px;">Szukam…</div>';
+    if (pods) pods.textContent = '';
+    try {
+        const r = await fetch(API_URL + '?action=get_aktywne_pakiety&zabieg=' + encodeURIComponent(zabieg));
+        const d = await r.json();
+        if (d.status !== 'success') { cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd: ' + escHtml(d.message || 'nieznany') + '</div>'; return; }
+        const rows = d.data || [];
+        if (pods) pods.textContent = rows.length ? ('Znaleziono: ' + rows.length) : '';
+        if (!rows.length) { cont.innerHTML = '<div style="color:#9ca3af; font-size:13px; font-style:italic; padding:6px 2px;">Brak klientów z niezakończonym pakietem „' + escHtml(zabieg) + '".</div>'; return; }
+        cont.innerHTML = rows.map(rnk_renderPakietWiersz).join('');
+    } catch (e) {
+        cont.innerHTML = '<div style="color:#dc2626; font-size:13px;">Błąd połączenia.</div>';
+    }
+}
+
+function rnk_renderPakietWiersz(w) {
+    const diff = Number(w.diff);
+    let badge, kolor;
+    if (!w.data_waznosci) { badge = 'bez terminu ważności'; kolor = '#0369a1'; }
+    else if (diff < 0) { badge = `⚠ wygasł ${Math.abs(diff)} dni temu`; kolor = '#b91c1c'; }
+    else if (diff === 0) { badge = '⏳ wygasa DZIŚ'; kolor = '#b45309'; }
+    else { badge = `ważny do ${w.data_waznosci.split('-').reverse().join('.')} (jeszcze ${diff} dni)`; kolor = '#166534'; }
+    const zawieszen = Number(w.zawieszenia_liczba) || 0;
+    const zawieszInfo = zawieszen > 0 ? ` · 🕓 zawieszano ${zawieszen}× (${Number(w.zawieszenia_dni_lacznie) || 0} dni)` : '';
+    const klientHtml = w.id_klienta
+        ? `<a href="javascript:void(0)" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${w.id_klienta}'), 50);" style="color:#b87080; font-weight:700; text-decoration:none;">${escHtml(w.klient || '—')}</a>`
+        : `<span style="font-weight:700;">${escHtml(w.klient || '—')}</span>`;
+    return `<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
+        <div style="min-width:160px;">${klientHtml}</div>
+        <div style="flex:1; min-width:180px; color:#334155;">${escHtml(w.zabieg || '—')}${w.szczegoly ? ' <span style="color:#6b7280;">· ' + escHtml(w.szczegoly) + '</span>' : ''}</div>
+        <div style="min-width:220px; color:${kolor}; font-weight:600; font-size:12.5px;">${badge}${zawieszInfo}</div>
+    </div>`;
 }
 
 function rnk_ustawSort(sort, btn) {

@@ -538,6 +538,8 @@ app.get('/api', (req, res) => {
         'an_get_costs_list': '/api/analityka?action=get_costs_list&tenant_id=' + tenant_id,
         'get_ranking_zabiegi': '/api/klienci?action=get_ranking_zabiegi&tenant_id=' + tenant_id + (req.query.od ? '&od=' + encodeURIComponent(req.query.od) : '') + (req.query.do ? '&do=' + encodeURIComponent(req.query.do) : ''),
         'get_client_ranking': '/api/klienci?action=get_client_ranking&tenant_id=' + tenant_id + '&od=' + encodeURIComponent(req.query.od || '') + '&do=' + encodeURIComponent(req.query.do || '') + '&sortuj=' + encodeURIComponent(req.query.sortuj || '') + '&zabieg=' + encodeURIComponent(req.query.zabieg || '') + '&limit=' + encodeURIComponent(req.query.limit || '') + '&offset=' + encodeURIComponent(req.query.offset || ''),
+        'get_aktywne_pakiety': '/api/klienci?action=get_aktywne_pakiety&tenant_id=' + tenant_id + '&zabieg=' + encodeURIComponent(req.query.zabieg || ''),
+        'get_pakiety_z_aktywnymi_lista': '/api/klienci?action=get_pakiety_z_aktywnymi_lista&tenant_id=' + tenant_id,
         'kon_read_results': '/api/konsultacje?action=kon_read_results&tenant_id=' + tenant_id,
         'kon_get_consultants': '/api/konsultacje?action=kon_get_consultants&tenant_id=' + tenant_id + '&onlyActive=' + (req.query.onlyActive || ''),
         'kon_get_logs': '/api/konsultacje?action=kon_get_logs&tenant_id=' + tenant_id,
