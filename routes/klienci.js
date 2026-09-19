@@ -282,15 +282,40 @@ module.exports = (db) => {
               ORDER BY diff ASC`,
             [tenant_id]);
 
-          const data = rows
-            .filter(r => String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim() === zabiegFiltr)
-            .map(r => ({
-              id: r.id, id_klienta: String(r.id_klienta || ''), klient: r.klient || '',
-              zabieg: r.zabieg || '', szczegoly: r.szczegoly || '',
+          const pasujace = rows.filter(r =>
+            String(r.zabieg || '').trim().replace(/(?:\s|-)*dopłata$/i, '').trim() === zabiegFiltr);
+
+          const klienciRows = await q(
+            `SELECT id_klienta, imie_nazwisko, telefon FROM Klienci WHERE tenant_id = ? AND (status = 'AKTYWNY' OR status IS NULL)`,
+            [tenant_id]);
+          const klienciMap = new Map(klienciRows.map(k => [String(k.id_klienta), k]));
+
+          // Ten sam klient bywa w wynikach kilka razy (np. dwa osobne zakupy tego samego
+          // pakietu z różnym rabatem) — recepcja zgłosiła, że dublowanie się myli. Grupujemy
+          // po id_klienta (albo po nazwie, gdy brak karty), jeden wiersz = jedna osoba,
+          // wszystkie jej pakiety w środku.
+          const grupy = new Map(); // klucz -> { id_klienta, klient, telefon, pakiety: [] }
+          pasujace.forEach(r => {
+            const idK = String(r.id_klienta || '').trim();
+            const klucz = idK || ('nazwa:' + String(r.klient || '').toLowerCase().trim());
+            if (!grupy.has(klucz)) {
+              const karta = idK ? klienciMap.get(idK) : null;
+              grupy.set(klucz, {
+                id_klienta: idK, klient: (karta && karta.imie_nazwisko) || r.klient || '',
+                telefon: (karta && karta.telefon) || '', pakiety: []
+              });
+            }
+            grupy.get(klucz).pakiety.push({
+              id: r.id, zabieg: r.zabieg || '', szczegoly: r.szczegoly || '',
               data_waznosci: r.data_waznosci, diff: r.diff === null ? null : Number(r.diff),
               zawieszenia_liczba: Number(r.zawieszenia_liczba) || 0,
               zawieszenia_dni_lacznie: Number(r.zawieszenia_dni_lacznie) || 0
-            }));
+            });
+          });
+          // Najpilniejsi (najdawniej wygasło / najmniej dni zostało) na górze listy.
+          const data = Array.from(grupy.values())
+            .sort((a, b) => Math.min(...a.pakiety.map(p => p.diff ?? Infinity)) - Math.min(...b.pakiety.map(p => p.diff ?? Infinity)));
+
           return res.json({ status: 'success', data, razem: data.length });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       })();

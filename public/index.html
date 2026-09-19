@@ -33945,22 +33945,34 @@ async function rnk_szukajPakietow() {
     }
 }
 
+// Jeden wiersz = jedna osoba (nie jedna transakcja) — ten sam klient bywa kilka razy
+// w wynikach (np. dwa osobne zakupy tego samego pakietu z różnym rabatem); dublowanie
+// wprowadzało w błąd (zgłoszenie recepcji). Backend już grupuje po kliencie —
+// w.pakiety to lista wszystkich jego pasujących zakupów.
+function rnk_renderPakietBadge(p) {
+    const diff = Number(p.diff);
+    let tekst, kolor;
+    if (!p.data_waznosci) { tekst = 'bez terminu ważności'; kolor = '#0369a1'; }
+    else if (diff < 0) { tekst = `⚠ wygasł ${Math.abs(diff)} dni temu`; kolor = '#b91c1c'; }
+    else if (diff === 0) { tekst = '⏳ wygasa DZIŚ'; kolor = '#b45309'; }
+    else { tekst = `ważny do ${p.data_waznosci.split('-').reverse().join('.')} (jeszcze ${diff} dni)`; kolor = '#166534'; }
+    const zawieszen = Number(p.zawieszenia_liczba) || 0;
+    const zawieszInfo = zawieszen > 0 ? ` · 🕓 zawieszano ${zawieszen}× (${Number(p.zawieszenia_dni_lacznie) || 0} dni)` : '';
+    return `<div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:4px 0;">
+        <div style="flex:1; min-width:180px; color:#334155;">${escHtml(p.zabieg || '—')}${p.szczegoly ? ' <span style="color:#6b7280;">· ' + escHtml(p.szczegoly) + '</span>' : ''}</div>
+        <div style="min-width:220px; color:${kolor}; font-weight:600; font-size:12.5px;">${tekst}${zawieszInfo}</div>
+    </div>`;
+}
+
 function rnk_renderPakietWiersz(w) {
-    const diff = Number(w.diff);
-    let badge, kolor;
-    if (!w.data_waznosci) { badge = 'bez terminu ważności'; kolor = '#0369a1'; }
-    else if (diff < 0) { badge = `⚠ wygasł ${Math.abs(diff)} dni temu`; kolor = '#b91c1c'; }
-    else if (diff === 0) { badge = '⏳ wygasa DZIŚ'; kolor = '#b45309'; }
-    else { badge = `ważny do ${w.data_waznosci.split('-').reverse().join('.')} (jeszcze ${diff} dni)`; kolor = '#166534'; }
-    const zawieszen = Number(w.zawieszenia_liczba) || 0;
-    const zawieszInfo = zawieszen > 0 ? ` · 🕓 zawieszano ${zawieszen}× (${Number(w.zawieszenia_dni_lacznie) || 0} dni)` : '';
     const klientHtml = w.id_klienta
         ? `<a href="javascript:void(0)" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${w.id_klienta}'), 50);" style="color:#b87080; font-weight:700; text-decoration:none;">${escHtml(w.klient || '—')}</a>`
         : `<span style="font-weight:700;">${escHtml(w.klient || '—')}</span>`;
-    return `<div style="display:flex; align-items:center; gap:14px; padding:12px 14px; border-bottom:1px solid #f1f5f9; flex-wrap:wrap;">
-        <div style="min-width:160px;">${klientHtml}</div>
-        <div style="flex:1; min-width:180px; color:#334155;">${escHtml(w.zabieg || '—')}${w.szczegoly ? ' <span style="color:#6b7280;">· ' + escHtml(w.szczegoly) + '</span>' : ''}</div>
-        <div style="min-width:220px; color:${kolor}; font-weight:600; font-size:12.5px;">${badge}${zawieszInfo}</div>
+    const liczbaPakietow = (w.pakiety || []).length;
+    const licznik = liczbaPakietow > 1 ? ` <span style="color:#6d28d9; font-weight:600; font-size:12px;">(${liczbaPakietow}×)</span>` : '';
+    return `<div style="padding:12px 14px; border-bottom:1px solid #f1f5f9;">
+        <div style="margin-bottom:4px;">${klientHtml}${licznik}${w.telefon ? ' <span style="color:#6b7280; font-size:12.5px;">· ' + escHtml(w.telefon) + '</span>' : ''}</div>
+        ${(w.pakiety || []).map(rnk_renderPakietBadge).join('')}
     </div>`;
 }
 
