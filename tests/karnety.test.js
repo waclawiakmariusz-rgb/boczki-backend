@@ -268,6 +268,44 @@ describe('akcje karnetów — opis w Dzienniku Zdarzeń', () => {
         expect(opisZLogu(db)).toContain('ważność do 31.12.2026');
     });
 
+    // "✎ Ustaw datę" (2026-09-21): recepcja przedłużyła omyłkowo nie ten karnet — data
+    // może iść też DO TYŁU, a Dziennik ma to odróżnić od zwykłego przedłużenia.
+    function akcjaZLogu(db) {
+        const wpis = findQuery(db, 'INSERT INTO Logi');
+        return wpis ? String(wpis.params[3]) : null;   // (id, tenant, kto, akcja, opis)
+    }
+
+    test('extend_karnet z datą WCZEŚNIEJSZĄ niż poprzednia = korekta, nie przedłużenie', async () => {
+        const db = mockDb(
+            { rows: { affectedRows: 1 } },
+            { rows: [{ ...KARNET, data_waznosci: '2026-11-02' }] },
+            { rows: { affectedRows: 1 } },
+        );
+        const res = await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'extend_karnet', tenant_id: TENANT, id: 'S1',
+            data_waznosci: '2026-11-02', poprzednia_data: '2026-12-31', pracownik: 'Gosia',
+        });
+        expect(res.body.status).toBe('success');
+        expect(res.body.message).toContain('skrócona do 2026-11-02');
+        const q = findQuery(db, 'SET data_waznosci = ?');
+        expect(q.params).toContain('2026-11-02');
+        expect(akcjaZLogu(db)).toBe('KOREKTA DATY KARNETU');
+        expect(opisZLogu(db)).toContain('ważność do 02.11.2026');
+        expect(opisZLogu(db)).toContain('skrócono z 31.12.2026');
+    });
+
+    test('extend_karnet z datą PÓŹNIEJSZĄ niż poprzednia = zwykłe przedłużenie', async () => {
+        const db = dbZKarnetem();
+        const res = await request(buildApp(db)).post('/api/sprzedaz').send({
+            action: 'extend_karnet', tenant_id: TENANT, id: 'S1',
+            data_waznosci: '2026-12-31', poprzednia_data: '2026-11-02', pracownik: 'Gosia',
+        });
+        expect(res.body.status).toBe('success');
+        expect(res.body.message).toContain('zaktualizowana do 2026-12-31');
+        expect(akcjaZLogu(db)).toBe('PRZEDŁUŻ KARNET');
+        expect(opisZLogu(db)).not.toContain('skrócono');
+    });
+
     test('gdy danych karnetu brak — log powstaje mimo to, w starej formie', async () => {
         // Zdarzenie MUSI trafić do Dziennika nawet bez ładnego opisu.
         const db = mockDb(

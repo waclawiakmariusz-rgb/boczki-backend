@@ -15341,6 +15341,7 @@ function renderKarnetInfo(t, grupaId, liczba) {
             <option value="">🕓 Zawieś ▾</option>
             ${opcjeDniPrzedluzenia()}
         </select>
+        <button onclick="otworzUstawDate('${t.id}', '${t.data_waznosci}', '${gid || ''}', '${_escOnclick(t.zabieg || 'karnet')}')" style="flex:0 0 auto; background:#fffbeb; border:1px solid #fde68a; color:#b45309; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;" title="Ustaw dokładną datę ważności — także wcześniejszą (np. korekta pomyłkowego przedłużenia)">✎ Ustaw datę</button>
         <button onclick="zakonczKarnet('${t.id}'${gidArg})" style="flex:0 0 auto; background:#f1f5f9; border:1px solid #e2e8f0; color:#64748b; cursor:pointer; font-size:12px; font-weight:600; padding:4px 12px; border-radius:999px; line-height:1.4;">Zakończ</button>
     </div>`;
 }
@@ -15403,6 +15404,44 @@ function zawiesKarnet(id, aktualnaData, dni, grupaId) {
     baza.setDate(baza.getDate() + liczbaDni);
     const nowa = `${baza.getFullYear()}-${String(baza.getMonth() + 1).padStart(2, '0')}-${String(baza.getDate()).padStart(2, '0')}`;
     _karnetAction({ action: 'suspend_karnet', id: id, grupa_id: grupaId || null, data_waznosci: nowa, dni: liczbaDni, pracownik: currentUser });
+}
+
+// ✎ Ustaw dokładną datę ważności — także WCZEŚNIEJSZĄ niż obecna (prośba recepcji
+// 2026-09-21: przedłużono omyłkowo nie ten karnet i "Przedłuż" nie dawało drogi powrotnej).
+// Reużywa backendowej akcji extend_karnet (ta od zawsze przyjmowała dowolną datę);
+// dodatkowo wysyła poprzednia_data, żeby Dziennik rozróżnił korektę od przedłużenia.
+let _ustawDateKontekst = null;
+// Tekst do wstawienia w '...' wewnątrz atrybutu onclick: najpierw escape JS (\' i \\),
+// potem HTML — bo przeglądarka dekoduje encje PRZED parsowaniem JS, więc samo &#39; by
+// przerwało string.
+function _escOnclick(s) {
+    return escHtml(String(s || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
+}
+function otworzUstawDate(id, aktualnaData, grupaId, opisKarnetu) {
+    _ustawDateKontekst = { id: id, grupaId: grupaId || null, aktualna: aktualnaData || '' };
+    const fmt = (iso) => { const p = String(iso || '').split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : (iso || '—'); };
+    document.getElementById('sd-ustawdate-opis').textContent = opisKarnetu || 'karnet';
+    document.getElementById('sd-ustawdate-obecna').textContent = fmt(aktualnaData);
+    const inp = document.getElementById('sd-ustawdate-data');
+    inp.value = aktualnaData || '';
+    document.getElementById('sd-ustawdate-overlay').style.display = 'flex';
+    setTimeout(() => { try { inp.focus(); } catch (e) {} }, 50);
+}
+
+function wykonajUstawDate() {
+    const k = _ustawDateKontekst;
+    if (!k) return;
+    const nowa = document.getElementById('sd-ustawdate-data').value;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(nowa)) return alert('Wybierz datę.');
+    if (nowa === k.aktualna) return alert('To ta sama data, którą karnet ma teraz.');
+    const fmt = (iso) => iso.split('-').reverse().join('.');
+    if (k.aktualna && nowa < k.aktualna) {
+        // Skrócenie — potwierdzenie, żeby nie zrobić odwrotnej pomyłki.
+        if (!confirm(`Skracasz ważność z ${fmt(k.aktualna)} na ${fmt(nowa)}. Na pewno?`)) return;
+    }
+    zamknijModal('sd-ustawdate-overlay');
+    _karnetAction({ action: 'extend_karnet', id: k.id, grupa_id: k.grupaId, data_waznosci: nowa, poprzednia_data: k.aktualna || null, pracownik: currentUser });
+    _ustawDateKontekst = null;
 }
 
 function zakonczKarnet(id, grupaId) {
@@ -15539,6 +15578,7 @@ function renderujDoSprawdzenia(box, d) {
         const btnP = (dni) => `<button class="dsx-btn act" onclick="przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',${dni},'${gr}')" title="Przedłuż ważność o ${dni} dni">+${dni}</button>`;
         const selP = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:64px;padding:5px 6px;" title="Przedłuż o dowolną liczbę dni" onchange="if(this.value){przedluzKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">+ inne ▾</option>${opcjeDniPrzedluzenia()}</select>`;
         const selZaw = `<select class="dsx-btn act" style="appearance:none;-webkit-appearance:none;-moz-appearance:none;width:78px;padding:5px 6px;color:#6d28d9;" title="Zawieś ważność — regulamin salonu to dopuszcza (np. wyjazd, choroba)" onchange="if(this.value){zawiesKarnet('${esc(w.id)}','${esc(w.data_waznosci)}',this.value,'${gr}');} this.selectedIndex=0;"><option value="">🕓 Zawieś ▾</option>${opcjeDniPrzedluzenia()}</select>`;
+        const btnData = `<button class="dsx-btn act" style="color:#b45309;" onclick="otworzUstawDate('${esc(w.id)}','${esc(w.data_waznosci)}','${gr}','${esc(w.zabieg || 'karnet')}')" title="Ustaw dokładną datę ważności — także wcześniejszą (korekta pomyłki)">✎ Data</button>`;
         // Pojedynczy zabieg (brak mnogości typu "10x" w szczegółach) — klient mógł go
         // wykorzystać już w dniu zakupu, więc "wygasa" bywa tu fałszywym alarmem.
         const mnog = String(w.szczegoly || w.zabieg || '').match(/(\d+)\s*x/i);
@@ -15556,7 +15596,7 @@ function renderujDoSprawdzenia(box, d) {
                 + (w.szczegoly ? ` <span class="dsx-mut">· ${escHtml(w.szczegoly)}</span>` : '')
                 + infoPoj + infoZaw,
             `<span class="${klasa}">${badge}<br><small class="dsx-mut">${escHtml(dataFmt)}</small></span>`,
-            btnP(7) + btnP(14) + btnP(28) + selP + selZaw
+            btnP(7) + btnP(14) + btnP(28) + selP + selZaw + btnData
                 + `<button class="dsx-btn act" onclick="zakonczKarnet('${esc(w.id)}','${gr}')" title="Oznacz karnet jako zakończony">✓ Zakończ</button>`
                 + btnPomin(w.id, 'karnet')
         );
@@ -16040,6 +16080,7 @@ function renderWygasajaceKarnety() {
                         <select onchange="if(this.value){zawiesKarnet('${w.id}','${w.data_waznosci}',this.value);} this.selectedIndex=0;" style="background:#6d28d9; color:#fff; border:none; border-radius:8px; padding:6px 8px; font-size:13px; cursor:pointer; appearance:none; -webkit-appearance:none; -moz-appearance:none; width:92px;" title="Zawieś ważność — regulamin salonu to dopuszcza">
                             <option value="" style="color:#334155;background:#fff;">Zawieś ▾</option>${opcjeDniPrzedluzenia()}
                         </select>
+                        <button onclick="otworzUstawDate('${w.id}','${w.data_waznosci}','','${_escOnclick(w.zabieg || 'karnet')}')" style="background:#fef3c7; color:#b45309; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;" title="Ustaw dokładną datę ważności — także wcześniejszą (korekta pomyłki)">✎ Data</button>
                         <button onclick="zakonczKarnet('${w.id}')" style="background:#e2e8f0; color:#475569; border:none; border-radius:8px; padding:6px 12px; font-size:13px; cursor:pointer;">Zakończ</button>
                     </div>
                 </div>`;
@@ -31209,6 +31250,21 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
     <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
       <button onclick="zamknijModal('sd-zawwszystkie-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
       <button onclick="wykonajZawiesWszystkie()" style="padding:10px 20px; border:0; background:#6d28d9; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">🕓 Zawieś wszystkie</button>
+    </div>
+  </div>
+</div>
+
+<!-- ✎ Modal: Ustaw dokładną datę ważności karnetu (także wcześniejszą — korekta pomyłki) -->
+<div id="sd-ustawdate-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:95%; max-width:440px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
+    <h3 style="margin-top:0; color:#b45309;">✎ Ustaw datę ważności</h3>
+    <p style="font-size:13px; color:#6b7280;">Wpisz dokładną datę, do której karnet ma być ważny. Może być wcześniejsza niż obecna — np. gdy „Przedłuż" kliknięto omyłkowo przy nie tym karnecie. Liczniki zawieszeń zostają bez zmian.</p>
+    <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px; margin:0 0 12px 0;"><strong>Karnet:</strong> <span id="sd-ustawdate-opis">—</span><br><strong>Obecna ważność:</strong> <span id="sd-ustawdate-obecna">—</span></p>
+    <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Nowa data ważności</label>
+    <input type="date" id="sd-ustawdate-data" style="width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:8px; font-size:14px; box-sizing:border-box;">
+    <div style="display:flex; gap:10px; margin-top:20px; justify-content:flex-end;">
+      <button onclick="zamknijModal('sd-ustawdate-overlay')" style="padding:10px 20px; border:1px solid #e5e7eb; background:#fff; border-radius:8px; cursor:pointer; font-weight:600;">Anuluj</button>
+      <button onclick="wykonajUstawDate()" style="padding:10px 20px; border:0; background:#b45309; color:#fff; border-radius:8px; cursor:pointer; font-weight:700;">✎ Zapisz datę</button>
     </div>
   </div>
 </div>

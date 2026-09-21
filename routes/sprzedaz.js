@@ -1242,11 +1242,19 @@ module.exports = (db) => {
       );
 
     // --- EXTEND_KARNET (Przedłuż ważność / ustaw nową datę) ---
+    // Data może być też WCZEŚNIEJSZA niż obecna — przycisk "✎ Ustaw datę" w UI (prośba
+    // recepcji 2026-09-21: przedłużono omyłkowo nie ten karnet i nie było jak cofnąć).
+    // Frontend przesyła opcjonalnie `poprzednia_data` (tę, którą właśnie wyświetlał);
+    // gdy nowa data jest od niej wcześniejsza, wpis w Dzienniku to KOREKTA, nie przedłużenie.
+    // Porównujemy z danymi od klienta zamiast robić dodatkowy SELECT, żeby nie zmieniać
+    // kolejności zapytań (testy mockują je sekwencyjnie).
     } else if (action === 'extend_karnet') {
       const nowaData = toDateStr(d.data_waznosci);
       if (!nowaData || !/^\d{4}-\d{2}-\d{2}$/.test(nowaData)) {
         return res.json({ status: 'error', message: 'Nieprawidłowa data ważności (YYYY-MM-DD).' });
       }
+      const poprzednia = toDateStr(d.poprzednia_data);
+      const skrocenie = !!(poprzednia && /^\d{4}-\d{2}-\d{2}$/.test(poprzednia) && nowaData < poprzednia);
       // grupa_id → akcja obejmuje wszystkie powielone pozycje grupy; inaczej pojedyncze id.
       const grupowe = !!d.grupa_id;
       const warKol = grupowe ? 'grupa_id' : 'id';
@@ -1260,8 +1268,11 @@ module.exports = (db) => {
           if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono sprzedaży o tym ID.' });
           // opisKarnetu czyta rekord PO update, więc "ważność do" pokazuje już nową datę.
           opisKarnetu(tenant_id, grupowe, warKol, warVal, result.affectedRows,
-            (opis) => zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, opis));
-          return res.json({ status: 'success', message: 'Ważność zaktualizowana do ' + nowaData + (grupowe ? ` (${result.affectedRows} szt.)` : '') });
+            (opis) => skrocenie
+              ? zapiszLog(tenant_id, 'KOREKTA DATY KARNETU', d.pracownik, `${opis} · skrócono z ${dataPL(poprzednia)}`)
+              : zapiszLog(tenant_id, 'PRZEDŁUŻ KARNET', d.pracownik, opis));
+          const sztuk = grupowe ? ` (${result.affectedRows} szt.)` : '';
+          return res.json({ status: 'success', message: (skrocenie ? 'Ważność skrócona do ' : 'Ważność zaktualizowana do ') + nowaData + sztuk });
         }
       );
 
