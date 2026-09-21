@@ -335,12 +335,13 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 # 10c. STAN NA 2026-09-15 do 2026-09-19 (najnowszy — czytaj najpierw)
 
-Cztery dni pracy na HP. **UWAGA, inaczej niż w poprzednich rozdziałach: NIC poniżej nie zostało
-jeszcze wdrożone na Hostinger ani potwierdzone przez użytkownika w przeglądarce.** Cała praca
-jest wypushowana do gita (`main` = `dev` = `4efd26a`), ale w żadnej z tych sesji nie zrobiliśmy
-`git pull` + restart na serwerze. **Zanim powiesz userowi "to już działa" — zapytaj, czy deploy
-się odbył.** Ostatni tag `ostatnia-dobra-*` to `ostatnia-dobra-2026-09-10`, czyli SPRZED tej
-całej serii zmian — nie zakładaj, że coś z poniższego jest bezpiecznym punktem powrotu.
+Cztery dni pracy na HP. **AKTUALIZACJA 2026-09-21: cała seria (punkty 1–9) została wdrożona na
+Hostinger i użytkownik potwierdził, że działa** — tag `ostatnia-dobra-2026-09-19` wskazuje
+`5cd3f9f` (ostatni commit tej serii + brief). Punkt 10 (2026-09-21, „Ustaw datę") jest na
+`main` = `ace85e3`, wypushowany, ale jeszcze NIE potwierdzony na produkcji.
+**Nauczka z 2026-09-21 (HP):** git pokazuje push, ale NIE pokazuje, czy ktoś kliknął „Ponowne
+wdrożenie" — brief z 19.09 mówił „niewdrożone", a w międzyczasie użytkownik wdrożył. Zanim
+powiesz „ten deploy wnosi X" — zapytaj, co już jest na produkcji, zamiast wnioskować z briefu.
 
 ## Śledztwo bez zmian w kodzie (2026-09-15)
 
@@ -481,9 +482,12 @@ z 2026-09-10 niżej w rozdziale 10b — to ograniczenie dotyczy tylko `CREATE TA
 
 ## Tagi i deploy (stan na 2026-09-21)
 
-**Nic z tego rozdziału nie jest wdrożone na Hostinger ani potwierdzone przez usera.** Ostatni
-tag `ostatnia-dobra-2026-09-10` jest już nieaktualny względem `dev` o 13 commitów (2026-09-21:
-`05d9a1c` „Ustaw datę" jest tylko na `dev`, `main` stoi na `5cd3f9f` — czeka na „push na main").
+- `ostatnia-dobra-2026-09-19` → `5cd3f9f`: punkty 1–9 wdrożone i potwierdzone przez usera
+  (tag założony 2026-09-21 po potwierdzeniu). To aktualny bezpieczny punkt powrotu.
+- `main` = `origin/main` = `ace85e3` (punkt 10 „Ustaw datę" + brief), wypushowane 2026-09-21
+  na wyraźne „push na main". Deploy przyciskiem na Hostingerze i sprawdzenie w przeglądarce
+  — po stronie usera; dopóki nie potwierdzi, NIE zakładaj tagu na `ace85e3`.
+- Ruchomego `ostatnia-dobra` nadal nie przestawiamy (decyzja usera z 2026-09-02).
 Zanim utworzysz kolejny tag — upewnij się, że deploy faktycznie się odbył i user zobaczył, że
 działa (zasada z 2026-09-02: tag DOPIERO po sprawdzonym deployu).
 
