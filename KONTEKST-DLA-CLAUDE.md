@@ -451,6 +451,26 @@ dług całego systemu, nie specyfika tego modułu).
    liczenie „ile osób trzeba obdzwonić"; teraz jeden wiersz na osobę, wszystkie jej pasujące
    pakiety w środku + telefon do kontaktu.
 
+## Co weszło 2026-09-21 — karnety: „✎ Ustaw datę" (skrócenie ważności = korekta pomyłki)
+
+10. **Przycisk „✎ Ustaw datę" przy karnecie** (`05d9a1c`) — zgłoszenie recepcji: przedłużyła
+    omyłkowo pakiet Infinity zamiast Focus i nie miała jak cofnąć. Diagnoza: backend
+    `extend_karnet` **od zawsze przyjmował dowolną datę** (także wcześniejszą), blokada
+    siedziała wyłącznie w UI („Przedłuż" = tylko lista +N dni). Fix: w tych samych 3 miejscach
+    co Przedłuż/Zawieś (profil klienta, Pulpit→Do sprawdzenia, Klienci→Wygasające karnety)
+    doszedł przycisk otwierający modal `sd-ustawdate-overlay` z kalendarzem, wstępnie
+    wypełnionym obecną datą. Skrócenie wymaga potwierdzenia. Backend: opcjonalne pole
+    `poprzednia_data` — gdy nowa data jest od niej wcześniejsza, Dziennik dostaje
+    „KOREKTA DATY KARNETU · skrócono z DD.MM.RRRR" zamiast „PRZEDŁUŻ KARNET". Celowo BEZ
+    dodatkowego SELECT-a (kolejność zapytań i sekwencyjne mocki w testach bez zmian).
+    Liczniki zawieszeń nietknięte. **Pułapka techniczna:** tekst wstawiany w `'...'` wewnątrz
+    atrybutu `onclick` trzeba escapować najpierw po stronie JS (`\'`), potem HTML — samo
+    `&#39;` NIE działa, bo przeglądarka dekoduje encje przed parsowaniem JS (helper
+    `_escOnclick` w index.html, do reużycia). Sprawa pani Łukaszewicz (Infinity do 2.11):
+    **rekord w bazie NIE był ruszany** — recepcja poprawi sama tym przyciskiem po deployu.
+    Na czystym HEAD padają te same 14 testów w `dokumenty`/`voucher`/`magazyn` (brak env
+    typu `UPLOADS_DIR` na tej maszynie) — to nie regresja.
+
 ## Potwierdzenie: pułapka testowa z ALTER TABLE — nie dotyczy (dobra wiadomość)
 
 Przy każdej z powyższych zmian dodawaliśmy nowe kolumny przez `ALTER TABLE ... ADD COLUMN`
@@ -459,10 +479,11 @@ w testach**, bo `tests/helpers/mockDb.js` ma regex `^ALTER TABLE` i takie zapyta
 konsumują sekwencyjnej kolejki mocków (w przeciwieństwie do `CREATE TABLE`, patrz pułapka
 z 2026-09-10 niżej w rozdziale 10b — to ograniczenie dotyczy tylko `CREATE TABLE`).
 
-## Tagi i deploy (stan na 2026-09-19)
+## Tagi i deploy (stan na 2026-09-21)
 
 **Nic z tego rozdziału nie jest wdrożone na Hostinger ani potwierdzone przez usera.** Ostatni
-tag `ostatnia-dobra-2026-09-10` jest już nieaktualny względem `main`/`dev` o 11 commitów.
+tag `ostatnia-dobra-2026-09-10` jest już nieaktualny względem `dev` o 13 commitów (2026-09-21:
+`05d9a1c` „Ustaw datę" jest tylko na `dev`, `main` stoi na `5cd3f9f` — czeka na „push na main").
 Zanim utworzysz kolejny tag — upewnij się, że deploy faktycznie się odbył i user zobaczył, że
 działa (zasada z 2026-09-02: tag DOPIERO po sprawdzonym deployu).
 
