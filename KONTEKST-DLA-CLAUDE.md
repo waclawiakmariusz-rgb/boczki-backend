@@ -480,13 +480,25 @@ w testach**, bo `tests/helpers/mockDb.js` ma regex `^ALTER TABLE` i takie zapyta
 konsumują sekwencyjnej kolejki mocków (w przeciwieństwie do `CREATE TABLE`, patrz pułapka
 z 2026-09-10 niżej w rozdziale 10b — to ograniczenie dotyczy tylko `CREATE TABLE`).
 
-## Tagi i deploy (stan na 2026-09-21)
+## Co weszło 2026-09-23 — modal edycji zadatku
 
-- `ostatnia-dobra-2026-09-19` → `5cd3f9f`: punkty 1–9 wdrożone i potwierdzone przez usera
-  (tag założony 2026-09-21 po potwierdzeniu). To aktualny bezpieczny punkt powrotu.
-- `main` = `origin/main` = `ace85e3` (punkt 10 „Ustaw datę" + brief), wypushowane 2026-09-21
-  na wyraźne „push na main". Deploy przyciskiem na Hostingerze i sprawdzenie w przeglądarce
-  — po stronie usera; dopóki nie potwierdzi, NIE zakładaj tagu na `ace85e3`.
+11. **Modal „Edycja Zadatku" 20% mniejszy + zamykanie tłem i Esc** (`3c23ac8`) — zgłoszenie
+    recepcji: przy niższej rozdzielczości karta była wyższa niż okno, wyśrodkowanie w pionie
+    wypychało nagłówek z „×" poza ekran, tło się nie przewijało — modal nie dawał się zamknąć.
+    Decyzja usera (zamiast sticky-nagłówka): `zoom: 0.8` na karcie `deposit-edit-modal-overlay`
+    (skaluje naraz odstępy, pola, przyciski i style inline), klik w tło zamyka, Esc zamyka
+    (listener przy `zamknijEdycjeZadatku`), bezpiecznik `max-height: calc(92vh / 0.8)` +
+    `overflow-y:auto` (dzielone przez 0.8, bo zoom skaluje też vh). **Ten sam wzorzec można
+    skopiować do innych modali, ale user nie prosił — nie rób tego „przy okazji".**
+
+## Tagi i deploy (stan na 2026-09-28)
+
+- `ostatnia-dobra-2026-09-21` → `ace85e3`: punkt 10 „Ustaw datę" wdrożony i potwierdzony
+  (tag założony 2026-09-23). **To aktualny bezpieczny punkt powrotu.**
+- `ostatnia-dobra-2026-09-19` → `5cd3f9f`: punkty 1–9 (zostaje, starych nie kasujemy).
+- `main` = `origin/main` = `dev` = `3c23ac8` (punkt 11, modal zadatku), wypushowane 2026-09-23
+  na wyraźne „push na main". Czy Hostinger to wdrożył i recepcja sprawdziła — NIE wiadomo
+  z repo; zapytaj usera, zanim założysz tag na `3c23ac8`.
 - Ruchomego `ostatnia-dobra` nadal nie przestawiamy (decyzja usera z 2026-09-02).
 Zanim utworzysz kolejny tag — upewnij się, że deploy faktycznie się odbył i user zobaczył, że
 działa (zasada z 2026-09-02: tag DOPIERO po sprawdzonym deployu).
