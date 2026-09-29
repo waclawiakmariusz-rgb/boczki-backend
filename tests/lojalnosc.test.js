@@ -1571,6 +1571,30 @@ describe('POST /api/klub/rejestracja', () => {
     const REJ = () => makeKlubToken({ t: 't-rej-a', k: 'rejestracja', typ: 'rej', exp: Date.now() + 60000 });
     const valid = () => ({ token: REJ(), imie: 'Nowa Osoba', telefon: '511 222 333', pin: '1234', zgoda: true });
 
+    // 2026-09-29: pole „Kod polecający" w formularzu tylko gdy salon włączył nagrodę —
+    // u Boczków (0 pkt) było widoczne i mylone z „kodem od recepcji".
+    test('rej_info: polecenia_on=0 gdy polecenie_pkt=0 (pole kodu schowane)', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ nazwa_klubu: 'Klub', pkt_za_10zl: 1, bonus_powitalny_pkt: 20, polecenie_pkt: 0 }] },
+            { rows: [] },                              // regulamin
+        );
+        const res = await request(buildApp(db)).post('/api/klub/rej_info').send({ token: REJ() });
+        expect(res.body.status).toBe('success');
+        expect(res.body.polecenia_on).toBe(0);
+        expect(res.body.bonus_powitalny).toBe(20);
+    });
+
+    test('rej_info: polecenia_on=1 gdy salon ustawił nagrodę za polecenie', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [{ nazwa_klubu: 'Klub', pkt_za_10zl: 1, bonus_powitalny_pkt: 0, polecenie_pkt: 50 }] },
+            { rows: [] },
+        );
+        const res = await request(buildApp(db)).post('/api/klub/rej_info').send({ token: REJ() });
+        expect(res.body.polecenia_on).toBe(1);
+    });
+
     test('nowy numer → kartoteka + konto + bonus + sesja od ręki', async () => {
         const db = mockDb(
             ...INIT,

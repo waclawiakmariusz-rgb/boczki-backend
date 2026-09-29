@@ -3030,7 +3030,7 @@ module.exports = (db) => {
     const p = verifyKlubToken((req.body || {}).token, 'rej');
     if (!p) return res.json({ status: 'error', message: 'Link rejestracyjny jest nieprawidłowy. Poproś salon o aktualny.' });
     try {
-      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, bonus_powitalny_pkt, polecenie_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const rRows = await q(`SELECT url FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
       return res.json({
@@ -3038,6 +3038,10 @@ module.exports = (db) => {
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
         bonus_powitalny: parseInt(ust.bonus_powitalny_pkt, 10) || 0,
+        // Pole „Kod polecający" w formularzu tylko gdy salon włączył nagrodę za polecenia
+        // (2026-09-29: u Boczków 0 pkt, a pole i tak było widoczne — myliło recepcję,
+        // która brała je za „kod od recepcji"). Ta sama reguła co polecenia_on w /klub/me.
+        polecenia_on: (parseInt(ust.polecenie_pkt, 10) || 0) > 0 ? 1 : 0,
         regulamin_url: String(((Array.isArray(rRows) && rRows[0]) || {}).url || '').trim()
       });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }

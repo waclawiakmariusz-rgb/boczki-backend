@@ -296,7 +296,8 @@
     <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
     <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
     <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
-    <input type="text" id="rej-ref" maxlength="12" placeholder="Kod polecający (jeśli masz)" autocomplete="off" style="letter-spacing:.08em; text-transform:uppercase;">
+    <!-- Widoczne tylko gdy salon włączył nagrodę za polecenia (rej_info.polecenia_on) — to NIE jest kod od recepcji -->
+    <input type="text" id="rej-ref" maxlength="12" placeholder="Kod polecający od koleżanki z Klubu (jeśli masz)" autocomplete="off" style="display:none; letter-spacing:.08em; text-transform:uppercase;">
     <label class="chk-row"><input type="checkbox" id="rej-zgoda"><span>Akceptuję <a id="rej-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
     <button class="btn" id="rej-btn" onclick="zarejestruj()">Załóż konto</button>
     <div class="err" id="rej-err"></div>
@@ -774,9 +775,13 @@ async function startRejestracja(token) {
     if (d.regulamin_url) { reg.href = d.regulamin_url; }
     else { reg.removeAttribute('href'); reg.style.textDecoration = 'none'; reg.style.color = 'inherit'; reg.style.fontWeight = '400'; }
     try {
-      const ref = new URLSearchParams(location.search).get('ref');
+      // Kod polecający: pole (i prefill z ?ref=) tylko gdy salon włączył polecenia —
+      // inaczej klientki brały je za „kod od recepcji", a wpis i tak był ignorowany.
       const refEl = document.getElementById('rej-ref');
-      if (ref && refEl) refEl.value = String(ref).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
+      const polecOn = !!d.polecenia_on;
+      if (refEl) { refEl.style.display = polecOn ? '' : 'none'; if (!polecOn) refEl.value = ''; }
+      const ref = new URLSearchParams(location.search).get('ref');
+      if (polecOn && ref && refEl) refEl.value = String(ref).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
     } catch (e) {}
     history.replaceState(null, '', '/klub/');
     pokaz('screen-rejestracja');
