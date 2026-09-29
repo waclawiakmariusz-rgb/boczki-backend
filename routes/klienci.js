@@ -104,9 +104,15 @@ module.exports = (db) => {
     if (action === 'get_clients') {
       // Klienci + aktywne zadatki — bez USUNIETY/ZANONIMIZOWANY (NULL = stare rekordy = aktywne)
       const showDeleted = String(req.query.showDeleted || '') === 'true';
-      const filtrStatus = showDeleted ? '' : `AND (status = 'AKTYWNY' OR status IS NULL)`;
+      const filtrStatus = showDeleted ? '' : `AND (K.status = 'AKTYWNY' OR K.status IS NULL)`;
+      // wizerunek = zgoda na publikację z Rejestru RODO (najnowszy wpis klienta; kilka
+      // klientek ma >1 wpis). Podzapytanie w tym samym SELECT — kolejność zapytań bez
+      // zmian (testy mockują sekwencyjnie). NULL = brak wpisu RODO; wpis bez wartości
+      // = 'NIE'. Filtr „Zgoda na publikację" w Kartotece (prośba recepcji 2026-09-30).
       db.query(
-        `SELECT id_klienta, imie_nazwisko, telefon, rodo, osw, status, ostrzezenie, zmarly, data_zgonu, data_usuniecia, kto_usunal, powod_usuniecia, odwolanie_ulga, odwolanie_ulga_data FROM Klienci WHERE tenant_id = ? ${filtrStatus} ORDER BY imie_nazwisko`,
+        `SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.rodo, K.osw, K.status, K.ostrzezenie, K.zmarly, K.data_zgonu, K.data_usuniecia, K.kto_usunal, K.powod_usuniecia, K.odwolanie_ulga, K.odwolanie_ulga_data,
+                (SELECT COALESCE(R.wizerunek, 'NIE') FROM Rejestr_RODO R WHERE R.tenant_id = K.tenant_id AND R.id_klienta = K.id_klienta ORDER BY R.data_podpisu DESC LIMIT 1) AS wizerunek
+           FROM Klienci K WHERE K.tenant_id = ? ${filtrStatus} ORDER BY K.imie_nazwisko`,
         [tenant_id],
         (err, klienci) => {
           if (err) return res.json({ klienci: [], zadatki: [] });
@@ -134,7 +140,9 @@ module.exports = (db) => {
                 kto_usunal: r.kto_usunal || null,
                 powod_usuniecia: r.powod_usuniecia || null,
                 odwolanie_ulga: r.odwolanie_ulga ? 1 : 0,
-                odwolanie_ulga_data: r.odwolanie_ulga_data || null
+                odwolanie_ulga_data: r.odwolanie_ulga_data || null,
+                // null = brak wpisu RODO; 'TAK' / 'NIE' / tekst zastrzeżenia (np. "bez twarzy")
+                wizerunek: (r.wizerunek === undefined || r.wizerunek === null) ? null : String(r.wizerunek).trim()
               }));
 
               db.query(

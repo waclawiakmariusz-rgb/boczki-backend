@@ -121,6 +121,42 @@ describe('GET /api/klienci — get_clients', () => {
             .query({ action: 'get_clients' });
         expect(res.body.status).toBe('error');
     });
+
+    // Filtr „Zgoda na publikację" w Kartotece (2026-09-30): wizerunek z Rejestru RODO
+    // dołączony podzapytaniem do TEGO SAMEGO SELECT-a (kolejność zapytań bez zmian).
+    // 2 wypełniacze na start: moduł robi 2× CREATE TABLE przy ładowaniu (mockDb pomija tylko ALTER).
+    const INIT = [{ rows: [] }, { rows: [] }];
+
+    test('zwraca wizerunek z Rejestru RODO (TAK / tekst / NIE / null=bez RODO)', async () => {
+        const db = mockDb(
+            ...INIT,
+            { rows: [
+                { id_klienta: '1', imie_nazwisko: 'A', wizerunek: 'TAK' },
+                { id_klienta: '2', imie_nazwisko: 'B', wizerunek: ' bez twarzy ' },
+                { id_klienta: '3', imie_nazwisko: 'C', wizerunek: 'NIE' },
+                { id_klienta: '4', imie_nazwisko: 'D', wizerunek: null },
+            ] },
+            { rows: [] },   // dodatkowe dokumenty
+            { rows: [] },   // zadatki
+        );
+        const res = await request(buildApp(db))
+            .get('/api/klienci')
+            .query({ action: 'get_clients', tenant_id: TENANT });
+        const sql = db.query.mock.calls.find(c => /FROM Klienci K/.test(c[0]))[0];
+        expect(sql).toMatch(/Rejestr_RODO/);
+        expect(sql).toMatch(/K\.status = 'AKTYWNY' OR K\.status IS NULL/);
+        const w = res.body.klienci.map(k => k.wizerunek);
+        expect(w).toEqual(['TAK', 'bez twarzy', 'NIE', null]);
+    });
+
+    test('showDeleted=true nie filtruje po statusie', async () => {
+        const db = mockDb(...INIT, { rows: [] }, { rows: [] }, { rows: [] });
+        await request(buildApp(db))
+            .get('/api/klienci')
+            .query({ action: 'get_clients', tenant_id: TENANT, showDeleted: 'true' });
+        const sql = db.query.mock.calls.find(c => /FROM Klienci K/.test(c[0]))[0];
+        expect(sql).not.toMatch(/AKTYWNY/);
+    });
 });
 
 // ─── manage_deposit: PRZEPISZ (bon kupiony na siebie, wręczony komuś innemu) ──

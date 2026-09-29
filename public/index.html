@@ -7931,7 +7931,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
         <div id="ktab-kartoteka">
             <div class="card">
-                <input type="text" id="szukaj-klienta-profil" onkeyup="_db('kli',filtrujListeKlientow)" placeholder="🔍 Szukaj klienta..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:15px;">
+                    <input type="text" id="szukaj-klienta-profil" onkeyup="_db('kli',filtrujListeKlientow)" placeholder="🔍 Szukaj klienta..." style="flex:1 1 240px; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; margin:0;">
+                    <!-- Filtr zgody na publikację (wizerunek z Rejestru RODO) — prośba recepcji 2026-09-30:
+                         "kto ma zgodę, a kogo jeszcze próbować przekonać" -->
+                    <select id="filtr-zgoda-publikacja" onchange="filtrujListeKlientow()" title="Zgoda na publikację wizerunku (z formularza RODO)" style="flex:0 1 auto; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; background:#fff; font-size:14px; cursor:pointer;">
+                        <option value="">📸 Zgoda na publikację: wszyscy</option>
+                        <option value="pelna">✅ Pełna zgoda</option>
+                        <option value="warunkowa">⚠️ Warunkowa (np. bez twarzy)</option>
+                        <option value="zgoda">✅⚠️ Jakakolwiek zgoda (pełna + warunkowa)</option>
+                        <option value="brak">❌ Brak zgody — do przekonania</option>
+                        <option value="brak_rodo">📄 Bez podpisanego RODO</option>
+                    </select>
+                    <span id="klienci-licznik" style="font-size:12.5px; color:#64748b; white-space:nowrap;"></span>
+                </div>
                 <div id="lista-klientow-widok" style="max-height: 60vh; overflow-y: auto;">
                     <ul id="lista-klientow-ul" class="dict-list"></ul>
                 </div>
@@ -14043,7 +14056,17 @@ function renderujKafelkiKlientow(data, kontener) {
         let rodoIcon = (typeof klient === 'object' && klient.rodo) ? `<span title="RODO Podpisane" style="margin-left: 8px; font-size: 14px; cursor: help;">🛡️</span>` : ``;
         let oswIcon = (typeof klient === 'object' && klient.osw) ? `<span title="Oświadczenie Podpisane" style="margin-left: 4px; font-size: 14px; cursor: help;">📝</span>` : ``;
         let dodIcon = (typeof klient === 'object' && klient.dodatkowe > 0) ? `<span title="${klient.dodatkowe} dodatkowych dokumentów" style="margin-left: 4px; font-size: 14px; cursor: help;">📁</span>` : ``;
-        let ikony = rodoIcon + oswIcon + dodIcon;
+        // Zgoda na publikację wizerunku (Rejestr RODO) — plakietka, żeby nie wchodzić w profil.
+        let pubBadge = '';
+        if (typeof klient === 'object' && klient.status !== 'ZANONIMIZOWANY') {
+            const zp = klasyfikujZgodePublikacji(klient);
+            const st = 'margin-left:8px; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; white-space:nowrap; cursor:help;';
+            if (zp === 'pelna') pubBadge = `<span title="Zgoda na publikację wizerunku: TAK" style="${st} background:#dcfce7; color:#166534;">📸 zgoda</span>`;
+            else if (zp === 'warunkowa') pubBadge = `<span title="Zgoda na publikację z zastrzeżeniem: ${escHtml(klient.wizerunek || '')}" style="${st} background:#fef3c7; color:#b45309;">📸 ${escHtml(String(klient.wizerunek || '').slice(0, 28))}</span>`;
+            else if (zp === 'brak') pubBadge = `<span title="Brak zgody na publikację — warto zapytać" style="${st} background:#fee2e2; color:#b91c1c;">📸 brak</span>`;
+            else pubBadge = `<span title="Brak podpisanego formularza RODO" style="${st} background:#f1f5f9; color:#64748b;">📄 bez RODO</span>`;
+        }
+        let ikony = rodoIcon + oswIcon + dodIcon + pubBadge;
 
         let tel = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") ? escHtml(klient.telefon) : "";
         let telefon = tel
@@ -14591,29 +14614,57 @@ function weryfikujZadatek(selectEl, wymuszonaCena = null) {
 document.getElementById('multi_klient').addEventListener('change', sprawdzSaldoKlienta);
 // optymalizacja 3.1
 
+// Zgoda na publikację wizerunku (pole "wizerunek" z Rejestru RODO, przez get_clients):
+// 'pelna' = TAK, 'warunkowa' = dowolny tekst (np. "bez twarzy"), 'brak' = NIE/puste,
+// 'brak_rodo' = klient nie ma żadnego wpisu w rejestrze.
+function klasyfikujZgodePublikacji(k) {
+    if (!k || k.wizerunek === undefined || k.wizerunek === null) return 'brak_rodo';
+    const w = String(k.wizerunek).trim();
+    if (!w || w.toUpperCase() === 'NIE') return 'brak';
+    if (w.toUpperCase() === 'TAK') return 'pelna';
+    return 'warunkowa';
+}
+
 function filtrujListeKlientow() {
-    // 1. Pobieramy tekst do wyszukania
+    // 1. Pobieramy tekst do wyszukania + filtr zgody na publikację
     const input = document.getElementById('szukaj-klienta-profil');
     const filter = input.value.toLowerCase().trim();
-    
+    const selZg = document.getElementById('filtr-zgoda-publikacja');
+    const zgoda = selZg ? selZg.value : '';
+    const licznik = document.getElementById('klienci-licznik');
+
     const kontener = document.getElementById('lista-klientow-widok');
     if (!kontener || !window.wszyscyKlienciDane) return;
 
-    // 2. Jeśli wyszukiwarka jest pusta, ładujemy domyślny widok (pierwsze 50 osób)
-    if (filter === "") {
+    // 2. Nic nie wybrano → domyślny widok (pierwsze 50 osób)
+    if (filter === "" && !zgoda) {
+        if (licznik) licznik.textContent = '';
         renderujKafelkiKlientow(window.wszyscyKlienciDane, kontener);
         return;
     }
 
     // 3. Filtrujemy w PAMIĘCI RAM całą bazę (wszystkich klientów)
     const przefiltrowaniKlienci = window.wszyscyKlienciDane.filter(k => {
+        if (zgoda) {
+            const zp = klasyfikujZgodePublikacji(k);
+            const ok = zgoda === 'zgoda' ? (zp === 'pelna' || zp === 'warunkowa') : zp === zgoda;
+            if (!ok) return false;
+        }
+        if (filter === "") return true;
         const nazwa = (k.nazwa || "").toLowerCase();
         const telefon = (k.telefon || "").toLowerCase();
         const id = String(k.id || "").toLowerCase();
-        
+
         // Szukamy dopasowania w Imieniu, Telefonie lub ID
         return nazwa.includes(filter) || telefon.includes(filter) || id.includes(filter);
     });
+
+    // Licznik: ile osób spełnia filtr (recepcja widzi, ile zostało "do przekonania")
+    if (licznik) {
+        licznik.textContent = zgoda
+            ? `${przefiltrowaniKlienci.length} z ${window.wszyscyKlienciDane.length} klientów`
+            : '';
+    }
 
     // 4. Rysujemy nowe kafelki tylko dla znalezionych osób
     renderujKafelkiKlientow(przefiltrowaniKlienci, kontener);
