@@ -664,11 +664,22 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   od recepcji" (4-znakowy z profilu klientki, ekran logowania → „Mam kod od recepcji").
   Gdy wrócimy: (1) **luka** — `sprawdzPolecenie` woła się tylko z `naliczZaSprzedaz`, która
   wychodzi dla `platnosc=Zadatek/Portfel` → pierwszy zakup poleconej z zadatku NIGDY nie
-  domyka polecenia; (2) ekran „Zgłoszenie przyjęte" ma mówić wprost, że PIN z formularza
-  NIE został zapisany; (3) przycisk „Byłam już w salonie? Poproś o kod przy recepcji" —
-  10/10 ostatnich rejestracji z linku to osoby z kartoteki → wniosek, czyli stałe klientki
-  robią PIN dwa razy; (4) opcjonalnie „Zatwierdź na miejscu" w Do obsłużenia (PIN z wniosku,
-  wymaga hasha w `Lojalnosc_Wnioski` + klientki przy ladzie).
+  domyka polecenia; (2) ~~ekran „Zgłoszenie przyjęte"~~ i (3) ~~stałe klientki robią PIN
+  dwa razy~~ — **ZROBIONE 2026-09-30** (rejestracja w 2 krokach, punkt 12 niżej);
+  (4) opcjonalnie „Zatwierdź na miejscu" w Do obsłużenia (PIN z wniosku, wymaga hasha
+  w `Lojalnosc_Wnioski` + klientki przy ladzie) — user na razie wybrał wariant bez tego.
+- **12. Rejestracja online w 2 krokach (`857b72e`, 2026-09-30, `dev`)** — zgłoszenie recepcji:
+  „klientka dwa razy ustawia PIN i dwa razy dostaje kod". Kod dwa razy = pole polecające
+  (schowane w `af5dd99`). PIN dwa razy = osoba z kartoteki wpisywała PIN w formularzu,
+  system go wyrzucał, potem PIN przy kodzie. Teraz: krok 1 imię+telefon → `/klub/rej_sprawdz`
+  (`NOWA`/`WNIOSEK`/`MASZ_KONTO`); osoba z kartoteki od razu widzi ekran „Zgłoszenie
+  przyjęte" z 3 krokami (kod przy wizycie → „Mam kod od recepcji" → PIN raz) i nie jest
+  pytana o PIN; osoba nowa dostaje krok 2 (PIN+regulamin) → `/klub/rejestracja` jak dotąd.
+  Helpery `rozpoznajRejestrujaca`/`zlozWniosekOKonto` w `routes/lojalnosc.js`, kolejność
+  zapytań bez zmian. Model bezpieczeństwa NIE zmieniony: publiczny link nadal nigdy nie
+  zakłada konta na numer/nazwisko z kartoteki, rejestracja powtarza rozpoznanie serwerowo.
+  Dla recepcji: stałym klientkom dawać „Kod do apki" z profilu, nie link; aktywacja kodem
+  sama zamyka wniosek.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
