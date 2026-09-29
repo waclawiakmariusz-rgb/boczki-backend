@@ -3047,6 +3047,91 @@ module.exports = (db) => {
     } catch (e) { return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' }); }
   });
 
+  // ── Rejestracja online: wspólne rozpoznanie osoby (krok 1 i właściwa rejestracja) ──
+  // Zwraca { kod: 'MASZ_KONTO' | 'ZNANA' | 'NOWA', istniejaca, dopasowanoPoNazwisku }.
+  // Kolejność zapytań (konto → kartoteka) jest CELOWO ta sama co historycznie — testy
+  // mockują ją sekwencyjnie.
+  async function rozpoznajRejestrujaca(tenant, imie, tel) {
+    // Konto na ten numer już istnieje → do logowania (właściciel telefonu i tak zna swój stan)
+    const kontaRows = await q(
+      `SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND telefon = ? AND status = 'AKTYWNE' LIMIT 1`,
+      [tenant, tel]
+    );
+    if (Array.isArray(kontaRows) && kontaRows.length) return { kod: 'MASZ_KONTO', istniejaca: null, dopasowanoPoNazwisku: false };
+    // Kogo już mamy w kartotece? Bierzemy WSZYSTKICH aktywnych (także bez numeru —
+    // taką osobę da się rozpoznać po imieniu i nazwisku).
+    const klienciRows = await q(
+      `SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ?`,
+      [tenant]
+    ).catch(() => []);
+    const aktywni = (Array.isArray(klienciRows) ? klienciRows : []).filter(klientAktywny);
+
+    // 1. Dopasowanie po numerze telefonu (najmocniejszy sygnał).
+    let istniejaca = aktywni.find(k => k.telefon && normalizujTelefon(k.telefon) === tel);
+
+    // 2. Numer nieznany → sprawdzamy imię i nazwisko (zdrobnienia + literówki).
+    //    To zamyka dziurę, przez którą powstał duplikat: ta sama osoba z nowym numerem
+    //    była traktowana jak ktoś zupełnie nowy.
+    let dopasowanoPoNazwisku = false;
+    if (!istniejaca) {
+      const kluczNowej = kluczOsoby(imie);
+      istniejaca = aktywni.find(k => toSamaOsoba(kluczNowej, kluczOsoby(k.imie_nazwisko)));
+      if (istniejaca) dopasowanoPoNazwisku = true;
+    }
+    return { kod: istniejaca ? 'ZNANA' : 'NOWA', istniejaca, dopasowanoPoNazwisku };
+  }
+
+  // Wniosek o konto dla osoby z kartoteki (bez duplikatu NOWY dla tego numeru).
+  async function zlozWniosekOKonto(tenant, imie, tel, istniejaca, dopasowanoPoNazwisku) {
+    const dup = await q(
+      `SELECT id FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND telefon = ? AND status = 'NOWY' LIMIT 1`,
+      [tenant, tel]
+    ).catch(() => []);
+    if (Array.isArray(dup) && dup.length) return;
+    await q(
+      `INSERT INTO Lojalnosc_Wnioski (tenant_id, telefon, imie, id_klienta, status) VALUES (?, ?, ?, ?, 'NOWY')`,
+      [tenant, tel, imie, String(istniejaca.id_klienta)]
+    );
+    zapiszLog(tenant, 'KLUB WNIOSEK O KONTO', 'Klient (rejestracja)',
+      `${imie}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)} — dopasowano do kartoteki ${istniejaca.id_klienta}` +
+      (dopasowanoPoNazwisku ? ' PO IMIENIU I NAZWISKU (podała INNY numer niż w kartotece — zweryfikuj tożsamość)' : ''));
+  }
+
+  // Komunikat dla osoby z kartoteki. CELOWO ten sam przy dopasowaniu po numerze i po
+  // nazwisku. Bez obietnicy SMS-a i bez ram czasowych: wysyłka jest RĘCZNA (Estelio nie ma
+  // bramki SMS — przycisk w panelu tylko przygotowuje treść), więc system nie ma jak jej
+  // zagwarantować. Zdarzyło się, że klientka czekała na SMS, który nigdy nie przyszedł.
+  // Główna droga: kod od recepcji przy wizycie (od ręki), zapasowa: link telefonicznie.
+  const MSG_WNIOSEK = 'Zgłoszenie przyjęte. Dla bezpieczeństwa konto dokończy recepcja — poproś o kod do apki przy najbliższej wizycie albo zadzwoń po link.';
+  const MSG_MASZ_KONTO = 'Ten numer ma już konto — zaloguj się swoim PIN-em. Jeśli go nie pamiętasz, poproś salon o nowy link.';
+
+  // KROK 1 rejestracji (2026-09-30, prośba recepcji): samo imię+nazwisko+telefon, BEZ PIN-u.
+  // Osoba z kartoteki dostaje od razu wniosek i informację, co zrobić przy recepcji —
+  // wcześniej ustawiała PIN w formularzu, system go wyrzucał (publiczny link nie może
+  // zakładać konta na cudzy numer), a potem ustawiała PIN drugi raz przy kodzie. Osoba
+  // nowa dostaje 'NOWA' → apka pokazuje krok 2 (PIN + regulamin) → /klub/rejestracja.
+  router.post('/klub/rej_sprawdz', loginLimiter, async (req, res) => {
+    const d = req.body || {};
+    const p = verifyKlubToken(d.token, 'rej');
+    if (!p) return res.json({ status: 'error', message: 'Link rejestracyjny jest nieprawidłowy. Poproś salon o aktualny.' });
+    const imie = String(d.imie || '').trim().slice(0, 120);
+    const tel = normalizujTelefon(d.telefon);
+    if (imie.length < 3) return res.json({ status: 'error', message: 'Podaj imię i nazwisko.' });
+    if (tel.length < 9) return res.json({ status: 'error', message: 'Podaj poprawny numer telefonu.' });
+    try {
+      const r = await rozpoznajRejestrujaca(p.t, imie, tel);
+      if (r.kod === 'MASZ_KONTO') return res.json({ status: 'success', kod: 'MASZ_KONTO', message: MSG_MASZ_KONTO });
+      if (r.kod === 'ZNANA') {
+        await zlozWniosekOKonto(p.t, imie, tel, r.istniejaca, r.dopasowanoPoNazwisku);
+        return res.json({ status: 'success', kod: 'WNIOSEK', message: MSG_WNIOSEK });
+      }
+      return res.json({ status: 'success', kod: 'NOWA' });
+    } catch (e) {
+      console.error('[lojalnosc] rej_sprawdz:', e.message);
+      return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
   router.post('/klub/rejestracja', loginLimiter, async (req, res) => {
     const d = req.body || {};
     const p = verifyKlubToken(d.token, 'rej');
@@ -3059,59 +3144,14 @@ module.exports = (db) => {
     if (!/^\d{4,6}$/.test(pin)) return res.json({ status: 'error', message: 'PIN musi mieć 4–6 cyfr.' });
     if (!d.zgoda) return res.json({ status: 'error', message: 'Wymagana akceptacja regulaminu programu.' });
     try {
-      // Konto na ten numer już istnieje → do logowania (właściciel telefonu i tak zna swój stan)
-      const kontaRows = await q(
-        `SELECT id FROM Lojalnosc_Konta WHERE tenant_id = ? AND telefon = ? AND status = 'AKTYWNE' LIMIT 1`,
-        [p.t, tel]
-      );
-      if (Array.isArray(kontaRows) && kontaRows.length) {
-        return res.json({ status: 'success', kod: 'MASZ_KONTO', message: 'Ten numer ma już konto — zaloguj się swoim PIN-em. Jeśli go nie pamiętasz, poproś salon o nowy link.' });
-      }
-      // Kogo już mamy w kartotece? Bierzemy WSZYSTKICH aktywnych (także bez numeru —
-      // taką osobę da się rozpoznać po imieniu i nazwisku).
-      const klienciRows = await q(
-        `SELECT id_klienta, imie_nazwisko, telefon, status, zmarly FROM Klienci WHERE tenant_id = ?`,
-        [p.t]
-      ).catch(() => []);
-      const aktywni = (Array.isArray(klienciRows) ? klienciRows : []).filter(klientAktywny);
-
-      // 1. Dopasowanie po numerze telefonu (najmocniejszy sygnał).
-      let istniejaca = aktywni.find(k => k.telefon && normalizujTelefon(k.telefon) === tel);
-
-      // 2. Numer nieznany → sprawdzamy imię i nazwisko (zdrobnienia + literówki).
-      //    To zamyka dziurę, przez którą powstał duplikat: ta sama osoba z nowym numerem
-      //    była traktowana jak ktoś zupełnie nowy.
-      let dopasowanoPoNazwisku = false;
-      if (!istniejaca) {
-        const kluczNowej = kluczOsoby(imie);
-        istniejaca = aktywni.find(k => toSamaOsoba(kluczNowej, kluczOsoby(k.imie_nazwisko)));
-        if (istniejaca) dopasowanoPoNazwisku = true;
-      }
-
-      if (istniejaca) {
-        // Wniosek (bez duplikatu NOWY dla tego numeru)
-        const dup = await q(
-          `SELECT id FROM Lojalnosc_Wnioski WHERE tenant_id = ? AND telefon = ? AND status = 'NOWY' LIMIT 1`,
-          [p.t, tel]
-        ).catch(() => []);
-        if (!(Array.isArray(dup) && dup.length)) {
-          await q(
-            `INSERT INTO Lojalnosc_Wnioski (tenant_id, telefon, imie, id_klienta, status) VALUES (?, ?, ?, ?, 'NOWY')`,
-            [p.t, tel, imie, String(istniejaca.id_klienta)]
-          );
-          zapiszLog(p.t, 'KLUB WNIOSEK O KONTO', 'Klient (rejestracja)',
-            `${imie}, tel. ${tel.slice(0, 3)}***${tel.slice(-2)} — dopasowano do kartoteki ${istniejaca.id_klienta}` +
-            (dopasowanoPoNazwisku ? ' PO IMIENIU I NAZWISKU (podała INNY numer niż w kartotece — zweryfikuj tożsamość)' : ''));
-        }
-        // Komunikat CELOWO neutralny i taki sam jak przy dopasowaniu po numerze —
-        // nie potwierdzamy, że osoba o tym imieniu i nazwisku jest już klientką salonu
-        // (link rejestracyjny jest publiczny, więc nie może służyć do sprawdzania kartoteki).
-        //
-        // Bez obietnicy SMS-a i bez ram czasowych: wysyłka jest RĘCZNA (Estelio nie ma
-        // bramki SMS — przycisk w panelu tylko przygotowuje treść), więc system nie ma
-        // jak jej zagwarantować. Zdarzyło się, że klientka czekała na SMS, który nigdy
-        // nie przyszedł. Dajemy drugą drogę: poprosić o link w salonie.
-        return res.json({ status: 'success', kod: 'WNIOSEK', message: 'Zgłoszenie przyjęte. Konto aktywuje salon — link możesz też dostać od ręki, pytając przy najbliższej wizycie lub telefonicznie.' });
+      // Rozpoznanie powtórzone mimo kroku 1 — ktoś mógł wywołać endpoint bezpośrednio
+      // albo kartoteka zmieniła się między krokami. Zasada bez wyjątków: publiczny link
+      // NIGDY nie zakłada konta na numer/nazwisko z kartoteki.
+      const r = await rozpoznajRejestrujaca(p.t, imie, tel);
+      if (r.kod === 'MASZ_KONTO') return res.json({ status: 'success', kod: 'MASZ_KONTO', message: MSG_MASZ_KONTO });
+      if (r.kod === 'ZNANA') {
+        await zlozWniosekOKonto(p.t, imie, tel, r.istniejaca, r.dopasowanoPoNazwisku);
+        return res.json({ status: 'success', kod: 'WNIOSEK', message: MSG_WNIOSEK });
       }
       // Nowa osoba → kartoteka + konto od ręki (+ ewentualny bonus powitalny)
       const maxRows = await q(

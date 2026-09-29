@@ -292,25 +292,44 @@
     <h2>Załóż konto</h2>
     <div class="muted">Zbieraj punkty za wizyty i wymieniaj je na nagrody.</div>
     <div id="rej-bonus" style="display:none; margin-top:12px; background:var(--gold-soft); border:1px solid #f2d488; border-radius:var(--r-sm); padding:10px 14px; font-size:13px; font-weight:700; color:#a8730a;"></div>
-    <input type="text" id="rej-imie" placeholder="Imię i nazwisko" autocomplete="name" style="letter-spacing:0;">
-    <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
-    <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
-    <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
-    <!-- Widoczne tylko gdy salon włączył nagrodę za polecenia (rej_info.polecenia_on) — to NIE jest kod od recepcji -->
-    <input type="text" id="rej-ref" maxlength="12" placeholder="Kod polecający od koleżanki z Klubu (jeśli masz)" autocomplete="off" style="display:none; letter-spacing:.08em; text-transform:uppercase;">
-    <label class="chk-row"><input type="checkbox" id="rej-zgoda"><span>Akceptuję <a id="rej-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
-    <button class="btn" id="rej-btn" onclick="zarejestruj()">Załóż konto</button>
+    <!-- KROK 1: kim jesteś. Bez PIN-u — osoba z kartoteki i tak nie zakłada konta tutaj
+         (publiczny link), więc wcześniej wpisywała PIN na darmo i ustawiała go drugi raz
+         przy kodzie od recepcji (2026-09-30, prośba recepcji). -->
+    <div id="rej-krok1">
+      <input type="text" id="rej-imie" placeholder="Imię i nazwisko" autocomplete="name" style="letter-spacing:0;">
+      <input type="tel" id="rej-tel" inputmode="numeric" placeholder="Numer telefonu" autocomplete="tel">
+      <div class="muted" style="margin-top:6px; font-size:12px;">Byłaś już u nas w salonie? Też wpisz swoje dane — powiemy Ci, jak dokończyć.</div>
+      <button class="btn" id="rej-dalej-btn" onclick="rejDalej()" style="margin-top:10px;">Dalej</button>
+    </div>
+    <!-- KROK 2: tylko dla osoby NOWEJ — PIN + regulamin, konto od ręki. -->
+    <div id="rej-krok2" style="display:none;">
+      <div class="muted" id="rej-krok2-hello" style="margin-top:4px; margin-bottom:8px; font-weight:700; color:var(--primary);">Miło Cię poznać! Ustaw PIN do logowania.</div>
+      <input type="password" id="rej-pin" inputmode="numeric" maxlength="6" placeholder="Ustaw PIN (4–6 cyfr)" autocomplete="new-password">
+      <input type="password" id="rej-pin2" inputmode="numeric" maxlength="6" placeholder="Powtórz PIN" autocomplete="new-password">
+      <!-- Widoczne tylko gdy salon włączył nagrodę za polecenia (rej_info.polecenia_on) — to NIE jest kod od recepcji -->
+      <input type="text" id="rej-ref" maxlength="12" placeholder="Kod polecający od koleżanki z Klubu (jeśli masz)" autocomplete="off" style="display:none; letter-spacing:.08em; text-transform:uppercase;">
+      <label class="chk-row"><input type="checkbox" id="rej-zgoda"><span>Akceptuję <a id="rej-regulamin" href="#" target="_blank" rel="noopener">regulamin programu lojalnościowego</a> salonu.</span></label>
+      <button class="btn" id="rej-btn" onclick="zarejestruj()">Załóż konto</button>
+      <button class="link-btn" onclick="rejWroc()">← Popraw dane</button>
+    </div>
     <div class="err" id="rej-err"></div>
     <button class="link-btn" onclick="pokaz('screen-login')">Mam już konto — zaloguj mnie</button>
   </div>
 </div>
 
-<!-- ── Wniosek przyjęty (istniejąca klientka — czeka na SMS od salonu) ── -->
+<!-- ── Wniosek przyjęty (osoba z kartoteki — konto dokończy recepcja) ── -->
 <div id="screen-wniosek" class="screen center">
   <div class="logo-znak"><span data-iko="mail" data-s="28"></span></div>
   <div class="card" style="text-align:center;">
     <h2>Zgłoszenie przyjęte</h2>
-    <div class="muted" style="margin-top:6px;">Dla bezpieczeństwa Twoich danych konto aktywuje salon — otrzymasz od nas <b>link aktywacyjny</b>, po kliknięciu ustawisz PIN i konto będzie gotowe.<br><br>Nie chcesz czekać? <b>Poproś o link przy najbliższej wizycie lub zadzwoń do salonu</b> — dostaniesz go od ręki.</div>
+    <div class="muted" style="margin-top:6px; text-align:left;">Dla bezpieczeństwa Twoich danych (żeby nikt nie podszył się pod Twój numer) konto dokończy <b>recepcja</b>. Nie prosiliśmy Cię jeszcze o PIN — ustawisz go w tym kroku:</div>
+    <div style="text-align:left; margin-top:12px; padding:12px 14px; background:var(--gold-soft); border:1px solid #f2d488; border-radius:var(--r-sm); font-size:13.5px; line-height:1.5;">
+      <b>1.</b> Przy najbliższej wizycie poproś o <b>kod do apki</b> (4 znaki).<br>
+      <b>2.</b> W apce, na ekranie logowania, kliknij <b>„Mam kod od recepcji"</b>.<br>
+      <b>3.</b> Wpisz numer telefonu, kod i <b>ustaw swój PIN</b> — gotowe.
+    </div>
+    <div class="muted" style="margin-top:12px; text-align:left; font-size:12.5px;">Nie możesz wpaść? Zadzwoń do salonu — dostaniesz link aktywacyjny.</div>
+    <button class="btn" onclick="pokaz('screen-login'); if (document.getElementById('kod-box').style.display !== 'block') pokazKodBox();" style="margin-top:14px;">Mam już kod od recepcji</button>
     <button class="btn ghost" onclick="pokaz('screen-login')">Rozumiem</button>
   </div>
 </div>
@@ -784,12 +803,47 @@ async function startRejestracja(token) {
       if (polecOn && ref && refEl) refEl.value = String(ref).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12);
     } catch (e) {}
     history.replaceState(null, '', '/klub/');
+    rejWroc();                                   // zawsze od kroku 1
     pokaz('screen-rejestracja');
   } catch (e) {
     loader(false);
     pokaz('screen-login');
     document.getElementById('log-err').textContent = 'Błąd połączenia. Spróbuj ponownie.';
   }
+}
+// Krok 1 → 2 (osoba nowa) albo od razu ekran wniosku (osoba z kartoteki, bez PIN-u).
+function rejWroc() {
+  document.getElementById('rej-krok1').style.display = '';
+  document.getElementById('rej-krok2').style.display = 'none';
+  document.getElementById('rej-err').textContent = '';
+}
+async function rejDalej() {
+  const imie = document.getElementById('rej-imie').value.trim();
+  const tel = document.getElementById('rej-tel').value.trim();
+  const err = document.getElementById('rej-err');
+  err.textContent = '';
+  if (imie.length < 3) { err.textContent = 'Podaj imię i nazwisko.'; return; }
+  if (tel.replace(/\D/g, '').length < 9) { err.textContent = 'Podaj poprawny numer telefonu.'; return; }
+  const btn = document.getElementById('rej-dalej-btn');
+  btn.disabled = true;
+  try {
+    const d = await api('/rej_sprawdz', { token: rejestracjaToken, imie, telefon: tel });
+    if (d.status !== 'success') { err.textContent = d.message || 'Nie udało się sprawdzić danych.'; return; }
+    if (d.kod === 'NOWA') {
+      document.getElementById('rej-krok1').style.display = 'none';
+      document.getElementById('rej-krok2').style.display = '';
+      const hello = document.getElementById('rej-krok2-hello');
+      if (hello) hello.textContent = 'Miło Cię poznać, ' + imie.split(' ')[0] + '! Ustaw PIN do logowania.';
+      setTimeout(() => { try { document.getElementById('rej-pin').focus(); } catch (e) {} }, 50);
+    } else if (d.kod === 'WNIOSEK') {
+      pokaz('screen-wniosek');
+    } else { // MASZ_KONTO
+      pokaz('screen-login');
+      document.getElementById('log-tel').value = tel;
+      document.getElementById('log-err').textContent = d.message || 'Masz już konto — zaloguj się.';
+    }
+  } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
+  finally { btn.disabled = false; }
 }
 async function zarejestruj() {
   const imie = document.getElementById('rej-imie').value.trim();

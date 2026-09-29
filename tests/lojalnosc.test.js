@@ -1642,6 +1642,67 @@ describe('POST /api/klub/rejestracja', () => {
         expect(res.body.kod).toBe('MASZ_KONTO');
     });
 
+    // ── Krok 1 (2026-09-30): rej_sprawdz — samo imię+telefon, bez PIN-u ──
+    describe('POST /api/klub/rej_sprawdz (krok 1, bez PIN-u)', () => {
+        const krok1 = () => ({ token: REJ(), imie: 'Nowa Osoba', telefon: '511 222 333' });
+
+        test('osoba nowa → NOWA, nic nie zapisuje (konto dopiero w kroku 2)', async () => {
+            const db = mockDb(...INIT, { rows: [] }, { rows: [] });
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send(krok1());
+            expect(res.body.status).toBe('success');
+            expect(res.body.kod).toBe('NOWA');
+            // seed przy init robi własne INSERT-y — patrzymy tylko na tabele rejestracji
+            expect(db.query.mock.calls.some(c => /INSERT INTO (Lojalnosc_Wnioski|Lojalnosc_Konta|Klienci)/.test(c[0]))).toBe(false);
+        });
+
+        test('osoba z kartoteki → WNIOSEK od razu, bez pytania o PIN', async () => {
+            const db = mockDb(
+                ...INIT,
+                { rows: [] },
+                { rows: [{ id_klienta: '7', telefon: '511-222-333', status: '', zmarly: 0 }] },
+                { rows: [] },                          // brak duplikatu wniosku
+                { rows: { affectedRows: 1 } }          // INSERT wniosek
+            );
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send(krok1());
+            expect(res.body.kod).toBe('WNIOSEK');
+            expect(res.body.message).toMatch(/kod do apki/i);
+            expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Wnioski/.test(c[0]))).toBe(true);
+            expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Konta/.test(c[0]))).toBe(false);
+        });
+
+        test('powtórne kliknięcie „Dalej" nie dubluje wniosku', async () => {
+            const db = mockDb(
+                ...INIT,
+                { rows: [] },
+                { rows: [{ id_klienta: '7', telefon: '511-222-333', status: '', zmarly: 0 }] },
+                { rows: [{ id: 99 }] }                 // wniosek NOWY już jest
+            );
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send(krok1());
+            expect(res.body.kod).toBe('WNIOSEK');
+            expect(db.query.mock.calls.some(c => /INSERT INTO Lojalnosc_Wnioski/.test(c[0]))).toBe(false);
+        });
+
+        test('numer z kontem → MASZ_KONTO', async () => {
+            const db = mockDb(...INIT, { rows: [{ id: 1 }] });
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send(krok1());
+            expect(res.body.kod).toBe('MASZ_KONTO');
+        });
+
+        test('bez imienia → błąd walidacji, bez sięgania do bazy', async () => {
+            const db = mockDb(...INIT);
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send({ ...krok1(), imie: 'Al' });
+            expect(res.body.status).toBe('error');
+            expect(db.query.mock.calls.some(c => /FROM Lojalnosc_Konta/.test(c[0]))).toBe(false);
+        });
+
+        test('token sesyjny NIE działa jako rejestracyjny', async () => {
+            const db = mockDbAlways([]);
+            const zly = makeKlubToken({ t: 't-rej-a', k: '42', typ: 'ses', exp: Date.now() + 60000 });
+            const res = await request(buildApp(db)).post('/api/klub/rej_sprawdz').send({ ...krok1(), token: zly });
+            expect(res.body.status).toBe('error');
+        });
+    });
+
     test('token sesyjny NIE działa jako rejestracyjny', async () => {
         const db = mockDbAlways([]);
         const zly = makeKlubToken({ t: 't-rej-a', k: '42', typ: 'ses', exp: Date.now() + 60000 });
