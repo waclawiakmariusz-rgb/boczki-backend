@@ -680,6 +680,17 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   zakłada konta na numer/nazwisko z kartoteki, rejestracja powtarza rozpoznanie serwerowo.
   Dla recepcji: stałym klientkom dawać „Kod do apki" z profilu, nie link; aktywacja kodem
   sama zamyka wniosek.
+- **13. Kartoteka: filtr „Zgoda na publikację" (2026-09-30, `dev`)** — prośba recepcji: „kto
+  ma zgodę, a kogo próbować przekonać". Źródło: `Rejestr_RODO.wizerunek` (TAK / NIE / tekst
+  zastrzeżenia typu „bez twarzy"; kilka klientek ma >1 wpis → bierzemy najnowszy po
+  `data_podpisu`). `get_clients` w `routes/klienci.js` dokłada `wizerunek` podzapytaniem
+  w TYM SAMYM SELECT-cie (`null` = brak wpisu RODO, pusty wpis = NIE) — kolejność zapytań
+  bez zmian, ale UWAGA w testach `klienci.test.js`: moduł robi 2× `CREATE TABLE` przy
+  starcie, więc mocki wymagają 2 wypełniaczy (mockDb pomija tylko ALTER). Front: select
+  `#filtr-zgoda-publikacja` obok szukania (łączy się z filtrem tekstowym), licznik
+  `#klienci-licznik`, helper `klasyfikujZgodePublikacji()` (pelna/warunkowa/brak/brak_rodo),
+  plakietki przy nazwisku w `renderujKafelkiKlientow`. Stan u Boczków 2026-09-30: 62 pełna,
+  75 warunkowa, 242 brak, 22 bez RODO (z 401 aktywnych).
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
