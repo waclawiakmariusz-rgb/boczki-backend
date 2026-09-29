@@ -657,6 +657,18 @@ większej zmianie funkcjonalnej sprawdź, czy nie trzeba go poprawić — recepc
 jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
 
 ## Otwarte / niedokończone (nie zaczynaj bez rozmowy z użytkownikiem)
+- **PRZYPOMNIENIE (user 2026-09-29): polecenia w Klubie ODŁOŻONE, „wrócimy do tego".**
+  Stan: u Boczków `polecenie_pkt = 0` → funkcja wyłączona (0 kont z kodem, 0 poleceń,
+  0 pkt z poleceń — sprawdzone w bazie). Pole „Kod polecający" w rejestracji apki od `af5dd99`
+  pokazuje się tylko przy `polecenia_on=1` z `/klub/rej_info`. Recepcja myliła je z „kodem
+  od recepcji" (4-znakowy z profilu klientki, ekran logowania → „Mam kod od recepcji").
+  Gdy wrócimy: (1) **luka** — `sprawdzPolecenie` woła się tylko z `naliczZaSprzedaz`, która
+  wychodzi dla `platnosc=Zadatek/Portfel` → pierwszy zakup poleconej z zadatku NIGDY nie
+  domyka polecenia; (2) ekran „Zgłoszenie przyjęte" ma mówić wprost, że PIN z formularza
+  NIE został zapisany; (3) przycisk „Byłam już w salonie? Poproś o kod przy recepcji" —
+  10/10 ostatnich rejestracji z linku to osoby z kartoteki → wniosek, czyli stałe klientki
+  robią PIN dwa razy; (4) opcjonalnie „Zatwierdź na miejscu" w Do obsłużenia (PIN z wniosku,
+  wymaga hasha w `Lojalnosc_Wnioski` + klientki przy ladzie).
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
