@@ -14399,11 +14399,14 @@ function sprawdzSaldoKlienta() {
     if(stareInfo) stareInfo.remove();
     aktualneSaldoKlienta = 0;
 
-    if (!nazwaKlienta) return; 
+    if (!nazwaKlienta) return;
 
-    const klientObj = window.wszyscyKlienciDane ? window.wszyscyKlienciDane.find(k => k.nazwa === nazwaKlienta) : null;
+    // Rozpoznanie po ID z podpowiedzi (duplikaty nazwisk); przy niejednoznaczności
+    // bez ID — zostaje stare dopasowanie po nazwie (saldo i tak liczymy po ID albo nazwie)
+    const rozp = rozpoznajKlientaZPola(nazwaKlienta);
+    const klientObj = (rozp && rozp.klient) ? rozp.klient : null;
     const idDoSzukania = klientObj ? String(klientObj.id) : "";
-    const nazwaDoSzukania = nazwaKlienta.toLowerCase();
+    const nazwaDoSzukania = (klientObj ? klientObj.nazwa : nazwaKlienta).toLowerCase();
 
     // 1. Szukamy w pamięci podręcznej (błyskawicznie)
     aktywneZadatkiKlienta = [];
@@ -19900,6 +19903,35 @@ function zaladujListeKlientow(wymus = false) {
 }
 
 // Funkcja pomocnicza (żeby nie powtarzać kodu HTML)
+// Podpowiedzi klienta (datalist w sprzedaży, przepisaniu zadatku, zadaniach).
+// 2026-10-01, prośba recepcji: dwie klientki "Anna Michałowska" z innymi numerami —
+// podpowiedź pokazuje teraz TELEFON i ID, a wybrana pozycja jest rozpoznawana po ID
+// (helper rozpoznajKlientaZPola), nie po samym nazwisku. Format: "Nazwa · telefon · ID 1104".
+// Do bazy (Sprzedaz.klient) idzie zawsze CZYSTA nazwa z kartoteki, nigdy ten ciąg.
+function etykietaKlienta(k) {
+    const tel = (k.telefon && k.telefon !== 'undefined') ? String(k.telefon).trim() : '';
+    return String(k.nazwa || '') + (tel ? ' · ' + tel : '') + ' · ID ' + String(k.id);
+}
+function rozpoznajKlientaZPola(tekst) {
+    // Zwraca { klient, nazwa, id } | { niejednoznaczny: true, kandydaci } | null.
+    const t = String(tekst || '').trim();
+    if (!t) return null;
+    const lista = window.wszyscyKlienciDane || [];
+    // 1. Wybór z podpowiedzi → na końcu "· ID xxx" → dopasowanie po ID (jednoznaczne)
+    const m = t.match(/·\s*ID\s+(\S+)\s*$/i);
+    if (m) {
+        const k = lista.find(x => String(x.id) === m[1]);
+        return k ? { klient: k, nazwa: k.nazwa, id: String(k.id) } : null;
+    }
+    // 2. Wpisane z ręki samo nazwisko → jak dotąd, ale bez zgadywania przy duplikatach
+    const dop = lista.filter(x => String(x.nazwa || '').trim().toLowerCase() === t.toLowerCase());
+    if (dop.length === 1) return { klient: dop[0], nazwa: dop[0].nazwa, id: String(dop[0].id) };
+    if (dop.length > 1) return { niejednoznaczny: true, kandydaci: dop };
+    return null;
+}
+function opisKandydatow(kandydaci) {
+    return kandydaci.map(k => '• ' + etykietaKlienta(k)).join('\n');
+}
 function zaktualizujDataliste(data) {
     const datalist = document.getElementById('lista-klientow');
     if (datalist) {
@@ -19907,7 +19939,7 @@ function zaktualizujDataliste(data) {
         data.forEach(klient => {
             const option = document.createElement('option');
             if (typeof klient === 'object' && klient !== null) {
-                option.value = klient.nazwa; 
+                option.value = etykietaKlienta(klient);
             } else {
                 option.value = String(klient);
             }
@@ -20642,20 +20674,24 @@ function wyslijMultiSprzedaz() {
     if (!klientNazwa) { alert("Podaj klienta!"); return; }
     if (sellers.length === 0) { alert("Wybierz sprzedawcę!"); return; }
 
-    // Sprawdzamy, czy klient jest w naszej lokalnej bazie (pobranej przy starcie)
+    // Sprawdzamy, czy klient jest w naszej lokalnej bazie (pobranej przy starcie).
+    // Pozycja z podpowiedzi ma "· ID xxx" → dopasowanie po ID; samo nazwisko → po nazwie,
+    // a gdy pasuje kilka osób (np. dwie "Anna Michałowska") — NIE zgadujemy.
     let idKlientaDoZapisu = "";
-    let znaleziony = null;
-
-    if (window.wszyscyKlienciDane) {
-        znaleziony = window.wszyscyKlienciDane.find(k => k.nazwa.toLowerCase() === klientNazwa.toLowerCase());
+    const rozp = rozpoznajKlientaZPola(klientNazwa);
+    if (rozp && rozp.niejednoznaczny) {
+        alert(`⚠️ Kilka osób w kartotece nazywa się "${klientNazwa}":\n\n${opisKandydatow(rozp.kandydaci)}\n\nWybierz właściwą z podpowiedzi pod polem klienta (pozycja z telefonem i ID).`);
+        return;
     }
+    const znaleziony = rozp ? rozp.klient : null;
 
     // SCENARIUSZ A: Klient istnieje
     if (znaleziony) {
         idKlientaDoZapisu = znaleziony.id;
         console.log("✅ Klient istnieje, ID:", idKlientaDoZapisu);
-        finalizujSprzedazPoWalidacji(klientNazwa, idKlientaDoZapisu, sellers);
-    } 
+        // Do zapisu idzie CZYSTA nazwa z kartoteki (nie ciąg z telefonem i ID z pola)
+        finalizujSprzedazPoWalidacji(znaleziony.nazwa, idKlientaDoZapisu, sellers);
+    }
     // SCENARIUSZ B: Klienta nie ma -> SZYBKA REJESTRACJA
     else {
 	
@@ -22238,12 +22274,12 @@ function przepiszZadatekNaKlienta() {
     if (!nazwa) { alert("Wpisz klienta, na którego przepisujemy zadatek."); return; }
     if (powod.length < 3) { alert("Podaj powód przepisania (min. 3 znaki) — trafia do logu."); return; }
 
-    // Nazwisko → ID bierzemy z cache klientów (to samo źródło co podpowiedzi w polu).
-    const lista = window.wszyscyKlienciDane || [];
-    const dopasowani = lista.filter(k => String(k.nazwa || '').trim().toLowerCase() === nazwa.toLowerCase());
-    if (dopasowani.length === 0) { alert("Nie znaleziono klienta \"" + nazwa + "\".\n\nWybierz go z podpowiedzi (musi istnieć w kartotece)."); return; }
-    if (dopasowani.length > 1) { alert("Kilku klientów ma nazwę \"" + nazwa + "\" — nie wiadomo któremu przepisać. Rozróżnij ich w kartotece."); return; }
-    const nowy = dopasowani[0];
+    // Nazwisko → ID bierzemy z cache klientów (to samo źródło co podpowiedzi w polu);
+    // pozycja z podpowiedzi niesie "· ID xxx", więc duplikaty nazwisk są rozróżnialne.
+    const rozp = rozpoznajKlientaZPola(nazwa);
+    if (!rozp) { alert("Nie znaleziono klienta \"" + nazwa + "\".\n\nWybierz go z podpowiedzi (musi istnieć w kartotece)."); return; }
+    if (rozp.niejednoznaczny) { alert("Kilku klientów ma nazwę \"" + nazwa + "\":\n\n" + opisKandydatow(rozp.kandydaci) + "\n\nWybierz właściwą osobę z podpowiedzi (pozycja z telefonem i ID)."); return; }
+    const nowy = rozp.klient;
 
     const kwota = document.getElementById('de_kwota').value;
     const zKogo = document.getElementById('de_klient_nazwa').value;
@@ -25933,7 +25969,9 @@ if (inputNazwaCheck) {
                 setTimeout(zd_klientSearchInput, 600);
                 return;
             }
-            const wyniki = window.wszyscyKlienciDane.filter(k =>
+            // Wybór z datalisty wstawia "Nazwa · tel · ID xxx" — wtedy jeden pewny wynik po ID
+            const rozpZd = rozpoznajKlientaZPola(inp.value);
+            const wyniki = (rozpZd && rozpZd.klient) ? [rozpZd.klient] : window.wszyscyKlienciDane.filter(k =>
                 String(k.nazwa||'').toLowerCase().includes(fraza) ||
                 String(k.id||'').includes(fraza) ||
                 (k.telefon && String(k.telefon).includes(fraza))
