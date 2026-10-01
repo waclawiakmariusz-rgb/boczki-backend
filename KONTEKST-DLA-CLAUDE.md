@@ -691,6 +691,19 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   `#klienci-licznik`, helper `klasyfikujZgodePublikacji()` (pelna/warunkowa/brak/brak_rodo),
   plakietki przy nazwisku w `renderujKafelkiKlientow`. Stan u Boczków 2026-09-30: 62 pełna,
   75 warunkowa, 242 brak, 22 bez RODO (z 401 aktywnych).
+- **14. Podpowiedzi klienta z telefonem i ID (2026-10-01, `dev`)** — recepcja: dwie klientki
+  „Anna Michałowska" (ID 1104 tel. 790…, ID 1413 tel. 506… — ta druga założona 2026-10-01
+  z KROPKĄ w nazwisku jako obejście; inny duplikat: „Piotr Nowak" ×2). Przyczyna: formularz
+  sprzedaży (`wyslijMultiSprzedaz`, `sprawdzSaldoKlienta`), przepisanie zadatku
+  (`przepiszZadatekNaKlienta`) i szukajka w zadaniach (`zd_klientSearchInput`) dobierały
+  klienta po SAMYM TEKŚCIE nazwiska z pola → przy duplikacie zawsze pierwsza osoba. Fix tylko
+  w `index.html`: datalist `#lista-klientow` ma pozycje „Nazwa · telefon · ID xxx"
+  (`etykietaKlienta`), helper `rozpoznajKlientaZPola()` dopasowuje po ID gdy jest sufiks,
+  po nazwie gdy wpisano z ręki, a przy >1 dopasowaniu NIE zgaduje (alert z kandydatami).
+  **Inwariant:** do `Sprzedaz.klient` idzie zawsze czysta nazwa z kartoteki, nigdy ciąg
+  z telefonem. Backend i dane nietknięte (user: „ostrożnie, dane muszą być bezpieczne").
+  Po wdrożeniu recepcja może usunąć kropkę z nazwiska 1413. Odrzucone na razie: ostrzeżenie
+  przy zakładaniu klienta o istniejącym nazwisku (propozycja 3) — user wybrał tylko punkt 1.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
