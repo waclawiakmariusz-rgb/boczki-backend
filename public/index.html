@@ -4991,6 +4991,43 @@ body.dark-mode #widok-szczegolow-klienta div[style*="background: #f0fdfa"] {
 body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdfa"] [style*="color:#0f766e"] {
     color: #5eead4 !important;
 }
+
+/* 2026-10-02 (zgłoszenie recepcji): nagłówek profilu — menu „⋮ Akcje" i ramki nad nazwiskiem
+   (⚠ BAN / ⏳ odwołanie po czasie) były nieczytelne w dark mode. Przyczyna: generyczne reguły
+   łapią tylko zapis "background: #fffbeb" ZE spacją, a te elementy mają zapis bez spacji →
+   tło zostawało jasne, a `.pp-hero-top *` wymuszało biały tekst (biały na jasnożółtym).
+   Przyciski w ramkach i pozycje menu mają inline `background:#fff`. Tu reguły jawne,
+   o wyższej specyficzności niż `#widok-szczegolow-klienta [style*=...]`. */
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-btn {
+    background: #243044 !important; border-color: #475569 !important; color: #f8fafc !important;
+}
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu {
+    background: #1e293b !important; border-color: #475569 !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.55) !important;
+}
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu .akcje-item {
+    background: transparent !important; color: #f1f5f9 !important; border-bottom-color: #334155 !important;
+}
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu .akcje-item:hover { background: #334155 !important; }
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu .akcje-item[style*="#b91c1c"] { color: #fca5a5 !important; }
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu .akcje-item[style*="#b45309"] { color: #fcd34d !important; }
+body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu .akcje-item[style*="#6d28d9"] { color: #c4b5fd !important; }
+/* ⏳ ramka „odwołanie po czasie" (żółta) */
+body.dark-mode #widok-szczegolow-klienta #profil-odwolanie-info {
+    background: rgba(245,158,11,.16) !important; border-color: #f59e0b !important;
+}
+body.dark-mode #widok-szczegolow-klienta #profil-odwolanie-info * { color: #fde68a !important; }
+body.dark-mode #widok-szczegolow-klienta #profil-odwolanie-info button {
+    background: #3a2a0a !important; border-color: #f59e0b !important;
+}
+/* ⚠ ramka BAN (czerwona) */
+body.dark-mode #widok-szczegolow-klienta #profil-ban-alarm {
+    background: rgba(220,38,38,.18) !important; border-color: #dc2626 !important;
+}
+body.dark-mode #widok-szczegolow-klienta #profil-ban-alarm * { color: #fecaca !important; }
+body.dark-mode #widok-szczegolow-klienta #profil-ban-alarm button {
+    background: #3b1d1d !important; border-color: #dc2626 !important;
+}
 body.dark-mode #widok-szczegolow-klienta div[style*="background:#f0fdfa"] [style*="color:#115e59"] {
     color: #99f6e4 !important;
 }
