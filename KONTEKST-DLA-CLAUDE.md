@@ -704,6 +704,15 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   z telefonem. Backend i dane nietknięte (user: „ostrożnie, dane muszą być bezpieczne").
   Po wdrożeniu recepcja może usunąć kropkę z nazwiska 1413. Odrzucone na razie: ostrzeżenie
   przy zakładaniu klienta o istniejącym nazwisku (propozycja 3) — user wybrał tylko punkt 1.
+- **15. Dark mode: menu „⋮ Akcje" i ramki nad nazwiskiem w profilu (2026-10-02, `dev`)** —
+  zgłoszenie recepcji. **Pułapka CSS do zapamiętania:** generyczne reguły dark mode w
+  `index.html` łapią inline'owe tła przez `[style*="background: #fffbeb"]` ZE spacją po
+  dwukropku, a część elementów ma zapis BEZ spacji (`background:#fffbeb`) → nie łapie, tło
+  zostaje jasne, a `.pp-hero-top *` wymusza biały tekst → biały na jasnożółtym. Przy
+  następnym „nie widać w dark mode" sprawdź NAJPIERW spację w inline style. Fix: jawne reguły
+  `body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu/...-btn/#profil-odwolanie-info/
+  #profil-ban-alarm` (specyficzność wyższa niż `#widok-szczegolow-klienta [style*=...]`).
+  Tylko CSS, 37 linii dodanych, nic nie usunięte. Nie oglądane w przeglądarce.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
