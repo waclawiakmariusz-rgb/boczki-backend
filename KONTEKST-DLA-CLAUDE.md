@@ -713,6 +713,21 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   `body.dark-mode #widok-szczegolow-klienta #profil-akcje-menu/...-btn/#profil-odwolanie-info/
   #profil-ban-alarm` (specyficzność wyższa niż `#widok-szczegolow-klienta [style*=...]`).
   Tylko CSS, 37 linii dodanych, nic nie usunięte. Nie oglądane w przeglądarce.
+- **16. Modale nigdy wyższe niż ekran — reguła bazowa (2026-10-07, `dev`)** — recepcja: modal
+  edycji transakcji (Sprzedaż → Dzisiejsza sprzedaż → ✎, `#edit-modal-overlay`) przy niskiej
+  rozdzielczości nie dawał się zamknąć ANI potwierdzić. **Przyczyna systemowa:** `max-height:
+  92vh; overflow-y:auto` dla kart modali było TYLKO w media query dla wąskich ekranów (≤480
+  i ≤768 px szerokości, linie ~512 i ~1152). Laptop recepcji jest szeroki, ale niski → nic go
+  nie łapało; karta wyższa niż viewport wyśrodkowana → „×" i „Zapisz" poza ekranem, tło
+  `position:fixed` się nie przewija. Modal zadatku z 23.09 (punkt 11) to był ten sam problem
+  naprawiony punktowo. Fix: reguła bazowa poza media query dla 13 overlay-ów + `.edit-modal-card`
+  (za `#mobile-overlay { z-index: 900; }`), bez `!important`. Dodatkowo: edycja sprzedaży
+  zamykana tłem i Esc (listener wspólny z zadatkiem), oraz **korekta punktu 11**: w modalu
+  zadatku `max-height: calc(92vh / 0.8)` → `92vh` — przy `zoom:0.8` calc dawał 115vh, jeśli
+  przeglądarka NIE skaluje jednostek vh przez zoom (a tak jest w standardzie), więc karta
+  nadal mogła wyjść poza ekran. **Reguła na przyszłość:** nowy modal = karta musi mieć
+  `max-height` + `overflow-y:auto` na każdej rozdzielczości, nie tylko w media query dla
+  telefonu; a `zoom` i jednostki `vh` nie mieszać w jednym `calc`.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
