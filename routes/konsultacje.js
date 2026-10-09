@@ -20,6 +20,24 @@ module.exports = (db) => {
     });
   }
 
+  // Rola z tabeli Użytkownicy (ten sam wzorzec co pobierzRole w lojalnosc.js).
+  // Raport reklamowy (2026-10-09): admin / megaadmin / manager — sprawdzane PO STRONIE
+  // SERWERA, bo sumy sprzedażowe nie mogą być do pobrania samym wywołaniem API z sesji recepcji.
+  const ROLE_RAPORT_REKLAMOWY = new Set(['admin', 'megaadmin', 'manager']);
+  function wymagajRoleRaport(tenant_id, imie, res, next) {
+    const odmowa = () => res.json({ status: 'error', message: 'Brak uprawnień do raportu reklamowego (tylko administrator i manager).' });
+    if (!imie) return odmowa();
+    db.query(
+      `SELECT rola FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?) LIMIT 1`,
+      [tenant_id, imie],
+      (err, rows) => {
+        const rola = (!err && Array.isArray(rows) && rows.length) ? String(rows[0].rola || '').toLowerCase().trim() : '';
+        if (!ROLE_RAPORT_REKLAMOWY.has(rola)) return odmowa();
+        next();
+      }
+    );
+  }
+
   // Helper: sprawdź sukces
   function checkIfSuccess(pakiet, zrodlo, typAkcji, thresholdsMap) {
     let threshold = 150;
@@ -368,6 +386,67 @@ module.exports = (db) => {
             return res.json({ status: 'success', data: stats });
           }
         );
+      });
+
+    // --- RAPORT REKLAMOWY (2026-10-09) — zanonimizowane sumy dla firmy dostarczającej leady ---
+    // Zwraca WYŁĄCZNIE agregaty: bez klienta, telefonu, pracownika, uwag i zabiegów.
+    // „Pakiet" = checkIfSuccess — ta sama reguła co reszta analityki konsultacji.
+    // Kolejność zapytań: rola → progi → cennik kampanii → wpisy (testy mockują sekwencyjnie).
+    } else if (action === 'akon_get_ad_report') {
+      const od = String(d.od || '').trim(), doM = String(d.do || '').trim();
+      const okM = (s) => /^\d{4}-(0[1-9]|1[0-2])$/.test(s);
+      if (!okM(od) || !okM(doM)) return res.json({ status: 'error', message: 'Podaj zakres miesięcy w formacie RRRR-MM.' });
+      if (od > doM) return res.json({ status: 'error', message: 'Miesiąc „od" jest późniejszy niż „do".' });
+      const [oy, om] = od.split('-').map(Number), [dy, dm] = doM.split('-').map(Number);
+      const ileMiesiecy = (dy - oy) * 12 + (dm - om) + 1;
+      if (ileMiesiecy > 24) return res.json({ status: 'error', message: 'Zakres może obejmować najwyżej 24 miesiące.' });
+      const kto = String(d.user_log || d.pracownik || '').trim();
+      wymagajRoleRaport(tenant_id, kto, res, () => {
+        getThresholdsMap(tenant_id, (thresholdsMap) => {
+          db.query(`SELECT nazwa, cena, obszar FROM Typy_konsultacji WHERE tenant_id = ?`, [tenant_id], (errT, typyRows) => {
+            const cenaKampanii = {}, obszarKampanii = {};
+            (!errT && Array.isArray(typyRows) ? typyRows : []).forEach(t => { if (t.nazwa) { cenaKampanii[t.nazwa] = safeNum(t.cena); obszarKampanii[t.nazwa] = String(t.obszar || ''); } });
+            db.query(
+              `SELECT DATE_FORMAT(data_konsultacji, '%Y-%m') AS m, zrodlo, obszar, typ_akcji, kwota_reklama, kwota_pakiet, upsell
+                 FROM Wyniki_konsultacja
+                WHERE tenant_id = ? AND DATE_FORMAT(data_konsultacji, '%Y-%m') BETWEEN ? AND ? AND (status = 'Aktywna' OR status IS NULL)`,
+              [tenant_id, od, doM],
+              (err, rows) => {
+                if (err) return res.json({ status: 'error', message: err.message });
+                const miesiace = [];
+                for (let y = oy, m = om; (y < dy) || (y === dy && m <= dm); ) {
+                  miesiace.push(`${y}-${String(m).padStart(2, '0')}`);
+                  m++; if (m > 12) { m = 1; y++; }
+                }
+                const pusty = () => ({ n: 0, sukcesy: 0, oferta: 0, pakiet: 0, upsell: 0 });
+                const dodaj = (a, r, sukces) => { a.n++; if (sukces) a.sukcesy++; a.oferta += safeNum(r.kwota_reklama); a.pakiet += safeNum(r.kwota_pakiet); a.upsell += safeNum(r.upsell); };
+                const perM = {}; miesiace.forEach(m => { perM[m] = { m, wszystkie: 0, ...pusty() }; });
+                const kamp = {};
+                const total = pusty(); let wszystkie = 0;
+                (rows || []).forEach(r => {
+                  const m = String(r.m || '');
+                  if (!perM[m]) return;
+                  wszystkie++; perM[m].wszystkie++;
+                  if (!String(r.zrodlo || '').toLowerCase().includes('reklam')) return;
+                  const typ = String(r.typ_akcji || '').trim();
+                  const nazwa = typ || 'Nieoznaczona';
+                  const sukces = checkIfSuccess(safeNum(r.kwota_pakiet), String(r.zrodlo || '').trim(), typ, thresholdsMap);
+                  dodaj(perM[m], r, sukces);
+                  dodaj(total, r, sukces);
+                  if (!kamp[nazwa]) {
+                    kamp[nazwa] = { nazwa, obszar: obszarKampanii[typ] || String(r.obszar || ''), cena: cenaKampanii[typ] !== undefined ? cenaKampanii[typ] : null,
+                      prog: thresholdsMap[typ] !== undefined ? thresholdsMap[typ] : 150, perM: {}, ...pusty() };
+                    miesiace.forEach(mm => { kamp[nazwa].perM[mm] = { n: 0, pakiet: 0 }; });
+                  }
+                  dodaj(kamp[nazwa], r, sukces);
+                  kamp[nazwa].perM[m].n++; kamp[nazwa].perM[m].pakiet += safeNum(r.kwota_pakiet);
+                });
+                const kampanie = Object.values(kamp).sort((a, b) => b.n - a.n || b.pakiet - a.pakiet);
+                return res.json({ status: 'success', data: { od, do: doM, miesiace: miesiace.map(m => perM[m]), kampanie, total, wszystkie } });
+              }
+            );
+          });
+        });
       });
 
     } else if (action === 'akon_get_daily_summary') {

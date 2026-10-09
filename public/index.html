@@ -10417,6 +10417,62 @@ ANALIZA MANAGER
         <button class="filter-btn akon-tab" onclick="akon_switchView('daily', this)">📅 Dziennik</button>
         <button class="filter-btn akon-tab" onclick="akon_switchView('monthly_list', this)">📋 Lista Miesięczna</button>
         <button class="filter-btn akon-tab" onclick="akon_switchView('monthly', this)">📈 Raport</button>
+        <button class="filter-btn akon-tab" onclick="akon_switchView('reklama', this)" title="Zanonimizowany raport skuteczności kampanii reklamowych — dla firmy dostarczającej leady">📄 Raport reklamowy</button>
+    </div>
+
+    <!-- ── Raport reklamowy (2026-10-09): zanonimizowane sumy dla firmy od leadów ──
+         Dane liczy backend (akon_get_ad_report, rola admin/megaadmin/manager sprawdzana
+         serwerowo). PDF = okno drukowania przeglądarki („Zapisz jako PDF"), jak Audyt. -->
+    <div id="akon_view-reklama" style="display:none;">
+      <style>
+        #akon_rr-print { background:#fff !important; color:#2d2a26 !important; border:1px solid #e5e0db; border-radius:14px; padding:22px 26px; font-size:12px; line-height:1.45; max-width:1000px; }
+        #akon_rr-print * { color: inherit; }
+        #akon_rr-print .rr-head { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #8b2f4b; padding-bottom:12px; margin-bottom:16px; gap:16px; flex-wrap:wrap; }
+        #akon_rr-print .rr-head img { height:56px; }
+        #akon_rr-print .rr-head .rr-meta { text-align:right; color:#6b6560 !important; font-size:11px; }
+        #akon_rr-print h1 { font-size:20px; margin:0 0 4px 0; color:#2d2a26 !important; }
+        #akon_rr-print h2 { font-size:14px; margin:20px 0 8px 0; color:#8b2f4b !important; border-left:3px solid #8b2f4b; padding-left:8px; }
+        #akon_rr-print .rr-lead { color:#6b6560 !important; margin:0 0 12px 0; }
+        #akon_rr-print .rr-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin:6px 0 4px 0; }
+        #akon_rr-print .rr-tiles.c3 { grid-template-columns:repeat(3,1fr); }
+        #akon_rr-print .rr-tile { border:1px solid #e5e0db; border-radius:10px; padding:10px 12px; background:#fcfbfa !important; }
+        #akon_rr-print .rr-tile .l { font-size:10.5px; color:#6b6560 !important; }
+        #akon_rr-print .rr-tile .v { font-size:20px; font-weight:600; margin-top:2px; }
+        #akon_rr-print .rr-tile .s { font-size:10.5px; color:#6b6560 !important; margin-top:2px; }
+        #akon_rr-print .rr-chart { border:1px solid #e5e0db; border-radius:10px; padding:10px 12px 2px 12px; margin-top:8px; background:#fcfbfa !important; }
+        #akon_rr-print .rr-chart .cap { font-size:10.5px; color:#6b6560 !important; }
+        #akon_rr-print table { width:100%; border-collapse:collapse; margin-top:6px; }
+        #akon_rr-print th { text-align:left; font-size:10px; text-transform:uppercase; letter-spacing:.04em; color:#6b6560 !important; border-bottom:1px solid #d9d2cc; padding:6px; font-weight:600; background:none !important; }
+        #akon_rr-print th.num, #akon_rr-print td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+        #akon_rr-print td { padding:6px; border-bottom:1px solid #efeae5; vertical-align:top; background:none !important; }
+        #akon_rr-print tr.total td { border-top:2px solid #8b2f4b; border-bottom:0; font-weight:600; background:#fcf6f8 !important; }
+        #akon_rr-print .muted { color:#6b6560 !important; } #akon_rr-print .small { font-size:10px; } #akon_rr-print .strong { font-weight:600; }
+        #akon_rr-print .rr-note { background:#fcf6f8 !important; border:1px solid #ecd9e0; border-radius:10px; padding:10px 12px; font-size:10.5px; color:#4a4542 !important; }
+        #akon_rr-print .rr-note ul { margin:6px 0 0 16px; padding:0; }
+        #akon_rr-print .rr-foot { margin-top:16px; border-top:1px solid #efeae5; padding-top:6px; font-size:9.5px; color:#9a938d !important; display:flex; justify-content:space-between; }
+        @media (max-width:900px){ #akon_rr-print .rr-tiles, #akon_rr-print .rr-tiles.c3 { grid-template-columns:1fr 1fr; } }
+        @media print {
+          @page { size: A4; margin: 14mm 12mm 16mm 12mm; }
+          body[data-print-section="akon-reklama"] * { visibility:hidden; }
+          body[data-print-section="akon-reklama"] #akon_rr-print, body[data-print-section="akon-reklama"] #akon_rr-print * { visibility:visible; }
+          body[data-print-section="akon-reklama"] #akon_rr-print { position:absolute; left:0; top:0; width:100%; max-width:none; border:0; border-radius:0; padding:0; }
+          body[data-print-section="akon-reklama"] .akon-rr-noprint { display:none !important; }
+          body[data-print-section="akon-reklama"] #akon_rr-print thead { display:table-header-group; }
+          body[data-print-section="akon-reklama"] #akon_rr-print tr { page-break-inside:avoid; }
+          body[data-print-section="akon-reklama"] #akon_rr-print .rr-break { page-break-before:always; }
+        }
+      </style>
+      <div class="card akon-rr-noprint" style="margin-bottom:16px;">
+        <div style="display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
+          <div><label style="font-size:12px; font-weight:600; color:#64748b;">Od miesiąca</label><select id="akon_rr-od" class="modern-form-control" style="min-width:140px;"></select></div>
+          <div><label style="font-size:12px; font-weight:600; color:#64748b;">Do miesiąca</label><select id="akon_rr-do" class="modern-form-control" style="min-width:140px;"></select></div>
+          <button class="btn-primary" style="width:auto; padding:10px 18px;" onclick="akon_rr_pobierz()">📊 Pokaż</button>
+          <button id="akon_rr-btn-pdf" class="btn-primary" style="width:auto; padding:10px 18px; background:#8b2f4b;" onclick="akon_rr_drukuj()" disabled>💾 Zapisz PDF</button>
+          <span style="font-size:12px; color:#64748b;">Raport nie zawiera imion, nazwisk, telefonów ani danych pracowników. „Zapisz PDF" otwiera okno drukowania — wybierz „Zapisz jako PDF".</span>
+        </div>
+        <div id="akon_rr-status" style="margin-top:8px; font-size:12px; color:#64748b;"></div>
+      </div>
+      <div id="akon_rr-print" style="display:none;"></div>
     </div>
 
     <div id="akon_view-dashboard">
@@ -28486,8 +28542,10 @@ function kon_usunKonsultanta(i) {
             document.getElementById('akon_view-daily').style.display = 'none';
             document.getElementById('akon_view-monthly').style.display = 'none';
             document.getElementById('akon_view-monthly-list').style.display = 'none';
-            
+            const vRek = document.getElementById('akon_view-reklama'); if (vRek) vRek.style.display = 'none';
+
             document.querySelectorAll('.akon-tab').forEach(b => b.classList.remove('active'));
+            if(viewName === 'reklama' && vRek) { vRek.style.display = 'block'; akon_rr_init(); }
 
             if(viewName === 'dashboard') document.getElementById('akon_view-dashboard').style.display = 'block';
             if(viewName === 'daily') { document.getElementById('akon_view-daily').style.display = 'block'; akon_pobierzDziennik(); }
@@ -28495,6 +28553,88 @@ function kon_usunKonsultanta(i) {
             if(viewName === 'monthly_list') { document.getElementById('akon_view-monthly-list').style.display = 'block'; akon_pobierzListeMiesieczna(); }
             
             if(btn) btn.classList.add('active');
+        }
+
+        // ── RAPORT REKLAMOWY (akon_rr_*) — 2026-10-09 ──────────────────────────
+        // Zanonimizowany raport skuteczności kampanii dla firmy dostarczającej leady.
+        // Liczby liczy backend (akon_get_ad_report); tu tylko wybór zakresu, render i druk.
+        let akon_rr_gotowe = false;
+        const akon_rr_NAZWY = ['', 'Styczeń', 'Luty', 'Marzec', 'Kwiecień', 'Maj', 'Czerwiec', 'Lipiec', 'Sierpień', 'Wrzesień', 'Październik', 'Listopad', 'Grudzień'];
+        const akon_rr_nazwaM = (m) => { const p = String(m).split('-'); return p.length === 2 ? `${akon_rr_NAZWY[parseInt(p[1], 10)] || p[1]} ${p[0]}` : m; };
+        const akon_rr_zl = (v) => Math.round(Number(v) || 0).toLocaleString('pl-PL') + ' zł';
+        const akon_rr_pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+        async function akon_rr_init() {
+            if (akon_rr_gotowe) return;
+            const selOd = document.getElementById('akon_rr-od'), selDo = document.getElementById('akon_rr-do');
+            const res = await akon_apiCall('akon_get_months');
+            const months = (res.status === 'success' && Array.isArray(res.months)) ? res.months.slice().sort() : [];
+            if (!months.length) { document.getElementById('akon_rr-status').textContent = 'Brak konsultacji w bazie.'; return; }
+            const opcje = months.map(m => `<option value="${m}">${akon_rr_nazwaM(m)}</option>`).join('');
+            selOd.innerHTML = opcje; selDo.innerHTML = opcje;
+            // Domyślnie: ostatnie 6 PEŁNYCH miesięcy (bieżący pomijamy jako niepełny)
+            const dzis = new Date(); const biezacy = `${dzis.getFullYear()}-${String(dzis.getMonth() + 1).padStart(2, '0')}`;
+            const pelne = months.filter(m => m < biezacy);
+            const doM = pelne.length ? pelne[pelne.length - 1] : months[months.length - 1];
+            const idx = months.indexOf(doM);
+            const odM = months[Math.max(0, idx - 5)];
+            selOd.value = odM; selDo.value = doM;
+            akon_rr_gotowe = true;
+        }
+        async function akon_rr_pobierz() {
+            const od = document.getElementById('akon_rr-od').value, doM = document.getElementById('akon_rr-do').value;
+            const st = document.getElementById('akon_rr-status'), box = document.getElementById('akon_rr-print');
+            if (!od || !doM) { st.textContent = 'Wybierz zakres miesięcy.'; return; }
+            if (od > doM) { st.textContent = 'Miesiąc „od" jest późniejszy niż „do".'; return; }
+            st.textContent = '⏳ Liczę...'; box.style.display = 'none';
+            document.getElementById('akon_rr-btn-pdf').disabled = true;
+            const res = await akon_apiCall('akon_get_ad_report', { od, do: doM, user_log: currentUser });
+            if (res.status !== 'success') { st.textContent = res.message || 'Błąd pobierania raportu.'; return; }
+            akon_rr_render(res.data);
+            st.textContent = `Gotowe: ${res.data.total.n} konsultacji z reklamy w ${res.data.miesiace.length} mies.`;
+            box.style.display = 'block';
+            document.getElementById('akon_rr-btn-pdf').disabled = false;
+        }
+        function akon_rr_render(dt) {
+            const mies = dt.miesiace || [], kamp = dt.kampanie || [], T = dt.total || { n: 0, sukcesy: 0, oferta: 0, pakiet: 0, upsell: 0 };
+            const W = 640, H = 200, padL = 36, padB = 34, padT = 18;
+            const bw = Math.max(18, Math.min(64, Math.floor((W - padL) / mies.length * 0.6))), gap = (W - padL - mies.length * bw) / Math.max(mies.length, 1);
+            const maxN = Math.max(...mies.map(x => x.n), 1);
+            const bars = mies.map((x, i) => {
+                const h = Math.round((H - padB - padT) * x.n / maxN), xx = padL + gap / 2 + i * (bw + gap), yy = H - padB - h;
+                const lab = mies.length > 8 ? String(x.m).slice(5) + '/' + String(x.m).slice(2, 4) : akon_rr_nazwaM(x.m).split(' ')[0];
+                return `<rect x="${xx}" y="${yy}" width="${bw}" height="${h}" rx="4" fill="#8b2f4b"/><text x="${xx + bw / 2}" y="${yy - 6}" text-anchor="middle" font-size="12" font-weight="600" fill="#2d2a26">${x.n}</text><text x="${xx + bw / 2}" y="${H - padB + 18}" text-anchor="middle" font-size="${mies.length > 8 ? 9 : 11}" fill="#6b6560">${lab}</text>`;
+            }).join('');
+            const tile = (l, v, s) => `<div class="rr-tile"><div class="l">${l}</div><div class="v">${v}</div>${s ? `<div class="s">${s}</div>` : ''}</div>`;
+            const okres = mies.length ? `${akon_rr_nazwaM(mies[0].m)} – ${akon_rr_nazwaM(mies[mies.length - 1].m)}` : '—';
+            const dataGen = new Date().toLocaleDateString('pl-PL');
+            const esc = (s) => escHtml(s);
+            const wM = (x) => `<tr><td>${akon_rr_nazwaM(x.m)}</td><td class="num">${x.n}</td><td class="num muted">${x.wszystkie}</td><td class="num">${akon_rr_pct(x.n, x.wszystkie)}</td><td class="num">${x.sukcesy}</td><td class="num">${akon_rr_pct(x.sukcesy, x.n)}</td><td class="num">${akon_rr_zl(x.oferta)}</td><td class="num strong">${akon_rr_zl(x.pakiet)}</td><td class="num">${akon_rr_zl(x.upsell)}</td><td class="num">${x.n ? akon_rr_zl(x.pakiet / x.n) : '—'}</td></tr>`;
+            const wK = (k) => `<tr><td><strong>${esc(k.nazwa)}</strong><br><span class="muted small">${esc(k.obszar)}</span></td><td class="num">${k.cena ? akon_rr_zl(k.cena) : '—'}</td><td class="num muted">${akon_rr_zl(k.prog)}</td><td class="num">${k.n}</td><td class="num">${k.sukcesy}</td><td class="num">${akon_rr_pct(k.sukcesy, k.n)}</td><td class="num">${akon_rr_zl(k.oferta)}</td><td class="num strong">${akon_rr_zl(k.pakiet)}</td><td class="num">${akon_rr_zl(k.upsell)}</td><td class="num">${k.n ? akon_rr_zl(k.pakiet / k.n) : '—'}</td></tr>`;
+            const wMx = (k) => `<tr><td><strong>${esc(k.nazwa)}</strong></td>${mies.map(x => { const p = (k.perM || {})[x.m] || { n: 0, pakiet: 0 }; return p.n ? `<td class="num">${p.n}<br><span class="muted small">${akon_rr_zl(p.pakiet)}</span></td>` : '<td class="num muted">·</td>'; }).join('')}<td class="num strong">${k.n}<br><span class="small">${akon_rr_zl(k.pakiet)}</span></td></tr>`;
+            const razemRow = `<tr class="total"><td>Razem</td><td class="num">${T.n}</td><td class="num">${dt.wszystkie}</td><td class="num">${akon_rr_pct(T.n, dt.wszystkie)}</td><td class="num">${T.sukcesy}</td><td class="num">${akon_rr_pct(T.sukcesy, T.n)}</td><td class="num">${akon_rr_zl(T.oferta)}</td><td class="num">${akon_rr_zl(T.pakiet)}</td><td class="num">${akon_rr_zl(T.upsell)}</td><td class="num">${T.n ? akon_rr_zl(T.pakiet / T.n) : '—'}</td></tr>`;
+            document.getElementById('akon_rr-print').innerHTML = `
+              <div class="rr-head"><img src="/img/estelio-logo.png" alt="Estelio"><div class="rr-meta"><h1>Raport skuteczności kampanii reklamowych</h1>Okres: <strong>${okres}</strong> (${mies.length} mies.)<br>Wygenerowano: ${dataGen} · dane zanonimizowane</div></div>
+              <p class="rr-lead">Zestawienie konsultacji pozyskanych z kampanii reklamowych (leadów) oraz ich wyników sprzedażowych w salonie. Raport nie zawiera danych osobowych klientów ani danych pracowników. Pojedyncza konsultacja = jedna osoba z reklamy, która dotarła do salonu.</p>
+              <h2>Podsumowanie okresu</h2>
+              <div class="rr-tiles">${tile('Konsultacje z reklamy', T.n, `${akon_rr_pct(T.n, dt.wszystkie)} wszystkich konsultacji w salonie (${dt.wszystkie})`)}${tile('Konwersja na pakiet', akon_rr_pct(T.sukcesy, T.n), `${T.sukcesy} z ${T.n} konsultacji powyżej progu kampanii`)}${tile('Sprzedaż łączna', akon_rr_zl(T.pakiet), 'wartość pakietów zamkniętych po konsultacjach')}${tile('Dosprzedaż (upsell)', akon_rr_zl(T.upsell), `${akon_rr_pct(T.upsell, T.pakiet)} sprzedaży ponad ofertę z reklamy`)}</div>
+              <div class="rr-tiles c3">${tile('Wartość ofert z reklamy', akon_rr_zl(T.oferta), 'suma cen promocyjnych, z którymi klienci przyszli')}${tile('Średnia wartość pakietu', T.n ? akon_rr_zl(T.pakiet / T.n) : '—', 'na jedną konsultację z reklamy')}${tile('Średnia dosprzedaż', T.n ? akon_rr_zl(T.upsell / T.n) : '—', 'na jedną konsultację z reklamy')}</div>
+              <div class="rr-chart"><div class="cap">Liczba konsultacji z reklamy w kolejnych miesiącach</div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Konsultacje z reklamy po miesiącach"><line x1="${padL}" y1="${H - padB}" x2="${W}" y2="${H - padB}" stroke="#e5e0db"/>${bars}</svg></div>
+              <h2>Wyniki w podziale na miesiące</h2>
+              <table><thead><tr><th>Miesiąc</th><th class="num">Z reklamy</th><th class="num">Wszystkie</th><th class="num">Udział</th><th class="num">Pakiety</th><th class="num">Konwersja</th><th class="num">Oferty</th><th class="num">Sprzedaż</th><th class="num">Dosprzedaż</th><th class="num">Śr. pakiet</th></tr></thead><tbody>${mies.map(wM).join('')}${razemRow}</tbody></table>
+              <p class="muted small" style="margin-top:6px;">„Wszystkie" = konsultacje z reklamy i poza nią. „Pakiety" = konsultacje zakończone sprzedażą pakietu o wartości co najmniej progu kampanii. „Oferty" = suma cen promocyjnych z reklamy. „Dosprzedaż" = sprzedaż ponad cenę oferty.</p>
+              <h2 class="rr-break">Wyniki cząstkowe akcji reklamowych (łącznie za okres)</h2>
+              <table><thead><tr><th>Kampania</th><th class="num">Cena oferty</th><th class="num">Próg pakietu</th><th class="num">Konsult.</th><th class="num">Pakiety</th><th class="num">Konwersja</th><th class="num">Oferty</th><th class="num">Sprzedaż</th><th class="num">Dosprzedaż</th><th class="num">Śr. pakiet</th></tr></thead><tbody>${kamp.map(wK).join('') || '<tr><td colspan="10" class="muted">Brak konsultacji z reklamy w tym okresie.</td></tr>'}</tbody></table>
+              <h2 class="rr-break">Kampanie w kolejnych miesiącach — liczba konsultacji i sprzedaż</h2>
+              <table><thead><tr><th>Kampania</th>${mies.map(x => `<th class="num">${mies.length > 8 ? String(x.m).slice(5) + '/' + String(x.m).slice(2, 4) : akon_rr_nazwaM(x.m).split(' ')[0].slice(0, 3)}</th>`).join('')}<th class="num">Razem</th></tr></thead><tbody>${kamp.map(wMx).join('')}<tr class="total"><td>Razem</td>${mies.map(x => `<td class="num">${x.n}<br><span class="small">${akon_rr_zl(x.pakiet)}</span></td>`).join('')}<td class="num">${T.n}<br><span class="small">${akon_rr_zl(T.pakiet)}</span></td></tr></tbody></table>
+              <h2>Metodyka i definicje</h2>
+              <div class="rr-note">Źródło: moduł Konsultacje systemu Estelio, wpisy rejestrowane przez recepcję przy każdej konsultacji.<ul><li><strong>Konsultacja z reklamy</strong> — wpis ze źródłem „Reklama". Wpisy archiwalne pominięto.</li><li><strong>Miesiąc</strong> — według daty konsultacji.</li><li><strong>Pakiet (sukces)</strong> — wartość sprzedanego pakietu co najmniej równa progowi przypisanemu do kampanii w systemie (domyślnie 150 zł). To ta sama reguła, którą salon stosuje we własnej analityce.</li><li><strong>Cena oferty / Oferty</strong> — cena promocyjna z reklamy. <strong>Sprzedaż</strong> — finalna wartość pakietu. <strong>Dosprzedaż</strong> — różnica między sprzedażą a ofertą.</li><li>Kwoty w złotych, zaokrąglone do pełnych złotych. Raport nie obejmuje kolejnych wizyt ani późniejszych zakupów tych klientów.</li><li>Raport nie zawiera imion, nazwisk, telefonów ani danych pracowników salonu.</li></ul></div>
+              <div class="rr-foot"><span>Estelio · Beauty Management — raport wygenerowany z systemu Estelio</span><span>Dane zanonimizowane · ${dataGen}</span></div>`;
+        }
+        function akon_rr_drukuj() {
+            document.body.setAttribute('data-print-section', 'akon-reklama');
+            const sprzataj = () => { document.body.removeAttribute('data-print-section'); window.removeEventListener('afterprint', sprzataj); };
+            window.addEventListener('afterprint', sprzataj);
+            setTimeout(() => { window.print(); setTimeout(sprzataj, 3000); }, 60);
         }
 
         // --- POBIERANIE MIESIĘCY DO SELECTÓW ---
