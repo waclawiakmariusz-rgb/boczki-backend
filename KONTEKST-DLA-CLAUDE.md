@@ -775,12 +775,18 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   Stripe = najpierw `DELETE FROM Stripe_zdarzenia WHERE event_id=?`.**
   **NIE WŁĄCZAĆ `ENFORCE_SESSION=true` globalnie**, dopóki `PUBLIC_PATHS` nie obejmie
   `/foto/*`, `/zgoda/*` (biorą tenant_id z query/body bez sesji) — inaczej padną QR foto
-  i płatności tpay. **Do zrobienia (etap 1):** transakcja w `/rejestracja/zaloz` (dziś INSERT
-  Użytkownicy/Pracownicy/Uslugi tylko `console.error` + sukces → pół-salon bez osoby na
-  ekranie PIN, token zużyty), losowy sufiks tenant_id + UNIQUE `Licencje.id_bazy` (kolizja
-  co 10 s), `platnosc-sukces.html` dokańczająca po `session_id` gdy webhook nie dotarł,
-  piksele GA/Meta zdjęte z `rejestracja.html` (token w URL leci do Google/Meta), edycja
-  e-maila zamówienia w panelu. **Etap 2:** reset hasła dla statusu opóźniony/nieaktywny +
+  i płatności tpay. **Etap 0 WDROŻONY na prod 2026-10-09 21:09 (`c05778f`), zweryfikowany
+  sondami z zewnątrz** (bez tokenu 403, login+token OK, obcy tenant 403).
+  **Etap 1 ZROBIONY (`dev`, 2026-10-09 wieczór):** `routes/rejestracja-zaloz.js` = token +
+  Licencje + Użytkownicy + Pracownicy + Uslugi w JEDNEJ transakcji (`db.getConnection` →
+  `beginTransaction`; rollback cofa też token), tenant_id = slug + 8 hex z randomUUID + UNIQUE
+  `uq_licencje_id_bazy` (ALTER w admin.js, założony na wspólnej bazie przy lokalnym starcie),
+  `GET /api/stripe/sukces?session_id=` + JS w `platnosc-sukces.html` (dokańcza proces, gdy
+  webhook nie dotarł; pokazuje zamaskowany e-mail), GA/Meta zdjęte z `rejestracja.html`,
+  `POST /admin/zamowienie_email` + przycisk „Popraw e-mail" (zamówienie + Stripe + licencja).
+  Testy `tests/rejestracja-zaloz.test.js` (fałszywa pula z licznikami transakcji — wzorzec do
+  reużycia). **UWAGA testy:** `mockDb` nie ma `getConnection` — moduły transakcyjne testuj
+  własną fałszywą pulą jak tam. **Etap 2:** reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
   0 zł w usługach z katalogu, kreator mobilny, SQL w alertach. Stan danych 2026-10-09: 3
   zamówienia „nowe" z czerwca to testy usera (to samo IP), 0 tokenów oczekujących, Focus
