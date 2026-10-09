@@ -728,6 +728,18 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   nadal mogła wyjść poza ekran. **Reguła na przyszłość:** nowy modal = karta musi mieć
   `max-height` + `overflow-y:auto` na każdej rozdzielczości, nie tylko w media query dla
   telefonu; a `zoom` i jednostki `vh` nie mieszać w jednym `calc`.
+- **17. Zadania na dziś → Pozostałe Braki: „Nie zamawiam" vs „Usuń z magazynu" (2026-10-09,
+  `dev`)** — pytanie recepcji: czy „✕ Usuń" w brakach usuwa produkt? NIE — tylko chowało go
+  z listy zamówień (`Raport_Wycofane_Zamowienia`, akcja `rap_hideReorder`), produkt zostawał
+  w `Raport_Magazyn`. Prawdziwe usunięcie = `rap_archiveProduct` (kategoria → `'Archiwum'`,
+  `rap_getInventory` to wyklucza; **w UI nie ma przywracania z archiwum**, akcji
+  `rap_unarchive` nie ma). Stan u Boczków 2026-10-09: 575 aktywnych, z tego 80 ze stanem 0
+  i celem >0; 25 wycofanych z zamówień; 93 w archiwum. Fix tylko w `index.html`
+  (`rap_renderReport`, `rap_renderUkryte`, nowa `rap_usunZMagazynuZRaportu`): dwa przyciski
+  w wierszu braku + kosz przy chipach wycofanych; po archiwizacji sprzątany wpis „wycofane".
+  Celowo BEZ „usuń wszystkie zerowe naraz" (część to sezonowe/chwilowo wyczerpane). Moduł
+  `rap_` to zmigrowany „stary listopadowo-grudniowy system" (słowa usera) — backend
+  `routes/raport.js`, 11 akcji, bez RBAC po roli.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
