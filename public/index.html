@@ -29345,7 +29345,8 @@ function rap_renderReport() {
                    <td data-label="Akcja">
                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
                            <button class="rap_btn-fix" onclick="rap_quickAdd('${r[0]}', ${missing})">Wyrównaj</button>
-                           <button onclick="rap_ukryjZZamowien('${r[0]}', '${nazwaJs}')" title="Nie zamawiam tego produktu" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">✕ Usuń</button>
+                           <button onclick="rap_ukryjZZamowien('${r[0]}', '${nazwaJs}')" title="Zostaje w magazynie, tylko znika z listy zamówień (odwracalne)" style="background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">✕ Nie zamawiam</button>
+                           <button onclick="rap_usunZMagazynuZRaportu('${r[0]}', '${nazwaJs}')" title="Przenosi produkt do archiwum — znika ze wszystkich list magazynu (to samo co „Usuń" w liście produktów)" style="background:#fef2f2; color:#b91c1c; border:1px solid #fecaca; border-radius:8px; padding:8px 12px; cursor:pointer; font-size:12px; font-weight:600; white-space:nowrap;">🗑️ Usuń z magazynu</button>
                        </div>
                    </td>
                </tr>`;
@@ -29373,15 +29374,20 @@ function rap_renderUkryte() {
     const chipsy = ids.map(id => {
         const display = nazwaPoId[id] || ('(produkt ' + id + ')');
         const nazwaJs = escHtml(display).replace(/'/g, "\\'");
-        return `<button onclick="rap_przywrocDoZamowien('${id}', '${nazwaJs}')" title="Przywróć na listę zamówień"
-                    style="background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; border-radius:999px; padding:6px 12px; margin:3px; cursor:pointer; font-size:12px; font-weight:600;">
-                    ↩️ ${escHtml(display)}
-                </button>`;
+        // Para: przywróć na listę | usuń z magazynu (archiwum) — 2026-10-09, prośba recepcji:
+        // sporo wycofanych pozycji ma stan 0 i nie wraca do użycia, chcą je dokończyć stąd.
+        const moznaUsunac = !!nazwaPoId[id]; // rekordu już nie ma w magazynie → tylko przywróć
+        return `<span style="display:inline-flex; align-items:center; margin:3px; border:1px solid #bfdbfe; border-radius:999px; overflow:hidden; background:#eff6ff;">
+                    <button onclick="rap_przywrocDoZamowien('${id}', '${nazwaJs}')" title="Przywróć na listę zamówień"
+                        style="background:none; color:#1e40af; border:0; padding:6px 10px 6px 12px; cursor:pointer; font-size:12px; font-weight:600;">↩️ ${escHtml(display)}</button>
+                    ${moznaUsunac ? `<button onclick="rap_usunZMagazynuZRaportu('${id}', '${nazwaJs}')" title="Usuń z magazynu (archiwum)"
+                        style="background:#fef2f2; color:#b91c1c; border:0; border-left:1px solid #fecaca; padding:6px 10px; cursor:pointer; font-size:12px;">🗑️</button>` : ''}
+                </span>`;
     }).join('');
 
     box.innerHTML = `
         <details style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:10px 14px;">
-            <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#64748b;">Wycofane z zamówień (${ids.length}) — kliknij, aby przywrócić</summary>
+            <summary style="cursor:pointer; font-size:13px; font-weight:600; color:#64748b;">Wycofane z zamówień (${ids.length}) — ↩️ przywróć na listę albo 🗑️ usuń z magazynu</summary>
             <div style="margin-top:10px; display:flex; flex-wrap:wrap;">${chipsy}</div>
         </details>
     `;
@@ -29397,6 +29403,25 @@ function rap_ukryjZZamowien(id, nazwa) {
         } else {
             alert(res.message || 'Nie udało się usunąć z listy.');
         }
+    });
+}
+
+// Usuń produkt z magazynu prosto z raportu "Zadania na dziś" (2026-10-09, prośba recepcji).
+// Ta sama akcja co „Usuń" w liście produktów: kategoria → 'Archiwum', produkt znika ze
+// wszystkich list; w UI nie ma przywracania z archiwum, stąd twarde potwierdzenie.
+// Dotąd jedyny przycisk w brakach („✕ Usuń") tylko chował z listy zamówień, a recepcja
+// myślała, że usuwa produkt — stąd 80 aktywnych pozycji ze stanem 0 „straszących" w brakach.
+function rap_usunZMagazynuZRaportu(id, nazwa) {
+    if (!confirm(`Usunąć „${nazwa}" Z MAGAZYNU?\n\nProdukt trafi do archiwum i zniknie ze wszystkich list (stan, cel, historia zostają w bazie).\nNie da się tego cofnąć z poziomu aplikacji.\n\nJeśli chcesz tylko przestać go zamawiać, użyj „Nie zamawiam".`)) return;
+    rap_apiCall('rap_archiveProduct', { id, userFull: currentUser }).then(res => {
+        if (!(res.success || res.status === 'success')) { alert(res.message || 'Nie udało się usunąć z magazynu.'); return; }
+        // Porządek: wpis „wycofane z zamówień" dla zarchiwizowanego produktu jest już zbędny
+        // (chip pokazywałby „(produkt 123)" bez nazwy).
+        const bylUkryty = rap_ukryte && rap_ukryte.has(String(id));
+        const sprzatanie = bylUkryty
+            ? rap_apiCall('rap_unhideReorder', { id, nazwa, userFull: currentUser }).then(() => { rap_ukryte.delete(String(id)); }).catch(() => {})
+            : Promise.resolve();
+        sprzatanie.then(() => rap_fetchInventory());
     });
 }
 
