@@ -5,6 +5,7 @@ const express = require('express');
 const { randomUUID } = require('crypto');
 const bcrypt = require('bcrypt');
 const { rateLimitLogin, recordFailedLogin, recordSuccessLogin, makePublicLimiter } = require('./sessions');
+const { zalozSalon } = require('./rejestracja-zaloz');
 const { cloneBoczkiToDemo } = require('../scripts/clone_to_demo_lib');
 const { migracjaTenanta: migracjaTypyZabiegow, listaTenantow: listaTenantowDoMigracji } = require('../scripts/migrate_typy_lib');
 
@@ -570,6 +571,47 @@ module.exports = (db) => {
 
   // GET /api/rejestracja/weryfikuj?token=... — sprawdź ważność tokenu
   // Zwraca też dane z zakupu (Zamowienia) do prefillu formularza rejestracji.
+  // POST /api/admin/zamowienie_email — poprawa adresu e-mail zamówienia (2026-10-09, etap 1 audytu).
+  // Literówka w mailu przy zakupie = klient nie dostaje linku, faktur ani odnowień (invoice.paid
+  // dopasowuje licencję po e-mailu). Dotąd nie było jak tego poprawić. Aktualizujemy:
+  // Zamowienia.email, klienta w Stripe (żeby odnowienia szły na dobry adres) i — jeśli salon już
+  // powstał z tego zamówienia — Licencje.email. Potem admin klika „Wyślij ponownie ten sam link".
+  router.post('/admin/zamowienie_email', requireAdmin, async (req, res) => {
+    const id = String(req.body.id || '').trim();
+    const email = String(req.body.email || '').trim().toLowerCase();
+    if (!id) return res.json({ status: 'error', message: 'Brak id zamówienia.' });
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.json({ status: 'error', message: 'Podaj poprawny adres e-mail.' });
+    const q = (sql, p) => new Promise((resolve, reject) => db.query(sql, p, (e, r) => (e ? reject(e) : resolve(r))));
+    try {
+      const rows = await q(`SELECT z.email, z.stripe_customer_id, z.token_wyslany,
+                                   (SELECT t.tenant_id_utworzony FROM Tokeny_rejestracji t WHERE t.token = z.token_wyslany LIMIT 1) AS tenant_id
+                              FROM Zamowienia z WHERE z.id = ? LIMIT 1`, [id]);
+      const z = rows && rows[0];
+      if (!z) return res.json({ status: 'error', message: 'Nie znaleziono zamówienia.' });
+      const stary = String(z.email || '').trim().toLowerCase();
+      await q(`UPDATE Zamowienia SET email = ? WHERE id = ?`, [email, id]);
+      const zmiany = ['zamówienie'];
+      if (z.tenant_id) {
+        const r = await q(`UPDATE Licencje SET email = ? WHERE id_bazy = ? LIMIT 1`, [email, z.tenant_id]);
+        if (r && r.affectedRows) zmiany.push('licencja');
+      }
+      if (z.stripe_customer_id && process.env.STRIPE_SECRET_KEY) {
+        try {
+          const stripe = require('stripe')(String(process.env.STRIPE_SECRET_KEY).replace(/^['"]|['"]$/g, ''));
+          await stripe.customers.update(z.stripe_customer_id, { email });
+          zmiany.push('Stripe');
+        } catch (e) {
+          console.error('[admin] zamowienie_email: Stripe update:', e.message);
+          zmiany.push('Stripe: NIE (popraw ręcznie w dashboardzie)');
+        }
+      }
+      console.log(`[admin] zamowienie_email ${id}: ${stary} → ${email} (${zmiany.join(', ')})`);
+      return res.json({ status: 'success', message: `Adres zmieniony (${zmiany.join(', ')}). Teraz wyślij ponownie ten sam link.`, zmiany });
+    } catch (e) {
+      return res.json({ status: 'error', message: 'Błąd zapisu: ' + e.message });
+    }
+  });
+
   router.get('/rejestracja/weryfikuj', (req, res) => {
     const { token } = req.query;
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
@@ -634,6 +676,13 @@ module.exports = (db) => {
   });
 
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
+  // 2026-10-09 (etap 1 audytu): UNIQUE na Licencje.id_bazy — dotąd zwykły indeks; dwa salony
+  // mogły dostać ten sam id_bazy (sufiks z ms powtarzalny co 10 s) i widzieć nawzajem swoje dane.
+  // Idempotentnie: ER_DUP_KEYNAME (1061) = indeks już jest.
+  db.query(`ALTER TABLE Licencje ADD UNIQUE INDEX uq_licencje_id_bazy (id_bazy)`, (err) => {
+    if (err && err.code !== 'ER_DUP_KEYNAME') console.error('[admin] ALTER Licencje UNIQUE id_bazy:', err.message);
+  });
+
   const limiterRejestracja = makePublicLimiter({ max: 10, message: 'Za dużo prób rejestracji.' });
   router.post('/rejestracja/zaloz', limiterRejestracja, async (req, res) => {
     const d = req.body;
@@ -674,88 +723,40 @@ module.exports = (db) => {
 
     const hasloHash = await bcrypt.hash(haslo.trim(), BCRYPT_ROUNDS);
 
-    // Sprawdź token i zablokuj go atomowo (UPDATE ... WHERE status='nowy')
-    db.query(
-      `UPDATE Tokeny_rejestracji SET status='wykorzystany', data_wykorzystania=NOW()
-       WHERE token = ? AND status = 'nowy' AND data_wygasniecia > NOW()`,
-      [token],
-      (err, result) => {
-        if (err) return res.json({ status: 'error', message: 'Błąd bazy: ' + err.message });
-        if (!result.affectedRows) {
-          return res.json({ status: 'error', message: 'Link jest nieważny, wygasł lub został już użyty.' });
-        }
+    // 2026-10-09 (etap 1 audytu): token + licencja + użytkownicy + pracownicy + usługi w JEDNEJ
+    // transakcji (routes/rejestracja-zaloz.js). Wcześniej padnięty INSERT użytkownika dawał
+    // „pół-salon" (licencja bez osoby na ekranie PIN) i zużyty token — klient bez wyjścia.
+    const pracDoZapisu = pracWalidni.map(p => ({ imie: String(p.imie).trim().slice(0, 100), pin: String(p.pin).trim(), rola: String(p.rola || 'pracownik').trim().slice(0, 50) }));
+    const uslugiDoZapisu = (Array.isArray(uslugi) ? uslugi : [])
+      .filter(u => u && u.kategoria && u.wariant && String(u.kategoria).trim() && String(u.wariant).trim())
+      .map(u => ({ kategoria: String(u.kategoria).trim().slice(0, 255), wariant: String(u.wariant).trim().slice(0, 255), cena: parseFloat(u.cena) || 0, zrodlo: u.zrodlo || 'reczne' }));
 
-        // Token zablokowany — tworzymy salon
-        const slug = slugify(nazwa_salonu);
-        const suffix = Date.now().toString().slice(-4);
-        const tenant_id = `${slug}-${suffix}`;
-        const licId = randomUUID();
+    const wynik = await zalozSalon({
+      db,
+      dane: {
+        token, nazwa_salonu: String(nazwa_salonu).trim().slice(0, 255), ulica, miasto, telefon,
+        loginNorm, hasloHash, nazwaFirmy, emailLicencji, stripeCustomerId, stripeSubscriptionId,
+        pracownicy: pracDoZapisu, uslugi: uslugiDoZapisu,
+      },
+    });
 
-        db.query(
-          `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, nazwa_salonu, nazwa_firmy, ulica, miasto, telefon, email, stripe_customer_id, stripe_subscription_id, data_waznosci, data_utworzenia)
-           VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, ?, ?, ?, DATE_ADD(NOW(), INTERVAL 1 MONTH), NOW())`,
-          [licId, loginNorm, hasloHash, tenant_id, nazwa_salonu, nazwaFirmy, ulica || '', miasto || '', telefon || '', emailLicencji, stripeCustomerId, stripeSubscriptionId],
-          (err2) => {
-            if (err2) {
-              // Cofnij token jeśli zapis się nie udał
-              db.query(`UPDATE Tokeny_rejestracji SET status='nowy', data_wykorzystania=NULL WHERE token=?`, [token]);
-              if (err2.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', message: 'Ten login jest już zajęty. Wybierz inny.' });
-              return res.json({ status: 'error', message: 'Błąd tworzenia konta: ' + err2.message });
-            }
+    if (wynik.wynik === 'token') return res.json({ status: 'error', message: 'Link jest nieważny, wygasł lub został już użyty.' });
+    if (wynik.wynik === 'login_zajety') return res.json({ status: 'error', message: 'Ten login jest już zajęty. Wybierz inny.' });
+    if (wynik.wynik !== 'ok') return res.json({ status: 'error', message: wynik.message || 'Nie udało się założyć salonu. Spróbuj ponownie.' });
 
-            // Zapisz tenant_id w tokenie
-            db.query(`UPDATE Tokeny_rejestracji SET tenant_id_utworzony=? WHERE token=?`, [tenant_id, token]);
+    const tenant_id = wynik.tenant_id;
+    // Odpowiedź NAJPIERW, maile potem (fire-and-forget) — salon już istnieje, mail to dodatek.
+    res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: loginNorm });
 
-            // Pracownicy i usługi
-            const pracList = Array.isArray(pracownicy) ? pracownicy : [];
-            const uslugiList = Array.isArray(uslugi) ? uslugi : [];
-
-            const pObietnice = pracList.filter(p => p.imie?.trim()).map(p => new Promise(resolve => {
-              const pid = randomUUID();
-              db.query(`INSERT INTO Użytkownicy (id, tenant_id, imie_login, haslo_pin, rola) VALUES (?, ?, ?, ?, ?)`,
-                [pid, tenant_id, p.imie.trim(), String(p.pin).trim(), p.rola || 'pracownik'], (errU) => {
-                  if (errU) console.error('[rejestracja/zaloz] INSERT Użytkownicy failed:', errU.message, '| imie:', p.imie, '| tenant:', tenant_id);
-                  const prid = randomUUID();
-                  db.query(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (?, ?, ?)`,
-                    [prid, tenant_id, p.imie.trim()], (errP) => {
-                      if (errP) console.error('[rejestracja/zaloz] INSERT Pracownicy failed:', errP.message, '| imie:', p.imie, '| tenant:', tenant_id);
-                      resolve();
-                    });
-                });
-            }));
-
-            console.log(`[rejestracja/zaloz] tenant=${tenant_id} | wstawiam ${uslugiList.length} uslug, ${pracList.length} pracownikow`);
-
-            const uObietnice = uslugiList.filter(u => u.kategoria && u.wariant).map(u => new Promise(resolve => {
-              const uid = randomUUID();
-              db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, zrodlo) VALUES (?, ?, ?, ?, ?, ?)`,
-                [uid, tenant_id, u.kategoria.trim(), u.wariant.trim(), parseFloat(u.cena) || 0, u.zrodlo || 'reczne'], (errS) => {
-                  if (errS) console.error('[rejestracja/zaloz] INSERT Uslugi failed:', errS.message, '| kategoria:', u.kategoria, '| wariant:', u.wariant, '| tenant:', tenant_id);
-                  resolve();
-                });
-            }));
-
-            Promise.all([...pObietnice, ...uObietnice]).then(() => {
-              // 2026-10-09: odpowiedź NAJPIERW, maile potem (fire-and-forget). Wcześniej klient
-              // czekał na SMTP — wiszący serwer pocztowy = „Błąd połączenia", drugie kliknięcie =
-              // „link już użyty", a ekran z PIN-ami przepadał. Salon już istnieje, mail to dodatek.
-              res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: loginNorm });
-
-              // Welcome email (na email z zakupu — autorytatywny); bez hasła — patrz mailer.wyslijWitamy
-              if (emailLicencji) {
-                wyslijWitamy({ email: emailLicencji, imie: imie || '', nazwa_salonu, login: loginNorm })
-                  .then(() => console.log('[admin] Welcome email wysłany:', tenant_id))
-                  .catch(mailErr => console.error('[admin] Błąd wysyłki welcome email (salon istnieje):', mailErr.message));
-              }
-              // Powiadom admina o nowym salonie (fire-and-forget)
-              powiadomAdminaORejestracji({ nazwa_salonu, email: emailLicencji, login: loginNorm, tenant_id })
-                .then(() => console.log('[admin] Powiadomienie admina o rejestracji wysłane'))
-                .catch(err => console.error('[admin] Powiadomienie admina o rejestracji error:', err.message));
-            });
-          }
-        );
-      }
-    );
+    // Welcome email (na email z zakupu — autorytatywny); bez hasła — patrz mailer.wyslijWitamy
+    if (emailLicencji) {
+      wyslijWitamy({ email: emailLicencji, imie: imie || '', nazwa_salonu, login: loginNorm })
+        .then(() => console.log('[admin] Welcome email wysłany:', tenant_id))
+        .catch(mailErr => console.error('[admin] Błąd wysyłki welcome email (salon istnieje):', mailErr.message));
+    }
+    powiadomAdminaORejestracji({ nazwa_salonu, email: emailLicencji, login: loginNorm, tenant_id })
+      .then(() => console.log('[admin] Powiadomienie admina o rejestracji wysłane'))
+      .catch(err => console.error('[admin] Powiadomienie admina o rejestracji error:', err.message));
   });
 
   // ─── VOUCHERY ────────────────────────────────────────────────

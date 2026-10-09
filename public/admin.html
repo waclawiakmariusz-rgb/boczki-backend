@@ -1140,6 +1140,8 @@ function renderZgloszenia() {
         </div>
         ${z.wiadomosc ? `<div class="zgl-msg">„${z.wiadomosc}"</div>` : ''}
         <div class="zgl-actions">
+          ${z.status !== 'odrzucone' && z.status !== 'zrealizowane' ? `
+            <button class="btn-sm" style="background:#f1f5f9; color:#334155;" onclick="poprawEmailZgl('${z.id}','${z.email}')" title="Literówka w adresie? Poprawia zamówienie, klienta w Stripe i licencję (jeśli już jest)">✎ Popraw e-mail</button>` : ''}
           ${z.status === 'nowe' ? `
             <button class="btn-sm btn-edit" onclick="otworzSendModal('${z.id}','${z.email}','${z.imie}','${z.nazwa_salonu}')">
               📩 Wyślij link
@@ -1186,6 +1188,24 @@ async function wyslijPonownieIstniejacy(zamowienieId, token, email, imie, nazwa)
     }).then(r => r.json());
     if (r.status === 'success') { alert('📩 Link wysłany na ' + e); zaladujZgloszenia(); }
     else alert('Nie udało się wysłać: ' + (r.message || 'nieznany błąd'));
+  } catch (err) { alert('Błąd połączenia: ' + err.message); }
+}
+
+// 2026-10-09: poprawa literówki w e-mailu zamówienia (zamówienie + Stripe + licencja, jeśli jest).
+async function poprawEmailZgl(zamowienieId, stary) {
+  const nowy = prompt('Nowy adres e-mail klienta (obecny: ' + (stary || '—') + '):', stary || '');
+  if (nowy === null) return;
+  const e = (nowy || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('Podaj poprawny adres e-mail.'); return; }
+  if (e.toLowerCase() === String(stary || '').toLowerCase()) { alert('To ten sam adres.'); return; }
+  try {
+    const r = await fetch(`${API}/admin/zamowienie_email`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ id: zamowienieId, email: e })
+    }).then(r => r.json());
+    alert(r.status === 'success' ? '✅ ' + r.message : 'Nie udało się: ' + (r.message || 'nieznany błąd'));
+    if (r.status === 'success') zaladujZgloszenia();
   } catch (err) { alert('Błąd połączenia: ' + err.message); }
 }
 

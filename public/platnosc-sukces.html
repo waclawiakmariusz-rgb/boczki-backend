@@ -59,8 +59,8 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
   <h1>Płatność zakończona!</h1>
   <p>Dziękujemy za zakup dostępu do systemu <strong>Estelio</strong>.</p>
 
-  <div class="email-box">
-    📧 Link rejestracyjny został wysłany na Twój adres e-mail
+  <div class="email-box" id="email-box">
+    📧 Sprawdzamy stan Twojego zamówienia…
   </div>
 
   <div class="steps">
@@ -82,7 +82,36 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
     </div>
   </div>
 
-  <p style="font-size:12px; color:#9ca3af;">Nie dostałeś emaila? Skontaktuj się z nami — pomożemy.</p>
+  <p style="font-size:12px; color:#9ca3af;">Nie dostałeś emaila w ciągu kilku minut? Napisz na <a href="mailto:kontakt@estelio.com.pl" style="color:#b87080; font-weight:600;">kontakt@estelio.com.pl</a> — wyślemy link ręcznie.</p>
 </div>
+<script>
+// 2026-10-09: strona nie jest już bierna. Pyta serwer o stan zamówienia po session_id; jeśli
+// webhook Stripe nie dotarł, serwer dokańcza proces (token + mail) i mówi, na jaki adres poszedł link.
+(function () {
+  const box = document.getElementById('email-box');
+  const sid = new URLSearchParams(location.search).get('session_id');
+  const ustaw = (html, kolor) => { box.innerHTML = html; if (kolor) { box.style.background = kolor.bg; box.style.borderColor = kolor.border; box.style.color = kolor.text; } };
+  if (!sid) { ustaw('📧 Link rejestracyjny został wysłany na Twój adres e-mail'); return; }
+  let proby = 0;
+  const sprawdz = () => fetch('/api/stripe/sukces?session_id=' + encodeURIComponent(sid))
+    .then(r => r.json())
+    .then(d => {
+      if (d.status !== 'success') { ustaw('📧 Link rejestracyjny został wysłany na Twój adres e-mail'); return; }
+      const adres = d.email_masked ? ' na <strong>' + d.email_masked + '</strong>' : ' na Twój adres e-mail';
+      if (d.zamowienie_status === 'wyslano_link' || d.zamowienie_status === 'zrealizowane') {
+        ustaw('📧 Link rejestracyjny został wysłany' + adres);
+      } else if (d.zamowienie_status === 'blad_maila') {
+        ustaw('⚠️ Płatność przyjęta, ale nie udało się wysłać maila' + adres + '.<br>Napisz na <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a> — wyślemy link ręcznie.', { bg: '#fef2f2', border: '#fecaca', text: '#991b1b' });
+      } else if (proby++ < 5) {
+        ustaw('⏳ Płatność przyjęta, przygotowujemy link rejestracyjny…');
+        setTimeout(sprawdz, 3000);
+      } else {
+        ustaw('📧 Link rejestracyjny zostanie wysłany' + adres + ' w ciągu kilku minut.');
+      }
+    })
+    .catch(() => ustaw('📧 Link rejestracyjny został wysłany na Twój adres e-mail'));
+  sprawdz();
+})();
+</script>
 </body>
 </html>

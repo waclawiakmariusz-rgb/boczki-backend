@@ -497,6 +497,39 @@ module.exports = (db) => {
 
   // ─── GET /api/stripe/config ───────────────────────────────────
   // Zwraca publiczne dane (cena, nazwa) dla frontendu
+  // ─── GET /api/stripe/sukces?session_id=cs_... ─────────────────────────────────
+  // 2026-10-09 (etap 1 audytu): strona po płatności była bierna — gdy webhook nie dotarł
+  // (zły secret, awaria), klient zapłacił i nic nie dostał. Teraz strona pyta tu o stan,
+  // a jeśli zamówienie nadal jest 'nowe', DOKAŃCZAMY proces tą samą (idempotentną) logiką
+  // co webhook. Odpowiedź: status zamówienia + zamaskowany e-mail, na który poszedł link.
+  const limiterSukces = makePublicLimiter({ max: 30, message: 'Za dużo zapytań.' });
+  router.get('/stripe/sukces', limiterSukces, async (req, res) => {
+    if (!stripe) return res.json({ status: 'error', message: 'Płatności nie są skonfigurowane.' });
+    const sid = String(req.query.session_id || '').trim();
+    if (!/^cs_[A-Za-z0-9_]{10,}$/.test(sid)) return res.json({ status: 'error', message: 'Nieprawidłowy identyfikator sesji.' });
+    const q = (sql, p) => new Promise((resolve, reject) => db.query(sql, p, (e, r) => (e ? reject(e) : resolve(r))));
+    const maskuj = (e) => { const s = String(e || ''); const i = s.indexOf('@'); return i > 1 ? s[0] + '***' + s.slice(i) : (s ? '***' + s.slice(-6) : ''); };
+    try {
+      const session = await stripe.checkout.sessions.retrieve(sid);
+      const zamId = session && session.metadata && session.metadata.zamowienie_id;
+      const oplacona = session && (session.payment_status === 'paid' || session.payment_status === 'no_payment_required' || session.status === 'complete');
+      if (!zamId || !oplacona) return res.json({ status: 'error', message: 'Płatność nie została jeszcze potwierdzona.' });
+      const rows = await q(`SELECT status, email FROM Zamowienia WHERE id = ? LIMIT 1`, [zamId]);
+      const zam = rows && rows[0];
+      if (!zam) return res.json({ status: 'error', message: 'Nie znaleziono zamówienia.' });
+      let statusZam = zam.status;
+      if (statusZam === 'nowe') {
+        console.warn(`[stripe sukces] webhook nie dotarł dla zamówienia ${zamId} — dokańczam ze strony sukcesu`);
+        const w = await obsluzCheckoutCompleted({ db, session, trialDni: DEFAULT_TRIAL_DNI(), mailer: { wyslijLinkRejestracji }, wystawFakture, powiadomAdminaOZakupie });
+        statusZam = w.wynik === 'ok' ? (w.mailOk ? 'wyslano_link' : 'blad_maila') : (await q(`SELECT status FROM Zamowienia WHERE id = ? LIMIT 1`, [zamId]))[0]?.status || statusZam;
+      }
+      return res.json({ status: 'success', zamowienie_status: statusZam, email_masked: maskuj(zam.email || (session.customer_details && session.customer_details.email)) });
+    } catch (e) {
+      console.error('[stripe sukces]', e.message);
+      return res.json({ status: 'error', message: 'Nie udało się sprawdzić stanu płatności.' });
+    }
+  });
+
   router.get('/stripe/config', (req, res) => {
     res.json({
       cena_grosze: CENA_GROSZE(),
