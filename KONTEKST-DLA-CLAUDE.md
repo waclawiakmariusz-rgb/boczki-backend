@@ -786,7 +786,19 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   `POST /admin/zamowienie_email` + przycisk „Popraw e-mail" (zamówienie + Stripe + licencja).
   Testy `tests/rejestracja-zaloz.test.js` (fałszywa pula z licznikami transakcji — wzorzec do
   reużycia). **UWAGA testy:** `mockDb` nie ma `getConnection` — moduły transakcyjne testuj
-  własną fałszywą pulą jak tam. **Etap 2:** reset hasła dla statusu opóźniony/nieaktywny +
+  własną fałszywą pulą jak tam. **Etap 1 WDROŻONY na main `0b60746` (2026-10-09, push z
+  `--no-verify` za zgodą usera — pre-push hook blokuje usunięcie 24 linii pikseli
+  z `rejestracja.html`; przy kolejnych pushach tego commita hook znów zablokuje, to NORMALNE).**
+  **Etap 2 ZROBIONY (`dev`):** login dla opóźniony/nieaktywny → `code:'LICENCJA'` + link do
+  billing; reset hasła także dla tych statusów; role w kreatorze = Kosmetolog/Recepcja/Manager
+  (jak Dostępy); `manager` dodany do `ROLE_KLUB` i `loj_admin` (**decyzja do potwierdzenia przez
+  usera** — wcześniej Klub = admin+recepcja); `ladnyKomunikatBledu()` w wrapperze fetch tłumaczy
+  SQL na zdania; `ostrzezCenyZerowe()` toast dla managera gdy ≥5 i ≥50% usług ma 0 zł; kreator
+  `@media ≤560px`. Celowo BEZ banera „trial kończy się za N dni" — `Licencje.data_waznosci` to
+  NIE koniec trialu (NOW()+1 mies. przy rejestracji), prawdziwą datę ma Stripe/billing.html.
+  **Następny krok:** pełny test ścieżki kodem `100AK` (zamów → zapłać 0 zł → mail → kreator →
+  logowanie → pierwsza sprzedaż) na telefonie i komputerze. Stare punkty etapu 2 (dla porządku):
+  reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
   0 zł w usługach z katalogu, kreator mobilny, SQL w alertach. Stan danych 2026-10-09: 3
   zamówienia „nowe" z czerwca to testy usera (to samo IP), 0 tokenów oczekujących, Focus
