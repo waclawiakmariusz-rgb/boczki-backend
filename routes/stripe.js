@@ -37,6 +37,7 @@ try {
 }
 
 const { makePublicLimiter } = require('./sessions');
+const { obsluzCheckoutCompleted } = require('./onboarding-checkout');
 
 function stripQuotes(val) { return (val || '').replace(/^['"]|['"]$/g, ''); }
 const APP_URL        = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
@@ -54,6 +55,22 @@ const POLITYKA_VERSION  = '1.0-2026-05-28';
 const DPA_VERSION       = '1.0-2026-05-28';
 
 module.exports = (db) => {
+
+  // 2026-10-09 (audyt ścieżki sprzedażowej): nowe statusy zamówienia ('oplacone' = zapłacone,
+  // mail w toku; 'blad_maila' = zapłacone, mail NIE doszedł) + rejestr doręczonych zdarzeń Stripe
+  // (idempotencja webhooka). Oba idempotentne przy starcie.
+  db.query(
+    `ALTER TABLE Zamowienia MODIFY status ENUM('nowe','oplacone','wyslano_link','blad_maila','zrealizowane','odrzucone') NULL`,
+    (err) => { if (err) console.error('[stripe] ALTER Zamowienia.status:', err.message); }
+  );
+  db.query(
+    `CREATE TABLE IF NOT EXISTS Stripe_zdarzenia (
+       event_id VARCHAR(255) PRIMARY KEY,
+       typ      VARCHAR(64),
+       data     DATETIME DEFAULT CURRENT_TIMESTAMP
+     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+    (err) => { if (err) console.error('[stripe] CREATE Stripe_zdarzenia:', err.message); }
+  );
 
   // Idempotentne migracje:
   // • data_grace_until — koniec okresu łaski po nieudanej płatności
@@ -297,71 +314,36 @@ module.exports = (db) => {
       return res.status(400).send(`Webhook Error: ${err.message}`);
     }
 
+    // ─── Idempotencja zdarzeń (2026-10-09) ────────────────────────────────────────
+    // Stripe potrafi doręczyć TO SAMO zdarzenie kilka razy (retry po timeoucie, ręczny „resend"
+    // z dashboardu). Bez tej blokady powtórka = 2. token, 2. mail, 2. faktura (KSeF — tylko korekta),
+    // voucher ×2, a przy invoice.paid — podwójne przedłużenie licencji. Każde event.id zapisujemy
+    // raz; duplikat = 200 OK bez żadnej akcji. Celowy replay: usuń wiersz z Stripe_zdarzenia.
+    const powtorka = await new Promise((resolve) => {
+      db.query(`INSERT INTO Stripe_zdarzenia (event_id, typ) VALUES (?, ?)`, [event.id, event.type], (err) => {
+        if (err && err.code === 'ER_DUP_ENTRY') return resolve(true);
+        if (err) console.error('[stripe webhook] rejestr zdarzeń (przepuszczam):', err.message);
+        resolve(false);
+      });
+    });
+    if (powtorka) {
+      console.warn(`[stripe webhook] Powtórzone zdarzenie ${event.type} ${event.id} — pominięte`);
+      return res.json({ received: true, duplikat: true });
+    }
+
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object;
-      const { zamowienie_id, imie, nazwa_salonu, email } = session.metadata;
-
-      // Voucher zużyty dopiero po realnej płatności (nie przy tworzeniu koszyka)
-      const voucherKodUzyty = (session.metadata && session.metadata.voucher || '').trim();
-      if (voucherKodUzyty) {
-        db.query(
-          `UPDATE Kody_rabatowe SET ilosc_uzyc = ilosc_uzyc + 1 WHERE kod = ? LIMIT 1`,
-          [voucherKodUzyty],
-          (e) => { if (e) console.error('[stripe webhook] inkrementacja vouchera:', e.message); }
-        );
+      // Logika w routes/onboarding-checkout.js (testowalna bez SDK Stripe):
+      // atomowe 'nowe'→'oplacone', token ważny trial+7 dni (min. 30), status 'wyslano_link'
+      // dopiero po udanej wysyłce ('blad_maila' gdy SMTP padnie), faktura tylko gdy kwota > 0.
+      try {
+        const wynik = await obsluzCheckoutCompleted({
+          db, session: event.data.object, trialDni: DEFAULT_TRIAL_DNI(),
+          mailer: { wyslijLinkRejestracji }, wystawFakture, powiadomAdminaOZakupie,
+        });
+        console.log('[stripe webhook] checkout.session.completed →', JSON.stringify(wynik));
+      } catch (e) {
+        console.error('[stripe webhook] checkout.session.completed błąd:', e.message);
       }
-
-      // Generuj token rejestracyjny
-      const token = randomUUID();
-      const wygasa = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 dni
-
-      db.query(
-        `INSERT INTO Tokeny_rejestracji (token, status, data_wygasniecia, notatka) VALUES (?, 'nowy', ?, ?)`,
-        [token, wygasa, `Auto: ${imie} / ${nazwa_salonu}`],
-        async (err) => {
-          if (err) {
-            console.error('[stripe webhook] Błąd zapisu tokenu:', err.message);
-            return res.json({ received: true });
-          }
-
-          // Zaktualizuj status zamówienia + zapamiętaj Stripe IDs z sesji.
-          // session.customer/subscription istnieją już tutaj (mode: subscription),
-          // a Licencja powstaje dopiero przy rejestracji z linku — stąd przenosimy
-          // je przez Zamowienia, zamiast polegać na wyścigu z invoice.paid.
-          const stripeCustomerId = session.customer || null;
-          const stripeSubscriptionId = session.subscription || null;
-          db.query(
-            `UPDATE Zamowienia SET status='wyslano_link', token_wyslany=?, stripe_customer_id=?, stripe_subscription_id=? WHERE id=?`,
-            [token, stripeCustomerId, stripeSubscriptionId, zamowienie_id]
-          );
-
-          // Wyślij email z linkiem rejestracyjnym
-          try {
-            await wyslijLinkRejestracji({ email, imie, token, nazwa_salonu });
-            console.log(`[stripe webhook] Link wysłany do: ${email}`);
-          } catch (mailErr) {
-            console.error('[stripe webhook] Błąd wysyłki maila:', mailErr.message);
-            // Mimo błędu maila — token jest w bazie, admin może wysłać ręcznie
-          }
-
-          // Wystaw fakturę VAT przez Fakturownia.pl (wysyła PDF mailem do klienta)
-          try {
-            const { ulica, miasto, telefon, nip, firma } = session.metadata || {};
-            // Nabywca: nazwa firmy (z GUS/formularza) jeśli podana, inaczej nazwa salonu
-            // amount_total = kwota faktycznie pobrana (po voucherze/coupon Stripe)
-            await wystawFakture({ nazwa_salonu: (firma || '').trim() || nazwa_salonu, email, ulica, miasto, telefon, nip, kwota_grosze: session.amount_total });
-          } catch (fakErr) {
-            console.error('[stripe webhook] Błąd wystawiania faktury:', fakErr.message);
-            // Faktura nie krytyczna — token już wysłany, fakturę można wystawić ręcznie
-          }
-
-          // Powiadom admina o nowym zakupie (fire-and-forget)
-          const { telefon: telAdm, miasto: miastoAdm, voucher } = session.metadata || {};
-          powiadomAdminaOZakupie({ imie, nazwa_salonu, email, telefon: telAdm, miasto: miastoAdm, kwota_grosze: session.amount_total, voucher })
-            .then(() => console.log('[stripe webhook] Powiadomienie admina o zakupie wysłane'))
-            .catch(err => console.error('[stripe webhook] Powiadomienie admina o zakupie error:', err.message));
-        }
-      );
     }
 
     // ─── invoice.paid — przedłuż licencję o miesiąc + wyzeruj grace + zapisz customer_id/sub_id + faktura ──

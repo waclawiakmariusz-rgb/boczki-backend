@@ -307,6 +307,8 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 }
 .zgl-card.nowe         { border-left-color: var(--primary); }
 .zgl-card.wyslano_link { border-left-color: var(--blue); }
+.zgl-card.oplacone     { border-left-color: var(--blue); }
+.zgl-card.blad_maila   { border-left-color: #dc2626; background: #fff7f7; }
 .zgl-card.zrealizowane { border-left-color: var(--sage); opacity: 0.75; }
 .zgl-card.odrzucone    { border-left-color: var(--sand); opacity: 0.6; }
 .zgl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
@@ -320,6 +322,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 .badge-wyslano{ background: #e4ecf5; color: #2a5080; }
 .badge-zreal  { background: #e4f0e4; color: #3a6a3a; }
 .badge-odrz   { background: var(--bg); color: var(--taupe); }
+.badge-blad   { background: #fee2e2; color: #991b1b; }
 .send-modal { display: none; position: fixed; inset: 0; background: rgba(44,36,32,0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 200; padding: 20px; }
 .send-modal.open { display: flex; }
 
@@ -654,7 +657,9 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
         <select id="zgl-filter-status" onchange="_zglPage=1; renderZgloszenia()">
           <option value="">Wszystkie statusy</option>
           <option value="nowe">Nowe</option>
+          <option value="oplacone">Opłacone — mail w toku</option>
           <option value="wyslano_link">Wysłano link</option>
+          <option value="blad_maila">⚠️ Opłacone — mail nie wysłany</option>
           <option value="zrealizowane">Zrealizowane</option>
           <option value="odrzucone">Odrzucone</option>
         </select>
@@ -1071,8 +1076,10 @@ function adminLogout() {
 // ═══════════════════════════════════════════════
 // ZGŁOSZENIA
 // ═══════════════════════════════════════════════
-const statusLabel = { nowe: '🆕 Nowe', wyslano_link: '📩 Wysłano link', zrealizowane: '✅ Zrealizowane', odrzucone: '✗ Odrzucone' };
-const statusBadge = { nowe: 'badge-nowe', wyslano_link: 'badge-wyslano', zrealizowane: 'badge-zreal', odrzucone: 'badge-odrz' };
+// 2026-10-09: 'oplacone' = zapłacone, mail z linkiem w toku; 'blad_maila' = ZAPŁACONE, ALE MAIL
+// NIE DOSZEDŁ (SMTP padł) — klient czeka na link, trzeba wysłać ponownie TEN SAM token.
+const statusLabel = { nowe: '🆕 Nowe', oplacone: '💳 Opłacone — mail w toku', wyslano_link: '📩 Wysłano link', blad_maila: '⚠️ OPŁACONE — MAIL NIE WYSŁANY', zrealizowane: '✅ Zrealizowane', odrzucone: '✗ Odrzucone' };
+const statusBadge = { nowe: 'badge-nowe', oplacone: 'badge-wyslano', wyslano_link: 'badge-wyslano', blad_maila: 'badge-blad', zrealizowane: 'badge-zreal', odrzucone: 'badge-odrz' };
 
 let _zgloszeniaAll = [];
 let _zglPage = 1;
@@ -1137,9 +1144,13 @@ function renderZgloszenia() {
             <button class="btn-sm btn-edit" onclick="otworzSendModal('${z.id}','${z.email}','${z.imie}','${z.nazwa_salonu}')">
               📩 Wyślij link
             </button>` : ''}
-          ${z.status === 'wyslano_link' ? `
+          ${(z.status === 'wyslano_link' || z.status === 'oplacone' || z.status === 'blad_maila') && z.token_wyslany ? `
+            <button class="btn-sm ${z.status === 'blad_maila' ? 'btn-activate' : 'btn-edit'}" onclick="wyslijPonownieIstniejacy('${z.id}','${z.token_wyslany}','${z.email}','${z.imie}','${z.nazwa_salonu}')" title="Ten sam link co z zakupu — zachowuje dane Stripe i prefill kreatora">
+              🔁 Wyślij ponownie ten sam link
+            </button>` : ''}
+          ${(z.status === 'wyslano_link' || z.status === 'oplacone' || z.status === 'blad_maila') && !z.token_wyslany ? `
             <button class="btn-sm btn-edit" onclick="otworzSendModal('${z.id}','${z.email}','${z.imie}','${z.nazwa_salonu}')">
-              🔄 Wyślij ponownie
+              🔄 Wyślij ponownie (nowy link)
             </button>` : ''}
           ${z.status !== 'zrealizowane' ? `
             <button class="btn-sm btn-activate" onclick="zmienStatusZgl('${z.id}','zrealizowane')">✅ Zrealizowane</button>` : ''}
@@ -1158,6 +1169,25 @@ function renderZgloszenia() {
 }
 
 function zglStrona(n) { _zglPage = n; renderZgloszenia(); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+
+// 2026-10-09: ponowna wysyłka TEGO SAMEGO linku (token z zakupu). Wcześniej „Wyślij ponownie"
+// generowało nowy token niepowiązany z zamówieniem — rejestracja z niego nie dostawała
+// danych Stripe ani prefillu, a stary token dalej był ważny.
+async function wyslijPonownieIstniejacy(zamowienieId, token, email, imie, nazwa) {
+  const adres = prompt('Wysłać ponownie ten sam link rejestracyjny na adres:', email || '');
+  if (adres === null) return;
+  const e = (adres || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) { alert('Podaj poprawny adres e-mail.'); return; }
+  try {
+    const r = await fetch(`${API}/admin/wyslij_link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+      body: JSON.stringify({ token, email: e, imie, nazwa_salonu: nazwa, zamowienie_id: zamowienieId })
+    }).then(r => r.json());
+    if (r.status === 'success') { alert('📩 Link wysłany na ' + e); zaladujZgloszenia(); }
+    else alert('Nie udało się wysłać: ' + (r.message || 'nieznany błąd'));
+  } catch (err) { alert('Błąd połączenia: ' + err.message); }
+}
 
 function zmienStatusZgl(id, status) {
   fetch(`${API}/admin/zamowienie_status`, {

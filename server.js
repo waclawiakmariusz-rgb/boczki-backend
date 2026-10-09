@@ -13,6 +13,13 @@ const { validateTenantAccess, initSessions, touchSession } = require('./routes/s
 
 // ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
 const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
+// 2026-10-09 (audyt ścieżki sprzedażowej): router kompatybilności POST /api — czyli większość
+// akcji aplikacji (sprzedaż, klienci, PIN-y) — był CAŁKIEM pomijany przez middleware sesji:
+// każdy mógł czytać i zapisywać dane dowolnego salonu bez tokenu (potwierdzone na produkcji).
+// Ta flaga jest DOMYŚLNIE WŁĄCZONA i osobna od ENFORCE_SESSION, bo tamta obejmuje też ścieżki
+// publiczne (foto/zgoda/klub z tenant_id w zapytaniu) i wymaga najpierw uzupełnienia PUBLIC_PATHS.
+// Wyłącznik awaryjny na Hostingerze: ENFORCE_SESSION_POST=false (bez apostrofów).
+const ENFORCE_SESSION_POST = env('ENFORCE_SESSION_POST') !== 'false';
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -626,6 +633,23 @@ app.post('/api', (req, res) => {
 
     const tenant_id = d.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Błąd sesji SaaS: Brak przypisanej bazy. Zaloguj się ponownie.' });
+
+    // Weryfikacja sesji dla routera kompatybilności (2026-10-09) — patrz komentarz przy
+    // ENFORCE_SESSION_POST. Token powstaje przy 'login' (jedyna akcja bez tenant_id), więc
+    // verify_pin / get_pin_users i wszystko dalej już go mają. Front na 401/403 z code:'SESJA'
+    // czyści sesję i pokazuje logowanie (obsluzWygasnieciaSesji w index.html).
+    {
+      const tokenSesji = req.headers['x-session-token'];
+      const wynik = validateTenantAccess(tokenSesji, tenant_id);
+      if (!wynik.valid) {
+        console.warn(`[SESJA ${wynik.reason.toUpperCase()}] POST /api action=${action} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${tokenSesji ? 'obecny' : 'brak'}`);
+        if (ENFORCE_SESSION_POST) {
+          const status = wynik.reason === 'expired' ? 401 : 403;
+          const message = wynik.reason === 'expired' ? 'Sesja wygasła. Zaloguj się ponownie.' : 'Brak dostępu. Zaloguj się ponownie.';
+          return res.status(status).json({ status: 'error', code: 'SESJA', message });
+        }
+      }
+    }
 
     // Mapowanie akcji na route handlery
     const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry', 'hide_reorder', 'unhide_reorder'];

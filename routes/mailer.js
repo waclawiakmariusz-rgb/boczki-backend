@@ -91,8 +91,10 @@ function emailWrapper(icon, tytul, podtytul, tresc) {
 }
 
 // ─── Wyślij link rejestracyjny do klienta ────────────────────
-async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
+async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu, dniWaznosci }) {
   const link = `${APP_URL()}/rejestracja.html?token=${token}`;
+  // Ważność w treści maila = faktyczna ważność tokenu (webhook: trial+7, min. 30; admin: wybrana)
+  const dni = parseInt(dniWaznosci, 10) > 0 ? parseInt(dniWaznosci, 10) : 7;
   const transport = createTransport();
 
   await transport.sendMail({
@@ -119,7 +121,7 @@ async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu }) {
         </p>
       </div>
       <p style="font-size:12px; color:#a89e96; line-height:1.7;">
-        ⚠️ Ten link jest jednorazowy i wygaśnie po 7 dniach.<br>
+        ⚠️ Ten link jest jednorazowy i wygaśnie po ${dni} dniach.<br>
         Jeśli nie rejestrowałeś/-aś salonu, zignoruj tę wiadomość.
       </p>
     `)
@@ -178,7 +180,10 @@ async function wyslijResetHasla({ email, login, token }) {
 }
 
 // ─── Welcome email po zakończeniu rejestracji ────────────────
-async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
+// 2026-10-09: mail powitalny NIE zawiera hasła (wcześniej szło jawnym tekstem i leżało w skrzynce
+// bezterminowo, a ekran sukcesu kreatora obiecywał, że hasła nie wyślemy). Zostaje login +
+// informacja, jak odzyskać hasło. Parametr `haslo` celowo ignorowany, gdyby ktoś go jeszcze przekazał.
+async function wyslijWitamy({ email, imie, nazwa_salonu, login }) {
   const link = `${APP_URL()}/zaloguj`;
   const transport = createTransport();
 
@@ -204,9 +209,12 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login, haslo }) {
           </tr>
           <tr>
             <td style="padding:6px 0; color:#7a6e66;">Hasło:</td>
-            <td style="padding:6px 0; font-weight:700; color:#1c1a18; font-family:monospace; font-size:15px;">${haslo}</td>
+            <td style="padding:6px 0; color:#1c1a18; font-size:13px;">ustawione przez Ciebie w kreatorze — ze względów bezpieczeństwa nie wysyłamy go mailem</td>
           </tr>
         </table>
+        <p style="font-size:12px; color:#7a6e66; margin:12px 0 0; line-height:1.7;">
+          Nie pamiętasz hasła? Na ekranie logowania kliknij „Nie pamiętam hasła" — wyślemy link do ustawienia nowego.
+        </p>
       </div>
 
       ${emailBtn(link, 'Przejdź do systemu →')}

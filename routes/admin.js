@@ -445,7 +445,7 @@ module.exports = (db) => {
         // Jeśli podano email — wyślij automatycznie
         if (email_klienta) {
           try {
-            await wyslijLinkRejestracji({ email: email_klienta, imie: imie_klienta, token, nazwa_salonu });
+            await wyslijLinkRejestracji({ email: email_klienta, imie: imie_klienta, token, nazwa_salonu, dniWaznosci: dni });
             return res.json({ status: 'success', token, wyslano_email: true });
           } catch (mailErr) {
             console.error('[mailer] Błąd wysyłki:', mailErr.message);
@@ -575,7 +575,8 @@ module.exports = (db) => {
     if (!token) return res.json({ status: 'error', message: 'Brak tokenu.' });
 
     db.query(
-      `SELECT t.token, t.status, t.data_wygasniecia,
+      `SELECT t.token, t.status, t.data_wygasniecia, t.tenant_id_utworzony,
+              (SELECT l.nazwa_salonu FROM Licencje l WHERE l.id_bazy = t.tenant_id_utworzony LIMIT 1) AS salon_nazwa,
               z.imie AS z_imie, z.nazwa_salonu AS z_nazwa, z.email AS z_email,
               z.telefon AS z_telefon, z.ulica AS z_ulica, z.miasto AS z_miasto
        FROM Tokeny_rejestracji t
@@ -585,7 +586,17 @@ module.exports = (db) => {
       (err, rows) => {
         if (err || !rows.length) return res.json({ status: 'error', message: 'Nieprawidłowy link rejestracyjny.' });
         const t = rows[0];
-        if (t.status === 'wykorzystany') return res.json({ status: 'error', message: 'Ten link rejestracyjny został już wykorzystany.' });
+        if (t.status === 'wykorzystany') {
+          // 2026-10-09: klientka klika link drugi raz (F5, zerwane połączenie po założeniu salonu,
+          // drugie urządzenie) — ma usłyszeć, że salon JUŻ JEST i gdzie się zalogować, a nie
+          // „skontaktuj się z administratorem".
+          const salon = t.salon_nazwa ? `Salon „${t.salon_nazwa}" jest już założony.` : 'Salon został już założony.';
+          return res.json({
+            status: 'error',
+            juz_zalozony: true,
+            message: `Ten link został już wykorzystany. ${salon} Zaloguj się na ${String(process.env.APP_URL || 'https://estelio.com.pl').replace(/^['"]|['"]$/g, '').replace(/\/$/, '')}/zaloguj loginem podanym w kreatorze. Nie pamiętasz hasła? Na ekranie logowania kliknij „Nie pamiętam hasła".`
+          });
+        }
         if (t.status === 'wygasly' || new Date(t.data_wygasniecia) < new Date()) {
           return res.json({ status: 'error', message: 'Ten link rejestracyjny wygasł.' });
         }
@@ -724,21 +735,22 @@ module.exports = (db) => {
                 });
             }));
 
-            Promise.all([...pObietnice, ...uObietnice]).then(async () => {
-              // Wyślij welcome email z danymi logowania (na email z zakupu — autorytatywny)
+            Promise.all([...pObietnice, ...uObietnice]).then(() => {
+              // 2026-10-09: odpowiedź NAJPIERW, maile potem (fire-and-forget). Wcześniej klient
+              // czekał na SMTP — wiszący serwer pocztowy = „Błąd połączenia", drugie kliknięcie =
+              // „link już użyty", a ekran z PIN-ami przepadał. Salon już istnieje, mail to dodatek.
+              res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: loginNorm });
+
+              // Welcome email (na email z zakupu — autorytatywny); bez hasła — patrz mailer.wyslijWitamy
               if (emailLicencji) {
-                try {
-                  await wyslijWitamy({ email: emailLicencji, imie: imie || '', nazwa_salonu, login: loginNorm, haslo: haslo.trim() });
-                } catch (mailErr) {
-                  console.error('[admin] Błąd wysyłki welcome email:', mailErr.message);
-                  // Nie blokujemy odpowiedzi — salon już istnieje
-                }
+                wyslijWitamy({ email: emailLicencji, imie: imie || '', nazwa_salonu, login: loginNorm })
+                  .then(() => console.log('[admin] Welcome email wysłany:', tenant_id))
+                  .catch(mailErr => console.error('[admin] Błąd wysyłki welcome email (salon istnieje):', mailErr.message));
               }
               // Powiadom admina o nowym salonie (fire-and-forget)
               powiadomAdminaORejestracji({ nazwa_salonu, email: emailLicencji, login: loginNorm, tenant_id })
                 .then(() => console.log('[admin] Powiadomienie admina o rejestracji wysłane'))
                 .catch(err => console.error('[admin] Powiadomienie admina o rejestracji error:', err.message));
-              return res.json({ status: 'success', message: 'Salon został zarejestrowany!', tenant_id, login: loginNorm });
             });
           }
         );

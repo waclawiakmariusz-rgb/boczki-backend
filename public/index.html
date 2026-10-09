@@ -11700,6 +11700,13 @@ let wciecieLogow = "";
                 // Próbujemy zamienić odpowiedź na JSON
                 const data = JSON.parse(textResponse);
 
+                // 2026-10-09: serwer odrzucił sesję (401 wygasła / 403 brak tokenu albo inny salon).
+                // Wcześniej front nigdy tego nie obsługiwał — po 8 h bezczynności listy były po prostu
+                // puste, bez słowa. Teraz: komunikat, czyszczenie sesji i ekran logowania (raz).
+                if ((response.status === 401 || response.status === 403) && data && data.code === 'SESJA') {
+                    obsluzWygasnieciaSesji(data.message);
+                }
+
                 // Jeśli serwer sam zgłasza błąd logiczny
                 if (data.status === 'error' || data.error) {
                     const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
@@ -12686,9 +12693,21 @@ function wylogujGlowne() {
     // Czyścimy CAŁĄ pamięć przeglądarki dla tej aplikacji (ID, sesje, role)
     localStorage.clear();
     sessionStorage.clear();
-    
+
     // Odświeżamy stronę
     location.reload();
+}
+
+// 2026-10-09: wspólna obsługa odrzuconej sesji (401/403 + code:'SESJA' z serwera).
+// Debounce — przy starcie strony leci kilkanaście żądań naraz, komunikat pokazujemy RAZ.
+// Pełne wylogowanie (łącznie z tenant_id), bo sam ekran PIN też woła serwer i bez ważnego
+// tokenu dostałby kolejne 403 → pętla przeładowań. Bez tenant_id wrapper nie wysyła nic.
+let _sesjaOdrzuconaPokazano = false;
+function obsluzWygasnieciaSesji(komunikat) {
+    if (_sesjaOdrzuconaPokazano) return;
+    _sesjaOdrzuconaPokazano = true;
+    alert((komunikat || 'Sesja wygasła.') + '\n\nZaloguj się ponownie, żeby kontynuować pracę.');
+    wylogujGlowne();
 }
 
 // ═══════════════════════════════════════════
