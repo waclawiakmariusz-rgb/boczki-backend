@@ -740,6 +740,24 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   Celowo BEZ „usuń wszystkie zerowe naraz" (część to sezonowe/chwilowo wyczerpane). Moduł
   `rap_` to zmigrowany „stary listopadowo-grudniowy system" (słowa usera) — backend
   `routes/raport.js`, 11 akcji, bez RBAC po roli.
+- **18. Analiza Konsultacji → „📄 Raport reklamowy" (2026-10-09, `dev`)** — zanonimizowany raport
+  skuteczności kampanii dla firmy dostarczającej leady. Geneza: user poprosił o jednorazowy PDF
+  za kwi–wrz 2026 (zrobiony skryptem + Chrome headless, plik w `design/raporty/` i na Pulpicie:
+  76 konsultacji z reklamy, 54 pakiety, 117 853 zł), potem o tę funkcję w systemie. Backend:
+  akcja POST `akon_get_ad_report` (od/do `RRRR-MM`, max 24 mies.) w `routes/konsultacje.js`
+  zwraca TYLKO sumy (miesiące, kampanie z macierzą, total); SQL nie czyta klient/telefon/
+  kto_wykonal/uwagi. **Pierwszy backendowy RBAC w Analizie:** `wymagajRoleRaport` czyta rolę
+  z `Użytkownicy` (admin/megaadmin/manager). Front: selecty od/do (domyślnie 6 pełnych
+  miesięcy), „Zapisz PDF" = `data-print-section="akon-reklama"` + `window.print()` (jak Audyt;
+  na Hostingerze nie ma Chrome, a `pdf-lib` w repo nie ma czcionki z PL znakami). Testy:
+  `tests/konsultacje.test.js` (6, pierwsze testy tego modułu). **Pułapka:** `konsultacje.js`
+  tworzy `router` na poziomie MODUŁU, fabryka tylko dokłada handlery → w testach konieczne
+  `jest.resetModules()` przed każdym `buildApp`, inaczej żądania trafiają do handlera
+  z pierwszego testu. Dane: `Wyniki_konsultacja.zrodlo` = 'Reklama'/'Normalna'/null,
+  `typ_akcji` = nazwa kampanii (wolny tekst), `kwota_reklama` = cena oferty z reklamy,
+  `kwota_pakiet` = finalny pakiet, `upsell` = różnica. Dwie kampanie mają po 2 wpisy
+  w `Typy_konsultacji` z różnymi progami (Kriolipoliza Panowie 280/550, wodorowe 398/498) —
+  wygrywa późniejszy po PK (280, 398), tak samo jak w reszcie analityki.
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
