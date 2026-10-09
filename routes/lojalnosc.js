@@ -1000,7 +1000,9 @@ module.exports = (db) => {
   }
   // Dostęp do panelu Klubu: admin + recepcja (pełny dostęp — decyzja usera 2026-07-17).
   // Wcześniej pilot był admin-only; recepcja obsługuje teraz Klub tak jak admin.
-  const ROLE_KLUB = new Set(['admin', 'megaadmin', 'recepcja']);
+  // 2026-10-09: + 'manager' — to rola właściciela nadawana w kreatorze rejestracji (jedyna
+  // wymagana), a bez niej nowy klient nie widział własnego panelu Klubu.
+  const ROLE_KLUB = new Set(['admin', 'megaadmin', 'recepcja', 'manager']);
   function wymagajAdmina(tenant_id, kto, res, next) {
     pobierzRole(tenant_id, kto, (rola) => {
       if (!rola || !ROLE_KLUB.has(rola)) {

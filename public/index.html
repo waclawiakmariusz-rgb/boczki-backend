@@ -11709,7 +11709,14 @@ let wciecieLogow = "";
 
                 // Jeśli serwer sam zgłasza błąd logiczny
                 if (data.status === 'error' || data.error) {
-                    const komunikat = data.message || data.error || 'Nieznany błąd serwera.';
+                    let komunikat = data.message || data.error || 'Nieznany błąd serwera.';
+                    // 2026-10-09: surowe komunikaty MySQL (ER_DUP_ENTRY, Data too long, ECONNREFUSED…)
+                    // nie trafiają do klienta — zamieniamy na ludzkie zdanie, oryginał zostaje w konsoli.
+                    const ladny = ladnyKomunikatBledu(komunikat);
+                    if (ladny !== komunikat) {
+                        console.error(`[BŁĄD SERWERA → komunikat dla użytkownika] akcja=${akcja}:`, komunikat);
+                        komunikat = ladny; data.message = ladny; data.__ladny = true;
+                    }
 
                     console.error(`🚨 BŁĄD BACKENDU [Akcja: ${akcja}]:`, komunikat);
 
@@ -11721,8 +11728,8 @@ let wciecieLogow = "";
                     dodajDoLoga('SIEC', `✅ [${akcja}] Zakończono sukcesem.`);
                 }
 
-                // Zwracamy naprawiony obiekt Response dla reszty aplikacji
-                return new Response(textResponse, { status: 200, headers: { 'Content-Type': 'application/json' } });
+                // Zwracamy naprawiony obiekt Response dla reszty aplikacji (z ładnym komunikatem, jeśli podmieniony)
+                return new Response(data && data.__ladny ? JSON.stringify(data) : textResponse, { status: 200, headers: { 'Content-Type': 'application/json' } });
                 
             } catch (jsonErr) {
                 // 💥 Serwer zwrócił HTML zamiast JSON (np. błąd 500 lub brak internetu)
@@ -12152,6 +12159,14 @@ function zapiszDefinicjeRabatu() {
             }
             zaloguj(d.role);
         }
+        else if (d.code === 'LICENCJA' && d.billing_url) {
+            // 2026-10-09: zamiast alertu — komunikat z klikalnym linkiem do panelu rozliczeniowego
+            const msg = document.getElementById('login-msg');
+            if (msg) {
+                msg.style.color = '#b91c1c';
+                msg.innerHTML = escHtml(d.message).replace(escHtml(d.billing_url), `<a href="${escHtml(d.billing_url)}" target="_blank" rel="noopener" style="color:#b91c1c; font-weight:700;">${escHtml(d.billing_url)}</a>`);
+            } else alert(d.message);
+        }
         else { alert("Błąd: " + d.message); }
     }).catch(err => alert("Błąd serwera: " + err));
 }
@@ -12415,6 +12430,8 @@ function zalogujPinem() {
 function uruchomAplikacjePracownika(imie, rola) {
     currentUser = imie; // Zapisujemy KTO wbił do systemu
     const r = String(rola).toLowerCase().trim();
+    // 2026-10-09: nowy salon z katalogu usług ma ceny 0 zł — ostrzeżenie dla managera/admina (raz na sesję)
+    if (['manager', 'admin', 'megaadmin'].includes(r)) setTimeout(ostrzezCenyZerowe, 4000);
     
     // Zapisujemy sesję pracownika, żeby przetrwała odświeżenie (F5)
     localStorage.setItem('boczki_pracownik_imie', imie);
@@ -12702,6 +12719,36 @@ function wylogujGlowne() {
 // Debounce — przy starcie strony leci kilkanaście żądań naraz, komunikat pokazujemy RAZ.
 // Pełne wylogowanie (łącznie z tenant_id), bo sam ekran PIN też woła serwer i bez ważnego
 // tokenu dostałby kolejne 403 → pętla przeładowań. Bez tenant_id wrapper nie wysyła nic.
+// 2026-10-09: tłumaczenie surowych błędów bazy/serwera na zdania dla recepcji. Zwraca ten sam
+// tekst, jeśli nie wygląda na techniczny (żeby nie psuć celowych komunikatów z backendu).
+function ladnyKomunikatBledu(msg) {
+    const m = String(msg || '');
+    if (/ER_DUP_ENTRY|Duplicate entry/i.test(m)) return 'Taki wpis już istnieje — sprawdź, czy nie został dodany wcześniej.';
+    if (/ER_DATA_TOO_LONG|Data too long/i.test(m)) return 'Wpisany tekst jest za długi dla tego pola. Skróć go i spróbuj ponownie.';
+    if (/ER_NO_REFERENCED_ROW|ER_ROW_IS_REFERENCED|foreign key/i.test(m)) return 'Nie można zapisać — ten wpis jest powiązany z innym, który nie istnieje albo jest używany.';
+    if (/ECONNREFUSED|ETIMEDOUT|ECONNRESET|PROTOCOL_CONNECTION_LOST|Too many connections|ER_LOCK/i.test(m)) return 'Chwilowy problem z połączeniem z bazą danych. Odczekaj chwilę i spróbuj ponownie.';
+    if (/ER_BAD_FIELD_ERROR|Unknown column|ER_NO_SUCH_TABLE|doesn't exist|ER_PARSE_ERROR|syntax|SQLSTATE|ER_[A-Z_]+/.test(m)) return 'Wystąpił błąd po stronie serwera. Spróbuj ponownie, a jeśli problem się powtarza — zgłoś go (szczegóły są w logach systemu).';
+    return m;
+}
+
+// 2026-10-09: usługi z katalogu w kreatorze rejestracji trafiają do salonu z ceną 0 zł i nikt tego
+// nie sygnalizował — pierwsza sprzedaż podstawiała 0 zł. Ostrzegamy raz na sesję, tylko gdy ZERA
+// dominują (świeży salon), żeby nie męczyć salonów, które celowo mają kilka pozycji bez ceny.
+function ostrzezCenyZerowe() {
+    try {
+        if (sessionStorage.getItem('boczki_ceny_zerowe_pokazano')) return;
+        const d = window.salesDictCache;
+        const zab = d && Array.isArray(d.zabiegi) ? d.zabiegi : null;
+        if (!zab || zab.length < 3) return;
+        const zera = zab.filter(z => !(parseFloat(z.cena) > 0)).length;
+        if (zera < 5 || zera / zab.length < 0.5) return;
+        sessionStorage.setItem('boczki_ceny_zerowe_pokazano', '1');
+        if (typeof pokazPowiadomienie === 'function') {
+            pokazPowiadomienie('warning', 'Uzupełnij ceny usług', `${zera} z ${zab.length} usług ma cenę 0 zł. Przy sprzedaży podstawi się 0 zł — ustaw ceny w Administracja → Usługi.`);
+        }
+    } catch (e) { /* ostrzeżenie pomocnicze — nigdy nie może zepsuć startu */ }
+}
+
 let _sesjaOdrzuconaPokazano = false;
 function obsluzWygasnieciaSesji(komunikat) {
     if (_sesjaOdrzuconaPokazano) return;
@@ -32363,7 +32410,8 @@ function loj_enabled() {
 // Nazwa loj_admin() historyczna; backend też przepuszcza te role (wymagajAdmina/ROLE_KLUB).
 function loj_admin() {
   const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
-  return rola === 'admin' || rola === 'megaadmin' || rola === 'recepcja';
+  // 2026-10-09: + manager (rola właściciela z kreatora rejestracji) — spójnie z ROLE_KLUB w backendzie
+  return rola === 'admin' || rola === 'megaadmin' || rola === 'recepcja' || rola === 'manager';
 }
 
 // Hook z przelaczTabProfilu — zakładka Podsumowanie na profilu klienta

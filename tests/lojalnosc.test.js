@@ -449,11 +449,10 @@ describe('POST /api/lojalnosc — loj_ustawienia_zapisz', () => {
         expect(res.body.status).toBe('success');
     });
 
-    test('manager NIE może zapisać ustawień (pilot admin-only)', async () => {
+    test('manager PRZECHODZI kontrolę roli (2026-10-09: rola właściciela z kreatora rejestracji)', async () => {
         const db = mockDb(...INIT, { rows: [{ rola: 'Manager' }] });
         const res = await request(buildApp(db)).post('/api/lojalnosc').send(valid);
-        expect(res.body.status).toBe('error');
-        expect(res.body.message).toMatch(/uprawnień/i);
+        expect(res.body.message || '').not.toMatch(/uprawnień/i);
     });
 
     test('praktykantka NIE może zapisać ustawień (RBAC backendowy)', async () => {

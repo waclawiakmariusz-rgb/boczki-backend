@@ -112,6 +112,13 @@ input:focus, select:focus { background: white; border-color: var(--primary); box
   border-radius: 9px; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: 0.2s;
 }
 .btn-remove:hover { background: #fca5a5; }
+/* 2026-10-09: telefon (klientka klika link z maila na komórce) — wiersze zawijane, pola czytelne */
+@media (max-width: 560px) {
+  .list-item { flex-wrap: wrap; }
+  .list-item input, .list-item select { flex: 1 1 46%; min-width: 120px; }
+  .list-item input[style*="flex:2"] { flex: 1 1 100% !important; }
+  .form-row { grid-template-columns: 1fr !important; }
+}
 .btn-add-row {
   width: 100%; padding: 13px; border: 2px dashed #e2e8f0; background: transparent;
   border-radius: 12px; color: var(--muted); font-family: inherit; font-weight: 600;
@@ -488,7 +495,7 @@ function goStep(n) {
   currentStep = n;
   document.getElementById(`step-${currentStep}`).classList.add('visible');
   document.getElementById(`ws-${currentStep}`).className = 'w-step active';
-  if (n === 3 && !document.querySelector('#prac-lista .list-item')) dodajPracownika('manager');
+  if (n === 3 && !document.querySelector('#prac-lista .list-item')) dodajPracownika('Manager');
   if (n === 4) loadPredef();
   if (n === 5) renderSummary();
   saveProgress();
@@ -599,14 +606,25 @@ function dodajPracownika(rola) {
     <div class="list-item" id="${id}">
       <input type="text" placeholder="Imię i nazwisko" style="flex:2;">
       <input type="text" placeholder="PIN (4 cyfry)" maxlength="4" inputmode="numeric" style="flex:1; font-family:monospace; letter-spacing:3px;">
+      <!-- 2026-10-09: te same role co w aplikacji (Administracja → Dostępy): Kosmetolog / Recepcja /
+           Manager. Wcześniej 'pracownik' istniał tylko w kreatorze — w aplikacji nie dało się dodać
+           drugiej osoby z tą rolą. Serwer sprawdza rolę przez toLowerCase(). -->
       <select style="flex:1.2; padding:9px 11px;">
-        <option value="pracownik">Pracownik</option>
-        <option value="manager">Manager</option>
+        <option value="Kosmetolog">Kosmetolog (sprzedaż, klienci)</option>
+        <option value="Recepcja">Recepcja (sprzedaż, klienci, zadatki)</option>
+        <option value="Manager">Manager (dodatkowo Analiza)</option>
       </select>
       <button class="btn-remove" onclick="document.getElementById('${id}').remove()">×</button>
     </div>
   `);
-  if (rola) document.getElementById(id).querySelector('select').value = rola;
+  if (rola) {
+    // Rola z zapisu w sessionStorage mogła być w starym zapisie ('manager'/'pracownik') — dopasowujemy
+    // bez względu na wielkość liter, 'pracownik' → Kosmetolog.
+    const sel = document.getElementById(id).querySelector('select');
+    const szukana = String(rola).toLowerCase() === 'pracownik' ? 'kosmetolog' : String(rola).toLowerCase();
+    const opt = [...sel.options].find(o => o.value.toLowerCase() === szukana);
+    if (opt) sel.value = opt.value;
+  }
 }
 
 function step3() {
@@ -619,7 +637,7 @@ function step3() {
     err.textContent = `Pracownik „${zlyPin.imie}" musi mieć 4-cyfrowy PIN.`;
     return;
   }
-  if (!prac.some(p => p.rola === 'manager')) {
+  if (!prac.some(p => String(p.rola).toLowerCase() === 'manager')) {
     err.style.display = 'block';
     err.textContent = 'Dodaj co najmniej jednego pracownika z rolą Manager — bez konta Managera nie zalogujesz się do salonu.';
     return;
@@ -810,7 +828,7 @@ function zarejestruj() {
     hide('state-form');
     show('state-success');
     const pinList = (wData.pracownicy || [])
-      .map(p => `<div class="row"><strong>${p.imie}${p.rola === 'manager' ? ' (Manager)' : ''}</strong><span>PIN: ${p.pin}</span></div>`)
+      .map(p => `<div class="row"><strong>${p.imie} <span style="font-weight:400; color:#64748b;">(${p.rola})</span></strong><span>PIN: ${p.pin}</span></div>`)
       .join('');
     document.getElementById('state-success').innerHTML = `
       <div class="success-box">

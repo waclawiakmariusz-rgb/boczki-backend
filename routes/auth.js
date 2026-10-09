@@ -84,10 +84,14 @@ module.exports = (db) => {
           const dni = Math.ceil((graceMs - Date.now()) / (24*60*60*1000));
           warningPlatnosc = `Opóźnienie w płatności. Salon zostanie wstrzymany za ${dni} ${dni===1?'dzień':'dni'} jeśli nie odnowisz subskrypcji.`;
         } else {
-          return res.json({ status: 'error', message: 'Subskrypcja wygasła z powodu nieudanej płatności. Skontaktuj się: kontakt@estelio.com.pl' });
+          // 2026-10-09 (etap 2 audytu): zamiast ślepego zaułka — konkretna droga: panel
+          // rozliczeniowy (te same dane logowania) albo kontakt. Front pokazuje link.
+          const billing = String(process.env.APP_URL || 'https://estelio.com.pl').replace(/^['"]|['"]$/g, '').replace(/\/$/, '') + '/billing.html';
+          return res.json({ status: 'error', code: 'LICENCJA', billing_url: billing, message: `Dostęp wstrzymany — ostatnia płatność nie przeszła, a okres karencji minął. Zaktualizuj kartę w panelu rozliczeniowym (${billing}, te same dane logowania) albo napisz: kontakt@estelio.com.pl` });
         }
       } else if (status !== 'aktywny') {
-        return res.json({ status: 'error', message: 'Licencja nieaktywna.' });
+        const billing = String(process.env.APP_URL || 'https://estelio.com.pl').replace(/^['"]|['"]$/g, '').replace(/\/$/, '') + '/billing.html';
+        return res.json({ status: 'error', code: 'LICENCJA', billing_url: billing, message: `Subskrypcja jest nieaktywna. Odnów ją w panelu rozliczeniowym (${billing}, te same dane logowania) albo napisz: kontakt@estelio.com.pl` });
       }
 
       recordSuccessLogin(req);
@@ -104,7 +108,9 @@ module.exports = (db) => {
     }
 
     db.query(
-      `SELECT login, email FROM Licencje WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND status = 'aktywny' LIMIT 1`,
+      // 2026-10-09: reset hasła także dla statusu 'opóźniony'/'nieaktywny' — klient z zaległą
+      // płatnością musi móc wejść do panelu rozliczeniowego (te same dane), żeby ją uregulować.
+      `SELECT login, email FROM Licencje WHERE LOWER(TRIM(email)) = LOWER(TRIM(?)) AND LOWER(status) IN ('aktywny', 'opóźniony', 'nieaktywny') LIMIT 1`,
       [email.trim()],
       async (err, rows) => {
         if (err) return res.json({ status: 'error', message: 'Błąd bazy danych.' });
