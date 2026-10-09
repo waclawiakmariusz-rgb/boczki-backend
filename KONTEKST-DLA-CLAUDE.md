@@ -758,6 +758,33 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   `kwota_pakiet` = finalny pakiet, `upsell` = różnica. Dwie kampanie mają po 2 wpisy
   w `Typy_konsultacji` z różnymi progami (Kriolipoliza Panowie 280/550, wodorowe 398/498) —
   wygrywa późniejszy po PK (280, 398), tak samo jak w reszcie analityki.
+- **19. AUDYT ŚCIEŻKI SPRZEDAŻOWEJ + ETAP 0 (2026-10-09, `dev`)** — user: „mam mieć klienta
+  płacącego, nic nie może padać". Audyt (3 agenty + sondy na prod + stan bazy) dał 15 znalezisk.
+  **Najgorsze, POTWIERDZONE sondą na prod:** `POST /api {action, tenant_id}` BEZ tokenu zwracał
+  PIN-y i przyjmował zapisy dla DOWOLNEGO salonu (middleware sesji pomijał `req.path === '/'`,
+  a `ENFORCE_SESSION` na Hostingerze jest wyłączone — GET bez tokenu też przechodzi). Etap 0
+  (jeden commit, `fix(onboarding)`): (a) `ENFORCE_SESSION_POST` domyślnie ON w dispatcherze
+  POST, 401/403 z `code:'SESJA'`, front `obsluzWygasnieciaSesji()` → komunikat + pełne
+  wylogowanie (NIE sam ekran PIN — pętla przeładowań); wyłącznik `ENFORCE_SESSION_POST=false`;
+  (b) nowy `routes/onboarding-checkout.js` (testowalny): rejestr `Stripe_zdarzenia` (event_id PK)
+  = idempotencja wszystkich webhooków, atomowe `Zamowienia` 'nowe'→'oplacone', status
+  'wyslano_link' dopiero po mailu / 'blad_maila' (ENUM rozszerzony ALTER-em przy starcie),
+  token ważny trial+7 min. 30 dni (było 7 przy trialu 14!), faktura tylko gdy kwota>0;
+  (c) welcome bez hasła, rejestracja odpowiada przed mailem, użyty link → „Salon X już
+  założony, zaloguj się", admin.html „Wyślij ponownie TEN SAM link". **Celowy replay zdarzenia
+  Stripe = najpierw `DELETE FROM Stripe_zdarzenia WHERE event_id=?`.**
+  **NIE WŁĄCZAĆ `ENFORCE_SESSION=true` globalnie**, dopóki `PUBLIC_PATHS` nie obejmie
+  `/foto/*`, `/zgoda/*` (biorą tenant_id z query/body bez sesji) — inaczej padną QR foto
+  i płatności tpay. **Do zrobienia (etap 1):** transakcja w `/rejestracja/zaloz` (dziś INSERT
+  Użytkownicy/Pracownicy/Uslugi tylko `console.error` + sukces → pół-salon bez osoby na
+  ekranie PIN, token zużyty), losowy sufiks tenant_id + UNIQUE `Licencje.id_bazy` (kolizja
+  co 10 s), `platnosc-sukces.html` dokańczająca po `session_id` gdy webhook nie dotarł,
+  piksele GA/Meta zdjęte z `rejestracja.html` (token w URL leci do Google/Meta), edycja
+  e-maila zamówienia w panelu. **Etap 2:** reset hasła dla statusu opóźniony/nieaktywny +
+  link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
+  0 zł w usługach z katalogu, kreator mobilny, SQL w alertach. Stan danych 2026-10-09: 3
+  zamówienia „nowe" z czerwca to testy usera (to samo IP), 0 tokenów oczekujących, Focus
+  Beauty odnawia 13.10 (ma cus_/sub_), `data_waznosci` NIE jest egzekwowane (tylko `status`).
 - **Znacznik `ostatnia-dobra` nadal wskazuje `eba4e8c`** — czyli feralny commit sprzed naprawy
   Klubu. Użytkownik nie zdecydował o przestawieniu. Dopóki tak jest, awaryjne cofnięcie
   z `POWROT-AWARYJNY.md` wycofałoby CAŁY dzień 11.08. Komenda (jedyna z `-f` w tym obiegu,
