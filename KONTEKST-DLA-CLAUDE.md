@@ -352,7 +352,62 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
-# 10c. STAN NA 2026-09-15 do 2026-09-19 (najnowszy — czytaj najpierw)
+# 10d. STAN NA 2026-10-10 (najnowszy — czytaj najpierw)
+
+**Gałęzie:** `main` = `dev` = `422cae2` (HP). Produkcja: `422cae2`, wdrożone 2026-10-10 20:05, smoke test
+19/19 OK, log prod: `[db] połączenie szyfrowane TLS (TLS_AES_256_GCM_SHA384)`. Tag datowany
+`ostatnia-dobra-2026-10-10` JESZCZE NIE założony — dopiero po dniu pracy recepcji (11.10) bez zgłoszeń;
+ostatni tag: `ostatnia-dobra-2026-09-23` → 3c23ac8.
+
+**Co weszło na main i produkcję 2026-10-10 (chronologicznie):**
+1. `25c8b45` perf: start aplikacji 10,6 s → 0,05 s (`renderTabelaZabiegow`, `renderInwentaryzacja` bez
+   `innerHTML +=` w pętli). Narzędzie: `narzedzia/profil-startu.js`.
+2. `14558b0` przewodnik /pomoc/ uzupełniony o funkcje IX–X 2026 (pkt 21).
+3. `41e9ba2`+`e680c95`+`2be0ffe` NOWY przewodnik managera `/pomoc-manager/` (plik
+   `public/estelio_pomoc_manager.html`, 24 rozdziały, 30 scenek z życia salonu, formy żeńskie); chip
+   „👑 Przewodnik managera" w Esti tylko dla admin/megaadmin/manager; Esti indeksuje oba przewodniki
+   (`estIndexGuideDoc`). Stary `Desktop\Estelio_Przewodnik_Manager.html` (1.05) = archiwum.
+4. `45a3769` **INCYDENT**: Analiza → Miesiąc „Wystąpił błąd krytyczny" = `Chart is not defined`. CSP
+   (`script-src 'self'`, w server.js od 14.04!) blokowała Chart.js/Sortable z CDN + fonty Google +
+   piksele. Fix: biblioteki w `public/lib/` (Chart 4.5.1, Sortable 1.15.3), CSP z listą originów.
+   Dlaczego „działało wcześniej" — NIE ustalono (brak zmian w repo w tym miejscu od kwietnia).
+   → Reguła 1z + `narzedzia/smoke-prod.js` (`b2f73ce`).
+5. `fa09ff1` maile do nowych klientów — etap 1 (treść; pkt 22).
+6. `9ab60d1` przypomnienia e-mail — etap 2, `routes/przypomnienia.js`, **tryb proba** (pkt 22).
+7. `422cae2` TLS do bazy, `DB_SSL=on` domyślnie (pkt 23). Potwierdzone w logu prod.
+
+**Decyzje usera dziś:** (a) przewodnik ma być „jako przewodnik", jasny (bez dark mode), kobiecy, ze
+scenkami — ZROBIONE; (b) z listy bezpieczeństwa (cudzy tekst, pkt 23) TYLKO TLS — reszta odłożona;
+(c) przypomnienia: dni 3/10/3, BCC do ADMIN_EMAIL, linki z panelu bez przypomnień, stare zamówienia
+pominięte — przyjęte milcząco (user: „działaj"), nie kwestionował.
+
+**OTWARTE / NASTĘPNE KROKI (w tej kolejności):**
+1. 11.10 po pracy recepcji bez zgłoszeń: `git tag ostatnia-dobra-2026-10-10 422cae2 && git push origin --tags`.
+2. Przypomnienia: po 1–2 dniach logu `[przypomnienia] przebieg (proba)` → user ustawia
+   `PRZYPOMNIENIA=on` na Hostingerze + restart. Dziś „kandydatów 0" = poprawne (cutoff 2026-10-10).
+3. User ma włączyć w Stripe przypomnienie o końcu trialu (dashboard.stripe.com/settings/billing/automatic,
+   „Link to a Stripe-hosted page", 7 dni przed) — bez kodu. NIE wiadomo, czy już to zrobił.
+4. Audyt onboardingu — do końca (pkt 19): test 100AK (checklista w Desktop\Estelio - Przewodnik
+   wprowadzania nowego klienta.html, rozdz. „Test"), ENFORCE_SESSION dla GET (najpierw PUBLIC_PATHS!),
+   baner trialu (niski priorytet).
+5. Lista bezpieczeństwa odłożona (pkt 23): allowlista Remote MySQL w hPanel, `npm audit fix`
+   (1 critical proxy-addr, 8 high; nodemailer = MAJOR), limity logowania/PIN per konto zamiast per IP
+   (dziś `sessions.js`: login per IP, PIN per ip+tenant+imie 10/5 min), test odtworzenia backupu,
+   skaner claude-security (jako drugie oko, po powyższych), 2FA admin.html, osobne konto DB.
+   `scripts/*.js` nadal łączą się bez TLS (własne createConnection).
+6. Decyzja usera wisi: Manager w Klubie (`loj_admin`/`ROLE_KLUB` od 9.10) — w /pomoc/ tabela RBAC już ✓.
+7. Zaparkowane: wyszukiwanie produktu w formularzu sprzedaży (wariant B), polecenia w Klubie
+   (`todo_klub_polecenia`), projekt „praktyki" odłożony.
+
+**Pułapki z dziś (nie powtarzać):** CRLF w `estelio_pomoc_f.html` i `KONTEKST-DLA-CLAUDE.md`
+(anchory w skryptach muszą normalizować `\r\n`); cudzysłowy/backticki w `node -e` przez bash —
+dłuższe skrypty ZAWSZE do pliku w scratchpadzie; kolacja `Sesje.tenant_id` ≠ reszta (jawne COLLATE);
+jedna flakująca różnica w suicie (14 vs 15 failed) = ponowić, nie commitować „na oko";
+CORS lokalnego serwera odrzuca przeglądarkę z localhost — lokalnie sprawdza się tylko API/zasoby.
+
+---
+
+# 10c. STAN NA 2026-09-15 do 2026-09-19
 
 Cztery dni pracy na HP. **AKTUALIZACJA 2026-09-21: cała seria (punkty 1–9) została wdrożona na
 Hostinger i użytkownik potwierdził, że działa** — tag `ostatnia-dobra-2026-09-19` wskazuje
