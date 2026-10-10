@@ -825,6 +825,21 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   usług. Fix: wiersze do tablicy + jedno `innerHTML = join('')`. Po: long tasks 11 941 → 510 ms.
   **Reguła na przyszłość:** NIGDY `innerHTML +=` w pętli (w index.html jest jeszcze ~80 takich
   miejsc, ale w małych listach — przy zgłoszeniu „wolno" najpierw odpal profiler, nie zgaduj).
+- **21. PRZEWODNIKI /pomoc/ i /pomoc-manager/ (2026-10-10, `dev`)** — (a) `public/estelio_pomoc_f.html`
+  (`/pomoc/`, źródło Esti) uzupełniony o funkcje 09–10.2026 (karnety Zawieś/Ustaw datę, filtr zgody
+  na publikację, podpowiedzi z tel+ID, Ranking klientów, Pozostałe Braki, Raport reklamowy, Klub
+  2 kroki, statystyki tpay, wersja na Pulpicie, „Sesja wygasła", +10 FAQ) — commit `14558b0`, NA MAIN.
+  (b) NOWY `public/estelio_pomoc_manager.html` pod `/pomoc-manager/` (trasa w `server.js` obok
+  `/pomoc`): 24 rozdziały z perspektywy managera/właściciela, zastępuje nieaktualny
+  `Desktop\Estelio_Przewodnik_Manager.html` z 1.05.2026 (nigdy nie był w repo ani podlinkowany).
+  Ten sam CSS co /pomoc/ (head kopiowany 1:1, body własne). Link w aplikacji: chip „👑 Przewodnik
+  managera" w panelu Esti, widoczny tylko dla admin/megaadmin/manager (`estCzyManager()`).
+  Esti: wspólna funkcja `estIndexGuideDoc(doc, baseUrl, …)` indeksuje oba przewodniki; manager
+  dostaje wpisy z prefiksem 👑, recepcja ich nie widzi; gdy przewodnik załadował się przed PIN-em,
+  `estLoadGuide()` przeładowuje bazę przy otwarciu panelu (`estManagerZaindeksowany`).
+  Strona jest publiczna jak /pomoc/ (bez danych wrażliwych) — ochrona to tylko ukrycie linku.
+  (c) W /pomoc/ tabela RBAC: Klub dla Managera ✓ (zgodnie z `loj_admin()`/`ROLE_KLUB` od 2026-10-09).
+  Przy nowych funkcjach aktualizować OBA przewodniki (pracownik: procedura; manager: kontrola/decyzja).
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach

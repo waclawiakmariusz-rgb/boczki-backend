@@ -35183,6 +35183,7 @@ body.dark-mode .est-typing { background: #0f172a; }
             <button class="est-sug" onclick="estAsk('Magazyn — pilnowanie zapasów')">📦 Magazyn</button>
             <button class="est-sug" onclick="estAsk('Urodziny klientów')">🎂 Urodziny</button>
             <button class="est-sug" onclick="window.open('/pomoc/','_blank')">📖 Pełny przewodnik</button>
+            <button class="est-sug" id="est-sug-manager" style="display:none;" onclick="window.open('/pomoc-manager/','_blank')" title="Przewodnik zarządczy — widoczny dla managera i właściciela">👑 Przewodnik managera</button>
         </div>
 
         <div id="est-help-input-row">
@@ -35218,7 +35219,20 @@ const EST_KB = [];
    podmienić EST_GUIDE_URL (jedno miejsce).
    ---------------------------------------------------------- */
 const EST_GUIDE_URL = '/pomoc/';
+// 2026-10-10: drugi przewodnik — zarządczy (/pomoc-manager/). Esti indeksuje go TYLKO dla
+// managera/admina/megaadmina, żeby recepcja nie dostawała odpowiedzi o raportach, których nie widzi.
+const EST_MANAGER_GUIDE_URL = '/pomoc-manager/';
 let EST_KB_GUIDE = [];
+
+function estCzyManager() {
+    const rola = (localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim();
+    return rola === 'admin' || rola === 'megaadmin' || rola === 'manager';
+}
+// Przycisk „👑 Przewodnik managera" w chipach Esti — tylko dla ról zarządczych.
+function estPokazPrzyciskManagera() {
+    const b = document.getElementById('est-sug-manager');
+    if (b) b.style.display = estCzyManager() ? '' : 'none';
+}
 
 // Mapa: id sekcji w przewodniku → kategoria (do EST_SECTION_TO_CAT bonusu)
 const EST_GUIDE_CAT_MAP = {
@@ -35232,6 +35246,10 @@ const EST_GUIDE_CAT_MAP = {
     'dodatek-foto': 'Klienci', 'dodatek-klub': 'Klienci', 'dodatek-platnosc': 'Sprzedaż',
     analiza: 'Analityka', 'analiza-pracownik': 'Analityka', targety: 'Analityka',
     koszty: 'Analityka', dziennik: 'Analityka', rozliczenia: 'Ogólne', esti: 'Ogólne',
+    // sekcje przewodnika managera (/pomoc-manager/), których id nie pokrywają się z powyższymi
+    role: 'Ogólne', 'zadatki-karnety': 'Sprzedaż', 'analiza-zabieg': 'Analityka',
+    'analiza-konsultacje': 'Analityka', bi: 'Analityka', dostepy: 'Ogólne', katalog: 'Sprzedaż',
+    rabaty: 'Sprzedaż', dodatki: 'Ogólne', klub: 'Klienci',
     'role-start': 'Ogólne', slowniczek: 'Ogólne', bezpieczenstwo: 'Ogólne',
     wskazowki: 'Ogólne', faq: 'Ogólne'
 };
@@ -35335,8 +35353,14 @@ let estGuideInflight = null;
 // Diagnoza ostatniej nieudanej próby — pokazywana userowi w czacie,
 // żeby zgłoszenie błędu zawierało URL+status bez grzebania w konsoli.
 let estGuideLastError = '';
+// Czy wpisy z przewodnika managera są już w bazie (prefiks 👑). Gdy przewodnik załadował się
+// PRZED wpisaniem PIN-u (rola jeszcze nieznana), manager otwierający Esti dostaje przeładowanie.
+let estManagerZaindeksowany = false;
 function estLoadGuide() {
-    if (EST_KB_GUIDE.length) return Promise.resolve();
+    if (EST_KB_GUIDE.length && (estManagerZaindeksowany || !estCzyManager())) {
+        estPokazPrzyciskManagera();
+        return Promise.resolve();
+    }
     if (!estGuideInflight) {
         estGuideInflight = estLoadGuideInner().finally(() => { estGuideInflight = null; });
     }
@@ -35366,63 +35390,28 @@ async function estLoadGuideInner() {
         const sections = doc.querySelectorAll('section.card[id]');
         console.log('[Esti] Pobrano przewodnik:', html.length, 'znaków, sekcji:', sections.length);
         const entries = [];
+        estIndexGuideDoc(doc, EST_GUIDE_URL, 'przewodniku pracownika', '', entries);
 
-        sections.forEach(sec => {
-            const id = sec.id;
-            const cat = EST_GUIDE_CAT_MAP[id] || 'Ogólne';
-            const h2 = sec.querySelector('h2');
-            if (!h2) return;
-            const sectionTitle = h2.textContent.trim();
-            const link = `<br><br><a href="${EST_GUIDE_URL}#${id}" target="_blank" style="color:#ec3f91;font-weight:600;">📖 Otwórz pełny rozdział →</a>`;
-
-            // Treść sekcji dzielona na: wstęp (przed pierwszym h3) i bloki per-h3.
-            // Indeksujemy też scenariusze/przykłady — w nich jest najwięcej
-            // naturalnego słownictwa ("zwrot", "alergia", "pomyłka"...).
-            const introTexts = [];
-            const h3Bodies = new Map(); // h3 element → plain text bloku
-            let cursor = sec.querySelector('h2')?.closest('.card-header')?.nextElementSibling
-                      || sec.firstElementChild;
-            let currentH3 = null;
-            while (cursor) {
-                if (cursor.tagName === 'H3') {
-                    currentH3 = cursor;
-                    h3Bodies.set(currentH3, [cursor.textContent]);
-                } else if (currentH3) {
-                    h3Bodies.get(currentH3).push(cursor.textContent);
+        // Przewodnik managera — tylko dla ról zarządczych. Błąd pobrania nie psuje bazy
+        // z przewodnika pracownika (osobny try), a wpisy dostają prefiks 👑 w tytule.
+        estPokazPrzyciskManagera();
+        if (estCzyManager()) {
+            try {
+                const rm = await fetch(`${EST_MANAGER_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
+                if (rm.ok) {
+                    const htmlM = await rm.text();
+                    const docM = new DOMParser().parseFromString(htmlM, 'text/html');
+                    const przed = entries.length;
+                    estIndexGuideDoc(docM, EST_MANAGER_GUIDE_URL, 'przewodniku managera', '👑 ', entries);
+                    estManagerZaindeksowany = true;
+                    console.log('[Esti] Przewodnik managera:', entries.length - przed, 'wpisów');
                 } else {
-                    introTexts.push(cursor.textContent);
+                    console.warn('[Esti] HTTP', rm.status, 'dla', EST_MANAGER_GUIDE_URL, '— pomijam przewodnik managera');
                 }
-                cursor = cursor.nextElementSibling;
+            } catch (eM) {
+                console.warn('[Esti] Przewodnik managera niedostępny:', eM.message);
             }
-
-            // 1) Wpis główny sekcji (lead = ogólne wprowadzenie)
-            const lead = sec.querySelector('p.lead');
-            const leadHtml = lead ? lead.innerHTML.trim() : '';
-            entries.push({
-                title: sectionTitle,
-                category: cat,
-                keywords: estGuideTokens(sectionTitle, id),
-                body: estGuideBodyTokens(introTexts.join(' ')),
-                answer: (leadHtml || `Sekcja „${sectionTitle}" w przewodniku pracownika.`) + link,
-                _bonus: 0
-            });
-
-            // 2) Sub-wpisy: każdy <h3> w sekcji to osobny wpis (precyzyjne procedury)
-            sec.querySelectorAll('h3').forEach(h3 => {
-                const subTitle = h3.textContent.trim();
-                if (!subTitle) return;
-                const answerHtml = estGuideBuildSubAnswer(h3);
-                if (!answerHtml || answerHtml.length < 30) return; // Pomijamy puste/za krótkie
-                entries.push({
-                    title: `${sectionTitle.split('—')[0].trim()} — ${subTitle}`,
-                    category: cat,
-                    keywords: estGuideTokens(subTitle, sectionTitle, id),
-                    body: estGuideBodyTokens((h3Bodies.get(h3) || []).join(' ')),
-                    answer: answerHtml + link,
-                    _bonus: 0
-                });
-            });
-        });
+        }
 
         EST_KB_GUIDE = entries;
         console.log('[Esti] KB załadowane:', entries.length, 'wpisów');
@@ -35439,6 +35428,67 @@ async function estLoadGuideInner() {
         console.warn('[Esti] Błąd ładowania przewodnika:', e.message);
         estGuideLastError = `wyjątek: ${e.message}`;
     }
+}
+
+// Indeksuje jeden dokument przewodnika (section.card[id] → wpis główny z leadu + wpis per <h3>)
+// i dopisuje wpisy do `entries`. Wspólne dla /pomoc/ i /pomoc-manager/.
+function estIndexGuideDoc(doc, baseUrl, nazwaDokumentu, prefiksTytulu, entries) {
+    doc.querySelectorAll('section.card[id]').forEach(sec => {
+        const id = sec.id;
+        const cat = EST_GUIDE_CAT_MAP[id] || 'Ogólne';
+        const h2 = sec.querySelector('h2');
+        if (!h2) return;
+        const sectionTitle = h2.textContent.trim();
+        const link = `<br><br><a href="${baseUrl}#${id}" target="_blank" style="color:#ec3f91;font-weight:600;">📖 Otwórz pełny rozdział →</a>`;
+
+        // Treść sekcji dzielona na: wstęp (przed pierwszym h3) i bloki per-h3.
+        // Indeksujemy też scenariusze/przykłady — w nich jest najwięcej
+        // naturalnego słownictwa ("zwrot", "alergia", "pomyłka"...).
+        const introTexts = [];
+        const h3Bodies = new Map(); // h3 element → plain text bloku
+        let cursor = sec.querySelector('h2')?.closest('.card-header')?.nextElementSibling
+                  || sec.firstElementChild;
+        let currentH3 = null;
+        while (cursor) {
+            if (cursor.tagName === 'H3') {
+                currentH3 = cursor;
+                h3Bodies.set(currentH3, [cursor.textContent]);
+            } else if (currentH3) {
+                h3Bodies.get(currentH3).push(cursor.textContent);
+            } else {
+                introTexts.push(cursor.textContent);
+            }
+            cursor = cursor.nextElementSibling;
+        }
+
+        // 1) Wpis główny sekcji (lead = ogólne wprowadzenie)
+        const lead = sec.querySelector('p.lead');
+        const leadHtml = lead ? lead.innerHTML.trim() : '';
+        entries.push({
+            title: prefiksTytulu + sectionTitle,
+            category: cat,
+            keywords: estGuideTokens(sectionTitle, id),
+            body: estGuideBodyTokens(introTexts.join(' ')),
+            answer: (leadHtml || `Sekcja „${sectionTitle}" w ${nazwaDokumentu}.`) + link,
+            _bonus: 0
+        });
+
+        // 2) Sub-wpisy: każdy <h3> w sekcji to osobny wpis (precyzyjne procedury)
+        sec.querySelectorAll('h3').forEach(h3 => {
+            const subTitle = h3.textContent.trim();
+            if (!subTitle) return;
+            const answerHtml = estGuideBuildSubAnswer(h3);
+            if (!answerHtml || answerHtml.length < 30) return; // Pomijamy puste/za krótkie
+            entries.push({
+                title: `${prefiksTytulu}${sectionTitle.split('—')[0].trim()} — ${subTitle}`,
+                category: cat,
+                keywords: estGuideTokens(subTitle, sectionTitle, id),
+                body: estGuideBodyTokens((h3Bodies.get(h3) || []).join(' ')),
+                answer: answerHtml + link,
+                _bonus: 0
+            });
+        });
+    });
 }
 
 // === LEGACY (wyłączone) ===
@@ -35855,6 +35905,9 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', () => {
         estOpen = !estOpen;
         panel.classList.toggle('est-open', estOpen);
+        // Rola jest znana dopiero po PIN-ie — przy każdym otwarciu odśwież przycisk managera
+        // i (dla managera) dociągnij przewodnik zarządczy, jeśli baza załadowała się wcześniej.
+        if (estOpen) estLoadGuide();
         if (estOpen && document.getElementById('est-help-messages').childElementCount === 0) {
             // Wiadomość powitalna
             setTimeout(() => {

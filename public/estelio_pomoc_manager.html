@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik dla managera</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-50: #fff5f9;
+    --pink-100: #ffe9f2;
+    --pink-200: #ffd0e3;
+    --pink-300: #ffacc9;
+    --pink-400: #ff7eb0;
+    --pink-500: #ec3f91;
+    --pink-600: #df247e;
+    --pink-700: #be1264;
+    --pink-glow: rgba(236, 63, 145, 0.15);
+    --gold: #d4a574;
+    --gold-soft: #fef3e6;
+    --bg: #fffaf9;
+    --text: #1a0e1a;
+    --text-soft: #4a3848;
+    --muted: #8a7a85;
+    --line: #f5dde7;
+    --line-soft: #fbe9f0;
+    --card: #ffffff;
+    --green: #18bf7b;
+    --green-soft: #e0f7ec;
+    --orange: #ff961f;
+    --orange-soft: #fef3e6;
+    --red: #dc2626;
+    --red-soft: #fef2f2;
+    --shadow-soft: 0 4px 20px rgba(193, 60, 110, 0.05);
+    --shadow-medium: 0 16px 40px rgba(193, 60, 110, 0.08);
+    --shadow-pink: 0 18px 45px rgba(236, 63, 145, 0.22);
+    --serif: "Playfair Display", serif;
+    --sans: "Poppins", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── LAYOUT ── */
+  .app { display: grid; grid-template-columns: 290px 1fr; min-height: 100vh; max-width: 1500px; margin: 0 auto; background: #fff; box-shadow: 0 0 100px rgba(193, 60, 110, 0.04); }
+
+  /* ── SIDEBAR ── */
+  .sidebar { background: linear-gradient(180deg, #ffffff 0%, var(--pink-50) 100%); border-right: 1px solid var(--line-soft); padding: 38px 26px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar::-webkit-scrollbar { width: 6px; }
+  .sidebar::-webkit-scrollbar-track { background: transparent; }
+  .sidebar::-webkit-scrollbar-thumb { background: var(--pink-200); border-radius: 3px; }
+
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 6px 30px; border-bottom: 1px solid var(--line-soft); margin-bottom: 26px; }
+  .brand-mark { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; display: grid; place-items: center; font-size: 24px; box-shadow: var(--shadow-pink); }
+  .brand-text strong { display: block; font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .brand-text span { display: block; font-size: 9.5px; color: var(--pink-600); letter-spacing: 2.5px; text-transform: uppercase; font-weight: 600; margin-top: 1px; }
+
+  .nav-section { margin-bottom: 22px; }
+  .nav-section-title { font-size: 10.5px; font-weight: 800; color: var(--pink-600); text-transform: uppercase; letter-spacing: 2px; padding: 0 12px; margin-bottom: 10px; opacity: 0.8; }
+  .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; color: var(--text-soft); text-decoration: none; font-weight: 500; font-size: 13.5px; transition: all 0.2s; margin-bottom: 2px; }
+  .nav-link:hover { background: var(--pink-100); color: var(--pink-600); transform: translateX(3px); }
+  .nav-link .num { font-size: 11px; font-weight: 700; color: var(--pink-300); min-width: 24px; }
+  .nav-link:hover .num { color: var(--pink-500); }
+
+  /* ── MAIN ── */
+  .main { padding: 56px 64px 100px; max-width: 1100px; }
+
+  /* ── HERO ── */
+  .hero { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 50%, var(--pink-100) 100%); border: 1px solid var(--pink-200); border-radius: 32px; padding: 60px 56px; margin-bottom: 40px; position: relative; overflow: hidden; box-shadow: var(--shadow-soft); }
+  .hero::before { content: ""; position: absolute; top: -120px; right: -120px; width: 360px; height: 360px; background: radial-gradient(circle, var(--pink-glow) 0%, transparent 65%); border-radius: 50%; }
+  .hero::after { content: ""; position: absolute; bottom: -100px; left: -50px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(212, 165, 116, 0.08) 0%, transparent 65%); border-radius: 50%; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); color: var(--pink-600); padding: 9px 18px; border: 1px solid var(--pink-200); border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; position: relative; }
+  .hero-badge::before { content: ""; width: 8px; height: 8px; background: var(--pink-500); border-radius: 50%; box-shadow: 0 0 0 4px var(--pink-100); animation: pulse 2.5s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
+  .hero h1 { font-family: var(--serif); margin: 0 0 16px; font-size: 56px; font-weight: 800; letter-spacing: -1.8px; line-height: 1.05; color: var(--text); position: relative; }
+  .hero h1 em { font-style: italic; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { margin: 0; font-size: 17px; color: var(--text-soft); max-width: 680px; line-height: 1.75; position: relative; }
+  .hero-meta { display: flex; gap: 26px; margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--pink-200); position: relative; }
+  .hero-meta-item strong { display: block; font-size: 22px; color: var(--pink-600); font-weight: 800; }
+  .hero-meta-item span { display: block; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 3px; }
+
+  /* ── KARTY ── */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 48px 52px; margin-bottom: 28px; box-shadow: var(--shadow-soft); transition: all 0.3s; scroll-margin-top: 30px; position: relative; overflow: hidden; }
+  .card:hover { box-shadow: var(--shadow-medium); }
+  .card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--pink-500) 0%, var(--pink-300) 100%); opacity: 0; transition: opacity 0.3s; }
+  .card:hover::before { opacity: 1; }
+
+  .card-header { display: flex; align-items: flex-start; gap: 22px; margin-bottom: 24px; }
+  .card-icon { width: 60px; height: 60px; border-radius: 18px; background: linear-gradient(135deg, var(--pink-100) 0%, #fff 100%); border: 1px solid var(--pink-200); color: var(--pink-600); display: grid; place-items: center; font-size: 28px; flex-shrink: 0; }
+  .card-header-text h2 { margin: 0 0 6px; }
+  .card-header-text .subtitle { font-size: 12px; color: var(--pink-500); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+
+  h2 { font-family: var(--serif); margin: 0 0 22px; font-size: 34px; font-weight: 700; letter-spacing: -0.8px; color: var(--text); line-height: 1.15; }
+  h3 { margin: 32px 0 14px; font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  h3::before { content: "✦"; color: var(--pink-400); margin-right: 8px; font-size: 14px; vertical-align: middle; }
+  h4 { margin: 22px 0 10px; font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1.5px; }
+  p { margin: 12px 0 18px; color: var(--text-soft); }
+  .lead { font-size: 16.5px; color: var(--text-soft); margin-bottom: 26px; line-height: 1.65; }
+  ul, ol { padding-left: 24px; }
+  ul li, ol li { margin-bottom: 9px; color: var(--text-soft); }
+  ul li::marker, ol li::marker { color: var(--pink-500); font-weight: 700; }
+
+  /* ── SCENARIUSZE ── */
+  .scenario { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--pink-200); border-radius: 18px; padding: 26px 30px; margin: 24px 0; position: relative; }
+  .scenario-label { display: inline-flex; align-items: center; gap: 8px; background: var(--pink-500); color: #fff; padding: 5px 14px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .scenario-label::before { content: "🎬"; }
+  .scenario h4 { color: var(--text); text-transform: none; letter-spacing: normal; font-size: 17px; margin: 0 0 10px; font-family: var(--serif); font-weight: 700; }
+  .scenario-body { color: var(--text-soft); font-size: 14.5px; line-height: 1.7; }
+  .scenario-body p { margin: 8px 0; }
+  .scenario-dialog { background: rgba(255,255,255,0.7); border-left: 3px solid var(--pink-400); padding: 14px 18px; border-radius: 0 10px 10px 0; margin: 12px 0; font-style: italic; font-size: 14px; color: var(--text-soft); }
+  .scenario-dialog::before { content: "💬 "; font-style: normal; }
+  .scenario-result { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 0 10px 10px 0; font-size: 14px; color: #166534; font-weight: 600; margin-top: 14px; }
+  .scenario-result::before { content: "✓"; font-size: 18px; }
+
+  /* ── KROKI ── */
+  .step { display: grid; grid-template-columns: 60px 1fr; gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--line-soft); }
+  .step:last-child { border-bottom: none; }
+  .step .num { width: 48px; height: 48px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; border-radius: 16px; display: grid; place-items: center; font-weight: 700; font-size: 17px; box-shadow: var(--shadow-pink); flex-shrink: 0; font-family: var(--serif); }
+  .step strong { display: block; font-size: 16.5px; margin-bottom: 7px; color: var(--text); font-weight: 700; }
+  .step span { color: var(--text-soft); font-size: 14.5px; line-height: 1.65; }
+  .step span code { background: var(--pink-50); color: var(--pink-700); padding: 2px 8px; border-radius: 6px; font-size: 12.5px; font-family: var(--sans); font-weight: 600; }
+
+  /* ── RAMKI ── */
+  .tip { background: linear-gradient(135deg, var(--pink-50) 0%, #fff 100%); border-left: 3px solid var(--pink-500); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: var(--text-soft); }
+  .tip strong { color: var(--pink-600); font-weight: 700; }
+  .warning { background: linear-gradient(135deg, var(--orange-soft) 0%, #fff 100%); border-left: 3px solid var(--orange); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #78350f; }
+  .warning strong { color: #c2410c; font-weight: 700; }
+  .danger { background: linear-gradient(135deg, var(--red-soft) 0%, #fff 100%); border-left: 3px solid var(--red); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #7f1d1d; }
+  .danger strong { color: #991b1b; font-weight: 700; }
+  .info { background: linear-gradient(135deg, #f0f7ff 0%, #fff 100%); border-left: 3px solid #0284c7; padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #075985; }
+  .info strong { color: #0369a1; font-weight: 700; }
+
+  /* ── KAFELKI ── */
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin: 22px 0; }
+  .feature { background: linear-gradient(180deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--line-soft); border-radius: 18px; padding: 24px; transition: all 0.25s; }
+  .feature:hover { border-color: var(--pink-300); transform: translateY(-3px); box-shadow: var(--shadow-medium); }
+  .feature-icon { font-size: 28px; margin-bottom: 12px; }
+  .feature strong { display: block; font-size: 15px; margin-bottom: 7px; color: var(--text); font-weight: 700; }
+  .feature span { font-size: 13.5px; color: var(--muted); line-height: 1.65; }
+
+  /* ── TABELE ── */
+  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 14px; border: 1px solid var(--line-soft); border-radius: 14px; overflow: hidden; }
+  table th { background: linear-gradient(180deg, var(--pink-50) 0%, var(--pink-100) 100%); color: var(--pink-700); text-align: left; padding: 16px 20px; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; }
+  table td { padding: 16px 20px; border-top: 1px solid var(--line-soft); color: var(--text-soft); }
+
+  /* ── DIALOG SAMPLE ── */
+  .sample-call { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 18px 0; }
+  .sample-line { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .sample-line:last-child { margin-bottom: 0; }
+  .sample-who { font-size: 11px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1px; min-width: 80px; padding-top: 2px; }
+  .sample-text { flex: 1; font-size: 14px; color: var(--text-soft); font-style: italic; line-height: 1.6; }
+
+  /* ── ROZDZIELACZ ── */
+  .divider { display: flex; align-items: center; gap: 22px; margin: 60px 0 34px; }
+  .divider .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent 0%, var(--pink-200) 50%, transparent 100%); }
+  .divider .label { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 3px; padding: 10px 22px; background: var(--card); border: 1px solid var(--pink-200); border-radius: 999px; }
+
+  /* ── FOOTER ── */
+  .footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 70px; padding: 40px 0 20px; border-top: 1px solid var(--line-soft); }
+  .footer .ornament { font-family: var(--serif); font-size: 30px; color: var(--pink-400); margin-bottom: 16px; }
+  .footer strong { color: var(--pink-600); font-weight: 700; }
+  .footer p { margin: 6px 0; color: var(--muted); }
+
+  /* ── MOBILE ── */
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; }
+    .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line-soft); }
+    .nav-section { display: inline-block; vertical-align: top; margin-right: 26px; }
+    .main { padding: 32px 24px; }
+    .hero { padding: 36px 28px; }
+    .hero h1 { font-size: 36px; }
+    .card { padding: 32px 24px; }
+    .feature-grid { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 1fr; gap: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">✦</div>
+      <div class="brand-text">
+        <strong>Estelio</strong>
+        <span>Przewodnik managera</span>
+      </div>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">I · Operacyjnie</div>
+      <a class="nav-link" href="#role"><span class="num">01</span> Rola managera</a>
+      <a class="nav-link" href="#pulpit"><span class="num">02</span> Pulpit zarządczy</a>
+      <a class="nav-link" href="#sprzedaz"><span class="num">03</span> Sprzedaż i korekty</a>
+      <a class="nav-link" href="#zadatki-karnety"><span class="num">04</span> Zadatki i karnety</a>
+      <a class="nav-link" href="#klienci"><span class="num">05</span> Klienci i RODO</a>
+      <a class="nav-link" href="#magazyn"><span class="num">06</span> Magazyn</a>
+      <a class="nav-link" href="#zadania"><span class="num">07</span> Zadania zespołu</a>
+      <a class="nav-link" href="#retencja"><span class="num">08</span> Retencja i zebranie</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">II · Analiza</div>
+      <a class="nav-link" href="#analiza"><span class="num">09</span> Dzień · Miesiąc · Rok</a>
+      <a class="nav-link" href="#analiza-pracownik"><span class="num">10</span> Pracownik</a>
+      <a class="nav-link" href="#analiza-zabieg"><span class="num">11</span> Zabieg i eksport CSV</a>
+      <a class="nav-link" href="#analiza-konsultacje"><span class="num">12</span> Konsultacje i raport reklamowy</a>
+      <a class="nav-link" href="#bi"><span class="num">13</span> Inteligentna analiza i Audyt</a>
+      <a class="nav-link" href="#koszty"><span class="num">14</span> Koszty</a>
+      <a class="nav-link" href="#targety"><span class="num">15</span> Targety</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">III · Administracja</div>
+      <a class="nav-link" href="#dostepy"><span class="num">16</span> Konta, PIN-y, role</a>
+      <a class="nav-link" href="#katalog"><span class="num">17</span> Katalog sprzedaży</a>
+      <a class="nav-link" href="#rabaty"><span class="num">18</span> Rabaty, zadatki, podpowiedzi</a>
+      <a class="nav-link" href="#dodatki"><span class="num">19</span> Moje Estelio+</a>
+      <a class="nav-link" href="#klub"><span class="num">20</span> Klub — zarządzanie</a>
+    </div>
+
+    <div class="nav-section">
+      <div class="nav-section-title">IV · Kontrola</div>
+      <a class="nav-link" href="#dziennik"><span class="num">21</span> Dziennik zdarzeń</a>
+      <a class="nav-link" href="#bezpieczenstwo"><span class="num">22</span> Bezpieczeństwo</a>
+      <a class="nav-link" href="#rozliczenia"><span class="num">23</span> Rozliczenia z Estelio</a>
+      <a class="nav-link" href="#faq"><span class="num">24</span> FAQ managera</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="hero">
+      <span class="hero-badge">Przewodnik dla managera i właściciela</span>
+      <h1>Estelio <em>z perspektywy zarządczej</em></h1>
+      <p>Nie „jak kliknąć", tylko „co to znaczy i co z tym zrobić". Liczby, kontrola, decyzje. Procedury dla recepcji są w <a href="/pomoc/" target="_blank" style="color:var(--pink-500);font-weight:600;">przewodniku dla pracownika</a> — ten dokument zaczyna się tam, gdzie tamten się kończy.</p>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><strong>24</strong><span>Rozdziały</span></div>
+        <div class="hero-meta-item"><strong>30+</strong><span>Scenariuszy</span></div>
+        <div class="hero-meta-item"><strong>10.2026</strong><span>Stan systemu</span></div>
+      </div>
+    </div>
+
+    <!-- ══════════ 01 ROLA ══════════ -->
+    <section class="card" id="role">
+      <div class="card-header">
+        <div class="card-icon">👑</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 01 · Fundament</div>
+          <h2>Rola managera — co widzisz, czego nie widzi reszta</h2>
+        </div>
+      </div>
+      <p class="lead">System rozróżnia pięć ról i każdej pokazuje inny zestaw narzędzi. Manager i właściciel (Megaadmin/Admin) widzą wszystko, co zarządcze: Analizę, Administrację, Dziennik zdarzeń, zadania całego zespołu. Recepcja i kosmetolog pracują, Ty kontrolujesz i decydujesz.</p>
+
+      <h3>Kto co widzi</h3>
+      <table>
+        <thead><tr><th>Rola</th><th>Co widzi i może</th><th>Typowe użycie</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Megaadmin / Admin</strong></td><td>Wszystko: Kreator dostępów, Edycja awaryjna, konfiguracja, pełna analityka, Klub, dodatki.</td><td>Właściciel salonu</td></tr>
+          <tr><td><strong>Manager</strong></td><td>Pełna analityka, Administracja (cennik, rabaty, zadatki, podpowiedzi, dodatki), zadania zespołu, Klub, Raport reklamowy. <strong>Bez</strong> Kreatora dostępów i Edycji awaryjnej.</td><td>Zatrudniony manager, kierownik zmiany, właściciel po rejestracji przez stronę (kreator nadaje mu rolę Manager)</td></tr>
+          <tr><td><strong>Recepcja</strong></td><td>Sprzedaż, Klienci, Magazyn, Konsultacje, Retencja, Klub, Słownik kosmetyków, zadania w widgecie Pulpitu. Bez Analizy.</td><td>Osoba przy ladzie — szeroki dostęp operacyjny, zero liczb zarządczych</td></tr>
+          <tr><td><strong>Kosmetolog</strong></td><td>Sprzedaż, Klienci, Magazyn, Konsultacje. Bez Analizy, bez Klubu, bez zadań w menu.</td><td>Osoba wykonująca zabiegi</td></tr>
+          <tr><td><strong>Praktykantka</strong></td><td>Magazyn i własne zadania na Pulpicie.</td><td>Stażystka — uczy się bez ryzyka, że coś popsuje</td></tr>
+        </tbody>
+      </table>
+
+      <div class="scenario">
+        <span class="scenario-label">Decyzja o roli</span>
+        <h4>Patrycja zatrudnia doświadczoną kosmetolożkę — Kosmetolog czy Manager?</h4>
+        <div class="scenario-body">
+          <p>Magdalena ma pięć lat stażu w innym salonie. Patrycja waha się, czy nie dać jej od razu roli Manager „z szacunku do doświadczenia".</p>
+          <div class="scenario-result">Kosmetolog. Manager to rola dla osoby, która ma <strong>zarządzać innymi i widzieć finanse salonu</strong> — nie nagroda za staż. Magdalena wykonuje zabiegi, więc Kosmetolog wystarczy. Gdy za pół roku obejmie zmianę, Patrycja zmieni jej rolę w Kreatorze dostępów w minutę. Odwrotnie (odebranie roli) jest zawsze trudniej rozmową niż kliknięciem.</div>
+        </div>
+      </div>
+
+      <div class="info"><strong>Uprawnienia są sprawdzane w dwóch miejscach.</strong> Menu po lewej układa się według roli przy logowaniu (dlatego po zmianie roli trzeba się przelogować). Dodatkowo najwrażliwsze raporty — np. Raport reklamowy — mają sprawdzenie roli po stronie serwera, więc nawet ktoś, kto zna adres, nie dostanie danych bez uprawnienia.</div>
+    </section>
+
+    <!-- ══════════ 02 PULPIT ══════════ -->
+    <section class="card" id="pulpit">
+      <div class="card-header">
+        <div class="card-icon">🏠</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 02 · Twój kokpit</div>
+          <h2>Pulpit zarządczy — 30 sekund rano i wiesz, co się dzieje</h2>
+        </div>
+      </div>
+      <p class="lead">Jako manager widzisz na Pulpicie wszystko, co recepcja, plus sekcję „📊 Na dziś" z liczbami i zadania całego zespołu. Pierwszy ekran dnia: sprzedaż, zaległe zadania, alerty, sprawy Klubu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Patrycja o 8:50</span>
+        <h4>Co widzi manager przed otwarciem salonu</h4>
+        <div class="scenario-body">
+          <p><strong>📊 Na dziś:</strong> Sprzedaż 0 zł (salon jeszcze zamknięty), Transakcji 0, Klientów 0, Średnia —. Wieczorem te same kafelki pokażą bilans dnia.</p>
+          <p><strong>📋 Zadania zespołu:</strong> „7 zadań, 1 pilne". Marta nie odhaczyła wczorajszego „Zadzwoń do dostawcy" — Patrycja widzi to jako PO TERMINIE w sekcji „📤 Zlecone przeze mnie".</p>
+          <p><strong>⚠️ Wymaga uwagi:</strong> 95 produktów z niskim stanem, 9 urodzin w tym tygodniu, 87 klientek bez kompletu RODO.</p>
+          <p><strong>💎 Klub:</strong> fioletowy pasek „2 wnioski o konto, 1 nagroda do wydania" — pojawia się tylko, gdy coś czeka.</p>
+          <div class="scenario-result">Plan dnia w 30 sekund: 1) Marta ma dziś oddzwonić do dostawcy, 2) RODO kuleje — temat na odprawę, 3) recepcja aktywuje dwa konta w Klubie zanim klientki zaczną pytać.</div>
+        </div>
+      </div>
+
+      <h3>Sekcja „📊 Na dziś" — cztery liczby</h3>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">🧾</div><strong>Sprzedaż dzisiaj</strong><span>Suma sfinalizowanych transakcji dnia</span></div>
+        <div class="feature"><div class="feature-icon">👜</div><strong>Transakcji</strong><span>Płatność Mix liczy się jako jedna; wpisy „Ręczne" i „System" są pomijane</span></div>
+        <div class="feature"><div class="feature-icon">👥</div><strong>Klientów dzisiaj</strong><span>Unikalne osoby, które dziś coś kupiły</span></div>
+        <div class="feature"><div class="feature-icon">📈</div><strong>Średnia wartość</strong><span>Sprzedaż ÷ liczba transakcji — pierwszy sygnał, czy zespół dosprzedaje</span></div>
+      </div>
+      <p>Recepcja, kosmetolog i praktykantka tej sekcji nie widzą.</p>
+
+      <h3>„📤 Zlecone przeze mnie"</h3>
+      <p>Rozwijana lista pod zadaniami: co zleciłeś, komu, z jakim terminem i czy zostało zrobione. To Twoje narzędzie kontroli bez pytania „zrobiłaś?". Zadania po terminie są wyróżnione.</p>
+
+      <h3>Napis z wersją na dole Pulpitu</h3>
+      <p>Na samym dole Pulpitu jest drobny napis „Estelio · data i godzina wdrożenia". Gdy pracownik zgłasza, że „coś nie działa", najpierw poproś o odczytanie tej daty. Jeśli jest starsza niż ostatnie wdrożenie, jego przeglądarka trzyma stare pliki: <code>Ctrl + F5</code> rozwiązuje większość takich zgłoszeń.</p>
+
+      <div class="tip"><strong>💡 Rytuał managera:</strong> rano Pulpit (zadania, alerty), wieczorem Analiza → Dzień (zgodzić kasę), w poniedziałek Analiza → Miesiąc (gdzie jesteśmy), pierwszego dnia miesiąca Koszty (żeby zysk był prawdziwy).</div>
+    </section>
+
+    <!-- ══════════ 03 SPRZEDAŻ ══════════ -->
+    <section class="card" id="sprzedaz">
+      <div class="card-header">
+        <div class="card-icon">💰</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 03 · Kontrola kasy</div>
+          <h2>Sprzedaż — korekty, zwroty, statusy, ślad</h2>
+        </div>
+      </div>
+      <p class="lead">Jak wpisać sprzedaż, wie recepcja. Ciebie interesuje, co się dzieje, gdy ktoś się pomyli, jak to naprawić bez psucia statystyk i jak później sprawdzić, kto co zmienił.</p>
+
+      <h3>Trzy sposoby naprawy pomyłki — i kiedy który</h3>
+      <table>
+        <thead><tr><th>Narzędzie</th><th>Kiedy</th><th>Co zostaje w systemie</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Historia sprzedaży → Edytuj</strong></td><td>Bieżące pomyłki: zła kwota, zły sprzedawca, literówka w komentarzu. Robi recepcja sama.</td><td>Wpis w Dzienniku: kto, co zmienił, z jakiej wartości na jaką.</td></tr>
+          <tr><td><strong>↩ Zwrot</strong> (profil klientki → historia → przy pozycji)</td><td>Klientka oddaje produkt albo rezygnuje z opłaconego zabiegu. <strong>Nie edytuj i nie usuwaj starej sprzedaży.</strong></td><td>Ujemny wpis z dzisiejszą datą i powodem. Stare raporty nietknięte, kosmetyk wraca na stan (FIFO), punkty Klubu schodzą same.</td></tr>
+          <tr><td><strong>Administracja → Edycja awaryjna</strong> (tylko właściciel)</td><td>Transakcja z ostatnich 30 dni, którą trzeba znaleźć „na już" i poprawić z wyraźnym śladem — np. po sygnale od księgowej.</td><td>Wpis „ALARMOWA MODYFIKACJA" w Dzienniku, z imieniem i zakresem zmiany.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="scenario">
+        <span class="scenario-label">Sprzedaż na złą klientkę</span>
+        <h4>Marta wpisała 350 zł Endermologii na Annę Nowak zamiast Annę Kowalską</h4>
+        <div class="scenario-body">
+          <p>Pomyłkę zgłosiła sama Pani Nowak („nie byłam wczoraj!"). Patrycja otwiera <strong>Sprzedaż → Historia</strong>, w wyszukiwarce wpisuje „Nowak", licznik pokazuje „Znaleziono: 1". Klika Edytuj, zmienia klientkę — w podpowiedziach widzi obie Anny z telefonem i ID, wybiera właściwą — i dopisuje komentarz „korekta: pomyłka recepcji".</p>
+          <div class="scenario-result">„Łącznie wydano" obu pań się zgadza, Dziennik ma wpis z imieniem Patrycji i powodem. Gdyby to była sprzedaż sprzed trzech tygodni, Patrycja użyłaby Edycji awaryjnej — ten sam efekt, ale wpis alarmowy, którego nie da się przeoczyć w audycie.</div>
+        </div>
+      </div>
+
+      <h3>Statusy transakcji — dlaczego nic nie ginie</h3>
+      <table>
+        <thead><tr><th>Status</th><th>Co znaczy</th><th>W statystykach</th></tr></thead>
+        <tbody>
+          <tr><td><strong>AKTYWNY</strong></td><td>Normalna sprzedaż</td><td>Liczy się</td></tr>
+          <tr><td><strong>USUNIĘTY</strong></td><td>Skasowana przez człowieka — rekord zostaje w bazie</td><td>Nie liczy się</td></tr>
+          <tr><td><strong>SCALONY</strong></td><td>Dopięta do innej transakcji (np. dopłata Mix)</td><td>Nie liczy się osobno</td></tr>
+        </tbody>
+      </table>
+      <p>Usunięcie sprzedaży to zmiana statusu, nie kasowanie wiersza. Dzięki temu po roku da się odtworzyć, co kto zrobił. To samo dotyczy zadatków i klientek.</p>
+
+      <h3>Metody płatności, które <em>nie</em> wchodzą do statystyk</h3>
+      <p>„Ręczne" i „System" są wykluczone ze wszystkich raportów finansowych. Służą do korekt technicznych (np. konwersja zadatku). Jeśli w Historii widzisz je często, ktoś używa ich jako „domyślnej" — porozmawiaj, bo wtedy utarg w raportach jest zaniżony.</p>
+
+      <div class="warning"><strong>Mix to jedna transakcja, nie dwie.</strong> Gdy klientka płaci 250 zł z portfela i 50 zł kartą, w raportach jest jeden paragon z rozpisem. Jeśli recepcja wpisze to jako dwie sprzedaże, zawyży liczbę transakcji i zaniży średnią. Patrz na „Transakcji" w Analizie Dnia — podejrzanie wysoka liczba przy normalnym utargu to zwykle ten błąd.</div>
+    </section>
+
+    <!-- ══════════ 04 ZADATKI I KARNETY ══════════ -->
+    <section class="card" id="zadatki-karnety">
+      <div class="card-header">
+        <div class="card-icon">👛</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 04 · Zobowiązania wobec klientek</div>
+          <h2>Zadatki i karnety — pieniądze, które jeszcze nie są Twoje</h2>
+        </div>
+      </div>
+      <p class="lead">Zadatek wpłacony to zobowiązanie, nie zysk. Karnet opłacony z góry też. Manager pilnuje dwóch rzeczy: żeby saldo zobowiązań było znane (księgowa), i żeby klientki je wykorzystywały (kapitał obrotowy wraca, gdy zabieg jest wykonany).</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Koniec roku</span>
+        <h4>Patrycja liczy, ile salon „winien" klientkom</h4>
+        <div class="scenario-body">
+          <p>Grudzień. <strong>Sprzedaż → Spis zadatków</strong> pokazuje 47 aktywnych portfeli, suma sald 18 450 zł. Lista jest stronicowana po 20, więc Patrycja przegląda ją na telefonie bez zacięć.</p>
+          <div class="scenario-result">Dla księgowej to pozycja „zobowiązania wobec klientów" po stronie pasywów. Dla Patrycji sygnał: w styczniu kampania w Klubie „wykorzystaj swoje środki", żeby pieniądze zamieniły się w wykonane zabiegi, a nie wisiały.</div>
+        </div>
+      </div>
+
+      <h3>Reguły, które chronią liczby</h3>
+      <ul>
+        <li><strong>Zadatek punktuje w Klubie i liczy się do utargu w dniu wpłaty.</strong> Zabieg opłacony z portfela już nie — inaczej byłby liczony dwa razy. Stąd „Portfel" jest pomijany w sumach dnia.</li>
+        <li><strong>Płatność Mix</strong>: źródłem prawdy są rozpisy, nie nagłówek. Wszystkie raporty tak liczą; jeśli porównujesz z własnym arkuszem, licz tak samo.</li>
+        <li><strong>Zwrot zadatku</strong> ma własny wpis ze statusem — nie edytuj kwoty wpłaty wstecz.</li>
+        <li><strong>Odwołanie po czasie regulaminowym</strong>: w profilu klientki jest jednorazowa flaga „⏳ Odwołanie po czasie". Pierwszy raz recepcja wybacza i zaznacza; przy drugim zadatek podlega potrąceniu. Dzięki temu zasada z regulaminu jest egzekwowana jednakowo, niezależnie od tego, kto odbierze telefon.</li>
+      </ul>
+
+      <h3>Karnety: Przedłuż, Zawieś, Ustaw datę, Zakończ — co ma prawo zrobić recepcja</h3>
+      <table>
+        <thead><tr><th>Akcja</th><th>Charakter</th><th>Na co patrzysz jako manager</th></tr></thead>
+        <tbody>
+          <tr><td><strong>＋ Przedłuż</strong></td><td>Gest dobrej woli salonu</td><td>Częstotliwość. Jeśli ten sam pakiet notorycznie wygasa u wielu klientek, ważność w cenniku jest za krótka — zmień ją w Administracja → Zabiegi, zamiast prosić recepcję o ciągłe przedłużanie.</td></tr>
+          <tr><td><strong>🕓 Zawieś</strong></td><td>Prawo klientki z regulaminu</td><td>Licznik „Zawieszano 2× (łącznie 44 dni)" przy karnecie. To Twój dowód, czy limit z regulaminu (np. 2 razy w roku) jest przestrzegany. „Zawieś wszystkie karnety" z menu ⋮ Akcje robi to hurtowo dla jednej klientki.</td></tr>
+          <tr><td><strong>✎ Ustaw datę</strong></td><td>Korekta pomyłki, także skrócenie</td><td>W Dzienniku skrócenie zapisuje się jako „KOREKTA DATY KARNETU · skrócono z …". Korekta bez zgody klientki to zmiana warunków zakupu — jeśli widzisz skrócenia bez powodu w komentarzu, zapytaj.</td></tr>
+          <tr><td><strong>Zakończ</strong></td><td>Zamknięcie tematu</td><td>Listy wygasających mają alarmować o realnych sprawach. Niezakończone, dawno wykorzystane karnety zaśmiecają „Do sprawdzenia" i recepcja przestaje na nie patrzeć.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="tip"><strong>💡 Kto ma jeszcze wejścia?</strong> Sprzedajesz urządzenie albo oddajesz je do serwisu: <strong>Klienci → Ranking → 🎟️ Aktywne pakiety</strong> → wybierz zabieg. Dostaniesz wszystkie klientki z niezakończonym karnetem tego typu, także po terminie. To lista do obdzwonienia zanim urządzenie zniknie z salonu.</div>
+    </section>
+
+    <!-- ══════════ 05 KLIENCI ══════════ -->
+    <section class="card" id="klienci">
+      <div class="card-header">
+        <div class="card-icon">👥</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 05 · Kapitał klientelski</div>
+          <h2>Klienci i RODO — decyzje, które zatwierdza manager</h2>
+        </div>
+      </div>
+      <p class="lead">Baza klientek to największy majątek salonu. Recepcja ją prowadzi, Ty pilnujesz jakości: brak duplikatów, komplet dokumentów, zgody na marketing i publikację, porządek przy usuwaniu.</p>
+
+      <h3>Cztery „usunięcia" — żadne nie kasuje historii</h3>
+      <p>Menu <strong>⋮ Akcje</strong> przy nazwisku: <strong>Usuń duplikat</strong> (scala dwie karty tej samej osoby), <strong>RODO — anonimizuj</strong> (dane osobowe zamienione na „Klient #ID", historia finansowa zostaje przez 5 lat dla urzędu skarbowego), <strong>Oznacz jako zmarłego</strong> (profil znika z retencji, urodzin i Klubu), <strong>Klient problematyczny</strong> (recepcja widzi ostrzeżenie przy próbie obsługi). Każde zostawia wpis w Dzienniku z możliwością cofnięcia.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Dwie Anny Michałowskie</span>
+        <h4>Recepcja dodała kropkę przy nazwisku, żeby je rozróżnić</h4>
+        <div class="scenario-body">
+          <p>Patrycja zauważa w kartotece „Anna Michałowska" i „Anna Michałowska." — to dwie różne osoby, nie duplikat. Kropka psuła wyszukiwanie i Klub (telefon klientki nie pasował do nazwiska).</p>
+          <div class="scenario-result">Patrycja usuwa kropkę i pokazuje recepcji, że w podpowiedziach przy sprzedaży każda osoba ma dopisany telefon i ID („Anna Michałowska · 601 234 567 · ID 487"). System zapisuje sprzedaż po ID, nie po nazwisku. Przy dodawaniu nowej klientki o tym samym nazwisku lub telefonie system sam ostrzega „Możliwy duplikat". Gdyby to jednak była jedna osoba z dwiema kartami — ⋮ Akcje → Usuń duplikat, nigdy ręczne „przepisywanie".</div>
+        </div>
+      </div>
+
+      <h3>Dokumenty i zgody — gdzie co sprawdzić</h3>
+      <ul>
+        <li><strong>Komplet RODO</strong>: licznik „klientki bez kompletu RODO" na Pulpicie (⚠️ Wymaga uwagi). Cel: zero. Dokumenty są w profilu, z podglądem PDF.</li>
+        <li><strong>Zgoda na publikację wizerunku</strong>: filtr „📸 Zgoda na publikację" w kartotece (pełna / warunkowa / brak / bez RODO). Przed publikacją efektów z sesji Foto przed/po sprawdź „warunkową" — zwykle oznacza „bez twarzy".</li>
+        <li><strong>Zgody marketingowe</strong>: <strong>Administracja → Baza do akcji SMS</strong> pokazuje, kto zgodził się na e-mail marketingowy, a kto tylko na kontakt telefoniczny (to nie jest zgoda marketingowa). Lista do eksportu przed każdą kampanią.</li>
+        <li><strong>Dodatkowe dokumenty</strong> (wyniki konsultacji, certyfikaty): słownik typów dokumentów ustawiasz w Administracji, recepcja podpina pliki w profilu.</li>
+      </ul>
+
+      <h3>Ranking klientów — kto wydaje najwięcej</h3>
+      <p><strong>Klienci → Ranking → 💰 Wydatki</strong>: klientki ułożone po kwotach w wybranym zakresie dat, z filtrem po zabiegu. Używaj do: listy VIP na premierę zabiegu, uzasadnienia rabatu dla stałej klientki, sprawdzenia, kto kupował dany pakiet. Ranking jest celowo osobnym widokiem, żeby nie spowalniać kartoteki.</p>
+
+      <div class="warning"><strong>Żądanie „zapomnienia" obsługuj przez anonimizację, nie przez kasowanie.</strong> Prawo podatkowe wymaga zachowania historii sprzedaży. Anonimizacja spełnia RODO i chroni Cię przy kontroli. Procedura wymaga potwierdzenia managera — recepcja przygotowuje, Ty zatwierdzasz.</div>
+    </section>
+
+    <!-- ══════════ 06 MAGAZYN ══════════ -->
+    <section class="card" id="magazyn">
+      <div class="card-header">
+        <div class="card-icon">📦</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 06 · Zamrożony kapitał</div>
+          <h2>Magazyn — każdy słoik na półce to pieniądze, które nie pracują</h2>
+        </div>
+      </div>
+      <p class="lead">Optymalny magazyn: jak najmniej towaru, ale nigdy nie brakuje. Narzędzia managera: inwentaryzacja, raport braków, analiza różnic w Dzienniku, archiwum.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Po inwentaryzacji</span>
+        <h4>Patrycja analizuje, ile leży na półce i co z tym zrobić</h4>
+        <div class="scenario-body">
+          <p>124 produkty, wartość brutto 34 800 zł. Z Analizy Zabiegu (ranking kosmetyków) i raportu braków Patrycja wyciąga: 78 produktów rotuje co miesiąc, 32 leżą ponad kwartał, 14 ma bliską datę ważności.</p>
+          <div class="scenario-result">14 produktów z bliską datą: promocja −30% i reguła podpowiedzi sprzedaży „po zabiegu X zaproponuj Y". 32 leżące: dolna półka, rabat na hasło. Po dwóch tygodniach produkty z bliską datą sprzedane za ~70% ceny zamiast utylizacji za 0 zł.</div>
+        </div>
+      </div>
+
+      <h3>„Zadania na dziś" i „Pozostałe Braki" — trzy decyzje przy produkcie</h3>
+      <p>Raport <strong>Magazyn → Zadania na dziś</strong> wylicza produkty poniżej celu (minimum + 30%). Przy każdym recepcja ma trzy przyciski i warto, żebyś znał różnicę, bo to Ty rozstrzygasz spory:</p>
+      <ul>
+        <li><strong>Wyrównaj</strong> — dopisuje brakujące sztuki (dostawa przyszła).</li>
+        <li><strong>✕ Nie zamawiam</strong> — decyzja zakupowa, odwracalna: produkt zostaje w magazynie, znika z listy braków. Lista „Wycofane z zamówień" na dole raportu pozwala przywrócić.</li>
+        <li><strong>🗑️ Usuń z magazynu</strong> — archiwum. Produkt znika ze wszystkich list; przywraca go manager z Archiwum w Inwentaryzacji.</li>
+      </ul>
+
+      <h3>Po inwentaryzacji — analiza różnic</h3>
+      <p>Każda korekta stanu z inwentaryzacji ląduje w Dzienniku zdarzeń. Przejrzyj je w poniedziałek po inwentaryzacji. Częste przyczyny: sprzedaż niewpisana, tester pracownika bez wpisu, pomyłka z poprzedniej inwentaryzacji, zniknięcie. Różnice są informacją, nie problemem do schowania — ale 20 wpisów „tester pracownika" w miesiącu to sygnał.</p>
+
+      <h3>Typ produktu decyduje o raportach</h3>
+      <p>Suplement wpisany jako „Krem" trafia do rankingu kosmetyków i psuje Analizę. W edycji produktu jest lista typów (Krem, Serum, Suplement, Akcesorium…). Zmiana typu przelicza także historyczne raporty — dane w bazie zostają, zmienia się tylko klasyfikacja.</p>
+
+      <div class="tip"><strong>💡 Marża:</strong> system trzyma cenę netto (zakupu) i brutto (sprzedaży). Marża = (brutto − netto) / brutto. Przy 80 zł netto i 180 zł brutto to 55% — standard w branży. Produkty z marżą poniżej 30% rozważ wycofać albo podnieść cenę w Słowniku kosmetyków.</div>
+    </section>
+
+    <!-- ══════════ 07 ZADANIA ══════════ -->
+    <section class="card" id="zadania">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 07 · Delegowanie ze śladem</div>
+          <h2>Zadania zespołu — zlecasz, śledzisz, archiwizujesz</h2>
+        </div>
+      </div>
+      <p class="lead">Dwa miejsca: widget na Pulpicie (szybkie dodanie, podgląd) i <strong>Analiza → Zadania</strong> (pełna tabela z filtrami Aktywne / Wykonane / Zarchiwizowane / Szablony). Jako manager zlecasz każdemu i każdej roli, tworzysz cykliczne, komentujesz, kasujesz.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Cztery automaty zespołu</span>
+        <h4>Patrycja ustawia zadania cykliczne raz — i ma spokój na rok</h4>
+        <div class="scenario-body">
+          <ul>
+            <li>Codziennie 18:00 — „Sprawdź jutrzejsze umówienia" → rola Recepcja</li>
+            <li>Co poniedziałek 9:00 — „Zebranie zespołu" → wszyscy</li>
+            <li>Pierwszego dnia miesiąca — „Wpisz koszty miesiąca" → Patrycja</li>
+            <li>Ostatni dzień miesiąca — „Inwentaryzacja" → Marta i Julia</li>
+          </ul>
+          <div class="scenario-result">Szablony nie są widoczne na liście aktywnych — system generuje instancję w wyznaczonym dniu, dokładnie jedną (zabezpieczenie w bazie przed duplikatami). Po roku archiwum ma 365 wykonanych „Sprawdź umówienia" — pełny ślad pracy recepcji.</div>
+        </div>
+      </div>
+
+      <h3>Zadanie przypisane do roli vs do osoby</h3>
+      <p>Zadanie dla roli „Recepcja" widzą wszystkie osoby z tą rolą; kto pierwszy odhaczy, zamyka je dla wszystkich. Zadanie dla osoby widzi tylko ona. Do rzeczy, które „ktoś z recepcji ma zrobić", używaj roli; do rozliczania konkretnej osoby — imienia.</p>
+
+      <h3>Kontrola bez przesłuchań</h3>
+      <ul>
+        <li><strong>„📤 Zlecone przeze mnie"</strong> na Pulpicie — status każdego zlecenia.</li>
+        <li><strong>Komentarze pod zadaniem</strong> — wątek zamiast SMS-ów; widzisz całą wymianę między recepcjonistkami.</li>
+        <li><strong>Powiązanie z klientką</strong> — chip z nazwiskiem otwiera profil jednym kliknięciem; w tytule wystarczy wpisać nazwisko, system sam zaproponuje powiązanie.</li>
+        <li><strong>Archiwum</strong> — nic nie ginie; przy ocenie rocznej masz, co kto zrobił.</li>
+      </ul>
+    </section>
+
+    <!-- ══════════ 08 RETENCJA ══════════ -->
+    <section class="card" id="retencja">
+      <div class="card-header">
+        <div class="card-icon">📞</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 08 · Utrzymanie zamiast pozyskiwania</div>
+          <h2>Retencja i zebranie — nadzór nad tym, co przynosi najwięcej</h2>
+        </div>
+      </div>
+      <p class="lead">Pozyskanie nowej klientki kosztuje kilka razy więcej niż utrzymanie obecnej. System sortuje listę (algorytm B+C: najpierw ile wydała, potem jak dawno nie była), recepcja dzwoni, Ty sprawdzasz raz w tygodniu, czy dzwoni naprawdę.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Piątek 17:00</span>
+        <h4>Patrycja sprawdza tygodniowy wynik retencji</h4>
+        <div class="scenario-body">
+          <p>Moduł Retencji, filtr: ostatni tydzień, status „kontaktowano". Marta: 23 telefony, 12 umówień. Ania: 17 telefonów, 8 umówień. Razem 40 telefonów, 20 wizyt, konwersja 50%. Średnia umówiona wizyta 380 zł.</p>
+          <div class="scenario-result">7 600 zł nowej sprzedaży z 40 telefonów. Na poniedziałkowej odprawie: „50% konwersji, średnia branżowa to 30%. Tak trzymać". Argument do premii poparty liczbą, nie wrażeniem.</div>
+        </div>
+      </div>
+
+      <h3>Gdy retencja kuleje</h3>
+      <ol>
+        <li>Sprawdź, czy recepcja ma stały blok czasowy na telefony (np. wtorek 9:30). Bez bloku retencja „zawsze jest na jutro".</li>
+        <li>Sprawdź, czy mają konkretną propozycję: nowość, rabat lojalnościowy, bon dla VIP, pakiet. Bez propozycji telefon jest niezręczny.</li>
+        <li>Ustaw target: „30 telefonów retencji tygodniowo" (Konfigurator targetów nie ma takiego typu — użyj zadania cyklicznego z komentarzem wyniku).</li>
+        <li>Pilnuj statusu „🚫 Nie chce wracać" — tych klientek nie dzwoni się ponownie. Spam niszczy więcej niż brak telefonu.</li>
+      </ol>
+
+      <h3>Zebranie / Odprawa — jeden ekran dla wszystkich</h3>
+      <p><strong>Analiza → Zebranie</strong> pokazuje zespołowi to samo: wyniki wczoraj i w tygodniu, top sprzedawcy, klientki wymagające uwagi (urodziny, retencja, bez RODO), top zabiegi i kosmetyki, Twoja notatka. Formaty, które działają: poranna 10 minut (co wczoraj, co dziś), tygodniowa 30 minut (bilans, plan, problemy), miesięczna godzina (finanse, targety, zmiany). Notatka managera zostaje — w piątek sprawdzasz, co z poniedziałkowych ustaleń się udało.</p>
+
+      <div class="tip"><strong>💡 Klub robi część retencji sam.</strong> Automat „powrót po przerwie" w Klubie dopisuje punkty i wysyła wiadomość klientce, która nie była pół roku — bez telefonu recepcji. Retencja ręczna niech skupi się na VIP-kach, automat na reszcie.</div>
+    </section>
+
+    <!-- ══════════ 09 ANALIZA ══════════ -->
+    <section class="card" id="analiza">
+      <div class="card-header">
+        <div class="card-icon">📊</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 09 · Trzy poziomy, jeden cel</div>
+          <h2>Analiza: Dzień, Miesiąc, Rok</h2>
+        </div>
+      </div>
+      <p class="lead">Dzień = zgodzić kasę. Miesiąc = ocenić sprzedaż i zespół. Rok = decyzje strategiczne. Manager codziennie zerka na dzień, raz w tygodniu na miesiąc, raz w miesiącu na rok.</p>
+
+      <h3>Dzień — bilans przed zamknięciem</h3>
+      <p>Karty metod płatności: Gotówka, Karta/BLIK, Przelew, MediRaty, TubaPay, Booksy, TPay. Tabela transakcji z godziną, Mix pokazany jako rodzic z rozpisem. Na dole liczniki: ile płatności każdą metodą.</p>
+      <div class="scenario">
+        <span class="scenario-label">19:30, środa</span>
+        <h4>Kasa fiskalna vs Estelio</h4>
+        <div class="scenario-body">
+          <p>Taśma z kasy: 4 580 zł. Estelio → Dzień: 4 580 zł. Gotówka w kasetce 850 zł = karta „Gotówka" 850 zł.</p>
+          <div class="scenario-result">Dzień zamknięty bez różnic. Gdyby się nie zgadzało, tabela transakcji od razu pokazuje, której wpłaty szukać — dziś, nie jutro, bo jutro nikt nie pamięta.</div>
+        </div>
+      </div>
+
+      <h3>Miesiąc — najczęściej używany widok zarządczy</h3>
+      <ul>
+        <li><strong>KPI miesiąca</strong> z udziałem procentowym każdej metody; przy ratach liczba unikalnych klientek, które z nich skorzystały.</li>
+        <li><strong>Wykres dzienny</strong> — dni martwe i szczytowe (niedziele niskie, dni po wypłatach wysokie).</li>
+        <li><strong>Top sprzedawcy</strong> i <strong>Top zabiegi</strong>; obok lista <strong>„Worst"</strong> — zabiegi z cennika niesprzedane ani razu. Drugi miesiąc zera = promocja, szkolenie albo wycofanie z cennika.</li>
+        <li><strong>Porównanie</strong> z dowolnym miesiącem (miesiąc do miesiąca albo rok do roku).</li>
+        <li><strong>Koszty pokryte?</strong> — jeśli wpisałeś koszty, widzisz break-even: „Tak, 14 180 zł zysku" albo „Brakuje X zł".</li>
+      </ul>
+
+      <h3>Rok — sezonowość i trend</h3>
+      <p>Tabela 12 miesięcy: przychód, koszty, zysk; wykres łączący wszystkie trzy. Tu widać lipiec „na zero" i grudzień jako szczyt — i tu planujesz: akcję letnią, bony świąteczne, zatrudnienie na wrzesień.</p>
+
+      <div class="warning"><strong>Liczby zysku są bezużyteczne bez kosztów.</strong> Analiza Miesiąca i Roku pokazują zysk tylko wtedy, gdy koszty są wpisane (rozdział Koszty). Bez tego patrzysz na przychód i myślisz, że to zarobek.</div>
+    </section>
+
+    <!-- ══════════ 10 PRACOWNIK ══════════ -->
+    <section class="card" id="analiza-pracownik">
+      <div class="card-header">
+        <div class="card-icon">👤</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 10 · Najważniejszy widok HR</div>
+          <h2>Analiza Pracownika — oceny, premie, rozmowy 1:1</h2>
+        </div>
+      </div>
+      <p class="lead">Każda osoba osobno: co sprzedała, ile zarobiła salonowi, czego nie sprzedaje wcale. Tu przygotowujesz rozmowę kwartalną z liczbami zamiast „ogólnego wrażenia".</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Rozmowa kwartalna</span>
+        <h4>Patrycja przygotowuje 1:1 z Julią</h4>
+        <div class="scenario-body">
+          <p>Marzec: 12 800 zł zabiegów, 38 transakcji, kosmetyki 2 400 zł (14 szt.), 🥇 w rankingu. Top 5: Endermologia 15×, Karboksyterapia 8×… „Worst": Storz, Lipoliza, Pixel RF — zero. Złoty paragon 980 zł. Harmonijka po dniach: soboty 800 zł/dzień, środy 200 zł.</p>
+          <div class="scenario-result">Plan rozmowy: brawa za #1, pytanie czemu zero Storzów (szkolenie?), premia za 12 tys., cel na Q2: 14 tys. Julia czuje, że manager widzi szczegóły. Premia uzasadniona danymi.</div>
+        </div>
+      </div>
+
+      <h3>Co widzisz dla każdej osoby</h3>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">💰</div><strong>Zabiegi, kosmetyki, suplementy</strong><span>Osobno, ze sztukami — kosmetyki nie wchodzą do „Total" zabiegów</span></div>
+        <div class="feature"><div class="feature-icon">📈</div><strong>Średnia transakcja i udział w utargu</strong><span>Czy dosprzedaje, czy robi „minimum"</span></div>
+        <div class="feature"><div class="feature-icon">🏆</div><strong>Złoty paragon</strong><span>Największa pojedyncza sprzedaż — co w niej było, to wzór do powtórzenia</span></div>
+        <div class="feature"><div class="feature-icon">🚫</div><strong>Obszary do poprawy</strong><span>Zabiegi z cennika, których nie sprzedaje wcale</span></div>
+        <div class="feature"><div class="feature-icon">📅</div><strong>Harmonijka po dniach</strong><span>Każdy dzień: zabiegi / zadatki / kosmetyki / portfel; „Szczegóły" rozwija transakcje</span></div>
+        <div class="feature"><div class="feature-icon">📊</div><strong>Ranking zespołu</strong><span>Jeśli ten sam ranking powtarza się miesiąc po miesiącu, rozważ rotację zmian</span></div>
+      </div>
+
+      <h3>Reguły liczenia — żeby nie kłócić się z księgową</h3>
+      <ul>
+        <li>Kosmetyki w osobnej kategorii, nie w „Total" zabiegów.</li>
+        <li>Zadatek liczy się w dniu wpłaty; zabieg z portfela — nie (był już policzony).</li>
+        <li>Sprzedaż z kilkoma sprzedawcami dzieli się równo.</li>
+        <li>Wpisy „Ręczne" i „System" pominięte; tylko status AKTYWNY.</li>
+      </ul>
+      <p>Harmonijka po dniach jest do porównań z księgowością prowadzoną poza Estelio: dzień po dniu, bez zgadywania.</p>
+    </section>
+
+    <!-- ══════════ 11 ZABIEG ══════════ -->
+    <section class="card" id="analiza-zabieg">
+      <div class="card-header">
+        <div class="card-icon">💉</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 11 · Produkt pod lupą</div>
+          <h2>Analiza Zabiegu i eksport całej historii do CSV</h2>
+        </div>
+      </div>
+      <p class="lead">Jeden zabieg, pełny obraz: utarg i udział w obrocie, dynamika miesiąc do miesiąca, sztuki i średnia cena, złoty pracownik, powracalność, sezonowość, dni tygodnia, cross-sell kosmetyków.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Flagowy zabieg hamuje</span>
+        <h4>Endermologia: 38 → 35 → 32 wykonań w trzech miesiącach</h4>
+        <div class="scenario-body">
+          <p>Trend roczny: plateau, lekki spadek. 89 unikalnych klientek w roku, szczyt w środy i czwartki. Top cross-sell: kremy Vagheggi.</p>
+          <div class="scenario-result">Decyzja oparta na liczbach: pakiet Endermologia + Karboksy −15% (nowość dla „nasyconych" klientek), reguła podpowiedzi „po Endermologii zaproponuj Vagheggi", pytanie do Marty, czemu nie ma ani jednej (jest recepcją, ale czasem wykonuje).</div>
+        </div>
+      </div>
+
+      <h3>📊 Pełny raport (CSV) — dane do własnej analizy</h3>
+      <p>Przycisk w Analizie Zabiegu eksportuje <strong>całą historię sprzedaży</strong> do jednego pliku: gotową tabelę zabieg × miesiąc z sumami oraz surowe transakcje. „Dopłaty" są scalone z zabiegiem głównym, tak jak w Analizie. Plik otwierasz w Excelu albo wrzucasz do narzędzia AI i pytasz własnymi słowami: „które zabiegi rosną od wiosny?", „jaki udział mają pakiety?". To najprostsza droga do analiz, których Estelio nie ma wbudowanych.</p>
+
+      <div class="tip"><strong>💡 Analiza Zabiegu to narzędzie do decyzji o cenniku.</strong> Zabieg z niską powracalnością i spadającym trendem — kandydat do wycofania albo przepakowania. Zabieg z wysokim cross-sellem — kandydat do pakietu z kosmetykiem.</div>
+    </section>
+
+    <!-- ══════════ 12 KONSULTACJE ══════════ -->
+    <section class="card" id="analiza-konsultacje">
+      <div class="card-header">
+        <div class="card-icon">📋</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 12 · Skuteczność rozmów sprzedażowych</div>
+          <h2>Analiza Konsultacji i Raport reklamowy</h2>
+        </div>
+      </div>
+      <p class="lead">Konsultacje to rozmowy, po których klientka kupuje pakiet (albo nie). Moduł pokazuje, które kampanie, które źródła i które osoby domykają sprzedaż — i daje gotowy, anonimowy raport dla firmy, która dostarcza leady z reklam.</p>
+
+      <h3>Konfiguracja (Konsultacje → Panel admin)</h3>
+      <p>Tu definiujesz <strong>konsultantów</strong> (kto może być wybrany jako wykonujący), <strong>akcje promocyjne i typy konsultacji</strong> (nazwa kampanii, obszar ciało/twarz, cena startowa, próg sukcesu, szablon notatki) oraz przeglądasz historię edycji wpisów. Bez skonfigurowanej akcji recepcja nie przypisze konsultacji do kampanii, a Ty nie zmierzysz jej skuteczności.</p>
+
+      <h3>Analiza Konsultacji (Analiza → Analiza Konsultacji)</h3>
+      <ul>
+        <li><strong>Przegląd główny</strong>: sprzedane pakiety, wartość upsellu, skuteczność (% konsultacji zakończonych sprzedażą), analiza indywidualna pracownika.</li>
+        <li><strong>Dziennik</strong>: data, klientka, zabiegi, źródło, pakiet, upsell, konsultant.</li>
+        <li><strong>Lista miesięczna</strong> i <strong>Raport</strong>: zestawienia do wydruku.</li>
+        <li><strong>📄 Raport reklamowy</strong>: patrz niżej.</li>
+      </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Firma od leadów chce rozliczenia</span>
+        <h4>Agencja pyta: „ile z naszych leadów zamieniło się w pakiety?"</h4>
+        <div class="scenario-body">
+          <p>Patrycja otwiera zakładkę <strong>📄 Raport reklamowy</strong>, ustawia zakres kwiecień–wrzesień (maks. 24 miesiące), klika „Pokaż", potem „Zapisz PDF" — otwiera się okno drukowania przeglądarki, wybiera „Zapisz jako PDF".</p>
+          <div class="scenario-result">PDF z logo Estelio zawiera wyłącznie sumy miesiąc po miesiącu: liczba konsultacji z reklamy, ile zakończyło się pakietem, wartości, skuteczność. <strong>Zero imion, nazwisk, telefonów i danych pracowników</strong> — można go wysłać agencji bez naruszenia RODO. Zakładkę widzą tylko admin, właściciel i manager, a uprawnienie jest sprawdzane na serwerze.</div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>Raport reklamowy liczy tylko konsultacje ze źródłem „reklama".</strong> Jeśli recepcja wpisuje źródło byle jak („inne", puste), raport będzie zaniżony, a agencja dostanie fałszywy obraz. Pilnuj pola „Źródło" przy raportowaniu konsultacji.</div>
+    </section>
+
+    <!-- ══════════ 13 BI + AUDYT ══════════ -->
+    <section class="card" id="bi">
+      <div class="card-header">
+        <div class="card-icon">🧠</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 13 · Nie „co było", tylko „co z tym zrobić"</div>
+          <h2>Inteligentna analiza i Audyt pełny</h2>
+        </div>
+      </div>
+      <p class="lead">Dwa raporty, które pokazują, skąd bierze się przychód: nowi vs powracający, średni koszyk, co kupuje się razem, kto zasnął — oraz pełny audyt sprzedaży usług i produktów z udziałem procentowym i zyskiem.</p>
+
+      <h3>Inteligentna analiza (BI)</h3>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">🔄</div><strong>Retencja klientów</strong><span>Nowi w tym roku vs powracający; wartość każdej grupy; wskaźnik retencji</span></div>
+        <div class="feature"><div class="feature-icon">💸</div><strong>AOV — średni koszyk</strong><span>Jedna wizyta = jeden koszyk; trend 12 miesięcy pokazuje, czy zespół dosprzedaje</span></div>
+        <div class="feature"><div class="feature-icon">🛍️</div><strong>Cross-sell</strong><span>Top 10 par kupowanych razem — gotowe pomysły na pakiety i reguły podpowiedzi</span></div>
+        <div class="feature"><div class="feature-icon">😴</div><strong>Śpiący VIP-owie</strong><span>≥2 wizyty, ≥500 zł, >90 dni nieobecności — lista do obdzwonienia, od największych kwot</span></div>
+      </div>
+
+      <div class="scenario">
+        <span class="scenario-label">Akcja „Powitanie"</span>
+        <h4>47 śpiących VIP-ek, bon 200 zł, zadanie cykliczne dla recepcji</h4>
+        <div class="scenario-body">
+          <p>Patrycja tworzy zadanie „Co poniedziałek zadzwoń do 5 śpiących VIP-ek" → Marta i Ania. Po miesiącu: 22 oddzwonione, 14 wróciło, średnio 480 zł.</p>
+          <div class="scenario-result">6 720 zł sprzedaży minus 2 800 zł bonów = +3 920 zł netto, plus 14 klientek z powrotem w obiegu. Akcja powtarzana co kwartał.</div>
+        </div>
+      </div>
+
+      <h3>Audyt pełny (Analiza → Audyt pełny)</h3>
+      <p>Wybierasz miesiąc albo rok i dostajesz: sprzedaż usług i produktów, <strong>udział procentowy każdej pozycji w obrocie</strong>, zysk salonu, marżę, godziny. To widok „z lotu ptaka" na cały cennik naraz — gdzie są pieniądze, a co jest ozdobą oferty. Model jest obrotowy (bez marż jednostkowych na zabiegach), więc zysk liczy się z przychodu i wpisanych kosztów.</p>
+
+      <div class="tip"><strong>💡 Kolejność patrzenia:</strong> Audyt pełny (co zarabia) → Analiza Zabiegu (dlaczego) → BI (kto kupuje i kto przestał) → decyzja (cennik, pakiet, kampania w Klubie, telefon).</div>
+    </section>
+
+    <!-- ══════════ 14 KOSZTY ══════════ -->
+    <section class="card" id="koszty">
+      <div class="card-header">
+        <div class="card-icon">💰</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 14 · 15 minut miesięcznie</div>
+          <h2>Koszty — żeby zysk był prawdziwy</h2>
+        </div>
+      </div>
+      <p class="lead">Bez kosztów Analiza pokazuje przychód i nazywa go zyskiem. Wpisanie kosztów to kwadrans pierwszego dnia miesiąca — i od tej chwili Miesiąc, Rok i Audyt pełny pokazują prawdziwy wynik.</p>
+
+      <h3>Dwa tryby</h3>
+      <ul>
+        <li><strong>Koszty (proste)</strong> — jedna kwota miesięcznie.</li>
+        <li><strong>Plan kosztów (szczegółowy)</strong> — 50 predefiniowanych kategorii: wynagrodzenia, ZUS pracowników i własny, czynsz, media, reklama FB/IG, księgowa, terminal, prowizje online, Booksy, leasingi… plus własne. Typ: stały / zmienny / mieszany. Przycisk „powiel z poprzedniego miesiąca" oszczędza większość pracy.</li>
+      </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Pierwszy poniedziałek kwietnia</span>
+        <h4>Patrycja wpisuje koszty marca</h4>
+        <div class="scenario-body">
+          <p>Powiela luty, poprawia trzy pozycje (reklama, ZUS, zakupy). Razem 28 400 zł. Zapisuje.</p>
+          <div class="scenario-result">Analiza Miesiąca: „Koszty pokryte? Tak — 14 180 zł zysku". Patrycja planuje premie i zakupy na podstawie zysku, nie przychodu.</div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>Koszty wpisuj w miesiącu, którego dotyczą</strong>, nie w miesiącu zapłaty — inaczej Rok pokaże fałszywe doliny i górki. Z księgową ustal jedną metodę (memoriałowo vs kasowo) i trzymaj się jej.</div>
+    </section>
+
+    <!-- ══════════ 15 TARGETY ══════════ -->
+    <section class="card" id="targety">
+      <div class="card-header">
+        <div class="card-icon">🎯</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 15 · Cele zespołu</div>
+          <h2>Wyniki i Cele — targety, które motywują zamiast zniechęcać</h2>
+        </div>
+      </div>
+      <p class="lead">Konfigurator targetów ustawia cele miesięczne per osoba; „Wyniki i Cele" pokazuje realizację na żywo. Bez celów nie ma kontroli — ale cele za wysokie zabijają motywację szybciej niż ich brak.</p>
+
+      <h3>Typy targetów</h3>
+      <ul>
+        <li><strong>Sprzedaż</strong> — kwota miesięczna.</li>
+        <li><strong>Liczba zabiegów</strong> albo <strong>konkretny zabieg</strong> (np. 10× Endermologia).</li>
+        <li><strong>Sprzedaż kosmetyków</strong> — kwota lub sztuki.</li>
+        <li><strong>Minimalna średnia cena</strong> transakcji — target na dosprzedaż, nie na obrót.</li>
+      </ul>
+      <p>Ustawianie: pracownik → miesiąc → typ → wartość → opcjonalny opis („Wakacyjny boost") → zapis. Każda osoba widzi swój cel, pasek postępu, procent i status (zielony / pomarańczowy / czerwony) oraz ile dni zostało.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Półmetek miesiąca</span>
+        <h4>15 marca: Julia 55%, Marta 56%, obie Dominiki ok. 40%</h4>
+        <div class="scenario-body">
+          <p>Patrycja nie czeka na koniec miesiąca. Rozmawia z Dominikami: „Zostało 16 dni, brakuje 5 900 i 4 800 zł. Co przyspieszy?". Marta kieruje do nich klientki z retencji; kosmetolożki proponują pakiety dziś, nie „przy następnej wizycie".</p>
+          <div class="scenario-result">31 marca: wszystkie cztery osoby powyżej 100%. Interwencja w środku miesiąca zamiast rozliczenia po fakcie.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>💡 Strategia:</strong> target o 10–15% wyższy niż realny wynik z poprzedniego miesiąca. Po trzech miesiącach: wszyscy +20% → podnieś; wszyscy −20% → to nie zespół, to cel albo sezon. Ranking w Analizie Pracownika mówi, czy problem jest u jednej osoby, czy u wszystkich.</div>
+    </section>
+
+    <!-- ══════════ 16 DOSTĘPY ══════════ -->
+    <section class="card" id="dostepy">
+      <div class="card-header">
+        <div class="card-icon">🔑</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 16 · Tylko właściciel</div>
+          <h2>Konta, PIN-y, role — Kreator dostępów</h2>
+        </div>
+      </div>
+      <p class="lead">Konta logowania zakłada wyłącznie Admin/Megaadmin. Manager tu nie wchodzi — celowo, bo kto nadaje dostępy, ten odpowiada za bezpieczeństwo danych klientek.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Nowa praktykantka</span>
+        <h4>Patrycja zakłada konto Karolinie dzień przed pierwszą zmianą</h4>
+        <div class="scenario-body">
+          <p><strong>Administracja → Kreator dostępów → + Dodaj użytkownika</strong>: imię, 4-cyfrowy PIN, rola Praktykantka. Po zapisie PIN jest zaszyfrowany (bcrypt) — Patrycja już go nie podejrzy, może tylko zmienić. Przekazuje go Karolinie osobiście.</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Karolina:</div><div class="sample-text">A jak zapomnę?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Zgłaszasz mi, ja ustawiam nowy. Nigdy nie loguj się cudzym PIN-em — wszystko jest zapisywane na konto, którym się zalogowano.</div></div>
+          </div>
+          <div class="scenario-result">Karolina widzi tylko Magazyn i swoje zadania. Uczy się bez ryzyka. Gdy zostanie kosmetolożką, zmiana roli to jedno kliknięcie — i przelogowanie.</div>
+        </div>
+      </div>
+
+      <h3>Dwie listy osób — po co</h3>
+      <p><strong>Kreator dostępów</strong> to konta do logowania (PIN, rola). <strong>Administracja → Pracownicy</strong> to lista osób, na które rozlicza się sprzedaż (kafelki „Sprzedawca" przy kasie i w rankingach). Zwykle się pokrywają, ale kosmetolog na zlecenie może być w Pracownikach bez własnego logowania.</p>
+
+      <h3>Zasady, które egzekwujesz</h3>
+      <ul>
+        <li>Jedna osoba — jeden PIN. Wspólny PIN „recepcji" niszczy cały sens Dziennika zdarzeń.</li>
+        <li>Odchodzi pracownik — tego samego dnia „Usuń" w Kreatorze. Konto jest dezaktywowane, historia zostaje do audytu.</li>
+        <li>Po zmianie roli osoba musi się wylogować i zalogować — menu układa się przy logowaniu.</li>
+        <li>Hasło salonu (to do logowania przed PIN-ami) zna właściciel. Zmiana: „Nie pamiętam hasła" na ekranie logowania (link na e-mail licencji) albo przez administratora Estelio.</li>
+      </ul>
+    </section>
+
+    <!-- ══════════ 17 KATALOG ══════════ -->
+    <section class="card" id="katalog">
+      <div class="card-header">
+        <div class="card-icon">📚</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 17 · Co można sprzedawać</div>
+          <h2>Katalog sprzedaży — zabiegi, ważność, typy, słownik kosmetyków</h2>
+        </div>
+      </div>
+      <p class="lead">Wszystko, co recepcja widzi przy kasie, pochodzi stąd. Jeśli czegoś nie da się wybrać, nie zostało dodane. Jeśli karnet „nie pilnuje ważności", nie ma jej ustawionej w cenniku.</p>
+
+      <h3>Zabiegi (Administracja → Zabiegi)</h3>
+      <ul>
+        <li><strong>Kategoria + wariant + cena domyślna</strong>: „Endermologia · Brzuch · 350 zł". Cenę recepcja może skorygować przy sprzedaży (rabat), ale punkt wyjścia jest Twój.</li>
+        <li><strong>Ważność (dni)</strong>: pakiet dostaje datę ważności liczoną od zakupu (np. 5× Endermologia — 90 dni). Zabiegi bez ważności są bezterminowe i system ich nie alarmuje. To tu decydujesz, ile recepcja będzie musiała przedłużać.</li>
+        <li><strong>Typ zabiegu</strong> (ikona + kolor): etykieta do analiz — Pielęgnacja, Iniekcje, Modelowanie, Wellness. Własne typy przez „+ Dodaj nowy typ".</li>
+        <li><strong>Usługi z katalogu branżowego</strong> (po rejestracji salonu) mają cenę 0 zł — system przypomina managerowi po zalogowaniu, dopóki ceny nie zostaną uzupełnione.</li>
+      </ul>
+
+      <h3>Słownik kosmetyków vs Magazyn</h3>
+      <p>Słownik mówi „co i za ile da się sprzedać" (firma, model, cena). Magazyn liczy sztuki. Nowy produkt dodajesz w obu miejscach. Słownik może prowadzić recepcja; ceny warto przeglądać raz na kwartał pod kątem marży.</p>
+
+      <div class="tip"><strong>💡 Przegląd cennika raz na kwartał:</strong> Analiza Miesiąca → „Worst" (co się nie sprzedaje) + Analiza Zabiegu (trend) + Audyt pełny (udział w obrocie). Pozycje z zerową sprzedażą przez dwa kwartały wycofaj — krótszy cennik sprzedaje lepiej niż długi.</div>
+    </section>
+
+    <!-- ══════════ 18 RABATY ══════════ -->
+    <section class="card" id="rabaty">
+      <div class="card-header">
+        <div class="card-icon">🏷️</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 18 · Reguły zamiast liczenia w głowie</div>
+          <h2>Rabaty, ustawienia zadatków, podpowiedzi sprzedaży</h2>
+        </div>
+      </div>
+      <p class="lead">Trzy ustawienia, które porządkują kasę i dosprzedaż. Wszystkie są propozycją dla recepcji — przy konkretnej sprzedaży można je zmienić, ale ślad zostaje.</p>
+
+      <h3>Kreator rabatów</h3>
+      <p>Nazwa („Urodzinowy", „Stały klient −10%"), typ (procent albo kwota), wartość. Recepcja wybiera z listy, system przelicza, a w statystykach widać, jaki rabat zastosowano. Rabat „z ręki" (zmiana ceny bez wyboru z listy) jest niewidoczny w raportach — jeśli chcesz wiedzieć, ile rabatów dajesz, wymagaj listy.</p>
+
+      <h3>Ustawienia zadatków</h3>
+      <p>Tryb procentowy (np. 50% ceny zabiegu) albo progi kwotowe („do 200 zł → 50 zł, do 500 → 100, do 1000 → 200") z regułą dla kwot powyżej ostatniego progu i zaokrągleniem do 5 lub 10 zł. Jednolita polityka zadatków = mniej dyskusji przy ladzie i mniej „wyjątków" do tłumaczenia.</p>
+
+      <h3>Podpowiedzi sprzedaży (cross-selling)</h3>
+      <p>Reguła „jeśli klientka była na X, zaproponuj Y" z argumentem dla recepcji („dla podtrzymania efektu peelingu"). Przy sprzedaży X system pokazuje podpowiedź Y. Skąd brać pary: BI → Cross-sell (co już kupuje się razem) i Analiza Zabiegu → ranking kosmetyków przy zabiegu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Reguła, która się zwraca</span>
+        <h4>„Peeling kawitacyjny → Krem SPF (skóra po peelingu jest wrażliwa na słońce)"</h4>
+        <div class="scenario-body">
+          <p>Recepcja nie musi pamiętać. Przy każdej sprzedaży peelingu widzi podpowiedź i argument.</p>
+          <div class="scenario-result">Po miesiącu w Analizie Zabiegu przy peelingu krem SPF jest w top 3 cross-sellu. Reguła działa — czas na następną.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ══════════ 19 DODATKI ══════════ -->
+    <section class="card" id="dodatki">
+      <div class="card-header">
+        <div class="card-icon">✨</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 19 · Rozszerzenia</div>
+          <h2>Moje Estelio+ — dodatki, Foto przed/po, płatności online</h2>
+        </div>
+      </div>
+      <p class="lead">Dodatki włączasz i wyłączasz sam w <strong>Administracja → Moje Estelio+</strong>. Po włączeniu na Pulpicie pojawiają się odpowiednie kafelki, w menu sekcje. Wyłączenie nie kasuje danych.</p>
+
+      <h3>Foto przed/po — zarządzanie telefonami i zgodami</h3>
+      <ul>
+        <li><strong>Parowanie telefonu</strong>: na komputerze generujesz kod QR sesji foto, telefon skanuje, potwierdza PIN-em. Sparowany telefon zostaje zapamiętany.</li>
+        <li><strong>Unieważnianie</strong>: w panelu dodatku widzisz listę sparowanych urządzeń. Telefon pracownika, który odszedł, unieważnij tego samego dnia — razem z jego kontem.</li>
+        <li><strong>Zgoda na fotografowanie</strong> to część RODO; zgoda na <em>publikację</em> to osobne pole — do publikacji używaj filtra „📸 Zgoda na publikację" w kartotece.</li>
+      </ul>
+
+      <h3>Link do płatności (tpay) — statystyki miesięczne</h3>
+      <p>Recepcja generuje linki z akceptacją regulaminu (procedura w przewodniku pracownika). Ty w <strong>Administracja → Płatności online (tpay)</strong> masz: link do regulaminu na stronie WWW (albo wklejoną treść) oraz tabelę <strong>📊 Statystyki miesięczne</strong>: utworzono / zaakceptowano / wygasło / anulowano / oczekuje. Dużo „wygasło" (7 dni bez reakcji) = linki wysyłane za późno albo bez wyjaśnienia, za co płatność. Dużo „oczekuje" = recepcja nie dopina zadatków w Estelio po wpłacie.</p>
+
+      <h3>Booksy — „Dziś w lokalu"</h3>
+      <p>Po podpięciu skrzynki z powiadomieniami Booksy na Pulpicie pojawia się lista wizyt na dziś. To podgląd, nie synchronizacja sprzedaży — sprzedaż nadal wpisuje recepcja.</p>
+
+      <div class="info"><strong>Dodatki są per salon.</strong> Recepcja z innego salonu może mieć inny Pulpit. Gdy pracownik pyta „czemu nie mam kafelka Foto", odpowiedź jest w Moje Estelio+, nie w uprawnieniach.</div>
+    </section>
+
+    <!-- ══════════ 20 KLUB ══════════ -->
+    <section class="card" id="klub">
+      <div class="card-header">
+        <div class="card-icon">💎</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 20 · Lojalność, która działa sama</div>
+          <h2>Klub — konfiguracja i strategia managera</h2>
+        </div>
+      </div>
+      <p class="lead">Obsługę przy kasie (QR, kody, wydawanie nagród, wnioski) ma recepcja. Ty ustawiasz zasady gry: przelicznik, nagrody, promocje, kampanie, automaty, poziomy, polecenia — i patrzysz na statystyki. Sekcję Klub widzą admin, właściciel, manager i recepcja.</p>
+
+      <h3>Ustawienia, które decydują o ekonomii programu</h3>
+      <table>
+        <thead><tr><th>Ustawienie</th><th>Co robi</th><th>Na co uważać</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Przelicznik punktów</strong></td><td>Ile punktów za każde 10 zł</td><td>Policz koszt: jeśli nagroda za 800 pkt to serum za 180 zł, a 800 pkt = 2 000 zł wydatków, program kosztuje 9% obrotu klubowiczek. Decyzja świadoma, nie przypadkowa.</td></tr>
+          <tr><td><strong>Bonus powitalny</strong></td><td>Punkty na start z linku publicznego</td><td>Dostają tylko nowe osoby z linku — dobra zachęta na Instagramie.</td></tr>
+          <tr><td><strong>Punkty za polecenie</strong></td><td>Ile dostaje polecająca i polecona po pierwszym zakupie poleconej</td><td><strong>0 wyłącza polecenia</strong> — pole „Kod polecający" znika z rejestracji. Włączaj, gdy masz plan, jak o tym mówić; samo pole nie generuje poleceń.</td></tr>
+          <tr><td><strong>Kasowanie punktów 1 stycznia</strong></td><td>Zerowanie sald z początkiem roku</td><td>Włączone w trakcie roku nie kasuje bieżących punktów. Motywuje do wykorzystania w grudniu. Poziomy liczą się od wydatków, więc status zostaje.</td></tr>
+          <tr><td><strong>Poziomy</strong></td><td>Srebro / Złoto / Diament wg wydatków rocznych</td><td>Progi ustaw tak, żeby Złoto osiągało ok. 20% klubowiczek, Diament kilka procent. Z Rankingu klientów (Wydatki, rok) odczytasz rozkład.</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Cztery silniki ruchu — jak ich używać</h3>
+      <ul>
+        <li><strong>Mnożnik ×2</strong> na martwe dni (wtorek–czwartek w słabym tygodniu). Wykres dzienny w Analizie Miesiąca mówi, które dni są martwe.</li>
+        <li><strong>Automaty</strong>: urodziny, powrót po przerwie, rocznica, „brakuje Ci X do nagrody", awans. Raz włączone, działają codziennie bez recepcji. W historii punktów klientki widać nazwę automatu.</li>
+        <li><strong>Promocje z „BIORĘ"</strong> targetowane (wszyscy / od X punktów / po zabiegu / dawno niewidziane). Zgłoszenia lądują w „Do obsłużenia".</li>
+        <li><strong>Kampanie</strong>: wiadomość do segmentu, od razu albo zaplanowana, z licznikiem odczytań. Segment <strong>„Wybrane klientki…"</strong> pozwala wskazać konkretne osoby — np. wysłać test push na własny telefon przed wysyłką do wszystkich.</li>
+      </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Martwy tydzień po świętach</span>
+        <h4>Patrycja łączy mnożnik, kampanię i promocję</h4>
+        <div class="scenario-body">
+          <p>Mnożnik ×2 od 7 do 10 stycznia. Kampania do segmentu „dawno niewidziane": „Punkty ×2 przez 4 dni + Twoje środki z zadatku czekają". Promocja „BIORĘ" na masaż −20% dla osób od 300 pkt.</p>
+          <div class="scenario-result">Przegląd Klubu po tygodniu: odczytania kampanii, zgłoszenia „BIORĘ", punkty naliczone ×2. Analiza Dnia pokazuje, czy martwy tydzień przestał być martwy. Jeśli nie — zmienia komunikat, nie mechanizm.</div>
+        </div>
+      </div>
+
+      <h3>Statystyki i kontrola</h3>
+      <ul>
+        <li><strong>Przegląd</strong>: członkinie, punkty w obiegu, odbiory nagród — punkty w obiegu to Twoje zobowiązanie, jak zadatki.</li>
+        <li><strong>Członkowie</strong>: sortowanie wg punktów, 20 na stronę, kliknięcie otwiera szczegóły z historią.</li>
+        <li><strong>Ręczne punkty</strong> wymagają powodu i są w historii klientki (widzi je też ona). Przeglądaj je raz w miesiącu — to jedyne miejsce, gdzie punkty powstają „z ręki".</li>
+        <li><strong>Wnioski o konto</strong>: rejestracja z linku dla osoby z kartoteki tworzy wniosek, a nie konto; recepcja wysyła link aktywacyjny z telefonu salonu. Jeśli wnioski wiszą dniami, klientki rezygnują — pasek „💎 Klub" na Pulpicie ma być pusty wieczorem.</li>
+      </ul>
+    </section>
+
+    <!-- ══════════ 21 DZIENNIK ══════════ -->
+    <section class="card" id="dziennik">
+      <div class="card-header">
+        <div class="card-icon">📜</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 21 · Kto, co, kiedy</div>
+          <h2>Dziennik zdarzeń — Twoja kopalnia dowodów</h2>
+        </div>
+      </div>
+      <p class="lead">Każde logowanie, sprzedaż, edycja, zwrot, korekta stanu, zmiana karnetu, zmiana konta — z imieniem, godziną i szczegółami. W razie sporu, audytu, zwolnienia: twarde dane zamiast słowa przeciw słowu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Spór z byłą pracownicą</span>
+        <h4>„Pracowałam bez wpisów do systemu"</h4>
+        <div class="scenario-body">
+          <p>Patrycja filtruje Dziennik po imieniu, okres 6 miesięcy: 1 247 wpisów. Ostatni tydzień pracy: 38 sprzedaży, ostatnie wylogowanie 13.04 o 18:15. Eksport do PDF dla prawnika.</p>
+          <div class="scenario-result">Sprawa rozstrzygnięta na podstawie zapisów, nie wspomnień.</div>
+        </div>
+      </div>
+
+      <h3>Wpisy, na które warto patrzeć co tydzień</h3>
+      <ul>
+        <li><strong>ALARMOWA MODYFIKACJA</strong> — każda Edycja awaryjna.</li>
+        <li><strong>KOREKTA DATY KARNETU</strong> — skrócenia ważności; sprawdź powód.</li>
+        <li><strong>Zawieszenia karnetów</strong> — ile razy u tej samej klientki.</li>
+        <li><strong>Korekty stanu magazynu</strong> poza inwentaryzacją — zwłaszcza powtarzające się u jednej osoby.</li>
+        <li><strong>Usunięcia</strong> sprzedaży i zadatków — kto i dlaczego.</li>
+        <li><strong>Ręczne punkty Klubu</strong> — z powodami.</li>
+      </ul>
+      <p>Wyszukiwarka przyjmuje nazwisko klientki, nazwę produktu, imię pracownika. Jeśli coś robisz regularnie, zrób z tego zadanie cykliczne „Przegląd Dziennika — poniedziałek".</p>
+    </section>
+
+    <!-- ══════════ 22 BEZPIECZEŃSTWO ══════════ -->
+    <section class="card" id="bezpieczenstwo">
+      <div class="card-header">
+        <div class="card-icon">🛡️</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 22 · Dane klientek</div>
+          <h2>Bezpieczeństwo — co robi system, co robisz Ty</h2>
+        </div>
+      </div>
+      <p class="lead">Estelio działa jako wspólna platforma dla wielu salonów. Każdy salon ma własny identyfikator i każde zapytanie do bazy jest nim filtrowane — Salon A nie zobaczy danych Salonu B. Reszta zależy od nawyków w Twoim salonie.</p>
+
+      <h3>Co robi system</h3>
+      <ul>
+        <li><strong>Sesja</strong>: po zalogowaniu wystawiany jest token sprawdzany przy każdym żądaniu, także tych w tle. Wygasa po 8 godzinach bez aktywności; każde kliknięcie przedłuża.</li>
+        <li><strong>PIN-y</strong> trzymane jako skrót (bcrypt) — nie do odczytania nawet z bazy. PIN-y klientek w Klubie tak samo.</li>
+        <li><strong>Błędne PIN-y</strong> są logowane; seria błędnych prób z jednego adresu daje chwilową blokadę.</li>
+        <li><strong>Uprawnienia</strong> sprawdzane w menu i, dla wrażliwych raportów, na serwerze.</li>
+        <li><strong>Dokumenty klientek</strong> leżą na serwerze poza aplikacją, dostępne tylko przez zalogowaną sesję.</li>
+        <li><strong>Restart aplikacji</strong> (wdrożenie) wylogowuje wszystkich — „Sesja wygasła" u całego zespołu naraz po godzinach pracy to normalne.</li>
+      </ul>
+
+      <h3>Co robisz Ty</h3>
+      <ul>
+        <li>Jedna osoba — jeden PIN; odejście pracownika = dezaktywacja konta i telefonu Foto tego samego dnia.</li>
+        <li>Komputer przy ladzie: wylogowanie przed odejściem, ekran bez podglądu dla klientek.</li>
+        <li>Żądania RODO przez anonimizację, nie kasowanie. Zgody marketingowe sprawdzane przed każdą kampanią (Baza do akcji SMS).</li>
+        <li>Hasło salonu i hasło do panelu rozliczeniowego zna właściciel; nie na karteczce przy monitorze.</li>
+        <li>Raporty na zewnątrz (agencja, księgowa) tylko w wersjach bez danych osobowych: Raport reklamowy, eksporty sum.</li>
+      </ul>
+
+      <div class="warning"><strong>Nie proś administratora Estelio o „zalogowanie się za klientkę" ani o podgląd PIN-ów.</strong> System tego nie umożliwia celowo. Gdy klientka zapomni PIN do apki Klubu, w apce jest „Nie pamiętam PIN-u" — salon wysyła link do ustawienia nowego.</div>
+    </section>
+
+    <!-- ══════════ 23 ROZLICZENIA ══════════ -->
+    <section class="card" id="rozliczenia">
+      <div class="card-header">
+        <div class="card-icon">💳</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 23 · Abonament</div>
+          <h2>Rozliczenia z Estelio — panel, faktury, co gdy płatność nie przejdzie</h2>
+        </div>
+      </div>
+      <p class="lead">Opłata za Estelio to osobny świat od kasy salonu. Właściciel ma do niej panel rozliczeniowy pod adresem <code>estelio.com.pl/billing.html</code>, logowany loginem i hasłem salonu (bez PIN-u).</p>
+
+      <h3>Co widzisz w panelu</h3>
+      <ul>
+        <li><strong>Status subskrypcji</strong> i „Ważna do" — data przedłuża się o miesiąc po każdej opłaconej fakturze.</li>
+        <li><strong>Abonament</strong> — realna kwota po ewentualnym kodzie rabatowym (np. „29 zł/mies. do końca roku, potem 79 zł").</li>
+        <li><strong>Zarządzaj płatnością i subskrypcją</strong> — portal Stripe: zmiana karty, paragony, anulowanie. Estelio nie przechowuje danych karty.</li>
+        <li><strong>Historia faktur</strong> z PDF do pobrania — księgowa bierze je stąd sama.</li>
+      </ul>
+
+      <h3>Okres próbny i pierwsza faktura</h3>
+      <p>Zakup przez stronę daje 14 dni za darmo z kartą zapisaną w Stripe. Faktura za pierwszy miesiąc wychodzi automatycznie, gdy po 14 dniach Stripe pobierze pierwsze 79 zł. Przy kodzie rabatowym okresu próbnego nie ma — płatność od razu, ze zniżką.</p>
+
+      <h3>Gdy płatność nie przejdzie</h3>
+      <ol>
+        <li>Stripe ponawia obciążenie sam. Salon dostaje mail „Nieudana płatność", a w aplikacji manager widzi baner „Opóźnienie w płatności" z linkiem do panelu.</li>
+        <li>Przez 7 dni karencji wszystko działa normalnie.</li>
+        <li>Po karencji logowanie do aplikacji jest zablokowane z komunikatem i linkiem do panelu rozliczeniowego. Reset hasła działa.</li>
+        <li>Zmieniasz kartę w portalu Stripe; po udanej płatności dostęp wraca sam, bez kontaktu z Estelio.</li>
+      </ol>
+
+      <div class="info"><strong>Dane do faktur</strong> (nazwa firmy, NIP) pochodzą z zamówienia lub rejestracji. Zmianę zgłoś do Estelio (kontakt@estelio.com.pl) — faktury są wystawiane w systemie KSeF, więc błędnej nie da się poprawić, tylko skorygować.</div>
+    </section>
+
+    <!-- ══════════ 24 FAQ ══════════ -->
+    <section class="card" id="faq">
+      <div class="card-header">
+        <div class="card-icon">❓</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 24 · Najczęstsze pytania managera</div>
+          <h2>FAQ</h2>
+        </div>
+      </div>
+
+      <h3>Liczby w Analizie Pracownika nie zgadzają się z księgową</h3>
+      <p>Sprawdź harmonijkę po dniach. Cztery typowe różnice: księgowa liczy kosmetyki razem z zabiegami (Estelio osobno); zadatki liczone w dniu wykorzystania (Estelio w dniu wpłaty); korekty „Ręczne"/„System" (Estelio pomija); status USUNIĘTY (Estelio pomija).</p>
+
+      <h3>Recepcja przedłuża karnety „hurtowo" — jak to ograniczyć?</h3>
+      <p>Najpierw sprawdź w Administracja → Zabiegi, czy ważność pakietu nie jest za krótka. Potem Dziennik: przedłużenia bez powodu w komentarzu. Zawieszenie z regulaminu i przedłużenie z dobrej woli to dwie różne akcje — wymagaj właściwej.</p>
+
+      <h3>Jak zrobić promocję na konkretny zabieg?</h3>
+      <p>Kreator rabatów (rabat z nazwą, żeby było widać w statystykach) + promocja w Klubie z „BIORĘ" dla segmentu + ewentualnie mnożnik ×2 w tych dniach. Nie przez ręczne zaniżanie cen przy kasie — tego nie policzysz.</p>
+
+      <h3>Klientka chce być „zapomniana"</h3>
+      <p>⋮ Akcje → RODO — anonimizuj. Dane osobowe zamienione na „Klient #ID", historia finansowa zostaje (5 lat dla urzędu). Recepcja przygotowuje, Ty zatwierdzasz.</p>
+
+      <h3>Jak dać agencji reklamowej wyniki bez danych klientek?</h3>
+      <p>Analiza → Analiza Konsultacji → 📄 Raport reklamowy → zakres miesięcy → Zapisz PDF. Same sumy, zero danych osobowych.</p>
+
+      <h3>Chcę policzyć coś, czego Analiza nie ma</h3>
+      <p>Analiza Zabiegu → 📊 Pełny raport (CSV). Cała historia sprzedaży w Excelu albo w narzędziu AI.</p>
+
+      <h3>Komu należą się jeszcze wejścia na urządzenie, które sprzedajemy?</h3>
+      <p>Klienci → Ranking → 🎟️ Aktywne pakiety → wybierz zabieg. Wszystkie klientki z niezakończonym karnetem, także po terminie.</p>
+
+      <h3>Manager nie widzi Kreatora dostępów — to błąd?</h3>
+      <p>Nie. Konta i PIN-y zakłada tylko Admin/Megaadmin. Manager ma Administrację (cennik, rabaty, zadatki, dodatki, Klub) i całą Analizę.</p>
+
+      <h3>Zmieniłam komuś rolę, nadal widzi stare menu</h3>
+      <p>Musi się wylogować i zalogować. Menu układa się przy logowaniu.</p>
+
+      <h3>Wszystkim naraz wyskoczyło „Sesja wygasła"</h3>
+      <p>Wdrożenie nowej wersji (restart) albo 8 godzin bezczynności. Zalogować ponownie; sprawdzić datę wersji na dole Pulpitu; w razie starej wersji Ctrl + F5. Jeśli powtarza się bez wdrożeń — zgłoś do Estelio.</p>
+
+      <h3>Czy manager może obsługiwać Klub?</h3>
+      <p>Tak, od października 2026 sekcja Klub jest dostępna dla managera (oprócz admina, właściciela i recepcji).</p>
+
+      <h3>Backup danych?</h3>
+      <p>Kopie bazy robi operator Estelio (hosting) oraz Estelio przed każdą zmianą struktury danych. Dla własnego spokoju: eksporty CSV (klienci, sprzedaż, zabiegi, magazyn) dostępne są przez administratora Estelio na życzenie, a Pełny raport CSV z Analizy Zabiegu pobierzesz sam w każdej chwili.</p>
+    </section>
+
+    <div class="footer">
+      <div class="ornament">✦ ✦ ✦</div>
+      <p><strong>Estelio</strong> — Beauty Management System</p>
+      <p>Przewodnik dla managera i właściciela · stan na październik 2026 · procedury dla recepcji: <a href="/pomoc/" style="color:var(--pink-500);">/pomoc/</a></p>
+      <p style="margin-top:10px;font-style:italic;">Estelio to narzędzie. Prawdziwy biznes to ludzie i klientki — system ma im służyć, nie odwrotnie.</p>
+    </div>
+
+  </main>
+
+</div>
+
+</body>
+</html>
