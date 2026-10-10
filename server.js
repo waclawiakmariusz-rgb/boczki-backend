@@ -369,6 +369,15 @@ const fotoRoutes       = require('./routes/foto')(db);
 const zgodyRoutes      = require('./routes/zgody')(db);
 const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 
+// Przypomnienia e-mail dla nowych klientów (2026-10-10): osobny moduł, własna tabela, tryb z env
+// PRZYPOMNIENIA = off | proba (DOMYŚLNIE: tylko log) | on. Nie ma żadnej trasy HTTP ani wpływu
+// na rejestrację/logowanie; błąd startu nie może położyć serwera — stąd try/catch.
+try {
+  require('./routes/przypomnienia')(db).start();
+} catch (e) {
+  console.error('[przypomnienia] nie wystartowano:', e.message);
+}
+
 // ==========================================
 // REJESTR BŁĘDÓW — każdy błąd API trafia do Dziennika Zdarzeń
 // ==========================================

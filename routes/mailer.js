@@ -50,8 +50,10 @@ function htmlDoTekstu(html) {
 }
 
 // Wspólne pola maili do KLIENTA: odpowiedź trafia na skrzynkę kontaktową, zawsze jest część tekstowa.
-function mailDoKlienta({ to, subject, html }) {
-  return { from: FROM(), to, replyTo: ADMIN_EMAIL(), subject, html, text: htmlDoTekstu(html) };
+function mailDoKlienta({ to, subject, html, bcc }) {
+  const m = { from: FROM(), to, replyTo: ADMIN_EMAIL(), subject, html, text: htmlDoTekstu(html) };
+  if (bcc) m.bcc = bcc;
+  return m;
 }
 
 // Blok kontaktowy powtarzany na końcu maili do klienta.
@@ -499,4 +501,82 @@ async function powiadomAdminaORejestracji({ nazwa_salonu, email, login, tenant_i
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji };
+// ─── Przypomnienia dla nowych klientów (routes/przypomnienia.js, 2026-10-10) ─────────
+// Kopia (BCC) do ADMIN_EMAIL — właściciel widzi, co dostają klienci.
+
+// etap 1 (3 dni): „link czeka"; etap 2 (10 dni): „wygaśnie za N dni"
+async function wyslijPrzypomnienieLink({ email, imie, nazwa_salonu, token, dniDoWygasniecia, etap }) {
+  const link = `${APP_URL()}/rejestracja.html?token=${token}`;
+  const dni = parseInt(dniDoWygasniecia, 10);
+  const salon = nazwa_salonu ? ` <strong style="color:#1c1a18;">${nazwa_salonu}</strong>` : '';
+  const drugi = Number(etap) === 2;
+  const transport = createTransport();
+  const html = emailWrapper(drugi ? '⏳' : '✨', 'Estelio', 'System zarządzania salonem', `
+      <p style="font-size:16px; font-weight:700; color:#1c1a18; margin-bottom:8px;">Cześć${imie ? ' ' + imie : ''}! 👋</p>
+      <p style="font-size:14px; color:#7a6e66; line-height:1.8; margin-bottom:20px;">
+        ${drugi
+          ? `Link do założenia salonu${salon} jest wciąż nieużyty${Number.isFinite(dni) && dni > 0 ? ` i <strong style="color:#1c1a18;">wygaśnie za ${dni} ${dni === 1 ? 'dzień' : 'dni'}</strong>` : ''}.
+             Po tym terminie trzeba będzie poprosić o nowy — a rejestracja to naprawdę 5 minut.`
+          : `Kilka dni temu wysłaliśmy Ci link do założenia salonu${salon}, a profil wciąż czeka.
+             Nic straconego — link jest ważny${Number.isFinite(dni) && dni > 0 ? ` jeszcze ${dni} dni` : ''}. Kreator zajmuje około 5 minut, dane z zamówienia są już wpisane.`}
+      </p>
+      ${emailBtn(link, drugi ? 'Dokończ rejestrację →' : 'Załóż profil salonu →')}
+      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <p style="font-size:11px; color:#a89e96; margin:0 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Lub skopiuj link ręcznie</p>
+        <p style="font-size:11px; color:#5c5046; word-break:break-all; margin:0; font-family:monospace;">${link}</p>
+      </div>
+      <p style="font-size:13px; color:#7a6e66; line-height:1.8;">
+        Coś Cię zatrzymało? Niejasny krok, brak czasu, pytanie o cenę? Odpisz jednym zdaniem — pomożemy
+        albo założymy salon razem przez telefon.
+      </p>
+      ${blokKontakt()}
+    `);
+  await transport.sendMail(mailDoKlienta({
+    to: email,
+    bcc: ADMIN_EMAIL(),
+    subject: drugi
+      ? `Link do rejestracji${nazwa_salonu ? ` salonu ${nazwa_salonu}` : ''} wygaśnie${Number.isFinite(dni) && dni > 0 ? ` za ${dni} dni` : ' wkrótce'} — Estelio`
+      : `Twój link do Estelio czeka — 5 minut i salon${nazwa_salonu ? ` ${nazwa_salonu}` : ''} działa`,
+    html,
+  }));
+}
+
+// 3 dni po rejestracji bez ani jednego logowania
+async function wyslijPrzypomnienieStart({ email, nazwa_salonu, login }) {
+  const transport = createTransport();
+  const html = emailWrapper('🌸', 'Estelio', 'System zarządzania salonem', `
+      <p style="font-size:16px; font-weight:700; color:#1c1a18; margin-bottom:8px;">Dzień dobry${nazwa_salonu ? `, ${nazwa_salonu}` : ''}! 👋</p>
+      <p style="font-size:14px; color:#7a6e66; line-height:1.8; margin-bottom:20px;">
+        Salon jest założony, ale widzimy, że nikt się jeszcze nie logował. To normalne — pierwszy raz
+        zawsze jest „jutro". Dlatego podpowiadamy, od czego zacząć, żeby Estelio zaczęło pracować dla Ciebie.
+      </p>
+      <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:12px; padding:16px 20px; margin-bottom:20px;">
+        <p style="margin:0 0 6px; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:#c9a96e;">Twój login</p>
+        <p style="margin:0; font-size:15px; font-weight:700; color:#1c1a18; font-family:monospace;">${login || '—'}</p>
+        <p style="font-size:12px; color:#7a6e66; margin:8px 0 0; line-height:1.7;">Hasło ustawiłaś/-eś w kreatorze. Nie pamiętasz? Na ekranie logowania kliknij „Nie pamiętam hasła".</p>
+      </div>
+      ${emailBtn(`${APP_URL()}/zaloguj`, 'Zaloguj się do Estelio →')}
+      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:16px 18px; margin-bottom:8px;">
+        <p style="font-size:12px; font-weight:700; color:#1c1a18; margin:0 0 8px;">Trzy rzeczy na pierwsze 15 minut</p>
+        <ol style="font-size:13px; color:#7a6e66; margin:0; padding-left:18px; line-height:1.9;">
+          <li>Zaloguj się, wybierz siebie z listy i wpisz swój PIN.</li>
+          <li>Wpisz ceny usług (Administracja → Zabiegi) — pozycje z katalogu mają na start 0 zł.</li>
+          <li>Dodaj pierwszą klientkę i pierwszą sprzedaż. Od tej chwili system zaczyna liczyć.</li>
+        </ol>
+      </div>
+      <p style="font-size:13px; color:#7a6e66; line-height:1.8; margin-top:12px;">
+        Wolisz, żeby ktoś Cię przeprowadził? Odpisz na tę wiadomość — umówimy 20 minut przez telefon
+        i wystartujemy razem. Przewodnik krok po kroku:
+        <a href="${APP_URL()}/pomoc/" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/pomoc/</a>
+      </p>
+      ${blokKontakt()}
+    `);
+  await transport.sendMail(mailDoKlienta({
+    to: email,
+    bcc: ADMIN_EMAIL(),
+    subject: `Salon${nazwa_salonu ? ` ${nazwa_salonu}` : ''} czeka na pierwsze logowanie — pomożemy wystartować`,
+    html,
+  }));
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart };
