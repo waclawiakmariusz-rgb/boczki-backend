@@ -40,6 +40,25 @@ To nie są preferencje kosmetyczne. Każda z tych reguł powstała po konkretnym
 
 ---
 
+## 1z. REGUŁA NIEZMIENNA (user, 2026-10-10): „nic nie może okazać się zepsute, a działało"
+
+Geneza: Analiza → Miesiąc padała z „Chart is not defined" — nagłówek CSP (`script-src 'self'`,
+w server.js od 2026-04-14) blokował Chart.js/Sortable z CDN, fonty Google i piksele GA/Meta. Nikt
+nie widział tego przez miesiące (błąd tylko w konsoli przeglądarki). User odkrył po wdrożeniu
+i przypisał to bieżącym zmianom. Fix `45a3769`: biblioteki w `public/lib/`, CSP z listą originów.
+**Zasady, których nie zmieniamy:**
+1. Zero bibliotek z CDN — każda zewnętrzna biblioteka = kopia w `public/lib/` z przypiętą wersją.
+2. CSP w server.js to lista dopuszczonych originów; nowy zewnętrzny zasób → najpierw origin w CSP.
+3. **Po każdym wdrożeniu: `PROFIL_LOGIN=demo PROFIL_HASLO=... node narzedzia/smoke-prod.js`** —
+   sprawdza Chart/Sortable, naruszenia CSP, wyjątki JS, Analizę → Miesiąc z liczbami, /pomoc/.
+   Wynik pokazać userowi ZANIM powiesz, że wdrożenie jest OK. Lokalnie `B=http://127.0.0.1:3999`
+   (uwaga: CORS odrzuca przeglądarkę z localhost — lokalnie wiarygodne są tylko zasoby i API).
+4. Zmiana nagłówków / middleware / kolejności `app.use` w server.js → smoke test po wdrożeniu.
+5. Regresję najpierw REPRODUKUJ (Chrome headless, CDP: Runtime.exceptionThrown + Log.entryAdded),
+   potem `git log -S` na przyczynę, dopiero potem rozmowa, czy to „moje zmiany". Nie zgadywać.
+
+---
+
 # 2. CO TO JEST ESTELIO — produkt i szerszy cel
 
 **Estelio** to system do prowadzenia salonu kosmetycznego, sprzedawany w modelu SaaS
