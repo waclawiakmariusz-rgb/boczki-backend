@@ -18842,6 +18842,9 @@ function renderInwentaryzacja(d, czyArchiwum) {
     // 2. Sortowanie alfabetyczne i generowanie HTML
     const listaDoRysowania = Object.values(zgrupowane).sort((a,b) => a.nazwa.localeCompare(b.nazwa));
 
+    // 2026-10-10: wiersze zbierane do tablicy i wstawiane RAZ (było `t.innerHTML +=` w pętli —
+    // koszt kwadratowy, ~1 s zablokowanej karty przy 400 partiach Boczków na każdym starcie).
+    const wiersze = [];
     listaDoRysowania.forEach(g => {
         let btns = "";
         // Kodujemy parametry do funkcji onclick
@@ -18862,18 +18865,19 @@ function renderInwentaryzacja(d, czyArchiwum) {
             `;
         }
 
-        t.innerHTML += `
+        wiersze.push(`
         <div class="inv-row">
             <div>
-                <span class="cat-badge ${g.kategoria === 'Detal' ? 'cat-detal' : 'cat-pro'}">${g.kategoria}</span> 
+                <span class="cat-badge ${g.kategoria === 'Detal' ? 'cat-detal' : 'cat-pro'}">${g.kategoria}</span>
                 <b>${g.nazwa}</b><br>
                 <span style="font-size:11px;color:#888">Połączone partie (Suma)</span>
             </div>
             <div style="display:flex;gap:10px;align-items:center">
                 ${btns}
             </div>
-        </div>`;
+        </div>`);
     });
+    t.innerHTML = wiersze.join('');
 }
 
 function zmienGrupowo(nazwaEncoded, katEncoded, delta) {
@@ -19732,6 +19736,11 @@ function renderTabelaZabiegow(zabiegi) {
         typyMap[String(t.nazwa).toLowerCase()] = t;
     });
 
+    // 2026-10-10: wiersze zbierane do tablicy i wstawiane RAZ. Wcześniej `t.innerHTML +=` w pętli —
+    // przeglądarka parsowała całą tabelę od nowa przy każdym wierszu (koszt kwadratowy): przy ~480
+    // usługach Boczków/demo to 10,6 s zablokowanej karty przy KAŻDYM starcie aplikacji
+    // (komunikat „Strona nie odpowiada / Czekaj"). Zmierzone profilerem CPU 2026-10-10.
+    const wiersze = [];
     dane.forEach(z => {
         const k = encodeURIComponent(z.kategoria);
         const w = encodeURIComponent(z.wariant);
@@ -19761,7 +19770,7 @@ function renderTabelaZabiegow(zabiegi) {
             typBadge = `<span style="display:inline-flex; align-items:center; gap:4px; padding:3px 8px; border-radius:999px; background:${meta.kolor}22; color:${meta.kolor}; font-size:12px; font-weight:600;">${meta.ikona || ''} ${typZab}</span>`;
         }
 
-        t.innerHTML += `
+        wiersze.push(`
             <tr style="border-bottom: 1px solid #eee;">
                 <td style="padding:10px;"><strong>${z.kategoria}</strong></td>
                 <td style="padding:10px;">${z.wariant || '-'}</td>
@@ -19773,8 +19782,9 @@ function renderTabelaZabiegow(zabiegi) {
                     <button class="btn-delete" onclick="usunZabiegUI('${k}', '${w}')" style="margin:0; width:30px; height:30px;">×</button>
                 </td>
             </tr>
-        `;
+        `);
     });
+    t.innerHTML = wiersze.join('');
 }
 
         function usunZabiegUI(kategoria, wariant) {

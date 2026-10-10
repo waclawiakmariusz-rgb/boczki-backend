@@ -814,6 +814,17 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
      trialu; uczciwie = przy loginie/verify_pin pobrać `stripe.subscriptions.retrieve(sub_id)`
      (`trial_end`, `current_period_end`) z cache 1 h, pokazać w istniejącym `pokazBannerPlatnosci`.
      Niski priorytet, billing.html już to pokazuje.
+- **20. WYDAJNOŚĆ STARTU: 10,6 s → 0,05 s (2026-10-10, `dev`)** — user: „system działa wolniej,
+  przeglądarka pokazuje „Czekaj" przy starcie, pewnie przez podpowiedzi klientów z telefonem".
+  **Zmierzone, nie zgadywane:** `narzedzia/profil-startu.js` (Chrome headless + CDP, profil CPU
+  per funkcja; hasło z env `PROFIL_HASLO`, nigdy w repo). Podpowiedzi = 1 ms, kafelki = 5 ms.
+  Winowajca: `renderTabelaZabiegow` (Administracja → Usługi, renderowana przy KAŻDYM starcie
+  z `_renderSalesDictUI`) robiła `t.innerHTML +=` w pętli po ~480 usługach → parsowanie całej
+  tabeli od nowa przy każdym wierszu (kwadratowo) = **10 616 ms** zablokowanej karty; to samo
+  `renderInwentaryzacja` przy ~400 partiach = 1 084 ms. Stary kod z 04–05.2026, rósł z liczbą
+  usług. Fix: wiersze do tablicy + jedno `innerHTML = join('')`. Po: long tasks 11 941 → 510 ms.
+  **Reguła na przyszłość:** NIGDY `innerHTML +=` w pętli (w index.html jest jeszcze ~80 takich
+  miejsc, ale w małych listach — przy zgłoszeniu „wolno" najpierw odpal profiler, nie zgaduj).
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
