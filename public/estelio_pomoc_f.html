@@ -282,7 +282,7 @@
       <p>Wszystko, co musisz wiedzieć żeby sprawnie pracować w salonie. Z prawdziwymi sytuacjami, dialogami z klientkami, konkretnymi krokami. Po przeczytaniu nie będziesz miała wątpliwości "jak to się robi" w żadnej sekcji systemu — od logowania, przez sprzedaż, zwroty i magazyn, aż po administrację, dodatki Estelio+, analizę wyników i rozliczenia salonu.</p>
       <div class="hero-meta">
         <div class="hero-meta-item"><strong>37</strong><span>Modułów</span></div>
-        <div class="hero-meta-item"><strong>130+</strong><span>Scenariuszy</span></div>
+        <div class="hero-meta-item"><strong>145+</strong><span>Scenariuszy</span></div>
         <div class="hero-meta-item"><strong>95 min</strong><span>Czasu czytania</span></div>
       </div>
     </div>
@@ -315,6 +315,19 @@
       <div class="step"><div class="num">2</div><div><strong>Kliknij swoją kafelkę</strong><span>Każdy pracownik ma kafelek z imieniem i rolą. Kafelki są posortowane wg ról — najpierw recepcja, potem kosmetolodzy, potem praktykantki. Klik = przechodzisz do ekranu PIN.</span></div></div>
       <div class="step"><div class="num">3</div><div><strong>Wpisz swój 4-cyfrowy PIN</strong><span>PIN ustawia administrator (zwykle właściciel salonu lub manager). Po 5 błędnych próbach z tego samego urządzenia będzie chwilowa blokada (rate limit) — bezpieczeństwo. Jeśli nie pamiętasz, daj znać managerowi — on zresetuje.</span></div></div>
       <div class="step"><div class="num">4</div><div><strong>Witaj w systemie!</strong><span>Pojawi się Pulpit. Po lewej masz menu, w środku — informacje na dziś. U góry widzisz swoje imię + rolę: <code>👤 Marta (Recepcja)</code>.</span></div></div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · 8:55, pierwsza klientka za pięć minut</span>
+        <h4>Ania wpisuje PIN trzeci raz i trzeci raz jest źle</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Marta, pożycz mi swój PIN na chwilę, muszę wbić Panią Nowak, a mój nie działa.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Nie, bo wszystko, co wbijesz, będzie na moje konto. Wpisz spokojnie jeszcze raz — masz dziesięć prób na pięć minut, a dopiero potem system blokuje.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Działa… wpisywałam stary, z poprzedniego salonu.</div></div>
+          </div>
+          <div class="scenario-result">Jedna osoba, jeden PIN. Gdyby Ania zalogowała się PIN-em Marty, każda sprzedaż z tego dnia byłaby w Dzienniku „Marta", a przy pomyłce nikt by nie wiedział, kogo pytać. Blokada po dziesięciu błędnych próbach chroni przed zgadywaniem, nie przed Tobą — po pięciu minutach próbujesz dalej.</div>
+        </div>
+      </div>
 
       <h3>Wylogowanie</h3>
       <p>U dołu lewego menu czerwony przycisk <strong>🔒 Wyloguj się</strong>. Klikasz przed odejściem od komputera. Sesja trwa maksymalnie kilka godzin, potem i tak Cię wyrzuca, ale lepiej wylogować się ręcznie.</p>
@@ -378,6 +391,21 @@
         <div class="feature"><div class="feature-icon">🔗</div><strong>Link do płatności</strong><span>Płatność online tpay z akceptacją regulaminu (widoczne przy aktywnym dodatku)</span></div>
       </div>
       <p>Kafelki dodatków pojawiają się tylko wtedy, gdy dany dodatek jest włączony w Twoim salonie — dlatego Twój Pulpit może wyglądać nieco inaczej niż na screenach koleżanki z innego salonu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · 9:02, kawa i Pulpit</span>
+        <h4>Na kafelku „Do sprawdzenia" świeci pomarańczowa trójka</h4>
+        <div class="scenario-body">
+          <p>Marta klika. Dwa karnety kończą się w przyszłym tygodniu, jeden zadatek wisi od dwóch miesięcy.</p>
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Patrycja, Pani Zielińska ma 300 zł w portfelu od sierpnia i nie była. Dzwonić?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Dzwoń, ale nie „ma Pani zadatek", tylko „mam dla Pani termin w czwartek, zadatek już czeka". Ludzie wracają na termin, nie na pieniądze.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">A karnety?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Te dwie panie umów na pozostałe zabiegi. Jak któraś nie może — Przedłuż i napisz w notatce dlaczego.</div></div>
+          </div>
+          <div class="scenario-result">Trzy sprawy, trzy telefony, dziesięć minut. Wieczorem licznik pokazuje zero, a na grafiku są trzy nowe wizyty. „Do sprawdzenia" to nie lista zaległości — to lista okazji, które system wyłowił za Ciebie.</div>
+        </div>
+      </div>
 
       <h3>Panel „🔎 Do sprawdzenia"</h3>
       <p>To codzienna „skrzynka spraw" recepcji — system sam zbiera w jedno miejsce rzeczy, które łatwo przegapić:</p>
@@ -493,6 +521,21 @@
 
       <div class="tip"><strong>💡 Dlaczego razem a nie osobno?</strong> Jedna transakcja = jeden paragon = jeden moment w historii klientki. Łatwiej ocenić ile na nią wydała przy tej wizycie. Średnia paragonu w analityce też liczy się dobrze (a nie sztucznie zaniżona przez dzielenie).</div>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · przy kasie, 250 zł z portfela i reszta kartą</span>
+        <h4>Pani Kasia po masażu za 370 zł: „Mam coś na koncie u was, prawda?"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Ma Pani 250 zł z zadatku. Dopłata to 120 — kartą czy gotówką?</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Kasia:</div><div class="sample-text">Kartą.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">(wpisuje sprzedaż, metoda Mix: Portfel 250, Karta 120, jedna transakcja)</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Kasia:</div><div class="sample-text">A to się nie pomiesza?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Nie — system pamięta, że 250 było z Pani zadatku, a 120 z karty. Na wieczornym rozliczeniu kasy zobaczymy dokładnie 120 na terminalu.</div></div>
+          </div>
+          <div class="scenario-result">Jedna sprzedaż, dwie metody w środku. Saldo portfela Pani Kasi spada do zera, w raporcie dnia karta ma 120 zł, a licznik transakcji pokazuje jedną wizytę, nie dwie. Gdyby Marta wpisała to jako dwie osobne sprzedaże, średnia wartość wizyty w Analizie byłaby zaniżona dwa razy.</div>
+        </div>
+      </div>
+
       <h3>Płatność typu Mix</h3>
 
       <div class="scenario">
@@ -579,6 +622,20 @@
         <li><strong>Cel zadatku</strong> (opcjonalnie, ale zalecane) — np. "Pakiet 5x endermologia", "Zaliczka na zabieg 30.05", "Bon urodzinowy 200 zł"</li>
         <li><strong>Pracownika</strong> obsługującego (kto przyjmował wpłatę)</li>
       </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „a jak nie przyjdę?"</span>
+        <h4>Pani Ewa wpłaca 200 zł na endermologię za trzy tygodnie i pyta, czy to przepada</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Pani Ewa:</div><div class="sample-text">Bo ja mam różnie z pracą. Jak coś mi wypadnie, to te 200 zł znika?</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Nie, jeśli odwoła Pani wizytę wcześniej niż dobę przed — zadatek czeka na koncie na następny termin, nawet pół roku. Przepada tylko przy odwołaniu w ostatniej chwili, i to tak naprawdę dopiero za drugim razem, pierwszy raz wybaczamy.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Ewa:</div><div class="sample-text">A dostanę coś na papierze?</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Wpisuję to teraz w systemie na Pani konto, na życzenie wydrukuję potwierdzenie. I przy każdej wizycie zobaczę, ile Pani ma do wykorzystania.</div></div>
+          </div>
+          <div class="scenario-result">Ania wpisuje zadatek w profilu Pani Ewy z celem „Endermologia 31.10". Od tej chwili saldo widzi każda osoba z recepcji, a przy sprzedaży zabiegu system sam podpowie „użyć 200 zł z portfela?". Klientka wychodzi spokojna, bo usłyszała zasadę, a nie „jakoś to będzie".</div>
+        </div>
+      </div>
 
       <h3>Sprawdzanie salda klientki</h3>
 
@@ -671,6 +728,20 @@
         <li><strong>Po sprzedaży</strong> sprawdź w magazynie czy stan jest poprawny — szczególnie przy nowych produktach</li>
       </ul>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · po zabiegu, przy ladzie</span>
+        <h4>Julia wychodzi z gabinetu z Panią Olą: „Pani Olu, ten krem, o którym mówiłam, Marta pokaże"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">(wpisuje sprzedaż zabiegu, na ekranie wyskakuje podpowiedź: „Po peelingu zaproponuj krem SPF — podtrzymuje efekt")</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Julia miała na myśli ten z filtrem — po peelingu skóra jest wrażliwa na słońce przez kilka dni. 180 zł, mamy na półce.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Ola:</div><div class="sample-text">A jak mi nie podejdzie?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Ma Pani 14 dni na zwrot, jeśli coś uczula — wpisuję zwrot od ręki, bez dyskusji.</div></div>
+          </div>
+          <div class="scenario-result">Marta klika „+ Detal", wybiera krem ze słownika, stan magazynowy spada o jeden, a sprzedaż ma dwie pozycje: zabieg i krem. Podpowiedź przy kasie ustawiła managerka, Marta nie musiała niczego pamiętać. W Analizie Zabiegu ten krem pojawi się jako sprzedany „razem z peelingiem" — i managerka zobaczy, że reguła działa.</div>
+        </div>
+      </div>
+
       <h3>Sprzedaż 0,5 szt. (np. próbka albo połowa)</h3>
       <p>Zdarza się że sprzedajesz pół opakowania (np. ampułki w mniejszej liczbie). Wpisz w "Szczegóły": <code>0,5 szt.</code>. System odejmie 0,5 z magazynu.</p>
 
@@ -747,6 +818,20 @@
       <div class="step"><div class="num">4</div><div><strong>Wybierz sposób zwrotu</strong><span>Gotówka / przelew / na kartę — tak jak fizycznie oddajesz pieniądze. Dzięki temu podsumowanie dnia pokaże wypływ we właściwej metodzie.</span></div></div>
       <div class="step"><div class="num">5</div><div><strong>Zdecyduj o magazynie (przy produktach)</strong><span>Jeśli zwracany produkt nadaje się do dalszej sprzedaży — zaznacz przywrócenie na stan i podaj liczbę sztuk. Otwarty/uszkodzony produkt zostaw bez przywracania.</span></div></div>
       <div class="step"><div class="num">6</div><div><strong>Wpisz powód (wymagany)</strong><span>Powód jest widoczny w historii klientki — pisz konkretnie: „alergia", „rezygnacja z pakietu, zwrot za 3 niewykorzystane zabiegi". To Twoja ochrona przy późniejszych pytaniach.</span></div></div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „proszę to po prostu wykasować"</span>
+        <h4>Pani Magda oddaje serum kupione tydzień temu — Ania chce usunąć tamtą sprzedaż</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Patrycja, usunę tamtą sprzedaż z zeszłej środy i oddam gotówkę, dobrze?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Nie usuwaj. Tamta środa była rozliczona z kasą fiskalną i się zgadzała. Wejdź w profil Pani Magdy, przy serum kliknij Zwrot, wpisz powód i oddaj pieniądze tak, jak płaciła.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Ale wtedy dzisiejsza kasa będzie na minusie o 220 zł.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">I to jest prawda — dziś wyszło 220 zł z kasetki. Jutro rano w Podsumowaniu dnia będzie dokładnie to widać.</div></div>
+          </div>
+          <div class="scenario-result">Zwrot robi ujemny wpis z dzisiejszą datą i powodem. Zeszła środa zostaje nietknięta, serum wraca na stan (albo nie — Ania zaznacza, czy nadaje się do sprzedaży), punkty Klubu za ten zakup schodzą same. Nikt za miesiąc nie będzie szukał, czemu środa „zmieniła się" w raportach.</div>
+        </div>
+      </div>
 
       <h3>Dlaczego tak, a nie „edytuj/usuń starą sprzedaż"?</h3>
       <ul>
@@ -888,6 +973,20 @@
         <li><strong>📄 Bez podpisanego RODO</strong> — tu zgody jeszcze nie ma, bo nie ma formularza. Najpierw dokumenty, potem pytanie o zdjęcia.</li>
       </ul>
       <div class="tip"><strong>💡 Przed sesją Foto przed/po</strong> ustaw filtr na „Jakakolwiek zgoda" — od razu widzisz, czyje efekty możesz pokazać w relacji na Instagramie, a czyje zostają tylko w kartotece.</div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · telefon w środku dnia</span>
+        <h4>„Dzień dobry, Kowalska. Ile mi jeszcze zostało z tego pakietu?"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">(wpisuje „Kowal" w wyszukiwarce — dwie panie; wybiera tę z właściwym numerem telefonu)</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Anno, pakiet 5× Endermologia: wykorzystane trzy, zostały dwa, ważny do 18 listopada. I ma Pani jeszcze 150 zł w portfelu.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Anna:</div><div class="sample-text">O, to umówmy od razu dwa terminy.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Jest wtorek 16:00 i następny wtorek. Dopisuję w notatce, że woli Pani popołudnia.</div></div>
+          </div>
+          <div class="scenario-result">Cała rozmowa trwa minutę, bo wszystko jest w jednym profilu: historia, karnet z plakietką ważności, saldo, notatki. Marta nie musiała pytać „a kiedy Pani była?". Dwie Anny Kowalskie rozróżniła po telefonie w podpowiedziach — bez kropek i dopisków przy nazwisku.</div>
+        </div>
+      </div>
 
       <h3>Co znajdziesz w profilu klientki</h3>
       <div class="feature-grid">
@@ -1246,6 +1345,20 @@
       </ul>
       <p>Klikasz "Zapisz". Produkt pojawia się w stanie magazynowym i w liście rozwijanej przy sprzedaży.</p>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · kurier w środku dnia</span>
+        <h4>Karton z kremami Vagheggi ląduje na ladzie między dwiema klientkami</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">Marta, przyszły kremy, dwanaście sztuk. Wpiszesz? Bo jak nie, to w czwartek znowu „brakuje" na liście.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Wpisuję teraz, zanim zapomnę: produkt, plus 12, data ważności z pudełka — 12.2027.</div></div>
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">A faktura?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Fakturę odkładam Patrycji do koszyka, ona wpisuje koszty raz w miesiącu. Stan ma być prawdziwy od razu, koszt może poczekać.</div></div>
+          </div>
+          <div class="scenario-result">Stan rośnie z 2 do 14, alert „niski stan" znika z Pulpitu, a w Dzienniku jest wpis „Marta, +12, dostawa". Lista „Co zamówić" w czwartek pokaże to, czego naprawdę brakuje. Towar wpisany od razu to jedyny sposób, żeby magazyn w systemie zgadzał się z półką.</div>
+        </div>
+      </div>
+
       <h3>Edycja produktu — zmiana stanu</h3>
 
       <div class="scenario">
@@ -1387,6 +1500,20 @@
 
       <div class="tip"><strong>💡 Dobra praktyka:</strong> rób inwentaryzację we DWIE osoby — recepcja+kosmetolog. Jedna liczy fizycznie, druga wpisuje. Mniej pomyłek, szybciej, sprawiedliwiej (nikt nie pisze "sam swoje liczby").</div>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · piątek 16:30, serum się nie zgadza</span>
+        <h4>System mówi 6, na półce jest 4</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">Może po prostu wpisz 4 i idziemy dalej, jest późno.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Najpierw sprawdzę gabinet i szufladę z testerami. Jak poprawię bez liczenia, to Patrycja w poniedziałek będzie szukać dwóch serum, których nie ma, a może leżą u Ciebie.</div></div>
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">…jedno mam w gabinecie, otwarte, na zabiegi.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Czyli to jest „profesja", nie „detal". Przenoszę jedno, a drugie faktycznie brakuje — koryguję minus jeden z powodem „różnica inwentaryzacyjna".</div></div>
+          </div>
+          <div class="scenario-result">Jedna sztuka wyjaśniona, jedna zapisana jako realna różnica. W poniedziałek managerka widzi w Dzienniku dokładnie to: minus jeden, powód, kto liczył. Inwentaryzacja we dwie osoby trwa dłużej o kwadrans, ale nikt nie „poprawia z głowy" i nikt nie jest podejrzewany za coś, co leżało w gabinecie.</div>
+        </div>
+      </div>
+
       <h3>Po inwentaryzacji — analiza różnic</h3>
       <p>Manager przegląda wpisy o korektach w logu systemu. Częste przyczyny różnic:</p>
       <ul>
@@ -1522,6 +1649,19 @@
         </div>
       </div>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „nie zdążę do 14:00"</span>
+        <h4>Patrycja zleciła Marcie telefon do dostawcy, a salon od rana jest pełny</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">(o 13:40 rozwija zadanie i pisze komentarz zamiast SMS-a) „Dostawca nie odbiera, dzwoniłam 2×. Spróbuję po 16, jak Ania wróci."</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">(w komentarzu, z telefonu) „OK, przesuwam termin na 17:00. Jak dalej nic, zostaw mi numer, zadzwonię jutro rano."</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">(o 16:10, w tym samym wątku) „Dodzwoniłam się — dostawa w środę. Oznaczam zrobione."</div></div>
+          </div>
+          <div class="scenario-result">Trzy osoby, jeden wątek pod jednym zadaniem, zero SMS-ów do szukania. Patrycja wieczorem widzi w „Zlecone przeze mnie", że sprawa zamknięta i kto ją domknął. Gdyby to poszło przez wiadomości, w środę nikt nie pamiętałby, kto obiecał odebrać dostawę.</div>
+        </div>
+      </div>
+
       <h3>Komentarze pod zadaniem</h3>
 
       <div class="scenario">
@@ -1579,6 +1719,20 @@
           </ul>
           <p>Klika "💾 Zapisz Wynik Konsultacji". Wpis pojawia się na liście bieżącego miesiąca.</p>
           <div class="scenario-result">Manager widzi w analizie, że konsultacja Julii zakończyła się pakietem za 1 800 zł. Notatka z wywiadu zostaje przy wpisie na przyszłość.</div>
+        </div>
+      </div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · po konsultacji, pole „Źródło"</span>
+        <h4>Julia wpisuje wynik konsultacji i zatrzymuje się na pytaniu, skąd przyszła klientka</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">Pani Magda mówiła, że widziała nas na Instagramie, ale przyszła, bo koleżanka ją namówiła. Reklama czy polecenie?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Patrycja prosiła, żeby pytać wprost: „co sprawiło, że Pani zadzwoniła?". Jak koleżanka — polecenie. Instagram to było tylko tło.</div></div>
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">A to ma znaczenie?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Duże. Z pola „Źródło" powstaje raport dla firmy od reklam. Jak wpiszemy „reklama" wszędzie, Patrycja zapłaci agencji za klientki, które przyprowadziły koleżanki.</div></div>
+          </div>
+          <div class="scenario-result">Jedno pole, jedno pytanie przy konsultacji, a raport skuteczności reklam mówi prawdę. Julia wpisuje źródło „polecenie", pakiet 6× za 1 800 zł i notatkę z wywiadu. Przy następnej wizycie Pani Magdy każdy w salonie wie, co ustalono.</div>
         </div>
       </div>
 
@@ -2099,6 +2253,20 @@
 
       <p>Kod QR pozostaje jako opcja awaryjna (np. sesja z prywatnego telefonu pracownika) — panel sam podpowie „Bez kodu QR: salon ma sparowany telefon", gdy QR jest zbędny.</p>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „a gdzie te zdjęcia trafiają?"</span>
+        <h4>Pani Ola przed pierwszym zdjęciem „przed" pyta, kto to zobaczy</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Pani Ola:</div><div class="sample-text">Nie chcę, żeby to wylądowało gdzieś w internecie.</div></div>
+            <div class="sample-line"><div class="sample-who">Dominika:</div><div class="sample-text">Zdjęcie idzie z telefonu salonu prosto do Pani karty w naszym systemie — nie zostaje w galerii telefonu, nie idzie na żaden Instagram. Widzą je tylko osoby zalogowane w salonie.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Ola:</div><div class="sample-text">A jeśli kiedyś chcielibyście pokazać efekt?</div></div>
+            <div class="sample-line"><div class="sample-who">Dominika:</div><div class="sample-text">To osobna zgoda, na publikację, i zawsze zapytamy. Dziś podpisuje Pani tylko zgodę na zdjęcie do dokumentacji zabiegu — żeby za miesiąc porównać.</div></div>
+          </div>
+          <div class="scenario-result">Zgoda na fotografowanie i zgoda na publikację to dwie różne rzeczy — i dwie różne rubryki w RODO. Dominika robi zdjęcie sparowanym telefonem, zdjęcie pojawia się w profilu Pani Oli, a recepcja widzi w kartotece plakietkę „brak zgody na publikację". Nikt nie wrzuci go w relację przez pomyłkę.</div>
+        </div>
+      </div>
+
       <h3>Zgoda na fotografowanie (RODO)</h3>
       <p>Zdjęcia sylwetki to dane wrażliwe. Jeśli klientka nie ma w dokumentach podpisanej zgody na fotografię, system pokaże bursztynowe ostrzeżenie przy starcie sesji. Nie blokuje pracy — ale potraktuj to jako sygnał: <strong>najpierw zgoda, potem zdjęcia</strong>. Wzór zgody trzymasz w Dodatkowych dokumentach klientki.</p>
 
@@ -2164,6 +2332,21 @@
           <p>Pani Anna uzbierała punkty i zarezerwowała w apce nagrodę „Serum Vagheggi". Przy wizycie pokazuje Marcie kod z telefonu.</p>
           <p>Marta otwiera <strong>Klub → Do obsłużenia</strong>, znajduje rezerwację z tym kodem i klika „✅ Wydaj". Recepcja ma do tego pełny dostęp — nie trzeba wołać managera.</p>
           <div class="scenario-result">Punkty schodzą z konta dopiero w momencie wydania (wcześniej były tylko zarezerwowane — gdyby klientka anulowała, wróciłyby w całości). Serum wydane, wpis w historii punktów klientki: „Nagroda: Serum Vagheggi −800 pkt".</div>
+        </div>
+      </div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „a co ja z tych punktów mam?"</span>
+        <h4>Pani Kasia przy kasie słyszy o Klubie i pyta konkretnie</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Za każde 10 zł wydane u nas dostaje Pani punkty — u nas cztery za dziesiątkę. Po trzech endermologiach ma Pani maskę gratis, po sześciu — serum, to z polecanych nagród.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Kasia:</div><div class="sample-text">I co, muszę coś pamiętać, nosić kartę?</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Nic. Punkty naliczają się same z każdej wizyty. Pokażę Pani kod QR z Pani karty — skanuje Pani telefonem, ustawia PIN i ma apkę z saldem.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Kasia:</div><div class="sample-text">A jak nie mam teraz czasu?</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">To wyślę link na Pani numer, zrobi Pani w domu w minutę. Dzisiejsza wizyta i tak się policzy, jak tylko konto będzie aktywne.</div></div>
+          </div>
+          <div class="scenario-result">Zdanie z konkretem („po trzech endermologiach maska") działa lepiej niż „zbiera Pani punkty" — przelicznik i nagrody ustawia Wasz salon, więc sprawdź swoje liczby w Klubie → Ustawienia. Ania pokazuje QR z profilu, Pani Kasia skanuje, ustawia PIN — minuta. Od tej chwili recepcja nie robi nic, a Pani Kasia widzi w apce, ile jej brakuje do serum. Gdyby była już w kartotece, a rejestrowała się z linku, apka nie pytałaby o PIN — Ania wysłałaby link aktywacyjny z zakładki „Do obsłużenia".</div>
         </div>
       </div>
 
@@ -2269,6 +2452,21 @@
         <li><strong>Dowód w systemie</strong> — akceptacje trzymane są przy kliencie: data, godzina, adres IP. Przy sporze „nikt mi nie mówił o regulaminie" masz twardy zapis.</li>
         <li><strong>Porządek</strong> — lista wszystkich wygenerowanych linków (z wyszukiwarką) pokazuje komu, kiedy, na ile i czy regulamin został zaakceptowany.</li>
       </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „zapłaciłam, widać?"</span>
+        <h4>Klientka z Instagrama dzwoni dziesięć minut po wpłacie przez link</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Pani Natalia:</div><div class="sample-text">Dzień dobry, zapłaciłam ten zadatek z linku, 100 zł. Czy termin jest już mój?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">(otwiera kafelek Link do płatności → lista linków: wpis „Natalia — 100 zł — regulamin zaakceptowany 11:42 — opłacony")</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Widzę wpłatę i akceptację regulaminu. Wpisuję Pani zadatek do systemu i termin na sobotę 11:00 jest wiążący.</div></div>
+            <div class="sample-line"><div class="sample-who">Pani Natalia:</div><div class="sample-text">A ten regulamin, to co ja właściwie zaakceptowałam?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Zasady odwoływania: do doby przed wizytą zadatek zostaje na koncie, później przepada. Ma Pani to w mailu z potwierdzeniem.</div></div>
+          </div>
+          <div class="scenario-result">Link załatwił płatność i regulamin, ale portfel klientki prowadzi Estelio — dlatego Marta po wpłacie wpisuje zadatek w profilu Pani Natalii (metoda TPay). Gdyby tego nie zrobiła, w sobotę nikt nie wiedziałby, że 100 zł już jest. Akceptacja regulaminu z datą i godziną zostaje przy kliencie na wypadek sporu.</div>
+        </div>
+      </div>
 
       <h3>Dobre nawyki</h3>
       <ul>
@@ -2708,6 +2906,20 @@
         <li>Każdy pracownik ma własne konto. Jeśli ktoś nowy nie ma jeszcze loginu — manager zakłada go w Kreatorze dostępów.</li>
       </ul>
 
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · „daj PIN na sekundę"</span>
+        <h4>Weronika, nowa kosmetolożka, nie ma jeszcze konta i prosi Martę o jej PIN, żeby wpisać sprzedaż</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Weronika:</div><div class="sample-text">Marta, wbij mi swój PIN, tylko wpiszę Panią Lewandowską i oddaję.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Nie mogę, serio. Wszystko, co wpiszesz, będzie w Dzienniku jako moje. Jak się pomylisz w kwocie, Patrycja przyjdzie do mnie.</div></div>
+            <div class="sample-line"><div class="sample-who">Weronika:</div><div class="sample-text">To co mam zrobić?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Podyktuj mi, ja wpiszę i zaznaczę Ciebie jako wykonującą zabieg. A Patrycji powiem, żeby założyła Ci konto dziś — to dwie minuty w Kreatorze dostępów.</div></div>
+          </div>
+          <div class="scenario-result">Marta wpisuje sprzedaż na swoje konto, ale z Weroniką jako sprzedawcą — Weronika ma zabieg w swoich statystykach, a Dziennik mówi prawdę o tym, kto klikał. Wieczorem Weronika ma własny PIN. Pożyczony PIN to nie uprzejmość, to podpisanie się pod cudzą pracą.</div>
+        </div>
+      </div>
+
       <h3>Ekran i wylogowanie</h3>
       <ul>
         <li>Odchodzisz od komputera w recepcji? Wyloguj się (czerwony przycisk u dołu menu) albo zablokuj ekran.</li>
@@ -2751,6 +2963,20 @@
 
       <h3>Dark Mode</h3>
       <p>U dołu lewego menu jest przycisk <strong>"☾ Dark Mode"</strong>. Klik = przełącza na tryb ciemny — przyjemniejszy dla oczu wieczorem, gdy światło w salonie jest już przygaszone. Ustawienie zapamięta się dla Twojej przeglądarki — nie musisz włączać przy każdym logowaniu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · poniedziałek rano, „coś się zmieniło"</span>
+        <h4>Ania: „Patrycja, przycisk w sprzedaży wygląda inaczej i nie działa jak w piątek"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">W sobotę było wdrożenie. Przewiń Pulpit na sam dół — jaka tam jest data przy „Estelio · wersja"?</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Piątek, 10.10, 13:16.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">A powinna być sobotnia. Twoja przeglądarka trzyma stare pliki. Ctrl+F5 i patrz jeszcze raz.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Jest sobota 20:05 i przycisk działa.</div></div>
+          </div>
+          <div class="scenario-result">Dziewięć na dziesięć „dziwnie wygląda po weekendzie" to stara wersja w przeglądarce, nie błąd systemu. Data na dole Pulpitu rozstrzyga to w pięć sekund, zanim ktokolwiek zacznie szukać awarii. Jeśli data jest aktualna, a problem zostaje — wtedy zgłaszasz.</div>
+        </div>
+      </div>
 
       <h3>Hard refresh — gdy coś dziwnie wygląda</h3>
       <p>Czasem po aktualizacji systemu trzeba odświeżyć stronę pełnym przeładowaniem (przeglądarka cache'uje stare pliki):</p>
