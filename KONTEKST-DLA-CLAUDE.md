@@ -796,8 +796,25 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   SQL na zdania; `ostrzezCenyZerowe()` toast dla managera gdy ≥5 i ≥50% usług ma 0 zł; kreator
   `@media ≤560px`. Celowo BEZ banera „trial kończy się za N dni" — `Licencje.data_waznosci` to
   NIE koniec trialu (NOW()+1 mies. przy rejestracji), prawdziwą datę ma Stripe/billing.html.
-  **Następny krok:** pełny test ścieżki kodem `100AK` (zamów → zapłać 0 zł → mail → kreator →
-  logowanie → pierwsza sprzedaż) na telefonie i komputerze. Stare punkty etapu 2 (dla porządku):
+  **Etap 2 na main `c274f08` (2026-10-10).**
+  **AUDYT — DO WYKONANIA DO KOŃCA (decyzja usera 2026-10-10, w tej kolejności):**
+  1. **Test ścieżki kodem `100AK`** (100% rabatu, kod istnieje w `Kody_rabatowe`): zamow.html →
+     płatność 0 zł → mail z linkiem (ważny 30 dni) → kreator → logowanie → pierwsza sprzedaż,
+     na telefonie I komputerze. Wymaga skrzynki usera i prawdziwego Stripe — Claude przygotowuje
+     listę kontrolną, user klika. Po teście: tag datowany.
+  2. **`ENFORCE_SESSION` dla GET** (dziś wyłączone; odczyty z `tenant_id` bez tokenu przechodzą).
+     Najpierw uzupełnić `PUBLIC_PATHS` w `server.js` o ścieżki publiczne biorące tenant_id
+     z query/body bez sesji: `/foto/*` (QR foto przed/po), `/zgoda/*` (tpay/regulamin), `/klub/*`
+     (HMAC), `/blog`, `/kontakt`, `/gus`, `/predef/*`, `/rejestracja/check-login`; potem
+     tryb „loguj naruszenia" przez dzień na prod (`console.warn [SESJA …]`), dopiero potem
+     `ENFORCE_SESSION=true` na Hostingerze. Front już obsługuje 401/403 `code:'SESJA'`
+     (middleware GET zwraca bez `code` — DODAĆ `code:'SESJA'` w `server.js` ~linia 459).
+     Szacunek: pół dnia z testami. Ryzyko: każda strona publiczna z tenant_id w URL.
+  3. **Baner „okres próbny kończy się za N dni"** — `Licencje.data_waznosci` to NIE koniec
+     trialu; uczciwie = przy loginie/verify_pin pobrać `stripe.subscriptions.retrieve(sub_id)`
+     (`trial_end`, `current_period_end`) z cache 1 h, pokazać w istniejącym `pokazBannerPlatnosci`.
+     Niski priorytet, billing.html już to pokazuje.
+  Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
   0 zł w usługach z katalogu, kreator mobilny, SQL w alertach. Stan danych 2026-10-09: 3
