@@ -354,7 +354,8 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 # 10d. STAN NA 2026-10-10 (najnowszy — czytaj najpierw)
 
-**Gałęzie:** `main` = `dev` = `422cae2` (HP). Produkcja: `422cae2`, wdrożone 2026-10-10 20:05, smoke test
+**Gałęzie:** `main` = `dev` = `4333b86` (HP; ostatni commit = scenki w /pomoc/, tylko statyczny HTML + brief).
+Produkcja: `422cae2` wdrożone 2026-10-10 20:05 (`4333b86` wymaga jeszcze `git pull` — bez restartu), smoke test
 19/19 OK, log prod: `[db] połączenie szyfrowane TLS (TLS_AES_256_GCM_SHA384)`. Tag datowany
 `ostatnia-dobra-2026-10-10` JESZCZE NIE założony — dopiero po dniu pracy recepcji (11.10) bez zgłoszeń;
 ostatni tag: `ostatnia-dobra-2026-09-23` → 3c23ac8.
