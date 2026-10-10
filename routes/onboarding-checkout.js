@@ -23,9 +23,11 @@ function q(db, sql, params) {
   return new Promise((resolve, reject) => db.query(sql, params, (err, r) => (err ? reject(err) : resolve(r))));
 }
 
-async function obsluzCheckoutCompleted({ db, session, trialDni, mailer, wystawFakture, powiadomAdminaOZakupie, log = console }) {
+async function obsluzCheckoutCompleted({ db, session, trialDni, cenaGrosze, mailer, wystawFakture, powiadomAdminaOZakupie, log = console }) {
   const meta = (session && session.metadata) || {};
   const { zamowienie_id, imie, nazwa_salonu, email } = meta;
+  // Kwota faktycznie pobrana dziś (0 przy trialu / kodzie 100%) — używana w mailu z linkiem i przy fakturze
+  const kwota = parseInt(session.amount_total, 10) || 0;
   const stripeCustomerId = session.customer || null;
   const stripeSubscriptionId = session.subscription || null;
 
@@ -64,7 +66,11 @@ async function obsluzCheckoutCompleted({ db, session, trialDni, mailer, wystawFa
   // 4. Mail z linkiem — status zamówienia DOPIERO po wyniku wysyłki
   let mailOk = false;
   try {
-    await mailer.wyslijLinkRejestracji({ email, imie, token, nazwa_salonu, dniWaznosci: dni });
+    await mailer.wyslijLinkRejestracji({
+      email, imie, token, nazwa_salonu, dniWaznosci: dni,
+      // Warunki zakupu w mailu (jedyne potwierdzenie przy trialu — faktury za 0 zł nie ma)
+      warunki: { kwota_grosze: kwota, cena_grosze: cenaGrosze, trial_dni: trialDni, voucher },
+    });
     mailOk = true;
     log.log(`[onboarding] Link rejestracyjny wysłany do: ${email} (ważny ${dni} dni)`);
   } catch (mailErr) {
@@ -76,7 +82,6 @@ async function obsluzCheckoutCompleted({ db, session, trialDni, mailer, wystawFa
   }
 
   // 5. Faktura — tylko gdy faktycznie pobrano pieniądze
-  const kwota = parseInt(session.amount_total, 10) || 0;
   let faktura = 'pominieta';
   if (kwota > 0) {
     try {

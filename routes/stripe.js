@@ -337,7 +337,7 @@ module.exports = (db) => {
       // dopiero po udanej wysyłce ('blad_maila' gdy SMTP padnie), faktura tylko gdy kwota > 0.
       try {
         const wynik = await obsluzCheckoutCompleted({
-          db, session: event.data.object, trialDni: DEFAULT_TRIAL_DNI(),
+          db, session: event.data.object, trialDni: DEFAULT_TRIAL_DNI(), cenaGrosze: CENA_GROSZE(),
           mailer: { wyslijLinkRejestracji }, wystawFakture, powiadomAdminaOZakupie,
         });
         console.log('[stripe webhook] checkout.session.completed →', JSON.stringify(wynik));

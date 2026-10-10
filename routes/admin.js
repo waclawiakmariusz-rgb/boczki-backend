@@ -465,7 +465,19 @@ module.exports = (db) => {
     if (!token || !email) return res.json({ status: 'error', message: 'Brak tokenu lub emaila.' });
 
     try {
-      await wyslijLinkRejestracji({ email, imie, token, nazwa_salonu });
+      // 2026-10-10: ważność w treści maila = REALNA ważność tokenu (webhook daje 30+ dni, a mail
+      // bez tego parametru mówił „7 dni" — klient mógł uznać link za martwy). Gdy nie da się
+      // odczytać, mail idzie bez liczby dni (domyślne 7 w mailerze) — wysyłka nigdy nie jest blokowana.
+      let dniWaznosci;
+      try {
+        const rows = await new Promise((resolve, reject) =>
+          db.query(`SELECT data_wygasniecia FROM Tokeny_rejestracji WHERE token=? LIMIT 1`, [token], (e, r) => (e ? reject(e) : resolve(r))));
+        const wygasa = rows && rows[0] && rows[0].data_wygasniecia ? new Date(rows[0].data_wygasniecia) : null;
+        if (wygasa && !isNaN(wygasa)) dniWaznosci = Math.max(1, Math.ceil((wygasa - Date.now()) / (24 * 60 * 60 * 1000)));
+      } catch (e) {
+        console.warn('[admin] wyslij_link: nie odczytano ważności tokenu —', e.message);
+      }
+      await wyslijLinkRejestracji({ email, imie, token, nazwa_salonu, dniWaznosci });
 
       // Jeśli to zgłoszenie — aktualizuj status
       if (zamowienie_id) {

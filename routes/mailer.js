@@ -30,6 +30,40 @@ const FROM        = () => `"Estelio" <${stripQuotes(process.env.SMTP_USER)}>`;
 const ADMIN_EMAIL = () => stripQuotes(process.env.ADMIN_EMAIL) || stripQuotes(process.env.SMTP_USER);
 const APP_URL     = () => stripQuotes(process.env.APP_URL || 'https://estelio.com.pl').replace(/\/$/, '');
 
+// 2026-10-10: wersja tekstowa każdego maila (nodemailer `text`) — klienci pocztowi bez HTML i filtry
+// antyspamowe (brak części text/plain podnosi punktację spamu). Prosta konwersja: przyciski i linki
+// zostają jako adresy, reszta tagów wylatuje.
+function htmlDoTekstu(html) {
+  return String(html || '')
+    .replace(/<style[\s\S]*?<\/style>/gi, '')
+    .replace(/<a\s[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (m, href, txt) => {
+      const t = txt.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      const adres = href.replace(/^mailto:/i, '');
+      return t && t !== adres ? `${t}: ${adres}` : adres;
+    })
+    .replace(/<(br|\/p|\/div|\/li|\/tr|\/h[1-6])[^>]*>/gi, '\n')
+    .replace(/<li[^>]*>/gi, '• ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+    .split('\n').map(l => l.replace(/\s+/g, ' ').trim()).join('\n')
+    .replace(/\n{3,}/g, '\n\n').trim();
+}
+
+// Wspólne pola maili do KLIENTA: odpowiedź trafia na skrzynkę kontaktową, zawsze jest część tekstowa.
+function mailDoKlienta({ to, subject, html }) {
+  return { from: FROM(), to, replyTo: ADMIN_EMAIL(), subject, html, text: htmlDoTekstu(html) };
+}
+
+// Blok kontaktowy powtarzany na końcu maili do klienta.
+function blokKontakt() {
+  return `
+      <p style="font-size:12px; color:#a89e96; line-height:1.7; margin-top:16px;">
+        Masz pytanie? Odpisz na tę wiadomość albo napisz na
+        <a href="mailto:${ADMIN_EMAIL()}" style="color:#b87080; text-decoration:none;">${ADMIN_EMAIL()}</a>
+        — odpowiada człowiek, nie automat.
+      </p>`;
+}
+
 // Paleta Estelio
 // --dark:   #1c1a18   (header tło)
 // --dark2:  #2a2420   (header gradient)
@@ -83,6 +117,11 @@ function emailWrapper(icon, tytul, podtytul, tresc) {
     <!-- Footer -->
     <div style="background:#f4efe6; border-top:1px solid #ede6d8; padding:18px 40px; text-align:center;">
       <p style="font-size:11px; color:#a89e96; margin:0;">© Estelio · System zarządzania salonem beauty</p>
+      <p style="font-size:11px; color:#a89e96; margin:6px 0 0;">
+        <a href="${APP_URL()}" style="color:#a89e96; text-decoration:none;">${APP_URL().replace(/^https?:\/\//, '')}</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:${ADMIN_EMAIL()}" style="color:#a89e96; text-decoration:none;">${ADMIN_EMAIL()}</a>
+      </p>
     </div>
 
   </div>
@@ -91,41 +130,84 @@ function emailWrapper(icon, tytul, podtytul, tresc) {
 }
 
 // ─── Wyślij link rejestracyjny do klienta ────────────────────
-async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu, dniWaznosci }) {
+// `warunki` (opcjonalne, z webhooka Stripe): { kwota_grosze, cena_grosze, trial_dni, voucher } —
+// mail jest jedynym potwierdzeniem zakupu przy trialu (faktury za 0 zł nie ma), więc mówi wprost,
+// ile pobrano dziś, co dalej z opłatą i że można zrezygnować. Bez `warunki` (link z panelu admina)
+// blok warunków jest pomijany — nie zgadujemy.
+async function wyslijLinkRejestracji({ email, imie, token, nazwa_salonu, dniWaznosci, warunki }) {
   const link = `${APP_URL()}/rejestracja.html?token=${token}`;
   // Ważność w treści maila = faktyczna ważność tokenu (webhook: trial+7, min. 30; admin: wybrana)
   const dni = parseInt(dniWaznosci, 10) > 0 ? parseInt(dniWaznosci, 10) : 7;
   const transport = createTransport();
 
-  await transport.sendMail({
-    from: FROM(),
-    to: email,
-    subject: 'Twój link rejestracyjny — Estelio',
-    html: emailWrapper('✨', 'Estelio', 'System zarządzania salonem', `
+  let blokWarunki = '';
+  if (warunki && typeof warunki === 'object') {
+    const kwota = parseInt(warunki.kwota_grosze, 10);
+    const cena = parseInt(warunki.cena_grosze, 10);
+    const trial = parseInt(warunki.trial_dni, 10);
+    const zl = (g) => (g / 100).toFixed(2).replace('.', ',').replace(/,00$/, '') + ' zł';
+    const voucher = String(warunki.voucher || '').trim();
+    let opis;
+    if (Number.isFinite(kwota) && kwota > 0) {
+      opis = `Pobraliśmy dziś <strong style="color:#1c1a18;">${zl(kwota)}</strong>${voucher ? ` (kod <strong>${voucher}</strong>)` : ''}. Faktura przyjdzie osobnym mailem.`
+        + (Number.isFinite(cena) && cena > 0 ? ` Kolejne opłaty: ${zl(cena)} miesięcznie, pobierane automatycznie.` : '');
+    } else if (voucher) {
+      opis = `Dziś <strong style="color:#1c1a18;">0 zł</strong> — korzystasz z okresu próbnego z kodu <strong>${voucher}</strong>.`
+        + (Number.isFinite(cena) && cena > 0 ? ` Po jego zakończeniu abonament ${zl(cena)} miesięcznie pobierze się automatycznie z zapisanej karty.` : '');
+    } else {
+      opis = `Dziś <strong style="color:#1c1a18;">0 zł</strong> — pierwsze ${Number.isFinite(trial) && trial > 0 ? trial : 14} dni masz za darmo.`
+        + (Number.isFinite(cena) && cena > 0 ? ` Potem abonament ${zl(cena)} miesięcznie pobierze się automatycznie z zapisanej karty.` : '');
+    }
+    blokWarunki = `
+      <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <p style="font-size:12px; font-weight:700; color:#c9a96e; margin:0 0 5px; text-transform:uppercase; letter-spacing:0.5px;">Twoje warunki</p>
+        <p style="font-size:13px; color:#5c5046; margin:0; line-height:1.7;">
+          ${opis} Zrezygnować możesz w każdej chwili w panelu rozliczeniowym — bez umowy na czas określony.
+        </p>
+      </div>`;
+  }
+
+  const html = emailWrapper('✨', 'Estelio', 'System zarządzania salonem', `
       <p style="font-size:16px; font-weight:700; color:#1c1a18; margin-bottom:8px;">Cześć${imie ? ' ' + imie : ''}! 👋</p>
-      <p style="font-size:14px; color:#7a6e66; line-height:1.8; margin-bottom:24px;">
-        Dziękujemy za wybór systemu <strong style="color:#1c1a18;">Estelio</strong>.
-        Kliknij poniższy przycisk, aby założyć profil swojego salonu
-        ${nazwa_salonu ? `<strong style="color:#1c1a18;">${nazwa_salonu}</strong>` : ''}.
+      <p style="font-size:14px; color:#7a6e66; line-height:1.8; margin-bottom:20px;">
+        Dziękujemy za wybór <strong style="color:#1c1a18;">Estelio</strong>. Został jeden krok:
+        załóż profil salonu${nazwa_salonu ? ` <strong style="color:#1c1a18;">${nazwa_salonu}</strong>` : ''}.
+        Kreator prowadzi za rękę i zajmuje około 5 minut — dane z zamówienia są już wpisane.
       </p>
       ${emailBtn(link, 'Załóż profil salonu →')}
       <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
         <p style="font-size:11px; color:#a89e96; margin:0 0 4px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Lub skopiuj link ręcznie</p>
         <p style="font-size:11px; color:#5c5046; word-break:break-all; margin:0; font-family:monospace;">${link}</p>
       </div>
+      ${blokWarunki}
+      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin-bottom:16px;">
+        <p style="font-size:12px; font-weight:700; color:#1c1a18; margin:0 0 8px;">Co Cię czeka w kreatorze</p>
+        <ol style="font-size:13px; color:#7a6e66; margin:0; padding-left:18px; line-height:1.9;">
+          <li>Dane salonu i Twój login z hasłem</li>
+          <li>Pracownicy z 4-cyfrowymi PIN-ami (Ty jako Manager)</li>
+          <li>Usługi — z gotowego katalogu albo własne</li>
+          <li>Gotowe: logujesz się i zaczynasz pracę</li>
+        </ol>
+      </div>
       <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px; margin-bottom:20px;">
         <p style="font-size:12px; font-weight:700; color:#c9a96e; margin:0 0 5px; text-transform:uppercase; letter-spacing:0.5px;">Panel rozliczeniowy</p>
         <p style="font-size:12px; color:#7a6e66; margin:0; line-height:1.7;">
-          Po założeniu profilu znajdziesz faktury i historię płatności pod adresem
+          Faktury, abonament i kartę znajdziesz po rejestracji pod adresem
           <a href="${APP_URL()}/billing.html" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/billing.html</a> — logujesz się tymi samymi danymi co do systemu.
         </p>
       </div>
       <p style="font-size:12px; color:#a89e96; line-height:1.7;">
-        ⚠️ Ten link jest jednorazowy i wygaśnie po ${dni} dniach.<br>
-        Jeśli nie rejestrowałeś/-aś salonu, zignoruj tę wiadomość.
+        ⚠️ Link jest jednorazowy i ważny przez ${dni} dni (do rejestracji wystarczy raz).<br>
+        Jeśli to nie Ty zamawiałaś/-eś Estelio, zignoruj tę wiadomość — nic się nie stanie.
       </p>
-    `)
-  });
+      ${blokKontakt()}
+    `);
+
+  await transport.sendMail(mailDoKlienta({
+    to: email,
+    subject: nazwa_salonu ? `Załóż profil salonu ${nazwa_salonu} — Twój link do Estelio` : 'Twój link rejestracyjny — Estelio',
+    html,
+  }));
 }
 
 // ─── Powiadomienie admina o nowym zgłoszeniu ──────────────────
@@ -156,8 +238,7 @@ async function wyslijResetHasla({ email, login, token }) {
   const link = `${APP_URL()}/reset-hasla.html?token=${token}`;
   const transport = createTransport();
 
-  await transport.sendMail({
-    from: FROM(),
+  await transport.sendMail(mailDoKlienta({
     to: email,
     subject: 'Reset hasła — Estelio',
     html: emailWrapper('🔑', 'Estelio', 'Reset hasła', `
@@ -175,8 +256,9 @@ async function wyslijResetHasla({ email, login, token }) {
         ⏱ Link jest ważny przez <strong style="color:#7a6e66;">1 godzinę</strong>.<br>
         Jeśli to nie Ty wysłałeś/-aś tę prośbę — zignoruj wiadomość. Hasło pozostanie bez zmian.
       </p>
+      ${blokKontakt()}
     `)
-  });
+  }));
 }
 
 // ─── Welcome email po zakończeniu rejestracji ────────────────
@@ -187,17 +269,16 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login }) {
   const link = `${APP_URL()}/zaloguj`;
   const transport = createTransport();
 
-  await transport.sendMail({
-    from: FROM(),
+  await transport.sendMail(mailDoKlienta({
     to: email,
-    subject: `Witaj w Estelio — Twój salon jest gotowy! 🎉`,
+    subject: `Witaj w Estelio — salon ${nazwa_salonu || ''} jest gotowy! 🎉`.replace('  ', ' '),
     html: emailWrapper('🎉', 'Estelio', 'System zarządzania salonem', `
       <p style="font-size:16px; font-weight:700; color:#1c1a18; margin-bottom:8px;">
         Witaj${imie ? ' ' + imie : ''}! 🎀
       </p>
       <p style="font-size:14px; color:#7a6e66; line-height:1.8; margin-bottom:20px;">
-        Salon <strong style="color:#1c1a18;">${nazwa_salonu}</strong> został pomyślnie zarejestrowany w systemie Estelio.
-        Poniżej znajdziesz swoje dane do logowania — zachowaj je w bezpiecznym miejscu.
+        Salon <strong style="color:#1c1a18;">${nazwa_salonu}</strong> jest zarejestrowany w Estelio — pracownicy
+        z PIN-ami i usługi z kreatora już czekają. Poniżej login (hasła nie wysyłamy — ustawiłaś/-eś je w kreatorze).
       </p>
 
       <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:12px; padding:20px 24px; margin-bottom:24px;">
@@ -220,12 +301,23 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login }) {
       ${emailBtn(link, 'Przejdź do systemu →')}
 
       <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:16px 18px; margin-bottom:8px;">
-        <p style="font-size:12px; font-weight:700; color:#1c1a18; margin:0 0 8px;">Co dalej?</p>
-        <ul style="font-size:13px; color:#7a6e66; margin:0; padding-left:18px; line-height:1.9;">
-          <li>Zaloguj się i uzupełnij listę pracowników</li>
-          <li>Dodaj zabiegi i ceny usług</li>
-          <li>Zarejestruj pierwszych klientów</li>
-        </ul>
+        <p style="font-size:12px; font-weight:700; color:#1c1a18; margin:0 0 8px;">Pierwsze 15 minut — od tego warto zacząć</p>
+        <ol style="font-size:13px; color:#7a6e66; margin:0; padding-left:18px; line-height:1.9;">
+          <li><strong style="color:#1c1a18;">Zaloguj się</strong> loginem i hasłem, potem wybierz siebie z listy i wpisz swój PIN. Działa na komputerze i na telefonie — PIN jest osobisty, login wspólny dla salonu.</li>
+          <li><strong style="color:#1c1a18;">Wpisz ceny usług</strong> — pozycje wybrane z katalogu mają na start 0 zł. Administracja → Zabiegi, ołówek przy pozycji.</li>
+          <li><strong style="color:#1c1a18;">Dodaj pierwszą klientkę i pierwszą sprzedaż</strong> — Klienci → Nowy klient, potem Sprzedaż. Reszta (zadatki, karnety, magazyn) przyjdzie sama.</li>
+          <li><strong style="color:#1c1a18;">Masz pytanie w trakcie pracy?</strong> Kliknij różowy dymek Esti w prawym dolnym rogu i zapytaj własnymi słowami — odpowiada z przewodnika.</li>
+        </ol>
+      </div>
+
+      <div style="background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:14px 18px; margin:8px 0;">
+        <p style="font-size:12px; font-weight:700; color:#1c1a18; margin:0 0 6px;">Przewodniki — do przeczytania przy kawie</p>
+        <p style="font-size:13px; color:#7a6e66; margin:0; line-height:1.8;">
+          📖 Dla recepcji i kosmetologów, krok po kroku ze scenkami z salonu:
+          <a href="${APP_URL()}/pomoc/" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/pomoc/</a><br>
+          👑 Dla Ciebie jako managerki/właścicielki — liczby, kontrola, decyzje:
+          <a href="${APP_URL()}/pomoc-manager/" style="color:#b87080; text-decoration:none; font-weight:600;">${APP_URL()}/pomoc-manager/</a>
+        </p>
       </div>
 
       <div style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px; margin-top:8px;">
@@ -237,22 +329,18 @@ async function wyslijWitamy({ email, imie, nazwa_salonu, login }) {
         </p>
       </div>
 
-      <p style="font-size:12px; color:#a89e96; line-height:1.7; margin-top:16px;">
-        Masz pytania? Odpisz na tego maila lub napisz na
-        <a href="mailto:${ADMIN_EMAIL()}" style="color:#b87080; text-decoration:none;">${ADMIN_EMAIL()}</a>.
-      </p>
+      ${blokKontakt()}
     `)
-  });
+  }));
 }
 
 // ─── Potwierdzenie przyjęcia zgłoszenia (zamow.html) ─────────
 async function wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu }) {
   const transport = createTransport();
 
-  await transport.sendMail({
-    from: FROM(),
+  await transport.sendMail(mailDoKlienta({
     to: email,
-    subject: `Otrzymaliśmy Twoje zgłoszenie — Estelio`,
+    subject: `Otrzymaliśmy Twoje zgłoszenie${nazwa_salonu ? ` — ${nazwa_salonu}` : ''} — Estelio`,
     html: emailWrapper('📬', 'Estelio', 'Potwierdzenie zgłoszenia', `
       <p style="font-size:16px; font-weight:700; color:#1c1a18; margin-bottom:8px;">
         Cześć${imie ? ' ' + imie : ''}! 👋
@@ -269,12 +357,9 @@ async function wyslijPotwierdzeniZgloszenia({ email, imie, nazwa_salonu }) {
         </p>
       </div>
 
-      <p style="font-size:13px; color:#7a6e66; line-height:1.8;">
-        Jeśli masz pytania — odpisz na tego maila lub skontaktuj się pod adresem
-        <a href="mailto:${ADMIN_EMAIL()}" style="color:#b87080; text-decoration:none;">${ADMIN_EMAIL()}</a>.
-      </p>
+      ${blokKontakt()}
     `)
-  });
+  }));
 }
 
 // ─── Wiadomość z formularza kontaktowego ─────────────────────
@@ -307,15 +392,14 @@ async function wyslijOstrzezenieOPlatnosci({ email, nazwa_salonu, data_grace_unt
   const dataStr = data_grace_until
     ? new Date(data_grace_until).toLocaleDateString('pl-PL')
     : 'wkrótce';
-  return transporter.sendMail({
-    from: FROM(),
+  return transporter.sendMail(mailDoKlienta({
     to: email,
-    subject: '⚠️ Nieudana płatność — Estelio',
+    subject: `⚠️ Nie udało się pobrać opłaty za Estelio${nazwa_salonu ? ` — ${nazwa_salonu}` : ''}`,
     html: emailWrapper('💳', 'Problem z płatnością', 'Subskrypcja Estelio', `
-      <h2 style="margin:0 0 14px; font-size:20px; color:#1c1a18;">Witaj!</h2>
+      <h2 style="margin:0 0 14px; font-size:20px; color:#1c1a18;">Dzień dobry${nazwa_salonu ? `, ${nazwa_salonu}` : ''}!</h2>
       <p style="font-size:14px; color:#2c2420; line-height:1.7;">
-        Stripe nie był w stanie pobrać miesięcznej opłaty za salon
-        <strong>${nazwa_salonu || 'Twój salon'}</strong>. Najczęstsze przyczyny:
+        Nie udało się pobrać miesięcznej opłaty za Estelio z zapisanej karty. Nic się nie stało —
+        to zwykle jedna z trzech rzeczy:
       </p>
       <ul style="font-size:14px; color:#2c2420; line-height:1.8; padding-left:18px;">
         <li>Wygasła karta płatnicza</li>
@@ -328,15 +412,14 @@ async function wyslijOstrzezenieOPlatnosci({ email, nazwa_salonu, data_grace_unt
         opłacenia subskrypcji.
       </p>
       <p style="font-size:14px; color:#2c2420; line-height:1.7;">
-        Aby ponowić płatność: zaloguj się do panelu rozliczeniowego (link który wysłaliśmy
-        po rejestracji) i zaktualizuj kartę. Stripe automatycznie ponowi próbę.
+        Co zrobić: otwórz panel rozliczeniowy (logujesz się tym samym loginem i hasłem co do systemu,
+        bez PIN-u), kliknij „Zarządzaj płatnością" i podaj nową kartę. Opłata pobierze się sama,
+        a dostęp pozostanie bez przerwy.
       </p>
       ${emailBtn(`${APP_URL()}/billing.html`, 'Otwórz panel rozliczeniowy →')}
-      <p style="font-size:13px; color:#7a6e66; margin-top:24px;">
-        Pytania? Odpisz na ten email lub napisz na <a href="mailto:kontakt@estelio.com.pl" style="color:#b87080;">kontakt@estelio.com.pl</a>.
-      </p>
+      ${blokKontakt()}
     `)
-  });
+  }));
 }
 
 // ─── Powiadom admina o nieudanej płatności klienta ────────────
