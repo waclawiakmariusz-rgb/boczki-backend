@@ -865,7 +865,7 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   nazwie salonu; wszystkie maile do klienta: text/plain + Reply-To ADMIN_EMAIL + stopka; fix:
   „Wyślij ponownie ten sam link" podawał „7 dni" zamiast realnej ważności tokenu (admin.js czyta
   `data_wygasniecia`). Testy: `tests/mailer.test.js` (nodemailer zmockowany; render do HTML:
-  scratchpad `render-maile.js`). (2) przypomnienia (`routes/przypomnienia.js`, `dev`): raz dziennie
+  scratchpad `render-maile.js`). (2) przypomnienia (`routes/przypomnienia.js`, NA MAIN `a013357`, wdrożone 2026-10-10 19:04, smoke test OK 19/19): raz dziennie
   po godz. 7 czasu serwera (UTC → ~9 PL), reguły link_3 / link_10 (zakup opłacony, token `nowy`,
   okna 3–9 i 10–20 dni) i salon_3 (licencja aktywna, 0 wierszy w `Sesje`, okno 3–10 dni, bez demo).
   Własna tabela `Przypomnienia_wyslane` UNIQUE(typ, klucz), claim INSERT IGNORE PRZED wysyłką
