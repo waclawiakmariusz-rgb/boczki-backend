@@ -859,6 +859,26 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   Strona jest publiczna jak /pomoc/ (bez danych wrażliwych) — ochrona to tylko ukrycie linku.
   (c) W /pomoc/ tabela RBAC: Klub dla Managera ✓ (zgodnie z `loj_admin()`/`ROLE_KLUB` od 2026-10-09).
   Przy nowych funkcjach aktualizować OBA przewodniki (pracownik: procedura; manager: kontrola/decyzja).
+- **22. MAILE DO NOWYCH KLIENTÓW — etap 1 i 2 (2026-10-10)** — (1) treść (`fa09ff1`, NA MAIN):
+  link rejestracyjny z blokiem „Twoje warunki" (0 zł/trial/kwota+kod/cena) z webhooka, mail
+  powitalny z „pierwsze 15 minut" i linkami do /pomoc/ + /pomoc-manager/, nieudana płatność po
+  nazwie salonu; wszystkie maile do klienta: text/plain + Reply-To ADMIN_EMAIL + stopka; fix:
+  „Wyślij ponownie ten sam link" podawał „7 dni" zamiast realnej ważności tokenu (admin.js czyta
+  `data_wygasniecia`). Testy: `tests/mailer.test.js` (nodemailer zmockowany; render do HTML:
+  scratchpad `render-maile.js`). (2) przypomnienia (`routes/przypomnienia.js`, `dev`): raz dziennie
+  po godz. 7 czasu serwera (UTC → ~9 PL), reguły link_3 / link_10 (zakup opłacony, token `nowy`,
+  okna 3–9 i 10–20 dni) i salon_3 (licencja aktywna, 0 wierszy w `Sesje`, okno 3–10 dni, bez demo).
+  Własna tabela `Przypomnienia_wyslane` UNIQUE(typ, klucz), claim INSERT IGNORE PRZED wysyłką
+  (2 instancje na wspólnej bazie = 1 mail), DELETE claimu przy błędzie SMTP, cutoff `2026-10-10`,
+  BCC do ADMIN_EMAIL. **Env `PRZYPOMNIENIA`: off | proba (DOMYŚLNIE: tylko log „wysłałbym") | on.**
+  Procedura włączenia: wdrożyć → dzień-dwa czytać log `[przypomnienia] PRÓBA — wysłałbym …` →
+  `PRZYPOMNIENIA=on` na Hostingerze (bez apostrofów) + restart. Linki generowane ręcznie w zakładce
+  Linki NIE mają zapisanego e-maila → bez przypomnień (świadoma decyzja, bez zmiany schematu).
+  Pułapka znaleziona w trybie próbnym: `Sesje.tenant_id` ma kolację utf8mb4_uca1400_ai_ci (nowy
+  domyślny MariaDB), reszta utf8mb4_unicode_ci → porównania między tymi tabelami wymagają
+  jawnego `COLLATE`; nowe tabele tworzyć z `DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`.
+  Trial: przypomnienie Stripe-hosted (7 dni przed) włącza się w dashboard.stripe.com/settings/
+  billing/automatic („Link to a Stripe-hosted page"); webhook `trial_will_end` (3 dni) nieobsługiwany.
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach
