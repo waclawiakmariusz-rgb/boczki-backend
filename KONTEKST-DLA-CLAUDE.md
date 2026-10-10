@@ -879,6 +879,16 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   jawnego `COLLATE`; nowe tabele tworzyć z `DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`.
   Trial: przypomnienie Stripe-hosted (7 dni przed) włącza się w dashboard.stripe.com/settings/
   billing/automatic („Link to a Stripe-hosted page"); webhook `trial_will_end` (3 dni) nieobsługiwany.
+- **23. TLS DO BAZY (2026-10-10, `dev`)** — `server.js` dbConfig.ssl sterowane env `DB_SSL`: on (DOMYŚLNIE,
+  szyfrowanie bez weryfikacji CA) | strict (z weryfikacją; z laptopa działa) | off (wyłącznik awaryjny).
+  Po starcie log `[db] połączenie szyfrowane TLS (…)` albo `[db] UWAGA: … NIE jest szyfrowane`.
+  Powód: konto bazy @% + połączenie jawnym tekstem z laptopa dev przez internet (Ssl_cipher pusty).
+  Sprawdzone lokalnie we wszystkich 3 trybach (login przez pulę OK). Wdrożenie: po godzinach, user
+  przy klawiaturze; jeśli po restarcie `Błąd połączenia z bazą` → `DB_SSL=off` na Hostingerze + restart.
+  Jeszcze bez TLS: jednorazowe `scripts/*.js` i migratory (własne createConnection) — uruchamiane rzadko,
+  z laptopa; do ujednolicenia przy okazji. Z listy bezpieczeństwa (2026-10-10) user wybrał TYLKO ten punkt;
+  odłożone: allowlista Remote MySQL w hPanel, npm audit fix, limity per konto, ENFORCE_SESSION GET,
+  test odtworzenia backupu, skaner claude-security, 2FA admin.html, osobne konto DB.
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach

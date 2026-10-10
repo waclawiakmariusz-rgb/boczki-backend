@@ -308,6 +308,17 @@ if (process.env.DB_SOCKET) {
     dbConfig.socketPath = process.env.DB_SOCKET;
 } else {
     dbConfig.host = env('DB_HOST');
+    // 2026-10-10: szyfrowane połączenie z bazą (TLS). Do tej pory hasło i dane klientek szły jawnym
+    // tekstem — na Hostingerze wewnątrz jednej maszyny, ale z laptopa dev przez publiczny internet.
+    // Serwer bazy (MariaDB 11.8) obsługuje TLS 1.3 — sprawdzone z laptopa w obu trybach.
+    //   DB_SSL=on      (DOMYŚLNIE) szyfrowanie bez weryfikacji certyfikatu — chroni przed podsłuchem,
+    //                  działa niezależnie od tego, pod jaką nazwą hosta baza jest widziana na prod
+    //   DB_SSL=strict  szyfrowanie + weryfikacja certyfikatu (nazwa hosta musi pasować do certyfikatu)
+    //   DB_SSL=off     wyłącznik awaryjny (bez apostrofów na Hostingerze) — zachowanie sprzed zmiany
+    const dbSsl = String(env('DB_SSL') || 'on').trim().toLowerCase();
+    if (dbSsl !== 'off') {
+        dbConfig.ssl = { rejectUnauthorized: dbSsl === 'strict', minVersion: 'TLSv1.2' };
+    }
 }
 const db = mysql.createPool(dbConfig);
 
@@ -322,7 +333,13 @@ db.getConnection((err, connection) => {
         console.error('Błąd połączenia z bazą danych:', err.message);
     } else {
         console.log('SUKCES! Połączono z bazą danych MySQL!');
-        connection.release();
+        // Stan szyfrowania widoczny w logu po każdym starcie — żeby „TLS włączony" dało się
+        // sprawdzić na prod bez zgadywania (pusty Ssl_cipher = połączenie jawnym tekstem).
+        connection.query("SHOW STATUS LIKE 'Ssl_cipher'", (e, rows) => {
+            const cipher = !e && rows && rows[0] && rows[0].Value;
+            console.log(cipher ? `[db] połączenie szyfrowane TLS (${cipher})` : '[db] UWAGA: połączenie z bazą NIE jest szyfrowane');
+            connection.release();
+        });
     }
 });
 
