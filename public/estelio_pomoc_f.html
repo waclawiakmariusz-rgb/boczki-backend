@@ -282,8 +282,8 @@
       <p>Wszystko, co musisz wiedzieć żeby sprawnie pracować w salonie. Z prawdziwymi sytuacjami, dialogami z klientkami, konkretnymi krokami. Po przeczytaniu nie będziesz miała wątpliwości "jak to się robi" w żadnej sekcji systemu — od logowania, przez sprzedaż, zwroty i magazyn, aż po administrację, dodatki Estelio+, analizę wyników i rozliczenia salonu.</p>
       <div class="hero-meta">
         <div class="hero-meta-item"><strong>37</strong><span>Modułów</span></div>
-        <div class="hero-meta-item"><strong>120+</strong><span>Scenariuszy</span></div>
-        <div class="hero-meta-item"><strong>85 min</strong><span>Czasu czytania</span></div>
+        <div class="hero-meta-item"><strong>130+</strong><span>Scenariuszy</span></div>
+        <div class="hero-meta-item"><strong>95 min</strong><span>Czasu czytania</span></div>
       </div>
     </div>
 
@@ -418,6 +418,9 @@
       </ul>
 
       <div class="tip"><strong>💡 Praktyka:</strong> trenuj w sobie odruch "po zalogowaniu — Pulpit". Pulpit jest punktem kontroli — cokolwiek robisz, zaczynaj od niego, żeby wyłapać alerty zanim klientka cię o coś poprosi.</div>
+    
+      <h3>Napis „Estelio · wersja …" na samym dole Pulpitu</h3>
+      <p>Na dole Pulpitu (tylko tam) jest drobny szary napis z datą i godziną ostatniego wdrożenia. Po co? Gdy dzwonisz z problemem, osoba po drugiej stronie poprosi: „odczytaj mi wersję z dołu Pulpitu". Jeśli data jest starsza niż ostatnie wdrożenie, Twoja przeglądarka trzyma stare pliki — wystarczy <code>Ctrl + F5</code> (pełne odświeżenie) i problem zwykle znika, zanim ktokolwiek zacznie go szukać.</p>
     </section>
 
     <!-- SPRZEDAŻ -->
@@ -531,6 +534,10 @@
       <p>Wszystkie edycje są <strong>logowane</strong> — manager widzi w "Dzienniku zdarzeń" co kto poprawił. Nie bój się robić korekt — lepiej skorygować niż zostawić błąd.</p>
 
       <div class="tip"><strong>💡 Złota zasada:</strong> jeśli nie jesteś pewna jak wpisać sprzedaż (np. dziwna kombinacja płatności), wpisz najpierw bezpiecznie najprostszą wersję, potem skoryguj. Lepiej mieć poprawioną sprzedaż niż w ogóle żadnej.</div>
+    
+      <h3 style="margin-top:32px;">Historia sprzedaży — szukaj po wszystkim, także po komentarzu</h3>
+      <p>W <strong>Sprzedaż → Historia</strong> jedna wyszukiwarka przeszukuje naraz klientkę, zabieg lub produkt, sprzedawcę <strong>i treść komentarza</strong>. Pod polem pojawia się licznik „Znaleziono: X", więc od razu wiesz, czy trafiłaś. Komentarz to dobre miejsce na słowa-klucze, po których potem łatwo coś odnaleźć: „promo wrzesień", „reklamacja", „bon urodzinowy".</p>
+      <div class="tip"><strong>💡 Okno edycji sprzedaży</strong> zamkniesz klawiszem <code>Esc</code> albo kliknięciem obok okna. Na małych ekranach okno nigdy nie wychodzi poza ekran — jeśli jest długie, przewija się wewnątrz, a przyciski „Zapisz" i „Anuluj" są zawsze dostępne.</div>
     </section>
 
     <!-- ZADATKI -->
@@ -586,7 +593,7 @@
         </div>
       </div>
 
-      <p>Można też sprawdzić w <strong>Sprzedaż → Spis zadatków</strong> — lista wszystkich aktywnych portfeli, ułożona po klientach lub kwocie.</p>
+      <p>Można też sprawdzić w <strong>Sprzedaż → Spis zadatków</strong> — lista wszystkich aktywnych portfeli, ułożona po klientach lub kwocie. Lista jest stronicowana po 20 wpisów (przyciski na dole), dzięki czemu otwiera się szybko także na telefonie.</p>
 
       <h3>Wykorzystanie zadatku przy sprzedaży</h3>
       <p>Przy zwykłej sprzedaży, w polu "Metoda płatności" wybierasz <strong>👛 Portfel</strong>. System sprawdzi saldo i:</p>
@@ -763,7 +770,7 @@
           <h2>Karnety i ważność — żaden pakiet nie umiera po cichu</h2>
         </div>
       </div>
-      <p class="lead">Pakiety i karnety mają termin ważności. System pilnuje go za Ciebie: przy karnecie w historii klientki widać plakietkę z datą ważności, a te, które kończą się w ciągu 14 dni, trafiają na listę w panelu „Do sprawdzenia". Twoje narzędzia: <strong>Przedłuż</strong> i <strong>Zakończ</strong> — oba jednym kliknięciem, oba ze śladem.</p>
+      <p class="lead">Pakiety i karnety mają termin ważności. System pilnuje go za Ciebie: przy karnecie w historii klientki widać plakietkę z datą ważności, a te, które kończą się w ciągu 14 dni, trafiają na listę w panelu „Do sprawdzenia". Twoje narzędzia: <strong>Przedłuż</strong>, <strong>Zawieś</strong>, <strong>Ustaw datę</strong> i <strong>Zakończ</strong> — każde jednym kliknięciem, każde ze śladem w Dzienniku.</p>
 
       <div class="scenario">
         <span class="scenario-label">Karnet się kończy, klientka chora</span>
@@ -790,10 +797,40 @@
         <tbody>
           <tr><td><strong>＋ Przedłuż ▾</strong></td><td>Klientka chora, wyjazd, salon zamknięty — ważność mija nie z jej winy albo z dobrej woli salonu</td><td>Wybierasz z listy o ile dni przedłużyć (są gotowe opcje i „inne"). Nowa data zapisuje się od razu, ze śladem w logu.</td></tr>
           <tr><td><strong>Zakończ</strong></td><td>Karnet wykorzystany do końca albo świadomie zamykacie temat (np. rozliczony zwrotem)</td><td>Karnet przestaje alarmować na listach. Historia zostaje.</td></tr>
+          <tr><td><strong>🕓 Zawieś ▾</strong></td><td>Regulamin salonu dopuszcza zawieszenie ważności (wyjazd, choroba, ciąża) — klientka korzysta z tego prawa</td><td>Jak Przedłuż: wybierasz liczbę dni i data się przesuwa. Różnica: system <strong>liczy, ile razy i na ile dni łącznie</strong> karnet był zawieszany. Przy karnecie pojawia się plakietka „🕓 Zawieszano 2× (łącznie 44 dni)" — widać ją też na listach wygasających i w „Do sprawdzenia".</td></tr>
+          <tr><td><strong>✎ Ustaw datę</strong></td><td>Trzeba wpisać dokładną datę — także <em>wcześniejszą</em> niż obecna, np. gdy „Przedłuż" kliknięto przy nie tym karnecie</td><td>Otwiera się okno z nazwą karnetu i obecną ważnością; wpisujesz nową datę i zapisujesz. Liczniki zawieszeń zostają bez zmian. W Dzienniku skrócenie zapisuje się jako „KOREKTA DATY KARNETU", więc manager odróżni poprawkę od przedłużenia.</td></tr>
           <tr><td><strong>Cofnij</strong></td><td>Zakończenie było pomyłką</td><td>Karnet wraca do zwykłego pilnowania ważności.</td></tr>
         </tbody>
       </table>
       <p>Akcje działają na <strong>całym karnecie</strong> (grupie zabiegów z pakietu) — nie musisz klikać osobno przy każdej pozycji z serii.</p>
+
+      <h3>Zawieszenie ważności — gdy regulamin na to pozwala</h3>
+      <p>Przedłużenie to gest dobrej woli salonu. Zawieszenie to <strong>prawo klientki zapisane w regulaminie</strong> (np. „karnet można zawiesić dwa razy w roku, maksymalnie na 30 dni"). Mechanicznie wychodzi na to samo — data ważności się przesuwa — ale system prowadzi osobny licznik zawieszeń, żeby recepcja wiedziała, czy limit z regulaminu nie został już wyczerpany.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Wyjazd na miesiąc, trzy karnety</span>
+        <h4>Pani Joanna wyjeżdża do pracy za granicę na 5 tygodni — ma Endermologię, Alma i karnet na masaże</h4>
+        <div class="scenario-body">
+          <p>Marta nie klika trzech karnetów po kolei. W profilu Pani Joanny otwiera menu <strong>⋮ Akcje ▾</strong> (obok nazwiska) i wybiera <strong>🕓 Zawieś wszystkie karnety</strong>. Wybiera liczbę dni: <code>35</code>. Potwierdza.</p>
+          <div class="scenario-result">Wszystkie aktywne (niezakończone) karnety Pani Joanny dostają +35 dni naraz, a przy każdym rośnie licznik zawieszeń. W Dzienniku jest jeden wpis na karnet: kto, kiedy, o ile. Gdy za pół roku Pani Joanna poprosi o kolejne zawieszenie, Marta zobaczy przy karnecie „Zawieszano 1× (35 dni)" i sprawdzi w regulaminie, czy drugie jeszcze przysługuje.</div>
+        </div>
+      </div>
+
+      <div class="tip"><strong>💡 Zawieś czy Przedłuż?</strong> Jeśli klientka powołuje się na regulamin („mam prawo zawiesić") — <strong>Zawieś</strong>. Jeśli salon z własnej inicjatywy daje więcej czasu („nic straconego, przedłużę Pani") — <strong>Przedłuż</strong>. Oba przesuwają datę, ale tylko Zawieś liczy się do limitu z regulaminu.</div>
+
+      <h3>✎ Ustaw datę — gdy trzeba cofnąć pomyłkę</h3>
+      <div class="scenario">
+        <span class="scenario-label">Przedłużony nie ten karnet</span>
+        <h4>Marta chciała przedłużyć karnet Focus, a kliknęła Przedłuż przy Infinity</h4>
+        <div class="scenario-body">
+          <p>Infinity miało ważność do 2 listopada, a po pomyłce ma do 2 grudnia. „Przedłuż" nie ma opcji ujemnej, więc Marta klika przy Infinity <strong>✎ Ustaw datę</strong>. W oknie widzi: „Karnet: Infinity · Obecna ważność: 02.12.2026". Wpisuje <code>02.11.2026</code> i zapisuje. Potem przedłuża właściwy karnet Focus.</p>
+          <div class="scenario-result">Infinity wraca do prawidłowej daty, a w Dzienniku jest wpis „KOREKTA DATY KARNETU · skrócono z 02.12.2026" — manager widzi, że to poprawka, nie kara dla klientki. Liczniki zawieszeń nie drgnęły.</div>
+        </div>
+      </div>
+
+      <div class="warning"><strong>Ustaw datę nie służy do „karania".</strong> Skracanie ważności bez zgody klientki to zmiana warunków zakupu. Używaj go do korekt pomyłek i do ustawienia daty, którą faktycznie uzgodniono (np. po zwrocie części pakietu).</div>
+
+      <p>Lista wygasających karnetów jest w dwóch miejscach: na Pulpicie w <strong>Do sprawdzenia</strong> oraz w <strong>Klienci → Klienci → zakładka Wygasające karnety</strong>. To ta sama lista — karnet pominięty w jednym miejscu nie wraca w drugim.</p>
 
       <h3>Lista wygasających — rytuał recepcji</h3>
       <ol>
@@ -839,7 +876,18 @@
       </div>
 
       <h3>Wejście do kartoteki</h3>
-      <p>Menu po lewej → <strong>Klienci → Klienci</strong>. Lista wszystkich osób w bazie. U góry wyszukiwarka — wpisz fragment imienia, nazwiska, telefonu lub ID. System filtruje na żywo.</p>
+      <p>Menu po lewej → <strong>Klienci → Klienci</strong>. Lista wszystkich osób w bazie. U góry wyszukiwarka — wpisz fragment imienia, nazwiska, telefonu lub ID. System filtruje na żywo. Obok wyszukiwarki jest filtr <strong>📸 Zgoda na publikację</strong> (opisany niżej), a przy nazwiskach na liście plakietka pokazująca, czy klientka zgodziła się na publikację wizerunku.</p>
+
+      <h3>Filtr „📸 Zgoda na publikację" — kto pozwala na zdjęcia w social mediach</h3>
+      <p>Zgoda na publikację wizerunku jest częścią formularza RODO. Żeby nie wchodzić w każdy profil osobno, w kartotece jest filtr z pięcioma opcjami:</p>
+      <ul>
+        <li><strong>✅ Pełna zgoda</strong> — można publikować zdjęcia bez ograniczeń.</li>
+        <li><strong>⚠️ Warunkowa</strong> — zgoda z zastrzeżeniem, np. „bez twarzy". Zanim coś wrzucisz, sprawdź warunek w profilu.</li>
+        <li><strong>✅⚠️ Jakakolwiek zgoda</strong> — pełna i warunkowa razem; do szybkiego „kogo mogę pokazać".</li>
+        <li><strong>❌ Brak zgody — do przekonania</strong> — klientki z podpisanym RODO, które odmówiły. Lista do rozmowy przy następnej wizycie.</li>
+        <li><strong>📄 Bez podpisanego RODO</strong> — tu zgody jeszcze nie ma, bo nie ma formularza. Najpierw dokumenty, potem pytanie o zdjęcia.</li>
+      </ul>
+      <div class="tip"><strong>💡 Przed sesją Foto przed/po</strong> ustaw filtr na „Jakakolwiek zgoda" — od razu widzisz, czyje efekty możesz pokazać w relacji na Instagramie, a czyje zostają tylko w kartotece.</div>
 
       <h3>Co znajdziesz w profilu klientki</h3>
       <div class="feature-grid">
@@ -884,6 +932,16 @@
 
       <p>System automatycznie nada ID. Po dodaniu od razu możesz nową klientkę używać w sprzedaży.</p>
 
+      <div class="warning"><strong>System sprawdza duplikaty przy zapisie.</strong> Jeśli w bazie jest już osoba o tym samym imieniu i nazwisku <em>albo</em> z tym samym numerem telefonu, przed zapisaniem zobaczysz ostrzeżenie „Możliwy duplikat klienta". Zanim potwierdzisz, zerknij do kartoteki — druga karta tej samej osoby rozbija historię wizyt, punkty Klubu i zadatki.</div>
+
+      <h3>Dwie klientki o tym samym imieniu i nazwisku</h3>
+      <p>Zdarza się: dwie Anny Michałowskie. Dawniej recepcja ratowała się kropką przy nazwisku. Teraz nie trzeba — <strong>w podpowiedziach przy wyborze klientki (sprzedaż, zadatek, konsultacja) każda osoba ma dopisany telefon i ID</strong>, np. „Anna Michałowska · 601 234 567 · ID 487". Wybierasz tę z właściwym numerem, a system zapisuje sprzedaż po ID, nie po nazwisku.</p>
+      <ul>
+        <li>Jeśli wpiszesz samo nazwisko i pasują dwie osoby, system nie zgadnie — poprosi o wybranie z listy, pokazując obie z telefonami.</li>
+        <li>Telefon w kartotece jest zapisywany w jednolitym formacie (bez „+48" i spacji), więc wyszukiwanie po numerze działa niezależnie od tego, jak go wpisano.</li>
+        <li>Jeżeli to naprawdę jedna osoba z dwiema kartami — nie poprawiaj ręcznie, użyj <strong>⋮ Akcje → Usuń duplikat</strong>, który scala historię.</li>
+      </ul>
+
       <h3>Edycja danych klientki</h3>
       <p>W kartotece kliknij imię → otwiera się profil → przycisk "Edytuj dane". Zmień, co trzeba, zapisz. Wszystkie zmiany są logowane.</p>
 
@@ -924,6 +982,31 @@
       </ol>
 
       <div class="warning"><strong>Procedura:</strong> wszystkie 4 wymagają potwierdzenia managera. Recepcja przygotowuje (klikając „Usuń klientkę → wybierz powód"), manager zatwierdza. Cofnięcie z logu jest możliwe do 30 dni od usunięcia.</div>
+
+      <h3 style="margin-top:32px;">⋮ Akcje — menu przy nazwisku w profilu</h3>
+      <p>Obok nazwiska klientki jest przycisk <strong>⋮ Akcje ▾</strong>. Zbiera rzadziej używane operacje, żeby nie zaśmiecać profilu: cztery warianty usunięcia (wyżej), <strong>⏳ Odwołanie po czasie</strong> oraz <strong>🕓 Zawieś wszystkie karnety</strong> (opisane w sekcji Karnety).</p>
+
+      <h3>⏳ Odwołanie po czasie regulaminowym — jednorazowa ulga</h3>
+      <p>Wiele salonów ma w regulaminie zasadę: odwołanie wizyty później niż 24 h przed terminem = zadatek przepada, ale <strong>pierwszy raz wybaczamy</strong>. Żeby recepcja nie musiała pamiętać, kto już „wykorzystał" swój pierwszy raz, w profilu jest flaga.</p>
+      <div class="scenario">
+        <span class="scenario-label">Pierwsze późne odwołanie</span>
+        <h4>Pani Karolina dzwoni o 20:00, że jutro o 9:00 nie przyjdzie</h4>
+        <div class="scenario-body">
+          <p>Marta sprawdza profil: nad nazwiskiem nie ma żółtej ramki, czyli Pani Karolina jeszcze nigdy nie odwoływała po czasie. Marta mówi: „Tym razem zadatek zostaje na Pani koncie, ale przy kolejnym odwołaniu poniżej 24 h już go nie zwrócimy". Otwiera <strong>⋮ Akcje → ⏳ Odwołanie po czasie</strong>, zaznacza „Wykorzystała już tę możliwość", data ustawia się na dziś, zapisuje.</p>
+          <div class="scenario-result">W profilu pojawia się żółta ramka „⏳ Odwołanie po czasie: 10.10.2026". Każda osoba z recepcji, która następnym razem odbierze telefon od Pani Karoliny, od razu wie, że ulga została wykorzystana i zadatek podlega potrąceniu. Pomyłkowe zaznaczenie cofasz, odznaczając pole i zapisując.</div>
+        </div>
+      </div>
+
+      <h3>Ranking klientów — kto wydaje najwięcej i komu należą się jeszcze wejścia</h3>
+      <p><strong>Klienci → Ranking</strong> to osobny widok (celowo poza listą klientów, żeby jej nie spowalniać) z dwoma trybami:</p>
+      <table>
+        <thead><tr><th>Tryb</th><th>Co pokazuje</th><th>Kiedy się przydaje</th></tr></thead>
+        <tbody>
+          <tr><td><strong>💰 Wydatki</strong></td><td>Klientki ułożone wg kwot wydanych w wybranym zakresie dat (domyślnie od początku roku), z filtrem po konkretnym zabiegu lub pakiecie. Sortowanie „Najwięcej wydali" / „Najmniej wydali", wyniki po 15 z przyciskiem „Pokaż więcej".</td><td>Lista VIP-ek do zaproszenia na premierę zabiegu; sprawdzenie, kto kupował dany pakiet; argument przy przyznawaniu rabatu stałej klientce.</td></tr>
+          <tr><td><strong>🎟️ Aktywne pakiety</strong></td><td>Wybierasz zabieg/pakiet z listy (przy każdym jest liczba osób) i dostajesz <strong>wszystkie klientki z niezakończonym karnetem tego typu</strong> — niezależnie od kwoty i od tego, czy ważność już minęła. Wyniki są pogrupowane po klientce.</td><td>Salon sprzedaje lub oddaje do serwisu urządzenie (np. Alma) i trzeba ustalić, komu jeszcze należą się wejścia. Albo planujesz grafik i chcesz wiedzieć, ile osób ma do wykorzystania dany pakiet.</td></tr>
+        </tbody>
+      </table>
+      <div class="tip"><strong>💡 Ranking to nie Analiza.</strong> Manager ma w Analizie raporty o utargu i pracownikach. Ranking jest dla recepcji — odpowiada na pytania „kto" i „komu", a nie „ile zarobiliśmy".</div>
     </section>
 
     <!-- URODZINY -->
@@ -1197,7 +1280,7 @@
         <span class="scenario-label">Czwartek = przegląd zamówień</span>
         <h4>Marta sprawdza co trzeba zamówić u dostawców</h4>
         <div class="scenario-body">
-          <p>Menu → <strong>Kosmetyki → Co zamówić?</strong>. Raport pokazuje dwie listy:</p>
+          <p>Menu → <strong>Magazyn → Zadania na dziś</strong> (dawniej „Co zamówić?"). Raport pokazuje m.in.:</p>
           <ul>
             <li><strong>📉 Krytyczne stany (0 lub 1 sztuka)</strong> — np. Vagheggi krem nawilżający (stan: 1), Endermologia preparat (stan: 0)</li>
             <li><strong>⏳ Krótka data ważności</strong> — np. Karboksyterapia płyn, 30 dni do końca → zużyć w pierwszej kolejności, nie zamawiać nowych</li>
@@ -1212,13 +1295,26 @@
       <table>
         <thead><tr><th>Przycisk</th><th>Co robi</th><th>Czy odwracalne</th></tr></thead>
         <tbody>
-          <tr><td><strong>✕ Usuń</strong> (przy liście „Co zamówić")</td><td>Ukrywa produkt z listy zamówień na ten przegląd — np. „już to zamówiłam, nie pokazuj mi tego ciągle". Produkt zostaje w magazynie, tylko znika z podpowiedzi zamówień.</td><td><strong>Tak</strong> — to tylko ukrycie. Produkt da się przywrócić na listę.</td></tr>
+          <tr><td><strong>✕ Nie zamawiam</strong> (dawniej „✕ Usuń", przy liście braków)</td><td>Ukrywa produkt z listy zamówień na ten przegląd — np. „już to zamówiłam, nie pokazuj mi tego ciągle". Produkt zostaje w magazynie, tylko znika z podpowiedzi zamówień.</td><td><strong>Tak</strong> — to tylko ukrycie. Produkt da się przywrócić na listę.</td></tr>
           <tr><td><strong>🗑 Usuń</strong> (przy liście „Po dacie / przeterminowane")</td><td>Przenosi produkt do <strong>Archiwum</strong> (kategoria „Archiwum"). Używasz gdy preparat jest po dacie i fizycznie go utylizujesz — żeby zniknął ze stanów i raportów.</td><td>Pół na pół — produkt nie jest kasowany z bazy, trafia do archiwum. Manager może go odzyskać, ale w codziennej pracy znika z widoku.</td></tr>
         </tbody>
       </table>
       <p>Po kliknięciu <strong>🗑 Usuń</strong> system pyta o potwierdzenie („Produkt trafi do archiwum") — to świadoma decyzja, nie da się jej zrobić jednym przypadkowym kliknięciem.</p>
 
       <div class="warning"><strong>Uwaga:</strong> 🗑 Usuń (archiwizacja) stosuj wyłącznie do rzeczy faktycznie zutylizowanych po dacie ważności. Jeśli produkt jest dobry, tylko nie chcesz go widzieć na liście zamówień — użyj ✕ Usuń (ukrycie), które niczego nie rusza w magazynie.</div>
+
+      <h3 style="margin-top:28px;">„Pozostałe Braki" — trzy przyciski przy każdym produkcie</h3>
+      <p>W <strong>Zadania na dziś</strong> sekcja <strong>Pozostałe Braki</strong> wylicza produkty poniżej celu (cel = minimum + 30%). Przy każdym wierszu masz trzy decyzje do podjęcia — i wszystkie są jednoznacznie podpisane:</p>
+      <table>
+        <thead><tr><th>Przycisk</th><th>Co robi</th><th>Czy odwracalne</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Wyrównaj</strong></td><td>Dopisuje do stanu brakującą liczbę sztuk — używasz, gdy towar właśnie przyszedł i chcesz jednym kliknięciem doprowadzić stan do celu.</td><td>Tak, przez edycję stanu.</td></tr>
+          <tr><td><strong>✕ Nie zamawiam</strong></td><td>Wycofuje produkt z listy zamówień („mamy go dość", „sezonowy", „zamówiony inną drogą"). Produkt <strong>zostaje w magazynie</strong>, tylko przestaje się pojawiać w brakach.</td><td><strong>Tak.</strong> Na dole raportu jest zwijana lista „Wycofane z zamówień (N)" — przycisk ↩️ przywraca produkt na listę.</td></tr>
+          <tr><td><strong>🗑️ Usuń z magazynu</strong></td><td>Przenosi produkt do archiwum — znika ze wszystkich list magazynu. To dokładnie to samo, co „Usuń" na liście produktów. Dla pozycji ze stanem 0, które nie wrócą do użycia.</td><td>Produkt trafia do archiwum, nie jest kasowany z bazy; przywraca go manager. System pyta o potwierdzenie.</td></tr>
+        </tbody>
+      </table>
+      <p>W liście „Wycofane z zamówień" przy każdej pozycji są dwa przyciski: <strong>↩️ przywróć na listę</strong> i <strong>🗑️ usuń z magazynu</strong> — można więc najpierw coś wycofać „na próbę", a po kilku tygodniach dokończyć porządki bez szukania produktu w stanie magazynowym.</p>
+      <div class="warning"><strong>Nie mylić:</strong> „Nie zamawiam" to decyzja zakupowa (odwracalna). „Usuń z magazynu" to decyzja o produkcie (archiwum). Jeśli nie jesteś pewna — wybierz „Nie zamawiam", nic nie stracisz.</div>
 
       <div class="tip"><strong>💡 Na telefonie:</strong> raport zamówień na małym ekranie zamienia się w czytelne karty (każdy produkt jako osobny kafelek z podpisanymi polami: Nazwa, Stan, Data, Akcja). Nie musisz przewijać tabeli w bok — wszystko widać jeden pod drugim.</div>
 
@@ -2077,8 +2173,8 @@
         <tbody>
           <tr><td><strong>QR od recepcji</strong> (podstawowa)</td><td>Profil klientki → kafel Klub → <strong>📲 QR</strong>. Klientka skanuje przy kasie, ustawia PIN — minuta i gotowe.</td></tr>
           <tr><td><strong>Kod odczytany na głos</strong> (gdy QR niewygodny)</td><td>Profil klientki → kafel Klub → <strong>🔢 Kod do apki</strong>. Czteroznakowy kod, który po prostu dyktujesz. Klientka w aplikacji podaje numer telefonu, kod i nowy PIN. Kod jest przypisany do numeru z kartoteki, ważny 6 godzin i unieważnia się po pięciu błędnych próbach — działa jak PIN do karty.</td></tr>
-          <tr><td><strong>Link publiczny</strong> (Instagram, ulotki)</td><td>Salon ma stały link/QR do rejestracji online (generowany w ustawieniach Klubu — wrzuć do bio na IG). Nowa osoba zakłada konto sama i może dostać punkty powitalne na start.</td></tr>
-          <tr><td><strong>Wniosek</strong> (istniejąca klientka przez internet)</td><td>Gdy z linku rejestruje się numer, który już jest w kartotece, system nie zakłada konta od ręki — tworzy wniosek do obsłużenia. Link aktywacyjny idzie <em>na numer z kartoteki</em>, co chroni przed podszyciem się pod klientkę.</td></tr>
+          <tr><td><strong>Link publiczny</strong> (Instagram, ulotki)</td><td>Salon ma stały link/QR do rejestracji online (generowany w ustawieniach Klubu — wrzuć do bio na IG). Formularz ma <strong>dwa kroki</strong>: najpierw tylko imię, nazwisko i telefon. Osoba <em>nowa</em> przechodzi do kroku 2 (PIN i regulamin) i ma konto od ręki, z ewentualnymi punktami powitalnymi.</td></tr>
+          <tr><td><strong>Wniosek</strong> (istniejąca klientka przez internet)</td><td>Gdy w kroku 1 pojawia się numer, który już jest w kartotece, aplikacja <strong>nie pyta o PIN</strong> i nie zakłada konta — pokazuje ekran „Zgłoszenie przyjęte" z trzema krokami: recepcja sprawdza zgłoszenie, wysyła link aktywacyjny na numer z kartoteki, klientka ustawia PIN dopiero na tym linku. Dzięki temu PIN ustawia się <em>raz</em>, a nikt nie podszyje się pod klientkę. Aktywacja konta sama zamyka wniosek — nic nie zostaje „wiszące" na Pulpicie.</td></tr>
         </tbody>
       </table>
 
@@ -2090,11 +2186,11 @@
         <li><strong>Przegląd</strong> — statystyki programu: członkinie, punkty, odbiory.</li>
         <li><strong>Nagrody</strong> — katalog z cenami w punktach, limitami sztuk i grafikami. Do trzech nagród możesz oznaczyć jako „★ polecane" — te pokażą się klientkom na wierzchu.</li>
         <li><strong>Promocje</strong> — oferty z targetowaniem (wszyscy / od X punktów / po konkretnym zabiegu / dawno niewidziane) i opcją „BIORĘ".</li>
-        <li><strong>Kampanie</strong> — wiadomości do wybranego segmentu klientek: od razu albo zaplanowane na termin, z podglądem „tak zobaczy to klientka", licznikiem odczytań i możliwością wycofania.</li>
+        <li><strong>Kampanie</strong> — wiadomości do wybranego segmentu klientek (w tym „Wybrane klientki…" — konkretne osoby wskazane z wyszukiwarki, np. do testu push na własny telefon przed wysyłką do wszystkich): od razu albo zaplanowane na termin, z podglądem „tak zobaczy to klientka", licznikiem odczytań i możliwością wycofania.</li>
         <li><strong>Mnożniki ×2</strong> — okno czasowe z podwójnymi punktami (patrz niżej).</li>
         <li><strong>Automaty</strong> — pięć samoczynnych akcji nagradzających (patrz niżej).</li>
         <li><strong>Poziomy</strong> — progi typu Srebro / Złoto / Diament wg rocznych wydatków.</li>
-        <li><strong>Członkowie</strong> — lista kont z saldami i ostatnią wizytą, z wyszukiwarką.</li>
+        <li><strong>Członkowie</strong> — lista kont z saldami i ostatnią wizytą, z wyszukiwarką; domyślnie posortowana wg punktów, po 20 na stronę. Kliknięcie w osobę otwiera szczegóły z historią punktów.</li>
         <li><strong>Do obsłużenia</strong> — odbiory nagród, zgłoszenia „BIORĘ", wnioski o konto i resety PIN — wszystko z licznikiem przy zakładce i <strong>godziną zgłoszenia</strong>, żeby było widać, czy klientka czeka dziesięć minut, czy od wczoraj.</li>
         <li><strong>Ustawienia</strong> — nazwa klubu, przelicznik punktów, bonus powitalny, punkty za polecenie, kasowanie punktów 1 stycznia, regulamin, link rejestracyjny, QR na ladę.</li>
       </ul>
@@ -2121,7 +2217,7 @@
         </div>
       </div>
 
-      <div class="warning"><strong>Poleceń nie obsługuje recepcja.</strong> Kod polecający klientka wpisuje sama, przy zakładaniu konta w aplikacji. Punkty przyznają się dopiero przy pierwszym prawdziwym zakupie poleconej osoby — czyli nie da się „nabić" poleceń bez sprzedaży. Przy kasie nie robisz nic.</div>
+      <div class="warning"><strong>Polecenia są włączane przez salon.</strong> Pole „Kod polecający" w rejestracji pokazuje się klientkom tylko wtedy, gdy w Ustawieniach Klubu punkty za polecenie są większe od zera. Przy zerze pola nie ma — salon, który nie prowadzi programu poleceń, nie myli klientek niepotrzebnym polem. <strong>Poleceń nie obsługuje recepcja.</strong> Kod polecający klientka wpisuje sama, przy zakładaniu konta w aplikacji. Punkty przyznają się dopiero przy pierwszym prawdziwym zakupie poleconej osoby — czyli nie da się „nabić" poleceń bez sprzedaży. Przy kasie nie robisz nic.</div>
 
       <h3>Kasowanie punktów 1 stycznia (opcjonalne)</h3>
       <p>W Ustawieniach Klubu można włączyć zerowanie punktów z początkiem roku. Sens jest handlowy: punkty, które „przepadną", motywują do wykorzystania ich w grudniu — a to zwykle najlepszy miesiąc salonu.</p>
@@ -2185,6 +2281,9 @@
       <div class="tip"><strong>💡 Z profilu klientki jeszcze szybciej:</strong> na profilu jest przycisk „+ Link do płatności" — klientka jest już wybrana, wklejasz tylko link z tpay i kwotę. Historia jej linków i akceptacji regulaminu jest w tym samym miejscu.</div>
 
       <div class="warning"><strong>Link ≠ zaksięgowana wpłata.</strong> Wygenerowanie i wysłanie linku to dopiero zaproszenie do zapłaty. Termin rezerwuj wiążąco dopiero, gdy pieniądze faktycznie wpłyną — i wtedy wpisz zadatek do systemu.</div>
+    
+      <h3 style="margin-top:28px;">📊 Statystyki miesięczne (Administracja → Płatności online)</h3>
+      <p>Manager widzi w <strong>Administracja → Płatności online (tpay)</strong> tabelę miesiąc po miesiącu: ile linków <strong>utworzono</strong>, ile zostało <strong>zaakceptowanych</strong> (klientka potwierdziła regulamin i przeszła do płatności), ile <strong>wygasło</strong> po 7 dniach, ile <strong>anulowano</strong> i ile jeszcze <strong>oczekuje</strong>. Duża liczba wygasłych to sygnał, że linki wysyłane są za późno albo bez wyjaśnienia, po co.</p>
     </section>
 
     <!-- ANALIZA — PRZEGLĄD -->
@@ -2268,16 +2367,18 @@
         <li>Wskaźnik lojalności (powracalności) — czy klienci wracają na serię.</li>
         <li>Sezonowość (wykres roczny) i w które dni tygodnia klienci najczęściej go kupują.</li>
         <li>Rozwijana analiza kosmetyków — ranking produktów Top 20, sortowany po kwocie, ilości lub nazwie.</li>
+        <li><strong>📊 Pełny raport (CSV)</strong> — eksport całej historii sprzedaży do pliku: gotowa tabela zabieg × miesiąc z sumami oraz surowe transakcje. Plik otwierasz w Excelu albo wrzucasz do narzędzia AI, żeby zadawać własne pytania („które zabiegi rosną od wiosny?"). Dopłaty są scalone z zabiegiem głównym, tak jak w Analizie.</li>
       </ul>
 
       <h3>Analiza konsultacji</h3>
-      <p>Raport skuteczności konsultacji (rozmów sprzedażowych). Ma zakładki: Przegląd główny, Dziennik, Lista miesięczna, Raport.</p>
+      <p>Raport skuteczności konsultacji (rozmów sprzedażowych). Ma zakładki: Przegląd główny, Dziennik, Lista miesięczna, Raport oraz <strong>📄 Raport reklamowy</strong>.</p>
       <ul>
         <li><strong>Sprzedane pakiety</strong> — łączna wartość pakietów domkniętych na konsultacjach.</li>
         <li><strong>Wartość upsellu</strong> — ile udało się dosprzedać ponad pierwotny plan.</li>
         <li><strong>Skuteczność</strong> (%) — jaka część konsultacji kończy się sprzedażą.</li>
         <li>Analiza indywidualna pracownika: jego utarg z pakietów, dosprzedaż, skuteczność zamknięcia i najczęstsze zabiegi.</li>
         <li>Dziennik konsultacji: data, klient, zabiegi, źródło (np. reklama), pakiet, upsell, konsultant.</li>
+        <li><strong>📄 Raport reklamowy</strong> — zanonimizowany raport skuteczności kampanii dla firmy, która dostarcza leady: wybierasz zakres miesięcy (do 24), klikasz „Pokaż", a „Zapisz PDF" otwiera okno drukowania przeglądarki (wybierz „Zapisz jako PDF"). Raport zawiera tylko sumy — liczbę konsultacji z reklamy, sprzedane pakiety, skuteczność, wartości — <strong>bez imion, nazwisk, telefonów i danych pracowników</strong>. Widzą go wyłącznie admin, właściciel i manager; uprawnienie jest sprawdzane po stronie serwera, nie tylko w menu.</li>
       </ul>
 
       <h3>Inteligentna analiza</h3>
@@ -2430,6 +2531,8 @@
       <p>Przycisk „Otwórz panel Stripe" przenosi do bezpiecznego panelu operatora płatności, gdzie właściciel może: zmienić kartę, pobrać potwierdzenia płatności i — w razie potrzeby — anulować subskrypcję. Estelio nie przechowuje danych karty; obsługuje to Stripe.</p>
 
       <div class="warning"><strong>To nie jest kasa salonu.</strong> Panel rozliczeniowy dotyczy wyłącznie opłaty za korzystanie z Estelio. Sprzedaż zabiegów i kosmetyków klientkom rozliczasz w module Sprzedaż — to dwie zupełnie różne rzeczy.</div>
+
+      <div class="warning"><strong>Gdy płatność za Estelio nie przejdzie.</strong> Przy nieudanej płatności salon dostaje 7 dni karencji — wszystko działa, ale manager widzi baner „Opóźnienie w płatności" z linkiem do panelu rozliczeniowego. Po karencji logowanie do aplikacji jest blokowane: na ekranie logowania pojawia się komunikat z linkiem do panelu rozliczeniowego, gdzie można uregulować płatność (zmienić kartę w panelu Stripe). Reset hasła w tym czasie działa. Gdy płatność przejdzie, dostęp wraca sam — bez kontaktu z Estelio.</div>
 
       <div class="tip"><strong>💡 Faktury są zawsze pod ręką.</strong> Każda płatność za Estelio ma fakturę PDF do pobrania w historii. Księgowa salonu może je stamtąd brać samodzielnie — nie trzeba prosić o nie mailowo.</div>
     </section>
@@ -2687,6 +2790,17 @@
       </ol>
 
       <div class="tip"><strong>💡 Drobiazg:</strong> w dropdown'ie pracowników, klientów, produktów — używaj wpisywania zamiast przewijania. Wpisz 2 litery, lista się skróci. Szybciej niż scroll.</div>
+    
+      <h3 style="margin-top:28px;">Komunikat „Sesja wygasła" — co znaczy</h3>
+      <p>Pojawia się w dwóch sytuacjach i w obu wystarczy zalogować się ponownie:</p>
+      <ul>
+        <li><strong>Po 8 godzinach bez aktywności</strong> — zabezpieczenie na wypadek komputera zostawionego na noc. Każde kliknięcie w ciągu dnia odświeża licznik, więc podczas normalnej pracy nie wyrzuca.</li>
+        <li><strong>Po wdrożeniu nowej wersji</strong> — restart aplikacji wylogowuje wszystkich naraz. To normalne; wdrożenia robione są po godzinach pracy salonów, żeby nie przerywać obsługi.</li>
+      </ul>
+      <p>Jeśli komunikat pojawia się częściej i bez wdrożenia — zgłoś managerowi. Dane wpisane przed wylogowaniem nie giną: zapisana sprzedaż jest zapisana, a niewysłany formularz trzeba wpisać ponownie.</p>
+
+      <h3>Okna dialogowe na małych ekranach</h3>
+      <p>Każde okno (edycja sprzedaży, zadatek, karnet) mieści się w ekranie — przy niskiej rozdzielczości zawartość przewija się w środku okna, a przyciski „Zapisz" i „Anuluj" są zawsze widoczne. Okno zamkniesz klawiszem <code>Esc</code> albo kliknięciem w ciemne tło obok.</p>
     </section>
 
     <!-- FAQ -->
@@ -2797,6 +2911,36 @@
 
       <h3>Nie widzę kafelka Foto / Klub / Link do płatności, a koleżanka w innym salonie ma</h3>
       <p>To dodatki Estelio+ — pojawiają się tylko, gdy właściciel włączy je w Administracja → Moje Estelio+. Sekcja Klub w panelu jest dodatkowo widoczna wyłącznie dla admina. Jeśli salon chce z czegoś korzystać — decyzja i aktywacja należą do właściciela.</p>
+    
+      <h3>Przedłużyłam nie ten karnet — jak to cofnąć?</h3>
+      <p>Przy pomyłkowo przedłużonym karnecie kliknij <strong>✎ Ustaw datę</strong> i wpisz datę, która była wcześniej (widać ją w Dzienniku zdarzeń albo w notatce). „Przedłuż" nie ma opcji ujemnej — od tego jest Ustaw datę. Potem przedłuż właściwy karnet.</p>
+
+      <h3>Klientka wyjeżdża na miesiąc i ma kilka karnetów — klikać każdy osobno?</h3>
+      <p>Nie. W profilu <strong>⋮ Akcje → 🕓 Zawieś wszystkie karnety</strong>, wybierz liczbę dni. Wszystkie niezakończone karnety przesuną się naraz, a przy każdym zapisze się zawieszenie.</p>
+
+      <h3>Mam dwie klientki o tym samym imieniu i nazwisku — jak nie pomylić?</h3>
+      <p>Przy wyborze klientki w sprzedaży podpowiedzi pokazują telefon i ID („Anna Michałowska · 601 234 567 · ID 487"). Wybierz tę z właściwym numerem. Nie dodawaj kropek ani dopisków do nazwiska — ID rozróżnia osoby lepiej i nie psuje Klubu ani wyszukiwania.</p>
+
+      <h3>Jak sprawdzić, które klientki zgodziły się na publikację zdjęć?</h3>
+      <p>Klienci → Klienci → filtr <strong>📸 Zgoda na publikację</strong> → „Jakakolwiek zgoda". Przy nazwiskach jest też plakietka ze statusem zgody. „Warunkowa" oznacza zastrzeżenie (np. bez twarzy) — sprawdź je w profilu przed publikacją.</p>
+
+      <h3>Komu jeszcze należą się wejścia na urządzenie, które sprzedajemy?</h3>
+      <p>Klienci → Ranking → tryb <strong>🎟️ Aktywne pakiety</strong> → wybierz zabieg z listy. Dostaniesz wszystkie klientki z niezakończonym karnetem tego typu, także te po terminie ważności.</p>
+
+      <h3>Klientka odwołała wizytę po czasie — potrącać zadatek czy nie?</h3>
+      <p>Zajrzyj do profilu: jeśli nad nazwiskiem nie ma żółtej ramki „Odwołanie po czasie", to jej pierwszy raz — zadatek zostaje, a Ty zaznaczasz ulgę w <strong>⋮ Akcje → ⏳ Odwołanie po czasie</strong>. Jeśli ramka już jest, zadatek podlega potrąceniu zgodnie z regulaminem.</p>
+
+      <h3>W Pozostałych Brakach: „Nie zamawiam" czy „Usuń z magazynu"?</h3>
+      <p>„Nie zamawiam" = produkt zostaje w magazynie, tylko znika z listy zamówień (odwracalne, lista „Wycofane z zamówień" na dole). „Usuń z magazynu" = archiwum, produkt znika ze wszystkich list. W razie wątpliwości wybierz „Nie zamawiam".</p>
+
+      <h3>Klientka z naszej kartoteki rejestruje się w apce Klubu i apka nie pyta jej o PIN — to błąd?</h3>
+      <p>Nie, tak ma być. Osoba, której numer już jest w kartotece, dostaje ekran „Zgłoszenie przyjęte", a Ty w <strong>Klub → Do obsłużenia</strong> wysyłasz jej link aktywacyjny. PIN ustawia dopiero na tym linku — jeden raz. O PIN od razu pyta tylko osoba zupełnie nowa.</p>
+
+      <h3>Wszystkim naraz wyskoczyło „Sesja wygasła"</h3>
+      <p>Najpewniej właśnie wdrożono nową wersję — zaloguj się ponownie i zerknij na datę wersji na dole Pulpitu. Jeśli wersja jest stara, zrób <code>Ctrl + F5</code>. Jeśli to się powtarza bez wdrożeń, zgłoś managerowi.</p>
+
+      <h3>Jak przygotować raport dla firmy od reklam bez danych klientek?</h3>
+      <p>Analiza → Analiza Konsultacji → zakładka <strong>📄 Raport reklamowy</strong> → zakres miesięcy → „Pokaż" → „Zapisz PDF". Raport zawiera wyłącznie sumy. Zakładkę widzą tylko admin, właściciel i manager.</p>
     </section>
 
     <div class="footer">
