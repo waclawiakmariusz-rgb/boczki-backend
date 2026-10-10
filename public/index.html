@@ -8,7 +8,9 @@
 	<link rel="icon" type="image/png" href="icon.png">    
     <link rel="apple-touch-icon" href="icon.png">
     <title>Estelio - zarządzanie salonem</title>
-	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+	<!-- 2026-10-10: Chart.js z własnej domeny (public/lib, przypięta 4.5.1). Wersja z CDN była blokowana
+	     przez nagłówek Content-Security-Policy (script-src 'self') → "Chart is not defined" w Analizie. -->
+	<script src="/lib/chart.umd.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
@@ -31879,7 +31881,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
 <!-- ═══════════════════════════════════════════════════════════════
      SORTABLE.JS — drag & drop dla miniaturek stron dokumentu
 ════════════════════════════════════════════════════════════════ -->
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+<script src="/lib/Sortable.min.js"></script>
 <script>
 // ─── Upload dokumentów (RODO / Regulamin) ────────────────────
 // prefix: 'con' = Regulamin, 'rodo' = RODO

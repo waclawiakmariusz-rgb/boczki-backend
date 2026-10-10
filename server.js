@@ -49,7 +49,21 @@ app.use((req, res, next) => {
     res.setHeader('X-XSS-Protection', '1; mode=block');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'self'");
+    // 2026-10-10: CSP blokowała zasoby spoza domeny — Chart.js i Sortable z CDN (→ "Chart is not
+    // defined", Analiza → Miesiąc padała), czcionki Google na wszystkich stronach, piksele GA/Meta na
+    // zamow.html. Biblioteki JS są teraz w public/lib (własna domena); tu dopuszczamy tylko to, co
+    // nadal ładuje się z zewnątrz. Nowy zewnętrzny zasób = dopisz origin TUTAJ, inaczej przeglądarka
+    // go po cichu zablokuje (błąd widać tylko w konsoli).
+    res.setHeader('Content-Security-Policy', [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: blob: https://www.facebook.com https://www.google-analytics.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com",
+      "object-src 'none'",
+      "frame-ancestors 'self'",
+    ].join('; '));
     res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
     res.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
     next();
