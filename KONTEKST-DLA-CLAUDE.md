@@ -352,6 +352,43 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
+# 10e. STAN NA 2026-10-11 (najnowszy — czytaj najpierw)
+
+**Gałęzie i produkcja:** `main` = `dev` = produkcja = `1af9dbc` (HP, wdrożone 2026-10-11 ok. 14:30, user:
+„panel admina już jest i działa"). Smoke test `narzedzia/smoke-prod.js` po wdrożeniu: 19/19 OK (wersja na
+Pulpicie 1af9dbc). Tag `ostatnia-dobra-2026-10-10` NADAL nie założony — dziś niedziela, recepcja nie
+pracowała; zakładać dopiero po dniu pracy bez zgłoszeń (najwcześniej 12–13.10), na commicie, który wtedy
+będzie na prod (dziś byłby to `1af9dbc`).
+
+**Co weszło na main i produkcję 2026-10-11 (chronologicznie):**
+1. `db05c58` + `2c57e9d` + `66660ac` TICKETY — zgłoszenia salonów do Estelio z rozmową (pkt 24); formularz
+   nie pokazuje pracownikom identyfikatora tenanta. Na prod jest 1 realny ticket testowy usera (#3, Boczki,
+   „nie widzę zadatków w profilu", 1 PNG, dopisek „a teraz już ok?") — NIE obsłużony, user: „przećwiczymy na
+   żywo jak pojawi się problem".
+2. `1af9dbc` REDESIGN PANELU ADMINA (pkt 25).
+
+**Uzgodnienie na przyszłość — obsługa ticketu przeze mnie (user pytał „czy dasz radę sam rozwiązać"):**
+(1) odczyt ticketu z bazy tylko do odczytu (`Zgloszenia_Tickety/_Komentarze/_Zalaczniki`), (2) reprodukcja
+w headless Chrome na lokalnym serwerze zalogowanym na dany salon (reguła 1z), (3) fix na `dev` + testy + zrzuty,
+push na main tylko po zgodzie, (4) odpowiedź w tickecie przez `POST /api/admin/tickety/odpowiedz` z tokenem
+admina z `.env` — zapis na prod, więc ZAWSZE pokazać treść i spytać. Salon widzi odpowiedź dopiero po
+otwarciu Zgłoszeń (mail o odpowiedzi nie istnieje — TODO).
+
+**Esti a przewodniki (user pytał):** Esti pobiera `/pomoc/` i (dla manager+) `/pomoc-manager/` na żywo przy
+pierwszym otwarciu czatu i indeksuje `section.card[id]` + h3; po aktualizacji przewodnika wystarczy F5.
+
+**OTWARTE / NASTĘPNE KROKI (kolejność bez zmian wobec 10d):** tag datowany → `PRZYPOMNIENIA=on` po logu proba →
+Stripe trial reminder (user) → audyt onboardingu (100AK, ENFORCE_SESSION GET po PUBLIC_PATHS) → lista
+bezpieczeństwa → decyzja Manager w Klubie. Nowe, niskie: mail do salonu przy odpowiedzi w tickecie, „Zgłoś
+problem" dla kosmetolog/praktykantka, `ostatnia-dobra` po redesignie admina.
+
+**Pułapki z dziś:** heredoc w bashu z dużym CSS/HTML wysypuje się na cudzysłowach — pliki pomocnicze przez
+Write, a podmiany w dużych plikach skryptem Node z asercją „dokładnie N trafień" (patrz
+`scratchpad/patch-admin.js` — nie w repo). `admin.html` ma CRLF (normalizować i odtwarzać). Kontener listy
+z klasą `.loading` na stałe = wyśrodkowana cała zawartość (było tak od miesięcy).
+
+---
+
 # 10d. STAN NA 2026-10-10 (najnowszy — czytaj najpierw)
 
 **Gałęzie:** `main` = `dev` = `4333b86` (HP; ostatni commit = scenki w /pomoc/, tylko statyczny HTML + brief).
@@ -1009,6 +1046,23 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
 
 ---
 
+- **25. REDESIGN PANELU ADMINA `public/admin.html` (2026-10-11, `1af9dbc`, NA PROD)** — user: „wszystko
+  wygląda jak jeden wielki ulep, takie rekurencyjne dodawanie". Zrobione bez zmiany identyfikatorów, loaderów
+  i logiki JS (backend nietknięty): (a) nawigacja boczna `.sidebar` w grupach — Przegląd (Pulpit), Sprzedaż
+  i klienci (Salony, **Zamówienia** = dawne „Zgłoszenia" z zamow.html, przemianowane, żeby nie mylić
+  z Ticketami; Linki rejestracji; Vouchery), Wsparcie (Tickety, Baza wiedzy Esti), Konfiguracja (Nowy salon,
+  Predef. usługi, Salon demo, Migracja typów); stopka: Przewodnik, Blog CMS, Wyloguj; RWD < 920 px = pasek
+  u góry; (b) `showTab(id)` bez `event.target` — aktywny wpis po `data-tab`, tytuł + opis strony z mapy
+  `TAB_INFO` (`#page-title`, `#page-sub`); `#app` pokazywany jako `display:grid`; (c) jeden CSS: tokeny
+  `:root` + klasy `.card .toolbar .table .note-* .pill .chip .btn-primary/.btn-secondary/.btn-danger/
+  .btn-link .stat-card .voucher-item .predef-kat .tk-reply`; `.btn-primary` NIE jest już 100% szerokości
+  (jest `.btn-block`); blok KB (drugi `<style>` w `kb_renderPanel`) przepięty na tokeny — bez różowej
+  palety #ff758c. (d) Błędy wyłapane na zrzutach i naprawione: kontenery list miały na stałe `class="loading"`
+  (wszystko wyśrodkowane), Predef „undefined undefined" (front czytał `nazwa/ilosc`, backend daje
+  `kategoria/ile`), przycisk Edytuj w KB psuł się na wpisach z cudzysłowem (JSON w onclick bez `kb_esc`),
+  tabele statystyk ticketów bez przewijania. Weryfikacja: headless Chrome na lokalnym serwerze — 11 zakładek,
+  baner „Pokaż salony", modal szczegółów salonu, statystyki i rozmowa ticketów, modal edycji KB, widok 420 px,
+  0 wyjątków JS; po wdrożeniu smoke test prod 19/19. Pulpit: kafel „Nowe zamówienia".
 # 11. CZEGO GIT NIE PRZENOSI + różnice między maszynami
 
 | co | uwaga |
