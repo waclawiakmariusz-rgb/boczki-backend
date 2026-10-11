@@ -10,18 +10,22 @@
 :root {
   --primary:      #c4a0a0;
   --primary-dark: #a88080;
+  --primary-soft: rgba(196,160,160,0.14);
   --primary-glow: rgba(196,160,160,0.22);
   --bg:           #e8e0d5;
   --cream:        #f2ede6;
   --white:        #f7f2eb;
   --sand:         #d4c4a8;
+  --sand-soft:    #e3d8c6;
   --text:         #2c2420;
   --muted:        #6a5e56;
   --taupe:        #b8a898;
   --camel:        #c4a870;
   --sage:         #9aab9a;
-  --radius:       20px;
-  --radius-btn:   12px;
+  --ink:          #2c2420;
+  --radius:       18px;
+  --radius-sm:    12px;
+  --radius-btn:   10px;
   --radius-input: 10px;
   --shadow:       0 4px 24px rgba(44,36,32,0.06), 0 1px 6px rgba(44,36,32,0.04);
   --shadow-hover: 0 8px 32px rgba(44,36,32,0.10);
@@ -30,27 +34,30 @@
   --red:    #b85858;
   --orange: #c49040;
   --blue:   #7090b8;
+  --ok-bg: #e4f0e4;  --ok-fg: #3a6a3a;  --ok-bd: #b4d4b4;
+  --warn-bg: #fdf0d5; --warn-fg: #92600e; --warn-bd: #f5cf66;
+  --bad-bg: #f5e4e4;  --bad-fg: #8a3030;  --bad-bd: #d4a4a4;
+  --info-bg: #e4ecf5; --info-fg: #2a5080; --info-bd: #a4c0d8;
+  --sidebar-w: 244px;
 }
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 10px; }
+::-webkit-scrollbar { width: 6px; height: 6px; } ::-webkit-scrollbar-thumb { background: var(--sand); border-radius: 10px; }
+code { font-family: Consolas, 'SF Mono', monospace; font-size: .92em; background: rgba(44,36,32,.06); padding: 1px 5px; border-radius: 5px; }
 
 /* ── LOGIN ── */
 #login-screen {
   display: flex; align-items: center; justify-content: center;
-  min-height: 100vh; padding: 20px;
-  background: var(--bg);
+  min-height: 100vh; padding: 20px; background: var(--bg);
   position: relative; overflow: hidden;
 }
 #login-screen::before {
-  content: ''; position: absolute;
-  width: 560px; height: 560px;
+  content: ''; position: absolute; width: 560px; height: 560px;
   background: radial-gradient(circle, rgba(196,160,160,.18) 0%, transparent 65%);
   top: -160px; right: -120px; border-radius: 50%;
 }
 #login-screen::after {
-  content: ''; position: absolute;
-  width: 380px; height: 380px;
+  content: ''; position: absolute; width: 380px; height: 380px;
   background: radial-gradient(circle, rgba(154,171,154,.14) 0%, transparent 65%);
   bottom: -100px; left: -80px; border-radius: 50%;
 }
@@ -60,315 +67,302 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   width: 100%; max-width: 400px; text-align: center;
   box-shadow: var(--shadow); position: relative; z-index: 1;
 }
-.login-logo {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 2.2rem; font-weight: 600; color: var(--text);
-  letter-spacing: .08em; margin-bottom: 6px;
-}
+.login-logo { font-family: 'Cormorant Garamond', serif; font-size: 2.2rem; font-weight: 600; color: var(--text); letter-spacing: .08em; margin-bottom: 6px; }
 .login-logo em { color: var(--primary); font-style: italic; font-weight: 400; }
 .login-box h1 { font-size: 15px; font-weight: 500; color: var(--muted); letter-spacing: .04em; margin-bottom: 32px; }
 .login-box p { color: var(--taupe); font-size: 13px; margin-bottom: 28px; }
 
-/* ── APP LAYOUT ── */
-#app { display: none; min-height: 100vh; }
-.app-header {
-  background: var(--cream); border-bottom: 1px solid var(--sand);
-  padding: 18px 40px;
-  display: flex; align-items: center; justify-content: space-between;
-  position: sticky; top: 0; z-index: 100;
+/* ── POWŁOKA: SIDEBAR + TREŚĆ ── */
+#app { display: none; min-height: 100vh; grid-template-columns: var(--sidebar-w) 1fr; }
+.sidebar {
+  background: var(--cream); border-right: 1px solid var(--sand);
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column; padding: 22px 14px 18px;
 }
-.app-header .brand {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: 1.4rem; font-weight: 600; color: var(--text);
-  letter-spacing: .06em; display: flex; align-items: center; gap: 10px;
+.sidebar .brand {
+  font-family: 'Cormorant Garamond', serif; font-size: 1.55rem; font-weight: 600;
+  color: var(--text); letter-spacing: .06em; padding: 4px 12px 2px;
 }
-.app-header .brand span { color: var(--primary); font-style: italic; font-weight: 400; }
-.app-content { max-width: 1200px; margin: 0 auto; padding: 36px 30px; }
+.sidebar .brand span { color: var(--primary); font-style: italic; font-weight: 400; }
+.sidebar .brand-sub { font-size: 11px; color: var(--taupe); letter-spacing: .12em; text-transform: uppercase; padding: 0 12px 18px; }
+.nav-group { margin-top: 14px; }
+.nav-group-title { font-size: 10.5px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: .12em; padding: 0 12px; margin-bottom: 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 12px; border: 1px solid transparent; border-radius: var(--radius-btn);
+  background: transparent; color: var(--muted); font-family: inherit; font-size: 13.5px; font-weight: 500;
+  text-align: left; cursor: pointer; text-decoration: none; transition: background .15s, color .15s;
+}
+.nav-item .ico { width: 20px; text-align: center; font-size: 15px; flex-shrink: 0; }
+.nav-item .lbl { flex: 1; min-width: 0; }
+.nav-item:hover { background: rgba(44,36,32,.05); color: var(--text); }
+.nav-item.active { background: var(--primary); color: #fff; box-shadow: var(--shadow-glow); }
+.nav-item.active .nav-badge { background: #fff; color: var(--primary-dark); }
+.nav-badge { background: #d9534f; color: #fff; border-radius: 20px; padding: 1px 7px; font-size: 11px; font-weight: 700; line-height: 1.5; min-width: 20px; text-align: center; }
+.sidebar-foot { margin-top: auto; padding-top: 18px; border-top: 1px solid var(--sand-soft); }
+.sidebar-foot .nav-item { font-size: 13px; }
+.sidebar-foot .logout-btn { width: 100%; margin-top: 8px; }
 
-/* ── TABS ── */
-.tab-bar { display: flex; gap: 6px; margin-bottom: 32px; flex-wrap: wrap; }
-.tab-btn {
-  padding: 10px 20px; border: 1px solid var(--sand); background: var(--cream);
-  border-radius: var(--radius-btn);
-  font-family: inherit; font-weight: 500; font-size: 13.5px; color: var(--muted);
-  cursor: pointer; transition: all 0.2s;
-}
-.tab-btn.active {
-  background: var(--primary); border-color: var(--primary);
-  color: #fff; box-shadow: var(--shadow-glow);
-}
-.tab-btn:hover:not(.active) { color: var(--text); border-color: var(--taupe); background: var(--bg); }
+.main { min-width: 0; }
+.app-content { max-width: 1180px; margin: 0 auto; padding: 30px 34px 60px; }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+.page-head h1 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; font-weight: 600; line-height: 1.1; color: var(--text); }
+.page-head p { font-size: 13.5px; color: var(--muted); margin-top: 6px; max-width: 760px; line-height: 1.55; }
 .tab-panel { display: none; }
-.tab-panel.active { display: block; animation: fadeUp 0.3s ease; }
+.tab-panel.active { display: block; animation: fadeUp 0.25s ease; }
+.narrow { max-width: 860px; }
+.narrow-sm { max-width: 720px; }
 
-/* ── KARTY SALONÓW ── */
-.salony-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 18px; }
-.salon-card {
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: var(--radius); padding: 26px;
-  box-shadow: var(--shadow); transition: all 0.25s;
+/* ── KARTY, TOOLBARY, TABELE ── */
+.card, .gen-card, .wizard-card, .stat-card, .salon-card, .token-card, .zgl-card, .wizard-progress, .modal-box, .login-box {
+  background: var(--cream); border: 1px solid var(--sand); box-shadow: var(--shadow);
 }
+.card, .gen-card { border-radius: var(--radius); padding: 26px 28px; margin-bottom: 20px; }
+.card h3, .gen-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; color: var(--text); }
+.card .card-sub, .gen-card .card-sub { font-size: 13px; color: var(--muted); margin: -8px 0 20px; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.card-head h3 { margin: 0; }
+.toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 18px; }
+.toolbar .grow { flex: 1; min-width: 220px; }
+.toolbar input, .toolbar select { margin: 0; width: auto; }
+.toolbar input[type=text] { width: 100%; }
+.toolbar .spacer { flex: 1; }
+.table, .pulpit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.table th, .pulpit-table th { text-align: left; padding: 10px 14px; color: var(--taupe); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--sand); }
+.table td, .pulpit-table td { padding: 11px 14px; border-bottom: 1px solid var(--sand-soft); color: var(--text); vertical-align: top; }
+.table tr:last-child td { border-bottom: none; }
+.table-wrap { overflow-x: auto; }
+.section-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 6px 0 14px; }
+.hint { font-size: 11.5px; color: var(--taupe); line-height: 1.6; }
+
+/* ── NOTATKI / ALERTY ── */
+.note { border-radius: var(--radius-sm); padding: 14px 18px; margin-bottom: 16px; font-size: 13.5px; line-height: 1.6; border: 1px solid; }
+.note > strong:first-child + ul, .note > strong:first-child + ol { margin-top: 8px; }
+.mini-label { font-size: 11px; color: var(--taupe); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+.tk-row .btn-sm { flex: 0 0 auto; }
+.note ul, .note ol { margin: 6px 0 0; padding-left: 20px; }
+.note-warn { background: #fff8e7; border-color: var(--warn-bd); color: #78350f; }
+.note-warn strong { color: var(--warn-fg); }
+.note-danger { background: #fef2f2; border-color: #fca5a5; color: #7f1d1d; }
+.note-danger strong { color: #991b1b; }
+.note-info { background: #eef4ff; border-color: #cad9f7; color: #1e3a8a; }
+.note-ok { background: #f0fdf4; border-color: #86efac; color: #166534; }
+.alert { padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 18px; border: 1px solid; }
+.alert-error   { background: #f9ecea; color: var(--bad-fg); border-color: #e0b8b8; }
+.alert-success { background: #edf5ed; color: var(--ok-fg); border-color: var(--ok-bd); }
+.alert-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #fffaf0; border: 1px solid var(--warn-bd); border-radius: var(--radius-sm); padding: 13px 20px; margin-bottom: 20px; font-size: 13.5px; color: var(--warn-fg); font-weight: 500; }
+.alert-banner button { background: #fff; border: 1px solid var(--warn-bd); color: var(--warn-fg); padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
+
+/* ── PRZYCISKI ── */
+.btn-primary, .btn-secondary, .btn-export, .btn-danger, .btn-danger-outline, .btn-sm, .btn-export-sm, .copy-btn, .pager button {
+  font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+}
+.btn-primary {
+  background: var(--primary); color: #fff; border: none; padding: 12px 24px;
+  border-radius: var(--radius-btn); font-weight: 600; font-size: 14px; box-shadow: var(--shadow-glow);
+}
+.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(196,160,160,.3); }
+.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+.btn-block { width: 100%; }
+.btn-secondary, .btn-export {
+  background: var(--cream); color: var(--muted); border: 1px solid var(--sand);
+  padding: 10px 18px; border-radius: var(--radius-btn); font-weight: 500; font-size: 13px;
+}
+.btn-secondary:hover, .btn-export:hover { border-color: var(--primary); color: var(--primary); }
+.btn-danger { background: var(--red); color: #fff; border: none; padding: 12px 24px; border-radius: var(--radius-btn); font-weight: 600; font-size: 14px; }
+.btn-danger:hover { background: #a04848; }
+.btn-danger-outline { background: var(--cream); color: var(--bad-fg); border: 1px solid var(--bad-bd); padding: 11px 22px; border-radius: var(--radius-btn); font-weight: 600; font-size: 13.5px; }
+.btn-danger-outline:hover { background: var(--bad-bg); }
+.btn-link { background: none; border: none; color: var(--primary-dark); font-weight: 600; cursor: pointer; font-size: 13px; font-family: inherit; }
+.btn-link:hover { text-decoration: underline; }
+.btn-sm {
+  flex: 1; padding: 9px 12px; border: 1px solid var(--sand); border-radius: 9px;
+  font-weight: 500; font-size: 12px; background: var(--cream); color: var(--text);
+}
+.btn-activate   { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-bd); }
+.btn-deactivate { background: var(--bad-bg); color: var(--bad-fg); border-color: var(--bad-bd); }
+.btn-edit       { background: var(--info-bg); color: var(--info-fg); border-color: var(--info-bd); }
+.btn-detail     { background: #efe8f5; color: #5a3a80; border-color: #c4b0d8; }
+.btn-sm:hover { opacity: 0.85; transform: translateY(-1px); }
+.btn-sm.auto { flex: 0 0 auto; }
+.logout-btn {
+  background: transparent; border: 1px solid var(--sand); color: var(--taupe);
+  padding: 8px 18px; border-radius: 9px; font-family: inherit; font-weight: 500;
+  font-size: 13px; cursor: pointer; transition: 0.2s;
+}
+.logout-btn:hover { border-color: var(--primary-dark); color: var(--primary-dark); }
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 20px; }
+.pager button { background: var(--cream); border: 1px solid var(--sand); padding: 8px 15px; border-radius: 8px; font-size: 13px; color: var(--text); }
+.pager button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+.pager button:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── ODZNAKI ── */
+.badge { padding: 4px 11px; border-radius: 20px; font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; white-space: nowrap; }
+.badge-active, .badge-used, .badge-zreal { background: var(--ok-bg); color: var(--ok-fg); }
+.badge-inactive, .badge-expired { background: var(--bad-bg); color: var(--bad-fg); }
+.badge-warn { background: var(--warn-bg); color: var(--warn-fg); }
+.badge-expired-lic { background: #faddcf; color: #9a3412; }
+.badge-nowe { background: var(--primary-soft); color: var(--primary-dark); }
+.badge-wyslano, .badge-new { background: var(--info-bg); color: var(--info-fg); }
+.badge-odrz { background: var(--bg); color: var(--taupe); }
+.badge-blad { background: #fee2e2; color: #991b1b; }
+.pill { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+
+/* ── PULPIT ── */
+.pulpit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; margin-bottom: 26px; }
+.stat-card { border-radius: var(--radius); padding: 20px 22px; }
+.stat-card .stat-label { font-size: 11px; color: var(--taupe); font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
+.stat-card .stat-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+.stat-card .stat-sub { font-size: 12px; color: var(--muted); margin-top: 8px; }
+.stat-card.accent-mrr .stat-value { color: var(--ok-fg); }
+.stat-card.accent-primary .stat-value { color: var(--primary-dark); }
+.stat-card.accent-warn { border-color: var(--warn-bd); background: #fffaf0; }
+.stat-card.accent-warn .stat-value { color: var(--warn-fg); }
+.stat-card.accent-danger { border-color: #fca5a5; background: #fff6f4; }
+.stat-card.accent-danger .stat-value { color: #9a3412; }
+.pulpit-section-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 6px 0 14px; }
+
+/* ── SALONY ── */
+.salony-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 16px; }
+.salon-card { border-radius: var(--radius); padding: 24px; transition: all 0.25s; }
 .salon-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-hover); }
-.salon-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+.salon-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 14px; }
 .salon-name { font-size: 16px; font-weight: 600; color: var(--text); }
 .salon-city { font-size: 12px; color: var(--taupe); margin-top: 3px; }
-.badge {
-  padding: 4px 11px; border-radius: 20px; font-size: 10.5px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px;
-}
-.badge-active   { background: #e4f0e4; color: #3a6a3a; }
-.badge-inactive { background: #f5e4e4; color: #8a3030; }
-.badge-warn        { background: #fdf0d5; color: #92600e; }
-.badge-expired-lic { background: #faddcf; color: #9a3412; }
-.salony-toolbar { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.salon-meta { font-size: 13px; color: var(--muted); line-height: 1.85; }
+.salon-meta strong { color: var(--text); font-weight: 600; }
+.salon-actions { display: flex; gap: 8px; margin-top: 16px; }
+.salony-toolbar { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 12px; }
 .salony-toolbar input, .salony-toolbar select { margin: 0; }
 .salony-licznik-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
 .salony-licznik { font-size: 12.5px; color: var(--taupe); }
 @media (max-width: 760px) { .salony-toolbar { grid-template-columns: 1fr; } }
-
-/* ── PULPIT / FINANSE ── */
-.pulpit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
-.stat-card { background: var(--cream); border: 1px solid var(--sand); border-radius: var(--radius); padding: 22px 24px; box-shadow: var(--shadow); }
-.stat-card .stat-label { font-size: 11.5px; color: var(--taupe); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 11px; }
-.stat-card .stat-value { font-size: 30px; font-weight: 700; color: var(--text); line-height: 1; }
-.stat-card .stat-sub { font-size: 12px; color: var(--muted); margin-top: 9px; }
-.stat-card.accent-mrr .stat-value { color: #3a6a3a; }
-.stat-card.accent-warn { border-color: #f5cf66; background: #fffaf0; }
-.stat-card.accent-warn .stat-value { color: #92600e; }
-.stat-card.accent-danger { border-color: #fca5a5; background: #fff6f4; }
-.stat-card.accent-danger .stat-value { color: #9a3412; }
-.pulpit-section-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 6px 0 16px; }
-.pulpit-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.pulpit-table th { text-align: left; padding: 10px 14px; color: var(--taupe); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; border-bottom: 1px solid var(--sand); }
-.pulpit-table td { padding: 11px 14px; border-bottom: 1px solid var(--sand); color: var(--text); }
-.alert-banner { display: flex; align-items: center; justify-content: space-between; gap: 14px; background: #fffaf0; border: 1px solid #f5cf66; border-radius: 12px; padding: 13px 20px; margin-bottom: 18px; font-size: 13.5px; color: #92600e; font-weight: 500; }
-.alert-banner button { background: #fff; border: 1px solid #f5cf66; color: #92600e; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.btn-export { background: var(--cream); border: 1px solid var(--sand); color: var(--text); padding: 9px 16px; border-radius: 9px; font-weight: 500; font-size: 12.5px; cursor: pointer; font-family: inherit; white-space: nowrap; }
-.btn-export:hover { border-color: var(--primary); color: var(--primary); }
-.zgl-toolbar { display: flex; gap: 12px; justify-content: flex-end; align-items: center; margin-bottom: 16px; }
+.zgl-toolbar { display: flex; gap: 10px; justify-content: flex-end; align-items: center; flex-wrap: wrap; margin-bottom: 16px; }
 .zgl-toolbar select { width: auto; margin: 0; }
-.pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin-top: 20px; }
-.pager button { background: var(--cream); border: 1px solid var(--sand); padding: 8px 15px; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 13px; color: var(--text); }
-.pager button:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
-.pager button:disabled { opacity: .4; cursor: not-allowed; }
-.spinner {
-  display: inline-block; width: 15px; height: 15px; border: 2px solid var(--sand);
-  border-top-color: var(--primary); border-radius: 50%;
-  animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 9px;
-}
+.spinner { display: inline-block; width: 15px; height: 15px; border: 2px solid var(--sand); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 9px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.salon-meta { font-size: 13px; color: var(--muted); line-height: 1.85; }
-.salon-meta strong { color: var(--text); font-weight: 600; }
-.salon-actions { display: flex; gap: 8px; margin-top: 18px; }
-.btn-sm {
-  flex: 1; padding: 9px; border: 1px solid var(--sand); border-radius: 9px;
-  font-family: inherit; font-weight: 500; font-size: 12px; cursor: pointer;
-  transition: 0.2s; background: var(--cream);
-}
-.btn-activate   { background: #e4f0e4; color: #3a6a3a; border-color: #b4d4b4; }
-.btn-deactivate { background: #f5e4e4; color: #8a3030; border-color: #d4a4a4; }
-.btn-edit       { background: #e4ecf5; color: #2a5080; border-color: #a4c0d8; }
-.btn-detail     { background: #efe8f5; color: #5a3a80; border-color: #c4b0d8; }
-.btn-sm:hover { opacity: 0.85; transform: translateY(-1px); }
 
 /* ── MODAL SZCZEGÓŁÓW ── */
 .dt-section { margin-bottom: 18px; }
-.dt-section-title {
-  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--primary); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--sand);
-}
+.dt-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); margin-bottom: 8px; padding-bottom: 5px; border-bottom: 1px solid var(--sand); }
 .dt-row { display: flex; justify-content: space-between; gap: 14px; padding: 5px 0; font-size: 13px; }
 .dt-label { color: var(--muted); flex-shrink: 0; }
 .dt-val { text-align: right; word-break: break-word; }
 .dt-export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.btn-export-sm {
-  padding: 9px 12px; border: 1px solid var(--sand); border-radius: 9px; background: var(--cream);
-  font-family: inherit; font-weight: 500; font-size: 12px; cursor: pointer; transition: 0.2s; color: var(--text);
-}
+.btn-export-sm { padding: 9px 12px; border: 1px solid var(--sand); border-radius: 9px; background: var(--cream); font-weight: 500; font-size: 12px; color: var(--text); }
 .btn-export-sm:hover { border-color: var(--primary); color: var(--primary); transform: translateY(-1px); }
 .btn-export-sm:disabled { opacity: 0.6; cursor: default; transform: none; }
 .dt-export-grid .btn-export-sm:last-child:nth-child(odd) { grid-column: 1 / -1; }
 
 /* ── WIZARD ── */
 .wizard-wrap { max-width: 720px; margin: 0 auto; }
-.wizard-progress {
-  display: flex; align-items: center; margin-bottom: 32px;
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: var(--radius); padding: 22px 28px;
-  box-shadow: var(--shadow);
-}
-.w-step {
-  display: flex; flex-direction: column; align-items: center; flex: 1; position: relative;
-}
-.w-step:not(:last-child)::after {
-  content: ''; position: absolute; top: 20px; left: 60%; width: 80%;
-  height: 1px; background: var(--sand); z-index: 0;
-}
+.wizard-progress { display: flex; align-items: center; margin-bottom: 24px; border-radius: var(--radius); padding: 22px 28px; }
+.w-step { display: flex; flex-direction: column; align-items: center; flex: 1; position: relative; }
+.w-step:not(:last-child)::after { content: ''; position: absolute; top: 20px; left: 60%; width: 80%; height: 1px; background: var(--sand); z-index: 0; }
 .w-step.done::after { background: var(--primary); }
-.w-dot {
-  width: 40px; height: 40px; border-radius: 50%; background: var(--bg);
-  color: var(--taupe); font-weight: 600; font-size: 14px;
-  display: flex; align-items: center; justify-content: center; z-index: 1;
-  transition: all 0.3s; border: 1px solid var(--sand);
-}
-.w-step.active .w-dot {
-  background: var(--primary); color: #fff;
-  border-color: transparent; box-shadow: var(--shadow-glow);
-}
+.w-dot { width: 40px; height: 40px; border-radius: 50%; background: var(--bg); color: var(--taupe); font-weight: 600; font-size: 14px; display: flex; align-items: center; justify-content: center; z-index: 1; transition: all 0.3s; border: 1px solid var(--sand); }
+.w-step.active .w-dot { background: var(--primary); color: #fff; border-color: transparent; box-shadow: var(--shadow-glow); }
 .w-step.done .w-dot { background: var(--sage); color: #fff; border-color: transparent; }
 .w-label { font-size: 11px; color: var(--taupe); margin-top: 8px; font-weight: 500; text-align: center; white-space: nowrap; }
 .w-step.active .w-label { color: var(--primary); font-weight: 600; }
 .w-step.done .w-label { color: var(--sage); }
-
-.wizard-card {
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: var(--radius); padding: 36px;
-  box-shadow: var(--shadow); margin-bottom: 16px;
-}
+.wizard-card { border-radius: var(--radius); padding: 36px; margin-bottom: 16px; }
 .wizard-card h2 { font-family: 'Cormorant Garamond', serif; font-size: 1.5rem; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 .wizard-card .subtitle { font-size: 13.5px; color: var(--muted); margin-bottom: 28px; }
-
-/* ── FORMULARZE ── */
-.form-group { margin-bottom: 18px; }
-label { display: block; font-size: 11px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px; }
-input[type=text], input[type=password], input[type=email], input[type=tel], input[type=date], input[type=number], select {
-  width: 100%; padding: 12px 16px; background: var(--bg); border: 1px solid var(--sand);
-  border-radius: var(--radius-input); font-size: 14px; color: var(--text); font-weight: 400;
-  outline: none; transition: all 0.2s; font-family: inherit;
-}
-input:focus, select:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(196,160,160,.12); }
-.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
-
-/* ── LISTY PRACOWNICY/USŁUGI ── */
-.list-item {
-  display: flex; gap: 10px; align-items: center; padding: 10px;
-  background: var(--bg); border: 1px solid var(--sand); border-radius: 10px; margin-bottom: 8px;
-}
-.list-item input { flex: 1; margin: 0; }
-.list-item .btn-remove {
-  width: 34px; height: 34px; border: none; background: #f5e4e4; color: #8a3030;
-  border-radius: 8px; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: 0.2s;
-}
-.list-item .btn-remove:hover { background: #eac8c8; }
-.btn-add-row {
-  width: 100%; padding: 12px; border: 1px dashed var(--sand); background: transparent;
-  border-radius: 10px; color: var(--taupe); font-family: inherit; font-weight: 500;
-  font-size: 13.5px; cursor: pointer; transition: 0.2s; margin-top: 4px;
-}
-.btn-add-row:hover { border-color: var(--primary); color: var(--primary); background: rgba(196,160,160,.05); }
-
-/* ── PRZYCISKI GŁÓWNE ── */
-.btn-primary {
-  background: var(--primary);
-  color: #fff; border: none; padding: 14px 28px; border-radius: var(--radius-btn);
-  font-family: inherit; font-weight: 600; font-size: 14px;
-  cursor: pointer; box-shadow: var(--shadow-glow);
-  transition: all 0.2s; width: 100%;
-}
-.btn-primary:hover { background: var(--primary-dark); transform: translateY(-1px); box-shadow: 0 10px 24px rgba(196,160,160,.3); }
-.btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-.btn-secondary {
-  background: var(--cream); color: var(--muted); border: 1px solid var(--sand);
-  padding: 13px 24px; border-radius: var(--radius-btn); font-family: inherit;
-  font-weight: 500; font-size: 14px; cursor: pointer; transition: all 0.2s;
-}
-.btn-secondary:hover { border-color: var(--primary); color: var(--primary); }
 .wizard-nav { display: flex; gap: 12px; margin-top: 10px; }
 .wizard-nav .btn-secondary { flex: 0 0 auto; }
 .wizard-nav .btn-primary { flex: 1; }
 
-/* ── PODSUMOWANIE ── */
+/* ── FORMULARZE ── */
+.form-group { margin-bottom: 18px; }
+label { display: block; font-size: 11px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 7px; }
+input[type=text], input[type=password], input[type=email], input[type=tel], input[type=date], input[type=number], select, textarea {
+  width: 100%; padding: 11px 15px; background: var(--bg); border: 1px solid var(--sand);
+  border-radius: var(--radius-input); font-size: 14px; color: var(--text); font-weight: 400;
+  outline: none; transition: all 0.2s; font-family: inherit;
+}
+textarea { resize: vertical; line-height: 1.5; }
+input:focus, select:focus, textarea:focus { background: #fff; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(196,160,160,.12); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+.list-item { display: flex; gap: 10px; align-items: center; padding: 10px; background: var(--bg); border: 1px solid var(--sand); border-radius: 10px; margin-bottom: 8px; }
+.list-item input { flex: 1; margin: 0; }
+.list-item .btn-remove { width: 34px; height: 34px; border: none; background: var(--bad-bg); color: var(--bad-fg); border-radius: 8px; font-size: 15px; cursor: pointer; flex-shrink: 0; transition: 0.2s; }
+.list-item .btn-remove:hover { background: #eac8c8; }
+.btn-add-row { width: 100%; padding: 12px; border: 1px dashed var(--sand); background: transparent; border-radius: 10px; color: var(--taupe); font-family: inherit; font-weight: 500; font-size: 13.5px; cursor: pointer; transition: 0.2s; margin-top: 4px; }
+.btn-add-row:hover { border-color: var(--primary); color: var(--primary); background: rgba(196,160,160,.05); }
+
+/* ── PODSUMOWANIE WIZARDA ── */
 .summary-section { margin-bottom: 22px; }
 .summary-section h4 { font-size: 11px; font-weight: 600; color: var(--taupe); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
 .summary-row { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--sand); font-size: 13.5px; }
 .summary-row strong { color: var(--text); }
 .summary-row span { color: var(--muted); }
 .summary-chip { display: inline-block; background: var(--bg); border: 1px solid var(--sand); border-radius: 7px; padding: 3px 9px; font-size: 12px; font-weight: 500; margin: 3px 3px 3px 0; }
-.result-box {
-  text-align: center; padding: 40px;
-  background: #edf5ed; border: 1px solid #b4d4b4; border-radius: var(--radius);
-}
+.result-box { text-align: center; padding: 40px; background: #edf5ed; border: 1px solid var(--ok-bd); border-radius: var(--radius); }
 .result-box .icon { font-size: 56px; margin-bottom: 18px; }
 .result-box h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; color: #2a5a2a; margin-bottom: 8px; }
 .result-box p { color: #5a8a5a; font-size: 13.5px; margin-bottom: 6px; }
-.result-box .tenant-id {
-  background: var(--cream); border: 1px solid var(--sand); border-radius: 10px; padding: 12px 18px;
-  font-family: monospace; font-size: 15px; font-weight: 600; color: var(--text);
-  margin: 18px 0; letter-spacing: 1px;
-}
+.result-box .tenant-id { background: var(--cream); border: 1px solid var(--sand); border-radius: 10px; padding: 12px 18px; font-family: monospace; font-size: 15px; font-weight: 600; color: var(--text); margin: 18px 0; letter-spacing: 1px; }
 
-/* ── ZGŁOSZENIA ── */
-.zgl-card {
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: 16px; padding: 22px 26px;
-  box-shadow: var(--shadow); margin-bottom: 12px; transition: all 0.25s;
-  border-left: 3px solid transparent;
-}
+/* ── ZAMÓWIENIA / TICKETY (karty zgłoszeń) ── */
+.zgl-card { border-radius: var(--radius-sm); padding: 20px 24px; margin-bottom: 12px; transition: all 0.25s; border-left: 3px solid transparent; }
 .zgl-card.nowe         { border-left-color: var(--primary); }
 .zgl-card.wyslano_link { border-left-color: var(--blue); }
 .zgl-card.oplacone     { border-left-color: var(--blue); }
 .zgl-card.blad_maila   { border-left-color: #dc2626; background: #fff7f7; }
 .zgl-card.zrealizowane { border-left-color: var(--sage); opacity: 0.75; }
 .zgl-card.odrzucone    { border-left-color: var(--sand); opacity: 0.6; }
-.zgl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+.zgl-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 10px; }
 .zgl-name   { font-size: 15px; font-weight: 600; color: var(--text); }
 .zgl-salon  { font-size: 12.5px; color: var(--taupe); margin-top: 2px; }
 .zgl-meta   { font-size: 13px; color: var(--muted); line-height: 1.85; }
-.zgl-meta a { color: var(--primary); text-decoration: none; font-weight: 600; }
-.zgl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sand); }
+.zgl-meta a { color: var(--primary-dark); text-decoration: none; font-weight: 600; }
+.zgl-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--sand-soft); }
+.zgl-actions .btn-sm { flex: 0 0 auto; }
 .zgl-msg { font-size: 13px; color: var(--muted); background: var(--bg); border-radius: 8px; padding: 10px 14px; margin-top: 10px; font-style: italic; }
-.badge-nowe   { background: rgba(196,160,160,.15); color: var(--primary-dark); }
-.badge-wyslano{ background: #e4ecf5; color: #2a5080; }
-.badge-zreal  { background: #e4f0e4; color: #3a6a3a; }
-.badge-odrz   { background: var(--bg); color: var(--taupe); }
-.badge-blad   { background: #fee2e2; color: #991b1b; }
+.tk-reply { margin-top: 10px; background: var(--bg); border: 1px solid var(--sand-soft); border-radius: 10px; padding: 12px 14px; }
+.tk-reply label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: none; letter-spacing: 0; margin-bottom: 6px; }
+.tk-reply textarea { background: var(--cream); font-size: 13px; padding: 9px 12px; }
+.tk-reply select { width: auto; padding: 7px 10px; font-size: 13px; background: var(--cream); }
+.tk-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+.tk-small { font-size: 11px; color: var(--taupe); }
 .send-modal { display: none; position: fixed; inset: 0; background: rgba(44,36,32,0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; z-index: 200; padding: 20px; }
 .send-modal.open { display: flex; }
 
-/* ── TOKENY ── */
-.token-card {
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: 14px; padding: 18px 22px;
-  box-shadow: var(--shadow); margin-bottom: 10px; display: flex;
-  align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-}
+/* ── LINKI ── */
+.token-card { border-radius: var(--radius-sm); padding: 16px 20px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .token-info { flex: 1; min-width: 0; }
 .token-code { font-family: monospace; font-size: 11.5px; color: var(--taupe); word-break: break-all; }
 .token-meta { font-size: 13px; margin-top: 4px; color: var(--text); font-weight: 500; }
 .token-note { font-size: 12px; color: var(--taupe); font-style: italic; }
 .token-actions { display: flex; gap: 8px; flex-shrink: 0; }
-.badge-new     { background: #e4ecf5; color: #2a5080; }
-.badge-used    { background: #e4f0e4; color: #3a6a3a; }
-.badge-expired { background: #f5e4e4; color: #8a3030; }
-.link-box {
-  background: var(--bg); border-radius: 10px; padding: 10px 14px;
-  font-family: monospace; font-size: 12px; color: var(--text); word-break: break-all;
-  margin-top: 10px; border: 1px dashed var(--sand);
-}
-.gen-card { background: var(--cream); border: 1px solid var(--sand); border-radius: var(--radius); padding: 28px; box-shadow: var(--shadow); margin-bottom: 22px; }
-.gen-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 18px; color: var(--text); }
-.gen-result { background: #edf5ed; border: 1px solid #b4d4b4; border-radius: 12px; padding: 18px; margin-top: 18px; display: none; }
-.gen-result p { font-size: 13px; color: #3a6a3a; font-weight: 600; margin-bottom: 10px; }
-.copy-btn {
-  background: #e4f0e4; color: #3a6a3a; border: none; padding: 7px 14px;
-  border-radius: 8px; font-family: inherit; font-weight: 600; font-size: 12px;
-  cursor: pointer; margin-top: 6px; transition: 0.2s;
-}
+.token-actions .btn-sm { flex: 0 0 auto; }
+.link-box { background: var(--bg); border-radius: 10px; padding: 10px 14px; font-family: monospace; font-size: 12px; color: var(--text); word-break: break-all; margin-top: 10px; border: 1px dashed var(--sand); }
+.gen-result { background: #edf5ed; border: 1px solid var(--ok-bd); border-radius: 12px; padding: 18px; margin-top: 18px; display: none; }
+.gen-result p { font-size: 13px; color: var(--ok-fg); font-weight: 600; margin-bottom: 10px; }
+.copy-btn { background: var(--ok-bg); color: var(--ok-fg); border: none; padding: 7px 14px; border-radius: 8px; font-weight: 600; font-size: 12px; margin-top: 6px; }
 .copy-btn:hover { background: #c8e4c8; }
 
-/* ── EDIT MODAL ── */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(44,36,32,0.35); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center; z-index: 1000; display: none;
-  padding: 20px;
-}
-.modal-box {
-  background: var(--cream); border: 1px solid var(--sand);
-  border-radius: var(--radius); padding: 36px;
-  width: 100%; max-width: 500px; box-shadow: 0 20px 60px rgba(44,36,32,0.14);
-  animation: fadeUp 0.3s ease;
-}
+/* ── VOUCHERY ── */
+.voucher-item { background: var(--cream); border: 1px solid var(--sand); border-left: 4px solid var(--primary); border-radius: var(--radius-sm); padding: 16px 18px; margin-bottom: 10px; box-shadow: var(--shadow); }
+.voucher-item.off { border-left-color: var(--sand); opacity: .7; }
+.voucher-item .v-kod { font-family: monospace; font-size: 15px; font-weight: 700; letter-spacing: 1px; color: var(--primary-dark); }
+.voucher-item.off .v-kod { color: var(--muted); }
+
+/* ── PREDEF. USŁUGI ── */
+.predef-kat { border: 1px solid var(--sand); border-radius: var(--radius-sm); margin-bottom: 14px; overflow: hidden; background: var(--white); }
+.predef-kat-head { background: var(--cream); padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.predef-kat-head .kat-nazwa { font-weight: 600; font-size: 15px; }
+.predef-kat-body { padding: 14px 18px; }
+.chip { background: var(--bg); border: 1px solid var(--sand); border-radius: 20px; padding: 5px 12px; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
+.chip .chip-x { background: none; border: none; cursor: pointer; color: var(--taupe); font-size: 14px; line-height: 1; padding: 0; }
+.chip .chip-x:hover { color: var(--red); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+
+/* ── MODAL ── */
+.modal-overlay { position: fixed; inset: 0; background: rgba(44,36,32,0.35); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 1000; display: none; padding: 20px; }
+.modal-box { border-radius: var(--radius); padding: 36px; width: 100%; max-width: 500px; box-shadow: 0 20px 60px rgba(44,36,32,0.14); animation: fadeUp 0.3s ease; }
 .modal-box h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 22px; color: var(--text); }
 
 /* ── MISC ── */
@@ -376,32 +370,26 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 .empty-state .icon { font-size: 48px; margin-bottom: 14px; }
 .empty-state p { font-size: 14px; color: var(--muted); }
 .loading { text-align: center; padding: 40px; color: var(--taupe); font-size: 14px; }
-.alert { padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 18px; border: 1px solid; }
-.alert-error   { background: #f9ecea; color: #8a3030; border-color: #e0b8b8; }
-.alert-success { background: #edf5ed; color: #3a6a3a; border-color: #b4d4b4; }
-.logout-btn {
-  background: transparent; border: 1px solid var(--sand); color: var(--taupe);
-  padding: 8px 18px; border-radius: 9px; font-family: inherit; font-weight: 500;
-  font-size: 13px; cursor: pointer; transition: 0.2s;
-}
-.logout-btn:hover { border-color: var(--primary-dark); color: var(--primary-dark); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-@keyframes fadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+/* ── RWD: sidebar zwija się do paska u góry ── */
+@media (max-width: 920px) {
+  #app { grid-template-columns: 1fr; }
+  .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 4px; padding: 12px 14px; border-right: none; border-bottom: 1px solid var(--sand); }
+  .sidebar .brand { font-size: 1.3rem; padding: 0 8px; }
+  .sidebar .brand-sub { display: none; }
+  .nav-group { margin: 0; display: contents; }
+  .nav-group-title { display: none; }
+  .nav-item { width: auto; padding: 7px 10px; font-size: 13px; }
+  .sidebar-foot { margin: 0; padding: 0; border: 0; display: contents; }
+  .sidebar-foot .logout-btn { width: auto; margin: 0; }
+  .app-content { padding: 22px 16px 50px; }
+  .page-head h1 { font-size: 1.6rem; }
+}
 
 /* ─── POWIADOMIENIA TOAST ─────────────────── */
-#boczki-toasts {
-    position: fixed; bottom: 24px; right: 24px; z-index: 99999;
-    display: flex; flex-direction: column-reverse; gap: 10px;
-    pointer-events: none; max-width: 340px; width: calc(100vw - 48px);
-}
-.b-toast {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 16px 18px; border-radius: 16px;
-    background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-    font-size: 13px; color: #2d3748; pointer-events: all; cursor: pointer;
-    animation: bToastIn 0.38s cubic-bezier(.22,1,.36,1) both;
-    border-left: 4px solid transparent; position: relative; overflow: hidden; word-break: break-word;
-}
+#boczki-toasts { position: fixed; bottom: 24px; right: 24px; z-index: 99999; display: flex; flex-direction: column-reverse; gap: 10px; pointer-events: none; max-width: 340px; width: calc(100vw - 48px); }
+.b-toast { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 18px; border-radius: 16px; background: #fff; box-shadow: 0 8px 30px rgba(0,0,0,0.12); font-size: 13px; color: #2d3748; pointer-events: all; cursor: pointer; animation: bToastIn 0.38s cubic-bezier(.22,1,.36,1) both; border-left: 4px solid transparent; position: relative; overflow: hidden; word-break: break-word; }
 .b-toast.b-success { border-left-color: #27ae60; }
 .b-toast.b-error   { border-left-color: #e74c3c; }
 .b-toast.b-warning { border-left-color: #f39c12; }
@@ -410,10 +398,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 .b-toast-body { flex: 1; }
 .b-toast-title { font-weight: 600; margin-bottom: 2px; }
 .b-toast-msg { font-size: 12px; color: #6b7280; }
-.b-toast-bar {
-    position: absolute; bottom: 0; left: 0; height: 3px;
-    animation: bToastBar linear forwards;
-}
+.b-toast-bar { position: absolute; bottom: 0; left: 0; height: 3px; animation: bToastBar linear forwards; }
 .b-toast.b-success .b-toast-bar { background: #27ae60; }
 .b-toast.b-error   .b-toast-bar { background: #e74c3c; }
 .b-toast.b-warning .b-toast-bar { background: #f39c12; }
@@ -438,7 +423,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <label>Hasło administratora</label>
       <input type="password" id="admin-password" placeholder="••••••••" onkeydown="if(event.key==='Enter') adminLogin()">
     </div>
-    <button class="btn-primary" onclick="adminLogin()">Zaloguj się</button>
+    <button class="btn-primary btn-block" onclick="adminLogin()">Zaloguj się</button>
   </div>
 </div>
 
@@ -446,37 +431,61 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
      APLIKACJA
 ════════════════════════════════ -->
 <div id="app">
-  <div class="app-header">
-    <div class="brand">Este<span>lio</span> &nbsp;·&nbsp; <span style="font-size:1rem;color:var(--taupe);font-style:normal;font-weight:400">Panel Admina</span></div>
-    <div style="display:flex;gap:10px;align-items:center">
-      <a href="/admin-guide.html" style="font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px 16px;border:1px solid var(--sand);border-radius:9px;background:var(--cream);transition:border-color .2s" onmouseover="this.style.borderColor='var(--camel)';this.style.color='var(--camel)'" onmouseout="this.style.borderColor='var(--sand)';this.style.color='var(--muted)'" target="_blank">📖 Przewodnik</a>
-      <a href="/admin-blog.html" style="font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;padding:8px 16px;border:1px solid var(--sand);border-radius:9px;background:var(--cream);transition:border-color .2s" onmouseover="this.style.borderColor='var(--primary)';this.style.color='var(--primary)'" onmouseout="this.style.borderColor='var(--sand)';this.style.color='var(--muted)'" target="_blank">✍️ Blog CMS</a>
+  <!-- Nawigacja boczna (redesign 2026-10-11): grupy zamiast 11 przycisków w rzędzie.
+       Identyfikatory zakładek (tab-*) i odznak (badge-nowe, badge-tickety) bez zmian — JS się na nich opiera. -->
+  <aside class="sidebar">
+    <div class="brand">Este<span>lio</span></div>
+    <div class="brand-sub">Panel admina</div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Przegląd</div>
+      <button class="nav-item tab-btn active" data-tab="tab-pulpit" onclick="showTab('tab-pulpit')"><span class="ico">📊</span><span class="lbl">Pulpit</span></button>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Sprzedaż i klienci</div>
+      <button class="nav-item tab-btn" data-tab="tab-salony" onclick="showTab('tab-salony')"><span class="ico">🏪</span><span class="lbl">Salony</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-zgloszenia" onclick="showTab('tab-zgloszenia')"><span class="ico">🛒</span><span class="lbl">Zamówienia</span><span id="badge-nowe" class="nav-badge" style="display:none;">0</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-linki" onclick="showTab('tab-linki')"><span class="ico">🔗</span><span class="lbl">Linki rejestracji</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-vouchery" onclick="showTab('tab-vouchery')"><span class="ico">🏷️</span><span class="lbl">Vouchery</span></button>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Wsparcie</div>
+      <button class="nav-item tab-btn" data-tab="tab-tickety" onclick="showTab('tab-tickety')"><span class="ico">🎫</span><span class="lbl">Tickety</span><span id="badge-tickety" class="nav-badge" style="display:none;">0</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-kb" onclick="showTab('tab-kb')"><span class="ico">💬</span><span class="lbl">Baza wiedzy Esti</span></button>
+    </div>
+
+    <div class="nav-group">
+      <div class="nav-group-title">Konfiguracja</div>
+      <button class="nav-item tab-btn" data-tab="tab-nowy" onclick="showTab('tab-nowy')"><span class="ico">➕</span><span class="lbl">Nowy salon</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-predef" onclick="showTab('tab-predef'); predef_init();"><span class="ico">💅</span><span class="lbl">Predef. usługi</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-demo" onclick="showTab('tab-demo')"><span class="ico">🎬</span><span class="lbl">Salon demo</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-typy-migracja" onclick="showTab('tab-typy-migracja'); typyMigracja_init();"><span class="ico">🔧</span><span class="lbl">Migracja typów</span></button>
+    </div>
+
+    <div class="sidebar-foot">
+      <a class="nav-item" href="/admin-guide.html" target="_blank"><span class="ico">📖</span><span class="lbl">Przewodnik admina</span></a>
+      <a class="nav-item" href="/admin-blog.html" target="_blank"><span class="ico">✍️</span><span class="lbl">Blog CMS</span></a>
       <button class="logout-btn" onclick="adminLogout()">Wyloguj ↩</button>
     </div>
-  </div>
+  </aside>
 
+  <div class="main">
   <div class="app-content">
 
     <div id="alert-wygasajace" class="alert-banner" style="display:none;"></div>
 
-    <!-- Tabs -->
-    <div class="tab-bar">
-      <button class="tab-btn active" onclick="showTab('tab-pulpit')">📊 Pulpit</button>
-      <button class="tab-btn" onclick="showTab('tab-salony')">🏪 Salony</button>
-      <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
-      <button class="tab-btn" onclick="showTab('tab-tickety')">🎫 Tickety <span id="badge-tickety" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
-      <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
-      <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
-      <button class="tab-btn" onclick="showTab('tab-kb')">💬 Baza Wiedzy</button>
-      <button class="tab-btn" onclick="showTab('tab-predef'); predef_init();">💅 Predef. usługi</button>
-      <button class="tab-btn" onclick="showTab('tab-nowy')">➕ Nowy salon</button>
-      <button class="tab-btn" onclick="showTab('tab-demo')">🎬 Demo</button>
-      <button class="tab-btn" onclick="showTab('tab-typy-migracja'); typyMigracja_init();">🏷️ Migracja typów</button>
+    <div class="page-head">
+      <div>
+        <h1 id="page-title">Pulpit</h1>
+        <p id="page-sub">Najważniejsze liczby: aktywne salony, przychód, licencje do odnowienia.</p>
+      </div>
     </div>
 
     <!-- Tab: Pulpit / Finanse -->
     <div id="tab-pulpit" class="tab-panel active">
-      <div id="pulpit-content" class="loading">Ładowanie pulpitu...</div>
+      <div id="pulpit-content"><div class="loading">Ładowanie pulpitu...</div></div>
     </div>
 
     <!-- Tab: Lista salonów -->
@@ -504,21 +513,15 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
         <div id="salony-licznik" class="salony-licznik"></div>
         <button class="btn-export" onclick="eksportSalonyCSV()">⬇ Eksport CSV</button>
       </div>
-      <div id="salony-content" class="loading">Ładowanie salonów...</div>
+      <div id="salony-content"><div class="loading">Ładowanie salonów...</div></div>
     </div>
 
     <!-- Tab: Demo Salon -->
     <div id="tab-demo" class="tab-panel">
-      <div style="max-width:780px; margin:0 auto;">
-        <h3 style="margin-bottom:6px;">🎬 Salon demonstracyjny</h3>
-        <p style="color:var(--taupe); font-size:13.5px; margin-bottom:20px; line-height:1.6;">
-          Klonuje dane z salonu Boczków (tenant <code>boczki-salon-glowny-001</code>) do tenanta <code>demo-estelio</code> z anonimizacją imion klientów i pracowników.
-          <br>Salon Boczków pozostaje nietknięty — kopiujemy tylko (SELECT z Boczków, INSERT do demo).
-        </p>
-
-        <div style="background:#fff8e7; border:1px solid #f5cf66; border-radius:12px; padding:18px 22px; margin-bottom:20px;">
-          <strong style="color:#92400e;">⚠ Co się stanie:</strong>
-          <ul style="margin:10px 0 0; padding-left:20px; color:#78350f; font-size:13.5px;">
+      <div class="narrow">
+        <div class="note note-warn">
+          <strong>⚠ Co się stanie:</strong>
+          <ul>
             <li>Klienci → losowe imiona (Anna Kowalska → Magdalena Wiśniewska), telefony fake, notatki wymazane</li>
             <li>Sprzedaż, zadatki, magazyn, cennik (Uslugi), koszty — kopiowane</li>
             <li>Pracownicy mapowani na 6 demo (Ola/Kasia/Patrycja/Magdalena/Anna/Marta)</li>
@@ -528,25 +531,25 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
           </ul>
         </div>
 
-        <div id="demo-existing-warning" style="display:none; background:#fef2f2; border:1px solid #fca5a5; border-radius:12px; padding:14px 18px; margin-bottom:16px;">
-          <strong style="color:#991b1b;">⚠ Demo już istnieje</strong> — klikając "Sklonuj ponownie (force)" wyczyścisz aktualne dane demo i utworzysz na nowo.
+        <div id="demo-existing-warning" class="note note-danger" style="display:none;">
+          <strong>⚠ Demo już istnieje</strong> — klikając "Sklonuj ponownie (force)" wyczyścisz aktualne dane demo i utworzysz na nowo.
         </div>
 
         <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
-          <button id="btn-demo-clone" onclick="cloneDemo(false)" style="background:linear-gradient(135deg, #ec3f91 0%, #df247e 100%); color:#fff; border:none; padding:14px 28px; border-radius:12px; font-weight:700; font-size:14px; cursor:pointer; box-shadow:0 8px 20px rgba(236,63,145,0.25);">
+          <button id="btn-demo-clone" class="btn-primary" onclick="cloneDemo(false)">
             🎬 Sklonuj salon demonstracyjny
           </button>
-          <button id="btn-demo-force" onclick="cloneDemo(true)" style="display:none; background:#fff; color:#dc2626; border:1px solid #fca5a5; padding:14px 22px; border-radius:12px; font-weight:700; font-size:13px; cursor:pointer;">
+          <button id="btn-demo-force" class="btn-danger-outline" onclick="cloneDemo(true)" style="display:none;">
             🗑 Sklonuj ponownie (force)
           </button>
         </div>
 
-        <div id="demo-progress" style="display:none; margin-top:24px; padding:20px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; max-height:400px; overflow-y:auto;">
+        <div id="demo-progress" class="card" style="display:none; margin-top:24px; padding:20px; max-height:400px; overflow-y:auto;">
           <div id="demo-progress-status" style="font-weight:700; color:#1e40af; margin-bottom:12px;">Klonowanie w toku... (może potrwać kilka minut)</div>
           <pre id="demo-progress-log" style="margin:0; font-size:11.5px; color:#475569; font-family:Consolas,monospace; white-space:pre-wrap; max-height:280px; overflow-y:auto;"></pre>
         </div>
 
-        <div id="demo-result" style="display:none; margin-top:24px; padding:24px; background:#f0fdf4; border:1px solid #86efac; border-radius:14px;">
+        <div id="demo-result" class="note note-ok" style="display:none; margin-top:24px; padding:24px;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
             <span style="font-size:28px;">✓</span>
             <h4 style="margin:0; color:#166534; font-size:18px;">Salon demo gotowy</h4>
@@ -558,17 +561,10 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
     <!-- Tab: Migracja typów zabiegów -->
     <div id="tab-typy-migracja" class="tab-panel">
-      <div style="max-width:860px; margin:0 auto;">
-        <h3 style="margin-bottom:6px;">🏷️ Migracja typów zabiegów</h3>
-        <p style="color:var(--taupe); font-size:13.5px; margin-bottom:20px; line-height:1.6;">
-          Wypełnia kolumny <code>typ_zabiegu</code> w tabelach <code>Uslugi</code> (cennik) i <code>Sprzedaz</code> (historia)
-          na podstawie heurystyk po nazwie. Dotyczy istniejących danych — nowe sprzedaże od commit 1 zapisują typ
-          automatycznie.
-        </p>
-
-        <div style="background:#fff8e7; border:1px solid #f5cf66; border-radius:12px; padding:18px 22px; margin-bottom:20px;">
-          <strong style="color:#92400e;">⚠ Workflow:</strong>
-          <ol style="margin:10px 0 0; padding-left:20px; color:#78350f; font-size:13.5px;">
+      <div class="narrow">
+        <div class="note note-warn">
+          <strong>⚠ Workflow:</strong>
+          <ol>
             <li><b>Najpierw DRY-RUN</b> — bezpieczne, nic nie zapisuje, pokazuje raport per typ</li>
             <li>Sprawdź czy liczby pasują do intuicji (np. czy zabiegi twarzy faktycznie są w „twarz")</li>
             <li><b>BACKUP SQL</b> w phpMyAdmin (eksport tabel Uslugi + Sprzedaz dla wybranego tenanta)</li>
@@ -579,24 +575,24 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
         <div class="gen-card" style="margin-bottom:20px;">
           <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px;">
-            <label style="font-weight:600; color:#1f2937;">Tenant:</label>
-            <select id="typy-migracja-tenant" style="padding:8px 12px; border:1px solid #d1d5db; border-radius:8px; min-width:280px; font-size:14px;">
+            <label style="margin:0;">Tenant</label>
+            <select id="typy-migracja-tenant" style="width:auto; min-width:280px;">
               <option value="">— wybierz —</option>
               <option value="all">🌐 Wszyscy tenanci</option>
             </select>
           </div>
 
           <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button id="btn-typy-dryrun" onclick="typyMigracja_run(false)" style="background:#3b82f6; color:#fff; border:none; padding:12px 22px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">
+            <button id="btn-typy-dryrun" class="btn-primary" onclick="typyMigracja_run(false)">
               🔍 Dry-run (raport)
             </button>
-            <button id="btn-typy-apply" onclick="typyMigracja_run(true)" style="background:#dc2626; color:#fff; border:none; padding:12px 22px; border-radius:10px; font-weight:700; font-size:14px; cursor:pointer;">
+            <button id="btn-typy-apply" class="btn-danger" onclick="typyMigracja_run(true)">
               ⚙️ APPLY (zapis do bazy)
             </button>
           </div>
         </div>
 
-        <div id="typy-migracja-progress" style="display:none; padding:14px 18px; background:#dbeafe; border:1px solid #93c5fd; border-radius:10px; margin-bottom:16px; color:#1e40af; font-weight:600;">
+        <div id="typy-migracja-progress" class="note note-info" style="display:none; font-weight:600;">
           ⏳ Migracja w toku... (może potrwać kilkadziesiąt sekund dla dużych baz)
         </div>
 
@@ -606,43 +602,40 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
     <!-- Tab: Predefiniowane usługi -->
     <div id="tab-predef" class="tab-panel">
-      <div style="max-width:860px; margin:0 auto;">
-        <h3 style="margin-bottom:6px;">💅 Predefiniowane usługi</h3>
-        <p style="color:var(--taupe); font-size:13px; margin-bottom:16px;">Lista kategorii i zabiegów pokazywana nowym salonom podczas rejestracji. Zmiany widoczne natychmiast dla kolejnych rejestracji.</p>
-
+      <div class="narrow">
         <!-- Statystyki -->
-        <div id="predef-stats" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin-bottom:24px;">
-          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
-            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Salony użyły predef</div>
-            <div id="stat-predef" style="font-size:26px; font-weight:800; color:var(--primary);">—</div>
+        <div id="predef-stats" class="pulpit-grid">
+          <div class="stat-card">
+            <div class="stat-label">Salony użyły predef</div>
+            <div id="stat-predef" class="stat-value">—</div>
           </div>
-          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
-            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Tylko ręczne / brak</div>
-            <div id="stat-reczne" style="font-size:26px; font-weight:800; color:var(--ink);">—</div>
+          <div class="stat-card">
+            <div class="stat-label">Tylko ręczne / brak</div>
+            <div id="stat-reczne" class="stat-value">—</div>
           </div>
-          <div style="background:var(--cream); border:1px solid var(--sand); border-radius:10px; padding:14px 18px;">
-            <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:6px;">Kliknięcia "Pomiń"</div>
-            <div id="stat-pominięcia" style="font-size:26px; font-weight:800; color:#f59e0b;">—</div>
+          <div class="stat-card">
+            <div class="stat-label">Kliknięcia "Pomiń"</div>
+            <div id="stat-pominięcia" class="stat-value">—</div>
           </div>
         </div>
         <div id="predef-top-kat" style="margin-bottom:24px; display:none;">
-          <div style="font-size:11px; color:var(--taupe); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Najpopularniejsze kategorie</div>
+          <div class="mini-label">Najpopularniejsze kategorie</div>
           <div id="predef-top-kat-lista" style="display:flex; flex-wrap:wrap; gap:8px;"></div>
         </div>
 
         <!-- Dodaj kategorię -->
         <div class="gen-card" style="margin-bottom:24px;">
           <h3>➕ Nowa kategoria</h3>
-          <div style="display:flex; gap:10px; margin-top:12px; flex-wrap:wrap;">
-            <input type="text" id="predef-new-kat-ikona" placeholder="Emoji ikona, np. 💅" style="width:100px; padding:9px 12px; border:1px solid var(--sand); border-radius:8px; font-size:14px;">
-            <input type="text" id="predef-new-kat-nazwa" placeholder="Nazwa kategorii, np. Stylizacja paznokci" style="flex:1; min-width:200px; padding:9px 12px; border:1px solid var(--sand); border-radius:8px; font-size:14px;">
-            <button class="btn-primary" style="margin:0; padding:9px 20px;" onclick="predef_dodajKat()">Dodaj kategorię</button>
+          <div class="toolbar" style="margin:0;">
+            <input type="text" id="predef-new-kat-ikona" placeholder="Emoji, np. 💅" style="width:120px;">
+            <input type="text" id="predef-new-kat-nazwa" class="grow" placeholder="Nazwa kategorii, np. Stylizacja paznokci">
+            <button class="btn-primary" onclick="predef_dodajKat()">Dodaj kategorię</button>
           </div>
         </div>
 
         <!-- Lista kategorii -->
         <div id="predef-lista">
-          <div style="color:var(--taupe); text-align:center; padding:30px;">Ładowanie...</div>
+          <div class="loading">Ładowanie...</div>
         </div>
       </div>
     </div>
@@ -654,7 +647,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
 
     <!-- Tab: Tickety — zgłoszenia salonów do Estelio (routes/tickety.js, 2026-10-11) -->
     <div id="tab-tickety" class="tab-panel">
-      <div class="zgl-toolbar" style="flex-wrap:wrap; gap:8px;">
+      <div class="toolbar" style="justify-content:flex-end;">
         <select id="tk-adm-status" onchange="renderTickety()">
           <option value="aktywne">Aktywne (nowe + w toku)</option>
           <option value="nowe">Tylko nowe</option>
@@ -667,7 +660,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
         <button class="btn-secondary" onclick="tkAdmStatystyki()">📊 Statystyki</button>
       </div>
       <div id="tk-adm-stats" style="display:none; margin:10px 0 14px;"></div>
-      <div id="tk-adm-content" class="loading">Ładowanie zgłoszeń…</div>
+      <div id="tk-adm-content"><div class="loading">Ładowanie zgłoszeń…</div></div>
     </div>
 
     <!-- Tab: Zgłoszenia od klientów -->
@@ -684,7 +677,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
         </select>
         <button class="btn-export" onclick="eksportZgloszeniaCSV()">⬇ Eksport CSV</button>
       </div>
-      <div id="zgloszenia-content" class="loading">Ładowanie zgłoszeń...</div>
+      <div id="zgloszenia-content"><div class="loading">Ładowanie zgłoszeń...</div></div>
       <div id="zgl-pager" class="pager"></div>
     </div>
 
@@ -694,7 +687,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <!-- Generator nowego linku -->
       <div class="gen-card">
         <h3>🔗 Wygeneruj link rejestracyjny</h3>
-        <p style="font-size:13px; color:var(--muted); margin-bottom:20px;">Wyślij link klientowi po otrzymaniu płatności. Każdy link działa tylko raz.</p>
+        <p class="card-sub">Wyślij link klientowi po otrzymaniu płatności. Każdy link działa tylko raz.</p>
         <div style="display:grid; grid-template-columns:1fr 1fr auto; gap:14px; align-items:end;">
           <div class="form-group" style="margin:0;">
             <label>Notatka (np. imię klienta)</label>
@@ -709,7 +702,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
               <option value="30">30 dni</option>
             </select>
           </div>
-          <button class="btn-primary" style="margin:0; padding:15px 24px; white-space:nowrap;" onclick="generujToken()">➕ Generuj</button>
+          <button class="btn-primary" style="padding:12px 24px;" onclick="generujToken()">➕ Generuj</button>
         </div>
         <div class="gen-result" id="gen-result">
           <p>✅ Link wygenerowany! Skopiuj go i wyślij klientowi.</p>
@@ -719,7 +712,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       </div>
 
       <!-- Lista tokenów -->
-      <div id="tokeny-content" class="loading">Ładowanie...</div>
+      <div id="tokeny-content"><div class="loading">Ładowanie...</div></div>
 
     </div>
 
@@ -728,9 +721,9 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; align-items:start;">
 
         <!-- Formularz tworzenia -->
-        <div style="background:var(--white); border-radius:var(--radius); padding:32px; box-shadow:var(--shadow);">
-          <h3 style="font-size:17px; font-weight:800; margin-bottom:6px;">🏷️ Nowy voucher</h3>
-          <p style="font-size:13px; color:var(--muted); margin-bottom:24px;">Kody rabatowe dla klientów kupujących dostęp.</p>
+        <div class="card" style="margin:0;">
+          <h3 style="margin-bottom:6px;">🏷️ Nowy voucher</h3>
+          <p class="card-sub" style="margin:0 0 22px;">Kody rabatowe dla klientów kupujących dostęp.</p>
 
           <div class="form-group">
             <label>Kod rabatowy *</label>
@@ -769,7 +762,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
             <input type="number" id="v-miesiecy" placeholder="np. 12" min="1" max="120" value="12">
           </div>
 
-          <div class="form-group" id="v-trial-info" style="display:none; background:#eef4ff; border:1px solid #cad9f7; border-radius:8px; padding:10px 12px; font-size:13px; color:#1e3a8a;">
+          <div class="form-group note note-info" id="v-trial-info" style="display:none; font-size:13px;">
             Salon korzysta za darmo przez podaną liczbę dni. Karta jest pobierana z góry, a po okresie próbnym Stripe <b>automatycznie</b> pobierze pełną cenę (79 zł/mies.). Można anulować w trakcie triala.
           </div>
 
@@ -790,16 +783,16 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
           </div>
 
           <div id="v-error" class="alert alert-error" style="display:none;"></div>
-          <button class="btn-primary" onclick="utworzVoucher()">✚ Utwórz voucher</button>
+          <button class="btn-primary btn-block" onclick="utworzVoucher()">✚ Utwórz voucher</button>
         </div>
 
         <!-- Lista voucherów -->
         <div>
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-            <h3 style="font-size:17px; font-weight:800;">Lista voucherów</h3>
-            <button onclick="zaladujVouchery()" style="background:none; border:none; color:var(--primary); font-weight:700; cursor:pointer; font-size:13px;">↻ Odśwież</button>
+          <div class="card-head" style="min-height:44px;">
+            <h3 class="section-title" style="margin:0;">Lista voucherów</h3>
+            <button class="btn-link" onclick="zaladujVouchery()">↻ Odśwież</button>
           </div>
-          <div id="vouchery-lista" class="loading">Ładowanie...</div>
+          <div id="vouchery-lista"><div class="loading">Ładowanie...</div></div>
         </div>
       </div>
     </div>
@@ -926,6 +919,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
     </div><!-- /tab-nowy -->
 
   </div><!-- /app-content -->
+  </div><!-- /main -->
 </div><!-- /app -->
 
 <!-- Modal: Wyślij link do klienta -->
@@ -935,7 +929,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
     <input type="hidden" id="sm-zamowienie-id">
     <input type="hidden" id="sm-email">
     <div id="sm-error" class="alert alert-error" style="display:none;"></div>
-    <div id="sm-info" style="background:#f8fafc; border-radius:12px; padding:14px 16px; margin-bottom:20px; font-size:13px; color:var(--text);"></div>
+    <div id="sm-info" style="background:var(--bg); border-radius:12px; padding:14px 16px; margin-bottom:20px; font-size:13px; color:var(--text);"></div>
     <div class="form-group">
       <label>Ważność linku</label>
       <select id="sm-dni">
@@ -1075,7 +1069,7 @@ function adminLogin() {
     adminToken = d.token;
     sessionStorage.setItem('boczki_admin_token', adminToken);
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+    document.getElementById('app').style.display = 'grid';
     zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
@@ -1130,7 +1124,7 @@ function renderZgloszenia() {
   let lista = fStatus ? _zgloszeniaAll.filter(z => z.status === fStatus) : _zgloszeniaAll;
 
   if (!lista.length) {
-    cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${fStatus ? 'Brak zgłoszeń o tym statusie.' : 'Brak zgłoszeń.<br>Klienci mogą składać zamówienia przez <strong>/zamow.html</strong>'}</p></div>`;
+    cont.innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>${fStatus ? 'Brak zamówień o tym statusie.' : 'Brak zamówień.<br>Klienci mogą składać zamówienia przez <strong>/zamow.html</strong>'}</p></div>`;
     if (pager) pager.innerHTML = '';
     return;
   }
@@ -1309,7 +1303,7 @@ window.addEventListener('load', () => {
   if (saved) {
     adminToken = saved;
     document.getElementById('login-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
+    document.getElementById('app').style.display = 'grid';
     zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
@@ -1340,7 +1334,7 @@ function zaladujPulpit() {
         <div class="stat-card"><div class="stat-label">Aktywne salony</div><div class="stat-value">${s.aktywne}</div><div class="stat-sub">z ${s.wszystkie} łącznie</div></div>
         <div class="stat-card accent-mrr"><div class="stat-label">MRR (szacowany)</div><div class="stat-value">${liczba(s.mrr_szac)} zł</div><div class="stat-sub">${s.z_subskrypcja} subskrypcji × ${liczba(d.cena_bazowa_zl)} zł</div></div>
         <div class="stat-card"><div class="stat-label">Nowi w tym miesiącu</div><div class="stat-value">${s.nowi_miesiac}</div><div class="stat-sub">zarejestrowane salony</div></div>
-        <div class="stat-card ${s.zgloszenia_nowe ? 'accent-warn' : ''}"><div class="stat-label">Nowe zgłoszenia</div><div class="stat-value">${s.zgloszenia_nowe}</div><div class="stat-sub">czekają na link</div></div>
+        <div class="stat-card ${s.zgloszenia_nowe ? 'accent-warn' : ''}"><div class="stat-label">Nowe zamówienia</div><div class="stat-value">${s.zgloszenia_nowe}</div><div class="stat-sub">czekają na link</div></div>
         <div class="stat-card ${s.wygasa_7dni ? 'accent-warn' : ''}"><div class="stat-label">Wygasa ≤7 dni</div><div class="stat-value">${s.wygasa_7dni}</div><div class="stat-sub">licencje do odnowienia</div></div>
         <div class="stat-card ${s.wygasle ? 'accent-danger' : ''}"><div class="stat-label">Wygasłe licencje</div><div class="stat-value">${s.wygasle}</div><div class="stat-sub">po terminie ważności</div></div>
         <div class="stat-card"><div class="stat-label">Zablokowane</div><div class="stat-value">${s.zablokowane}</div><div class="stat-sub">nieaktywne konta</div></div>
@@ -1357,7 +1351,7 @@ function zaladujPulpit() {
           <td>${v.aktywny ? '<span class="badge badge-active">aktywny</span>' : '<span class="badge badge-inactive">wyłączony</span>'}</td>
         </tr>`).join('')}</tbody>
       </table>` : '';
-    const note = `<div style="font-size:11.5px; color:var(--taupe); margin-top:18px; line-height:1.6;">MRR szacowany = liczba aktywnych subskrypcji × cena bazowa. Vouchery (np. START29) czasowo obniżają realny przychód — dokładne kwoty znajdziesz w panelu Stripe.</div>`;
+    const note = `<div class="hint" style="margin-top:18px;">MRR szacowany = liczba aktywnych subskrypcji × cena bazowa. Vouchery (np. START29) czasowo obniżają realny przychód — dokładne kwoty znajdziesz w panelu Stripe.</div>`;
     cont.innerHTML = cards + vouchery + note;
   })
   .catch(() => { if (cont) cont.innerHTML = '<div class="alert alert-error">Błąd ładowania pulpitu.</div>'; });
@@ -1377,12 +1371,7 @@ function renderAlertWygasajace(s) {
 }
 
 function pokazWygasajace() {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-salony').classList.add('active');
-  const btn = document.querySelector('.tab-btn[onclick*="tab-salony"]');
-  if (btn) btn.classList.add('active');
-  zaladujSalony();
+  showTab('tab-salony');
   setTimeout(() => {
     const sort = document.getElementById('salony-sort');
     if (sort) sort.value = 'waznosc';
@@ -1431,11 +1420,29 @@ function eksportZgloszeniaCSV() {
 // ═══════════════════════════════════════════════
 // TABS
 // ═══════════════════════════════════════════════
+const TAB_INFO = {
+  'tab-pulpit':        ['Pulpit', 'Najważniejsze liczby: aktywne salony, przychód, licencje do odnowienia.'],
+  'tab-salony':        ['Salony', 'Wszystkie konta klientów: status, licencje, dane kontaktowe, eksport CSV.'],
+  'tab-zgloszenia':    ['Zamówienia', 'Zamówienia dostępu złożone przez stronę zamow.html — wysyłka linków rejestracyjnych i ich statusy.'],
+  'tab-tickety':       ['Tickety', 'Zgłoszenia salonów wysłane z panelu Estelio (błędy, prośby, pytania) oraz rozmowa z salonem.'],
+  'tab-linki':         ['Linki rejestracji', 'Ręczne generowanie jednorazowych linków do założenia salonu.'],
+  'tab-vouchery':      ['Vouchery', 'Kody rabatowe i okresy próbne dla klientów kupujących dostęp.'],
+  'tab-kb':            ['Baza wiedzy Esti', 'Wpisy globalne — widoczne w chacie pomocy we wszystkich salonach jako domyślne odpowiedzi. Własne wpisy salonu mają wyższy priorytet.'],
+  'tab-predef':        ['Predefiniowane usługi', 'Lista kategorii i zabiegów pokazywana nowym salonom podczas rejestracji. Zmiany widoczne natychmiast dla kolejnych rejestracji.'],
+  'tab-nowy':          ['Nowy salon', 'Kreator ręcznego założenia salonu: dane, dostęp, pracownicy, usługi.'],
+  'tab-demo':          ['Salon demonstracyjny', 'Klonuje dane z salonu Boczków (tenant boczki-salon-glowny-001) do tenanta demo-estelio z anonimizacją imion klientów i pracowników. Salon Boczków pozostaje nietknięty — kopiujemy tylko (SELECT z Boczków, INSERT do demo).'],
+  'tab-typy-migracja': ['Migracja typów zabiegów', 'Wypełnia kolumnę typ_zabiegu w tabelach Uslugi (cennik) i Sprzedaz (historia) na podstawie heurystyk po nazwie. Dotyczy istniejących danych — nowe sprzedaże zapisują typ automatycznie.'],
+};
 function showTab(id) {
+  const panel = document.getElementById(id);
+  if (!panel) return;
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  event.target.classList.add('active');
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === id));
+  panel.classList.add('active');
+  const info = TAB_INFO[id] || ['', ''];
+  const t = document.getElementById('page-title'); if (t) t.textContent = info[0];
+  const s = document.getElementById('page-sub'); if (s) { s.textContent = info[1]; s.style.display = info[1] ? '' : 'none'; }
+  window.scrollTo({ top: 0 });
   if (id === 'tab-pulpit') zaladujPulpit();
   if (id === 'tab-salony') zaladujSalony();
   if (id === 'tab-zgloszenia') zaladujZgloszenia();
@@ -1709,27 +1716,27 @@ function renderTickety() {
         <div class="zgl-header">
           <div>
             <div class="zgl-name">#${t.id} · ${tkEsc(t.tytul)}</div>
-            <div class="zgl-salon">🏪 ${tkEsc(t.nazwa_salonu || t.tenant_id)} <span style="color:#a89e96; font-size:11px;">(${tkEsc(t.tenant_id)})</span></div>
+            <div class="zgl-salon">🏪 ${tkEsc(t.nazwa_salonu || t.tenant_id)} <span class="tk-small">(${tkEsc(t.tenant_id)})</span></div>
           </div>
-          <span style="background:${st[1]}; color:${st[2]}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap;">${st[0]}</span>
+          <span class="pill" style="background:${st[1]}; color:${st[2]};">${st[0]}</span>
         </div>
         <div class="zgl-meta">
           👤 ${tkEsc(t.pracownik || '—')}${t.rola ? ` (${tkEsc(t.rola)})` : ''} · 🕐 ${tkData(t.data_utworzenia)} · ${TK_A_KAT[t.kategoria] || tkEsc(t.kategoria)} · pilność: <strong style="color:${pil[1]};">${pil[0]}</strong>${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}
-          ${t.kontekst ? `<br><span style="font-size:11px; color:#a89e96;">${tkEsc(t.kontekst)}</span>` : ''}
+          ${t.kontekst ? `<br><span class="tk-small">${tkEsc(t.kontekst)}</span>` : ''}
         </div>
         <div class="zgl-msg" style="white-space:pre-line;">${tkEsc(t.opis || '')}</div>
-        <div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-          ${Number(t.czeka_na_estelio) && t.status !== 'zamkniete' ? `<span style="background:#fee2e2; color:#991b1b; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700;">⏳ czeka na Twoją odpowiedź</span>` : ''}
+        <div class="tk-row" style="margin:8px 0;">
+          ${Number(t.czeka_na_estelio) && t.status !== 'zamkniete' ? `<span class="pill" style="background:#fee2e2; color:#991b1b;">⏳ czeka na Twoją odpowiedź</span>` : ''}
           <button class="btn-sm" onclick="tkAdmRozmowa(${t.id})">💬 Rozmowa${Number(t.komentarze) ? ` (${t.komentarze})` : ''}</button>
           ${Number(t.zalaczniki) ? `<button class="btn-sm" onclick="tkAdmZalaczniki(${t.id}, '${tkEsc(t.tenant_id)}')">📎 Załączniki (${t.zalaczniki})</button>` : ''}
         </div>
         <div id="tk-adm-watek-${t.id}" style="display:none;"></div>
         <div id="tk-adm-zal-${t.id}"></div>
-        <div style="margin-top:10px; background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:10px 12px;">
-          <label style="font-size:12px; font-weight:700; color:#7a6e66; display:block; margin-bottom:4px;">💬 Dopisz odpowiedź dla salonu${t.odpowiedz_data ? ` <span style="font-weight:400;">(ostatnia: ${tkData(t.odpowiedz_data)}${Number(t.odpowiedz_przeczytana) ? ', przeczytana' : ', nieprzeczytana'})</span>` : ''}</label>
-          <textarea id="tk-adm-odp-${t.id}" rows="3" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:8px; border:1px solid #ddd4c4; border-radius:8px;" placeholder="Nowa wiadomość w rozmowie: co ustaliłaś/-eś, co naprawione, kiedy wdrożone… (puste = tylko zmiana statusu)"></textarea>
-          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
-            <select id="tk-adm-st-${t.id}" style="padding:6px 8px; border:1px solid #ddd4c4; border-radius:8px;">
+        <div class="tk-reply">
+          <label>💬 Dopisz odpowiedź dla salonu${t.odpowiedz_data ? ` <span style="font-weight:400;">(ostatnia: ${tkData(t.odpowiedz_data)}${Number(t.odpowiedz_przeczytana) ? ', przeczytana' : ', nieprzeczytana'})</span>` : ''}</label>
+          <textarea id="tk-adm-odp-${t.id}" rows="3" placeholder="Nowa wiadomość w rozmowie: co ustaliłaś/-eś, co naprawione, kiedy wdrożone… (puste = tylko zmiana statusu)"></textarea>
+          <div class="tk-row">
+            <select id="tk-adm-st-${t.id}">
               <option value="nowe" ${t.status === 'nowe' ? 'selected' : ''}>🆕 Nowe</option>
               <option value="w_toku" ${t.status === 'w_toku' ? 'selected' : ''}>🔧 W toku</option>
               <option value="zamkniete" ${t.status === 'zamkniete' ? 'selected' : ''}>✅ Zamknięte</option>
@@ -1739,7 +1746,7 @@ function renderTickety() {
             <span id="tk-adm-msg-${t.id}" style="font-size:12px;"></span>
           </div>
         </div>
-        ${t.data_zamkniecia ? `<div style="font-size:11px; color:#a89e96; margin-top:6px;">Zamknięte ${tkData(t.data_zamkniecia)}</div>` : ''}
+        ${t.data_zamkniecia ? `<div class="tk-small" style="margin-top:6px;">Zamknięte ${tkData(t.data_zamkniecia)}</div>` : ''}
       </div>`;
   }).join('');
 }
@@ -1747,7 +1754,7 @@ function renderTickety() {
 function tkAdmZapisz(id) {
   const msg = document.getElementById(`tk-adm-msg-${id}`);
   const body = { id, odpowiedz: document.getElementById(`tk-adm-odp-${id}`).value, status: document.getElementById(`tk-adm-st-${id}`).value };
-  msg.textContent = 'Zapisuję…'; msg.style.color = '#7a6e66';
+  msg.textContent = 'Zapisuję…'; msg.style.color = 'var(--muted)';
   fetch(`${API}/admin/tickety/odpowiedz`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken }, body: JSON.stringify(body) })
     .then(r => r.json())
     .then(d => {
@@ -1761,12 +1768,12 @@ function tkAdmZapisz(id) {
 function tkAdmRozmowa(id) {
   const box = document.getElementById(`tk-adm-watek-${id}`); if (!box) return;
   if (box.style.display === 'block') { box.style.display = 'none'; return; }
-  box.style.display = 'block'; box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Ładowanie rozmowy…</span>';
+  box.style.display = 'block'; box.innerHTML = '<span class="tk-small">Ładowanie rozmowy…</span>';
   fetch(`${API}/admin/tickety/komentarze/${id}`, { headers: { 'X-Admin-Token': adminToken } })
     .then(r => r.json())
     .then(d => {
       const kom = (d && d.data) || [];
-      if (!kom.length) { box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Jeszcze bez wiadomości — pierwszy opis jest wyżej.</span>'; return; }
+      if (!kom.length) { box.innerHTML = '<span class="tk-small">Jeszcze bez wiadomości — pierwszy opis jest wyżej.</span>'; return; }
       box.innerHTML = kom.map(k => { const e = k.autor_typ === 'estelio'; return `<div style="display:flex; justify-content:${e ? 'flex-end' : 'flex-start'}; margin:6px 0;">
         <div style="max-width:85%; background:${e ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${e ? '#bbf7d0' : '#bfdbfe'}; border-radius:10px; padding:8px 12px;">
           <div style="font-size:11px; font-weight:700; color:${e ? '#166534' : '#1e40af'};">${e ? '🛠️ Estelio' : '👤 ' + tkEsc(k.autor || 'salon')} · ${tkData(k.data_dodania)}</div>
@@ -1778,12 +1785,12 @@ function tkAdmRozmowa(id) {
 
 function tkAdmZalaczniki(id, tenant) {
   const box = document.getElementById(`tk-adm-zal-${id}`); if (!box) return;
-  box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Ładowanie…</span>';
+  box.innerHTML = '<span class="tk-small">Ładowanie…</span>';
   fetch(`${API}/admin/tickety/zalaczniki/${id}`, { headers: { 'X-Admin-Token': adminToken } })
     .then(r => r.json())
     .then(d => {
       const lista = (d && d.data) || [];
-      if (!lista.length) { box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Brak załączników.</span>'; return; }
+      if (!lista.length) { box.innerHTML = '<span class="tk-small">Brak załączników.</span>'; return; }
       box.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap;">${lista.map(z => {
         const url = `${API}/admin/tickety/zalacznik/${z.id}?admin_token=${encodeURIComponent(adminToken)}`;
         return /^image\//.test(z.typ || '')
@@ -1803,13 +1810,13 @@ function tkAdmStatystyki() {
     .then(d => {
       if (d.status !== 'success') { box.innerHTML = '<div class="alert alert-error">Błąd statystyk.</div>'; return; }
       const st = Object.fromEntries((d.wg_statusu || []).map(x => [x.status, Number(x.n)]));
-      const tab = (rows, kol) => `<table style="width:100%; border-collapse:collapse; font-size:13px;"><thead><tr>${kol.map(k => `<th style="text-align:left; padding:6px 8px; border-bottom:2px solid #ede6d8; font-size:11px; text-transform:uppercase; color:#7a6e66;">${k[1]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${kol.map(k => `<td style="padding:6px 8px; border-bottom:1px solid #f4efe6;">${tkEsc(typeof k[0] === 'function' ? k[0](r) : r[k[0]])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      const tab = (rows, kol) => `<div class="table-wrap"><table class="table"><thead><tr>${kol.map(k => `<th style="padding:6px 8px;">${k[1]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${kol.map(k => `<td style="padding:6px 8px;">${tkEsc(typeof k[0] === 'function' ? k[0](r) : r[k[0]])}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
       box.innerHTML = `
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
-          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700;">Razem</div><div style="font-size:22px; font-weight:700;">${(st.nowe || 0) + (st.w_toku || 0) + (st.zamkniete || 0)}</div><div style="font-size:12px; color:#7a6e66;">nowe ${st.nowe || 0} · w toku ${st.w_toku || 0} · zamknięte ${st.zamkniete || 0}</div></div>
-          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Wg salonu</div>${tab(d.wg_salonu || [], [[r => r.nazwa_salonu || r.tenant_id, 'Salon'], ['n', 'Zgłoszeń'], ['otwarte', 'Otwartych']])}</div>
-          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Kto zgłasza</div>${tab(d.wg_osoby || [], [['pracownik', 'Osoba'], ['tenant_id', 'Salon'], ['n', 'Zgłoszeń'], [r => tkData(r.ostatnie), 'Ostatnie']])}</div>
-          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Kategoria × pilność</div>${tab(d.wg_kategorii || [], [[r => TK_A_KAT[r.kategoria] || r.kategoria, 'Kategoria'], ['pilnosc', 'Pilność'], ['n', 'Ile']])}</div>
+          <div class="card" style="padding:16px 18px; margin:0;"><div class="mini-label">Razem</div><div style="font-size:24px; font-weight:700;">${(st.nowe || 0) + (st.w_toku || 0) + (st.zamkniete || 0)}</div><div class="hint">nowe ${st.nowe || 0} · w toku ${st.w_toku || 0} · zamknięte ${st.zamkniete || 0}</div></div>
+          <div class="card" style="padding:16px 18px; margin:0;"><div class="mini-label">Wg salonu</div>${tab(d.wg_salonu || [], [[r => r.nazwa_salonu || r.tenant_id, 'Salon'], ['n', 'Zgłoszeń'], ['otwarte', 'Otwartych']])}</div>
+          <div class="card" style="padding:16px 18px; margin:0;"><div class="mini-label">Kto zgłasza</div>${tab(d.wg_osoby || [], [['pracownik', 'Osoba'], ['tenant_id', 'Salon'], ['n', 'Zgłoszeń'], [r => tkData(r.ostatnie), 'Ostatnie']])}</div>
+          <div class="card" style="padding:16px 18px; margin:0;"><div class="mini-label">Kategoria × pilność</div>${tab(d.wg_kategorii || [], [[r => TK_A_KAT[r.kategoria] || r.kategoria, 'Kategoria'], ['pilnosc', 'Pilność'], ['n', 'Ile']])}</div>
         </div>`;
     })
     .catch(() => { box.innerHTML = '<div class="alert alert-error">Błąd połączenia.</div>'; });
@@ -2482,7 +2489,7 @@ function aktywujSalon() {
         <div class="tenant-id">${d.tenant_id}</div>
         <p style="font-size:12px; color:#86efac;">Powyższy kod to identyfikator salonu (tenant_id)</p>
         <button class="btn-primary" style="margin-top:25px; width:auto; padding:16px 32px;"
-          onclick="showTab('tab-salony'); document.querySelectorAll('.tab-btn')[0].classList.add('active'); document.querySelectorAll('.tab-btn')[1].classList.remove('active');">
+          onclick="showTab('tab-salony')">
           → Przejdź do listy salonów
         </button>
       </div>
@@ -2513,7 +2520,7 @@ async function zaladujVouchery() {
   }).then(r => r.json());
 
   if (!rows.length) {
-    el.innerHTML = '<p style="color:var(--muted); font-size:14px;">Brak voucherów.</p>';
+    el.innerHTML = '<div class="empty-state"><div class="icon">🏷️</div><p>Brak voucherów.</p></div>';
     return;
   }
 
@@ -2526,15 +2533,15 @@ async function zaladujVouchery() {
     const czasLabel = jestTrial ? 'okres próbny' : (v.czas_trwania === 'zawsze' ? 'na zawsze' : `${v.czas_trwania_miesiecy} mies.`);
     const limitLabel = v.max_uzyc !== null ? `${v.ilosc_uzyc}/${v.max_uzyc}` : `${v.ilosc_uzyc}/∞`;
     const wygasaLabel = v.data_wygasniecia
-      ? `<span style="color:#f59e0b">wygasa: ${v.data_wygasniecia}</span>`
+      ? `<span style="color:var(--orange)">wygasa: ${v.data_wygasniecia}</span>`
       : '';
     const glowny = jestTrial ? typLabel : ('-' + typLabel);
 
     return `
-      <div style="background:${aktywny ? 'var(--white)' : '#f8fafc'}; border-radius:16px; padding:18px 20px; box-shadow:var(--shadow); margin-bottom:12px; border-left:4px solid ${aktywny ? 'var(--primary)' : '#e2e8f0'};">
+      <div class="voucher-item${aktywny ? '' : ' off'}">
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;">
           <div>
-            <div style="font-family:monospace; font-size:16px; font-weight:800; letter-spacing:1px; color:${aktywny ? 'var(--primary)' : 'var(--muted)'};">${v.kod}</div>
+            <div class="v-kod">${v.kod}</div>
             <div style="font-size:13px; color:var(--text); margin-top:4px;">
               <strong>${glowny}</strong> &nbsp;·&nbsp; ${czasLabel} &nbsp;·&nbsp; użyć: ${limitLabel}
               ${wygasaLabel ? '&nbsp;·&nbsp;' + wygasaLabel : ''}
@@ -2543,11 +2550,11 @@ async function zaladujVouchery() {
           </div>
           <div style="display:flex; gap:8px; flex-shrink:0;">
             <button onclick="toggleVoucher(${v.id}, ${aktywny ? 0 : 1}, this)"
-              class="btn-sm ${aktywny ? 'btn-deactivate' : 'btn-activate'}" style="padding:8px 14px; border-radius:10px;">
+              class="btn-sm auto ${aktywny ? 'btn-deactivate' : 'btn-activate'}">
               ${aktywny ? 'Dezaktywuj' : 'Aktywuj'}
             </button>
             <button onclick="usunVoucher(${v.id}, this)"
-              class="btn-sm" style="background:#fff1f2; color:#be123c; padding:8px 14px; border-radius:10px;">
+              class="btn-sm auto btn-deactivate">
               Usuń
             </button>
           </div>
@@ -2719,7 +2726,7 @@ function kb_renderPanel(items) {
         <div class="kb-item-kw">${tagsHtml}<span class="kb-cat-badge">${KB_CAT_ICONS[cat]||'📋'} ${kb_esc(cat)}</span></div>
         <div class="kb-item-ans">${kb_esc(preview)}${item.answer.length>140?'…':''}</div>
         <div class="kb-item-actions">
-          <button class="kb-btn-sm kb-btn-edit" onclick="kb_otworzEdycje(${item.id},${JSON.stringify(JSON.stringify(tags))},${JSON.stringify(item.answer)},${JSON.stringify(cat)})">✏️ Edytuj</button>
+          <button class="kb-btn-sm kb-btn-edit" onclick="kb_otworzEdycje(${item.id},${kb_esc(JSON.stringify(JSON.stringify(tags)))},${kb_esc(JSON.stringify(item.answer))},${kb_esc(JSON.stringify(cat))})">✏️ Edytuj</button>
           <button class="kb-btn-sm kb-btn-del" onclick="kb_usun(${item.id})">🗑️ Usuń</button>
         </div>
       </div>`;
@@ -2734,56 +2741,49 @@ function kb_renderPanel(items) {
 <style>
 .kb-layout{display:grid;grid-template-columns:1fr 1.5fr;gap:22px;align-items:start}
 @media(max-width:800px){.kb-layout{grid-template-columns:1fr}}
-.kb-card{background:#fff;border-radius:20px;padding:26px 22px;box-shadow:0 4px 20px rgba(0,0,0,.04);border:1px solid #f0eef0}
-.kb-card-title{font-size:15px;font-weight:700;color:#2d3748;margin:0 0 18px 0;display:flex;align-items:center;justify-content:space-between}
-.kb-label{display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.kb-input,.kb-textarea{width:100%;padding:10px 13px;border:1.5px solid #e5e7eb;border-radius:11px;font-family:inherit;font-size:13.5px;color:#2d3748;outline:none;transition:border-color .2s;background:#fafafa;box-sizing:border-box}
-.kb-input:focus,.kb-textarea:focus{border-color:#ff758c;background:#fff}
+.kb-card{background:var(--cream);border-radius:var(--radius);padding:26px 24px;box-shadow:var(--shadow);border:1px solid var(--sand)}
+.kb-card-title{font-size:16px;font-weight:600;color:var(--text);margin:0 0 18px 0;display:flex;align-items:center;justify-content:space-between}
+.kb-label{display:block;font-size:11px;font-weight:600;color:var(--taupe);margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.kb-input,.kb-textarea{width:100%;padding:10px 13px;border:1px solid var(--sand);border-radius:var(--radius-input);font-family:inherit;font-size:13.5px;color:var(--text);outline:none;transition:border-color .2s;background:var(--bg);box-sizing:border-box}
+.kb-input:focus,.kb-textarea:focus{border-color:var(--primary);background:#fff}
 .kb-textarea{resize:vertical;min-height:105px;line-height:1.6}
-.kb-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:7px 10px;border:1.5px solid #e5e7eb;border-radius:11px;background:#fafafa;min-height:42px;cursor:text;transition:border-color .2s}
-.kb-tags-wrap:focus-within{border-color:#ff758c;background:#fff}
-.kb-tag{background:#fff0f3;color:#ff758c;border-radius:20px;padding:3px 10px 3px 12px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
+.kb-tags-wrap{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:7px 10px;border:1px solid var(--sand);border-radius:var(--radius-input);background:var(--bg);min-height:42px;cursor:text;transition:border-color .2s}
+.kb-tags-wrap:focus-within{border-color:var(--primary);background:#fff}
+.kb-tag{background:var(--primary-soft);color:var(--primary-dark);border-radius:20px;padding:3px 10px 3px 12px;font-size:12px;font-weight:500;display:flex;align-items:center;gap:4px}
 .kb-tag-del{background:none;border:none;cursor:pointer;color:inherit;padding:0;font-size:14px;line-height:1;opacity:.7}
 .kb-tag-del:hover{opacity:1}
-.kb-tag-input{border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:#2d3748;min-width:110px;flex:1}
-.kb-tag-hint{font-size:11px;color:#a0aec0;margin-top:4px}
-.kb-btn-add{width:100%;padding:12px;background:linear-gradient(135deg,#ff758c,#ff7eb3);color:#fff;border:none;border-radius:13px;font-family:inherit;font-size:13.5px;font-weight:700;cursor:pointer;margin-top:14px;box-shadow:0 5px 16px rgba(255,117,140,.3);transition:transform .2s,box-shadow .2s}
-.kb-btn-add:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(255,117,140,.4)}
+.kb-tag-input{border:none;outline:none;background:transparent;font-family:inherit;font-size:13px;color:var(--text);min-width:110px;flex:1}
+.kb-tag-hint{font-size:11px;color:var(--taupe);margin-top:4px}
+.kb-btn-add{width:100%;padding:12px;background:var(--primary);color:#fff;border:none;border-radius:var(--radius-btn);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;margin-top:14px;box-shadow:var(--shadow-glow);transition:transform .2s,box-shadow .2s,background .2s}
+.kb-btn-add:hover{background:var(--primary-dark);transform:translateY(-1px);box-shadow:0 10px 24px rgba(196,160,160,.3)}
 .kb-btn-add:disabled{opacity:.6;cursor:not-allowed;transform:none}
 .kb-list{display:flex;flex-direction:column;gap:10px}
-.kb-item{background:#fff;border:1.5px solid #f0eef0;border-radius:16px;padding:14px 16px;transition:box-shadow .2s,border-color .2s}
-.kb-item:hover{box-shadow:0 4px 14px rgba(255,117,140,.1);border-color:#ffd0d8}
+.kb-item{background:var(--white);border:1px solid var(--sand);border-radius:var(--radius-sm);padding:14px 16px;transition:box-shadow .2s,border-color .2s}
+.kb-item:hover{box-shadow:var(--shadow);border-color:var(--primary)}
 .kb-item-kw{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
-.kb-item-tag{background:#fff0f3;color:#ff758c;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500}
-.kb-item-ans{font-size:12.5px;color:#4a5568;line-height:1.55;word-break:break-word}
+.kb-item-tag{background:var(--primary-soft);color:var(--primary-dark);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500}
+.kb-item-ans{font-size:12.5px;color:var(--muted);line-height:1.55;word-break:break-word}
 .kb-item-actions{display:flex;gap:7px;margin-top:10px;justify-content:flex-end}
 .kb-btn-sm{padding:5px 13px;border-radius:9px;font-size:11.5px;font-family:inherit;font-weight:600;cursor:pointer;border:none;transition:opacity .15s,transform .1s}
 .kb-btn-sm:hover{opacity:.85;transform:translateY(-1px)}
-.kb-btn-edit{background:#f0f4ff;color:#6366f1}
-.kb-btn-del{background:#fff0f0;color:#ef4444}
-.kb-empty{text-align:center;padding:36px 20px;color:#a0aec0;font-size:13.5px}
+.kb-btn-edit{background:var(--info-bg);color:var(--info-fg)}
+.kb-btn-del{background:var(--bad-bg);color:var(--bad-fg)}
+.kb-empty{text-align:center;padding:36px 20px;color:var(--taupe);font-size:13.5px}
 .kb-toast{padding:9px 14px;border-radius:11px;font-size:12.5px;margin-top:10px;display:none}
 .kb-toast.ok{background:#f0fff4;color:#15803d;border:1px solid #bbf7d0}
 .kb-toast.err{background:#fff0f0;color:#dc2626;border:1px solid #fecaca}
 #kb-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:none;align-items:center;justify-content:center}
 #kb-modal-overlay.open{display:flex}
-#kb-modal{background:#fff;border-radius:22px;padding:28px 24px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.15);position:relative;max-height:90vh;overflow-y:auto}
-.kb-cat-badge{background:#f1f5f9;color:#64748b;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500;margin-left:4px}
+#kb-modal{background:var(--cream);border:1px solid var(--sand);border-radius:var(--radius);padding:28px 24px;width:100%;max-width:520px;box-shadow:0 20px 50px rgba(0,0,0,.15);position:relative;max-height:90vh;overflow-y:auto}
+.kb-cat-badge{background:var(--bg);color:var(--muted);border-radius:20px;padding:2px 9px;font-size:11px;font-weight:500;margin-left:4px}
 .kb-filters{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
-.kb-filter-btn{padding:5px 13px;border-radius:20px;font-size:12px;font-family:inherit;font-weight:500;cursor:pointer;border:1.5px solid #e5e7eb;background:#fff;color:#64748b;transition:all .15s}
-.kb-filter-btn.active{background:#fff0f3;border-color:#ff758c;color:#ff758c;font-weight:700}
+.kb-filter-btn{padding:5px 13px;border-radius:20px;font-size:12px;font-family:inherit;font-weight:500;cursor:pointer;border:1px solid var(--sand);background:var(--cream);color:var(--muted);transition:all .15s}
+.kb-filter-btn.active{background:var(--primary-soft);border-color:var(--primary);color:var(--primary-dark);font-weight:700}
 </style>
 
-<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:6px;">
-  <h2 style="font-size:18px;font-weight:800;margin:0;">💬 Baza Wiedzy Chatu Pomocy</h2>
-  <button id="kb-seed-btn" onclick="kb_seed()" style="padding:9px 18px;background:linear-gradient(135deg,#ff758c,#ff7eb3);color:#fff;border:none;border-radius:12px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px rgba(255,117,140,.3);">
-    📥 Załaduj przykładowe wpisy
-  </button>
+<div class="toolbar" style="justify-content:flex-end;">
+  <button id="kb-seed-btn" class="btn-secondary" onclick="kb_seed()">📥 Załaduj przykładowe wpisy</button>
 </div>
-<p style="font-size:13px;color:#6b7280;margin-bottom:22px;line-height:1.6;">
-  Wpisy globalne — widoczne w chacie pomocy we wszystkich salonach jako domyślne odpowiedzi.
-  Własne wpisy salonu mają wyższy priorytet.
-</p>
 
 <div class="kb-layout">
   <div class="kb-card">
@@ -3033,9 +3033,7 @@ async function predef_zaladujStatystyki() {
     if (d.top_kategorie && d.top_kategorie.length) {
       const lista = document.getElementById('predef-top-kat-lista');
       lista.innerHTML = d.top_kategorie.map(k =>
-        `<span style="background:var(--cream); border:1px solid var(--sand); border-radius:20px; padding:5px 14px; font-size:13px;">
-          ${k.nazwa} <span style="color:var(--primary); font-weight:700;">${k.ilosc}</span>
-        </span>`
+        `<span class="chip">${kb_esc(k.kategoria ?? k.nazwa ?? '—')} <span style="color:var(--primary-dark); font-weight:700;">${k.ile ?? k.ilosc ?? 0}</span></span>`
       ).join('');
       document.getElementById('predef-top-kat').style.display = 'block';
     }
@@ -3044,42 +3042,42 @@ async function predef_zaladujStatystyki() {
 
 async function predef_zaladuj() {
   const lista = document.getElementById('predef-lista');
-  lista.innerHTML = '<div style="color:var(--taupe); text-align:center; padding:30px;">Ładowanie...</div>';
+  lista.innerHTML = '<div class="loading">Ładowanie...</div>';
   try {
     const r = await fetch(`${API}/predef/zabiegi`);
     const d = await r.json();
-    if (d.status !== 'success') { lista.innerHTML = '<div style="color:#ef4444;">Błąd ładowania.</div>'; return; }
+    if (d.status !== 'success') { lista.innerHTML = '<div class="alert alert-error">Błąd ładowania.</div>'; return; }
 
     if (!d.kategorie.length) {
-      lista.innerHTML = '<div style="color:var(--taupe); text-align:center; padding:30px;">Brak kategorii. Dodaj pierwszą powyżej.</div>';
+      lista.innerHTML = '<div class="empty-state"><div class="icon">💅</div><p>Brak kategorii. Dodaj pierwszą powyżej.</p></div>';
       return;
     }
 
     lista.innerHTML = d.kategorie.map(kat => `
-      <div style="border:1px solid var(--sand); border-radius:12px; margin-bottom:16px; overflow:hidden;">
-        <div style="background:var(--cream); padding:14px 18px; display:flex; align-items:center; justify-content:space-between;">
-          <div style="font-weight:700; font-size:15px;">${kat.ikona} ${kat.nazwa}</div>
-          <button onclick="predef_usunKat(${kat.id}, '${kat.nazwa.replace(/'/g,"\\'")}' )" style="background:none; border:none; color:#ef4444; cursor:pointer; font-size:13px; font-weight:600;">🗑 Usuń kategorię</button>
+      <div class="predef-kat">
+        <div class="predef-kat-head">
+          <div class="kat-nazwa">${kat.ikona} ${kat.nazwa}</div>
+          <button onclick="predef_usunKat(${kat.id}, '${kat.nazwa.replace(/'/g,"\\'")}' )" class="btn-link" style="color:var(--red);">🗑 Usuń kategorię</button>
         </div>
-        <div style="padding:16px 18px;">
-          <div id="predef-zabiegi-${kat.id}" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:12px;">
+        <div class="predef-kat-body">
+          <div id="predef-zabiegi-${kat.id}" class="chips">
             ${kat.zabiegi.map(z => `
-              <span style="background:#f8fafc; border:1px solid var(--sand); border-radius:20px; padding:5px 12px; font-size:13px; display:inline-flex; align-items:center; gap:6px;">
+              <span class="chip">
                 ${z.nazwa}${z.domyslna_cena > 0 ? ` <span style="color:var(--taupe); font-size:11px;">${z.domyslna_cena} zł</span>` : ''}
-                <button onclick="predef_usunZabieg(${z.id}, ${kat.id})" style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:14px; line-height:1; padding:0;">×</button>
+                <button class="chip-x" onclick="predef_usunZabieg(${z.id}, ${kat.id})" title="Usuń zabieg">×</button>
               </span>
             `).join('')}
           </div>
-          <div style="display:flex; gap:8px; flex-wrap:wrap;">
-            <input type="text" id="predef-nowy-${kat.id}" placeholder="Nowy zabieg, np. Manicure japoński" style="flex:1; min-width:180px; padding:7px 11px; border:1px solid var(--sand); border-radius:8px; font-size:13px;">
-            <input type="number" id="predef-cena-${kat.id}" placeholder="Cena zł (opcj.)" min="0" step="0.01" style="width:130px; padding:7px 11px; border:1px solid var(--sand); border-radius:8px; font-size:13px;">
-            <button onclick="predef_dodajZabieg(${kat.id})" style="background:var(--primary); color:white; border:none; padding:7px 16px; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">+ Dodaj</button>
+          <div class="toolbar" style="margin:0;">
+            <input type="text" id="predef-nowy-${kat.id}" class="grow" placeholder="Nowy zabieg, np. Manicure japoński" style="padding:8px 12px; font-size:13px;">
+            <input type="number" id="predef-cena-${kat.id}" placeholder="Cena zł (opcj.)" min="0" step="0.01" style="width:140px; padding:8px 12px; font-size:13px;">
+            <button class="btn-primary" style="padding:8px 16px; font-size:13px;" onclick="predef_dodajZabieg(${kat.id})">+ Dodaj</button>
           </div>
         </div>
       </div>
     `).join('');
   } catch(e) {
-    lista.innerHTML = '<div style="color:#ef4444;">Błąd połączenia.</div>';
+    lista.innerHTML = '<div class="alert alert-error">Błąd połączenia.</div>';
   }
 }
 
