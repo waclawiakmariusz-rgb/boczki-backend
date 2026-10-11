@@ -969,7 +969,7 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   komentarz `estelio` + `odpowiedz` (ostatnia) + `czeka_na_estelio=0`; kolumny `ostatni_ruch`,
   `czeka_na_estelio` (ALTER ADD COLUMN IF NOT EXISTS dla instancji, które utworzyły tabelę przed południem).
   UI: „💬 Rozmowa · dopisz" w aplikacji (dymki salon/Estelio + pole dopisz), w adminie „⏳ czeka na Twoją
-  odpowiedź" + „Rozmowa (n)" + pole „Dopisz odpowiedź" (puste = sama zmiana statusu). E2E scenariusza: OK.
+  odpowiedź" + „Rozmowa (n)" + pole „Dopisz odpowiedź" (puste = sama zmiana statusu). E2E scenariusza: OK. WDROZONE 2026-10-11 13:09 (2c57e9d): tabele + kolumny na prod OK, smoke test OK (1. przebieg: jeden przejsciowy 401 get_months tuz po restarcie, 2. przebieg czysty).
   Wdrożenie: pull + RESTART (server.js), tabele tworzą się same. Nieotwarte: mail do salonu przy odpowiedzi,
   „Zgłoś problem" dla kosmetologa/praktykantki.
   Stare punkty etapu 2 (dla porządku):
