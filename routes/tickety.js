@@ -49,9 +49,25 @@ module.exports = (db, opts = {}) => {
       odpowiedz_przeczytana TINYINT(1) NOT NULL DEFAULT 1,
       data_utworzenia DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       data_zamkniecia DATETIME NULL,
+      ostatni_ruch VARCHAR(10) NOT NULL DEFAULT 'salon',
+      czeka_na_estelio TINYINT(1) NOT NULL DEFAULT 1,
       INDEX idx_tenant (tenant_id, status),
       INDEX idx_status (status, data_utworzenia)
     ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, (e) => { if (e) log.error('[tickety] CREATE Zgloszenia_Tickety:', e.message); });
+  // Rozmowa pod ticketem (2026-10-11): salon dopisuje wyjaśnienia, Estelio odpowiada — wątek jak w Jirze.
+  // Tabela ticketów powstała tego samego dnia, ALTER jest dla instancji, które zdążyły ją utworzyć bez kolumn.
+  db.query(`ALTER TABLE Zgloszenia_Tickety ADD COLUMN IF NOT EXISTS ostatni_ruch VARCHAR(10) NOT NULL DEFAULT 'salon'`, () => {});
+  db.query(`ALTER TABLE Zgloszenia_Tickety ADD COLUMN IF NOT EXISTS czeka_na_estelio TINYINT(1) NOT NULL DEFAULT 1`, () => {});
+  db.query(`CREATE TABLE IF NOT EXISTS Zgloszenia_Komentarze (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      ticket_id INT NOT NULL,
+      tenant_id VARCHAR(100) NOT NULL,
+      autor_typ VARCHAR(10) NOT NULL,
+      autor VARCHAR(100) NULL,
+      tresc TEXT NOT NULL,
+      data_dodania DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_ticket (ticket_id, id)
+    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, (e) => { if (e) log.error('[tickety] CREATE Zgloszenia_Komentarze:', e.message); });
   db.query(`CREATE TABLE IF NOT EXISTS Zgloszenia_Zalaczniki (
       id INT AUTO_INCREMENT PRIMARY KEY,
       ticket_id INT NOT NULL,
@@ -67,7 +83,10 @@ module.exports = (db, opts = {}) => {
   const s = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
   const KOLUMNY_LISTY = `t.id, t.tenant_id, t.nazwa_salonu, t.pracownik, t.rola, t.kategoria, t.pilnosc, t.tytul, t.opis, t.kontekst,
       t.status, t.odpowiedz, t.odpowiedz_data, t.odpowiedz_przeczytana, t.data_utworzenia, t.data_zamkniecia,
-      (SELECT COUNT(*) FROM Zgloszenia_Zalaczniki z WHERE z.ticket_id = t.id) AS zalaczniki`;
+      t.ostatni_ruch, t.czeka_na_estelio,
+      (SELECT COUNT(*) FROM Zgloszenia_Zalaczniki z WHERE z.ticket_id = t.id) AS zalaczniki,
+      (SELECT COUNT(*) FROM Zgloszenia_Komentarze k WHERE k.ticket_id = t.id) AS komentarze`;
+  const SQL_KOMENTARZE = `SELECT id, autor_typ, autor, tresc, data_dodania FROM Zgloszenia_Komentarze WHERE ticket_id = ? AND tenant_id = ? ORDER BY id`;
 
   // ── admin: ten sam token co reszta panelu (tabela admin_sessions z routes/admin.js) ──
   function wymagajAdmina(req, res, next) {
@@ -122,7 +141,27 @@ module.exports = (db, opts = {}) => {
         const rows = await q(`SELECT ${KOLUMNY_LISTY} FROM Zgloszenia_Tickety t WHERE t.id = ? AND t.tenant_id = ?`, [id, tenant_id]);
         if (!rows || !rows.length) return res.json({ status: 'error', message: 'Nie ma takiego zgłoszenia w tym salonie.' });
         const zal = await q(`SELECT id, nazwa, typ, rozmiar, data_dodania FROM Zgloszenia_Zalaczniki WHERE ticket_id = ? AND tenant_id = ? ORDER BY id`, [id, tenant_id]);
-        return res.json({ status: 'success', data: { ...rows[0], zalaczniki_lista: zal || [] } });
+        const kom = await q(SQL_KOMENTARZE, [id, tenant_id]);
+        return res.json({ status: 'success', data: { ...rows[0], zalaczniki_lista: zal || [], komentarze_lista: kom || [] } });
+      }
+
+      if (action === 'tk_komentarz') {
+        // Salon dopisuje wyjaśnienie. Zamknięty ticket wraca do „w toku" — Estelio ma wiedzieć, że czeka.
+        const id = parseInt(d.id, 10);
+        const tresc = s(d.tresc, 5000);
+        if (!id) return res.json({ status: 'error', message: 'Brak numeru zgłoszenia.' });
+        if (tresc.length < 2) return res.json({ status: 'error', message: 'Wpisz treść wiadomości.' });
+        const rows = await q(`SELECT id, status, tytul FROM Zgloszenia_Tickety WHERE id = ? AND tenant_id = ?`, [id, tenant_id]);
+        if (!rows || !rows.length) return res.json({ status: 'error', message: 'Nie ma takiego zgłoszenia w tym salonie.' });
+        const autor = s(d.pracownik || d.user_log, 100) || 'salon';
+        await q(`INSERT INTO Zgloszenia_Komentarze (ticket_id, tenant_id, autor_typ, autor, tresc) VALUES (?, ?, 'salon', ?, ?)`, [id, tenant_id, autor, tresc]);
+        const otwarte = rows[0].status === 'zamkniete';
+        await q(`UPDATE Zgloszenia_Tickety SET ostatni_ruch = 'salon', czeka_na_estelio = 1${otwarte ? ", status = 'w_toku', data_zamkniecia = NULL" : ''} WHERE id = ? AND tenant_id = ?`, [id, tenant_id]);
+        zapiszLog(tenant_id, 'ZGŁOSZENIE DO ESTELIO', autor, `#${id} dopisek${otwarte ? ' (zgłoszenie otwarte ponownie)' : ''}: ${tresc.slice(0, 120)}`);
+        Promise.resolve()
+          .then(() => mailer.powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu: s(d.nazwa_salonu, 255) || null, pracownik: autor, rola: s(d.rola, 50), kategoria: 'dopisek', pilnosc: otwarte ? 'otwarte ponownie' : 'dopisek', tytul: rows[0].tytul, opis: tresc }))
+          .catch(e => log.error('[tickety] mail o dopisku:', e.message));
+        return res.json({ status: 'success', otwarte_ponownie: otwarte });
       }
 
       if (action === 'tk_przeczytane') {
@@ -203,6 +242,13 @@ module.exports = (db, opts = {}) => {
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 
+  router.get('/admin/tickety/komentarze/:ticketId', wymagajAdmina, async (req, res) => {
+    try {
+      const rows = await q(`SELECT id, autor_typ, autor, tresc, data_dodania FROM Zgloszenia_Komentarze WHERE ticket_id = ? ORDER BY id`, [parseInt(req.params.ticketId, 10) || 0]);
+      return res.json({ status: 'success', data: rows || [] });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
   router.get('/admin/tickety/zalaczniki/:ticketId', wymagajAdmina, async (req, res) => {
     try {
       const rows = await q(`SELECT id, nazwa, typ, rozmiar, data_dodania FROM Zgloszenia_Zalaczniki WHERE ticket_id = ? ORDER BY id`, [parseInt(req.params.ticketId, 10) || 0]);
@@ -232,12 +278,17 @@ module.exports = (db, opts = {}) => {
       if (!rows || !rows.length) return res.json({ status: 'error', message: 'Nie ma takiego zgłoszenia.' });
       const t = rows[0];
       const set = []; const params = [];
-      if (odpowiedz != null && odpowiedz !== (t.odpowiedz || '')) { set.push('odpowiedz = ?', 'odpowiedz_data = NOW()', 'odpowiedz_przeczytana = 0'); params.push(odpowiedz || null); }
-      if (status) { set.push('status = ?'); params.push(status); set.push(status === 'zamkniete' ? 'data_zamkniecia = NOW()' : 'data_zamkniecia = NULL'); }
+      // Niepusta odpowiedź = nowa wiadomość w rozmowie (komentarz 'estelio') + ostatnia odpowiedź na karcie.
+      const nowaWiadomosc = odpowiedz != null && odpowiedz.length > 0;
+      if (nowaWiadomosc) {
+        await q(`INSERT INTO Zgloszenia_Komentarze (ticket_id, tenant_id, autor_typ, autor, tresc) VALUES (?, ?, 'estelio', 'Estelio', ?)`, [id, t.tenant_id, odpowiedz]);
+        set.push('odpowiedz = ?', 'odpowiedz_data = NOW()', 'odpowiedz_przeczytana = 0', "ostatni_ruch = 'estelio'", 'czeka_na_estelio = 0'); params.push(odpowiedz);
+      }
+      if (status) { set.push('status = ?'); params.push(status); set.push(status === 'zamkniete' ? 'data_zamkniecia = NOW()' : 'data_zamkniecia = NULL'); if (!nowaWiadomosc) set.push('czeka_na_estelio = 0'); }
       if (!set.length) return res.json({ status: 'success', message: 'Bez zmian.' });
       params.push(id);
       await q(`UPDATE Zgloszenia_Tickety SET ${set.join(', ')} WHERE id = ?`, params);
-      zapiszLog(t.tenant_id, 'ZGŁOSZENIE — ODPOWIEDŹ ESTELIO', 'Estelio', `#${id} ${status ? 'status: ' + status : ''}${odpowiedz != null ? ' · odpowiedź zaktualizowana' : ''}`);
+      zapiszLog(t.tenant_id, 'ZGŁOSZENIE — ODPOWIEDŹ ESTELIO', 'Estelio', `#${id} ${status ? 'status: ' + status : ''}${nowaWiadomosc ? ' · nowa odpowiedź' : ''}`);
       return res.json({ status: 'success' });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });

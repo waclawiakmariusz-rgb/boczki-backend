@@ -583,10 +583,11 @@ async function wyslijPrzypomnienieStart({ email, nazwa_salonu, login }) {
 async function powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu, pracownik, rola, kategoria, pilnosc, tytul, opis }) {
   const transporter = createTransport();
   const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba o zmianę', pytanie: '❓ Pytanie', inne: '📝 Inne' };
+  const KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba o zmianę', pytanie: '❓ Pytanie', inne: '📝 Inne', dopisek: '💬 Dopisek salonu do rozmowy' };
   const PIL = { niska: 'niska', normalna: 'normalna', wysoka: '⚠️ wysoka', krytyczna: '🚨 KRYTYCZNA' };
-  const html = emailWrapper('🎫', 'Nowe zgłoszenie', 'Panel administratora', `
-      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">#${id} · ${esc(tytul)}</h2>
+  const dopisek = kategoria === 'dopisek';
+  const html = emailWrapper(dopisek ? '💬' : '🎫', dopisek ? 'Salon dopisał do zgłoszenia' : 'Nowe zgłoszenie', 'Panel administratora', `
+      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">#${id} · ${esc(tytul)}${dopisek && pilnosc === 'otwarte ponownie' ? ' <span style="font-size:13px; color:#b45309;">(otwarte ponownie)</span>' : ''}</h2>
       <table style="width:100%; border-collapse:collapse; font-size:14px;">
         <tr><td style="padding:8px 0; color:#7a6e66; width:130px; border-bottom:1px solid #f4efe6;">Salon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><strong>${esc(nazwa_salonu || tenant_id)}</strong> <span style="color:#a89e96; font-size:12px;">(${esc(tenant_id)})</span></td></tr>
         <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Zgłasza:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${esc(pracownik)}${rola ? ` · ${esc(rola)}` : ''}</td></tr>
@@ -598,7 +599,7 @@ async function powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu, pracownik,
     `);
   return transporter.sendMail({
     from: FROM(), to: ADMIN_EMAIL(),
-    subject: `🎫 #${id} [${pilnosc}] ${tytul} — ${nazwa_salonu || tenant_id}`,
+    subject: dopisek ? `💬 #${id} dopisek salonu${pilnosc === 'otwarte ponownie' ? ' (otwarte ponownie)' : ''}: ${tytul} — ${nazwa_salonu || tenant_id}` : `🎫 #${id} [${pilnosc}] ${tytul} — ${nazwa_salonu || tenant_id}`,
     html, text: htmlDoTekstu(html),
   });
 }

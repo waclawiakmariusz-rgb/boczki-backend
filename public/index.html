@@ -21625,15 +21625,64 @@ function tk_render() {
                 <span style="background:${st[1]}; color:${st[2]}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap;">${st[0]}</span>
             </div>
             <div style="font-size:13px; color:#334155; margin-top:8px; white-space:pre-line;">${escHtml(t.opis || '')}</div>
-            ${Number(t.zalaczniki) ? `<div id="tk-zal-${t.id}" style="margin-top:8px;"><button onclick="tk_pokazZalaczniki(${t.id})" class="filter-btn" style="font-size:12px;">📎 Pokaż załączniki (${t.zalaczniki})</button></div>` : ''}
             ${t.odpowiedz ? `<div style="margin-top:10px; background:${nowaOdp ? '#fffbeb' : '#f0fdf4'}; border:1px solid ${nowaOdp ? '#fde68a' : '#bbf7d0'}; border-radius:8px; padding:10px 12px;">
-                <div style="font-size:12px; font-weight:700; color:#166534;">💬 Odpowiedź Estelio${t.odpowiedz_data ? ' · ' + tk_data(t.odpowiedz_data) : ''}${nowaOdp ? ' · <span style="color:#b45309;">NOWA</span>' : ''}</div>
+                <div style="font-size:12px; font-weight:700; color:#166534;">💬 Ostatnia odpowiedź Estelio${t.odpowiedz_data ? ' · ' + tk_data(t.odpowiedz_data) : ''}${nowaOdp ? ' · <span style="color:#b45309;">NOWA</span>' : ''}</div>
                 <div style="font-size:13px; color:#1f2937; margin-top:4px; white-space:pre-line;">${escHtml(t.odpowiedz)}</div>
                 ${nowaOdp ? `<button onclick="tk_przeczytane(${t.id})" class="filter-btn" style="font-size:12px; margin-top:6px;">✓ Przeczytane</button>` : ''}
-            </div>` : (t.status !== 'zamkniete' ? `<div style="font-size:12px; color:#94a3b8; margin-top:8px;">Czeka na odpowiedź Estelio.</div>` : '')}
-            ${t.data_zamkniecia ? `<div style="font-size:11.5px; color:#94a3b8; margin-top:6px;">Zamknięte ${tk_data(t.data_zamkniecia)}</div>` : ''}
+            </div>` : (t.status !== 'zamkniete' ? `<div style="font-size:12px; color:#94a3b8; margin-top:8px;">${Number(t.czeka_na_estelio) ? 'Czeka na odpowiedź Estelio.' : ''}</div>` : '')}
+            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                <button onclick="tk_rozwin(${t.id})" class="filter-btn" style="font-size:12px;" id="tk-btn-rozwin-${t.id}">💬 Rozmowa${Number(t.komentarze) ? ` (${t.komentarze})` : ''} · dopisz${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}</button>
+                ${t.data_zamkniecia ? `<span style="font-size:11.5px; color:#94a3b8;">Zamknięte ${tk_data(t.data_zamkniecia)}</span>` : ''}
+            </div>
+            <div id="tk-watek-${t.id}" style="display:none; margin-top:10px;"></div>
         </div>`;
     }).join('');
+}
+// Wątek pod ticketem: opis → kolejne wiadomości (salon / Estelio) → załączniki → pole „dopisz".
+async function tk_rozwin(id) {
+    const box = document.getElementById('tk-watek-' + id); if (!box) return;
+    if (box.style.display === 'block') { box.style.display = 'none'; return; }
+    box.style.display = 'block'; box.innerHTML = '<span style="font-size:12px; color:#94a3b8;">Ładowanie rozmowy…</span>';
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_get', tenant_id: tk_kto().tenant_id, id }) });
+        const d = await r.json();
+        if (d.status !== 'success') { box.innerHTML = `<span style="font-size:12px; color:#dc2626;">${escHtml(d.message || 'Błąd')}</span>`; return; }
+        const t = d.data; const kom = t.komentarze_lista || []; const zal = t.zalaczniki_lista || [];
+        const bubble = (kto, kiedy, tresc, estelio) => `<div style="display:flex; justify-content:${estelio ? 'flex-start' : 'flex-end'}; margin:6px 0;">
+            <div style="max-width:85%; background:${estelio ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${estelio ? '#bbf7d0' : '#bfdbfe'}; border-radius:10px; padding:8px 12px;">
+                <div style="font-size:11px; font-weight:700; color:${estelio ? '#166534' : '#1e40af'};">${estelio ? '🛠️ Estelio' : '👤 ' + escHtml(kto || 'salon')} · ${tk_data(kiedy)}</div>
+                <div style="font-size:13px; color:#1f2937; margin-top:3px; white-space:pre-line;">${escHtml(tresc)}</div>
+            </div></div>`;
+        box.innerHTML = `
+            <div style="border-top:1px dashed #e2e8f0; padding-top:8px;">
+                ${bubble(t.pracownik, t.data_utworzenia, t.opis, false)}
+                ${kom.map(k => bubble(k.autor, k.data_dodania, k.tresc, k.autor_typ === 'estelio')).join('')}
+                ${zal.length ? `<div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><span style="font-size:12px; color:#64748b;">Załączniki:</span>${zal.map(z => `<button onclick="tk_otworzZalacznik(${z.id})" class="filter-btn" style="font-size:12px;">${/^image\//.test(z.typ || '') ? '🖼️' : '📄'} ${escHtml(z.nazwa || 'załącznik')} <small style="color:#94a3b8;">${Math.round((z.rozmiar || 0) / 1024)} KB</small></button>`).join('')}</div>` : ''}
+                <div style="margin-top:10px;">
+                    <textarea id="tk-dopisz-${id}" class="form-control" rows="3" maxlength="5000" placeholder="${t.status === 'zamkniete' ? 'Dopisz wyjaśnienie — zgłoszenie otworzy się ponownie i trafi do Estelio.' : 'Dopisz wyjaśnienie albo pytanie do tego zgłoszenia…'}"></textarea>
+                    <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;">
+                        <button onclick="tk_dopisz(${id})" class="btn-primary" style="padding:6px 14px; font-size:13px;">💬 Dopisz</button>
+                        <span id="tk-dopisz-msg-${id}" style="font-size:12px;"></span>
+                    </div>
+                </div>
+            </div>`;
+    } catch (e) { box.innerHTML = '<span style="font-size:12px; color:#dc2626;">Nie udało się pobrać rozmowy.</span>'; }
+}
+async function tk_dopisz(id) {
+    const ta = document.getElementById('tk-dopisz-' + id); const msg = document.getElementById('tk-dopisz-msg-' + id);
+    const tresc = (ta.value || '').trim();
+    if (tresc.length < 2) { msg.textContent = 'Wpisz treść.'; msg.style.color = '#dc2626'; return; }
+    msg.textContent = 'Wysyłam…'; msg.style.color = '#64748b';
+    try {
+        const k = tk_kto();
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_komentarz', tenant_id: k.tenant_id, id, tresc, pracownik: k.pracownik, rola: k.rola }) });
+        const d = await r.json();
+        if (d.status !== 'success') { msg.textContent = d.message || 'Błąd.'; msg.style.color = '#dc2626'; return; }
+        ta.value = '';
+        msg.textContent = d.otwarte_ponownie ? 'Dopisano — zgłoszenie otwarte ponownie, Estelio dostało powiadomienie.' : 'Dopisano — Estelio dostało powiadomienie.'; msg.style.color = '#16a34a';
+        await tk_zaladuj();
+        const box = document.getElementById('tk-watek-' + id); if (box) { box.style.display = 'none'; tk_rozwin(id); }
+    } catch (e) { msg.textContent = 'Błąd połączenia.'; msg.style.color = '#dc2626'; }
 }
 async function tk_przeczytane(id) {
     try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_przeczytane', tenant_id: tk_kto().tenant_id, id }) }); } catch (e) {}

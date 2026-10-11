@@ -963,8 +963,15 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   w Dzienniku salonu. Badge nieprzeczytanych odpowiedzi w menu (liczony przy otwarciu sekcji — NIE przy
   logowaniu, żeby nie dotykać startu aplikacji). **Testy:** `tests/tickety.test.js` (14). **E2E na lokalnym
   serwerze z prawdziwą bazą (demo): komplet OK** — ticket #1 w demo-estelio zostawiony jako zamknięty przykład.
+  **Rozmowa pod ticketem** (tego samego dnia, scenariusz usera „Ania: nie działa A → odp. → Ania: myślałam
+  inaczej → odp."): tabela `Zgloszenia_Komentarze` (autor_typ salon|estelio), akcja `tk_komentarz` (dopisek do
+  ZAMKNIĘTEGO otwiera ponownie → `w_toku`, `czeka_na_estelio=1`, mail do admina z 💬), odpowiedź admina =
+  komentarz `estelio` + `odpowiedz` (ostatnia) + `czeka_na_estelio=0`; kolumny `ostatni_ruch`,
+  `czeka_na_estelio` (ALTER ADD COLUMN IF NOT EXISTS dla instancji, które utworzyły tabelę przed południem).
+  UI: „💬 Rozmowa · dopisz" w aplikacji (dymki salon/Estelio + pole dopisz), w adminie „⏳ czeka na Twoją
+  odpowiedź" + „Rozmowa (n)" + pole „Dopisz odpowiedź" (puste = sama zmiana statusu). E2E scenariusza: OK.
   Wdrożenie: pull + RESTART (server.js), tabele tworzą się same. Nieotwarte: mail do salonu przy odpowiedzi,
-  komentarze zwrotne salonu pod ticketem, „Zgłoś problem" dla kosmetologa/praktykantki.
+  „Zgłoś problem" dla kosmetologa/praktykantki.
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach

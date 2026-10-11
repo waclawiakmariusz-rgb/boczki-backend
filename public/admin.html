@@ -1718,10 +1718,16 @@ function renderTickety() {
           ${t.kontekst ? `<br><span style="font-size:11px; color:#a89e96;">${tkEsc(t.kontekst)}</span>` : ''}
         </div>
         <div class="zgl-msg" style="white-space:pre-line;">${tkEsc(t.opis || '')}</div>
-        ${Number(t.zalaczniki) ? `<div id="tk-adm-zal-${t.id}" style="margin:8px 0;"><button class="btn-sm" onclick="tkAdmZalaczniki(${t.id}, '${tkEsc(t.tenant_id)}')">📎 Pokaż załączniki (${t.zalaczniki})</button></div>` : ''}
+        <div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+          ${Number(t.czeka_na_estelio) && t.status !== 'zamkniete' ? `<span style="background:#fee2e2; color:#991b1b; border-radius:999px; padding:2px 10px; font-size:12px; font-weight:700;">⏳ czeka na Twoją odpowiedź</span>` : ''}
+          <button class="btn-sm" onclick="tkAdmRozmowa(${t.id})">💬 Rozmowa${Number(t.komentarze) ? ` (${t.komentarze})` : ''}</button>
+          ${Number(t.zalaczniki) ? `<button class="btn-sm" onclick="tkAdmZalaczniki(${t.id}, '${tkEsc(t.tenant_id)}')">📎 Załączniki (${t.zalaczniki})</button>` : ''}
+        </div>
+        <div id="tk-adm-watek-${t.id}" style="display:none;"></div>
+        <div id="tk-adm-zal-${t.id}"></div>
         <div style="margin-top:10px; background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:10px 12px;">
-          <label style="font-size:12px; font-weight:700; color:#7a6e66; display:block; margin-bottom:4px;">💬 Odpowiedź dla salonu${t.odpowiedz_data ? ` <span style="font-weight:400;">(ostatnia: ${tkData(t.odpowiedz_data)}${Number(t.odpowiedz_przeczytana) ? ', przeczytana' : ', nieprzeczytana'})</span>` : ''}</label>
-          <textarea id="tk-adm-odp-${t.id}" rows="3" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:8px; border:1px solid #ddd4c4; border-radius:8px;" placeholder="Co ustaliłaś/-eś, co naprawione, kiedy wdrożone…">${tkEsc(t.odpowiedz || '')}</textarea>
+          <label style="font-size:12px; font-weight:700; color:#7a6e66; display:block; margin-bottom:4px;">💬 Dopisz odpowiedź dla salonu${t.odpowiedz_data ? ` <span style="font-weight:400;">(ostatnia: ${tkData(t.odpowiedz_data)}${Number(t.odpowiedz_przeczytana) ? ', przeczytana' : ', nieprzeczytana'})</span>` : ''}</label>
+          <textarea id="tk-adm-odp-${t.id}" rows="3" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:8px; border:1px solid #ddd4c4; border-radius:8px;" placeholder="Nowa wiadomość w rozmowie: co ustaliłaś/-eś, co naprawione, kiedy wdrożone… (puste = tylko zmiana statusu)"></textarea>
           <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
             <select id="tk-adm-st-${t.id}" style="padding:6px 8px; border:1px solid #ddd4c4; border-radius:8px;">
               <option value="nowe" ${t.status === 'nowe' ? 'selected' : ''}>🆕 Nowe</option>
@@ -1750,6 +1756,24 @@ function tkAdmZapisz(id) {
       setTimeout(() => zaladujTickety(), 600);
     })
     .catch(() => { msg.textContent = 'Błąd połączenia.'; msg.style.color = '#dc2626'; });
+}
+
+function tkAdmRozmowa(id) {
+  const box = document.getElementById(`tk-adm-watek-${id}`); if (!box) return;
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block'; box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Ładowanie rozmowy…</span>';
+  fetch(`${API}/admin/tickety/komentarze/${id}`, { headers: { 'X-Admin-Token': adminToken } })
+    .then(r => r.json())
+    .then(d => {
+      const kom = (d && d.data) || [];
+      if (!kom.length) { box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Jeszcze bez wiadomości — pierwszy opis jest wyżej.</span>'; return; }
+      box.innerHTML = kom.map(k => { const e = k.autor_typ === 'estelio'; return `<div style="display:flex; justify-content:${e ? 'flex-end' : 'flex-start'}; margin:6px 0;">
+        <div style="max-width:85%; background:${e ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${e ? '#bbf7d0' : '#bfdbfe'}; border-radius:10px; padding:8px 12px;">
+          <div style="font-size:11px; font-weight:700; color:${e ? '#166534' : '#1e40af'};">${e ? '🛠️ Estelio' : '👤 ' + tkEsc(k.autor || 'salon')} · ${tkData(k.data_dodania)}</div>
+          <div style="font-size:13px; color:#1f2937; margin-top:3px; white-space:pre-line;">${tkEsc(k.tresc)}</div>
+        </div></div>`; }).join('');
+    })
+    .catch(() => { box.innerHTML = '<span style="font-size:12px; color:#dc2626;">Nie udało się pobrać rozmowy.</span>'; });
 }
 
 function tkAdmZalaczniki(id, tenant) {

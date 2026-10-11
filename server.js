@@ -723,7 +723,7 @@ app.post('/api', (req, res) => {
         'loj_poziom_zapisz', 'loj_poziom_usun',
         'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc',
         'loj_kod_aktywacyjny', 'loj_app_qr'];
-    const ticketyActions = ['tk_add', 'tk_list', 'tk_get', 'tk_przeczytane', 'tk_zalacznik'];
+    const ticketyActions = ['tk_add', 'tk_list', 'tk_get', 'tk_przeczytane', 'tk_zalacznik', 'tk_komentarz'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
