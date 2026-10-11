@@ -464,6 +464,7 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
       <button class="tab-btn active" onclick="showTab('tab-pulpit')">📊 Pulpit</button>
       <button class="tab-btn" onclick="showTab('tab-salony')">🏪 Salony</button>
       <button class="tab-btn" onclick="showTab('tab-zgloszenia')">📋 Zgłoszenia <span id="badge-nowe" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
+      <button class="tab-btn" onclick="showTab('tab-tickety')">🎫 Tickety <span id="badge-tickety" style="display:none; background:#ef4444; color:white; border-radius:20px; padding:2px 8px; font-size:11px; margin-left:6px;">0</span></button>
       <button class="tab-btn" onclick="showTab('tab-linki')">🔗 Linki</button>
       <button class="tab-btn" onclick="showTab('tab-vouchery')">🏷️ Vouchery</button>
       <button class="tab-btn" onclick="showTab('tab-kb')">💬 Baza Wiedzy</button>
@@ -649,6 +650,24 @@ input:focus, select:focus { background: #fff; border-color: var(--primary); box-
     <!-- Tab: Baza Wiedzy Chatu -->
     <div id="tab-kb" class="tab-panel">
       <div id="kb-content"></div>
+    </div>
+
+    <!-- Tab: Tickety — zgłoszenia salonów do Estelio (routes/tickety.js, 2026-10-11) -->
+    <div id="tab-tickety" class="tab-panel">
+      <div class="zgl-toolbar" style="flex-wrap:wrap; gap:8px;">
+        <select id="tk-adm-status" onchange="renderTickety()">
+          <option value="aktywne">Aktywne (nowe + w toku)</option>
+          <option value="nowe">Tylko nowe</option>
+          <option value="w_toku">Tylko w toku</option>
+          <option value="zamkniete">Zamknięte</option>
+          <option value="">Wszystkie</option>
+        </select>
+        <select id="tk-adm-salon" onchange="renderTickety()"><option value="">Wszystkie salony</option></select>
+        <button class="btn-secondary" onclick="zaladujTickety()">🔄 Odśwież</button>
+        <button class="btn-secondary" onclick="tkAdmStatystyki()">📊 Statystyki</button>
+      </div>
+      <div id="tk-adm-stats" style="display:none; margin:10px 0 14px;"></div>
+      <div id="tk-adm-content" class="loading">Ładowanie zgłoszeń…</div>
     </div>
 
     <!-- Tab: Zgłoszenia od klientów -->
@@ -1060,6 +1079,7 @@ function adminLogin() {
     zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
+    zaladujTickety(true);   // tylko licznik nowych ticketów na zakładce
     initWizard();
   })
   .catch(() => { errEl.style.display = 'block'; errEl.textContent = 'Błąd połączenia z serwerem.'; });
@@ -1293,6 +1313,7 @@ window.addEventListener('load', () => {
     zaladujPulpit();
     zaladujSalony();
     zaladujZgloszenia();
+    zaladujTickety(true);   // tylko licznik nowych ticketów na zakładce
     initWizard();
   }
 });
@@ -1418,6 +1439,7 @@ function showTab(id) {
   if (id === 'tab-pulpit') zaladujPulpit();
   if (id === 'tab-salony') zaladujSalony();
   if (id === 'tab-zgloszenia') zaladujZgloszenia();
+  if (id === 'tab-tickety') zaladujTickety();
   if (id === 'tab-linki') zaladujTokeny();
   if (id === 'tab-vouchery') zaladujVouchery();
   if (id === 'tab-kb') kb_init();
@@ -1637,6 +1659,136 @@ function kopiujLink() {
     btn.textContent = '✅ Skopiowano!';
     setTimeout(() => { btn.textContent = '📋 Kopiuj link'; }, 2000);
   });
+}
+
+// ═══════════ 🎫 TICKETY — zgłoszenia salonów do Estelio (routes/tickety.js, 2026-10-11) ═══════════
+let _ticketyAll = [];
+const TK_A_KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba', pytanie: '❓ Pytanie', inne: '📝 Inne' };
+const TK_A_PIL = { niska: ['niska', '#64748b'], normalna: ['normalna', '#2563eb'], wysoka: ['WYSOKA', '#d97706'], krytyczna: ['KRYTYCZNA', '#dc2626'] };
+const TK_A_ST = { nowe: ['🆕 Nowe', '#dbeafe', '#1e40af'], w_toku: ['🔧 W toku', '#fef3c7', '#92400e'], zamkniete: ['✅ Zamknięte', '#dcfce7', '#166534'] };
+const tkEsc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const tkData = (d) => { if (!d) return ''; const x = new Date(String(d).replace(' ', 'T')); return isNaN(x) ? String(d) : x.toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); };
+
+function zaladujTickety(tylkoLicznik) {
+  const cont = document.getElementById('tk-adm-content');
+  if (!tylkoLicznik && cont) cont.innerHTML = '<div class="loading">Ładowanie zgłoszeń…</div>';
+  fetch(`${API}/admin/tickety`, { headers: { 'X-Admin-Token': adminToken } })
+    .then(r => r.json())
+    .then(d => {
+      _ticketyAll = d.status === 'success' && Array.isArray(d.data) ? d.data : [];
+      const nowe = _ticketyAll.filter(t => t.status === 'nowe').length;
+      const badge = document.getElementById('badge-tickety');
+      if (badge) { badge.style.display = nowe ? 'inline' : 'none'; badge.textContent = nowe; }
+      if (tylkoLicznik) return;
+      const sel = document.getElementById('tk-adm-salon');
+      if (sel) {
+        const biez = sel.value;
+        const salony = [...new Map(_ticketyAll.map(t => [t.tenant_id, t.nazwa_salonu || t.tenant_id])).entries()].sort((a, b) => String(a[1]).localeCompare(String(b[1]), 'pl'));
+        sel.innerHTML = '<option value="">Wszystkie salony</option>' + salony.map(([id, n]) => `<option value="${tkEsc(id)}">${tkEsc(n)}</option>`).join('');
+        sel.value = biez;
+      }
+      renderTickety();
+    })
+    .catch(() => { if (cont && !tylkoLicznik) cont.innerHTML = '<div class="alert alert-error">Błąd ładowania ticketów.</div>'; });
+}
+
+function renderTickety() {
+  const cont = document.getElementById('tk-adm-content'); if (!cont) return;
+  const fs = document.getElementById('tk-adm-status').value;
+  const fsal = document.getElementById('tk-adm-salon').value;
+  let lista = _ticketyAll;
+  if (fs === 'aktywne') lista = lista.filter(t => t.status !== 'zamkniete');
+  else if (fs) lista = lista.filter(t => t.status === fs);
+  if (fsal) lista = lista.filter(t => t.tenant_id === fsal);
+  if (!lista.length) { cont.innerHTML = '<div class="empty-state"><div class="icon">🎫</div><p>Brak zgłoszeń w tym widoku.</p></div>'; return; }
+  cont.innerHTML = lista.map(t => {
+    const st = TK_A_ST[t.status] || [t.status, '#f1f5f9', '#334155'];
+    const pil = TK_A_PIL[t.pilnosc] || [t.pilnosc, '#64748b'];
+    return `
+      <div class="zgl-card" id="tk-adm-card-${t.id}" style="border-left:4px solid ${pil[1]};">
+        <div class="zgl-header">
+          <div>
+            <div class="zgl-name">#${t.id} · ${tkEsc(t.tytul)}</div>
+            <div class="zgl-salon">🏪 ${tkEsc(t.nazwa_salonu || t.tenant_id)} <span style="color:#a89e96; font-size:11px;">(${tkEsc(t.tenant_id)})</span></div>
+          </div>
+          <span style="background:${st[1]}; color:${st[2]}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap;">${st[0]}</span>
+        </div>
+        <div class="zgl-meta">
+          👤 ${tkEsc(t.pracownik || '—')}${t.rola ? ` (${tkEsc(t.rola)})` : ''} · 🕐 ${tkData(t.data_utworzenia)} · ${TK_A_KAT[t.kategoria] || tkEsc(t.kategoria)} · pilność: <strong style="color:${pil[1]};">${pil[0]}</strong>${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}
+          ${t.kontekst ? `<br><span style="font-size:11px; color:#a89e96;">${tkEsc(t.kontekst)}</span>` : ''}
+        </div>
+        <div class="zgl-msg" style="white-space:pre-line;">${tkEsc(t.opis || '')}</div>
+        ${Number(t.zalaczniki) ? `<div id="tk-adm-zal-${t.id}" style="margin:8px 0;"><button class="btn-sm" onclick="tkAdmZalaczniki(${t.id}, '${tkEsc(t.tenant_id)}')">📎 Pokaż załączniki (${t.zalaczniki})</button></div>` : ''}
+        <div style="margin-top:10px; background:#faf7f2; border:1px solid #ede6d8; border-radius:10px; padding:10px 12px;">
+          <label style="font-size:12px; font-weight:700; color:#7a6e66; display:block; margin-bottom:4px;">💬 Odpowiedź dla salonu${t.odpowiedz_data ? ` <span style="font-weight:400;">(ostatnia: ${tkData(t.odpowiedz_data)}${Number(t.odpowiedz_przeczytana) ? ', przeczytana' : ', nieprzeczytana'})</span>` : ''}</label>
+          <textarea id="tk-adm-odp-${t.id}" rows="3" style="width:100%; box-sizing:border-box; font-family:inherit; font-size:13px; padding:8px; border:1px solid #ddd4c4; border-radius:8px;" placeholder="Co ustaliłaś/-eś, co naprawione, kiedy wdrożone…">${tkEsc(t.odpowiedz || '')}</textarea>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:8px;">
+            <select id="tk-adm-st-${t.id}" style="padding:6px 8px; border:1px solid #ddd4c4; border-radius:8px;">
+              <option value="nowe" ${t.status === 'nowe' ? 'selected' : ''}>🆕 Nowe</option>
+              <option value="w_toku" ${t.status === 'w_toku' ? 'selected' : ''}>🔧 W toku</option>
+              <option value="zamkniete" ${t.status === 'zamkniete' ? 'selected' : ''}>✅ Zamknięte</option>
+            </select>
+            <button class="btn-sm btn-edit" onclick="tkAdmZapisz(${t.id})">💾 Zapisz odpowiedź i status</button>
+            ${t.status !== 'zamkniete' ? `<button class="btn-sm" onclick="document.getElementById('tk-adm-st-${t.id}').value='zamkniete'; tkAdmZapisz(${t.id})">✅ Zamknij</button>` : ''}
+            <span id="tk-adm-msg-${t.id}" style="font-size:12px;"></span>
+          </div>
+        </div>
+        ${t.data_zamkniecia ? `<div style="font-size:11px; color:#a89e96; margin-top:6px;">Zamknięte ${tkData(t.data_zamkniecia)}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function tkAdmZapisz(id) {
+  const msg = document.getElementById(`tk-adm-msg-${id}`);
+  const body = { id, odpowiedz: document.getElementById(`tk-adm-odp-${id}`).value, status: document.getElementById(`tk-adm-st-${id}`).value };
+  msg.textContent = 'Zapisuję…'; msg.style.color = '#7a6e66';
+  fetch(`${API}/admin/tickety/odpowiedz`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken }, body: JSON.stringify(body) })
+    .then(r => r.json())
+    .then(d => {
+      if (d.status !== 'success') { msg.textContent = d.message || 'Błąd zapisu.'; msg.style.color = '#dc2626'; return; }
+      msg.textContent = 'Zapisano.'; msg.style.color = '#16a34a';
+      setTimeout(() => zaladujTickety(), 600);
+    })
+    .catch(() => { msg.textContent = 'Błąd połączenia.'; msg.style.color = '#dc2626'; });
+}
+
+function tkAdmZalaczniki(id, tenant) {
+  const box = document.getElementById(`tk-adm-zal-${id}`); if (!box) return;
+  box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Ładowanie…</span>';
+  fetch(`${API}/admin/tickety/zalaczniki/${id}`, { headers: { 'X-Admin-Token': adminToken } })
+    .then(r => r.json())
+    .then(d => {
+      const lista = (d && d.data) || [];
+      if (!lista.length) { box.innerHTML = '<span style="font-size:12px; color:#a89e96;">Brak załączników.</span>'; return; }
+      box.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap;">${lista.map(z => {
+        const url = `${API}/admin/tickety/zalacznik/${z.id}?admin_token=${encodeURIComponent(adminToken)}`;
+        return /^image\//.test(z.typ || '')
+          ? `<a href="${url}" target="_blank" title="${tkEsc(z.nazwa)}"><img src="${url}" style="height:110px; border-radius:8px; border:1px solid #ede6d8;"></a>`
+          : `<a href="${url}" target="_blank" class="btn-sm">📄 ${tkEsc(z.nazwa || 'plik')}</a>`;
+      }).join('')}</div>`;
+    })
+    .catch(() => { box.innerHTML = '<span style="font-size:12px; color:#dc2626;">Nie udało się pobrać załączników.</span>'; });
+}
+
+function tkAdmStatystyki() {
+  const box = document.getElementById('tk-adm-stats');
+  if (box.style.display === 'block') { box.style.display = 'none'; return; }
+  box.style.display = 'block'; box.innerHTML = '<div class="loading">Liczę…</div>';
+  fetch(`${API}/admin/tickety/statystyki`, { headers: { 'X-Admin-Token': adminToken } })
+    .then(r => r.json())
+    .then(d => {
+      if (d.status !== 'success') { box.innerHTML = '<div class="alert alert-error">Błąd statystyk.</div>'; return; }
+      const st = Object.fromEntries((d.wg_statusu || []).map(x => [x.status, Number(x.n)]));
+      const tab = (rows, kol) => `<table style="width:100%; border-collapse:collapse; font-size:13px;"><thead><tr>${kol.map(k => `<th style="text-align:left; padding:6px 8px; border-bottom:2px solid #ede6d8; font-size:11px; text-transform:uppercase; color:#7a6e66;">${k[1]}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${kol.map(k => `<td style="padding:6px 8px; border-bottom:1px solid #f4efe6;">${tkEsc(typeof k[0] === 'function' ? k[0](r) : r[k[0]])}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+      box.innerHTML = `
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700;">Razem</div><div style="font-size:22px; font-weight:700;">${(st.nowe || 0) + (st.w_toku || 0) + (st.zamkniete || 0)}</div><div style="font-size:12px; color:#7a6e66;">nowe ${st.nowe || 0} · w toku ${st.w_toku || 0} · zamknięte ${st.zamkniete || 0}</div></div>
+          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Wg salonu</div>${tab(d.wg_salonu || [], [[r => r.nazwa_salonu || r.tenant_id, 'Salon'], ['n', 'Zgłoszeń'], ['otwarte', 'Otwartych']])}</div>
+          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Kto zgłasza</div>${tab(d.wg_osoby || [], [['pracownik', 'Osoba'], ['tenant_id', 'Salon'], ['n', 'Zgłoszeń'], [r => tkData(r.ostatnie), 'Ostatnie']])}</div>
+          <div class="card" style="padding:12px;"><div style="font-size:12px; color:#7a6e66; font-weight:700; margin-bottom:6px;">Kategoria × pilność</div>${tab(d.wg_kategorii || [], [[r => TK_A_KAT[r.kategoria] || r.kategoria, 'Kategoria'], ['pilnosc', 'Pilność'], ['n', 'Ile']])}</div>
+        </div>`;
+    })
+    .catch(() => { box.innerHTML = '<div class="alert alert-error">Błąd połączenia.</div>'; });
 }
 
 function zaladujTokeny() {

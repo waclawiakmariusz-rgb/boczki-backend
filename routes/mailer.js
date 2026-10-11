@@ -579,4 +579,28 @@ async function wyslijPrzypomnienieStart({ email, nazwa_salonu, login }) {
   }));
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart };
+// ─── Nowy ticket z salonu (routes/tickety.js, 2026-10-11) — do admina ─────────
+async function powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu, pracownik, rola, kategoria, pilnosc, tytul, opis }) {
+  const transporter = createTransport();
+  const esc = (v) => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba o zmianę', pytanie: '❓ Pytanie', inne: '📝 Inne' };
+  const PIL = { niska: 'niska', normalna: 'normalna', wysoka: '⚠️ wysoka', krytyczna: '🚨 KRYTYCZNA' };
+  const html = emailWrapper('🎫', 'Nowe zgłoszenie', 'Panel administratora', `
+      <h2 style="margin:0 0 14px; font-size:18px; color:#1c1a18;">#${id} · ${esc(tytul)}</h2>
+      <table style="width:100%; border-collapse:collapse; font-size:14px;">
+        <tr><td style="padding:8px 0; color:#7a6e66; width:130px; border-bottom:1px solid #f4efe6;">Salon:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;"><strong>${esc(nazwa_salonu || tenant_id)}</strong> <span style="color:#a89e96; font-size:12px;">(${esc(tenant_id)})</span></td></tr>
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Zgłasza:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${esc(pracownik)}${rola ? ` · ${esc(rola)}` : ''}</td></tr>
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Kategoria:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6;">${KAT[kategoria] || esc(kategoria)}</td></tr>
+        <tr><td style="padding:8px 0; color:#7a6e66; border-bottom:1px solid #f4efe6;">Pilność:</td><td style="padding:8px 0; border-bottom:1px solid #f4efe6; ${pilnosc === 'krytyczna' ? 'color:#dc2626; font-weight:700;' : ''}">${PIL[pilnosc] || esc(pilnosc)}</td></tr>
+        <tr><td style="padding:8px 0; color:#7a6e66; vertical-align:top;">Opis:</td><td style="padding:8px 0; color:#1c1a18; white-space:pre-line;">${esc(opis)}</td></tr>
+      </table>
+      ${emailBtn(`${APP_URL()}/admin.html`, 'Otwórz panel admina → Tickety')}
+    `);
+  return transporter.sendMail({
+    from: FROM(), to: ADMIN_EMAIL(),
+    subject: `🎫 #${id} [${pilnosc}] ${tytul} — ${nazwa_salonu || tenant_id}`,
+    html, text: htmlDoTekstu(html),
+  });
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie };

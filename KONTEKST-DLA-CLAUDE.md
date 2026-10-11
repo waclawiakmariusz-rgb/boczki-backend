@@ -945,6 +945,26 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   z laptopa; do ujednolicenia przy okazji. Z listy bezpieczeństwa (2026-10-10) user wybrał TYLKO ten punkt;
   odłożone: allowlista Remote MySQL w hPanel, npm audit fix, limity per konto, ENFORCE_SESSION GET,
   test odtworzenia backupu, skaner claude-security, 2FA admin.html, osobne konto DB.
+- **24. TICKETY — wewnętrzne zgłoszenia salonów do Estelio (2026-10-11, `dev`)** — user: „taka Jira":
+  recepcja zgłasza błędy/prośby/pytania ze zrzutami, auto: salon, kto, data/godzina; kategoria + pilność;
+  numer ticketu (#id globalny); admin odpowiada, zamyka, widzi kto ile zgłosił. **Gdzie:** aplikacja →
+  Administracja → „🎫 Zgłoszenia" (sekcja `#tickety`, widoczna dla recepcji/managera/admina — kosmetolog
+  i praktykantka nie mają Administracji); panel admina → zakładka „🎫 Tickety" (lista, filtry status/salon,
+  odpowiedź + status, załączniki, statystyki). **Kod:** `routes/tickety.js` (akcje dispatchera `tk_add`,
+  `tk_list`, `tk_get`, `tk_przeczytane`, `tk_zalacznik`; upload multipart `POST /api/tickety/zalacznik`
+  z własną weryfikacją `x-session-token`; admin: `GET /admin/tickety[?status&tenant_id]`,
+  `/admin/tickety/statystyki`, `/admin/tickety/zalaczniki/:ticketId`, `/admin/tickety/zalacznik/:id`
+  (binarnie, token też w `?admin_token=` dla `<img>`), `POST /admin/tickety/odpowiedz {id, odpowiedz, status}`).
+  **Tabele własne:** `Zgloszenia_Tickety`, `Zgloszenia_Zalaczniki` (MEDIUMBLOB — celowo NIE UPLOADS_DIR),
+  CREATE IF NOT EXISTS z jawną kolacją utf8mb4_unicode_ci; nazwa salonu dla admina przez LEFT JOIN Licencje.
+  Statusy: nowe | w_toku | zamkniete; kategorie: blad | prosba | pytanie | inne; pilność: niska | normalna |
+  wysoka | krytyczna. Limity: 5 załączników, 4 MB/plik (front zmniejsza obrazy do 1600 px JPEG; Ctrl+V
+  wkleja zrzut do opisu). Mail do ADMIN_EMAIL przy nowym tickecie (`powiadomAdminaOTickecie`), wpis
+  w Dzienniku salonu. Badge nieprzeczytanych odpowiedzi w menu (liczony przy otwarciu sekcji — NIE przy
+  logowaniu, żeby nie dotykać startu aplikacji). **Testy:** `tests/tickety.test.js` (14). **E2E na lokalnym
+  serwerze z prawdziwą bazą (demo): komplet OK** — ticket #1 w demo-estelio zostawiony jako zamknięty przykład.
+  Wdrożenie: pull + RESTART (server.js), tabele tworzą się same. Nieotwarte: mail do salonu przy odpowiedzi,
+  komentarze zwrotne salonu pod ticketem, „Zgłoś problem" dla kosmetologa/praktykantki.
   Stare punkty etapu 2 (dla porządku):
   reset hasła dla statusu opóźniony/nieaktywny +
   link do billing, baner o trialu, ujednolicenie ról kreator↔Dostępy, ostrzeżenie o cenach

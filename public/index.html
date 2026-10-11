@@ -5624,6 +5624,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 						<li><button onclick="pokaz('slownik', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="M3.3 7 12 12l8.7-5"/><path d="M12 22V12"/></svg>Kosmetyki</span></button></li>
 							<li id="menu-platnosc-link" style="display:none;"><button onclick="pokaz('sekcja-platnosc-link', this); zg_zaladujSekcje();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>Płatności online</span></button></li>
 							<li id="menu-dodatki" style="display:none;"><button onclick="pokaz('addons', this); addonsZaladuj();"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12v10H4V12"/><path d="M2 7h20v5H2z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>Dodatki</span></button></li>
+							<li><button onclick="pokaz('tickety', this)" title="Zgłoś błąd, prośbę o zmianę albo pytanie do twórcy Estelio"><span class="nav-label">🎫 Zgłoszenia</span><span id="tickety-badge" style="display:none; margin-left:6px; background:#ef4444; color:#fff; border-radius:10px; padding:0 6px; font-size:11px;"></span></button></li>
 							<li><button onclick="pokaz('sms-baza', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-7-8-3z"/></svg>Baza do akcji SMS</span></button></li>
                     </ul>
                 </li>
@@ -5792,6 +5793,69 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                 <tbody id="sms-lista"></tbody>
             </table>
         </div>
+    </div>
+</div>
+
+<!-- ===== 🎫 ZGŁOSZENIA DO ESTELIO (tickety) — 2026-10-11. Osobny moduł: routes/tickety.js, akcje tk_* ===== -->
+<div id="tickety" class="section">
+    <div class="header">
+        <h1>🎫 Zgłoszenia do Estelio</h1>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button onclick="tk_pokazFormularz()" class="btn-primary" id="tk-btn-nowe">➕ Nowe zgłoszenie</button>
+            <button onclick="tk_zaladuj()" class="btn-primary" style="background:#64748b;">🔄 Odśwież</button>
+        </div>
+    </div>
+
+    <div class="card" id="tk-formularz" style="display:none;">
+        <h3 style="margin-top:0;">Nowe zgłoszenie</h3>
+        <p style="color:#64748b; font-size:13px; margin:0 0 12px;">Błąd, prośba o zmianę, pytanie — opisz własnymi słowami, jak na kartce dla koleżanki. Nazwa salonu, Twoje imię oraz data i godzina dopisują się same. Zrzut ekranu możesz wkleić (Ctrl+V) prosto do opisu.</p>
+        <div id="tk-auto" style="font-size:12.5px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-bottom:12px;"></div>
+        <div class="form-grid">
+            <div style="grid-column:1 / -1;"><label>Tytuł (jedno zdanie):</label><input type="text" id="tk-tytul" class="form-control" maxlength="200" placeholder="np. Przycisk Zwrot nie reaguje w profilu klientki"></div>
+            <div><label>Kategoria:</label>
+                <select id="tk-kategoria" class="form-control">
+                    <option value="blad">🐞 Błąd — coś nie działa</option>
+                    <option value="prosba">💡 Prośba o zmianę / nową funkcję</option>
+                    <option value="pytanie">❓ Pytanie — jak coś zrobić</option>
+                    <option value="inne">📝 Inne</option>
+                </select></div>
+            <div><label>Pilność:</label>
+                <select id="tk-pilnosc" class="form-control">
+                    <option value="niska">Niska — może poczekać</option>
+                    <option value="normalna" selected>Normalna</option>
+                    <option value="wysoka">Wysoka — utrudnia pracę</option>
+                    <option value="krytyczna">Krytyczna — nie da się pracować</option>
+                </select></div>
+            <div style="grid-column:1 / -1;"><label>Opis (co się stało, co kliknęłaś, czego oczekiwałaś):</label><textarea id="tk-opis" class="form-control" rows="6" maxlength="5000" placeholder="Np. Weszłam w profil Pani Kowalskiej, kliknęłam Zwrot przy kremie, pojawiło się puste okno. Działo się 2 razy, na komputerze przy recepcji."></textarea></div>
+            <div style="grid-column:1 / -1;">
+                <label>Zrzuty ekranu / pliki (do 5, obrazy lub PDF):</label>
+                <input type="file" id="tk-pliki" class="form-control" multiple accept="image/*,application/pdf" onchange="tk_dodajPliki(this.files); this.value='';">
+                <div id="tk-pliki-lista" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;"></div>
+            </div>
+        </div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px;">
+            <button onclick="tk_wyslij()" class="btn-primary" id="tk-btn-wyslij">📨 Wyślij zgłoszenie</button>
+            <button onclick="tk_ukryjFormularz()" class="btn-primary" style="background:#94a3b8;">Anuluj</button>
+            <span id="tk-komunikat" style="font-size:13px;"></span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="filters" style="margin-bottom:10px;">
+            <button class="filter-btn active" onclick="tk_filtr('aktywne', this)">Aktywne</button>
+            <button class="filter-btn" onclick="tk_filtr('zamkniete', this)">Zamknięte</button>
+            <button class="filter-btn" onclick="tk_filtr('wszystkie', this)">Wszystkie</button>
+        </div>
+        <div id="tk-podsumowanie" style="font-size:13px; color:#64748b; margin-bottom:10px;"></div>
+        <div id="tk-lista">Ładowanie...</div>
+    </div>
+</div>
+
+<!-- podgląd załącznika -->
+<div id="tk-podglad-overlay" onclick="if(event.target===this) this.style.display='none'" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,.75); z-index:10050; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#fff; border-radius:14px; padding:12px; max-width:min(96vw, 1200px); max-height:92vh; overflow:auto; position:relative;">
+        <button onclick="document.getElementById('tk-podglad-overlay').style.display='none'" style="position:absolute; top:8px; right:8px; border:0; background:#0f172a; color:#fff; border-radius:8px; padding:4px 10px; cursor:pointer;">✕</button>
+        <div id="tk-podglad-tresc" style="text-align:center;"></div>
     </div>
 </div>
 
@@ -16934,6 +16998,7 @@ function pokaz(id, b) {
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
+    if (id === 'tickety' && typeof tk_init === 'function') tk_init();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -17063,6 +17128,7 @@ function pokaz(id, b) {
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
+    if (id === 'tickety' && typeof tk_init === 'function') tk_init();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -17328,6 +17394,7 @@ function pokaz(id, b) {
     if (id === 'zadatki-lista') pobierzZadatkiWszystkie();
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
+    if (id === 'tickety' && typeof tk_init === 'function') tk_init();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -21402,6 +21469,199 @@ function ustawCzasRetencji(dni, btn) {
 // Recepcja nie miała jak zobaczyć, kto zgodził się na marketing — zgody czytały się
 // wyłącznie w profilu pojedynczego klienta. Tu dostaje gotową listę do wysyłki.
 window.__smsBaza = { lista: [], zgoda: 'sms' };
+
+// ═══════════════════════════════════════════════════════════════
+// 🎫 ZGŁOSZENIA DO ESTELIO (tickety) — 2026-10-11
+// Backend: routes/tickety.js (akcje tk_* przez dispatcher POST /api, upload multipart
+// /api/tickety/zalacznik). Sekcja: #tickety (Administracja → Zgłoszenia).
+// ═══════════════════════════════════════════════════════════════
+let tk_dane = [];
+let tk_aktywnyFiltr = 'aktywne';
+let tk_plikiDoWyslania = [];
+const TK_KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba o zmianę', pytanie: '❓ Pytanie', inne: '📝 Inne' };
+const TK_PIL = { niska: ['Niska', '#64748b'], normalna: ['Normalna', '#2563eb'], wysoka: ['Wysoka', '#d97706'], krytyczna: ['KRYTYCZNA', '#dc2626'] };
+const TK_STATUS = { nowe: ['🆕 Nowe', '#dbeafe', '#1e40af'], w_toku: ['🔧 W toku', '#fef3c7', '#92400e'], zamkniete: ['✅ Zamknięte', '#dcfce7', '#166534'] };
+
+function tk_kto() {
+    return {
+        pracownik: localStorage.getItem('boczki_pracownik_imie') || (typeof currentUser !== 'undefined' ? currentUser : '') || 'nieznany',
+        rola: localStorage.getItem('boczki_pracownik_rola') || '',
+        tenant_id: localStorage.getItem('boczki_tenant_id') || '',
+    };
+}
+function tk_data(d) {
+    if (!d) return '';
+    const x = d instanceof Date ? d : new Date(String(d).replace(' ', 'T'));
+    return isNaN(x) ? String(d) : x.toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+function tk_init() {
+    const k = tk_kto();
+    const auto = document.getElementById('tk-auto');
+    if (auto) auto.innerHTML = `Dopisze się automatycznie: <strong>salon ${escHtml(k.tenant_id)}</strong> · <strong>${escHtml(k.pracownik)}</strong>${k.rola ? ' (' + escHtml(k.rola) + ')' : ''} · ${tk_data(new Date())}`;
+    tk_zaladuj();
+}
+function tk_pokazFormularz() {
+    document.getElementById('tk-formularz').style.display = 'block';
+    document.getElementById('tk-komunikat').textContent = '';
+    const opis = document.getElementById('tk-opis');
+    if (opis && !opis._tkPaste) {
+        opis._tkPaste = true;
+        opis.addEventListener('paste', (e) => {
+            const items = (e.clipboardData && e.clipboardData.items) || [];
+            const pliki = [];
+            for (const it of items) if (it.kind === 'file' && /^image\//.test(it.type)) { const f = it.getAsFile(); if (f) pliki.push(new File([f], 'zrzut-' + Date.now() + '.png', { type: f.type })); }
+            if (pliki.length) { e.preventDefault(); tk_dodajPliki(pliki); }
+        });
+    }
+    setTimeout(() => { try { document.getElementById('tk-tytul').focus(); } catch (e) {} }, 50);
+}
+function tk_ukryjFormularz() {
+    document.getElementById('tk-formularz').style.display = 'none';
+    ['tk-tytul', 'tk-opis'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    tk_plikiDoWyslania = []; tk_renderPliki();
+}
+function tk_dodajPliki(lista) {
+    for (const f of Array.from(lista || [])) {
+        if (tk_plikiDoWyslania.length >= 5) { tk_komunikat('Maksymalnie 5 załączników.', false); break; }
+        if (!/^(image\/|application\/pdf)/.test(f.type)) { tk_komunikat(`Pominięto „${f.name}" — dozwolone są obrazy i PDF.`, false); continue; }
+        if (f.size > 12 * 1024 * 1024) { tk_komunikat(`Pominięto „${f.name}" — plik jest za duży.`, false); continue; }
+        tk_plikiDoWyslania.push(f);
+    }
+    tk_renderPliki();
+}
+function tk_usunPlik(i) { tk_plikiDoWyslania.splice(i, 1); tk_renderPliki(); }
+function tk_renderPliki() {
+    const box = document.getElementById('tk-pliki-lista'); if (!box) return;
+    box.innerHTML = tk_plikiDoWyslania.map((f, i) => `<span style="display:inline-flex; align-items:center; gap:6px; background:#f1f5f9; border:1px solid #e2e8f0; border-radius:8px; padding:4px 8px; font-size:12px;">${/^image\//.test(f.type) ? '🖼️' : '📄'} ${escHtml(f.name)} <small style="color:#94a3b8;">${Math.round(f.size / 1024)} KB</small> <button onclick="tk_usunPlik(${i})" style="border:0; background:none; cursor:pointer; color:#dc2626;" title="Usuń">✕</button></span>`).join('');
+}
+function tk_komunikat(txt, ok) {
+    const el = document.getElementById('tk-komunikat'); if (!el) return;
+    el.textContent = txt; el.style.color = ok ? '#16a34a' : '#dc2626';
+}
+// Zrzuty ekranu bywają po 3–5 MB — zmniejszamy w przeglądarce do 1600 px / JPEG, zanim pójdą na serwer.
+async function tk_zmniejszObraz(file) {
+    if (!/^image\/(png|jpeg|jpg|webp)$/i.test(file.type) || file.size < 400 * 1024) return file;
+    try {
+        const url = URL.createObjectURL(file);
+        const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+        const max = 1600; const k = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * k), h = Math.round(img.height * k);
+        const c = document.createElement('canvas'); c.width = w; c.height = h; c.getContext('2d').drawImage(img, 0, 0, w, h);
+        const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+        URL.revokeObjectURL(url);
+        return blob ? new File([blob], file.name.replace(/\.[^.]+$/, '') + '.jpg', { type: 'image/jpeg' }) : file;
+    } catch (e) { return file; }
+}
+async function tk_wyslij() {
+    const k = tk_kto();
+    const tytul = (document.getElementById('tk-tytul').value || '').trim();
+    const opis = (document.getElementById('tk-opis').value || '').trim();
+    if (tytul.length < 3) return tk_komunikat('Podaj krótki tytuł (min. 3 znaki).', false);
+    if (opis.length < 5) return tk_komunikat('Opisz, co się dzieje (min. 5 znaków).', false);
+    const btn = document.getElementById('tk-btn-wyslij'); btn.disabled = true; tk_komunikat('Wysyłam…', true);
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({
+            action: 'tk_add', tenant_id: k.tenant_id, pracownik: k.pracownik, rola: k.rola,
+            tytul, opis, kategoria: document.getElementById('tk-kategoria').value, pilnosc: document.getElementById('tk-pilnosc').value,
+            kontekst: (location.pathname + location.hash).slice(0, 200) + ' · ' + navigator.userAgent.slice(0, 200),
+        }) });
+        const d = await r.json();
+        if (d.status !== 'success') { tk_komunikat(d.message || 'Nie udało się zapisać zgłoszenia.', false); btn.disabled = false; return; }
+        let wyslane = 0, bledy = 0;
+        for (const f0 of tk_plikiDoWyslania) {
+            try {
+                const f = await tk_zmniejszObraz(f0);
+                const fd = new FormData(); fd.append('tenant_id', k.tenant_id); fd.append('ticket_id', String(d.id)); fd.append('plik', f, f.name);
+                const ru = await fetch('/api/tickety/zalacznik', { method: 'POST', body: fd, headers: { 'x-session-token': localStorage.getItem('boczki_session_token') || '' } });
+                const du = await ru.json().catch(() => ({}));
+                if (ru.ok && du.status === 'success') wyslane++; else bledy++;
+            } catch (e) { bledy++; }
+        }
+        tk_komunikat(`Zgłoszenie #${d.id} zapisane${tk_plikiDoWyslania.length ? ` (załączniki: ${wyslane} OK${bledy ? ', ' + bledy + ' nieudane' : ''})` : ''}. Dziękujemy — odpowiedź pojawi się na tej liście.`, true);
+        tk_plikiDoWyslania = []; tk_renderPliki();
+        ['tk-tytul', 'tk-opis'].forEach(id => document.getElementById(id).value = '');
+        setTimeout(() => { document.getElementById('tk-formularz').style.display = 'none'; tk_komunikat('', true); }, 2500);
+        tk_zaladuj();
+    } catch (e) {
+        tk_komunikat('Błąd połączenia — spróbuj ponownie.', false);
+    } finally { btn.disabled = false; }
+}
+async function tk_zaladuj() {
+    const k = tk_kto();
+    const box = document.getElementById('tk-lista'); if (!box) return;
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_list', tenant_id: k.tenant_id }) });
+        const d = await r.json();
+        tk_dane = d.status === 'success' && Array.isArray(d.data) ? d.data : [];
+        tk_render();
+    } catch (e) { box.innerHTML = '<div style="color:#dc2626;">Nie udało się pobrać zgłoszeń.</div>'; }
+}
+function tk_filtr(f, btn) {
+    tk_aktywnyFiltr = f;
+    document.querySelectorAll('#tickety .filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    tk_render();
+}
+function tk_render() {
+    const box = document.getElementById('tk-lista'); if (!box) return;
+    const lista = tk_dane.filter(t => tk_aktywnyFiltr === 'wszystkie' ? true : tk_aktywnyFiltr === 'zamkniete' ? t.status === 'zamkniete' : t.status !== 'zamkniete');
+    const nieprzeczytane = tk_dane.filter(t => t.odpowiedz && Number(t.odpowiedz_przeczytana) === 0).length;
+    const badge = document.getElementById('tickety-badge');
+    if (badge) { badge.style.display = nieprzeczytane ? 'inline-block' : 'none'; badge.textContent = nieprzeczytane; }
+    const otwarte = tk_dane.filter(t => t.status !== 'zamkniete').length;
+    const pods = document.getElementById('tk-podsumowanie');
+    if (pods) pods.textContent = tk_dane.length ? `Zgłoszeń w tym salonie: ${tk_dane.length} · aktywnych: ${otwarte} · zamkniętych: ${tk_dane.length - otwarte}${nieprzeczytane ? ` · nowych odpowiedzi: ${nieprzeczytane}` : ''}` : '';
+    if (!lista.length) { box.innerHTML = `<div style="color:#94a3b8; padding:14px; text-align:center;">${tk_dane.length ? 'Brak zgłoszeń w tym widoku.' : 'Jeszcze nic nie zgłoszono. Gdy coś nie działa albo czegoś brakuje — kliknij „Nowe zgłoszenie".'}</div>`; return; }
+    box.innerHTML = lista.map(t => {
+        const st = TK_STATUS[t.status] || [t.status, '#f1f5f9', '#334155'];
+        const pil = TK_PIL[t.pilnosc] || [t.pilnosc, '#64748b'];
+        const nowaOdp = t.odpowiedz && Number(t.odpowiedz_przeczytana) === 0;
+        return `<div style="border:1px solid ${nowaOdp ? '#f59e0b' : '#e2e8f0'}; border-left:4px solid ${pil[1]}; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff;">
+            <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
+                <div style="min-width:0;">
+                    <div style="font-weight:700; color:#0f172a;">#${t.id} · ${escHtml(t.tytul)}</div>
+                    <div style="font-size:12px; color:#64748b; margin-top:3px;">${TK_KAT[t.kategoria] || escHtml(t.kategoria)} · pilność: <span style="color:${pil[1]}; font-weight:600;">${pil[0]}</span> · ${escHtml(t.pracownik || '')}${t.rola ? ' (' + escHtml(t.rola) + ')' : ''} · ${tk_data(t.data_utworzenia)}${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}</div>
+                </div>
+                <span style="background:${st[1]}; color:${st[2]}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap;">${st[0]}</span>
+            </div>
+            <div style="font-size:13px; color:#334155; margin-top:8px; white-space:pre-line;">${escHtml(t.opis || '')}</div>
+            ${Number(t.zalaczniki) ? `<div id="tk-zal-${t.id}" style="margin-top:8px;"><button onclick="tk_pokazZalaczniki(${t.id})" class="filter-btn" style="font-size:12px;">📎 Pokaż załączniki (${t.zalaczniki})</button></div>` : ''}
+            ${t.odpowiedz ? `<div style="margin-top:10px; background:${nowaOdp ? '#fffbeb' : '#f0fdf4'}; border:1px solid ${nowaOdp ? '#fde68a' : '#bbf7d0'}; border-radius:8px; padding:10px 12px;">
+                <div style="font-size:12px; font-weight:700; color:#166534;">💬 Odpowiedź Estelio${t.odpowiedz_data ? ' · ' + tk_data(t.odpowiedz_data) : ''}${nowaOdp ? ' · <span style="color:#b45309;">NOWA</span>' : ''}</div>
+                <div style="font-size:13px; color:#1f2937; margin-top:4px; white-space:pre-line;">${escHtml(t.odpowiedz)}</div>
+                ${nowaOdp ? `<button onclick="tk_przeczytane(${t.id})" class="filter-btn" style="font-size:12px; margin-top:6px;">✓ Przeczytane</button>` : ''}
+            </div>` : (t.status !== 'zamkniete' ? `<div style="font-size:12px; color:#94a3b8; margin-top:8px;">Czeka na odpowiedź Estelio.</div>` : '')}
+            ${t.data_zamkniecia ? `<div style="font-size:11.5px; color:#94a3b8; margin-top:6px;">Zamknięte ${tk_data(t.data_zamkniecia)}</div>` : ''}
+        </div>`;
+    }).join('');
+}
+async function tk_przeczytane(id) {
+    try { await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_przeczytane', tenant_id: tk_kto().tenant_id, id }) }); } catch (e) {}
+    const t = tk_dane.find(x => x.id === id); if (t) t.odpowiedz_przeczytana = 1;
+    tk_render();
+}
+async function tk_pokazZalaczniki(id) {
+    const box = document.getElementById('tk-zal-' + id); if (!box) return;
+    box.innerHTML = '<span style="font-size:12px; color:#94a3b8;">Ładowanie załączników…</span>';
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_get', tenant_id: tk_kto().tenant_id, id }) });
+        const d = await r.json();
+        const lista = (d.data && d.data.zalaczniki_lista) || [];
+        if (!lista.length) { box.innerHTML = '<span style="font-size:12px; color:#94a3b8;">Brak załączników.</span>'; return; }
+        box.innerHTML = `<div style="display:flex; gap:8px; flex-wrap:wrap;">${lista.map(z => `<button onclick="tk_otworzZalacznik(${z.id})" class="filter-btn" style="font-size:12px;">${/^image\//.test(z.typ || '') ? '🖼️' : '📄'} ${escHtml(z.nazwa || 'załącznik')} <small style="color:#94a3b8;">${Math.round((z.rozmiar || 0) / 1024)} KB</small></button>`).join('')}</div>`;
+    } catch (e) { box.innerHTML = '<span style="font-size:12px; color:#dc2626;">Nie udało się pobrać załączników.</span>'; }
+}
+async function tk_otworzZalacznik(id) {
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'tk_zalacznik', tenant_id: tk_kto().tenant_id, id }) });
+        const d = await r.json();
+        if (d.status !== 'success') return alert(d.message || 'Brak załącznika.');
+        const src = `data:${d.typ || 'application/octet-stream'};base64,${d.dane}`;
+        const tresc = document.getElementById('tk-podglad-tresc');
+        tresc.innerHTML = /^image\//.test(d.typ || '') ? `<img src="${src}" style="max-width:100%; max-height:85vh; border-radius:8px;">` : `<iframe src="${src}" style="width:min(90vw,1000px); height:80vh; border:0;"></iframe>`;
+        document.getElementById('tk-podglad-overlay').style.display = 'flex';
+    } catch (e) { alert('Nie udało się otworzyć załącznika.'); }
+}
 
 function pobierzBazeSMS() {
     const zgoda = document.getElementById('sms-zgoda').value;

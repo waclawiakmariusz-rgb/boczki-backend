@@ -385,6 +385,9 @@ const booksyRoutes     = require('./routes/booksy')(db);
 const fotoRoutes       = require('./routes/foto')(db);
 const zgodyRoutes      = require('./routes/zgody')(db);
 const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
+// Zgłoszenia salonów do Estelio („tickety", 2026-10-11): własne tabele, akcje tk_*, upload multipart,
+// panel admina. Osobny moduł — nie dotyka żadnej istniejącej tabeli ani trasy.
+const ticketyRoutes    = require('./routes/tickety')(db);
 
 // Przypomnienia e-mail dla nowych klientów (2026-10-10): osobny moduł, własna tabela, tryb z env
 // PRZYPOMNIENIA = off | proba (DOMYŚLNIE: tylko log) | on. Nie ma żadnej trasy HTTP ani wpływu
@@ -447,6 +450,7 @@ app.use('/api', blogRoutes);
 app.use('/api', predefRoutes);
 app.use('/api', kosztPlanRoutes);
 app.use('/api', zadaniaRoutes);
+app.use('/api', ticketyRoutes);
 app.use('/api', typyZabiegowRoutes);
 app.use('/api', leadyRoutes);
 app.use('/api', featuresRoutes);
@@ -719,6 +723,7 @@ app.post('/api', (req, res) => {
         'loj_poziom_zapisz', 'loj_poziom_usun',
         'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc',
         'loj_kod_aktywacyjny', 'loj_app_qr'];
+    const ticketyActions = ['tk_add', 'tk_list', 'tk_get', 'tk_przeczytane', 'tk_zalacznik'];
 
     if (magazynActions.includes(action)) {
         req.url = '/magazyn';
@@ -771,6 +776,9 @@ app.post('/api', (req, res) => {
     } else if (lojalnoscActions.includes(action)) {
         req.url = '/lojalnosc';
         return lojalnoscRoutes(req, res, () => {});
+    } else if (ticketyActions.includes(action)) {
+        req.url = '/tickety';
+        return ticketyRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
