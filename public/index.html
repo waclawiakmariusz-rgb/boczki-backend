@@ -21497,7 +21497,8 @@ function tk_data(d) {
 function tk_init() {
     const k = tk_kto();
     const auto = document.getElementById('tk-auto');
-    if (auto) auto.innerHTML = `Dopisze się automatycznie: <strong>salon ${escHtml(k.tenant_id)}</strong> · <strong>${escHtml(k.pracownik)}</strong>${k.rola ? ' (' + escHtml(k.rola) + ')' : ''} · ${tk_data(new Date())}`;
+    // Bez identyfikatora salonu na ekranie (user 2026-10-11) — tenant dopisuje się po cichu, w tle.
+    if (auto) auto.innerHTML = `Dopisze się automatycznie: Twój salon · <strong>${escHtml(k.pracownik)}</strong>${k.rola ? ' (' + escHtml(k.rola) + ')' : ''} · ${tk_data(new Date())}`;
     tk_zaladuj();
 }
 function tk_pokazFormularz() {
