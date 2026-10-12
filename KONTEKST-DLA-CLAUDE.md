@@ -352,6 +352,44 @@ Skrótowo, żebyś nie projektował od nowa czegoś, co jest.
 
 ---
 
+# 10f. STAN NA 2026-10-12 (najnowszy — czytaj najpierw) — TERMINARZ 2.0, etap A
+
+**Gałęzie:** `main` = produkcja = `1af9dbc` (bez zmian od 11.10). `dev` = `4e1b112` (brief). **Nowa gałąź `terminarz`**
+(od dev): `c1396b1` feat + commit docs — NIE zmergowana do dev, NIE na main, NIE na prod. Punkt powrotu:
+tag `przed-terminarz-2026-10-12` = 1af9dbc (wypchnięty). User sam pobrał kopię bazy przed startem.
+
+**Zadanie dnia (user):** „dziś robimy coś naprawdę grubego … opcjonalny dodatek za 0 zł, wewnętrzny terminarz
+zintegrowany z CRM … atut sprzedażowy … NIEZWYKLE WAŻNE, aby nie uszkodzić działania Estelio.” Spec: pkt 26.
+
+**Co powstało (pkt 26):** dodatek Estelio+ `terminarz` (Features_Catalog, 0 zł, AKTYWNY → każdy salon włącza sam
+w Administracja → Dodatki), 9 tabel `Term_*`, `routes/terminarz.js` + `routes/terminarz-silnik.js` (czysty silnik
+dostępności, 20 testów), `public/terminarz.js`/`.css` (osobne pliki), w index.html 4 wpięcia. Tabele powstały
+już na wspólnej bazie (lokalny serwer je utworzył), katalog ma wpis; dodatek włączony TYLKO dla `demo-estelio`
+(testy E2E zostawiły tam wizyty EST-0001…0005 na 13–15.10 i sprzedaż 202610120929155 — dane testowe demo).
+
+**Zweryfikowane lokalnie (serwer :3999, prawdziwa baza, salon demo):** test API 36/36 (konflikty, idempotencja,
+wersje, maskowanie dla kosmetologa, T043/T073/T079/T121/T154/T159/T191/T211), most do Sprzedaży w headless Chrome
+(prefill multisprzedaży → sprzedaż → Powiąż → „Rozliczona”, drugie Rozlicz = ta sama sprzedaż), zrzuty 14 widoków
+(manager, kosmetolog, telefon 400 px) — 0 wyjątków JS, 0 CSP; jest 443 passed (14 znanych env). Skrypty w scratchpadzie
+HP (nie w repo): `test-terminarz-api.js`, `shot-terminarz.js`, `test-trm-rozlicz.js`.
+
+**Decyzja do podjęcia (user):** merge `terminarz` → `dev` → `main` (ff) i wdrożenie. Po wdrożeniu: `narzedzia/smoke-prod.js`,
+w panelu Boczków włączyć dodatek (Administracja → Dodatki → Terminarz) dopiero gdy user zdecyduje; Ctrl+F5.
+
+**Etap A — co zostało / świadomie pominięte:** przeciąganie kart (drag&drop) — zamiast tego „Zmień termin / osobę”
+z podglądem; „Klient już jest” (walk-in) = nowa wizyta na teraz + „Przybyła”; kompletność dokumentów przed startem (P13)
+i korekta po rozliczeniu (P20) — nie zrobione; etapy usługi zwalniające pracownika = etap C (spec). Etap B (online, hold,
+powiadomienia, przedpłaty), C (serie, kolejka, awarie, raporty, import, Klub/Tpay), D — nietknięte, model je przewiduje
+(statusy hold/do_zatwierdzenia/do_wplaty już w enum).
+
+**Pułapki z dziś:** limit API 120 zapytań/min z jednego IP — testy E2E muszą być oszczędne (odczekać 60 s);
+`Date.toISOString().slice(0,10)` po lokalnej północy daje poprzedni dzień (UTC) — daty składać z getFullYear/
+getMonth/getDate; w salonie demo jedna pozycja Uslugi ma kategoria NULL (terminarz ją pomija); pracownicy =
+`Pracownicy.imie`, rola = `Użytkownicy.rola` po TRIM(imie_login); serwer lokalny po starcie miewa ETIMEDOUT na
+pierwszych zapytaniach (tabele Term_* i tak powstały).
+
+---
+
 # 10e. STAN NA 2026-10-11 (najnowszy — czytaj najpierw)
 
 **Gałęzie i produkcja:** `main` = `dev` = produkcja = `1af9dbc` (HP, wdrożone 2026-10-11 ok. 14:30, user:
@@ -1063,6 +1101,32 @@ jako źródło prawdy i błędny zapis realnie zmienia jej zachowanie.
   tabele statystyk ticketów bez przewijania. Weryfikacja: headless Chrome na lokalnym serwerze — 11 zakładek,
   baner „Pokaż salony", modal szczegółów salonu, statystyki i rozmowa ticketów, modal edycji KB, widok 420 px,
   0 wyjątków JS; po wdrożeniu smoke test prod 19/19. Pulpit: kafel „Nowe zamówienia".
+- **26. TERMINARZ 2.0 — dodatek Estelio+ 0 zł, etap A (2026-10-12, gałąź `terminarz`, commit `c1396b1`)** —
+  spec w repo: `design/terminarz 2.0/Estelio_Terminarz_Specyfikacja_dla_Claude_Code.md` (MD rozstrzyga; 52 ścieżki
+  P01–P52, 240 scenariuszy T001–T240, etapy A→B→C→D, rozdz. 28 = 18 poleceń dla mnie, rozdz. 26 = wartości domyślne)
+  + PDF makiet (35 plansz; tekst przez `pdftotext -layout`, obrazów nie ma jak obejrzeć — brak pdftoppm).
+  **Architektura (pod regułę 1z):** zero zmian w istniejących tabelach; własne `Term_Ustawienia, Term_Zasoby,
+  Term_Uslugi (konfig per Uslugi.id: czas_min, bufory, bufor_dotyczy, wymaga_gabinet, gabinety/urzadzenia/pracownicy
+  JSON), Term_Grafik (tygodniowy per Pracownicy.imie), Term_Nieobecnosci (pracownik | zasob_id | cały salon),
+  Term_Rezerwacje (status/obecnosc/kanal/wersja/klucz_idem/sprzedaz_id/rozliczenie_od), Term_Pozycje (snapshot
+  kategoria/wariant/cena/czas, pracownik, gabinet_id, urzadzenie_id, stan, start/koniec_fakt, sprzedaz_id),
+  Term_Zajecia (typ_zasobu pracownik|gabinet|urzadzenie, klucz, od/do_, powod usluga|bufor, aktywne),
+  Term_Historia`; DATETIME jako łańcuchy w czasie salonu (NOW() tylko w SQL). Moduł w server.js w try/catch,
+  `terminarzActions = modul.AKCJE` (23 akcje trm_*), POST przez dispatcher (sesja wymuszona).
+  **Silnik `routes/terminarz-silnik.js`** (czyste funkcje): `sprawdzKomplet` (kolejność: kompetencje → grafik →
+  kolizje pracownika → gabinet z puli → urządzenie z puli; pozycje sekwencyjnie, przerwa = bufor po; R05 klientka),
+  `szukajTerminy` (siatka, limit), `zajeciaPozycji` (bufory per zasób R06), `odejmij`, `przedzialyZGrafiku`;
+  przedziały [od,do). **Zapis:** `trm_zapisz`/`trm_zmien` na dedykowanym połączeniu pod `GET_LOCK('trm:<tenant>')`
+  + transakcja; idempotencja `klucz_idem` (UNIQUE tenant+klucz); wersja wizyty w UPDATE … AND wersja = ?.
+  **RBAC:** rola z Użytkownicy po `pracownik` z body: manager+ = ustawienia; recepcja+ = operacje; kosmetolog =
+  własne pozycje (stan), cudze wizyty maskowane („Zajęte”); praktykantka = maskowane. **Most E11:** `trm_rozlicz_start`
+  (rozliczenie_od = NOW(), prefill) → front wypełnia istniejącą multisprzedaż (#multi_klient, dodajNowyWiersz,
+  .item-cat/.item-var, .seller-chip) → user zatwierdza sprzedaż → `trm_rozlicz_powiaz` szuka Sprzedaz po id_klienta
+  i data_sprzedazy >= rozliczenie_od, wiąże bazowy id (bez „-n”), blokuje podwójne. **Front:** `window.TRM`,
+  `trm_otworz()` (hook w pokaz), `trm_aktualizujWidocznosc()` (menu `#menu-terminarz` gated `hasFeature('terminarz')`,
+  wołane po logowaniu i po toggle dodatku), widoki dzien/tydzien/agenda/zasoby/moj/ustawienia, panel nowa/szczegóły,
+  skróty N/T/←→/Esc, telefon = agenda, cache-busting `?v=20261012a` w index.html (podbijać przy zmianach).
+  **Pomoc:** rozdział „Terminarz” w /pomoc-manager/ (krok 24) i /pomoc/ (krok 37) ze scenkami → Esti indeksuje sam.
 # 11. CZEGO GIT NIE PRZENOSI + różnice między maszynami
 
 | co | uwaga |

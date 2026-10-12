@@ -233,7 +233,8 @@
       <a class="nav-link" href="#dziennik"><span class="num">21</span> Dziennik zdarzeń</a>
       <a class="nav-link" href="#bezpieczenstwo"><span class="num">22</span> Bezpieczeństwo</a>
       <a class="nav-link" href="#rozliczenia"><span class="num">23</span> Rozliczenia z Estelio</a>
-      <a class="nav-link" href="#faq"><span class="num">24</span> FAQ managera</a>
+      <a class="nav-link" href="#terminarz"><span class="num">24</span> Terminarz (dodatek)</a>
+      <a class="nav-link" href="#faq"><span class="num">25</span> FAQ managera</a>
     </div>
   </aside>
 
@@ -1215,11 +1216,73 @@
     </section>
 
     <!-- ══════════ 24 FAQ ══════════ -->
+    <section class="card" id="terminarz">
+      <div class="card-header">
+        <div class="card-icon">📅</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 24 · Dodatek za 0 zł</div>
+          <h2>Terminarz — wewnętrzny kalendarz wizyt zintegrowany z kartoteką i Sprzedażą</h2>
+        </div>
+      </div>
+      <p class="lead">Terminarz to dodatek Estelio+ w cenie 0 zł. Włączasz go w <strong>Administracja → Dodatki</strong> i od tej chwili zespół ma w menu pozycję <strong>📅 Terminarz</strong>: grafik dnia całego zespołu, tydzień jednej osoby, agendę i widok gabinetów oraz urządzeń. Wizyta wskazuje istniejącą klientkę z kartoteki, usługę z cennika i wykonawcę z listy pracowników — niczego nie wpisuje się drugi raz, a rozliczenie po zabiegu przechodzi do zwykłej Sprzedaży.</p>
+
+      <h3>Zanim zespół zacznie umawiać — pięć ustawień managera</h3>
+      <ol>
+        <li><strong>Godziny salonu</strong> (Terminarz → Ustawienia → Godziny i zasady). Otwarcie drzwi nie oznacza pracy konkretnej osoby — to tylko ramy dla gabinetów i urządzeń.</li>
+        <li><strong>Gabinety i urządzenia.</strong> Każde urządzenie to osobny wpis o pojemności 1: „Infinity 1” i „Infinity 2” zamiast jednego „Infinity ×2”. Dzięki temu dwie klientki mogą mieć zabieg równolegle, a trzecia dostanie inny termin zamiast kolizji.</li>
+        <li><strong>Usługi.</strong> Każda pozycja cennika, którą chcesz umawiać, potrzebuje <em>czasu trwania</em>. Do tego: bufor przed/po (sprzątanie, przygotowanie — liczony dla wskazanych zasobów, nie zjada czasu klientki), czy wymaga gabinetu, które jednostki sprzętu są zgodne i kto ma uprawnienie do wykonywania (pusta lista = wszyscy). Usługa bez czasu zostaje w cenniku, ale terminarz jej nie zaproponuje.</li>
+        <li><strong>Grafik zespołu.</strong> Tygodniowe godziny każdej osoby. Na start kliknij „Skopiuj godziny salonu do osób bez grafiku” i popraw wyjątki. Dzień bez grafiku to dzień bez wolnych terminów — tak ma być, system nie zgaduje dostępności z samych godzin salonu.</li>
+        <li><strong>Nieobecności i blokady.</strong> Urlop, choroba, szkolenie, przerwa, serwis urządzenia albo zamknięcie salonu. Publicznie zawsze „Niedostępne”, powód zostaje wewnątrz.</li>
+      </ol>
+
+      <h3>Jedna wizyta, trzy niezależne informacje</h3>
+      <ul>
+        <li><strong>Rezerwacja:</strong> potwierdzona albo anulowana (anulowane znikają z siatki, zostają w agendzie i historii).</li>
+        <li><strong>Obsługa:</strong> przybyła / spóźniona / nieobecna oraz dla każdej usługi: zaplanowana → w trakcie → wykonana (albo przerwana, niewykonana, odmowa kwalifikacji).</li>
+        <li><strong>Pieniądze:</strong> do rozliczenia albo rozliczona — z numerem konkretnej sprzedaży.</li>
+      </ul>
+      <p>„Wykonana” nie znaczy „rozliczona”, a „anulowana” nie znaczy, że pieniądze wróciły. Terminarz pokazuje te trzy rzeczy obok siebie i żadnej nie zgaduje: nieobecność potwierdza człowiek, zadatek i ulga za późne odwołanie nadal żyją w kartotece klientki.</p>
+
+      <h3>Czego terminarz nie robi — celowo</h3>
+      <ul>
+        <li><strong>Nie ma drugiej kasy.</strong> Przycisk „Rozlicz w Sprzedaży” otwiera zwykłą multisprzedaż z wpisaną klientką, wykonanymi usługami i wykonawczynią. Po zatwierdzeniu sprzedaży klikasz „Powiąż” — wizyta dostaje numer sprzedaży i nie da się jej rozliczyć drugi raz.</li>
+        <li><strong>Nie omija fizyki.</strong> Zajętego urządzenia albo gabinetu nie nadpisze nawet właścicielka — dostaje konkretne alternatywy: ta sama osoba o innej godzinie, inna osoba z uprawnieniem, zgodna jednostka sprzętu.</li>
+        <li><strong>Nie odwołuje wizyt za Ciebie.</strong> Zmiana grafiku albo nowa nieobecność najpierw pokazuje listę dotkniętych wizyt. Zapisujesz — wizyty zostają do rozwiązania (zastępstwo, zmiana terminu, kontakt), nic nie znika po cichu.</li>
+        <li><strong>Nie nadpisuje cudzej pracy.</strong> Gdy dwie osoby edytują tę samą wizytę, druga widzi „Ktoś zmienił tę wizytę” i aktualne dane. Dwa kliknięcia „Zapisz” dają jedną wizytę, nie dwie.</li>
+      </ul>
+
+      <h3>Kto co widzi</h3>
+      <ul>
+        <li><strong>Recepcja, manager, admin</strong> — pełny kalendarz, nowe wizyty, zmiany, odwołania, rozliczenie.</li>
+        <li><strong>Kosmetolog</strong> — „Mój dzień” i własne usługi (Rozpocznij / Zakończ / Przerwij); cudze wizyty widzi jako „Zajęte”, bez nazwiska i telefonu. Cudzej usługi nie rozpocznie — potrzebne przekazanie.</li>
+        <li><strong>Ustawienia</strong> zmienia tylko manager lub właściciel.</li>
+      </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · wtorek 7:40, SMS od Natalii</span>
+        <h4>„Mam 39 stopni, nie przyjdę do czwartku” — a Natalia ma dziś sześć wizyt</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Patrycja, co robię z grafikiem Natalii? Wykasować ją na trzy dni?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Nic nie kasuj. Terminarz → Ustawienia → Nieobecności: Natalia, choroba, od dziś 8:00 do czwartku 20:00. Zanim zapisze, pokaże Ci, ile wizyt jest dotkniętych.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">„Ta nieobecność nachodzi na 6 wizyt. Zapis jej nie odwołuje.” Zapisałam mimo to.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Dobrze. Teraz każdą z tych sześciu otwierasz i klikasz „Zmień termin / osobę”. Zostaw godzinę, zmień wykonawczynię na Emilię — system sprawdzi, czy Emilia ma uprawnienie do zabiegu, wolny gabinet i to samo urządzenie. Jeśli coś nie gra, dostaniesz alternatywy.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Kowalska wybierała Natalię specjalnie. Mam jej zmienić po cichu?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Nie. Tej nie przestawiaj, dopóki nie zadzwonisz i nie usłyszysz „tak”. Dopóki wizyta jest potwierdzona, jej termin jest zajęty — nikt go nie sprzeda przez pomyłkę. Jak klientka woli poczekać na Natalię, przełóż na piątek tym samym przyciskiem.</div></div>
+          </div>
+          <p class="scenario-note">Nieobecność zapisujesz od razu, żeby zatrzymać nowe zapisy. Każdą dotkniętą wizytę rozwiązujesz osobno i świadomie — system podpowiada komplet, ale zgodę klientki na zmianę osoby zbiera człowiek.</p>
+        </div>
+      </div>
+
+      <h3>Czego jeszcze nie ma (kolejne etapy)</h3>
+      <p>Ten etap to terminarz <strong>wewnętrzny</strong>. Rezerwacje online i publiczna strona salonu, przypomnienia SMS/e-mail, przedpłaty online, serie wizyt z karnetu, lista oczekujących, raporty obłożenia i import z innego kalendarza są zaprojektowane, ale jeszcze nie włączone — w Ustawieniach widać je jako „etap B/C”. Terminarz możesz używać równolegle z innym kalendarzem, pamiętając, że dwa źródła zapisów nie synchronizują się same.</p>
+    </section>
+
     <section class="card" id="faq">
       <div class="card-header">
         <div class="card-icon">❓</div>
         <div class="card-header-text">
-          <div class="subtitle">Krok 24 · Najczęstsze pytania managera</div>
+          <div class="subtitle">Krok 25 · Najczęstsze pytania managera</div>
           <h2>FAQ</h2>
         </div>
       </div>

@@ -270,7 +270,8 @@
     <div class="nav-section">
       <div class="nav-section-title">Pomoc</div>
       <a class="nav-link" href="#wskazowki"><span class="num">36</span> Wskazówki</a>
-      <a class="nav-link" href="#faq"><span class="num">37</span> FAQ</a>
+      <a class="nav-link" href="#terminarz"><span class="num">37</span> Terminarz (dodatek)</a>
+      <a class="nav-link" href="#faq"><span class="num">38</span> FAQ</a>
     </div>
   </aside>
 
@@ -3030,11 +3031,79 @@
     </section>
 
     <!-- FAQ -->
+    <section class="card" id="terminarz">
+      <div class="card-header">
+        <div class="card-icon">📅</div>
+        <div class="card-header-text">
+          <div class="subtitle">Krok 37 · Jeśli salon włączył dodatek</div>
+          <h2>Terminarz — umawianie, dzień wizyty i rozliczenie</h2>
+        </div>
+      </div>
+      <p class="lead">Jeżeli w menu widzisz <strong>📅 Terminarz</strong>, Twój salon włączył wewnętrzny kalendarz Estelio. Wizyta łączy klientkę z kartoteki, usługę z cennika i wykonawczynię — a po zabiegu jednym przyciskiem przechodzi do zwykłej Sprzedaży. Nic nie wpisujesz dwa razy.</p>
+
+      <h3>Widoki</h3>
+      <ul>
+        <li><strong>Dzień</strong> — kolumna na każdą osobę, godziny pracy na jasnym tle, blokady i czas poza grafikiem zakreskowane. Kliknięcie wolnego pola otwiera nową wizytę o tej godzinie i u tej osoby.</li>
+        <li><strong>Tydzień</strong> — jedna osoba, siedem dni. Kliknij nagłówek dnia, żeby wrócić do zespołu.</li>
+        <li><strong>Agenda</strong> — lista wizyt na tydzień, także anulowane. Na telefonie dzień też jest listą, nie wąskimi kolumnami.</li>
+        <li><strong>Zasoby</strong> — gabinety i urządzenia: widać, że wolna osoba to jeszcze nie wolny komplet.</li>
+        <li><strong>Mój dzień</strong> (kosmetolog) — tylko Twoje wizyty; cudze widzisz jako „Zajęte”.</li>
+      </ul>
+      <p>Skróty: <code>N</code> nowa wizyta, <code>T</code> dzisiaj, strzałki ← → zmieniają dzień, <code>Esc</code> zamyka panel (zapyta, jeśli masz niezapisane dane). Na górze „pokaż anulowane” przywraca odwołane wizyty na siatkę.</p>
+
+      <h3>Nowa wizyta — pięć kroków</h3>
+      <ol>
+        <li><strong>Klientka</strong> — wpisz nazwisko, telefon albo ID. Nowa klientka? „Dodaj nową klientkę” tworzy jeden profil w kartotece, zgody uzupełniasz później w jej karcie. Samo nazwisko nie łączy historii — sprawdź podobny profil po telefonie.</li>
+        <li><strong>Usługi</strong> — z cennika; usługa „brak czasu” jest nieaktywna, dopóki manager nie ustawi czasu trwania. Przy każdej wybierasz wykonawczynię albo „Dowolna właściwa osoba” (tylko osoby z uprawnieniem do tej usługi). Czas możesz dziś skorygować.</li>
+        <li><strong>Termin</strong> — data i godzina albo „Znajdź najbliższe terminy” (pełne komplety na 14 dni).</li>
+        <li><strong>Sprawdź komplet</strong> — zielono: osoba, gabinet i urządzenie są wolne, widać koniec i ewentualne przerwy między usługami. Czerwono: konkretny powód i lista rozwiązań do kliknięcia.</li>
+        <li><strong>Zapisz wizytę</strong> — system sprawdza wszystko jeszcze raz w chwili zapisu. Dwa kliknięcia to nadal jedna wizyta.</li>
+      </ol>
+
+      <h3>Dzień wizyty</h3>
+      <ul>
+        <li>Klientka weszła → <strong>Klientka przybyła</strong>. Spóźnia się → „Spóźniona” (to tylko informacja, nic nie przesuwa się samo). Nie przyszła → „Nieobecna” — potwierdzasz Ty, zaplanowane usługi stają się „niewykonane”, a termin się zwalnia. Zadatek i ulga za późne odwołanie zostają do rozliczenia w karcie klientki.</li>
+        <li>Przy usłudze: <strong>Rozpocznij → Zakończ</strong> (albo Przerwij / Nie wykonano / Odmowa kwalifikacji z powodem). Zapisuje się faktyczny czas i kto wykonała.</li>
+        <li><strong>Rozlicz w Sprzedaży</strong> — otwiera formularz sprzedaży z wpisaną klientką, wykonanymi usługami i wykonawczynią. Dodajesz detal, zadatek, wybierasz płatność jak zwykle, zatwierdzasz. Potem wracasz pasek u dołu ekranu: <strong>Powiąż sprzedaż</strong> — wizyta dostaje numer sprzedaży. Drugi raz się nie rozliczy.</li>
+      </ul>
+
+      <h3>Zmiana terminu i odwołanie</h3>
+      <ul>
+        <li><strong>Zmień termin / osobę</strong> — podajesz nowy termin lub wykonawczynię, klikasz „Sprawdź”. Stara wizyta zostaje nietknięta, dopóki nie zatwierdzisz nowej. Jeśli ktoś w tym czasie zmienił tę wizytę, zobaczysz komunikat i aktualne dane.</li>
+        <li><strong>Odwołaj / rozpatrz</strong> — cała wizyta albo jedna usługa, kto odwołuje (klientka / salon) i powód. Przed potwierdzeniem widzisz skutek: termin zwolniony, jednostka karnetu niezużyta, pieniądze rozliczane w kartotece. Odwołanie wykonanej części nie jest możliwe — ją rozliczasz.</li>
+      </ul>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · telefon o 11:05</span>
+        <h4>„Czy Infinity o dwunastej u Natalii jest wolne?” — nie jest, ale klientka i tak wychodzi z terminem</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Dzień dobry, pani Kowalska. Sprawdzam… Klikam wolne pole 12:00 u Natalii, wybieram panią z kartoteki, dodaję „Endermologia Infinity · ciało” i „Sprawdź komplet”.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Natalia o dwunastej jest wolna, ale urządzenie jest zajęte do 12:50 — system pokazuje trzy rozwiązania: 13:00 u Natalii na Infinity 2, 14:00 na Infinity 1, albo jutro 12:00.</div></div>
+            <div class="sample-line"><div class="sample-who">Klientka:</div><div class="sample-text">Trzynasta może być.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Klikam „Wybierz” przy 13:00, komplet jest zielony: Natalia, Gabinet 1, Infinity 2, koniec 13:40. „Zapisz wizytę” — mamy EST-0048. Wpisuję w notatce „prosi o cieplejszy gabinet”.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja (później):</div><div class="sample-text">Dlaczego nie dałaś jej dwunastej? Natalia była wolna.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Bo wolna osoba to nie wolny komplet. Infinity 1 miała do 12:50 pani Nowak. Dałabym dwie klientki na jedno urządzenie.</div></div>
+          </div>
+          <p class="scenario-note">Czerwony wynik to nie „nie da się”, tylko „nie tak”. Lista alternatyw mówi dokładnie, co się zmienia: godzina, osoba albo jednostka sprzętu — klientka decyduje, Ty klikasz.</p>
+        </div>
+      </div>
+
+      <h3>Najczęstsze pytania</h3>
+      <ul>
+        <li><strong>Usługi nie ma na liście albo jest szara „brak czasu”.</strong> Manager musi ustawić jej czas trwania w Terminarz → Ustawienia → Usługi. Do tego czasu usługę sprzedasz normalnie, tylko nie umówisz.</li>
+        <li><strong>Nikt nie ma wolnych godzin.</strong> Dzień bez grafiku = brak terminów. Poproś managera o grafik zespołu (jest przycisk „skopiuj godziny salonu”).</li>
+        <li><strong>Widzę „Zajęte” zamiast nazwiska.</strong> To wizyta innej osoby — jako kosmetolog widzisz tylko swoje dane klientek.</li>
+        <li><strong>Kliknęłam „Zapisz” dwa razy.</strong> Powstała jedna wizyta. Przy drugim kliknięciu system rozpoznał powtórzenie.</li>
+        <li><strong>„Ktoś zmienił tę wizytę”.</strong> Druga osoba zapisała ją chwilę wcześniej. Przeczytaj aktualne dane i zdecyduj jeszcze raz — nic nie zostało nadpisane.</li>
+      </ul>
+    </section>
+
     <section class="card" id="faq">
       <div class="card-header">
         <div class="card-icon">❓</div>
         <div class="card-header-text">
-          <div class="subtitle">Krok 37 · Najczęstsze pytania</div>
+          <div class="subtitle">Krok 38 · Najczęstsze pytania</div>
           <h2>FAQ — co zrobić gdy...</h2>
         </div>
       </div>
