@@ -277,6 +277,8 @@ app.get(['/pomoc', '/pomoc/'], (req, res) => res.sendFile(path.join(__dirname, '
 // Przewodnik zarządczy (manager/właściciel). Bez danych wrażliwych — statyczny jak /pomoc/;
 // link w aplikacji widzi tylko manager+, a Esti indeksuje go tylko dla ról zarządczych.
 app.get(['/pomoc-manager', '/pomoc-manager/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_manager.html')));
+// Przewodnik po Terminarzu (dodatek Estelio+, 2026-10-12) — Esti indeksuje go, gdy salon ma włączony dodatek
+app.get(['/pomoc-terminarz', '/pomoc-terminarz/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_terminarz.html')));
 
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));

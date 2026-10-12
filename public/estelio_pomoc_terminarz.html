@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik po Terminarzu</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-50: #fff5f9; --pink-100: #ffe9f2; --pink-200: #ffd0e3; --pink-300: #ffacc9; --pink-400: #ff7eb0; --pink-500: #ec3f91; --pink-600: #df247e; --pink-700: #be1264;
+    --pink-glow: rgba(236, 63, 145, 0.15); --gold: #d4a574; --gold-soft: #fef3e6; --bg: #fffaf9; --text: #1a0e1a; --text-soft: #4a3848; --muted: #8a7a85;
+    --line: #f5dde7; --line-soft: #fbe9f0; --card: #ffffff; --green: #18bf7b; --green-soft: #e0f7ec; --orange: #ff961f; --orange-soft: #fef3e6; --red: #dc2626; --red-soft: #fef2f2;
+    --shadow-soft: 0 4px 20px rgba(193, 60, 110, 0.05); --shadow-medium: 0 16px 40px rgba(193, 60, 110, 0.08); --shadow-pink: 0 18px 45px rgba(236, 63, 145, 0.22);
+    --serif: "Playfair Display", serif; --sans: "Poppins", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.7; -webkit-font-smoothing: antialiased; }
+  .app { display: grid; grid-template-columns: 290px 1fr; min-height: 100vh; max-width: 1500px; margin: 0 auto; background: #fff; box-shadow: 0 0 100px rgba(193, 60, 110, 0.04); }
+  .sidebar { background: linear-gradient(180deg, #ffffff 0%, var(--pink-50) 100%); border-right: 1px solid var(--line-soft); padding: 38px 26px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar::-webkit-scrollbar { width: 6px; } .sidebar::-webkit-scrollbar-track { background: transparent; } .sidebar::-webkit-scrollbar-thumb { background: var(--pink-200); border-radius: 3px; }
+  .brand { display: flex; align-items: center; gap: 14px; padding: 0 6px 30px; border-bottom: 1px solid var(--line-soft); margin-bottom: 26px; }
+  .brand-mark { width: 48px; height: 48px; border-radius: 16px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; display: grid; place-items: center; font-size: 24px; box-shadow: var(--shadow-pink); }
+  .brand-text strong { display: block; font-family: var(--serif); font-size: 24px; font-weight: 700; letter-spacing: -0.5px; color: var(--text); }
+  .brand-text span { display: block; font-size: 9.5px; color: var(--pink-600); letter-spacing: 2.5px; text-transform: uppercase; font-weight: 600; margin-top: 1px; }
+  .nav-section { margin-bottom: 22px; }
+  .nav-section-title { font-size: 10.5px; font-weight: 800; color: var(--pink-600); text-transform: uppercase; letter-spacing: 2px; padding: 0 12px; margin-bottom: 10px; opacity: 0.8; }
+  .nav-link { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; color: var(--text-soft); text-decoration: none; font-weight: 500; font-size: 13.5px; transition: all 0.2s; margin-bottom: 2px; }
+  .nav-link:hover { background: var(--pink-100); color: var(--pink-600); transform: translateX(3px); }
+  .nav-link .num { font-size: 11px; font-weight: 700; color: var(--pink-300); min-width: 24px; } .nav-link:hover .num { color: var(--pink-500); }
+  .main { padding: 56px 64px 100px; max-width: 1100px; }
+  .hero { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 50%, var(--pink-100) 100%); border: 1px solid var(--pink-200); border-radius: 32px; padding: 60px 56px; margin-bottom: 40px; position: relative; overflow: hidden; box-shadow: var(--shadow-soft); }
+  .hero::before { content: ""; position: absolute; top: -120px; right: -120px; width: 360px; height: 360px; background: radial-gradient(circle, var(--pink-glow) 0%, transparent 65%); border-radius: 50%; }
+  .hero::after { content: ""; position: absolute; bottom: -100px; left: -50px; width: 280px; height: 280px; background: radial-gradient(circle, rgba(212, 165, 116, 0.08) 0%, transparent 65%); border-radius: 50%; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); color: var(--pink-600); padding: 9px 18px; border: 1px solid var(--pink-200); border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 24px; position: relative; }
+  .hero-badge::before { content: ""; width: 8px; height: 8px; background: var(--pink-500); border-radius: 50%; box-shadow: 0 0 0 4px var(--pink-100); animation: pulse 2.5s infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.3); opacity: 0.7; } }
+  .hero h1 { font-family: var(--serif); margin: 0 0 16px; font-size: 56px; font-weight: 800; letter-spacing: -1.8px; line-height: 1.05; color: var(--text); position: relative; }
+  .hero h1 em { font-style: italic; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .hero p { margin: 0; font-size: 17px; color: var(--text-soft); max-width: 680px; line-height: 1.75; position: relative; }
+  .hero-meta { display: flex; gap: 26px; margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--pink-200); position: relative; flex-wrap: wrap; }
+  .hero-meta-item strong { display: block; font-size: 22px; color: var(--pink-600); font-weight: 800; }
+  .hero-meta-item span { display: block; font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.2px; font-weight: 600; margin-top: 3px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 24px; padding: 48px 52px; margin-bottom: 28px; box-shadow: var(--shadow-soft); transition: all 0.3s; scroll-margin-top: 30px; position: relative; overflow: hidden; }
+  .card:hover { box-shadow: var(--shadow-medium); }
+  .card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--pink-500) 0%, var(--pink-300) 100%); opacity: 0; transition: opacity 0.3s; }
+  .card:hover::before { opacity: 1; }
+  .card-header { display: flex; align-items: flex-start; gap: 22px; margin-bottom: 24px; }
+  .card-icon { width: 60px; height: 60px; border-radius: 18px; background: linear-gradient(135deg, var(--pink-100) 0%, #fff 100%); border: 1px solid var(--pink-200); color: var(--pink-600); display: grid; place-items: center; font-size: 28px; flex-shrink: 0; }
+  .card-header-text h2 { margin: 0 0 6px; }
+  .card-header-text .subtitle { font-size: 12px; color: var(--pink-500); font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; }
+  h2 { font-family: var(--serif); margin: 0 0 22px; font-size: 34px; font-weight: 700; letter-spacing: -0.8px; color: var(--text); line-height: 1.15; }
+  h3 { margin: 32px 0 14px; font-size: 19px; font-weight: 700; color: var(--text); letter-spacing: -0.3px; }
+  h3::before { content: "✦"; color: var(--pink-400); margin-right: 8px; font-size: 14px; vertical-align: middle; }
+  h4 { margin: 22px 0 10px; font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1.5px; }
+  p { margin: 12px 0 18px; color: var(--text-soft); }
+  .lead { font-size: 16.5px; color: var(--text-soft); margin-bottom: 26px; line-height: 1.65; }
+  ul, ol { padding-left: 24px; } ul li, ol li { margin-bottom: 9px; color: var(--text-soft); } ul li::marker, ol li::marker { color: var(--pink-500); font-weight: 700; }
+  code { background: var(--pink-50); color: var(--pink-700); padding: 2px 8px; border-radius: 6px; font-size: 12.5px; font-family: var(--sans); font-weight: 600; }
+  .scenario { background: linear-gradient(135deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--pink-200); border-radius: 18px; padding: 26px 30px; margin: 24px 0; position: relative; }
+  .scenario-label { display: inline-flex; align-items: center; gap: 8px; background: var(--pink-500); color: #fff; padding: 5px 14px; border-radius: 999px; font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 14px; }
+  .scenario-label::before { content: "🎬"; }
+  .scenario h4 { color: var(--text); text-transform: none; letter-spacing: normal; font-size: 17px; margin: 0 0 10px; font-family: var(--serif); font-weight: 700; }
+  .scenario-body { color: var(--text-soft); font-size: 14.5px; line-height: 1.7; } .scenario-body p { margin: 8px 0; }
+  .scenario-note { font-size: 13.5px; color: var(--muted); border-top: 1px dashed var(--pink-200); padding-top: 10px; margin-top: 12px; }
+  .scenario-result { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--green-soft); border-left: 3px solid var(--green); border-radius: 0 10px 10px 0; font-size: 14px; color: #166534; font-weight: 600; margin-top: 14px; }
+  .scenario-result::before { content: "✓"; font-size: 18px; }
+  .step { display: grid; grid-template-columns: 60px 1fr; gap: 24px; padding: 24px 0; border-bottom: 1px solid var(--line-soft); } .step:last-child { border-bottom: none; }
+  .step .num { width: 48px; height: 48px; background: linear-gradient(135deg, var(--pink-500) 0%, var(--pink-700) 100%); color: #fff; border-radius: 16px; display: grid; place-items: center; font-weight: 700; font-size: 17px; box-shadow: var(--shadow-pink); flex-shrink: 0; font-family: var(--serif); }
+  .step strong { display: block; font-size: 16.5px; margin-bottom: 7px; color: var(--text); font-weight: 700; }
+  .step span { color: var(--text-soft); font-size: 14.5px; line-height: 1.65; }
+  .tip { background: linear-gradient(135deg, var(--pink-50) 0%, #fff 100%); border-left: 3px solid var(--pink-500); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: var(--text-soft); } .tip strong { color: var(--pink-600); font-weight: 700; }
+  .warning { background: linear-gradient(135deg, var(--orange-soft) 0%, #fff 100%); border-left: 3px solid var(--orange); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #78350f; } .warning strong { color: #c2410c; font-weight: 700; }
+  .danger { background: linear-gradient(135deg, var(--red-soft) 0%, #fff 100%); border-left: 3px solid var(--red); padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #7f1d1d; } .danger strong { color: #991b1b; font-weight: 700; }
+  .info { background: linear-gradient(135deg, #f0f7ff 0%, #fff 100%); border-left: 3px solid #0284c7; padding: 20px 24px; border-radius: 0 16px 16px 0; margin: 22px 0; font-size: 14.5px; color: #075985; } .info strong { color: #0369a1; font-weight: 700; }
+  .feature-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin: 22px 0; }
+  .feature { background: linear-gradient(180deg, #fff 0%, var(--pink-50) 100%); border: 1px solid var(--line-soft); border-radius: 18px; padding: 24px; transition: all 0.25s; }
+  .feature:hover { border-color: var(--pink-300); transform: translateY(-3px); box-shadow: var(--shadow-medium); }
+  .feature-icon { font-size: 28px; margin-bottom: 12px; } .feature strong { display: block; font-size: 15px; margin-bottom: 7px; color: var(--text); font-weight: 700; } .feature span { font-size: 13.5px; color: var(--muted); line-height: 1.65; }
+  table { width: 100%; border-collapse: collapse; margin: 22px 0; font-size: 14px; border: 1px solid var(--line-soft); border-radius: 14px; overflow: hidden; }
+  table th { background: linear-gradient(180deg, var(--pink-50) 0%, var(--pink-100) 100%); color: var(--pink-700); text-align: left; padding: 14px 18px; font-weight: 700; font-size: 11.5px; text-transform: uppercase; letter-spacing: 1px; }
+  table td { padding: 14px 18px; border-top: 1px solid var(--line-soft); color: var(--text-soft); vertical-align: top; }
+  .sample-call { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin: 18px 0; }
+  .sample-line { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; } .sample-line:last-child { margin-bottom: 0; }
+  .sample-who { font-size: 11px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 1px; min-width: 88px; padding-top: 2px; }
+  .sample-text { flex: 1; font-size: 14px; color: var(--text-soft); font-style: italic; line-height: 1.6; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin: 0 2px; }
+  .pill.ok { background: var(--green-soft); color: #166534; } .pill.warn { background: var(--orange-soft); color: #9a3412; } .pill.bad { background: var(--red-soft); color: #991b1b; } .pill.neu { background: var(--pink-100); color: var(--pink-700); } .pill.info { background: #e8f1fb; color: #1e4e79; }
+  .divider { display: flex; align-items: center; gap: 22px; margin: 60px 0 34px; }
+  .divider .line { flex: 1; height: 1px; background: linear-gradient(90deg, transparent 0%, var(--pink-200) 50%, transparent 100%); }
+  .divider .label { font-family: var(--serif); font-size: 13px; font-weight: 700; color: var(--pink-600); text-transform: uppercase; letter-spacing: 3px; padding: 10px 22px; background: var(--card); border: 1px solid var(--pink-200); border-radius: 999px; }
+  .quick { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 26px 0 6px; }
+  .quick div { background: #fff; border: 1px solid var(--pink-200); border-radius: 16px; padding: 18px; font-size: 13.5px; color: var(--text-soft); }
+  .quick b { display: block; color: var(--pink-700); font-size: 12px; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 6px; }
+  .footer { text-align: center; color: var(--muted); font-size: 13px; margin-top: 70px; padding: 40px 0 20px; border-top: 1px solid var(--line-soft); }
+  .footer .ornament { font-family: var(--serif); font-size: 30px; color: var(--pink-400); margin-bottom: 16px; } .footer strong { color: var(--pink-600); font-weight: 700; } .footer p { margin: 6px 0; color: var(--muted); }
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; } .sidebar { position: static; height: auto; border-right: none; border-bottom: 1px solid var(--line-soft); }
+    .nav-section { display: inline-block; vertical-align: top; margin-right: 26px; } .main { padding: 32px 24px; } .hero { padding: 36px 28px; } .hero h1 { font-size: 36px; }
+    .card { padding: 32px 24px; } .feature-grid, .quick { grid-template-columns: 1fr; } .step { grid-template-columns: 1fr; gap: 12px; }
+    .main { max-width: 100%; overflow-x: hidden; }
+    table { display: block; overflow-x: auto; max-width: 100%; -webkit-overflow-scrolling: touch; }
+    table th, table td { white-space: nowrap; }
+    table td:first-child { white-space: normal; min-width: 150px; }
+    .sample-who { min-width: 70px; } .hero-meta { gap: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">📅</div>
+      <div class="brand-text"><strong>Estelio</strong><span>Przewodnik po Terminarzu</span></div>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">I · Zanim zaczniesz</div>
+      <a class="nav-link" href="#start"><span class="num">01</span> Co to jest i jak włączyć</a>
+      <a class="nav-link" href="#trzy-osie"><span class="num">02</span> Jedna wizyta, trzy informacje</a>
+      <a class="nav-link" href="#role"><span class="num">03</span> Kto co widzi</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">II · Konfiguracja (manager)</div>
+      <a class="nav-link" href="#konfiguracja"><span class="num">04</span> Pierwsze uruchomienie</a>
+      <a class="nav-link" href="#uslugi"><span class="num">05</span> Usługi: czas i bufory</a>
+      <a class="nav-link" href="#zasoby"><span class="num">06</span> Gabinety i urządzenia</a>
+      <a class="nav-link" href="#grafik"><span class="num">07</span> Grafik zespołu</a>
+      <a class="nav-link" href="#nieobecnosci"><span class="num">08</span> Nieobecności i blokady</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">III · Codzienna praca</div>
+      <a class="nav-link" href="#widoki"><span class="num">09</span> Widoki i skróty</a>
+      <a class="nav-link" href="#nowa-wizyta"><span class="num">10</span> Nowa wizyta</a>
+      <a class="nav-link" href="#konflikty"><span class="num">11</span> Konflikty i alternatywy</a>
+      <a class="nav-link" href="#dzien-wizyty"><span class="num">12</span> Dzień wizyty</a>
+      <a class="nav-link" href="#rozliczenie"><span class="num">13</span> Rozliczenie w Sprzedaży</a>
+      <a class="nav-link" href="#zmiana"><span class="num">14</span> Zmiana terminu lub osoby</a>
+      <a class="nav-link" href="#odwolanie"><span class="num">15</span> Odwołanie i nieobecność</a>
+      <a class="nav-link" href="#kosmetolog"><span class="num">16</span> Mój dzień (kosmetolog)</a>
+      <a class="nav-link" href="#telefon"><span class="num">17</span> Telefon i brak internetu</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">IV · Zasady</div>
+      <a class="nav-link" href="#zasady"><span class="num">18</span> Czego terminarz nie robi</a>
+      <a class="nav-link" href="#roadmap"><span class="num">19</span> Co dalej (etapy B–D)</a>
+      <a class="nav-link" href="#faq"><span class="num">20</span> FAQ</a>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <div class="hero">
+      <span class="hero-badge">Dodatek Estelio+ · 0 zł</span>
+      <h1>Terminarz, <em>który rozumie salon</em></h1>
+      <p>Znajomy kalendarz, ale podpięty do tego, co już masz w Estelio: kartoteki klientek, cennika, zespołu, karnetów i Sprzedaży. Ten przewodnik prowadzi od włączenia dodatku do rozliczenia pierwszej wizyty — normalnym językiem, na przykładach: Patrycja prowadzi salon, Marta i Ania są na recepcji, Julia i Dominika robią zabiegi.</p>
+      <div class="quick">
+        <div><b>Manager · 15 minut</b>Włącz dodatek, wpisz czas trwania usług, skopiuj godziny salonu do grafiku. Rozdziały 04–07.</div>
+        <div><b>Recepcja · pierwsza wizyta</b>Kliknij wolne pole, wybierz klientkę i usługę, „Sprawdź komplet", „Zapisz". Rozdział 10.</div>
+        <div><b>Po zabiegu</b>„Zakończ" → „Rozlicz w Sprzedaży" → zatwierdź sprzedaż → „Powiąż". Rozdział 13.</div>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><strong>20</strong><span>Rozdziałów</span></div>
+        <div class="hero-meta-item"><strong>12</strong><span>Scenek z życia salonu</span></div>
+        <div class="hero-meta-item"><strong>A</strong><span>Etap: terminarz wewnętrzny</span></div>
+        <div class="hero-meta-item"><strong>10.2026</strong><span>Stan systemu</span></div>
+      </div>
+    </div>
+
+    <div class="divider"><div class="line"></div><div class="label">I · Zanim zaczniesz</div><div class="line"></div></div>
+
+    <!-- 01 -->
+    <section class="card" id="start">
+      <div class="card-header">
+        <div class="card-icon">📅</div>
+        <div class="card-header-text"><div class="subtitle">Krok 01 · Na start</div><h2>Co to jest Terminarz i jak go włączyć</h2></div>
+      </div>
+      <p class="lead">Terminarz to opcjonalny dodatek Estelio+ w cenie 0 zł. Daje salonowi wewnętrzny kalendarz wizyt: grafik dnia całego zespołu, tydzień jednej osoby, agendę i widok gabinetów oraz urządzeń. Nie jest drugim programem obok Estelio — wizyta wskazuje istniejącą klientkę z kartoteki, usługę z cennika i wykonawczynię z listy pracowników, a po zabiegu przechodzi do zwykłej Sprzedaży.</p>
+
+      <h3>Włączenie — jedno kliknięcie managera</h3>
+      <div class="step"><div class="num">1</div><div><strong>Administracja → Dodatki</strong><span>Na liście jest kafel „Terminarz" z ceną 0 zł. Włącz go. Nic nie zmienia się w dotychczasowych modułach.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Pozycja 📅 Terminarz w menu</strong><span>Pojawia się u góry menu, przy codziennych modułach. Widzi ją każdy, kto ma włączony dodatek w salonie — recepcja pełny kalendarz, kosmetolog swój dzień.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Konfiguracja przed pierwszą wizytą</strong><span>Terminarz nie zgaduje, ile trwa zabieg ani kiedy kto pracuje. Zanim recepcja zacznie umawiać, manager robi pięć ustawień z rozdziału 04. Bez nich kalendarz jest pusty — i to jest celowe.</span></div></div>
+
+      <h3>Jak wygląda ekran</h3>
+      <ul>
+        <li><strong>Nagłówek:</strong> data z przyciskami „Dzisiaj", ‹ › i wyborem dnia, przełącznik widoków (Dzień · Tydzień · Agenda · Zasoby · Ustawienia), przycisk „+ Nowa wizyta".</li>
+        <li><strong>Liczniki:</strong> ile wizyt, ile klientek już przybyło, ile czeka na rozliczenie, ile blokad, godzina ostatniej aktualizacji i przełącznik „pokaż anulowane".</li>
+        <li><strong>Siatka:</strong> kolumna na każdą osobę. Jasne tło = godziny pracy wg grafiku, zakreskowane = poza grafikiem albo blokada. Pozioma bordowa linia to „teraz" (tylko dziś).</li>
+        <li><strong>Panel boczny:</strong> otwiera się po prawej przy nowej wizycie albo po kliknięciu karty. Na telefonie zajmuje cały ekran.</li>
+      </ul>
+
+      <div class="tip"><strong>Wyłączenie dodatku</strong> nie kasuje danych — wizyty, historia i konfiguracja zostają, znika tylko pozycja w menu. Po ponownym włączeniu wszystko wraca.</div>
+    </section>
+
+    <!-- 02 -->
+    <section class="card" id="trzy-osie">
+      <div class="card-header">
+        <div class="card-icon">🧭</div>
+        <div class="card-header-text"><div class="subtitle">Krok 02 · Najważniejsza zasada</div><h2>Jedna wizyta, trzy niezależne informacje</h2></div>
+      </div>
+      <p class="lead">Większość nieporozumień w salonach bierze się z jednego słowa: „zakończona". Zakończona, czyli co — klientka wyszła? Zabieg zrobiony? Pieniądze w kasie? Terminarz Estelio rozdziela te trzy rzeczy i pokazuje je obok siebie, w trzech kolorowych etykietach na górze każdej wizyty.</p>
+
+      <table>
+        <tr><th>Oś</th><th>Stany</th><th>Kto zmienia</th></tr>
+        <tr><td><strong>Rezerwacja</strong><br><span style="font-size:12.5px;color:var(--muted)">czy termin jest zajęty</span></td><td><span class="pill ok">Potwierdzona</span> <span class="pill bad">Anulowana</span><br><span style="font-size:12.5px;color:var(--muted)">(stany „tymczasowo zajęty", „do zatwierdzenia", „do wpłaty" pojawią się z rezerwacjami online)</span></td><td>Recepcja i manager przy zapisie, zmianie i odwołaniu.</td></tr>
+        <tr><td><strong>Obsługa</strong><br><span style="font-size:12.5px;color:var(--muted)">co się fizycznie wydarzyło</span></td><td>Obecność: <span class="pill neu">Oczekiwana</span> <span class="pill ok">Przybyła</span> <span class="pill warn">Spóźniona</span> <span class="pill bad">Nieobecna</span><br>Każda usługa: <span class="pill neu">Zaplanowana</span> → <span class="pill info">W trakcie</span> → <span class="pill ok">Wykonana</span> (albo Przerwana, Niewykonana, Odmowa kwalifikacji)</td><td>Recepcja przy ladzie, kosmetolog przy swoich usługach.</td></tr>
+        <tr><td><strong>Pieniądze</strong><br><span style="font-size:12.5px;color:var(--muted)">czy jest sprzedaż</span></td><td><span class="pill warn">Do rozliczenia</span> → <span class="pill ok">Rozliczona</span> z numerem sprzedaży</td><td>Recepcja przez „Rozlicz w Sprzedaży" i „Powiąż".</td></tr>
+      </table>
+
+      <h3>Poprawne kombinacje, które na pierwszy rzut oka wyglądają dziwnie</h3>
+      <ul>
+        <li><strong>Potwierdzona + Wykonana + Do rozliczenia</strong> — zabieg zrobiony, recepcja jeszcze nie wbiła sprzedaży. Normalny stan o 14:05, gdy klientka płaci za chwilę.</li>
+        <li><strong>Potwierdzona + Nieobecna</strong> — klientka nie przyszła. Termin zwolniony, usługi „niewykonane", ale to nie jest anulacja z przeszłości i nie „zrobiło się" nic z zadatkiem.</li>
+        <li><strong>Potwierdzona + jedna usługa Wykonana, druga Anulowana</strong> — klientka zrezygnowała z drugiej części. Wizyta zostaje, rozliczasz wykonaną część.</li>
+      </ul>
+      <div class="danger"><strong>Trzy skróty, których system celowo nie robi:</strong> „anulowana = pieniądze wróciły", „wykonana = sprzedaż zapisana", „klientka przyszła = zabieg zaczęty". Każda z tych rzeczy to osobne kliknięcie człowieka — dzięki temu Analiza, zadatki i Klub dostają prawdziwe dane.</div>
+    </section>
+
+    <!-- 03 -->
+    <section class="card" id="role">
+      <div class="card-header">
+        <div class="card-icon">👥</div>
+        <div class="card-header-text"><div class="subtitle">Krok 03 · Uprawnienia</div><h2>Kto co widzi i co może kliknąć</h2></div>
+      </div>
+      <p class="lead">Uprawnienia sprawdza serwer, nie tylko ukryty przycisk. Rola pochodzi z konta PIN pracownika (Administracja → Kreator dostępów), tak jak w reszcie Estelio.</p>
+      <table>
+        <tr><th>Akcja</th><th>Właściciel / Admin / Manager</th><th>Recepcja</th><th>Kosmetolog</th><th>Praktykantka</th></tr>
+        <tr><td>Kalendarz zespołu</td><td>pełny</td><td>pełny</td><td>swoje wizyty z danymi; cudze jako „Zajęte"</td><td>wszystko jako „Zajęte"</td></tr>
+        <tr><td>Nowa wizyta, zmiana, odwołanie</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Obecność klientki (przybyła / nieobecna)</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Rozpocznij / Zakończ / Przerwij usługę</td><td>każdą</td><td>każdą</td><td>tylko własną</td><td>nie</td></tr>
+        <tr><td>Rozlicz w Sprzedaży, Powiąż</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Ceny przy wizycie, notatka, historia, karta klientki</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Ustawienia (usługi, zasoby, grafik, nieobecności)</td><td>tak</td><td>podgląd przez widoki</td><td>nie</td><td>nie</td></tr>
+      </table>
+      <div class="info"><strong>Dlaczego kosmetolog nie widzi nazwisk cudzych klientek?</strong> Bo nie potrzebuje ich do pracy, a kartoteka to dane osobowe. Widzi, że koleżanka jest zajęta od 12:00 do 12:40 — to wystarczy, żeby zaplanować gabinet. Jeśli ma przejąć usługę, recepcja zmienia wykonawczynię w wizycie i wtedy dane się pojawiają.</div>
+    </section>
+
+    <div class="divider"><div class="line"></div><div class="label">II · Konfiguracja</div><div class="line"></div></div>
+
+    <!-- 04 -->
+    <section class="card" id="konfiguracja">
+      <div class="card-header">
+        <div class="card-icon">🛠️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 04 · Manager · 15 minut</div><h2>Pierwsze uruchomienie — pięć ustawień</h2></div>
+      </div>
+      <p class="lead">Wszystko jest w Terminarz → Ustawienia (zakładka widoczna dla managera i właściciela). Kolejność ma znaczenie: bez czasu trwania usług nie ma czego umawiać, bez grafiku nie ma kiedy.</p>
+      <div class="step"><div class="num">1</div><div><strong>Godziny i zasady</strong><span>Godziny otwarcia salonu dla każdego dnia tygodnia (do dwóch przedziałów, np. 9–13 i 15–19). Siatka kalendarza (co 15 min domyślnie), tolerancja spóźnienia (tylko podpowiedź), horyzont planowania. Godziny salonu są ramą dla gabinetów i urządzeń — <em>nie</em> oznaczają, że ktoś w tym czasie pracuje.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Gabinety i urządzenia</strong><span>Dodaj konkretne pomieszczenia i sprzęt. Jeśli masz dwa takie same urządzenia, zrób dwa wpisy. Szczegóły w rozdziale 06.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Usługi</strong><span>Dla każdej pozycji cennika, którą chcesz umawiać: czas trwania (obowiązkowo), bufor sprzątania, czy wymaga gabinetu, które urządzenia pasują, kto ma uprawnienie do wykonania. Rozdział 05.</span></div></div>
+      <div class="step"><div class="num">4</div><div><strong>Grafik zespołu</strong><span>Kliknij „Skopiuj godziny salonu do osób bez grafiku", a potem popraw wyjątki (Julia we wtorki od 12, Dominika nie pracuje w soboty). Rozdział 07.</span></div></div>
+      <div class="step"><div class="num">5</div><div><strong>Nieobecności</strong><span>Zaplanowane urlopy i szkolenia wpisz od razu — wtedy recepcja nie umówi nikogo na dzień, którego nie ma. Rozdział 08.</span></div></div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · poniedziałek 8:10, pierwszy dzień z terminarzem</span>
+        <h4>„Włączyłam, a kalendarz jest pusty i szary" — Patrycja i Marta uruchamiają terminarz</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Kliknęłam wolne pole, dodałam panią Nowak, a lista usług jest cała szara z napisem „brak czasu".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Bo jeszcze nie powiedziałyśmy systemowi, ile trwa endermologia. Ustawienia → Usługi. Wpisuję: Endermologia ciało 40 minut, bufor po 10, wymaga gabinetu, urządzenia Infinity 1 i 2, wykonują Julia i Dominika. Zapisz. Kobido 60 minut, bez urządzenia, gabinet dowolny.</span></div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Teraz usługi są czarne, ale u wszystkich jest „brak grafiku".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Ustawienia → Grafik zespołu → „Skopiuj godziny salonu do osób bez grafiku". Julia we wtorki zaczyna o 12 — wybieram Julię, wtorek 12:00–19:00, zapisz. Dominika nie ma sobót — kasuję jej sobotę.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Wróciłam na Dzień — kolumny są jasne od 9 do 17, a Julia we wtorek ma kreski do dwunastej. Umawiam panią Nowak na 11:00: „Cały komplet jest dostępny: Dominika, Gabinet 1, Infinity 1".</div></div>
+          </div>
+          <div class="scenario-result">Kwadrans konfiguracji, pierwsza wizyta zapisana. Pozostałe usługi Patrycja uzupełnia w ciągu tygodnia — te bez czasu nadal da się sprzedać, tylko nie umówić.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 05 -->
+    <section class="card" id="uslugi">
+      <div class="card-header">
+        <div class="card-icon">⏱️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 05 · Ustawienia → Usługi</div><h2>Usługa jako plan czasu i zasobów</h2></div>
+      </div>
+      <p class="lead">Terminarz korzysta z tego samego cennika co Sprzedaż (Administracja → Zabiegi). Nie dopisujesz usług drugi raz — dopisujesz tylko to, czego kasa nie potrzebowała: ile trwa, co zajmuje i kto może ją wykonać. Tabela w Ustawieniach ma jeden wiersz na każdą pozycję cennika; wiersze bez czasu są podświetlone na żółto.</p>
+
+      <table>
+        <tr><th>Pole</th><th>Co oznacza</th><th>Jak ustawić</th></tr>
+        <tr><td><strong>Czas (min)</strong></td><td>Czas klientki w gabinecie. Obowiązkowy — bez niego usługa nie pojawi się w panelu nowej wizyty.</td><td>Od 5 do 480 min, krok 5. Recepcja może go dziś jednorazowo zmienić przy konkretnej wizycie.</td></tr>
+        <tr><td><strong>Bufor przed / po</strong></td><td>Przygotowanie i sprzątanie. Nie zjada czasu klientki — blokuje wskazane zasoby przed i po usłudze.</td><td>Np. 0 / 10. Bufor musi mieścić się w grafiku osoby i godzinach salonu: usługa kończąca się o 17:00 z buforem 10 min wymaga grafiku do 17:10.</td></tr>
+        <tr><td><strong>Bufor dotyczy</strong></td><td>Kogo blokuje bufor.</td><td>„osoba + gabinet/sprzęt" (domyślnie), „tylko osoba", „tylko gabinet/sprzęt" (sprzątanie robi ktoś inny — osoba jest wolna od razu), „brak".</td></tr>
+        <tr><td><strong>Gabinet</strong></td><td>Czy usługa potrzebuje pomieszczenia.</td><td>Zaznacz „wymaga". Żaden gabinet niezaznaczony = dowolny wolny; zaznaczone = tylko te.</td></tr>
+        <tr><td><strong>Urządzenia (pula)</strong></td><td>Które jednostki sprzętu nadają się do tej usługi.</td><td>Zaznacz zgodne. System przydzieli pierwszą wolną. Niezaznaczone = usługa bez sprzętu.</td></tr>
+        <tr><td><strong>Kto wykonuje</strong></td><td>Kompetencje.</td><td>Pusta lista = wszyscy. Zaznacz osoby, jeśli tylko część zespołu ma uprawnienie — „Dowolna właściwa osoba" wybiera tylko spośród nich.</td></tr>
+        <tr><td><strong>W terminarzu</strong></td><td>Czy usługę da się umawiać.</td><td>Odznacz dla usług sprzedawanych bez wizyty (np. produkty, konsultacje telefoniczne).</td></tr>
+      </table>
+
+      <h3>Przykłady planowania</h3>
+      <ul>
+        <li><strong>Endermologia 40 min + sprzątanie 10 min, bufor „osoba + gabinet/sprzęt":</strong> klientka 12:00–12:40; Julia, Gabinet 1 i Infinity 1 zajęte do 12:50.</li>
+        <li><strong>To samo, bufor „tylko gabinet/sprzęt":</strong> Julia wolna od 12:40 (może zacząć konsultację w recepcji), Gabinet 1 i Infinity 1 zajęte do 12:50.</li>
+        <li><strong>Twarz 30 min + ciało 40 min w jednej wizycie:</strong> usługi idą po sobie; jeśli pierwsza ma bufor po 10, druga zaczyna się po buforze i klientka widzi 10 min przerwy w podsumowaniu. Każda usługa może mieć inną wykonawczynię i inny gabinet.</li>
+      </ul>
+
+      <div class="warning"><strong>Zmiana definicji nie przestawia istniejących wizyt.</strong> Gdy skrócisz endermologię z 40 na 30 minut, dzisiejsze i przyszłe wizyty zachowują 40 — zmienia się tylko to, co umówisz od teraz. To celowe: klientka dostała potwierdzenie na konkretną godzinę końca.</div>
+      <div class="tip"><strong>Cena przy wizycie</strong> jest zapamiętana w chwili umówienia (z cennika). Właściwa kwota do zapłaty i tak powstaje w Sprzedaży przy rozliczeniu — z rabatem, zadatkiem, karnetem. Terminarz pokazuje cenę tylko orientacyjnie.</div>
+    </section>
+
+    <!-- 06 -->
+    <section class="card" id="zasoby">
+      <div class="card-header">
+        <div class="card-icon">🏠</div>
+        <div class="card-header-text"><div class="subtitle">Krok 06 · Ustawienia → Gabinety i urządzenia</div><h2>Zasoby: wolna osoba to jeszcze nie wolny komplet</h2></div>
+      </div>
+      <p class="lead">Najczęstsza podwójna rezerwacja w salonach z urządzeniami wygląda tak: dwie kosmetolożki są wolne, obie dostają klientkę na 12:00, a maszyna jest jedna. Terminarz nie pozwoli jej umówić dwa razy — ale tylko wtedy, gdy ta maszyna istnieje jako zasób.</p>
+
+      <h3>Jak dodawać</h3>
+      <ul>
+        <li><strong>Gabinet</strong> = pomieszczenie. Pojemność 1 (domyślnie) albo więcej dla sali, w której równolegle może być kilka osób.</li>
+        <li><strong>Urządzenie</strong> = konkretna jednostka. Dwa Infinity to dwa wpisy: „Infinity 1" i „Infinity 2". Dzięki temu dwie klientki mogą mieć zabieg w tym samym czasie, a trzecia dostanie inny termin zamiast kolizji.</li>
+        <li><strong>Podobne, ale inne urządzenie</strong> (np. Infinity i Alliance) nie zastępuje się automatycznie. Jeśli usługa może iść na obu, zaznacz obie jednostki w jej puli — jeśli nie, system nie podstawi drugiej „bo brzmi podobnie".</li>
+      </ul>
+
+      <h3>Archiwizacja</h3>
+      <p>Sprzedajesz urządzenie albo likwidujesz gabinet → „Archiwizuj". Jeżeli zasób ma przyszłe wizyty, zobaczysz ich listę i musisz świadomie potwierdzić. Wizyty nie znikają — zostają do rozwiązania (inna jednostka, zmiana terminu). Historia wykonanych zabiegów zachowuje nazwę zasobu.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · środa, kurier przywiózł drugie Infinity</span>
+        <h4>„Od jutra możemy brać dwie klientki naraz" — i co z tego wynika w terminarzu</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Ustawienia → Gabinety i urządzenia → dodaję „Infinity 2". Potem Usługi → Endermologia ciało → w puli zaznaczam Infinity 1 i Infinity 2 → Zapisz.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Mam dwie panie na czwartek 10:00, Julia i Dominika obie wolne. Wcześniej system dawał mi czerwono „urządzenie zajęte".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Sprawdź teraz.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Pierwsza: Julia, Gabinet 1, Infinity 1. Druga: Dominika, Gabinet 2, Infinity 2. Obie zielone. A trzecia pani na 10:00 dostaje propozycję 10:50.</div></div>
+          </div>
+          <div class="scenario-result">Jeden nowy wpis w zasobach i jedno zaznaczenie w usłudze. Widok „Zasoby" pokazuje odtąd obie jednostki obok siebie, z buforami sprzątania.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 07 -->
+    <section class="card" id="grafik">
+      <div class="card-header">
+        <div class="card-icon">🗓️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 07 · Ustawienia → Grafik zespołu</div><h2>Grafik: kiedy kogo można umawiać</h2></div>
+      </div>
+      <p class="lead">Grafik to tygodniowy wzorzec godzin każdej osoby: poniedziałek 9–17, wtorek 12–19, sobota wolna. Osoba bez grafiku nie ma wolnych terminów — system nie wnioskuje dostępności z samych godzin salonu, bo otwarte drzwi nie oznaczają, że Julia jest w pracy.</p>
+      <ul>
+        <li><strong>Dwa przedziały dziennie</strong> — dla podzielonych zmian (9–13 i 15–19). Usługa nie „przejedzie" przez przerwę w środku dnia.</li>
+        <li><strong>„Skopiuj godziny salonu do osób bez grafiku"</strong> — szybki start; osoby, które już mają grafik, nie są nadpisywane.</li>
+        <li><strong>Zmiana grafiku z istniejącymi wizytami</strong> — przed zapisem dostajesz listę wizyt, które wypadną poza nowe godziny. Zapisujesz świadomie; wizyty zostają do rozwiązania (zastępstwo, zmiana terminu). Nic nie jest odwołane automatycznie.</li>
+        <li><strong>Wyjątek na jeden dzień</strong> („w ten piątek Julia do 20") — nie zmieniaj wzorca tygodniowego. Na dziś: dodaj nieobecność (rozdział 08) albo poproś, żeby recepcja umówiła w godzinach wzorca, a wyjątkową wizytę dopisała ręcznie w rozmowie z managerem. Osobne „wyjątki godzin" są w planie.</li>
+      </ul>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · piątek, grafik na nowy miesiąc</span>
+        <h4>„Skracam Julii czwartki do 15" — a na czwartki są już trzy wizyty po 15</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Ustawienia → Grafik → Julia → czwartek 9:00–15:00 → Zapisz.</div></div>
+            <div class="sample-line"><div class="sample-who">System:</div><div class="sample-text">„Zmiana grafiku dotknie 3 wizyt. Sprawdź zastępstwo, zaproponuj klientkom zmianę albo przełóż terminy — zapis grafiku ich nie odwołuje." Lista: 16.10 15:30 Kowalska, 23.10 16:00 Nowak, 30.10 15:00 Zielińska. Zapisać mimo to?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Tak. Marta, te trzy wizyty: otwórz każdą, „Zmień termin / osobę" — Dominika ma czwartki do 19, sprawdź, czy wejdzie z tym samym urządzeniem. Jak klientka wybierała Julię specjalnie, najpierw telefon.</div></div>
+          </div>
+          <p class="scenario-note">Nowy grafik obowiązuje od razu dla nowych zapisów. Stare wizyty stoją w kalendarzu z normalnym wyglądem — o tym, że są „poza grafikiem", przypomina lista z chwili zapisu i Dziennik zdarzeń.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 08 -->
+    <section class="card" id="nieobecnosci">
+      <div class="card-header">
+        <div class="card-icon">🌴</div>
+        <div class="card-header-text"><div class="subtitle">Krok 08 · Ustawienia → Nieobecności i blokady</div><h2>Urlop, choroba, serwis, zamknięty salon</h2></div>
+      </div>
+      <p class="lead">Blokada wyłącza z dostępności osobę, urządzenie, gabinet albo cały salon w konkretnym przedziale czasu. Typ (urlop, choroba, szkolenie, przerwa, serwis, zamknięte, inne) i opis są wewnętrzne — publicznie zawsze „Niedostępne".</p>
+      <ul>
+        <li><strong>Osoba:</strong> urlop od poniedziałku 00:00 do piątku 23:59 — na siatce zakreskowana kolumna, w tygodniu „wolne".</li>
+        <li><strong>Urządzenie / gabinet:</strong> serwis Infinity 1 w środę 12–16 — usługi z pulą „Infinity 1 i 2" dostają automatycznie Infinity 2, usługi tylko na Infinity 1 nie mają terminów w tym czasie.</li>
+        <li><strong>Cały salon:</strong> święto, remont, szkolenie zespołu — nikt i nic nie jest dostępne.</li>
+        <li><strong>Lista dotkniętych wizyt</strong> pojawia się przed zapisem, tak jak przy grafiku. Zapisujesz blokadę od razu, żeby zatrzymać nowe zapisy, i rozwiązujesz wizyty po jednej.</li>
+        <li><strong>Usunięcie blokady</strong> przywraca pełną dostępność — ale tylko to, co naprawdę jest wolne wg grafiku i innych wizyt.</li>
+      </ul>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · wtorek 7:40, SMS od Julii</span>
+        <h4>„Mam 39 stopni, nie przyjdę do czwartku" — a Julia ma dziś sześć wizyt</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Patrycja, co robię z grafikiem Julii? Wykasować ją na trzy dni?</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Nic nie kasuj. Ustawienia → Nieobecności: Julia, choroba, od dziś 8:00 do czwartku 20:00. Zanim zapisze, pokaże ci, ile wizyt jest dotkniętych.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">„Ta nieobecność nachodzi na 6 wizyt. Zapis jej nie odwołuje." Zapisałam mimo to.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Teraz każdą z sześciu otwierasz, „Zmień termin / osobę", zostawiasz godzinę, zmieniasz na Dominikę. System sprawdzi uprawnienie, gabinet i urządzenie — jak coś nie gra, dostaniesz alternatywy.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pani Kowalska wybierała Julię specjalnie.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Tej nie przestawiaj, dopóki nie zadzwonisz i nie usłyszysz „tak". Dopóki wizyta jest potwierdzona, jej termin jest zajęty — nikt go przez pomyłkę nie sprzeda. Jak woli poczekać na Julię, przełóż na piątek.</div></div>
+          </div>
+          <div class="scenario-result">Blokada od razu, decyzje po kolei, zgoda klientki na zmianę osoby — od człowieka. Nic nie zniknęło po cichu.</div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider"><div class="line"></div><div class="label">III · Codzienna praca</div><div class="line"></div></div>
+
+    <!-- 09 -->
+    <section class="card" id="widoki">
+      <div class="card-header">
+        <div class="card-icon">🖥️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 09 · Recepcja i manager</div><h2>Widoki, liczniki i skróty klawiaturowe</h2></div>
+      </div>
+      <div class="feature-grid">
+        <div class="feature"><div class="feature-icon">👥</div><strong>Dzień</strong><span>Kolumna na każdą osobę, godziny pracy pod nazwiskiem. Klik w wolne pole = nowa wizyta o tej godzinie u tej osoby. Klik w kartę = szczegóły w panelu bocznym.</span></div>
+        <div class="feature"><div class="feature-icon">📆</div><strong>Tydzień</strong><span>Jedna osoba, siedem dni, grafik pod datą. Klik w nagłówek dnia wraca do widoku zespołu tego dnia. Strzałki ‹ › przeskakują o tydzień.</span></div>
+        <div class="feature"><div class="feature-icon">📋</div><strong>Agenda</strong><span>Lista wizyt na tydzień, z filtrem osoby. Pokazuje też anulowane. Każda pozycja otwiera tę samą wizytę co karta na siatce.</span></div>
+        <div class="feature"><div class="feature-icon">🏠</div><strong>Zasoby</strong><span>Kolumna na każdy gabinet i urządzenie, z buforami sprzątania. Tu widać, dlaczego „wolna osoba" nie dostała terminu.</span></div>
+      </div>
+      <h3>Czytanie karty wizyty</h3>
+      <p>Godzina → klientka → usługa (albo „usługa + usługa") → najwyżej dwa znaczniki. Kolor lewej krawędzi to kategoria zabiegu z Administracji → Typy zabiegów. Znaczniki mówią, co odbiega od normy: „Przybyła", „W trakcie", „Do rozliczenia", „Rozliczona", „Spóźniona", „Nieobecna". Anulowane nie zajmują siatki — przełącznik „pokaż anulowane" przy licznikach przywraca je szare i przekreślone.</p>
+      <h3>Liczniki na górze</h3>
+      <p>Liczba wizyt, ile klientek już przybyło, ile wizyt czeka na rozliczenie, ile jest blokad, godzina ostatniej aktualizacji. Recepcja nie widzi tu obrotu salonu — to nie jest Analiza.</p>
+      <h3>Skróty</h3>
+      <table>
+        <tr><th>Klawisz</th><th>Działanie</th></tr>
+        <tr><td><code>N</code></td><td>Nowa wizyta</td></tr>
+        <tr><td><code>T</code></td><td>Dzisiaj</td></tr>
+        <tr><td><code>←</code> <code>→</code></td><td>Poprzedni / następny dzień (w Tygodniu i Agendzie: tydzień)</td></tr>
+        <tr><td><code>Esc</code></td><td>Zamknij panel (zapyta, gdy masz niezapisane dane)</td></tr>
+      </table>
+      <p>Skróty nie działają, gdy kursor jest w polu tekstowym.</p>
+    </section>
+
+    <!-- 10 -->
+    <section class="card" id="nowa-wizyta">
+      <div class="card-header">
+        <div class="card-icon">➕</div>
+        <div class="card-header-text"><div class="subtitle">Krok 10 · Najważniejszy rozdział dla recepcji</div><h2>Nowa wizyta w pięciu krokach</h2></div>
+      </div>
+      <p class="lead">Panel otwiera „+ Nowa wizyta", klawisz <code>N</code> albo kliknięcie wolnego pola na siatce (wtedy data, godzina i osoba są już wpisane). Klientka → usługi → termin → sprawdzenie kompletu → zapis. Wszystko bez opuszczania kalendarza.</p>
+
+      <div class="step"><div class="num">1</div><div><strong>Klientka</strong><span>Wpisz nazwisko, telefon albo numer ID — lista podpowiada z kartoteki. Przy klientce z ostrzeżeniem w kartotece zobaczysz ⚠. Nowa klientka: „Dodaj nową klientkę" (imię i nazwisko, telefon) tworzy jeden profil w Klientach, dokładnie jak przycisk „Dodaj klienta" — zgody i dokumenty uzupełnisz w jej karcie. Samo nazwisko nie łączy historii: jeśli pani Kowalska już jest w bazie, znajdź ją po telefonie.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Usługi i wykonawczynie</strong><span>Szukaj w cenniku, klikaj — można dodać kilka (idą po sobie). Usługi „brak czasu" są szare, dopóki manager nie ustawi czasu. Przy każdej: wykonawczyni albo „Dowolna właściwa osoba" (system wybierze pierwszą wolną spośród osób z uprawnieniem). Czas możesz dziś jednorazowo zmienić, np. 30 zamiast 40, gdy klientka prosi o krótszy zabieg.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Termin</strong><span>Data i godzina. Nie wiesz, kiedy wolne? „Znajdź najbliższe terminy" przegląda 14 dni i podaje pełne komplety (osoba + gabinet + sprzęt), od najwcześniejszego.</span></div></div>
+      <div class="step"><div class="num">4</div><div><strong>Sprawdź komplet</strong><span>Zielony wynik: kto wykona, w którym gabinecie, na którym urządzeniu, o której koniec, ile minut przerwy między usługami. Czerwony: konkretny powód (rozdział 11) i lista rozwiązań do kliknięcia — jedno kliknięcie podstawia nowy termin lub osobę i sprawdza ponownie.</span></div></div>
+      <div class="step"><div class="num">5</div><div><strong>Zapisz wizytę</strong><span>W chwili zapisu system sprawdza wszystko jeszcze raz — wynik z kroku 4 był ofertą, nie gwarancją. Jeśli w międzyczasie ktoś zajął termin, dostaniesz konflikt zamiast podwójnej rezerwacji. Dwa kliknięcia „Zapisz" to nadal jedna wizyta. Po zapisie otwierają się jej szczegóły i numer, np. EST-0048.</span></div></div>
+
+      <h3>Kanał i notatka</h3>
+      <p>Kanał (recepcja, telefon, wiadomość, kampania) to informacja, skąd przyszło umówienie — przyda się w raportach. Notatka jest wewnętrzna („prosi o cieplejszy gabinet", „pierwsza wizyta po konsultacji"); kosmetolog jej nie widzi.</p>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · telefon o 11:05</span>
+        <h4>„Czy Infinity o dwunastej u Julii jest wolne?" — nie jest, ale klientka i tak wychodzi z terminem</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Dzień dobry, pani Kowalska. Sprawdzam… Klikam wolne pole 12:00 u Julii, wybieram panią z kartoteki, dodaję „Endermologia Infinity · ciało" i „Sprawdź komplet".</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Julia o dwunastej jest wolna, ale urządzenie jest zajęte do 12:50. System pokazuje trzy rozwiązania: 13:00 u Julii na Infinity 2, 14:00 na Infinity 1, albo jutro 12:00.</div></div>
+            <div class="sample-line"><div class="sample-who">Klientka:</div><div class="sample-text">Trzynasta może być.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">„Wybierz" przy 13:00 — komplet zielony: Julia, Gabinet 1, Infinity 2, koniec 13:40. „Zapisz wizytę" — EST-0048. W notatce: „prosi o cieplejszy gabinet".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja (później):</div><div class="sample-text">Dlaczego nie dałaś jej dwunastej? Julia była wolna.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Bo wolna osoba to nie wolny komplet. Infinity 1 miała do 12:50 pani Nowak. Dałabym dwie klientki na jedno urządzenie.</div></div>
+          </div>
+          <div class="scenario-result">Czerwony wynik to nie „nie da się", tylko „nie tak". Lista alternatyw mówi dokładnie, co się zmienia — klientka decyduje, recepcja klika.</div>
+        </div>
+      </div>
+
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · klientka przy ladzie bez zapisu</span>
+        <h4>„Czy mogę teraz na kobido?" — wizyta natychmiastowa</h4>
+        <div class="scenario-body">
+          <p>Marta klika wolne pole o bieżącej godzinie u Dominiki (albo <code>N</code> i wpisuje godzinę „teraz"), dodaje kobido 60 min, „Sprawdź komplet". Dominika jest wolna do 15:00, gabinet 2 wolny — zielono. „Zapisz", potem w szczegółach od razu „Klientka przybyła". Dominika w swoim telefonie widzi nową wizytę i klika „Rozpocznij".</p>
+          <p class="scenario-note">Wizyta „na teraz" przechodzi tę samą kontrolę co każda inna. Jeśli Dominika miałaby kolejną klientkę za 40 minut, kobido 60 min dostałoby czerwono i propozycję krótszego wariantu albo innej osoby.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="card" id="konflikty">
+      <div class="card-header">
+        <div class="card-icon">🚦</div>
+        <div class="card-header-text"><div class="subtitle">Krok 11 · Czerwone komunikaty</div><h2>Konflikty: co oznacza każdy komunikat i co z nim zrobić</h2></div>
+      </div>
+      <p class="lead">System sprawdza w stałej kolejności: uprawnienie osoby → grafik → inne wizyty osoby → gabinet → urządzenie → inne wizyty tej klientki. Pokazuje pierwszy użyteczny powód. Jeśli kilka rzeczy nie gra naraz, po naprawieniu pierwszej może pojawić się następna — to normalne.</p>
+      <table>
+        <tr><th>Komunikat</th><th>Znaczenie</th><th>Co zrobić</th></tr>
+        <tr><td>„Usługa nie ma ustawionego czasu trwania"</td><td>Manager nie uzupełnił usługi w Ustawieniach.</td><td>Poproś managera; do tego czasu usługę da się sprzedać, nie umówić.</td></tr>
+        <tr><td>„Julia nie wykonuje usługi…"</td><td>Osoba nie ma uprawnienia (kompetencje w Ustawieniach → Usługi).</td><td>Wybierz „Dowolna właściwa osoba" albo inną osobę z listy.</td></tr>
+        <tr><td>„Julia nie pracuje w tym czasie (…)"</td><td>Poza grafikiem, w przerwie, na urlopie — albo bufor po usłudze wychodzi poza grafik.</td><td>Inna godzina albo osoba; manager może zmienić grafik.</td></tr>
+        <tr><td>„Julia ma w tym czasie inną wizytę"</td><td>Kolizja z wizytą lub jej buforem.</td><td>Kliknij alternatywę; przy „dowolnej osobie" system sam weźmie wolną.</td></tr>
+        <tr><td>„Wszystkie dopuszczone gabinety są zajęte"</td><td>Osoba wolna, pomieszczenia nie.</td><td>Inna godzina; sprawdź widok Zasoby.</td></tr>
+        <tr><td>„Urządzenie jest zajęte w wymaganym czasie"</td><td>Osoba i gabinet wolne, sprzęt nie — klasyczna pułapka.</td><td>Alternatywa na drugiej jednostce albo inna godzina. Właścicielka też tego nie nadpisze.</td></tr>
+        <tr><td>„Klientka ma w tym czasie inną wizytę"</td><td>Ta sama osoba już ma coś umówione w nachodzącym czasie.</td><td>Sprawdź Agendę — może to duplikat telefonu.</td></tr>
+        <tr><td>„Ktoś zmienił tę wizytę"</td><td>Druga osoba zapisała ją chwilę wcześniej (inna karta, inny komputer).</td><td>Przeczytaj aktualne dane i zdecyduj ponownie. Nic nie zostało nadpisane.</td></tr>
+        <tr><td>„Salon zapisuje właśnie inną wizytę"</td><td>Dwa zapisy w tej samej sekundzie — system je ustawia w kolejce.</td><td>Kliknij jeszcze raz za chwilę.</td></tr>
+      </table>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · właścicielka chce „wcisnąć"</span>
+        <h4>„To jest moja najlepsza klientka, wstaw ją na 13:00 i koniec"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Marta, wstaw panią Zielińską na 13:00 do Julii na Infinity.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Czerwono: Infinity 1 jest zajęte 13:00–13:50, Infinity 2 w serwisie do 16. Nie mam jak — system nie ma przycisku „mimo to".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Nawet dla mnie?</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Nawet. Alternatywy: 13:50 u Julii, albo 13:00 u Julii kobido zamiast endermologii. Dzwonię do pani Zielińskiej.</div></div>
+          </div>
+          <p class="scenario-note">Twardej kolizji urządzenia nie da się ominąć żadną rolą — bo w gabinecie i tak stałyby dwie klientki przy jednej maszynie. Uprawnienia zarządcze nie zmieniają fizyki.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 12 -->
+    <section class="card" id="dzien-wizyty">
+      <div class="card-header">
+        <div class="card-icon">🚪</div>
+        <div class="card-header-text"><div class="subtitle">Krok 12 · Od wejścia do wyjścia</div><h2>Dzień wizyty: obecność, start, koniec</h2></div>
+      </div>
+      <p class="lead">Szczegóły wizyty (klik w kartę) mają trzy grupy przycisków: obecność klientki, stan każdej usługi i rozliczenie. Każde kliknięcie zapisuje się w historii wizyty i w Dzienniku zdarzeń z godziną i osobą.</p>
+      <h3>Obecność</h3>
+      <ul>
+        <li><strong>Klientka przybyła</strong> — klikasz, gdy wchodzi. Jeśli zapomnisz, pierwsze „Rozpocznij" oznaczy ją automatycznie.</li>
+        <li><strong>Spóźniona</strong> — tylko informacja dla zespołu; system niczego nie przesuwa. Tolerancja z Ustawień to podpowiedź, nie automat.</li>
+        <li><strong>Nieobecna</strong> — potwierdzasz świadomie. Zaplanowane usługi stają się „niewykonane", termin i urządzenie zwalniają się od teraz. Zadatek i ulga „odwołanie po czasie" zostają do decyzji w karcie klientki (rozdział 15).</li>
+      </ul>
+      <h3>Usługa</h3>
+      <ul>
+        <li><strong>Rozpocznij</strong> — zapisuje faktyczną godzinę startu i kto wykonuje (może być inna osoba niż planowana — np. przejęcie w zastępstwie).</li>
+        <li><strong>Zakończ</strong> — faktyczny koniec. Drugie kliknięcie nic nie zmienia.</li>
+        <li><strong>Przerwij</strong> (z powodem) — zabieg zaczęty, ale nie dokończony (awaria, złe samopoczucie). Zakres wykonania i rozliczenie wymagają decyzji — nie zaliczamy automatycznie pełnego zabiegu.</li>
+        <li><strong>Nie wykonano</strong> — zaplanowana, ale nie odbyła się (bez anulowania wizyty).</li>
+        <li><strong>Odmowa kwalifikacji</strong> (z powodem) — decyzja kosmetolożki przed zabiegiem. Powód trafia do historii wizyty; terminarz nie ocenia przeciwwskazań.</li>
+      </ul>
+      <div class="warning"><strong>Przeciągający się zabieg.</strong> Gdy zabieg trwa dłużej niż plan, terminarz nie przesuwa kolejnych wizyt. Recepcja widzi kolejną klientkę na siatce i decyduje: krótszy wariant za zgodą, inna osoba, przesunięcie — każdą zmianę zapisuje przez „Zmień termin / osobę".</div>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · 12:20, klientka na 12:00</span>
+        <h4>„Przepraszam, korki" — spóźnienie 20 minut przy zabiegu 40 min i kolejnej klientce o 12:50</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Oznaczam „Spóźniona" i „Przybyła". Julia ma następną o 12:50. Jeśli zacznie teraz, skończy 13:00.</div></div>
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">Zrobię 30-minutową wersję, jeśli pani się zgodzi, i zdążę.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Klientka zgadza się. Zmieniam w wizycie czas usługi na 30 przez „Zmień termin / osobę" (start 12:20), sprawdzam: zielono, koniec 12:50, bufor do 13:00 — kolizja z następną! System pokazuje czerwono.</div></div>
+            <div class="sample-line"><div class="sample-who">Julia:</div><div class="sample-text">Sprzątanie zrobi Dominika, ja przechodzę od razu.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Nie zmienię bufora z poziomu wizyty. Przesuwam następną klientkę o 10 minut — ma zgodę, bo siedzi obok — i zapisuję obie zmiany. Julia klika „Rozpocznij".</div></div>
+          </div>
+          <p class="scenario-note">System pokazał skutek spóźnienia zamiast go ukryć. Dwie świadome decyzje (krótszy wariant za zgodą, 10 minut przesunięcia za zgodą) zamiast cichego „jakoś to będzie".</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 13 -->
+    <section class="card" id="rozliczenie">
+      <div class="card-header">
+        <div class="card-icon">💳</div>
+        <div class="card-header-text"><div class="subtitle">Krok 13 · Most do Sprzedaży</div><h2>Rozliczenie: bez drugiej kasy</h2></div>
+      </div>
+      <p class="lead">Terminarz nie ma własnej kasy, portfela ani licznika karnetów. Rozliczenie wizyty to zwykła multisprzedaż w Estelio — ta sama, którą znasz, z zadatkami, karnetami, rabatami i Mixem. Terminarz tylko ją wypełnia i potem zapamiętuje numer.</p>
+      <div class="step"><div class="num">1</div><div><strong>Rozlicz w Sprzedaży</strong><span>Przycisk pojawia się, gdy co najmniej jedna usługa jest wykonana. Otwiera formularz sprzedaży z wpisaną klientką, wykonanymi usługami (kategoria, wariant, cena z cennika) i zaznaczoną wykonawczynią. Usługi niewykonane i anulowane nie trafiają do sprzedaży.</span></div></div>
+      <div class="step"><div class="num">2</div><div><strong>Dopełnij i zatwierdź jak zwykle</strong><span>Dodaj krem, zadatek na następny zabieg, wybierz płatność albo Mix, użyj zadatku z portfela lub wejścia z karnetu — wszystko działa tak, jak przed terminarzem. Zatwierdź sprzedaż.</span></div></div>
+      <div class="step"><div class="num">3</div><div><strong>Powiąż sprzedaż</strong><span>U dołu ekranu jest ciemny pasek „Rozliczasz wizytę EST-0048". Kliknij „Powiąż sprzedaż" — system znajduje sprzedaż tej klientki zapisaną po kliknięciu „Rozlicz" i przypina ją do wizyty. Wizyta dostaje etykietę „Rozliczona" i numer sprzedaży; drugie „Rozlicz" pokazuje tę samą sprzedaż zamiast tworzyć nową.</span></div></div>
+      <h3>Gdy coś poszło nie tak</h3>
+      <ul>
+        <li><strong>Zamknęłam pasek przed powiązaniem</strong> — wejdź w wizytę, jest tam przycisk „Powiąż zapisaną sprzedaż". Działa, dopóki sprzedaż była zapisana po kliknięciu „Rozlicz".</li>
+        <li><strong>Powiąż mówi „nie znaleziono"</strong> — sprzedaż nie została zatwierdzona albo poszła na inną klientkę. Sprawdź w Sprzedaży → historia dnia.</li>
+        <li><strong>Pomyłka w sprzedaży</strong> — poprawiasz ją jak dotąd w module Sprzedaży (korekta, zwrot ujemnym wpisem). Wizyta pozostaje powiązana z tą samą sprzedażą; terminarz nie tworzy drugiego wpisu ani drugiego potrącenia punktów Klubu.</li>
+      </ul>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · 14:50, po zabiegu</span>
+        <h4>Zabieg 300 zł z wpłaconym zadatkiem 100 zł, do tego krem za 180 zł — ile klientka płaci dziś?</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Julia kliknęła „Zakończ", wizyta ma „Do rozliczenia". „Rozlicz w Sprzedaży" — formularz ma panią Kowalską i endermologię 300 zł, Julia zaznaczona jako wykonawczyni.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Dodaję wiersz „Detal": krem 180 zł. Przy zabiegu wybieram płatność „Zadatek" na 100 zł z jej portfela i dopłatę 200 zł kartą — razem Mix. Krem gotówką. Zatwierdzam.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Pasek na dole: „Powiąż sprzedaż". Wizyta: „Rozliczona · 202610141450".</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">W Analizie dnia zobaczę 380 zł nowego wpływu (200 karta + 180 gotówka), a nie 480 — zadatek był wpłacony wcześniej i liczony wtedy.</div></div>
+          </div>
+          <div class="scenario-result">Cała logika pieniędzy została w Sprzedaży — tam, gdzie od zawsze są zadatki, karnety i Mix. Terminarz dodał tylko „kto, co i kiedy wykonał" oraz numer sprzedaży przy wizycie.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 14 -->
+    <section class="card" id="zmiana">
+      <div class="card-header">
+        <div class="card-icon">🔁</div>
+        <div class="card-header-text"><div class="subtitle">Krok 14 · Przekładanie</div><h2>Zmiana terminu lub osoby — stary termin zostaje do końca</h2></div>
+      </div>
+      <p class="lead">W szczegółach wizyty: „Zmień termin / osobę". Podajesz nową datę i godzinę, możesz zmienić wykonawczynię przy każdej usłudze. „Sprawdź" pokazuje podgląd: obecny termin i nowy, z gabinetem i urządzeniem. Dopiero „Zatwierdź zmianę" zapisuje — do tej chwili stara wizyta jest nietknięta i jej termin nadal zajęty.</p>
+      <ul>
+        <li><strong>Konflikt przy zmianie</strong> wygląda jak przy nowej wizycie: powód i alternatywy. Nieudana zmiana niczego nie psuje — stara wizyta stoi.</li>
+        <li><strong>Zmiana osoby, którą klientka wybrała sama</strong> — wysłanie SMS-a to nie zgoda. Najpierw rozmowa, potem kliknięcie.</li>
+        <li><strong>Wizyt rozpoczętych lub wykonanych nie przekładamy</strong> — to już korekta, nie przełożenie.</li>
+        <li><strong>Przeciąganie kart myszą</strong> jeszcze nie działa — w tym etapie zmianę robi się przez panel, z podglądem. Jest w planie.</li>
+      </ul>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · dwie recepcjonistki, ta sama wizyta</span>
+        <h4>Marta przekłada panią Nowak na 15:00, Ania w tym samym czasie odwołuje ją na prośbę telefoniczną</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Pani Nowak dzwoni, że nie przyjdzie. Otwieram wizytę, „Odwołaj", powód, „Potwierdź". Odwołana.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">A ja właśnie miałam ją przełożyć na 15:00 — kliknęłam „Zatwierdź zmianę" i dostałam: „Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem".</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Bo sekundę wcześniej ją odwołałam. Zobacz — panel pokazuje teraz „Anulowana" i mój powód.</div></div>
+          </div>
+          <p class="scenario-note">Każda wizyta ma numer wersji. Zapis ze starą wersją kończy się komunikatem, nie nadpisaniem. Gdyby klientka jednak chciała 15:00, Marta tworzy nową wizytę — odtworzenie anulowanej to nowa rezerwacja z pełną kontrolą.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 15 -->
+    <section class="card" id="odwolanie">
+      <div class="card-header">
+        <div class="card-icon">✖️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 15 · Odwołania</div><h2>Odwołanie i nieobecność — skutek przed decyzją</h2></div>
+      </div>
+      <p class="lead">„Odwołaj / rozpatrz" w szczegółach wizyty. Wybierasz zakres (cała wizyta albo jedna z usług), kto odwołuje (klientka / salon) i powód. Przed potwierdzeniem widzisz skutek: termin zwolniony, jednostka karnetu niezużyta, pieniądze rozliczane w kartotece.</p>
+      <h3>Co się dzieje po potwierdzeniu</h3>
+      <ul>
+        <li>Zasoby zwalniają się dla innych — ale dopiero po poprawnym zapisie, nie w trakcie klikania.</li>
+        <li>Wizyta znika z siatki (jest w Agendzie i pod „pokaż anulowane"), w historii zostaje kto, kiedy i dlaczego.</li>
+        <li>Odwołanie jednej usługi zostawia resztę wizyty na miejscu. Wykonanej części nie da się odwołać — ją rozliczasz.</li>
+        <li>Drugie kliknięcie „Odwołaj" na odwołanej wizycie nic nie zmienia — nie ma „podwójnego" skutku.</li>
+      </ul>
+      <h3>Zadatek, ulga, karnet — gdzie to się dzieje</h3>
+      <p>W kartotece klientki, tak jak dotąd. Terminarz nie potrąca ani nie zwraca pieniędzy i nie zużywa wejść z karnetu. Jeżeli salon stosuje politykę późnych odwołań, flaga „Odwołanie po czasie" i jednorazowa ulga są w profilu klientki (Klienci → Akcje). Terminarz przypomina o tym w oknie odwołania, ale decyzję zapisuje człowiek we właściwym module.</p>
+      <h3>Odwołanie czy nieobecność?</h3>
+      <table>
+        <tr><th>Sytuacja</th><th>Co kliknąć</th><th>Efekt</th></tr>
+        <tr><td>Klientka dzwoni dzień wcześniej, że nie przyjdzie</td><td>Odwołaj / rozpatrz → klientka → powód</td><td>Anulowana, termin wolny od razu</td></tr>
+        <tr><td>Klientka dzwoni 30 minut przed</td><td>Odwołaj → klientka → powód „późne"; ulga w kartotece</td><td>Anulowana; zadatek wg polityki salonu</td></tr>
+        <tr><td>Klientka nie przyszła i nie odbiera</td><td>Obecność → Nieobecna (po tolerancji)</td><td>Potwierdzona + Nieobecna, usługi niewykonane, termin zwolniony od teraz</td></tr>
+        <tr><td>Salon odwołuje (awaria, choroba)</td><td>Odwołaj → salon → powód, albo Zmień termin</td><td>Bez sankcji dla klientki; propozycja nowego terminu</td></tr>
+      </table>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · 9:40, wizyta o 10:00</span>
+        <h4>„Nie dam rady dziś, zapomniałam o zebraniu w szkole" — odwołanie 20 minut przed, z wpłaconym zadatkiem</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Otwieram wizytę pani Kowalskiej, „Odwołaj / rozpatrz": cała wizyta, odwołuje klientka, powód „zebranie w szkole, 20 min przed". Okno mówi: termin zostanie zwolniony, zadatek 100 zł rozliczany w kartotece.</div></div>
+            <div class="sample-line"><div class="sample-who">Ania:</div><div class="sample-text">Potwierdzam. Julia ma wolne 10:00–10:50 — termin od razu widać jako wolny.</div></div>
+            <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">A zadatek? To pierwsze późne odwołanie pani Kowalskiej, więc zgodnie z regulaminem zostaje w portfelu — zaznacz jej w kartotece „Odwołanie po czasie" z dzisiejszą datą, żeby następnym razem system przypomniał, że ulga była wykorzystana.</div></div>
+          </div>
+          <div class="scenario-result">Terminarz załatwił termin i historię. Decyzja o pieniądzach zapadła w kartotece, w module, który już to umie — bez fikcyjnego „wykonania" zabiegu i bez drugiego wpisu.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 16 -->
+    <section class="card" id="kosmetolog">
+      <div class="card-header">
+        <div class="card-icon">💆‍♀️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 16 · Dla kosmetolożki</div><h2>Mój dzień: tylko to, co Twoje</h2></div>
+      </div>
+      <p class="lead">Po zalogowaniu jako kosmetolog Terminarz otwiera się na „Mój dzień": lista Twoich wizyt od rana, z klientką, usługą i godziną. Cudze wizyty w widoku Dzień widzisz jako „Zajęte" — bez nazwiska i telefonu.</p>
+      <ul>
+        <li><strong>Co możesz:</strong> otworzyć swoją wizytę, kliknąć „Rozpocznij", „Zakończ", „Przerwij" (z powodem), „Odmowa kwalifikacji" (z powodem). Widzisz notatkę o klientce? Nie — notatka i ceny są dla recepcji.</li>
+        <li><strong>Czego nie możesz:</strong> umawiać, przekładać, odwoływać, rozliczać, oznaczać obecności. To robi recepcja, która ma pełny obraz dnia.</li>
+        <li><strong>Przejęcie cudzej usługi:</strong> poproś recepcję o zmianę wykonawczyni w wizycie — wtedy pojawi się u Ciebie. Kliknięcie „Rozpocznij" przy cudzej usłudze kończy się komunikatem.</li>
+      </ul>
+      <div class="scenario">
+        <span class="scenario-label">Z życia salonu · gabinet, 9:58</span>
+        <h4>Dominika: „Mam w telefonie, że o 10 jest pani Lewandowska na kobido — ale ona przyszła na twarz z pakietu"</h4>
+        <div class="scenario-body">
+          <div class="sample-call">
+            <div class="sample-line"><div class="sample-who">Dominika:</div><div class="sample-text">Marta, w wizycie mam kobido, a klientka mówi, że umawiała zabieg na twarz z karnetu.</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Patrzę w kartę: ma aktywny karnet „Twarz ×6, 4 wejścia wolne". Ktoś przy telefonie źle zapisał. Nie rozpoczynaj kobido — odwołuję tę usługę jako błąd salonu i dodaję nową wizytę o 10:00 z zabiegiem na twarz, u Ciebie. Zielono.</div></div>
+            <div class="sample-line"><div class="sample-who">Dominika:</div><div class="sample-text">Mam ją już w „Moim dniu". Klikam „Rozpocznij".</div></div>
+            <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Przy rozliczeniu wybiorę w Sprzedaży wejście z karnetu — terminarz sam tego nie odejmie.</div></div>
+          </div>
+          <p class="scenario-note">Kosmetolożka zgłasza, recepcja poprawia w rezerwacji, kasa i karnet rozliczają się tam, gdzie zawsze. Nikt nie „naciąga" wizyty, żeby zgadzała się z rzeczywistością.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 17 -->
+    <section class="card" id="telefon">
+      <div class="card-header">
+        <div class="card-icon">📱</div>
+        <div class="card-header-text"><div class="subtitle">Krok 17 · Na telefonie i bez sieci</div><h2>Telefon: agenda zamiast ośmiu wąskich kolumn</h2></div>
+      </div>
+      <p>Na ekranie węższym niż 760 px widok Dzień zmienia się w listę: godzina, klientka, usługi, etykiety. Panele (nowa wizyta, szczegóły) zajmują cały ekran; zamykasz je krzyżykiem albo <code>Esc</code>. Przyciski mają wysokość pod kciuk. Przeciąganie nie jest potrzebne — zmiany robi się przyciskami.</p>
+      <div class="warning"><strong>Brak internetu.</strong> Jeśli sieć zniknie, zobaczysz komunikat „Brak połączenia" przy próbie zapisu. Nic nie zapisuje się „na później" — dane w formularzu zostają, ale wizyta powstanie dopiero po odzyskaniu połączenia i ponownym kliknięciu „Zapisz". Ostatnia pobrana agenda jest widoczna z godziną aktualizacji na górze.</div>
+    </section>
+
+    <div class="divider"><div class="line"></div><div class="label">IV · Zasady</div><div class="line"></div></div>
+
+    <!-- 18 -->
+    <section class="card" id="zasady">
+      <div class="card-header">
+        <div class="card-icon">⚖️</div>
+        <div class="card-header-text"><div class="subtitle">Krok 18 · Reguły, których nie zmienia żadna rola</div><h2>Czego terminarz nie robi — celowo</h2></div>
+      </div>
+      <ul>
+        <li><strong>Nie umawia na niepełny komplet.</strong> Osoba, gabinet i urządzenie muszą być wolne jednocześnie, razem z buforami. Wolna osoba to za mało.</li>
+        <li><strong>Nie omija kolizji.</strong> Nie ma przycisku „mimo to" — ani dla recepcji, ani dla właścicielki.</li>
+        <li><strong>Nie zgaduje nieobecności.</strong> Po tolerancji spóźnienia podpowiada, nie oznacza. Nieobecność potwierdza człowiek.</li>
+        <li><strong>Nie przesuwa dnia automatycznie.</strong> Przedłużający się zabieg to informacja dla recepcji, nie przestawienie kolejnych klientek.</li>
+        <li><strong>Nie odwołuje wizyt przy zmianie grafiku, nieobecności czy archiwizacji zasobu.</strong> Pokazuje listę i czeka na decyzje.</li>
+        <li><strong>Nie tworzy sprzedaży, nie zużywa karnetu, nie potrąca zadatku.</strong> Prowadzi do Sprzedaży i do kartoteki, gdzie te rzeczy już są obsłużone.</li>
+        <li><strong>Nie nadpisuje po cichu.</strong> Równoczesna edycja kończy się komunikatem o wersji; podwójne kliknięcie daje jeden zapis; ponowienie tej samej akcji zwraca ten sam wynik.</li>
+        <li><strong>Nie pokazuje kosmetolożce cudzych kartotek.</strong> Dane osobowe widzi ten, kto ich potrzebuje do pracy.</li>
+        <li><strong>Nie zmienia historii.</strong> Umówiona cena, czas i wykonawczyni zostają przy wizycie, nawet gdy cennik się zmieni. Historia wizyty i Dziennik zdarzeń zapisują każdą decyzję z osobą i godziną.</li>
+      </ul>
+      <div class="info"><strong>Dlaczego tak surowo?</strong> Bo każdy z tych „ułatwiających" automatów w innych systemach prędzej czy później produkuje podwójną rezerwację, zdublowaną sprzedaż albo zadatek, który „sam" przepadł. Terminarz woli pokazać problem niż go ukryć.</div>
+    </section>
+
+    <!-- 19 -->
+    <section class="card" id="roadmap">
+      <div class="card-header">
+        <div class="card-icon">🧭</div>
+        <div class="card-header-text"><div class="subtitle">Krok 19 · Uczciwie o tym, czego jeszcze nie ma</div><h2>Co dalej: etapy B, C i D</h2></div>
+      </div>
+      <p class="lead">Ten przewodnik opisuje etap A — terminarz wewnętrzny. Projekt dodatku jest większy i kolejne części są zaplanowane w tej kolejności. W Ustawieniach widać je jako wyłączone opcje.</p>
+      <table>
+        <tr><th>Funkcja</th><th>Etap</th><th>Jak sobie radzić dziś</th></tr>
+        <tr><td>Rezerwacje online i publiczna strona salonu, link / QR dla klientek</td><td>B</td><td>Umawianie telefoniczne i przy ladzie; kanał „telefon" / „wiadomość" w wizycie.</td></tr>
+        <tr><td>Weryfikacja kontaktu (kod SMS), hold terminu, akceptacja przez salon</td><td>B</td><td>Nie dotyczy umawiania wewnętrznego.</td></tr>
+        <tr><td>Przypomnienia e-mail / SMS 24 h i 2 h przed</td><td>B</td><td>Recepcja wysyła ręcznie z Agendy na jutro.</td></tr>
+        <tr><td>Przedpłaty online, potwierdzenia operatora płatności</td><td>B</td><td>Zadatek przyjmowany jak dotąd (w kasie albo przez obecny link Tpay) i widoczny w kartotece.</td></tr>
+        <tr><td>Serie wizyt z karnetu („zaplanuj 6 sesji co 7 dni"), licznik wejść przy terminach</td><td>C</td><td>Każdą sesję umawiasz osobno; stan karnetu sprawdzasz w karcie klientki.</td></tr>
+        <tr><td>Lista oczekujących z ofertą terminu</td><td>C</td><td>Notatka w Zadaniach albo w karcie klientki.</td></tr>
+        <tr><td>Zastępstwa hurtowo, awarie z planem naprawczym, raporty obłożenia, import z innego kalendarza</td><td>C</td><td>Nieobecność + lista dotkniętych, zmiany po jednej; obłożenie z Analizy pracownika.</td></tr>
+        <tr><td>Etapy usługi zwalniające pracownika w czasie pracy urządzenia, przeciąganie kart myszą, wyjątki godzin na jeden dzień</td><td>C / później</td><td>Usługa zajmuje osobę przez cały czas; zmiany przez panel.</td></tr>
+        <tr><td>Wiele lokalizacji, wizyty grupowe, dojazd, konsultacje online, opinie</td><td>D</td><td>—</td></tr>
+      </table>
+      <div class="tip"><strong>Praca obok Booksy.</strong> Możesz używać terminarza równolegle z innym kalendarzem — ale dwa źródła zapisów nie synchronizują się same. Bezpiecznie jest ustalić jedno miejsce prawdy dla dostępności (np. urządzenia tylko w Estelio) albo wyznaczyć datę przejścia.</div>
+    </section>
+
+    <!-- 20 -->
+    <section class="card" id="faq">
+      <div class="card-header">
+        <div class="card-icon">❓</div>
+        <div class="card-header-text"><div class="subtitle">Krok 20 · Najczęstsze pytania</div><h2>FAQ</h2></div>
+      </div>
+
+      <h3>Włączyłam dodatek, a w menu nie ma Terminarza</h3>
+      <p>Odśwież aplikację (F5) albo wyloguj się i zaloguj — menu układa się przy logowaniu. Jeśli nadal nie ma, sprawdź w Administracja → Dodatki, czy kafel ma status „Włączony".</p>
+
+      <h3>Usługa jest szara z napisem „brak czasu"</h3>
+      <p>Manager nie ustawił czasu trwania w Terminarz → Ustawienia → Usługi. Do tego czasu usługę normalnie sprzedasz, tylko nie umówisz.</p>
+
+      <h3>Nikt nie ma wolnych godzin, kolumny są zakreskowane</h3>
+      <p>Dzień bez grafiku to dzień bez terminów. Ustawienia → Grafik zespołu → „Skopiuj godziny salonu do osób bez grafiku". Sprawdź też, czy nie ma blokady na cały salon.</p>
+
+      <h3>Czy pracownik musi mieć konto PIN, żeby być w terminarzu?</h3>
+      <p>Lista osób w terminarzu to lista pracowników z Administracji (ta sama, co przy sprzedaży). Do klikania „Rozpocznij / Zakończ" na własnych wizytach osoba potrzebuje konta PIN z rolą kosmetolog — zakłada je Admin w Kreatorze dostępów.</p>
+
+      <h3>Wolna osoba, a system mówi „urządzenie zajęte"</h3>
+      <p>Bo wolna osoba to nie wolny komplet. Widok „Zasoby" pokazuje, która jednostka jest zajęta i do kiedy. Rozwiązanie: alternatywa z listy albo druga jednostka sprzętu w puli usługi.</p>
+
+      <h3>Chcę umówić wizytę o 17:00, salon zamyka o 17:30, a system odmawia</h3>
+      <p>Usługa 40 min z buforem 10 kończy zajęcie zasobów o 17:50 — po grafiku osoby i godzinach salonu. Albo krótszy wariant, albo manager wydłuża grafik na ten dzień, albo bufor „tylko gabinet" (jeśli ktoś inny sprząta).</p>
+
+      <h3>Kliknęłam „Zapisz" dwa razy</h3>
+      <p>Powstała jedna wizyta. Drugie kliknięcie system rozpoznał jako powtórzenie i pokazał tę samą wizytę.</p>
+
+      <h3>Klientka chce zmienić godzinę — przeciągam kartę i nic</h3>
+      <p>Przeciąganie myszą jeszcze nie działa. Otwórz wizytę → „Zmień termin / osobę" → „Sprawdź" → „Zatwierdź zmianę". Stary termin jest bezpieczny do zatwierdzenia.</p>
+
+      <h3>Gdzie wpisać zadatek przy umawianiu?</h3>
+      <p>Tam gdzie dotąd: w Sprzedaży jako pozycja „Zadatek" (wpłata do portfela klientki). Terminarz pokaże go przy rozliczeniu, gdy wybierzesz płatność z zadatku.</p>
+
+      <h3>Czy terminarz odejmie wejście z karnetu po zabiegu?</h3>
+      <p>Nie. Wejście rozliczasz w Sprzedaży przy „Rozlicz w Sprzedaży", tak jak dziś. Automatyczne wiązanie sesji z karnetem to etap C.</p>
+
+      <h3>Zapomniałam kliknąć „Powiąż" po sprzedaży</h3>
+      <p>Wejdź w wizytę — jest przycisk „Powiąż zapisaną sprzedaż". Znajdzie sprzedaż klientki zapisaną po kliknięciu „Rozlicz".</p>
+
+      <h3>Rozliczyłam wizytę na złą klientkę</h3>
+      <p>Popraw sprzedaż w module Sprzedaży (korekta / zwrot ujemnym wpisem) i zrób właściwą. Powiązanie z wizytą zostanie przy pierwotnej sprzedaży — opisz w notatce wizyty, co się stało. Narzędzie „korekta po rozliczeniu" z poziomu wizyty jest w planie.</p>
+
+      <h3>Klientka nie przyszła — Odwołaj czy Nieobecna?</h3>
+      <p>Nie odebrała i nie przyszła: „Nieobecna" (po tolerancji). Zadzwoniła wcześniej: „Odwołaj" z powodem. Oba zwalniają termin; różnią się historią i tym, jak później rozpatrzysz zadatek.</p>
+
+      <h3>Widzę „Zajęte" zamiast nazwiska</h3>
+      <p>To wizyta innej osoby — jako kosmetolog widzisz dane tylko swoich klientek. Recepcja widzi wszystko.</p>
+
+      <h3>„Ktoś zmienił tę wizytę"</h3>
+      <p>Druga osoba zapisała ją chwilę wcześniej. Przeczytaj aktualne dane i zdecyduj jeszcze raz — nic nie zostało nadpisane.</p>
+
+      <h3>Jak sprawdzić, kto i kiedy odwołał wizytę?</h3>
+      <p>W szczegółach wizyty sekcja „Historia" (kto, kiedy, co) oraz Dziennik zdarzeń w menu — wpisy „TERMINARZ: …".</p>
+
+      <h3>Czy klientka dostaje SMS z potwierdzeniem?</h3>
+      <p>Jeszcze nie — przypomnienia i potwierdzenia są w etapie B. Dziś potwierdzasz przez telefon jak dotąd.</p>
+
+      <h3>Pracownik odchodzi — co z jego wizytami?</h3>
+      <p>Najpierw w terminarzu: Ustawienia → Nieobecności (do odwołania) albo zmiana wykonawczyni we wszystkich przyszłych wizytach. Dopiero potem usuwasz konto w Kreatorze dostępów. Historia wykonanych zabiegów zachowuje jego imię.</p>
+
+      <h3>Czy manager widzi obrót w terminarzu?</h3>
+      <p>Nie — terminarz pokazuje ceny z cennika przy wizycie i liczniki operacyjne. Obrót, zysk i rankingi są w Analizie, z dotychczasowymi uprawnieniami.</p>
+
+      <h3>Wyłączyłam dodatek — co z danymi?</h3>
+      <p>Zostają. Wizyty, historia i ustawienia wracają po ponownym włączeniu. Powiązania sprzedaży z wizytami są trwałe.</p>
+
+      <h3>Gdzie zgłosić błąd albo prośbę o zmianę?</h3>
+      <p>Administracja → 🎫 Zgłoszenia (tickety do Estelio) — ze zrzutem ekranu i numerem wizyty, np. EST-0048.</p>
+    </section>
+
+    <div class="footer">
+      <div class="ornament">✦ ✦ ✦</div>
+      <p><strong>Estelio</strong> — Beauty Management System</p>
+      <p>Przewodnik po Terminarzu · etap A · stan na październik 2026 · pozostałe przewodniki: <a href="/pomoc/" style="color:var(--pink-500);">/pomoc/</a> (recepcja) · <a href="/pomoc-manager/" style="color:var(--pink-500);">/pomoc-manager/</a> (manager)</p>
+      <p style="margin-top:10px;font-style:italic;">Terminarz ma pokazywać prawdę o dniu w salonie — nie ładniejszą wersję, w której wszystko się zgadza.</p>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

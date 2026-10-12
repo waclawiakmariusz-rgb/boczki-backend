@@ -35547,6 +35547,8 @@ const EST_GUIDE_URL = '/pomoc/';
 // 2026-10-10: drugi przewodnik — zarządczy (/pomoc-manager/). Esti indeksuje go TYLKO dla
 // managera/admina/megaadmina, żeby recepcja nie dostawała odpowiedzi o raportach, których nie widzi.
 const EST_MANAGER_GUIDE_URL = '/pomoc-manager/';
+// 2026-10-12: trzeci przewodnik — Terminarz (/pomoc-terminarz/), indeksowany tylko gdy salon ma włączony dodatek.
+const EST_TERMINARZ_GUIDE_URL = '/pomoc-terminarz/';
 let EST_KB_GUIDE = [];
 
 function estCzyManager() {
@@ -35735,6 +35737,23 @@ async function estLoadGuideInner() {
                 }
             } catch (eM) {
                 console.warn('[Esti] Przewodnik managera niedostępny:', eM.message);
+            }
+        }
+
+        // Przewodnik po Terminarzu — tylko gdy salon ma włączony dodatek. Osobny try: błąd nie psuje reszty bazy.
+        if (typeof hasFeature === 'function' && hasFeature('terminarz')) {
+            try {
+                const rt = await fetch(`${EST_TERMINARZ_GUIDE_URL}?v=${v}`, { cache: 'no-cache' });
+                if (rt.ok) {
+                    const docT = new DOMParser().parseFromString(await rt.text(), 'text/html');
+                    const przedT = entries.length;
+                    estIndexGuideDoc(docT, EST_TERMINARZ_GUIDE_URL, 'przewodniku terminarza', '📅 ', entries);
+                    console.log('[Esti] Przewodnik terminarza:', entries.length - przedT, 'wpisów');
+                } else {
+                    console.warn('[Esti] HTTP', rt.status, 'dla', EST_TERMINARZ_GUIDE_URL, '— pomijam przewodnik terminarza');
+                }
+            } catch (eT) {
+                console.warn('[Esti] Przewodnik terminarza niedostępny:', eT.message);
             }
         }
 
@@ -36262,7 +36281,7 @@ document.addEventListener('DOMContentLoaded', function() {
 })(); // end IIFE
 </script>
 <!-- 📅 TERMINARZ (dodatek Estelio+, 2026-10-12) — osobne pliki, żeby nie ruszać reszty aplikacji; ?v= podbijać przy każdej zmianie -->
-<link rel="stylesheet" href="/terminarz.css?v=20261012a">
-<script src="/terminarz.js?v=20261012a" defer></script>
+<link rel="stylesheet" href="/terminarz.css?v=20261012b">
+<script src="/terminarz.js?v=20261012b" defer></script>
 </body>
 </html>
