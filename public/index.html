@@ -5538,6 +5538,11 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                         <li><button class="nav-btn" onclick="pokaz('rap_categories', this)"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg>Kategorie</span></button></li>
                     </ul>
                 </li>
+                <!-- 📅 TERMINARZ — dodatek Estelio+ (2026-10-12). Widoczny tylko gdy salon ma włączony dodatek
+                     (trm_aktualizujWidocznosc w public/terminarz.js). Sekcja #terminarz niżej, logika w osobnym pliku. -->
+                <li id="menu-terminarz" style="display:none;">
+                    <button onclick="pokaz('terminarz', this)" class="nav-single-btn" style="color:#8D2947;"><span class="nav-label">📅 Terminarz</span></button>
+                </li>
                 <li id="group-sales">
                     <button onclick="toggleMenu('sub-sales', this)" class="nav-parent"><span class="nav-label"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/></svg>Sprzedaż</span> <span style="font-size:11px;">▼</span></button>
                     <ul id="sub-sales" class="nav-submenu">
@@ -8501,6 +8506,9 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- Sekcja Dodatku Testowego (widoczna gdy feature 'demo_dodatek' aktywne) -->
+            <!-- 📅 TERMINARZ — dodatek Estelio+: cała treść renderowana przez public/terminarz.js do #trm-root -->
+            <div id="terminarz" class="section"><div id="trm-root"></div></div>
+
             <div id="demo-dodatek" class="section" style="text-align:center; padding:60px 20px;">
                 <div style="max-width:600px; margin:0 auto;">
                     <div style="font-size:64px; margin-bottom:20px;">🎁</div>
@@ -12585,6 +12593,7 @@ function uruchomAplikacjePracownika(imie, rola) {
     if (typeof aktualizujBooksyWidocznosc === 'function') aktualizujBooksyWidocznosc();
     if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
     if (typeof zg_aktualizujWidocznosc === 'function') zg_aktualizujWidocznosc();
+    if (typeof trm_aktualizujWidocznosc === 'function') trm_aktualizujWidocznosc();
 
     // Odpalamy docelowe zaciąganie danych
     initApp();
@@ -12734,6 +12743,7 @@ function addonsToggle(featureKey, enable, nazwa, cenaZl) {
         aktualizujMenuFeatures();
         if (typeof foto_aktualizujWidocznosc === 'function') foto_aktualizujWidocznosc();
         if (typeof zg_aktualizujWidocznosc === 'function') zg_aktualizujWidocznosc();
+    if (typeof trm_aktualizujWidocznosc === 'function') trm_aktualizujWidocznosc();
         addonsZaladuj(); // przerysuj listę
     })
     .catch(err => alert('Błąd: ' + err));
@@ -16999,6 +17009,7 @@ function pokaz(id, b) {
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'tickety' && typeof tk_init === 'function') tk_init();
+    if (id === 'terminarz' && typeof trm_otworz === 'function') trm_otworz();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -17129,6 +17140,7 @@ function pokaz(id, b) {
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'tickety' && typeof tk_init === 'function') tk_init();
+    if (id === 'terminarz' && typeof trm_otworz === 'function') trm_otworz();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -17395,6 +17407,7 @@ function pokaz(id, b) {
     if (id === 'do-sprawdzenia') ladujDoSprawdzenia();
     if (id === 'booksy-dzis') ladujBooksyDzis();
     if (id === 'tickety' && typeof tk_init === 'function') tk_init();
+    if (id === 'terminarz' && typeof trm_otworz === 'function') trm_otworz();
     if (id === 'klient-profil') {
         const widokListy = document.getElementById('widok-listy-klientow');
         const widokProfilu = document.getElementById('widok-szczegolow-klienta');
@@ -36248,5 +36261,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 })(); // end IIFE
 </script>
+<!-- 📅 TERMINARZ (dodatek Estelio+, 2026-10-12) — osobne pliki, żeby nie ruszać reszty aplikacji; ?v= podbijać przy każdej zmianie -->
+<link rel="stylesheet" href="/terminarz.css?v=20261012a">
+<script src="/terminarz.js?v=20261012a" defer></script>
 </body>
 </html>

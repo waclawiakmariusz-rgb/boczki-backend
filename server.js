@@ -389,6 +389,18 @@ const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 // panel admina. Osobny moduł — nie dotyka żadnej istniejącej tabeli ani trasy.
 const ticketyRoutes    = require('./routes/tickety')(db);
 
+// Terminarz (2026-10-12): opcjonalny dodatek Estelio+ (0 zł) — wewnętrzny kalendarz wizyt.
+// Osobny moduł z własnymi tabelami Term_*; nie dotyka żadnej istniejącej tabeli ani trasy.
+// Gdyby moduł nie wstał (np. brak uprawnień do CREATE), Estelio ma działać bez niego.
+let terminarzRoutes = null, terminarzActions = [];
+try {
+    const terminarzModul = require('./routes/terminarz');
+    terminarzRoutes = terminarzModul(db);
+    terminarzActions = terminarzModul.AKCJE;
+} catch (e) {
+    console.error('[terminarz] moduł nie został załadowany:', e.message);
+}
+
 // Przypomnienia e-mail dla nowych klientów (2026-10-10): osobny moduł, własna tabela, tryb z env
 // PRZYPOMNIENIA = off | proba (DOMYŚLNIE: tylko log) | on. Nie ma żadnej trasy HTTP ani wpływu
 // na rejestrację/logowanie; błąd startu nie może położyć serwera — stąd try/catch.
@@ -451,6 +463,7 @@ app.use('/api', predefRoutes);
 app.use('/api', kosztPlanRoutes);
 app.use('/api', zadaniaRoutes);
 app.use('/api', ticketyRoutes);
+if (terminarzRoutes) app.use('/api', terminarzRoutes);
 app.use('/api', typyZabiegowRoutes);
 app.use('/api', leadyRoutes);
 app.use('/api', featuresRoutes);
@@ -779,6 +792,9 @@ app.post('/api', (req, res) => {
     } else if (ticketyActions.includes(action)) {
         req.url = '/tickety';
         return ticketyRoutes(req, res, () => {});
+    } else if (terminarzRoutes && terminarzActions.includes(action)) {
+        req.url = '/terminarz';
+        return terminarzRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });
