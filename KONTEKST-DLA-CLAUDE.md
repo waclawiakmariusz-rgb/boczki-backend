@@ -373,6 +373,10 @@ wersje, maskowanie dla kosmetologa, T043/T073/T079/T121/T154/T159/T191/T211), mo
 (manager, kosmetolog, telefon 400 px) — 0 wyjątków JS, 0 CSP; jest 443 passed (14 znanych env). Skrypty w scratchpadzie
 HP (nie w repo): `test-terminarz-api.js`, `shot-terminarz.js`, `test-trm-rozlicz.js`.
 
+**Dalej tego dnia:** user: „zrób na dev, przetestuję sam, main po moim zatwierdzeniu" → `dev` = ff z `terminarz` (60a7eb6);
+potem przewodnik `/pomoc-terminarz/` (`public/estelio_pomoc_terminarz.html`, 20 rozdz., 12 scenek, FAQ 21, styl jak manager;
+Esti indeksuje przy włączonym dodatku; przycisk Pomoc w terminarzu) — `f4326ae` na dev. **main nadal 1af9dbc.**
+
 **Decyzja do podjęcia (user):** merge `terminarz` → `dev` → `main` (ff) i wdrożenie. Po wdrożeniu: `narzedzia/smoke-prod.js`,
 w panelu Boczków włączyć dodatek (Administracja → Dodatki → Terminarz) dopiero gdy user zdecyduje; Ctrl+F5.
 
