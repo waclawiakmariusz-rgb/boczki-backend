@@ -135,6 +135,14 @@ module.exports = (db, opts = {}) => {
         return res.json({ status: 'success', data: rows || [] });
       }
 
+      if (action === 'tk_licznik') {
+        // Lekki odczyt na pasek Pulpitu (ds-tickety-bar) — tylko liczba, bez treści zgłoszeń.
+        // Ta sama definicja "nowości" co badge w zakładce Zgłoszenia: odpowiedź Estelio jeszcze
+        // nieprzeczytana przez salon (dotyczy zarówno nowej odpowiedzi, jak i zamknięcia z komentarzem).
+        const rows = await q(`SELECT COUNT(*) AS n FROM Zgloszenia_Tickety WHERE tenant_id = ? AND odpowiedz IS NOT NULL AND odpowiedz_przeczytana = 0`, [tenant_id]);
+        return res.json({ status: 'success', liczba: (rows && rows[0] && rows[0].n) || 0 });
+      }
+
       if (action === 'tk_get') {
         const id = parseInt(d.id, 10);
         if (!id) return res.json({ status: 'error', message: 'Brak numeru zgłoszenia.' });
