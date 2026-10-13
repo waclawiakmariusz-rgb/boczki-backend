@@ -18629,7 +18629,9 @@ function renderMagazyn(d) {
         const zgrupowane = {};
         d.forEach(p => {
             if (aktualnyFiltrMagazyn !== 'Wszystkie' && p.kategoria !== aktualnyFiltrMagazyn) return;
-            if (Number(p.ilosc) <= 0) return; // Ukrywamy wyzerowane w szczegółach
+            // 2026-10-13: NIE ukrywamy wyzerowanych partii — Ania (recepcja, ticket #4) zgłosiła,
+            // że produkt ze stanem 0 znikał z widoku całkowicie, więc nie dało się go sprawdzić/zamówić.
+            // Grupa z sumą 0 i tak dostaje niżej czerwoną etykietę "0 (BRAK)".
 
             const klucz = p.nazwa + "|" + p.kategoria;
             if (!zgrupowane[klucz]) {
