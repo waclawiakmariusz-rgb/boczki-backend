@@ -586,9 +586,9 @@
   function renderUstawienia() {
     if (!manager()) { el('trm-main').innerHTML = '<div class="trm-note bad">Ustawienia terminarza zmienia manager lub właściciel.</div>'; return; }
     const t = TRM.ust.tab;
-    const tabs = [['ogolne', 'Godziny i zasady'], ['uslugi', 'Usługi'], ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
+    const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
     let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ust.tab='${k}';TRM.widokZmien('ustawienia')">${n}</button>`).join('')}</div>`;
-    html += ({ ogolne: ustOgolne, uslugi: ustUslugi, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
+    html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
     el('trm-main').innerHTML = html;
   }
   const godzinyHtml = (godziny, prefix) => `<div class="trm-godz">${[1, 2, 3, 4, 5, 6, 7].map(dz => { const l = godziny[dz] || []; return `<div class="d">${DNI[dz]}</div><div class="p"><input type="time" id="${prefix}-${dz}-a-od" value="${(l[0] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-a-do" value="${(l[0] || {}).do || ''}"> <span class="muted small">i</span> <input type="time" id="${prefix}-${dz}-b-od" value="${(l[1] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-b-do" value="${(l[1] || {}).do || ''}"></div>`; }).join('')}</div>`;
@@ -607,6 +607,20 @@
     const d = await api('trm_ustawienia_zapisz', { godziny: zbierzGodziny('trm-g'), siatka_min: Number(el('trm-u-siatka').value), tolerancja_min: Number(el('trm-u-tol').value), horyzont_dni: Number(el('trm-u-hor').value), tryb: el('trm-u-tryb').value });
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
     TRM.dane.ustawienia = d.ustawienia; toast('success', 'Zapisano ustawienia');
+  };
+  function ustZespol() {
+    const z = TRM.dane.zespol || [];
+    if (!z.length) return '<div class="trm-note warn">Brak pracowników.</div>';
+    return `<div class="trm-note info small">Osoby, które nie wykonują zabiegów (np. tylko recepcja), nie pojawiają się w terminarzu jako wykonawcy — nie trzeba ich wyłączać z każdej usługi z osobna. To ustawienie jest niezależne od „Kto wykonuje” przy konkretnej usłudze (zakładka Usługi) — tam nadal możesz zawężać, kto robi co, wśród osób zaznaczonych tutaj.</div>
+    <div class="trm-card"><table class="trm-table"><thead><tr><th>Osoba</th><th>Wykonuje zabiegi</th></tr></thead><tbody>
+    ${z.map(p => `<tr><td><b>${esc(p.imie)}</b></td><td><label style="text-transform:none;letter-spacing:0;font-size:13px"><input type="checkbox" ${p.wykonuje_zabiegi ? 'checked' : ''} onchange="TRM.ustZmienZespol('${esc(p.imie)}', this.checked)" style="width:auto;min-height:0"> ${p.wykonuje_zabiegi ? 'tak — widoczna w terminarzu' : 'nie — tylko recepcja'}</label></td></tr>`).join('')}
+    </tbody></table></div>`;
+  }
+  TRM.ustZmienZespol = async (kto, wartosc) => {
+    const d = await api('trm_zespol_zapisz', { pracownik_zespol: kto, wykonuje_zabiegi: wartosc });
+    if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
+    TRM.dane.zespol = d.zespol; TRM.dane.pracownicy = d.pracownicy;
+    toast('success', wartosc ? 'Wykonuje zabiegi' : 'Tylko recepcja', kto); renderUstawienia();
   };
   function ustUslugi() {
     const zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano), gab = zas.filter(z => z.typ === 'gabinet'), urz = zas.filter(z => z.typ === 'urzadzenie');

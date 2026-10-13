@@ -192,6 +192,13 @@ module.exports = (db, opts = {}) => {
       po_json TEXT NULL,
       INDEX idx_rez (tenant_id, rezerwacja_id)
     )${KOL}`, 'Term_Historia');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Pracownicy (
+      tenant_id VARCHAR(100) NOT NULL,
+      pracownik VARCHAR(100) NOT NULL,
+      wykonuje_zabiegi TINYINT(1) NOT NULL DEFAULT 1,
+      zmieniono DATETIME NULL,
+      PRIMARY KEY (tenant_id, pracownik)
+    )${KOL}`, 'Term_Pracownicy');
   // Katalog Estelio+: widoczny dla każdego salonu, 0 zł — włącza manager+ w Administracja → Dodatki.
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
             VALUES (?, ?, ?, 0, 'AKTYWNY', 5) ON DUPLICATE KEY UPDATE feature_key = feature_key`,
@@ -242,7 +249,13 @@ module.exports = (db, opts = {}) => {
     }));
   }
 
-  const pracownicy = (tenant) => q(`SELECT imie FROM Pracownicy WHERE tenant_id = ? ORDER BY imie`, [tenant]).then(r => r.map(x => x.imie));
+  // Tylko osoby oznaczone jako wykonujące zabiegi (brak wpisu w Term_Pracownicy = domyślnie TAK, nic się nie zmienia dla nikogo bez decyzji managera).
+  // To jest JEDYNE miejsce filtrowania — propaguje się do wszystkich widoków (siatki dni, listy, grafik, nowa wizyta) przez wspólną funkcję.
+  const pracownicy = (tenant) => q(`SELECT p.imie FROM Pracownicy p LEFT JOIN Term_Pracownicy tp ON tp.tenant_id = p.tenant_id AND tp.pracownik = p.imie
+      WHERE p.tenant_id = ? AND COALESCE(tp.wykonuje_zabiegi, 1) = 1 ORDER BY p.imie`, [tenant]).then(r => r.map(x => x.imie));
+  // Pełna lista (łącznie z osobami „tylko recepcja”) — tylko do ekranu ustawień „Zespół”.
+  const zespol = (tenant) => q(`SELECT p.imie, COALESCE(tp.wykonuje_zabiegi, 1) AS wykonuje_zabiegi FROM Pracownicy p LEFT JOIN Term_Pracownicy tp ON tp.tenant_id = p.tenant_id AND tp.pracownik = p.imie
+      WHERE p.tenant_id = ? ORDER BY p.imie`, [tenant]).then(r => r.map(x => ({ imie: x.imie, wykonuje_zabiegi: !!x.wykonuje_zabiegi })));
   const grafik = (tenant) => q(`SELECT id, pracownik, dzien_tyg, od, do_ AS \`do\`, od_daty, do_daty FROM Term_Grafik WHERE tenant_id = ? ORDER BY pracownik, dzien_tyg, od`, [tenant]).then(r => r.map(x => ({ ...x, od_daty: dataZ(x.od_daty), do_daty: dataZ(x.do_daty) })));
 
   /** Godziny salonu dla dnia → przedziały w minutach. */
@@ -413,7 +426,7 @@ module.exports = (db, opts = {}) => {
         if (!on) return res.json({ status: 'success', feature_on: false, rola: r });
         const cfg = await wspolneCfg(tenant);
         const nieob = await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i:%s') AS \`do\`, typ, opis, utworzyl FROM Term_Nieobecnosci WHERE tenant_id = ? AND do_ >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY od`, [tenant]);
-        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob });
+        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
       }
       if (!(await czyFeature(tenant))) return res.json({ status: 'error', code: 'DODATEK', message: 'Dodatek „Terminarz” nie jest aktywny w tym salonie.' });
       const wynik = await obsluz(action, d, tenant, imie, r);
@@ -538,6 +551,17 @@ module.exports = (db, opts = {}) => {
         const res_ = await q(`INSERT INTO Term_Nieobecnosci (tenant_id, pracownik, zasob_id, od, do_, typ, opis, utworzyl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, prac, zasob, od, do_, typ, String(d.opis || '').slice(0, 255) || null, imie || null]);
         zapiszLog(tenant, 'TERMINARZ: NIEOBECNOŚĆ', imie, `${prac || (zasob ? 'zasób ' + zasob : 'cały salon')} ${od}–${do_} (${typ}), dotkniętych wizyt: ${dotk.length}`);
         return { status: 'success', id: res_.insertId, dotkniete: dotk };
+      }
+      case 'trm_zespol_zapisz': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const kto = String(d.pracownik_zespol || '').trim();
+        const wszyscyProc = await q(`SELECT imie FROM Pracownicy WHERE tenant_id = ?`, [tenant]).then(rr => rr.map(x => x.imie));
+        if (!wszyscyProc.includes(kto)) throw new BladUzytkownika('Nieznany pracownik.');
+        const wartosc = (d.wykonuje_zabiegi === false || d.wykonuje_zabiegi === 0 || d.wykonuje_zabiegi === '0') ? 0 : 1;
+        await q(`INSERT INTO Term_Pracownicy (tenant_id, pracownik, wykonuje_zabiegi, zmieniono) VALUES (?, ?, ?, NOW())
+                 ON DUPLICATE KEY UPDATE wykonuje_zabiegi = VALUES(wykonuje_zabiegi), zmieniono = NOW()`, [tenant, kto, wartosc]);
+        zapiszLog(tenant, 'TERMINARZ: ZESPÓŁ', imie, `${kto}: ${wartosc ? 'wykonuje zabiegi' : 'tylko recepcja'}`);
+        return { status: 'success', zespol: await zespol(tenant), pracownicy: await pracownicy(tenant) };
       }
       case 'trm_nieobecnosc_usun': {
         wymagaj(r, ROLE_MANAGER_PLUS);
@@ -840,4 +864,4 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka'];
