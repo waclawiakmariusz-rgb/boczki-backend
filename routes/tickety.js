@@ -137,9 +137,11 @@ module.exports = (db, opts = {}) => {
 
       if (action === 'tk_licznik') {
         // Lekki odczyt na pasek Pulpitu (ds-tickety-bar) — tylko liczba, bez treści zgłoszeń.
-        // Ta sama definicja "nowości" co badge w zakładce Zgłoszenia: odpowiedź Estelio jeszcze
-        // nieprzeczytana przez salon (dotyczy zarówno nowej odpowiedzi, jak i zamknięcia z komentarzem).
-        const rows = await q(`SELECT COUNT(*) AS n FROM Zgloszenia_Tickety WHERE tenant_id = ? AND odpowiedz IS NOT NULL AND odpowiedz_przeczytana = 0`, [tenant_id]);
+        // Tylko zgłoszenia WCIĄŻ OTWARTE (status <> zamkniete): pasek ma znikać, gdy nie ma już nic
+        // do zobaczenia — zamknięte zgłoszenie z nieprzeczytaną ostatnią odpowiedzią nadal widać
+        // w samej zakładce Zgłoszenia (badge „NOWA"), ale nie nagabuje z Pulpitu (user 2026-10-13:
+        // „jak nie ma tam aktywnego taska który można zobaczyć to nie powinno być komunikatu”).
+        const rows = await q(`SELECT COUNT(*) AS n FROM Zgloszenia_Tickety WHERE tenant_id = ? AND odpowiedz IS NOT NULL AND odpowiedz_przeczytana = 0 AND status <> 'zamkniete'`, [tenant_id]);
         return res.json({ status: 'success', liczba: (rows && rows[0] && rows[0].n) || 0 });
       }
 
