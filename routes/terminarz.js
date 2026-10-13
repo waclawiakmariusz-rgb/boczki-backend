@@ -199,6 +199,48 @@ module.exports = (db, opts = {}) => {
       zmieniono DATETIME NULL,
       PRIMARY KEY (tenant_id, pracownik)
     )${KOL}`, 'Term_Pracownicy');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      typ VARCHAR(10) NOT NULL,
+      rezerwacja_id INT NULL,
+      tytul VARCHAR(255) NOT NULL,
+      opis TEXT NULL,
+      dane_json TEXT NULL,
+      priorytet VARCHAR(2) NOT NULL DEFAULT 'P2',
+      priorytet_bazowy VARCHAR(2) NOT NULL DEFAULT 'P2',
+      stan VARCHAR(12) NOT NULL DEFAULT 'nowa',
+      wlasciciel VARCHAR(100) NULL,
+      termin_dzialania DATETIME NULL,
+      powiazany_czas DATETIME NULL,
+      wynik TEXT NULL,
+      rozwiazal VARCHAR(100) NULL,
+      rozwiazano DATETIME NULL,
+      eskalowano_o DATETIME NULL,
+      utworzono DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      zmieniono DATETIME NULL,
+      klucz_dedup VARCHAR(190) NOT NULL,
+      UNIQUE KEY uq_dedup (tenant_id, klucz_dedup),
+      INDEX idx_lista (tenant_id, stan, priorytet),
+      INDEX idx_rez (tenant_id, rezerwacja_id)
+    )${KOL}`, 'Term_Sprawy');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy_Dziennik (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      sprawa_id INT NOT NULL,
+      kiedy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      kto VARCHAR(100) NULL,
+      akcja VARCHAR(24) NOT NULL,
+      opis VARCHAR(500) NULL,
+      INDEX idx_sprawa (tenant_id, sprawa_id)
+    )${KOL}`, 'Term_Sprawy_Dziennik');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy_Odczyt (
+      tenant_id VARCHAR(100) NOT NULL,
+      sprawa_id INT NOT NULL,
+      pracownik VARCHAR(100) NOT NULL,
+      przeczytano DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (tenant_id, sprawa_id, pracownik)
+    )${KOL}`, 'Term_Sprawy_Odczyt');
   // Katalog Estelio+: widoczny dla każdego salonu, 0 zł — włącza manager+ w Administracja → Dodatki.
   db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
             VALUES (?, ?, ?, 0, 'AKTYWNY', 5) ON DUPLICATE KEY UPDATE feature_key = feature_key`,
@@ -349,6 +391,91 @@ module.exports = (db, opts = {}) => {
   }
   const historia = (conn, tenant, rezId, kto, akcja, opis, przed, po) => qc(conn, `INSERT INTO Term_Historia (tenant_id, rezerwacja_id, kto, akcja, opis, przed_json, po_json) VALUES (?, ?, ?, ?, ?, ?, ?)`, [tenant, rezId, kto || null, akcja, (opis || '').slice(0, 500), przed == null ? null : JSON.stringify(przed), po == null ? null : JSON.stringify(po)]);
 
+  // ═══════════ CENTRUM POWIADOMIEŃ: Sprawy (aneks "Centrum powiadomień", zakres etapu A) ═══════════
+  // Zdarzenie = już zapisany fakt (Term_Historia). Sprawa = wspólna praca z właścicielem/priorytetem/stanem.
+  // Sprawę tworzymy TYLKO dla zdarzeń, które etap A faktycznie generuje — reszta katalogu z aneksu
+  // (karnety, SMS, serie, import, przekazanie zmiany) czeka na odpowiednie etapy B/C.
+  const prIz = (poz) => [...new Set((poz || []).map(x => x.pracownik).filter(Boolean))];
+  /** Priorytet P1 → P0, gdy do powiązanego czasu zostało mniej niż próg (domyślnie 120 min, rozdz. 07 aneksu). */
+  function priorytetDlaCzasu(terazStr, czasStr, prog) {
+    if (!czasStr) return 'P1';
+    return (S.naMin(czasStr) - S.naMin(terazStr)) <= (prog || 120) ? 'P0' : 'P1';
+  }
+  /** Tworzy sprawę albo cicho odświeża treść istniejącego otwartego wątku tej samej przyczyny (klucz_dedup) —
+   * bez duplikatów przy powtórzeniu zdarzenia (np. kolejny tick pollera dla wciąż otwartego E13/E19).
+   * Dziennik dostaje wpis TYLKO przy realnej zmianie (świeży wątek, podniesienie priorytetu, wznowienie) —
+   * identyczny powtórzony upsert nie zostawia śladu i nie dotyka `zmieniono` (inaczej samo NOW() w UPDATE
+   * zawsze zgłaszałoby "zmianę", nawet gdy nic naprawdę się nie stało). */
+  async function sprawaUpsert(tenant, { typ, rezerwacja_id = null, tytul, opis = null, dane = null, priorytet = 'P2', powiazany_czas = null, klucz, kto = null, dziennikOpis = null }) {
+    try {
+      const istniejaca = (await q(`SELECT id, priorytet, stan FROM Term_Sprawy WHERE tenant_id = ? AND klucz_dedup = ?`, [tenant, klucz]))[0];
+      const tyt = String(tytul).slice(0, 255), op = opis ? String(opis).slice(0, 2000) : null, dj = dane ? JSON.stringify(dane) : null;
+      if (!istniejaca) {
+        const ins = await q(`INSERT INTO Term_Sprawy (tenant_id, typ, rezerwacja_id, tytul, opis, dane_json, priorytet, priorytet_bazowy, powiazany_czas, klucz_dedup) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tenant, typ, rezerwacja_id, tyt, op, dj, priorytet, priorytet, powiazany_czas, klucz]);
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'zdarzenie', ?)`, [tenant, ins.insertId, kto, (dziennikOpis || tyt).slice(0, 500)]);
+        return ins.insertId;
+      }
+      // eskalacja do P0 nigdy się nie cofa przez zwykłe odświeżenie treści tego samego, wciąż otwartego wątku
+      const docelowyPriorytet = istniejaca.priorytet === 'P0' ? 'P0' : priorytet;
+      const wznawiamy = ['rozwiazana', 'nieaktualna'].includes(istniejaca.stan);
+      const realnaZmiana = wznawiamy || docelowyPriorytet !== istniejaca.priorytet;
+      if (realnaZmiana) {
+        await q(`UPDATE Term_Sprawy SET tytul = ?, opis = ?, dane_json = ?, priorytet = ?, priorytet_bazowy = ?, powiazany_czas = ?, stan = IF(stan IN ('rozwiazana', 'nieaktualna'), 'nowa', stan), zmieniono = NOW() WHERE id = ?`,
+          [tyt, op, dj, docelowyPriorytet, priorytet, powiazany_czas, istniejaca.id]);
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'zdarzenie', ?)`, [tenant, istniejaca.id, kto, (dziennikOpis || tyt).slice(0, 500)]);
+      } else {
+        // cichy refresh treści (np. zaktualizowana lista dotkniętych wizyt) bez ruszania zmieniono/dziennika
+        await q(`UPDATE Term_Sprawy SET tytul = ?, opis = ?, dane_json = ?, powiazany_czas = ? WHERE id = ?`, [tyt, op, dj, powiazany_czas, istniejaca.id]);
+      }
+      return istniejaca.id;
+    } catch (e) { log.error('[terminarz] sprawaUpsert:', e.message); return null; }
+  }
+  /** Zamyka sprawę, gdy przyczyna się rozstrzygnęła sama (np. ustalono wynik wizyty, odwołano dotkniętą wizytę). */
+  async function sprawaAutoZamknij(tenant, klucz, wynik, stan) {
+    stan = stan || 'rozwiazana';
+    try {
+      const up = await q(`UPDATE Term_Sprawy SET stan = ?, wynik = ?, rozwiazal = 'System', rozwiazano = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND klucz_dedup = ? AND stan NOT IN ('rozwiazana', 'nieaktualna')`, [stan, String(wynik).slice(0, 500), tenant, klucz]);
+      if (up.affectedRows) {
+        const row = (await q(`SELECT id FROM Term_Sprawy WHERE tenant_id = ? AND klucz_dedup = ?`, [tenant, klucz]))[0];
+        if (row) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, 'System', ?, ?)`, [tenant, row.id, stan === 'nieaktualna' ? 'nieaktualna' : 'rozwiazano', String(wynik).slice(0, 500)]);
+      }
+    } catch (e) { log.error('[terminarz] sprawaAutoZamknij:', e.message); }
+  }
+  /** Widoczność i maskowanie sprawy dla odbiorcy (12: tylko dane potrzebne właściwej osobie) — analogicznie do maskuj(). */
+  function sprawaDlaOdbiorcy(s, r, imie) {
+    const dane = json(s.dane_json, {});
+    if (ROLE_OPERACYJNE.has(r)) return { ...s, dane };
+    if (!ROLE_SPECJALISTA.has(r)) return null;
+    if (Array.isArray(dane.dotkniete)) {
+      const wlasne = dane.dotkniete.filter(x => x.pracownik === imie);
+      if (!wlasne.length) return null;
+      return { ...s, dane: { ...dane, dotkniete: wlasne } };
+    }
+    if (!Array.isArray(dane.dotyczy) || !dane.dotyczy.includes(imie)) return null;
+    return { ...s, dane };
+  }
+  function formatujSprawe(s) {
+    return { id: s.id, typ: s.typ, rezerwacja_id: s.rezerwacja_id, tytul: s.tytul, opis: s.opis, dane: s.dane,
+      priorytet: s.priorytet, stan: s.stan, wlasciciel: s.wlasciciel, termin_dzialania: dt(s.termin_dzialania),
+      powiazany_czas: dt(s.powiazany_czas), wynik: s.wynik, rozwiazal: s.rozwiazal, rozwiazano: dt(s.rozwiazano),
+      utworzono: dt(s.utworzono), zmieniono: dt(s.zmieniono) };
+  }
+  async function sprawyLista(tenant, r, imie, zakladka) {
+    const rows = await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? ORDER BY CASE priorytet WHEN 'P0' THEN 0 WHEN 'P1' THEN 1 ELSE 2 END, COALESCE(powiazany_czas, utworzono), utworzono DESC LIMIT 300`, [tenant]);
+    const odczytane = imie ? new Set((await q(`SELECT sprawa_id FROM Term_Sprawy_Odczyt WHERE tenant_id = ? AND pracownik = ?`, [tenant, imie])).map(x => x.sprawa_id)) : new Set();
+    let widoczne = rows.map(x => sprawaDlaOdbiorcy(x, r, imie)).filter(Boolean);
+    if (zakladka === 'do_dzialania') widoczne = widoczne.filter(x => ['P0', 'P1'].includes(x.priorytet) && !['rozwiazana', 'nieaktualna'].includes(x.stan));
+    else if (zakladka === 'zmiany') widoczne = widoczne.filter(x => x.rezerwacja_id);
+    else if (zakladka === 'dla_mnie') widoczne = widoczne.filter(x => x.wlasciciel === imie || (Array.isArray(x.dane.dotyczy) && x.dane.dotyczy.includes(imie)) || (Array.isArray(x.dane.dotkniete) && x.dane.dotkniete.some(y => y.pracownik === imie)));
+    else if (zakladka === 'informacje') widoczne = widoczne.filter(x => x.priorytet === 'P2');
+    return widoczne.map(x => ({ ...formatujSprawe(x), przeczytane: odczytane.has(x.id) }));
+  }
+  async function sprawyLicznik(tenant, r, imie) {
+    const lista = await sprawyLista(tenant, r, imie, 'do_dzialania');
+    return { otwarte: lista.length, pilne: lista.filter(x => x.priorytet === 'P0').length, nieprzeczytane: lista.filter(x => !x.przeczytane).length };
+  }
+
   /** Maskowanie danych dla specjalisty/praktykantki (03: inni bez danych osobowych domyślnie). */
   function maskuj(rez, r, imie) {
     if (ROLE_OPERACYJNE.has(r)) return rez;
@@ -480,6 +607,14 @@ module.exports = (db, opts = {}) => {
         if (dotk.length && !d.wymus) return { status: 'success', wymaga_decyzji: true, dotkniete: dotk, message: `Ten zasób ma ${dotk.length} przyszłych wizyt. Przenieś je lub potwierdź archiwizację — wizyty zostaną z flagą do rozwiązania.` };
         await q(`UPDATE Term_Zasoby SET aktywny = 0, zarchiwizowano = NOW() WHERE tenant_id = ? AND id = ?`, [tenant, id]);
         zapiszLog(tenant, 'TERMINARZ: ZASÓB ZARCHIWIZOWANY', imie, `id ${id}, dotkniętych wizyt: ${dotk.length}`);
+        if (dotk.length) {
+          const najwczesniej = dotk.map(x => x.start).sort()[0];
+          await sprawaUpsert(tenant, { typ: 'E18', rezerwacja_id: null,
+            tytul: `Zasób zarchiwizowany — ${dotk.length} ${dotk.length === 1 ? 'wizyta' : 'wizyt'} do obsłużenia`,
+            opis: 'Zasób zarchiwizowano mimo wpływu na istniejące wizyty.',
+            dane: { zrodlo: 'zasob', dotkniete: dotk.map(x => ({ rezerwacja_id: x.rezerwacja_id, pozycja_id: x.id, pracownik: x.pracownik, start: x.start, koniec: x.koniec, klient_nazwa: x.klient_nazwa, kategoria: x.kategoria + (x.wariant ? ' / ' + x.wariant : ''), rozwiazana: false })) },
+            priorytet: priorytetDlaCzasu(t, najwczesniej), powiazany_czas: najwczesniej, klucz: `E18:${crypto.randomUUID()}`, kto: imie });
+        }
         return { status: 'success', zasoby: await zasoby(tenant, false), dotkniete: dotk };
       }
       case 'trm_usluga_zapisz': {
@@ -517,6 +652,14 @@ module.exports = (db, opts = {}) => {
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
         zapiszLog(tenant, 'TERMINARZ: GRAFIK', imie, `${kto}: ${nowyGrafik.length} przedziałów, dotkniętych wizyt: ${dotk.length}`);
+        if (dotk.length) {
+          const najwczesniej = dotk.map(x => x.start).sort()[0];
+          await sprawaUpsert(tenant, { typ: 'E18', rezerwacja_id: null,
+            tytul: `Zmiana grafiku ${kto} — ${dotk.length} ${dotk.length === 1 ? 'wizyta' : 'wizyt'} poza nową dostępnością`,
+            opis: 'Grafik zapisano mimo wpływu na istniejące wizyty.',
+            dane: { zrodlo: 'grafik', kto, dotkniete: dotk.map(x => ({ rezerwacja_id: x.rezerwacja_id, pozycja_id: x.id, pracownik: x.pracownik, start: x.start, koniec: x.koniec, klient_nazwa: x.klient_nazwa, kategoria: x.kategoria + (x.wariant ? ' / ' + x.wariant : ''), rozwiazana: false })) },
+            priorytet: priorytetDlaCzasu(cfg.terazStr, najwczesniej), powiazany_czas: najwczesniej, klucz: `E18:${crypto.randomUUID()}`, kto: imie });
+        }
         return { status: 'success', grafik: await grafik(tenant), dotkniete: dotk };
       }
       case 'trm_grafik_z_godzin_salonu': {
@@ -550,6 +693,16 @@ module.exports = (db, opts = {}) => {
         if (dotk.length && !d.wymus) return { status: 'success', wymaga_decyzji: true, dotkniete: dotk, message: `Ta nieobecność nachodzi na ${dotk.length} wizyt. Zapis jej nie odwołuje — rozwiąż je osobno (zastępstwo, zmiana terminu, kontakt).` };
         const res_ = await q(`INSERT INTO Term_Nieobecnosci (tenant_id, pracownik, zasob_id, od, do_, typ, opis, utworzyl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, prac, zasob, od, do_, typ, String(d.opis || '').slice(0, 255) || null, imie || null]);
         zapiszLog(tenant, 'TERMINARZ: NIEOBECNOŚĆ', imie, `${prac || (zasob ? 'zasób ' + zasob : 'cały salon')} ${od}–${do_} (${typ}), dotkniętych wizyt: ${dotk.length}`);
+        if (dotk.length) {
+          const typSprawy = prac ? 'E15' : 'E16';
+          const najwczesniej = dotk.map(x => x.start).sort()[0];
+          const terazStr = await teraz();
+          await sprawaUpsert(tenant, { typ: typSprawy, rezerwacja_id: null,
+            tytul: `${prac ? 'Nieobecność: ' + prac : 'Niedostępny zasób'} — ${dotk.length} ${dotk.length === 1 ? 'wizyta' : 'wizyt'} do obsłużenia`,
+            opis: `${typ} ${od.slice(0, 16)}–${do_.slice(0, 16)}`,
+            dane: { typ_nieob: typ, kogo: prac || `zasób ${zasob}`, od, do: do_, dotkniete: dotk.map(x => ({ rezerwacja_id: x.rezerwacja_id, pozycja_id: x.id, pracownik: x.pracownik, start: x.start, koniec: x.koniec, klient_nazwa: x.klient_nazwa, kategoria: x.kategoria + (x.wariant ? ' / ' + x.wariant : ''), rozwiazana: false })) },
+            priorytet: priorytetDlaCzasu(terazStr, najwczesniej), powiazany_czas: najwczesniej, klucz: `${typSprawy}:nieob:${res_.insertId}`, kto: imie });
+        }
         return { status: 'success', id: res_.insertId, dotkniete: dotk };
       }
       case 'trm_zespol_zapisz': {
@@ -722,6 +875,21 @@ module.exports = (db, opts = {}) => {
             await historia(conn, tenant, rez.id, imie, 'przelozono', `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, podglad.obecny, podglad.nowy);
             await commit(conn);
             zapiszLog(tenant, 'TERMINARZ: ZMIANA TERMINU', imie, `${rez.numer} ${rez.klient_nazwa}: ${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}`);
+            const czasZmienil = rez.start !== w2.start;
+            const kimZmienil = podglad.obecny.pozycje.some((pp, i) => pp.pracownik !== w2.pozycje[i].pracownik);
+            const dotyczyWszyscy = [...new Set([...prIz(podglad.obecny.pozycje), ...prIz(w2.pozycje)])];
+            if (czasZmienil) {
+              await sprawaUpsert(tenant, { typ: 'E02', rezerwacja_id: rez.id, tytul: `Zmieniono termin — ${rez.klient_nazwa}`,
+                opis: `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`,
+                dane: { poprzednio: podglad.obecny, teraz: podglad.nowy, autor: imie, dotyczy: dotyczyWszyscy },
+                priorytet: priorytetDlaCzasu(cfg.terazStr, w2.start), powiazany_czas: w2.start, klucz: `E02:${rez.id}`, kto: imie });
+            }
+            if (kimZmienil) {
+              await sprawaUpsert(tenant, { typ: 'E03', rezerwacja_id: rez.id, tytul: `Zmieniono wykonawcę — ${rez.klient_nazwa}`,
+                opis: podglad.obecny.pozycje.map((pp, i) => pp.pracownik !== w2.pozycje[i].pracownik ? `${pp.nazwa}: ${pp.pracownik || '—'} → ${w2.pozycje[i].pracownik || '—'}` : null).filter(Boolean).join('; '),
+                dane: { pozycje: podglad.obecny.pozycje.map((pp, i) => ({ nazwa: pp.nazwa, poprzedni: pp.pracownik, nowy: w2.pozycje[i].pracownik })), dotyczy: dotyczyWszyscy },
+                priorytet: 'P2', powiazany_czas: w2.start, klucz: `E03:${rez.id}`, kto: imie });
+            }
             return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
           } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
@@ -739,6 +907,7 @@ module.exports = (db, opts = {}) => {
         const kto = d.kto_anulowal === 'klient' ? 'klient' : 'salon';
         const powod = String(d.powod || '').trim().slice(0, 255);
         if (!powod) throw new BladUzytkownika('Podaj powód odwołania.');
+        const pozn = cel.map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
         const conn = await polacz();
         try {
           await begin(conn);
@@ -759,11 +928,15 @@ module.exports = (db, opts = {}) => {
             const st = pozostale.length ? pozostale.map(p => p.start).sort()[0] : rez.start;
             await qc(conn, `UPDATE Term_Rezerwacje SET start = ?, koniec = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [st, kon, tenant, rez.id, rez.wersja]);
           }
-          const pozn = cel.map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
           await historia(conn, tenant, rez.id, imie, calosc && nicNieWykonano ? 'anulowano' : 'anulowano_pozycje', `${kto === 'klient' ? 'Klientka odwołała' : 'Salon odwołał'}: ${pozn} — ${powod}`, null, { pozycje: cel.map(p => p.id) });
           await commit(conn);
           zapiszLog(tenant, 'TERMINARZ: ODWOŁANIE', imie, `${rez.numer} ${rez.klient_nazwa} (${kto}): ${pozn} — ${powod}`);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        await sprawaUpsert(tenant, { typ: 'E05', rezerwacja_id: rez.id, tytul: `Odwołano wizytę — ${rez.klient_nazwa}`,
+          opis: `${kto === 'klient' ? 'Klientka odwołała' : 'Salon odwołał'}: ${pozn} — ${powod}`,
+          dane: { pozycje: cel.map(p => ({ kategoria: p.kategoria, wariant: p.wariant, pracownik: p.pracownik, start: p.start })), kto, powod, dotyczy: prIz(cel) },
+          priorytet: 'P2', powiazany_czas: null, klucz: `E05:${rez.id}`, kto: imie });
+        for (const p of cel) await sprawaAutoZamknij(tenant, `E13:poz:${p.id}`, 'Wizyta odwołana', 'nieaktualna');
         const po = await rezerwacja(tenant, rez.id);
         return { status: 'success', rezerwacja: po, rozrachunek: 'Rozliczenie środków (zadatki, karnet) wykonuje się w istniejących modułach — terminarz ich nie zmienia.' };
       }
@@ -786,6 +959,14 @@ module.exports = (db, opts = {}) => {
           await historia(conn, tenant, rez.id, imie, 'obecnosc', `${rez.obecnosc} → ${d.obecnosc}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, { obecnosc: rez.obecnosc }, { obecnosc: d.obecnosc });
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        if (d.obecnosc === 'nieobecny') {
+          const zaplanowaneIdy = rez.pozycje.filter(p => p.stan === 'zaplanowana').map(p => p.id);
+          await sprawaUpsert(tenant, { typ: 'E06', rezerwacja_id: rez.id, tytul: `Potwierdzono nieobecność — ${rez.klient_nazwa}`,
+            opis: d.powod ? String(d.powod).slice(0, 300) : null,
+            dane: { pozycje: rez.pozycje.map(p => ({ kategoria: p.kategoria, wariant: p.wariant, pracownik: p.pracownik })), dotyczy: prIz(rez.pozycje) },
+            priorytet: 'P2', powiazany_czas: null, klucz: `E06:${rez.id}`, kto: imie });
+          for (const pid of zaplanowaneIdy) await sprawaAutoZamknij(tenant, `E13:poz:${pid}`, 'Potwierdzono nieobecność klientki');
+        }
         return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
       }
       case 'trm_pozycja_stan': {
@@ -812,6 +993,13 @@ module.exports = (db, opts = {}) => {
           await historia(conn, tenant, rez.id, imie, 'wykonanie', `${p.kategoria}${p.wariant ? ' / ' + p.wariant : ''}: ${p.stan} → ${stan}${d.uwaga ? ' — ' + String(d.uwaga).slice(0, 200) : ''}`, { stan: p.stan }, { stan, wykonawca: wyk });
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        await sprawaAutoZamknij(tenant, `E13:poz:${p.id}`, `Ustalono: ${stan}`);
+        if (stan === 'przerwana') {
+          await sprawaUpsert(tenant, { typ: 'E08', rezerwacja_id: rez.id, tytul: `Przerwano usługę — ${rez.klient_nazwa}`,
+            opis: `${p.kategoria}${p.wariant ? ' / ' + p.wariant : ''}${d.uwaga ? ' — ' + String(d.uwaga).slice(0, 200) : ''}`,
+            dane: { kategoria: p.kategoria, wariant: p.wariant, pracownik: wyk, dotyczy: [wyk].filter(Boolean) },
+            priorytet: 'P1', powiazany_czas: rez.koniec, klucz: `E08:${rez.id}:${p.id}`, kto: imie });
+        }
         return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
       }
 
@@ -849,6 +1037,7 @@ module.exports = (db, opts = {}) => {
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
         zapiszLog(tenant, 'TERMINARZ: ROZLICZENIE', imie, `${rez.numer} ${rez.klient_nazwa} → sprzedaż ${baza}`);
+        await sprawaAutoZamknij(tenant, `E19:rez:${rez.id}`, 'Powiązano ze sprzedażą ' + baza);
         return { status: 'success', znaleziono: true, sprzedaz_id: baza, sprzedaz: rows.filter(x => String(x.id).replace(/-\d+$/, '') === baza), rezerwacja: await rezerwacja(tenant, rez.id) };
       }
       case 'trm_notatka': {
@@ -856,12 +1045,148 @@ module.exports = (db, opts = {}) => {
         await q(`UPDATE Term_Rezerwacje SET notatka = ?, zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [String(d.notatka || '').slice(0, 2000) || null, tenant, Number(d.id)]);
         return { status: 'success' };
       }
+      // ───────── centrum powiadomień: Sprawy ─────────
+      case 'trm_sprawy_lista': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const zakladka = ['do_dzialania', 'zmiany', 'dla_mnie', 'informacje'].includes(d.zakladka) ? d.zakladka : 'do_dzialania';
+        return { status: 'success', zakladka, sprawy: await sprawyLista(tenant, r, imie, zakladka) };
+      }
+      case 'trm_sprawy_licznik': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) return { status: 'success', otwarte: 0, pilne: 0, nieprzeczytane: 0 };
+        return { status: 'success', ...(await sprawyLicznik(tenant, r, imie)) };
+      }
+      case 'trm_sprawa_szczegoly': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
+        const widoczna = row ? sprawaDlaOdbiorcy(row, r, imie) : null;
+        if (!widoczna) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        const dziennik = await q(`SELECT DATE_FORMAT(kiedy,'%Y-%m-%d %H:%i:%s') AS kiedy, kto, akcja, opis FROM Term_Sprawy_Dziennik WHERE tenant_id = ? AND sprawa_id = ? ORDER BY id`, [tenant, widoczna.id]);
+        return { status: 'success', sprawa: formatujSprawe(widoczna), dziennik };
+      }
+      case 'trm_sprawa_przejmij': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const id = Number(d.id);
+        const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
+        const widoczna0 = row ? sprawaDlaOdbiorcy(row, r, imie) : null;
+        if (!widoczna0) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        if (row.wlasciciel && row.wlasciciel !== imie) return { status: 'success', juz_przejeta: true, sprawa: formatujSprawe(widoczna0) };
+        await q(`UPDATE Term_Sprawy SET wlasciciel = ?, stan = IF(stan = 'nowa', 'w_trakcie', stan), zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND (wlasciciel IS NULL OR wlasciciel = ?)`, [imie, tenant, id, imie]);
+        const swiezy = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
+        const widocznaPo = sprawaDlaOdbiorcy(swiezy, r, imie);
+        if (swiezy.wlasciciel !== imie) return { status: 'success', juz_przejeta: true, sprawa: formatujSprawe(widocznaPo) };
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'przejeto', ?)`, [tenant, id, imie, `${imie} przejęła sprawę`]);
+        return { status: 'success', sprawa: formatujSprawe(widocznaPo) };
+      }
+      case 'trm_sprawa_przekaz': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const id = Number(d.id), komu = String(d.komu || '').trim();
+        if (!komu) throw new BladUzytkownika('Wskaż osobę, której przekazujesz sprawę.');
+        const up = await q(`UPDATE Term_Sprawy SET wlasciciel = ?, zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [komu, tenant, id]);
+        if (!up.affectedRows) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'przekazano', ?)`, [tenant, id, imie, `Przekazano: ${komu}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`]);
+        return { status: 'success' };
+      }
+      case 'trm_sprawa_kontakt': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const id = Number(d.id), tresc = String(d.tresc || '').trim().slice(0, 500);
+        if (!tresc) throw new BladUzytkownika('Opisz wynik kontaktu.');
+        const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
+        if (!row || !sprawaDlaOdbiorcy(row, r, imie)) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        const termin = d.termin_dzialania ? sprawdzDt(d.termin_dzialania, 'termin_dzialania') : null;
+        await q(`UPDATE Term_Sprawy SET stan = 'oczekuje', termin_dzialania = COALESCE(?, termin_dzialania), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [termin, tenant, id]);
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'kontakt', ?)`, [tenant, id, imie, tresc]);
+        return { status: 'success' };
+      }
+      case 'trm_sprawa_rozwiaz': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const id = Number(d.id), wynik = String(d.wynik || '').trim().slice(0, 500);
+        if (!wynik) throw new BladUzytkownika('Opisz wynik sprawy.');
+        const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
+        if (!row || !sprawaDlaOdbiorcy(row, r, imie)) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        await q(`UPDATE Term_Sprawy SET stan = 'rozwiazana', wynik = ?, rozwiazal = ?, rozwiazano = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [wynik, imie, tenant, id]);
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'rozwiazano', ?)`, [tenant, id, imie, wynik]);
+        return { status: 'success' };
+      }
+      case 'trm_sprawa_wznow': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const id = Number(d.id), powod = String(d.powod || '').trim().slice(0, 300) || 'Wznowiono';
+        const up = await q(`UPDATE Term_Sprawy SET stan = 'nowa', wlasciciel = NULL, rozwiazano = NULL, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND stan IN ('rozwiazana', 'nieaktualna')`, [tenant, id]);
+        if (!up.affectedRows) throw new BladUzytkownika('Sprawa jest już otwarta albo nie istnieje.');
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'wznowiono', ?)`, [tenant, id, imie, powod]);
+        return { status: 'success' };
+      }
+      case 'trm_sprawa_pozycja_obsluzono': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const id = Number(d.id), rezId = Number(d.rezerwacja_id);
+        const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
+        if (!row || !sprawaDlaOdbiorcy(row, r, imie)) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        const dane = json(row.dane_json, {});
+        if (!Array.isArray(dane.dotkniete)) throw new BladUzytkownika('Ta sprawa nie ma listy wizyt.');
+        let zmienilo = false;
+        dane.dotkniete = dane.dotkniete.map(x => { if (Number(x.rezerwacja_id) === rezId) { zmienilo = true; return { ...x, rozwiazana: true }; } return x; });
+        if (!zmienilo) throw new BladUzytkownika('Ta wizyta nie jest na liście tej sprawy.');
+        const wszystkie = dane.dotkniete.every(x => x.rozwiazana);
+        if (wszystkie) {
+          await q(`UPDATE Term_Sprawy SET dane_json = ?, stan = 'rozwiazana', rozwiazal = ?, rozwiazano = NOW(), wynik = 'Wszystkie dotknięte wizyty obsłużone', zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [JSON.stringify(dane), imie, tenant, id]);
+        } else {
+          await q(`UPDATE Term_Sprawy SET dane_json = ?, zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [JSON.stringify(dane), tenant, id]);
+        }
+        await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'obsluzono_pozycje', ?)`, [tenant, id, imie, `Wizyta EST-${String(rezId).padStart(4, '0')} obsłużona${wszystkie ? ' — cała sprawa zamknięta' : ''}`]);
+        return { status: 'success' };
+      }
+      case 'trm_sprawy_przeczytane': {
+        if (!imie) return { status: 'success', oznaczono: 0 };
+        const ids = Array.isArray(d.ids) ? d.ids.map(Number).filter(Boolean) : (d.id ? [Number(d.id)] : []);
+        for (const id of ids.slice(0, 200)) await q(`INSERT IGNORE INTO Term_Sprawy_Odczyt (tenant_id, sprawa_id, pracownik) VALUES (?, ?, ?)`, [tenant, id, imie]);
+        return { status: 'success', oznaczono: ids.length };
+      }
       default:
         throw new BladUzytkownika('Nieznana akcja terminarza: ' + action);
     }
   }
 
+  // ─── Centrum powiadomień: eskalacja czasowa + zdarzenia bez pojedynczego wyzwalacza (E13/E19) ───
+  // Ten sam wzorzec co w routes/lojalnosc.js (tickHarmonogramu): co 60 s, własny try/catch,
+  // nie startuje w testach. Baza wspólna dla dev+prod — UPDATE z warunkiem w WHERE jest atomowym claimem.
+  async function tickSprawy() {
+    try {
+      const kandydaciEskalacji = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje') AND powiazany_czas IS NOT NULL AND powiazany_czas <= DATE_ADD(NOW(), INTERVAL 120 MINUTE) LIMIT 100`).catch(() => []);
+      for (const s of (kandydaciEskalacji || [])) {
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch(() => null);
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — zbliża się powiązany termin' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+      }
+      const bezWyniku = await q(`SELECT p.id AS pozycja_id, p.rezerwacja_id, p.tenant_id, p.pracownik, p.kategoria, p.wariant, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec, r.klient_nazwa
+        FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.id = p.rezerwacja_id AND r.tenant_id = p.tenant_id
+        WHERE p.stan IN ('zaplanowana', 'w_trakcie') AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla') AND p.koniec <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
+        LIMIT 200`).catch(() => []);
+      for (const poz of (bezWyniku || [])) {
+        await sprawaUpsert(poz.tenant_id, { typ: 'E13', rezerwacja_id: poz.rezerwacja_id, tytul: `Brak wyniku wizyty — ${poz.klient_nazwa}`,
+          opis: `${poz.kategoria}${poz.wariant ? ' / ' + poz.wariant : ''} — planowany koniec ${poz.koniec.slice(0, 16)}, brak potwierdzonego wykonania lub nieobecności.`,
+          dane: { pozycja_id: poz.pozycja_id, pracownik: poz.pracownik, planowany_koniec: poz.koniec, dotyczy: [poz.pracownik].filter(Boolean) },
+          priorytet: 'P1', powiazany_czas: poz.koniec, klucz: `E13:poz:${poz.pozycja_id}`, kto: null });
+      }
+      const bezPokrycia = await q(`SELECT r.id, r.tenant_id, r.klient_nazwa, DATE_FORMAT(r.koniec,'%Y-%m-%d %H:%i:%s') AS koniec
+        FROM Term_Rezerwacje r WHERE r.sprzedaz_id IS NULL AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla')
+          AND r.koniec <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
+          AND EXISTS (SELECT 1 FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.stan IN ('wykonana', 'przerwana'))
+        LIMIT 200`).catch(() => []);
+      for (const rz of (bezPokrycia || [])) {
+        const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch(() => []);
+        await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Wyjaśnij pokrycie — ${rz.klient_nazwa}`,
+          opis: `Wizyta zakończona ${rz.koniec.slice(0, 16)}, brak powiązanej sprzedaży.`,
+          dane: { pozycje: wyk, dotyczy: prIz(wyk) },
+          priorytet: 'P1', powiazany_czas: null, klucz: `E19:rez:${rz.id}`, kto: null });
+      }
+    } catch (e) { log.error('[terminarz] tickSprawy:', e.message); }
+  }
+  if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') {
+    const timerSprawy = setInterval(tickSprawy, 60 * 1000);
+    if (timerSprawy.unref) timerSprawy.unref();
+    const pierwszySprawy = setTimeout(tickSprawy, 8000);
+    if (pierwszySprawy.unref) pierwszySprawy.unref();
+  }
+
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

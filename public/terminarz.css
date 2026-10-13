@@ -151,6 +151,27 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-godz .p { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
 .trm-godz input[type=time] { width:110px; min-height:34px; padding:4px 8px; }
 
+/* ── centrum powiadomień (Sprawy) ── */
+.trm-dzwonek { position:relative; font-size:16px; padding:9px 12px; }
+.trm-dzwonek-licz { position:absolute; top:-6px; right:-6px; background:var(--t-warn-fg); color:#fff; border-radius:999px; min-width:18px; height:18px; font-size:10.5px; font-weight:700; display:flex; align-items:center; justify-content:center; padding:0 4px; }
+.trm-dzwonek-licz.pilne { background:var(--t-bad-fg); }
+.trm-tabs.sm button { padding:7px 10px; font-size:12px; }
+.trm-sprawy-lista { display:flex; flex-direction:column; gap:8px; }
+.trm-sprawa-karta { border:1px solid var(--t-line); border-left:3px solid var(--t-line); border-radius:var(--t-rs); padding:10px 12px; background:var(--t-sur); cursor:pointer; transition:border-color .15s; }
+.trm-sprawa-karta:hover { border-color:var(--t-acc); }
+.trm-sprawa-karta.bad { border-left-color:var(--t-bad-fg); }
+.trm-sprawa-karta.warn { border-left-color:var(--t-warn-fg); }
+.trm-sprawa-karta.neu { border-left-color:var(--t-line); }
+.trm-sprawa-gora { display:flex; align-items:center; gap:6px; margin-bottom:5px; }
+.trm-kropka { width:7px; height:7px; border-radius:50%; background:var(--t-acc); flex:0 0 auto; }
+.trm-sprawa-tytul { font-weight:600; font-size:13.5px; }
+.trm-sprawa-naglowek { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.trm-dotknieta { display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--t-line); border-radius:var(--t-rs); padding:8px 10px; margin-top:6px; background:var(--t-bg); font-size:12.5px; }
+.trm-dotknieta.ok { opacity:.6; }
+.trm-przedpo { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:center; text-align:center; background:var(--t-bg); border-radius:var(--t-rs); padding:10px; font-size:13px; }
+.trm-dziennik-wpis { font-size:12.5px; color:var(--t-mut); border-left:2px solid var(--t-line); padding-left:10px; margin-bottom:7px; }
+.trm-dziennik-wpis b { color:var(--t-ink); }
+
 /* ── telefon ── */
 @media (max-width: 760px) {
   .trm { padding:10px; border-radius:12px; }
