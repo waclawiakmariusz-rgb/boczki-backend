@@ -603,8 +603,8 @@
         ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn danger sm" onclick="TRM.obecnosc('nieobecny')">Nieobecna</button>` : ''}
       </div><div class="muted small" style="margin-top:6px">Nieobecność potwierdza człowiek — system jej nie zgaduje. Jednostka karnetu nie jest zużywana.</div>
       <div class="trm-row" style="margin-top:10px">
-        ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};renderSzczegoly()">Zmień termin / osobę</button>` : ''}
-        ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};renderSzczegoly()">Odwołaj / rozpatrz</button>` : ''}
+        ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Zmień termin / osobę</button>` : ''}
+        ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj / rozpatrz</button>` : ''}
       </div></div>`;
       html += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
     } else if (r.notatka && op) html += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
@@ -613,6 +613,7 @@
     panelOtworz(html);
     const k = document.querySelector(`.trm-karta[onclick*="otworzSzczegoly(${r.id})"]`); if (k) k.classList.add('akt');
   }
+  TRM.renderSzczegoly = renderSzczegoly; // inline onclick="...renderSzczegoly()" (Zmień termin/osobę, Odwołaj, Wróć) woła ją z zasięgu globalnego
   TRM.pozStan = async (pozId, stan, pytanie) => {
     let uwaga = '';
     if (pytanie) { uwaga = window.prompt(pytanie) || ''; if (!uwaga.trim()) return; }
@@ -638,7 +639,7 @@
       ${akt.map(p => { const u = usluga(p.usluga_id); const lista = (u && u.pracownicy && u.pracownicy.length) ? u.pracownicy : TRM.dane.pracownicy; return `<div class="trm-field"><label>${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</label><select onchange="TRM.zm.prac['${p.id}']=this.value||null"><option value="">Dowolna właściwa osoba</option>${lista.map(x => `<option ${(z.prac[p.id] !== undefined ? z.prac[p.id] : p.pracownik) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>`; }).join('')}
       <div class="trm-field"><label>Powód (opcjonalnie)</label><input id="trm-z-powod" placeholder="np. prośba klientki"></div>
       <div id="trm-z-wynik">${z.wynik ? podgladZmianyHtml(z.wynik) : ''}</div>
-      <div class="trm-row" style="margin-top:8px"><button class="trm-btn" onclick="TRM.zmianaSprawdz(false)">Sprawdź</button><button class="trm-btn primary" onclick="TRM.zmianaSprawdz(true)" ${z.wynik && z.wynik.status === 'success' ? '' : 'disabled'} id="trm-z-ok">Zatwierdź zmianę</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';renderSzczegoly()">Wróć</button></div></div>`;
+      <div class="trm-row" style="margin-top:8px"><button class="trm-btn" onclick="TRM.zmianaSprawdz(false)">Sprawdź</button><button class="trm-btn primary" onclick="TRM.zmianaSprawdz(true)" ${z.wynik && z.wynik.status === 'success' ? '' : 'disabled'} id="trm-z-ok">Zatwierdź zmianę</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
   }
   function podgladZmianyHtml(d) {
     const pg = d.podglad || {};
@@ -667,7 +668,7 @@
       <div class="trm-field"><label>Kto odwołuje</label><select onchange="TRM.an.kto=this.value"><option value="klient" ${a.kto === 'klient' ? 'selected' : ''}>Klientka</option><option value="salon" ${a.kto === 'salon' ? 'selected' : ''}>Salon (własna przyczyna)</option></select></div>
       <div class="trm-field"><label>Powód</label><input id="trm-a-powod" placeholder="np. klientka nie może przyjść" value="${esc(a.powod)}"></div>
       <div class="trm-note warn small"><b>Wynik przed decyzją:</b> termin zostanie zwolniony; jednostka karnetu nie jest zużyta; zadatek i ewentualna ulga za późne odwołanie rozliczane są w kartotece klientki (flaga „Odwołanie po czasie”) — terminarz nie potrąca środków sam.</div>
-      <div class="trm-row"><button class="trm-btn danger" onclick="TRM.anulujPotwierdz()">Potwierdź odwołanie</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';renderSzczegoly()">Wróć</button></div></div>`;
+      <div class="trm-row"><button class="trm-btn danger" onclick="TRM.anulujPotwierdz()">Potwierdź odwołanie</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
   }
   TRM.anulujPotwierdz = async () => {
     const r = TRM.szcz.rez, a = TRM.an; a.powod = el('trm-a-powod').value.trim();
