@@ -104,6 +104,10 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-karta.nieob .zn .st { background:var(--t-bad-bg); color:var(--t-bad-fg); }
 .trm-karta.akt { outline:2px solid var(--t-acc); }
 .trm-karta.bufor { background:repeating-linear-gradient(135deg, #f6efe8 0 5px, #ede3d8 5px 6px); border:1px dashed var(--t-line); border-left:4px solid transparent; cursor:default; color:var(--t-mut); font-size:10.5px; z-index:1; }
+.trm-karta.przeciagalna { cursor:grab; }
+.trm-karta.przeciagalna:active { cursor:grabbing; }
+.trm-karta.przeciagana { opacity:.35; }
+.trm-col.drag-nad { background-color:var(--t-acc2); outline:2px dashed var(--t-acc); outline-offset:-2px; }
 .trm-legenda { display:flex; gap:14px; flex-wrap:wrap; font-size:12px; color:var(--t-mut); margin-top:8px; }
 .trm-legenda span::before { content:''; display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:5px; vertical-align:-1px; background:var(--c); }
 .trm-week-h { display:grid; grid-template-columns:58px repeat(7, minmax(150px,1fr)); }

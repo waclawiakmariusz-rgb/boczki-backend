@@ -160,7 +160,7 @@
     if (wsz.length) { od = Math.min(od, ...wsz.map(x => x[0])); do_ = Math.max(do_, ...wsz.map(x => x[1])); }
     return { od: Math.floor(od / 60) * 60, do: Math.min(1440, Math.ceil(do_ / 60) * 60) };
   }
-  function kolumnaHtml(rezerwacje, dostepnosc, bloki, zak, klik, filtrPoz) {
+  function kolumnaHtml(rezerwacje, dostepnosc, bloki, zak, klik, filtrPoz, dragPrac) {
     const h = zak.do - zak.od;
     let s = '';
     for (let m = zak.od; m <= zak.do; m += 30) s += `<div class="hline ${m % 60 ? 'half' : ''}" style="top:${(m - zak.od) * PX}px"></div>`;
@@ -182,11 +182,14 @@
       if (r.wykonanie === 'wykonana') zn.push(r.sprzedaz_id ? '<span class="st">Rozliczona</span>' : '<span class="st">Do rozliczenia</span>'); else if (r.wykonanie === 'w_toku') zn.push('<span class="st">W trakcie</span>'); else if (r.obecnosc === 'przybyl') zn.push('<span class="st">Przybyła</span>');
       if (r.kanal === 'online' || r.kanal === 'klub') zn.push('<span>Online</span>');
       const naz = poz.map(p => p.kategoria + (p.wariant ? ' · ' + p.wariant : '')).join(' + ');
-      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''}" style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.otworzSzczegoly(${r.id})" title="${esc(r.klient_nazwa + ' — ' + naz)}">
+      const mozePrzeciagac = !!dragPrac && operacyjna() && !anul && r.wykonanie === 'zaplanowana';
+      const pozIdsCsv = poz.map(x => x.id).join(',');
+      const dragAttr = mozePrzeciagac ? `draggable="true" ondragstart="TRM.dragStart(event,${r.id},'${pozIdsCsv}','${esc(dragPrac).replace(/'/g, "\\'")}')" ondragend="TRM.dragEnd(event)"` : '';
+      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''}" ${dragAttr} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.otworzSzczegoly(${r.id})" title="${esc(r.klient_nazwa + ' — ' + naz)}${mozePrzeciagac ? ' · przeciągnij, aby zmienić termin lub osobę' : ''}">
         <div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}
       </div>`;
     });
-    return `<div class="trm-col" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
+    return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" ondragover="TRM.dragOver(event)" ondragleave="TRM.dragLeave(event)" ondrop="TRM.drop(event)" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
   }
   function kolumnaGodzin(zak) {
     let s = '';
@@ -208,6 +211,47 @@
     TRM.nowaWizyta({ start: `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`, pracownik });
   };
 
+  // ── przeciąganie kart w widoku Dzień (zmiana terminu/osoby bez otwierania formularza) ──
+  // Wywołuje dokładnie tę samą akcję trm_zmien co przycisk „Zmień termin / osobę" — żadnej nowej
+  // logiki po stronie backendu. Po zrzucie zawsze odświeżamy z serwera (sukces lub konflikt
+  // samo naprawia widok — karta wraca na miejsce, jeśli zapis się nie powiódł).
+  TRM.dragStart = (ev, rezId, pozIdsCsv, pracZrodlowy) => {
+    TRM._drag = { rezId, pozIds: pozIdsCsv.split(',').map(Number).filter(Boolean), prac: pracZrodlowy };
+    try { ev.dataTransfer.setData('text/plain', String(rezId)); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {}
+    setTimeout(() => { if (ev.target && ev.target.classList) ev.target.classList.add('przeciagana'); }, 0);
+  };
+  TRM.dragEnd = (ev) => {
+    if (ev.target && ev.target.classList) ev.target.classList.remove('przeciagana');
+    document.querySelectorAll('.trm-col.drag-nad').forEach(c => c.classList.remove('drag-nad'));
+    TRM._drag = null;
+  };
+  TRM.dragOver = (ev) => { if (!TRM._drag) return; ev.preventDefault(); ev.currentTarget.classList.add('drag-nad'); try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {} };
+  TRM.dragLeave = (ev) => { ev.currentTarget.classList.remove('drag-nad'); };
+  TRM.drop = async (ev) => {
+    ev.preventDefault();
+    const col = ev.currentTarget; col.classList.remove('drag-nad');
+    const drag = TRM._drag; TRM._drag = null;
+    if (!drag || !col.dataset.prac) return;
+    const zak = TRM._zak || { od: 480 };
+    const siatka = (TRM.dane.ustawienia.siatka_min || 15);
+    const rect = col.getBoundingClientRect();
+    let m = zak.od + Math.round((ev.clientY - rect.top) / PX); m = Math.round(m / siatka) * siatka;
+    const nowyStart = `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+    const d = TRM.dzien, rez = d && (d.rezerwacje || []).find(r => r.id === drag.rezId);
+    if (!rez) return;
+    const pracDocelowy = col.dataset.prac;
+    const body = { id: drag.rezId, wersja: rez.wersja, start: nowyStart, potwierdz: true };
+    if (pracDocelowy && pracDocelowy !== drag.prac && drag.pozIds.length) {
+      const mapa = {}; drag.pozIds.forEach(pid => { mapa[pid] = pracDocelowy; }); body.pracownicy_pozycji = mapa;
+    }
+    const wynik = await api('trm_zmien', body);
+    if (wynik.status === 'konflikt') toast('warning', 'Nie przeniesiono', wynik.message);
+    else if (wynik.status !== 'success') toast('error', 'Nie przeniesiono', wynik.message);
+    else toast('success', 'Przeniesiono wizytę', `${rez.klient_nazwa} · ${hhmm(nowyStart)}${pracDocelowy && pracDocelowy !== drag.prac ? ' · ' + pracDocelowy : ''}`);
+    await odswiez();
+    if (TRM.szcz && TRM.szcz.id === drag.rezId) await przeladujSzczegoly();
+  };
+
   // ── widok DZIEŃ / ZESPÓŁ (E01) ─────────────────────────────────────────
   function renderDzien() {
     const d = TRM.dzien, main = el('trm-main');
@@ -222,7 +266,7 @@
     }
     html += `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${prac.length}, minmax(180px,1fr))">
       <div class="trm-col-h hours"></div>${prac.map(p => { const dp = d.dostepnosc[p] || []; return `<div class="trm-col-h"><div class="name">${esc(p)}</div><div class="hrs">${dp.length ? dp.map(x => hhmm(x.od) + '–' + hhmm(x.do)).join(', ') : 'brak grafiku'}</div></div>`; }).join('')}
-      ${kolumnaGodzin(zak)}${prac.map(p => kolumnaHtml(d.rezerwacje, d.dostepnosc[p], d.nieobecnosci.filter(n => n.pracownik === p || (!n.pracownik && !n.zasob_id)), zak, `TRM.klikSiatka(event, '${esc(p).replace(/'/g, "\\'")}')`, (x) => x.pracownik === p)).join('')}
+      ${kolumnaGodzin(zak)}${prac.map(p => kolumnaHtml(d.rezerwacje, d.dostepnosc[p], d.nieobecnosci.filter(n => n.pracownik === p || (!n.pracownik && !n.zasob_id)), zak, `TRM.klikSiatka(event, '${esc(p).replace(/'/g, "\\'")}')`, (x) => x.pracownik === p, p)).join('')}
     </div></div>
     <div class="trm-legenda"><span style="--c:#fff;border:1px solid #E6DBD5">dostępność</span><span style="--c:#efe6dd">poza grafikiem / blokada</span><span style="--c:#BD9560">karta wizyty (kolor = kategoria)</span>${operacyjna() ? '<span class="muted">Kliknij wolne pole, żeby dodać wizytę</span>' : ''}</div>`;
     main.innerHTML = html;
