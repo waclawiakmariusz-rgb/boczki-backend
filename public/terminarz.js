@@ -418,13 +418,23 @@
   }
 
   // ── widok ZASOBY (E04) ────────────────────────────────────────────────
+  TRM.zasTypZmien = (t) => { TRM.zasTyp = t; renderZasoby(); };
   function renderZasoby() {
     const d = TRM.dzien, main = el('trm-main');
-    const zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano);
-    if (!zas.length) { main.innerHTML = `<div class="trm-empty"><div class="big">🏠</div><p>Brak gabinetów i urządzeń. ${manager() ? 'Dodaj je w Ustawienia → Zasoby.' : ''}</p></div>`; return; }
+    const wszystkie = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano);
+    if (!wszystkie.length) { main.innerHTML = `<div class="trm-empty"><div class="big">🏠</div><p>Brak gabinetów i urządzeń. ${manager() ? 'Dodaj je w Ustawienia → Zasoby.' : ''}</p></div>`; return; }
+    if (!TRM.zasTyp || !wszystkie.some(z => z.typ === TRM.zasTyp)) TRM.zasTyp = wszystkie.some(z => z.typ === 'gabinet') ? 'gabinet' : 'urzadzenie';
+    const zas = wszystkie.filter(z => z.typ === TRM.zasTyp);
     const zak = TRM._zak = zakresGodzin(d.salon, d.rezerwacje);
-    const html = `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${zas.length}, minmax(170px,1fr))">
-      <div class="trm-col-h hours"></div>${zas.map(z => `<div class="trm-col-h"><div class="name">${z.typ === 'gabinet' ? '🏠' : '⚙️'} ${esc(z.nazwa)}</div><div class="hrs">${z.typ === 'gabinet' ? 'gabinet' : 'urządzenie'}${z.pojemnosc > 1 ? ' · ' + z.pojemnosc + ' miejsc' : ''}</div></div>`).join('')}
+    const przelacznik = `<div class="trm-row" style="margin-bottom:10px;justify-content:space-between"><div class="fix muted small">Widok: Zasoby</div><div class="trm-segment">
+      ${['gabinet', 'urzadzenie'].map(t => `<button class="${TRM.zasTyp === t ? 'active' : ''}" onclick="TRM.zasTypZmien('${t}')">${t === 'gabinet' ? 'Gabinety' : 'Urządzenia'}</button>`).join('')}
+    </div></div>`;
+    if (!zas.length) { main.innerHTML = przelacznik + `<div class="trm-empty"><div class="big">🏠</div><p>Brak ${TRM.zasTyp === 'gabinet' ? 'gabinetów' : 'urządzeń'} tego typu.</p></div>`; return; }
+    const html = przelacznik + `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${zas.length}, minmax(170px,1fr))">
+      <div class="trm-col-h hours"></div>${zas.map(z => {
+        const serwis = (d.nieobecnosci || []).find(n => Number(n.zasob_id) === Number(z.id) && n.typ === 'serwis' && n.od <= d.teraz && n.do >= d.teraz);
+        return `<div class="trm-col-h"><div><div class="name">${z.typ === 'gabinet' ? '🏠' : '⚙️'} ${esc(z.nazwa)}</div><div class="hrs">${serwis ? pill(['Serwis do ' + hhmm(serwis.do), 'warn']) : pill(['Aktywne', 'ok'])}</div></div></div>`;
+      }).join('')}
       ${kolumnaGodzin(zak)}${zas.map(z => {
         let kol = kolumnaHtml(d.rezerwacje, d.dostepnosc_zasobow[String(z.id)], d.nieobecnosci.filter(n => Number(n.zasob_id) === Number(z.id) || (!n.pracownik && !n.zasob_id)), zak, null, (p) => Number(p.gabinet_id) === Number(z.id) || Number(p.urzadzenie_id) === Number(z.id));
         const buf = (d.zajecia || []).filter(x => x.powod === 'bufor' && String(x.klucz) === String(z.id) && x.typ_zasobu !== 'pracownik').map(x => `<div class="trm-karta bufor" style="top:${(minDnia(x.od) - zak.od) * PX}px;height:${Math.max(10, (minDnia(x.do) - minDnia(x.od)) * PX - 2)}px">sprzątanie / bufor</div>`).join('');

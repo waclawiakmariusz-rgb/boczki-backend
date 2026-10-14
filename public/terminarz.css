@@ -195,6 +195,9 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-rozlicz-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:9000; background:#302720; color:#fff; border-radius:999px; padding:10px 16px; display:flex; gap:10px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.25); font-size:13px; max-width:calc(100vw - 32px); }
 .trm-rozlicz-bar button { border:none; border-radius:999px; padding:7px 12px; background:#8D2947; color:#fff; font-weight:600; }
 .trm-rozlicz-bar button.sec { background:transparent; border:1px solid rgba(255,255,255,.4); }
+.trm-segment { display:inline-flex; padding:3px; border:1px solid var(--t-line); border-radius:30px; background:var(--t-sur); }
+.trm-segment button { background:none; border:0; border-radius:26px; min-height:34px; padding:7px 18px; color:var(--t-mut); font-size:13px; }
+.trm-segment button.active { background:var(--t-acc); color:#fff; }
 
 /* ── ustawienia ── */
 .trm-tabs { display:flex; gap:4px; border-bottom:1px solid var(--t-line); margin-bottom:14px; flex-wrap:wrap; }
