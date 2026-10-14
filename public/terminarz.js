@@ -992,17 +992,35 @@
     html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
     el('trm-main').innerHTML = html;
   }
-  const godzinyHtml = (godziny, prefix) => `<div class="trm-godz">${[1, 2, 3, 4, 5, 6, 7].map(dz => { const l = godziny[dz] || []; return `<div class="d">${DNI[dz]}</div><div class="p"><input type="time" id="${prefix}-${dz}-a-od" value="${(l[0] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-a-do" value="${(l[0] || {}).do || ''}"> <span class="muted small">i</span> <input type="time" id="${prefix}-${dz}-b-od" value="${(l[1] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-b-do" value="${(l[1] || {}).do || ''}"></div>`; }).join('')}</div>`;
-  const zbierzGodziny = (prefix) => { const g = {}; for (let dz = 1; dz <= 7; dz++) { g[dz] = []; ['a', 'b'].forEach(x => { const od = el(`${prefix}-${dz}-${x}-od`).value, do_ = el(`${prefix}-${dz}-${x}-do`).value; if (od && do_ && od < do_) g[dz].push({ od, do: do_ }); }); } return g; };
+  const godzinyHtml = (godziny, prefix) => `<div class="trm-godz-lista">${[1, 2, 3, 4, 5, 6, 7].map(dz => { const l = godziny[dz] || []; const ma = l.length > 0; return `<div class="trm-dzien-wiersz">
+      <span class="trm-dzien-nazwa">${DNI[dz]}</span>
+      <label class="trm-switch"><input type="checkbox" id="${prefix}-${dz}-on" ${ma ? 'checked' : ''} onchange="TRM.godzToggle('${prefix}',${dz},this.checked)"><span></span></label>
+      <div class="trm-dz-godz" id="${prefix}-${dz}-pola" ${ma ? '' : 'hidden'}>
+        <input type="time" id="${prefix}-${dz}-a-od" value="${(l[0] || {}).od || '09:00'}"> – <input type="time" id="${prefix}-${dz}-a-do" value="${(l[0] || {}).do || '17:00'}">
+        <span class="muted small">i</span>
+        <input type="time" id="${prefix}-${dz}-b-od" value="${(l[1] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-b-do" value="${(l[1] || {}).do || ''}">
+      </div>
+      <span class="muted small" id="${prefix}-${dz}-zamk" ${ma ? 'hidden' : ''}>Zamknięte</span>
+    </div>`; }).join('')}</div>
+    <button class="trm-btn link sm" type="button" onclick="TRM.godzKopiuj('${prefix}')" style="margin-top:4px">⧉ Skopiuj poniedziałek na dni robocze (wt–pt)</button>`;
+  TRM.godzToggle = (prefix, dz, wlacz) => { const pola = el(`${prefix}-${dz}-pola`), zamk = el(`${prefix}-${dz}-zamk`); if (pola) pola.hidden = !wlacz; if (zamk) zamk.hidden = wlacz; };
+  TRM.godzKopiuj = (prefix) => {
+    const on = el(`${prefix}-1-on`).checked, aod = el(`${prefix}-1-a-od`).value, ado = el(`${prefix}-1-a-do`).value, bod = el(`${prefix}-1-b-od`).value, bdo = el(`${prefix}-1-b-do`).value;
+    [2, 3, 4, 5].forEach(dz => { el(`${prefix}-${dz}-on`).checked = on; el(`${prefix}-${dz}-a-od`).value = aod; el(`${prefix}-${dz}-a-do`).value = ado; el(`${prefix}-${dz}-b-od`).value = bod; el(`${prefix}-${dz}-b-do`).value = bdo; TRM.godzToggle(prefix, dz, on); });
+    toast('success', 'Skopiowano godziny poniedziałku na wtorek–piątek');
+  };
+  const zbierzGodziny = (prefix) => { const g = {}; for (let dz = 1; dz <= 7; dz++) { g[dz] = []; const on = el(`${prefix}-${dz}-on`); if (on && !on.checked) continue; ['a', 'b'].forEach(x => { const odEl = el(`${prefix}-${dz}-${x}-od`), doEl = el(`${prefix}-${dz}-${x}-do`); if (!odEl || !doEl) return; const od = odEl.value, do_ = doEl.value; if (od && do_ && od < do_) g[dz].push({ od, do: do_ }); }); } return g; };
   function ustOgolne() {
     const u = TRM.dane.ustawienia;
-    return `<div class="trm-card"><h3>Godziny otwarcia salonu</h3><div class="muted small" style="margin-bottom:10px">Otwarcie drzwi nie oznacza pracy konkretnej osoby — dostępność wynika z grafiku pracownika. Gabinety i urządzenia są dostępne w godzinach salonu.</div>${godzinyHtml(u.godziny, 'trm-g')}</div>
-    <div class="trm-card"><h3>Zasady</h3><div class="trm-grid2">
-      <div class="trm-field"><label>Siatka kalendarza</label><select id="trm-u-siatka">${[5, 10, 15, 30].map(x => `<option value="${x}" ${u.siatka_min === x ? 'selected' : ''}>${x} min</option>`).join('')}</select></div>
-      <div class="trm-field"><label>Tolerancja spóźnienia (tylko sugestia)</label><input type="number" id="trm-u-tol" min="0" max="30" value="${u.tolerancja_min}"></div>
-      <div class="trm-field"><label>Tryb pracy</label><select id="trm-u-tryb"><option value="wewnetrzny" selected>Terminarz wyłącznie wewnętrzny</option><option value="online" disabled>Główny terminarz z rezerwacjami online (etap B)</option><option value="obok" disabled>Praca obok zewnętrznego kalendarza (etap B)</option></select></div>
-      <div class="trm-field"><label>Horyzont planowania (dni)</label><input type="number" id="trm-u-hor" min="7" max="365" value="${u.horyzont_dni}"></div>
-    </div><button class="trm-btn primary" onclick="TRM.ustZapiszOgolne()">Zapisz ustawienia</button></div>`;
+    return `<div class="trm-grid2">
+      <div class="trm-card"><h3>Godziny otwarcia salonu</h3><div class="muted small" style="margin-bottom:10px">Otwarcie drzwi nie oznacza pracy konkretnej osoby — dostępność wynika z grafiku pracownika. Gabinety i urządzenia są dostępne w godzinach salonu.</div>${godzinyHtml(u.godziny, 'trm-g')}</div>
+      <div class="trm-card"><h3>Zasady umawiania</h3>
+        <div class="trm-field"><label>Krok przesuwania wizyt</label><select id="trm-u-siatka">${[5, 10, 15, 30].map(x => `<option value="${x}" ${u.siatka_min === x ? 'selected' : ''}>${x} minut</option>`).join('')}</select><div class="muted small" style="margin-top:3px">O jaką wartość przesuwać wizyty na grafiku.</div></div>
+        <div class="trm-field" style="margin-top:10px"><label>Planowanie z wyprzedzeniem</label><input type="number" id="trm-u-hor" min="7" max="365" value="${u.horyzont_dni}"><div class="muted small" style="margin-top:3px">Na ile dni do przodu można umawiać wizyty.</div></div>
+        <div class="trm-field" style="margin-top:10px"><label>Przypomnienie o spóźnieniu</label><input type="number" id="trm-u-tol" min="0" max="30" value="${u.tolerancja_min}"><div class="muted small" style="margin-top:3px">Po tym czasie przypomnienie jest tylko sugestią dla recepcji.</div></div>
+        <div class="trm-field" style="margin-top:10px"><label>Tryb pracy</label><select id="trm-u-tryb"><option value="wewnetrzny" selected>Terminarz wyłącznie wewnętrzny</option><option value="online" disabled>Główny terminarz z rezerwacjami online (etap B)</option><option value="obok" disabled>Praca obok zewnętrznego kalendarza (etap B)</option></select></div>
+      </div>
+    </div><button class="trm-btn primary" style="margin-top:12px" onclick="TRM.ustZapiszOgolne()">Zapisz ustawienia</button>`;
   }
   TRM.ustZapiszOgolne = async () => {
     const d = await api('trm_ustawienia_zapisz', { godziny: zbierzGodziny('trm-g'), siatka_min: Number(el('trm-u-siatka').value), tolerancja_min: Number(el('trm-u-tol').value), horyzont_dni: Number(el('trm-u-hor').value), tryb: el('trm-u-tryb').value });
