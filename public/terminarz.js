@@ -1047,39 +1047,78 @@
     TRM.dane.zespol = d.zespol; TRM.dane.pracownicy = d.pracownicy;
     toast('success', wartosc ? 'Wykonuje zabiegi' : 'Tylko recepcja', kto); renderUstawienia();
   };
-  function ustUslugi() {
+  function uslugaDetalHtml(u) {
     const zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano), gab = zas.filter(z => z.typ === 'gabinet'), urz = zas.filter(z => z.typ === 'urzadzenie');
     const prac = TRM.dane.pracownicy;
-    return `<div class="trm-note info small">Każda usługa z cennika, którą chcesz umawiać, potrzebuje <b>czasu trwania</b>. Bufor to przygotowanie/sprzątanie liczone dla wskazanych zasobów (nie zjada czasu klientki). Pusta lista pracowników = wszyscy mogą wykonywać. Zmiana definicji nie przestawia istniejących wizyt.</div>
-    <div class="trm-card" style="overflow:auto"><table class="trm-table"><thead><tr><th>Usługa</th><th>Czas (min)</th><th>Bufor przed</th><th>Bufor po</th><th>Bufor dotyczy</th><th>Gabinet</th><th>Urządzenia (pula)</th><th>Kto wykonuje</th><th>W terminarzu</th><th></th></tr></thead><tbody>
-    ${TRM.dane.uslugi.map((u, i) => `<tr id="trm-us-${i}" style="${u.skonfigurowana ? '' : 'background:var(--t-warn-bg)'}">
-      <td><b>${esc(u.kategoria)}</b>${u.wariant ? '<br><span class="muted small">' + esc(u.wariant) + '</span>' : ''}${u.cena != null ? '<br><span class="muted small">' + zl(u.cena) + '</span>' : ''}</td>
-      <td><input type="number" class="czas" min="5" max="480" step="5" value="${u.czas_min || ''}" style="width:80px" placeholder="np. 40"></td>
-      <td><input type="number" class="bp" min="0" max="120" value="${u.bufor_przed_min}" style="width:70px"></td>
-      <td><input type="number" class="ba" min="0" max="120" value="${u.bufor_po_min}" style="width:70px"></td>
-      <td><select class="bd" style="width:120px">${[['oba', 'osoba + gabinet/sprzęt'], ['pracownik', 'tylko osoba'], ['gabinet', 'tylko gabinet/sprzęt'], ['brak', 'brak']].map(([k, n]) => `<option value="${k}" ${u.bufor_dotyczy === k ? 'selected' : ''}>${n}</option>`).join('')}</select></td>
-      <td><label style="text-transform:none;letter-spacing:0;font-size:12px"><input type="checkbox" class="wg" ${u.wymaga_gabinet ? 'checked' : ''} style="width:auto;min-height:0"> wymaga</label>${gab.length ? `<div class="trm-chips" style="margin-top:4px">${gab.map(g => `<span class="trm-chip gab ${u.gabinety && u.gabinety.map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">żaden zaznaczony = dowolny</div>` : '<div class="muted small">brak gabinetów</div>'}</td>
-      <td>${urz.length ? `<div class="trm-chips">${urz.map(g => `<span class="trm-chip urz ${(u.urzadzenia || []).map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">zaznacz zgodne jednostki</div>` : '<div class="muted small">brak urządzeń</div>'}</td>
-      <td><div class="trm-chips">${prac.map(p => `<span class="trm-chip pr ${u.pracownicy && u.pracownicy.includes(p) ? 'on' : ''}" data-id="${esc(p)}" onclick="this.classList.toggle('on')">${esc(p)}</span>`).join('')}</div></td>
-      <td><input type="checkbox" class="akt" ${u.aktywna ? 'checked' : ''} style="width:auto;min-height:0"></td>
-      <td><button class="trm-btn sm primary" onclick="TRM.ustZapiszUsluge(${i})">Zapisz</button></td></tr>`).join('')}
-    </tbody></table></div>`;
+    return `<div class="trm-row" style="justify-content:space-between;align-items:flex-start">
+      <div><h3 style="margin:0">${esc(nazwaUslugi(u))}</h3>${u.cena != null ? `<div class="muted small">${zl(u.cena)}</div>` : ''}</div>
+      <label class="trm-switch" title="Można umawiać"><input type="checkbox" id="trm-us-akt" ${u.aktywna ? 'checked' : ''}><span></span></label>
+    </div>
+    <div class="trm-grid2" style="margin-top:12px">
+      <div class="trm-field"><label>Czas zabiegu (min)</label><input type="number" id="trm-us-czas" min="5" max="480" step="5" value="${u.czas_min || ''}" placeholder="np. 40"></div>
+      <div class="trm-field"><label>Bufor przed (min)</label><input type="number" id="trm-us-bp" min="0" max="120" value="${u.bufor_przed_min}"></div>
+      <div class="trm-field"><label>Bufor po (min)</label><input type="number" id="trm-us-ba" min="0" max="120" value="${u.bufor_po_min}"></div>
+      <div class="trm-field"><label>Bufor dotyczy</label><select id="trm-us-bd">${[['oba', 'osoba + gabinet/sprzęt'], ['pracownik', 'tylko osoba'], ['gabinet', 'tylko gabinet/sprzęt'], ['brak', 'brak']].map(([k, n]) => `<option value="${k}" ${u.bufor_dotyczy === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+    </div>
+    <div class="trm-field" style="margin-top:10px"><label>Kto wykonuje zabieg?</label><div class="trm-chips">${prac.length ? prac.map(p => `<span class="trm-chip pr ${u.pracownicy && u.pracownicy.includes(p) ? 'on' : ''}" data-id="${esc(p)}" onclick="this.classList.toggle('on')">${esc(p)}</span>`).join('') : '<span class="muted small">brak pracowników</span>'}</div><div class="muted small" style="margin-top:4px">żaden zaznaczony = dowolna osoba</div></div>
+    <div class="trm-field" style="margin-top:10px"><label style="text-transform:none;letter-spacing:0"><input type="checkbox" id="trm-us-wg" ${u.wymaga_gabinet ? 'checked' : ''} style="width:auto;min-height:0;margin-right:6px">Wymaga gabinetu</label>
+      ${gab.length ? `<div class="trm-chips" style="margin-top:6px">${gab.map(g => `<span class="trm-chip gab ${u.gabinety && u.gabinety.map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">żaden zaznaczony = dowolny</div>` : '<div class="muted small">brak gabinetów</div>'}
+    </div>
+    <div class="trm-field" style="margin-top:10px"><label>Urządzenie (pula)</label>${urz.length ? `<div class="trm-chips">${urz.map(g => `<span class="trm-chip urz ${(u.urzadzenia || []).map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">zaznacz zgodne jednostki</div>` : '<div class="muted small">brak urządzeń</div>'}</div>
+    <button class="trm-btn primary" style="margin-top:14px" onclick="TRM.ustZapiszUsluge('${esc(u.id)}')">Zapisz zmiany</button>`;
   }
-  TRM.ustZapiszUsluge = async (i) => {
-    const u = TRM.dane.uslugi[i], tr = el('trm-us-' + i);
-    const chips = (kl) => [...tr.querySelectorAll('.trm-chip.' + kl + '.on')].map(c => c.dataset.id);
-    const d = await api('trm_usluga_zapisz', { usluga_id: u.id, czas_min: tr.querySelector('.czas').value || null, bufor_przed_min: tr.querySelector('.bp').value, bufor_po_min: tr.querySelector('.ba').value, bufor_dotyczy: tr.querySelector('.bd').value, wymaga_gabinet: tr.querySelector('.wg').checked, gabinety: chips('gab'), urzadzenia: chips('urz'), pracownicy: chips('pr'), aktywna: tr.querySelector('.akt').checked });
+  function ustUslugi() {
+    const wszystkie = TRM.dane.uslugi;
+    const gotowe = wszystkie.filter(u => u.skonfigurowana).length, doUst = wszystkie.length - gotowe;
+    const zak = TRM.ust.uslZakladka || 'wszystkie';
+    const fr = (TRM.ust.uslFiltr || '').toLowerCase();
+    const lista = wszystkie.filter(u => (zak === 'gotowe' ? u.skonfigurowana : zak === 'do_ustawienia' ? !u.skonfigurowana : true) && (!fr || nazwaUslugi(u).toLowerCase().includes(fr)));
+    if (TRM.ust.uslWybrana == null || !wszystkie.some(u => u.id === TRM.ust.uslWybrana)) TRM.ust.uslWybrana = lista[0] ? lista[0].id : null;
+    const wyb = wszystkie.find(u => u.id === TRM.ust.uslWybrana);
+    return `<div class="trm-note info small">Każda usługa z cennika, którą chcesz umawiać, potrzebuje <b>czasu trwania</b>. Bufor to przygotowanie/sprzątanie liczone dla wskazanych zasobów (nie zjada czasu klientki). Pusta lista pracowników = wszyscy mogą wykonywać. Zmiana definicji nie przestawia istniejących wizyt.</div>
+    <div class="trm-grid2">
+      <div class="trm-card">
+        <h3>Usługi w terminarzu</h3>
+        <input placeholder="Szukaj zabiegu…" value="${esc(TRM.ust.uslFiltr || '')}" oninput="TRM.ust.uslFiltr=this.value;TRM.widokZmien('ustawienia')" style="margin-bottom:8px">
+        <div class="trm-segment" style="width:100%;margin-bottom:10px">
+          <button type="button" style="flex:1" class="${zak === 'gotowe' ? 'active' : ''}" onclick="TRM.ust.uslZakladka='gotowe';TRM.widokZmien('ustawienia')">Gotowe ${gotowe}</button>
+          <button type="button" style="flex:1" class="${zak === 'do_ustawienia' ? 'active' : ''}" onclick="TRM.ust.uslZakladka='do_ustawienia';TRM.widokZmien('ustawienia')">Do ustawienia ${doUst}</button>
+        </div>
+        <div style="max-height:520px;overflow:auto">${lista.length ? lista.map(u => `<div class="trm-usl-wiersz ${u.id === TRM.ust.uslWybrana ? 'wybrana' : ''}" onclick="TRM.ust.uslWybrana='${esc(u.id)}';TRM.widokZmien('ustawienia')">
+          <span class="trm-usl-kropka" style="background:${kolorKat(u)}"></span>
+          <div><b>${esc(nazwaUslugi(u))}</b><div class="muted small">${u.skonfigurowana ? u.czas_min + ' min' : 'brak czasu trwania'}</div></div>
+          <span class="trm-usl-strzalka">›</span>
+        </div>`).join('') : '<div class="muted small" style="padding:8px 0">Brak usług.</div>'}</div>
+      </div>
+      <div class="trm-card">${wyb ? uslugaDetalHtml(wyb) : '<div class="trm-empty"><p>Wybierz zabieg, aby ustawić jego umawianie.</p></div>'}</div>
+    </div>`;
+  }
+  TRM.ustZapiszUsluge = async (uslugaId) => {
+    const u = TRM.dane.uslugi.find(x => x.id === uslugaId); if (!u) return;
+    const chips = (kl) => [...document.querySelectorAll('.trm-chip.' + kl + '.on')].map(c => c.dataset.id);
+    const d = await api('trm_usluga_zapisz', { usluga_id: u.id, czas_min: el('trm-us-czas').value || null, bufor_przed_min: el('trm-us-bp').value, bufor_po_min: el('trm-us-ba').value, bufor_dotyczy: el('trm-us-bd').value, wymaga_gabinet: el('trm-us-wg').checked, gabinety: chips('gab'), urzadzenia: chips('urz'), pracownicy: chips('pr'), aktywna: el('trm-us-akt').checked });
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
     TRM.dane.uslugi = d.uslugi; toast('success', 'Zapisano usługę', nazwaUslugi(u)); renderUstawienia();
   };
+  function zasobKartaHtml(x) {
+    return `<div class="trm-zasob-karta">
+      <span class="trm-zasob-ikona">${x.typ === 'gabinet' ? '🚪' : '⚙️'}</span>
+      <div class="trm-zasob-info"><b>${esc(x.nazwa)}</b><div class="muted small">${x.pojemnosc} ${x.pojemnosc === 1 ? 'wizyta jednocześnie' : 'wizyty jednocześnie'}</div></div>
+      ${x.zarchiwizowano ? pill(['Zarchiwizowany', 'neu']) : pill(['Aktywny', 'ok'])}
+      ${!x.zarchiwizowano ? `<button class="trm-btn sm fix" onclick="TRM.ustArchiwizuj(${x.id}, false)">Archiwizuj</button>` : ''}
+    </div>`;
+  }
   function ustZasoby() {
     const z = TRM.dane.zasoby;
-    const lista = (typ) => z.filter(x => x.typ === typ).map(x => `<tr><td>${x.zarchiwizowano ? '<span class="muted">' + esc(x.nazwa) + ' (archiwum)</span>' : '<b>' + esc(x.nazwa) + '</b>'}</td><td>${x.pojemnosc}</td><td>${x.zarchiwizowano ? '' : `<button class="trm-btn sm" onclick="TRM.ustArchiwizuj(${x.id}, false)">Archiwizuj</button>`}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">brak</td></tr>';
+    const lista = (typ) => { const l = z.filter(x => x.typ === typ); return l.length ? l.map(zasobKartaHtml).join('') : '<div class="muted small" style="padding:8px 0">brak</div>'; };
     return `<div class="trm-note info small">Gabinet i urządzenie to konkretne zasoby o pojemności 1 (chyba że podasz inną). Dwa identyczne urządzenia = dwa osobne wpisy („Infinity 1”, „Infinity 2”), żeby dwie klientki mogły mieć je równolegle, a trzecia nie.</div>
-    <div class="trm-grid2"><div class="trm-card"><h3>🏠 Gabinety</h3><table class="trm-table"><thead><tr><th>Nazwa</th><th>Miejsc</th><th></th></tr></thead><tbody>${lista('gabinet')}</tbody></table></div>
-    <div class="trm-card"><h3>⚙️ Urządzenia</h3><table class="trm-table"><thead><tr><th>Nazwa</th><th>Szt.</th><th></th></tr></thead><tbody>${lista('urzadzenie')}</tbody></table></div></div>
-    <div class="trm-card" style="margin-top:12px"><h3>Dodaj zasób</h3><div class="trm-row"><select id="trm-zs-typ" style="width:auto"><option value="gabinet">Gabinet</option><option value="urzadzenie">Urządzenie</option></select><input id="trm-zs-nazwa" placeholder="np. Gabinet 1 albo Infinity 1"><input type="number" id="trm-zs-poj" value="1" min="1" max="50" style="width:90px" title="Pojemność"><button class="trm-btn primary fix" onclick="TRM.ustDodajZasob()">Dodaj</button></div></div>`;
+    <div class="trm-grid2">
+      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Gabinety</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('gabinet')">+ Dodaj gabinet</button></div>${lista('gabinet')}</div>
+      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Urządzenia</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('urzadzenie')">+ Dodaj urządzenie</button></div>${lista('urzadzenie')}</div>
+    </div>
+    <div class="trm-card" style="margin-top:12px" id="trm-zs-dodaj"><h3>Dodaj zasób</h3><div class="trm-row"><select id="trm-zs-typ" style="width:auto"><option value="gabinet">Gabinet</option><option value="urzadzenie">Urządzenie</option></select><input id="trm-zs-nazwa" placeholder="np. Gabinet 1 albo Infinity 1"><input type="number" id="trm-zs-poj" value="1" min="1" max="50" style="width:90px" title="Pojemność"><button class="trm-btn primary fix" onclick="TRM.ustDodajZasob()">Dodaj</button></div></div>`;
   }
+  TRM.ustFokusDodaj = (typ) => { const sel = el('trm-zs-typ'); if (sel) sel.value = typ; const form = el('trm-zs-dodaj'); if (form) form.scrollIntoView({ block: 'center' }); const nazwa = el('trm-zs-nazwa'); if (nazwa) nazwa.focus(); };
   TRM.ustDodajZasob = async () => { const d = await api('trm_zasob_zapisz', { typ: el('trm-zs-typ').value, nazwa: el('trm-zs-nazwa').value, pojemnosc: el('trm-zs-poj').value }); if (d.status !== 'success') return toast('error', 'Nie dodano', d.message); TRM.dane.zasoby = d.zasoby; toast('success', 'Dodano zasób'); renderUstawienia(); };
   TRM.ustArchiwizuj = async (id, wymus) => {
     const d = await api('trm_zasob_archiwizuj', { id, wymus });
@@ -1105,23 +1144,43 @@
     TRM.dane.grafik = d.grafik; toast('success', 'Zapisano grafik', TRM.ust.prac); renderUstawienia();
   };
   TRM.ustGrafikZSalonu = async () => { const d = await api('trm_grafik_z_godzin_salonu', {}); if (d.status !== 'success') return toast('error', 'Nie skopiowano', d.message); TRM.dane.grafik = d.grafik; toast('success', 'Grafik uzupełniony z godzin salonu'); renderUstawienia(); };
+  function nieobPodgladHtml() {
+    const stan = TRM.ust.nieobPodglad;
+    if (!stan) return `<div class="trm-card muted small" style="display:flex;align-items:center;justify-content:center;min-height:140px;text-align:center">Wypełnij formularz i kliknij „Zapisz blokadę i sprawdź wizyty”.</div>`;
+    const dot = stan.dotkniete || [];
+    return `<div class="trm-card" style="border-color:var(--t-warn-fg);background:var(--t-warn-bg)"><h3>⚠ Ta blokada dotknie ${dot.length} ${dot.length === 1 ? 'wizyty' : 'wizyt'}</h3>
+      <div class="muted small" style="margin-bottom:8px">${esc(stan.message || '')}</div>
+      ${dot.slice(0, 10).map(x => `<div class="trm-dotknieta"><div><b>${esc(x.klient_nazwa || 'wizyta')}</b><br><span class="muted small">${esc(x.kategoria || '')} · ${esc((x.start || '').slice(0, 16))} · ${esc(x.pracownik || '')}</span></div></div>`).join('')}
+      <div class="muted small" style="margin-top:8px">Wizyty pozostaną w kalendarzu. Po zapisaniu wybierzesz dla nich rozwiązanie.</div>
+      <div class="trm-row" style="margin-top:10px"><button class="trm-btn danger fix" onclick="TRM.ustDodajNieob(true)">Zapisz mimo to</button><button class="trm-btn fix" onclick="TRM.ust.nieobPodglad=null;TRM.widokZmien('ustawienia')">Anuluj</button></div>
+    </div>`;
+  }
   function ustNieob() {
     const n = TRM.dane.nieobecnosci || [], zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano);
+    const gab = zas.filter(z => z.typ === 'gabinet'), urz = zas.filter(z => z.typ === 'urzadzenie');
+    const dot = TRM.ust.nieobDotyczy || 'pracownik';
     return `<div class="trm-note info small">Urlop, choroba, szkolenie, przerwa, serwis urządzenia albo zamknięcie salonu. Publicznie zawsze tylko „Niedostępne”. Zapis nie odwołuje wizyt — pokaże, które wymagają decyzji.</div>
-    <div class="trm-card"><h3>Dodaj nieobecność / blokadę</h3><div class="trm-grid2">
-      <div class="trm-field"><label>Kogo / czego dotyczy</label><select id="trm-nb-kogo"><option value="">Cały salon</option>${TRM.dane.pracownicy.map(p => `<option value="p:${esc(p)}">${esc(p)}</option>`).join('')}${zas.map(z => `<option value="z:${z.id}">${z.typ === 'gabinet' ? '🏠' : '⚙️'} ${esc(z.nazwa)}</option>`).join('')}</select></div>
-      <div class="trm-field"><label>Typ</label><select id="trm-nb-typ">${[['urlop', 'Urlop'], ['choroba', 'Choroba'], ['szkolenie', 'Szkolenie'], ['przerwa', 'Przerwa'], ['serwis', 'Serwis / awaria'], ['zamkniete', 'Salon zamknięty'], ['inne', 'Inne']].map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-      <div class="trm-field"><label>Od</label><input type="datetime-local" id="trm-nb-od" value="${TRM.data}T09:00"></div>
-      <div class="trm-field"><label>Do</label><input type="datetime-local" id="trm-nb-do" value="${TRM.data}T17:00"></div>
-    </div><div class="trm-field"><label>Opis wewnętrzny (niepubliczny)</label><input id="trm-nb-opis" placeholder="np. serwis Infinity 1"></div>
-    <button class="trm-btn primary" onclick="TRM.ustDodajNieob(false)">Zapisz blokadę</button></div>
+    <div class="trm-grid2">
+      <div class="trm-card"><h3>Nowa blokada</h3>
+        <div class="trm-field"><label>Dotyczy</label><div class="trm-segment" style="width:100%">${[['pracownik', 'Pracownik'], ['gabinet', 'Gabinet'], ['urzadzenie', 'Urządzenie'], ['salon', 'Cały salon']].map(([k, n2]) => `<button type="button" style="flex:1" class="${dot === k ? 'active' : ''}" onclick="TRM.ust.nieobDotyczy='${k}';TRM.ust.nieobPodglad=null;TRM.widokZmien('ustawienia')">${n2}</button>`).join('')}</div></div>
+        ${dot === 'pracownik' ? `<div class="trm-field"><label>Pracownik</label><select id="trm-nb-kogo">${TRM.dane.pracownicy.map(p => `<option value="p:${esc(p)}">${esc(p)}</option>`).join('') || '<option value="">brak pracowników</option>'}</select></div>` : ''}
+        ${dot === 'gabinet' ? `<div class="trm-field"><label>Gabinet</label><select id="trm-nb-kogo">${gab.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak gabinetów</option>'}</select></div>` : ''}
+        ${dot === 'urzadzenie' ? `<div class="trm-field"><label>Urządzenie</label><select id="trm-nb-kogo">${urz.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak urządzeń</option>'}</select></div>` : ''}
+        <div class="trm-field"><label>Powód</label><select id="trm-nb-typ">${[['urlop', 'Urlop'], ['choroba', 'Choroba'], ['szkolenie', 'Szkolenie'], ['przerwa', 'Przerwa'], ['serwis', 'Serwis / awaria'], ['zamkniete', 'Salon zamknięty'], ['inne', 'Inne']].map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+        <div class="trm-grid2"><div class="trm-field"><label>Od</label><input type="datetime-local" id="trm-nb-od" value="${TRM.data}T09:00"></div><div class="trm-field"><label>Do</label><input type="datetime-local" id="trm-nb-do" value="${TRM.data}T17:00"></div></div>
+        <div class="trm-field"><label>Notatka dla zespołu (niepubliczna)</label><input id="trm-nb-opis" placeholder="np. serwis Infinity 1" maxlength="500"></div>
+        <button class="trm-btn primary" style="margin-top:8px" onclick="TRM.ustDodajNieob(false)">Zapisz blokadę i sprawdź wizyty</button>
+      </div>
+      <div id="trm-nb-podglad">${nieobPodgladHtml()}</div>
+    </div>
     <div class="trm-card" style="margin-top:12px"><h3>Zaplanowane i ostatnie</h3><table class="trm-table"><thead><tr><th>Kogo</th><th>Od</th><th>Do</th><th>Typ</th><th>Opis</th><th></th></tr></thead><tbody>${n.length ? n.map(x => `<tr><td>${x.pracownik ? esc(x.pracownik) : x.zasob_id ? esc((zasob(x.zasob_id) || {}).nazwa || 'zasób') : '<b>cały salon</b>'}</td><td>${esc(x.od.slice(0, 16))}</td><td>${esc(x.do.slice(0, 16))}</td><td>${esc(x.typ)}</td><td class="muted">${esc(x.opis || '')}</td><td><button class="trm-btn sm" onclick="TRM.ustUsunNieob(${x.id})">Usuń</button></td></tr>`).join('') : '<tr><td colspan="6" class="muted">brak</td></tr>'}</tbody></table></div>`;
   }
   TRM.ustDodajNieob = async (wymus) => {
-    const kogo = el('trm-nb-kogo').value;
+    const kogoEl = el('trm-nb-kogo'), kogo = kogoEl ? kogoEl.value : '';
     const d = await api('trm_nieobecnosc_zapisz', { pracownik_nieob: kogo.startsWith('p:') ? kogo.slice(2) : null, zasob_id: kogo.startsWith('z:') ? Number(kogo.slice(2)) : null, od: el('trm-nb-od').value.replace('T', ' '), do: el('trm-nb-do').value.replace('T', ' '), typ: el('trm-nb-typ').value, opis: el('trm-nb-opis').value, wymus });
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
-    if (d.wymaga_decyzji) { if (window.confirm(d.message + '\n\n' + d.dotkniete.slice(0, 10).map(x => `${x.start.slice(0, 16)} ${x.klient_nazwa} — ${x.kategoria} (${x.pracownik})`).join('\n') + '\n\nZapisać blokadę mimo to?')) return TRM.ustDodajNieob(true); return; }
+    if (d.wymaga_decyzji) { TRM.ust.nieobPodglad = { dotkniete: d.dotkniete, message: d.message }; renderUstawienia(); return; }
+    TRM.ust.nieobPodglad = null;
     await window.trm_odswiezDane(); toast('success', 'Zapisano blokadę', d.dotkniete && d.dotkniete.length ? `${d.dotkniete.length} wizyt do rozwiązania` : ''); renderUstawienia();
   };
   TRM.ustUsunNieob = async (id) => { if (!window.confirm('Usunąć tę blokadę? Dostępność wróci do pełnej walidacji grafiku.')) return; const d = await api('trm_nieobecnosc_usun', { id }); if (d.status !== 'success') return toast('error', 'Nie usunięto', d.message); await window.trm_odswiezDane(); renderUstawienia(); };

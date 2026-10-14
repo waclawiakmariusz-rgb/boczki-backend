@@ -209,6 +209,15 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-dzien-nazwa { width:100px; font-weight:600; font-size:13.5px; flex-shrink:0; }
 .trm-dz-godz { display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
 .trm-dz-godz input[type=time] { width:100px; min-height:38px; padding:5px 8px; }
+.trm-zasob-karta { display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--t-line); }
+.trm-zasob-karta:last-child { border-bottom:none; }
+.trm-zasob-ikona { width:40px; height:40px; border-radius:10px; background:var(--t-acc2); display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+.trm-zasob-info { flex:1; min-width:0; }
+.trm-usl-wiersz { display:flex; align-items:center; gap:10px; padding:10px; border-radius:var(--t-rs); cursor:pointer; border:1px solid transparent; }
+.trm-usl-wiersz:hover { background:var(--t-bg); }
+.trm-usl-wiersz.wybrana { background:var(--t-acc2); border-color:var(--t-acc); }
+.trm-usl-kropka { width:12px; height:12px; border-radius:50%; flex-shrink:0; }
+.trm-usl-strzalka { margin-left:auto; color:var(--t-mut); }
 
 /* ── ustawienia ── */
 .trm-tabs { display:flex; gap:4px; border-bottom:1px solid var(--t-line); margin-bottom:14px; flex-wrap:wrap; }
