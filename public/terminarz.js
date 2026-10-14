@@ -1030,9 +1030,15 @@
   function ustZespol() {
     const z = TRM.dane.zespol || [];
     if (!z.length) return '<div class="trm-note warn">Brak pracowników.</div>';
+    const uslugiOsoby = (imie) => TRM.dane.uslugi.filter(u => u.pracownicy && u.pracownicy.includes(imie));
     return `<div class="trm-note info small">Osoby, które nie wykonują zabiegów (np. tylko recepcja), nie pojawiają się w terminarzu jako wykonawcy — nie trzeba ich wyłączać z każdej usługi z osobna. To ustawienie jest niezależne od „Kto wykonuje” przy konkretnej usłudze (zakładka Usługi) — tam nadal możesz zawężać, kto robi co, wśród osób zaznaczonych tutaj.</div>
-    <div class="trm-card"><table class="trm-table"><thead><tr><th>Osoba</th><th>Wykonuje zabiegi</th></tr></thead><tbody>
-    ${z.map(p => `<tr><td><b>${esc(p.imie)}</b></td><td><label style="text-transform:none;letter-spacing:0;font-size:13px"><input type="checkbox" ${p.wykonuje_zabiegi ? 'checked' : ''} onchange="TRM.ustZmienZespol('${esc(p.imie)}', this.checked)" style="width:auto;min-height:0"> ${p.wykonuje_zabiegi ? 'tak — widoczna w terminarzu' : 'nie — tylko recepcja'}</label></td></tr>`).join('')}
+    <div class="trm-card"><table class="trm-table"><thead><tr><th>Pracownik</th><th>Wykonuje zabiegi</th><th>Przypisane usługi</th><th>Grafik</th></tr></thead><tbody>
+    ${z.map(p => { const us = uslugiOsoby(p.imie); return `<tr>
+      <td><div style="display:flex;align-items:center;gap:10px">${avatarHtml(p.imie, true)}<div><b>${esc(p.imie)}</b>${p.rola && !p.wykonuje_zabiegi ? `<div class="muted small">${esc(p.rola)}</div>` : ''}</div></div></td>
+      <td><label class="trm-switch"><input type="checkbox" ${p.wykonuje_zabiegi ? 'checked' : ''} onchange="TRM.ustZmienZespol('${esc(p.imie)}', this.checked)"><span></span></label></td>
+      <td>${!p.wykonuje_zabiegi ? '<span class="muted small">Nie wykonuje zabiegów</span>' : (us.length ? `<div class="trm-chips">${us.map(u => `<span class="trm-chip on">${esc(nazwaUslugi(u))}</span>`).join('')}</div>` : '<span class="muted small">bez ograniczeń (wszystkie usługi)</span>')}</td>
+      <td>${p.wykonuje_zabiegi ? `<button class="trm-btn link sm" onclick="TRM.ust.tab='grafik';TRM.ust.prac='${esc(p.imie).replace(/'/g, "\\'")}';TRM.widokZmien('ustawienia')">Edytuj grafik →</button>` : '<span class="muted small">—</span>'}</td>
+    </tr>`; }).join('')}
     </tbody></table></div>`;
   }
   TRM.ustZmienZespol = async (kto, wartosc) => {
