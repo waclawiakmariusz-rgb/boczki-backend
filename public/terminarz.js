@@ -774,18 +774,8 @@
     if (TRM.widok === 'ustawienia') return;
     await odswiez();
   }
-  function renderSzczegoly() {
-    const s = TRM.szcz; if (!s || !s.rez) return;
-    const r = s.rez, anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
-    const op = operacyjna();
-    const suma = r.pozycje.filter(p => p.stan !== 'anulowana').reduce((a, p) => a + (Number(p.cena) || 0), 0);
-    let html = naglowekPanelu(`${esc(r.numer)} · ${esc(r.klient_nazwa)}`, `${ladnaData(r.start.slice(0, 10))} · ${hhmm(r.start)}–${hhmm(r.koniec)}`);
-    html += `<div class="trm-row" style="margin-bottom:10px">${pill(ST_LABEL[r.status])}${anul ? '' : pill(OB_LABEL[r.obecnosc])}${anul ? '' : pill(WYK_LABEL[r.wykonanie])}${r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : ''}</div>`;
-    html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Karta klientki</button>` : ''}</div></div>`;
-    if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
-    if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
-    // pozycje
-    html += `<div class="trm-card"><h3>Usługi</h3>${r.pozycje.map(p => {
+  function wizytaKartaHtml(r, s, anul, op) {
+    let h = `<div class="trm-card"><h3>Usługi</h3>${r.pozycje.map(p => {
       const u = usluga(p.usluga_id);
       const akcje = [];
       const moge = op || (specjalista() && p.pracownik === kto());
@@ -798,15 +788,8 @@
         ${p.start_fakt ? `<div class="m">Faktycznie: ${hhmm(p.start_fakt)}${p.koniec_fakt ? '–' + hhmm(p.koniec_fakt) : ' (trwa)'}</div>` : ''}
         ${akcje.length ? `<div class="a">${akcje.join('')}</div>` : ''}</div>`;
     }).join('')}</div>`;
-    // pieniądze (tylko operacyjne role)
-    if (op) html += `<div class="trm-card"><h3>Rozliczenie</h3><div class="trm-kwota"><span>Cena usług wg cennika</span><b>${zl(suma)}</b></div><div class="trm-kwota suma"><span>${r.sprzedaz_id ? 'Sprzedaż' : 'Stan'}</span><span>${r.sprzedaz_id ? '<code>' + esc(r.sprzedaz_id) + '</code>' : (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? 'Do rozliczenia' : 'Po wykonaniu')}</span></div>
-      ${s.sprzedaz && s.sprzedaz.length ? `<div class="small muted" style="margin-top:6px">${s.sprzedaz.map(x => `${esc(x.data)} · ${esc(x.zabieg)}${x.szczegoly ? ' / ' + esc(x.szczegoly) : ''} · ${zl(x.kwota)} · ${esc(x.platnosc || '')}`).join('<br>')}</div>` : ''}
-      <div class="muted small" style="margin-top:6px">Zadatki, karnety i vouchery rozlicza istniejąca Sprzedaż — terminarz nie tworzy drugiej kasy. Wpłata ≠ wykonanie ≠ rozliczenie.</div>
-      ${!anul && !r.sprzedaz_id && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo') ? `<div class="trm-row" style="margin-top:8px"><button class="trm-btn primary" onclick="TRM.rozlicz()">Rozlicz w Sprzedaży</button>${r.rozliczenie_od ? `<button class="trm-btn" onclick="TRM.rozliczPowiaz()">Powiąż zapisaną sprzedaż</button>` : ''}</div>` : ''}
-    </div>`;
-    // obecność + akcje
     if (op && !anul) {
-      html += `<div class="trm-card"><h3>Obecność i obsługa</h3><div class="trm-row">
+      h += `<div class="trm-card"><h3>Obecność i obsługa</h3><div class="trm-row">
         ${r.obecnosc !== 'przybyl' ? `<button class="trm-btn ok sm" onclick="TRM.obecnosc('przybyl')">Klientka przybyła</button>` : ''}
         ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
         ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn danger sm" onclick="TRM.obecnosc('nieobecny')">Nieobecna</button>` : ''}
@@ -815,14 +798,42 @@
         ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Zmień termin / osobę</button>` : ''}
         ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj / rozpatrz</button>` : ''}
       </div></div>`;
-      html += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
-    } else if (r.notatka && op) html += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
-    if (anul) html += `<div class="trm-note bad">Odwołana ${esc(hhmm(r.anulowano || ''))} ${r.anulowano ? esc(r.anulowano.slice(0, 10)) : ''} przez ${r.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}${r.anulowal ? ' (' + esc(r.anulowal) + ')' : ''}: ${esc(r.powod_anulacji || '')}. Odtworzenie to nowa rezerwacja z pełną walidacją.</div>`;
-    if (op && s.historia && s.historia.length) html += `<div class="trm-card"><h3>Historia</h3><div class="trm-hist">${s.historia.map(h => `<div><b>${esc(h.kiedy.slice(5, 16))}</b> · ${esc(h.kto || 'system')} · ${esc(h.akcja)} — ${esc(h.opis || '')}</div>`).join('')}</div></div>`;
+      h += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
+    } else if (r.notatka && op) h += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
+    if (anul) h += `<div class="trm-note bad">Odwołana ${esc(hhmm(r.anulowano || ''))} ${r.anulowano ? esc(r.anulowano.slice(0, 10)) : ''} przez ${r.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}${r.anulowal ? ' (' + esc(r.anulowal) + ')' : ''}: ${esc(r.powod_anulacji || '')}. Odtworzenie to nowa rezerwacja z pełną walidacją.</div>`;
+    return h;
+  }
+  function rozliczenieHtml(r, s, suma, anul) {
+    return `<div class="trm-card"><h3>Rozliczenie</h3><div class="trm-kwota"><span>Cena usług wg cennika</span><b>${zl(suma)}</b></div><div class="trm-kwota suma"><span>${r.sprzedaz_id ? 'Sprzedaż' : 'Stan'}</span><span>${r.sprzedaz_id ? '<code>' + esc(r.sprzedaz_id) + '</code>' : (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? 'Do rozliczenia' : 'Po wykonaniu')}</span></div>
+      ${s.sprzedaz && s.sprzedaz.length ? `<div class="small muted" style="margin-top:6px">${s.sprzedaz.map(x => `${esc(x.data)} · ${esc(x.zabieg)}${x.szczegoly ? ' / ' + esc(x.szczegoly) : ''} · ${zl(x.kwota)} · ${esc(x.platnosc || '')}`).join('<br>')}</div>` : ''}
+      <div class="muted small" style="margin-top:6px">Zadatki, karnety i vouchery rozlicza istniejąca Sprzedaż — terminarz nie tworzy drugiej kasy. Wpłata ≠ wykonanie ≠ rozliczenie.</div>
+      ${!anul && !r.sprzedaz_id && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo') ? `<div class="trm-row" style="margin-top:8px"><button class="trm-btn primary" onclick="TRM.rozlicz()">Rozlicz w Sprzedaży</button>${r.rozliczenie_od ? `<button class="trm-btn" onclick="TRM.rozliczPowiaz()">Powiąż zapisaną sprzedaż</button>` : ''}</div>` : ''}
+    </div>`;
+  }
+  function historiaHtml(s) {
+    if (!s.historia || !s.historia.length) return '<div class="trm-empty"><div class="big">🗒️</div><p>Brak zdarzeń w historii tej wizyty.</p></div>';
+    return `<div class="trm-card"><h3>Historia</h3><div class="trm-hist">${s.historia.map(h => `<div><b>${esc(h.kiedy.slice(5, 16))}</b> · ${esc(h.kto || 'system')} · ${esc(h.akcja)} — ${esc(h.opis || '')}</div>`).join('')}</div></div>`;
+  }
+  function renderSzczegoly() {
+    const s = TRM.szcz; if (!s || !s.rez) return;
+    const r = s.rez, anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
+    const op = operacyjna();
+    const suma = r.pozycje.filter(p => p.stan !== 'anulowana').reduce((a, p) => a + (Number(p.cena) || 0), 0);
+    let html = naglowekPanelu(`${esc(r.numer)} · ${esc(r.klient_nazwa)}`, `${ladnaData(r.start.slice(0, 10))} · ${hhmm(r.start)}–${hhmm(r.koniec)}`);
+    html += `<div class="trm-row" style="margin-bottom:10px">${pill(ST_LABEL[r.status])}${anul ? '' : pill(OB_LABEL[r.obecnosc])}${anul ? '' : pill(WYK_LABEL[r.wykonanie])}${r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : ''}</div>`;
+    html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
+    if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
+    if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
+    const karta = op ? (s.karta || 'wizyta') : 'wizyta';
+    if (op) html += `<div class="trm-tabs">${[['wizyta', 'Wizyta'], ['rozliczenie', 'Rozliczenie'], ['historia', 'Historia']].map(([k, n]) => `<button class="${karta === k ? 'aktywny' : ''}" onclick="TRM.szczegolyTab('${k}')">${n}</button>`).join('')}</div>`;
+    if (karta === 'rozliczenie') html += rozliczenieHtml(r, s, suma, anul);
+    else if (karta === 'historia') html += historiaHtml(s);
+    else html += wizytaKartaHtml(r, s, anul, op);
     panelOtworz(html);
     const k = document.querySelector(`.trm-karta[onclick*="otworzSzczegoly(${r.id})"]`); if (k) k.classList.add('akt');
   }
   TRM.renderSzczegoly = renderSzczegoly; // inline onclick="...renderSzczegoly()" (Zmień termin/osobę, Odwołaj, Wróć) woła ją z zasięgu globalnego
+  TRM.szczegolyTab = (k) => { if (!TRM.szcz) return; TRM.szcz.karta = k; renderSzczegoly(); };
   TRM.pozStan = async (pozId, stan, pytanie) => {
     let uwaga = '';
     if (pytanie) { uwaga = window.prompt(pytanie) || ''; if (!uwaga.trim()) return; }
