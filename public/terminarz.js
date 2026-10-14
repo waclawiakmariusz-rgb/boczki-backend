@@ -455,20 +455,28 @@
   }
 
   // ── AGENDA (E03) ───────────────────────────────────────────────────────
+  const TRM_AG_HEAD = `<div class="trm-ag-head"><span>Godzina</span><span>Klientka i zabiegi</span><span>Pracownik</span><span>Status</span><span>Rozliczenie</span></div>`;
   function wierszAgendy(r) {
     const poz = r.pozycje.filter(p => p.stan !== 'anulowana');
     const u0 = usluga((poz[0] || r.pozycje[0] || {}).usluga_id);
     const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
+    const pracownicy = [...new Set(r.pozycje.map(p => p.pracownik).filter(Boolean))];
+    const prac = pracownicy.length === 1 ? `${avatarHtml(pracownicy[0], true)}<span>${esc(pracownicy[0])}</span>`
+      : pracownicy.length ? `<span class="muted small">${pracownicy.map(esc).join(', ')}</span>` : '<span class="muted small">—</span>';
+    const uslugi = r.pozycje.map(p => `${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}${pracownicy.length > 1 ? ' — ' + esc(p.pracownik) : ''}`).join(' + ');
     return `<div class="trm-ag-row" style="--kat:${kolorKat(u0)};${anul ? 'opacity:.5' : ''}" onclick="TRM.otworzSzczegoly(${r.id})">
       <div class="t">${hhmm(r.start)}–${hhmm(r.koniec)}</div>
-      <div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(r.pozycje.map(p => p.kategoria + (p.wariant ? ' · ' + p.wariant : '') + ' — ' + p.pracownik).join(' + '))}</div></div>
-      <div>${pill(ST_LABEL[r.status])} ${r.obecnosc !== 'oczekiwana' ? pill(OB_LABEL[r.obecnosc]) : ''} ${r.wykonanie !== 'zaplanowana' ? pill(WYK_LABEL[r.wykonanie]) : ''} ${r.wykonanie === 'wykonana' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : ''}</div>
+      <div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${uslugi}</div></div>
+      <div class="trm-ag-prac">${prac}</div>
+      <div class="trm-ag-status">${pill(ST_LABEL[r.status])}${r.obecnosc !== 'oczekiwana' ? pill(OB_LABEL[r.obecnosc]) : ''}${r.wykonanie !== 'zaplanowana' ? pill(WYK_LABEL[r.wykonanie]) : ''}</div>
+      <div class="trm-ag-rozl">${r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : '<span class="muted small">—</span>'}</div>
     </div>`;
   }
   function renderAgenda(od, do_) {
     const main = el('trm-main'), rez = TRM.zakres.rezerwacje;
     let html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value||null;TRM.widokZmien('agenda')" style="width:auto"><option value="">Cały zespół</option>${TRM.dane.pracownicy.map(p => `<option ${p === TRM.osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="fix muted small">${rez.length} wizyt · każda pozycja otwiera tę samą wizytę</div></div>`;
     if (!rez.length) html += `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym zakresie.</p></div>`;
+    else html += TRM_AG_HEAD;
     for (let i = 0; i < 7; i++) {
       const dz = dodajDni(od, i), rd = rez.filter(r => r.start.slice(0, 10) === dz);
       if (!rd.length) continue;
@@ -479,7 +487,7 @@
   function renderAgendaDnia() {
     const d = TRM.dzien, main = el('trm-main');
     const rez = TRM.widok === 'moj' ? d.rezerwacje.filter(r => r.pozycje.some(p => p.pracownik === kto())) : d.rezerwacje;
-    main.innerHTML = (TRM.widok === 'moj' ? `<div class="trm-note info">Mój dzień — ${esc(kto())}. Rozpoczęcie i zakończenie usługi zapisujesz w szczegółach wizyty.</div>` : '') + (rez.length ? rez.map(wierszAgendy).join('') : `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym dniu.</p></div>`);
+    main.innerHTML = (TRM.widok === 'moj' ? `<div class="trm-note info">Mój dzień — ${esc(kto())}. Rozpoczęcie i zakończenie usługi zapisujesz w szczegółach wizyty.</div>` : '') + (rez.length ? TRM_AG_HEAD + rez.map(wierszAgendy).join('') : `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym dniu.</p></div>`);
   }
 
   // ── PANEL: pokaż / schowaj ─────────────────────────────────────────────
