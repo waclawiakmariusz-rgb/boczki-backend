@@ -55,6 +55,9 @@
   const nazwaUslugi = (u) => u ? (u.kategoria + (u.wariant ? ' / ' + u.wariant : '')) : '';
   const kolorKat = (u) => (u && u.kolor && /^#[0-9a-f]{6}$/i.test(u.kolor)) ? u.kolor : '#BD9560';
   const pill = (para, extra) => para ? `<span class="trm-pill ${para[1]} ${extra || ''}">${esc(para[0])}</span>` : '';
+  const AWATAR_KOLORY = ['', 'mint', 'gold', 'blue'];
+  const awatarKolor = (nazwa) => { let h = 0; for (const ch of String(nazwa || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AWATAR_KOLORY[h % AWATAR_KOLORY.length]; };
+  const avatarHtml = (nazwa) => `<span class="trm-awatar ${awatarKolor(nazwa)}">${esc(String(nazwa || '?').trim().charAt(0).toUpperCase())}</span>`;
 
   // ── widoczność w menu (wołane po logowaniu i po przełączeniu dodatku) ─
   window.trm_aktualizujWidocznosc = function () {
@@ -104,6 +107,7 @@
       </div>
       <div class="trm-counters" id="trm-counters"></div>
       <div class="trm-body" id="trm-body"><div class="trm-main" id="trm-main"></div><aside class="trm-panel" id="trm-panel" hidden></aside></div>
+      <div class="trm-bubble-layer" id="trm-bubble-layer"></div>
     </div>`;
   }
   async function odswiezLicznikSpraw() {
@@ -184,12 +188,12 @@
       const naz = poz.map(p => p.kategoria + (p.wariant ? ' · ' + p.wariant : '')).join(' + ');
       const mozePrzeciagac = !!dragPrac && operacyjna() && !anul && r.wykonanie === 'zaplanowana';
       const pozIdsCsv = poz.map(x => x.id).join(',');
-      const dragAttr = mozePrzeciagac ? `draggable="true" ondragstart="TRM.dragStart(event,${r.id},'${pozIdsCsv}','${esc(dragPrac).replace(/'/g, "\\'")}')" ondragend="TRM.dragEnd(event)"` : '';
-      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''}" ${dragAttr} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.otworzSzczegoly(${r.id})" title="${esc(r.klient_nazwa + ' — ' + naz)}${mozePrzeciagac ? ' · przeciągnij, aby zmienić termin lub osobę' : ''}">
+      const krotka = (b - a) < 40;
+      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" title="${esc(r.klient_nazwa + ' — ' + naz)}${mozePrzeciagac ? ' · przeciągnij, aby zmienić termin lub osobę' : ''}">
         <div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}
       </div>`;
     });
-    return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" ondragover="TRM.dragOver(event)" ondragleave="TRM.dragLeave(event)" ondrop="TRM.drop(event)" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
+    return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
   }
   function kolumnaGodzin(zak) {
     let s = '';
@@ -211,46 +215,178 @@
     TRM.nowaWizyta({ start: `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`, pracownik });
   };
 
-  // ── przeciąganie kart w widoku Dzień (zmiana terminu/osoby bez otwierania formularza) ──
-  // Wywołuje dokładnie tę samą akcję trm_zmien co przycisk „Zmień termin / osobę" — żadnej nowej
-  // logiki po stronie backendu. Po zrzucie zawsze odświeżamy z serwera (sukces lub konflikt
-  // samo naprawia widok — karta wraca na miejsce, jeśli zapis się nie powiódł).
-  TRM.dragStart = (ev, rezId, pozIdsCsv, pracZrodlowy) => {
-    TRM._drag = { rezId, pozIds: pozIdsCsv.split(',').map(Number).filter(Boolean), prac: pracZrodlowy };
-    try { ev.dataTransfer.setData('text/plain', String(rezId)); ev.dataTransfer.effectAllowed = 'move'; } catch (e) {}
-    setTimeout(() => { if (ev.target && ev.target.classList) ev.target.classList.add('przeciagana'); }, 0);
+  // ── CHMURKA: krótki podgląd po najechaniu/kliknięciu karty, bez otwierania pełnego panelu ──
+  // Najazd ~240ms otwiera, przejście z karty do chmurki jej nie zamyka (tolerancja ~220ms po opuszczeniu).
+  // Kliknięcie karty przypina. Dane bierzemy z już wczytanego TRM.dzien — bez dodatkowego zapytania.
+  let trmHoverT = null, trmLeaveT = null;
+  const rezZDnia = (id) => (TRM.dzien && TRM.dzien.rezerwacje || []).find(r => r.id === id);
+  function trmPokazBuble() {
+    const layer = el('trm-bubble-layer'); if (!layer || !TRM.bubla) return;
+    const r = rezZDnia(TRM.bubla.id);
+    if (!r) { layer.innerHTML = ''; TRM.bubla = null; return; }
+    const p = r.pozycje[0] || {};
+    const rect = TRM.bubla.rect, szer = 380;
+    let left = rect.right + 14; if (left + szer > window.innerWidth - 16) left = Math.max(12, rect.left - szer - 14);
+    const top = Math.max(12, Math.min(rect.top - 80, window.innerHeight - 420));
+    const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
+    const aktywna = !anul && r.wykonanie !== 'wykonana';
+    layer.innerHTML = `<div class="trm-bubble" style="left:${left}px;top:${Math.max(12, top)}px" role="dialog" aria-label="Podgląd wizyty" tabindex="-1">
+      <div class="trm-row" style="margin-bottom:4px">${pill(ST_LABEL[r.status])}<div class="trm-spacer"></div><button class="trm-x" onclick="TRM.zamknijBuble()" title="Zamknij podgląd">✕</button></div>
+      <h4>${esc(r.klient_nazwa)}</h4>
+      <div class="muted small">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b></div>
+      <div style="margin-top:10px"><b>${esc(r.pozycje.map(x => x.kategoria + (x.wariant ? ' / ' + x.wariant : '')).join(' + '))}</b>
+        <div class="muted small">${esc(p.pracownik || '—')}${p.gabinet ? ' · ' + esc(p.gabinet) : ''}${p.urzadzenie ? ' · ' + esc(p.urzadzenie) : ''}</div>
+      </div>
+      <div class="trm-bubble-foot">
+        ${aktywna && operacyjna() && r.obecnosc !== 'przybyl' ? `<button class="trm-btn sm" onclick="TRM.bublaObecnosc('przybyl')">Przybyła</button>` : ''}
+        ${aktywna && operacyjna() && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.bublaPrzelozenie()">Przełóż</button>` : ''}
+        <button class="trm-btn sm primary" onclick="TRM.bublaSzczegoly()">Szczegóły</button>
+      </div>
+    </div>`;
+  }
+  TRM.zamknijBuble = () => { TRM.bubla = null; const l = el('trm-bubble-layer'); if (l) l.innerHTML = ''; };
+  TRM.bublaSzczegoly = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); };
+  TRM.bublaPrzelozenie = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); if (!TRM.szcz || !TRM.szcz.rez) return; TRM.szcz.tryb = 'zmiana'; TRM.zm = { start: TRM.szcz.rez.start.slice(0, 16), prac: {} }; TRM.renderSzczegoly(); };
+  TRM.bublaObecnosc = async (stan) => { const id = TRM.bubla.id; TRM.zamknijBuble(); const d = await api('trm_obecnosc', { id, obecnosc: stan }); if (d.status !== 'success') return toast('error', 'Nie udało się', d.message); toast('success', 'Zapisano'); await odswiez(); };
+  TRM.kartaKlik = (ev, id) => {
+    if (TRM._suprimKlik && Date.now() < TRM._suprimKlik) return;
+    clearTimeout(trmHoverT); clearTimeout(trmLeaveT);
+    TRM.bubla = { id, pinned: true, rect: ev.currentTarget.getBoundingClientRect() };
+    trmPokazBuble();
   };
-  TRM.dragEnd = (ev) => {
-    if (ev.target && ev.target.classList) ev.target.classList.remove('przeciagana');
-    document.querySelectorAll('.trm-col.drag-nad').forEach(c => c.classList.remove('drag-nad'));
-    TRM._drag = null;
+  function trmHoverKarta(ev) {
+    if (drag || ev.pointerType === 'touch') return;
+    const card = ev.target.closest('.trm-karta[data-rezerwacja]'); if (!card) return;
+    clearTimeout(trmLeaveT);
+    if (TRM.bubla && TRM.bubla.pinned) return;
+    clearTimeout(trmHoverT);
+    // ponowne sprawdzenie "pinned" w chwili odpalenia timera — kliknięcie mogło przypiąć chmurkę
+    // w międzyczasie (np. szybki klik tuż po najechaniu, zanim upłynęło 240ms)
+    trmHoverT = setTimeout(() => { if (drag || (TRM.bubla && TRM.bubla.pinned)) return; TRM.bubla = { id: Number(card.dataset.rezerwacja), pinned: false, rect: card.getBoundingClientRect() }; trmPokazBuble(); }, 240);
+  }
+  function trmLeaveKarta(ev) {
+    const from = ev.target.closest('.trm-karta[data-rezerwacja], .trm-bubble'); if (!from) return;
+    if (TRM.bubla && TRM.bubla.pinned) return;
+    const to = ev.relatedTarget;
+    if (to && to.closest && to.closest('.trm-bubble, .trm-karta[data-rezerwacja]')) return;
+    clearTimeout(trmHoverT); clearTimeout(trmLeaveT);
+    trmLeaveT = setTimeout(() => { if (TRM.bubla && !TRM.bubla.pinned) TRM.zamknijBuble(); }, 220);
+  }
+
+  // ── PRZECIĄGANIE kart w widoku Dzień: Pointer Events, próg 6px, podgląd celu na żywo, krok 5 minut,
+  // potwierdzenie przed zapisem. Zatwierdzenie woła dokładnie trm_zmien — tę samą akcję co panel
+  // „Zmień termin / osobę" — najpierw bez potwierdz (podgląd), potem z potwierdz:true po kliknięciu „Zatwierdź”.
+  let drag = null, dragRaf = 0;
+  TRM.pDown = (ev) => {
+    if (ev.button !== 0 || ev.pointerType === 'touch') return;
+    const card = ev.currentTarget, lane = card.closest('.trm-col'); if (!lane) return;
+    drag = { pointerId: ev.pointerId, card, lane, rezId: Number(card.dataset.rezerwacja), pozIds: (card.dataset.pozycje || '').split(',').map(Number).filter(Boolean), pracZrodlo: card.dataset.pracZrodlo, startX: ev.clientX, startY: ev.clientY, x: ev.clientX, y: ev.clientY, started: false };
   };
-  TRM.dragOver = (ev) => { if (!TRM._drag) return; ev.preventDefault(); ev.currentTarget.classList.add('drag-nad'); try { ev.dataTransfer.dropEffect = 'move'; } catch (e) {} };
-  TRM.dragLeave = (ev) => { ev.currentTarget.classList.remove('drag-nad'); };
-  TRM.drop = async (ev) => {
-    ev.preventDefault();
-    const col = ev.currentTarget; col.classList.remove('drag-nad');
-    const drag = TRM._drag; TRM._drag = null;
-    if (!drag || !col.dataset.prac) return;
-    const zak = TRM._zak || { od: 480 };
-    const siatka = (TRM.dane.ustawienia.siatka_min || 15);
-    const rect = col.getBoundingClientRect();
-    let m = zak.od + Math.round((ev.clientY - rect.top) / PX); m = Math.round(m / siatka) * siatka;
-    const nowyStart = `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
-    const d = TRM.dzien, rez = d && (d.rezerwacje || []).find(r => r.id === drag.rezId);
-    if (!rez) return;
-    const pracDocelowy = col.dataset.prac;
-    const body = { id: drag.rezId, wersja: rez.wersja, start: nowyStart, potwierdz: true };
-    if (pracDocelowy && pracDocelowy !== drag.prac && drag.pozIds.length) {
-      const mapa = {}; drag.pozIds.forEach(pid => { mapa[pid] = pracDocelowy; }); body.pracownicy_pozycji = mapa;
+  function trmDragMove(ev) {
+    if (!drag || ev.pointerId !== drag.pointerId) return;
+    drag.x = ev.clientX; drag.y = ev.clientY;
+    if (!drag.started) {
+      if (Math.hypot(drag.x - drag.startX, drag.y - drag.startY) < 6) return;
+      drag.started = true; TRM.zamknijBuble();
+      try { drag.card.setPointerCapture(ev.pointerId); } catch (e) {}
+      document.querySelectorAll('.trm').forEach(n => n.classList.add('przeciaganie'));
+      drag.card.classList.add('przeciagana');
+      drag.lanes = [...document.querySelectorAll('#trm-main .trm-col')];
+      const tip = document.createElement('div'); tip.className = 'trm-drag-tip'; tip.setAttribute('role', 'status');
+      const bl = el('trm-bubble-layer'); if (bl) bl.appendChild(tip); drag.tip = tip;
     }
-    const wynik = await api('trm_zmien', body);
-    if (wynik.status === 'konflikt') toast('warning', 'Nie przeniesiono', wynik.message);
-    else if (wynik.status !== 'success') toast('error', 'Nie przeniesiono', wynik.message);
-    else toast('success', 'Przeniesiono wizytę', `${rez.klient_nazwa} · ${hhmm(nowyStart)}${pracDocelowy && pracDocelowy !== drag.prac ? ' · ' + pracDocelowy : ''}`);
-    await odswiez();
-    if (TRM.szcz && TRM.szcz.id === drag.rezId) await przeladujSzczegoly();
+    ev.preventDefault();
+    if (!dragRaf) dragRaf = requestAnimationFrame(trmDragFrame);
+  }
+  function trmDragFrame() {
+    dragRaf = 0; if (!drag || !drag.started) return;
+    document.querySelectorAll('.trm-draft-slot').forEach(n => n.remove());
+    const laneEl = (drag.lanes || []).find(l => { const r = l.getBoundingClientRect(); return drag.x >= r.left && drag.x < r.right; });
+    if (!laneEl) { if (drag.tip) drag.tip.textContent = 'Puszczenie poza siatką anuluje zmianę.'; drag.candidate = null; return; }
+    const rect = laneEl.getBoundingClientRect(), zak = TRM._zak || { od: 480 }, krok = 5;
+    let m = zak.od + Math.round((drag.y - rect.top) / PX); m = Math.round(m / krok) * krok;
+    const rezOryg = rezZDnia(drag.rezId), trwanie = rezOryg ? (minDnia(rezOryg.koniec) - minDnia(rezOryg.start)) : 40;
+    const koniecM = m + trwanie, pracDocelowy = laneEl.dataset.prac;
+    drag.candidate = { start: `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`, pracDocelowy };
+    const slot = document.createElement('div'); slot.className = 'trm-draft-slot';
+    slot.style.top = ((m - zak.od) * PX) + 'px'; slot.style.height = Math.max(20, trwanie * PX) + 'px';
+    slot.innerHTML = `<strong>${pad(Math.floor(m / 60))}:${pad(m % 60)}–${pad(Math.floor(koniecM / 60))}:${pad(koniecM % 60)}</strong>`;
+    laneEl.appendChild(slot);
+    if (drag.tip) {
+      drag.tip.style.left = Math.max(12, Math.min(window.innerWidth - 320, drag.x + 18)) + 'px';
+      drag.tip.style.top = Math.max(12, Math.min(window.innerHeight - 90, drag.y + 18)) + 'px';
+      drag.tip.innerHTML = `<strong>${pad(Math.floor(m / 60))}:${pad(m % 60)}–${pad(Math.floor(koniecM / 60))}:${pad(koniecM % 60)} · ${esc(pracDocelowy || '')}</strong><br>Puść, aby sprawdzić zmianę`;
+    }
+  }
+  function trmDragUp(ev) {
+    if (!drag || ev.pointerId !== drag.pointerId) return;
+    const d = drag; drag = null;
+    document.querySelectorAll('.trm').forEach(n => n.classList.remove('przeciaganie'));
+    if (d.card) d.card.classList.remove('przeciagana');
+    if (d.tip) d.tip.remove();
+    document.querySelectorAll('.trm-draft-slot').forEach(n => n.remove());
+    if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
+    try { d.card.releasePointerCapture(d.pointerId); } catch (e) {}
+    if (!d.started) return;
+    TRM._suprimKlik = Date.now() + 350;
+    if (!d.candidate) return;
+    const rezOryg = rezZDnia(d.rezId); if (!rezOryg) return;
+    if (d.candidate.start === rezOryg.start && (!d.candidate.pracDocelowy || d.candidate.pracDocelowy === d.pracZrodlo)) return;
+    trmPotwierdzPrzesuniecie(d, rezOryg);
+  }
+  async function trmPotwierdzPrzesuniecie(d, rezOryg) {
+    const body = { id: d.rezId, wersja: rezOryg.wersja, start: d.candidate.start };
+    if (d.candidate.pracDocelowy && d.candidate.pracDocelowy !== d.pracZrodlo && d.pozIds.length) {
+      const mapa = {}; d.pozIds.forEach(pid => { mapa[pid] = d.candidate.pracDocelowy; }); body.pracownicy_pozycji = mapa;
+    }
+    const podglad = await api('trm_zmien', body);
+    if (podglad.status === 'konflikt') return trmPokazKonflikt(podglad, d);
+    if (podglad.status !== 'success' || !podglad.podglad) { toast('error', 'Nie udało się', podglad.message); return; }
+    trmPokazConfirmPrzesuniecia(podglad.podglad, d, body);
+  }
+  function trmPokazConfirmPrzesuniecia(podglad, d, body) {
+    const layer = el('trm-bubble-layer'); if (!layer) return;
+    const left = Math.max(12, Math.min(window.innerWidth - 332, d.x - 40)), top = Math.max(12, Math.min(window.innerHeight - 200, d.y));
+    const nowy = podglad.nowy || {};
+    layer.innerHTML = `<div class="trm-confirm-move" style="left:${left}px;top:${top}px" role="dialog" aria-label="Potwierdź przeniesienie">
+      <div class="small muted">Propozycja — nic jeszcze nie zapisano</div>
+      <div style="margin:6px 0 12px"><b>${hhmm(nowy.start)}–${hhmm(nowy.koniec)}</b>${nowy.pozycje && nowy.pozycje[0] ? ' · ' + esc(nowy.pozycje[0].pracownik || '') : ''}</div>
+      <div class="trm-row"><button class="trm-btn sm fix" onclick="TRM.anulujPrzesuniecie()">Anuluj</button><button class="trm-btn sm primary fix" onclick="TRM.zatwierdzPrzesuniecie()">Zatwierdź</button></div>
+    </div>`;
+    TRM._oczekPrzesuniecie = { body, rezId: d.rezId };
+  }
+  function trmPokazKonflikt(wynik, d) {
+    const layer = el('trm-bubble-layer'); if (!layer) return;
+    const left = Math.max(12, Math.min(window.innerWidth - 332, d.x - 40)), top = Math.max(12, Math.min(window.innerHeight - 260, d.y));
+    layer.innerHTML = `<div class="trm-confirm-move" style="left:${left}px;top:${top}px;border-color:#eab8c3" role="dialog" aria-label="Konflikt terminu">
+      <div class="trm-note bad" style="margin:0 0 10px">${esc(wynik.message || 'Ten termin nie jest dostępny.')}</div>
+      ${(wynik.alternatywy || []).length ? '<div class="small muted" style="margin-bottom:6px">Dostępne alternatywy:</div>' + wynik.alternatywy.slice(0, 3).map((alt, i) => `<div class="trm-row" style="margin-bottom:6px"><span class="small fix">${esc(ladnaData(alt.start.slice(0, 10), true))} · ${hhmm(alt.start)}–${hhmm(alt.koniec)}</span><button class="trm-btn sm fix" onclick="TRM.wybierzAlternatywePrzesuniecia(${i})">Wybierz</button></div>`).join('') : ''}
+      <button class="trm-btn sm fix" onclick="TRM.anulujPrzesuniecie()">Zamknij</button>
+    </div>`;
+    TRM._alternatywyPrzesuniecia = wynik.alternatywy || []; TRM._danePrzesuniecia = d;
+  }
+  TRM.wybierzAlternatywePrzesuniecia = (i) => {
+    const alt = (TRM._alternatywyPrzesuniecia || [])[i], d = TRM._danePrzesuniecia; if (!alt || !d) return;
+    const rezOryg = rezZDnia(d.rezId); if (!rezOryg) return;
+    d.candidate = { start: alt.start, pracDocelowy: alt.pozycje && alt.pozycje[0] ? alt.pozycje[0].pracownik : d.pracZrodlo };
+    trmPotwierdzPrzesuniecie(d, rezOryg);
   };
+  TRM.anulujPrzesuniecie = () => { TRM._oczekPrzesuniecie = null; TRM._alternatywyPrzesuniecia = null; TRM._danePrzesuniecia = null; const l = el('trm-bubble-layer'); if (l) l.innerHTML = ''; };
+  TRM.zatwierdzPrzesuniecie = async () => {
+    const pend = TRM._oczekPrzesuniecie; if (!pend) return;
+    TRM._oczekPrzesuniecie = null; const l = el('trm-bubble-layer'); if (l) l.innerHTML = '';
+    const wynik = await api('trm_zmien', { ...pend.body, potwierdz: true });
+    if (wynik.status === 'konflikt') { toast('warning', 'Termin właśnie zajęty', wynik.message); await odswiez(); return; }
+    if (wynik.status !== 'success') { toast('error', 'Nie przeniesiono', wynik.message); await odswiez(); return; }
+    toast('success', 'Przeniesiono wizytę');
+    await odswiez();
+    if (TRM.szcz && TRM.szcz.id === pend.rezId) await przeladujSzczegoly();
+  };
+  document.addEventListener('pointermove', trmDragMove);
+  document.addEventListener('pointerup', trmDragUp);
+  document.addEventListener('pointerover', trmHoverKarta);
+  document.addEventListener('pointerout', trmLeaveKarta);
+  document.addEventListener('click', (e) => { if (TRM.bubla && TRM.bubla.pinned && !e.target.closest('.trm-bubble, .trm-karta[data-rezerwacja]')) TRM.zamknijBuble(); });
 
   // ── widok DZIEŃ / ZESPÓŁ (E01) ─────────────────────────────────────────
   function renderDzien() {
@@ -265,7 +401,7 @@
       html += `<div class="trm-note warn">Nikt nie ma grafiku na ten dzień, więc nie ma dostępnych terminów. ${manager() ? 'Ustaw grafik w <b>Ustawienia → Grafik</b> (albo skopiuj godziny salonu jednym kliknięciem).' : 'Poproś managera o ustawienie grafiku.'}</div>`;
     }
     html += `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${prac.length}, minmax(180px,1fr))">
-      <div class="trm-col-h hours"></div>${prac.map(p => { const dp = d.dostepnosc[p] || []; return `<div class="trm-col-h"><div class="name">${esc(p)}</div><div class="hrs">${dp.length ? dp.map(x => hhmm(x.od) + '–' + hhmm(x.do)).join(', ') : 'brak grafiku'}</div></div>`; }).join('')}
+      <div class="trm-col-h hours"></div>${prac.map(p => { const dp = d.dostepnosc[p] || []; return `<div class="trm-col-h">${avatarHtml(p)}<div><div class="name">${esc(p)}</div><div class="hrs">${dp.length ? dp.map(x => hhmm(x.od) + '–' + hhmm(x.do)).join(', ') : 'brak grafiku'}</div></div></div>`; }).join('')}
       ${kolumnaGodzin(zak)}${prac.map(p => kolumnaHtml(d.rezerwacje, d.dostepnosc[p], d.nieobecnosci.filter(n => n.pracownik === p || (!n.pracownik && !n.zasob_id)), zak, `TRM.klikSiatka(event, '${esc(p).replace(/'/g, "\\'")}')`, (x) => x.pracownik === p, p)).join('')}
     </div></div>
     <div class="trm-legenda"><span style="--c:#fff;border:1px solid #E6DBD5">dostępność</span><span style="--c:#efe6dd">poza grafikiem / blokada</span><span style="--c:#BD9560">karta wizyty (kolor = kategoria)</span>${operacyjna() ? '<span class="muted">Kliknij wolne pole, żeby dodać wizytę</span>' : ''}</div>`;
@@ -899,7 +1035,7 @@
   document.addEventListener('keydown', (e) => {
     const sek = el('terminarz'); if (!sek || !sek.classList.contains('active')) return;
     const tag = (e.target && e.target.tagName) || ''; if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || e.target.isContentEditable) return;
-    if (e.key === 'Escape') { if (TRM.panel) { if (TRM.panel === 'nowa' && (TRM.nowa.pozycje.length || TRM.nowa.klient) && !window.confirm('Zamknąć panel? Niezapisane dane zostaną utracone.')) return; TRM.panelZamknij(); } }
+    if (e.key === 'Escape') { if (TRM.bubla) { TRM.zamknijBuble(); return; } if (TRM.panel) { if (TRM.panel === 'nowa' && (TRM.nowa.pozycje.length || TRM.nowa.klient) && !window.confirm('Zamknąć panel? Niezapisane dane zostaną utracone.')) return; TRM.panelZamknij(); } }
     else if (e.key === 'n' || e.key === 'N') { if (operacyjna()) TRM.nowaWizyta(); }
     else if (e.key === 't' || e.key === 'T') TRM.idz(0);
     else if (e.key === 'ArrowLeft') TRM.idz(-1);
