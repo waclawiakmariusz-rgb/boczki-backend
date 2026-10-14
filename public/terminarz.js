@@ -57,7 +57,14 @@
   const pill = (para, extra) => para ? `<span class="trm-pill ${para[1]} ${extra || ''}">${esc(para[0])}</span>` : '';
   const AWATAR_KOLORY = ['', 'mint', 'gold', 'blue'];
   const awatarKolor = (nazwa) => { let h = 0; for (const ch of String(nazwa || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AWATAR_KOLORY[h % AWATAR_KOLORY.length]; };
-  const avatarHtml = (nazwa) => `<span class="trm-awatar ${awatarKolor(nazwa)}">${esc(String(nazwa || '?').trim().charAt(0).toUpperCase())}</span>`;
+  const avatarHtml = (nazwa, mala) => `<span class="trm-awatar ${awatarKolor(nazwa)}${mala ? ' sm' : ''}">${esc(String(nazwa || '?').trim().charAt(0).toUpperCase())}</span>`;
+  function terminEtykieta(dt) {
+    const dzis = new Date().toISOString().slice(0, 10), jutro = dodajDni(dzis, 1);
+    const data = dt.slice(0, 10), godz = dt.slice(11, 16);
+    if (data === dzis) return `do ${godz}`;
+    if (data === jutro) return `do jutra, ${godz}`;
+    return `do ${ladnaData(data, true)}, ${godz}`;
+  }
 
   // ── widoczność w menu (wołane po logowaniu i po przełączeniu dodatku) ─
   window.trm_aktualizujWidocznosc = function () {
@@ -645,11 +652,17 @@
   }
   function kartaSprawy(sp) {
     const [plab, pcls] = PRIOR_LABEL[sp.priorytet] || ['', 'neu'];
+    const termin = sp.termin_dzialania ? terminEtykieta(sp.termin_dzialania) : null;
     const czas = (sp.powiazany_czas || sp.utworzono || '').slice(0, 16).replace(' ', ' · ');
+    const mozePrzejac = sp.priorytet !== 'P2' && !sp.wlasciciel && !['rozwiazana', 'nieaktualna'].includes(sp.stan);
     return `<div class="trm-sprawa-karta ${pcls} ${sp.przeczytane ? '' : 'nieprz'}" onclick="TRM.otworzSprawe(${sp.id})">
-      <div class="trm-sprawa-gora"><span class="trm-pill ${pcls}">${esc(plab)}</span>${!sp.przeczytane ? '<span class="trm-kropka" title="Nieprzeczytane"></span>' : ''}<span class="fix muted small">${esc(czas)}</span></div>
+      <div class="trm-sprawa-gora"><span class="trm-pill ${pcls}">${esc(termin ? `${plab} · ${termin}` : plab)}</span>${!sp.przeczytane ? '<span class="trm-kropka" title="Nieprzeczytane"></span>' : ''}${!termin ? `<span class="fix muted small">${esc(czas)}</span>` : ''}</div>
       <div class="trm-sprawa-tytul">${esc(sp.tytul)}</div>
-      ${sp.wlasciciel ? `<div class="muted small">Prowadzi: ${esc(sp.wlasciciel)}</div>` : (sp.priorytet !== 'P2' ? '<div class="muted small">Nikt jeszcze nie przejął</div>' : '')}
+      ${sp.opis ? `<div class="muted small trm-sprawa-opis">${esc(sp.opis)}</div>` : ''}
+      <div class="trm-sprawa-dol">
+        <div class="trm-sprawa-prowadzi">${sp.wlasciciel ? `${avatarHtml(sp.wlasciciel, true)}<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : (sp.priorytet !== 'P2' ? '<span class="muted small">Nikt jeszcze nie przejął</span>' : '')}</div>
+        ${mozePrzejac ? `<button class="trm-btn primary sm fix" onclick="event.stopPropagation();TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>` : ''}
+      </div>
     </div>`;
   }
   TRM.otworzSprawe = async (id) => {
