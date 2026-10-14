@@ -485,36 +485,39 @@
     if (!operacyjna()) return;
     const o = opcje || {};
     const start = o.start || `${TRM.data} ${pad(Math.max(8, new Date().getHours() + 1))}:00`;
-    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '' };
+    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, krok: 1 };
     if (o.pracownik) TRM.nowa.domyslny = o.pracownik;
     TRM.panel = 'nowa';
     renderNowa();
     setTimeout(() => { const i = el('trm-k-fraza'); if (i) i.focus(); }, 50);
   };
-  function renderNowa() {
-    const n = TRM.nowa; if (!n) return;
+  function klientWynikiHtml(wyniki) {
+    return wyniki.map((k, i) => `<button type="button" class="trm-klient-karta" onclick="TRM.nowaKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span>${k.ostrzezenie ? ' <span class="trm-pill warn">⚠</span>' : ''}</button>`).join('');
+  }
+  function sekcjaKlientHtml(n) {
+    return `<div class="trm-field"><label>Klientka</label>
+      ${n.klient ? `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`
+      : n.nowyKlient ? `<div class="trm-wybrana"><div class="trm-grid2"><div><label>Imię i nazwisko</label><input id="trm-nk-nazwa" value="${esc(n.nkNazwa || '')}"></div><div><label>Telefon</label><input id="trm-nk-tel" value="${esc(n.nkTel || '')}" inputmode="tel"></div></div>
+          <div class="trm-row" style="margin-top:8px"><button class="trm-btn primary sm fix" onclick="TRM.nowaDodajKlienta()">Dodaj do kartoteki</button><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=false;TRM.renderNowa()">Wróć do szukania</button></div>
+          <div class="muted small" style="margin-top:6px">Powstanie jeden profil w kartotece Klientów (tak jak przez „Dodaj klienta”). Zgody i dokumenty uzupełnia się w profilu.</div></div>`
+      : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
+         <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${klientWynikiHtml(n.wyniki)}</div>
+         <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=true;TRM.nowa.nkNazwa=TRM.nowa.fraza;TRM.renderNowa()">+ Dodaj nową klientkę</button><span class="muted small">Samo nazwisko nie łączy historii — sprawdź podobny profil po telefonie.</span></div>`}
+    </div>`;
+  }
+  function sekcjaUslugiHtml(n, lista) {
     const skonf = TRM.dane.uslugi.filter(u => u.skonfigurowana && u.aktywna);
-    const fr = (n.filtrUsl || '').toLowerCase();
-    const lista = TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60);
-    const html = naglowekPanelu('Nowa wizyta', 'Klient → usługi → termin → komplet zasobów → zapis') + `
-      <div class="trm-field"><label>Klientka</label>
-        ${n.klient ? `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`
-        : n.nowyKlient ? `<div class="trm-wybrana"><div class="trm-grid2"><div><label>Imię i nazwisko</label><input id="trm-nk-nazwa" value="${esc(n.nkNazwa || '')}"></div><div><label>Telefon</label><input id="trm-nk-tel" value="${esc(n.nkTel || '')}" inputmode="tel"></div></div>
-            <div class="trm-row" style="margin-top:8px"><button class="trm-btn primary sm fix" onclick="TRM.nowaDodajKlienta()">Dodaj do kartoteki</button><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=false;TRM.renderNowa()">Wróć do szukania</button></div>
-            <div class="muted small" style="margin-top:6px">Powstanie jeden profil w kartotece Klientów (tak jak przez „Dodaj klienta”). Zgody i dokumenty uzupełnia się w profilu.</div></div>`
-        : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
-           <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${n.wyniki.map((k, i) => `<div onclick="TRM.nowaKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span>${k.ostrzezenie ? ' <span class="trm-pill warn">⚠</span>' : ''}</div>`).join('')}</div>
-           <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=true;TRM.nowa.nkNazwa=TRM.nowa.fraza;TRM.renderNowa()">+ Dodaj nową klientkę</button><span class="muted small">Samo nazwisko nie łączy historii — sprawdź podobny profil po telefonie.</span></div>`}
-      </div>
-      <div class="trm-field"><label>Usługi i wykonawcy</label>
-        ${n.pozycje.map((p, i) => { const u = usluga(p.usluga_id); return `<div class="trm-wybrana"><div class="trm-row"><b>${esc(nazwaUslugi(u))}</b><span class="fix muted small">${u.cena != null ? zl(u.cena) : ''}</span><button class="trm-btn link sm fix" onclick="TRM.nowaUsunPoz(${i})">usuń</button></div>
-          <div class="r"><select onchange="TRM.nowa.pozycje[${i}].pracownik=this.value||null;TRM.nowaUniewaznij()"><option value="">Dowolna właściwa osoba</option>${(u.pracownicy && u.pracownicy.length ? u.pracownicy : TRM.dane.pracownicy).map(x => `<option ${p.pracownik === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-          <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div></div>`; }).join('')}
-        <input placeholder="Szukaj usługi w cenniku…" value="${esc(n.filtrUsl)}" oninput="TRM.nowa.filtrUsl=this.value;TRM.renderNowaUslugi()" style="margin-top:6px">
-        <div class="trm-usl-lista" id="trm-usl-lista">${listaUslugHtml(lista)}</div>
-        ${!skonf.length ? `<div class="trm-note warn small">Żadna usługa nie ma jeszcze czasu trwania. ${manager() ? 'Ustaw go w Ustawienia → Usługi.' : 'Poproś managera o konfigurację usług w terminarzu.'}</div>` : ''}
-      </div>
-      <div class="trm-grid2">
+    return `<div class="trm-field"><label>Usługi i wykonawcy</label>
+      ${n.pozycje.map((p, i) => { const u = usluga(p.usluga_id); return `<div class="trm-wybrana"><div class="trm-row"><b>${esc(nazwaUslugi(u))}</b><span class="fix muted small">${u.cena != null ? zl(u.cena) : ''}</span><button class="trm-btn link sm fix" onclick="TRM.nowaUsunPoz(${i})">usuń</button></div>
+        <div class="r"><select onchange="TRM.nowa.pozycje[${i}].pracownik=this.value||null;TRM.nowaUniewaznij()"><option value="">Dowolna właściwa osoba</option>${(u.pracownicy && u.pracownicy.length ? u.pracownicy : TRM.dane.pracownicy).map(x => `<option ${p.pracownik === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+        <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div></div>`; }).join('')}
+      <input placeholder="Szukaj usługi w cenniku…" value="${esc(n.filtrUsl)}" oninput="TRM.nowa.filtrUsl=this.value;TRM.renderNowaUslugi()" style="margin-top:6px">
+      <div class="trm-usl-lista" id="trm-usl-lista">${listaUslugHtml(lista)}</div>
+      ${!skonf.length ? `<div class="trm-note warn small">Żadna usługa nie ma jeszcze czasu trwania. ${manager() ? 'Ustaw go w Ustawienia → Usługi.' : 'Poproś managera o konfigurację usług w terminarzu.'}</div>` : ''}
+    </div>`;
+  }
+  function sekcjaTerminuHtml(n) {
+    return `<div class="trm-grid2">
         <div class="trm-field"><label>Data</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
         <div class="trm-field"><label>Godzina</label><input type="time" id="trm-n-godz" step="300" value="${n.start.slice(11, 16)}" onchange="TRM.nowaStart()"></div>
       </div>
@@ -523,18 +526,44 @@
         <div class="trm-field"><label>&nbsp;</label><button class="trm-btn" style="width:100%" onclick="TRM.nowaSzukajTerminy()">Znajdź najbliższe terminy</button></div>
       </div>
       <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value">${esc(n.notatka)}</textarea></div>
-      <div id="trm-n-wynik">${wynikHtml(n.wynik)}</div>
-      <div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaSprawdz()" ${n.pozycje.length ? '' : 'disabled'}>Sprawdź komplet</button><button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${n.pozycje.length && n.klient ? '' : 'disabled'} id="trm-n-zapisz">Zapisz wizytę</button></div>
+      <div id="trm-n-wynik">${wynikHtml(n.wynik)}</div>`;
+  }
+  function renderNowa() {
+    const n = TRM.nowa; if (!n) return;
+    const fr = (n.filtrUsl || '').toLowerCase();
+    const lista = TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60);
+    panelOtworz(n.szybka ? renderNowaSzybka(n, lista) : renderNowaKreator(n, lista));
+  }
+  function renderNowaSzybka(n, lista) {
+    return naglowekPanelu('Nowa wizyta', 'Klient → usługi → termin → komplet zasobów → zapis')
+      + sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n)
+      + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaSprawdz()" ${n.pozycje.length ? '' : 'disabled'}>Sprawdź komplet</button><button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${n.pozycje.length && n.klient ? '' : 'disabled'} id="trm-n-zapisz">Zapisz wizytę</button></div>
       <div class="muted small" style="margin-top:8px">Zapis sprawdza pracownika, gabinet i sprzęt razem. Wynik wyszukiwarki jest ofertą, nie gwarancją — przy zapisie sprawdzamy jeszcze raz.</div>`;
-    panelOtworz(html);
+  }
+  function renderNowaKreator(n, lista) {
+    const krok = Math.max(1, Math.min(3, n.krok || 1));
+    const kroki = `<div class="trm-kroki">${['Klientka', 'Usługi', 'Termin'].map((t, i) => `<div class="trm-krok-el ${i + 1 === krok ? 'aktywny' : ''}"><b>${i + 1 < krok ? '✓' : i + 1}</b>${esc(t)}</div>`).join('')}</div>`;
+    let body;
+    if (krok === 1) {
+      body = sekcjaKlientHtml(n) + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn primary" style="width:100%" onclick="TRM.nowaDalej()" ${n.klient ? '' : 'disabled'}>Dalej</button></div>`;
+    } else if (krok === 2) {
+      body = sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaWstecz()">Wstecz</button><button class="trm-btn primary fix" onclick="TRM.nowaDalej()" ${n.pozycje.length ? '' : 'disabled'}>Dalej</button></div>`;
+    } else {
+      body = sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n)
+        + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaWstecz()">Wstecz</button><button class="trm-btn fix" onclick="TRM.nowaSprawdz()" ${n.pozycje.length ? '' : 'disabled'}>Sprawdź komplet</button><button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${n.pozycje.length && n.klient ? '' : 'disabled'} id="trm-n-zapisz">Zapisz wizytę</button></div>
+        <div class="muted small" style="margin-top:8px">Zapis sprawdza pracownika, gabinet i sprzęt razem. Wynik wyszukiwarki jest ofertą, nie gwarancją — przy zapisie sprawdzamy jeszcze raz.</div>`;
+    }
+    return naglowekPanelu('Nowa wizyta', 'Klient → usługi → termin → komplet zasobów → zapis') + kroki + body;
   }
   TRM.renderNowa = renderNowa;
+  TRM.nowaDalej = () => { const n = TRM.nowa; if (!n) return; if ((n.krok || 1) === 1 && !n.klient) return; if ((n.krok || 1) === 2 && !n.pozycje.length) return; n.krok = Math.min(3, (n.krok || 1) + 1); renderNowa(); };
+  TRM.nowaWstecz = () => { const n = TRM.nowa; if (!n) return; n.krok = Math.max(1, (n.krok || 1) - 1); renderNowa(); };
   function listaUslugHtml(lista) {
-    return lista.length ? lista.map(u => `<div class="${u.skonfigurowana && u.aktywna ? '' : 'off'}" onclick="${u.skonfigurowana && u.aktywna ? `TRM.nowaDodajPoz('${esc(u.id)}')` : ''}" title="${u.skonfigurowana ? '' : 'Brak czasu trwania — skonfiguruj w Ustawieniach'}"><span>${esc(nazwaUslugi(u))}</span><span class="muted">${u.skonfigurowana ? u.czas_min + ' min' : 'brak czasu'}${u.cena != null ? ' · ' + zl(u.cena) : ''}</span></div>`).join('') : '<div class="muted" style="padding:8px 10px">Brak usług w cenniku.</div>';
+    return lista.length ? lista.map(u => `<div class="trm-usl-karta ${u.skonfigurowana && u.aktywna ? '' : 'off'}" onclick="${u.skonfigurowana && u.aktywna ? `TRM.nowaDodajPoz('${esc(u.id)}')` : ''}" title="${u.skonfigurowana ? '' : 'Brak czasu trwania — skonfiguruj w Ustawieniach'}"><span>${esc(nazwaUslugi(u))}</span><span class="muted">${u.skonfigurowana ? u.czas_min + ' min' : 'brak czasu'}${u.cena != null ? ' · ' + zl(u.cena) : ''}</span></div>`).join('') : '<div class="muted" style="padding:8px 10px">Brak usług w cenniku.</div>';
   }
   TRM.renderNowaUslugi = () => { const fr = (TRM.nowa.filtrUsl || '').toLowerCase(); const l = el('trm-usl-lista'); if (l) l.innerHTML = listaUslugHtml(TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60)); };
   let szukajT = null;
-  TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = TRM.nowa.wyniki.map((k, i) => `<div onclick="TRM.nowaKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span>${k.ostrzezenie ? ' <span class="trm-pill warn">⚠</span>' : ''}</div>`).join(''); } }, 250); };
+  TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = klientWynikiHtml(TRM.nowa.wyniki); } }, 250); };
   TRM.nowaKlient = (i) => { TRM.nowa.klient = i == null ? null : TRM.nowa.wyniki[i]; TRM.nowa.wynik = null; renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); };
   TRM.nowaDodajKlienta = async () => {
     const nazwa = (el('trm-nk-nazwa').value || '').trim(), tel = (el('trm-nk-tel').value || '').trim();

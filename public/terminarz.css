@@ -170,6 +170,22 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-usl-lista div.off { opacity:.5; cursor:not-allowed; }
 .trm-wybrana { border:1px solid var(--t-line); border-radius:var(--t-rs); padding:8px 10px; margin-top:6px; background:var(--t-bg); }
 .trm-wybrana .r { display:grid; grid-template-columns:1fr 110px 32px; gap:6px; align-items:center; margin-top:6px; }
+
+/* ── kreator "Nowa wizyta" (przycisk w nagłówku): wskaźnik kroków + karty klientki/usługi ── */
+.trm-kroki { display:flex; justify-content:space-between; margin:20px 0 6px; position:relative; }
+.trm-kroki::before { content:''; height:1px; background:#e8c9d5; position:absolute; left:30px; right:30px; top:18px; }
+.trm-krok-el { text-align:center; position:relative; width:33%; color:var(--t-mut); font-size:12.5px; }
+.trm-krok-el b { width:36px; height:36px; border-radius:50%; display:grid; place-items:center; margin:0 auto 6px; background:#eeeae7; color:#7c7780; outline:8px solid var(--t-sur); font-weight:700; font-size:14px; }
+.trm-krok-el.aktywny { color:var(--t-acc); font-weight:600; }
+.trm-krok-el.aktywny b { color:#fff; background:var(--t-acc); }
+.trm-klient-karta { display:flex; align-items:center; gap:12px; border:1px solid var(--t-line); background:var(--t-sur); border-radius:11px; padding:13px 14px; width:100%; text-align:left; color:var(--t-ink); margin-bottom:8px; cursor:pointer; }
+.trm-klient-karta:hover { border-color:#bf7c95; background:#fffafb; }
+.trm-usl-karta { display:flex; gap:12px; align-items:center; justify-content:space-between; padding:13px 14px; border:1px solid var(--t-line); border-radius:11px; margin-top:8px; cursor:pointer; background:var(--t-sur); }
+.trm-usl-karta:hover { border-color:var(--t-acc); background:#fffafd; }
+.trm-usl-karta.off { opacity:.5; cursor:not-allowed; }
+.trm-sloty { display:flex; gap:8px; flex-wrap:wrap; }
+.trm-sloty button { border:1px solid #cfa4b3; background:#fff; border-radius:8px; padding:9px 17px; min-height:40px; font-size:13px; }
+.trm-sloty button.selected { color:#fff; background:var(--t-acc); border-color:var(--t-acc); }
 .trm-rozlicz-bar { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; z-index:9000; background:#302720; color:#fff; border-radius:999px; padding:10px 16px; display:flex; gap:10px; align-items:center; box-shadow:0 10px 30px rgba(0,0,0,.25); font-size:13px; max-width:calc(100vw - 32px); }
 .trm-rozlicz-bar button { border:none; border-radius:999px; padding:7px 12px; background:#8D2947; color:#fff; font-weight:600; }
 .trm-rozlicz-bar button.sec { background:transparent; border:1px solid rgba(255,255,255,.4); }
