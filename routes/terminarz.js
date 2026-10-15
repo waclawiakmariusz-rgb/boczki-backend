@@ -47,6 +47,8 @@ module.exports = (db, opts = {}) => {
   const rollback = (conn) => new Promise((resolve) => conn.rollback(() => resolve()));
   const KOL = ' DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
   const mk = (sql, nazwa) => db.query(sql, (e) => { if (e) log.error(`[terminarz] CREATE ${nazwa}:`, e.message); });
+  // kolumny dodawane idempotentnie (ER_DUP_FIELDNAME = już jest); zawsze NULL-owalne / z domyślną wartością, żeby stary kod działał bez zmian
+  const alterKolumna = (tabela, kolumna, def) => db.query(`ALTER TABLE ${tabela} ADD COLUMN ${kolumna} ${def}`, (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') log.error(`[terminarz] ALTER ${tabela}.${kolumna}:`, e.message); });
 
   // ── tabele własne (idempotentnie, przy ładowaniu modułu) ─────────────────────
   mk(`CREATE TABLE IF NOT EXISTS Term_Ustawienia (
@@ -199,6 +201,72 @@ module.exports = (db, opts = {}) => {
       zmieniono DATETIME NULL,
       PRIMARY KEY (tenant_id, pracownik)
     )${KOL}`, 'Term_Pracownicy');
+  // ── T02/T03 (raport naprawczy 2026-10-15): zakupy klientki i jednostki zabiegowe — WSZYSTKO dodatkowe, bez zmian
+  // w Sprzedaz/Uslugi. Trzy znaczenia: usługa wykonywana (Uslugi.id z czasem/zasobami), oferta sprzedażowa (wiersz
+  // cennika, np. „1 obszar 4x”) → Term_Oferty mapuje ją na składniki wykonywane, zakup klientki (wiersz Sprzedaz) → Term_Zakupy.
+  mk(`CREATE TABLE IF NOT EXISTS Term_Oferty (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      usluga_id VARCHAR(36) NOT NULL,
+      stan VARCHAR(16) NOT NULL DEFAULT 'propozycja',
+      zrodlo VARCHAR(16) NOT NULL DEFAULT 'tekst',
+      zatwierdzil VARCHAR(100) NULL,
+      zatwierdzono DATETIME NULL,
+      zmieniono DATETIME NULL,
+      UNIQUE KEY uq_oferta (tenant_id, usluga_id)
+    )${KOL}`, 'Term_Oferty');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Oferty_Skladniki (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      oferta_id INT NOT NULL,
+      usluga_wyk_id VARCHAR(36) NOT NULL,
+      jednostki INT NOT NULL DEFAULT 1,
+      INDEX idx_of (tenant_id, oferta_id)
+    )${KOL}`, 'Term_Oferty_Skladniki');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Zakupy (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      sprzedaz_id VARCHAR(50) NOT NULL,
+      id_klienta VARCHAR(50) NULL,
+      klient_nazwa VARCHAR(255) NULL,
+      oferta_id INT NOT NULL,
+      usluga_id VARCHAR(36) NOT NULL,
+      nazwa VARCHAR(300) NULL,
+      data_zakupu DATE NULL,
+      data_waznosci DATE NULL,
+      stan VARCHAR(16) NOT NULL DEFAULT 'aktywny',
+      bilans_status VARCHAR(20) NOT NULL DEFAULT 'niezweryfikowany',
+      zweryfikowal VARCHAR(100) NULL,
+      zweryfikowano DATETIME NULL,
+      powod_korekty VARCHAR(300) NULL,
+      utworzono DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_sprz (tenant_id, sprzedaz_id),
+      INDEX idx_kl (tenant_id, id_klienta)
+    )${KOL}`, 'Term_Zakupy');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Zakupy_Skladniki (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      zakup_id INT NOT NULL,
+      usluga_wyk_id VARCHAR(36) NOT NULL,
+      jednostki_przyznane INT NOT NULL DEFAULT 1,
+      jednostki_historyczne INT NOT NULL DEFAULT 0,
+      INDEX idx_z (tenant_id, zakup_id)
+    )${KOL}`, 'Term_Zakupy_Skladniki');
+  mk(`CREATE TABLE IF NOT EXISTS Term_Zakupy_Ruchy (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      tenant_id VARCHAR(100) NOT NULL,
+      skladnik_id INT NOT NULL,
+      pozycja_id INT NULL,
+      typ VARCHAR(12) NOT NULL,
+      jednostki INT NOT NULL DEFAULT 1,
+      kto VARCHAR(100) NULL,
+      kiedy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      powod VARCHAR(300) NULL,
+      UNIQUE KEY uq_poz_typ (tenant_id, pozycja_id, typ),
+      INDEX idx_s (tenant_id, skladnik_id)
+    )${KOL}`, 'Term_Zakupy_Ruchy');
+  alterKolumna('Term_Pozycje', 'zakup_skladnik_id', 'INT NULL');
+  alterKolumna('Term_Ustawienia', 'kontrola_zakupow', "VARCHAR(5) NOT NULL DEFAULT 'off'");
   mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy (
       id INT AUTO_INCREMENT PRIMARY KEY,
       tenant_id VARCHAR(100) NOT NULL,
@@ -270,7 +338,7 @@ module.exports = (db, opts = {}) => {
       rows = await q(`SELECT * FROM Term_Ustawienia WHERE tenant_id = ?`, [tenant]);
     }
     const u = rows[0];
-    return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja };
+    return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja, kontrola_zakupow: u.kontrola_zakupow === 'on' ? 'on' : 'off' };
   }
 
   async function zasoby(tenant, tylkoAktywne = false) {
@@ -376,7 +444,7 @@ module.exports = (db, opts = {}) => {
       status: r.status, obecnosc: r.obecnosc, kanal: r.kanal, zrodlo: r.zrodlo, start: r.start_s, koniec: r.koniec_s, notatka: r.notatka, brak_kontaktu: !!r.brak_kontaktu,
       wersja: r.wersja, utworzyl: r.utworzyl, utworzono: dt(r.utworzono), anulowano: dt(r.anulowano), anulowal: r.anulowal, powod_anulacji: r.powod_anulacji, kto_anulowal: r.kto_anulowal,
       sprzedaz_id: r.sprzedaz_id, rozliczenie_od: dt(r.rozliczenie_od),
-      pozycje: poz.map(p => ({ id: p.id, kolejnosc: p.kolejnosc, usluga_id: p.usluga_id, kategoria: p.kategoria, wariant: p.wariant, cena: p.cena == null ? null : Number(p.cena), czas_min: p.czas_min, pracownik: p.pracownik, start: p.start_s, koniec: p.koniec_s, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, gabinet: p.gabinet, urzadzenie: p.urzadzenie, stan: p.stan, start_fakt: dt(p.start_fakt), koniec_fakt: dt(p.koniec_fakt), wykonawca_fakt: p.wykonawca_fakt, sprzedaz_id: p.sprzedaz_id })),
+      pozycje: poz.map(p => ({ id: p.id, kolejnosc: p.kolejnosc, usluga_id: p.usluga_id, kategoria: p.kategoria, wariant: p.wariant, cena: p.cena == null ? null : Number(p.cena), czas_min: p.czas_min, pracownik: p.pracownik, start: p.start_s, koniec: p.koniec_s, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, gabinet: p.gabinet, urzadzenie: p.urzadzenie, stan: p.stan, start_fakt: dt(p.start_fakt), koniec_fakt: dt(p.koniec_fakt), wykonawca_fakt: p.wykonawca_fakt, zakup_skladnik_id: p.zakup_skladnik_id || null, sprzedaz_id: p.sprzedaz_id })),
       wykonanie: podsumujWykonanie(poz),
     };
   }
@@ -474,6 +542,72 @@ module.exports = (db, opts = {}) => {
   async function sprawyLicznik(tenant, r, imie) {
     const lista = await sprawyLista(tenant, r, imie, 'do_dzialania');
     return { otwarte: lista.length, pilne: lista.filter(x => x.priorytet === 'P0').length, nieprzeczytane: lista.filter(x => !x.przeczytane).length };
+  }
+
+  // ───────── T02/T03: zakupy klientki i jednostki (pomocnicze) ─────────
+  const bezSufiksuRabatu = (w) => String(w || '').replace(/\s*\[[^\]]*\]\s*$/, '').trim(); // „4x [Rabat: -20%]” → „4x” (jak w sprzedaz.js)
+  const bazaWariantu = (w) => String(w || '').replace(/\s*\d+\s*[x×]\s*$/i, '').trim().toLowerCase();
+  const liczbaZTekstu = (w) => { const m = String(w || '').match(/(\d+)\s*[x×]\s*$/i); return m ? Math.max(1, parseInt(m[1], 10)) : null; };
+  /** Propozycja mapowania oferty → składniki, WYŁĄCZNIE jako podpowiedź do zatwierdzenia (tekst „4x” nie jest dowodem). */
+  function propozycjaOferty(u, katalog) {
+    const n = liczbaZTekstu(u.wariant);
+    if (!n) return { skladniki: [{ usluga_wyk_id: u.id, jednostki: 1 }], pewna: true, uwaga: 'pojedynczy zabieg — 1 jednostka tej usługi' };
+    const baza = bazaWariantu(u.wariant);
+    const jednostkowa = katalog.find(x => x.id !== u.id && x.kategoria === u.kategoria && bazaWariantu(x.wariant) === baza && liczbaZTekstu(x.wariant) === 1);
+    if (jednostkowa) return { skladniki: [{ usluga_wyk_id: jednostkowa.id, jednostki: n }], pewna: false, uwaga: `z nazwy: ${n} × „${jednostkowa.kategoria}${jednostkowa.wariant ? ' / ' + jednostkowa.wariant : ''}” — wymaga zatwierdzenia` };
+    return { skladniki: [{ usluga_wyk_id: u.id, jednostki: n }], pewna: false, uwaga: `z nazwy: ${n} jednostek tej pozycji (brak wariantu 1x) — sprawdź obszar/technologię i zatwierdź` };
+  }
+  /** Zatwierdzone mapowania ofert → { usluga_id: { oferta_id, skladniki:[{usluga_wyk_id, jednostki}] } } */
+  async function zatwierdzoneOferty(tenant) {
+    const rows = await q(`SELECT o.id AS oferta_id, o.usluga_id, s.usluga_wyk_id, s.jednostki FROM Term_Oferty o JOIN Term_Oferty_Skladniki s ON s.oferta_id = o.id AND s.tenant_id = o.tenant_id WHERE o.tenant_id = ? AND o.stan = 'zatwierdzona'`, [tenant]);
+    const out = {}; rows.forEach(r => { (out[r.usluga_id] = out[r.usluga_id] || { oferta_id: r.oferta_id, skladniki: [] }).skladniki.push({ usluga_wyk_id: r.usluga_wyk_id, jednostki: r.jednostki }); });
+    return out;
+  }
+  /** Salda składników z ruchów: pozycja ze „zuzycie” = wykonana; bez „zwolnienie” z „rezerwacja” = zaplanowana. Idempotentne (unikalny ruch per pozycja+typ). */
+  async function saldaSkladnikow(tenant, ids, conn) {
+    const out = {}; ids.forEach(id => { out[id] = { wykonane: 0, zarezerwowane: 0 }; });
+    if (!ids.length) return out;
+    const qq = conn ? (s, p) => qc(conn, s, p) : q;
+    const ruchy = await qq(`SELECT skladnik_id, pozycja_id, typ FROM Term_Zakupy_Ruchy WHERE tenant_id = ? AND pozycja_id IS NOT NULL AND skladnik_id IN (${ids.map(() => '?').join(',')})`, [tenant, ...ids]);
+    const perPoz = {};
+    ruchy.forEach(x => { const k = x.skladnik_id + ':' + x.pozycja_id; const p = perPoz[k] = perPoz[k] || { s: x.skladnik_id, z: false, w: false, r: false }; if (x.typ === 'zuzycie') p.z = true; else if (x.typ === 'zwolnienie') p.w = true; else if (x.typ === 'rezerwacja') p.r = true; });
+    Object.values(perPoz).forEach(p => { if (!out[p.s]) return; if (p.z) out[p.s].wykonane++; else if (p.r && !p.w) out[p.s].zarezerwowane++; });
+    return out;
+  }
+  /** Import zakupów klientki z istniejących sprzedaży (tylko z zatwierdzonym mapowaniem; nic nie zmienia w Sprzedaz; idempotentny). */
+  async function importujZakupy(tenant, filtr, kto) {
+    const mapy = await zatwierdzoneOferty(tenant);
+    if (!Object.keys(mapy).length) return { dodano: 0, bezMapowania: 0 };
+    const params = [tenant]; let gdzie = '';
+    if (filtr && (filtr.id_klienta || filtr.klient)) { gdzie = ' AND (s.id_klienta = ? OR (s.id_klienta IS NULL AND s.klient = ?))'; params.push(filtr.id_klienta || '', filtr.klient || ''); }
+    const rows = await q(`SELECT s.id, DATE_FORMAT(s.data_sprzedazy,'%Y-%m-%d') AS data, s.klient, s.zabieg, s.szczegoly, s.id_klienta, s.data_waznosci FROM Sprzedaz s
+      WHERE s.tenant_id = ? AND s.status = 'AKTYWNY' AND s.karnet_zamkniety_w IS NULL AND s.zabieg IS NOT NULL AND s.zabieg <> '' AND s.kategoria_produktu IS NULL
+        AND NOT EXISTS (SELECT 1 FROM Term_Zakupy z WHERE z.tenant_id = s.tenant_id AND z.sprzedaz_id = s.id)${gdzie} ORDER BY s.data_sprzedazy DESC LIMIT 2000`, params);
+    if (!rows.length) return { dodano: 0, bezMapowania: 0 };
+    const cennik = await q(`SELECT id, kategoria, COALESCE(wariant,'') AS wariant FROM Uslugi WHERE tenant_id = ?`, [tenant]);
+    const idZ = (kat, war) => { const w = bezSufiksuRabatu(war); const u = cennik.find(x => x.kategoria === kat && x.wariant === w); return u ? u.id : null; };
+    let dodano = 0, bezMapowania = 0;
+    for (const s of rows) {
+      const uid = idZ(s.zabieg, s.szczegoly); const m = uid ? mapy[uid] : null;
+      if (!m) { bezMapowania++; continue; }
+      const ins = await q(`INSERT IGNORE INTO Term_Zakupy (tenant_id, sprzedaz_id, id_klienta, klient_nazwa, oferta_id, usluga_id, nazwa, data_zakupu, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [tenant, s.id, s.id_klienta || null, s.klient, m.oferta_id, uid, `${s.zabieg}${s.szczegoly ? ' / ' + bezSufiksuRabatu(s.szczegoly) : ''}`, s.data, s.data_waznosci ? String(s.data_waznosci).slice(0, 10) : null]);
+      if (!ins.insertId) continue;
+      for (const sk of m.skladniki) await q(`INSERT INTO Term_Zakupy_Skladniki (tenant_id, zakup_id, usluga_wyk_id, jednostki_przyznane) VALUES (?, ?, ?, ?)`, [tenant, ins.insertId, sk.usluga_wyk_id, sk.jednostki]);
+      dodano++;
+    }
+    if (dodano) zapiszLog(tenant, 'TERMINARZ: IMPORT ZAKUPÓW', kto, `${dodano} zakupów (bilans otwarcia do weryfikacji), bez mapowania: ${bezMapowania}`);
+    return { dodano, bezMapowania };
+  }
+  /** Zakupy klientki z saldami składników (wykonane / zaplanowane / wolne). */
+  async function zakupyKlientki(tenant, idKlienta, klientNazwa, katalog) {
+    const zak = await q(`SELECT * FROM Term_Zakupy WHERE tenant_id = ? AND (id_klienta = ? OR (id_klienta IS NULL AND klient_nazwa = ?)) ORDER BY data_waznosci IS NULL, data_waznosci, data_zakupu DESC`, [tenant, idKlienta || '', klientNazwa || '']);
+    if (!zak.length) return [];
+    const skl = await q(`SELECT * FROM Term_Zakupy_Skladniki WHERE tenant_id = ? AND zakup_id IN (${zak.map(() => '?').join(',')})`, [tenant, ...zak.map(z => z.id)]);
+    const salda = await saldaSkladnikow(tenant, skl.map(s => s.id));
+    const nazwaU = (id) => { const u = (katalog || []).find(x => String(x.id) === String(id)); return u ? u.kategoria + (u.wariant ? ' / ' + u.wariant : '') : String(id); };
+    return zak.map(z => ({ id: z.id, sprzedaz_id: z.sprzedaz_id, nazwa: z.nazwa, data_zakupu: z.data_zakupu ? String(z.data_zakupu).slice(0, 10) : null, data_waznosci: z.data_waznosci ? String(z.data_waznosci).slice(0, 10) : null, stan: z.stan, bilans_status: z.bilans_status, zweryfikowal: z.zweryfikowal, powod_korekty: z.powod_korekty,
+      skladniki: skl.filter(s => s.zakup_id === z.id).map(s => { const sa = salda[s.id]; const wykonane = s.jednostki_historyczne + sa.wykonane; return { id: s.id, usluga_wyk_id: s.usluga_wyk_id, usluga_nazwa: nazwaU(s.usluga_wyk_id), przyznane: s.jednostki_przyznane, historyczne: s.jednostki_historyczne, wykonane, zaplanowane: sa.zarezerwowane, wolne: Math.max(0, s.jednostki_przyznane - wykonane - sa.zarezerwowane) }; }) }));
   }
 
   /** Maskowanie danych dla specjalisty/praktykantki (03: inni bez danych osobowych domyślnie). */
@@ -582,6 +716,7 @@ module.exports = (db, opts = {}) => {
         const wyp = Math.min(168 * 60, Math.max(0, Number(d.wyprzedzenie_min ?? ust.wyprzedzenie_min) || 0));
         const tryb = ['wewnetrzny', 'online', 'obok'].includes(d.tryb) ? d.tryb : ust.tryb;
         await q(`UPDATE Term_Ustawienia SET godziny_json = ?, siatka_min = ?, tolerancja_min = ?, horyzont_dni = ?, wyprzedzenie_min = ?, tryb = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ?`, [JSON.stringify(godziny), siatka, tol, hor, wyp, tryb, tenant]);
+        if (d.kontrola_zakupow === 'on' || d.kontrola_zakupow === 'off') await q(`UPDATE Term_Ustawienia SET kontrola_zakupow = ? WHERE tenant_id = ?`, [d.kontrola_zakupow, tenant]); // T03: opt-in per salon
         zapiszLog(tenant, 'TERMINARZ: USTAWIENIA', imie, `siatka ${siatka} min, tryb ${tryb}`);
         return { status: 'success', ustawienia: await ustawienia(tenant) };
       }
@@ -642,12 +777,15 @@ module.exports = (db, opts = {}) => {
         const cfg = await wspolneCfg(tenant);
         // podgląd wpływu (T191): przyszłe pozycje tego pracownika poza nową dostępnością
         const nowyGrafik = wzorce.map(w => ({ pracownik: kto, dzien_tyg: Number(w.dzien_tyg), od: w.od, do: w.do }));
-        const dotk = await wizytyDotkniete(tenant, kto, null, cfg.terazStr.slice(0, 10), '2099-12-31', (p) => S.miesciSie(S.naMin(p.start), S.naMin(p.koniec), S.przedzialyZGrafiku(nowyGrafik, p.start.slice(0, 10))));
+        const wyjatkiOsoby = cfg.grafik.filter(g => g.pracownik === kto && g.od_daty && g.do_daty && String(g.od_daty) === String(g.do_daty));
+        const grafikPodglad = [...nowyGrafik, ...wyjatkiOsoby]; // podgląd wpływu liczony z nowym harmonogramem + zachowanymi wyjątkami dni
+        const dotk = await wizytyDotkniete(tenant, kto, null, cfg.terazStr.slice(0, 10), '2099-12-31', (p) => S.miesciSie(S.naMin(p.start), S.naMin(p.koniec), S.przedzialyZGrafiku(grafikPodglad, p.start.slice(0, 10))));
         if (dotk.length && !d.wymus) return { status: 'success', wymaga_decyzji: true, dotkniete: dotk, message: `Zmiana grafiku dotknie ${dotk.length} wizyt. Sprawdź zastępstwo, zaproponuj klientkom zmianę albo przełóż terminy — zapis grafiku ich nie odwołuje.` };
         const conn = await polacz();
         try {
           await begin(conn);
-          await qc(conn, `DELETE FROM Term_Grafik WHERE tenant_id = ? AND pracownik = ?`, [tenant, kto]);
+          // zapis stałego harmonogramu nie usuwa wyjątków datowanych (R05) — one mają własną akcję trm_grafik_dzien_zapisz/usun
+          await qc(conn, `DELETE FROM Term_Grafik WHERE tenant_id = ? AND pracownik = ? AND NOT (od_daty IS NOT NULL AND do_daty IS NOT NULL AND od_daty = do_daty)`, [tenant, kto]);
           for (const w of nowyGrafik) await qc(conn, `INSERT INTO Term_Grafik (tenant_id, pracownik, dzien_tyg, od, do_) VALUES (?, ?, ?, ?, ?)`, [tenant, kto, w.dzien_tyg, w.od, w.do]);
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
@@ -679,6 +817,46 @@ module.exports = (db, opts = {}) => {
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
         zapiszLog(tenant, 'TERMINARZ: GRAFIK Z GODZIN SALONU', imie, wybrani.join(', '));
+        return { status: 'success', grafik: await grafik(tenant) };
+      }
+      // ───────── R05: wyjątek jednego dnia w grafiku (pierwszeństwo nad regułą cykliczną, nie zmienia innych tygodni) ─────────
+      case 'trm_grafik_dzien_zapisz': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const kto = String(d.pracownik_grafik || '').trim();
+        if (!(await pracownicy(tenant)).includes(kto)) throw new BladUzytkownika('Nieznany pracownik.');
+        const data = sprawdzData(d.data, 'data');
+        const wolne = !!d.wolne;
+        const przedz = wolne ? [] : (Array.isArray(d.przedzialy) ? d.przedzialy : []).filter(w => RE_HHMM.test(w.od) && RE_HHMM.test(w.do) && w.od < w.do);
+        if (!wolne && !przedz.length) throw new BladUzytkownika('Podaj godziny albo zaznacz „dzień wolny”.');
+        const cfg = await wspolneCfg(tenant);
+        const dt = S.dzienTygodnia(data);
+        const wyjatek = (wolne ? [{ od: '00:00', do: '00:00' }] : przedz).map(w => ({ pracownik: kto, dzien_tyg: dt, od: w.od, do: w.do, od_daty: data, do_daty: data }));
+        // podgląd wpływu: grafik osoby bez dotychczasowego wyjątku tego dnia + nowy wyjątek
+        const grafikPodglad = [...cfg.grafik.filter(g => g.pracownik === kto && !(g.od_daty && g.do_daty && String(g.od_daty) === data && String(g.do_daty) === data)), ...wyjatek];
+        const dotk = await wizytyDotkniete(tenant, kto, null, data, data, (p) => S.miesciSie(S.naMin(p.start), S.naMin(p.koniec), S.przedzialyZGrafiku(grafikPodglad, data)));
+        if (d.podglad) return { status: 'success', podglad: true, dotkniete: dotk };
+        if (dotk.length && !d.wymus) return { status: 'success', wymaga_decyzji: true, dotkniete: dotk, message: `Zmiana tego dnia dotknie ${dotk.length} wizyt. Zapis ich nie odwołuje — rozwiąż je osobno.` };
+        const conn = await polacz();
+        try {
+          await begin(conn);
+          await qc(conn, `DELETE FROM Term_Grafik WHERE tenant_id = ? AND pracownik = ? AND od_daty = ? AND do_daty = ?`, [tenant, kto, data, data]);
+          for (const w of wyjatek) await qc(conn, `INSERT INTO Term_Grafik (tenant_id, pracownik, dzien_tyg, od, do_, od_daty, do_daty) VALUES (?, ?, ?, ?, ?, ?, ?)`, [tenant, kto, dt, w.od, w.do, data, data]);
+          await commit(conn);
+        } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        zapiszLog(tenant, 'TERMINARZ: GRAFIK DZIEŃ', imie, `${kto} ${data}: ${wolne ? 'dzień wolny' : przedz.map(w => w.od + '–' + w.do).join(', ')}, dotkniętych wizyt: ${dotk.length}`);
+        if (dotk.length) {
+          const najwczesniej = dotk.map(x => x.start).sort()[0];
+          await sprawaUpsert(tenant, { typ: 'E18', rezerwacja_id: null, tytul: `Zmiana grafiku ${kto} (${data}) — ${dotk.length} ${dotk.length === 1 ? 'wizyta' : 'wizyt'} poza nową dostępnością`, opis: 'Wyjątek dnia zapisano mimo wpływu na istniejące wizyty.',
+            dane: { zrodlo: 'grafik_dzien', kto, data, dotkniete: dotk.map(x => ({ rezerwacja_id: x.rezerwacja_id, pozycja_id: x.id, pracownik: x.pracownik, start: x.start, koniec: x.koniec, klient_nazwa: x.klient_nazwa, kategoria: x.kategoria + (x.wariant ? ' / ' + x.wariant : ''), rozwiazana: false })) },
+            priorytet: priorytetDlaCzasu(cfg.terazStr, najwczesniej), powiazany_czas: najwczesniej, klucz: `E18:dzien:${kto}:${data}`, kto: imie });
+        }
+        return { status: 'success', grafik: await grafik(tenant), dotkniete: dotk };
+      }
+      case 'trm_grafik_dzien_usun': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const kto = String(d.pracownik_grafik || '').trim(), data = sprawdzData(d.data, 'data');
+        await q(`DELETE FROM Term_Grafik WHERE tenant_id = ? AND pracownik = ? AND od_daty = ? AND do_daty = ?`, [tenant, kto, data, data]);
+        zapiszLog(tenant, 'TERMINARZ: GRAFIK DZIEŃ', imie, `${kto} ${data}: przywrócono stały harmonogram`);
         return { status: 'success', grafik: await grafik(tenant) };
       }
       case 'trm_nieobecnosc_zapisz': {
@@ -778,6 +956,89 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', dni: 60, wiecej: rows.length > 20, wizyty: rows.slice(0, 20), klienci: klienci.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko })) };
       }
 
+      // ───────── T02/T03: zakupy klientki, mapowanie ofert, bilans otwarcia ─────────
+      case 'trm_zakupy_klientki': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const idKlienta = d.id_klienta ? String(d.id_klienta) : null;
+        let nazwa = d.klient_nazwa ? String(d.klient_nazwa) : null;
+        if (idKlienta && !nazwa) { const kr = (await q(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id = ? AND id_klienta = ?`, [tenant, idKlienta]))[0]; nazwa = kr ? kr.imie_nazwisko : null; }
+        if (!idKlienta && !nazwa) return { status: 'success', zakupy: [], bez_mapowania: 0 };
+        const cfg = await wspolneCfg(tenant);
+        const imp = await importujZakupy(tenant, { id_klienta: idKlienta, klient: nazwa }, imie); // leniwie: nowe sprzedaże klientki pojawiają się same
+        return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, zakupy: await zakupyKlientki(tenant, idKlienta, nazwa, cfg.katalog), bez_mapowania: imp.bezMapowania };
+      }
+      case 'trm_oferty_lista': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const cfg = await wspolneCfg(tenant);
+        const of = await q(`SELECT id, usluga_id, stan, zrodlo, zatwierdzil, DATE_FORMAT(zatwierdzono,'%Y-%m-%d %H:%i') AS zatwierdzono FROM Term_Oferty WHERE tenant_id = ?`, [tenant]);
+        const sk = of.length ? await q(`SELECT oferta_id, usluga_wyk_id, jednostki FROM Term_Oferty_Skladniki WHERE tenant_id = ? AND oferta_id IN (${of.map(() => '?').join(',')})`, [tenant, ...of.map(o => o.id)]) : [];
+        const lista = cfg.katalog.map(u => {
+          const o = of.find(x => String(x.usluga_id) === String(u.id));
+          const prop = propozycjaOferty(u, cfg.katalog);
+          return { usluga_id: u.id, nazwa: u.kategoria + (u.wariant ? ' / ' + u.wariant : ''), cena: u.cena, skonfigurowana: u.skonfigurowana, stan: o ? o.stan : 'brak', zrodlo: o ? o.zrodlo : null, zatwierdzil: o ? o.zatwierdzil : null, zatwierdzono: o ? o.zatwierdzono : null,
+            skladniki: o ? sk.filter(s => s.oferta_id === o.id).map(s => ({ usluga_wyk_id: s.usluga_wyk_id, jednostki: s.jednostki })) : prop.skladniki, propozycja: prop };
+        });
+        const niezw = await q(`SELECT COUNT(*) AS n FROM Term_Zakupy WHERE tenant_id = ? AND bilans_status = 'niezweryfikowany' AND stan = 'aktywny'`, [tenant]);
+        return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, oferty: lista, zakupy_do_weryfikacji: niezw[0].n };
+      }
+      case 'trm_oferta_zapisz': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const uid = String(d.usluga_id || '');
+        const u = (await q(`SELECT id FROM Uslugi WHERE tenant_id = ? AND id = ?`, [tenant, uid]))[0];
+        if (!u) throw new BladUzytkownika('Oferta nie istnieje w cenniku.');
+        const stan = ['zatwierdzona', 'odrzucona', 'propozycja'].includes(d.stan) ? d.stan : 'zatwierdzona';
+        const skl = (Array.isArray(d.skladniki) ? d.skladniki : []).map(s => ({ usluga_wyk_id: String(s.usluga_wyk_id || ''), jednostki: Math.max(1, Math.min(500, Number(s.jednostki) || 1)) })).filter(s => s.usluga_wyk_id);
+        if (stan === 'zatwierdzona' && !skl.length) throw new BladUzytkownika('Zatwierdzona oferta musi mieć co najmniej jeden składnik (usługa wykonywana + liczba jednostek).');
+        const znane = await q(`SELECT id FROM Uslugi WHERE tenant_id = ? AND id IN (${(skl.length ? skl : [{ usluga_wyk_id: '' }]).map(() => '?').join(',')})`, [tenant, ...(skl.length ? skl.map(s => s.usluga_wyk_id) : [''])]);
+        if (skl.some(s => !znane.find(z => String(z.id) === s.usluga_wyk_id))) throw new BladUzytkownika('Składnik wskazuje usługę, której nie ma w cenniku.');
+        const conn = await polacz();
+        try {
+          await begin(conn);
+          await qc(conn, `INSERT INTO Term_Oferty (tenant_id, usluga_id, stan, zrodlo, zatwierdzil, zatwierdzono, zmieniono) VALUES (?, ?, ?, 'reczne', ?, ?, NOW()) ON DUPLICATE KEY UPDATE stan = VALUES(stan), zrodlo = 'reczne', zatwierdzil = VALUES(zatwierdzil), zatwierdzono = VALUES(zatwierdzono), zmieniono = NOW()`, [tenant, uid, stan, imie || null, stan === 'zatwierdzona' ? new Date() : null]);
+          const o = (await qc(conn, `SELECT id FROM Term_Oferty WHERE tenant_id = ? AND usluga_id = ?`, [tenant, uid]))[0];
+          await qc(conn, `DELETE FROM Term_Oferty_Skladniki WHERE tenant_id = ? AND oferta_id = ?`, [tenant, o.id]);
+          for (const s of skl) await qc(conn, `INSERT INTO Term_Oferty_Skladniki (tenant_id, oferta_id, usluga_wyk_id, jednostki) VALUES (?, ?, ?, ?)`, [tenant, o.id, s.usluga_wyk_id, s.jednostki]);
+          await commit(conn);
+        } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        zapiszLog(tenant, 'TERMINARZ: MAPOWANIE OFERTY', imie, `${uid}: ${stan} (${skl.map(s => s.jednostki + '×' + s.usluga_wyk_id).join(', ')})`);
+        return { status: 'success' };
+      }
+      case 'trm_zakupy_import': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const w = await importujZakupy(tenant, null, imie);
+        return { status: 'success', ...w };
+      }
+      case 'trm_zakup_bilans': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const zid = Number(d.zakup_id);
+        const z = (await q(`SELECT * FROM Term_Zakupy WHERE tenant_id = ? AND id = ?`, [tenant, zid]))[0];
+        if (!z) throw new BladUzytkownika('Nie znaleziono zakupu.');
+        const powod = String(d.powod || '').trim().slice(0, 300);
+        if (!powod) throw new BladUzytkownika('Podaj powód / źródło bilansu otwarcia (np. „wykonania w Booksy do 10.2026”).');
+        const skl = await q(`SELECT * FROM Term_Zakupy_Skladniki WHERE tenant_id = ? AND zakup_id = ?`, [tenant, zid]);
+        const salda = await saldaSkladnikow(tenant, skl.map(s => s.id));
+        const wej = Array.isArray(d.skladniki) ? d.skladniki : [];
+        const conn = await polacz();
+        try {
+          await begin(conn);
+          for (const s of skl) {
+            const w = wej.find(x => Number(x.id) === s.id); if (!w) continue;
+            const hist = Math.max(0, Math.min(s.jednostki_przyznane, Number(w.historyczne) || 0));
+            // historyczne wykorzystanie nie może zejść poniżej tego, co już zarezerwowano/wykonano w Estelio (nie odliczamy drugi raz)
+            if (hist + salda[s.id].wykonane + salda[s.id].zarezerwowane > s.jednostki_przyznane) throw new BladUzytkownika(`Składnik ${s.usluga_wyk_id}: ${hist} historycznych + ${salda[s.id].wykonane} wykonanych + ${salda[s.id].zarezerwowane} zaplanowanych przekracza ${s.jednostki_przyznane} przyznanych.`);
+            if (hist !== s.jednostki_historyczne) {
+              await qc(conn, `UPDATE Term_Zakupy_Skladniki SET jednostki_historyczne = ? WHERE tenant_id = ? AND id = ?`, [hist, tenant, s.id]);
+              await qc(conn, `INSERT INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, jednostki, kto, powod) VALUES (?, ?, NULL, 'korekta', ?, ?, ?)`, [tenant, s.id, hist - s.jednostki_historyczne, imie || null, `bilans otwarcia: ${s.jednostki_historyczne} → ${hist}; ${powod}`]);
+            }
+          }
+          await qc(conn, `UPDATE Term_Zakupy SET bilans_status = 'zweryfikowany', zweryfikowal = ?, zweryfikowano = NOW(), powod_korekty = ?, stan = ? WHERE tenant_id = ? AND id = ?`, [imie || null, powod, d.zamknij ? 'zamkniety' : 'aktywny', tenant, zid]);
+          await commit(conn);
+        } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
+        zapiszLog(tenant, 'TERMINARZ: BILANS OTWARCIA', imie, `zakup ${z.sprzedaz_id} (${z.klient_nazwa}): ${powod}`);
+        const cfg = await wspolneCfg(tenant);
+        return { status: 'success', zakupy: await zakupyKlientki(tenant, z.id_klienta, z.klient_nazwa, cfg.katalog) };
+      }
+
       // ───────── dostępność ─────────
       case 'trm_sprawdz': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -838,6 +1099,29 @@ module.exports = (db, opts = {}) => {
               const alt = await alternatywy(tenant, start.slice(0, 10), poz, cfg, idKlienta, null);
               return { status: 'konflikt', message: w.problemy[0] ? w.problemy[0].opis : 'Wybrany komplet nie jest dostępny.', problemy: w.problemy, alternatywy: alt };
             }
+            // T03: rezerwacja jednostek zakupu — pod tą samą blokadą salonu (GET_LOCK), więc dwa stanowiska nie zarezerwują ostatniej jednostki.
+            // Opt-in: pozycja z zakup_skladnik_id; przy włączonej kontroli zakup jest wymagany dla każdego zabiegu.
+            const kontrolaZakupow = cfg.ust.kontrola_zakupow === 'on';
+            const zakupPoz = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => p && p.zakup_skladnik_id ? Number(p.zakup_skladnik_id) : null);
+            if (kontrolaZakupow && zakupPoz.some(x => !x)) throw new BladUzytkownika('Kontrola zakupów jest włączona — wskaż zakup klientki dla każdego zabiegu (albo zarejestruj nowy zakup w Sprzedaży).');
+            const idySkl = [...new Set(zakupPoz.filter(Boolean))];
+            if (idySkl.length) {
+              const skl = await qc(conn, `SELECT s.id, s.usluga_wyk_id, s.jednostki_przyznane, s.jednostki_historyczne, z.id_klienta, z.klient_nazwa, z.stan, z.nazwa, z.data_waznosci FROM Term_Zakupy_Skladniki s JOIN Term_Zakupy z ON z.id = s.zakup_id AND z.tenant_id = s.tenant_id WHERE s.tenant_id = ? AND s.id IN (${idySkl.map(() => '?').join(',')})`, [tenant, ...idySkl]);
+              const salda = await saldaSkladnikow(tenant, idySkl, conn);
+              const wTejWizycie = {};
+              for (let i = 0; i < poz.length; i++) {
+                const sid = zakupPoz[i]; if (!sid) continue;
+                const s = skl.find(x => x.id === sid);
+                if (!s) throw new BladUzytkownika('Nie znaleziono wskazanego zakupu.');
+                if (idKlienta ? String(s.id_klienta || '') !== idKlienta : (s.klient_nazwa || '') !== nazwa) throw new BladUzytkownika('Wskazany zakup należy do innej klientki.');
+                if (s.stan !== 'aktywny') throw new BladUzytkownika(`Zakup „${s.nazwa}” jest zamknięty.`);
+                if (s.data_waznosci && String(s.data_waznosci).slice(0, 10) < start.slice(0, 10)) throw new BladUzytkownika(`Zakup „${s.nazwa}” wygasa ${String(s.data_waznosci).slice(0, 10)} — przed terminem wizyty. Przedłuż ważność w kartotece albo wybierz inny zakup.`);
+                if (String(s.usluga_wyk_id) !== String(poz[i].usluga_id)) throw new BladUzytkownika(`Zakup „${s.nazwa}” dotyczy innej usługi niż „${poz[i].nazwa}”.`);
+                wTejWizycie[sid] = (wTejWizycie[sid] || 0) + 1;
+                const wolne = s.jednostki_przyznane - s.jednostki_historyczne - salda[sid].wykonane - salda[sid].zarezerwowane - wTejWizycie[sid];
+                if (wolne < 0) throw new BladUzytkownika(`Brak wolnych jednostek w zakupie „${s.nazwa}”: przyznane ${s.jednostki_przyznane}, wykonane ${s.jednostki_historyczne + salda[sid].wykonane}, zaplanowane ${salda[sid].zarezerwowane}.`);
+              }
+            }
             await begin(conn);
             const ins = await qc(conn, `INSERT INTO Term_Rezerwacje (tenant_id, id_klienta, klient_nazwa, klient_telefon, status, kanal, zrodlo, start, koniec, notatka, brak_kontaktu, klucz_idem, utworzyl) VALUES (?, ?, ?, ?, 'potwierdzona', ?, ?, ?, ?, ?, ?, ?, ?)`,
               [tenant, idKlienta, nazwa, telefon, kanal, String(d.zrodlo || '').slice(0, 100) || null, w.start, w.koniec, String(d.notatka || '').slice(0, 2000) || null, d.brak_kontaktu || !telefon ? 1 : 0, klucz, imie || null]);
@@ -846,6 +1130,10 @@ module.exports = (db, opts = {}) => {
               const p = w.pozycje[i];
               const pi = await qc(conn, `INSERT INTO Term_Pozycje (tenant_id, rezerwacja_id, kolejnosc, usluga_id, kategoria, wariant, cena, czas_min, pracownik, start, koniec, gabinet_id, urzadzenie_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [tenant, rezId, i, p.usluga_id, p.kategoria, p.wariant || null, p.cena, p.czas_min, p.pracownik, p.start, p.koniec, p.gabinet_id ? Number(p.gabinet_id) : null, p.urzadzenie_id ? Number(p.urzadzenie_id) : null]);
+              if (zakupPoz[i]) { // T03: utworzenie wizyty rezerwuje jednostkę (ruch unikalny per pozycja — ponowienie nie podwaja)
+                await qc(conn, `UPDATE Term_Pozycje SET zakup_skladnik_id = ? WHERE tenant_id = ? AND id = ?`, [zakupPoz[i], tenant, pi.insertId]);
+                await qc(conn, `INSERT IGNORE INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, kto, powod) VALUES (?, ?, ?, 'rezerwacja', ?, ?)`, [tenant, zakupPoz[i], pi.insertId, imie || null, `EST-${String(rezId).padStart(4, '0')} ${p.nazwa}`]);
+              }
               for (const z of p.zajecia) await qc(conn, `INSERT INTO Term_Zajecia (tenant_id, rezerwacja_id, pozycja_id, typ_zasobu, klucz, od, do_, powod) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, rezId, pi.insertId, z.typ_zasobu, String(z.klucz), S.naStr(z.od), S.naStr(z.do), z.powod]);
             }
             await historia(conn, tenant, rezId, imie, 'utworzono', `${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}`, null, { start: w.start, koniec: w.koniec });
@@ -935,6 +1223,7 @@ module.exports = (db, opts = {}) => {
             await qc(conn, `UPDATE Term_Pozycje SET stan = 'anulowana' WHERE tenant_id = ? AND id = ?`, [tenant, p.id]);
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND pozycja_id = ? AND od >= NOW()`, [tenant, p.id]);
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND pozycja_id = ? AND powod = 'bufor'`, [tenant, p.id]);
+            if (p.zakup_skladnik_id) await qc(conn, `INSERT IGNORE INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, kto, powod) VALUES (?, ?, ?, 'zwolnienie', ?, ?)`, [tenant, p.zakup_skladnik_id, p.id, imie || null, `${rez.numer}: odwołanie (${kto})`]); // T03: anulowanie niewykonanego zabiegu zwalnia jednostkę, bez zwrotu pieniędzy
           }
           const pozostale = rez.pozycje.filter(p => !cel.some(c => c.id === p.id) && p.stan !== 'anulowana');
           const calosc = pozostale.length === 0 || pozostale.every(p => ['niewykonana', 'odmowa'].includes(p.stan));
@@ -973,6 +1262,8 @@ module.exports = (db, opts = {}) => {
           await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = ?, obecnosc_zmieniono = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [d.obecnosc, tenant, rez.id]);
           if (d.obecnosc === 'nieobecny') {
             // Nieobecność: przyszłe zasoby zwalnia decyzja człowieka; pozycje zaplanowane → niewykonane (T158: jednostka karnetu wraca — nie zużywamy jej)
+            // T03: zwolnienie jednostek zaplanowanych zabiegów (nieobecność nie zużywa pakietu — decyzja człowieka, bez automatycznej kary)
+            for (const p of rez.pozycje.filter(x => x.stan === 'zaplanowana' && x.zakup_skladnik_id)) await qc(conn, `INSERT IGNORE INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, kto, powod) VALUES (?, ?, ?, 'zwolnienie', ?, ?)`, [tenant, p.zakup_skladnik_id, p.id, imie || null, `${rez.numer}: nieobecność`]);
             await qc(conn, `UPDATE Term_Pozycje SET stan = 'niewykonana' WHERE tenant_id = ? AND rezerwacja_id = ? AND stan = 'zaplanowana'`, [tenant, rez.id]);
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ? AND do_ > NOW()`, [tenant, rez.id]);
           }
@@ -1010,6 +1301,11 @@ module.exports = (db, opts = {}) => {
           else if (stan === 'wykonana' || stan === 'przerwana') await qc(conn, `UPDATE Term_Pozycje SET stan = ?, start_fakt = COALESCE(start_fakt, start), koniec_fakt = NOW(), wykonawca_fakt = COALESCE(wykonawca_fakt, ?) WHERE tenant_id = ? AND id = ?`, [stan, wyk, tenant, p.id]);
           else await qc(conn, `UPDATE Term_Pozycje SET stan = ? WHERE tenant_id = ? AND id = ?`, [stan, tenant, p.id]);
           if (['niewykonana', 'odmowa', 'przerwana'].includes(stan)) await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND pozycja_id = ? AND do_ > NOW()`, [tenant, p.id]);
+          // T03: wykonanie zamienia rezerwację jednostki w zużycie dokładnie raz (INSERT IGNORE na unikalnym kluczu pozycja+typ); niewykonanie/odmowa zwalnia rezerwację
+          if (p.zakup_skladnik_id) {
+            if (stan === 'wykonana' || stan === 'przerwana') await qc(conn, `INSERT IGNORE INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, kto, powod) VALUES (?, ?, ?, 'zuzycie', ?, ?)`, [tenant, p.zakup_skladnik_id, p.id, imie || null, `${rez.numer}: ${stan}`]);
+            else if (stan === 'niewykonana' || stan === 'odmowa') await qc(conn, `INSERT IGNORE INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, kto, powod) VALUES (?, ?, ?, 'zwolnienie', ?, ?)`, [tenant, p.zakup_skladnik_id, p.id, imie || null, `${rez.numer}: ${stan}`]);
+          }
           await historia(conn, tenant, rez.id, imie, 'wykonanie', `${p.kategoria}${p.wariant ? ' / ' + p.wariant : ''}: ${p.stan} → ${stan}${d.uwaga ? ' — ' + String(d.uwaga).slice(0, 200) : ''}`, { stan: p.stan }, { stan, wykonawca: wyk });
           await commit(conn);
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
@@ -1209,4 +1505,4 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

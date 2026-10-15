@@ -229,13 +229,21 @@ function szukajTerminy(w) {
 }
 
 /** Grafik tygodniowy → przedziały dnia (minuty). wzorce: [{dzien_tyg, od:'09:00', do:'17:00', od_daty, do_daty}] */
+// Wyjątek datowany = wpis z od_daty = do_daty = ten dzień. Ma PIERWSZEŃSTWO i zastępuje reguły cykliczne tego dnia
+// (raport odbioru R05): „zmiana jednej środy nie zmienia innych śród”. Wyjątek „00:00–00:00” oznacza dzień wolny.
+const jestWyjatkiem = (g) => !!(g.od_daty && g.do_daty && String(g.od_daty).slice(0, 10) === String(g.do_daty).slice(0, 10));
 function przedzialyZGrafiku(wzorce, data) {
   const dt = dzienTygodnia(data), baza = naMin(data + ' 00:00');
+  const lista = wzorce || [];
+  const wyjatki = lista.filter(g => jestWyjatkiem(g) && String(g.od_daty).slice(0, 10) === data);
+  const zrodlo = wyjatki.length ? wyjatki : lista.filter(g => !jestWyjatkiem(g));
   const out = [];
-  for (const g of (wzorce || [])) {
-    if (Number(g.dzien_tyg) !== dt) continue;
-    if (g.od_daty && String(g.od_daty).slice(0, 10) > data) continue;
-    if (g.do_daty && String(g.do_daty).slice(0, 10) < data) continue;
+  for (const g of zrodlo) {
+    if (!wyjatki.length) {
+      if (Number(g.dzien_tyg) !== dt) continue;
+      if (g.od_daty && String(g.od_daty).slice(0, 10) > data) continue;
+      if (g.do_daty && String(g.do_daty).slice(0, 10) < data) continue;
+    }
     const [h1, m1] = String(g.od).split(':').map(Number), [h2, m2] = String(g.do).split(':').map(Number);
     const od = baza + h1 * 60 + m1, do_ = baza + h2 * 60 + m2;
     if (do_ > od) out.push({ od, do: do_ });

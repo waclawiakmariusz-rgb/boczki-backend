@@ -134,8 +134,55 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-bubble-poz .g { font-weight:600; }
 .trm-bubble-poz .m { color:var(--t-mut); font-size:12px; grid-column:2; }
 .trm-bubble-rozl { display:flex; align-items:center; gap:8px; margin-top:10px; font-size:12.5px; color:var(--t-mut); }
-.trm-bubble-foot { display:flex; gap:8px; margin-top:16px; flex-wrap:wrap; }
-.trm-bubble-foot .trm-btn { flex:1 1 auto; min-width:0; white-space:normal; line-height:1.2; padding:7px 9px; }
+/* R01: akcja główna na pełnej szerokości, pod nią działania drugorzędne (makieta 02-podglad-wizyty) */
+.trm-bubble-foot { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:16px; }
+.trm-bubble-foot .trm-btn { min-width:0; white-space:normal; line-height:1.25; }
+.trm-bubble-foot .trm-btn.glowna { grid-column:1 / -1; min-height:44px; font-size:14px; }
+.trm-bubble-foot .trm-btn.link { text-decoration:underline; text-underline-offset:3px; }
+/* R02: drugi przedział godzin — widoczny tylko po rozwinięciu lub gdy jest w danych */
+.trm-dz-b { display:inline-flex; align-items:center; gap:6px; }
+.trm-dz-b[hidden] { display:none; }
+/* R03: jedna karta wyniku w kroku „Termin” */
+.trm-wynik-termin { border:1px solid var(--t-line); border-radius:12px; padding:14px 16px; background:var(--t-sur); margin:8px 0; }
+.trm-wynik-termin.ok { border-color:#bfdcc9; background:#f4faf6; }
+.trm-wynik-termin.zajety { border-color:#eab8c3; background:#fdf5f6; }
+.trm-wynik-termin.blad { border-color:#ecd59a; background:#fffaf0; }
+.trm-wynik-termin .godz { font-size:26px; font-weight:700; letter-spacing:-.3px; line-height:1.1; }
+.trm-wynik-termin .st { font-size:13px; font-weight:600; margin-top:2px; }
+.trm-wynik-termin.ok .st { color:var(--t-ok-fg); } .trm-wynik-termin.zajety .st { color:var(--t-bad-fg); } .trm-wynik-termin.blad .st { color:var(--t-warn-fg); }
+.trm-wynik-termin .seg { display:grid; grid-template-columns:92px 1fr; gap:3px 10px; font-size:14px; margin-top:10px; }
+.trm-wynik-termin .seg .m { grid-column:2; color:var(--t-mut); font-size:13px; }
+.trm-propozycja { position:absolute; left:5px; right:5px; border:2px dashed #558cff; background:#eaf2ffdb; border-radius:8px; padding:6px 10px; z-index:6; pointer-events:none; font-size:12px; overflow:hidden; color:#243b6b; }
+.trm-propozycja b { display:block; }
+/* R04: tryb Ustawień — osobne wejście, bez nawigacji po dniach */
+.trm-top2 { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:-6px 0 12px; }
+.trm-top2 .trm-btn.ust { display:inline-flex; align-items:center; gap:6px; }
+.trm-top2 .trm-btn.ust.on { background:var(--t-acc2); border-color:var(--t-acc); color:var(--t-acc); }
+.trm-ust-naglowek { display:none; align-items:center; gap:14px; flex-wrap:wrap; margin:0 0 6px; }
+.trm-ust-naglowek h2 { font-size:22px; }
+.trm.tryb-ustawienia .trm-nav, .trm.tryb-ustawienia .trm-views, .trm.tryb-ustawienia .trm-counters, .trm.tryb-ustawienia .trm-filtry, .trm.tryb-ustawienia .trm-szukaj { display:none; }
+.trm.tryb-ustawienia .trm-ust-naglowek { display:flex; }
+@media (max-width: 1100px) { .trm-top .trm-szukaj { order:9; flex:1 1 100%; max-width:none; } }
+/* T02/T03: zakupy klientki w kroku „Zabieg” */
+.trm-zakup { border:1px solid var(--t-line); border-radius:11px; padding:12px 14px; background:var(--t-sur); margin-bottom:8px; }
+.trm-zakup.wygasly, .trm-zakup.zamkniety { opacity:.7; background:var(--t-bg); }
+.trm-zakup .n { font-weight:600; font-size:14px; }
+.trm-zakup .m { color:var(--t-mut); font-size:12.5px; }
+.trm-zakup-skl { display:flex; align-items:center; gap:10px; flex-wrap:wrap; padding:8px 0 0; }
+.trm-zakup-skl .saldo { display:inline-flex; gap:6px; font-size:12px; }
+.trm-zakup-skl .saldo span { background:var(--t-bg); border-radius:999px; padding:3px 9px; }
+.trm-zakup-skl .saldo span.wolne { background:var(--t-ok-bg); color:var(--t-ok-fg); font-weight:600; }
+.trm-zakup-skl .saldo span.zero { background:var(--t-bad-bg); color:var(--t-bad-fg); font-weight:600; }
+.trm-pill.pakiet { background:#e5efff; color:#3763a0; }
+.trm-obsada .kom.wyjatek { outline:2px dashed var(--t-acc); outline-offset:-2px; }
+.trm-obsada .kom.akt { box-shadow:0 0 0 2px var(--t-acc); }
+.trm-dzien-edytor .trm-stopka { margin-top:10px; }
+.trm-obsada .kom small { display:block; font-size:10.5px; }
+.trm-oferty { width:100%; border-collapse:collapse; font-size:13px; }
+.trm-oferty th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--t-mut); padding:8px 6px; border-bottom:1px solid var(--t-line); }
+.trm-oferty td { padding:7px 6px; border-bottom:1px solid var(--t-line); vertical-align:middle; }
+.trm-oferty select, .trm-oferty input { min-height:34px; padding:4px 8px; font-size:13px; }
+.trm-oferty input.j { width:64px; }
 @keyframes trm-wjazd { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:translateY(0); } }
 
 /* ── przeciąganie: pole docelowe na żywo + dymek przy kursorze ── */

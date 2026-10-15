@@ -34,6 +34,16 @@ describe('terminarz-silnik: czas i przedziały', () => {
     expect(S.dzienTygodnia('2026-10-13')).toBe(2);
     expect(S.dzienTygodnia('2026-10-18')).toBe(7);
   });
+  test('R05/A20: wyjątek datowany zastępuje regułę cykliczną tylko tego dnia', () => {
+    const wz = [{ dzien_tyg: 2, od: '09:00', do: '17:00' }, { dzien_tyg: 2, od: '12:00', do: '15:00', od_daty: D, do_daty: D }];
+    expect(S.przedzialyZGrafiku(wz, D)).toEqual(dost('12:00', '15:00'));
+    expect(S.przedzialyZGrafiku(wz, '2026-10-20')).toEqual([{ od: S.naMin('2026-10-20 09:00'), do: S.naMin('2026-10-20 17:00') }]);
+  });
+  test('R05: wyjątek 00:00–00:00 = dzień wolny; dzień pracy poza regułą standardową', () => {
+    expect(S.przedzialyZGrafiku([{ dzien_tyg: 2, od: '09:00', do: '17:00' }, { dzien_tyg: 2, od: '00:00', do: '00:00', od_daty: D, do_daty: D }], D)).toEqual([]);
+    const nd = '2026-10-18'; // niedziela bez reguły cyklicznej
+    expect(S.przedzialyZGrafiku([{ dzien_tyg: 7, od: '10:00', do: '14:00', od_daty: nd, do_daty: nd }], nd)).toEqual([{ od: S.naMin(nd + ' 10:00'), do: S.naMin(nd + ' 14:00') }]);
+  });
   test('przedzialyZGrafiku honoruje dzień tygodnia i zakres dat', () => {
     const wz = [{ dzien_tyg: 2, od: '09:00', do: '13:00' }, { dzien_tyg: 2, od: '14:00', do: '17:00', od_daty: '2026-11-01' }, { dzien_tyg: 3, od: '09:00', do: '17:00' }];
     expect(S.przedzialyZGrafiku(wz, D)).toEqual(dost('09:00', '13:00'));
