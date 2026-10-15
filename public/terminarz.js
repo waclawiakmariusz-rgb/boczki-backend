@@ -97,7 +97,7 @@
     const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
-    <div class="trm" data-wersja="20261015c">
+    <div class="trm" data-wersja="20261015d">
       <div class="trm-top">
         <div><h1>Terminarz</h1><div class="trm-sub" id="trm-sub"></div></div>
         <div class="trm-spacer"></div>
@@ -328,8 +328,14 @@
     TRM.bubla = { id, pinned: true, rect: ev.currentTarget.getBoundingClientRect() };
     trmPokazBuble();
   };
+  let trmKursor = { x: -1, y: -1 };
+  document.addEventListener('pointermove', (ev) => { trmKursor = { x: ev.clientX, y: ev.clientY }; }, { passive: true });
+  const trmKursorNaChmurce = () => { const e = document.elementFromPoint(trmKursor.x, trmKursor.y); return !!(e && e.closest && e.closest('.trm-bubble, .trm-karta[data-rezerwacja]')); };
   function trmHoverKarta(ev) {
     if (drag || ev.pointerType === 'touch') return;
+    // wejście na chmurkę (albo powrót na kafelek) kasuje zegar zamknięcia — wcześniej kasował go tylko kafelek,
+    // więc przejście przez 14 px szczeliny kafelek→chmurka zamykało ją po 220 ms, zanim dało się kliknąć
+    if (ev.target.closest && ev.target.closest('.trm-bubble')) { clearTimeout(trmLeaveT); return; }
     const card = ev.target.closest('.trm-karta[data-rezerwacja]'); if (!card) return;
     clearTimeout(trmLeaveT);
     if (TRM.bubla && TRM.bubla.pinned) return;
@@ -344,7 +350,8 @@
     const to = ev.relatedTarget;
     if (to && to.closest && to.closest('.trm-bubble, .trm-karta[data-rezerwacja]')) return;
     clearTimeout(trmHoverT); clearTimeout(trmLeaveT);
-    trmLeaveT = setTimeout(() => { if (TRM.bubla && !TRM.bubla.pinned) TRM.zamknijBuble(); }, 220);
+    const zamknijGdyPoza = () => { if (!TRM.bubla || TRM.bubla.pinned) return; if (trmKursorNaChmurce()) { trmLeaveT = setTimeout(zamknijGdyPoza, 420); return; } TRM.zamknijBuble(); };
+    trmLeaveT = setTimeout(zamknijGdyPoza, 420);
   }
 
   // ── PRZECIĄGANIE kart w widoku Dzień: Pointer Events, próg 6px, podgląd celu na żywo, krok 5 minut,
