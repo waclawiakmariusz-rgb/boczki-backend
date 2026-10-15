@@ -690,6 +690,8 @@ module.exports = (db, opts = {}) => {
         const zasob = d.zasob_id ? Number(d.zasob_id) : null;
         if (prac && !(await pracownicy(tenant)).includes(prac)) throw new BladUzytkownika('Nieznany pracownik.');
         const dotk = await wizytyDotkniete(tenant, prac, zasob, od.slice(0, 10), do_.slice(0, 10), (p) => !S.nakladaja(S.naMin(p.start), S.naMin(p.koniec), S.naMin(od), S.naMin(do_)));
+        // podgląd skutków bez zapisu (raport naprawczy T10) — ta sama lista co przy zapisie, nic nie zmienia w bazie
+        if (d.podglad) return { status: 'success', podglad: true, dotkniete: dotk };
         if (dotk.length && !d.wymus) return { status: 'success', wymaga_decyzji: true, dotkniete: dotk, message: `Ta nieobecność nachodzi na ${dotk.length} wizyt. Zapis jej nie odwołuje — rozwiąż je osobno (zastępstwo, zmiana terminu, kontakt).` };
         const res_ = await q(`INSERT INTO Term_Nieobecnosci (tenant_id, pracownik, zasob_id, od, do_, typ, opis, utworzyl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, prac, zasob, od, do_, typ, String(d.opis || '').slice(0, 255) || null, imie || null]);
         zapiszLog(tenant, 'TERMINARZ: NIEOBECNOŚĆ', imie, `${prac || (zasob ? 'zasób ' + zasob : 'cały salon')} ${od}–${do_} (${typ}), dotkniętych wizyt: ${dotk.length}`);
@@ -756,6 +758,24 @@ module.exports = (db, opts = {}) => {
         const like = '%' + fraza + '%';
         const rows = await q(`SELECT id_klienta, imie_nazwisko, telefon, status, ostrzezenie FROM Klienci WHERE tenant_id = ? AND (status IS NULL OR status = 'AKTYWNY') AND (imie_nazwisko LIKE ? OR telefon LIKE ? OR id_klienta = ?) ORDER BY imie_nazwisko LIMIT 12`, [tenant, like, like, fraza]);
         return { status: 'success', klienci: rows.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko, telefon: k.telefon, ostrzezenie: k.ostrzezenie })) };
+      }
+      // wyszukiwarka wizyt po klientce (nazwa, telefon, ID) w jawnie podanym zakresie ±60 dni (raport naprawczy T08)
+      case 'trm_szukaj_wizyt': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const fraza = String(d.fraza || '').trim().slice(0, 80);
+        if (fraza.length < 2) return { status: 'success', wizyty: [], klienci: [], dni: 60 };
+        const like = '%' + fraza + '%';
+        const cfg = await wspolneCfg(tenant);
+        const dzis = cfg.terazStr.slice(0, 10);
+        const od = S.dzienZ(S.naMin(dzis + ' 00:00') - 60 * 1440) + ' 00:00:00', do_ = S.dzienZ(S.naMin(dzis + ' 00:00') + 60 * 1440) + ' 23:59:59';
+        const rows = await q(`SELECT r.id, r.klient_nazwa, r.status, DATE_FORMAT(r.start,'%Y-%m-%d %H:%i:%s') AS start,
+            GROUP_CONCAT(DISTINCT CONCAT(p.kategoria, IF(p.wariant IS NULL OR p.wariant = '', '', CONCAT(' · ', p.wariant))) ORDER BY p.kolejnosc SEPARATOR ' + ') AS uslugi,
+            GROUP_CONCAT(DISTINCT p.pracownik ORDER BY p.kolejnosc SEPARATOR ', ') AS pracownicy
+          FROM Term_Rezerwacje r LEFT JOIN Term_Pozycje p ON p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.stan <> 'anulowana'
+          WHERE r.tenant_id = ? AND r.start BETWEEN ? AND ? AND (r.klient_nazwa LIKE ? OR r.klient_telefon LIKE ? OR r.id_klienta = ?)
+          GROUP BY r.id ORDER BY ABS(TIMESTAMPDIFF(MINUTE, r.start, ?)) LIMIT 21`, [tenant, od, do_, like, like, fraza, cfg.terazStr]);
+        const klienci = rows.length ? [] : await q(`SELECT id_klienta, imie_nazwisko FROM Klienci WHERE tenant_id = ? AND (status IS NULL OR status = 'AKTYWNY') AND (imie_nazwisko LIKE ? OR telefon LIKE ?) ORDER BY imie_nazwisko LIMIT 5`, [tenant, like, like]);
+        return { status: 'success', dni: 60, wiecej: rows.length > 20, wizyty: rows.slice(0, 20), klienci: klienci.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko })) };
       }
 
       // ───────── dostępność ─────────
@@ -1189,4 +1209,4 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

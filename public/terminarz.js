@@ -108,11 +108,13 @@
         </div>
         <div class="trm-views" id="trm-views">${widoki.map(([k, n]) => `<button class="${TRM.widok === k ? 'on' : ''}" onclick="TRM.widokZmien('${k}')">${n}</button>`).join('')}</div>
         <div class="trm-spacer"></div>
+        ${operacyjna() ? `<div class="trm-szukaj"><input id="trm-szukaj" placeholder="Szukaj wizyty lub klientki…" autocomplete="off" oninput="TRM.szukajWizyt(this.value)" onfocus="TRM.szukajWizyt(this.value)" aria-label="Szukaj wizyty lub klientki"><div class="trm-szukaj-wyniki" id="trm-szukaj-wyniki" hidden></div></div>` : ''}
         <a class="trm-btn" href="/pomoc-terminarz/" target="_blank" rel="noopener" title="Przewodnik po Terminarzu — scenki, FAQ" style="text-decoration:none;display:inline-flex;align-items:center">📖 Pomoc</a>
         ${(operacyjna() || specjalista()) ? `<button class="trm-btn trm-dzwonek fix" onclick="TRM.otworzPowiadomienia()" title="Powiadomienia i sprawy">🔔<span class="trm-dzwonek-licz" id="trm-dzwonek-licz" hidden>0</span></button>` : ''}
         ${operacyjna() ? `<button class="trm-btn primary" onclick="TRM.nowaWizyta()">+ Nowa wizyta</button>` : ''}
       </div>
       <div class="trm-counters" id="trm-counters"></div>
+      <div class="trm-filtry" id="trm-filtry" hidden></div>
       <div class="trm-body" id="trm-body"><div class="trm-main" id="trm-main"></div><aside class="trm-panel" id="trm-panel" hidden></aside></div>
       <div class="trm-bubble-layer" id="trm-bubble-layer"></div>
     </div>`;
@@ -127,12 +129,43 @@
   }
   TRM.idz = (n) => { if (n === 0) TRM.data = dzisStr(); else TRM.data = dodajDni(TRM.data, (TRM.widok === 'tydzien' || TRM.widok === 'agenda') ? 7 * n : n); el('trm-data').value = TRM.data; odswiez(); };
   TRM.ustawDate = (v) => { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { TRM.data = v; odswiez(); } };
+
+  // ── filtr osób (widok Dzień) + wyszukiwarka wizyt/klientek (raport T08) ──
+  TRM.filtrPrac = new Set();
+  function renderFiltry(wszyscy) {
+    const f = el('trm-filtry'); if (!f) return;
+    if (TRM.widok !== 'dzien' || !wszyscy || wszyscy.length < 2) { f.hidden = true; f.innerHTML = ''; return; }
+    f.hidden = false;
+    f.innerHTML = `<span class="muted small">Osoby:</span>${wszyscy.map(p => `<span class="trm-chip ${TRM.filtrPrac.has(p) ? 'on' : ''}" role="button" tabindex="0" onclick="TRM.filtrPracToggle('${esc(p).replace(/'/g, "\\'")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">${avatarHtml(p, true)}${esc(p)}</span>`).join('')}${TRM.filtrPrac.size ? `<button class="trm-btn link sm" onclick="TRM.filtrWyczysc()">Wyczyść filtry</button>` : '<span class="muted small">(bez zaznaczenia = cały zespół)</span>'}`;
+  }
+  TRM.filtrPracToggle = (p) => { if (TRM.filtrPrac.has(p)) TRM.filtrPrac.delete(p); else TRM.filtrPrac.add(p); if (TRM.dzien && TRM.widok === 'dzien') renderDzien(); };
+  TRM.filtrWyczysc = () => { TRM.filtrPrac.clear(); if (TRM.dzien && TRM.widok === 'dzien') renderDzien(); };
+  let szukajWizytT = null, szukajWizytReq = 0;
+  TRM.szukajWizyt = (fraza) => {
+    const box = el('trm-szukaj-wyniki'); if (!box) return;
+    clearTimeout(szukajWizytT);
+    const f = String(fraza || '').trim();
+    if (f.length < 2) { box.hidden = true; box.innerHTML = ''; return; }
+    szukajWizytT = setTimeout(async () => {
+      const req = ++szukajWizytReq;
+      const d = await api('trm_szukaj_wizyt', { fraza: f });
+      if (req !== szukajWizytReq) return;
+      if (d.status !== 'success') { box.hidden = false; box.innerHTML = `<div class="m">${esc(d.message || 'Nie udało się wyszukać')}</div>`; return; }
+      box.hidden = false;
+      box.innerHTML = (d.wizyty || []).length
+        ? `<div class="m" style="cursor:default">Wizyty ±${d.dni || 60} dni · ${d.wizyty.length}${d.wiecej ? '+' : ''}</div>` + d.wizyty.map(w => `<div onclick="TRM.szukajOtworz(${w.id}, '${w.start.slice(0, 10)}')"><b>${esc(w.klient_nazwa)}</b> · ${esc(ladnaData(w.start.slice(0, 10), true))} ${hhmm(w.start)}<div class="m">${esc(w.uslugi || '')}${w.pracownicy ? ' · ' + esc(w.pracownicy) : ''}${w.status !== 'potwierdzona' ? ' · ' + esc((ST_LABEL[w.status] || [w.status])[0]) : ''}</div></div>`).join('')
+        : `<div class="m" style="cursor:default">Brak wizyt dla „${esc(f)}” w zakresie ±${d.dni || 60} dni.${(d.klienci || []).length ? ' Znalezione klientki: ' + d.klienci.map(k => esc(k.nazwa)).join(', ') : ''}</div>`;
+    }, 300);
+  };
+  TRM.szukajOtworz = async (id, data) => { const box = el('trm-szukaj-wyniki'); if (box) { box.hidden = true; box.innerHTML = ''; } const inp = el('trm-szukaj'); if (inp) inp.value = ''; if (data && data !== TRM.data) { TRM.data = data; const di = el('trm-data'); if (di) di.value = data; } if (TRM.widok !== 'dzien' && TRM.widok !== 'moj') TRM.widokZmien('dzien'); else await odswiez(); TRM.otworzSzczegoly(id); };
+  document.addEventListener('click', (e) => { const box = el('trm-szukaj-wyniki'); if (box && !box.hidden && !e.target.closest('.trm-szukaj')) { box.hidden = true; } });
   TRM.widokZmien = (w) => { TRM.widok = w; document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', tydzien: 'Tydzień', agenda: 'Agenda', zasoby: 'Zasoby', ustawienia: 'Ustawienia', moj: 'Mój dzień' })[w])); odswiez(); };
 
   async function odswiez() {
     const main = el('trm-main'); if (!main) return;
     const sub = el('trm-sub');
     const di = el('trm-data'); if (di && di.value !== TRM.data) di.value = TRM.data;
+    if (TRM.widok !== 'dzien') renderFiltry(null); // chipy osób tylko w widoku Dzień
     if (TRM.widok === 'ustawienia') { if (sub) sub.textContent = 'Konfiguracja salonu'; return renderUstawienia(); }
     if (TRM.widok === 'tydzien' || TRM.widok === 'agenda') {
       const od = TRM.widok === 'tydzien' ? poniedzialek(TRM.data) : TRM.data, do_ = dodajDni(od, 6);
@@ -149,6 +182,7 @@
     if (d.status !== 'success') { main.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
     TRM.dzien = d;
     liczniki(d);
+    nowaSynchronizujDate();
     if (TRM.widok === 'zasoby') return renderZasoby();
     if (TRM.widok === 'moj' || waski()) return renderAgendaDnia();
     renderDzien();
@@ -196,7 +230,7 @@
       const mozePrzeciagac = !!dragPrac && operacyjna() && !anul && r.wykonanie === 'zaplanowana';
       const pozIdsCsv = poz.map(x => x.id).join(',');
       const krotka = (b - a) < 40;
-      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" title="${esc(r.klient_nazwa + ' — ' + naz)}${mozePrzeciagac ? ' · przeciągnij, aby zmienić termin lub osobę' : ''}">
+      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
         <div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}
       </div>`;
     });
@@ -231,26 +265,40 @@
     const layer = el('trm-bubble-layer'); if (!layer || !TRM.bubla) return;
     const r = rezZDnia(TRM.bubla.id);
     if (!r) { layer.innerHTML = ''; TRM.bubla = null; return; }
-    const p = r.pozycje[0] || {};
     const rect = TRM.bubla.rect, szer = 380;
     let left = rect.right + 14; if (left + szer > window.innerWidth - 16) left = Math.max(12, rect.left - szer - 14);
-    const top = Math.max(12, Math.min(rect.top - 80, window.innerHeight - 420));
     const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
     const aktywna = !anul && r.wykonanie !== 'wykonana';
-    layer.innerHTML = `<div class="trm-bubble" style="left:${left}px;top:${Math.max(12, top)}px" role="dialog" aria-label="Podgląd wizyty" tabindex="-1">
-      <div class="trm-row" style="margin-bottom:4px">${pill(ST_LABEL[r.status])}<div class="trm-spacer"></div><button class="trm-x" onclick="TRM.zamknijBuble()" title="Zamknij podgląd">✕</button></div>
-      <h4>${esc(r.klient_nazwa)}</h4>
-      <div class="muted small">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b></div>
-      <div style="margin-top:10px"><b>${esc(r.pozycje.map(x => x.kategoria + (x.wariant ? ' / ' + x.wariant : '')).join(' + '))}</b>
-        <div class="muted small">${esc(p.pracownik || '—')}${p.gabinet ? ' · ' + esc(p.gabinet) : ''}${p.urzadzenie ? ' · ' + esc(p.urzadzenie) : ''}</div>
-      </div>
+    const poz = r.pozycje.filter(x => x.stan !== 'anulowana');
+    const lista = poz.length ? poz : r.pozycje;
+    const op = operacyjna();
+    // jeden główny stan obsługi (T05/T06): odwołana > nieobecna > wykonana > w trakcie > przybyła > zaplanowana
+    const glowny = anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    // rozliczenie: tylko to, co system naprawdę wie (bez fikcyjnych liczników pakietu — etap A nie śledzi jednostek zakupu)
+    const rozl = !op ? '' : r.sprzedaz_id ? `<span class="trm-pill ok">Rozliczona</span><span>sprzedaż ${esc(r.sprzedaz_id)}</span>` : (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo') ? `<span class="trm-pill warn">Do rozliczenia</span><span>w Sprzedaży, po wykonaniu</span>` : `<span class="trm-pill neu">Rozliczenie po wykonaniu</span>`;
+    // główna czynność zależna od etapu
+    let akcja = '';
+    if (op && aktywna) {
+      if (r.obecnosc !== 'przybyl' && r.wykonanie === 'zaplanowana') akcja = `<button class="trm-btn sm primary" onclick="TRM.bublaObecnosc('przybyl')">Oznacz przybycie</button>`;
+      else if (lista.some(x => x.stan === 'zaplanowana') && r.wykonanie !== 'w_toku') akcja = `<button class="trm-btn sm primary" onclick="TRM.bublaStan(${(lista.find(x => x.stan === 'zaplanowana') || {}).id}, 'w_trakcie')">Rozpocznij zabieg</button>`;
+      else if (lista.some(x => x.stan === 'w_trakcie')) akcja = `<button class="trm-btn sm primary" onclick="TRM.bublaStan(${(lista.find(x => x.stan === 'w_trakcie') || {}).id}, 'wykonana')">Zakończ zabieg</button>`;
+    }
+    layer.innerHTML = `<div class="trm-bubble" style="left:${left}px;top:12px" role="dialog" aria-label="Podgląd wizyty" tabindex="-1">
+      <div class="trm-row" style="margin-bottom:4px">${pill(glowny)}<div class="trm-spacer"></div><button class="trm-x" onclick="TRM.zamknijBuble()" aria-label="Zamknij podgląd">✕</button></div>
+      <h4>${esc(r.klient_nazwa)}${r.id_klienta && op ? ` <button class="trm-btn link sm" style="font-size:12px;vertical-align:middle" onclick="TRM.zamknijBuble();pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil ↗</button>` : ''}</h4>
+      <div class="muted small">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b> · ${lista.length} ${lista.length === 1 ? 'zabieg' : lista.length < 5 ? 'zabiegi' : 'zabiegów'}</div>
+      <div style="margin-top:10px">${lista.map(x => `<div class="trm-bubble-poz"><span class="g">${hhmm(x.start)}–${hhmm(x.koniec)}</span><span><b>${esc(x.kategoria)}${x.wariant ? ' · ' + esc(x.wariant) : ''}</b></span><span class="m">${esc(x.wykonawca_fakt || x.pracownik || '—')}${x.gabinet ? ' · ' + esc(x.gabinet) : ''}${x.urzadzenie ? ' · ' + esc(x.urzadzenie) : ''}${x.stan !== 'zaplanowana' ? ' · ' + esc(POZ_LABEL[x.stan] || x.stan) : ''}</span></div>`).join('')}</div>
+      ${rozl ? `<div class="trm-bubble-rozl">${rozl}</div>` : ''}
       <div class="trm-bubble-foot">
-        ${aktywna && operacyjna() && r.obecnosc !== 'przybyl' ? `<button class="trm-btn sm" onclick="TRM.bublaObecnosc('przybyl')">Przybyła</button>` : ''}
-        ${aktywna && operacyjna() && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.bublaPrzelozenie()">Przełóż</button>` : ''}
-        <button class="trm-btn sm primary" onclick="TRM.bublaSzczegoly()">Szczegóły</button>
+        ${akcja}
+        ${aktywna && op && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.bublaPrzelozenie()">Przełóż</button>` : ''}
+        <button class="trm-btn sm ${akcja ? '' : 'primary'}" onclick="TRM.bublaSzczegoly()">Szczegóły</button>
       </div>
     </div>`;
+    // dopasowanie do ekranu dopiero po zmierzeniu realnej wysokości (chmurka ma się mieścić w oknie)
+    const b = layer.firstElementChild; if (b) { const h = b.offsetHeight; b.style.top = Math.max(12, Math.min(rect.top - 40, window.innerHeight - h - 12)) + 'px'; }
   }
+  TRM.bublaStan = async (pozId, stan) => { const id = TRM.bubla && TRM.bubla.id; if (!id || !pozId) return; TRM.zamknijBuble(); const d = await api('trm_pozycja_stan', { id, pozycja_id: pozId, stan }); if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message); toast('success', stan === 'w_trakcie' ? 'Zabieg rozpoczęty' : 'Zabieg zakończony'); await odswiez(); if (TRM.szcz && TRM.szcz.id === id) await przeladujSzczegoly(d.rezerwacja); };
   TRM.zamknijBuble = () => { TRM.bubla = null; const l = el('trm-bubble-layer'); if (l) l.innerHTML = ''; };
   TRM.bublaSzczegoly = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); };
   TRM.bublaPrzelozenie = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); if (!TRM.szcz || !TRM.szcz.rez) return; TRM.szcz.tryb = 'zmiana'; TRM.zm = { start: TRM.szcz.rez.start.slice(0, 16), prac: {} }; TRM.renderSzczegoly(); };
@@ -325,6 +373,19 @@
       drag.tip.innerHTML = `<strong>${pad(Math.floor(m / 60))}:${pad(m % 60)}–${pad(Math.floor(koniecM / 60))}:${pad(koniecM % 60)} · ${esc(pracDocelowy || '')}</strong><br>Puść, aby sprawdzić zmianę`;
     }
   }
+  // Escape / utrata gestu (pointercancel) anuluje propozycję bez żadnej mutacji (raport T12)
+  function trmDragAnuluj() {
+    if (!drag) return;
+    const d = drag; drag = null;
+    document.querySelectorAll('.trm').forEach(n => n.classList.remove('przeciaganie'));
+    if (d.card) d.card.classList.remove('przeciagana');
+    if (d.tip) d.tip.remove();
+    document.querySelectorAll('.trm-draft-slot').forEach(n => n.remove());
+    if (dragRaf) { cancelAnimationFrame(dragRaf); dragRaf = 0; }
+    try { d.card.releasePointerCapture(d.pointerId); } catch (e) {}
+    if (d.started) TRM._suprimKlik = Date.now() + 350;
+  }
+  document.addEventListener('pointercancel', trmDragAnuluj);
   function trmDragUp(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
     const d = drag; drag = null;
@@ -398,8 +459,12 @@
   // ── widok DZIEŃ / ZESPÓŁ (E01) ─────────────────────────────────────────
   function renderDzien() {
     const d = TRM.dzien, main = el('trm-main');
-    const prac = TRM.dane.pracownicy;
-    if (!prac.length) { main.innerHTML = `<div class="trm-empty"><div class="big">👩‍⚕️</div><p>Salon nie ma jeszcze pracowników (Administracja → Pracownicy).</p></div>`; return; }
+    const wszyscy = TRM.dane.pracownicy;
+    renderFiltry(wszyscy);
+    // filtr osób zawęża tylko widok — kolizje liczy serwer na pełnych danych (raport T08)
+    const prac = (TRM.filtrPrac && TRM.filtrPrac.size) ? wszyscy.filter(p => TRM.filtrPrac.has(p)) : wszyscy;
+    if (!wszyscy.length) { main.innerHTML = `<div class="trm-empty"><div class="big">👩‍⚕️</div><p>Salon nie ma jeszcze pracowników (Administracja → Pracownicy).</p></div>`; return; }
+    if (!prac.length) { main.innerHTML = `<div class="trm-empty"><p>Filtr nie pasuje do żadnej osoby. <button class="trm-btn link sm" onclick="TRM.filtrWyczysc()">Wyczyść filtry</button></p></div>`; return; }
     const wszPrzedz = Object.values(d.dostepnosc).flat();
     const zak = TRM._zak = zakresGodzin([...wszPrzedz, ...d.salon], d.rezerwacje);
     const brakGrafiku = prac.filter(p => !(d.dostepnosc[p] || []).length);
@@ -479,7 +544,7 @@
       <div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${uslugi}</div></div>
       <div class="trm-ag-prac">${prac}</div>
       <div class="trm-ag-status">${pill(ST_LABEL[r.status])}${r.obecnosc !== 'oczekiwana' ? pill(OB_LABEL[r.obecnosc]) : ''}${r.wykonanie !== 'zaplanowana' ? pill(WYK_LABEL[r.wykonanie]) : ''}</div>
-      <div class="trm-ag-rozl">${r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : '<span class="muted small">—</span>'}</div>
+      <div class="trm-ag-rozl">${!operacyjna() ? '<span class="muted small">brak uprawnień</span>' : anul ? '<span class="muted small">nie dotyczy</span>' : r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : !r.id_klienta ? '<span class="muted small">bez kartoteki</span>' : '<span class="muted small">po wykonaniu</span>'}</div>
     </div>`;
   }
   function renderAgenda(od, do_) {
@@ -510,7 +575,8 @@
     if (!operacyjna()) return;
     const o = opcje || {};
     const start = o.start || `${TRM.data} ${pad(Math.max(8, new Date().getHours() + 1))}:00`;
-    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, krok: 1 };
+    // dataReczna: użytkownik świadomie wpisał datę w formularzu — wtedy nawigacja kalendarza jej nie nadpisuje (raport T01)
+    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
     if (o.pracownik) TRM.nowa.domyslny = o.pracownik;
     TRM.panel = 'nowa';
     renderNowa();
@@ -541,17 +607,44 @@
       ${!skonf.length ? `<div class="trm-note warn small">Żadna usługa nie ma jeszcze czasu trwania. ${manager() ? 'Ustaw go w Ustawienia → Usługi.' : 'Poproś managera o konfigurację usług w terminarzu.'}</div>` : ''}
     </div>`;
   }
+  // Krok 3 (raport T01/T04): data zawsze jawna, wolne godziny jako przyciski, dostępność sprawdzana automatycznie
+  // po każdej istotnej zmianie (bez ręcznego „Sprawdź komplet”), 4 stany: czekam / ok / zajęty / błąd.
   function sekcjaTerminuHtml(n) {
+    const prac = TRM.dane.pracownicy;
+    const dost = n.dostep || {}, st = dost.stan;
+    const dostepHtml = !n.pozycje.length ? '' : st === 'czekam' ? `<div class="trm-dostep czekam">⏳ Sprawdzamy termin…</div>`
+      : st === 'ok' ? `<div class="trm-dostep ok">✓ Termin dostępny · ${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}${dost.wynik.przerwy_min ? ` (w tym ${dost.wynik.przerwy_min} min przerwy)` : ''}</div>`
+      : st === 'zajety' ? `<div class="trm-dostep zajety">✕ Termin zajęty — ${esc((dost.wynik.problemy || []).map(p => p.opis).join('; ') || 'konflikt zasobów')}</div>`
+      : st === 'blad' ? `<div class="trm-dostep blad">⚠ Nie udało się sprawdzić terminu (${esc(dost.komunikat || 'brak odpowiedzi')}). <button class="trm-btn link sm" onclick="TRM.nowaZmiana(true)">Sprawdź ponownie</button></div>`
+      : `<div class="trm-dostep czekam">Wybierz godzinę — dostępność sprawdzimy automatycznie.</div>`;
+    const sloty = n.sloty;
+    const slotyHtml = !n.pozycje.length ? '<div class="muted small">Najpierw wybierz zabieg.</div>'
+      : sloty == null ? '<div class="muted small">⏳ Szukamy wolnych godzin…</div>'
+      : sloty.blad ? '<div class="muted small">Nie udało się pobrać propozycji — wpisz godzinę ręcznie.</div>'
+      : !sloty.length ? `<div class="trm-note warn small">Brak wolnych godzin tego dnia dla tego wyboru. <button class="trm-btn link sm" onclick="TRM.nowaSzukajTerminy()">Pokaż najbliższe inne dni</button></div>`
+      : `<div class="trm-sloty">${sloty.map(s => `<button type="button" class="${n.start === s.start.slice(0, 16) ? 'selected' : ''}" onclick="TRM.nowaWybierzSlot('${s.start.slice(0, 16)}')">${hhmm(s.start)}</button>`).join('')}</div>`;
     return `<div class="trm-grid2">
-        <div class="trm-field"><label>Data</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
-        <div class="trm-field"><label>Godzina</label><input type="time" id="trm-n-godz" step="300" value="${n.start.slice(11, 16)}" onchange="TRM.nowaStart()"></div>
+        <div class="trm-field"><label>Data wizyty</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
+        <div class="trm-field"><label>Preferowany wykonawca</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolna właściwa osoba</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
       </div>
-      <div class="trm-grid2">
+      <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}</div>
+      <div class="trm-field"><label>Inna godzina</label><input type="time" id="trm-n-godz" step="300" value="${n.start.slice(11, 16)}" onchange="TRM.nowaStart()"></div>
+      ${dostepHtml}
+      ${st === 'ok' && dost.wynik ? `<div class="trm-podsum" style="display:block"><div class="t">Podsumowanie</div>${dost.wynik.pozycje.map(p => `<div class="m">${hhmm(p.start)}–${hhmm(p.koniec)} · ${esc(p.nazwa)} — <b>${esc(p.pracownik)}</b>${p.gabinet_id ? ' · ' + esc((zasob(p.gabinet_id) || {}).nazwa || 'gabinet') : ''}${p.urzadzenie_id ? ' · ' + esc((zasob(p.urzadzenie_id) || {}).nazwa || 'urządzenie') : ''}</div>`).join('')}<div class="m" style="margin-top:4px">Rozliczenie: po wykonaniu, w Sprzedaży (zakupy klientki sprawdza kartoteka).</div></div>` : ''}
+      ${st === 'zajety' && dost.wynik ? alternatywyHtml(dost.wynik.alternatywy, 'TRM.nowaWybierzAlt') : ''}
+      <details class="trm-wiecej" ${n.notatka || n.kanal !== 'recepcja' ? 'open' : ''}><summary>Notatka i kanał</summary>
+        <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value">${esc(n.notatka)}</textarea></div>
         <div class="trm-field"><label>Kanał</label><select onchange="TRM.nowa.kanal=this.value">${Object.entries(KANAL_LABEL).filter(([k]) => !['online', 'klub', 'import'].includes(k)).map(([k, v]) => `<option value="${k}" ${n.kanal === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
-        <div class="trm-field"><label>&nbsp;</label><button class="trm-btn" style="width:100%" onclick="TRM.nowaSzukajTerminy()">Znajdź najbliższe terminy</button></div>
-      </div>
-      <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value">${esc(n.notatka)}</textarea></div>
-      <div id="trm-n-wynik">${wynikHtml(n.wynik)}</div>`;
+      </details>
+      <div id="trm-n-wynik"></div>`;
+  }
+  function podsumowanieKrok3(n) {
+    return `<div class="trm-podsum"><div><div class="t">Klientka</div><div class="v">${esc(n.klient ? n.klient.nazwa : '—')}</div><div class="m">${n.klient ? esc(n.klient.telefon || 'brak telefonu') : ''}</div></div><button class="trm-btn link sm fix" onclick="TRM.nowaIdzDoKroku(1)">Zmień</button></div>
+    <div class="trm-podsum"><div><div class="t">Zabiegi</div>${n.pozycje.map(p => `<div class="v">${esc(nazwaUslugi(usluga(p.usluga_id)))} <span class="m">· ${p.czas_min} min${p.pracownik ? ' · ' + esc(p.pracownik) : ''}</span></div>`).join('') || '<div class="m">brak</div>'}</div><button class="trm-btn link sm fix" onclick="TRM.nowaIdzDoKroku(2)">Zmień</button></div>`;
+  }
+  function stopkaNowej(n) {
+    const gotowe = n.pozycje.length && n.klient && n.dostep && n.dostep.stan === 'ok';
+    return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">Umów wizytę</button></div>`;
   }
   function renderNowa() {
     const n = TRM.nowa; if (!n) return;
@@ -560,36 +653,33 @@
     panelOtworz(n.szybka ? renderNowaSzybka(n, lista) : renderNowaKreator(n, lista));
   }
   function renderNowaSzybka(n, lista) {
-    return naglowekPanelu('Nowa wizyta', 'Klient → usługi → termin → komplet zasobów → zapis')
-      + sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n)
-      + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaSprawdz()" ${n.pozycje.length ? '' : 'disabled'}>Sprawdź komplet</button><button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${n.pozycje.length && n.klient ? '' : 'disabled'} id="trm-n-zapisz">Zapisz wizytę</button></div>
-      <div class="muted small" style="margin-top:8px">Zapis sprawdza pracownika, gabinet i sprzęt razem. Wynik wyszukiwarki jest ofertą, nie gwarancją — przy zapisie sprawdzamy jeszcze raz.</div>`;
+    return naglowekPanelu('Nowa wizyta', `${esc(ladnaData(n.start.slice(0, 10)))}${n.domyslny ? ' · ' + esc(n.domyslny) : ''}`)
+      + sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n) + stopkaNowej(n);
   }
   function renderNowaKreator(n, lista) {
     const krok = Math.max(1, Math.min(3, n.krok || 1));
-    const kroki = `<div class="trm-kroki">${['Klientka', 'Usługi', 'Termin'].map((t, i) => `<div class="trm-krok-el ${i + 1 === krok ? 'aktywny' : ''}"><b>${i + 1 < krok ? '✓' : i + 1}</b>${esc(t)}</div>`).join('')}</div>`;
+    const kroki = `<div class="trm-kroki">${['Klientka', 'Zabieg', 'Termin'].map((t, i) => `<div class="trm-krok-el ${i + 1 === krok ? 'aktywny' : ''}"><b>${i + 1 < krok ? '✓' : i + 1}</b>${esc(t)}</div>`).join('')}</div>`;
     let body;
     if (krok === 1) {
-      body = sekcjaKlientHtml(n) + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn primary" style="width:100%" onclick="TRM.nowaDalej()" ${n.klient ? '' : 'disabled'}>Dalej</button></div>`;
+      body = sekcjaKlientHtml(n) + `<div class="trm-stopka"><button class="trm-btn primary" onclick="TRM.nowaDalej()" ${n.klient ? '' : 'disabled'}>Dalej</button></div>`;
     } else if (krok === 2) {
-      body = sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaWstecz()">Wstecz</button><button class="trm-btn primary fix" onclick="TRM.nowaDalej()" ${n.pozycje.length ? '' : 'disabled'}>Dalej</button></div>`;
+      body = sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + `<div class="trm-stopka"><button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button><button class="trm-btn primary" onclick="TRM.nowaDalej()" ${n.pozycje.length ? '' : 'disabled'}>Dalej</button></div>`;
     } else {
-      body = sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n)
-        + `<div class="trm-row" style="margin-top:10px"><button class="trm-btn" onclick="TRM.nowaWstecz()">Wstecz</button><button class="trm-btn fix" onclick="TRM.nowaSprawdz()" ${n.pozycje.length ? '' : 'disabled'}>Sprawdź komplet</button><button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${n.pozycje.length && n.klient ? '' : 'disabled'} id="trm-n-zapisz">Zapisz wizytę</button></div>
-        <div class="muted small" style="margin-top:8px">Zapis sprawdza pracownika, gabinet i sprzęt razem. Wynik wyszukiwarki jest ofertą, nie gwarancją — przy zapisie sprawdzamy jeszcze raz.</div>`;
+      body = podsumowanieKrok3(n) + sekcjaTerminuHtml(n) + stopkaNowej(n);
     }
-    return naglowekPanelu('Nowa wizyta', 'Klient → usługi → termin → komplet zasobów → zapis') + kroki + body;
+    return naglowekPanelu('Nowa wizyta', esc(ladnaData(n.start.slice(0, 10)))) + kroki + body;
   }
   TRM.renderNowa = renderNowa;
-  TRM.nowaDalej = () => { const n = TRM.nowa; if (!n) return; if ((n.krok || 1) === 1 && !n.klient) return; if ((n.krok || 1) === 2 && !n.pozycje.length) return; n.krok = Math.min(3, (n.krok || 1) + 1); renderNowa(); };
+  TRM.nowaDalej = () => { const n = TRM.nowa; if (!n) return; if ((n.krok || 1) === 1 && !n.klient) return; if ((n.krok || 1) === 2 && !n.pozycje.length) return; n.krok = Math.min(3, (n.krok || 1) + 1); renderNowa(); if (n.krok === 3) { nowaLadujSloty(); TRM.nowaZmiana(true); } };
   TRM.nowaWstecz = () => { const n = TRM.nowa; if (!n) return; n.krok = Math.max(1, (n.krok || 1) - 1); renderNowa(); };
+  TRM.nowaIdzDoKroku = (k) => { const n = TRM.nowa; if (!n) return; n.krok = k; renderNowa(); };
   function listaUslugHtml(lista) {
     return lista.length ? lista.map(u => `<div class="trm-usl-karta ${u.skonfigurowana && u.aktywna ? '' : 'off'}" onclick="${u.skonfigurowana && u.aktywna ? `TRM.nowaDodajPoz('${esc(u.id)}')` : ''}" title="${u.skonfigurowana ? '' : 'Brak czasu trwania — skonfiguruj w Ustawieniach'}"><span>${esc(nazwaUslugi(u))}</span><span class="muted">${u.skonfigurowana ? u.czas_min + ' min' : 'brak czasu'}${u.cena != null ? ' · ' + zl(u.cena) : ''}</span></div>`).join('') : '<div class="muted" style="padding:8px 10px">Brak usług w cenniku.</div>';
   }
   TRM.renderNowaUslugi = () => { const fr = (TRM.nowa.filtrUsl || '').toLowerCase(); const l = el('trm-usl-lista'); if (l) l.innerHTML = listaUslugHtml(TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60)); };
   let szukajT = null;
   TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = klientWynikiHtml(TRM.nowa.wyniki); } }, 250); };
-  TRM.nowaKlient = (i) => { TRM.nowa.klient = i == null ? null : TRM.nowa.wyniki[i]; TRM.nowa.wynik = null; renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); };
+  TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaDodajKlienta = async () => {
     const nazwa = (el('trm-nk-nazwa').value || '').trim(), tel = (el('trm-nk-tel').value || '').trim();
     if (nazwa.length < 3) return toast('warning', 'Podaj imię i nazwisko');
@@ -598,13 +688,62 @@
     const s = await api('trm_szukaj_klienta', { fraza: tel || nazwa });
     const k = (s.klienci || []).find(x => x.nazwa === nazwa) || (s.klienci || [])[0];
     if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow(true);
-    TRM.nowa.nowyKlient = false; TRM.nowa.klient = k || null; TRM.nowa.wynik = null; renderNowa();
+    TRM.nowa.nowyKlient = false; TRM.nowa.klient = k || null; nowaResetDostep(TRM.nowa); renderNowa(); if (nowaNaTerminie(TRM.nowa)) { nowaLadujSloty(); TRM.nowaZmiana(); }
     toast('success', 'Klientka dodana', k ? 'Profil powiązany z wizytą.' : 'Wyszukaj ją i wybierz.');
   };
-  TRM.nowaDodajPoz = (id) => { const u = usluga(id); if (!u) return; TRM.nowa.pozycje.push({ usluga_id: u.id, pracownik: TRM.nowa.domyslny && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(TRM.nowa.domyslny)) ? TRM.nowa.domyslny : null, czas_min: u.czas_min }); TRM.nowa.filtrUsl = ''; TRM.nowa.wynik = null; renderNowa(); };
-  TRM.nowaUsunPoz = (i) => { TRM.nowa.pozycje.splice(i, 1); TRM.nowa.wynik = null; renderNowa(); };
-  TRM.nowaUniewaznij = () => { TRM.nowa.wynik = null; const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; };
-  TRM.nowaStart = () => { const dt = el('trm-n-data').value, g = el('trm-n-godz').value; if (dt && g) { TRM.nowa.start = `${dt} ${g}`; TRM.nowaUniewaznij(); } };
+  // czy krok „Termin” jest aktualnie widoczny (tryb szybki pokazuje wszystko na raz)
+  const nowaNaTerminie = (n) => n && (n.szybka || n.krok === 3);
+  const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; };
+  TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaUniewaznij = () => { const n = TRM.nowa; if (!n) return; nowaResetDostep(n); const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaPrefPrac = (v) => { const n = TRM.nowa; if (!n) return; n.prefPrac = v || ''; n.pozycje.forEach(p => { const u = usluga(p.usluga_id); p.pracownik = v && (!u || !u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(v)) ? v : null; }); nowaResetDostep(n); renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(); };
+  TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.dataReczna = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };
+  TRM.nowaStart = () => {
+    const n = TRM.nowa; if (!n) return;
+    const dtEl = el('trm-n-data'), gEl = el('trm-n-godz');
+    const dt = dtEl && dtEl.value ? dtEl.value : n.start.slice(0, 10), g = gEl && gEl.value ? gEl.value : n.start.slice(11, 16);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dt) || !/^\d{2}:\d{2}$/.test(g)) return;
+    const zmianaDnia = dt !== n.start.slice(0, 10);
+    n.start = `${dt} ${g}`; n.dataReczna = true; nowaResetDostep(n);
+    if (zmianaDnia) { TRM.data = dt; const di = el('trm-data'); if (di) di.value = dt; odswiez(); } // kalendarz podąża za datą z formularza (T01)
+    renderNowa(); nowaLadujSloty(); TRM.nowaZmiana();
+  };
+  // nawigacja kalendarza przy otwartym formularzu: data formularza podąża za dniem, dopóki ktoś nie wpisał jej ręcznie (T01)
+  function nowaSynchronizujDate() {
+    const n = TRM.nowa; if (!n || TRM.panel !== 'nowa') return;
+    if (n.dataReczna || n.start.slice(0, 10) === TRM.data) return;
+    n.start = TRM.data + n.start.slice(10); nowaResetDostep(n);
+    renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); }
+  }
+  // automatyczne sprawdzenie dostępności z ochroną przed nieaktualną odpowiedzią (A17: licznik żądań)
+  let nowaSprawdzT = null;
+  TRM.nowaZmiana = (natychmiast) => {
+    const n = TRM.nowa; if (!n) return;
+    clearTimeout(nowaSprawdzT);
+    if (!n.pozycje.length || !nowaNaTerminie(n)) return;
+    n.dostep = { stan: 'czekam' }; renderNowa();
+    nowaSprawdzT = setTimeout(nowaAutoSprawdz, natychmiast ? 0 : 350);
+  };
+  async function nowaAutoSprawdz() {
+    const n = TRM.nowa; if (!n || !n.pozycje.length) return;
+    const req = ++n.req;
+    let d; try { d = await api('trm_sprawdz', { start: n.start, pozycje: n.pozycje, id_klienta: n.klient ? n.klient.id_klienta : null }); } catch (e) { d = { status: 'error', message: 'brak połączenia' }; }
+    if (TRM.nowa !== n || req !== n.req) return; // stara odpowiedź po kolejnej zmianie — ignorujemy
+    if (!d || d.status !== 'success') n.dostep = { stan: 'blad', komunikat: (d && d.message) || 'brak odpowiedzi' };
+    else n.dostep = d.ok ? { stan: 'ok', wynik: d } : { stan: 'zajety', wynik: d };
+    renderNowa();
+  }
+  async function nowaLadujSloty() {
+    const n = TRM.nowa; if (!n) return;
+    if (!n.pozycje.length) { n.sloty = []; return; }
+    const dzien = n.start.slice(0, 10); const req = n.reqSloty = (n.reqSloty || 0) + 1;
+    n.sloty = null;
+    let d; try { d = await api('trm_szukaj', { dzien_od: dzien, dzien_do: dzien, pozycje: n.pozycje, limit: 12, id_klienta: n.klient ? n.klient.id_klienta : null }); } catch (e) { d = null; }
+    if (TRM.nowa !== n || req !== n.reqSloty || n.start.slice(0, 10) !== dzien) return;
+    n.sloty = d && d.status === 'success' ? d.terminy : Object.assign([], { blad: true });
+    renderNowa();
+  }
   function wynikHtml(w) {
     if (!w) return '';
     if (w.ok) return `<div class="trm-note ok"><b>Cały komplet jest dostępny</b> · ${hhmm(w.start)}–${hhmm(w.koniec)}${w.przerwy_min ? ` (w tym ${w.przerwy_min} min przerwy)` : ''}<br>${w.pozycje.map(p => `${esc(p.nazwa)} — <b>${esc(p.pracownik)}</b>${p.gabinet_id ? ' · ' + esc((zasob(p.gabinet_id) || {}).nazwa || 'gabinet') : ''}${p.urzadzenie_id ? ' · ' + esc((zasob(p.urzadzenie_id) || {}).nazwa || 'urządzenie') : ''} (${hhmm(p.start)}–${hhmm(p.koniec)})`).join('<br>')}</div>`;
@@ -614,14 +753,18 @@
     if (!alt || !alt.length) return '<div class="muted small">Brak alternatyw w najbliższych dniach — zmień zakres albo osobę.</div>';
     return `<div class="small muted" style="margin-top:8px">Dostępne rozwiązania:</div>` + alt.map((a, i) => `<div class="trm-alt"><div><b>${ladnaData(a.start.slice(0, 10), true)} · ${hhmm(a.start)}–${hhmm(a.koniec)}</b><div class="d">${esc(a.opis || '')} · ${a.pozycje.map(p => p.pracownik).join(', ')}</div></div><button class="trm-btn sm" onclick="${fn}(${i})">Wybierz</button></div>`).join('');
   }
-  TRM.nowaWybierzAlt = (i) => { const a = TRM.nowa.wynik.alternatywy[i]; TRM.nowa.start = a.start.slice(0, 16); a.pozycje.forEach((p, j) => { if (TRM.nowa.pozycje[j]) TRM.nowa.pozycje[j].pracownik = p.pracownik; }); TRM.nowa.wynik = null; renderNowa(); TRM.nowaSprawdz(); };
-  TRM.nowaSprawdz = async () => {
-    const n = TRM.nowa; if (!n || !n.pozycje.length) return;
-    const w = el('trm-n-wynik'); if (w) w.innerHTML = '<div class="muted small">Sprawdzamy komplet…</div>';
-    const d = await api('trm_sprawdz', { start: n.start, pozycje: n.pozycje, id_klienta: n.klient ? n.klient.id_klienta : null });
-    if (d.status !== 'success') { if (w) w.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
-    n.wynik = d; if (w) w.innerHTML = wynikHtml(d);
+  TRM.nowaWybierzAlt = (i) => {
+    const n = TRM.nowa; if (!n) return;
+    const zrodlo = (n.dostep && n.dostep.wynik && n.dostep.wynik.alternatywy) || (n.wynik && n.wynik.alternatywy) || [];
+    const a = zrodlo[i]; if (!a) return;
+    const nowyDzien = a.start.slice(0, 10), zmianaDnia = nowyDzien !== n.start.slice(0, 10);
+    n.start = a.start.slice(0, 16); n.dataReczna = true;
+    a.pozycje.forEach((p, j) => { if (n.pozycje[j]) n.pozycje[j].pracownik = p.pracownik; });
+    nowaResetDostep(n);
+    if (zmianaDnia) { TRM.data = nowyDzien; const di = el('trm-data'); if (di) di.value = nowyDzien; odswiez(); }
+    renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(true);
   };
+  TRM.nowaSprawdz = () => TRM.nowaZmiana(true); // zgodność wsteczna — sprawdzanie jest teraz automatyczne
   TRM.nowaSzukajTerminy = async () => {
     const n = TRM.nowa; if (!n || !n.pozycje.length) return toast('warning', 'Najpierw wybierz usługę');
     const w = el('trm-n-wynik'); if (w) w.innerHTML = '<div class="muted small">Szukamy pełnych kompletów (14 dni)…</div>';
@@ -637,8 +780,8 @@
     n.zapis = true; const btn = el('trm-n-zapisz'); if (btn) { btn.disabled = true; btn.textContent = 'Zapisujemy…'; }
     const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta, nazwa: n.klient.nazwa }, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka });
     n.zapis = false;
-    if (d.status === 'konflikt') { n.wynik = { ok: false, problemy: d.problemy, alternatywy: d.alternatywy }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
-    if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = 'Zapisz wizytę'; } return toast('error', 'Nie zapisano', d.message); }
+    if (d.status === 'konflikt') { n.dostep = { stan: 'zajety', wynik: { problemy: d.problemy, alternatywy: d.alternatywy } }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
+    if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
     toast('success', d.powtorzenie ? 'Ta wizyta była już zapisana' : 'Zapisano wizytę', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)}`);
     TRM.data = d.rezerwacja.start.slice(0, 10); const di = el('trm-data'); if (di) di.value = TRM.data;
     TRM.nowa = null; TRM.panel = null;
@@ -805,30 +948,50 @@
     if (TRM.widok === 'ustawienia') return;
     await odswiez();
   }
+  // Jedna główna czynność zależna od etapu (raport T06), reszta w rozwijanym „Więcej działań”.
+  function glownaAkcjaWizyty(r, anul, op) {
+    if (anul || !op) return '';
+    const akt = r.pozycje.filter(p => !['anulowana', 'niewykonana', 'odmowa'].includes(p.stan));
+    const wTrakcie = akt.find(p => p.stan === 'w_trakcie'), zapl = akt.find(p => p.stan === 'zaplanowana');
+    const nazwa = (p) => esc(p.kategoria + (p.wariant ? ' · ' + p.wariant : ''));
+    if (wTrakcie) return `<button class="trm-btn primary" onclick="TRM.pozStan(${wTrakcie.id},'wykonana')">Zakończ zabieg${akt.length > 1 ? ': ' + nazwa(wTrakcie) : ''}</button>`;
+    if (zapl && r.obecnosc !== 'przybyl' && r.obecnosc !== 'spozniony') return `<button class="trm-btn primary" onclick="TRM.obecnosc('przybyl')">Oznacz przybycie</button>`;
+    if (zapl) return `<button class="trm-btn primary" onclick="TRM.pozStan(${zapl.id},'w_trakcie')">${akt.some(p => p.stan === 'wykonana') ? 'Rozpocznij kolejny' : 'Rozpocznij zabieg'}${akt.length > 1 ? ': ' + nazwa(zapl) : ''}</button>`;
+    return '';
+  }
   function wizytaKartaHtml(r, s, anul, op) {
-    let h = `<div class="trm-card"><h3>Usługi</h3>${r.pozycje.map(p => {
+    const akt = r.pozycje.filter(p => !['anulowana', 'niewykonana', 'odmowa'].includes(p.stan));
+    const wieleAktywnych = akt.filter(p => ['zaplanowana', 'w_trakcie'].includes(p.stan)).length > 1;
+    let h = `<div class="trm-card"><h3>Zabiegi</h3>${r.pozycje.map(p => {
       const u = usluga(p.usluga_id);
-      const akcje = [];
       const moge = op || (specjalista() && p.pracownik === kto());
+      const szybkie = [], inne = [];
       if (!anul && moge) {
-        if (p.stan === 'zaplanowana') { akcje.push(`<button class="trm-btn sm ok" onclick="TRM.pozStan(${p.id},'w_trakcie')">▶ Rozpocznij</button>`); akcje.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'wykonana')">✓ Wykonana</button>`); if (op) akcje.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'niewykonana')">Nie wykonano</button>`); akcje.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'odmowa','Odmowa kwalifikacji — powód (zostanie w historii):')">Odmowa kwalifikacji</button>`); }
-        if (p.stan === 'w_trakcie') { akcje.push(`<button class="trm-btn sm ok" onclick="TRM.pozStan(${p.id},'wykonana')">■ Zakończ</button>`); akcje.push(`<button class="trm-btn sm danger" onclick="TRM.pozStan(${p.id},'przerwana','Powód przerwania:')">Przerwij</button>`); }
+        // przy kilku aktywnych zabiegach każdy ma własne „Rozpocznij/Zakończ”, żeby wybrać właściwy segment; przy jednym wystarczy akcja główna
+        if (p.stan === 'zaplanowana' && (wieleAktywnych || !op)) szybkie.push(`<button class="trm-btn sm ok" onclick="TRM.pozStan(${p.id},'w_trakcie')">▶ Rozpocznij</button>`);
+        if (p.stan === 'w_trakcie' && (wieleAktywnych || !op)) szybkie.push(`<button class="trm-btn sm ok" onclick="TRM.pozStan(${p.id},'wykonana')">■ Zakończ</button>`);
+        if (p.stan === 'zaplanowana') { inne.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'wykonana')">Oznacz jako wykonany (bez „Rozpocznij”)</button>`); if (op) inne.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'niewykonana')">Nie wykonano</button>`); inne.push(`<button class="trm-btn sm" onclick="TRM.pozStan(${p.id},'odmowa','Odmowa kwalifikacji — powód (zostanie w historii):')">Odmowa kwalifikacji</button>`); }
+        if (p.stan === 'w_trakcie') inne.push(`<button class="trm-btn sm danger" onclick="TRM.pozStan(${p.id},'przerwana','Powód przerwania:')">Przerwij zabieg</button>`);
       }
       return `<div class="trm-poz" style="border-left:4px solid ${kolorKat(u)}"><div class="trm-row"><div class="n">${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</div><span class="fix trm-pill ${p.stan === 'wykonana' ? 'ok' : p.stan === 'w_trakcie' ? 'info' : ['anulowana', 'niewykonana', 'odmowa', 'przerwana'].includes(p.stan) ? 'bad' : 'neu'}">${POZ_LABEL[p.stan] || p.stan}</span></div>
         <div class="m">${hhmm(p.start)}–${hhmm(p.koniec)} · ${p.czas_min} min · <b>${esc(p.pracownik)}</b>${p.wykonawca_fakt && p.wykonawca_fakt !== p.pracownik ? ' (wykonała: ' + esc(p.wykonawca_fakt) + ')' : ''}${p.gabinet ? ' · ' + esc(p.gabinet) : ''}${p.urzadzenie ? ' · ' + esc(p.urzadzenie) : ''}${p.cena != null && op ? ' · ' + zl(p.cena) : ''}</div>
         ${p.start_fakt ? `<div class="m">Faktycznie: ${hhmm(p.start_fakt)}${p.koniec_fakt ? '–' + hhmm(p.koniec_fakt) : ' (trwa)'}</div>` : ''}
-        ${akcje.length ? `<div class="a">${akcje.join('')}</div>` : ''}</div>`;
+        ${szybkie.length ? `<div class="a">${szybkie.join('')}</div>` : ''}
+        ${inne.length ? `<details class="trm-wiecej"><summary>Inne działania dla tego zabiegu</summary><div class="a">${inne.join('')}</div></details>` : ''}</div>`;
     }).join('')}</div>`;
+    const glowna = glownaAkcjaWizyty(r, anul, op);
     if (op && !anul) {
-      h += `<div class="trm-card"><h3>Obecność i obsługa</h3><div class="trm-row">
-        ${r.obecnosc !== 'przybyl' ? `<button class="trm-btn ok sm" onclick="TRM.obecnosc('przybyl')">Klientka przybyła</button>` : ''}
-        ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
-        ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn danger sm" onclick="TRM.obecnosc('nieobecny')">Nieobecna</button>` : ''}
-      </div><div class="muted small" style="margin-top:6px">Nieobecność potwierdza człowiek — system jej nie zgaduje. Jednostka karnetu nie jest zużywana.</div>
-      <div class="trm-row" style="margin-top:10px">
-        ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Zmień termin / osobę</button>` : ''}
-        ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj / rozpatrz</button>` : ''}
-      </div></div>`;
+      const wszystkieWykonane = akt.length && akt.every(p => ['wykonana', 'przerwana'].includes(p.stan));
+      h += `<div class="trm-card">${glowna ? `<div class="trm-akcja-glowna">${glowna}</div>` : wszystkieWykonane ? `<div class="trm-note ok small">Wizyta wykonana — podsumowanie i rozliczenie w zakładce „Rozliczenie”.</div>` : ''}
+      <details class="trm-wiecej"><summary>Więcej działań</summary>
+        <div class="trm-row">
+          ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Przełóż całą wizytę</button>` : ''}
+          ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
+          ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
+          ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj wizytę</button>` : ''}
+        </div>
+        <div class="trm-pomoc">Nieobecność potwierdza człowiek — system jej nie zgaduje i nie zużywa jednostki karnetu.</div>
+      </details></div>`;
       h += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
     } else if (r.notatka && op) h += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
     if (anul) h += `<div class="trm-note bad">Odwołana ${esc(hhmm(r.anulowano || ''))} ${r.anulowano ? esc(r.anulowano.slice(0, 10)) : ''} przez ${r.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}${r.anulowal ? ' (' + esc(r.anulowal) + ')' : ''}: ${esc(r.powod_anulacji || '')}. Odtworzenie to nowa rezerwacja z pełną walidacją.</div>`;
@@ -850,8 +1013,16 @@
     const r = s.rez, anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
     const op = operacyjna();
     const suma = r.pozycje.filter(p => p.stan !== 'anulowana').reduce((a, p) => a + (Number(p.cena) || 0), 0);
-    let html = naglowekPanelu(`${esc(r.numer)} · ${esc(r.klient_nazwa)}`, `${ladnaData(r.start.slice(0, 10))} · ${hhmm(r.start)}–${hhmm(r.koniec)}`);
-    html += `<div class="trm-row" style="margin-bottom:10px">${pill(ST_LABEL[r.status])}${anul ? '' : pill(OB_LABEL[r.obecnosc])}${anul ? '' : pill(WYK_LABEL[r.wykonanie])}${r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : ''}</div>`;
+    const aktywne = r.pozycje.filter(p => p.stan !== 'anulowana').length;
+    // nagłówek: klientka na pierwszym planie, numer EST-… jako informacja pomocnicza (raport T06)
+    let html = `<div class="trm-panel-head"><div><h2>${esc(r.klient_nazwa)}</h2><div class="trm-numer">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b> · ${aktywne} ${aktywne === 1 ? 'zabieg' : aktywne < 5 ? 'zabiegi' : 'zabiegów'} · ${esc(r.numer)}</div></div><button class="trm-x" onclick="TRM.panelZamknij()" aria-label="Zamknij">✕</button></div>`;
+    // jeden główny stan obsługi + pozostałe osie modelu słownie (dane zostają, zmienia się tylko hierarchia prezentacji)
+    const glowny = anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    const pomoc = [];
+    if (!anul && r.status !== 'potwierdzona') pomoc.push('rezerwacja: ' + (ST_LABEL[r.status] || [r.status])[0].toLowerCase());
+    if (!anul && glowny !== OB_LABEL[r.obecnosc] && r.obecnosc !== 'oczekiwana') pomoc.push('obecność: ' + OB_LABEL[r.obecnosc][0].toLowerCase());
+    if (!anul && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo')) pomoc.push(r.sprzedaz_id ? 'rozliczona' : 'do rozliczenia');
+    html += `<div class="trm-status-glowny">${pill(glowny)}${pomoc.length ? `<span class="pomoc">${esc(pomoc.join(' · '))}</span>` : ''}</div>`;
     html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
     if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
     if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
@@ -914,7 +1085,8 @@
   function formAnulacji() {
     const r = TRM.szcz.rez, a = TRM.an;
     const zapl = r.pozycje.filter(p => p.stan === 'zaplanowana');
-    return `<div class="trm-card"><h3>Odwołanie</h3>
+    return `<div class="trm-card"><h3>Odwołaj wizytę</h3>
+      <div class="trm-pomoc" style="margin-bottom:8px">To odwołanie przez klientkę lub salon. „Nie wykonano” i „Odmowa kwalifikacji” dla pojedynczego zabiegu są w zakładce Wizyta, przy zabiegu.</div>
       <div class="trm-field"><label>Zakres</label><select onchange="TRM.an.zakres=this.value"><option value="cala" ${a.zakres === 'cala' ? 'selected' : ''}>Cała wizyta (wszystkie zaplanowane usługi)</option>${zapl.map(p => `<option value="${p.id}" ${String(a.zakres) === String(p.id) ? 'selected' : ''}>Tylko: ${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</option>`).join('')}</select></div>
       <div class="trm-field"><label>Kto odwołuje</label><select onchange="TRM.an.kto=this.value"><option value="klient" ${a.kto === 'klient' ? 'selected' : ''}>Klientka</option><option value="salon" ${a.kto === 'salon' ? 'selected' : ''}>Salon (własna przyczyna)</option></select></div>
       <div class="trm-field"><label>Powód</label><input id="trm-a-powod" placeholder="np. klientka nie może przyjść" value="${esc(a.powod)}"></div>
@@ -988,39 +1160,47 @@
     if (!manager()) { el('trm-main').innerHTML = '<div class="trm-note bad">Ustawienia terminarza zmienia manager lub właściciel.</div>'; return; }
     const t = TRM.ust.tab;
     const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
-    let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ust.tab='${k}';TRM.widokZmien('ustawienia')">${n}</button>`).join('')}</div>`;
+    let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ustTab('${k}')">${n}</button>`).join('')}</div>`;
+    TRM.ust.brudne = false;
     html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
     el('trm-main').innerHTML = html;
+    if (t === 'nieobecnosci') TRM.nieobZmiana(true); // podgląd skutków od razu dla domyślnie wypełnionego formularza
   }
+  // zmiana zakładki Ustawień: ostrzeżenie tylko wtedy, gdy są niezapisane zmiany (raport T14)
+  TRM.ustTab = (k) => { if (TRM.ust.brudne && !window.confirm('Masz niezapisane zmiany w tej zakładce. Przejść dalej i je porzucić?')) return; TRM.ust.tab = k; TRM.widokZmien('ustawienia'); };
+  document.addEventListener('input', (e) => { if (TRM.widok === 'ustawienia' && e.target.closest && e.target.closest('#trm-main') && !e.target.closest('.trm-tabs, #trm-szukaj')) TRM.ust.brudne = true; });
   const godzinyHtml = (godziny, prefix) => `<div class="trm-godz-lista">${[1, 2, 3, 4, 5, 6, 7].map(dz => { const l = godziny[dz] || []; const ma = l.length > 0; return `<div class="trm-dzien-wiersz">
       <span class="trm-dzien-nazwa">${DNI[dz]}</span>
       <label class="trm-switch"><input type="checkbox" id="${prefix}-${dz}-on" ${ma ? 'checked' : ''} onchange="TRM.godzToggle('${prefix}',${dz},this.checked)"><span></span></label>
       <div class="trm-dz-godz" id="${prefix}-${dz}-pola" ${ma ? '' : 'hidden'}>
-        <input type="time" id="${prefix}-${dz}-a-od" value="${(l[0] || {}).od || '09:00'}"> – <input type="time" id="${prefix}-${dz}-a-do" value="${(l[0] || {}).do || '17:00'}">
-        <span class="muted small">i</span>
-        <input type="time" id="${prefix}-${dz}-b-od" value="${(l[1] || {}).od || ''}"> – <input type="time" id="${prefix}-${dz}-b-do" value="${(l[1] || {}).do || ''}">
+        <input type="time" id="${prefix}-${dz}-a-od" value="${(l[0] || {}).od || '09:00'}" aria-label="${DNI[dz]}: od"> – <input type="time" id="${prefix}-${dz}-a-do" value="${(l[0] || {}).do || '17:00'}" aria-label="${DNI[dz]}: do">
+        <span id="${prefix}-${dz}-b" ${l[1] ? '' : 'hidden'} style="display:inline-flex;align-items:center;gap:6px"><span class="muted small">po przerwie:</span><input type="time" id="${prefix}-${dz}-b-od" value="${(l[1] || {}).od || ''}" aria-label="${DNI[dz]}: drugi przedział od"> – <input type="time" id="${prefix}-${dz}-b-do" value="${(l[1] || {}).do || ''}" aria-label="${DNI[dz]}: drugi przedział do"><button type="button" class="trm-btn link sm" onclick="TRM.godzDrugi('${prefix}',${dz},false)" aria-label="Usuń drugi przedział">✕</button></span>
+        <button type="button" class="trm-btn link sm" id="${prefix}-${dz}-b-btn" ${l[1] ? 'hidden' : ''} onclick="TRM.godzDrugi('${prefix}',${dz},true)">+ Przerwa / drugi przedział</button>
       </div>
       <span class="muted small" id="${prefix}-${dz}-zamk" ${ma ? 'hidden' : ''}>Zamknięte</span>
     </div>`; }).join('')}</div>
+    <div class="trm-pomoc">Drugi przedział to praca po przerwie (np. 9–13 i 15–19). Dzień bez przedziałów = zamknięte.</div>
     <button class="trm-btn link sm" type="button" onclick="TRM.godzKopiuj('${prefix}')" style="margin-top:4px">⧉ Skopiuj poniedziałek na dni robocze (wt–pt)</button>`;
   TRM.godzToggle = (prefix, dz, wlacz) => { const pola = el(`${prefix}-${dz}-pola`), zamk = el(`${prefix}-${dz}-zamk`); if (pola) pola.hidden = !wlacz; if (zamk) zamk.hidden = wlacz; };
+  TRM.godzDrugi = (prefix, dz, pokaz) => { const b = el(`${prefix}-${dz}-b`), btn = el(`${prefix}-${dz}-b-btn`); if (b) b.hidden = !pokaz; if (btn) btn.hidden = pokaz; if (!pokaz) { const o = el(`${prefix}-${dz}-b-od`), d = el(`${prefix}-${dz}-b-do`); if (o) o.value = ''; if (d) d.value = ''; } };
   TRM.godzKopiuj = (prefix) => {
     const on = el(`${prefix}-1-on`).checked, aod = el(`${prefix}-1-a-od`).value, ado = el(`${prefix}-1-a-do`).value, bod = el(`${prefix}-1-b-od`).value, bdo = el(`${prefix}-1-b-do`).value;
-    [2, 3, 4, 5].forEach(dz => { el(`${prefix}-${dz}-on`).checked = on; el(`${prefix}-${dz}-a-od`).value = aod; el(`${prefix}-${dz}-a-do`).value = ado; el(`${prefix}-${dz}-b-od`).value = bod; el(`${prefix}-${dz}-b-do`).value = bdo; TRM.godzToggle(prefix, dz, on); });
+    [2, 3, 4, 5].forEach(dz => { el(`${prefix}-${dz}-on`).checked = on; el(`${prefix}-${dz}-a-od`).value = aod; el(`${prefix}-${dz}-a-do`).value = ado; el(`${prefix}-${dz}-b-od`).value = bod; el(`${prefix}-${dz}-b-do`).value = bdo; TRM.godzToggle(prefix, dz, on); TRM.godzDrugi(prefix, dz, !!(bod && bdo)); });
     toast('success', 'Skopiowano godziny poniedziałku na wtorek–piątek');
   };
   const zbierzGodziny = (prefix) => { const g = {}; for (let dz = 1; dz <= 7; dz++) { g[dz] = []; const on = el(`${prefix}-${dz}-on`); if (on && !on.checked) continue; ['a', 'b'].forEach(x => { const odEl = el(`${prefix}-${dz}-${x}-od`), doEl = el(`${prefix}-${dz}-${x}-do`); if (!odEl || !doEl) return; const od = odEl.value, do_ = doEl.value; if (od && do_ && od < do_) g[dz].push({ od, do: do_ }); }); } return g; };
   function ustOgolne() {
     const u = TRM.dane.ustawienia;
     return `<div class="trm-grid2">
-      <div class="trm-card"><h3>Godziny otwarcia salonu</h3><div class="muted small" style="margin-bottom:10px">Otwarcie drzwi nie oznacza pracy konkretnej osoby — dostępność wynika z grafiku pracownika. Gabinety i urządzenia są dostępne w godzinach salonu.</div>${godzinyHtml(u.godziny, 'trm-g')}</div>
+      <div class="trm-card"><h3>Godziny otwarcia salonu</h3><div class="trm-pomoc" style="margin-bottom:10px">Ustaw standardowy tydzień pracy salonu.</div>${godzinyHtml(u.godziny, 'trm-g')}</div>
       <div class="trm-card"><h3>Zasady umawiania</h3>
-        <div class="trm-field"><label>Krok przesuwania wizyt</label><select id="trm-u-siatka">${[5, 10, 15, 30].map(x => `<option value="${x}" ${u.siatka_min === x ? 'selected' : ''}>${x} minut</option>`).join('')}</select><div class="muted small" style="margin-top:3px">O jaką wartość przesuwać wizyty na grafiku.</div></div>
-        <div class="trm-field" style="margin-top:10px"><label>Planowanie z wyprzedzeniem</label><input type="number" id="trm-u-hor" min="7" max="365" value="${u.horyzont_dni}"><div class="muted small" style="margin-top:3px">Na ile dni do przodu można umawiać wizyty.</div></div>
-        <div class="trm-field" style="margin-top:10px"><label>Przypomnienie o spóźnieniu</label><input type="number" id="trm-u-tol" min="0" max="30" value="${u.tolerancja_min}"><div class="muted small" style="margin-top:3px">Po tym czasie przypomnienie jest tylko sugestią dla recepcji.</div></div>
-        <div class="trm-field" style="margin-top:10px"><label>Tryb pracy</label><select id="trm-u-tryb"><option value="wewnetrzny" selected>Terminarz wyłącznie wewnętrzny</option><option value="online" disabled>Główny terminarz z rezerwacjami online (etap B)</option><option value="obok" disabled>Praca obok zewnętrznego kalendarza (etap B)</option></select></div>
+        <div class="trm-field"><label>Krok przesuwania wizyt (minuty)</label><select id="trm-u-siatka">${[5, 10, 15, 30].map(x => `<option value="${x}" ${u.siatka_min === x ? 'selected' : ''}>${x} minut</option>`).join('')}</select><div class="trm-pomoc">O jaką wartość przesuwać wizyty na siatce.</div></div>
+        <div class="trm-field" style="margin-top:10px"><label>Planowanie z wyprzedzeniem (dni)</label><input type="number" id="trm-u-hor" min="7" max="365" value="${u.horyzont_dni}"><div class="trm-pomoc">Na ile dni do przodu można umawiać wizyty.</div></div>
+        <div class="trm-field" style="margin-top:10px"><label>Przypomnienie o spóźnieniu (minuty)</label><input type="number" id="trm-u-tol" min="0" max="30" value="${u.tolerancja_min}"><div class="trm-pomoc">Po tym czasie recepcja widzi przypomnienie — to sugestia, nic nie dzieje się automatycznie.</div></div>
+        <input type="hidden" id="trm-u-tryb" value="wewnetrzny">
+        <details class="trm-pomoc-wiecej" style="margin-top:10px"><summary>Więcej o tych ustawieniach</summary><div class="trm-pomoc">Otwarcie salonu nie oznacza pracy konkretnej osoby — dostępność wynika z grafiku pracownika (zakładka „Grafik zespołu”). Gabinety i urządzenia są dostępne w godzinach salonu. Terminarz pracuje w trybie wewnętrznym: rezerwacje umawia wyłącznie zespół salonu.</div></details>
       </div>
-    </div><button class="trm-btn primary" style="margin-top:12px" onclick="TRM.ustZapiszOgolne()">Zapisz ustawienia</button>`;
+    </div><div class="trm-stopka"><button class="trm-btn primary" onclick="TRM.ustZapiszOgolne()">Zapisz ustawienia</button></div>`;
   }
   TRM.ustZapiszOgolne = async () => {
     const d = await api('trm_ustawienia_zapisz', { godziny: zbierzGodziny('trm-g'), siatka_min: Number(el('trm-u-siatka').value), tolerancja_min: Number(el('trm-u-tol').value), horyzont_dni: Number(el('trm-u-hor').value), tryb: el('trm-u-tryb').value });
@@ -1031,8 +1211,7 @@
     const z = TRM.dane.zespol || [];
     if (!z.length) return '<div class="trm-note warn">Brak pracowników.</div>';
     const uslugiOsoby = (imie) => TRM.dane.uslugi.filter(u => u.pracownicy && u.pracownicy.includes(imie));
-    return `<div class="trm-note info small">Osoby, które nie wykonują zabiegów (np. tylko recepcja), nie pojawiają się w terminarzu jako wykonawcy — nie trzeba ich wyłączać z każdej usługi z osobna. To ustawienie jest niezależne od „Kto wykonuje” przy konkretnej usłudze (zakładka Usługi) — tam nadal możesz zawężać, kto robi co, wśród osób zaznaczonych tutaj.</div>
-    <div class="trm-card"><table class="trm-table"><thead><tr><th>Pracownik</th><th>Wykonuje zabiegi</th><th>Przypisane usługi</th><th>Grafik</th></tr></thead><tbody>
+    return `<div class="trm-card"><h3>Osoby w terminarzu</h3><div class="trm-pomoc" style="margin-bottom:8px">Włącz osoby, do których można umawiać zabiegi. Osoba wyłączona (np. tylko recepcja) nadal obsługuje terminarz, ale nie pojawia się jako wykonawca. <details class="trm-pomoc-wiecej" style="display:inline"><summary style="display:inline">Więcej</summary> To ustawienie jest niezależne od „Kto wykonuje zabieg?” przy konkretnej usłudze (zakładka Usługi) — tam zawężasz wybór wśród osób włączonych tutaj.</details></div><table class="trm-table"><thead><tr><th>Pracownik</th><th>Wykonuje zabiegi</th><th>Przypisane usługi</th><th>Grafik</th></tr></thead><tbody>
     ${z.map(p => { const us = uslugiOsoby(p.imie); return `<tr>
       <td><div style="display:flex;align-items:center;gap:10px">${avatarHtml(p.imie, true)}<div><b>${esc(p.imie)}</b>${p.rola && !p.wykonuje_zabiegi ? `<div class="muted small">${esc(p.rola)}</div>` : ''}</div></div></td>
       <td><label class="trm-switch"><input type="checkbox" ${p.wykonuje_zabiegi ? 'checked' : ''} onchange="TRM.ustZmienZespol('${esc(p.imie)}', this.checked)"><span></span></label></td>
@@ -1060,13 +1239,48 @@
       <div class="trm-field"><label>Bufor po (min)</label><input type="number" id="trm-us-ba" min="0" max="120" value="${u.bufor_po_min}"></div>
       <div class="trm-field"><label>Bufor dotyczy</label><select id="trm-us-bd">${[['oba', 'osoba + gabinet/sprzęt'], ['pracownik', 'tylko osoba'], ['gabinet', 'tylko gabinet/sprzęt'], ['brak', 'brak']].map(([k, n]) => `<option value="${k}" ${u.bufor_dotyczy === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
     </div>
-    <div class="trm-field" style="margin-top:10px"><label>Kto wykonuje zabieg?</label><div class="trm-chips">${prac.length ? prac.map(p => `<span class="trm-chip pr ${u.pracownicy && u.pracownicy.includes(p) ? 'on' : ''}" data-id="${esc(p)}" onclick="this.classList.toggle('on')">${esc(p)}</span>`).join('') : '<span class="muted small">brak pracowników</span>'}</div><div class="muted small" style="margin-top:4px">żaden zaznaczony = dowolna osoba</div></div>
-    <div class="trm-field" style="margin-top:10px"><label style="text-transform:none;letter-spacing:0"><input type="checkbox" id="trm-us-wg" ${u.wymaga_gabinet ? 'checked' : ''} style="width:auto;min-height:0;margin-right:6px">Wymaga gabinetu</label>
-      ${gab.length ? `<div class="trm-chips" style="margin-top:6px">${gab.map(g => `<span class="trm-chip gab ${u.gabinety && u.gabinety.map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">żaden zaznaczony = dowolny</div>` : '<div class="muted small">brak gabinetów</div>'}
+    ${powodyKonfiguracji(u).length ? `<div class="trm-note warn small" style="margin-top:10px">Wymaga konfiguracji: ${esc(powodyKonfiguracji(u).join(', '))}.</div>` : ''}
+    <div class="trm-field" style="margin-top:10px"><label>Kto wykonuje zabieg?</label>
+      <div class="trm-radio"><label><input type="radio" name="trm-us-kto" value="wszyscy" ${u.pracownicy && u.pracownicy.length ? '' : 'checked'} onchange="TRM.ustRadio('trm-us-kto-chipy', false)"> Wszyscy wykonujący zabiegi (${prac.length})</label><label><input type="radio" name="trm-us-kto" value="wybrani" ${u.pracownicy && u.pracownicy.length ? 'checked' : ''} onchange="TRM.ustRadio('trm-us-kto-chipy', true)"> Tylko wybrane osoby</label></div>
+      <div id="trm-us-kto-chipy" ${u.pracownicy && u.pracownicy.length ? '' : 'hidden'}><div class="trm-chips">${prac.length ? prac.map(p => `<span class="trm-chip pr ${u.pracownicy && u.pracownicy.includes(p) ? 'on' : ''}" data-id="${esc(p)}" role="button" tabindex="0" onclick="this.classList.toggle('on')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">${esc(p)}</span>`).join('') : '<span class="muted small">brak pracowników</span>'}</div></div>
     </div>
-    <div class="trm-field" style="margin-top:10px"><label>Urządzenie (pula)</label>${urz.length ? `<div class="trm-chips">${urz.map(g => `<span class="trm-chip urz ${(u.urzadzenia || []).map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" onclick="this.classList.toggle('on')">${esc(g.nazwa)}</span>`).join('')}</div><div class="muted small">zaznacz zgodne jednostki</div>` : '<div class="muted small">brak urządzeń</div>'}</div>
-    <button class="trm-btn primary" style="margin-top:14px" onclick="TRM.ustZapiszUsluge('${esc(u.id)}')">Zapisz zmiany</button>`;
+    <div class="trm-field" style="margin-top:10px"><label style="text-transform:none;letter-spacing:0"><input type="checkbox" id="trm-us-wg" ${u.wymaga_gabinet ? 'checked' : ''} style="width:auto;min-height:0;margin-right:6px">Wymaga gabinetu</label>
+      ${gab.length ? `<div class="trm-chips" style="margin-top:6px">${gab.map(g => `<span class="trm-chip gab ${u.gabinety && u.gabinety.map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" role="button" tabindex="0" onclick="this.classList.toggle('on')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">${esc(g.nazwa)}</span>`).join('')}</div><div class="trm-pomoc">Bez zaznaczenia: dowolny wolny gabinet.</div>` : '<div class="trm-pomoc">Brak gabinetów — dodaj w zakładce „Gabinety i urządzenia”.</div>'}
+    </div>
+    <div class="trm-field" style="margin-top:10px"><label>Urządzenie</label>
+      <div class="trm-radio"><label><input type="radio" name="trm-us-urz" value="nie" ${(u.urzadzenia || []).length ? '' : 'checked'} onchange="TRM.ustRadio('trm-us-urz-chipy', false)"> Nie wymaga urządzenia</label><label><input type="radio" name="trm-us-urz" value="tak" ${(u.urzadzenia || []).length ? 'checked' : ''} ${urz.length ? '' : 'disabled'} onchange="TRM.ustRadio('trm-us-urz-chipy', true)"> Wymaga jednego z wybranych</label></div>
+      <div id="trm-us-urz-chipy" ${(u.urzadzenia || []).length ? '' : 'hidden'}>${urz.length ? `<div class="trm-chips">${urz.map(g => `<span class="trm-chip urz ${(u.urzadzenia || []).map(Number).includes(g.id) ? 'on' : ''}" data-id="${g.id}" role="button" tabindex="0" onclick="this.classList.toggle('on')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">${esc(g.nazwa)}</span>`).join('')}</div><div class="trm-pomoc">Estelio wybierze wolną jednostkę z zaznaczonych.</div>` : '<div class="trm-pomoc">Brak urządzeń — dodaj w zakładce „Gabinety i urządzenia”.</div>'}</div>
+    </div>
+    ${wariantyRodzenstwa(u).length ? `<div class="trm-pomoc" style="margin-top:8px">Warianty ilościowe tej usługi (${wariantyRodzenstwa(u).map(x => esc(x.wariant || '')).join(', ')}) to ta sama czynność. <button type="button" class="trm-btn link sm" onclick="TRM.ustZastosujDoWariantow('${esc(u.id)}')" ${u.skonfigurowana ? '' : 'disabled'}>Zastosuj czas i zasoby do ${wariantyRodzenstwa(u).length} wariantów</button></div>` : ''}
+    <div class="trm-stopka"><button class="trm-btn primary" onclick="TRM.ustZapiszUsluge('${esc(u.id)}')">Zapisz zmiany</button></div>`;
   }
+  // co brakuje, żeby usługę dało się umawiać (raport T02 pkt 7: konkretny powód zamiast „do ustawienia”)
+  function powodyKonfiguracji(u) {
+    const p = [];
+    if (u.czas_min == null) p.push('brak czasu trwania');
+    if (!u.aktywna) p.push('wyłączona w terminarzu');
+    if (u.pracownicy && u.pracownicy.length && !u.pracownicy.some(x => TRM.dane.pracownicy.includes(x))) p.push('żadna z wybranych osób nie wykonuje już zabiegów');
+    return p;
+  }
+  // warianty ilościowe tej samej czynności: ta sama kategoria i wariant różniący się tylko końcówką „Nx” (np. „1 obszar 1x/4x/6x”)
+  const bazaWariantu = (w) => String(w || '').replace(/\s*\d+\s*[x×]\s*$/i, '').trim().toLowerCase();
+  function wariantyRodzenstwa(u) {
+    if (!/\d+\s*[x×]\s*$/i.test(String(u.wariant || ''))) return [];
+    return TRM.dane.uslugi.filter(x => x.id !== u.id && x.kategoria === u.kategoria && bazaWariantu(x.wariant) === bazaWariantu(u.wariant));
+  }
+  TRM.ustRadio = (idKontenera, pokaz) => { const k = el(idKontenera); if (k) k.hidden = !pokaz; };
+  TRM.ustZastosujDoWariantow = async (uslugaId) => {
+    const u = TRM.dane.uslugi.find(x => x.id === uslugaId); if (!u || !u.skonfigurowana) return;
+    const cele = wariantyRodzenstwa(u); if (!cele.length) return;
+    if (!window.confirm(`Skopiować czas (${u.czas_min} min), bufory, wymagania gabinetu/urządzenia i wykonawców z „${nazwaUslugi(u)}” do:\n\n${cele.map(x => '• ' + nazwaUslugi(x)).join('\n')}\n\nCeny i włączenie/wyłączenie każdego wariantu zostają bez zmian.`)) return;
+    let ok = 0, blad = null;
+    for (const c of cele) {
+      const d = await api('trm_usluga_zapisz', { usluga_id: c.id, czas_min: u.czas_min, bufor_przed_min: u.bufor_przed_min, bufor_po_min: u.bufor_po_min, bufor_dotyczy: u.bufor_dotyczy, wymaga_gabinet: u.wymaga_gabinet, gabinety: u.gabinety || [], urzadzenia: u.urzadzenia || [], pracownicy: u.pracownicy || [], aktywna: c.aktywna });
+      if (d.status === 'success') { ok++; TRM.dane.uslugi = d.uslugi; } else { blad = d.message; break; }
+    }
+    if (blad) toast('error', `Zastosowano do ${ok} z ${cele.length}`, blad); else toast('success', `Zastosowano do ${ok} wariantów`);
+    renderUstawienia();
+  };
   function ustUslugi() {
     const wszystkie = TRM.dane.uslugi;
     const gotowe = wszystkie.filter(u => u.skonfigurowana).length, doUst = wszystkie.length - gotowe;
@@ -1075,8 +1289,7 @@
     const lista = wszystkie.filter(u => (zak === 'gotowe' ? u.skonfigurowana : zak === 'do_ustawienia' ? !u.skonfigurowana : true) && (!fr || nazwaUslugi(u).toLowerCase().includes(fr)));
     if (TRM.ust.uslWybrana == null || !wszystkie.some(u => u.id === TRM.ust.uslWybrana)) TRM.ust.uslWybrana = lista[0] ? lista[0].id : null;
     const wyb = wszystkie.find(u => u.id === TRM.ust.uslWybrana);
-    return `<div class="trm-note info small">Każda usługa z cennika, którą chcesz umawiać, potrzebuje <b>czasu trwania</b>. Bufor to przygotowanie/sprzątanie liczone dla wskazanych zasobów (nie zjada czasu klientki). Pusta lista pracowników = wszyscy mogą wykonywać. Zmiana definicji nie przestawia istniejących wizyt.</div>
-    <div class="trm-grid2">
+    return `<div class="trm-grid2">
       <div class="trm-card">
         <h3>Usługi w terminarzu</h3>
         <input placeholder="Szukaj zabiegu…" value="${esc(TRM.ust.uslFiltr || '')}" oninput="TRM.ust.uslFiltr=this.value;TRM.widokZmien('ustawienia')" style="margin-bottom:8px">
@@ -1086,7 +1299,7 @@
         </div>
         <div style="max-height:520px;overflow:auto">${lista.length ? lista.map(u => `<div class="trm-usl-wiersz ${u.id === TRM.ust.uslWybrana ? 'wybrana' : ''}" onclick="TRM.ust.uslWybrana='${esc(u.id)}';TRM.widokZmien('ustawienia')">
           <span class="trm-usl-kropka" style="background:${kolorKat(u)}"></span>
-          <div><b>${esc(nazwaUslugi(u))}</b><div class="muted small">${u.skonfigurowana ? u.czas_min + ' min' : 'brak czasu trwania'}</div></div>
+          <div><b>${esc(nazwaUslugi(u))}</b><div class="muted small">${powodyKonfiguracji(u).length ? esc(powodyKonfiguracji(u).join(', ')) : u.czas_min + ' min' + (u.pracownicy && u.pracownicy.length ? ' · ' + u.pracownicy.length + ' os.' : '')}</div></div>
           <span class="trm-usl-strzalka">›</span>
         </div>`).join('') : '<div class="muted small" style="padding:8px 0">Brak usług.</div>'}</div>
       </div>
@@ -1096,7 +1309,14 @@
   TRM.ustZapiszUsluge = async (uslugaId) => {
     const u = TRM.dane.uslugi.find(x => x.id === uslugaId); if (!u) return;
     const chips = (kl) => [...document.querySelectorAll('.trm-chip.' + kl + '.on')].map(c => c.dataset.id);
-    const d = await api('trm_usluga_zapisz', { usluga_id: u.id, czas_min: el('trm-us-czas').value || null, bufor_przed_min: el('trm-us-bp').value, bufor_po_min: el('trm-us-ba').value, bufor_dotyczy: el('trm-us-bd').value, wymaga_gabinet: el('trm-us-wg').checked, gabinety: chips('gab'), urzadzenia: chips('urz'), pracownicy: chips('pr'), aktywna: el('trm-us-akt').checked });
+    // jawny wybór zamiast „pusta lista = wszyscy” (raport T11); backend zachowuje dotychczasową semantykę (null = wszyscy)
+    const kto = (document.querySelector('input[name="trm-us-kto"]:checked') || {}).value || 'wszyscy';
+    const pracownicyWyb = kto === 'wybrani' ? chips('pr') : [];
+    if (kto === 'wybrani' && !pracownicyWyb.length) return toast('warning', 'Wybierz co najmniej jedną osobę', 'albo zaznacz „Wszyscy wykonujący zabiegi”.');
+    const urzTryb = (document.querySelector('input[name="trm-us-urz"]:checked') || {}).value || 'nie';
+    const urzWyb = urzTryb === 'tak' ? chips('urz') : [];
+    if (urzTryb === 'tak' && !urzWyb.length) return toast('warning', 'Wybierz co najmniej jedno urządzenie', 'albo zaznacz „Nie wymaga urządzenia”.');
+    const d = await api('trm_usluga_zapisz', { usluga_id: u.id, czas_min: el('trm-us-czas').value || null, bufor_przed_min: el('trm-us-bp').value, bufor_po_min: el('trm-us-ba').value, bufor_dotyczy: el('trm-us-bd').value, wymaga_gabinet: el('trm-us-wg').checked, gabinety: chips('gab'), urzadzenia: urzWyb, pracownicy: pracownicyWyb, aktywna: el('trm-us-akt').checked });
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
     TRM.dane.uslugi = d.uslugi; toast('success', 'Zapisano usługę', nazwaUslugi(u)); renderUstawienia();
   };
@@ -1110,13 +1330,17 @@
   }
   function ustZasoby() {
     const z = TRM.dane.zasoby;
-    const lista = (typ) => { const l = z.filter(x => x.typ === typ); return l.length ? l.map(zasobKartaHtml).join('') : '<div class="muted small" style="padding:8px 0">brak</div>'; };
-    return `<div class="trm-note info small">Gabinet i urządzenie to konkretne zasoby o pojemności 1 (chyba że podasz inną). Dwa identyczne urządzenia = dwa osobne wpisy („Infinity 1”, „Infinity 2”), żeby dwie klientki mogły mieć je równolegle, a trzecia nie.</div>
-    <div class="trm-grid2">
-      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Gabinety</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('gabinet')">+ Dodaj gabinet</button></div>${lista('gabinet')}</div>
-      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Urządzenia</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('urzadzenie')">+ Dodaj urządzenie</button></div>${lista('urzadzenie')}</div>
+    const lista = (typ, pustyTekst) => { const l = z.filter(x => x.typ === typ); return l.length ? l.map(zasobKartaHtml).join('') : `<div class="trm-empty" style="padding:18px 8px"><p>${pustyTekst}</p><button class="trm-btn primary sm" onclick="TRM.ustFokusDodaj('${typ}')">${typ === 'gabinet' ? '+ Dodaj pierwszy gabinet' : '+ Dodaj pierwsze urządzenie'}</button></div>`; };
+    return `<div class="trm-grid2">
+      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Gabinety</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('gabinet')">+ Dodaj gabinet</button></div>${lista('gabinet', 'Brak gabinetów. Bez gabinetu umawiasz tylko usługi, które go nie wymagają.')}</div>
+      <div class="trm-card"><div class="trm-row" style="justify-content:space-between;margin-bottom:6px"><h3 style="margin:0">Urządzenia</h3><button class="trm-btn sm fix" onclick="TRM.ustFokusDodaj('urzadzenie')">+ Dodaj urządzenie</button></div>${lista('urzadzenie', 'Brak urządzeń. Dodaj każde fizyczne urządzenie osobno (np. „LPG 1”, „LPG 2”), żeby kolizje i serwis liczyły się per sztuka.')}</div>
     </div>
-    <div class="trm-card" style="margin-top:12px" id="trm-zs-dodaj"><h3>Dodaj zasób</h3><div class="trm-row"><select id="trm-zs-typ" style="width:auto"><option value="gabinet">Gabinet</option><option value="urzadzenie">Urządzenie</option></select><input id="trm-zs-nazwa" placeholder="np. Gabinet 1 albo Infinity 1"><input type="number" id="trm-zs-poj" value="1" min="1" max="50" style="width:90px" title="Pojemność"><button class="trm-btn primary fix" onclick="TRM.ustDodajZasob()">Dodaj</button></div></div>`;
+    <div class="trm-card" style="margin-top:12px" id="trm-zs-dodaj"><h3>Nowy zasób</h3><div class="trm-grid2" style="grid-template-columns:140px 1fr 170px auto;align-items:end">
+      <div class="trm-field" style="margin:0"><label>Rodzaj</label><select id="trm-zs-typ"><option value="gabinet">Gabinet</option><option value="urzadzenie">Urządzenie</option></select></div>
+      <div class="trm-field" style="margin:0"><label>Nazwa</label><input id="trm-zs-nazwa" placeholder="np. Gabinet 1 albo LPG 1"></div>
+      <div class="trm-field" style="margin:0"><label>Jednoczesne wizyty</label><input type="number" id="trm-zs-poj" value="1" min="1" max="50" aria-label="Ile wizyt jednocześnie obsługuje ten zasób"></div>
+      <button class="trm-btn primary" onclick="TRM.ustDodajZasob()">Dodaj</button>
+    </div><div class="trm-pomoc">„Jednoczesne wizyty” = 1 dla zwykłego gabinetu i każdego fizycznego urządzenia. Większą liczbę ustaw tylko dla sali, w której naprawdę odbywa się kilka wizyt naraz. Blokady serwisowe dodasz w zakładce „Nieobecności i blokady”.</div></div>`;
   }
   TRM.ustFokusDodaj = (typ) => { const sel = el('trm-zs-typ'); if (sel) sel.value = typ; const form = el('trm-zs-dodaj'); if (form) form.scrollIntoView({ block: 'center' }); const nazwa = el('trm-zs-nazwa'); if (nazwa) nazwa.focus(); };
   TRM.ustDodajZasob = async () => { const d = await api('trm_zasob_zapisz', { typ: el('trm-zs-typ').value, nazwa: el('trm-zs-nazwa').value, pojemnosc: el('trm-zs-poj').value }); if (d.status !== 'success') return toast('error', 'Nie dodano', d.message); TRM.dane.zasoby = d.zasoby; toast('success', 'Dodano zasób'); renderUstawienia(); };
@@ -1131,11 +1355,28 @@
     const kto_ = TRM.ust.prac && prac.includes(TRM.ust.prac) ? TRM.ust.prac : prac[0]; TRM.ust.prac = kto_;
     const g = {}; TRM.dane.grafik.filter(x => x.pracownik === kto_).forEach(x => { (g[x.dzien_tyg] = g[x.dzien_tyg] || []).push({ od: x.od, do: x.do }); });
     const bez = prac.filter(p => !TRM.dane.grafik.some(x => x.pracownik === p));
-    return `<div class="trm-note info small">Grafik tygodniowy osoby = kiedy można ją umawiać. Zmiana grafiku <b>nie odwołuje</b> wizyt — najpierw pokażemy listę zagrożonych terminów.</div>
-    ${bez.length ? `<div class="trm-note warn small">Bez grafiku: ${bez.map(esc).join(', ')}. <button class="trm-btn sm" onclick="TRM.ustGrafikZSalonu()">Skopiuj godziny salonu do osób bez grafiku</button></div>` : ''}
-    <div class="trm-card"><div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Pracownik</label><select onchange="TRM.ust.prac=this.value;TRM.widokZmien('ustawienia')" style="width:auto">${prac.map(p => `<option ${p === kto_ ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div></div>
-    ${godzinyHtml(g, 'trm-gr')}<div class="trm-row" style="margin-top:12px"><button class="trm-btn primary fix" onclick="TRM.ustZapiszGrafik(false)">Zapisz grafik ${esc(kto_)}</button></div></div>`;
+    return obsadaTabela(prac) +
+    `${bez.length ? `<div class="trm-note warn small">Bez grafiku: ${bez.map(esc).join(', ')}. <button class="trm-btn sm" onclick="TRM.ustGrafikZSalonu()">Skopiuj godziny salonu do osób bez grafiku</button></div>` : ''}
+    <div class="trm-card" id="trm-grafik-osoba"><div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Stały harmonogram osoby</label><select onchange="TRM.ust.prac=this.value;TRM.widokZmien('ustawienia')" style="width:auto">${prac.map(p => `<option ${p === kto_ ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="trm-pomoc" style="align-self:flex-end">Reguła cykliczna (co tydzień). Zmiana nie odwołuje wizyt — najpierw pokażemy listę zagrożonych terminów.</div></div>
+    ${godzinyHtml(g, 'trm-gr')}<div class="trm-stopka"><button class="trm-btn primary" onclick="TRM.ustZapiszGrafik(false)">Zapisz grafik ${esc(kto_)}</button></div></div>`;
   }
+  // zbiorczy podgląd obsady: pracownicy w wierszach, realne dni wybranego tygodnia w kolumnach (raport T09)
+  function obsadaTabela(prac) {
+    const od = TRM.ust.tydzienOd || poniedzialek(dzisStr()); TRM.ust.tydzienOd = od;
+    const dni = [0, 1, 2, 3, 4, 5, 6].map(i => dodajDni(od, i)), dzis = dzisStr();
+    const nieob = TRM.dane.nieobecnosci || [];
+    const kom = (p, dz) => {
+      const g = TRM.dane.grafik.filter(x => x.pracownik === p && Number(x.dzien_tyg) === dzienTyg(dz) && (!x.od_daty || x.od_daty <= dz) && (!x.do_daty || x.do_daty >= dz));
+      const bl = nieob.filter(n => n.pracownik === p && String(n.od).slice(0, 10) <= dz && String(n.do).slice(0, 10) >= dz);
+      const txt = g.length ? g.map(x => x.od + '–' + x.do).join(', ') : 'wolne';
+      return `<span class="kom ${bl.length ? 'blok' : g.length ? '' : 'wolne'}" role="button" tabindex="0" onclick="TRM.ustGrafikOsoba('${esc(p).replace(/'/g, "\\'")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}" title="Edytuj stały harmonogram: ${esc(p)}">${esc(txt)}${bl.length ? `<br><small>${esc(bl.map(b => b.typ + ' ' + String(b.od).slice(11, 16) + '–' + String(b.do).slice(11, 16)).join(', '))}</small>` : ''}</span>`;
+    };
+    return `<div class="trm-card"><div class="trm-row" style="margin-bottom:8px"><h3 style="margin:0">Obsada zespołu</h3><div class="trm-spacer"></div><button class="trm-btn sm fix" onclick="TRM.ustTydzien(-1)" aria-label="Poprzedni tydzień">‹</button><span class="fix small"><b>${esc(ladnaData(od, true))} – ${esc(ladnaData(dni[6], true))}</b></span><button class="trm-btn sm fix" onclick="TRM.ustTydzien(1)" aria-label="Następny tydzień">›</button><button class="trm-btn sm fix" onclick="TRM.ustTydzien(0)">Ten tydzień</button></div>
+    <div style="overflow:auto"><table class="trm-obsada"><thead><tr><th>Osoba</th>${dni.map(dz => `<th class="${dz === dzis ? 'dzis' : ''}">${DNI_K[dzienTyg(dz)]} ${dz.slice(8, 10)}.${dz.slice(5, 7)}</th>`).join('')}</tr></thead><tbody>${prac.map(p => `<tr><td class="os">${esc(p)}</td>${dni.map(dz => `<td>${kom(p, dz)}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="trm-pomoc">Zielone = stały grafik, żółte = nieobecność/blokada w tym dniu, szare = wolne. Kliknięcie komórki otwiera stały harmonogram tej osoby poniżej. Wyjątek na jeden dzień (urlop, skrócony dzień) dodaj w „Nieobecności i blokady” — nie zmienia to reguły cyklicznej.</div></div>`;
+  }
+  TRM.ustTydzien = (n) => { TRM.ust.tydzienOd = n === 0 ? poniedzialek(dzisStr()) : dodajDni(TRM.ust.tydzienOd || poniedzialek(dzisStr()), 7 * n); renderUstawienia(); };
+  TRM.ustGrafikOsoba = (p) => { TRM.ust.prac = p; renderUstawienia(); const k = el('trm-grafik-osoba'); if (k) k.scrollIntoView({ block: 'start', behavior: 'smooth' }); };
   TRM.ustZapiszGrafik = async (wymus) => {
     const g = zbierzGodziny('trm-gr'); const wzorce = []; Object.keys(g).forEach(dz => g[dz].forEach(p => wzorce.push({ dzien_tyg: Number(dz), od: p.od, do: p.do })));
     const d = await api('trm_grafik_zapisz', { pracownik_grafik: TRM.ust.prac, wzorce, wymus });
@@ -1144,44 +1385,74 @@
     TRM.dane.grafik = d.grafik; toast('success', 'Zapisano grafik', TRM.ust.prac); renderUstawienia();
   };
   TRM.ustGrafikZSalonu = async () => { const d = await api('trm_grafik_z_godzin_salonu', {}); if (d.status !== 'success') return toast('error', 'Nie skopiowano', d.message); TRM.dane.grafik = d.grafik; toast('success', 'Grafik uzupełniony z godzin salonu'); renderUstawienia(); };
+  // Podgląd skutków blokady liczony automatycznie po zmianie formularza (raport T10): osobne stany
+  // „czekam / błąd / 0 wizyt / N wizyt”, nigdy fałszywe „0” przy braku odpowiedzi. Zapis sprawdza ponownie na serwerze.
   function nieobPodgladHtml() {
     const stan = TRM.ust.nieobPodglad;
-    if (!stan) return `<div class="trm-card muted small" style="display:flex;align-items:center;justify-content:center;min-height:140px;text-align:center">Wypełnij formularz i kliknij „Zapisz blokadę i sprawdź wizyty”.</div>`;
+    if (!stan) return `<div class="trm-card muted small" style="display:flex;align-items:center;justify-content:center;min-height:140px;text-align:center">Wybierz kogo/czego dotyczy i zakres czasu — pokażemy, które wizyty obejmie ta blokada.</div>`;
+    if (stan.stan === 'czekam') return `<div class="trm-card muted small" style="display:flex;align-items:center;justify-content:center;min-height:140px;text-align:center">⏳ Sprawdzamy wizyty w tym zakresie…</div>`;
+    if (stan.stan === 'blad') return `<div class="trm-card" style="border-color:var(--t-warn-fg);background:var(--t-warn-bg)"><h3>⚠ Nie udało się sprawdzić wizyt</h3><div class="muted small">${esc(stan.message || 'brak odpowiedzi serwera')}</div><button class="trm-btn sm" style="margin-top:8px" onclick="TRM.nieobZmiana(true)">Sprawdź ponownie</button></div>`;
     const dot = stan.dotkniete || [];
+    if (!dot.length) return `<div class="trm-card" style="border-color:#bfdcc9;background:var(--t-ok-bg)"><h3 style="color:var(--t-ok-fg)">✓ Ta blokada nie obejmuje żadnej zaplanowanej wizyty</h3><div class="muted small">Przy zapisie sprawdzimy to jeszcze raz — w międzyczasie ktoś mógł umówić nową wizytę.</div></div>`;
     return `<div class="trm-card" style="border-color:var(--t-warn-fg);background:var(--t-warn-bg)"><h3>⚠ Ta blokada dotknie ${dot.length} ${dot.length === 1 ? 'wizyty' : 'wizyt'}</h3>
-      <div class="muted small" style="margin-bottom:8px">${esc(stan.message || '')}</div>
-      ${dot.slice(0, 10).map(x => `<div class="trm-dotknieta"><div><b>${esc(x.klient_nazwa || 'wizyta')}</b><br><span class="muted small">${esc(x.kategoria || '')} · ${esc((x.start || '').slice(0, 16))} · ${esc(x.pracownik || '')}</span></div></div>`).join('')}
-      <div class="muted small" style="margin-top:8px">Wizyty pozostaną w kalendarzu. Po zapisaniu wybierzesz dla nich rozwiązanie.</div>
-      <div class="trm-row" style="margin-top:10px"><button class="trm-btn danger fix" onclick="TRM.ustDodajNieob(true)">Zapisz mimo to</button><button class="trm-btn fix" onclick="TRM.ust.nieobPodglad=null;TRM.widokZmien('ustawienia')">Anuluj</button></div>
+      ${dot.slice(0, 12).map(x => `<div class="trm-dotknieta"><div><b>${esc(x.klient_nazwa || 'wizyta')}</b><br><span class="muted small">${esc(x.kategoria || '')} · ${esc(ladnaData((x.start || '').slice(0, 10), true))} ${esc((x.start || '').slice(11, 16))}–${esc((x.koniec || '').slice(11, 16))} · ${esc(x.pracownik || '')}</span></div></div>`).join('')}${dot.length > 12 ? `<div class="muted small">… i ${dot.length - 12} więcej</div>` : ''}
+      <div class="muted small" style="margin-top:8px">Wizyty pozostaną w kalendarzu i trafią do spraw „Do działania” (zastępstwo, zmiana terminu, kontakt). Zapis niczego nie odwołuje.</div>
     </div>`;
   }
+  let nieobT = null, nieobReq = 0;
+  TRM.nieobZmiana = (natychmiast) => {
+    clearTimeout(nieobT);
+    const kogoEl = el('trm-nb-kogo'), od = (el('trm-nb-od') || {}).value, do_ = (el('trm-nb-do') || {}).value;
+    if (!od || !do_ || (kogoEl && !kogoEl.value && (TRM.ust.nieobDotyczy || 'pracownik') !== 'salon')) { TRM.ust.nieobPodglad = null; nieobOdswiez(); return; }
+    TRM.ust.nieobPodglad = { stan: 'czekam' }; nieobOdswiez();
+    nieobT = setTimeout(async () => {
+      const req = ++nieobReq, kogo = kogoEl ? kogoEl.value : '';
+      let d; try { d = await api('trm_nieobecnosc_zapisz', { podglad: true, pracownik_nieob: kogo.startsWith('p:') ? kogo.slice(2) : null, zasob_id: kogo.startsWith('z:') ? Number(kogo.slice(2)) : null, od: od.replace('T', ' '), do: do_.replace('T', ' '), typ: (el('trm-nb-typ') || {}).value }); } catch (e) { d = null; }
+      if (req !== nieobReq) return;
+      TRM.ust.nieobPodglad = d && d.status === 'success' && d.podglad ? { stan: 'wynik', dotkniete: d.dotkniete || [] } : { stan: 'blad', message: d && d.message };
+      nieobOdswiez();
+    }, natychmiast ? 0 : 400);
+  };
+  function nieobOdswiez() { const p = el('trm-nb-podglad'); if (p) p.innerHTML = nieobPodgladHtml(); const b = el('trm-nb-zapisz'); if (b) { const s = TRM.ust.nieobPodglad; b.textContent = s && s.stan === 'wynik' && s.dotkniete.length ? 'Zapisz blokadę i przejdź do wizyt' : 'Zapisz blokadę'; } }
   function ustNieob() {
     const n = TRM.dane.nieobecnosci || [], zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano);
     const gab = zas.filter(z => z.typ === 'gabinet'), urz = zas.filter(z => z.typ === 'urzadzenie');
     const dot = TRM.ust.nieobDotyczy || 'pracownik';
-    return `<div class="trm-note info small">Urlop, choroba, szkolenie, przerwa, serwis urządzenia albo zamknięcie salonu. Publicznie zawsze tylko „Niedostępne”. Zapis nie odwołuje wizyt — pokaże, które wymagają decyzji.</div>
-    <div class="trm-grid2">
+    return `<div class="trm-grid2">
       <div class="trm-card"><h3>Nowa blokada</h3>
         <div class="trm-field"><label>Dotyczy</label><div class="trm-segment" style="width:100%">${[['pracownik', 'Pracownik'], ['gabinet', 'Gabinet'], ['urzadzenie', 'Urządzenie'], ['salon', 'Cały salon']].map(([k, n2]) => `<button type="button" style="flex:1" class="${dot === k ? 'active' : ''}" onclick="TRM.ust.nieobDotyczy='${k}';TRM.ust.nieobPodglad=null;TRM.widokZmien('ustawienia')">${n2}</button>`).join('')}</div></div>
-        ${dot === 'pracownik' ? `<div class="trm-field"><label>Pracownik</label><select id="trm-nb-kogo">${TRM.dane.pracownicy.map(p => `<option value="p:${esc(p)}">${esc(p)}</option>`).join('') || '<option value="">brak pracowników</option>'}</select></div>` : ''}
-        ${dot === 'gabinet' ? `<div class="trm-field"><label>Gabinet</label><select id="trm-nb-kogo">${gab.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak gabinetów</option>'}</select></div>` : ''}
-        ${dot === 'urzadzenie' ? `<div class="trm-field"><label>Urządzenie</label><select id="trm-nb-kogo">${urz.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak urządzeń</option>'}</select></div>` : ''}
-        <div class="trm-field"><label>Powód</label><select id="trm-nb-typ">${[['urlop', 'Urlop'], ['choroba', 'Choroba'], ['szkolenie', 'Szkolenie'], ['przerwa', 'Przerwa'], ['serwis', 'Serwis / awaria'], ['zamkniete', 'Salon zamknięty'], ['inne', 'Inne']].map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
-        <div class="trm-grid2"><div class="trm-field"><label>Od</label><input type="datetime-local" id="trm-nb-od" value="${TRM.data}T09:00"></div><div class="trm-field"><label>Do</label><input type="datetime-local" id="trm-nb-do" value="${TRM.data}T17:00"></div></div>
-        <div class="trm-field"><label>Notatka dla zespołu (niepubliczna)</label><input id="trm-nb-opis" placeholder="np. serwis Infinity 1" maxlength="500"></div>
-        <button class="trm-btn primary" style="margin-top:8px" onclick="TRM.ustDodajNieob(false)">Zapisz blokadę i sprawdź wizyty</button>
+        ${dot === 'pracownik' ? `<div class="trm-field"><label>Pracownik</label><select id="trm-nb-kogo" onchange="TRM.nieobZmiana()">${TRM.dane.pracownicy.map(p => `<option value="p:${esc(p)}">${esc(p)}</option>`).join('') || '<option value="">brak pracowników</option>'}</select></div>` : ''}
+        ${dot === 'gabinet' ? `<div class="trm-field"><label>Gabinet</label><select id="trm-nb-kogo" onchange="TRM.nieobZmiana()">${gab.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak gabinetów</option>'}</select></div>` : ''}
+        ${dot === 'urzadzenie' ? `<div class="trm-field"><label>Urządzenie</label><select id="trm-nb-kogo" onchange="TRM.nieobZmiana()">${urz.map(z => `<option value="z:${z.id}">${esc(z.nazwa)}</option>`).join('') || '<option value="">brak urządzeń</option>'}</select></div>` : ''}
+        <div class="trm-field"><label>Powód</label><select id="trm-nb-typ" onchange="TRM.nieobZmiana()">${[['urlop', 'Urlop'], ['choroba', 'Choroba'], ['szkolenie', 'Szkolenie'], ['przerwa', 'Przerwa'], ['serwis', 'Serwis / awaria'], ['zamkniete', 'Salon zamknięty'], ['inne', 'Inne']].map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
+        <div class="trm-grid2"><div class="trm-field"><label>Od</label><input type="datetime-local" id="trm-nb-od" value="${TRM.data}T09:00" onchange="TRM.nieobZmiana()"></div><div class="trm-field"><label>Do</label><input type="datetime-local" id="trm-nb-do" value="${TRM.data}T17:00" onchange="TRM.nieobZmiana()"></div></div>
+        <div class="trm-field"><label>Notatka dla zespołu (niepubliczna)</label><input id="trm-nb-opis" placeholder="np. przegląd techniczny" maxlength="500"></div>
+        <button class="trm-btn primary" id="trm-nb-zapisz" style="margin-top:8px" onclick="TRM.ustDodajNieob()">Zapisz blokadę</button>
       </div>
       <div id="trm-nb-podglad">${nieobPodgladHtml()}</div>
     </div>
     <div class="trm-card" style="margin-top:12px"><h3>Zaplanowane i ostatnie</h3><table class="trm-table"><thead><tr><th>Kogo</th><th>Od</th><th>Do</th><th>Typ</th><th>Opis</th><th></th></tr></thead><tbody>${n.length ? n.map(x => `<tr><td>${x.pracownik ? esc(x.pracownik) : x.zasob_id ? esc((zasob(x.zasob_id) || {}).nazwa || 'zasób') : '<b>cały salon</b>'}</td><td>${esc(x.od.slice(0, 16))}</td><td>${esc(x.do.slice(0, 16))}</td><td>${esc(x.typ)}</td><td class="muted">${esc(x.opis || '')}</td><td><button class="trm-btn sm" onclick="TRM.ustUsunNieob(${x.id})">Usuń</button></td></tr>`).join('') : '<tr><td colspan="6" class="muted">brak</td></tr>'}</tbody></table></div>`;
   }
-  TRM.ustDodajNieob = async (wymus) => {
+  TRM.ustDodajNieob = async () => {
     const kogoEl = el('trm-nb-kogo'), kogo = kogoEl ? kogoEl.value : '';
-    const d = await api('trm_nieobecnosc_zapisz', { pracownik_nieob: kogo.startsWith('p:') ? kogo.slice(2) : null, zasob_id: kogo.startsWith('z:') ? Number(kogo.slice(2)) : null, od: el('trm-nb-od').value.replace('T', ' '), do: el('trm-nb-do').value.replace('T', ' '), typ: el('trm-nb-typ').value, opis: el('trm-nb-opis').value, wymus });
-    if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
-    if (d.wymaga_decyzji) { TRM.ust.nieobPodglad = { dotkniete: d.dotkniete, message: d.message }; renderUstawienia(); return; }
+    const s = TRM.ust.nieobPodglad;
+    if (!s || s.stan !== 'wynik') { TRM.nieobZmiana(true); return toast('warning', 'Poczekaj na sprawdzenie wizyt', 'Zapisz, gdy pokażemy, które wizyty obejmie blokada.'); }
+    const znane = s.dotkniete.length;
+    const btn = el('trm-nb-zapisz'); if (btn) btn.disabled = true;
+    const body = { pracownik_nieob: kogo.startsWith('p:') ? kogo.slice(2) : null, zasob_id: kogo.startsWith('z:') ? Number(kogo.slice(2)) : null, od: el('trm-nb-od').value.replace('T', ' '), do: el('trm-nb-do').value.replace('T', ' '), typ: el('trm-nb-typ').value, opis: el('trm-nb-opis').value, wymus: znane > 0 };
+    const d = await api('trm_nieobecnosc_zapisz', body);
+    if (btn) btn.disabled = false;
+    if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message); // formularz zostaje wypełniony (T14)
+    if (d.wymaga_decyzji) { // w międzyczasie doszła nowa wizyta — pokaż aktualny wynik, zapis dopiero po ponownym kliknięciu
+      TRM.ust.nieobPodglad = { stan: 'wynik', dotkniete: d.dotkniete || [] }; nieobOdswiez();
+      return toast('warning', 'Lista wizyt się zmieniła', `Teraz blokada obejmuje ${d.dotkniete.length} wizyt — sprawdź i kliknij zapis ponownie.`);
+    }
     TRM.ust.nieobPodglad = null;
-    await window.trm_odswiezDane(); toast('success', 'Zapisano blokadę', d.dotkniete && d.dotkniete.length ? `${d.dotkniete.length} wizyt do rozwiązania` : ''); renderUstawienia();
+    await window.trm_odswiezDane();
+    const ile = (d.dotkniete || []).length;
+    toast('success', 'Zapisano blokadę', ile ? `${ile} wizyt do obsłużenia — otwieramy sprawy` : '');
+    renderUstawienia();
+    if (ile) TRM.otworzPowiadomienia();
   };
   TRM.ustUsunNieob = async (id) => { if (!window.confirm('Usunąć tę blokadę? Dostępność wróci do pełnej walidacji grafiku.')) return; const d = await api('trm_nieobecnosc_usun', { id }); if (d.status !== 'success') return toast('error', 'Nie usunięto', d.message); await window.trm_odswiezDane(); renderUstawienia(); };
 
@@ -1189,7 +1460,7 @@
   document.addEventListener('keydown', (e) => {
     const sek = el('terminarz'); if (!sek || !sek.classList.contains('active')) return;
     const tag = (e.target && e.target.tagName) || ''; if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || e.target.isContentEditable) return;
-    if (e.key === 'Escape') { if (TRM.bubla) { TRM.zamknijBuble(); return; } if (TRM.panel) { if (TRM.panel === 'nowa' && (TRM.nowa.pozycje.length || TRM.nowa.klient) && !window.confirm('Zamknąć panel? Niezapisane dane zostaną utracone.')) return; TRM.panelZamknij(); } }
+    if (e.key === 'Escape') { if (drag) { trmDragAnuluj(); return; } if (TRM.bubla) { TRM.zamknijBuble(); return; } if (TRM.panel) { if (TRM.panel === 'nowa' && (TRM.nowa.pozycje.length || TRM.nowa.klient) && !window.confirm('Zamknąć panel? Niezapisane dane zostaną utracone.')) return; TRM.panelZamknij(); } }
     else if (e.key === 'n' || e.key === 'N') { if (operacyjna()) TRM.nowaWizyta(); }
     else if (e.key === 't' || e.key === 'T') TRM.idz(0);
     else if (e.key === 'ArrowLeft') TRM.idz(-1);
