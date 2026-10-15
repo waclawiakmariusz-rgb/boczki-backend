@@ -393,13 +393,20 @@ details.trm-pomoc-wiecej summary { cursor:pointer; color:var(--t-acc); font-size
 
 /* D02: gdy sekcja terminarza jest aktywna, pływający widget pomocy i toasty hosta nie stoją w rogu, w którym leży stopka panelu
    (przesunięcie tylko na czas terminarza; poza nim host bez zmian). Sidebar hosta ma 260 px — stąd 284 px od lewej. */
-body.trm-aktywny #est-help-widget, body.trm-aktywny #boczki-toasts { right:auto !important; left:284px !important; }
-body.trm-aktywny #est-help-widget #est-help-panel { right:auto; left:0; }
-/* wąski LUB niski ekran (panel jest wtedy pełnoekranową nakładką ze stopką na dole): widget i toasty nad stopką, przy lewej krawędzi */
-@media (max-width: 760px), (max-height: 640px) { body.trm-aktywny #est-help-widget, body.trm-aktywny #boczki-toasts { left:16px !important; bottom:88px !important; } }
+/* E01: gdy panel terminarza jest otwarty, pływający widget pomocy znika (pomoc = przycisk „?” w nagłówku panelu, który go przywołuje);
+   po zamknięciu panelu wraca na swoje miejsce. Toasty w czasie pracy w terminarzu lądują u góry na środku — osobny obszar, nie róg stopki. */
+body.trm-panel-otwarty #est-help-widget { display:none !important; }
+body.trm-panel-otwarty.trm-pomoc-otwarta #est-help-widget { display:block !important; }
+body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; right:auto !important; left:50% !important; transform:translateX(-50%); flex-direction:column; align-items:center; }
+.trm-panel-head .trm-pomoc-btn { font-weight:700; }
 /* D03: neutralna karta przed wyborem godziny */
 .trm-wynik-termin.neutralna { background:var(--t-bg); border:1px dashed var(--t-line); }
 .trm-wynik-termin.neutralna .godz { font-size:20px; }
 /* D04: wiersz „o jakiej wizycie mowa” na karcie sprawy; karta reaguje na fokus z klawiatury */
 .trm-sprawa-wizyta { margin:2px 0 4px; font-weight:600; }
 .trm-sprawa-karta:focus-visible { outline:2px solid var(--t-acc); outline-offset:2px; }
+
+/* E04: odświeżanie tego samego dnia bez pustej siatki — delikatne wyszarzenie i oznaczenie zmienianej karty */
+.trm-main.trm-odswiezanie, #trm-main.trm-odswiezanie { opacity:.85; transition:opacity .15s; }
+.trm-karta.zapis { opacity:.55; outline:2px dashed var(--t-acc); }
+.trm-karta.zapis::after { content:"⏳ zapisujemy…"; position:absolute; right:6px; top:4px; font-size:10.5px; color:var(--t-acc); }

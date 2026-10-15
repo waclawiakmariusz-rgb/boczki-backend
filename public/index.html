@@ -28134,9 +28134,9 @@ function zaladujModulAdmina() {
                 <tr>
                     <td style="font-weight: bold;">${user.imie}</td>
                     <td><span style="background: ${rolaColor}; padding: 3px 8px; border-radius: 4px; font-size: 11px;">${user.rola}</span></td>
-                    <td style="letter-spacing: 2px;">${user.pin}</td>
+                    <td style="letter-spacing: 2px;" title="PIN nie jest pokazywany — zmienisz go w formularzu edycji">${user.pin_ustawiony === false ? '—' : '••••'}</td>
                     <td style="text-align: right;">
-                        <button onclick="edytujUzytkownikaAdmin('${user.imie}', '${user.pin}', '${user.rola}')" style="background:none; border:none; cursor:pointer; color:#3b82f6; padding:6px;" title="Edytuj">${ICON_EDIT}</button>
+                        <button onclick="edytujUzytkownikaAdmin('${user.imie}', '', '${user.rola}')" style="background:none; border:none; cursor:pointer; color:#3b82f6; padding:6px;" title="Edytuj">${ICON_EDIT}</button>
                         <button onclick="usunUzytkownikaAdmin('${user.imie}')" style="background:none; border:none; cursor:pointer; color:#ef4444; padding:6px; margin-left: 6px;" title="Usuń">${ICON_TRASH}</button>
                     </td>
                 </tr>
@@ -28176,7 +28176,9 @@ function zapiszUzytkownikaAdmin(e) {
 // 3. Wrzucanie danych do formularza (do edycji)
 function edytujUzytkownikaAdmin(imie, pin, rola) {
     document.getElementById('admin-imie').value = imie;
-    document.getElementById('admin-pin').value = pin;
+    // PIN-y nie są już przesyłane do przeglądarki: przy edycji pole zostaje puste (= bez zmiany PIN-u), wpisanie nowego go zmienia
+    const pinEl = document.getElementById('admin-pin');
+    pinEl.value = ''; pinEl.required = false; pinEl.placeholder = 'nowy PIN (puste = bez zmian)';
     document.getElementById('admin-rola').value = rola;
     document.getElementById('admin-imie').focus(); // Skupia kursor na imieniu
 }
@@ -36310,7 +36312,7 @@ document.addEventListener('DOMContentLoaded', function() {
 })(); // end IIFE
 </script>
 <!-- 📅 TERMINARZ (dodatek Estelio+, 2026-10-12) — osobne pliki, żeby nie ruszać reszty aplikacji; ?v= podbijać przy każdej zmianie -->
-<link rel="stylesheet" href="/terminarz.css?v=20261015f">
-<script src="/terminarz.js?v=20261015f" defer></script>
+<link rel="stylesheet" href="/terminarz.css?v=20261015g">
+<script src="/terminarz.js?v=20261015g" defer></script>
 </body>
 </html>

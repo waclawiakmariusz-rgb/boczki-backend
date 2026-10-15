@@ -534,6 +534,63 @@ module.exports = (db, opts = {}) => {
     } catch (e) { log.error('[terminarz] sprawaUpsert:', e.message); return null; }
   }
   /** Zamyka sprawę, gdy przyczyna się rozstrzygnęła sama (np. ustalono wynik wizyty, odwołano dotkniętą wizytę). */
+  // E02: „obsłużona” = wizyta naprawdę poza kolizją, która założyła sprawę (odwołana, przełożona, inny wykonawca, cofnięta blokada/zmiana grafiku).
+  // Sprawdzamy STAN ŹRÓDŁOWY, nie listę z chwili utworzenia sprawy. Zwraca { koliduje, powod }.
+  async function kolizjaWizytyWSprawie(tenant, row, rezId, dotknieta) {
+    const dane = json(row.dane_json, {});
+    const rez = await rezerwacja(tenant, rezId);
+    if (!rez || ['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) return { koliduje: false, powod: 'wizyta odwołana' };
+    const pozAkt = rez.pozycje.filter(p => ['zaplanowana', 'w_trakcie'].includes(p.stan));
+    if (!pozAkt.length) return { koliduje: false, powod: 'wizyta bez zaplanowanych pozycji' };
+    if (row.typ === 'E15' || row.typ === 'E16') {
+      const m = String(row.klucz_dedup || '').match(/:nieob:(\d+)$/);
+      if (m) { const nb = (await q(`SELECT id FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(m[1])]))[0]; if (!nb) return { koliduje: false, powod: 'blokada została usunięta' }; }
+      const prac = dane.kogo && !/^zasób /.test(dane.kogo) ? dane.kogo : null; const zasob = dane.kogo && /^zasób /.test(dane.kogo) ? Number(dane.kogo.replace('zasób ', '')) : null;
+      if (!dane.od || !dane.do) return { koliduje: false, powod: 'brak zakresu blokady' };
+      const lista = await wizytyDotkniete(tenant, prac, zasob, String(dane.od).slice(0, 10), String(dane.do).slice(0, 10), (p) => !S.nakladaja(S.naMin(p.start), S.naMin(p.koniec), S.naMin(dane.od), S.naMin(dane.do)));
+      const nadal = lista.some(x => Number(x.rezerwacja_id) === Number(rezId));
+      return nadal ? { koliduje: true, powod: `nadal w czasie blokady ${prac || dane.kogo} (${String(dane.od).slice(0, 16)}–${String(dane.do).slice(0, 16)})` } : { koliduje: false, powod: 'poza blokadą' };
+    }
+    if (row.typ === 'E18') {
+      const cfg = await wspolneCfg(tenant); const kto = dane.kto;
+      const dni = [...new Set(pozAkt.map(p => p.start.slice(0, 10)))];
+      for (const dzien of dni) {
+        const przedz = S.przedzialyZGrafiku(cfg.grafik.filter(g => g.pracownik === kto), dzien);
+        const poza = pozAkt.filter(p => p.pracownik === kto && p.start.slice(0, 10) === dzien && !S.miesciSie(S.naMin(p.start), S.naMin(p.koniec), przedz));
+        if (poza.length) return { koliduje: true, powod: `${kto} nie pracuje wtedy według grafiku (${poza[0].start.slice(11, 16)}–${poza[0].koniec.slice(11, 16)})` };
+      }
+      return { koliduje: false, powod: 'wizyta mieści się w grafiku' };
+    }
+    return { koliduje: false, powod: 'sprawa bez kolizji zasobów' };
+  }
+  // Odświeża listę dotkniętych wizyt sprawy według stanu źródłowego; wizyty poza kolizją oznacza jako obsłużone (ślad w dzienniku),
+  // a gdy wszystkie są obsłużone — zamyka sprawę. Zwraca { dane, pozostalo, zamknieta }.
+  async function odswiezDotkniete(tenant, row, kto, opis) {
+    const dane = json(row.dane_json, {});
+    if (!Array.isArray(dane.dotkniete) || !dane.dotkniete.length || ['rozwiazana', 'nieaktualna'].includes(row.stan)) return { dane, pozostalo: Array.isArray(dane.dotkniete) ? dane.dotkniete.filter(x => !x.rozwiazana).length : 0, zamknieta: false };
+    let zmiana = false; const wpisy = [];
+    for (const x of dane.dotkniete) {
+      if (x.rozwiazana) continue;
+      const k = await kolizjaWizytyWSprawie(tenant, row, x.rezerwacja_id, x);
+      if (!k.koliduje) { x.rozwiazana = true; x.rozwiazano = new Date().toISOString().slice(0, 16).replace('T', ' '); x.jak = k.powod; zmiana = true; wpisy.push(`Wizyta EST-${String(x.rezerwacja_id).padStart(4, '0')} obsłużona — ${k.powod}${opis ? ' (' + opis + ')' : ''}`); }
+    }
+    const pozostalo = dane.dotkniete.filter(x => !x.rozwiazana).length;
+    if (zmiana) {
+      if (!pozostalo) await q(`UPDATE Term_Sprawy SET dane_json = ?, stan = 'rozwiazana', rozwiazal = ?, rozwiazano = NOW(), wynik = 'Wszystkie dotknięte wizyty obsłużone', zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [JSON.stringify(dane), kto || 'System', tenant, row.id]);
+      else await q(`UPDATE Term_Sprawy SET dane_json = ?, zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [JSON.stringify(dane), tenant, row.id]);
+      for (const w of wpisy) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'obsluzono_pozycje', ?)`, [tenant, row.id, kto || 'System', w.slice(0, 500)]);
+      if (!pozostalo) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'rozwiazano', 'Wszystkie dotknięte wizyty obsłużone — sprawa zamknięta automatycznie')`, [tenant, row.id, kto || 'System']);
+      row.dane_json = JSON.stringify(dane); if (!pozostalo) row.stan = 'rozwiazana';
+    }
+    return { dane, pozostalo, zamknieta: zmiana && !pozostalo };
+  }
+  // Po przełożeniu / zmianie wykonawcy / odwołaniu wizyty: otwarte sprawy grupowe z tą wizytą dostają aktualny stan.
+  async function sprawyPoZmianieWizyty(tenant, rezId, kto, opis) {
+    try {
+      const rows = await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND stan NOT IN ('rozwiazana', 'nieaktualna') AND rezerwacja_id IS NULL AND dane_json LIKE ?`, [tenant, `%"rezerwacja_id":${Number(rezId)},%`]);
+      for (const row of rows) await odswiezDotkniete(tenant, row, kto, opis);
+    } catch (e) { log.error('[terminarz] sprawyPoZmianieWizyty:', e.message); }
+  }
   async function sprawaAutoZamknij(tenant, klucz, wynik, stan) {
     stan = stan || 'rozwiazana';
     try {
@@ -1250,6 +1307,7 @@ module.exports = (db, opts = {}) => {
                 dane: { pozycje: podglad.obecny.pozycje.map((pp, i) => ({ nazwa: pp.nazwa, poprzedni: pp.pracownik, nowy: w2.pozycje[i].pracownik })), dotyczy: dotyczyWszyscy },
                 priorytet: 'P2', powiazany_czas: w2.start, klucz: `E03:${rez.id}`, kto: imie });
             }
+            await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta przełożona / zmieniony wykonawca'); // E02
             return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
           } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
@@ -1299,6 +1357,7 @@ module.exports = (db, opts = {}) => {
           priorytet: 'P2', powiazany_czas: null, klucz: `E05:${rez.id}`, kto: imie });
         for (const p of cel) await sprawaAutoZamknij(tenant, `E13:poz:${p.id}`, 'Wizyta odwołana', 'nieaktualna');
         const po = await rezerwacja(tenant, rez.id);
+        await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta odwołana'); // E02
         return { status: 'success', rezerwacja: po, rozrachunek: 'Rozliczenie środków (zadatki, karnet) wykonuje się w istniejących modułach — terminarz ich nie zmienia.' };
       }
       case 'trm_obecnosc': {
@@ -1428,8 +1487,10 @@ module.exports = (db, opts = {}) => {
         const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
         const widoczna = row ? sprawaDlaOdbiorcy(row, r, imie) : null;
         if (!widoczna) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        await odswiezDotkniete(tenant, row, null, 'sprawdzenie przy otwarciu'); // E02: stan źródłowy, nie lista z chwili utworzenia
+        const swieza = sprawaDlaOdbiorcy(row, r, imie) || widoczna;
         const dziennik = await q(`SELECT DATE_FORMAT(kiedy,'%Y-%m-%d %H:%i:%s') AS kiedy, kto, akcja, opis FROM Term_Sprawy_Dziennik WHERE tenant_id = ? AND sprawa_id = ? ORDER BY id`, [tenant, widoczna.id]);
-        return { status: 'success', sprawa: formatujSprawe(widoczna), dziennik };
+        return { status: 'success', sprawa: formatujSprawe(swieza), dziennik };
       }
       case 'trm_sprawa_przejmij': {
         if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
@@ -1471,6 +1532,17 @@ module.exports = (db, opts = {}) => {
         if (!wynik) throw new BladUzytkownika('Opisz wynik sprawy.');
         const row = (await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND id = ?`, [tenant, id]))[0];
         if (!row || !sprawaDlaOdbiorcy(row, r, imie)) throw new BladUzytkownika('Nie znaleziono sprawy.');
+        // E02: sprawa z listą wizyt zamyka się dopiero po obsłużeniu wszystkich (stan źródłowy); wyjątek tylko dla managera, jawnie oznaczony
+        const stanD = await odswiezDotkniete(tenant, row, imie, 'sprawdzenie przy zamykaniu');
+        if (stanD.zamknieta) return { status: 'success', zamknieta_automatycznie: true, message: 'Wszystkie wizyty są już poza kolizją — sprawa zamknęła się sama.' };
+        if (stanD.pozostalo) {
+          if (!d.wyjatek) throw new BladUzytkownika(`Pozostało ${stanD.pozostalo} ${stanD.pozostalo === 1 ? 'wizyta' : stanD.pozostalo < 5 ? 'wizyty' : 'wizyt'} do obsłużenia — przełóż je, zmień wykonawcę albo odwołaj. Notatka nie usuwa kolizji.`, { pozostalo: stanD.pozostalo });
+          if (!ROLE_MANAGER_PLUS.has(r)) throw new BladUzytkownika('Zamknięcie sprawy mimo nieobsłużonych wizyt wymaga managera.');
+          await q(`UPDATE Term_Sprawy SET stan = 'rozwiazana', wynik = ?, rozwiazal = ?, rozwiazano = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [`WYJĄTEK MANAGERA (${stanD.pozostalo} wizyt nieobsłużonych): ${wynik}`, imie, tenant, id]);
+          await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'wyjatek_managera', ?)`, [tenant, id, imie, `Zamknięto wyjątkowo mimo ${stanD.pozostalo} nieobsłużonych wizyt: ${wynik}`.slice(0, 500)]);
+          zapiszLog(tenant, 'TERMINARZ: SPRAWA — WYJĄTEK MANAGERA', imie, `sprawa #${id}: ${stanD.pozostalo} wizyt nieobsłużonych — ${wynik}`);
+          return { status: 'success', wyjatek: true };
+        }
         await q(`UPDATE Term_Sprawy SET stan = 'rozwiazana', wynik = ?, rozwiazal = ?, rozwiazano = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [wynik, imie, tenant, id]);
         await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'rozwiazano', ?)`, [tenant, id, imie, wynik]);
         return { status: 'success' };
@@ -1490,9 +1562,12 @@ module.exports = (db, opts = {}) => {
         if (!row || !sprawaDlaOdbiorcy(row, r, imie)) throw new BladUzytkownika('Nie znaleziono sprawy.');
         const dane = json(row.dane_json, {});
         if (!Array.isArray(dane.dotkniete)) throw new BladUzytkownika('Ta sprawa nie ma listy wizyt.');
+        if (!dane.dotkniete.some(x => Number(x.rezerwacja_id) === rezId)) throw new BladUzytkownika('Ta wizyta nie jest na liście tej sprawy.');
+        // E02: znacznik nie ukrywa aktywnej kolizji — sprawdzamy stan źródłowy; wyjątek managera jawny (powód w historii)
+        const kol = await kolizjaWizytyWSprawie(tenant, row, rezId);
+        if (kol.koliduje && !(d.wyjatek && ROLE_MANAGER_PLUS.has(r))) throw new BladUzytkownika(`Wizyta EST-${String(rezId).padStart(4, '0')} nadal koliduje (${kol.powod}) — przełóż ją, zmień wykonawcę albo odwołaj. Samo oznaczenie nie usuwa kolizji.`, { koliduje: true });
         let zmienilo = false;
-        dane.dotkniete = dane.dotkniete.map(x => { if (Number(x.rezerwacja_id) === rezId) { zmienilo = true; return { ...x, rozwiazana: true }; } return x; });
-        if (!zmienilo) throw new BladUzytkownika('Ta wizyta nie jest na liście tej sprawy.');
+        dane.dotkniete = dane.dotkniete.map(x => { if (Number(x.rezerwacja_id) === rezId) { zmienilo = true; return { ...x, rozwiazana: true, jak: kol.koliduje ? `WYJĄTEK MANAGERA: ${String(d.powod || '').slice(0, 200)}` : kol.powod }; } return x; });
         const wszystkie = dane.dotkniete.every(x => x.rozwiazana);
         if (wszystkie) {
           await q(`UPDATE Term_Sprawy SET dane_json = ?, stan = 'rozwiazana', rozwiazal = ?, rozwiazano = NOW(), wynik = 'Wszystkie dotknięte wizyty obsłużone', zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [JSON.stringify(dane), imie, tenant, id]);
@@ -1540,7 +1615,7 @@ module.exports = (db, opts = {}) => {
         LIMIT 200`).catch(() => []);
       for (const rz of (bezPokrycia || [])) {
         const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch(() => []);
-        await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Wyjaśnij pokrycie — ${rz.klient_nazwa}`,
+        await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Potwierdź rozliczenie — ${rz.klient_nazwa}`,
           opis: `Wizyta zakończona ${rz.koniec.slice(0, 16)}, brak powiązanej sprzedaży.`,
           dane: { pozycje: wyk, dotyczy: prIz(wyk) },
           priorytet: 'P1', powiazany_czas: null, klucz: `E19:rez:${rz.id}`, kto: null });
