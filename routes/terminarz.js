@@ -1,3 +1,4 @@
+const { getSession } = require('./sessions'); // C06/A24: tożsamość osoby z sesji PIN
 // ═══════════════════════════════════════════════════════════════════════════
 //  TERMINARZ — dodatek Estelio+ (0 zł). Etap A: terminarz wewnętrzny.
 //  Spec: design/terminarz 2.0/Estelio_Terminarz_Specyfikacja_dla_Claude_Code.md
@@ -267,6 +268,37 @@ module.exports = (db, opts = {}) => {
     )${KOL}`, 'Term_Zakupy_Ruchy');
   alterKolumna('Term_Pozycje', 'zakup_skladnik_id', 'INT NULL');
   alterKolumna('Term_Ustawienia', 'kontrola_zakupow', "VARCHAR(5) NOT NULL DEFAULT 'off'");
+  // ── C07: rejestr stanu schematu. Każdy krok DDL powyżej jest idempotentny, ale jego wynik był dotąd tylko w logu.
+  // Term_Migracje zapisuje, które elementy schematu zakupów są obecne; brak kolumny NIE może cicho wyłączyć kontroli —
+  // trm_zapisz/trm_ustawienia_zapisz odmawiają włączenia/użycia zakupów, gdy schemat jest niekompletny.
+  mk(`CREATE TABLE IF NOT EXISTS Term_Migracje (
+      nazwa VARCHAR(120) NOT NULL PRIMARY KEY,
+      wersja VARCHAR(20) NOT NULL,
+      obecna TINYINT(1) NOT NULL DEFAULT 0,
+      sprawdzono DATETIME NOT NULL,
+      uwaga VARCHAR(255) NULL
+    )${KOL}`, 'Term_Migracje');
+  const SCHEMAT_ZAKUPOW = [['Term_Oferty', null], ['Term_Oferty_Skladniki', null], ['Term_Zakupy', null], ['Term_Zakupy_Skladniki', null], ['Term_Zakupy_Ruchy', null], ['Term_Pozycje', 'zakup_skladnik_id'], ['Term_Ustawienia', 'kontrola_zakupow']];
+  const schemat = { wersja: '2026-10-15', sprawdzono: null, gotowy: false, braki: [] };
+  async function sprawdzSchemat() {
+    try {
+      const rows = await q(`SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('Term_Oferty','Term_Oferty_Skladniki','Term_Zakupy','Term_Zakupy_Skladniki','Term_Zakupy_Ruchy','Term_Pozycje','Term_Ustawienia')`);
+      const braki = [];
+      for (const [t, c] of SCHEMAT_ZAKUPOW) {
+        const jest = c ? rows.some(r => r.t === t && r.c === c) : rows.some(r => r.t === t);
+        if (!jest) braki.push(c ? `${t}.${c}` : t);
+        await q(`INSERT INTO Term_Migracje (nazwa, wersja, obecna, sprawdzono) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE wersja = VALUES(wersja), obecna = VALUES(obecna), sprawdzono = NOW()`, [c ? `${t}.${c}` : t, schemat.wersja, jest ? 1 : 0]);
+      }
+      schemat.braki = braki; schemat.gotowy = braki.length === 0; schemat.sprawdzono = new Date().toISOString();
+      if (braki.length) log.error('[terminarz] schemat zakupów niekompletny:', braki.join(', '));
+    } catch (e) { schemat.gotowy = false; schemat.braki = ['(nie udało się sprawdzić: ' + e.message + ')']; log.error('[terminarz] sprawdzSchemat:', e.message); }
+    return schemat;
+  }
+  if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') setTimeout(() => { sprawdzSchemat(); }, 4000); // po CREATE/ALTER wyżej
+  // ── Sekcja 0 odbioru: integracja zakupów (T02/T03) jest ODSEPAROWANA od terminarza. Włącza ją wyłącznie właściciel,
+  // listą salonów w zmiennej środowiskowej TERMINARZ_ZAKUPY_TENANTS (np. „demo-estelio,inny-salon”). Bez wpisu: brak
+  // importu, brak rezerwacji jednostek, brak UI zakupów; kontrola_zakupow traktowana jak „off”. Kod i tabele zostają.
+  const zakupyAktywne = (tenant) => String(process.env.TERMINARZ_ZAKUPY_TENANTS || '').split(',').map(s => s.trim()).filter(Boolean).includes(String(tenant));
   mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy (
       id INT AUTO_INCREMENT PRIMARY KEY,
       tenant_id VARCHAR(100) NOT NULL,
@@ -338,7 +370,9 @@ module.exports = (db, opts = {}) => {
       rows = await q(`SELECT * FROM Term_Ustawienia WHERE tenant_id = ?`, [tenant]);
     }
     const u = rows[0];
-    return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja, kontrola_zakupow: u.kontrola_zakupow === 'on' ? 'on' : 'off' };
+    const integracja = zakupyAktywne(tenant) && schemat.gotowy;
+    return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja,
+      zakupy_integracja: integracja ? 'on' : 'off', kontrola_zakupow: integracja && u.kontrola_zakupow === 'on' ? 'on' : 'off', kontrola_zakupow_zapisana: u.kontrola_zakupow === 'on' ? 'on' : 'off' };
   }
 
   async function zasoby(tenant, tylkoAktywne = false) {
@@ -676,18 +710,27 @@ module.exports = (db, opts = {}) => {
   }
 
   // ═══════════════════ ROUTER ═══════════════════
+  const wymagajIntegracji = (tenant) => { if (!zakupyAktywne(tenant)) throw new BladUzytkownika('Integracja zakupów nie jest włączona w tym salonie (etap w przygotowaniu).'); if (!schemat.gotowy) throw new BladUzytkownika('Integracja zakupów niedostępna — schemat bazy niekompletny: ' + schemat.braki.join(', ')); };
   router.post('/terminarz', async (req, res) => {
     const d = req.body || {};
     const tenant = d.tenant_id, action = d.action, imie = d.pracownik ? String(d.pracownik).trim() : '';
     if (!tenant) return res.json({ status: 'error', message: 'Brak tenant_id' });
     try {
+      // C06/A24: sesja założona przez verify_pin niesie imię zalogowanej osoby (sessions.login). Jeśli żądanie podaje
+      // inne imię pracownika tego salonu, odrzucamy — uprawnienia liczą się dla osoby uwierzytelnionej PIN-em, nie dla
+      // pola w żądaniu. Sesja salonowa (login kontem salonu, bez PIN-u) nie ma tożsamości osoby i zachowuje się jak dotąd.
+      const sesja = getSession(req.headers['x-session-token']);
+      if (sesja && sesja.login && imie && String(sesja.login).trim() !== imie && String(sesja.tenant_id) === String(tenant) && (await rola(tenant, String(sesja.login).trim())) !== null) {
+        log.warn(`[terminarz] tożsamość: sesja=${sesja.login} żądanie=${imie} tenant=${tenant} akcja=${action}`);
+        return res.json({ status: 'error', code: 'TOZSAMOSC', message: 'Żądanie podaje inną osobę niż zalogowana PIN-em. Zaloguj się ponownie.' });
+      }
       const r = await rola(tenant, imie);
       if (action === 'trm_init') {
         const on = await czyFeature(tenant);
         if (!on) return res.json({ status: 'success', feature_on: false, rola: r });
         const cfg = await wspolneCfg(tenant);
         const nieob = await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i:%s') AS \`do\`, typ, opis, utworzyl FROM Term_Nieobecnosci WHERE tenant_id = ? AND do_ >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY od`, [tenant]);
-        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
+        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, schemat, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
       }
       if (!(await czyFeature(tenant))) return res.json({ status: 'error', code: 'DODATEK', message: 'Dodatek „Terminarz” nie jest aktywny w tym salonie.' });
       const wynik = await obsluz(action, d, tenant, imie, r);
@@ -716,6 +759,7 @@ module.exports = (db, opts = {}) => {
         const wyp = Math.min(168 * 60, Math.max(0, Number(d.wyprzedzenie_min ?? ust.wyprzedzenie_min) || 0));
         const tryb = ['wewnetrzny', 'online', 'obok'].includes(d.tryb) ? d.tryb : ust.tryb;
         await q(`UPDATE Term_Ustawienia SET godziny_json = ?, siatka_min = ?, tolerancja_min = ?, horyzont_dni = ?, wyprzedzenie_min = ?, tryb = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ?`, [JSON.stringify(godziny), siatka, tol, hor, wyp, tryb, tenant]);
+        if (d.kontrola_zakupow === 'on' && !(zakupyAktywne(tenant) && schemat.gotowy)) throw new BladUzytkownika(zakupyAktywne(tenant) ? 'Nie można włączyć kontroli zakupów — schemat bazy niekompletny: ' + schemat.braki.join(', ') : 'Integracja zakupów nie jest włączona w tym salonie.');
         if (d.kontrola_zakupow === 'on' || d.kontrola_zakupow === 'off') await q(`UPDATE Term_Ustawienia SET kontrola_zakupow = ? WHERE tenant_id = ?`, [d.kontrola_zakupow, tenant]); // T03: opt-in per salon
         zapiszLog(tenant, 'TERMINARZ: USTAWIENIA', imie, `siatka ${siatka} min, tryb ${tryb}`);
         return { status: 'success', ustawienia: await ustawienia(tenant) };
@@ -959,6 +1003,7 @@ module.exports = (db, opts = {}) => {
       // ───────── T02/T03: zakupy klientki, mapowanie ofert, bilans otwarcia ─────────
       case 'trm_zakupy_klientki': {
         wymagaj(r, ROLE_OPERACYJNE);
+        if (!zakupyAktywne(tenant) || !schemat.gotowy) return { status: 'success', integracja: 'off', zakupy: [], bez_mapowania: 0 }; // sekcja 0: bez importu i bez sald, gdy integracja nieaktywna
         const idKlienta = d.id_klienta ? String(d.id_klienta) : null;
         let nazwa = d.klient_nazwa ? String(d.klient_nazwa) : null;
         if (idKlienta && !nazwa) { const kr = (await q(`SELECT imie_nazwisko FROM Klienci WHERE tenant_id = ? AND id_klienta = ?`, [tenant, idKlienta]))[0]; nazwa = kr ? kr.imie_nazwisko : null; }
@@ -968,7 +1013,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, zakupy: await zakupyKlientki(tenant, idKlienta, nazwa, cfg.katalog), bez_mapowania: imp.bezMapowania };
       }
       case 'trm_oferty_lista': {
-        wymagaj(r, ROLE_MANAGER_PLUS);
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
         const cfg = await wspolneCfg(tenant);
         const of = await q(`SELECT id, usluga_id, stan, zrodlo, zatwierdzil, DATE_FORMAT(zatwierdzono,'%Y-%m-%d %H:%i') AS zatwierdzono FROM Term_Oferty WHERE tenant_id = ?`, [tenant]);
         const sk = of.length ? await q(`SELECT oferta_id, usluga_wyk_id, jednostki FROM Term_Oferty_Skladniki WHERE tenant_id = ? AND oferta_id IN (${of.map(() => '?').join(',')})`, [tenant, ...of.map(o => o.id)]) : [];
@@ -982,7 +1027,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, oferty: lista, zakupy_do_weryfikacji: niezw[0].n };
       }
       case 'trm_oferta_zapisz': {
-        wymagaj(r, ROLE_MANAGER_PLUS);
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
         const uid = String(d.usluga_id || '');
         const u = (await q(`SELECT id FROM Uslugi WHERE tenant_id = ? AND id = ?`, [tenant, uid]))[0];
         if (!u) throw new BladUzytkownika('Oferta nie istnieje w cenniku.');
@@ -1004,12 +1049,12 @@ module.exports = (db, opts = {}) => {
         return { status: 'success' };
       }
       case 'trm_zakupy_import': {
-        wymagaj(r, ROLE_MANAGER_PLUS);
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
         const w = await importujZakupy(tenant, null, imie);
         return { status: 'success', ...w };
       }
       case 'trm_zakup_bilans': {
-        wymagaj(r, ROLE_MANAGER_PLUS);
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
         const zid = Number(d.zakup_id);
         const z = (await q(`SELECT * FROM Term_Zakupy WHERE tenant_id = ? AND id = ?`, [tenant, zid]))[0];
         if (!z) throw new BladUzytkownika('Nie znaleziono zakupu.');
@@ -1103,6 +1148,7 @@ module.exports = (db, opts = {}) => {
             // Opt-in: pozycja z zakup_skladnik_id; przy włączonej kontroli zakup jest wymagany dla każdego zabiegu.
             const kontrolaZakupow = cfg.ust.kontrola_zakupow === 'on';
             const zakupPoz = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => p && p.zakup_skladnik_id ? Number(p.zakup_skladnik_id) : null);
+            if (zakupPoz.some(Boolean) && cfg.ust.zakupy_integracja !== 'on') throw new BladUzytkownika(schemat.gotowy ? 'Rezerwacja zabiegów z zakupów nie jest włączona w tym salonie.' : 'Rezerwacja zabiegów z zakupów niedostępna — schemat bazy niekompletny: ' + schemat.braki.join(', '));
             if (kontrolaZakupow && zakupPoz.some(x => !x)) throw new BladUzytkownika('Kontrola zakupów jest włączona — wskaż zakup klientki dla każdego zabiegu (albo zarejestruj nowy zakup w Sprzedaży).');
             const idySkl = [...new Set(zakupPoz.filter(Boolean))];
             if (idySkl.length) {

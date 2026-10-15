@@ -111,7 +111,14 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-karta.przeciagalna { cursor:grab; }
 .trm-karta.przeciagalna:active { cursor:grabbing; }
 .trm-karta.przeciagana { opacity:.28; }
-.trm-karta.krotka .u, .trm-karta.krotka .zn { display:none; }
+/* C08: karta 30-minutowa — godzina i klientka w jednej linii, usługa w drugiej (zamiast ukrywania usługi) */
+.trm-karta.krotka .g, .trm-karta.krotka .k { display:inline; }
+.trm-karta.krotka .g { margin-right:5px; }
+.trm-karta.krotka .u { display:block; }
+.trm-karta.krotka .zn { display:none; }
+.trm-confirm-move .trm-cm-wiersz { display:flex; gap:8px; font-size:13px; margin:3px 0; }
+.trm-confirm-move .trm-cm-wiersz .e { color:var(--t-mut); min-width:76px; }
+.trm-confirm-move .trm-cm-wiersz .nowy { color:var(--t-acc); font-weight:600; }
 .trm-col.drag-nad { background-color:var(--t-acc2); outline:2px dashed var(--t-acc); outline-offset:-2px; }
 .trm.przeciaganie { user-select:none; }
 .trm.przeciaganie .trm-karta { cursor:grabbing; }
@@ -365,4 +372,16 @@ details.trm-pomoc-wiecej summary { cursor:pointer; color:var(--t-acc); font-size
   .trm-ag-head { display:none; }
   .trm-ag-row { grid-template-columns:80px 1fr; }
   .trm-ag-row > :nth-child(3), .trm-ag-row > :nth-child(4), .trm-ag-row > :nth-child(5) { grid-column:1 / -1; }
+}
+
+/* A26: na wąskim ekranie każda kontrolka w panelu jest celem dotykowym (min 44 px), także małe przyciski i linki */
+@media (max-width: 760px) {
+  .trm-panel .trm-btn.sm, .trm-panel .trm-btn.link, .trm-panel .trm-sloty button { min-height:44px; padding-top:10px; padding-bottom:10px; }
+}
+
+/* A26 / 200 %: przy niskim oknie (np. zoom 200 % na laptopie) panel boczny zaczynałby się pod dolną krawędzią ekranu —
+   wtedy, tak jak na telefonie, staje się nakładką z własnym przewijaniem i stopką „Umów wizytę” zawsze na dole */
+@media (max-height: 640px) {
+  .trm-body.z-panelem { grid-template-columns:1fr; }
+  .trm-panel { position:fixed; inset:0; z-index:9500; max-height:none; border-radius:0; overflow:auto; }
 }

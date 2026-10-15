@@ -97,7 +97,7 @@
     const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
-    <div class="trm" data-wersja="20261015d">
+    <div class="trm" data-wersja="20261015e">
       <div class="trm-top">
         <div><h1>Terminarz</h1><div class="trm-sub" id="trm-sub"></div></div>
         <div class="trm-spacer"></div>
@@ -267,6 +267,7 @@
   }
   TRM.klikSiatka = (ev, pracownik) => {
     if (!operacyjna()) return;
+    if (TRM._suprimKlik && Date.now() < TRM._suprimKlik) return; // C01: puszczenie myszy po geście (także anulowanym) nie jest kliknięciem w siatkę
     const col = ev.currentTarget; const rect = col.getBoundingClientRect();
     const zak = TRM._zak || { od: 480 };
     const siatka = (TRM.dane.ustawienia.siatka_min || 15);
@@ -361,7 +362,7 @@
   TRM.pDown = (ev) => {
     if (ev.button !== 0 || ev.pointerType === 'touch') return;
     const card = ev.currentTarget, lane = card.closest('.trm-col'); if (!lane) return;
-    drag = { pointerId: ev.pointerId, card, lane, rezId: Number(card.dataset.rezerwacja), pozIds: (card.dataset.pozycje || '').split(',').map(Number).filter(Boolean), pracZrodlo: card.dataset.pracZrodlo, startX: ev.clientX, startY: ev.clientY, x: ev.clientX, y: ev.clientY, started: false };
+    drag = { pointerId: ev.pointerId, card, lane, rezId: Number(card.dataset.rezerwacja), pozIds: (card.dataset.pozycje || '').split(',').map(Number).filter(Boolean), pracZrodlo: card.dataset.pracZrodlo, startX: ev.clientX, startY: ev.clientY, offsetY: ev.clientY - card.getBoundingClientRect().top, x: ev.clientX, y: ev.clientY, started: false };
   };
   function trmDragMove(ev) {
     if (!drag || ev.pointerId !== drag.pointerId) return;
@@ -384,8 +385,9 @@
     document.querySelectorAll('.trm-draft-slot').forEach(n => n.remove());
     const laneEl = (drag.lanes || []).find(l => { const r = l.getBoundingClientRect(); return drag.x >= r.left && drag.x < r.right; });
     if (!laneEl) { if (drag.tip) drag.tip.textContent = 'Puszczenie poza siatką anuluje zmianę.'; drag.candidate = null; return; }
-    const rect = laneEl.getBoundingClientRect(), zak = TRM._zak || { od: 480 }, krok = 5;
-    let m = zak.od + Math.round((drag.y - rect.top) / PX); m = Math.round(m / krok) * krok;
+    // C01: krok = siatka salonu (nie 5 min na sztywno); karta trzyma punkt chwycenia (offsetY), więc jej GÓRA wyznacza nowy start
+    const rect = laneEl.getBoundingClientRect(), zak = TRM._zak || { od: 480 }, krok = (TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.siatka_min) || 15;
+    let m = zak.od + (drag.y - (drag.offsetY || 0) - rect.top) / PX; m = Math.max(zak.od, Math.round(m / krok) * krok);
     const rezOryg = rezZDnia(drag.rezId), trwanie = rezOryg ? (minDnia(rezOryg.koniec) - minDnia(rezOryg.start)) : 40;
     const koniecM = m + trwanie, pracDocelowy = laneEl.dataset.prac;
     drag.candidate = { start: `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`, pracDocelowy };
@@ -441,11 +443,18 @@
   function trmPokazConfirmPrzesuniecia(podglad, d, body) {
     const layer = el('trm-bubble-layer'); if (!layer) return;
     const left = Math.max(12, Math.min(window.innerWidth - 332, d.x - 40)), top = Math.max(12, Math.min(window.innerHeight - 200, d.y));
-    const nowy = podglad.nowy || {};
-    layer.innerHTML = `<div class="trm-confirm-move" style="left:${left}px;top:${top}px" role="dialog" aria-label="Potwierdź przeniesienie">
-      <div class="small muted">Propozycja — nic jeszcze nie zapisano</div>
-      <div style="margin:6px 0 12px"><b>${hhmm(nowy.start)}–${hhmm(nowy.koniec)}</b>${nowy.pozycje && nowy.pozycje[0] ? ' · ' + esc(nowy.pozycje[0].pracownik || '') : ''}</div>
-      <div class="trm-row"><button class="trm-btn sm fix" onclick="TRM.anulujPrzesuniecie()">Anuluj</button><button class="trm-btn sm primary fix" onclick="TRM.zatwierdzPrzesuniecie()">Zatwierdź</button></div>
+    const nowy = podglad.nowy || {}, obecny = podglad.obecny || {}, rez = rezZDnia(d.rezId) || {};
+    const prac = (l) => [...new Set((l || []).map(p => p.pracownik).filter(Boolean))].join(', ');
+    const pracPrzed = prac(obecny.pozycje), pracPo = prac(nowy.pozycje);
+    const zabiegi = (nowy.pozycje || obecny.pozycje || []).map(p => p.nazwa).join(' + ');
+    // C01: okno mówi, CO się zmieni — klientka, zabieg, termin przed → po, zmiana wykonawcy; akcja nazwana jednoznacznie
+    layer.innerHTML = `<div class="trm-confirm-move" style="left:${left}px;top:${top}px" role="dialog" aria-label="Przełożyć wizytę?">
+      <h4 style="margin:0 0 2px">Przełożyć wizytę?</h4><div class="small muted" style="margin-bottom:8px">Nic jeszcze nie zapisano.</div>
+      <div class="trm-cm-wiersz"><span class="e">Klientka</span><b>${esc(rez.klient_nazwa || '—')}</b></div>
+      <div class="trm-cm-wiersz"><span class="e">Zabieg</span><span>${esc(zabiegi || '—')}</span></div>
+      <div class="trm-cm-wiersz"><span class="e">Termin</span><span>${esc(ladnaData((obecny.start || '').slice(0, 10), true))} ${hhmm(obecny.start)}–${hhmm(obecny.koniec)} → <span class="nowy">${esc(ladnaData((nowy.start || '').slice(0, 10), true))} ${hhmm(nowy.start)}–${hhmm(nowy.koniec)}</span></span></div>
+      ${pracPrzed !== pracPo ? `<div class="trm-cm-wiersz"><span class="e">Wykonawca</span><span>${esc(pracPrzed || '—')} → <span class="nowy">${esc(pracPo || '—')}</span></span></div>` : `<div class="trm-cm-wiersz"><span class="e">Wykonawca</span><span>${esc(pracPo || '—')} (bez zmian)</span></div>`}
+      <div class="trm-row" style="margin-top:10px"><button class="trm-btn sm fix" onclick="TRM.anulujPrzesuniecie()">Anuluj</button><button class="trm-btn sm primary fix" onclick="TRM.zatwierdzPrzesuniecie()">Przełóż wizytę</button></div>
     </div>`;
     TRM._oczekPrzesuniecie = { body, rezId: d.rezId };
   }
@@ -593,7 +602,12 @@
   }
 
   // ── PANEL: pokaż / schowaj ─────────────────────────────────────────────
-  function panelOtworz(html) { const p = el('trm-panel'), b = el('trm-body'); if (!p) return; p.innerHTML = html; p.hidden = false; b.classList.add('z-panelem'); }
+  // C08: panel ma własne przewijanie, a jego stopka („Umów wizytę”) ma być widoczna bez przewijania całej strony.
+  // CSS zakłada panel od 12 px od góry, ale w Estelio zaczyna się niżej (nagłówek hosta + nagłówek terminarza) —
+  // dopasowujemy max-height do faktycznego położenia, przy otwarciu i przy zmianie rozmiaru okna.
+  function trmDopasujPanel() { const p = el('trm-panel'); if (!p || p.hidden) return; p.style.maxHeight = ''; if (getComputedStyle(p).position === 'fixed') return; /* wąski lub niski ekran: panel jest nakładką (CSS) */ const top = p.getBoundingClientRect().top; if (top > 12) p.style.maxHeight = Math.max(260, window.innerHeight - top - 12) + 'px'; }
+  window.addEventListener('resize', () => trmDopasujPanel());
+  function panelOtworz(html) { const p = el('trm-panel'), b = el('trm-body'); if (!p) return; p.innerHTML = html; p.hidden = false; b.classList.add('z-panelem'); trmDopasujPanel(); }
   TRM.panelZamknij = () => { document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
   const naglowekPanelu = (tytul, sub) => `<div class="trm-panel-head"><div><h2>${tytul}</h2>${sub ? `<div class="muted small">${sub}</div>` : ''}</div><button class="trm-x" onclick="TRM.panelZamknij()" title="Zamknij">✕</button></div>`;
 
@@ -601,6 +615,13 @@
   TRM.nowaWizyta = (opcje) => {
     if (!operacyjna()) return;
     const o = opcje || {};
+    // C01: otwarty szkic z wpisanymi danymi nie jest kasowany przez kliknięcie siatki — przejmuje tylko wskazany termin/osobę
+    const szkic = TRM.nowa;
+    if (szkic && o.start && (szkic.klient || szkic.pozycje.length || szkic.notatka)) {
+      szkic.start = o.start; szkic.dataReczna = true; if (o.pracownik) szkic.prefPrac = o.pracownik;
+      nowaResetDostep(szkic); renderNowa(); if (nowaNaTerminie(szkic)) { nowaLadujSloty(); TRM.nowaZmiana(true); }
+      toast('info', 'Szkic zachowany', `Termin zmieniony na ${o.start.slice(11, 16)}${o.pracownik ? ' · ' + o.pracownik : ''}`); return;
+    }
     const start = o.start || `${TRM.data} ${pad(Math.max(8, new Date().getHours() + 1))}:00`;
     // dataReczna: użytkownik świadomie wpisał datę w formularzu — wtedy nawigacja kalendarza jej nie nadpisuje (raport T01)
     TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
@@ -624,7 +645,9 @@
     </div>`;
   }
   // T02/T03: zakupy klientki na pierwszym planie kroku „Zabieg”; cennik jako „pojedynczy zabieg” (albo tylko informacja o Sprzedaży przy włączonej kontroli)
+  const zakupyIntegracja = () => !!(TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.zakupy_integracja === 'on'); // sekcja 0 odbioru: UI zakupów tylko gdy właściciel włączył integrację
   async function nowaLadujZakupy() {
+    if (!zakupyIntegracja()) return;
     const n = TRM.nowa; if (!n || !n.klient) { if (n) n.zakupy = null; return; }
     const req = n.reqZakupy = (n.reqZakupy || 0) + 1; n.zakupy = undefined; renderNowa();
     let d; try { d = await api('trm_zakupy_klientki', { id_klienta: n.klient.id_klienta, klient_nazwa: n.klient.nazwa }); } catch (e) { d = null; }
@@ -653,13 +676,14 @@
     n.zakupy = d.zakupy; toast('success', 'Bilans otwarcia zapisany'); renderNowa();
   };
   function zakupyKlientkiHtml(n) {
+    if (!zakupyIntegracja()) return '';
     const kontrola = TRM.dane.ustawienia && TRM.dane.ustawienia.kontrola_zakupow === 'on';
     if (!n.klient) return kontrola ? '<div class="trm-pomoc">Najpierw wybierz klientkę — pokażemy jej zakupy.</div>' : '';
     if (n.zakupy === undefined) return '<div class="muted small">⏳ Sprawdzamy zakupy klientki…</div>';
     if (n.zakupy && n.zakupy.blad) return '<div class="trm-note warn small">Nie udało się pobrać zakupów klientki. <button class="trm-btn link sm" onclick="TRM.nowaOdswiezZakupy()">Spróbuj ponownie</button></div>';
     const lista = n.zakupy || [];
     const dzis = dzisStr(), dzien = n.start.slice(0, 10);
-    const bez = n.zakupyBezMapowania ? `<div class="trm-pomoc">${n.zakupyBezMapowania} ${n.zakupyBezMapowania === 1 ? 'sprzedaż klientki nie ma' : 'sprzedaże klientki nie mają'} jeszcze mapowania na usługę (Ustawienia → Pakiety).</div>` : '';
+    const bez = n.zakupyBezMapowania ? `<div class="trm-pomoc">${n.zakupyBezMapowania} ${n.zakupyBezMapowania === 1 ? 'zakup klientki wymaga' : 'zakupy klientki wymagają'} konfiguracji pakietu (Ustawienia → Pakiety i zakupy).</div>` : '';
     if (!lista.length) return `<div class="trm-field"><label>Zakupy klientki</label><div class="trm-note ${kontrola ? 'warn' : 'info'} small">Brak zakupów z wolnymi jednostkami.${kontrola ? ' Kontrola zakupów jest włączona — nowy zakup zarejestruj w Sprzedaży, potem wróć do umawiania.' : ' Możesz umówić pojedynczy zabieg z cennika poniżej.'}</div>${bez}</div>`;
     return `<div class="trm-field"><label>Zakupy klientki</label>${lista.map(z => {
       const wygasly = z.data_waznosci && z.data_waznosci < dzien, zamkniety = z.stan !== 'aktywny';
@@ -695,7 +719,7 @@
     if (n.pozycje.length) {
       if (st === 'ok' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin ok"><div class="godz">${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}</div><div class="st">✓ Termin dostępny${dost.wynik.przerwy_min ? ` · w tym ${dost.wynik.przerwy_min} min przerwy` : ''} · ${esc(ladnaData(n.start.slice(0, 10), true))}</div>
         ${dost.wynik.pozycje.map(p => `<div class="seg"><span>${hhmm(p.start)}–${hhmm(p.koniec)}</span><span><b>${esc(p.nazwa)}</b> — ${esc(p.pracownik)}</span><span class="m">${p.gabinet_id ? nazwaZasobu(p.gabinet_id, 'gabinet') : 'bez gabinetu'}${p.urzadzenie_id ? ' · ' + nazwaZasobu(p.urzadzenie_id, 'urządzenie') : ''}</span></div>`).join('')}
-        <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">Rozliczenie: po wykonaniu, w Sprzedaży.${TRM.dane.ustawienia && TRM.dane.ustawienia.kontrola_zakupow === 'on' ? ' Jednostka zakupu zostanie zarezerwowana przy zapisie.' : ''}</div></div>`;
+        <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">${n.pozycje.some(p => p.zakup_skladnik_id) ? `Rozliczenie: z zakupu klientki — przy zapisie zarezerwujemy ${n.pozycje.filter(p => p.zakup_skladnik_id).length === 1 ? '1 zabieg' : n.pozycje.filter(p => p.zakup_skladnik_id).length + ' zabiegi'} z pakietu${n.pozycje.some(p => !p.zakup_skladnik_id) ? '; pozostałe po wykonaniu, w Sprzedaży' : ''}.` : 'Rozliczenie: po wykonaniu, w Sprzedaży.'}</div></div>`;
       else if (st === 'zajety' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin zajety"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">✕ Termin zajęty</div><div class="m" style="margin-top:6px">${esc((dost.wynik.problemy || []).map(p => p.opis).join('; ') || 'konflikt zasobów')}</div>${alternatywyHtml(dost.wynik.alternatywy, 'TRM.nowaWybierzAlt')}</div>`;
       else if (st === 'blad') wynikHtml2 = `<div class="trm-wynik-termin blad"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">⚠ Nie udało się sprawdzić terminu</div><div class="m">${esc(dost.komunikat || 'brak odpowiedzi')} <button class="trm-btn link sm" onclick="TRM.nowaZmiana(true)">Sprawdź ponownie</button></div></div>`;
       else if (st === 'czekam') wynikHtml2 = `<div class="trm-wynik-termin"><div class="godz">${n.start.slice(11, 16)}</div><div class="st muted">⏳ Sprawdzamy termin…</div></div>`;
@@ -1257,8 +1281,8 @@
   // ── USTAWIENIA (E16/E17/E18/E19 — zakres etapu A) ──────────────────────
   function renderUstawienia() {
     if (!manager()) { el('trm-main').innerHTML = '<div class="trm-note bad">Ustawienia terminarza zmienia manager lub właściciel.</div>'; return; }
-    const t = TRM.ust.tab;
-    const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ['pakiety', 'Pakiety i zakupy'], ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
+    const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ...((TRM.dane.ustawienia || {}).zakupy_integracja === 'on' ? [['pakiety', 'Pakiety i zakupy']] : []), ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
+    const t = tabs.some(x => x[0] === TRM.ust.tab) ? TRM.ust.tab : 'ogolne'; TRM.ust.tab = t; // zakładka niedostępna (np. zakupy przy wyłączonej integracji) → Godziny i zasady
     let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ustTab('${k}')">${n}</button>`).join('')}</div>`;
     TRM.ust.brudne = false;
     html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, pakiety: ustPakiety, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
@@ -1285,16 +1309,16 @@
       const lista = of.filter(o => (widok === 'wszystkie' || /\d+\s*[x×]\s*$/i.test(o.nazwa) || o.stan !== 'brak') && (!fr || o.nazwa.toLowerCase().includes(fr)));
       const opcje = (wyb) => of.map(x => `<option value="${esc(x.usluga_id)}" ${String(x.usluga_id) === String(wyb) ? 'selected' : ''}>${esc(x.nazwa)}</option>`).join('');
       tabela = `<div class="trm-row" style="margin-bottom:8px"><input placeholder="Szukaj oferty…" value="${esc(TRM.ust.ofFiltr || '')}" oninput="TRM.ust.ofFiltr=this.value;TRM.widokZmien('ustawienia')"><div class="trm-segment fix"><button type="button" class="${widok === 'pakiety' ? 'active' : ''}" onclick="TRM.ust.ofWidok='pakiety';TRM.widokZmien('ustawienia')">Pakiety i zmapowane</button><button type="button" class="${widok === 'wszystkie' ? 'active' : ''}" onclick="TRM.ust.ofWidok='wszystkie';TRM.widokZmien('ustawienia')">Cały cennik</button></div></div>
-      <div style="overflow:auto"><table class="trm-oferty"><thead><tr><th>Oferta (cennik)</th><th>Składnik: usługa wykonywana × jednostki</th><th>Stan</th><th></th></tr></thead><tbody>
+      <div style="overflow:auto"><table class="trm-oferty"><thead><tr><th>Oferta (cennik)</th><th>Zabieg wykonywany × liczba zabiegów</th><th>Stan</th><th></th></tr></thead><tbody>
       ${lista.slice(0, 150).map(o => { const s0 = o.skladniki[0] || { usluga_wyk_id: o.usluga_id, jednostki: 1 }; const st = o.stan === 'zatwierdzona' ? pill(['Zatwierdzona', 'ok']) : o.stan === 'odrzucona' ? pill(['Odrzucona', 'bad']) : pill(['Propozycja z nazwy', 'warn']);
         return `<tr id="trm-of-${esc(o.usluga_id)}"><td><b>${esc(o.nazwa)}</b>${o.cena != null ? `<div class="muted small">${zl(o.cena)}</div>` : ''}</td>
-          <td><div class="trm-row"><select class="wyk">${opcje(s0.usluga_wyk_id)}</select><input type="number" class="j fix" min="1" max="500" value="${s0.jednostki}" aria-label="jednostki"></div>${o.stan === 'brak' || o.stan === 'propozycja' ? `<div class="trm-pomoc">${esc(o.propozycja.uwaga)}</div>` : o.zatwierdzil ? `<div class="trm-pomoc">${esc(o.zatwierdzil)} · ${esc(o.zatwierdzono || '')}</div>` : ''}</td>
+          <td><div class="trm-row"><select class="wyk">${opcje(s0.usluga_wyk_id)}</select><input type="number" class="j fix" min="1" max="500" value="${s0.jednostki}" aria-label="liczba zabiegów"></div>${o.stan === 'brak' || o.stan === 'propozycja' ? `<div class="trm-pomoc">${esc(o.propozycja.uwaga)}</div>` : o.zatwierdzil ? `<div class="trm-pomoc">${esc(o.zatwierdzil)} · ${esc(o.zatwierdzono || '')}</div>` : ''}</td>
           <td>${st}</td>
           <td><div class="trm-row"><button class="trm-btn sm primary fix" onclick="TRM.ustOfertaZapisz('${esc(o.usluga_id)}','zatwierdzona')">Zatwierdź</button><button class="trm-btn sm fix" onclick="TRM.ustOfertaZapisz('${esc(o.usluga_id)}','odrzucona')">Odrzuć</button></div></td></tr>`; }).join('')}
       </tbody></table>${lista.length > 150 ? `<div class="trm-pomoc">Pokazano 150 z ${lista.length} — zawęź wyszukiwaniem.</div>` : ''}${!lista.length ? '<div class="muted small" style="padding:10px 0">Brak pozycji.</div>' : ''}</div>`;
     }
     return `<div class="trm-grid2" style="grid-template-columns:1fr 360px;align-items:start">
-      <div class="trm-card"><h3>Mapowanie ofert na usługi wykonywane</h3><div class="trm-pomoc" style="margin-bottom:8px">Oferta z cennika (np. „1 obszar 4x”) to pakiet. Tu potwierdzasz, <b>co</b> jest wykonywane i <b>ile razy</b>. Nazwa z „4x” to tylko propozycja — uprawnienie klientki powstaje dopiero po zatwierdzeniu.</div>${tabela}</div>
+      <div class="trm-card"><h3>Co obejmuje pakiet?</h3><div class="trm-pomoc" style="margin-bottom:8px">Oferta z cennika (np. „1 obszar 4x”) to pakiet. Tu potwierdzasz, <b>co</b> jest wykonywane i <b>ile razy</b>. Nazwa z „4x” to tylko propozycja — uprawnienie klientki powstaje dopiero po zatwierdzeniu.</div>${tabela}</div>
       <div>
         <div class="trm-card"><h3>Kontrola zakupów</h3><div class="trm-row"><label class="trm-switch"><input type="checkbox" ${kontrola ? 'checked' : ''} onchange="TRM.ustKontrolaZakupow(this.checked)"><span></span></label><div><b>${kontrola ? 'Włączona' : 'Wyłączona'}</b><div class="trm-pomoc">${kontrola ? 'Umówić można tylko zabieg z zakupu klientki z wolną jednostką. Zapis rezerwuje jednostkę, wykonanie ją zużywa.' : 'Zakupy są pokazywane w umawianiu, ale można też umówić pojedynczy zabieg z cennika. Włącz, gdy mapowania i bilanse otwarcia są gotowe.'}</div></div></div></div>
         <div class="trm-card" style="margin-top:12px"><h3>Zakupy klientek</h3><div class="trm-pomoc">Import tworzy wpisy zakupów z istniejących sprzedaży (tylko oferty zatwierdzone), nie zmienia Sprzedaży. Stare zakupy dostają status „saldo do weryfikacji” — bilans otwarcia ustawia manager w umawianiu, przy zakupie klientki.</div>
@@ -1503,7 +1527,8 @@
   function ustGrafik() {
     const prac = TRM.dane.pracownicy; if (!prac.length) return '<div class="trm-note warn">Brak pracowników.</div>';
     const kto_ = TRM.ust.prac && prac.includes(TRM.ust.prac) ? TRM.ust.prac : prac[0]; TRM.ust.prac = kto_;
-    const g = {}; TRM.dane.grafik.filter(x => x.pracownik === kto_).forEach(x => { (g[x.dzien_tyg] = g[x.dzien_tyg] || []).push({ od: x.od, do: x.do }); });
+    // C02: do pól stałego harmonogramu trafiają TYLKO reguły cykliczne — wyjątki dnia (od_daty = do_daty) mają własny edytor w obsadzie
+    const g = {}; TRM.dane.grafik.filter(x => x.pracownik === kto_ && !jestWyjatkiem(x)).forEach(x => { (g[x.dzien_tyg] = g[x.dzien_tyg] || []).push({ od: x.od, do: x.do }); });
     const bez = prac.filter(p => !TRM.dane.grafik.some(x => x.pracownik === p));
     return obsadaTabela(prac) +
     `${bez.length ? `<div class="trm-note warn small">Bez grafiku: ${bez.map(esc).join(', ')}. <button class="trm-btn sm" onclick="TRM.ustGrafikZSalonu()">Skopiuj godziny salonu do osób bez grafiku</button></div>` : ''}
