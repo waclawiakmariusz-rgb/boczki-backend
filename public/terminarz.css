@@ -115,7 +115,7 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-karta.krotka { padding:4px 9px 3px; line-height:1.2; }
 .trm-karta.krotka .l1 { display:flex; align-items:baseline; gap:0; white-space:nowrap; overflow:hidden; }
 .trm-karta.krotka .l1 .g { flex:0 0 auto; white-space:nowrap; font-size:11.5px; }
-.trm-karta.krotka .l1 .sep { flex:0 0 auto; color:var(--t-mut); }
+.trm-karta.krotka .l1 .sep { flex:0 0 auto; color:var(--t-mut); margin:0 4px; } /* odstęp wokół kropki — w flexie białe znaki w spanie są ucinane */
 .trm-karta.krotka .l1 .k { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12.5px; }
 .trm-karta.krotka .u { display:block; font-size:11px; line-height:1.2; }
 .trm-karta.krotka .zn { display:none; }
