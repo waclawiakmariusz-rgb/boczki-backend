@@ -97,7 +97,7 @@
     const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
-    <div class="trm" data-wersja="20261015e">
+    <div class="trm" data-wersja="20261015f">
       <div class="trm-top">
         <div><h1>Terminarz</h1><div class="trm-sub" id="trm-sub"></div></div>
         <div class="trm-spacer"></div>
@@ -128,8 +128,10 @@
     if (!operacyjna() && !specjalista()) return;
     const d = await api('trm_sprawy_licznik');
     const b = el('trm-dzwonek-licz'); if (d.status !== 'success' || !b) return;
-    if (d.pilne > 0) { b.hidden = false; b.textContent = d.pilne; b.classList.add('pilne'); }
-    else if (d.nieprzeczytane > 0) { b.hidden = false; b.textContent = d.nieprzeczytane; b.classList.remove('pilne'); }
+    // D04: dzwonek = liczba OTWARTYCH spraw do działania w zakresie odbiorcy (zasada centrum powiadomień); kolor „pilne”, gdy jest choć jedna P0
+    const dzw = b.closest('.trm-dzwonek'); const opis = `${d.otwarte} do działania · ${d.pilne} pilnych · ${d.nieprzeczytane} nieprzeczytanych`;
+    if (dzw) { dzw.title = 'Powiadomienia: ' + opis; dzw.setAttribute('aria-label', 'Powiadomienia: ' + opis); }
+    if (d.otwarte > 0) { b.hidden = false; b.textContent = d.otwarte; b.classList.toggle('pilne', d.pilne > 0); }
     else { b.hidden = true; b.classList.remove('pilne'); }
   }
   TRM.idz = (n) => { if (n === 0) TRM.data = dzisStr(); else TRM.data = dodajDni(TRM.data, (TRM.widok === 'tydzien' || TRM.widok === 'agenda') ? 7 * n : n); el('trm-data').value = TRM.data; odswiez(); };
@@ -177,6 +179,7 @@
   let odswiezReq = 0; // A17: szybkie klikanie ‹ › / zmiana widoku — starsza odpowiedź nie może nadpisać nowszego widoku
   async function odswiez() {
     const main = el('trm-main'); if (!main) return;
+    trmOznaczAktywny();
     const req = ++odswiezReq;
     const sub = el('trm-sub');
     const di = el('trm-data'); if (di && di.value !== TRM.data) di.value = TRM.data;
@@ -247,9 +250,9 @@
       const naz = poz.map(p => p.kategoria + (p.wariant ? ' · ' + p.wariant : '')).join(' + ');
       const mozePrzeciagac = !!dragPrac && operacyjna() && !anul && r.wykonanie === 'zaplanowana';
       const pozIdsCsv = poz.map(x => x.id).join(',');
-      const krotka = (b - a) < 40;
-      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
-        <div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}
+      const krotka = (b - a) < 40, mini = (b - a) < 20; // D01: 20–39 min = 2 linie (godzina·klientka / usługa), <20 min = 1 linia
+      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
+        ${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
       </div>`;
     });
     return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
@@ -607,7 +610,15 @@
   // dopasowujemy max-height do faktycznego położenia, przy otwarciu i przy zmianie rozmiaru okna.
   function trmDopasujPanel() { const p = el('trm-panel'); if (!p || p.hidden) return; p.style.maxHeight = ''; if (getComputedStyle(p).position === 'fixed') return; /* wąski lub niski ekran: panel jest nakładką (CSS) */ const top = p.getBoundingClientRect().top; if (top > 12) p.style.maxHeight = Math.max(260, window.innerHeight - top - 12) + 'px'; }
   window.addEventListener('resize', () => trmDopasujPanel());
-  function panelOtworz(html) { const p = el('trm-panel'), b = el('trm-body'); if (!p) return; p.innerHTML = html; p.hidden = false; b.classList.add('z-panelem'); trmDopasujPanel(); }
+  // D02: gdy sekcja terminarza jest aktywna, body dostaje klasę trm-aktywny — terminarz.css odsuwa wtedy pływający widget
+  // pomocy i toasty hosta (#est-help-widget, #boczki-toasts) z prawego dolnego rogu, gdzie stoi stopka panelu.
+  const trmOznaczAktywny = () => { const s = el('terminarz'); document.body.classList.toggle('trm-aktywny', !!(s && s.classList.contains('active'))); };
+  (function () { const s = el('terminarz'); if (s && window.MutationObserver) new MutationObserver(trmOznaczAktywny).observe(s, { attributes: true, attributeFilter: ['class'] }); trmOznaczAktywny(); })();
+  function panelOtworz(html) {
+    const p = el('trm-panel'), b = el('trm-body'); if (!p) return; p.innerHTML = html; p.hidden = false; b.classList.add('z-panelem'); trmDopasujPanel(); trmOznaczAktywny();
+    // D04: wizyta otwarta ze sprawy ma drogę powrotu do tej sprawy (kontekst listy zostaje w TRM.sprawy)
+    if (TRM.panel === 'szczegoly' && TRM.szcz && TRM.szcz.powrotSprawa) { const head = p.querySelector('.trm-panel-head'); if (head) head.insertAdjacentHTML('afterend', `<button class="trm-btn link sm" onclick="TRM.otworzSprawe(${TRM.szcz.powrotSprawa})">← wróć do sprawy</button>`); }
+  }
   TRM.panelZamknij = () => { document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
   const naglowekPanelu = (tytul, sub) => `<div class="trm-panel-head"><div><h2>${tytul}</h2>${sub ? `<div class="muted small">${sub}</div>` : ''}</div><button class="trm-x" onclick="TRM.panelZamknij()" title="Zamknij">✕</button></div>`;
 
@@ -622,9 +633,11 @@
       nowaResetDostep(szkic); renderNowa(); if (nowaNaTerminie(szkic)) { nowaLadujSloty(); TRM.nowaZmiana(true); }
       toast('info', 'Szkic zachowany', `Termin zmieniony na ${o.start.slice(11, 16)}${o.pracownik ? ' · ' + o.pracownik : ''}`); return;
     }
-    const start = o.start || `${TRM.data} ${pad(Math.max(8, new Date().getHours() + 1))}:00`;
+    // D03: z przycisku „Nowa wizyta” nie zgadujemy godziny (dawniej „aktualna+1”, wieczorem 20:00 poza grafikiem → czerwony błąd na start);
+    // data = kontekst kalendarza, godzinę wybiera użytkownik (slot lub pole). Z pustej komórki siatki godzina jest wskazana.
+    const start = o.start || `${TRM.data} 00:00`;
     // dataReczna: użytkownik świadomie wpisał datę w formularzu — wtedy nawigacja kalendarza jej nie nadpisuje (raport T01)
-    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
+    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, godzina: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
     if (o.pracownik) TRM.nowa.domyslny = o.pracownik;
     TRM.panel = 'nowa';
     renderNowa();
@@ -720,10 +733,17 @@
       if (st === 'ok' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin ok"><div class="godz">${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}</div><div class="st">✓ Termin dostępny${dost.wynik.przerwy_min ? ` · w tym ${dost.wynik.przerwy_min} min przerwy` : ''} · ${esc(ladnaData(n.start.slice(0, 10), true))}</div>
         ${dost.wynik.pozycje.map(p => `<div class="seg"><span>${hhmm(p.start)}–${hhmm(p.koniec)}</span><span><b>${esc(p.nazwa)}</b> — ${esc(p.pracownik)}</span><span class="m">${p.gabinet_id ? nazwaZasobu(p.gabinet_id, 'gabinet') : 'bez gabinetu'}${p.urzadzenie_id ? ' · ' + nazwaZasobu(p.urzadzenie_id, 'urządzenie') : ''}</span></div>`).join('')}
         <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">${n.pozycje.some(p => p.zakup_skladnik_id) ? `Rozliczenie: z zakupu klientki — przy zapisie zarezerwujemy ${n.pozycje.filter(p => p.zakup_skladnik_id).length === 1 ? '1 zabieg' : n.pozycje.filter(p => p.zakup_skladnik_id).length + ' zabiegi'} z pakietu${n.pozycje.some(p => !p.zakup_skladnik_id) ? '; pozostałe po wykonaniu, w Sprzedaży' : ''}.` : 'Rozliczenie: po wykonaniu, w Sprzedaży.'}</div></div>`;
-      else if (st === 'zajety' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin zajety"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">✕ Termin zajęty</div><div class="m" style="margin-top:6px">${esc((dost.wynik.problemy || []).map(p => p.opis).join('; ') || 'konflikt zasobów')}</div>${alternatywyHtml(dost.wynik.alternatywy, 'TRM.nowaWybierzAlt')}</div>`;
+      else if (st === 'zajety' && dost.wynik) { // D03: „zajęty” = nakładanie wizyt/zasobów; „niedostępny” = poza grafikiem / brak wykonawcy; przy „dowolnym” mówimy o całym zespole
+        const problemy = dost.wynik.problemy || [], kody = problemy.map(p => p.kod || '');
+        const zajety = kody.some(k => /ZAJET/.test(k));
+        const dowolny = !n.prefPrac && n.pozycje.some(p => !p.pracownik);
+        const opis = problemy.map(p => (dowolny && p.kod === 'GRAFIK') ? `Nikt z dostępnych specjalistów nie pracuje o tej godzinie (${p.opis})` : p.opis).join('; ') || 'konflikt zasobów';
+        wynikHtml2 = `<div class="trm-wynik-termin zajety"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">✕ ${zajety ? 'Termin zajęty' : 'Termin niedostępny'}</div><div class="m" style="margin-top:6px">${esc(opis)}</div>${alternatywyHtml(dost.wynik.alternatywy, 'TRM.nowaWybierzAlt')}</div>`;
+      }
       else if (st === 'blad') wynikHtml2 = `<div class="trm-wynik-termin blad"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">⚠ Nie udało się sprawdzić terminu</div><div class="m">${esc(dost.komunikat || 'brak odpowiedzi')} <button class="trm-btn link sm" onclick="TRM.nowaZmiana(true)">Sprawdź ponownie</button></div></div>`;
       else if (st === 'czekam') wynikHtml2 = `<div class="trm-wynik-termin"><div class="godz">${n.start.slice(11, 16)}</div><div class="st muted">⏳ Sprawdzamy termin…</div></div>`;
-      else wynikHtml2 = `<div class="trm-dostep czekam">Wybierz godzinę — dostępność sprawdzimy automatycznie.</div>`;
+      else wynikHtml2 = `<div class="trm-wynik-termin neutralna"><div class="st">Wybierz godzinę z listy albo wpisz własną — dostępność sprawdzimy automatycznie, bez zapisu.</div></div>`;
+      if (!n.godzina) wynikHtml2 = `<div class="trm-wynik-termin neutralna"><div class="godz muted">Wybierz godzinę</div><div class="st">${esc(ladnaData(n.start.slice(0, 10), true))} · ${n.prefPrac ? esc(n.prefPrac) : 'dowolny dostępny specjalista'} — po wyborze godziny pokażemy wykonawcę i czas końca.</div></div>`;
     }
     const sloty = n.sloty;
     const slotyHtml = !n.pozycje.length ? '<div class="muted small">Najpierw wybierz zabieg.</div>'
@@ -737,7 +757,7 @@
         <div class="trm-field"><label>Wykonawca</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
       </div>
       <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}</div>
-      <details class="trm-wiecej" ${innaOtwarta ? 'open' : ''} ontoggle="TRM.nowa&&(TRM.nowa.innaGodzina=this.open)"><summary>Inna godzina</summary><div class="trm-field"><label>Godzina rozpoczęcia</label><input type="time" id="trm-n-godz" step="300" value="${n.start.slice(11, 16)}" onchange="TRM.nowaStart()"></div></details>
+      <details class="trm-wiecej" ${innaOtwarta ? 'open' : ''} ontoggle="TRM.nowa&&(TRM.nowa.innaGodzina=this.open)"><summary>Inna godzina</summary><div class="trm-field"><label>Godzina rozpoczęcia</label><input type="time" id="trm-n-godz" step="300" value="${n.godzina ? n.start.slice(11, 16) : ''}" onchange="TRM.nowaStart()"></div></details>
       ${wynikHtml2}
       <details class="trm-wiecej" ${n.notatka || n.kanal !== 'recepcja' ? 'open' : ''}><summary>Notatka i kanał</summary>
         <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value">${esc(n.notatka)}</textarea></div>
@@ -750,7 +770,7 @@
     <div class="trm-podsum"><div><div class="t">Zabiegi</div>${n.pozycje.map(p => `<div class="v">${esc(nazwaUslugi(usluga(p.usluga_id)))} <span class="m">· ${p.czas_min} min${p.pracownik ? ' · ' + esc(p.pracownik) : ''}</span>${p.zakup_skladnik_id ? ` <span class="trm-pill pakiet">Z pakietu${p.zakup_nazwa ? ': ' + esc(p.zakup_nazwa) : ''}</span>` : ' <span class="trm-pill neu">Pojedynczy zabieg</span>'}</div>`).join('') || '<div class="m">brak</div>'}</div><button class="trm-btn link sm fix" onclick="TRM.nowaIdzDoKroku(2)">Zmień</button></div>`;
   }
   function stopkaNowej(n) {
-    const gotowe = n.pozycje.length && n.klient && n.dostep && n.dostep.stan === 'ok';
+    const gotowe = n.pozycje.length && n.klient && n.godzina && n.dostep && n.dostep.stan === 'ok';
     return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">Umów wizytę</button></div>`;
   }
   function renderNowa() {
@@ -806,13 +826,14 @@
   TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUniewaznij = () => { const n = TRM.nowa; if (!n) return; nowaResetDostep(n); const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaPrefPrac = (v) => { const n = TRM.nowa; if (!n) return; n.prefPrac = v || ''; n.pozycje.forEach(p => { const u = usluga(p.usluga_id); p.pracownik = v && (!u || !u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(v)) ? v : null; }); nowaResetDostep(n); renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(); };
-  TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.dataReczna = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };
+  TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.godzina = true; n.dataReczna = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };
   TRM.nowaStart = () => {
     const n = TRM.nowa; if (!n) return;
     const dtEl = el('trm-n-data'), gEl = el('trm-n-godz');
-    const dt = dtEl && dtEl.value ? dtEl.value : n.start.slice(0, 10), g = gEl && gEl.value ? gEl.value : n.start.slice(11, 16);
+    const dt = dtEl && dtEl.value ? dtEl.value : n.start.slice(0, 10), g = gEl && gEl.value ? gEl.value : (n.godzina ? n.start.slice(11, 16) : '00:00');
     if (!/^\d{4}-\d{2}-\d{2}$/.test(dt) || !/^\d{2}:\d{2}$/.test(g)) return;
     const zmianaDnia = dt !== n.start.slice(0, 10);
+    if (gEl && gEl.value) n.godzina = true; // D03: godzina wpisana świadomie
     n.start = `${dt} ${g}`; n.dataReczna = true; nowaResetDostep(n);
     if (zmianaDnia) { TRM.data = dt; const di = el('trm-data'); if (di) di.value = dt; odswiez(); } // kalendarz podąża za datą z formularza (T01)
     renderNowa(); nowaLadujSloty(); TRM.nowaZmiana();
@@ -834,7 +855,7 @@
     nowaSprawdzT = setTimeout(nowaAutoSprawdz, natychmiast ? 0 : 350);
   };
   async function nowaAutoSprawdz() {
-    const n = TRM.nowa; if (!n || !n.pozycje.length) return;
+    const n = TRM.nowa; if (!n || !n.pozycje.length || !n.godzina) return; // D03: bez wybranej godziny nic nie sprawdzamy
     const req = ++n.req;
     let d; try { d = await api('trm_sprawdz', { start: n.start, pozycje: n.pozycje, id_klienta: n.klient ? n.klient.id_klienta : null }); } catch (e) { d = { status: 'error', message: 'brak połączenia' }; }
     if (TRM.nowa !== n || req !== n.req) return; // stara odpowiedź po kolejnej zmianie — ignorujemy
@@ -856,7 +877,7 @@
   // R03: tymczasowa propozycja wizyty w siatce (właściwa kolumna i godzina) — tylko podgląd, bez zapisu
   function nowaRysujPropozycje() {
     document.querySelectorAll('.trm-propozycja').forEach(x => x.remove());
-    const n = TRM.nowa; if (!n || TRM.panel !== 'nowa' || !n.dostep || n.dostep.stan !== 'ok' || !n.dostep.wynik) return;
+    const n = TRM.nowa; if (!n || TRM.panel !== 'nowa' || !n.godzina || !n.dostep || n.dostep.stan !== 'ok' || !n.dostep.wynik) return;
     if (TRM.widok !== 'dzien' || n.start.slice(0, 10) !== TRM.data || !TRM._zak) return;
     const zak = TRM._zak;
     n.dostep.wynik.pozycje.forEach(p => {
@@ -929,7 +950,10 @@
   TRM.sprawyZakladka = (z) => zaladujSprawy(z);
   function renderSprawyLista() {
     const z = TRM.sprawy.zakladka, lista = TRM.sprawy.lista;
-    const html = naglowekPanelu('Powiadomienia', `${lista.length} ${lista.length === 1 ? 'sprawa' : lista.length % 10 >= 2 && lista.length % 10 <= 4 && (lista.length % 100 < 10 || lista.length % 100 >= 20) ? 'sprawy' : 'spraw'}`) +
+    const lm = (n, j, m, w) => n === 1 ? j : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? m : w;
+    const pilne = lista.filter(x => x.priorytet === 'P0').length;
+    const podtytul = z === 'do_dzialania' ? `${lista.length} ${lm(lista.length, 'sprawa', 'sprawy', 'spraw')} do działania${pilne ? ` · ${pilne} ${lm(pilne, 'pilna', 'pilne', 'pilnych')}` : ''} — to liczy dzwonek` : `${lista.length} ${lm(lista.length, 'sprawa', 'sprawy', 'spraw')} w tej zakładce`;
+    const html = naglowekPanelu('Powiadomienia', podtytul) +
       `<div class="trm-tabs sm">${SPRAWY_TABY.map(([k, n]) => `<button class="${z === k ? 'on' : ''}" onclick="TRM.sprawyZakladka('${k}')">${n}</button>`).join('')}</div>` +
       (lista.length ? `<div class="trm-sprawy-lista">${lista.map(kartaSprawy).join('')}</div>` : `<div class="trm-empty"><div class="big">✅</div><p>Brak spraw w tej zakładce.</p></div>`);
     panelOtworz(html);
@@ -937,18 +961,53 @@
   function kartaSprawy(sp) {
     const [plab, pcls] = PRIOR_LABEL[sp.priorytet] || ['', 'neu'];
     const termin = sp.termin_dzialania ? terminEtykieta(sp.termin_dzialania) : null;
-    const czas = (sp.powiazany_czas || sp.utworzono || '').slice(0, 16).replace(' ', ' · ');
     const mozePrzejac = sp.priorytet !== 'P2' && !sp.wlasciciel && !['rozwiazana', 'nieaktualna'].includes(sp.stan);
-    return `<div class="trm-sprawa-karta ${pcls} ${sp.przeczytane ? '' : 'nieprz'}" onclick="TRM.otworzSprawe(${sp.id})">
-      <div class="trm-sprawa-gora"><span class="trm-pill ${pcls}">${esc(termin ? `${plab} · ${termin}` : plab)}</span>${!sp.przeczytane ? '<span class="trm-kropka" title="Nieprzeczytane"></span>' : ''}${!termin ? `<span class="fix muted small">${esc(czas)}</span>` : ''}</div>
+    const w = wizytaSprawy(sp), powod = powodPriorytetu(sp);
+    return `<div class="trm-sprawa-karta ${pcls} ${sp.przeczytane ? '' : 'nieprz'}" role="button" tabindex="0" onclick="TRM.otworzSprawe(${sp.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.otworzSprawe(${sp.id});}" aria-label="${esc(sp.tytul)}">
+      <div class="trm-sprawa-gora"><span class="trm-pill ${pcls}">${esc(termin ? `${plab} · ${termin}` : plab)}</span>${!sp.przeczytane ? '<span class="trm-kropka" title="Nieprzeczytane"></span>' : ''}${powod ? `<span class="muted small">${esc(powod)}</span>` : ''}</div>
       <div class="trm-sprawa-tytul">${esc(sp.tytul)}</div>
+      ${w ? `<div class="small trm-sprawa-wizyta">${esc(w)}</div>` : ''}
       ${sp.opis ? `<div class="muted small trm-sprawa-opis">${esc(sp.opis)}</div>` : ''}
       <div class="trm-sprawa-dol">
         <div class="trm-sprawa-prowadzi">${sp.wlasciciel ? `${avatarHtml(sp.wlasciciel, true)}<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : (sp.priorytet !== 'P2' ? '<span class="muted small">Nikt jeszcze nie przejął</span>' : '')}</div>
-        ${mozePrzejac ? `<button class="trm-btn primary sm fix" onclick="event.stopPropagation();TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>` : ''}
+        <div class="trm-row" style="gap:6px">${akcjaWizytySprawy(sp, true)}${mozePrzejac ? `<button class="trm-btn primary sm fix" onclick="event.stopPropagation();TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>` : ''}</div>
       </div>
     </div>`;
   }
+  // D04: jedna linia „o jakiej wizycie mowa” — termin wizyty (podpisany), wykonawca, liczba wizyt przy sprawach grupowych
+  function wizytaSprawy(sp) {
+    const d = sp.dane || {};
+    const kiedy = sp.powiazany_czas ? `${ladnaData(sp.powiazany_czas.slice(0, 10), true)} · ${sp.powiazany_czas.slice(11, 16)}` : null;
+    if (Array.isArray(d.dotkniete) && d.dotkniete.length) {
+      const osoby = [...new Set(d.dotkniete.map(x => x.pracownik).filter(Boolean))];
+      return `${d.dotkniete.length === 1 ? 'Wizyta' : d.dotkniete.length + ' wizyt'}${kiedy ? ': od ' + kiedy : ''}${osoby.length ? ' · ' + osoby.join(', ') : ''}`;
+    }
+    const prac = (Array.isArray(d.pozycje) && d.pozycje[0] && (d.pozycje[0].nowy || d.pozycje[0].pracownik)) || d.pracownik || d.kogo || null;
+    if (!kiedy && !prac) return '';
+    return `Wizyta${kiedy ? ': ' + kiedy : ''}${prac ? ' · ' + prac : ''}`;
+  }
+  // D04: powód pilności widoczny na karcie — z typu zdarzenia i czasu wizyty (reguła eskalacji: P0 w ciągu 2 h od wizyty)
+  function powodPriorytetu(sp) {
+    const typ = sp.typ || '';
+    const baza = { E13: 'brak wyniku po zakończeniu wizyty', E19: 'niepotwierdzone pokrycie wizyty', E15: 'wizyty w czasie nieobecności', E16: 'wizyty na niedostępnym zasobie', E18: 'wizyty poza nową dostępnością', E02: 'przełożona wizyta', E03: 'zmiana wykonawcy', E05: 'odwołana wizyta', E06: 'nieobecność klientki', E08: 'przerwany zabieg' }[typ] || '';
+    if (sp.priorytet !== 'P0') return baza;
+    const teraz = TRM.dzien && TRM.dzien.teraz ? TRM.dzien.teraz : null;
+    const pc = sp.powiazany_czas || '';
+    const dlaczego = pc && teraz ? (pc <= teraz ? 'wizyta już się odbyła' : 'wizyta w ciągu 2 h') : 'eskalacja czasowa';
+    return `pilne, bo ${dlaczego}${baza ? ' — ' + baza : ''}`;
+  }
+  function akcjaWizytySprawy(sp, naKarcie) {
+    const d = sp.dane || {};
+    const stop = naKarcie ? 'event.stopPropagation();' : '';
+    if (sp.rezerwacja_id) return `<button class="trm-btn sm fix" onclick="${stop}TRM.sprawaOtworzWizyte(${sp.id}, ${sp.rezerwacja_id})">Otwórz wizytę</button>`;
+    const pierwsza = Array.isArray(d.dotkniete) && d.dotkniete[0] ? d.dotkniete[0] : null;
+    const data = (pierwsza && pierwsza.start ? pierwsza.start : (sp.powiazany_czas || '')).slice(0, 10);
+    if (data) return `<button class="trm-btn sm fix" onclick="${stop}TRM.sprawaPokazDzien('${data}'${pierwsza && pierwsza.pracownik ? `, '${esc(pierwsza.pracownik).replace(/'/g, "\\'")}'` : ''})">Sprawdź wizyty</button>`;
+    return '';
+  }
+  TRM.sprawaOtworzWizyte = async (sprawaId, rezId) => { await TRM.otworzSzczegoly(rezId); if (TRM.szcz) { TRM.szcz.powrotSprawa = sprawaId; const p = el('trm-panel'); const head = p && p.querySelector('.trm-panel-head'); if (head && !p.querySelector('.trm-powrot-sprawa')) head.insertAdjacentHTML('afterend', `<button class="trm-btn link sm trm-powrot-sprawa" onclick="TRM.otworzSprawe(${sprawaId})">← wróć do sprawy</button>`); } };
+  TRM.sprawaPokazDzien = (data, prac) => { if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return; TRM.data = data; const di = el('trm-data'); if (di) di.value = data; if (prac && TRM.widok === 'dzien') { TRM.filtrPrac = new Set([prac]); } if (TRM.widok !== 'dzien') TRM.widokZmien('dzien'); else odswiez(); toast('info', 'Pokazujemy dzień ' + ladnaData(data, true), 'Panel sprawy zostaje otwarty — wróć do listy przyciskiem u góry.'); };
+
   TRM.otworzSprawe = async (id) => {
     TRM.sprawy.szczegolyId = id; TRM.sprawy.forma = null;
     panelOtworz(naglowekPanelu('Sprawa', 'Pobieramy…'));
@@ -978,6 +1037,7 @@
   function akcjeSprawy(sp) {
     if (['rozwiazana', 'nieaktualna'].includes(sp.stan)) return operacyjna() ? `<button class="trm-btn fix" onclick="TRM.sprawaWznow(${sp.id})">Wznów sprawę</button>` : '';
     const btns = [];
+    const otw = akcjaWizytySprawy(sp, false); if (otw) btns.push(otw);
     if (!sp.wlasciciel || sp.wlasciciel !== kto()) btns.push(`<button class="trm-btn primary fix" onclick="TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>`);
     btns.push(`<button class="trm-btn fix" onclick="TRM.sprawaFormaPokaz('kontakt')">Zapisz kontakt</button>`);
     btns.push(`<button class="trm-btn fix" onclick="TRM.sprawaFormaPokaz('rozwiaz')">Rozwiąż</button>`);
@@ -1009,6 +1069,8 @@
         ${sp.wlasciciel ? `<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : '<span class="muted small">Nikt jeszcze nie przejął</span>'}
       </div>
       <h2 style="margin:8px 0 4px">${esc(sp.tytul)}</h2>
+      ${wizytaSprawy(sp) ? `<div class="small" style="margin-bottom:4px"><b>${esc(wizytaSprawy(sp))}</b></div>` : ''}
+      <div class="muted small" style="margin-bottom:6px">Zgłoszono: ${esc((sp.utworzono || '').slice(0, 16).replace(' ', ' · '))}${powodPriorytetu(sp) ? ' · ' + esc(powodPriorytetu(sp)) : ''}</div>
       ${sp.opis ? `<div class="muted small" style="margin-bottom:10px">${esc(sp.opis)}</div>` : ''}
       ${danePodglad(sp)}
       ${sp.wynik ? `<div class="trm-note ${sp.stan === 'nieaktualna' ? 'info' : 'ok'}" style="margin-top:10px"><b>Wynik:</b> ${esc(sp.wynik)}${sp.rozwiazal ? ' — ' + esc(sp.rozwiazal) : ''}${sp.rozwiazano ? ' · ' + esc(sp.rozwiazano.slice(0, 16)) : ''}</div>` : ''}
@@ -1055,7 +1117,8 @@
 
   // ── SZCZEGÓŁY WIZYTY (E07) ─────────────────────────────────────────────
   TRM.otworzSzczegoly = async (id) => {
-    TRM.panel = 'szczegoly'; TRM.szcz = { id, tryb: 'podglad' };
+    const powrot = TRM.szcz && TRM.szcz.id === id ? TRM.szcz.powrotSprawa : null;
+    TRM.panel = 'szczegoly'; TRM.szcz = { id, tryb: 'podglad', powrotSprawa: powrot || null };
     panelOtworz(naglowekPanelu('Wizyta', 'Pobieramy…'));
     const d = await api('trm_rezerwacja', { id });
     if (d.status !== 'success') { panelOtworz(naglowekPanelu('Wizyta') + `<div class="trm-note bad">${esc(d.message)}</div>`); return; }

@@ -720,9 +720,15 @@ module.exports = (db, opts = {}) => {
       // inne imię pracownika tego salonu, odrzucamy — uprawnienia liczą się dla osoby uwierzytelnionej PIN-em, nie dla
       // pola w żądaniu. Sesja salonowa (login kontem salonu, bez PIN-u) nie ma tożsamości osoby i zachowuje się jak dotąd.
       const sesja = getSession(req.headers['x-session-token']);
-      if (sesja && sesja.login && imie && String(sesja.login).trim() !== imie && String(sesja.tenant_id) === String(tenant) && (await rola(tenant, String(sesja.login).trim())) !== null) {
-        log.warn(`[terminarz] tożsamość: sesja=${sesja.login} żądanie=${imie} tenant=${tenant} akcja=${action}`);
-        return res.json({ status: 'error', code: 'TOZSAMOSC', message: 'Żądanie podaje inną osobę niż zalogowana PIN-em. Zaloguj się ponownie.' });
+      if (sesja && String(sesja.tenant_id) === String(tenant)) {
+        const osobaSesji = sesja.login ? String(sesja.login).trim() : '';
+        const rolaSesji = osobaSesji ? await rola(tenant, osobaSesji) : null; // null = sesja salonowa (login kontem salonu), nie osoba
+        if (rolaSesji !== null && imie && osobaSesji !== imie) {
+          log.warn(`[terminarz] tożsamość: sesja=${osobaSesji} żądanie=${imie} tenant=${tenant} akcja=${action}`);
+          return res.json({ status: 'error', code: 'TOZSAMOSC', message: 'Żądanie podaje inną osobę niż zalogowana PIN-em. Zaloguj się ponownie.' });
+        }
+        // D06.4: uprawnienia liczą się dla osoby uwierzytelnionej PIN-em. Sesja salonowa (przed wyborem osoby) może tylko zainicjować moduł.
+        if (rolaSesji === null && action !== 'trm_init') return res.json({ status: 'error', code: 'PIN', message: 'Wybierz osobę (PIN), żeby korzystać z terminarza.' });
       }
       const r = await rola(tenant, imie);
       if (action === 'trm_init') {

@@ -111,11 +111,16 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-karta.przeciagalna { cursor:grab; }
 .trm-karta.przeciagalna:active { cursor:grabbing; }
 .trm-karta.przeciagana { opacity:.28; }
-/* C08: karta 30-minutowa — godzina i klientka w jednej linii, usługa w drugiej (zamiast ukrywania usługi) */
-.trm-karta.krotka .g, .trm-karta.krotka .k { display:inline; }
-.trm-karta.krotka .g { margin-right:5px; }
-.trm-karta.krotka .u { display:block; }
+/* D01: karta 20–39 min = 2 linie: „09:00–09:30 · Klientka” (niełamany zakres, skrót poziomy) + usługa; <20 min = 1 linia; nic nie jest ucinane pionowo */
+.trm-karta.krotka { padding:4px 9px 3px; line-height:1.2; }
+.trm-karta.krotka .l1 { display:flex; align-items:baseline; gap:0; white-space:nowrap; overflow:hidden; }
+.trm-karta.krotka .l1 .g { flex:0 0 auto; white-space:nowrap; font-size:11.5px; }
+.trm-karta.krotka .l1 .sep { flex:0 0 auto; color:var(--t-mut); }
+.trm-karta.krotka .l1 .k { flex:0 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:12.5px; }
+.trm-karta.krotka .u { display:block; font-size:11px; line-height:1.2; }
 .trm-karta.krotka .zn { display:none; }
+.trm-karta.mini { padding:2px 8px; line-height:1.15; }
+.trm-karta.mini .l1 .k { font-size:11.5px; }
 .trm-confirm-move .trm-cm-wiersz { display:flex; gap:8px; font-size:13px; margin:3px 0; }
 .trm-confirm-move .trm-cm-wiersz .e { color:var(--t-mut); min-width:76px; }
 .trm-confirm-move .trm-cm-wiersz .nowy { color:var(--t-acc); font-weight:600; }
@@ -385,3 +390,16 @@ details.trm-pomoc-wiecej summary { cursor:pointer; color:var(--t-acc); font-size
   .trm-body.z-panelem { grid-template-columns:1fr; }
   .trm-panel { position:fixed; inset:0; z-index:9500; max-height:none; border-radius:0; overflow:auto; }
 }
+
+/* D02: gdy sekcja terminarza jest aktywna, pływający widget pomocy i toasty hosta nie stoją w rogu, w którym leży stopka panelu
+   (przesunięcie tylko na czas terminarza; poza nim host bez zmian). Sidebar hosta ma 260 px — stąd 284 px od lewej. */
+body.trm-aktywny #est-help-widget, body.trm-aktywny #boczki-toasts { right:auto !important; left:284px !important; }
+body.trm-aktywny #est-help-widget #est-help-panel { right:auto; left:0; }
+/* wąski LUB niski ekran (panel jest wtedy pełnoekranową nakładką ze stopką na dole): widget i toasty nad stopką, przy lewej krawędzi */
+@media (max-width: 760px), (max-height: 640px) { body.trm-aktywny #est-help-widget, body.trm-aktywny #boczki-toasts { left:16px !important; bottom:88px !important; } }
+/* D03: neutralna karta przed wyborem godziny */
+.trm-wynik-termin.neutralna { background:var(--t-bg); border:1px dashed var(--t-line); }
+.trm-wynik-termin.neutralna .godz { font-size:20px; }
+/* D04: wiersz „o jakiej wizycie mowa” na karcie sprawy; karta reaguje na fokus z klawiatury */
+.trm-sprawa-wizyta { margin:2px 0 4px; font-weight:600; }
+.trm-sprawa-karta:focus-visible { outline:2px solid var(--t-acc); outline-offset:2px; }
