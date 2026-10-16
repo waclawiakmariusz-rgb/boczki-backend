@@ -65,7 +65,7 @@ Nowe: `trm_zakupy_uzgodnij`, `trm_ewidencja_ustaw`, `trm_zakup_przyznaj`, `trm_s
 
 ## 5. Stan git i publikacja
 
-- Gałąź `dev`, commit podany w podsumowaniu odpowiedzi (po `ce8230b`). Push na `dev` = **wyłącznie zapis kodu**: repozytorium nie ma CI ani automatycznego wdrożenia; dev.estelio.com.pl aktualizuje właściciel ręcznie (`git pull` + restart). Po takim wdrożeniu start serwera **nie uruchamia migracji v2** (tylko sprawdzenie obecności + wpis stanu do `Term_Migracje`), a bez `TERMINARZ_ZAKUPY_TENANTS` integracja pozostaje wyłączona dla wszystkich salonów.
+- Gałąź `dev`, commit `648c45e` (po `ce8230b`); ten dopisek: commit następny. Push na `dev` = **wyłącznie zapis kodu**: repozytorium nie ma CI ani automatycznego wdrożenia; dev.estelio.com.pl aktualizuje właściciel ręcznie (`git pull` + restart). Po takim wdrożeniu start serwera **nie uruchamia migracji v2** (tylko sprawdzenie obecności + wpis stanu do `Term_Migracje`), a bez `TERMINARZ_ZAKUPY_TENANTS` integracja pozostaje wyłączona dla wszystkich salonów.
 - Push/wdrożenie ≠ aktywacja dodatku ani ewidencji (trzy osobne warunki: licencja dodatku, lista techniczna, tryb ewidencji ustawiony przez managera).
 
 ## 6. Potwierdzenia
