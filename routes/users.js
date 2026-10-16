@@ -5,7 +5,7 @@ const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
-const { createSession, rateLimitPin, recordFailedPin, recordSuccessPin, getSession } = require('./sessions');
+const { createSession, rateLimitPin, recordFailedPin, recordSuccessPin, getSession, deleteSessionsFor } = require('./sessions');
 
 module.exports = (db) => {
   const zapiszLog = makeZapiszLog(db);
@@ -137,6 +137,8 @@ module.exports = (db) => {
               (err2) => {
                 if (err2) return res.json({ status: 'error', message: err2.message });
                 zapiszLog(tenant_id, 'EDYCJA UŻYTKOWNIKA', kto.imie, `Zaktualizowano profil: ${d.imie} (${d.rola})${nowyPin ? ', nowy PIN' : ''}`);
+                // E05: zmiana PIN-u lub roli unieważnia dotychczasowe sesje tej osoby (stara sesja nie może zachować dawnych uprawnień); sesja wykonującego zostaje
+                const n = deleteSessionsFor(tenant_id, d.imie, req.headers['x-session-token']); if (n) zapiszLog(tenant_id, 'SESJE UNIEWAŻNIONE', kto.imie, `${d.imie}: ${n} sesji po zmianie ${nowyPin ? 'PIN-u' : 'roli'}`);
                 return res.json({ status: 'success', message: 'Zaktualizowano profil pracownika!' });
               }
             );
@@ -168,6 +170,7 @@ module.exports = (db) => {
           if (err) return res.json({ status: 'error', message: err.message });
           if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono użytkownika.' });
           zapiszLog(tenant_id, 'USUNIĘTO UŻYTKOWNIKA', kto.imie, `Usunięto profil: ${d.imie}`);
+          const n = deleteSessionsFor(tenant_id, d.imie); if (n) zapiszLog(tenant_id, 'SESJE UNIEWAŻNIONE', kto.imie, `${d.imie}: ${n} sesji po usunięciu konta`); // E05
           return res.json({ status: 'success', message: 'Konto pracownika zostało usunięte.' });
         }
       );

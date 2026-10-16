@@ -103,6 +103,16 @@ module.exports = (db) => {
 
   // POST /api/admin/clone_demo — klonowanie Boczków do tenant 'demo-estelio'
   // Bezpieczna funkcja: tylko SELECT z Boczków + INSERT do demo. Boczki nietknięte.
+  // E05: kontrolowane unieważnienie sesji PIN/salonu przez właściciela (panel admina / curl z x-admin-token).
+  // body: { tenant_id, login? } — bez login: wszystkie sesje salonu. Zwraca liczbę usuniętych z cache (DB czyszczona równolegle).
+  router.post('/admin/sesje/uniewaznij', requireAdmin, (req, res) => {
+    const { deleteSessionsFor } = require('./sessions');
+    const tenant_id = String(req.body?.tenant_id || '').trim(), login = req.body?.login ? String(req.body.login).trim() : null;
+    if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
+    const n = deleteSessionsFor(tenant_id, login);
+    console.log(`[admin] unieważniono sesje: tenant=${tenant_id} login=${login || '(wszystkie)'} n=${n}`);
+    return res.json({ status: 'success', usunieto: n, tenant_id, login });
+  });
   router.post('/admin/clone_demo', requireAdmin, async (req, res) => {
     // Wyłącz timeout żądania — klonowanie może potrwać kilka minut
     if (req.setTimeout) req.setTimeout(0);

@@ -108,6 +108,25 @@ function deleteSession(token) {
   sessions.delete(token);
   persistDelete(token);
 }
+// E05: unieważnienie WSZYSTKICH sesji osoby w salonie (zmiana PIN-u, zmiana roli, usunięcie konta, decyzja właściciela).
+// `login` = imię pracownika (sesje z verify_pin) albo login konta salonu; bez `login` — wszystkie sesje salonu.
+// `zachowajToken` pozwala nie wylogować osoby, która właśnie wykonuje operację. Działa na cache i na tabeli Sesje.
+function deleteSessionsFor(tenant_id, login, zachowajToken) {
+  const t = String(tenant_id), l = login == null ? null : String(login).trim();
+  let n = 0;
+  for (const [token, s] of sessions) {
+    if (String(s.tenant_id) !== t) continue;
+    if (l !== null && String(s.login || '').trim() !== l) continue;
+    if (zachowajToken && token === zachowajToken) continue;
+    sessions.delete(token); n++;
+  }
+  if (_db) {
+    const sql = l === null ? 'DELETE FROM `Sesje` WHERE `tenant_id` = ?' + (zachowajToken ? ' AND `token` <> ?' : '') : 'DELETE FROM `Sesje` WHERE `tenant_id` = ? AND TRIM(`login`) = ?' + (zachowajToken ? ' AND `token` <> ?' : '');
+    const params = l === null ? [t] : [t, l]; if (zachowajToken) params.push(zachowajToken);
+    _db.query(sql, params, (err) => { if (err) console.error('[sessions deleteSessionsFor]', err.message); });
+  }
+  return n;
+}
 
 // ─── SLIDING EXPIRY ────────────────────────────────────────────
 // Bez tego 8h liczyło się od LOGOWANIA, nie od ostatniej aktywności — pracownik
@@ -269,6 +288,7 @@ module.exports = {
   createSession,
   getSession,
   deleteSession,
+  deleteSessionsFor,
   touchSession,
   validateTenantAccess,
   rateLimitLogin,
