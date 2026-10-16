@@ -1,0 +1,109 @@
+{
+  "baza": "estelio_test",
+  "wersja": "11.8.9-MariaDB",
+  "kiedy": "2026-10-16T18:11:55.842Z",
+  "wyniki": [
+    {
+      "id": "K11",
+      "wynik": "PASS",
+      "opis": "migracja v2 wykonana i powtarzalna",
+      "dowod": "1. przebieg: 0 zastosowano/51 było; 2. przebieg: 51 „już było”, 0 nowych"
+    },
+    {
+      "id": "K11b",
+      "wynik": "PASS",
+      "opis": "sprawdzSchematV2 widzi komplet elementów",
+      "dowod": "braki: 0"
+    },
+    {
+      "id": "A0",
+      "wynik": "PASS",
+      "opis": "zestaw A: U=3, R=4, B=3",
+      "dowod": "{\"U\":3,\"R\":4,\"B\":3}"
+    },
+    {
+      "id": "A1",
+      "wynik": "PASS",
+      "opis": "wykonanie jednej: 4/3/3",
+      "dowod": "{\"U\":4,\"R\":3,\"B\":3}"
+    },
+    {
+      "id": "A2",
+      "wynik": "PASS",
+      "opis": "odwołanie jednej: 4/2/4",
+      "dowod": "{\"U\":4,\"R\":2,\"B\":4}"
+    },
+    {
+      "id": "K03",
+      "wynik": "PASS",
+      "opis": "wykonaj → cofnij → wykonaj ponownie na bazie: saldo poprawne, 2 realizacje w historii",
+      "dowod": "{\"U\":4,\"R\":2}"
+    },
+    {
+      "id": "K02",
+      "wynik": "PASS",
+      "opis": "B niezweryfikowane odrzucone przez domenę na bazie; A dostępne",
+      "dowod": "Nie można umówić z pakietu „Pakiet 5A+4B”: stan do sprawdzenia — najpierw potwierdź, ile zabiegów pozostało."
+    },
+    {
+      "id": "K02b",
+      "wynik": "PASS",
+      "opis": "rodzic „częściowo zweryfikowany”, A: do umówienia 3",
+      "dowod": "[[\"Endermologia\",3,null],[\"Meltivio\",null,\"stan do sprawdzenia — najpierw potwierdź, ile zabiegów pozostało\"]]"
+    },
+    {
+      "id": "K05",
+      "wynik": "PASS",
+      "opis": "dwa połączenia o ostatnią jednostkę: dokładnie jeden sukces, R nie przekracza puli",
+      "dowod": "OK | ODRZUCONO: Nie można umówić z pakietu „Przyznane przez salon: Endermologia”: wszystkie pozostałe zabiegi są już umówione. | R=1 B=0"
+    },
+    {
+      "id": "K08",
+      "wynik": "PASS",
+      "opis": "zmiana źródła atomowa; odrzucona próba zachowuje stare źródło",
+      "dowod": "po przeniesieniu C1 R=0/B=1, C2 R=1/B=0; odmowa: Nie zmieniono zakupu (pakiet ważny do 2026-11-10). Wizyta nadal korzysta z dotychczasowego pakietu."
+    },
+    {
+      "id": "K06",
+      "wynik": "PASS",
+      "opis": "równoczesne wykonanie i odwołanie: jeden skutek, brak sprzecznych ruchów",
+      "dowod": "WYKONANO 1 | ZWOLNIONO 0 | U=1 R=0 B=0"
+    },
+    {
+      "id": "K07a",
+      "wynik": "PASS",
+      "opis": "awaria przed COMMIT cofa przydział, ruchy i operację",
+      "dowod": "{\"przed\":{\"p\":7,\"r\":23,\"o\":0},\"po\":{\"p\":7,\"r\":23,\"o\":0}}"
+    },
+    {
+      "id": "K07b",
+      "wynik": "PASS",
+      "opis": "ponowienie po COMMIT zwraca istniejący wynik, bez duplikatu przydziału",
+      "dowod": "przydziały pozycji: 1"
+    },
+    {
+      "id": "K04",
+      "wynik": "PASS",
+      "opis": "ten sam klucz z innym żądaniem odrzucony na bazie (UNIQUE + skrót)",
+      "dowod": "Ten klucz operacji został już użyty dla innego żądania."
+    },
+    {
+      "id": "K13",
+      "wynik": "PASS",
+      "opis": "zwrot w Sprzedaży między podglądem a zapisem wykryty w transakcji; zakup „wycofane”, brak przydziału",
+      "dowod": "podgląd: dostępny; zapis: Zakup „Endermologia / 5x” wymaga wyjaśnienia — został zmieniony w Sprzedaży po ostatnim sprawdzeniu (zwrot). Wizyta nie została zapisana; formularz zachowany.; stan_zrodla=wycofane"
+    },
+    {
+      "id": "K13b",
+      "wynik": "PASS",
+      "opis": "UWAGA: ochrona obejmuje ponowny odczyt Sprzedaz (LOCK IN SHARE MODE) w transakcji dodatku; edycja w rdzeniu NIE używa blokady salonu — zmiana po COMMIT dodatku jest wykrywana przy następnym sprawdzeniu (hash), nie natychmiast",
+      "dowod": "ograniczenie kontraktu, nie dowód pełnej spójności"
+    },
+    {
+      "id": "A14",
+      "wynik": "PASS",
+      "opis": "projekcja saldo_json odtwarzalna z ruchów dla wszystkich składników",
+      "dowod": "składników: 6, rozjazdów: 0"
+    }
+  ]
+}

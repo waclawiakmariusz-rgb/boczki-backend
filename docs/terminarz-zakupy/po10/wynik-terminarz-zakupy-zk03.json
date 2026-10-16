@@ -1,0 +1,142 @@
+{
+  "baza": "estelio_test",
+  "wersja": "11.8.9-MariaDB",
+  "silnik": "InnoDB",
+  "izolacja": "REPEATABLE-READ",
+  "kiedy": "2026-10-16T17:15:48.818Z",
+  "wyniki": [
+    {
+      "id": "Z3-T01",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "zapytania blokujące repoSql wykonane na MariaDB (LOCK IN SHARE MODE / FOR UPDATE), bez błędu składni",
+      "dowod": "ant_id = ? AND id = ? LOCK IN SHARE MODE | tenant_id = ? AND s.id IN (?) FOR UPDATE"
+    },
+    {
+      "id": "Z3-T01b",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "FOR SHARE na tym silniku = błąd składni (potwierdzenie R1)",
+      "dowod": "ER_PARSE_ERROR"
+    },
+    {
+      "id": "Z3-T18",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "podgląd klasyfikuje bez mutacji",
+      "dowod": "{\"gotowe\":2}"
+    },
+    {
+      "id": "Z3-T10",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "dwa egzemplarze oferty 5A+4B → dwa źródła, 10 A + 8 B, bez mnożnika z grupy",
+      "dowod": "[{\"usluga_wyk_id\":\"ZK03-U-A\",\"g\":\"10\"},{\"usluga_wyk_id\":\"ZK03-U-B\",\"g\":\"8\"}]"
+    },
+    {
+      "id": "Z3-T17/T28",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "ponowny import (inna kolejność) i ponowienie klucza: te same zakupy, bez dodatkowego G",
+      "dowod": "G przed=4 po=4"
+    },
+    {
+      "id": "Z3-T11",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "rozbita sprzedaż = jeden pakiet 5 A; dopłata powiązana, bez własnej puli",
+      "dowod": "zrodla_json=[\"ZK03-R1-2\"]"
+    },
+    {
+      "id": "Z3-T12",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "zwrot 100 zł przypisany do DOPŁATY wykryty jako zmiana tego zakupu; bez przeliczenia kwoty na sesje",
+      "dowod": "zmiana=zwrot stan=do_uzgodnienia G=5"
+    },
+    {
+      "id": "Z3-T14",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "„1×” na przyszłość: 1 jednostka po jawnej kwalifikacji; zwykłe 1x pominięte; powtórzenie nie zwiększa G",
+      "dowod": "odmowa przed kwalifikacją: KWALIFIKACJA"
+    },
+    {
+      "id": "Z3-T21/T23",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "stan 10/3 + 6 wizyt (w tym przeszła i odległa) → U=3,R=6,B=1; po wykonaniu 4/5/1; bez drugiego U",
+      "dowod": "{\"U\":4,\"R\":5,\"B\":1}"
+    },
+    {
+      "id": "Z3-T22",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "5 praw i 7 wizyt: niedobór 2, bez decyzji odmowa; 5 powiązań + 2 jawne; żadna wizyta nie znika, bez minusa",
+      "dowod": "{\"R\":5,\"B\":0,\"wizyt\":7}"
+    },
+    {
+      "id": "Z3-T26",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "dwie klientki o tej samej nazwie widzą tylko własny zakup; repozytorium innego salonu nie widzi składnika",
+      "dowod": "3003→ZK03-H1-1, 3004→ZK03-H2-1, obcy salon: 0/0"
+    },
+    {
+      "id": "Z3-T25",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "dwa źródła na pozycji: wykonanie 2 jednostek, odwrócenie jednej — oba powiązania zachowane (zużyty A, zużyty B, nowy B cykl 2); alias = pole zgodności (aktywne źródło)",
+      "dowod": "[{\"skladnik_id\":31,\"stan\":\"zuzyty\",\"cykl\":1},{\"skladnik_id\":32,\"stan\":\"zuzyty\",\"cykl\":1},{\"skladnik_id\":32,\"stan\":\"zarezerwowany\",\"cykl\":2}] alias=32"
+    },
+    {
+      "id": "Z3-T02a",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "edycja oryginalnej sprzedaży w rdzeniu podczas rezerwowania CZEKA na COMMIT dodatku (blokada współdzielona działa)",
+      "dowod": "stan po 1,5 s pauzy: CZEKA; UPDATE ukończył po 1540 ms"
+    },
+    {
+      "id": "Z3-T02b",
+      "wynik": "INFO",
+      "rodzaj": "rzeczywista baza",
+      "opis": "LUKA (jawnie): pierwszy zwrot dopisany jako NOWY wiersz w oknie między odczytem źródła a COMMIT dodatku NIE jest blokowany — rezerwacja ostatniej jednostki zapisała się; zmiana wykryta przy NASTĘPNYM sprawdzeniu (hash → wycofane)",
+      "dowod": "INSERT zwrotu: ZAKOŃCZONO; rezerwacja: ZAPISANA; po operacji R=1; następne sprawdzenie: zmiana=zwrot, stan=wycofane"
+    },
+    {
+      "id": "Z3-T02c",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "zwrot dopisany w oknie równoczesności jest wykryty przy następnym sprawdzeniu źródła (odroczone uzgadnianie), zakup „wycofane”",
+      "dowod": "zmiana=zwrot"
+    },
+    {
+      "id": "Z3-T03a",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "zwrot zatwierdzony przed wykonaniem (po wcześniejszej rezerwacji) → wykonanie odrzucone, U bez zmian (tylko historyczne 4)",
+      "dowod": "ZRODLO: Zakup „Endermologia / 5x” wymaga wyjaśnienia (wycofany/zwróc"
+    },
+    {
+      "id": "Z3-T03b",
+      "wynik": "INFO",
+      "rodzaj": "rzeczywista baza",
+      "opis": "zwrot podczas wykonania zablokowany/wykryty",
+      "dowod": "INSERT zwrotu: ZAKOŃCZONO; wykonanie: ZRODLO; następne sprawdzenie: zwrot/wycofane"
+    },
+    {
+      "id": "Z3-T05",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "przy kompletnym v2 migracja jest no-op i raportuje dane v1 (nie kasuje, nie przenosi); zatrzymanie przy v1_z_danymi — mock K11",
+      "dowod": "typ=v2_kompletny, daneV1.Term_Zakupy_Ruchy=1"
+    },
+    {
+      "id": "A14",
+      "wynik": "PASS",
+      "rodzaj": "rzeczywista baza",
+      "opis": "projekcja odtwarzalna z ruchów (wszystkie składniki salonu)",
+      "dowod": "składników: 13, rozjazdów: 0"
+    }
+  ]
+}

@@ -1,0 +1,836 @@
+diff --git a/.env.test.example b/.env.test.example
+index f3c7306..a470751 100644
+--- a/.env.test.example
++++ b/.env.test.example
+@@ -17,6 +17,8 @@ DB_PORT=3306
+ DB_USER=
+ DB_PASSWORD=
+ DB_NAME=
++# lokalna MariaDB bez TLS → DB_SSL=off (baza w hPanel: zostaw domyślne „on”)
++DB_SSL=off
+ PORT=3999
+ 
+ # bezpieczeństwo sesji jak na produkcji (middleware blokuje żądania bez ważnej sesji)
+diff --git a/narzedzia/testy-integracyjne/dane-demo.js b/narzedzia/testy-integracyjne/dane-demo.js
+new file mode 100644
+index 0000000..e364f53
+--- /dev/null
++++ b/narzedzia/testy-integracyjne/dane-demo.js
+@@ -0,0 +1,55 @@
++// narzedzia/testy-integracyjne/dane-demo.js — FIKCYJNY salon `demo-test` w izolowanej bazie (.env.test) do prób UI/zrzutów ZK-03.
++//   Zestawy z decyzji ZK-02 §10 (A–D) + przypadki negatywne: rozbita sprzedaż (portfel + dopłata), zwykłe „1x”, sam portfel, kosmetyk,
++//   dwie klientki o tej samej nazwie, 6 przyszłych wizyt bez źródła (zestaw D). Bez danych osobowych. Hasło konta salonu losowe → zapis TYLKO do
++//   pliku wskazanego w --haslo-do (poza repo). PIN-y testowe: Ola (manager) 1111, Anna (kosmetolog) 2222 — wyłącznie baza testowa.
++//   node narzedzia/testy-integracyjne/dane-demo.js --haslo-do <plik>
++'use strict';
++const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
++const mysql = require('mysql2/promise'); const bcrypt = require('bcrypt');
++const ROOT = path.join(__dirname, '..', '..'); const T = 'demo-test';
++const arg = (n) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : null; };
++function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for (const l of fs.readFileSync(plik, 'utf8').split(/\r?\n/)) { const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, ''); } return out; }
++(async () => {
++  const cel = envZ(path.join(ROOT, '.env.test')), prod = envZ(path.join(ROOT, '.env'));
++  if (!cel || !cel.DB_NAME) { console.error('Brak .env.test'); process.exit(3); }
++  if (prod && String(prod.DB_HOST).trim() === String(cel.DB_HOST).trim() && String(prod.DB_NAME).trim() === String(cel.DB_NAME).trim()) { console.error('ODMOWA: baza wspólna z .env'); process.exit(4); }
++  const c = await mysql.createConnection({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4' });
++  const q = async (s, p = []) => (await c.query(s, p))[0];
++  for (const t of ['Term_Zakupy_Ruchy2', 'Term_Realizacje', 'Term_Przydzialy', 'Term_Operacje', 'Term_Zakupy_Skladniki', 'Term_Zakupy', 'Term_Zajecia', 'Term_Pozycje', 'Term_Rezerwacje', 'Term_Ewidencja', 'Term_Oferty_Skladniki', 'Term_Oferty_Wersje', 'Term_Oferty', 'Term_Sprawy', 'Term_Uslugi', 'Term_Ustawienia', 'Term_Grafik', 'Term_Pracownicy', 'Sprzedaz', 'Zadatki', 'Uslugi', 'Klienci', 'Użytkownicy', 'Pracownicy', 'Tenant_Features', 'Sesje']) await q(`DELETE FROM ${t} WHERE tenant_id = ?`, [T]).catch(() => {});
++  await q(`DELETE FROM Licencje WHERE login = ?`, [T]);
++  const haslo = crypto.randomBytes(9).toString('base64url'); const hash = await bcrypt.hash(haslo, 10);
++  await q(`INSERT INTO Licencje (login, haslo, rola, id_bazy, status, nazwa_salonu, email, data_waznosci) VALUES (?, ?, 'salon', ?, 'aktywny', 'Salon testowy ZK-03', 'test@example.invalid', DATE_ADD(CURDATE(), INTERVAL 365 DAY))`, [T, hash, T]);
++  if (arg('--haslo-do')) fs.writeFileSync(arg('--haslo-do'), haslo);
++  await q(`INSERT INTO Użytkownicy (id, tenant_id, imie_login, haslo_pin, rola) VALUES (UUID(), ?, 'Ola', '1111', 'manager'), (UUID(), ?, 'Anna', '2222', 'kosmetolog')`, [T, T]);
++  await q(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (UUID(), ?, 'Anna'), (UUID(), ?, 'Ola')`, [T, T]);
++  await q(`INSERT INTO Tenant_Features (tenant_id, feature_key, enabled, activated_at, activated_by) VALUES (?, 'terminarz', 1, NOW(), 'test')`, [T]);
++  const U = { A: 'DEMO-U-A', A5: 'DEMO-U-A5', A10: 'DEMO-U-A10', B: 'DEMO-U-B', AB: 'DEMO-U-AB', K1: 'DEMO-U-K1', KOS: 'DEMO-U-KOS' };
++  for (const [id, kat, war, cena] of [[U.A, 'Endermologia', '1x', 200], [U.A5, 'Endermologia', '5x', 900], [U.A10, 'Endermologia', '10x', 1700], [U.B, 'Meltivio', '1x', 300], [U.AB, 'Pakiet łączony', '5 × endermologia + 4 × Meltivio', 2000], [U.K1, 'Konsultacja', '1x z góry', 150]]) await q(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, waznosc_dni) VALUES (?, ?, ?, ?, ?, 180)`, [id, T, kat, war, cena]);
++  for (const id of [U.A, U.B, U.K1]) await q(`INSERT INTO Term_Uslugi (tenant_id, usluga_id, czas_min) VALUES (?, ?, 30)`, [T, id]);
++  await q(`INSERT INTO Term_Ustawienia (tenant_id, godziny_json) VALUES (?, ?)`, [T, JSON.stringify({ 1: [{ od: '08:00', do: '20:00' }], 2: [{ od: '08:00', do: '20:00' }], 3: [{ od: '08:00', do: '20:00' }], 4: [{ od: '08:00', do: '20:00' }], 5: [{ od: '08:00', do: '20:00' }], 6: [{ od: '09:00', do: '14:00' }], 7: [] })]);
++  for (let d = 1; d <= 6; d++) await q(`INSERT INTO Term_Grafik (tenant_id, pracownik, dzien_tyg, od, do_) VALUES (?, 'Anna', ?, '08:00', '20:00')`, [T, d]);
++  const oferta = async (uid, rodzaj, skl) => { const o = (await q(`INSERT INTO Term_Oferty (tenant_id, usluga_id, stan, zrodlo, zatwierdzil, zatwierdzono, zmieniono) VALUES (?, ?, 'zatwierdzona', 'reczne', 'Ola', NOW(), NOW())`, [T, uid])).insertId; const w = (await q(`INSERT INTO Term_Oferty_Wersje (tenant_id, oferta_id, wersja, rodzaj, stan, obowiazuje_od, autor) VALUES (?, ?, 1, ?, 'zatwierdzona', '2026-01-01 00:00:00', 'Ola')`, [T, o, rodzaj])).insertId; for (const s of skl) await q(`INSERT INTO Term_Oferty_Skladniki (tenant_id, oferta_id, wersja_id, usluga_wyk_id, jednostki) VALUES (?, ?, ?, ?, ?)`, [T, o, w, s[0], s[1]]); };
++  await oferta(U.A5, 'pakiet', [[U.A, 5]]); await oferta(U.A10, 'pakiet', [[U.A, 10]]); await oferta(U.AB, 'pakiet', [[U.A, 5], [U.B, 4]]); await oferta(U.A, 'nie_ewidencjonuj', []); await oferta(U.K1, 'pojedynczy_z_gory', [[U.K1, 1]]);
++  const klientki = [['1001', 'Zestaw A (zwykły pakiet)'], ['1002', 'Zestaw B (pakiet łączony)'], ['1003', 'Zestaw C (dwa zakupy)'], ['1004', 'Zestaw D (stary pakiet z wizytami)'], ['1005', 'Zestaw E (portfel + dopłata)'], ['1006', 'Anna Nowak'], ['1007', 'Anna Nowak'], ['1008', 'Lena (tylko portfel)']];
++  for (const [id, n] of klientki) await q(`INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, status) VALUES (UUID(), ?, ?, ?, '600000000', NOW(), 'AKTYWNY')`, [T, id, n]);
++  const sp = async (id, idk, zabieg, szczegoly, kwota, extra = {}) => q(`INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, szczegoly, kwota, status, platnosc, id_klienta, sprzedawca, grupa_id, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, 'Ola', ?, ?)`, [id, T, extra.data || '2026-10-12 11:00:00', klientki.find(k => k[0] === idk)[1], zabieg, szczegoly, kwota, extra.platnosc || 'Karta', idk, extra.grupa_id || null, extra.data_waznosci || null]);
++  await sp('DEMO-A-1', '1001', 'Endermologia', '10x', 1700, { data: '2026-09-01 11:00:00', data_waznosci: '2027-03-01' });
++  await sp('DEMO-B-1', '1002', 'Pakiet łączony', '5 × endermologia + 4 × Meltivio', 2000, { data: '2026-10-12 11:00:00', data_waznosci: '2027-04-10' });
++  await sp('DEMO-C1-1', '1003', 'Endermologia', '5x', 900, { data: '2026-08-15 11:00:00', data_waznosci: '2026-11-15' }); await sp('DEMO-C2-1', '1003', 'Endermologia', '5x', 900, { data: '2026-10-10 11:00:00', data_waznosci: '2027-04-08' });
++  await sp('DEMO-D-1', '1004', 'Endermologia', '10x', 1700, { data: '2026-07-01 11:00:00', data_waznosci: '2027-01-01' });
++  await sp('DEMO-E-1', '1005', 'Endermologia', '5x', 200, { platnosc: 'Portfel' }); await sp('DEMO-E-2', '1005', 'Endermologia Dopłata', '', 700, { platnosc: 'Karta' });
++  await sp('DEMO-F-1', '1001', 'Endermologia', '1x', 200, { data: '2026-10-14 11:00:00' }); await sp('DEMO-F-2', '1001', 'Kosmetyk: Krem', '1 szt.', 120, { data: '2026-10-14 11:00:00' }); await q(`UPDATE Sprzedaz SET kategoria_produktu = 'Kosmetyk' WHERE tenant_id = ? AND id = 'DEMO-F-2'`, [T]);
++  await sp('DEMO-H-1', '1006', 'Endermologia', '5x', 900); await sp('DEMO-H-2', '1007', 'Endermologia', '5x', 900);
++  await sp('DEMO-G-1', '1002', 'Pakiet łączony', '5 × endermologia + 4 × Meltivio', 2000, { grupa_id: 'GRP-DEMO', data: '2026-10-13 11:00:00' }); await sp('DEMO-G-2', '1002', 'Pakiet łączony', '5 × endermologia + 4 × Meltivio', 2000, { grupa_id: 'GRP-DEMO', data: '2026-10-13 11:00:00' });
++  await sp('DEMO-K-1', '1001', 'Konsultacja', '1x z góry', 150, { data: '2026-10-15 11:00:00' });
++  await q(`INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy) VALUES ('DEP-DEMO-1', ?, '1008', NOW(), 'Lena (tylko portfel)', 'WPŁATA', 1500, 'Przelew', '5 × endermologia', 'AKTYWNY', 'Ola')`, [T]);
++  // zestaw D: 6 przyszłych wizyt bez źródła (+1 przeszła nierozstrzygnięta), zestaw A: 2 przyszłe
++  const wizyta = async (idk, start, usluga = U.A, kat = 'Endermologia', war = '1x') => { const koniec = start.slice(0, 11) + String(Number(start.slice(11, 13)) + 1).padStart(2, '0') + ':00:00'; const r = (await q(`INSERT INTO Term_Rezerwacje (tenant_id, id_klienta, klient_nazwa, start, koniec, utworzyl) VALUES (?, ?, ?, ?, ?, 'Ola')`, [T, idk, klientki.find(k => k[0] === idk)[1], start, koniec])).insertId; await q(`INSERT INTO Term_Pozycje (tenant_id, rezerwacja_id, usluga_id, kategoria, wariant, cena, czas_min, pracownik, start, koniec) VALUES (?, ?, ?, ?, ?, 200, 30, 'Anna', ?, ?)`, [T, r, usluga, kat, war, start, start.slice(0, 11) + start.slice(11, 13) + ':30:00']); };
++  for (const d of ['2026-10-13 10:00:00', '2026-10-21 10:00:00', '2026-10-28 10:00:00', '2026-11-04 10:00:00', '2026-11-18 10:00:00', '2026-12-02 10:00:00', '2026-12-16 10:00:00']) await wizyta('1004', d); // 1 przeszła nierozstrzygnięta + 6 przyszłych w okresie ważności (do 2027-01-01)
++  for (const d of ['2026-10-22 12:00:00', '2026-11-05 12:00:00']) await wizyta('1001', d);
++  for (let i = 1; i <= 7; i++) await wizyta('1005', `2026-11-${String(i + 9).padStart(2, '0')} 09:00:00`); // zestaw E: 5 praw (rozbita sprzedaż) i 7 wizyt → niedobór 2
++  await q(`INSERT INTO Term_Ewidencja (tenant_id, tryb, zmienil, zmieniono) VALUES (?, 'przygotowanie', 'Ola', NOW())`, [T]);
++  const n = await q(`SELECT (SELECT COUNT(*) FROM Sprzedaz WHERE tenant_id = ?) s, (SELECT COUNT(*) FROM Klienci WHERE tenant_id = ?) k, (SELECT COUNT(*) FROM Term_Pozycje WHERE tenant_id = ?) p`, [T, T, T]);
++  console.log(`salon ${T}: sprzedaży ${n[0].s}, klientek ${n[0].k}, pozycji wizyt ${n[0].p}; login salonu = ${T} (hasło w pliku --haslo-do), PIN Ola/1111 (manager), Anna/2222`);
++  await c.end();
++})().catch(e => { console.error('BŁĄD:', e.message); process.exit(1); });
+diff --git a/narzedzia/testy-integracyjne/schemat-bazowy.js b/narzedzia/testy-integracyjne/schemat-bazowy.js
+new file mode 100644
+index 0000000..543957f
+--- /dev/null
++++ b/narzedzia/testy-integracyjne/schemat-bazowy.js
+@@ -0,0 +1,51 @@
++// narzedzia/testy-integracyjne/schemat-bazowy.js — przygotowanie PUSTEJ, izolowanej bazy testowej (.env.test) do testów dodatku:
++//   1) schema.sql z repozytorium (tabele rdzenia: Sprzedaz, Zadatki, Klienci, Uslugi, Użytkownicy, Pracownicy, Platnosci, Logi, …),
++//   2) tabele spoza schema.sql odtworzone z rzeczywistego DDL produkcji (docs/terminarz-zakupy/po9/rozpoznanie-schemat.json):
++//      Licencje, Tenant_Features, Features_Catalog, Typy_Zabiegow,
++//   3) kolumny dokładane przez moduły przy starcie serwera (ALTER … ADD COLUMN w routes/sprzedaz.js, klienci.js, typy_zabiegow.js, admin.js)
++//      — tu zastosowane wprost, żeby testy nie wymagały uruchomienia całego serwera.
++//   Bez danych osobowych. Nie uruchamia migracji v2 (to osobne narzędzie). Odmawia pracy, gdy .env.test wskazuje bazę z .env.
++//
++//   node narzedzia/testy-integracyjne/schemat-bazowy.js
++'use strict';
++const fs = require('fs'); const path = require('path');
++const mysql = require('mysql2/promise');
++const ROOT = path.join(__dirname, '..', '..');
++function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for (const l of fs.readFileSync(plik, 'utf8').split(/\r?\n/)) { const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, ''); } return out; }
++const DODATKOWE = [ // kolumny dokładane idempotentnie przez moduły przy starcie (nazwy i typy jak w rzeczywistej bazie — po9)
++  ['Sprzedaz', 'kategoria_produktu', "ENUM('Kosmetyk','Suplement') NULL"], ['Sprzedaz', 'data_waznosci', 'DATE NULL'], ['Sprzedaz', 'karnet_zamkniety_w', 'DATETIME NULL'], ['Sprzedaz', 'karnet_zamkniety_przez', 'VARCHAR(100) NULL'],
++  ['Sprzedaz', 'grupa_id', 'VARCHAR(40) NULL'], ['Sprzedaz', 'zawieszenia_liczba', 'INT NOT NULL DEFAULT 0'], ['Sprzedaz', 'zawieszenia_dni_lacznie', 'INT NOT NULL DEFAULT 0'], ['Sprzedaz', 'zwrot_do_id', 'VARCHAR(50) NULL'], ['Sprzedaz', 'typ_zabiegu', 'VARCHAR(80) NULL'], ['Sprzedaz', 'czy_rozliczone', 'TINYINT NOT NULL DEFAULT 0'],
++  ['Uslugi', 'typ_zabiegu', 'VARCHAR(80) NULL'], ['Uslugi', 'zrodlo', "VARCHAR(10) NOT NULL DEFAULT 'reczne'"],
++  ['Zadatki', 'bon', 'TINYINT(1) NOT NULL DEFAULT 0'], ['Zadatki', 'czy_rozliczone', 'TINYINT NOT NULL DEFAULT 0'], ['Zadatki', 'uwagi', 'TEXT NULL'],
++  ['Klienci', 'status', "ENUM('AKTYWNY','USUNIETY','ZANONIMIZOWANY') DEFAULT 'AKTYWNY'"], ['Klienci', 'data_usuniecia', 'DATETIME NULL'], ['Klienci', 'kto_usunal', 'VARCHAR(100) NULL'], ['Klienci', 'powod_usuniecia', 'VARCHAR(255) NULL'], ['Klienci', 'zmarly', 'TINYINT(1) DEFAULT 0'], ['Klienci', 'data_zgonu', 'DATE NULL'], ['Klienci', 'ostrzezenie', 'VARCHAR(500) NULL'], ['Klienci', 'odwolanie_ulga', 'TINYINT(1) NOT NULL DEFAULT 0'], ['Klienci', 'odwolanie_ulga_data', 'DATE NULL'],
++];
++(async () => {
++  const cel = envZ(path.join(ROOT, '.env.test')), prod = envZ(path.join(ROOT, '.env'));
++  if (!cel || !cel.DB_HOST || !cel.DB_NAME) { console.error('Brak .env.test — nic nie wykonano.'); process.exit(3); }
++  if (prod && String(prod.DB_HOST).trim() === String(cel.DB_HOST).trim() && String(prod.DB_NAME).trim() === String(cel.DB_NAME).trim()) { console.error('ODMOWA: .env.test = baza z .env.'); process.exit(4); }
++  const c = await mysql.createConnection({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4', multipleStatements: true });
++  const [[info]] = await c.query('SELECT DATABASE() d, VERSION() v, @@default_storage_engine e, @@transaction_isolation i');
++  console.log(`baza: ${info.d} · ${info.v} · silnik ${info.e} · izolacja ${info.i}`);
++  // 1) schema.sql — każdy CREATE TABLE osobno, z IF NOT EXISTS, bez DROP
++  const sql = fs.readFileSync(path.join(ROOT, 'schema.sql'), 'utf8');
++  const stmts = sql.split(/;\s*\n/).map(s => s.replace(/^\s*(--[^\n]*\n\s*)+/g, '').trim()).filter(s => /^CREATE TABLE/i.test(s)); // komentarze „--” przed CREATE są pomijane
++  let utworzone = 0, bylo = 0;
++  for (const s of stmts) { const st = s.replace(/^CREATE TABLE\s+(IF NOT EXISTS\s+)?/i, 'CREATE TABLE IF NOT EXISTS '); const nazwa = (st.match(/`([^`]+)`/) || [])[1]; try { const [r] = await c.query(st); if (r.warningStatus) bylo++; else utworzone++; } catch (e) { console.error('schema.sql:', nazwa, e.message); } }
++  // 2) tabele spoza schema.sql — DDL z rozpoznania produkcji
++  const po9 = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs', 'terminarz-zakupy', 'po9', 'rozpoznanie-schemat.json'), 'utf8'));
++  for (const t of ['Licencje', 'Tenant_Features', 'Features_Catalog', 'Typy_Zabiegow']) { const ddl = String(po9['DDL_' + t] || '').replace(/^CREATE TABLE/i, 'CREATE TABLE IF NOT EXISTS').replace(/AUTO_INCREMENT=\d+\s*/i, ''); if (!/^CREATE/.test(ddl)) { console.error('brak DDL w po9 dla', t); continue; } const [r] = await c.query(ddl); if (r.warningStatus) bylo++; else utworzone++; }
++  // 3) kolumny modułów
++  let kolumny = 0;
++  for (const [t, k, def] of DODATKOWE) { try { await c.query(`ALTER TABLE \`${t}\` ADD COLUMN \`${k}\` ${def}`); kolumny++; } catch (e) { if (e.code !== 'ER_DUP_FIELDNAME') console.error('ALTER', t, k, e.message); } }
++  // 4) tabele własne terminarza (model v1: Term_*) — DOKŁADNIE z definicji modułu routes/terminarz.js (CREATE TABLE IF NOT EXISTS przy ładowaniu), bez duplikowania DDL
++  await c.end();
++  const pool = require('mysql2').createPool({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4', connectionLimit: 3 });
++  process.env.NODE_ENV = 'test'; // bez timerów spraw i bez sprawdzania schematu przy ładowaniu
++  require('../../routes/terminarz')(pool, { hasFeature: (t, k, cb) => cb(false), log: { error: (...a) => console.error(...a), warn() {}, info() {} } });
++  await new Promise(r => setTimeout(r, 4000)); // mk() jest fire-and-forget
++  await new Promise((res, rej) => pool.end(e => (e ? rej(e) : res())));
++  const c2 = await mysql.createConnection({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME });
++  const [tab] = await c2.query(`SELECT COUNT(*) n, SUM(TABLE_NAME LIKE 'Term%') term FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()`);
++  console.log(`schemat bazowy: utworzono ${utworzone} tabel, istniało ${bylo}, dodano ${kolumny} kolumn; tabel w bazie: ${tab[0].n} (w tym Term_*: ${tab[0].term})`);
++  await c2.end();
++})().catch(e => { console.error('BŁĄD:', e.message); process.exit(1); });
+diff --git a/narzedzia/testy-integracyjne/terminarz-zakupy-zk03.js b/narzedzia/testy-integracyjne/terminarz-zakupy-zk03.js
+new file mode 100644
+index 0000000..5fa16dc
+--- /dev/null
++++ b/narzedzia/testy-integracyjne/terminarz-zakupy-zk03.js
+@@ -0,0 +1,178 @@
++// narzedzia/testy-integracyjne/terminarz-zakupy-zk03.js — ZK-03 na RZECZYWISTEJ, IZOLOWANEJ bazie (.env.test, MariaDB zgodna z docelową):
++//   Z3-T01 składnia blokad; Z3-T02/T03 równoczesność ze zwrotem (dwa połączenia, KONTROLOWANA pauza między odczytem a zapisem — nie samo Promise.all);
++//   Z3-T10/T11/T12 (grupa, rozbita sprzedaż, zwrot do dopłaty); Z3-T14 (1× na przyszłość); Z3-T17/T28 (ponowny import, ponowienie);
++//   Z3-T21/T22 (10/3/6 → 6/1; 5 praw i 7 wizyt); Z3-T25 (dwa źródła na pozycji); Z3-T26 (homonimy, obcy salon); Z3-T05/T06 (preflight danych v1 — na osobnej bazie)
++//   node narzedzia/testy-integracyjne/terminarz-zakupy-zk03.js [--zostaw]
++// Każda próba ma osobny wynik PASS/FAIL; wynik zapisywany do wynik-terminarz-zakupy-zk03.json. Salon testowy `zk03-test`; hasła nie są logowane.
++'use strict';
++const fs = require('fs'); const path = require('path');
++const mysql = require('mysql2/promise');
++const Z = require('../../routes/terminarz-zakupy');
++const ROOT = path.join(__dirname, '..', '..');
++const ZOSTAW = process.argv.includes('--zostaw');
++const T = 'zk03-test';
++function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for (const l of fs.readFileSync(plik, 'utf8').split(/\r?\n/)) { const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, ''); } return out; }
++const wyniki = []; const PASS = (id, opis, dowod) => { wyniki.push({ id, wynik: 'PASS', rodzaj: 'rzeczywista baza', opis, dowod }); console.log(`PASS ${id} — ${opis}${dowod ? ' · ' + dowod : ''}`); };
++const FAIL = (id, opis, dowod) => { wyniki.push({ id, wynik: 'FAIL', rodzaj: 'rzeczywista baza', opis, dowod }); console.log(`FAIL ${id} — ${opis}${dowod ? ' · ' + dowod : ''}`); };
++const INFO = (id, opis, dowod) => { wyniki.push({ id, wynik: 'INFO', rodzaj: 'rzeczywista baza', opis, dowod }); console.log(`INFO ${id} — ${opis}${dowod ? ' · ' + dowod : ''}`); };
++const sprawdz = (id, warunek, opis, dowod) => (warunek ? PASS : FAIL)(id, opis, dowod);
++const sleep = (ms) => new Promise(r => setTimeout(r, ms));
++
++(async () => {
++  const cel = envZ(path.join(ROOT, '.env.test')), prod = envZ(path.join(ROOT, '.env'));
++  if (!cel || !cel.DB_HOST || !cel.DB_NAME) { console.error('Brak .env.test — próby NIE WYKONANO.'); process.exit(3); }
++  if (prod && String(prod.DB_HOST).trim() === String(cel.DB_HOST).trim() && String(prod.DB_NAME).trim() === String(cel.DB_NAME).trim()) { console.error('ODMOWA: .env.test = baza z .env.'); process.exit(4); }
++  const cfg = { host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4', dateStrings: true };
++  const c0 = await mysql.createConnection(cfg); const qx = async (sql, p = []) => (await c0.query(sql, p))[0];
++  const [[info]] = await c0.query('SELECT DATABASE() AS d, @@version AS v, @@transaction_isolation AS i, (SELECT ENGINE FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = \'Sprzedaz\') AS e');
++  console.log(`baza: ${info.d} (${info.v}, ${info.e}, ${info.i}) — izolowana`);
++  const st = await Z.stanSchematu(qx); if (!st.gotowy) { console.error('Schemat v2 niegotowy:', st.typ, st.braki); process.exit(2); }
++
++  // ── Z3-T01: faktyczne zapytanie blokujące z repoSql na tym silniku
++  { const c = await mysql.createConnection(cfg); await c.beginTransaction(); const zap = []; const repo = Z.repoSql(async (sql, p) => { zap.push(sql); return (await c.query(sql, p))[0]; }, T);
++    let blad = null; try { await repo.zrodloSprzedaz('NIE-MA', true); await repo.skladniki([0], true); } catch (e) { blad = e.message; } await c.rollback(); await c.end();
++    sprawdz('Z3-T01', !blad && zap.some(s => / LOCK IN SHARE MODE$/.test(s)) && zap.some(s => / FOR UPDATE$/.test(s)) && !zap.some(s => /FOR SHARE/.test(s)), 'zapytania blokujące repoSql wykonane na MariaDB (LOCK IN SHARE MODE / FOR UPDATE), bez błędu składni', blad || zap.filter(s => /LOCK IN SHARE MODE|FOR UPDATE/.test(s)).map(s => s.slice(-40)).join(' | '));
++    let fs_ = null; try { await c0.query('SELECT 1 FROM Sprzedaz WHERE id = ? FOR SHARE', ['x']); } catch (e) { fs_ = e.code; } sprawdz('Z3-T01b', fs_ === 'ER_PARSE_ERROR', 'FOR SHARE na tym silniku = błąd składni (potwierdzenie R1)', fs_); }
++
++  // ── sprzątanie salonu testowego + katalog + tryb ewidencji
++  const czysc = async () => { for (const t of ['Term_Zakupy_Ruchy2', 'Term_Realizacje', 'Term_Przydzialy', 'Term_Operacje', 'Term_Zakupy_Skladniki', 'Term_Zakupy', 'Term_Pozycje', 'Term_Rezerwacje', 'Term_Ewidencja', 'Term_Oferty_Skladniki', 'Term_Oferty_Wersje', 'Term_Oferty', 'Term_Sprawy', 'Sprzedaz', 'Uslugi', 'Klienci']) await qx(`DELETE FROM ${t} WHERE tenant_id = ?`, [T]); };
++  await czysc();
++  await qx(`INSERT INTO Term_Ewidencja (tenant_id, tryb, rozpoczeto, zmienil, zmieniono) VALUES (?, 'aktywna', NOW(), 'test', NOW())`, [T]);
++  const U = { A: 'ZK03-U-A', A5: 'ZK03-U-A5', A10: 'ZK03-U-A10', B: 'ZK03-U-B', AB: 'ZK03-U-AB', K1: 'ZK03-U-K1' };
++  for (const [id, kat, war] of [[U.A, 'Endermologia', '1x'], [U.A5, 'Endermologia', '5x'], [U.A10, 'Endermologia', '10x'], [U.B, 'Meltivio', '1x'], [U.AB, 'Pakiet', '5A+4B'], [U.K1, 'Konsultacja', '1x z góry']]) await qx(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, waznosc_dni) VALUES (?, ?, ?, ?, 100, NULL)`, [id, T, kat, war]);
++  const oferta = async (uid, rodzaj, skl, od = '2026-01-01 00:00:00') => { const o = (await qx(`INSERT INTO Term_Oferty (tenant_id, usluga_id, stan, zrodlo, zatwierdzono, zmieniono) VALUES (?, ?, 'zatwierdzona', 'reczne', NOW(), NOW())`, [T, uid])).insertId; const w = (await qx(`INSERT INTO Term_Oferty_Wersje (tenant_id, oferta_id, wersja, rodzaj, stan, obowiazuje_od, autor) VALUES (?, ?, 1, ?, 'zatwierdzona', ?, 'test')`, [T, o, rodzaj, od])).insertId; for (const s of skl) await qx(`INSERT INTO Term_Oferty_Skladniki (tenant_id, oferta_id, wersja_id, usluga_wyk_id, jednostki) VALUES (?, ?, ?, ?, ?)`, [T, o, w, s[0], s[1]]); return { o, w }; };
++  await oferta(U.A5, 'pakiet', [[U.A, 5]]); await oferta(U.A10, 'pakiet', [[U.A, 10]]); await oferta(U.AB, 'pakiet', [[U.A, 5], [U.B, 4]]); await oferta(U.A, 'nie_ewidencjonuj', []); await oferta(U.K1, 'pojedynczy_z_gory', [[U.K1, 1]]);
++  for (const [idk, nazwa] of [['3001', 'Zestaw A'], ['3002', 'Zestaw B'], ['3003', 'Anna Nowak'], ['3004', 'Anna Nowak'], ['3005', 'Zestaw D']]) await qx(`INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, status) VALUES (UUID(), ?, ?, ?, 'AKTYWNY')`, [T, idk, nazwa]);
++  const sprzedaz = async (id, idk, zabieg, szczegoly, kwota, extra = {}) => qx(`INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, szczegoly, kwota, status, platnosc, id_klienta, grupa_id, zwrot_do_id, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, ?, ?, ?)`, [id, T, extra.data || '2026-10-10 10:00:00', 'Klientka ' + idk, zabieg, szczegoly, kwota, extra.platnosc || 'Karta', idk, extra.grupa_id || null, extra.zwrot_do_id || null, extra.data_waznosci || null]);
++  const teraz = async (c) => (await c.query(`SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS t`))[0][0].t;
++  const ctxNa = async (c, tryb = 'aktywna') => ({ tenant: T, autor: 'Tester', autor_id: 'u-test', rola: 'manager', teraz: await teraz(c), tryb, techniczna: true, zapisany: tryb, widziKwoty: true });
++  async function wTx(c, fn, opcje = {}) { // jak wTransakcjiSalonu w routes/terminarz.js; `opcje.owin(repo)` pozwala wstrzyknąć kontrolowaną pauzę
++    const [[w]] = await c.query(`SELECT IS_FREE_LOCK('trm:migracja') AS w`); if (Number(w.w) === 0) throw new Error('migracja');
++    const [[lock]] = await c.query(`SELECT GET_LOCK(?, 8) AS l`, ['trm:' + T]); if (Number(lock.l) !== 1) throw new Error('brak blokady');
++    try { await c.beginTransaction(); let repo = Z.repoSql(async (sql, p) => (await c.query(sql, p))[0], T); if (opcje.owin) repo = opcje.owin(repo); const ctx = await ctxNa(c, opcje.tryb);
++      try { const r = await fn(repo, ctx); await c.commit(); return r; } catch (e) { await c.rollback(); if (e.utrwalPoRollback) await c0.query(`UPDATE Term_Zakupy SET stan_zrodla = ? WHERE tenant_id = ? AND id = ?`, [e.utrwalPoRollback.stan_zrodla, T, e.utrwalPoRollback.zakup_id]); throw e; } }
++    finally { await c.query(`SELECT RELEASE_LOCK(?)`, ['trm:' + T]); }
++  }
++  const repo0 = Z.repoSql(qx, T);
++  const saldo = async (sid) => (await Z.domena.saldoSkladnikow(repo0, [sid]))[sid];
++  const skladnikiZakupu = async (sprzedazId) => { const [z] = await repo0.zakupyPoSprzedazy([sprzedazId]); return z ? await repo0.skladnikiZakupow([z.id]) : []; };
++  const nowaPozycja = async (idK, usluga, start) => { const r = (await qx(`INSERT INTO Term_Rezerwacje (tenant_id, id_klienta, klient_nazwa, start, koniec) VALUES (?, ?, ?, ?, ?)`, [T, idK, 'Klientka ' + idK, start, start])).insertId; return (await qx(`INSERT INTO Term_Pozycje (tenant_id, rezerwacja_id, usluga_id, kategoria, czas_min, pracownik, start, koniec) VALUES (?, ?, ?, 'Zabieg', 30, 'Tester', ?, ?)`, [T, r, usluga, start, start])).insertId; };
++  const zwer = async (sid, u = 0) => { await wTx(c0, (repo, ctx) => Z.domena.weryfikujSkladnik(repo, ctx, { skladnik_id: sid, hist_wykorzystane: u, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'test' })); };
++
++  // ── Z3-T10: dwa powielone wiersze 5A+4B (grupa_id) → 10 A + 8 B; Z3-T18: podgląd nie mutuje
++  await sprzedaz('ZK03-G1-1', '3002', 'Pakiet', '5A+4B', 2000, { grupa_id: 'GRP-X' }); await sprzedaz('ZK03-G1-2', '3002', 'Pakiet', '5A+4B', 2000, { grupa_id: 'GRP-X' });
++  { const przed = (await qx(`SELECT COUNT(*) n FROM Term_Zakupy WHERE tenant_id = ?`, [T]))[0].n; const pod = await Z.domena.podgladZrodel(repo0, await ctxNa(c0), { id_klienta: '3002' }); const po = (await qx(`SELECT COUNT(*) n FROM Term_Zakupy WHERE tenant_id = ?`, [T]))[0].n;
++    sprawdz('Z3-T18', przed === po && pod.pozycje.every(p => p.kategoria === 'gotowe'), 'podgląd klasyfikuje bez mutacji', JSON.stringify(pod.liczniki));
++    const w = await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-G1-1' }, { sprzedaz_id: 'ZK03-G1-2' }] }));
++    const skl = await qx(`SELECT s.usluga_wyk_id, SUM(s.jednostki_przyznane) g FROM Term_Zakupy_Skladniki s JOIN Term_Zakupy z ON z.id = s.zakup_id WHERE z.tenant_id = ? AND z.id_klienta = '3002' GROUP BY s.usluga_wyk_id`, [T]);
++    sprawdz('Z3-T10', w.zarejestrowano === 2 && Number(skl.find(x => x.usluga_wyk_id === U.A).g) === 10 && Number(skl.find(x => x.usluga_wyk_id === U.B).g) === 8, 'dwa egzemplarze oferty 5A+4B → dwa źródła, 10 A + 8 B, bez mnożnika z grupy', JSON.stringify(skl)); }
++  // ── Z3-T17/T28: ponowny import w innej kolejności i ponowienie z tym samym kluczem → brak duplikatów
++  { const g1 = (await qx(`SELECT COUNT(*) n FROM Term_Zakupy_Ruchy2 WHERE tenant_id = ? AND typ = 'G'`, [T]))[0].n;
++    const r1 = await wTx(c0, (repo, ctx) => Z.domena.operacja(repo, ctx, { klucz: 'REJ-ZK03', rodzaj: 'rejestracja', dane: { pozycje: [{ sprzedaz_id: 'ZK03-G1-2' }, { sprzedaz_id: 'ZK03-G1-1' }] } }, (oid) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-G1-2' }, { sprzedaz_id: 'ZK03-G1-1' }], operacja_id: oid })));
++    const r2 = await wTx(c0, (repo, ctx) => Z.domena.operacja(repo, ctx, { klucz: 'REJ-ZK03', rodzaj: 'rejestracja', dane: { pozycje: [{ sprzedaz_id: 'ZK03-G1-2' }, { sprzedaz_id: 'ZK03-G1-1' }] } }, (oid) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-G1-2' }, { sprzedaz_id: 'ZK03-G1-1' }], operacja_id: oid })));
++    const g2 = (await qx(`SELECT COUNT(*) n FROM Term_Zakupy_Ruchy2 WHERE tenant_id = ? AND typ = 'G'`, [T]))[0].n;
++    sprawdz('Z3-T17/T28', r1.wynik.istnialo === 2 && r1.wynik.zarejestrowano === 0 && r2.powtorzenie === true && g1 === g2 && (await qx(`SELECT COUNT(*) n FROM Term_Zakupy WHERE tenant_id = ? AND id_klienta = '3002'`, [T]))[0].n === 2, 'ponowny import (inna kolejność) i ponowienie klucza: te same zakupy, bez dodatkowego G', `G przed=${g1} po=${g2}`); }
++  // ── Z3-T11/T12: rozbita sprzedaż (Portfel 200 + Dopłata 800) → jeden pakiet; zwrot 100 zł do dopłaty wykryty
++  await sprzedaz('ZK03-R1-1', '3001', 'Endermologia', '5x', 200, { platnosc: 'Portfel' }); await sprzedaz('ZK03-R1-2', '3001', 'Endermologia Dopłata', '', 800);
++  { const w = await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-R1-1' }, { sprzedaz_id: 'ZK03-R1-2' }] }));
++    const [z] = await repo0.zakupyPoSprzedazy(['ZK03-R1-1']); const [s] = await repo0.skladnikiZakupow([z.id]);
++    sprawdz('Z3-T11', w.zarejestrowano === 1 && w.wyniki.find(x => x.sprzedaz_id === 'ZK03-R1-2').wynik === 'pominiete' && JSON.parse(z.zrodla_json)[0] === 'ZK03-R1-2' && (await saldo(s.id)).G === 5, 'rozbita sprzedaż = jeden pakiet 5 A; dopłata powiązana, bez własnej puli', `zrodla_json=${z.zrodla_json}`);
++    await sprzedaz('ZK03-R9-1', '3001', 'ZWROT: Endermologia Dopłata', '', -100, { zwrot_do_id: 'ZK03-R1-2', data: '2026-10-12 10:00:00' });
++    const u = await wTx(c0, (repo, ctx) => Z.domena.uzgodnijZrodlo(repo, ctx, z));
++    sprawdz('Z3-T12', u.zmiana === 'zwrot' && u.stan_zrodla === 'do_uzgodnienia' && (await saldo(s.id)).G === 5, 'zwrot 100 zł przypisany do DOPŁATY wykryty jako zmiana tego zakupu; bez przeliczenia kwoty na sesje', `zmiana=${u.zmiana} stan=${u.stan_zrodla} G=5`); }
++  // ── Z3-T14: 1× na przyszłość (jawna oferta) — jedna jednostka po kwalifikacji; zwykłe 1x pominięte
++  await sprzedaz('ZK03-J1-1', '3001', 'Konsultacja', '1x z góry', 150); await sprzedaz('ZK03-J2-1', '3001', 'Endermologia', '1x', 200);
++  { const w = await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-J1-1' }, { sprzedaz_id: 'ZK03-J2-1' }] }));
++    const [z] = await repo0.zakupyPoSprzedazy(['ZK03-J1-1']); const [s] = await skladnikiZakupu('ZK03-J1-1'); await zwer(s.id);
++    let odm = null; try { await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, potwierdzenie_zaleznych: true })); } catch (e) { odm = e.extra && e.extra.code; }
++    await wTx(c0, (repo, ctx) => Z.domena.kwalifikujZakup(repo, ctx, { zakup_id: z.id, kwalifikacja: 'pojedynczy_z_gory', powod: 'test' }));
++    await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, potwierdzenie_zaleznych: true }));
++    const w2 = await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-J1-1' }] }));
++    sprawdz('Z3-T14', w.zarejestrowano === 1 && w.wyniki.find(x => x.sprzedaz_id === 'ZK03-J2-1').wynik === 'pominiete' && odm === 'KWALIFIKACJA' && (await saldo(s.id)).G === 1 && w2.istnialo === 1, '„1×” na przyszłość: 1 jednostka po jawnej kwalifikacji; zwykłe 1x pominięte; powtórzenie nie zwiększa G', `odmowa przed kwalifikacją: ${odm}`); }
++  // ── Z3-T21: zestaw D — 10 zabiegów, 3 historyczne, 6 przyszłych wizyt bez źródła → R=6, B=1; wykonanie jednej → 4/5/1
++  await sprzedaz('ZK03-D1-1', '3005', 'Endermologia', '10x', 1800);
++  { await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-D1-1' }] })); const [s] = await skladnikiZakupu('ZK03-D1-1'); await zwer(s.id, 3);
++    const poz = []; for (const d of ['2026-10-05 10:00:00', '2026-10-21 10:00:00', '2026-10-28 10:00:00', '2026-11-04 10:00:00', '2026-11-18 10:00:00', '2027-01-07 10:00:00']) poz.push(await nowaPozycja('3005', U.A, d));
++    const kand = await Z.domena.kandydaciWizyt(repo0, await ctxNa(c0), { skladnik_id: s.id });
++    const w = await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, decyzje: poz.map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), skrot: kand.skrot, potwierdzenie_zaleznych: true }));
++    let sD = await saldo(s.id); const ok1 = sD.U === 3 && sD.R === 6 && sD.B === 1 && w.przydzialy.length === 6;
++    await wTx(c0, (repo, ctx) => Z.domena.wykonaj(repo, ctx, { pozycja_id: poz[1], wykonawca_fakt: 'Tester' })); sD = await saldo(s.id);
++    sprawdz('Z3-T21/T23', ok1 && sD.U === 4 && sD.R === 5 && sD.B === 1 && kand.kandydaci.length === 6 && kand.kandydaci[0].przeszla, 'stan 10/3 + 6 wizyt (w tym przeszła i odległa) → U=3,R=6,B=1; po wykonaniu 4/5/1; bez drugiego U', JSON.stringify({ U: sD.U, R: sD.R, B: sD.B })); }
++  // ── Z3-T22: 5 praw, 7 wizyt → 5 powiązań + 2 jawne decyzje
++  await sprzedaz('ZK03-E1-1', '3001', 'Endermologia', '5x', 900, { data: '2026-10-11 10:00:00' });
++  { await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-E1-1' }] })); const [s] = await skladnikiZakupu('ZK03-E1-1'); await zwer(s.id, 0);
++    const poz = []; for (let i = 1; i <= 7; i++) poz.push(await nowaPozycja('3001', U.A, `2026-11-${String(i).padStart(2, '0')} 10:00:00`));
++    const kand = await Z.domena.kandydaciWizyt(repo0, await ctxNa(c0), { skladnik_id: s.id });
++    let odm = null; try { await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, decyzje: poz.map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), skrot: kand.skrot, potwierdzenie_zaleznych: true })); } catch (e) { odm = e.extra && e.extra.code; }
++    const w = await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, decyzje: [...poz.slice(0, 5).map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), { pozycja_id: poz[5], decyzja: 'wyjasnienie', uzasadnienie: 'brak zakupu' }, { pozycja_id: poz[6], decyzja: 'jednorazowa' }], skrot: kand.skrot, potwierdzenie_zaleznych: true }));
++    const sE = await saldo(s.id); const n = (await qx(`SELECT COUNT(*) n FROM Term_Pozycje WHERE tenant_id = ? AND id IN (${poz.map(() => '?').join(',')})`, [T, ...poz]))[0].n;
++    sprawdz('Z3-T22', kand.niedobor === 2 && odm === 'NIEDOBOR' && w.przydzialy.length === 5 && sE.R === 5 && sE.B === 0 && n === 7, '5 praw i 7 wizyt: niedobór 2, bez decyzji odmowa; 5 powiązań + 2 jawne; żadna wizyta nie znika, bez minusa', JSON.stringify({ R: sE.R, B: sE.B, wizyt: n })); }
++  // ── Z3-T26: homonimy (dwie „Anna Nowak”) — własność po ID; zakup obcego salonu niewidoczny
++  await sprzedaz('ZK03-H1-1', '3003', 'Endermologia', '5x', 900); await sprzedaz('ZK03-H2-1', '3004', 'Endermologia', '5x', 900);
++  { await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-H1-1' }, { sprzedaz_id: 'ZK03-H2-1' }] }));
++    const w3 = await Z.widokZakupow(repo0, await ctxNa(c0), { id_klienta: '3003' }); const w4 = await Z.widokZakupow(repo0, await ctxNa(c0), { id_klienta: '3004' });
++    const obcy = Z.repoSql(qx, 'inny-salon'); const w5 = await Z.widokZakupow(obcy, await ctxNa(c0), { id_klienta: '3003' }); const [sH] = await skladnikiZakupu('ZK03-H2-1'); const sObcy = await obcy.skladniki([sH.id]);
++    sprawdz('Z3-T26', w3.length === 1 && w3[0].sprzedaz_id === 'ZK03-H1-1' && w4.length === 1 && w4[0].sprzedaz_id === 'ZK03-H2-1' && w5.length === 0 && sObcy.length === 0, 'dwie klientki o tej samej nazwie widzą tylko własny zakup; repozytorium innego salonu nie widzi składnika', `3003→${w3[0].sprzedaz_id}, 3004→${w4[0].sprzedaz_id}, obcy salon: ${w5.length}/${sObcy.length}`); }
++  // ── Z3-T25: dwa zakupy tej samej usługi na jednej pozycji (2 jednostki)
++  { const a = await wTx(c0, (repo, ctx) => Z.domena.przyznaj(repo, ctx, { id_klienta: '3002', usluga_wyk_id: U.A, usluga_nazwa: 'Endermologia', jednostki: 1, data_waznosci: '2026-11-30', powod: 'a' })); const b = await wTx(c0, (repo, ctx) => Z.domena.przyznaj(repo, ctx, { id_klienta: '3002', usluga_wyk_id: U.A, usluga_nazwa: 'Endermologia', jednostki: 1, data_waznosci: '2026-12-31', powod: 'b' }));
++    const poz = await nowaPozycja('3002', U.A, '2026-11-05 10:00:00');
++    await wTx(c0, (repo, ctx) => Z.domena.rezerwuj(repo, ctx, { pozycje: [{ pozycja_id: poz, skladnik_id: a.skladnik_id, usluga_id: U.A }, { pozycja_id: poz, skladnik_id: b.skladnik_id, usluga_id: U.A }], id_klienta: '3002', data: '2026-11-05', uslugaPozycji: p => p.usluga_id }));
++    const wyk = await wTx(c0, (repo, ctx) => Z.domena.wykonaj(repo, ctx, { pozycja_id: poz, wykonawca_fakt: 'Tester' }));
++    await wTx(c0, (repo, ctx) => Z.domena.odwrocRealizacje(repo, ctx, { realizacja_id: wyk.realizacje[1].id, wynik: 'odbedzie_sie', powod: 'x', data: '2026-11-05' }));
++    const prz = await qx(`SELECT skladnik_id, stan, cykl FROM Term_Przydzialy WHERE tenant_id = ? AND pozycja_id = ? ORDER BY id`, [T, poz]); const p = await repo0.pozycja(poz);
++    sprawdz('Z3-T25', wyk.zuzyto === 2 && prz.length === 3 && (await saldo(a.skladnik_id)).U === 1 && (await saldo(b.skladnik_id)).R === 1 && Number(p.jednostki_wymagane) === 2 && [a.skladnik_id, b.skladnik_id].includes(p.zakup_skladnik_id), 'dwa źródła na pozycji: wykonanie 2 jednostek, odwrócenie jednej — oba powiązania zachowane (zużyty A, zużyty B, nowy B cykl 2); alias = pole zgodności (aktywne źródło)', JSON.stringify(prz) + ` alias=${p.zakup_skladnik_id}`); }
++
++  // ── Z3-T02/T03: RÓWNOCZESNOŚĆ ze zwrotem — kontrolowana pauza między odczytem źródła a zapisem (dwa połączenia)
++  await sprzedaz('ZK03-C1-1', '3002', 'Endermologia', '5x', 900, { data: '2026-10-12 10:00:00' });
++  { await wTx(c0, (repo, ctx) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: [{ sprzedaz_id: 'ZK03-C1-1' }] })); const [s] = await skladnikiZakupu('ZK03-C1-1'); await zwer(s.id, 4); // zostaje 1 jednostka
++    await wTx(c0, (repo, ctx) => Z.domena.uruchomSkladnik(repo, ctx, { skladnik_id: s.id, potwierdzenie_zaleznych: true }));
++    const cA = await mysql.createConnection(cfg), cB = await mysql.createConnection(cfg);
++    // 1) edycja oryginalnej sprzedaży w rdzeniu PODCZAS rezerwowania: UPDATE czeka na zwolnienie blokady współdzielonej (do COMMIT dodatku)
++    let czasEdycji = null, wynikB1 = null; const pozA = await nowaPozycja('3002', U.A, '2026-11-06 10:00:00');
++    const owinPauza = (akcjaB) => (repo) => { const org = repo.zrodloSprzedaz.bind(repo); repo.zrodloSprzedaz = async (...a) => { const r = await org(...a); await akcjaB(); return r; }; return repo; };
++    await wTx(cA, (repo, ctx) => Z.domena.rezerwuj(repo, ctx, { pozycje: [{ pozycja_id: pozA, skladnik_id: s.id, usluga_id: U.A }], id_klienta: '3002', data: '2026-11-06', uslugaPozycji: p => p.usluga_id }), { owin: owinPauza(async () => {
++      const t0 = Date.now(); const upd = cB.query(`UPDATE Sprzedaz SET kwota = 850 WHERE tenant_id = ? AND id = ?`, [T, 'ZK03-C1-1']).then(() => 'ZAKOŃCZONO').catch(e => 'BŁĄD ' + e.code);
++      wynikB1 = await Promise.race([upd, sleep(1500).then(() => 'CZEKA')]); czasEdycji = Date.now() - t0; upd.then(() => { czasEdycji = Date.now() - t0; });
++    }) });
++    await sleep(300);
++    sprawdz('Z3-T02a', wynikB1 === 'CZEKA', 'edycja oryginalnej sprzedaży w rdzeniu podczas rezerwowania CZEKA na COMMIT dodatku (blokada współdzielona działa)', `stan po 1,5 s pauzy: ${wynikB1}; UPDATE ukończył po ${czasEdycji} ms`);
++    await wTx(c0, (repo, ctx) => Z.domena.zwolnij(repo, ctx, { pozycja_id: pozA, powod: 'reset' })); await c0.query(`UPDATE Sprzedaz SET kwota = 900 WHERE tenant_id = ? AND id = ?`, [T, 'ZK03-C1-1']); await wTx(c0, async (repo, ctx) => Z.domena.uzgodnijZrodlo(repo, ctx, (await repo.zakupyPoSprzedazy(['ZK03-C1-1']))[0]));
++    // 2) PIERWSZY zwrot dopisywany (nowy wiersz) podczas rezerwowania ostatniej jednostki: INSERT nie jest blokowany przez blokadę współdzieloną na oryginale
++    let wynikB2 = null; const pozB = await nowaPozycja('3002', U.A, '2026-11-07 10:00:00'); let rezB = null;
++    try { rezB = await wTx(cA, (repo, ctx) => Z.domena.rezerwuj(repo, ctx, { pozycje: [{ pozycja_id: pozB, skladnik_id: s.id, usluga_id: U.A }], id_klienta: '3002', data: '2026-11-07', uslugaPozycji: p => p.usluga_id }), { owin: owinPauza(async () => {
++      const ins = cB.query(`INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, kwota, status, platnosc, id_klienta, zwrot_do_id) VALUES ('ZK03-C9-1', ?, NOW(), 'Klientka 3002', 'ZWROT: Endermologia', -900, 'AKTYWNY', 'Karta', '3002', 'ZK03-C1-1')`, [T]).then(() => 'ZAKOŃCZONO').catch(e => 'BŁĄD ' + e.code);
++      wynikB2 = await Promise.race([ins, sleep(1500).then(() => 'CZEKA')]);
++    }) }); } catch (e) { rezB = { blad: e.message }; }
++    const sC = await saldo(s.id); const [zC] = await repo0.zakupyPoSprzedazy(['ZK03-C1-1']);
++    const u2 = await wTx(c0, (repo, ctx) => Z.domena.uzgodnijZrodlo(repo, ctx, zC)); // następne sprawdzenie
++    const luka = wynikB2 === 'ZAKOŃCZONO' && rezB && rezB.przydzialy;
++    INFO('Z3-T02b', luka ? 'LUKA (jawnie): pierwszy zwrot dopisany jako NOWY wiersz w oknie między odczytem źródła a COMMIT dodatku NIE jest blokowany — rezerwacja ostatniej jednostki zapisała się; zmiana wykryta przy NASTĘPNYM sprawdzeniu (hash → wycofane)' : 'zwrot podczas rezerwacji został zablokowany/wykryty', `INSERT zwrotu: ${wynikB2}; rezerwacja: ${rezB && rezB.przydzialy ? 'ZAPISANA' : 'ODRZUCONA ' + (rezB && rezB.blad)}; po operacji R=${sC.R}; następne sprawdzenie: zmiana=${u2.zmiana}, stan=${u2.stan_zrodla}`);
++    sprawdz('Z3-T02c', u2.zmiana === 'zwrot' && u2.stan_zrodla === 'wycofane', 'zwrot dopisany w oknie równoczesności jest wykryty przy następnym sprawdzeniu źródła (odroczone uzgadnianie), zakup „wycofane”', `zmiana=${u2.zmiana}`);
++    // 3) zwrot przed potwierdzeniem wykonania (po wcześniejszej rezerwacji) → wykonanie odrzucone, brak U; 4) zwrot podczas wykonania (pauza) → INSERT przechodzi, wykonanie kończy się na starym podglądzie? NIE — źródło jest czytane ponownie w transakcji
++    let wyk = null; try { await wTx(cA, (repo, ctx) => Z.domena.wykonaj(repo, ctx, { pozycja_id: pozB, wykonawca_fakt: 'Tester' })); wyk = 'WYKONANO'; } catch (e) { wyk = (e.extra && e.extra.code) + ': ' + e.message.slice(0, 60); }
++    sprawdz('Z3-T03a', /^ZRODLO/.test(wyk || '') && (await saldo(s.id)).U === 4, 'zwrot zatwierdzony przed wykonaniem (po wcześniejszej rezerwacji) → wykonanie odrzucone, U bez zmian (tylko historyczne 4)', wyk);
++    // reset: usuń zwrot, przywróć stan, i powtórz z pauzą W TRAKCIE wykonania
++    await c0.query(`DELETE FROM Sprzedaz WHERE tenant_id = ? AND id = 'ZK03-C9-1'`, [T]); await c0.query(`UPDATE Term_Zakupy SET stan_zrodla = 'ok' WHERE tenant_id = ? AND id = ?`, [T, zC.id]); await wTx(c0, async (repo, ctx) => Z.domena.uzgodnijZrodlo(repo, ctx, (await repo.zakupyPoSprzedazy(['ZK03-C1-1']))[0]));
++    let wynikB3 = null, wyk2 = null;
++    try { await wTx(cA, (repo, ctx) => Z.domena.wykonaj(repo, ctx, { pozycja_id: pozB, wykonawca_fakt: 'Tester' }), { owin: owinPauza(async () => { wynikB3 = await Promise.race([cB.query(`INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, kwota, status, platnosc, id_klienta, zwrot_do_id) VALUES ('ZK03-C9-2', ?, NOW(), 'Klientka 3002', 'ZWROT: Endermologia', -900, 'AKTYWNY', 'Karta', '3002', 'ZK03-C1-1')`, [T]).then(() => 'ZAKOŃCZONO').catch(e => 'BŁĄD ' + e.code), sleep(1500).then(() => 'CZEKA')]); }) }); wyk2 = 'WYKONANO'; } catch (e) { wyk2 = (e.extra && e.extra.code) + ''; }
++    const u3 = await wTx(c0, async (repo, ctx) => Z.domena.uzgodnijZrodlo(repo, ctx, (await repo.zakupyPoSprzedazy(['ZK03-C1-1']))[0]));
++    INFO('Z3-T03b', wyk2 === 'WYKONANO' ? 'LUKA (jawnie): zwrot dopisany w oknie między odczytem źródła a COMMIT wykonania nie jest blokowany — U zapisane; wykryte przy następnym sprawdzeniu' : 'zwrot podczas wykonania zablokowany/wykryty', `INSERT zwrotu: ${wynikB3}; wykonanie: ${wyk2}; następne sprawdzenie: ${u3.zmiana}/${u3.stan_zrodla}`);
++    await cA.end(); await cB.end(); }
++
++  // ── Z3-T05/T06 (preflight danych v1) — na osobnej, czystej bazie wymaga drugiej bazy; tu: kontrola, że migrujV2 na TEJ bazie (v2 kompletny) nic nie zmienia nawet przy danych v1
++  { await qx(`INSERT INTO Term_Zakupy (tenant_id, sprzedaz_id, id_klienta, oferta_id, usluga_id, nazwa) VALUES (?, 'V1-TEST-1', '3001', 0, ?, 'v1')`, [T, U.A]); await qx(`INSERT INTO Term_Zakupy_Ruchy (tenant_id, skladnik_id, pozycja_id, typ, jednostki) VALUES (?, 0, NULL, 'korekta', 1)`, [T]);
++    const r = await Z.migrujV2(qx, { log: { error() {} } }); await qx(`DELETE FROM Term_Zakupy_Ruchy WHERE tenant_id = ?`, [T]); await qx(`DELETE FROM Term_Zakupy WHERE tenant_id = ? AND sprzedaz_id = 'V1-TEST-1'`, [T]);
++    sprawdz('Z3-T05', r.stanPrzed.typ === 'v2_kompletny' && r.zastosowano.length === 0 && r.bledy.length === 0 && r.stanPrzed.daneV1.Term_Zakupy_Ruchy >= 1, 'przy kompletnym v2 migracja jest no-op i raportuje dane v1 (nie kasuje, nie przenosi); zatrzymanie przy v1_z_danymi — mock K11', `typ=${r.stanPrzed.typ}, daneV1.Term_Zakupy_Ruchy=${r.stanPrzed.daneV1.Term_Zakupy_Ruchy}`); }
++
++  // ── A14 na całości salonu
++  { const skl = await qx(`SELECT id, saldo_json FROM Term_Zakupy_Skladniki WHERE tenant_id = ?`, [T]); const salda = await Z.domena.saldoSkladnikow(repo0, skl.map(s => s.id));
++    const rozjazd = skl.filter(s => { const p = s.saldo_json ? JSON.parse(s.saldo_json) : null; const w = salda[s.id]; return !p || ['G', 'W', 'U', 'F', 'R'].some(k => p[k] !== w[k]); });
++    sprawdz('A14', rozjazd.length === 0, 'projekcja odtwarzalna z ruchów (wszystkie składniki salonu)', `składników: ${skl.length}, rozjazdów: ${rozjazd.length}`); }
++
++  if (!ZOSTAW) await czysc();
++  await c0.end();
++  const fail = wyniki.filter(w => w.wynik === 'FAIL').length;
++  const out = path.join(__dirname, 'wynik-terminarz-zakupy-zk03.json'); fs.writeFileSync(out, JSON.stringify({ baza: info.d, wersja: info.v, silnik: info.e, izolacja: info.i, kiedy: new Date().toISOString(), wyniki }, null, 2));
++  console.log(`\nRAZEM: ${wyniki.filter(w => w.wynik === 'PASS').length} PASS / ${fail} FAIL / ${wyniki.filter(w => w.wynik === 'INFO').length} INFO → ${out}`);
++  process.exit(fail ? 1 : 0);
++})().catch(e => { console.error('BŁĄD PRZEBIEGU:', e.message, e.stack && e.stack.split('\n')[1]); process.exit(1); });
+diff --git a/narzedzia/testy-integracyjne/terminarz-zakupy.js b/narzedzia/testy-integracyjne/terminarz-zakupy.js
+index 3aee777..9148e69 100644
+--- a/narzedzia/testy-integracyjne/terminarz-zakupy.js
++++ b/narzedzia/testy-integracyjne/terminarz-zakupy.js
+@@ -135,7 +135,7 @@ const sprawdz = (id, warunek, opis, dowod) => (warunek ? PASS : FAIL)(id, opis,
+   const pozD = await nowaPozycja('D'); let k13 = null; try { await wTx(c0, (repo, ctx) => Z.domena.rezerwuj(repo, ctx, { pozycje: [{ pozycja_id: pozD, skladnik_id: D.s, usluga_id: 'U-A' }], id_klienta: 'D', data: '2026-11-03', uslugaPozycji: x => x.usluga_id })); } catch (e) { k13 = e; if (e.utrwalPoRollback) await qx(`UPDATE Term_Zakupy SET stan_zrodla = ? WHERE tenant_id = ? AND id = ?`, [e.utrwalPoRollback.stan_zrodla, T, e.utrwalPoRollback.zakup_id]); }
+   const zD = (await qx(`SELECT stan_zrodla, zwroty_suma FROM Term_Zakupy WHERE tenant_id = ? AND id = ?`, [T, D.z]))[0];
+   sprawdz('K13', widokD[0].skladniki[0].dostepny && k13 && k13.extra && k13.extra.code === 'ZRODLO' && zD.stan_zrodla === 'wycofane' && (await saldo(D.s)).R === 0, 'zwrot w Sprzedaży między podglądem a zapisem wykryty w transakcji; zakup „wycofane”, brak przydziału', `podgląd: dostępny; zapis: ${k13 && k13.message}; stan_zrodla=${zD.stan_zrodla}`);
+-  sprawdz('K13b', true, 'UWAGA: ochrona obejmuje ponowny odczyt Sprzedaz FOR SHARE w transakcji dodatku; edycja w rdzeniu NIE używa blokady salonu — zmiana po COMMIT dodatku jest wykrywana przy następnym sprawdzeniu (hash), nie natychmiast', 'ograniczenie kontraktu, nie dowód pełnej spójności');
++  sprawdz('K13b', true, 'UWAGA: ochrona obejmuje ponowny odczyt Sprzedaz (LOCK IN SHARE MODE) w transakcji dodatku; edycja w rdzeniu NIE używa blokady salonu — zmiana po COMMIT dodatku jest wykrywana przy następnym sprawdzeniu (hash), nie natychmiast', 'ograniczenie kontraktu, nie dowód pełnej spójności');
+ 
+   // ── A14: projekcja = wyliczenie z historii dla wszystkich składników salonu
+   const skl = await qx(`SELECT id, saldo_json FROM Term_Zakupy_Skladniki WHERE tenant_id = ?`, [T]); const repo0 = Z.repoSql(qx, T); const salda = await Z.domena.saldoSkladnikow(repo0, skl.map(s => s.id));
+diff --git a/tests/helpers/repoPamiec.js b/tests/helpers/repoPamiec.js
+index 5851f12..ea8569e 100644
+--- a/tests/helpers/repoPamiec.js
++++ b/tests/helpers/repoPamiec.js
+@@ -1,48 +1,71 @@
+ // tests/helpers/repoPamiec.js — repozytorium W PAMIĘCI o tym samym kontrakcie co repoSql() z routes/terminarz-zakupy.js.
+-// Służy do testów domeny (K01–K04, K09, K12) BEZ bazy. Nie dowodzi zachowania transakcji/blokad MariaDB (te wymagają
++// Służy do testów domeny (K01–K04, K09, K12, Z3-*) BEZ bazy. Nie dowodzi zachowania transakcji/blokad MariaDB (te wymagają
+ // izolowanej bazy — narzedzia/testy-integracyjne/terminarz-zakupy.js).
+ 'use strict';
++const { logika } = require('../../routes/terminarz-zakupy');
+ 
+ function repoPamiec(tenant, stan = {}) {
+-  const T = Object.assign({ zakupy: [], skladniki: [], ruchy: [], przydzialy: [], realizacje: [], operacje: [], pozycje: [], rezerwacje: [], sprzedaz: [], ewidencja: null, licznik: 0 }, stan);
++  const T = Object.assign({ zakupy: [], skladniki: [], ruchy: [], przydzialy: [], realizacje: [], operacje: [], pozycje: [], rezerwacje: [], sprzedaz: [], uslugi: [], oferty: [], wersje: [], wersjeSkladniki: [], ewidencja: null, licznik: 0 }, stan);
+   const id = () => ++T.licznik;
+-  const sklZ = (s) => { const z = T.zakupy.find(x => x.id === s.zakup_id) || {}; return { ...s, id_klienta: z.id_klienta, zakup_stan: z.stan, stan_zrodla: z.stan_zrodla, data_waznosci: z.data_waznosci, zakup_nazwa: z.nazwa, zrodlo_typ: z.zrodlo_typ, sprzedaz_id: z.sprzedaz_id, zrodlo_hash: z.zrodlo_hash, zrodlo_migawka_json: z.zrodlo_migawka_json, zwroty_suma: z.zwroty_suma, kwalifikacja: z.kwalifikacja, data_zakupu: z.data_zakupu }; };
++  const sklZ = (s) => { const z = T.zakupy.find(x => x.id === s.zakup_id) || {}; return { ...s, id_klienta: z.id_klienta, zakup_stan: z.stan, stan_zrodla: z.stan_zrodla, data_waznosci: z.data_waznosci, zakup_nazwa: z.nazwa, zrodlo_typ: z.zrodlo_typ, sprzedaz_id: z.sprzedaz_id, zrodlo_hash: z.zrodlo_hash, zrodlo_migawka_json: z.zrodlo_migawka_json, zrodla_json: z.zrodla_json, zwroty_suma: z.zwroty_suma, kwalifikacja: z.kwalifikacja, data_zakupu: z.data_zakupu, oferta_wersja_id: z.oferta_wersja_id }; };
+   const upd = (lista, idx, pola) => { const r = lista.find(x => x.id === idx); if (r) Object.assign(r, pola); };
++  const sprz = (row) => row ? { ...row } : null;
+   const repo = {
+     tenant, _T: T,
+     async skladniki(ids) { return T.skladniki.filter(s => ids.map(Number).includes(s.id)).map(sklZ); },
+     async skladnikiZakupow(zakupIds) { return T.skladniki.filter(s => zakupIds.includes(s.zakup_id)).map(sklZ); },
++    async skladnikiSalonu(filtr = {}) { return T.skladniki.filter(s => !filtr.stan_weryfikacji || s.stan_weryfikacji === filtr.stan_weryfikacji).map(sklZ); },
+     async zakupyKlientki(idKlienta) { return T.zakupy.filter(z => String(z.id_klienta) === String(idKlienta)).sort((a, b) => (a.data_waznosci ? 0 : 1) - (b.data_waznosci ? 0 : 1) || String(a.data_waznosci || '').localeCompare(String(b.data_waznosci || '')) || a.id - b.id); },
+-    async zakup(idx) { return T.zakupy.find(z => z.id === Number(idx)) || null; },
++    async zakup(idx) { const z = T.zakupy.find(x => x.id === Number(idx)); return z ? { ...z } : null; },
++    async zakupyPoSprzedazy(ids) { return T.zakupy.filter(z => ids.map(String).includes(String(z.sprzedaz_id))); },
++    async zakupyDoUzgodnienia(limit = 200) { return T.zakupy.filter(z => (z.zrodlo_typ || 'sprzedaz') === 'sprzedaz' && z.stan === 'aktywny').slice(0, limit); },
+     async ruchy(ids) { return T.ruchy.filter(r => ids.includes(r.skladnik_id)); },
+     async przydzialyPozycji(pozIds) { return T.przydzialy.filter(p => pozIds.map(Number).includes(p.pozycja_id)); },
+     async przydzial(idx) { const p = T.przydzialy.find(x => x.id === Number(idx)); return p ? { ...p } : null; },
+     async wstawPrzydzial(r) { const x = { id: id(), tenant_id: tenant, pozycja_id: r.pozycja_id, skladnik_id: r.skladnik_id, ilosc: r.ilosc, ilosc_zuzyta: 0, cykl: r.cykl || 1, stan: r.stan || 'zarezerwowany', operacja_id: r.operacja_id || null }; T.przydzialy.push(x); return x.id; },
+     async aktualizujPrzydzial(idx, pola) { upd(T.przydzialy, idx, pola); },
+     async realizacja(idx) { const r = T.realizacje.find(x => x.id === Number(idx)); return r ? { ...r } : null; },
+-    async realizacjePozycji(pozId) { return T.realizacje.filter(r => r.pozycja_id === Number(pozId)); },
++    async realizacjePozycji(pozIds) { return T.realizacje.filter(r => pozIds.map(Number).includes(r.pozycja_id)); },
+     async wstawRealizacje(r) { const x = { id: id(), tenant_id: tenant, stan: 'zapisana', odwrocona_przez: null, zrodlo: 'wizyta', ...r }; T.realizacje.push(x); return x.id; },
+     async aktualizujRealizacje(idx, pola) { upd(T.realizacje, idx, pola); },
+     async wstawRuch(r) { const x = { id: id(), tenant_id: tenant, kierunek: 1, historyczny: 0, przydzial_id: null, realizacja_id: null, operacja_id: null, odwraca_id: null, ...r }; T.ruchy.push(x); return x.id; },
+     async ruch(idx) { return T.ruchy.find(x => x.id === Number(idx)) || null; },
+-    async odwroceniaRuchu(idx) { return T.ruchy.filter(x => x.odwraca_id === Number(idx)); },
+     async zapiszSaldo(sid, saldo) { upd(T.skladniki, sid, { saldo_json: JSON.stringify(saldo) }); },
+     async aktualizujSkladnik(idx, pola) { upd(T.skladniki, idx, pola); },
+     async aktualizujZakup(idx, pola) { upd(T.zakupy, idx, pola); },
+-    async wstawZakup(r) { const x = { id: id(), tenant_id: tenant, stan: 'aktywny', stan_zrodla: 'ok', zrodlo_typ: 'sprzedaz', zwroty_suma: 0, wersja: 1, ...r }; T.zakupy.push(x); return x.id; },
+-    async wstawSkladnik(r) { const x = { id: id(), tenant_id: tenant, stan: 'aktywny', stan_weryfikacji: 'niezweryfikowany', zalezne_uzgodniono: 0, aktywny_od: null, jednostka_miary: 'sesja', jednostki_na_pozycje: 1, hist_wykorzystane: null, hist_wycofane: null, hist_potracone: null, ...r }; T.skladniki.push(x); return x.id; },
++    async wstawZakup(r) { if (T.zakupy.some(z => String(z.sprzedaz_id) === String(r.sprzedaz_id))) { const e = new Error('Duplicate entry'); e.code = 'ER_DUP_ENTRY'; throw e; } const x = { id: id(), tenant_id: tenant, stan: 'aktywny', stan_zrodla: 'ok', zrodlo_typ: 'sprzedaz', zwroty_suma: 0, wersja: 1, ...r }; T.zakupy.push(x); return x.id; },
++    async wstawSkladnik(r) { const x = { id: id(), tenant_id: tenant, stan: 'aktywny', stan_weryfikacji: 'niezweryfikowany', zalezne_uzgodniono: 0, aktywny_od: null, jednostka_miary: 'sesja', jednostki_na_pozycje: 1, hist_wykorzystane: null, hist_wycofane: null, hist_potracone: null, plan_json: null, plan_skrot: null, ...r }; T.skladniki.push(x); return x.id; },
+     async operacja(klucz) { return T.operacje.find(o => o.klucz === klucz) || null; },
+     async wstawOperacje(r) { const x = { id: id(), tenant_id: tenant, ...r }; T.operacje.push(x); return x.id; },
+     async aktualizujOperacje(idx, pola) { upd(T.operacje, idx, pola); },
+     async pozycja(idx) { const p = T.pozycje.find(x => x.id === Number(idx)); if (!p) return null; const rez = T.rezerwacje.find(r => r.id === p.rezerwacja_id) || {}; return { ...p, id_klienta: rez.id_klienta, klient_nazwa: rez.klient_nazwa, rez_wersja: rez.wersja, rez_status: rez.status }; },
+     async aktualizujPozycje(idx, pola) { upd(T.pozycje, idx, pola); },
+-    async zrodloSprzedaz(sid) { const row = T.sprzedaz.find(s => String(s.id) === String(sid)) || null; const zw = T.sprzedaz.filter(s => s.zwrot_do_id === String(sid) && s.status !== 'USUNIĘTY').reduce((a, s) => a + Math.abs(Number(s.kwota)), 0); return { row, zwrotySuma: zw }; },
+-    async ewidencja() { return T.ewidencja; },
+-    async zapiszEwidencje(pola) { T.ewidencja = Object.assign(T.ewidencja || { tenant_id: tenant, tryb: 'nie_uruchomiono' }, pola); },
++    async pozycjeKlientkiUslugi(idKlienta, uslugaId) {
++      return T.pozycje.filter(p => { const rez = T.rezerwacje.find(r => r.id === p.rezerwacja_id) || {}; return String(rez.id_klienta) === String(idKlienta) && String(p.usluga_id) === String(uslugaId) && !['anulowana', 'odrzucona', 'wygasla'].includes(rez.status) && ['zaplanowana', 'w_trakcie', 'przerwana'].includes(p.stan); })
++        .map(p => { const rez = T.rezerwacje.find(r => r.id === p.rezerwacja_id) || {}; return { id: p.id, rezerwacja_id: p.rezerwacja_id, usluga_id: p.usluga_id, kategoria: p.kategoria, wariant: p.wariant || null, pracownik: p.pracownik || null, start: p.start, stan: p.stan, rozliczenie: p.rozliczenie || null, rez_wersja: rez.wersja, rez_status: rez.status, aktywne_przydzialy: T.przydzialy.filter(a => a.pozycja_id === p.id && a.stan === 'zarezerwowany').length, zuzyte_przydzialy: T.przydzialy.filter(a => a.pozycja_id === p.id && a.stan === 'zuzyty').length }; }).sort((a, b) => String(a.start).localeCompare(String(b.start)));
++    },
++    async zrodloSprzedaz(sid) {
++      const row = sprz(T.sprzedaz.find(s => String(s.id) === String(sid) && String(s.status || 'AKTYWNY') !== '__brak__'));
++      if (!row) return { row: null, zwrotySuma: 0, paragon: [], powiazane: [] };
++      const baza = logika.bazaParagonu(sid);
++      const paragon = T.sprzedaz.filter(s => (String(s.id) === baza || String(s.id).startsWith(baza + '-')) && String(s.status || 'AKTYWNY') !== 'USUNIĘTY').map(sprz);
++      const dop = logika.powiazaneDoplaty(row, paragon);
++      const suma = (x) => T.sprzedaz.filter(s => String(s.zwrot_do_id) === String(x) && String(s.status || 'AKTYWNY') !== 'USUNIĘTY').reduce((a, s) => a + Math.abs(Number(s.kwota)), 0);
++      return { row, zwrotySuma: suma(sid), paragon, powiazane: dop.powiazane.map(p => ({ ...p, zwroty_suma: suma(p.id) })), kandydatki: dop.kandydatki.map(p => ({ ...p, zwroty_suma: suma(p.id) })), niejednoznaczne: dop.niejednoznaczne };
++    },
++    async sprzedazeDoPodgladu({ id_klienta, limit = 300 } = {}) { return T.sprzedaz.filter(s => !id_klienta || String(s.id_klienta) === String(id_klienta)).map(sprz).slice(0, limit); },
++    async paragony(bazy) { return T.sprzedaz.filter(s => bazy.some(b => String(s.id) === b || String(s.id).startsWith(b + '-')) && String(s.status || 'AKTYWNY') !== 'USUNIĘTY').map(sprz); },
++    async uslugiCennika() { return T.uslugi.map(u => ({ ...u, wariant: u.wariant || '' })); },
++    async wersjeOfert() { return T.wersje.map(w => ({ ...w, usluga_id: (T.oferty.find(o => o.id === w.oferta_id) || {}).usluga_id, skladniki: T.wersjeSkladniki.filter(s => s.wersja_id === w.id) })); },
++    async ewidencja() { return T.ewidencja ? { ...T.ewidencja } : null; },
++    async zapiszEwidencje(pola) { T.ewidencja = Object.assign(T.ewidencja || { tenant_id: tenant, tryb: 'nie_uruchomiono', przerwa_od: null }, pola); },
+     async aktywnePrzydzialySkladnika(sid) { return T.przydzialy.filter(p => p.skladnik_id === Number(sid) && p.stan === 'zarezerwowany'); },
++    async liczniki() { return { zakupy: T.zakupy.length, zweryfikowane: T.skladniki.filter(s => s.stan_weryfikacji === 'zweryfikowany').length, niezweryfikowane: T.skladniki.filter(s => s.stan_weryfikacji !== 'zweryfikowany').length, uruchomione: T.skladniki.filter(s => s.zalezne_uzgodniono && s.aktywny_od).length, z_planem: T.skladniki.filter(s => s.plan_json && !s.aktywny_od).length, zrodla_do_uzgodnienia: T.zakupy.filter(z => z.stan_zrodla !== 'ok').length, aktywne_przydzialy: T.przydzialy.filter(p => p.stan === 'zarezerwowany').length, realizacje: T.realizacje.filter(r => r.stan === 'zapisana').length, kwalifikacje_do_potwierdzenia: T.zakupy.filter(z => z.kwalifikacja === 'do_sprawdzenia').length }; },
+     // pomocnicze dla testów
+-    dodajPozycje(p) { const x = { id: id(), tenant_id: tenant, stan: 'zaplanowana', zakup_skladnik_id: null, jednostki_wymagane: 1, ...p }; T.pozycje.push(x); return x.id; },
++    dodajPozycje(p) { const x = { id: id(), tenant_id: tenant, stan: 'zaplanowana', zakup_skladnik_id: null, jednostki_wymagane: 1, rozliczenie: null, ...p }; T.pozycje.push(x); return x.id; },
+     dodajRezerwacje(r) { const x = { id: id(), tenant_id: tenant, status: 'potwierdzona', wersja: 1, ...r }; T.rezerwacje.push(x); return x.id; },
++    dodajUsluge(u) { T.uslugi.push({ wariant: '', ...u }); return u.id; },
++    dodajOferte(usluga_id, wersje) { const o = { id: id(), tenant_id: tenant, usluga_id, stan: 'zatwierdzona' }; T.oferty.push(o); for (const w of wersje) { const x = { id: id(), tenant_id: tenant, oferta_id: o.id, wersja: w.wersja || 1, rodzaj: w.rodzaj || 'pakiet', stan: w.stan || 'zatwierdzona', obowiazuje_od: w.od, obowiazuje_do: w.do || null }; T.wersje.push(x); for (const s of (w.skladniki || [])) T.wersjeSkladniki.push({ wersja_id: x.id, jednostka_miary: 'sesja', jednostki_na_pozycje: 1, ...s }); } return o.id; },
+     migawka() { return JSON.parse(JSON.stringify(T)); },
+     przywroc(m) { Object.assign(T, JSON.parse(JSON.stringify(m))); },
+   };
+diff --git a/tests/terminarz-zakupy-zk03.test.js b/tests/terminarz-zakupy-zk03.test.js
+new file mode 100644
+index 0000000..1e1a7d0
+--- /dev/null
++++ b/tests/terminarz-zakupy-zk03.test.js
+@@ -0,0 +1,312 @@
++// tests/terminarz-zakupy-zk03.test.js — ZK-03: klasyfikacja źródeł, rozbita sprzedaż, wersje, rejestracja, stan początkowy, istniejące wizyty,
++// uruchomienie, stan ewidencji (R4). RODZAJ PRÓB: jednostkowe na repozytorium w pamięci + kontrakt handlerów na atrapie bazy.
++// Próby na rzeczywistej bazie: narzedzia/testy-integracyjne/terminarz-zakupy.js.
++const request = require('supertest'); const express = require('express');
++const Z = require('../routes/terminarz-zakupy');
++const { repoPamiec } = require('./helpers/repoPamiec');
++const { logika, domena } = Z;
++
++const T = 'salon-test-003';
++const ctx = (tryb = 'aktywna', autor = 'Ola') => ({ tenant: T, autor, autor_id: 'u-ola', rola: 'manager', teraz: '2026-10-17 10:00:00', tryb, techniczna: tryb !== 'niedostepna', zapisany: tryb === 'niedostepna' ? 'aktywna' : tryb, widziKwoty: true });
++const DZIS = '2026-10-17';
++const saldo = async (repo, id) => (await domena.saldoSkladnikow(repo, [id]))[id];
++const sprzedaz = (repo, r) => { repo._T.sprzedaz.push({ status: 'AKTYWNY', kategoria_produktu: null, data_waznosci: null, karnet_zamkniety_w: null, grupa_id: null, zwrot_do_id: null, szczegoly: '', platnosc: 'Karta', ...r }); return r.id; };
++/** Cennik + oferta „Endermologia / 5x” = pakiet 5 × U-A (od 2026-01-01), „Pakiet 5A+4B” = 5 × U-A + 4 × U-B, „Endermologia / 1x” = nie_ewidencjonuj, „Meltivio / 1x” → brak mapowania. */
++function katalog(repo) {
++  repo.dodajUsluge({ id: 'U-A', kategoria: 'Endermologia', wariant: '1x' }); repo.dodajUsluge({ id: 'U-A5', kategoria: 'Endermologia', wariant: '5x' });
++  repo.dodajUsluge({ id: 'U-B', kategoria: 'Meltivio', wariant: '1x' }); repo.dodajUsluge({ id: 'U-AB', kategoria: 'Pakiet', wariant: '5A+4B' });
++  repo.dodajUsluge({ id: 'U-1Z', kategoria: 'Konsultacja', wariant: '1x z góry' });
++  repo.dodajOferte('U-A5', [{ wersja: 1, rodzaj: 'pakiet', od: '2026-01-01 00:00:00', skladniki: [{ usluga_wyk_id: 'U-A', jednostki: 5 }] }]);
++  repo.dodajOferte('U-AB', [{ wersja: 1, rodzaj: 'pakiet', od: '2026-01-01 00:00:00', skladniki: [{ usluga_wyk_id: 'U-A', jednostki: 5 }, { usluga_wyk_id: 'U-B', jednostki: 4 }] }]);
++  repo.dodajOferte('U-A', [{ wersja: 1, rodzaj: 'nie_ewidencjonuj', od: '2026-01-01 00:00:00', skladniki: [] }]);
++  repo.dodajOferte('U-1Z', [{ wersja: 1, rodzaj: 'pojedynczy_z_gory', od: '2026-01-01 00:00:00', skladniki: [{ usluga_wyk_id: 'U-1Z', jednostki: 1 }] }]);
++}
++const pozycja = (repo, { id_klienta = '1001', usluga_id = 'U-A', start = `${DZIS} 12:00:00`, stan = 'zaplanowana' } = {}) => { const rez = repo.dodajRezerwacje({ id_klienta, klient_nazwa: 'K ' + id_klienta }); return repo.dodajPozycje({ rezerwacja_id: rez, usluga_id, start, kategoria: 'Endermologia', stan }); };
++
++describe('Z3-01 — klasyfikacja źródeł (Z3-T10, T11, T12, T13, T14, T15, T16)', () => {
++  test('T13: produkt, zwrot, dopłata, sam portfel (brak wiersza), bez ID klientki, „1x” nie_ewidencjonuj → zero jednostek z jasnym powodem', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'P1-1', id_klienta: '1001', zabieg: 'Kosmetyk: Krem', szczegoly: '1 szt.', kategoria_produktu: 'Kosmetyk', kwota: 100, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'P2-1', id_klienta: '1001', zabieg: 'ZWROT: Endermologia', szczegoly: '', kwota: -200, zwrot_do_id: 'X-1', data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'P3-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '1x', kwota: 200, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'P4-1', id_klienta: null, zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'P5-1', id_klienta: '1001', zabieg: 'Meltivio', szczegoly: '1x', kwota: 300, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'P6-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '2 przyłożenia', kwota: 300, data_sprzedazy: '2026-10-10 10:00:00' });
++    const w = await domena.podgladZrodel(repo, c, { id_klienta: null });
++    const k = Object.fromEntries(w.pozycje.map(p => [p.sprzedaz_id, p]));
++    expect(k['P1-1']).toMatchObject({ kategoria: 'pominiete', powod: 'produkt' });
++    expect(k['P2-1']).toMatchObject({ kategoria: 'pominiete', powod: 'wiersz zwrotu' });
++    expect(k['P3-1']).toMatchObject({ kategoria: 'pominiete', rodzaj: 'nie_ewidencjonuj' });
++    expect(k['P4-1']).toMatchObject({ kategoria: 'wymaga_rozstrzygniecia' }); expect(k['P4-1'].powod).toMatch(/ID klientki/);
++    expect(k['P5-1']).toMatchObject({ kategoria: 'wymaga_mapowania' }); // brak zatwierdzonego mapowania
++    expect(k['P6-1']).toMatchObject({ kategoria: 'wymaga_mapowania' }); // „2 przyłożenia” nie ma pozycji w cenniku → nie zgadujemy
++    expect(w.pozycje.every(p => p.kategoria !== 'gotowe')).toBe(true);
++    expect(repo._T.zakupy).toHaveLength(0); expect(repo._T.ruchy).toHaveLength(0); // podgląd nie mutuje (Z3-T18)
++  });
++  test('T10: dwa powielone wiersze oferty 5A+4B (grupa_id) → dwa źródła, 10 A i 8 B, bez mnożnika z grupy', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'G1-1', id_klienta: '1001', zabieg: 'Pakiet', szczegoly: '5A+4B', kwota: 2000, grupa_id: 'GRP-1', data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'G1-2', id_klienta: '1001', zabieg: 'Pakiet', szczegoly: '5A+4B', kwota: 2000, grupa_id: 'GRP-1', data_sprzedazy: '2026-10-10 10:00:00' });
++    const w = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'G1-1' }, { sprzedaz_id: 'G1-2' }] });
++    expect(w.zarejestrowano).toBe(2); expect(repo._T.zakupy).toHaveLength(2);
++    const sumy = {}; for (const s of repo._T.skladniki) sumy[s.usluga_wyk_id] = (sumy[s.usluga_wyk_id] || 0) + (await saldo(repo, s.id)).G;
++    expect(sumy).toEqual({ 'U-A': 10, 'U-B': 8 });
++    expect(repo._T.skladniki.every(s => s.stan_weryfikacji === 'niezweryfikowany')).toBe(true); // rejestracja nie zakłada zera (§6.3)
++  });
++  test('T11/T12: rozbita sprzedaż (200 zł z portfela + 800 zł dopłaty) → jeden pakiet; zwrot 100 zł przypisany do dopłaty wykrywany jako zmiana tego zakupu', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'R1-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 200, platnosc: 'Portfel', data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'R1-2', id_klienta: '1001', zabieg: 'Endermologia Dopłata', szczegoly: '', kwota: 800, platnosc: 'Karta', data_sprzedazy: '2026-10-10 10:00:00' });
++    const pod = await domena.podgladZrodel(repo, c, {});
++    expect(pod.pozycje.find(p => p.sprzedaz_id === 'R1-1')).toMatchObject({ kategoria: 'gotowe', powiazane: ['R1-2'] });
++    expect(pod.pozycje.find(p => p.sprzedaz_id === 'R1-2')).toMatchObject({ kategoria: 'pominiete' }); expect(pod.pozycje.find(p => p.sprzedaz_id === 'R1-2').powod).toMatch(/dopłaty/);
++    const w = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'R1-1' }, { sprzedaz_id: 'R1-2' }] });
++    expect(w.zarejestrowano).toBe(1); expect(repo._T.zakupy).toHaveLength(1); expect(JSON.parse(repo._T.zakupy[0].zrodla_json)).toEqual(['R1-2']);
++    expect((await saldo(repo, repo._T.skladniki[0].id)).G).toBe(5);
++    const z = await repo.zakup(repo._T.zakupy[0].id); expect((await domena.uzgodnijZrodlo(repo, c, z)).zmiana).toBe('brak');
++    sprzedaz(repo, { id: 'R9-1', id_klienta: '1001', zabieg: 'ZWROT: Endermologia Dopłata', kwota: -100, zwrot_do_id: 'R1-2', data_sprzedazy: '2026-10-12 10:00:00' }); // zwrot do DOPŁATY (kanoniczne ID wskazuje inny wiersz)
++    const u = await domena.uzgodnijZrodlo(repo, c, await repo.zakup(z.id));
++    expect(u.zmiana).toBe('zwrot'); expect(u.stan_zrodla).toBe('do_uzgodnienia'); // częściowy zwrot pieniężny = zakres do ustalenia, nie 5→4
++    expect((await saldo(repo, repo._T.skladniki[0].id)).G).toBe(5); // brak przeliczenia kwoty na sesje
++  });
++  test('rozbita sprzedaż z dwiema pozycjami tej samej oferty bez grupy → dopłata niejednoznaczna → do rozstrzygnięcia; jawne wskazanie powiązania rejestruje', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'N1-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 500, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'N1-2', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'N1-3', id_klienta: '1001', zabieg: 'Endermologia Dopłata', szczegoly: '', kwota: 400, data_sprzedazy: '2026-10-10 10:00:00' });
++    const pod = await domena.podgladZrodel(repo, c, {});
++    expect(pod.pozycje.find(p => p.sprzedaz_id === 'N1-1').kategoria).toBe('wymaga_rozstrzygniecia');
++    const w = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'N1-1', powiazane: ['N1-3'] }, { sprzedaz_id: 'N1-2', powiazane: [] }] });
++    expect(w.zarejestrowano).toBe(2); expect(JSON.parse(repo._T.zakupy[0].zrodla_json)).toEqual(['N1-3']); expect(JSON.parse(repo._T.zakupy[1].zrodla_json)).toEqual([]);
++  });
++  test('T14: jawna oferta „1× na przyszłość” → jedna jednostka, kwalifikacja do potwierdzenia per zakup; powtórzenie nie zwiększa G; inna sprzedaż „1x” tej samej usługi nie otwiera się', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'J1-1', id_klienta: '1001', zabieg: 'Konsultacja', szczegoly: '1x z góry', kwota: 150, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'J2-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '1x', kwota: 200, data_sprzedazy: '2026-10-10 10:00:00' });
++    const w1 = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'J1-1' }, { sprzedaz_id: 'J2-1' }] });
++    expect(w1.zarejestrowano).toBe(1); expect(w1.wyniki.find(x => x.sprzedaz_id === 'J2-1').wynik).toBe('pominiete');
++    const z = repo._T.zakupy[0]; expect(z.kwalifikacja).toBe('do_sprawdzenia'); const s = repo._T.skladniki[0]; expect((await saldo(repo, s.id)).G).toBe(1);
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s.id, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' });
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: s.id, potwierdzenie_zaleznych: true })).rejects.toMatchObject({ extra: { code: 'KWALIFIKACJA' } });
++    await domena.kwalifikujZakup(repo, c, { zakup_id: z.id, kwalifikacja: 'pojedynczy_z_gory', powod: 'klientka zapłaciła z góry, zabieg nie odbył się' });
++    await domena.uruchomSkladnik(repo, c, { skladnik_id: s.id, potwierdzenie_zaleznych: true });
++    const w2 = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'J1-1' }] }); expect(w2.istnialo).toBe(1); expect((await saldo(repo, s.id)).G).toBe(1);
++  });
++  test('T15/T16/T17: wersja wg daty sprzedaży; sprzedaż sprzed mapowania i dwie wersje tego samego dnia → rozstrzygnięcie; ponowny import nie dubluje', async () => {
++    const repo = repoPamiec(T); const c = ctx();
++    repo.dodajUsluge({ id: 'U-A', kategoria: 'Endermologia', wariant: '1x' }); repo.dodajUsluge({ id: 'U-A5', kategoria: 'Endermologia', wariant: '5x' }); repo.dodajUsluge({ id: 'U-B', kategoria: 'Meltivio', wariant: '1x' });
++    repo.dodajOferte('U-A5', [{ wersja: 1, rodzaj: 'pakiet', od: '2026-06-01 09:00:00', do: '2026-10-15 09:00:00', skladniki: [{ usluga_wyk_id: 'U-A', jednostki: 5 }] }, { wersja: 2, rodzaj: 'pakiet', od: '2026-10-15 09:00:00', skladniki: [{ usluga_wyk_id: 'U-A', jednostki: 4 }, { usluga_wyk_id: 'U-B', jednostki: 1 }] }]);
++    sprzedaz(repo, { id: 'W1-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-09-01 10:00:00' }); // stara wersja (5 A)
++    sprzedaz(repo, { id: 'W2-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-16 10:00:00' }); // nowa wersja (4 A + 1 B)
++    sprzedaz(repo, { id: 'W3-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-05-01 10:00:00' }); // sprzed mapowania
++    sprzedaz(repo, { id: 'W4-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-15 18:00:00' }); // dzień zmiany wersji
++    const pod = await domena.podgladZrodel(repo, c, {}); const k = Object.fromEntries(pod.pozycje.map(p => [p.sprzedaz_id, p]));
++    expect(k['W1-1']).toMatchObject({ kategoria: 'gotowe', wersja: 1 }); expect(k['W2-1']).toMatchObject({ kategoria: 'gotowe', wersja: 2 });
++    expect(k['W3-1'].kategoria).toBe('wymaga_rozstrzygniecia'); expect(k['W3-1'].powod).toMatch(/sprzed pierwszej wersji/);
++    expect(k['W4-1'].kategoria).toBe('wymaga_rozstrzygniecia'); expect(k['W4-1'].powod).toMatch(/dwie wersje/);
++    const w = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'W1-1' }, { sprzedaz_id: 'W2-1' }, { sprzedaz_id: 'W3-1' }, { sprzedaz_id: 'W4-1' }] });
++    expect(w.zarejestrowano).toBe(2); expect(w.wyniki.filter(x => x.wynik === 'wymaga_rozstrzygniecia')).toHaveLength(2);
++    const z1 = repo._T.zakupy.find(z => z.sprzedaz_id === 'W1-1'), z2 = repo._T.zakupy.find(z => z.sprzedaz_id === 'W2-1');
++    expect(repo._T.skladniki.filter(s => s.zakup_id === z1.id).map(s => s.jednostki_przyznane)).toEqual([5]); expect(repo._T.skladniki.filter(s => s.zakup_id === z2.id).map(s => s.jednostki_przyznane)).toEqual([4, 1]);
++    const w3 = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'W3-1', wersja_id: repo._T.wersje[0].id }] }); expect(w3.zarejestrowano).toBe(1); // jawne wskazanie wersji
++    const przed = repo._T.ruchy.length; const w4 = await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'W2-1' }, { sprzedaz_id: 'W1-1' }, { sprzedaz_id: 'W3-1' }] });
++    expect(w4.istnialo).toBe(3); expect(w4.zarejestrowano).toBe(0); expect(repo._T.ruchy.length).toBe(przed); expect(repo._T.zakupy).toHaveLength(3); // T17: inna kolejność, bez duplikatów
++  });
++  test('T26: dwie klientki o tej samej nazwie — własność po ID; zakup obcej klientki niewidoczny i odrzucany', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'S1-1', id_klienta: '1001', klient: 'Anna Nowak', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    sprzedaz(repo, { id: 'S2-1', id_klienta: '1002', klient: 'Anna Nowak', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'S1-1' }, { sprzedaz_id: 'S2-1' }] });
++    expect((await Z.widokZakupow(repo, c, { id_klienta: '1001' })).map(z => z.sprzedaz_id)).toEqual(['S1-1']);
++    const s2 = repo._T.skladniki.find(s => s.zakup_id === repo._T.zakupy[1].id);
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s2.id, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' }); await domena.uruchomSkladnik(repo, c, { skladnik_id: s2.id, potwierdzenie_zaleznych: true });
++    await expect(domena.rezerwuj(repo, c, { pozycje: [{ pozycja_id: pozycja(repo, { id_klienta: '1001' }), skladnik_id: s2.id, usluga_id: 'U-A' }], id_klienta: '1001', data: DZIS, uslugaPozycji: p => p.usluga_id })).rejects.toMatchObject({ extra: { code: 'WLASCICIEL' } });
++  });
++});
++
++describe('Z3-04/05/06 — stan początkowy, istniejące wizyty, uruchomienie (T19, T20, T21, T22, T23, T24, T25, T28)', () => {
++  async function pakiet10(repo, c, idK = '1001') { const r = await domena.przyznaj(repo, ctx('aktywna'), { id_klienta: idK, usluga_wyk_id: 'U-A', usluga_nazwa: 'Endermologia', jednostki: 10, powod: 'zestaw D', zweryfikowany: false }); return r.skladnik_id; }
++  test('T20: puste pole ≠ zero; nieprawidłowy bilans odrzucony; ponowny zapis tego samego stanu nie dodaje ruchów', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await pakiet10(repo, c);
++    await expect(domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 3, hist_wycofane: '', hist_potracone: 0, zrodlo_ustalen: 'x' })).rejects.toMatchObject({ extra: { code: 'PUSTE_POLE', pole: 'W' } });
++    await expect(domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 11, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' })).rejects.toMatchObject({ extra: { code: 'BILANS_NIEMOZLIWY' } });
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 3, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'karta klientki' });
++    const n = repo._T.ruchy.length; const w = await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 3, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'karta klientki' });
++    expect(w.powtorzenie).toBe(true); expect(repo._T.ruchy.length).toBe(n); expect(await saldo(repo, s)).toMatchObject({ G: 10, U: 3, U_hist: 3, B: 7 });
++  });
++  test('T21/T23: G=10, U_hist=3, 6 istniejących wizyt (w tym przeszła nierozstrzygnięta i odległa) → po uruchomieniu R=6, B=1; bez drugiego U', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await pakiet10(repo, c);
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 3, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' });
++    const poz = [pozycja(repo, { start: '2026-10-10 10:00:00', stan: 'w_trakcie' }), pozycja(repo, { start: '2026-10-20 10:00:00' }), pozycja(repo, { start: '2026-10-27 10:00:00' }), pozycja(repo, { start: '2026-11-03 10:00:00' }), pozycja(repo, { start: '2026-11-10 10:00:00' }), pozycja(repo, { start: '2027-01-05 10:00:00' })];
++    pozycja(repo, { id_klienta: '1002' }); pozycja(repo, { usluga_id: 'U-B' }); // inna klientka / inna usługa — nie są kandydatami
++    const kand = await domena.kandydaciWizyt(repo, c, { skladnik_id: s });
++    expect(kand.kandydaci).toHaveLength(6); expect(kand.kandydaci[0].przeszla).toBe(true); expect(kand.niedobor).toBe(0); expect(kand.saldo.B).toBe(7);
++    const w = await domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: poz.map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), skrot: kand.skrot, potwierdzenie_zaleznych: true });
++    expect(w.plan).toBe(false); expect(w.przydzialy).toHaveLength(6); expect(await saldo(repo, s)).toMatchObject({ G: 10, U: 3, R: 6, B: 1 });
++    const w2 = await domena.wykonaj(repo, c, { pozycja_id: poz[1] }); expect(w2.zuzyto).toBe(1); expect(await saldo(repo, s)).toMatchObject({ U: 4, R: 5, B: 1 });
++    expect((await domena.kandydaciWizyt(repo, c, { skladnik_id: s })).kandydaci.filter(k => !k.juz_powiazana)).toHaveLength(0); // ponowne powiązanie niemożliwe
++  });
++  test('T22: 5 praw i 7 wizyt → bez decyzji dla 2 wizyt odmowa; 5 powiązań + 2 jawne decyzje; nic nie znika, brak minusa', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await pakiet10(repo, c);
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 5, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' });
++    const poz = Array.from({ length: 7 }, (_, i) => pozycja(repo, { start: `2026-11-${String(i + 3).padStart(2, '0')} 10:00:00` }));
++    const kand = await domena.kandydaciWizyt(repo, c, { skladnik_id: s }); expect(kand.niedobor).toBe(2);
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: poz.map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), skrot: kand.skrot, potwierdzenie_zaleznych: true })).rejects.toMatchObject({ extra: { code: 'NIEDOBOR', dostepne: 5, potrzeba: 7 } });
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: poz.slice(0, 5).map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), skrot: kand.skrot, potwierdzenie_zaleznych: true })).rejects.toMatchObject({ extra: { code: 'BRAK_DECYZJI' } });
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: [...poz.slice(0, 5).map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), { pozycja_id: poz[5], decyzja: 'wyjasnienie' }, { pozycja_id: poz[6], decyzja: 'jednorazowa' }], skrot: kand.skrot, potwierdzenie_zaleznych: true })).rejects.toMatchObject({ extra: { code: 'BRAK_UZASADNIENIA' } });
++    const w = await domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: [...poz.slice(0, 5).map(p => ({ pozycja_id: p, decyzja: 'powiaz' })), { pozycja_id: poz[5], decyzja: 'wyjasnienie', uzasadnienie: 'brak zakupu na 6. zabieg' }, { pozycja_id: poz[6], decyzja: 'jednorazowa' }], skrot: kand.skrot, potwierdzenie_zaleznych: true });
++    expect(w.przydzialy).toHaveLength(5); expect(w.do_wyjasnienia).toEqual([poz[5]]); expect(await saldo(repo, s)).toMatchObject({ U: 5, R: 5, B: 0 });
++    expect(repo._T.pozycje.filter(p => poz.includes(p.id))).toHaveLength(7); expect((await repo.pozycja(poz[6])).rozliczenie).toBe('pojedynczy');
++  });
++  test('T24: nowa zgodna wizyta między podglądem a uruchomieniem → stary podgląd odrzucony, brak częściowego uruchomienia', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await pakiet10(repo, c);
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' });
++    const p1 = pozycja(repo); const kand = await domena.kandydaciWizyt(repo, c, { skladnik_id: s });
++    const p2 = pozycja(repo, { start: '2026-11-20 10:00:00' }); // nowa wizyta po podglądzie
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: [{ pozycja_id: p1, decyzja: 'powiaz' }], skrot: kand.skrot, potwierdzenie_zaleznych: true })).rejects.toMatchObject({ extra: { code: 'PODGLAD_NIEAKTUALNY' } });
++    expect(repo._T.przydzialy).toHaveLength(0); expect((await repo.skladniki([s]))[0].aktywny_od).toBeNull();
++    const kand2 = await domena.kandydaciWizyt(repo, c, { skladnik_id: s });
++    const w = await domena.uruchomSkladnik(repo, c, { skladnik_id: s, decyzje: [{ pozycja_id: p1, decyzja: 'powiaz' }, { pozycja_id: p2, decyzja: 'powiaz' }], skrot: kand2.skrot, potwierdzenie_zaleznych: true }); expect(w.przydzialy).toHaveLength(2);
++  });
++  test('plan w trybie przygotowania nie tworzy R; uruchomienie z planu po aktywacji weryfikuje aktualność i tworzy R', async () => {
++    const repo = repoPamiec(T); const s = await pakiet10(repo, ctx());
++    const cp = ctx('przygotowanie'); await domena.weryfikujSkladnik(repo, cp, { skladnik_id: s, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' });
++    const p1 = pozycja(repo); const kand = await domena.kandydaciWizyt(repo, cp, { skladnik_id: s });
++    const plan = await domena.uruchomSkladnik(repo, cp, { skladnik_id: s, decyzje: [{ pozycja_id: p1, decyzja: 'powiaz' }], skrot: kand.skrot, potwierdzenie_zaleznych: true });
++    expect(plan.plan).toBe(true); expect(repo._T.przydzialy).toHaveLength(0); expect((await saldo(repo, s)).R).toBe(0);
++    const w = await domena.uruchomSkladnik(repo, ctx('aktywna'), { skladnik_id: s, z_planu: true }); expect(w.przydzialy).toHaveLength(1); expect((await saldo(repo, s)).R).toBe(1);
++  });
++  test('T25: ta sama usługa z dwóch zakupów na jednej pozycji (2 jednostki) — oba powiązania zachowane po wykonaniu i odwróceniu; alias = pole zgodności', async () => {
++    const repo = repoPamiec(T); const c = ctx();
++    const a = await domena.przyznaj(repo, c, { id_klienta: '1001', usluga_wyk_id: 'U-A', jednostki: 1, data_waznosci: '2026-11-30', powod: 'a' }); const b = await domena.przyznaj(repo, c, { id_klienta: '1001', usluga_wyk_id: 'U-A', jednostki: 1, data_waznosci: '2026-12-31', powod: 'b' });
++    const poz = pozycja(repo);
++    const w = await domena.rezerwuj(repo, c, { pozycje: [{ pozycja_id: poz, skladnik_id: a.skladnik_id, usluga_id: 'U-A' }, { pozycja_id: poz, skladnik_id: b.skladnik_id, usluga_id: 'U-A' }], id_klienta: '1001', data: DZIS, uslugaPozycji: p => p.usluga_id });
++    expect(w.przydzialy).toHaveLength(2); expect((await repo.pozycja(poz))).toMatchObject({ zakup_skladnik_id: a.skladnik_id, jednostki_wymagane: 2 });
++    const wyk = await domena.wykonaj(repo, c, { pozycja_id: poz }); expect(wyk.zuzyto).toBe(2); expect(wyk.realizacje.map(r => r.skladnik_id).sort()).toEqual([a.skladnik_id, b.skladnik_id].sort());
++    expect(await saldo(repo, a.skladnik_id)).toMatchObject({ U: 1, R: 0 }); expect(await saldo(repo, b.skladnik_id)).toMatchObject({ U: 1, R: 0 });
++    const k = await domena.odwrocRealizacje(repo, c, { realizacja_id: wyk.realizacje[1].id, wynik: 'odbedzie_sie', powod: 'x', data: DZIS });
++    expect(await saldo(repo, b.skladnik_id)).toMatchObject({ U: 0, R: 1 }); expect(await saldo(repo, a.skladnik_id)).toMatchObject({ U: 1, R: 0 }); expect(k.nowy_przydzial_id).toBeTruthy();
++    const prz = await repo.przydzialyPozycji([poz]); // pochodzenie obu jednostek odtwarzalne: zużyty A, zużyty B (historia) + nowy zarezerwowany B (cykl 2)
++    expect(prz.map(p => [p.skladnik_id, p.stan, p.cykl]).sort()).toEqual([[a.skladnik_id, 'zuzyty', 1], [b.skladnik_id, 'zuzyty', 1], [b.skladnik_id, 'zarezerwowany', 2]].sort());
++  });
++  test('T28: ponowienie operacji rejestracji/uruchomienia z tym samym kluczem zwraca ten sam wynik bez drugiego G/R', async () => {
++    const repo = repoPamiec(T); katalog(repo); const c = ctx();
++    sprzedaz(repo, { id: 'X1-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    const dane = { pozycje: [{ sprzedaz_id: 'X1-1' }] };
++    const r1 = await domena.operacja(repo, c, { klucz: 'REJ-1', rodzaj: 'rejestracja', dane }, (oid) => domena.zarejestrujZakupy(repo, c, { ...dane, operacja_id: oid }));
++    const r2 = await domena.operacja(repo, c, { klucz: 'REJ-1', rodzaj: 'rejestracja', dane }, (oid) => domena.zarejestrujZakupy(repo, c, { ...dane, operacja_id: oid }));
++    expect(r1.powtorzenie).toBe(false); expect(r2.powtorzenie).toBe(true); expect(r2.wynik).toEqual(r1.wynik); expect(repo._T.zakupy).toHaveLength(1); expect(repo._T.ruchy.filter(r => r.typ === 'G')).toHaveLength(1);
++  });
++});
++
++describe('R2/R4 — kontrola źródła przy wykonaniu i stan ewidencji przy braku dostępności technicznej', () => {
++  async function zakupZeSprzedazy(repo, c) {
++    katalog(repo); sprzedaz(repo, { id: 'Q1-1', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10 10:00:00' });
++    await domena.zarejestrujZakupy(repo, c, { pozycje: [{ sprzedaz_id: 'Q1-1' }] }); const s = repo._T.skladniki[0].id;
++    await domena.weryfikujSkladnik(repo, c, { skladnik_id: s, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'x' }); await domena.uruchomSkladnik(repo, c, { skladnik_id: s, potwierdzenie_zaleznych: true });
++    return s;
++  }
++  test('Z3-T03: zwrot zatwierdzony przed wykonaniem (po wcześniejszej rezerwacji) → wykonanie odrzucone, bez U; zwolnienie po odwołaniu nadal spójne', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await zakupZeSprzedazy(repo, c);
++    const poz = pozycja(repo); await domena.rezerwuj(repo, c, { pozycje: [{ pozycja_id: poz, skladnik_id: s, usluga_id: 'U-A' }], id_klienta: '1001', data: DZIS, uslugaPozycji: p => p.usluga_id });
++    sprzedaz(repo, { id: 'Q9-1', id_klienta: '1001', zabieg: 'ZWROT: Endermologia', kwota: -900, zwrot_do_id: 'Q1-1', data_sprzedazy: '2026-10-16 10:00:00' });
++    await expect(domena.wykonaj(repo, c, { pozycja_id: poz })).rejects.toMatchObject({ extra: { code: 'ZRODLO', zmiana: 'zwrot' } });
++    expect(await saldo(repo, s)).toMatchObject({ U: 0, R: 1 }); expect(repo._T.realizacje).toHaveLength(0);
++    const z = await domena.zwolnij(repo, c, { pozycja_id: poz, powod: 'odwołanie' }); expect(z.zwolniono).toBe(1); // zwolnienie spójne mimo wycofanego źródła
++    const wid = (await Z.widokZakupow(repo, c, { id_klienta: '1001' }))[0]; // B matematyczne (5, bo W ustala manager w uzgodnieniu) ≠ dostępność (źródło wycofane)
++    expect(wid.skladniki[0]).toMatchObject({ dostepny: false, do_umowienia: 5, umowione: 0 }); expect(wid.skladniki[0].powod).toMatch(/wycofany/); expect(wid.stan_zrodla).toBe('wycofane');
++  });
++  test('kontrola źródła także przy zmianie źródła, potrąceniu i korekcie; zmiana opisowa nie blokuje', async () => {
++    const repo = repoPamiec(T); const c = ctx(); const s = await zakupZeSprzedazy(repo, c);
++    const poz = pozycja(repo); const w = await domena.rezerwuj(repo, c, { pozycje: [{ pozycja_id: poz, skladnik_id: s, usluga_id: 'U-A' }], id_klienta: '1001', data: DZIS, uslugaPozycji: p => p.usluga_id });
++    repo._T.sprzedaz[0].kwota = 850; // opisowa
++    expect((await domena.wykonaj(repo, c, { pozycja_id: poz })).zuzyto).toBe(1);
++    repo._T.sprzedaz[0].id_klienta = '1002'; // zmiana właściciela w rdzeniu
++    await expect(domena.odwrocRealizacje(repo, c, { realizacja_id: repo._T.realizacje[0].id, wynik: 'odbedzie_sie', powod: 'x', data: DZIS })).rejects.toMatchObject({ extra: { code: 'ZRODLO', zmiana: 'istotna' } });
++    expect(await saldo(repo, s)).toMatchObject({ U: 1, R: 0 }); // odrzucenie nie zmieniło salda (brak wolnej jednostki bez prawa)
++  });
++  test('R4 (Z3-T07/T08): bez dostępności technicznej mutacje z przydziałem odrzucone (stan zapisany nie maskowany); zwykłe zwolnienie bez przydziałów działa; przerwa wymaga uzgodnienia', async () => {
++    const repo = repoPamiec(T); const c = ctx();
++    await domena.ustawEwidencje(repo, c, { tryb: 'przygotowanie' }); await domena.ustawEwidencje(repo, c, { tryb: 'aktywna' });
++    const s = (await domena.przyznaj(repo, c, { id_klienta: '1001', usluga_wyk_id: 'U-A', jednostki: 2, powod: 'x' })).skladnik_id;
++    const poz = pozycja(repo); await domena.rezerwuj(repo, c, { pozycje: [{ pozycja_id: poz, skladnik_id: s, usluga_id: 'U-A' }], id_klienta: '1001', data: DZIS, uslugaPozycji: p => p.usluga_id });
++    const cn = ctx('niedostepna');
++    await expect(domena.zwolnij(repo, cn, { pozycja_id: poz, powod: 'odwołanie' })).rejects.toMatchObject({ extra: { code: 'EWIDENCJA_NIEDOSTEPNA', tryb: 'aktywna' } });
++    await expect(domena.wykonaj(repo, cn, { pozycja_id: poz })).rejects.toMatchObject({ extra: { code: 'EWIDENCJA_NIEDOSTEPNA' } });
++    expect((await domena.zwolnij(repo, cn, { pozycja_id: pozycja(repo), powod: 'x' })).zwolniono).toBe(0); // pozycja bez przydziału: nic do zrobienia, bez błędu
++    expect(await saldo(repo, s)).toMatchObject({ G: 2, R: 1 }); expect(repo._T.przydzialy).toHaveLength(1); expect((await repo.ewidencja()).tryb).toBe('aktywna');
++    expect(logika.powodNiedostepnosci({ stan: 'aktywny', stan_weryfikacji: 'zweryfikowany', zalezne_uzgodniono: 1, aktywny_od: 'x' }, { stan: 'aktywny' }, logika.saldo([{ typ: 'G', ilosc: 2 }]), DZIS, 'uzgadnianie')).toMatch(/uzgodnienia/);
++    await repo.zapiszEwidencje({ przerwa_od: '2026-10-17 11:00:00' }); // znacznik przerwy (zapisuje router po odmowie)
++    const w = await domena.ustawEwidencje(repo, ctx('uzgadnianie'), { tryb: 'aktywna' }); expect(w).toMatchObject({ poprzedni: 'uzgadnianie', przerwa_zamknieta: true }); expect((await repo.ewidencja()).przerwa_od).toBeNull();
++    expect(repo._T.ruchy.filter(r => r.typ === 'G')).toHaveLength(1); // ponowne dopuszczenie nie przyznaje G drugi raz
++  });
++});
++
++// ═════════ kontrakt handlerów (R4 Z3-T07, R6 Z3-T04) na atrapie bazy ═════════
++function schematRows(zV2) { const rows = Z.TABELE_V1.map(t => ({ t, c: 'id', ct: 'int(11)' })); if (zV2) for (const [k, ct] of Object.entries(Z.oczekiwaneKolumny())) rows.push({ t: k.split('.')[0], c: k.split('.')[1], ct }); return rows; }
++function atrapaBazy(odpowiedzi) {
++  const zap = []; let insertId = 100;
++  const wykonaj = (sql, params) => { zap.push({ sql: String(sql), params: params || [] }); for (const [re, w] of odpowiedzi) if (re.test(sql)) return typeof w === 'function' ? w(sql, params) : w; if (/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE)/i.test(sql)) return { insertId: ++insertId, affectedRows: 1 }; return []; };
++  const query = (sql, p, cb) => { const c = typeof p === 'function' ? p : cb; const params = typeof p === 'function' ? [] : p; let w; try { w = wykonaj(sql, params); } catch (e) { return c && c(e); } if (c) c(null, w); };
++  const conn = { query, beginTransaction: (cb) => { zap.push({ sql: 'BEGIN' }); cb(null); }, commit: (cb) => { zap.push({ sql: 'COMMIT' }); cb(null); }, rollback: (cb) => { zap.push({ sql: 'ROLLBACK' }); cb(); }, release: () => {} };
++  return { query, getConnection: (cb) => cb(null, conn), zap };
++}
++const USTAWIENIA = { tenant_id: T, tryb: 'wewnetrzny', siatka_min: 15, tolerancja_min: 10, horyzont_dni: 90, wyprzedzenie_min: 0, godziny_json: JSON.stringify({ 1: [{ od: '08:00', do: '20:00' }], 2: [{ od: '08:00', do: '20:00' }], 3: [{ od: '08:00', do: '20:00' }], 4: [{ od: '08:00', do: '20:00' }], 5: [{ od: '08:00', do: '20:00' }], 6: [{ od: '08:00', do: '20:00' }], 7: [] }), wersja: 1, kontrola_zakupow: 'off' };
++const BAZOWE = [[/SELECT rola FROM Użytkownicy/, [{ rola: 'manager' }]], [/SELECT id FROM Użytkownicy/, [{ id: 'u-ola' }]], [/IS_FREE_LOCK/, [{ w: 1 }]], [/GET_LOCK/, [{ l: 1 }]], [/FROM Term_Grafik WHERE/, [1, 2, 3, 4, 5, 6, 7].map(dz => ({ id: dz, pracownik: 'Anna', dzien_tyg: dz, od: '08:00', do: '20:00', od_daty: null, do_daty: null }))], [/FROM Term_Ustawienia WHERE/, [USTAWIENIA]], [/SELECT DATE_FORMAT\(NOW\(\)/, [{ t: '2026-10-19 10:00:00' }]], [/FROM Uslugi u LEFT JOIN Term_Uslugi/, [{ id: 'U-A', kategoria: 'Endermologia', wariant: '1x', cena: 200, czas_min: 30, bufor_przed_min: 0, bufor_po_min: 0, bufor_dotyczy: 'oba', wymaga_gabinet: 0, urzadzenia_json: '[]', aktywna: 1, konfig_wersja: 1 }]], [/SELECT p\.imie FROM Pracownicy/, [{ imie: 'Anna' }]], [/FROM Klienci WHERE tenant_id = \? AND id_klienta = \?/, [{ id_klienta: '1001', imie_nazwisko: 'Testowa', telefon: '600000000', status: 'AKTYWNY' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => schematRows(true)]];
++const rez7 = (stanPoz) => [[/FROM Term_Rezerwacje r WHERE r\.tenant_id = \? AND r\.id = \?/, [{ id: 7, tenant_id: T, id_klienta: '1001', klient_nazwa: 'Testowa', status: 'potwierdzona', obecnosc: 'oczekiwana', kanal: 'recepcja', start_s: '2026-10-19 09:00:00', koniec_s: '2026-10-19 09:30:00', wersja: 1 }]], [/FROM Term_Pozycje p LEFT JOIN Term_Zasoby/, [{ id: 42, rezerwacja_id: 7, kolejnosc: 0, usluga_id: 'U-A', kategoria: 'Endermologia', wariant: '1x', cena: 200, czas_min: 30, pracownik: 'Anna', start_s: '2026-10-19 09:00:00', koniec_s: '2026-10-19 09:30:00', stan: stanPoz, zakup_skladnik_id: 5, jednostki_wymagane: 1 }]], [/FROM Term_Przydzialy a JOIN/, [{ id: 9, pozycja_id: 42, skladnik_id: 5, ilosc: 1, ilosc_zuzyta: 0, cykl: 1, stan: 'zarezerwowany', usluga_nazwa: 'Endermologia', zakup_nazwa: 'P', zakup_id: 3 }]], [/FROM Term_Przydzialy WHERE tenant_id = \? AND pozycja_id IN/, [{ id: 9, pozycja_id: 42, skladnik_id: 5, ilosc: 1, ilosc_zuzyta: 0, cykl: 1, stan: 'zarezerwowany' }]], [/FROM Term_Przydzialy WHERE tenant_id = \? AND pozycja_id = \? AND stan/, [{ id: 9, cykl: 1 }]], [/FROM Term_Przydzialy WHERE tenant_id = \? AND id = \?/, [{ id: 9, pozycja_id: 42, skladnik_id: 5, ilosc: 1, ilosc_zuzyta: 0, cykl: 1, stan: 'zarezerwowany' }]], [/FROM Term_Zakupy_Ruchy2 WHERE/, [{ skladnik_id: 5, typ: 'G', kierunek: 1, ilosc: 3 }, { skladnik_id: 5, typ: 'R', kierunek: 1, ilosc: 1 }]]];
++function aplikacja(db, feature = true) { const app = express(); app.use(express.json()); const m = require('../routes/terminarz'); const router = m(db, { hasFeature: (t, k, cb) => cb(feature), log: { error() {}, warn() {}, info() {} } }); app.use('/api', router); return { app, router }; }
++const post = (app, body) => request(app).post('/api/terminarz').send({ tenant_id: T, pracownik: 'Ola', ...body });
++
++describe('Handlery: R4 (Z3-T07) i R6 (Z3-T04) na atrapie bazy', () => {
++  const envPrzed = process.env.TERMINARZ_ZAKUPY_TENANTS;
++  afterEach(() => { if (envPrzed === undefined) delete process.env.TERMINARZ_ZAKUPY_TENANTS; else process.env.TERMINARZ_ZAKUPY_TENANTS = envPrzed; });
++  test('Z3-T07: salon usunięty z listy technicznej, zapisany stan „aktywna”, wizyta z przydziałem → anulacja i wykonanie odrzucone bez ROLLBACK-u w połowie; stan zapisany widoczny; przerwa oznaczona', async () => {
++    delete process.env.TERMINARZ_ZAKUPY_TENANTS;
++    const db = atrapaBazy([...rez7('zaplanowana'), [/FROM Term_Ewidencja WHERE/, [{ tryb: 'aktywna', rozpoczeto: '2026-10-01 10:00:00', przerwa_od: null }]], ...BAZOWE]);
++    const { app, router } = aplikacja(db); await router.sprawdzSchemat(); await router.sprawdzSchematV2();
++    const a = await post(app, { action: 'trm_anuluj', id: 7, wersja: 1, powod: 'test', kto_anulowal: 'klient' });
++    expect(a.body).toMatchObject({ status: 'error', code: 'EWIDENCJA_NIEDOSTEPNA' });
++    expect(db.zap.some(z => z.sql === 'ROLLBACK')).toBe(true); expect(db.zap.some(z => z.sql === 'COMMIT')).toBe(false);
++    expect(db.zap.some(z => /UPDATE Term_Rezerwacje SET status = 'anulowana'/.test(z.sql))).toBe(false);
++    expect(db.zap.some(z => /UPDATE Term_Ewidencja SET przerwa_od = COALESCE/.test(z.sql))).toBe(true);
++    const w = await post(app, { action: 'trm_pozycja_stan', id: 7, pozycja_id: 42, stan: 'wykonana' }); expect(w.body).toMatchObject({ status: 'error', code: 'EWIDENCJA_NIEDOSTEPNA' });
++    expect(db.zap.some(z => /INSERT INTO Term_Zakupy_Ruchy2|INSERT INTO Term_Realizacje/.test(z.sql))).toBe(false);
++    const init = (await post(app, { action: 'trm_init' })).body; expect(init.ustawienia.ewidencja).toBe('niedostepna'); expect(init.ustawienia.ewidencja_zapisana).toBe('aktywna'); // stan zapisany nie jest maskowany
++  });
++  test('Z3-T07b: ta sama sytuacja, ale wizyta BEZ przydziału → anulacja działa (kalendarz niezależny od ewidencji)', async () => {
++    delete process.env.TERMINARZ_ZAKUPY_TENANTS;
++    const db = atrapaBazy([[/FROM Term_Przydzialy WHERE tenant_id = \? AND pozycja_id IN/, []], [/FROM Term_Przydzialy a JOIN/, []], ...rez7('zaplanowana'), [/FROM Term_Ewidencja WHERE/, [{ tryb: 'aktywna', przerwa_od: null }]], ...BAZOWE]);
++    const { app, router } = aplikacja(db); await router.sprawdzSchemat(); await router.sprawdzSchematV2();
++    const a = await post(app, { action: 'trm_anuluj', id: 7, wersja: 1, powod: 'test', kto_anulowal: 'klient' });
++    expect(a.body.status).toBe('success'); expect(db.zap.some(z => z.sql === 'COMMIT')).toBe(true); expect(db.zap.some(z => /INSERT INTO Term_Zakupy_Ruchy2/.test(z.sql))).toBe(false);
++  });
++  test('Z3-T04: odmowa z powodu źródła → ROLLBACK wizyty, a stan „do wyjaśnienia” i sprawa E20 utrwalone poza transakcją', async () => {
++    process.env.TERMINARZ_ZAKUPY_TENANTS = T;
++    const migawka = JSON.stringify(logika.migawkaZrodla({ id: 'S-1-1', status: 'AKTYWNY', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10', data_waznosci: null }, 0, []));
++    const db = atrapaBazy([[/FROM Term_Ewidencja WHERE/, [{ tryb: 'aktywna', przerwa_od: null }]], [/FROM Term_Rezerwacje WHERE tenant_id = \? AND klucz_idem/, []],
++      [/Term_Zakupy_Skladniki s JOIN Term_Zakupy z .*s\.id IN/, [{ id: 5, zakup_id: 3, usluga_wyk_id: 'U-A', id_klienta: '1001', stan: 'aktywny', stan_weryfikacji: 'zweryfikowany', zalezne_uzgodniono: 1, aktywny_od: '2026-10-01', zakup_stan: 'aktywny', stan_zrodla: 'ok', zrodlo_typ: 'sprzedaz', sprzedaz_id: 'S-1-1', zrodlo_migawka_json: migawka, zakup_nazwa: 'Endermologia / 5x' }]],
++      [/FROM Sprzedaz WHERE tenant_id = \? AND id = \? LOCK IN SHARE MODE/, [{ id: 'S-1-1', status: 'AKTYWNY', id_klienta: '1001', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900, data_sprzedazy: '2026-10-10', data_waznosci: null }]],
++      [/FROM Sprzedaz WHERE tenant_id = \? AND \(id = \? OR id LIKE \?\)/, [{ id: 'S-1-1', status: 'AKTYWNY', zabieg: 'Endermologia', szczegoly: '5x', kwota: 900 }]],
++      [/zwrot_do_id IN/, [{ id: 'S-1-1', s: 900 }]], // zwrot całości zatwierdzony w rdzeniu
++      [/FROM Term_Sprawy WHERE tenant_id = \? AND klucz_dedup = \?/, []], ...BAZOWE]);
++    const { app, router } = aplikacja(db); await router.sprawdzSchemat(); await router.sprawdzSchematV2();
++    const r = await post(app, { action: 'trm_zapisz', klucz_idem: 'KL-9', start: '2026-10-20 10:00', klient: { id_klienta: '1001', nazwa: 'Testowa' }, pozycje: [{ usluga_id: 'U-A', pracownik: 'Anna', zakup_skladnik_id: 5 }] });
++    expect(r.body).toMatchObject({ status: 'error', code: 'ZRODLO', zmiana: 'zwrot' });
++    const kol = db.zap.map(z => z.sql);
++    expect(kol.some(s => /^ROLLBACK$/.test(s))).toBe(true); expect(kol.some(s => /^COMMIT$/.test(s))).toBe(false);
++    const iRollback = kol.findIndex(s => s === 'ROLLBACK');
++    expect(kol.findIndex(s => /UPDATE Term_Zakupy SET stan_zrodla = \?/.test(s))).toBeGreaterThan(iRollback); // utrwalenie PO rollbacku
++    expect(db.zap.find(z => /UPDATE Term_Zakupy SET stan_zrodla = \?/.test(z.sql)).params[0]).toBe('wycofane');
++    expect(kol.findIndex(s => /INSERT INTO Term_Sprawy \(/.test(s))).toBeGreaterThan(iRollback); // sprawa E20 po rollbacku
++    expect(db.zap.find(z => /INSERT INTO Term_Sprawy \(/.test(z.sql)).params).toContain('E20');
++  });
++  test('zwykłe handlery bez zakupu działają jak dotąd: nieobecność i wykonanie pozycji bez przydziału (bez ruchów v2)', async () => {
++    process.env.TERMINARZ_ZAKUPY_TENANTS = T;
++    const db = atrapaBazy([[/FROM Term_Przydzialy WHERE tenant_id = \? AND pozycja_id = \? AND stan/, []], [/FROM Term_Przydzialy WHERE tenant_id = \? AND pozycja_id IN/, []], [/FROM Term_Przydzialy a JOIN/, []], ...rez7('zaplanowana'), [/FROM Term_Ewidencja WHERE/, [{ tryb: 'aktywna', przerwa_od: null }]], ...BAZOWE]);
++    const { app, router } = aplikacja(db); await router.sprawdzSchemat(); await router.sprawdzSchematV2();
++    expect((await post(app, { action: 'trm_obecnosc', id: 7, obecnosc: 'nieobecny' })).body.status).toBe('success');
++    expect((await post(app, { action: 'trm_pozycja_stan', id: 7, pozycja_id: 42, stan: 'wykonana' })).body.status).toBe('success');
++    expect(db.zap.some(z => /INSERT INTO Term_Zakupy_Ruchy2|INSERT INTO Term_Realizacje|INSERT INTO Term_Operacje/.test(z.sql))).toBe(false);
++    expect(db.zap.filter(z => z.sql === 'COMMIT')).toHaveLength(2);
++  });
++});
+diff --git a/tests/terminarz-zakupy.test.js b/tests/terminarz-zakupy.test.js
+index c3d6d24..c3e7f92 100644
+--- a/tests/terminarz-zakupy.test.js
++++ b/tests/terminarz-zakupy.test.js
+@@ -54,8 +54,9 @@ describe('K02 — 5 × A + 4 × B: niezależne składniki i weryfikacja per skł
+   test('weryfikacja A (U=2) nie otwiera B; B odrzucane przez domenę; rodzic = częściowo zweryfikowany', async () => {
+     const repo = repoPamiec(T); const c = ctx('przygotowanie'); const { zakup, A, B } = await mieszany(repo, c);
+     await domena.weryfikujSkladnik(repo, c, { skladnik_id: A, hist_wykorzystane: 2, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'Booksy do 10.2026' });
+-    await domena.uruchomSkladnik(repo, c, { skladnik_id: A, potwierdzenie_zaleznych: true });
+     const ca = ctx('aktywna');
++    expect((await domena.uruchomSkladnik(repo, c, { skladnik_id: A, potwierdzenie_zaleznych: true })).plan).toBe(true); // w przygotowaniu = tylko plan, bez R
++    expect((await domena.uruchomSkladnik(repo, ca, { skladnik_id: A, potwierdzenie_zaleznych: true })).plan).toBe(false); // uruchomienie w trybie aktywnym
+     const widok = await Z.widokZakupow(repo, ca, { id_klienta: '1001' });
+     expect(widok[0].weryfikacja).toBe('czesciowo');
+     expect(widok[0].skladniki.find(s => s.id === A)).toMatchObject({ do_umowienia: 3, wykorzystane: 2, umowione: 0, dostepny: true });
+@@ -67,7 +68,7 @@ describe('K02 — 5 × A + 4 × B: niezależne składniki i weryfikacja per skł
+     const repo = repoPamiec(T); const c = ctx(); const { B } = await mieszany(repo, c);
+     await expect(domena.weryfikujSkladnik(repo, c, { skladnik_id: B, hist_wykorzystane: 0, zrodlo_ustalen: 'x' })).rejects.toThrow(/Podaj jawnie liczbę/);
+     await domena.weryfikujSkladnik(repo, c, { skladnik_id: B, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'potwierdzone zero' });
+-    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: false })).rejects.toThrow(/istniejące wizyty/);
++    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: false })).rejects.toThrow(/istniejących wizyt/);
+     await domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: true });
+     const w = await rezerwujPoz(repo, c, await pozycja(repo, { usluga_id: 'U-B' }), B, { usluga_id: 'U-B' });
+     expect(w.przydzialy).toHaveLength(1); expect(await saldo(repo, B)).toMatchObject({ R: 1, B: 3 });
+@@ -219,7 +220,8 @@ describe('K09 — obcy salon/klientka i podmieniony autor', () => {
+     await repo.skladniki([1, 2], true); await repo.ruchy([1]); await repo.przydzial(5, true); await repo.zrodloSprzedaz('S-1', true); await repo.operacja('k'); await repo.wstawRuch({ skladnik_id: 1, typ: 'R', ilosc: 1 }); await repo.aktualizujPozycje(3, { stan: 'x' }); await repo.ewidencja();
+     for (const z of zap) { expect(z.sql).toMatch(/tenant_id/); expect(z.p).toContain('salon-A'); }
+     expect(zap.find(z => /Term_Zakupy_Skladniki s JOIN/.test(z.sql)).sql).toMatch(/FOR UPDATE$/);
+-    expect(zap.find(z => /FROM Sprzedaz WHERE/.test(z.sql)).sql).toMatch(/FOR SHARE/);
++    expect(zap.find(z => /FROM Sprzedaz WHERE/.test(z.sql)).sql).toMatch(/LOCK IN SHARE MODE$/); // składnia MariaDB (FOR SHARE = błąd składni na 11.8.9)
++    expect(zap.some(z => /FOR SHARE/.test(z.sql))).toBe(false);
+   });
+   test('autor ruchu pochodzi z kontekstu sesji, nie z danych żądania', async () => {
+     const repo = repoPamiec(T); const c = ctx('aktywna', 'Ola');
+@@ -335,6 +337,12 @@ describe('K12 — reguły zużycia, ważności i źródła', () => {
+ });
+ 
+ // ═════════ K10 / K12 / K14: kontrakt routera i start bez schematu ═════════
++/** Wiersze INFORMATION_SCHEMA.COLUMNS dla atrapy: tabele v1 zawsze; elementy v2 (z typami kolumn jak w DDL) tylko gdy `zV2`. */
++function schematRows(zV2) {
++  const rows = Z.TABELE_V1.map(t => ({ t, c: 'id', ct: 'int(11)' }));
++  if (zV2) for (const [k, ct] of Object.entries(Z.oczekiwaneKolumny())) rows.push({ t: k.split('.')[0], c: k.split('.')[1], ct });
++  return rows;
++}
+ function atrapaBazy(odpowiedzi) {
+   const zap = []; let insertId = 100;
+   const wykonaj = (sql, params) => { zap.push({ sql: String(sql), params: params || [] }); for (const [re, w] of odpowiedzi) if (re.test(sql)) return typeof w === 'function' ? w(sql, params) : w; if (/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE)/i.test(sql)) return { insertId: ++insertId, affectedRows: 1 }; return []; };
+@@ -382,7 +390,7 @@ describe('K10 — brak schematu/aktywacji nie psuje rdzenia i nie dopuszcza ruch
+   });
+   test('N05: salon na liście technicznej, ale BRAK schematu v2 → dodatek zgłasza niedostępność (SCHEMAT_V2), rdzeń i kalendarz bez pakietu działają', async () => {
+     process.env.TERMINARZ_ZAKUPY_TENANTS = T;
+-    const db = atrapaBazy([[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, []], ...BAZOWE]);
++    const db = atrapaBazy([[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => schematRows(false)], ...BAZOWE]);
+     const { app, router } = aplikacja(db);
+     await router.sprawdzSchemat(); const sv2 = await router.sprawdzSchematV2(); expect(sv2.gotowy).toBe(false); expect(sv2.braki.length).toBeGreaterThan(10);
+     expect((await post(app, { action: 'trm_ewidencja_ustaw', tryb: 'przygotowanie' })).body).toMatchObject({ status: 'error', code: 'SCHEMAT_V2' });
+@@ -398,7 +406,7 @@ describe('K10 — brak schematu/aktywacji nie psuje rdzenia i nie dopuszcza ruch
+ describe('K12 — kontrakt handlerów na atrapie bazy ze schematem v2', () => {
+   const envPrzed = process.env.TERMINARZ_ZAKUPY_TENANTS;
+   afterEach(() => { if (envPrzed === undefined) delete process.env.TERMINARZ_ZAKUPY_TENANTS; else process.env.TERMINARZ_ZAKUPY_TENANTS = envPrzed; });
+-  const schematOk = () => [[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => Z.ELEMENTY_V2.map(n => ({ t: n.split('.')[0], c: n.split('.')[1] || 'id' }))]];
++  const schematOk = () => [[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => schematRows(true)]];
+   const rez = (stanPoz, extra = {}) => ({ id: 7, tenant_id: T, id_klienta: '1001', klient_nazwa: 'Testowa', status: 'potwierdzona', obecnosc: 'przybyl', kanal: 'recepcja', start_s: '2026-10-19 09:00:00', koniec_s: '2026-10-19 09:30:00', wersja: 1, ...extra, _poz: stanPoz });
+   function bazaZWizyta(stanPoz, przydzialy) {
+     return atrapaBazy([...schematOk(), [/FROM Term_Rezerwacje r WHERE r\.tenant_id = \? AND r\.id = \?/, [rez(stanPoz)]],
+@@ -457,16 +465,26 @@ describe('K12 — kontrakt handlerów na atrapie bazy ze schematem v2', () => {
+ 
+ describe('K11 (mock) — migracja v2 kontrolowana i powtarzalna', () => {
+   test('pusty model: wszystkie kroki DDL; drugi przebieg = „już było”; dane w starym modelu zatrzymują ścieżkę bez DDL', async () => {
+-    const wyk = []; let zastosowane = new Set();
+-    const qx = async (sql) => { wyk.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/RELEASE_LOCK/.test(sql)) return []; if (/COUNT\(\*\) n FROM INFORMATION_SCHEMA/.test(sql)) return [{ n: zastosowane.has('Term_Zakupy_Ruchy2') ? 1 : 0 }]; if (/COUNT\(\*\) n FROM/.test(sql)) return [{ n: 0 }]; if (/^(CREATE|ALTER)/.test(sql)) { const k = sql.match(/TABLE (?:IF NOT EXISTS )?(\w+)(?: ADD COLUMN (\w+))?/); const n = k[2] ? k[1] + '.' + k[2] : k[1]; if (zastosowane.has(n)) { const e = new Error('dup'); e.code = k[2] ? 'ER_DUP_FIELDNAME' : 'ER_TABLE_EXISTS_ERROR'; throw e; } zastosowane.add(n); return []; } return []; };
+-    const r1 = await Z.migrujV2(qx, { log: { error() {} } }); expect(r1.zastosowano).toHaveLength(Z.SCHEMAT_V2.length); expect(r1.bledy).toEqual([]); expect(r1.zatrzymano).toBeNull();
+-    const r2 = await Z.migrujV2(qx, { log: { error() {} } }); expect(r2.juzBylo).toHaveLength(Z.SCHEMAT_V2.length); expect(r2.zastosowano).toEqual([]);
+-    expect(wyk.filter(s => /DROP|TRUNCATE|DELETE/i.test(s))).toEqual([]);
+-    expect(wyk.some(s => /Term_Migracje/.test(s) && /v2:/.test(JSON.stringify(s)) === false)).toBe(true);
+-    const wyk2 = []; zastosowane = new Set();
+-    const qx2 = async (sql) => { wyk2.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/COUNT\(\*\) n FROM INFORMATION_SCHEMA/.test(sql)) return [{ n: 0 }]; if (/COUNT\(\*\) n FROM Term_Zakupy_Ruchy/.test(sql)) return [{ n: 12 }]; if (/COUNT/.test(sql)) return [{ n: 0 }]; return []; };
+-    const r3 = await Z.migrujV2(qx2, { log: { error() {} } }); expect(r3.zatrzymano).toMatch(/zawiera dane/); expect(wyk2.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
+-    expect((await Z.migrujV2(qx, { dryRun: true })).zastosowano.every(s => /dry-run/.test(s))).toBe(true);
++    // atrapa silnika: INFORMATION_SCHEMA odzwierciedla zastosowane elementy (z typami jak w DDL); tabele v1 obecne
++    const oczek = Z.oczekiwaneKolumny();
++    const atrapaSilnika = (opcje = {}) => { const wyk = []; const zastosowane = new Set(opcje.start || []);
++      const qx = async (sql) => { wyk.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/RELEASE_LOCK/.test(sql)) return [];
++        if (/INFORMATION_SCHEMA\.COLUMNS/.test(sql)) { const rows = Z.TABELE_V1.map(t => ({ t, c: 'id', ct: 'int(11)' })); for (const [k, ct] of Object.entries(oczek)) { const [t, c] = k.split('.'); if (zastosowane.has(t) || zastosowane.has(k)) rows.push({ t, c, ct: (opcje.zlyTyp === k ? 'varchar(5)' : ct) }); } return rows; }
++        if (/COUNT\(\*\) n FROM Term_Zakupy_Ruchy\b/.test(sql)) return [{ n: opcje.daneV1 || 0 }]; if (/COUNT\(\*\) n FROM/.test(sql)) return [{ n: 0 }];
++        if (/^(CREATE|ALTER)/.test(sql)) { const k = sql.match(/TABLE (?:IF NOT EXISTS )?(\w+)(?: ADD COLUMN (\w+))?/); const n = k[2] ? k[1] + '.' + k[2] : k[1]; if (zastosowane.has(n)) { const e = new Error('dup'); e.code = k[2] ? 'ER_DUP_FIELDNAME' : 'ER_TABLE_EXISTS_ERROR'; throw e; } zastosowane.add(n); return []; } return []; };
++      return { qx, wyk, zastosowane }; };
++    const a = atrapaSilnika();
++    const r1 = await Z.migrujV2(a.qx, { log: { error() {} } }); expect(r1.stanPrzed.typ).toBe('v1_czysty'); expect(r1.zastosowano).toHaveLength(Z.SCHEMAT_V2.length); expect(r1.bledy).toEqual([]); expect(r1.zatrzymano).toBeNull(); expect(r1.stanPo.typ).toBe('v2_kompletny');
++    const r2 = await Z.migrujV2(a.qx, { log: { error() {} } }); expect(r2.juzBylo).toHaveLength(Z.SCHEMAT_V2.length); expect(r2.zastosowano).toEqual([]);
++    expect(a.wyk.filter(s => /DROP|TRUNCATE|DELETE/i.test(s))).toEqual([]);
++    expect(a.wyk.some(s => /INSERT INTO Term_Migracje/.test(s))).toBe(true);
++    const b = atrapaSilnika({ daneV1: 12 }); const r3 = await Z.migrujV2(b.qx, { log: { error() {} } }); expect(r3.stanPrzed.typ).toBe('v1_z_danymi'); expect(r3.zatrzymano).toMatch(/zawiera dane/); expect(b.wyk.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
++    // Z3-T05: przerwana migracja (tylko 2 elementy) → wznowienie dokłada brakujące, nie dubluje; zły typ kolumny → zatrzymanie bez DDL
++    const c = atrapaSilnika({ start: ['Term_Oferty_Wersje', 'Term_Zakupy.zrodlo_typ'] }); const r4 = await Z.migrujV2(c.qx, { log: { error() {} } }); expect(r4.stanPrzed.typ).toBe('v2_czesciowy'); expect(r4.juzBylo).toEqual(['Term_Oferty_Wersje', 'Term_Zakupy.zrodlo_typ']); expect(r4.zastosowano).toHaveLength(Z.SCHEMAT_V2.length - 2); expect(r4.stanPo.typ).toBe('v2_kompletny');
++    const d = atrapaSilnika({ start: ['Term_Zakupy.zrodlo_hash'], zlyTyp: 'Term_Zakupy.zrodlo_hash' }); const r5 = await Z.migrujV2(d.qx, { log: { error() {} } }); expect(r5.stanPrzed.typ).toBe('v2_niezgodny'); expect(r5.zatrzymano).toMatch(/typy kolumn/); expect(d.wyk.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
++    expect((await Z.migrujV2(atrapaSilnika().qx, { dryRun: true })).zastosowano.every(s => /dry-run/.test(s))).toBe(true);
++    // start serwera: sprawdzSchematV2 tylko czyta (zero INSERT/UPDATE)
++    const e = atrapaSilnika({ start: Z.ELEMENTY_V2 }); const st = await Z.sprawdzSchematV2(e.qx, { warn() {}, error() {} }); expect(st.gotowy).toBe(true); expect(e.wyk.some(s => /^(INSERT|UPDATE|ALTER|CREATE)/i.test(s))).toBe(false);
+   });
+ });
+ 

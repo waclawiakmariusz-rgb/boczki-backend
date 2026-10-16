@@ -1,0 +1,89 @@
+{
+  "kiedy": "2026-10-16T18:00:17.459Z",
+  "serwer": "http://localhost:3999",
+  "salon": "demo-test (fikcyjny, izolowana baza)",
+  "wyniki": [
+    {
+      "id": "Z3-T09",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "edytor pokazuje 2 wiersze składu (5 × Endermologia, 4 × Meltivio)",
+      "plik": "zk03-01-edytor-5A-4B.png"
+    },
+    {
+      "id": "Z3-T09b",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "po zapisie bez zmian: 2 składniki, wersja 1 (bez nowej wersji)"
+    },
+    {
+      "id": "Z3-T11-UI",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "podgląd: {\"gotowe\":11,\"pominiete\":3}; rozbita sprzedaż E: kanoniczna gotowa z dopłatą, dopłata pominięta",
+      "plik": "zk03-02-podglad-zrodel-doplata.png"
+    },
+    {
+      "id": "Z3-T03-rejestracja",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "zarejestrowano 11, było 0, pominięto 0",
+      "plik": "zk03-03-rejestracja-wynik.png"
+    },
+    {
+      "id": "Z3-T19",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "rodzic „czesciowo”: Endermologia sprawdzona (U=2), Meltivio do sprawdzenia",
+      "plik": "zk03-04-czesciowa-weryfikacja-5A-4B.png"
+    },
+    {
+      "id": "Z3-T21a",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "7 kandydatów (6 przyszłych + 1 przeszła nierozstrzygnięta); plan zapisany w trybie przygotowania, R=0 (bez rezerwacji)",
+      "plik": "zk03-05-istniejace-wizyty-D-plan.png"
+    },
+    {
+      "id": "Z3-T21",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "Kupiono 10 · Wykorzystano 3 · Umówione 6 · Do umówienia 1",
+      "plik": "zk03-07-stan-10-3-6-1.png"
+    },
+    {
+      "id": "Z3-T22",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "niedobór 2 (5 praw, 7 wizyt); po uruchomieniu Umówione 5, Do umówienia 0; 2 wizyty rozstrzygnięte jawnie",
+      "plik": "zk03-08-niedobor-5-7.png"
+    },
+    {
+      "id": "Z3-T24",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "po nowej wizycie stary plan odrzucony (brak R, składnik nieuruchomiony); lista odświeżona: 3 wizyty",
+      "plik": "zk03-09-nieaktualny-podglad.png"
+    },
+    {
+      "id": "Z3-T31a",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "400 px (emulacja): bez poziomego przewijania (400/400), 14 przycisków zatwierdzania widocznych",
+      "plik": "zk03-10-stan-400px.png"
+    },
+    {
+      "id": "Z3-T31b",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "800×550 (emulacja): zakładka istniejących wizyt",
+      "plik": "zk03-11-wizyty-800x550.png"
+    },
+    {
+      "id": "UI-bledy",
+      "wynik": "PASS",
+      "rodzaj": "UI (pełny przebieg, Chrome headless, serwer lokalny + izolowana baza)",
+      "info": "brak nieobsłużonych wyjątków JS w przeglądarce"
+    }
+  ]
+}

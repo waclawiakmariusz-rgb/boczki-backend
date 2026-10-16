@@ -1,0 +1,15 @@
+ .env.test.example                                  |   2 +
+ narzedzia/testy-integracyjne/dane-demo.js          |  55 ++
+ narzedzia/testy-integracyjne/schemat-bazowy.js     |  51 ++
+ .../testy-integracyjne/terminarz-zakupy-zk03.js    | 178 ++++++
+ narzedzia/testy-integracyjne/terminarz-zakupy.js   |   2 +-
+ public/index.html                                  |   4 +-
+ public/terminarz.css                               |  34 ++
+ public/terminarz.js                                | 224 ++++++--
+ routes/terminarz-zakupy.js                         | 621 +++++++++++++++------
+ routes/terminarz.js                                | 128 ++++-
+ server.js                                          |   1 +
+ tests/helpers/repoPamiec.js                        |  47 +-
+ tests/terminarz-zakupy-zk03.test.js                | 312 +++++++++++
+ tests/terminarz-zakupy.test.js                     |  48 +-
+ 14 files changed, 1442 insertions(+), 265 deletions(-)

@@ -329,7 +329,7 @@ module.exports = (db, opts = {}) => {
   /**
    * Jedyna droga mutacji jednostek (§15.2): GET_LOCK salonu → BEGIN → fn(conn, repo) → COMMIT → RELEASE_LOCK; błąd = ROLLBACK.
    * Blokada i zwolnienie na TYM SAMYM połączeniu; blokada jest po stronie serwera MySQL (działa też przy wielu procesach).
-   * Uwaga: chroni tylko operacje tego modułu — edycje w Sprzedaży jej nie używają; dlatego źródło jest czytane ponownie w transakcji (FOR SHARE).
+   * Uwaga: chroni tylko operacje tego modułu — edycje w Sprzedaży jej nie używają; dlatego źródło jest czytane ponownie w transakcji (LOCK IN SHARE MODE).
    */
   async function wTransakcjiSalonu(tenant, fn) {
     const conn = await polacz();
