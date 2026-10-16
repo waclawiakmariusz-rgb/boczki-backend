@@ -189,8 +189,8 @@ Do rozstrzygnięcia tej kwestii integracja **nie jest** deklarowana jako gotowa 
 |---|---|
 | Commit bazowy diffu | `092dbdd` (ikona Zgłoszeń SVG) |
 | Commit kodu | `0edfec5` na `dev` — produkt + testy + narzędzia; diffy: `po10/diff-produkt-092dbdd..0edfec5.patch`, `po10/diff-testy-i-narzedzia-092dbdd..0edfec5.patch`, lista plików `po10/diff-stat-092dbdd..0edfec5.txt` |
-| Commit raportu | następny commit na `dev` (ten plik, kontrakt, errata ZK-02, paczka `po10/`) — hash w `git log` po publikacji |
-| Push | `dev` → `origin/dev` po commicie raportu (bez automatycznego wdrożenia) |
+| Commit raportu | `870d446` na `dev` (ten plik, kontrakt, errata ZK-02, paczka `po10/`, poprawka komentarza w `routes/terminarz.js`); numer commitu dopisany kolejnym commitem |
+| Push | **TAK** — `dev` → `origin/dev` (`092dbdd..870d446` + commit z numerem), bez automatycznego wdrożenia |
 | Wdrożenie | **NIE** — ani dev.estelio.com.pl, ani produkcja |
 | Migracja v2 | **tylko lokalna izolowana MariaDB**; baza wspólna dev/produkcja: brak schematu v2 |
 | Aktywacja | **NIE** — `TERMINARZ_ZAKUPY_TENANTS` niezmienione na żadnym rzeczywistym środowisku; ewidencja żadnego salonu nie została uruchomiona |
