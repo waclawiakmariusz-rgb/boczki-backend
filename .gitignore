@@ -11,3 +11,5 @@ design/
 *.sql.gz
 
 memory-backup/
+.env.test
+.env.*.local

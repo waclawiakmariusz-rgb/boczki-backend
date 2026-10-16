@@ -67,7 +67,7 @@ module.exports = (db) => {
   // Czyść stare sesje co godzinę
   setInterval(() => {
     db.query('DELETE FROM admin_sessions WHERE expires < ?', [Date.now()]);
-  }, 60 * 60 * 1000);
+  }, 60 * 60 * 1000).unref(); /* nie trzyma procesu przy życiu (jest/skrypty); serwer HTTP i tak go utrzymuje */
 
   // Middleware weryfikacji tokenu admina (async, sliding expiry)
   function requireAdmin(req, res, next) {

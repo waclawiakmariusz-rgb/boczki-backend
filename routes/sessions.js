@@ -82,7 +82,7 @@ setInterval(() => {
     _db.query('DELETE FROM `Sesje` WHERE `expires` < NOW()',
       (err) => { if (err) console.error('[sessions cleanup interval]', err.message); });
   }
-}, 30 * 60 * 1000);
+}, 30 * 60 * 1000).unref(); /* nie trzyma procesu przy życiu (jest/skrypty); serwer HTTP i tak go utrzymuje */
 
 function createSession(tenant_id, login) {
   const token = randomUUID();

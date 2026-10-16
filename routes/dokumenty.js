@@ -115,7 +115,9 @@ module.exports = (db) => {
       // 2. Utwórz PDF
       const pdfDoc = await PDFDocument.create();
       for (const jpgBuf of zoptymalizowane) {
-        const img   = await pdfDoc.embedJpg(jpgBuf);
+        // pdf-lib 1.17 czyta JPEG przez `bytes.buffer` bez `byteOffset`: bufor z puli Node (małe pliki, byteOffset ≠ 0)
+        // daje „SOI not found in JPEG”. Kopia do czystego Uint8Array (byteOffset 0) rozwiązuje problem dla każdego rozmiaru.
+        const img   = await pdfDoc.embedJpg(new Uint8Array(jpgBuf));
         const page  = pdfDoc.addPage([img.width, img.height]);
         page.drawImage(img, { x: 0, y: 0, width: img.width, height: img.height });
       }

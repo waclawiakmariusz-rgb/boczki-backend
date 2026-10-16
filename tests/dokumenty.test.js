@@ -10,7 +10,11 @@ const path    = require('path');
 const fs      = require('fs');
 const Jimp = require('jimp');
 
+const { createSession } = require('../routes/sessions'); // pobieranie pliku wymaga ważnej sesji TEGO salonu (kontrakt od 1d2863d, 2026-05-06)
+
 const TEST_TENANT   = `test-dok-${Date.now()}`;
+const SESJA_TESTOWA = createSession(TEST_TENANT, 'test');      // sesja w pamięci modułu sessions — bez bazy
+const SESJA_OBCA    = createSession('inny-salon-test', 'test'); // sesja innego salonu — ma dostać odmowę
 const UPLOADS_ROOT  = path.join(__dirname, '..', 'uploads');
 const TEST_UPLOAD_DIR = path.join(UPLOADS_ROOT, TEST_TENANT);
 
@@ -142,7 +146,8 @@ describe('GET /api/dokumenty/:tenant_id/:filename', () => {
 
   test('serwuje PDF dla poprawnego tenant_id', async () => {
     const res = await request(buildApp())
-      .get(`/api/dokumenty/${TEST_TENANT}/${savedFilename}?tenant_id=${TEST_TENANT}`);
+      .get(`/api/dokumenty/${TEST_TENANT}/${savedFilename}?tenant_id=${TEST_TENANT}`)
+      .set('x-session-token', SESJA_TESTOWA);
 
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toMatch(/application\/pdf/);
@@ -166,9 +171,20 @@ describe('GET /api/dokumenty/:tenant_id/:filename', () => {
   test('zwraca 404 gdy plik nie istnieje', async () => {
     const fakeUuid = '00000000-0000-0000-0000-000000000000';
     const res = await request(buildApp())
-      .get(`/api/dokumenty/${TEST_TENANT}/${fakeUuid}.pdf?tenant_id=${TEST_TENANT}`);
+      .get(`/api/dokumenty/${TEST_TENANT}/${fakeUuid}.pdf?tenant_id=${TEST_TENANT}`)
+      .set('x-session-token', SESJA_TESTOWA);
 
     expect(res.status).toBe(404);
+  });
+
+  test('zwraca 403 bez sesji oraz z sesją innego salonu (plik istnieje)', async () => {
+    const bez = await request(buildApp())
+      .get(`/api/dokumenty/${TEST_TENANT}/${savedFilename}?tenant_id=${TEST_TENANT}`);
+    const obca = await request(buildApp())
+      .get(`/api/dokumenty/${TEST_TENANT}/${savedFilename}?tenant_id=${TEST_TENANT}`)
+      .set('x-session-token', SESJA_OBCA);
+    expect(bez.status).toBe(403);
+    expect(obca.status).toBe(403);
   });
 
   test('zwraca 400 dla próby path traversal (../)', async () => {
