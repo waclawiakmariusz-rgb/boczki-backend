@@ -3,7 +3,7 @@
 **Data:** 16.10.2026 · **Gałąź:** `dev` · **Commit bazowy diffu:** `092dbdd` · **Commit kodu:** `0edfec5` · **Commit raportu:** (patrz §9)
 **Załączniki (paczka `docs/terminarz-zakupy/po10/`):** diffy od `092dbdd`, surowe wyniki rzeczywistej bazy (`wynik-terminarz-zakupy.json`, `wynik-terminarz-zakupy-zk03.json`), surowe wyniki prób UI (`zrzuty-zk03.json`), 11 zrzutów PNG. Kontrakt adaptera: `ZAKUPY_03_KONTRAKT_ZRODEL.md`. Errata ZK-02 naniesiona w `ZAKUPY_02_WYNIK.md` §2.
 
-**Status jednym zdaniem:** kod ZK-03 jest na `dev`, odebrany na izolowanej MariaDB 11.8.9 (ta sama wersja co produkcja) i w przeglądarce na fikcyjnym salonie; integracja pozostaje **wyłączona** dla rzeczywistych salonów, schemat v2 **nie istnieje** na bazie wspólnej dev/produkcja, nic nie wdrożono. Jedna jawnie opisana luka równoczesności (Z3-T02b, §7) — do rozstrzygnięcia przed aktywacją.
+**Status jednym zdaniem:** kod ZK-03 jest na `dev`, odebrany na izolowanej MariaDB 11.8.9 (ta sama wersja co produkcja) i w przeglądarce na fikcyjnym salonie; integracja pozostaje **wyłączona** dla rzeczywistych salonów, schemat v2 **nie istnieje** na bazie wspólnej dev/produkcja, nic nie wdrożono. Jedna jawnie opisana luka równoczesności (Z3-T02b) — **rozstrzygnięta decyzją właściciela 16.10.2026, §7.1**.
 
 ## 1. Wykonany zakres
 
@@ -96,7 +96,7 @@ Pliki: `po10/wynik-terminarz-zakupy-zk03.json` (baza: 17 PASS, 0 FAIL, 2 INFO), 
 | ID | Wynik | Dowód | Co sprawdzono |
 |---|---|---|---|
 | Z3-T01 | **PASS** | rzeczywista baza | wszystkie zapytania blokujące w transakcji; `FOR SHARE` = błąd składni |
-| Z3-T02 | **CZĘŚCIOWO — luka opisana** | rzeczywista baza, dwa połączenia, kontrolowana pauza 1,5 s między odczytem a COMMIT | (a) `UPDATE` oryginalnej sprzedaży w rdzeniu **czeka** na COMMIT dodatku (1540 ms) — PASS; (b) pierwszy zwrot jako **nowy wiersz** `INSERT` w tym oknie **nie jest blokowany**, rezerwacja ostatniej jednostki zapisała się — INFO/LUKA; (c) zwrot wykryty przy następnym sprawdzeniu, zakup `wycofane` — PASS. Szczegóły i proponowany kontrakt: §7 |
+| Z3-T02 | **CZĘŚCIOWO — luka opisana i rozstrzygnięta (§7.1)** | rzeczywista baza, dwa połączenia, kontrolowana pauza 1,5 s między odczytem a COMMIT | (a) `UPDATE` oryginalnej sprzedaży w rdzeniu **czeka** na COMMIT dodatku (1540 ms) — PASS; (b) pierwszy zwrot jako **nowy wiersz** `INSERT` w tym oknie **nie jest blokowany**, rezerwacja ostatniej jednostki zapisała się — INFO/LUKA; (c) zwrot wykryty przy następnym sprawdzeniu, zakup `wycofane` — PASS. Szczegóły i proponowany kontrakt: §7 |
 | Z3-T03 | **PASS** (z zastrzeżeniem) | rzeczywista baza + handler + jednostkowy | (a) zwrot zatwierdzony przed wykonaniem, po wcześniejszej rezerwacji → wykonanie odrzucone `ZRODLO`, U bez zmian; (b) zwrot wstawiony podczas wykonania (pauza przed kontrolą źródła) → wykonanie odrzucone, wykryty. Zastrzeżenie: okno między kontrolą a COMMIT jest tym samym oknem co w T02b |
 | Z3-T04 | **PASS** | handler (atrapa z rollbackiem) + baza (K13) | wizyta niezapisana; `stan_zrodla` i sprawa E20 utrwalone po rollbacku; podgląd po odświeżeniu pokazuje problem |
 | Z3-T05 | **PASS** | rzeczywista baza (no-op przy kompletnym v2, raport danych v1) + obserwacja wznowienia po przerwanym DDL (§2 R3) + mock (zatrzymanie przy `v1_z_danymi`) | kontrolowane przerwanie skryptem **nie było** osobną próbą — wznowienie potwierdzone zdarzeniem z prac, nie testem |
@@ -169,12 +169,18 @@ Skrypt zrzutów (`zrzuty-zk03.js`, Chrome headless przez CDP) jest poza repozyto
 
 **Czego nie zrobiono celowo:** nie dodano blokad zakresu/`SELECT … FOR UPDATE` na `Sprzedaz` ani nie zmieniono rdzenia Sprzedaży (zwrot w rdzeniu nie pobiera `GET_LOCK` salonu). Szeroka blokada obciążyłaby codzienną sprzedaż.
 
-**Proponowany minimalny kontrakt (do decyzji właściciela, przed aktywacją):**
+**Proponowany minimalny kontrakt — warianty przedstawione właścicielowi:**
 1. Akceptacja okna jako ograniczenia odroczonego uzgadniania **pod warunkiem** udokumentowanego czasu wykrycia (≤ 5 min tick + natychmiast przy następnej operacji) i sprawy E20 z jedną akcją „wyjaśnij” — stan obecny.
 2. Albo: po COMMIT rezerwacji dodatek wykonuje jedno dodatkowe, nietransakcyjne sprawdzenie źródła (ponowna suma zwrotów); różnica → natychmiastowe oznaczenie zakupu i sprawa (bez cofania wizyty). Koszt: jeden `SELECT` na rezerwację; zamyka okno do milisekund, nie do zera.
 3. Albo: w rdzeniu, przy zapisie zwrotu, `GET_LOCK('trm:<salon>', 2)` tylko gdy salon ma aktywną ewidencję — jedyna droga zamknięcia okna w 100 %; wymaga zmiany `routes/sprzedaz.js` (poza granicą tej iteracji).
 
-Do rozstrzygnięcia tej kwestii integracja **nie jest** deklarowana jako gotowa do aktywacji.
+### 7.1. Decyzja właściciela (16.10.2026) — wariant 1
+
+**Przyjęty wariant: 1 (akceptacja jako ograniczenie odroczonego uzgadniania).** Uzasadnienie właściciela: jeden lokal, jedna recepcjonistka na zmianie, zwrot wykonywany wyłącznie na wyraźną prośbę klientki przy stanowisku. Dwie równoczesne operacje na tym samym zakupie w oknie ułamka sekundy nie występują w tym trybie pracy — warunek wystąpienia luki jest niespełniony organizacyjnie, nie tylko mało prawdopodobny.
+
+Skutek dla odbioru: punkt Z3-T02b **nie blokuje** uznania ZK-03 za zamknięty. Obowiązujące zabezpieczenie pozostaje bez zmian: wykrycie przy następnej operacji na zakupie oraz w uzgadnianiu okresowym, zakup `wycofane`, sprawa E20 z jedną akcją.
+
+**Warunek ponownego otwarcia tematu:** salon z więcej niż jednym stanowiskiem recepcji pracującym równocześnie (Estelio jest sprzedawane także na zewnątrz). Przed włączeniem ewidencji takiemu salonowi wraca wariant 2 — jedno dodatkowe sprawdzenie źródła po COMMIT rezerwacji, kilka linii w `routes/terminarz.js`, bez zmian w Sprzedaży.
 
 ## 8. Poprawiony plan powrotu
 
@@ -200,4 +206,4 @@ Do rozstrzygnięcia tej kwestii integracja **nie jest** deklarowana jako gotowa 
 - Lista plików zmienionych/nowych: patrz `po10/diff-stat-092dbdd..0edfec5.txt` (14 plików; nowe: `tests/terminarz-zakupy-zk03.test.js`, `narzedzia/testy-integracyjne/{schemat-bazowy,dane-demo,terminarz-zakupy-zk03}.js`).
 - Bez sekretów w repozytorium i raporcie: hasła lokalnej instancji i salonu demo są w plikach poza repo (`.env.test`, pliki `--haslo-do`).
 - Rdzeń bez zmian; pełny zestaw testów Estelio nie był uruchamiany (zgodnie z R6 — tylko zestawy dotknięte).
-- Pozostaje w kolejnych etapach: ZK-04 kreator umawiania z pakietu/serie, ZK-05 ekran „fakt wykonania vs rozliczenie do wyjaśnienia”, ZK-06 kończenie/wznowienie ewidencji; decyzja w sprawie §7; po stronie właściciela: baza testowa w hPanel (opcjonalnie), 4 próby ręczne na dev, deploy, zmiana PIN-ów.
+- Pozostaje w kolejnych etapach: ZK-04 kreator umawiania z pakietu/serie, ZK-05 ekran „fakt wykonania vs rozliczenie do wyjaśnienia”, ZK-06 kończenie/wznowienie ewidencji; po stronie właściciela: baza testowa w hPanel (opcjonalnie), 4 próby ręczne na dev, deploy, zmiana PIN-ów.
