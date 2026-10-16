@@ -19,7 +19,8 @@ function mockDb(...resultSets) {
 
         // Idempotentne migracje ALTER TABLE uruchamiane przy ładowaniu modułu (fire-and-forget)
         // nie powinny "zjadać" kolejnych wyników przeznaczonych dla logiki handlera.
-        if (/^\s*ALTER\s+TABLE/i.test(String(sql || ''))) {
+        // (CREATE TABLE IF NOT EXISTS — np. Magazyn_Wycofane_Zamowienia w routes/magazyn.js — tak samo: migracja przy require, nie logika handlera)
+        if (/^\s*(ALTER|CREATE)\s+TABLE/i.test(String(sql || ''))) {
             if (callback) callback(null, { affectedRows: 0 });
             return;
         }

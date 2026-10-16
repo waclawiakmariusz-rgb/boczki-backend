@@ -26,7 +26,7 @@ function buildApp() {
 // Generuje mały (20×20px) szary JPEG jako Buffer
 async function tinyJpeg() {
   const img = await Jimp.create(20, 20, 0xccccccff);
-  return img.getBufferAsync(Jimp.MIME_PNG);
+  return img.getBufferAsync(Jimp.MIME_JPEG); // fixture musi być prawdziwym JPEG-iem (dotąd PNG z nazwą .jpg → sharp: „SOI not found in JPEG”)
 }
 
 let jpegBuf; // załadowany raz przed wszystkimi testami

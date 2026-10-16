@@ -9,6 +9,16 @@ const ADMIN_TOKEN = 'test-token-123';
 process.env.ADMIN_TOKEN = ADMIN_TOKEN;
 process.env.STRIPE_CENA_GROSZE = '7900';
 
+
+// Admin od 2026-04-15 (ddd29f5) loguje się do SESJI (tabela admin_sessions; x-admin-token = token sesji, nie hasło).
+// Mock odpowiada na SELECT sesji ważnym wierszem, a na pozostałe zapytania podanym wynikiem — testy sprawdzają aktualny kontrakt.
+function mockAdminDb(wynik = { affectedRows: 1 }) {
+    return { query: jest.fn((sql, paramsOrCallback, maybeCallback) => {
+        const cb = typeof paramsOrCallback === 'function' ? paramsOrCallback : maybeCallback;
+        if (/FROM admin_sessions/i.test(String(sql))) return cb && cb(null, [{ expires: Date.now() + 60 * 60 * 1000 }]);
+        if (cb) cb(null, wynik);
+    }) };
+}
 function buildAdminApp(db) {
     const app = express();
     app.use(express.json());
@@ -131,7 +141,7 @@ describe('GET /api/voucher/weryfikuj', () => {
 // ─── POST /api/admin/voucher — tworzenie ──────────────────────
 describe('POST /api/admin/voucher', () => {
     test('tworzy voucher procentowy', async () => {
-        const db = mockDbAlways({ affectedRows: 1 });
+        const db = mockAdminDb();
         const res = await request(buildAdminApp(db))
             .post('/api/admin/voucher')
             .set('x-admin-token', ADMIN_TOKEN)
@@ -145,7 +155,7 @@ describe('POST /api/admin/voucher', () => {
     });
 
     test('tworzy voucher kwotowy na X miesięcy', async () => {
-        const db = mockDbAlways({ affectedRows: 1 });
+        const db = mockAdminDb();
         const res = await request(buildAdminApp(db))
             .post('/api/admin/voucher')
             .set('x-admin-token', ADMIN_TOKEN)
@@ -161,7 +171,7 @@ describe('POST /api/admin/voucher', () => {
     });
 
     test('odrzuca brak wymaganych pól', async () => {
-        const db = mockDbAlways({ affectedRows: 1 });
+        const db = mockAdminDb();
         const res = await request(buildAdminApp(db))
             .post('/api/admin/voucher')
             .set('x-admin-token', ADMIN_TOKEN)
@@ -170,7 +180,7 @@ describe('POST /api/admin/voucher', () => {
     });
 
     test('odrzuca nieprawidłowy typ', async () => {
-        const db = mockDbAlways({ affectedRows: 1 });
+        const db = mockAdminDb();
         const res = await request(buildAdminApp(db))
             .post('/api/admin/voucher')
             .set('x-admin-token', ADMIN_TOKEN)
@@ -179,7 +189,7 @@ describe('POST /api/admin/voucher', () => {
     });
 
     test('odrzuca bez tokenu admina', async () => {
-        const db = mockDbAlways({ affectedRows: 1 });
+        const db = mockAdminDb();
         const res = await request(buildAdminApp(db))
             .post('/api/admin/voucher')
             .send({ kod: 'TEST', typ: 'procent', wartosc: 10 });
@@ -195,7 +205,10 @@ describe('POST /api/admin/login', () => {
             .post('/api/admin/login')
             .send({ haslo: ADMIN_TOKEN });
         expect(res.body.status).toBe('success');
-        expect(res.body.token).toBe(ADMIN_TOKEN);
+        // kontrakt od 2026-04-15 (ddd29f5): osobny token sesji admina (UUID), nigdy samo hasło administratora
+        expect(typeof res.body.token).toBe('string');
+        expect(res.body.token.length).toBeGreaterThan(20);
+        expect(res.body.token).not.toBe(ADMIN_TOKEN);
     });
 
     test('odrzuca złe hasło', async () => {
