@@ -298,6 +298,7 @@ const dbConfig = {
     user: env('DB_USER'),
     password: env('DB_PASSWORD'),
     database: env('DB_NAME'),
+    port: Number(env('DB_PORT')) || 3306, // DB_PORT tylko dla środowisk nietypowych (np. izolowana baza testowa na innym porcie); brak = 3306 jak dotąd
     charset: 'utf8mb4',
     waitForConnections: true,
     connectionLimit: 10,

@@ -410,3 +410,37 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
 .trm-main.trm-odswiezanie, #trm-main.trm-odswiezanie { opacity:.85; transition:opacity .15s; }
 .trm-karta.zapis { opacity:.55; outline:2px dashed var(--t-acc); }
 .trm-karta.zapis::after { content:"⏳ zapisujemy…"; position:absolute; right:6px; top:4px; font-size:10.5px; color:var(--t-acc); }
+
+/* ── ZK-03: Pakiety i zakupy — skład ofert, przygotowanie, stan pakietów, istniejące wizyty, gotowość (style ograniczone do .trm) ── */
+.trm .pz-seg { flex-wrap:wrap; }
+.trm .pz-seg button { min-height:32px; padding:6px 12px; }
+.trm .pz-tabela th { text-align:left; font-size:11px; letter-spacing:.05em; text-transform:uppercase; color:var(--t-mut); padding:6px 8px; border-bottom:1px solid var(--t-line); }
+.trm .pz-tabela td { padding:8px; border-bottom:1px solid var(--t-line); vertical-align:top; }
+.trm .pz-tabela tr.pz-edytowany td { background:var(--t-acc2); }
+.trm .pz-tabela tr.pz-pominiete td { opacity:.7; }
+.trm .pz-tabela tr.pz-zmienione td { background:var(--t-bad-bg); }
+.trm .pz-tabela input[type=checkbox] { width:18px; height:18px; min-height:0; padding:0; }
+.trm .pz-edytor { background:var(--t-bg); border:1px solid var(--t-line); border-radius:var(--t-rs); padding:10px 12px; }
+.trm .pz-sklad-naglowek { margin:4px 0 6px; }
+.trm .pz-sklad-wiersz { gap:6px; flex-wrap:wrap; margin-bottom:6px; align-items:center; }
+.trm .pz-sklad-wiersz input[type=number] { min-height:36px; padding:6px 8px; }
+.trm .pz-stan-wiersz { border-top:1px solid var(--t-line); padding:10px 0 6px; }
+.trm .pz-stan-wiersz.zwer { opacity:.85; }
+.trm .pz-stan-wiersz input[type=number] { min-height:38px; }
+.trm .pz-kafle { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:8px; }
+.trm .pz-kafel { background:var(--t-sur); border:1px solid var(--t-line); border-radius:var(--t-rs); padding:10px 12px; }
+.trm .pz-kafel .v { font-size:22px; font-weight:600; line-height:1.1; }
+.trm .pz-kafel .t { font-size:12px; color:var(--t-mut); margin-top:2px; }
+.trm .pz-kafel.ok .v { color:var(--t-ok-fg); } .trm .pz-kafel.warn .v { color:var(--t-warn-fg); } .trm .pz-kafel.bad .v { color:var(--t-bad-fg); }
+.trm .trm-note.ok { background:var(--t-ok-bg); color:var(--t-ok-fg); }
+@media (max-width: 900px) { .trm .pz-grid { grid-template-columns:1fr; } }
+@media (max-width: 640px) {
+  .trm .pz-tabela, .trm .pz-tabela thead, .trm .pz-tabela tbody, .trm .pz-tabela tr, .trm .pz-tabela td { display:block; width:100%; }
+  .trm .pz-tabela thead { display:none; }
+  .trm .pz-tabela tr { border:1px solid var(--t-line); border-radius:var(--t-rs); margin-bottom:8px; background:var(--t-sur); }
+  .trm .pz-tabela td { border:0; padding:6px 10px; }
+  .trm .pz-tabela td:first-child { padding-top:10px; }
+  .trm .pz-sklad-wiersz > * { flex:1 1 100% !important; min-width:0 !important; }
+  .trm .pz-stan-wiersz .trm-row > div { flex:1 1 46%; }
+  .trm .pz-stan-wiersz input[type=number] { width:100% !important; }
+}

@@ -54,8 +54,9 @@ describe('K02 — 5 × A + 4 × B: niezależne składniki i weryfikacja per skł
   test('weryfikacja A (U=2) nie otwiera B; B odrzucane przez domenę; rodzic = częściowo zweryfikowany', async () => {
     const repo = repoPamiec(T); const c = ctx('przygotowanie'); const { zakup, A, B } = await mieszany(repo, c);
     await domena.weryfikujSkladnik(repo, c, { skladnik_id: A, hist_wykorzystane: 2, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'Booksy do 10.2026' });
-    await domena.uruchomSkladnik(repo, c, { skladnik_id: A, potwierdzenie_zaleznych: true });
     const ca = ctx('aktywna');
+    expect((await domena.uruchomSkladnik(repo, c, { skladnik_id: A, potwierdzenie_zaleznych: true })).plan).toBe(true); // w przygotowaniu = tylko plan, bez R
+    expect((await domena.uruchomSkladnik(repo, ca, { skladnik_id: A, potwierdzenie_zaleznych: true })).plan).toBe(false); // uruchomienie w trybie aktywnym
     const widok = await Z.widokZakupow(repo, ca, { id_klienta: '1001' });
     expect(widok[0].weryfikacja).toBe('czesciowo');
     expect(widok[0].skladniki.find(s => s.id === A)).toMatchObject({ do_umowienia: 3, wykorzystane: 2, umowione: 0, dostepny: true });
@@ -67,7 +68,7 @@ describe('K02 — 5 × A + 4 × B: niezależne składniki i weryfikacja per skł
     const repo = repoPamiec(T); const c = ctx(); const { B } = await mieszany(repo, c);
     await expect(domena.weryfikujSkladnik(repo, c, { skladnik_id: B, hist_wykorzystane: 0, zrodlo_ustalen: 'x' })).rejects.toThrow(/Podaj jawnie liczbę/);
     await domena.weryfikujSkladnik(repo, c, { skladnik_id: B, hist_wykorzystane: 0, hist_wycofane: 0, hist_potracone: 0, zrodlo_ustalen: 'potwierdzone zero' });
-    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: false })).rejects.toThrow(/istniejące wizyty/);
+    await expect(domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: false })).rejects.toThrow(/istniejących wizyt/);
     await domena.uruchomSkladnik(repo, c, { skladnik_id: B, potwierdzenie_zaleznych: true });
     const w = await rezerwujPoz(repo, c, await pozycja(repo, { usluga_id: 'U-B' }), B, { usluga_id: 'U-B' });
     expect(w.przydzialy).toHaveLength(1); expect(await saldo(repo, B)).toMatchObject({ R: 1, B: 3 });
@@ -219,7 +220,8 @@ describe('K09 — obcy salon/klientka i podmieniony autor', () => {
     await repo.skladniki([1, 2], true); await repo.ruchy([1]); await repo.przydzial(5, true); await repo.zrodloSprzedaz('S-1', true); await repo.operacja('k'); await repo.wstawRuch({ skladnik_id: 1, typ: 'R', ilosc: 1 }); await repo.aktualizujPozycje(3, { stan: 'x' }); await repo.ewidencja();
     for (const z of zap) { expect(z.sql).toMatch(/tenant_id/); expect(z.p).toContain('salon-A'); }
     expect(zap.find(z => /Term_Zakupy_Skladniki s JOIN/.test(z.sql)).sql).toMatch(/FOR UPDATE$/);
-    expect(zap.find(z => /FROM Sprzedaz WHERE/.test(z.sql)).sql).toMatch(/FOR SHARE/);
+    expect(zap.find(z => /FROM Sprzedaz WHERE/.test(z.sql)).sql).toMatch(/LOCK IN SHARE MODE$/); // składnia MariaDB (FOR SHARE = błąd składni na 11.8.9)
+    expect(zap.some(z => /FOR SHARE/.test(z.sql))).toBe(false);
   });
   test('autor ruchu pochodzi z kontekstu sesji, nie z danych żądania', async () => {
     const repo = repoPamiec(T); const c = ctx('aktywna', 'Ola');
@@ -335,6 +337,12 @@ describe('K12 — reguły zużycia, ważności i źródła', () => {
 });
 
 // ═════════ K10 / K12 / K14: kontrakt routera i start bez schematu ═════════
+/** Wiersze INFORMATION_SCHEMA.COLUMNS dla atrapy: tabele v1 zawsze; elementy v2 (z typami kolumn jak w DDL) tylko gdy `zV2`. */
+function schematRows(zV2) {
+  const rows = Z.TABELE_V1.map(t => ({ t, c: 'id', ct: 'int(11)' }));
+  if (zV2) for (const [k, ct] of Object.entries(Z.oczekiwaneKolumny())) rows.push({ t: k.split('.')[0], c: k.split('.')[1], ct });
+  return rows;
+}
 function atrapaBazy(odpowiedzi) {
   const zap = []; let insertId = 100;
   const wykonaj = (sql, params) => { zap.push({ sql: String(sql), params: params || [] }); for (const [re, w] of odpowiedzi) if (re.test(sql)) return typeof w === 'function' ? w(sql, params) : w; if (/^\s*(INSERT|UPDATE|DELETE|ALTER|CREATE)/i.test(sql)) return { insertId: ++insertId, affectedRows: 1 }; return []; };
@@ -382,7 +390,7 @@ describe('K10 — brak schematu/aktywacji nie psuje rdzenia i nie dopuszcza ruch
   });
   test('N05: salon na liście technicznej, ale BRAK schematu v2 → dodatek zgłasza niedostępność (SCHEMAT_V2), rdzeń i kalendarz bez pakietu działają', async () => {
     process.env.TERMINARZ_ZAKUPY_TENANTS = T;
-    const db = atrapaBazy([[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, []], ...BAZOWE]);
+    const db = atrapaBazy([[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => schematRows(false)], ...BAZOWE]);
     const { app, router } = aplikacja(db);
     await router.sprawdzSchemat(); const sv2 = await router.sprawdzSchematV2(); expect(sv2.gotowy).toBe(false); expect(sv2.braki.length).toBeGreaterThan(10);
     expect((await post(app, { action: 'trm_ewidencja_ustaw', tryb: 'przygotowanie' })).body).toMatchObject({ status: 'error', code: 'SCHEMAT_V2' });
@@ -398,7 +406,7 @@ describe('K10 — brak schematu/aktywacji nie psuje rdzenia i nie dopuszcza ruch
 describe('K12 — kontrakt handlerów na atrapie bazy ze schematem v2', () => {
   const envPrzed = process.env.TERMINARZ_ZAKUPY_TENANTS;
   afterEach(() => { if (envPrzed === undefined) delete process.env.TERMINARZ_ZAKUPY_TENANTS; else process.env.TERMINARZ_ZAKUPY_TENANTS = envPrzed; });
-  const schematOk = () => [[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => Z.ELEMENTY_V2.map(n => ({ t: n.split('.')[0], c: n.split('.')[1] || 'id' }))]];
+  const schematOk = () => [[/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \('Term_Oferty'/, () => [{ t: 'Term_Oferty', c: 'id' }, { t: 'Term_Oferty_Skladniki', c: 'id' }, { t: 'Term_Zakupy', c: 'id' }, { t: 'Term_Zakupy_Skladniki', c: 'id' }, { t: 'Term_Zakupy_Ruchy', c: 'id' }, { t: 'Term_Pozycje', c: 'zakup_skladnik_id' }, { t: 'Term_Ustawienia', c: 'kontrola_zakupow' }]], [/INFORMATION_SCHEMA\.COLUMNS WHERE TABLE_SCHEMA = DATABASE\(\) AND TABLE_NAME IN \(\?/, () => schematRows(true)]];
   const rez = (stanPoz, extra = {}) => ({ id: 7, tenant_id: T, id_klienta: '1001', klient_nazwa: 'Testowa', status: 'potwierdzona', obecnosc: 'przybyl', kanal: 'recepcja', start_s: '2026-10-19 09:00:00', koniec_s: '2026-10-19 09:30:00', wersja: 1, ...extra, _poz: stanPoz });
   function bazaZWizyta(stanPoz, przydzialy) {
     return atrapaBazy([...schematOk(), [/FROM Term_Rezerwacje r WHERE r\.tenant_id = \? AND r\.id = \?/, [rez(stanPoz)]],
@@ -457,16 +465,26 @@ describe('K12 — kontrakt handlerów na atrapie bazy ze schematem v2', () => {
 
 describe('K11 (mock) — migracja v2 kontrolowana i powtarzalna', () => {
   test('pusty model: wszystkie kroki DDL; drugi przebieg = „już było”; dane w starym modelu zatrzymują ścieżkę bez DDL', async () => {
-    const wyk = []; let zastosowane = new Set();
-    const qx = async (sql) => { wyk.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/RELEASE_LOCK/.test(sql)) return []; if (/COUNT\(\*\) n FROM INFORMATION_SCHEMA/.test(sql)) return [{ n: zastosowane.has('Term_Zakupy_Ruchy2') ? 1 : 0 }]; if (/COUNT\(\*\) n FROM/.test(sql)) return [{ n: 0 }]; if (/^(CREATE|ALTER)/.test(sql)) { const k = sql.match(/TABLE (?:IF NOT EXISTS )?(\w+)(?: ADD COLUMN (\w+))?/); const n = k[2] ? k[1] + '.' + k[2] : k[1]; if (zastosowane.has(n)) { const e = new Error('dup'); e.code = k[2] ? 'ER_DUP_FIELDNAME' : 'ER_TABLE_EXISTS_ERROR'; throw e; } zastosowane.add(n); return []; } return []; };
-    const r1 = await Z.migrujV2(qx, { log: { error() {} } }); expect(r1.zastosowano).toHaveLength(Z.SCHEMAT_V2.length); expect(r1.bledy).toEqual([]); expect(r1.zatrzymano).toBeNull();
-    const r2 = await Z.migrujV2(qx, { log: { error() {} } }); expect(r2.juzBylo).toHaveLength(Z.SCHEMAT_V2.length); expect(r2.zastosowano).toEqual([]);
-    expect(wyk.filter(s => /DROP|TRUNCATE|DELETE/i.test(s))).toEqual([]);
-    expect(wyk.some(s => /Term_Migracje/.test(s) && /v2:/.test(JSON.stringify(s)) === false)).toBe(true);
-    const wyk2 = []; zastosowane = new Set();
-    const qx2 = async (sql) => { wyk2.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/COUNT\(\*\) n FROM INFORMATION_SCHEMA/.test(sql)) return [{ n: 0 }]; if (/COUNT\(\*\) n FROM Term_Zakupy_Ruchy/.test(sql)) return [{ n: 12 }]; if (/COUNT/.test(sql)) return [{ n: 0 }]; return []; };
-    const r3 = await Z.migrujV2(qx2, { log: { error() {} } }); expect(r3.zatrzymano).toMatch(/zawiera dane/); expect(wyk2.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
-    expect((await Z.migrujV2(qx, { dryRun: true })).zastosowano.every(s => /dry-run/.test(s))).toBe(true);
+    // atrapa silnika: INFORMATION_SCHEMA odzwierciedla zastosowane elementy (z typami jak w DDL); tabele v1 obecne
+    const oczek = Z.oczekiwaneKolumny();
+    const atrapaSilnika = (opcje = {}) => { const wyk = []; const zastosowane = new Set(opcje.start || []);
+      const qx = async (sql) => { wyk.push(sql); if (/GET_LOCK/.test(sql)) return [{ l: 1 }]; if (/RELEASE_LOCK/.test(sql)) return [];
+        if (/INFORMATION_SCHEMA\.COLUMNS/.test(sql)) { const rows = Z.TABELE_V1.map(t => ({ t, c: 'id', ct: 'int(11)' })); for (const [k, ct] of Object.entries(oczek)) { const [t, c] = k.split('.'); if (zastosowane.has(t) || zastosowane.has(k)) rows.push({ t, c, ct: (opcje.zlyTyp === k ? 'varchar(5)' : ct) }); } return rows; }
+        if (/COUNT\(\*\) n FROM Term_Zakupy_Ruchy\b/.test(sql)) return [{ n: opcje.daneV1 || 0 }]; if (/COUNT\(\*\) n FROM/.test(sql)) return [{ n: 0 }];
+        if (/^(CREATE|ALTER)/.test(sql)) { const k = sql.match(/TABLE (?:IF NOT EXISTS )?(\w+)(?: ADD COLUMN (\w+))?/); const n = k[2] ? k[1] + '.' + k[2] : k[1]; if (zastosowane.has(n)) { const e = new Error('dup'); e.code = k[2] ? 'ER_DUP_FIELDNAME' : 'ER_TABLE_EXISTS_ERROR'; throw e; } zastosowane.add(n); return []; } return []; };
+      return { qx, wyk, zastosowane }; };
+    const a = atrapaSilnika();
+    const r1 = await Z.migrujV2(a.qx, { log: { error() {} } }); expect(r1.stanPrzed.typ).toBe('v1_czysty'); expect(r1.zastosowano).toHaveLength(Z.SCHEMAT_V2.length); expect(r1.bledy).toEqual([]); expect(r1.zatrzymano).toBeNull(); expect(r1.stanPo.typ).toBe('v2_kompletny');
+    const r2 = await Z.migrujV2(a.qx, { log: { error() {} } }); expect(r2.juzBylo).toHaveLength(Z.SCHEMAT_V2.length); expect(r2.zastosowano).toEqual([]);
+    expect(a.wyk.filter(s => /DROP|TRUNCATE|DELETE/i.test(s))).toEqual([]);
+    expect(a.wyk.some(s => /INSERT INTO Term_Migracje/.test(s))).toBe(true);
+    const b = atrapaSilnika({ daneV1: 12 }); const r3 = await Z.migrujV2(b.qx, { log: { error() {} } }); expect(r3.stanPrzed.typ).toBe('v1_z_danymi'); expect(r3.zatrzymano).toMatch(/zawiera dane/); expect(b.wyk.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
+    // Z3-T05: przerwana migracja (tylko 2 elementy) → wznowienie dokłada brakujące, nie dubluje; zły typ kolumny → zatrzymanie bez DDL
+    const c = atrapaSilnika({ start: ['Term_Oferty_Wersje', 'Term_Zakupy.zrodlo_typ'] }); const r4 = await Z.migrujV2(c.qx, { log: { error() {} } }); expect(r4.stanPrzed.typ).toBe('v2_czesciowy'); expect(r4.juzBylo).toEqual(['Term_Oferty_Wersje', 'Term_Zakupy.zrodlo_typ']); expect(r4.zastosowano).toHaveLength(Z.SCHEMAT_V2.length - 2); expect(r4.stanPo.typ).toBe('v2_kompletny');
+    const d = atrapaSilnika({ start: ['Term_Zakupy.zrodlo_hash'], zlyTyp: 'Term_Zakupy.zrodlo_hash' }); const r5 = await Z.migrujV2(d.qx, { log: { error() {} } }); expect(r5.stanPrzed.typ).toBe('v2_niezgodny'); expect(r5.zatrzymano).toMatch(/typy kolumn/); expect(d.wyk.filter(s => /^(CREATE|ALTER)/.test(s))).toEqual([]);
+    expect((await Z.migrujV2(atrapaSilnika().qx, { dryRun: true })).zastosowano.every(s => /dry-run/.test(s))).toBe(true);
+    // start serwera: sprawdzSchematV2 tylko czyta (zero INSERT/UPDATE)
+    const e = atrapaSilnika({ start: Z.ELEMENTY_V2 }); const st = await Z.sprawdzSchematV2(e.qx, { warn() {}, error() {} }); expect(st.gotowy).toBe(true); expect(e.wyk.some(s => /^(INSERT|UPDATE|ALTER|CREATE)/i.test(s))).toBe(false);
   });
 });
 

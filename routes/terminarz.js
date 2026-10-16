@@ -286,7 +286,7 @@ module.exports = (db, opts = {}) => {
       const rows = await q(`SELECT TABLE_NAME AS t, COLUMN_NAME AS c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('Term_Oferty','Term_Oferty_Skladniki','Term_Zakupy','Term_Zakupy_Skladniki','Term_Zakupy_Ruchy','Term_Pozycje','Term_Ustawienia')`);
       const braki = [];
       for (const [t, c] of SCHEMAT_ZAKUPOW) {
-        const jest = c ? rows.some(r => r.t === t && r.c === c) : rows.some(r => r.t === t);
+        const jest = c ? rows.some(r => String(r.t).toLowerCase() === t.toLowerCase() && String(r.c).toLowerCase() === c.toLowerCase()) : rows.some(r => String(r.t).toLowerCase() === t.toLowerCase()); // bez względu na wielkość liter (lower_case_table_names=1 na Windows zwraca nazwy małymi literami)
         if (!jest) braki.push(c ? `${t}.${c}` : t);
         await q(`INSERT INTO Term_Migracje (nazwa, wersja, obecna, sprawdzono) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE wersja = VALUES(wersja), obecna = VALUES(obecna), sprawdzono = NOW()`, [c ? `${t}.${c}` : t, schemat.wersja, jest ? 1 : 0]);
       }
@@ -306,14 +306,26 @@ module.exports = (db, opts = {}) => {
   async function sprawdzSchematV2() { const w = await Z.sprawdzSchematV2(q, log); Object.assign(schematV2, w); return schematV2; }
   if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') setTimeout(() => { sprawdzSchematV2(); }, 4500);
   const integracjaZakupow = (tenant) => zakupyAktywne(tenant) && schemat.gotowy && schematV2.gotowy;
-  /** Tryb ewidencji salonu (§14.1). Bez technicznej aktywacji (env + schematy) zawsze „nie_uruchomiono” — żadna mutacja jednostek nie przejdzie. */
-  async function trybEwidencji(tenant) {
-    if (!integracjaZakupow(tenant)) return 'nie_uruchomiono';
-    const rows = await q(`SELECT tryb FROM Term_Ewidencja WHERE tenant_id = ?`, [tenant]).catch(() => []);
-    return rows.length && Z.TRYBY.includes(rows[0].tryb) ? rows[0].tryb : 'nie_uruchomiono';
+  /**
+   * Stan ewidencji salonu (§14.1, R4) — trzy niezależne rzeczy: dostępność techniczna (env + schematy), ZAPISANY stan (Term_Ewidencja —
+   * nigdy nie maskowany przez brak dostępności) i tryb efektywny (co wolno teraz). Bez dostępności technicznej tryb efektywny = „niedostepna”
+   * (każda mutacja jednostek odrzucona w całości, historia zachowana); po przerwie (przerwa_od) = „uzgadnianie” do decyzji managera.
+   */
+  async function stanEwidencji(tenant) {
+    const techniczna = integracjaZakupow(tenant);
+    const rows = schematV2.gotowy ? await q(`SELECT tryb, rozpoczeto, przerwa_od, punkt_uzgodnienia, zakonczono FROM Term_Ewidencja WHERE tenant_id = ?`, [tenant]).catch(() => []) : [];
+    const zapisany = rows.length && Z.TRYBY.includes(rows[0].tryb) ? rows[0].tryb : 'nie_uruchomiono';
+    const przerwa = rows.length && rows[0].przerwa_od ? String(rows[0].przerwa_od).slice(0, 19) : null;
+    const tryb = !techniczna ? 'niedostepna' : (przerwa && ['aktywna', 'konczenie'].includes(zapisany) ? 'uzgadnianie' : zapisany);
+    return { techniczna, zapisany, tryb, przerwa_od: przerwa, rozpoczeto: rows.length && rows[0].rozpoczeto ? String(rows[0].rozpoczeto).slice(0, 19) : null };
   }
-  /** Kontekst operacji jednostkowej: autor WYŁĄCZNIE z sesji PIN (router sprawdza tożsamość), czas serwera, tryb ewidencji. */
-  const ctxZ = async (tenant, imie, r) => ({ tenant, autor: imie || null, rola: r, teraz: await teraz(), tryb: await trybEwidencji(tenant) });
+  const trybEwidencji = async (tenant) => (await stanEwidencji(tenant)).tryb;
+  /** Kontekst operacji jednostkowej: autor WYŁĄCZNIE z sesji PIN (router sprawdza tożsamość) + stabilny identyfikator konta (R6), czas serwera, stan ewidencji. */
+  async function ctxZ(tenant, imie, r) {
+    const konto = imie ? (await q(`SELECT id FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?) LIMIT 1`, [tenant, imie]).catch(() => []))[0] : null;
+    const st = await stanEwidencji(tenant);
+    return { tenant, autor: imie || null, autor_id: konto ? String(konto.id) : null, rola: r, teraz: await teraz(), tryb: st.tryb, techniczna: st.techniczna, zapisany: st.zapisany, przerwa_od: st.przerwa_od, widziKwoty: ROLE_OPERACYJNE.has(r) };
+  }
   /**
    * Jedyna droga mutacji jednostek (§15.2): GET_LOCK salonu → BEGIN → fn(conn, repo) → COMMIT → RELEASE_LOCK; błąd = ROLLBACK.
    * Blokada i zwolnienie na TYM SAMYM połączeniu; blokada jest po stronie serwera MySQL (działa też przy wielu procesach).
@@ -322,20 +334,34 @@ module.exports = (db, opts = {}) => {
   async function wTransakcjiSalonu(tenant, fn) {
     const conn = await polacz();
     try {
+      // R3: na czas kontrolowanej migracji schematu (blokada 'trm:migracja' trzymana przez narzędzie) operacje dodatku są odrzucane; rdzeń nie jest wstrzymywany
+      const wolna = await qc(conn, `SELECT IS_FREE_LOCK('trm:migracja') AS w`);
+      if (wolna[0] && Number(wolna[0].w) === 0) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
       const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, ['trm:' + tenant]);
-      if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.');
+      if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.', { code: 'BLOKADA' });
       try {
         await begin(conn);
         const repo = Z.repoSql((sql, params) => qc(conn, sql, params), tenant);
         try { const wynik = await fn(conn, repo); await commit(conn); return wynik; }
         catch (e) {
           await rollback(conn);
-          // zmiana źródła wykryta w transakcji ma zostać utrwalona mimo odrzucenia operacji (zakup „do wyjaśnienia”)
-          if (e && e.utrwalPoRollback && schematV2.gotowy) await q(`UPDATE Term_Zakupy SET stan_zrodla = ?, wersja = wersja + 1 WHERE tenant_id = ? AND id = ?`, [e.utrwalPoRollback.stan_zrodla, tenant, e.utrwalPoRollback.zakup_id]).catch(() => {});
+          if (e && e.utrwalPoRollback && schematV2.gotowy) { // zmiana źródła wykryta w transakcji ma zostać utrwalona mimo odrzucenia operacji (R6): zakup „do wyjaśnienia” + sprawa
+            const u = e.utrwalPoRollback;
+            await q(`UPDATE Term_Zakupy SET stan_zrodla = ?, wersja = wersja + 1 WHERE tenant_id = ? AND id = ?`, [u.stan_zrodla, tenant, u.zakup_id]).catch(() => {});
+            await sprawaZrodla(tenant, { zakup_id: u.zakup_id, zmiana: u.zmiana, stan_zrodla: u.stan_zrodla, kto: null }).catch(() => {});
+          }
+          if (e && e.extra && e.extra.code === 'EWIDENCJA_NIEDOSTEPNA' && schematV2.gotowy) { // R4: odmowa przy istniejących przydziałach = rzeczywista przerwa ewidencji (powrót wymaga uzgodnienia)
+            await q(`UPDATE Term_Ewidencja SET przerwa_od = COALESCE(przerwa_od, NOW()) WHERE tenant_id = ? AND tryb IN ('aktywna','konczenie')`, [tenant]).catch(() => {});
+          }
           throw e;
         }
       } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
     } finally { conn.release(); }
+  }
+  /** Sprawa „zakup zmieniony w Sprzedaży” (E20) — jedna na zakup, aktualizowana (klucz dedup per zakup), nie co 5 minut nowa. */
+  async function sprawaZrodla(tenant, { zakup_id, zmiana, stan_zrodla, nazwa, id_klienta, kto }) {
+    const opis = `${nazwa ? nazwa + ': ' : ''}${zmiana === 'usuniete' ? 'zakup usunięty w Sprzedaży' : zmiana === 'zwrot' ? (stan_zrodla === 'wycofane' ? 'zwrot całości — uprawnienia wycofane' : 'zwrot części — zakres do ustalenia (nie przeliczamy kwoty na zabiegi)') : 'zmiana istotnych danych sprzedaży'}; nowe umówienia z tego zakupu wstrzymane do wyjaśnienia.`;
+    return sprawaUpsert(tenant, { typ: 'E20', tytul: 'Zakup zmieniony w Sprzedaży — wymaga wyjaśnienia', opis, dane: { zakup_id, id_klienta: id_klienta || null, zmiana, stan_zrodla, dotyczy: [] }, priorytet: 'P1', klucz: `E20:${zakup_id}`, kto: kto || null, dziennikOpis: opis });
   }
   mk(`CREATE TABLE IF NOT EXISTS Term_Sprawy (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -412,7 +438,7 @@ module.exports = (db, opts = {}) => {
     return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja,
       zakupy_integracja: integracja ? 'on' : 'off', kontrola_zakupow: integracja && u.kontrola_zakupow === 'on' ? 'on' : 'off', kontrola_zakupow_zapisana: u.kontrola_zakupow === 'on' ? 'on' : 'off',
       // ZK-02: trzy niezależne decyzje (§14.1): dostęp techniczny (zakupy_integracja), tryb ewidencji (manager), dopuszczenie usługi bez zakupu (kontrola_zakupow / Term_Uslugi.wymaga_zakupu)
-      ewidencja: integracja ? await trybEwidencji(tenant) : 'nie_uruchomiono',
+      ewidencja: integracja ? (await stanEwidencji(tenant)).tryb : 'niedostepna', ewidencja_zapisana: schematV2.gotowy ? (await stanEwidencji(tenant)).zapisany : 'nie_uruchomiono',
       recepcja_potwierdza_wykonanie: !!u.recepcja_potwierdza_wykonanie, potracenie_nieobecnosc: u.potracenie_nieobecnosc === 'on' ? 'on' : 'off', seria_limit: Math.min(50, Math.max(1, Number(u.seria_limit) || 20)) };
   }
 
@@ -511,7 +537,16 @@ module.exports = (db, opts = {}) => {
     if (!r) return null;
     const poz = await q(`SELECT p.*, DATE_FORMAT(p.start,'%Y-%m-%d %H:%i:%s') AS start_s, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec_s, g.nazwa AS gabinet, u.nazwa AS urzadzenie
       FROM Term_Pozycje p LEFT JOIN Term_Zasoby g ON g.id = p.gabinet_id LEFT JOIN Term_Zasoby u ON u.id = p.urzadzenie_id WHERE p.tenant_id = ? AND p.rezerwacja_id = ? ORDER BY p.kolejnosc, p.start`, [tenant, Number(id)]);
-    return formatujRez(r, poz);
+    const wynik = formatujRez(r, poz);
+    if (schematV2.gotowy && poz.length) { // R5: prawdą o jednostkach są przydziały i realizacje (wiele źródeł na pozycję); zakup_skladnik_id to tylko pole zgodności
+      const ids = poz.map(p => p.id);
+      const [prz, real] = await Promise.all([
+        q(`SELECT a.id, a.pozycja_id, a.skladnik_id, a.ilosc, a.ilosc_zuzyta, a.cykl, a.stan, s.usluga_nazwa, z.nazwa AS zakup_nazwa, z.id AS zakup_id FROM Term_Przydzialy a JOIN Term_Zakupy_Skladniki s ON s.id = a.skladnik_id JOIN Term_Zakupy z ON z.id = s.zakup_id WHERE a.tenant_id = ? AND a.pozycja_id IN (${ids.map(() => '?').join(',')}) ORDER BY a.id`, [tenant, ...ids]).catch(() => []),
+        q(`SELECT id, pozycja_id, przydzial_id, skladnik_id, ilosc, wykonawca_fakt, DATE_FORMAT(data_fakt,'%Y-%m-%d %H:%i:%s') AS data_fakt, zapisal, cykl, stan, odwrocona_przez FROM Term_Realizacje WHERE tenant_id = ? AND pozycja_id IN (${ids.map(() => '?').join(',')}) ORDER BY id`, [tenant, ...ids]).catch(() => []),
+      ]);
+      wynik.pozycje.forEach(p => { p.przydzialy = prz.filter(x => x.pozycja_id === p.id); p.realizacje = real.filter(x => x.pozycja_id === p.id); p.jednostki_wymagane = (poz.find(x => x.id === p.id) || {}).jednostki_wymagane || 1; p.rozliczenie = (poz.find(x => x.id === p.id) || {}).rozliczenie || null; p.wykonanie_data_fakt = dt((poz.find(x => x.id === p.id) || {}).wykonanie_data_fakt); });
+    }
+    return wynik;
   }
   function formatujRez(r, poz) {
     return {
@@ -1072,9 +1107,46 @@ module.exports = (db, opts = {}) => {
       case 'trm_zakupy_uzgodnij': { // jawna, idempotentna operacja: ponowny odczyt źródeł ISTNIEJĄCYCH zakupów klientki (hash/stan). Rejestracja nowych sprzedaży → ZK-03.
         wymagaj(r, ROLE_OPERACYJNE); wymagajIntegracji(tenant);
         const idKlienta = d.id_klienta ? String(d.id_klienta) : null; if (!idKlienta) throw new BladUzytkownika('Wskaż klientkę (ID).');
-        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); const out = []; for (const z of await repo.zakupyKlientki(idKlienta)) { const u = await Z.domena.uzgodnijZrodlo(repo, ctx, z); out.push({ zakup_id: z.id, zmiana: u.zmiana, stan_zrodla: u.stan_zrodla }); } return out; });
-        for (const x of wyn.filter(x => ['istotna', 'usuniete', 'zwrot'].includes(x.zmiana))) await sprawaUpsert(tenant, { typ: 'E20', tytul: 'Zakup zmieniony w Sprzedaży — wymaga wyjaśnienia', opis: `zakup #${x.zakup_id}: ${x.zmiana === 'usuniete' ? 'usunięty w Sprzedaży' : x.zmiana === 'zwrot' ? 'zwrot' : 'zmiana istotnych danych'} (stan: ${x.stan_zrodla})`, dane: { zakup_id: x.zakup_id, zmiana: x.zmiana, dotyczy: [] }, priorytet: 'P1', klucz: `E20:${x.zakup_id}:${x.stan_zrodla}`, kto: imie });
-        return { status: 'success', uzgodniono: wyn, nowe_zrodla: 'rejestracja nowych sprzedaży jako zakupów — ZK-03' };
+        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); const out = []; for (const z of await repo.zakupyKlientki(idKlienta)) { const u = await Z.domena.uzgodnijZrodlo(repo, ctx, z); out.push({ zakup_id: z.id, nazwa: z.nazwa, id_klienta: z.id_klienta, zmiana: u.zmiana, stan_zrodla: u.stan_zrodla }); } return out; });
+        for (const x of wyn.filter(x => ['istotna', 'usuniete', 'zwrot'].includes(x.zmiana))) await sprawaZrodla(tenant, { ...x, kto: imie });
+        return { status: 'success', uzgodniono: wyn, nowe_zrodla: 'nowe sprzedaże rejestruje jawnie trm_zakupy_podglad → trm_zakupy_rejestruj' };
+      }
+      // ───────── ZK-03: podgląd i rejestracja źródeł (Z3-03), kwalifikacja „1×”, kandydaci wizyt (Z3-05), gotowość (Z3-06) ─────────
+      case 'trm_zakupy_podglad': { // ODCZYT bez mutacji: klasyfikacja sprzedaży salonu/klientki (gotowe / wymaga mapowania / do rozstrzygnięcia / pominięte / istniejące / zmienione)
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        const ctx = await ctxZ(tenant, imie, r);
+        const w = await Z.domena.podgladZrodel(Z.repoSql(q, tenant), ctx, { id_klienta: d.id_klienta ? String(d.id_klienta) : null, od: d.od ? sprawdzData(d.od, 'od') : null, do_: d.do ? sprawdzData(d.do, 'do') : null, limit: Math.min(500, Math.max(1, Number(d.limit) || 300)) });
+        return { status: 'success', ewidencja: ctx.tryb, ewidencja_zapisana: ctx.zapisany, sprawdzono: ctx.teraz, ...w };
+      }
+      case 'trm_zakupy_rejestruj': { // JAWNE potwierdzenie listy źródeł → idempotentna rejestracja (klucz źródła + Term_Operacje); per pozycja wynik; bez R/U
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        const lista = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => ({ sprzedaz_id: String(p.sprzedaz_id || ''), wersja_id: p.wersja_id ? Number(p.wersja_id) : null, id_klienta: p.id_klienta ? String(p.id_klienta) : null, powiazane: Array.isArray(p.powiazane) ? p.powiazane.map(String) : undefined })).filter(p => p.sprzedaz_id).slice(0, 200);
+        if (!lista.length) throw new BladUzytkownika('Wskaż sprzedaże do zarejestrowania.');
+        const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
+        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); return Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'rejestracja', dane: { pozycje: lista } }, (operacja_id) => Z.domena.zarejestrujZakupy(repo, ctx, { pozycje: lista, operacja_id })); });
+        if (!wyn.powtorzenie && wyn.wynik.zarejestrowano) zapiszLog(tenant, 'TERMINARZ: REJESTRACJA ZAKUPÓW', imie, `${wyn.wynik.zarejestrowano} zarejestrowano, ${wyn.wynik.istnialo} już było, ${wyn.wynik.pominieto} pominięto/do rozstrzygnięcia`);
+        return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
+      }
+      case 'trm_zakup_kwalifikuj': { // „1×” kupiony na przyszłość (albo nie ewidencjonowany) — decyzja managera per zakup, z podstawą
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => Z.domena.kwalifikujZakup(repo, await ctxZ(tenant, imie, r), { zakup_id: Number(d.zakup_id), kwalifikacja: String(d.kwalifikacja || ''), powod: String(d.powod || '').trim().slice(0, 300) }));
+        if (!wyn.powtorzenie) zapiszLog(tenant, 'TERMINARZ: KWALIFIKACJA ZAKUPU', imie, `zakup ${wyn.zakup_id}: ${wyn.kwalifikacja} — ${String(d.powod || '').slice(0, 120)}`);
+        return { status: 'success', ...wyn };
+      }
+      case 'trm_skladnik_kandydaci': { // ODCZYT: istniejące wizyty klientki na tę usługę (także przeszłe nierozstrzygnięte i poza tygodniem), saldo, niedobór, skrót podglądu
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        const ctx = await ctxZ(tenant, imie, r);
+        return { status: 'success', ...(await Z.domena.kandydaciWizyt(Z.repoSql(q, tenant), ctx, { skladnik_id: Number(d.skladnik_id) })), ewidencja: ctx.tryb };
+      }
+      case 'trm_ewidencja_stan': { // ODCZYT: gotowość ewidencji — co można uruchomić, co wymaga decyzji
+        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        const ctx = await ctxZ(tenant, imie, r); const repo = Z.repoSql(q, tenant);
+        const liczniki = await repo.liczniki();
+        const skl = await repo.skladnikiSalonu({});
+        const salda = await Z.domena.saldoSkladnikow(repo, skl.map(s => s.id));
+        const lista = skl.map(s => ({ id: s.id, zakup_id: s.zakup_id, zakup_nazwa: s.zakup_nazwa, id_klienta: s.id_klienta, usluga_nazwa: s.usluga_nazwa, stan: s.stan, stan_weryfikacji: s.stan_weryfikacji, kwalifikacja: s.kwalifikacja, stan_zrodla: s.stan_zrodla, uruchomiony: !!(s.zalezne_uzgodniono && s.aktywny_od), ma_plan: !!s.plan_json && !s.aktywny_od, saldo: salda[s.id], powod: Z.logika.powodNiedostepnosci(s, { stan: s.zakup_stan, stan_zrodla: s.stan_zrodla, data_waznosci: s.data_waznosci, kwalifikacja: s.kwalifikacja }, salda[s.id], ctx.teraz.slice(0, 10), ctx.tryb) }));
+        const sprawy = await q(`SELECT COUNT(*) AS n FROM Term_Sprawy WHERE tenant_id = ? AND typ IN ('E20','E21','E22','E23','E24') AND stan IN ('nowa','w_trakcie','oczekuje')`, [tenant]).catch(() => [{ n: 0 }]);
+        return { status: 'success', ewidencja: ctx.tryb, ewidencja_zapisana: ctx.zapisany, techniczna: ctx.techniczna, przerwa_od: ctx.przerwa_od, liczniki: { ...liczniki, sprawy_otwarte: sprawy[0].n }, skladniki: lista, schemat_v2: { gotowy: schematV2.gotowy, typ: schematV2.typ } };
       }
       case 'trm_oferty_lista': {
         wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
@@ -1150,11 +1222,13 @@ module.exports = (db, opts = {}) => {
         if (!wyn.powtorzenie) zapiszLog(tenant, 'TERMINARZ: STAN POCZĄTKOWY SKŁADNIKA', imie, `składnik ${dane.skladnik_id}: U=${dane.hist_wykorzystane} W=${dane.hist_wycofane} F=${dane.hist_potracone}; ${dane.zrodlo_ustalen}`);
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
-      case 'trm_skladnik_uruchom': { // uruchomienie składnika do nowych umówień po weryfikacji i przejrzeniu zależnych wizyt (§13.3)
+      case 'trm_skladnik_uruchom': { // Z3-05/06: decyzje dla istniejących wizyt → plan (przygotowanie) albo atomowe przydziały + gotowość (aktywna); podgląd musi być aktualny
         wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
-        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => Z.domena.uruchomSkladnik(repo, await ctxZ(tenant, imie, r), { skladnik_id: Number(d.skladnik_id), potwierdzenie_zaleznych: !!d.potwierdzenie_zaleznych }));
-        zapiszLog(tenant, 'TERMINARZ: SKŁADNIK URUCHOMIONY', imie, `składnik ${wyn.skladnik_id}`);
-        return { status: 'success', ...wyn };
+        const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
+        const dane = { skladnik_id: Number(d.skladnik_id), decyzje: Array.isArray(d.decyzje) ? d.decyzje.map(x => ({ pozycja_id: Number(x.pozycja_id), decyzja: String(x.decyzja || ''), uzasadnienie: String(x.uzasadnienie || '').slice(0, 300) })) : null, skrot: d.skrot ? String(d.skrot) : null, z_planu: !!d.z_planu, potwierdzenie_zaleznych: !!d.potwierdzenie_zaleznych };
+        const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); return Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'uruchom', dane }, (operacja_id) => Z.domena.uruchomSkladnik(repo, ctx, { ...dane, operacja_id })); });
+        if (!wyn.powtorzenie) { zapiszLog(tenant, wyn.wynik.plan ? 'TERMINARZ: PLAN POWIĄZAŃ' : 'TERMINARZ: SKŁADNIK URUCHOMIONY', imie, `składnik ${dane.skladnik_id}: ${wyn.wynik.powiazan} powiązań${wyn.wynik.plan ? ' (plan, bez rezerwacji)' : ''}`); for (const pid of (wyn.wynik.do_wyjasnienia || [])) await sprawaUpsert(tenant, { typ: 'E21', tytul: 'Wizyta wymaga zakupu lub wyjaśnienia', opis: `Pozycja ${pid}: przy uruchamianiu pakietu rozstrzygnięta jako wymagająca zakupu/wyjaśnienia.`, dane: { pozycja_id: pid, skladnik_id: dane.skladnik_id, dotyczy: [] }, priorytet: 'P2', klucz: `E21:poz:${pid}`, kto: imie }); }
+        return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
       case 'trm_wykonanie_koryguj': { // korekta błędnego wykonania (manager): odwrócenie realizacji, historia zostaje (§9.5)
         wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
@@ -1668,6 +1742,18 @@ module.exports = (db, opts = {}) => {
           priorytet: 'P1', powiazany_czas: null, klucz: `E19:rez:${rz.id}`, kto: null });
       }
     } catch (e) { log.error('[terminarz] tickSprawy:', e.message); }
+    // ZK-03 (Z3-07): okresowe uzgadnianie źródeł zakupów — co 5 minut, tylko salony z dostępnością techniczną i zapisaną ewidencją aktywna/konczenie.
+    // Brak tabel v2 albo błąd jednego źródła nie zatrzymuje CRM; ten sam problem aktualizuje jedną sprawę (klucz E20:<zakup>), nie tworzy nowej co 5 minut.
+    try {
+      if (schematV2.gotowy && (tickSprawy.licznik = (tickSprawy.licznik || 0) + 1) % 5 === 0) {
+        const salony = await q(`SELECT tenant_id FROM Term_Ewidencja WHERE tryb IN ('aktywna','konczenie') AND przerwa_od IS NULL`).catch(() => []);
+        for (const s of salony) {
+          if (!integracjaZakupow(s.tenant_id)) continue;
+          const w = await wTransakcjiSalonu(s.tenant_id, async (conn, repo) => Z.domena.uzgodnijOkresowo(repo, await ctxZ(s.tenant_id, null, null), { limit: 200 })).catch(e => { log.error('[terminarz] uzgadnianie', s.tenant_id, e.message); return null; });
+          for (const x of ((w && w.zmiany) || [])) await sprawaZrodla(s.tenant_id, { ...x, kto: null }).catch(() => {});
+        }
+      }
+    } catch (e) { log.error('[terminarz] uzgadnianie okresowe:', e.message); }
   }
   if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') {
     const timerSprawy = setInterval(tickSprawy, 60 * 1000);
@@ -1680,4 +1766,4 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
