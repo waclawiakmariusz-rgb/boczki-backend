@@ -1,0 +1,352 @@
+{
+  "baza": {
+    "nazwa": "u393261461_systemb",
+    "wersja": "11.8.9-MariaDB-log"
+  },
+  "DDL_Sprzedaz": "CREATE TABLE `Sprzedaz` (\n  `id` varchar(50) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `data_sprzedazy` datetime DEFAULT NULL,\n  `klient` varchar(255) DEFAULT NULL,\n  `zabieg` varchar(255) DEFAULT NULL,\n  `sprzedawca` text DEFAULT NULL,\n  `kwota` decimal(10,2) DEFAULT NULL,\n  `komentarz` text DEFAULT NULL,\n  `szczegoly` text DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'AKTYWNY',\n  `platnosc` varchar(50) DEFAULT NULL,\n  `id_klienta` varchar(50) DEFAULT NULL,\n  `pracownik_dodajacy` varchar(100) DEFAULT NULL,\n  `id_zadatku` text DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  `czy_rozliczone` tinyint(4) NOT NULL DEFAULT 0,\n  `typ_zabiegu` varchar(80) DEFAULT NULL,\n  `kategoria_produktu` enum('Kosmetyk','Suplement') DEFAULT NULL,\n  `data_waznosci` date DEFAULT NULL,\n  `karnet_zamkniety_w` datetime DEFAULT NULL,\n  `karnet_zamkniety_przez` varchar(100) DEFAULT NULL,\n  `grupa_id` varchar(40) DEFAULT NULL,\n  `zwrot_do_id` varchar(50) DEFAULT NULL,\n  `zawieszenia_dni_lacznie` int(11) NOT NULL DEFAULT 0,\n  `zawieszenia_liczba` int(11) NOT NULL DEFAULT 0,\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`),\n  KEY `idx_klient` (`id_klienta`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Platnosci": "CREATE TABLE `Platnosci` (\n  `id` varchar(50) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `data_platnosci` datetime DEFAULT NULL,\n  `klient` varchar(255) DEFAULT NULL,\n  `metoda_platnosci` varchar(50) DEFAULT NULL,\n  `kwota` decimal(10,2) DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'AKTYWNY',\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Zadatki": "CREATE TABLE `Zadatki` (\n  `id` varchar(50) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `id_klienta` varchar(50) DEFAULT NULL,\n  `data_wplaty` datetime DEFAULT NULL,\n  `klient` varchar(255) DEFAULT NULL,\n  `typ` varchar(50) DEFAULT NULL,\n  `kwota` decimal(10,2) DEFAULT NULL,\n  `metoda` varchar(50) DEFAULT NULL,\n  `cel` text DEFAULT NULL,\n  `status` varchar(50) DEFAULT 'AKTYWNY',\n  `pracownicy` text DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  `czy_rozliczone` tinyint(4) NOT NULL DEFAULT 0,\n  `bon` tinyint(1) NOT NULL DEFAULT 0,\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Klienci": "CREATE TABLE `Klienci` (\n  `id` varchar(36) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `id_klienta` varchar(50) DEFAULT NULL,\n  `imie_nazwisko` varchar(255) DEFAULT NULL,\n  `telefon` varchar(50) DEFAULT NULL,\n  `data_rejestracji` datetime DEFAULT NULL,\n  `zgody_rodo_reg` varchar(255) DEFAULT NULL,\n  `notatki` text DEFAULT NULL,\n  `rodo` varchar(20) DEFAULT NULL,\n  `osw` varchar(20) DEFAULT NULL,\n  `status` enum('AKTYWNY','USUNIETY','ZANONIMIZOWANY') DEFAULT 'AKTYWNY',\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  `data_usuniecia` datetime DEFAULT NULL,\n  `kto_usunal` varchar(100) DEFAULT NULL,\n  `powod_usuniecia` varchar(255) DEFAULT NULL,\n  `zmarly` tinyint(1) DEFAULT 0,\n  `data_zgonu` date DEFAULT NULL,\n  `ostrzezenie` varchar(500) DEFAULT NULL,\n  `odwolanie_ulga` tinyint(1) NOT NULL DEFAULT 0,\n  `odwolanie_ulga_data` date DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`),\n  KEY `idx_klient` (`id_klienta`),\n  KEY `idx_status` (`tenant_id`,`status`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Uslugi": "CREATE TABLE `Uslugi` (\n  `id` varchar(36) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `kategoria` varchar(255) DEFAULT NULL,\n  `wariant` varchar(255) DEFAULT NULL,\n  `cena` decimal(10,2) DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  `zrodlo` varchar(10) NOT NULL DEFAULT 'reczne',\n  `typ_zabiegu` varchar(80) DEFAULT NULL,\n  `waznosc_dni` int(11) DEFAULT 7,\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Vouchery": "BRAK: Table 'u393261461_systemb.Vouchery' doesn't exist",
+  "DDL_Logi": "CREATE TABLE `Logi` (\n  `id` varchar(36) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `data_zdarzenia` datetime DEFAULT NULL,\n  `pracownik` varchar(100) DEFAULT NULL,\n  `akcja` varchar(100) DEFAULT NULL,\n  `modul` varchar(100) DEFAULT NULL,\n  `opis` text DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Pracownicy": "CREATE TABLE `Pracownicy` (\n  `id` varchar(36) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `imie` varchar(100) DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Użytkownicy": "CREATE TABLE `Użytkownicy` (\n  `id` varchar(36) NOT NULL,\n  `tenant_id` varchar(100) NOT NULL,\n  `imie_login` varchar(100) DEFAULT NULL,\n  `haslo_pin` varchar(255) DEFAULT NULL,\n  `rola` varchar(50) DEFAULT NULL,\n  `utworzono_w` timestamp NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  KEY `idx_tenant` (`tenant_id`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Features": "BRAK: Table 'u393261461_systemb.Features' doesn't exist",
+  "DDL_Tenant_Features": "CREATE TABLE `Tenant_Features` (\n  `tenant_id` varchar(100) NOT NULL,\n  `feature_key` varchar(50) NOT NULL,\n  `enabled` tinyint(1) DEFAULT 0,\n  `monthly_price_grosze` int(11) DEFAULT 0,\n  `stripe_item_id` varchar(100) DEFAULT NULL,\n  `activated_at` datetime DEFAULT NULL,\n  `cancelled_at` datetime DEFAULT NULL,\n  `activated_by` varchar(100) DEFAULT NULL,\n  PRIMARY KEY (`tenant_id`,`feature_key`),\n  KEY `idx_active` (`tenant_id`,`enabled`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Features_Catalog": "CREATE TABLE `Features_Catalog` (\n  `feature_key` varchar(50) NOT NULL,\n  `nazwa` varchar(100) NOT NULL,\n  `opis` varchar(500) DEFAULT NULL,\n  `miesieczna_cena_grosze` int(11) NOT NULL DEFAULT 0,\n  `stripe_price_id` varchar(100) DEFAULT NULL,\n  `status` enum('AKTYWNY','UKRYTY') DEFAULT 'AKTYWNY',\n  `sortowanie` int(11) DEFAULT 0,\n  PRIMARY KEY (`feature_key`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Licencje": "CREATE TABLE `Licencje` (\n  `login` varchar(100) NOT NULL,\n  `haslo` varchar(255) NOT NULL,\n  `rola` varchar(50) NOT NULL,\n  `id_bazy` varchar(100) NOT NULL,\n  `status` varchar(50) NOT NULL,\n  `id` varchar(36) DEFAULT NULL,\n  `nazwa_salonu` varchar(255) DEFAULT NULL,\n  `miasto` varchar(100) DEFAULT NULL,\n  `telefon` varchar(50) DEFAULT NULL,\n  `email` varchar(255) DEFAULT NULL,\n  `data_waznosci` date DEFAULT NULL,\n  `data_utworzenia` datetime DEFAULT current_timestamp(),\n  `data_grace_until` datetime DEFAULT NULL,\n  `stripe_customer_id` varchar(100) DEFAULT NULL,\n  `stripe_subscription_id` varchar(100) DEFAULT NULL,\n  `ulica` varchar(255) DEFAULT NULL,\n  `nazwa_firmy` varchar(255) DEFAULT NULL,\n  PRIMARY KEY (`login`),\n  UNIQUE KEY `uq_licencje_id_bazy` (`id_bazy`),\n  KEY `idx_licencje_id_bazy` (`id_bazy`)\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "DDL_Typy_Zabiegow": "CREATE TABLE `Typy_Zabiegow` (\n  `id` int(11) NOT NULL AUTO_INCREMENT,\n  `tenant_id` varchar(100) NOT NULL,\n  `nazwa` varchar(80) NOT NULL,\n  `ikona` varchar(20) DEFAULT '',\n  `kolor` varchar(20) DEFAULT '#64748b',\n  `kolejnosc` int(11) DEFAULT 0,\n  `created_at` timestamp NULL DEFAULT current_timestamp(),\n  PRIMARY KEY (`id`),\n  UNIQUE KEY `uk_tenant_nazwa` (`tenant_id`,`nazwa`)\n) ENGINE=InnoDB AUTO_INCREMENT=37 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+  "tabele": [
+    {
+      "t": "Features_Catalog",
+      "n": 4
+    },
+    {
+      "t": "Licencje",
+      "n": 8
+    },
+    {
+      "t": "Tenant_Features",
+      "n": 6
+    },
+    {
+      "t": "Term_Grafik",
+      "n": 84
+    },
+    {
+      "t": "Term_Historia",
+      "n": 576
+    },
+    {
+      "t": "Term_Migracje",
+      "n": 7
+    },
+    {
+      "t": "Term_Nieobecnosci",
+      "n": 1
+    },
+    {
+      "t": "Term_Oferty",
+      "n": 0
+    },
+    {
+      "t": "Term_Oferty_Skladniki",
+      "n": 0
+    },
+    {
+      "t": "Term_Pozycje",
+      "n": 260
+    },
+    {
+      "t": "Term_Pracownicy",
+      "n": 4
+    },
+    {
+      "t": "Term_Rezerwacje",
+      "n": 253
+    },
+    {
+      "t": "Term_Sprawy",
+      "n": 324
+    },
+    {
+      "t": "Term_Sprawy_Dziennik",
+      "n": 825
+    },
+    {
+      "t": "Term_Sprawy_Odczyt",
+      "n": 20
+    },
+    {
+      "t": "Term_Uslugi",
+      "n": 10
+    },
+    {
+      "t": "Term_Ustawienia",
+      "n": 2
+    },
+    {
+      "t": "Term_Zajecia",
+      "n": 584
+    },
+    {
+      "t": "Term_Zakupy",
+      "n": 0
+    },
+    {
+      "t": "Term_Zakupy_Ruchy",
+      "n": 0
+    },
+    {
+      "t": "Term_Zakupy_Skladniki",
+      "n": 0
+    },
+    {
+      "t": "Term_Zasoby",
+      "n": 9
+    }
+  ],
+  "Term_Zakupy": [],
+  "Term_Zakupy_Skladniki": [],
+  "Term_Zakupy_Ruchy": [],
+  "Term_Oferty": [],
+  "Term_Pozycje_z_zakupem": [],
+  "Term_Migracje": [
+    {
+      "nazwa": "Term_Oferty",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Oferty_Skladniki",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Pozycje.zakup_skladnik_id",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Ustawienia.kontrola_zakupow",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Zakupy",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Zakupy_Ruchy",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    },
+    {
+      "nazwa": "Term_Zakupy_Skladniki",
+      "wersja": "2026-10-15",
+      "obecna": 1,
+      "sprawdzono": "2026-10-16T09:19:47.000Z",
+      "uwaga": null
+    }
+  ],
+  "Term_Ustawienia": [
+    {
+      "tenant_id": "boczki-salon-glowny-001",
+      "kontrola_zakupow": "off"
+    },
+    {
+      "tenant_id": "demo-estelio",
+      "kontrola_zakupow": "off"
+    }
+  ],
+  "Term_Rezerwacje": [
+    {
+      "tenant_id": "boczki-salon-glowny-001",
+      "n": 6
+    },
+    {
+      "tenant_id": "demo-estelio",
+      "n": 247
+    }
+  ],
+  "Sprzedaz_statusy": [
+    {
+      "status": "AKTYWNY",
+      "n": 3763
+    },
+    {
+      "status": "USUNIĘTY",
+      "n": 105
+    }
+  ],
+  "Sprzedaz_ksztalt": [
+    {
+      "z_sufiksem": "3867",
+      "bez_sufiksu": "1",
+      "z_waznoscia": "969",
+      "zamknietych": "771",
+      "bez_id_klienta": "0",
+      "produkty": "131",
+      "razem": 3868
+    }
+  ],
+  "Sprzedaz_warianty_x": [
+    {
+      "szczegoly": "1x",
+      "n": 229
+    },
+    {
+      "szczegoly": "1x Przyłożenie",
+      "n": 83
+    },
+    {
+      "szczegoly": "2x Przyłożenia",
+      "n": 70
+    },
+    {
+      "szczegoly": "5x",
+      "n": 59
+    },
+    {
+      "szczegoly": "twarz + szyja + dekolt 1x",
+      "n": 45
+    },
+    {
+      "szczegoly": "10x",
+      "n": 44
+    },
+    {
+      "szczegoly": "4x przyłożenia",
+      "n": 42
+    },
+    {
+      "szczegoly": "twarz 1x",
+      "n": 38
+    },
+    {
+      "szczegoly": "2 obszary 1x",
+      "n": 33
+    },
+    {
+      "szczegoly": "1x (twarz lub plecy)",
+      "n": 32
+    },
+    {
+      "szczegoly": "1 obszar 1x",
+      "n": 27
+    },
+    {
+      "szczegoly": "5x [Rabat: -596 zł]",
+      "n": 27
+    },
+    {
+      "szczegoly": "20 ml 1x (preparat wyszczuplający) [Rabat: -50%]",
+      "n": 26
+    },
+    {
+      "szczegoly": "Ergolift 1x",
+      "n": 26
+    },
+    {
+      "szczegoly": "1x z pielęgnacją (twarz lub plecy)",
+      "n": 22
+    }
+  ],
+  "Sprzedaz_platnosc": [
+    {
+      "platnosc": "Karta",
+      "n": 1839
+    },
+    {
+      "platnosc": "Portfel",
+      "n": 1031
+    },
+    {
+      "platnosc": "Gotówka",
+      "n": 465
+    },
+    {
+      "platnosc": "Mix",
+      "n": 194
+    },
+    {
+      "platnosc": "Blik",
+      "n": 110
+    },
+    {
+      "platnosc": null,
+      "n": 104
+    },
+    {
+      "platnosc": "MediRaty",
+      "n": 54
+    },
+    {
+      "platnosc": "TubaPay",
+      "n": 33
+    },
+    {
+      "platnosc": "Przelew",
+      "n": 15
+    },
+    {
+      "platnosc": "Booksy",
+      "n": 12
+    },
+    {
+      "platnosc": "TPay",
+      "n": 9
+    },
+    {
+      "platnosc": "-",
+      "n": 2
+    }
+  ],
+  "Zadatki_statusy": [
+    {
+      "status": "AKTYWNY",
+      "n": 120
+    },
+    {
+      "status": "PRZEPADŁ (KARA)",
+      "n": 85
+    },
+    {
+      "status": "USUNIĘTY",
+      "n": 17
+    },
+    {
+      "status": "WYKORZYSTANY",
+      "n": 1093
+    },
+    {
+      "status": "ZWRÓCONY",
+      "n": 11
+    }
+  ],
+  "Platnosci_metody": [
+    "BRAK: Unknown column 'metoda' in 'SELECT'"
+  ],
+  "Uslugi_ksztalt": [
+    {
+      "razem": 1006,
+      "z_liczba_x": "769",
+      "salony": 6
+    }
+  ],
+  "uwaga": "Jedno połączenie tylko do odczytu (SHOW CREATE TABLE, COUNT, INFORMATION_SCHEMA). Bez danych osobowych. Host bazy usunięty z pliku."
+}
