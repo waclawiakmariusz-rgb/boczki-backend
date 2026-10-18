@@ -1,0 +1,13 @@
+ public/estelio_pomoc_terminarz.html |  125 ++-
+ public/index.html                   |   16 +-
+ public/terminarz.css                |  298 +++++++-
+ public/terminarz.js                 | 1444 +++++++++++++++++++++++++++++------
+ routes/admin.js                     |   12 +-
+ routes/dokumenty.js                 |    4 +-
+ routes/sessions.js                  |   22 +-
+ routes/terminarz-silnik.js          |   16 +-
+ routes/terminarz-zakupy.js          |  931 ++++++++++++++++++++++
+ routes/terminarz.js                 |  709 +++++++++++++++--
+ routes/users.js                     |   81 +-
+ server.js                           |    1 +
+ 12 files changed, 3299 insertions(+), 360 deletions(-)
