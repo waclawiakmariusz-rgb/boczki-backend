@@ -276,13 +276,19 @@ describe('K12 — reguły zużycia, ważności i źródła', () => {
     const w = await domena.wykonaj(repo, c, { pozycja_id: poz, ilosc: 2 });
     expect(w).toMatchObject({ zuzyto: 2, nierozstrzygniete: 1 }); expect(await saldo(repo, skladnik_id)).toMatchObject({ U: 2, R: 1, B: 2 });
   });
-  test('ważność: termin po dacie ważności odrzucony (umówienie i przeniesienie), ostatni dzień włącznie dozwolony; zawieszenie blokuje', async () => {
+  // Z8 (decyzja właściciela 18.10.2026): zabieg z pakietu po terminie ważności MOŻNA umówić — z widoczną informacją.
+  // Wcześniej ważność była powodem odmowy; regresja zasady: tests/terminarz-zakupy-zk031.test.js (opis „Z8”).
+  test('ważność: po terminie umówienie DOZWOLONE z ostrzeżeniem (Z8); przeniesienie po terminie też, z ostrzeżeniem; zawieszenie nadal blokuje', async () => {
     const repo = repoPamiec(T); const c = ctx();
     const { skladnik_id } = await przyznaj(repo, c, { jednostki: 3, data_waznosci: '2026-10-19' });
-    await expect(rezerwujPoz(repo, c, await pozycja(repo), skladnik_id, { data: '2026-10-20' })).rejects.toMatchObject({ extra: { powod: 'pakiet ważny do 2026-10-19' } });
+    const pozPo = await pozycja(repo);
+    await rezerwujPoz(repo, c, pozPo, skladnik_id, { data: '2026-10-20' }); // nie rzuca
+    expect(await saldo(repo, skladnik_id)).toMatchObject({ R: 1 });
+    const [s] = await repo.skladniki([skladnik_id]);
+    expect(logika.ostrzezenia(s, { data_waznosci: '2026-10-19' }, '2026-10-20').map(o => o.kod)).toEqual(['PO_TERMINIE']);
+    expect(logika.ostrzezenia(s, { data_waznosci: '2026-10-19' }, '2026-10-19')).toHaveLength(0); // ostatni dzień włącznie
     const poz = await pozycja(repo); await rezerwujPoz(repo, c, poz, skladnik_id, { data: '2026-10-19' });
-    const spr = await domena.sprawdzPrzeniesienie(repo, c, { pozycjaIds: [poz], data: '2026-10-20' });
-    expect(spr.ok).toBe(false); expect(spr.problemy[0].opis).toMatch(/ważny do 2026-10-19/); expect(await saldo(repo, skladnik_id)).toMatchObject({ R: 1 }); // przydział bez zmian
+    expect((await domena.sprawdzPrzeniesienie(repo, c, { pozycjaIds: [poz], data: '2026-10-20' })).ok).toBe(true);
     expect((await domena.sprawdzPrzeniesienie(repo, c, { pozycjaIds: [poz], data: '2026-10-18' })).ok).toBe(true);
     await repo.aktualizujSkladnik(skladnik_id, { zawieszono_od: '2026-10-17', zawieszono_do: '2026-10-18' });
     await expect(rezerwujPoz(repo, c, await pozycja(repo), skladnik_id, { data: '2026-10-18' })).rejects.toMatchObject({ extra: { powod: 'składnik zawieszony do 2026-10-18' } });

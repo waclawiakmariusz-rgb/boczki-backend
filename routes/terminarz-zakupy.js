@@ -40,6 +40,8 @@ const TRYBY_MUTACJE = new Set(['aktywna', 'konczenie']);
 const RODZAJE_OFERTY = ['pakiet', 'pojedynczy_z_gory', 'nie_ewidencjonuj', 'nieobslugiwany'];
 const KWALIFIKACJE = ['pakiet', 'pojedynczy_z_gory', 'nie_ewidencjonuj', 'do_sprawdzenia'];
 const DECYZJE_WIZYT = ['powiaz', 'jednorazowa', 'wyjasnienie', 'historyczna', 'niezwiazana'];
+/** N05: decyzje ważne TYLKO w kontekście ocenianego składnika — nie wykluczają wizyty z innych zakupów klientki. */
+const DECYZJE_LOKALNE = new Set(['niezwiazana', 'historyczna']);
 
 class BladDomeny extends Error { constructor(msg, extra) { super(msg); this.extra = extra || {}; this.uzytkownika = true; } }
 
@@ -72,8 +74,7 @@ const logika = {
     if (skl.stan_weryfikacji !== 'zweryfikowany') return 'stan do sprawdzenia — najpierw potwierdź, ile zabiegów pozostało';
     if (!skl.zalezne_uzgodniono || !skl.aktywny_od) return 'najpierw rozstrzygnij istniejące wizyty';
     if (skl.zawieszono_od && skl.zawieszono_do && data >= String(skl.zawieszono_od).slice(0, 10) && data <= String(skl.zawieszono_do).slice(0, 10)) return `składnik zawieszony do ${String(skl.zawieszono_do).slice(0, 10)}`;
-    const waz = logika.waznosc(skl, zakup);
-    if (waz && data > waz) return `pakiet ważny do ${waz}`;
+    // Z8: termin ważności NIE blokuje umówienia (decyzja właściciela 18.10.2026) — jest ostrzeżeniem, patrz logika.ostrzezenia().
     if (saldo.B <= 0) return saldo.R > 0 ? 'wszystkie pozostałe zabiegi są już umówione' : saldo.L <= 0 ? 'pakiet wykorzystany' : 'brak dostępnych jednostek';
     return null;
   },
@@ -84,7 +85,7 @@ const logika = {
   },
   bezSufiksuRabatu: (w) => String(w || '').replace(/\s*\[[^\]]*\]\s*$/, '').trim(),
   bazaParagonu: (id) => String(id || '').replace(/-\d+$/, ''),
-  hash: (obj) => crypto.createHash('sha256').update(JSON.stringify(obj, obj && typeof obj === 'object' && !Array.isArray(obj) ? Object.keys(obj).sort() : undefined)).digest('hex'),
+  hash: (obj) => crypto.createHash('sha256').update(logika.kanonicznie(obj)).digest('hex'), // N01: ten sam kontrakt co skrotZadania (zagnieżdżenia!)
   /** Migawka istotnych pól wiersza Sprzedaz (nazwy kolumn z rzeczywistej bazy) + powiązane wiersze finansujące + sumy zwrotów. Deterministyczna. */
   migawkaZrodla(row, zwrotySuma, powiazane) {
     if (!row) return null;
@@ -136,10 +137,48 @@ const logika = {
     const nazwa = String(kanon.zabieg || '').trim();
     const doplaty = (paragon || []).filter(r => String(r.id) !== String(kanon.id) && new RegExp('^' + nazwa.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\s+Dopłata$', 'i').test(String(r.zabieg || '').trim()));
     if (!doplaty.length) return { powiazane: [], niejednoznaczne: false, kandydatki: [] };
-    const rodzenstwo = (paragon || []).filter(r => String(r.id) !== String(kanon.id) && String(r.zabieg || '').trim() === nazwa && logika.bezSufiksuRabatu(r.szczegoly) === logika.bezSufiksuRabatu(kanon.szczegoly));
+    // N03 (ZK-03.1): „rodzeństwo” to KAŻDY inny wiersz główny tej samej kategorii na paragonie, niezależnie od wariantu.
+    // Wcześniej porównywany był też wariant — przy „Endermologia 5x” i „Endermologia 10x” żaden nie widział drugiego
+    // jako rodzeństwa i OBA dostawały OBIE dopłaty, z `niejednoznaczne:false`. Wariant nie rozróżnia dopłat, bo wiersz
+    // dopłaty ma wariant pusty.
+    const rodzenstwo = (paragon || []).filter(r => String(r.id) !== String(kanon.id) && String(r.zabieg || '').trim() === nazwa && logika.kandydatNaZakup(r).ok);
     if (!rodzenstwo.length) return { powiazane: doplaty, niejednoznaczne: false, kandydatki: doplaty };
-    if (kanon.grupa_id) { const moje = doplaty.filter(d => d.grupa_id === kanon.grupa_id); return { powiazane: moje, niejednoznaczne: moje.length !== 1 && doplaty.length > 0, kandydatki: doplaty }; }
+    // Wspólna `grupa_id` (tak właśnie wygląda powielenie pozycji przyciskiem) NIE rozstrzyga, do którego egzemplarza
+    // należy dopłata — rozstrzyga tylko grupa wyłączna dla tego wiersza głównego.
+    if (kanon.grupa_id) {
+      const grupaDzielona = rodzenstwo.some(r => r.grupa_id && String(r.grupa_id) === String(kanon.grupa_id));
+      const moje = doplaty.filter(d => d.grupa_id && String(d.grupa_id) === String(kanon.grupa_id));
+      if (!grupaDzielona && moje.length) return { powiazane: moje, niejednoznaczne: false, kandydatki: doplaty };
+    }
     return { powiazane: [], niejednoznaczne: true, kandydatki: doplaty };
+  },
+  /**
+   * N13 (ZK-03.1): STAN ABSOLUTNY źródła, sprawdzany także przy PIERWSZYM imporcie — nie tylko różnica migawek.
+   * Bez tego pakiet już zwrócony albo ręcznie zakończony przed rejestracją utrwalał się jako zdrowy (`stan_zrodla='ok'`),
+   * bo pierwsza migawka zapisywała stan problematyczny jako punkt odniesienia.
+   * Kwota bazowa = wiersz główny + jednoznacznie powiązane dopłaty; zwroty liczone do każdego z tych wierszy.
+   * Wpis za 0 zł NIE jest „zwrócony w całości” (brak dodatniej ceny ≠ pełny zwrot).
+   */
+  stanAbsolutnyZrodla(row, zwrotySuma, powiazane) {
+    if (!row) return { stan: 'usuniete', powod: 'brak wiersza sprzedaży' };
+    if (String(row.status || 'AKTYWNY') !== 'AKTYWNY') return { stan: 'usuniete', powod: 'wiersz usunięty w Sprzedaży' };
+    const kwota = Number(row.kwota) || 0;
+    const kwotaRazem = kwota + (powiazane || []).reduce((a, p) => a + (Number(p.kwota) || 0), 0);
+    const zwrotyRazem = (Number(zwrotySuma) || 0) + (powiazane || []).reduce((a, p) => a + (Number(p.zwroty_suma) || 0), 0);
+    if (kwotaRazem > 0 && zwrotyRazem + 0.001 >= kwotaRazem) return { stan: 'wycofane', powod: `zakup zwrócony w całości (${zwrotyRazem.toFixed(2)} z ${kwotaRazem.toFixed(2)} zł) — uzgodnij, co z jednostkami` };
+    if (zwrotyRazem > 0) return { stan: 'do_uzgodnienia', powod: `zwrot częściowy (${zwrotyRazem.toFixed(2)} z ${kwotaRazem.toFixed(2)} zł) — kwoty nie przeliczamy na zabiegi, ustal zakres` };
+    if (row.karnet_zamkniety_w) return { stan: 'do_uzgodnienia', powod: `pakiet zakończony ręcznie w Sprzedaży (${String(row.karnet_zamkniety_w).slice(0, 10)}) — ustal, ile zabiegów faktycznie pozostało` };
+    return { stan: 'ok', powod: null };
+  },
+  /**
+   * Z8 (zasada salonu, decyzja właściciela 18.10.2026): zabieg po terminie ważności MOŻNA umówić, ale z widoczną
+   * informacją. Ważność nie jest już powodem odmowy (patrz `powodNiedostepnosci`), tylko ostrzeżeniem.
+   */
+  ostrzezenia(skl, zakup, data) {
+    const out = [];
+    const waz = logika.waznosc(skl, zakup || {});
+    if (waz && String(data).slice(0, 10) > waz) out.push({ kod: 'PO_TERMINIE', tekst: `Ten zabieg z pakietu jest już po terminie — pakiet był ważny do ${waz}.` });
+    return out;
   },
   /** Wersja mapowania obowiązująca w dacie sprzedaży (precyzja: dzień). Zwraca { wersja } | { brak:true } | { niejednoznaczna:true, kandydatki }. */
   wersjaDlaDaty(wersje, dataSprzedazy) {
@@ -182,7 +221,23 @@ const logika = {
       kwalifikacja: wer.rodzaj === 'pojedynczy_z_gory' ? 'do_sprawdzenia' : 'pakiet', // „1×” nawet z jawnej oferty wymaga potwierdzenia per zakup (§2.2 decyzji)
       powod: wer.rodzaj === 'pojedynczy_z_gory' ? 'pojedynczy zabieg kupiony na przyszłość — po rejestracji wymaga potwierdzenia kwalifikacji dla tego zakupu' : zero ? 'wpis za 0 zł — prawo do zabiegu wymaga potwierdzenia stanu, nie wynika z ceny' : 'oferta zatwierdzona; stan początkowy do sprawdzenia' };
   },
-  skrotZadania: (rodzaj, dane) => crypto.createHash('sha256').update(rodzaj + '|' + JSON.stringify(dane, Object.keys(dane || {}).sort())).digest('hex'),
+  /**
+   * N01 (ZK-03.1): deterministyczna serializacja CAŁEGO ładunku, na wszystkich poziomach zagnieżdżenia.
+   * Wcześniej `JSON.stringify(dane, Object.keys(dane).sort())` — lista kluczy w `replacer` obowiązuje też obiekty
+   * zagnieżdżone, więc `{pozycje:[{sprzedaz_id:'A'}]}` i `{pozycje:[{sprzedaz_id:'B'}]}` dawały identyczny skrót
+   * `{"pozycje":[{}]}`: ten sam klucz operacji z innym żądaniem zwracał cudzy wynik zamiast konfliktu.
+   * Klucze obiektów sortowane (kolejność pól nie jest treścią), kolejność TABLIC zachowana (jest treścią biznesową).
+   * Typy i wartości puste rozróżnione: `null` ≠ `""` ≠ `0` ≠ `"0"` ≠ brak klucza; tablica ≠ obiekt.
+   */
+  kanonicznie(v) {
+    if (v === undefined) return '<undef>';
+    if (v === null) return 'null';
+    if (Array.isArray(v)) return '[' + v.map(logika.kanonicznie).join(',') + ']';
+    if (v instanceof Date) return '"' + v.toISOString() + '"';
+    if (typeof v === 'object') return '{' + Object.keys(v).sort().map(k => JSON.stringify(k) + ':' + logika.kanonicznie(v[k])).join(',') + '}';
+    return JSON.stringify(v);
+  },
+  skrotZadania: (rodzaj, dane) => crypto.createHash('sha256').update(rodzaj + '|' + logika.kanonicznie(dane === undefined ? {} : dane)).digest('hex'),
   przejscieTrybu: (z, do_) => !!(PRZEJSCIA[z] || []).includes(do_),
   /** Skrót zbioru kandydatów (id pozycji + wersje wizyt) — podgląd musi być aktualny przy uruchomieniu (Z3-T24). */
   skrotKandydatow: (lista) => crypto.createHash('sha256').update(JSON.stringify((lista || []).map(p => [p.id, p.rez_wersja, p.stan]).sort((a, b) => a[0] - b[0]))).digest('hex'),
@@ -375,6 +430,11 @@ function repoSql(qc, tenant) {
         FROM Term_Zakupy_Skladniki s JOIN Term_Zakupy z ON z.id = s.zakup_id AND z.tenant_id = s.tenant_id WHERE s.tenant_id = ?`;
   return {
     tenant,
+    // N02 (ZK-03.1): punkty zapisu w obrębie transakcji salonu — pozwalają wycofać JEDEN wadliwy zakup z partii,
+    // nie przerywając całej transakcji. Nazwa budowana wyłącznie z licznika (nigdy z danych żądania).
+    async savepoint(n) { await qc(`SAVEPOINT ${String(n).replace(/[^a-z0-9_]/gi, '')}`); },
+    async doSavepoint(n) { await qc(`ROLLBACK TO SAVEPOINT ${String(n).replace(/[^a-z0-9_]/gi, '')}`); },
+    async zwolnijSavepoint(n) { await qc(`RELEASE SAVEPOINT ${String(n).replace(/[^a-z0-9_]/gi, '')}`); },
     async skladniki(ids, blokuj) { if (!ids.length) return []; return qc(`${SKL} AND s.id IN (${ids.map(() => '?').join(',')})${blokuj ? ' FOR UPDATE' : ''}`, [tenant, ...ids]); },
     async skladnikiZakupow(zakupIds) { if (!zakupIds.length) return []; return qc(`${SKL} AND s.zakup_id IN (${zakupIds.map(() => '?').join(',')}) ORDER BY s.id`, [tenant, ...zakupIds]); },
     async skladnikiSalonu(filtr = {}) { const w = []; const p = [tenant]; if (filtr.stan_weryfikacji) { w.push('s.stan_weryfikacji = ?'); p.push(filtr.stan_weryfikacji); } return qc(`${SKL}${w.length ? ' AND ' + w.join(' AND ') : ''} ORDER BY s.id LIMIT 500`, p); },
@@ -555,9 +615,10 @@ const domena = {
   async zarejestrujZakupy(repo, ctx, { pozycje, operacja_id }) {
     domena.wymagajTryb(ctx, new Set(['przygotowanie', 'aktywna', 'konczenie', 'uzgadnianie']), 'Rejestracja zakupów wymaga trybu przygotowania albo działającej ewidencji.');
     const cennik = await repo.uslugiCennika(); const wersje = await repo.wersjeOfert();
-    const wyniki = [];
+    const wyniki = []; let nrSp = 0;
     for (const p of pozycje || []) {
       const sid = String(p.sprzedaz_id || '');
+      const sp = 'zk_sp_' + (++nrSp); let spOtwarty = false;
       try {
         const [ist] = await repo.zakupyPoSprzedazy([sid]);
         if (ist) { wyniki.push({ sprzedaz_id: sid, wynik: 'istnieje', zakup_id: ist.id }); continue; }
@@ -575,7 +636,9 @@ const domena = {
         if (!k.skladniki || !k.skladniki.length) { wyniki.push({ sprzedaz_id: sid, wynik: 'blad', powod: 'wersja mapowania bez składników' }); continue; }
         const powiazane = (Array.isArray(p.powiazane) ? (z.kandydatki || []) : z.powiazane).filter(x => (k.powiazane || []).includes(String(x.id)));
         const migawka = logika.migawkaZrodla(row, z.zwrotySuma, powiazane);
-        const zakupId = await repo.wstawZakup({ sprzedaz_id: sid, zrodlo_typ: 'sprzedaz', id_klienta: String(row.id_klienta), oferta_id: wersje.find(w => w.id === k.wersja_id).oferta_id, usluga_id: usl.id, nazwa: `${row.zabieg}${k.szczegoly ? ' / ' + k.szczegoly : ''}`, data_zakupu: k.data, data_waznosci: row.data_waznosci ? String(row.data_waznosci).slice(0, 10) : null, oferta_wersja_id: k.wersja_id, zrodlo_hash: logika.hash(migawka), zrodlo_migawka_json: JSON.stringify(migawka), zrodlo_sprawdzono: ctx.teraz, zrodla_json: JSON.stringify(migawka.powiazane.map(x => x.id)), zwroty_suma: Number(migawka.zwroty_suma), kwalifikacja: k.kwalifikacja, kwalifikowal: k.kwalifikacja === 'pakiet' ? ctx.autor : null, kwalifikowano: k.kwalifikacja === 'pakiet' ? ctx.teraz : null });
+        const abs = logika.stanAbsolutnyZrodla(row, z.zwrotySuma, powiazane); // N13: stan absolutny, nie tylko różnica migawek
+        if (repo.savepoint) { await repo.savepoint(sp); spOtwarty = true; } // N02: od tego miejsca zaczynają się zapisy tego zakupu
+        const zakupId = await repo.wstawZakup({ sprzedaz_id: sid, zrodlo_typ: 'sprzedaz', id_klienta: String(row.id_klienta), oferta_id: wersje.find(w => w.id === k.wersja_id).oferta_id, usluga_id: usl.id, nazwa: `${row.zabieg}${k.szczegoly ? ' / ' + k.szczegoly : ''}`, data_zakupu: k.data, data_waznosci: row.data_waznosci ? String(row.data_waznosci).slice(0, 10) : null, oferta_wersja_id: k.wersja_id, zrodlo_hash: logika.hash(migawka), zrodlo_migawka_json: JSON.stringify(migawka), zrodlo_sprawdzono: ctx.teraz, zrodla_json: JSON.stringify(migawka.powiazane.map(x => x.id)), zwroty_suma: Number(migawka.zwroty_suma), stan_zrodla: abs.stan, kwalifikacja: k.kwalifikacja, kwalifikowal: k.kwalifikacja === 'pakiet' ? ctx.autor : null, kwalifikowano: k.kwalifikacja === 'pakiet' ? ctx.teraz : null });
         const skl = [];
         for (const s of k.skladniki) {
           const nazwaU = (() => { const u = cennik.find(x => String(x.id) === String(s.usluga_wyk_id)); return u ? u.kategoria + (u.wariant ? ' / ' + u.wariant : '') : String(s.usluga_wyk_id); })();
@@ -584,8 +647,18 @@ const domena = {
           skl.push(sklId);
         }
         await domena.zapiszProjekcje(repo, skl);
-        wyniki.push({ sprzedaz_id: sid, wynik: 'zarejestrowano', zakup_id: zakupId, skladniki: skl, kwalifikacja: k.kwalifikacja, powiazane: migawka.powiazane.map(x => x.id) });
-      } catch (e) { if (e && e.code === 'ER_DUP_ENTRY') { const [ist2] = await repo.zakupyPoSprzedazy([sid]); wyniki.push({ sprzedaz_id: sid, wynik: 'istnieje', zakup_id: ist2 ? ist2.id : null }); } else wyniki.push({ sprzedaz_id: sid, wynik: 'blad', powod: e.message }); }
+        if (spOtwarty && repo.zwolnijSavepoint) { await repo.zwolnijSavepoint(sp); spOtwarty = false; }
+        wyniki.push({ sprzedaz_id: sid, wynik: 'zarejestrowano', zakup_id: zakupId, skladniki: skl, kwalifikacja: k.kwalifikacja, powiazane: migawka.powiazane.map(x => x.id), stan_zrodla: abs.stan, uwaga_zrodla: abs.powod });
+      } catch (e) {
+        // N02: wadliwy zakup wycofujemy W CAŁOŚCI (rodzic + składniki + ruchy G), poprawne z tej samej partii zostają.
+        if (spOtwarty && repo.doSavepoint) { try { await repo.doSavepoint(sp); } catch (e2) { throw e; } spOtwarty = false; }
+        if (e && e.code === 'ER_DUP_ENTRY' && /uq_sprz/i.test(String(e.message || ''))) {
+          const [ist2] = await repo.zakupyPoSprzedazy([sid]); // kolizja na (tenant_id, sprzedaz_id) = zakup już istnieje
+          wyniki.push({ sprzedaz_id: sid, wynik: 'istnieje', zakup_id: ist2 ? ist2.id : null });
+        } else if (e && e.code === 'ER_DUP_ENTRY') {
+          wyniki.push({ sprzedaz_id: sid, wynik: 'blad', powod: `konflikt unikalności poza kluczem źródła — nie traktujemy tego jako „zakup już istnieje”: ${e.message}` });
+        } else wyniki.push({ sprzedaz_id: sid, wynik: 'blad', powod: e.message });
+      }
     }
     return { wyniki, zarejestrowano: wyniki.filter(w => w.wynik === 'zarejestrowano').length, pominieto: wyniki.filter(w => w.wynik !== 'zarejestrowano' && w.wynik !== 'istnieje').length, istnialo: wyniki.filter(w => w.wynik === 'istnieje').length };
   },
@@ -614,7 +687,13 @@ const domena = {
     const przed = (await domena.saldoSkladnikow(repo, [s.id]))[s.id];
     const G = przed.G, sumaHist = Number(liczby.U) + Number(liczby.W) + Number(liczby.F);
     if (sumaHist > G) throw new BladDomeny(`Zgłoszone historyczne wykorzystanie (${sumaHist}) przekracza zakupione jednostki (${G}). Odszukaj brakujący zakup albo popraw dane — nie zatwierdzamy niemożliwego salda.`, { code: 'BILANS_NIEMOZLIWY' });
-    const nowyL = G - sumaHist; const nowyB = nowyL - przed.R;
+    // N04 (ZK-03.1): bilans liczony z PEŁNYCH aktualnych ruchów — zastępujemy tylko dotychczasową część historyczną nową.
+    // Wcześniej było `G − nowa historia − R`, co pomijało wykonania, wycofania i potrącenia zapisane już w terminarzu:
+    // przy G=10, historii U=3, pięciu wykonanych w terminarzu i R=1 korekta historii 3→5 przechodziła, dając B=−1.
+    const dotychH = { U: Number(s.hist_wykorzystane) || 0, W: Number(s.hist_wycofane) || 0, F: Number(s.hist_potracone) || 0 };
+    const nowe = {}; for (const k of ['U', 'W', 'F']) nowe[k] = Number(przed[k]) - dotychH[k] + Number(liczby[k]);
+    for (const k of ['U', 'W', 'F']) if (nowe[k] < 0) throw new BladDomeny(`Korekta jest niższa niż ruchy już zapisane w terminarzu (${k}: zapisane ${Number(przed[k]) - dotychH[k]}, historia ${dotychH[k]} → ${liczby[k]}). Najpierw skoryguj wykonania w kalendarzu.`, { code: 'BILANS_NIEMOZLIWY' });
+    const nowyL = G - nowe.W - nowe.U - nowe.F; const nowyB = nowyL - przed.R;
     if (nowyB < 0) throw new BladDomeny(`Po tej weryfikacji wolna pula (${nowyL}) byłaby mniejsza niż już przydzielone jednostki (${przed.R}). Najpierw uzgodnij zależne wizyty.`, { code: 'ZALEZNE_WIZYTY' });
     let zmian = 0;
     for (const [typ, v] of Object.entries(liczby)) {
@@ -633,7 +712,11 @@ const domena = {
     const poz = await repo.pozycjeKlientkiUslugi(s.id_klienta, s.usluga_wyk_id);
     const saldo = (await domena.saldoSkladnikow(repo, [s.id]))[s.id];
     const kandydaci = poz.map(p => ({ id: p.id, rezerwacja_id: p.rezerwacja_id, numer: 'EST-' + String(p.rezerwacja_id).padStart(4, '0'), start: p.start, pracownik: p.pracownik, stan: p.stan, rozliczenie: p.rozliczenie, rez_wersja: p.rez_wersja, przeszla: String(p.start) < ctx.teraz, juz_powiazana: Number(p.aktywne_przydzialy) > 0 || Number(p.zuzyte_przydzialy) > 0, jednostki: Number(s.jednostki_na_pozycje) || 1 }));
-    const doDecyzji = kandydaci.filter(k => !k.juz_powiazana && !k.rozliczenie);
+    // N05: decyzje lokalne tego składnika (plan) wykluczają wizytę TYLKO tutaj; globalne (`rozliczenie`) — wszędzie.
+    let planPrzed = null; try { planPrzed = s.plan_json ? JSON.parse(s.plan_json) : null; } catch (e) { planPrzed = null; }
+    const lokalne = {}; for (const d of (planPrzed && planPrzed.decyzje) || []) if (DECYZJE_LOKALNE.has(d.decyzja)) lokalne[Number(d.pozycja_id)] = d;
+    for (const k of kandydaci) if (lokalne[k.id]) { k.decyzja_lokalna = lokalne[k.id].decyzja; k.uzasadnienie_lokalne = lokalne[k.id].uzasadnienie || null; }
+    const doDecyzji = kandydaci.filter(k => !k.juz_powiazana && !k.rozliczenie && !k.decyzja_lokalna);
     const potrzeba = doDecyzji.reduce((a, k) => a + k.jednostki, 0);
     let plan = null; try { plan = s.plan_json ? JSON.parse(s.plan_json) : null; } catch (e) { plan = null; }
     return { skladnik: { id: s.id, usluga_nazwa: s.usluga_nazwa, stan_weryfikacji: s.stan_weryfikacji, uruchomiony: !!(s.zalezne_uzgodniono && s.aktywny_od), zakup_nazwa: s.zakup_nazwa, id_klienta: s.id_klienta }, saldo, kandydaci, do_decyzji: doDecyzji.length, potrzeba, niedobor: Math.max(0, potrzeba - Math.max(0, saldo.B)), skrot: logika.skrotKandydatow(poz), plan };
@@ -675,7 +758,14 @@ const domena = {
       await repo.aktualizujPozycje(k.id, { zakup_skladnik_id: s.id, jednostki_wymagane: k.jednostki, rozliczenie: 'pakiet' });
       przydzialy.push(pid);
     }
-    for (const k of doDecyzji) { const d = lista.find(x => Number(x.pozycja_id) === k.id); if (d.decyzja === 'powiaz') continue; await repo.aktualizujPozycje(k.id, { rozliczenie: d.decyzja === 'jednorazowa' ? 'pojedynczy' : d.decyzja === 'wyjasnienie' ? 'do_wyjasnienia' : d.decyzja === 'historyczna' ? 'historyczna' : 'niezwiazana' }); }
+    // N05 (ZK-03.1): tylko decyzje GLOBALNE trafiają na pozycję wizyty. „niezwiazana” i „historyczna” znaczą
+    // „nie z TEGO zakupu / ujęta w historii TEGO zakupu” — zapisane globalnie wykluczały wizytę także z każdego
+    // innego zakupu klientki (wizyta znikała z listy kandydatów dla zakupu Y). Trzymamy je w planie składnika.
+    for (const k of doDecyzji) {
+      const d = lista.find(x => Number(x.pozycja_id) === k.id);
+      if (d.decyzja === 'powiaz' || DECYZJE_LOKALNE.has(d.decyzja)) continue;
+      await repo.aktualizujPozycje(k.id, { rozliczenie: d.decyzja === 'jednorazowa' ? 'pojedynczy' : 'do_wyjasnienia' });
+    }
     await repo.aktualizujSkladnik(s.id, { zalezne_uzgodniono: 1, uzgodnienie_wersja: Number(s.uzgodnienie_wersja || 0) + 1, aktywny_od: s.aktywny_od || ctx.teraz, plan_json: JSON.stringify({ decyzje: lista, zapisal: ctx.autor, kiedy: ctx.teraz, uruchomiono: true }), plan_skrot: kand.skrot });
     const po = await domena.zapiszProjekcje(repo, [s.id]);
     return { skladnik_id: s.id, plan: false, przydzialy, powiazan: powiaz.length, do_wyjasnienia: doDecyzji.filter(k => lista.find(x => Number(x.pozycja_id) === k.id).decyzja === 'wyjasnienie').map(k => k.id), saldo: po[s.id] };

@@ -62,6 +62,10 @@ function repoPamiec(tenant, stan = {}) {
     async aktywnePrzydzialySkladnika(sid) { return T.przydzialy.filter(p => p.skladnik_id === Number(sid) && p.stan === 'zarezerwowany'); },
     async liczniki() { return { zakupy: T.zakupy.length, zweryfikowane: T.skladniki.filter(s => s.stan_weryfikacji === 'zweryfikowany').length, niezweryfikowane: T.skladniki.filter(s => s.stan_weryfikacji !== 'zweryfikowany').length, uruchomione: T.skladniki.filter(s => s.zalezne_uzgodniono && s.aktywny_od).length, z_planem: T.skladniki.filter(s => s.plan_json && !s.aktywny_od).length, zrodla_do_uzgodnienia: T.zakupy.filter(z => z.stan_zrodla !== 'ok').length, aktywne_przydzialy: T.przydzialy.filter(p => p.stan === 'zarezerwowany').length, realizacje: T.realizacje.filter(r => r.stan === 'zapisana').length, kwalifikacje_do_potwierdzenia: T.zakupy.filter(z => z.kwalifikacja === 'do_sprawdzenia').length }; },
     // pomocnicze dla testów
+    // N02: punkty zapisu — w pamięci realizowane migawką tablic stanu (odpowiednik SAVEPOINT / ROLLBACK TO SAVEPOINT).
+    async savepoint(n) { (T._sp = T._sp || {})[n] = JSON.stringify(T, (k, v) => k === '_sp' ? undefined : v); },
+    async doSavepoint(n) { const s = (T._sp || {})[n]; if (!s) return; const kopia = JSON.parse(s); for (const k of Object.keys(kopia)) { if (Array.isArray(T[k])) { T[k].length = 0; T[k].push(...kopia[k]); } else T[k] = kopia[k]; } },
+    async zwolnijSavepoint(n) { if (T._sp) delete T._sp[n]; },
     dodajPozycje(p) { const x = { id: id(), tenant_id: tenant, stan: 'zaplanowana', zakup_skladnik_id: null, jednostki_wymagane: 1, rozliczenie: null, ...p }; T.pozycje.push(x); return x.id; },
     dodajRezerwacje(r) { const x = { id: id(), tenant_id: tenant, status: 'potwierdzona', wersja: 1, ...r }; T.rezerwacje.push(x); return x.id; },
     dodajUsluge(u) { T.uslugi.push({ wariant: '', ...u }); return u.id; },
