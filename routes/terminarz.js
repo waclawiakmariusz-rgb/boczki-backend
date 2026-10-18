@@ -299,20 +299,30 @@ module.exports = (db, opts = {}) => {
   // ── Sekcja 0 odbioru: integracja zakupów (T02/T03) jest ODSEPAROWANA od terminarza. Włącza ją wyłącznie właściciel,
   // listą salonów w zmiennej środowiskowej TERMINARZ_ZAKUPY_TENANTS (np. „demo-estelio,inny-salon”). Bez wpisu: brak
   // importu, brak rezerwacji jednostek, brak UI zakupów; kontrola_zakupow traktowana jak „off”. Kod i tabele zostają.
-  const zakupyAktywne = (tenant) => String(process.env.TERMINARZ_ZAKUPY_TENANTS || '').split(',').map(s => s.trim()).filter(Boolean).includes(String(tenant));
+  // 2026-10-18 (decyzja właściciela): dostęp do rozliczania pakietów rozdaje DODATEK w Administracja → Dodatki —
+  // tak samo jak Klub, Foto i sam Terminarz. Salon z subskrypcją włącza go sobie sam; nie ma ręcznej listy w env.
+  // Dopóki dodatek ma w katalogu status UKRYTY, widzą go tylko salony, którym został przyznany (pilotaż — jak platnosc_link).
+  // TERMINARZ_ZAKUPY_TENANTS zostaje WYŁĄCZNIE jako wyłącznik awaryjny: gdy ustawione, zawęża dostęp do tej listy
+  // (można odciąć funkcję z panelu Hostingera, bez wgrywania kodu). Puste/nieustawione = decyduje sam dodatek.
+  const FEATURE_ZAKUPY = 'rozliczanie_pakietow';
+  const zakupyAktywne = async (tenant) => {
+    const awaryjna = String(process.env.TERMINARZ_ZAKUPY_TENANTS || '').split(',').map(s => s.trim()).filter(Boolean);
+    if (awaryjna.length && !awaryjna.includes(String(tenant))) return false;
+    return new Promise((res) => hasFeature(tenant, FEATURE_ZAKUPY, (ok) => res(!!ok)));
+  };
   // ── ZK-02: schemat v2 ewidencji NIE jest tworzony przy starcie (kontrolowana migracja: narzedzia/terminarz-zakupy-migracja.js).
   // Start tylko sprawdza obecność elementów; brak = ewidencja niedostępna (dodatek zgłasza własną niedostępność, rdzeń działa).
   const schematV2 = { wersja: Z.WERSJA_SCHEMATU_V2, sprawdzono: null, gotowy: false, braki: ['(nie sprawdzono)'] };
   async function sprawdzSchematV2() { const w = await Z.sprawdzSchematV2(q, log); Object.assign(schematV2, w); return schematV2; }
   if (!process.env.JEST_WORKER_ID && process.env.NODE_ENV !== 'test') setTimeout(() => { sprawdzSchematV2(); }, 4500);
-  const integracjaZakupow = (tenant) => zakupyAktywne(tenant) && schemat.gotowy && schematV2.gotowy;
+  const integracjaZakupow = async (tenant) => (await zakupyAktywne(tenant)) && schemat.gotowy && schematV2.gotowy;
   /**
    * Stan ewidencji salonu (§14.1, R4) — trzy niezależne rzeczy: dostępność techniczna (env + schematy), ZAPISANY stan (Term_Ewidencja —
    * nigdy nie maskowany przez brak dostępności) i tryb efektywny (co wolno teraz). Bez dostępności technicznej tryb efektywny = „niedostepna”
    * (każda mutacja jednostek odrzucona w całości, historia zachowana); po przerwie (przerwa_od) = „uzgadnianie” do decyzji managera.
    */
   async function stanEwidencji(tenant) {
-    const techniczna = integracjaZakupow(tenant);
+    const techniczna = await integracjaZakupow(tenant);
     const rows = schematV2.gotowy ? await q(`SELECT tryb, rozpoczeto, przerwa_od, punkt_uzgodnienia, zakonczono FROM Term_Ewidencja WHERE tenant_id = ?`, [tenant]).catch(() => []) : [];
     const zapisany = rows.length && Z.TRYBY.includes(rows[0].tryb) ? rows[0].tryb : 'nie_uruchomiono';
     const przerwa = rows.length && rows[0].przerwa_od ? String(rows[0].przerwa_od).slice(0, 19) : null;
@@ -410,6 +420,14 @@ module.exports = (db, opts = {}) => {
             VALUES (?, ?, ?, 0, 'AKTYWNY', 5) ON DUPLICATE KEY UPDATE feature_key = feature_key`,
     [FEATURE_KEY, 'Terminarz', 'Wewnętrzny kalendarz wizyt zintegrowany z kartoteką, karnetami i sprzedażą: grafik zespołu, gabinety i urządzenia, nowa wizyta bez opuszczania grafiku, rozliczenie w istniejącej Sprzedaży.'],
     (e) => { if (e) log.warn('[terminarz] seed Features_Catalog:', e.message); });
+  // Rozliczanie pakietów (ewidencja jednostek zabiegowych) — osobny dodatek, bo wymaga przygotowania przez managera
+  // (skład ofert, stan początkowy, istniejące wizyty) i nie każdy salon go chce. Status UKRYTY = pilotaż: widzą tylko
+  // salony, którym został przyznany. Po zakończeniu odbioru wystarczy zmienić status na AKTYWNY — wtedy każdy salon
+  // z subskrypcją włącza go sobie sam w Administracja → Dodatki, bez zmian w kodzie i bez zmiennych środowiskowych.
+  db.query(`INSERT INTO Features_Catalog (feature_key, nazwa, opis, miesieczna_cena_grosze, status, sortowanie)
+            VALUES (?, ?, ?, 0, 'UKRYTY', 6) ON DUPLICATE KEY UPDATE feature_key = feature_key`,
+    [FEATURE_ZAKUPY, 'Rozliczanie pakietów', 'Liczy zabiegi z pakietów i karnetów klientki: ile kupiła, ile wykorzystała, ile ma umówione i ile zostało. Przy umawianiu pokazuje stan pakietu i rezerwuje jednostkę; po potwierdzeniu wykonania odejmuje ją dokładnie raz. Wymaga Terminarza i jednorazowego przygotowania przez managera (skład ofert, stan początkowy, istniejące wizyty).'],
+    (e) => { if (e) log.warn('[terminarz] seed Features_Catalog (zakupy):', e.message); });
 
   // ── pomocnicze ───────────────────────────────────────────────────────────────
   const czyFeature = (tenant) => new Promise((resolve) => hasFeature(tenant, FEATURE_KEY, (ok) => resolve(!!ok)));
@@ -434,7 +452,7 @@ module.exports = (db, opts = {}) => {
       rows = await q(`SELECT * FROM Term_Ustawienia WHERE tenant_id = ?`, [tenant]);
     }
     const u = rows[0];
-    const integracja = integracjaZakupow(tenant); // env + schemat v1 + schemat v2
+    const integracja = await integracjaZakupow(tenant); // dodatek + schemat v1 + schemat v2
     return { tryb: u.tryb, siatka_min: u.siatka_min, tolerancja_min: u.tolerancja_min, horyzont_dni: u.horyzont_dni, wyprzedzenie_min: u.wyprzedzenie_min, godziny: json(u.godziny_json, DOMYSLNE_GODZINY), wersja: u.wersja,
       zakupy_integracja: integracja ? 'on' : 'off', kontrola_zakupow: integracja && u.kontrola_zakupow === 'on' ? 'on' : 'off', kontrola_zakupow_zapisana: u.kontrola_zakupow === 'on' ? 'on' : 'off',
       // ZK-02: trzy niezależne decyzje (§14.1): dostęp techniczny (zakupy_integracja), tryb ewidencji (manager), dopuszczenie usługi bez zakupu (kontrola_zakupow / Term_Uslugi.wymaga_zakupu)
@@ -790,7 +808,7 @@ module.exports = (db, opts = {}) => {
   }
 
   // ═══════════════════ ROUTER ═══════════════════
-  const wymagajIntegracji = (tenant) => { if (!zakupyAktywne(tenant)) throw new BladUzytkownika('Integracja zakupów nie jest włączona w tym salonie (etap w przygotowaniu).', { code: 'INTEGRACJA' }); if (!schemat.gotowy) throw new BladUzytkownika('Integracja zakupów niedostępna — schemat bazy niekompletny: ' + schemat.braki.join(', '), { code: 'SCHEMAT' }); if (!schematV2.gotowy) throw new BladUzytkownika('Ewidencja zakupów niedostępna — schemat v2 nie został zmigrowany (narzedzia/terminarz-zakupy-migracja.js): ' + schematV2.braki.slice(0, 3).join(', ') + (schematV2.braki.length > 3 ? '…' : ''), { code: 'SCHEMAT_V2' }); };
+  const wymagajIntegracji = async (tenant) => { if (!await zakupyAktywne(tenant)) throw new BladUzytkownika('Integracja zakupów nie jest włączona w tym salonie (etap w przygotowaniu).', { code: 'INTEGRACJA' }); if (!schemat.gotowy) throw new BladUzytkownika('Integracja zakupów niedostępna — schemat bazy niekompletny: ' + schemat.braki.join(', '), { code: 'SCHEMAT' }); if (!schematV2.gotowy) throw new BladUzytkownika('Ewidencja zakupów niedostępna — schemat v2 nie został zmigrowany (narzedzia/terminarz-zakupy-migracja.js): ' + schematV2.braki.slice(0, 3).join(', ') + (schematV2.braki.length > 3 ? '…' : ''), { code: 'SCHEMAT_V2' }); };
   const nazwaKat = (katalog, id) => { const u = (katalog || []).find(x => String(x.id) === String(id)); return u ? u.kategoria + (u.wariant ? ' / ' + u.wariant : '') : String(id); };
   router.post('/terminarz', async (req, res) => {
     const d = req.body || {};
@@ -846,7 +864,7 @@ module.exports = (db, opts = {}) => {
         const wyp = Math.min(168 * 60, Math.max(0, Number(d.wyprzedzenie_min ?? ust.wyprzedzenie_min) || 0));
         const tryb = ['wewnetrzny', 'online', 'obok'].includes(d.tryb) ? d.tryb : ust.tryb;
         await q(`UPDATE Term_Ustawienia SET godziny_json = ?, siatka_min = ?, tolerancja_min = ?, horyzont_dni = ?, wyprzedzenie_min = ?, tryb = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ?`, [JSON.stringify(godziny), siatka, tol, hor, wyp, tryb, tenant]);
-        if (d.kontrola_zakupow === 'on' && !integracjaZakupow(tenant)) throw new BladUzytkownika(zakupyAktywne(tenant) ? 'Nie można włączyć kontroli zakupów — schemat bazy niekompletny.' : 'Integracja zakupów nie jest włączona w tym salonie.');
+        if (d.kontrola_zakupow === 'on' && !await integracjaZakupow(tenant)) throw new BladUzytkownika(await zakupyAktywne(tenant) ? 'Nie można włączyć kontroli zakupów — schemat bazy niekompletny.' : 'Integracja zakupów nie jest włączona w tym salonie.');
         if (d.kontrola_zakupow === 'on' || d.kontrola_zakupow === 'off') await q(`UPDATE Term_Ustawienia SET kontrola_zakupow = ? WHERE tenant_id = ?`, [d.kontrola_zakupow, tenant]); // T03: opt-in per salon
         if (schematV2.gotowy) { // ZK-02: ustawienia ewidencji (kolumny istnieją tylko po migracji v2)
           if (d.recepcja_potwierdza_wykonanie !== undefined) await q(`UPDATE Term_Ustawienia SET recepcja_potwierdza_wykonanie = ? WHERE tenant_id = ?`, [d.recepcja_potwierdza_wykonanie ? 1 : 0, tenant]);
@@ -1095,7 +1113,7 @@ module.exports = (db, opts = {}) => {
       // ───────── ZK-02: zakupy klientki (odczyt BEZ mutacji), uzgodnienie źródeł, mapowanie ofert (wersje), ewidencja, korekty ─────────
       case 'trm_zakupy_klientki': {
         wymagaj(r, ROLE_OPERACYJNE);
-        if (!integracjaZakupow(tenant)) return { status: 'success', integracja: 'off', zakupy: [], bez_mapowania: 0 }; // sekcja 0: bez sald, gdy integracja nieaktywna
+        if (!await integracjaZakupow(tenant)) return { status: 'success', integracja: 'off', zakupy: [], bez_mapowania: 0 }; // sekcja 0: bez sald, gdy integracja nieaktywna
         const idKlienta = d.id_klienta ? String(d.id_klienta) : null;
         if (!idKlienta) return { status: 'success', zakupy: [], bez_mapowania: 0, uwaga: 'Zakupy są powiązane z kartoteką (ID klientki) — bez kartoteki nie ma zakupów do pokazania.' };
         const cfg = await wspolneCfg(tenant);
@@ -1105,7 +1123,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, ewidencja: ctx.tryb, zakupy, bez_mapowania: 0 };
       }
       case 'trm_zakupy_uzgodnij': { // jawna, idempotentna operacja: ponowny odczyt źródeł ISTNIEJĄCYCH zakupów klientki (hash/stan). Rejestracja nowych sprzedaży → ZK-03.
-        wymagaj(r, ROLE_OPERACYJNE); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_OPERACYJNE); await wymagajIntegracji(tenant);
         const idKlienta = d.id_klienta ? String(d.id_klienta) : null; if (!idKlienta) throw new BladUzytkownika('Wskaż klientkę (ID).');
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); const out = []; for (const z of await repo.zakupyKlientki(idKlienta)) { const u = await Z.domena.uzgodnijZrodlo(repo, ctx, z); out.push({ zakup_id: z.id, nazwa: z.nazwa, id_klienta: z.id_klienta, zmiana: u.zmiana, stan_zrodla: u.stan_zrodla }); } return out; });
         for (const x of wyn.filter(x => ['istotna', 'usuniete', 'zwrot'].includes(x.zmiana))) await sprawaZrodla(tenant, { ...x, kto: imie });
@@ -1113,13 +1131,13 @@ module.exports = (db, opts = {}) => {
       }
       // ───────── ZK-03: podgląd i rejestracja źródeł (Z3-03), kwalifikacja „1×”, kandydaci wizyt (Z3-05), gotowość (Z3-06) ─────────
       case 'trm_zakupy_podglad': { // ODCZYT bez mutacji: klasyfikacja sprzedaży salonu/klientki (gotowe / wymaga mapowania / do rozstrzygnięcia / pominięte / istniejące / zmienione)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const ctx = await ctxZ(tenant, imie, r);
         const w = await Z.domena.podgladZrodel(Z.repoSql(q, tenant), ctx, { id_klienta: d.id_klienta ? String(d.id_klienta) : null, od: d.od ? sprawdzData(d.od, 'od') : null, do_: d.do ? sprawdzData(d.do, 'do') : null, limit: Math.min(500, Math.max(1, Number(d.limit) || 300)) });
         return { status: 'success', ewidencja: ctx.tryb, ewidencja_zapisana: ctx.zapisany, sprawdzono: ctx.teraz, ...w };
       }
       case 'trm_zakupy_rejestruj': { // JAWNE potwierdzenie listy źródeł → idempotentna rejestracja (klucz źródła + Term_Operacje); per pozycja wynik; bez R/U
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const lista = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => ({ sprzedaz_id: String(p.sprzedaz_id || ''), wersja_id: p.wersja_id ? Number(p.wersja_id) : null, id_klienta: p.id_klienta ? String(p.id_klienta) : null, powiazane: Array.isArray(p.powiazane) ? p.powiazane.map(String) : undefined })).filter(p => p.sprzedaz_id).slice(0, 200);
         if (!lista.length) throw new BladUzytkownika('Wskaż sprzedaże do zarejestrowania.');
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
@@ -1128,18 +1146,18 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
       case 'trm_zakup_kwalifikuj': { // „1×” kupiony na przyszłość (albo nie ewidencjonowany) — decyzja managera per zakup, z podstawą
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => Z.domena.kwalifikujZakup(repo, await ctxZ(tenant, imie, r), { zakup_id: Number(d.zakup_id), kwalifikacja: String(d.kwalifikacja || ''), powod: String(d.powod || '').trim().slice(0, 300) }));
         if (!wyn.powtorzenie) zapiszLog(tenant, 'TERMINARZ: KWALIFIKACJA ZAKUPU', imie, `zakup ${wyn.zakup_id}: ${wyn.kwalifikacja} — ${String(d.powod || '').slice(0, 120)}`);
         return { status: 'success', ...wyn };
       }
       case 'trm_skladnik_kandydaci': { // ODCZYT: istniejące wizyty klientki na tę usługę (także przeszłe nierozstrzygnięte i poza tygodniem), saldo, niedobór, skrót podglądu
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const ctx = await ctxZ(tenant, imie, r);
         return { status: 'success', ...(await Z.domena.kandydaciWizyt(Z.repoSql(q, tenant), ctx, { skladnik_id: Number(d.skladnik_id) })), ewidencja: ctx.tryb };
       }
       case 'trm_ewidencja_stan': { // ODCZYT: gotowość ewidencji — co można uruchomić, co wymaga decyzji
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const ctx = await ctxZ(tenant, imie, r); const repo = Z.repoSql(q, tenant);
         const liczniki = await repo.liczniki();
         const skl = await repo.skladnikiSalonu({});
@@ -1149,7 +1167,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', ewidencja: ctx.tryb, ewidencja_zapisana: ctx.zapisany, techniczna: ctx.techniczna, przerwa_od: ctx.przerwa_od, liczniki: { ...liczniki, sprawy_otwarte: sprawy[0].n }, skladniki: lista, schemat_v2: { gotowy: schematV2.gotowy, typ: schematV2.typ } };
       }
       case 'trm_oferty_lista': {
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const cfg = await wspolneCfg(tenant);
         const of = await q(`SELECT id, usluga_id, stan, zrodlo, zatwierdzil, DATE_FORMAT(zatwierdzono,'%Y-%m-%d %H:%i') AS zatwierdzono FROM Term_Oferty WHERE tenant_id = ?`, [tenant]);
         const wer = of.length ? await q(`SELECT * FROM Term_Oferty_Wersje WHERE tenant_id = ? AND obowiazuje_do IS NULL AND oferta_id IN (${of.map(() => '?').join(',')})`, [tenant, ...of.map(o => o.id)]) : [];
@@ -1165,7 +1183,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', kontrola_zakupow: cfg.ust.kontrola_zakupow, ewidencja: cfg.ust.ewidencja, oferty: lista, zakupy_do_weryfikacji: niezw[0].n, skladniki_do_weryfikacji: niezw[0].n };
       }
       case 'trm_oferta_zapisz': { // wersjonowane mapowanie: zmiana = NOWA wersja dla kolejnych zakupów; istniejące zakupy zachowują swoją (D12, §6.2); pełna lista składników (C03)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const uid = String(d.usluga_id || '');
         const u = (await q(`SELECT id FROM Uslugi WHERE tenant_id = ? AND id = ?`, [tenant, uid]))[0];
         if (!u) throw new BladUzytkownika('Oferta nie istnieje w cenniku.');
@@ -1198,13 +1216,13 @@ module.exports = (db, opts = {}) => {
         throw new BladUzytkownika('Ta akcja została zastąpiona przez model ewidencji v2 (każdy składnik weryfikowany osobno). Rejestracja zakupów ze sprzedaży jest w przygotowaniu — nic nie zapisano.', { code: 'ZASTAPIONE' });
       }
       case 'trm_ewidencja_ustaw': { // tryb ewidencji salonu (§14.1) — decyzja managera, niezależna od listy technicznej
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => Z.domena.ustawEwidencje(repo, await ctxZ(tenant, imie, r), { tryb: String(d.tryb || ''), raport: d.raport || null }));
         if (!wyn.powtorzenie) zapiszLog(tenant, 'TERMINARZ: EWIDENCJA ZAKUPÓW', imie, `${wyn.poprzedni} → ${wyn.tryb}`);
         return { status: 'success', ...wyn, ustawienia: await ustawienia(tenant) };
       }
       case 'trm_zakup_przyznaj': { // uprawnienie przyznane przez salon (gratis/rekompensata/dane pilotażowe) — bez wiersza Sprzedaz, bez pieniędzy (§12.3)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const cfg = await wspolneCfg(tenant);
         const idKlienta = d.id_klienta ? String(d.id_klienta) : null;
         if (idKlienta) { const kr = (await q(`SELECT id_klienta FROM Klienci WHERE tenant_id = ? AND id_klienta = ?`, [tenant, idKlienta]))[0]; if (!kr) throw new BladUzytkownika('Nie znaleziono klientki w kartotece.'); }
@@ -1215,7 +1233,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
       case 'trm_skladnik_weryfikuj': { // stan początkowy JEDNEGO składnika — wszystkie liczby jawne (także 0); stan rodzica wyliczany (C04, §13.2)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
         const dane = { skladnik_id: Number(d.skladnik_id), hist_wykorzystane: d.hist_wykorzystane, hist_wycofane: d.hist_wycofane, hist_potracone: d.hist_potracone, punkt_odciecia: d.punkt_odciecia ? sprawdzDt(d.punkt_odciecia, 'punkt odcięcia') : null, zrodlo_ustalen: String(d.zrodlo_ustalen || '').trim().slice(0, 300) };
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); return Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'weryfikuj', dane }, (operacja_id) => Z.domena.weryfikujSkladnik(repo, ctx, { ...dane, operacja_id })); });
@@ -1223,7 +1241,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
       case 'trm_skladnik_uruchom': { // Z3-05/06: decyzje dla istniejących wizyt → plan (przygotowanie) albo atomowe przydziały + gotowość (aktywna); podgląd musi być aktualny
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
         const dane = { skladnik_id: Number(d.skladnik_id), decyzje: Array.isArray(d.decyzje) ? d.decyzje.map(x => ({ pozycja_id: Number(x.pozycja_id), decyzja: String(x.decyzja || ''), uzasadnienie: String(x.uzasadnienie || '').slice(0, 300) })) : null, skrot: d.skrot ? String(d.skrot) : null, z_planu: !!d.z_planu, potwierdzenie_zaleznych: !!d.potwierdzenie_zaleznych };
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => { const ctx = await ctxZ(tenant, imie, r); return Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'uruchom', dane }, (operacja_id) => Z.domena.uruchomSkladnik(repo, ctx, { ...dane, operacja_id })); });
@@ -1231,7 +1249,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik };
       }
       case 'trm_wykonanie_koryguj': { // korekta błędnego wykonania (manager): odwrócenie realizacji, historia zostaje (§9.5)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
         const dane = { realizacja_id: Number(d.realizacja_id), wynik: String(d.wynik || ''), powod: String(d.powod || '').trim().slice(0, 300) };
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => {
@@ -1246,7 +1264,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik, rezerwacja: wyn.rezerwacja_id ? await rezerwacja(tenant, wyn.rezerwacja_id) : null };
       }
       case 'trm_pozycja_zrodlo': { // atomowa zmiana zakupu dla pozycji (U10): zwolnienie w starym i przydział w nowym albo nic
-        wymagaj(r, ROLE_OPERACYJNE); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_OPERACYJNE); await wymagajIntegracji(tenant);
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
         const dane = { pozycja_id: Number(d.pozycja_id), nowy_skladnik_id: Number(d.nowy_skladnik_id), powod: String(d.powod || '').slice(0, 300) };
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => {
@@ -1260,7 +1278,7 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', powtorzenie: wyn.powtorzenie, ...wyn.wynik, rezerwacja: await rezerwacja(tenant, wyn.rezerwacja_id) };
       }
       case 'trm_pozycja_potrac': { // potrącenie jednostki (osobna decyzja, reguła salonu włączona): F rośnie, U nie (§9.4)
-        wymagaj(r, ROLE_MANAGER_PLUS); wymagajIntegracji(tenant);
+        wymagaj(r, ROLE_MANAGER_PLUS); await wymagajIntegracji(tenant);
         const ust = await ustawienia(tenant); if (ust.potracenie_nieobecnosc !== 'on') throw new BladUzytkownika('Potrącanie jednostek za nieobecność nie jest włączone w zasadach salonu.');
         const klucz = String(d.klucz_idem || '').slice(0, 64) || crypto.randomUUID();
         const dane = { pozycja_id: Number(d.pozycja_id), ilosc: Number(d.ilosc) || 1, powod: String(d.powod || '').trim().slice(0, 300) };
@@ -1750,7 +1768,7 @@ module.exports = (db, opts = {}) => {
       if (schematV2.gotowy && (tickSprawy.licznik = (tickSprawy.licznik || 0) + 1) % 5 === 0) {
         const salony = await q(`SELECT tenant_id FROM Term_Ewidencja WHERE tryb IN ('aktywna','konczenie') AND przerwa_od IS NULL`).catch(() => []);
         for (const s of salony) {
-          if (!integracjaZakupow(s.tenant_id)) continue;
+          if (!await integracjaZakupow(s.tenant_id)) continue;
           const w = await wTransakcjiSalonu(s.tenant_id, async (conn, repo) => Z.domena.uzgodnijOkresowo(repo, await ctxZ(s.tenant_id, null, null), { limit: 200 })).catch(e => { log.error('[terminarz] uzgadnianie', s.tenant_id, e.message); return null; });
           for (const x of ((w && w.zmiany) || [])) await sprawaZrodla(s.tenant_id, { ...x, kto: null }).catch(() => {});
         }

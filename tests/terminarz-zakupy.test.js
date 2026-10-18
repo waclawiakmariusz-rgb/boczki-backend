@@ -369,7 +369,7 @@ const BAZOWE = [
   [/FROM Term_Rezerwacje WHERE tenant_id = \? AND klucz_idem/, []],
   [/FROM Term_Ewidencja/, [{ tryb: 'aktywna' }]],
 ];
-function aplikacja(db, feature = true) { const app = express(); app.use(express.json()); const m = require('../routes/terminarz'); const router = m(db, { hasFeature: (t, k, cb) => cb(feature), log: { error() {}, warn() {}, info() {} } }); app.use('/api', router); return { app, router, AKCJE: m.AKCJE }; }
+function aplikacja(db, feature = true) { const app = express(); app.use(express.json()); const m = require('../routes/terminarz'); const ma = (k) => (feature && typeof feature === 'object') ? !!feature[k] : !!feature; const router = m(db, { hasFeature: (t, k, cb) => cb(ma(k)), log: { error() {}, warn() {}, info() {} } }); app.use('/api', router); return { app, router, AKCJE: m.AKCJE }; }
 const post = (app, body) => request(app).post('/api/terminarz').send({ tenant_id: T, pracownik: 'Ola', ...body });
 const zapisz = (extra = {}) => ({ action: 'trm_zapisz', klucz_idem: 'KL-1', start: '2026-10-20 10:00', klient: { id_klienta: '1001', nazwa: 'Testowa Klientka' }, pozycje: [{ usluga_id: 'U-A', pracownik: 'Anna', zakup_skladnik_id: 5 }], ...extra });
 
@@ -385,9 +385,9 @@ describe('K10 — brak schematu/aktywacji nie psuje rdzenia i nie dopuszcza ruch
     expect((await post(app, { action: 'trm_init' })).body).toMatchObject({ status: 'success', feature_on: false });
     expect((await post(app, zapisz())).body).toMatchObject({ status: 'error', code: 'DODATEK' });
   });
-  test('N03: integracja wyłączona (brak salonu w TERMINARZ_ZAKUPY_TENANTS) → rezerwacja z zakupu odrzucona PRZED jakimkolwiek zapisem; odczyt zakupów pusty', async () => {
+  test('N03: integracja wyłączona (salon bez dodatku „Rozliczanie pakietów”) → rezerwacja z zakupu odrzucona PRZED jakimkolwiek zapisem; odczyt zakupów pusty', async () => {
     delete process.env.TERMINARZ_ZAKUPY_TENANTS;
-    const db = atrapaBazy(BAZOWE); const { app } = aplikacja(db);
+    const db = atrapaBazy(BAZOWE); const { app } = aplikacja(db, { terminarz: true, rozliczanie_pakietow: false });
     const r = await post(app, zapisz()); expect(r.body).toMatchObject({ status: 'error', code: 'INTEGRACJA' });
     expect(db.zap.some(z => /^\s*INSERT/i.test(z.sql) && !/Features_Catalog|Term_Migracje/.test(z.sql))).toBe(false);
     expect((await post(app, { action: 'trm_zakupy_klientki', id_klienta: '1001' })).body).toMatchObject({ status: 'success', integracja: 'off', zakupy: [] });
