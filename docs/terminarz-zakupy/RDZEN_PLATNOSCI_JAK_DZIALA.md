@@ -57,7 +57,8 @@ Jedna pozycja, kilka metod: `Sprzedaz.platnosc = 'mix'`, a podział w `Platnosci
 ## 8. Karnety i pakiety w rdzeniu
 
 - Przy sprzedaży pozycji z cennika rdzeń odczytuje `Uslugi.waznosc_dni` i zapisuje `data_waznosci = data sprzedaży + dni` (snapshot). Brak dni = brak ważności.
-- Manager może **Przedłużyć** (`extend_karnet`, nowa data, działa na całej `grupa_id`), **Zawiesić** (`suspend_karnet`), **Zakończyć** (`close_karnet` → `karnet_zamkniety_w`, `karnet_zamkniety_przez`), **Cofnąć zakończenie** (`reopen_karnet`). Lista wygasających w profilu klientki.
+- Manager może **Przedłużyć** (`extend_karnet`, nowa data), **Zawiesić** (`suspend_karnet`), **Zakończyć** (`close_karnet` → `karnet_zamkniety_w`, `karnet_zamkniety_przez`), **Cofnąć zakończenie** (`reopen_karnet`). Każda z tych operacji działa na pojedynczym `id` albo na całej `grupa_id`, zależnie od tego, co przyśle ekran. Lista wygasających w profilu klientki.
+- **Uwaga o „Zawieszeniu”: nie istnieje stan „zamrożony”.** `suspend_karnet` wykonuje `UPDATE Sprzedaz SET data_waznosci = <nowa>, karnet_zamkniety_w = NULL, karnet_zamkniety_przez = NULL, zawieszenia_liczba = zawieszenia_liczba + 1, zawieszenia_dni_lacznie = zawieszenia_dni_lacznie + <dni>`. Czyli zawieszenie to **przesunięcie daty ważności o N dni plus dwa liczniki audytowe**, przy okazji cofające ewentualne zakończenie. Dla dodatku skutek jest taki sam jak przedłużenie: zmienia się `data_waznosci`, co jest zmianą istotną źródła.
 - To wszystko, co rdzeń wie o pakiecie: data ważności i ręczne zakończenie. **Nie ma licznika wykonanych zabiegów, nie ma powiązania wizyty z pakietem.** „Zakończ” może oznaczać „wykorzystany”, „przeterminowany” albo „klientka zrezygnowała” — rdzeń tego nie rozróżnia.
 
 ## 9. Edycja, usuwanie, rozliczenie księgowe
@@ -68,12 +69,23 @@ Jedna pozycja, kilka metod: `Sprzedaz.platnosc = 'mix'`, a podział w `Platnosci
 
 ## 10. Przykład: pakiet 1700 zł, klientka ma 200 zł w portfelu, resztę płaci kartą
 
+**Przykład A — jeden pakiet, paragon `A`:**
 ```
 Zadatki:   DEP-001  WPŁATA  200,00  Gotówka  cel="na zabiegi"  AKTYWNY  → po sprzedaży: WYKORZYSTANY
-Sprzedaz:  P-1  Endermologia         10x   Portfel  200,00   id_zadatku=DEP-001  data_waznosci=+180 dni
-Sprzedaz:  P-2  Endermologia Dopłata       Karta   1500,00   data_waznosci=NULL
+Sprzedaz:  A-1  Endermologia         10x   Portfel  200,00   id_zadatku=DEP-001  data_waznosci=+180 dni
+Sprzedaz:  A-2  Endermologia Dopłata       Karta   1500,00   data_waznosci=NULL
 ```
-Jeśli recepcja powieliła pozycję (dwa pakiety): `P-1`, `P-2` główne z tym samym `grupa_id`, dopłaty `P-3`, `P-4` z `grupa_id` odpowiednio odziedziczonym. Zwrot 100 zł kartą do `P-2` daje `Sprzedaz: P-5  ZWROT: Endermologia Dopłata  -100,00  Karta  zwrot_do_id=P-2  data=dziś`.
+Zwrot 100 zł kartą do dopłaty `A-2`:
+`Sprzedaz: 20261018150245  ZWROT: Endermologia Dopłata  −100,00  Karta  zwrot_do_id=A-2  data=dziś`.
+Wiersz zwrotu ma **własny identyfikator z czasu zwrotu**, nie numer w paragonie, więc nie należy do zbioru `A-%`; wiąże go wyłącznie `zwrot_do_id`.
+
+**Przykład B — dwa egzemplarze tej samej oferty, osobny paragon `B`:** recepcja powieliła pozycję przyciskiem, a saldo portfela (200 zł) wyczerpało się na pierwszym egzemplarzu:
+```
+Sprzedaz:  B-1  Endermologia          10x  Portfel  200,00   grupa_id=G1
+Sprzedaz:  B-2  Endermologia Dopłata       Karta   1500,00   grupa_id=G1
+Sprzedaz:  B-3  Endermologia          10x  Karta   1700,00   grupa_id=G1
+```
+Dwa prawa (z `B-1` i `B-3`), jedna dopłata finansująca wyłącznie `B-1`. Przypisanie dopłaty do właściwego egzemplarza wynika z `grupa_id` tylko wtedy, gdy grupy są różne; przy wspólnej grupie (jak wyżej) jest **niejednoznaczne i wymaga decyzji managera**. Dokładny zapis tej ścieżki przy powieleniu wymaga potwierdzenia próbą na izolowanej bazie (nie zakładać kolejności ani liczby dopłat).
 
 ## 11. Co z tego wynika dla ewidencji jednostek (dodatek)
 
@@ -82,7 +94,7 @@ Jeśli recepcja powieliła pozycję (dwa pakiety): `P-1`, `P-2` główne z tym s
 3. Zmiana finansowania (zwrot do głównego lub do dopłaty, usunięcie, edycja) jest zmianą tego samego prawa; kwota nie przelicza się na zabiegi.
 4. Powielone pozycje = osobne prawa; `grupa_id` tylko łączy je ze wspólnymi dopłatami i operacjami karnetu.
 5. Historia wykorzystania sprzed ewidencji **nie istnieje w danych**; musi ją podać człowiek, puste pole to „nie wiem”.
-6. Rdzeń nie używa żadnych blokad przy zapisie zwrotu; zwrot to zwykły INSERT. Stąd okno równoczesności opisane w ZK-03 i decyzja właściciela dla salonu z jedną recepcją.
+6. Rdzeń nie używa żadnych blokad przy zapisie zwrotu; zwrot to zwykły INSERT. Stąd okno równoczesności opisane w ZK-03. **Zapisana decyzja właściciela (16.10.2026, `ZAKUPY_03_WYNIK.md` §7.1), cytat warunku:** przyjęty wariant 1, akceptacja okna jako ograniczenia odroczonego uzgadniania, uzasadnienie — *„jeden lokal, jedna recepcjonistka na zmianie, zwrot wykonywany wyłącznie na wyraźną prośbę klientki przy stanowisku”*; warunek ponownego otwarcia tematu — *salon z więcej niż jednym stanowiskiem recepcji pracującym równocześnie*, wtedy wraca wariant 2 (dodatkowe sprawdzenie źródła po zatwierdzeniu rezerwacji). Decyzja dotyczy **tego** salonu i **nie** jest zgodą na aktywację integracji.
 
 ## 12. Czego w rdzeniu nie ma (żeby nie zakładać)
 
