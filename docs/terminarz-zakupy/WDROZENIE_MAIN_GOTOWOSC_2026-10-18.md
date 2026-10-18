@@ -90,10 +90,10 @@ Dodatkowo dev.estelio.com.pl pracuje na tym kodzie na wspólnej bazie bez v2 od 
 - **Próba wersji awaryjnej** (`po11/wynik-wersja-awaryjna.json`): kod z tagu `b3d774a` uruchomiony z osobnego katalogu roboczego (`git worktree`, bez przełączania gałęzi w katalogu serwera) na bazie `estelio_test` **po zapisach kandydata**: start OK, `trm_init` OK, odczyt wizyty zapisanej i odwołanej przez kandydata (status `anulowana`), zapis nowej wizyty przez stary kod, lista klientek. Schemat jest zgodny w obie strony: wszystkie kolumny dokładane przez kandydata są NULL-owalne lub z DEFAULT, nowe tabele są przez stary kod ignorowane. Uwaga techniczna: kod z tagu nie zna `DB_PORT`, więc próbę wykonano przez lokalny mostek TCP 3306→3307; na produkcji port jest domyślny, więc ten problem nie występuje.
 - **Co przywrócenie starego kodu oznacza:** powrót ujawniania PIN-ów (W07-6: stary kod oddaje pole `pin`). Właściciel świadomie nie zmienia PIN-ów, więc powrót = stan dzisiejszy, bez nowej ekspozycji. Baza i dane zostają.
 
-**Plan awaryjny (dwa poziomy, bez `reset --hard` i bez force-push):**
+**Plan awaryjny (dwa poziomy, bez `reset --hard` i bez force-push) — jedna kartka: `WROC_DO_OSTATNIEJ_DOBREJ.md`.** Wdrożenie i powrót idą przez panel Hostingera (Git → Pull from remote, Node.js → Restart application, Cache → Purge), bez konsoli na serwerze, więc powrót musi być zwykłym krokiem naprzód na `main`:
 1. **Problem w kalendarzu** → Administracja → Dodatki → wyłączyć Terminarz dla salonu. Zweryfikowane (W06-D): endpointy terminarza odmawiają, rdzeń działa, E05 zostaje. Bez pull, bez restartu.
-2. **Problem w rdzeniu** (logowanie, klientki, sprzedaż, dokumenty) → na serwerze produkcji przełączyć kod na tag: `git fetch --tags && git checkout ostatnia-dobra-2026-10-16` + restart (historia `main` nietknięta; gałąź naprawia się potem commitem `git revert`, nie siłą). Zweryfikowane lokalnie, że ten kod czyta i zapisuje dane powstałe po kandydacie. Bazy z kopii **nie przywracamy** bez analizy — od kopii mogą powstać prawidłowe zapisy.
-3. Ścieżka do przodu dla E05 (gdyby problem był w logowaniu): naprawa w kodzie, bo cofnięcie otwiera ujawnianie PIN-ów.
+2. **Problem w rdzeniu** (logowanie, klientki, sprzedaż, dokumenty) → gałąź **`wroc-ostatnia-dobra-2026-10-16`** (commit `4f9ab25`, przygotowana PRZED wdrożeniem: odwrócenie `b3d774a..7df0c8f`, drzewo identyczne co do bajta z produkcją — `git diff b3d774a 4f9ab25` = pusto; kandydat jest jej przodkiem, więc po scaleniu `main → 4f9ab25` to fast-forward). `git checkout main && git merge --ff-only wroc-ostatnia-dobra-2026-10-16 && git push origin main` → Pull → Restart → Purge. Zweryfikowane lokalnie, że kod sprzed wydania czyta i zapisuje dane powstałe po kandydacie. Bazy z kopii **nie przywracamy** bez analizy — od kopii mogą powstać prawidłowe zapisy. Uwaga: lokalny bezpiecznik `pre-push` zatrzymuje pushe kasujące linie w `public/index.html`; powrót kasuje je świadomie, więc ten jeden push wymaga `--no-verify` (decyzja właściciela, §9).
+3. Ścieżka do przodu dla E05 (gdyby problem był w logowaniu): naprawa w kodzie, bo cofnięcie otwiera ujawnianie PIN-ów (PIN-y bez zmian → stan dzisiejszy).
 
 ## 8. Bramka GO / NO-GO (§7 planu)
 
@@ -117,13 +117,16 @@ Dodatkowo dev.estelio.com.pl pracuje na tym kodzie na wspólnej bazie bez v2 od 
 - PIN-y pozostają bez zmian — decyzja właściciela (17.10). Luka ujawniania PIN-ów jest zamykana na przyszłość przez E05; przeszłe ewentualne podejrzenie PIN-ów nie jest unieważniane.
 - Odczyty GET bez tokenu (§5) — stan sprzed wydania, poza zakresem.
 - Dokument ZK-03.1, na który powołuje się plan, nie został przekazany; nie ma wpływu na to wydanie (zakupy uśpione).
+- Gałąź powrotu `wroc-ostatnia-dobra-2026-10-16` istnieje lokalnie i jest zweryfikowana; jej wypchnięcie na GitHub zatrzymał lokalny bezpiecznik `pre-push` (kasowanie linii w `index.html`). Wypchnięcie z `--no-verify` wymaga decyzji właściciela; do tego czasu powrót wykonuje Claude z lokalnego repozytorium (ten sam jeden push z `--no-verify`).
+- Sesje po restarcie produkcji są wczytywane z tabeli `Sesje` (W05-07a), więc restart zwykle nie wylogowuje zespołu; ewentualnie jedno przelogowanie.
 
 ## 10. Sekwencja okna (po „ruszaj” właściciela)
 
 ```
+# Właściciel, panel Hostingera, PRZED wszystkim: Node.js → Environment Variables → są: UPLOADS_DIR, ENFORCE_SESSION=true, DB_*, SMTP_*, STRIPE_*; brak TERMINARZ_ZAKUPY_TENANTS i DB_PORT
 # Claude, repozytorium lokalne (drzewo czyste, main = b3d774a):
-git fetch origin && git checkout main && git merge --ff-only <SHA kandydata z git log dev -1> && git push origin main
-# Właściciel, Hostinger (produkcja): git pull + restart
+git fetch origin && git checkout main && git merge --ff-only 7df0c8f && git push origin main
+# Właściciel, panel Hostingera (estelio.com.pl): Git → Pull from remote (sprawdzić hash 7df0c8f) → Node.js → Restart application → Cache → Purge
 # Claude, kontrola (wyłącznie odczyt; smoke-prod.js: login, get_pin_users, get_months, widoki w Chrome — bez zapisów):
 curl -s https://estelio.com.pl/zaloguj | grep -oE "[0-9]{2}\.[0-9]{2}\.[0-9]{4}[^<\"]{0,24}[0-9a-f]{7,12}"   # tożsamość wydania = SHA kandydata
 B=https://estelio.com.pl TENANT=demo-estelio PROFIL_LOGIN=<login demo> PROFIL_HASLO=<poza czatem> node narzedzia/smoke-prod.js
