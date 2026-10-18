@@ -109,6 +109,12 @@
     table td:first-child { white-space: normal; min-width: 150px; }
     .sample-who { min-width: 70px; } .hero-meta { gap: 18px; }
   }
+
+  /* Zrzuty ekranu (2026-10-18) — prawdziwe ekrany Estelio, dane fikcyjne */
+  .zrzut { margin: 26px 0; }
+  .zrzut img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 24px rgba(26,14,26,.07); background: var(--card); }
+  .zrzut figcaption { margin-top: 10px; font-size: 13px; line-height: 1.6; color: var(--muted); padding: 0 4px; }
+  @media (max-width: 860px) { .zrzut { margin: 18px -8px; } .zrzut img { border-radius: 12px; } }
 </style>
 </head>
 <body>
@@ -158,6 +164,16 @@
     <div class="nav-section">
       <div class="nav-section-title">V · Nowość</div>
       <a class="nav-link" href="#powiadomienia"><span class="num">25</span> Centrum powiadomień</a>
+    </div>
+    <div class="nav-section">
+      <div class="nav-section-title">VI · Rozliczanie pakietów</div>
+      <a class="nav-link" href="#pakiety-start"><span class="num">26</span> Pakiety: po co i jak włączyć</a>
+      <a class="nav-link" href="#pakiety-sklad"><span class="num">27</span> Skład ofert</a>
+      <a class="nav-link" href="#pakiety-przygotowanie"><span class="num">28</span> Przygotowanie zakupów</a>
+      <a class="nav-link" href="#pakiety-stan"><span class="num">29</span> Stan pakietu</a>
+      <a class="nav-link" href="#pakiety-wizyty"><span class="num">30</span> Istniejące wizyty</a>
+      <a class="nav-link" href="#pakiety-uruchomienie"><span class="num">31</span> Uruchomienie licznika</a>
+      <a class="nav-link" href="#pakiety-codziennie"><span class="num">32</span> Umawianie z pakietu</a>
     </div>
   </aside>
 
@@ -1197,7 +1213,232 @@
       <div class="info"><strong>Czego dzwonek jeszcze nie robi.</strong> Nie wysyła SMS-ów ani e-maili do klientek — to nadal osobna wiadomość w dotychczasowym procesie. Nie liczy jednostek karnetu ani serii wizyt. Nie ma osobnej kolejki na przekazanie całej zmiany na raz — przekazujesz sprawy pojedynczo, przyciskiem „Przekaż”. To wszystko jest w kolejnych etapach (rozdział 19).</div>
     </section>
 
-  </main>
+  
+  <div class="divider"><div class="line"></div><div class="label">VI · Rozliczanie pakietów</div><div class="line"></div></div>
+
+  <section class="card" id="pakiety-start">
+    <div class="card-header">
+      <div class="card-icon">🎟️</div>
+      <div class="card-header-text"><div class="subtitle">Krok 26 · Rozliczanie pakietów</div><h2>Po co liczyć zabiegi i co trzeba przygotować</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager przygotowuje, recepcja korzysta</span><span><b>Gdzie:</b> Administracja → Dodatki; potem Terminarz → Ustawienia → Pakiety i zakupy</span></div>
+    <p class="lead">Klientka kupuje pakiet dziesięciu endermologii. Do tej pory Estelio widziało jeden wiersz sprzedaży z tekstem „Endermologia / 10x” i kwotą. Nie wiedziało, że to dziesięć zabiegów, i nie umiało powiedzieć, ile zostało. Pilnowała tego recepcja: w karcie klientki, w zeszycie albo w pamięci. Dodatek <strong>Rozliczanie pakietów</strong> zamienia ten tekst w prawdziwy licznik, który odejmuje się sam przy umawianiu i przy potwierdzeniu wykonania.</p>
+
+    <h3>Co zobaczysz po włączeniu</h3>
+    <p>W Ustawieniach Terminarza pojawia się zakładka <strong>Pakiety i zakupy</strong> z pięcioma krokami. Idzie się przez nie po kolei, raz, i w większości tylko na starcie.</p>
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-01-sklad-ofert.png" alt="Zakładka Pakiety i zakupy, krok Skład ofert: lista ofert z cennika ze stanem mapowania">
+      <figcaption>Pięć kroków u góry, a pod nimi pierwszy z nich. Każda oferta z cennika ma widoczny stan: <span class="pill ok">Zatwierdzona</span> albo <span class="pill warn">Bez mapowania</span>.</figcaption>
+    </figure>
+
+    <h3>Dwa zdania, które tłumaczą całą resztę</h3>
+    <div class="tip"><strong>Liczba w nazwie nie jest dowodem.</strong> „10x” w cenniku wpisał człowiek. Bywa „1 obszar 4x”, bywa „2 przyłożenia”. Żaden automat nie ma prawa robić z tego licznika, bo pomyłka oznacza, że klientka dostaje zabiegi gratis albo traci swoje. Dlatego raz, ręcznie, potwierdzasz skład każdej oferty.</div>
+    <div class="tip"><strong>Puste pole znaczy „nie wiem”, a nie zero.</strong> Jeśli nie wpiszesz, ile klientka już wykorzystała, system nie przyzna jej wolnych zabiegów „na wszelki wypadek”. Woli zapytać, niż zgadnąć.</div>
+
+    <h3>Włączenie</h3>
+    <div class="step"><div class="num">1</div><div><strong>Administracja → Dodatki</strong><span>Kafel „Rozliczanie pakietów”, 0 zł. Włącza manager lub właściciel. Wymaga włączonego Terminarza.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Terminarz → Ustawienia → Pakiety i zakupy</strong><span>Zakładka pojawia się dopiero po włączeniu dodatku. Jeśli jej nie widzisz, sprawdź rolę: ustawienia zmienia manager lub właściciel.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Tryb licznika: „Nie uruchomiono” → „Przygotowanie”</strong><span>Na ostatniej zakładce. W przygotowaniu konfigurujesz wszystko spokojnie, a system nie rezerwuje jeszcze nic na prawdziwych wizytach.</span></div></div>
+
+    <div class="warning"><strong>Nic nie liczy się, dopóki sam nie włączysz.</strong> Pojawienie się panelu niczego nie uruchamia. Licznik startuje dopiero wtedy, gdy na piątym kroku przestawisz tryb na „Aktywna”. Do tego momentu możesz klikać bez obaw.</div>
+  </section>
+
+  <section class="card" id="pakiety-sklad">
+    <div class="card-header">
+      <div class="card-icon">🧩</div>
+      <div class="card-header-text"><div class="subtitle">Krok 27 · Pakiety i zakupy</div><h2>Skład ofert — co dokładnie zawiera pakiet</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Pakiety i zakupy → Skład ofert</span></div>
+    <p class="lead">To najdłuższa część przygotowania i jedyna, której nikt nie zrobi za Ciebie. Przechodzisz po swoim cenniku i mówisz systemowi, co i ile razy zawiera każda oferta. Robisz to raz; przy kolejnych sprzedażach system już wie.</p>
+
+    <h3>Pakiet łączony ma dwa osobne liczniki</h3>
+    <p>Oferta „5 × endermologia + 4 × Meltivio” to nie dziewięć dowolnych zabiegów. To dwa niezależne liczniki: pięć endermologii i cztery Meltivio. Każdy ma własne saldo i własne potwierdzenie stanu. Endermologia może już działać, gdy Meltivio nadal czeka na sprawdzenie.</p>
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-02-edytor-skladu.png" alt="Edytor składu oferty: dwa wiersze, pięć endermologii i cztery Meltivio, z jednostką i zużyciem na pozycję">
+      <figcaption>Każdy wiersz to osobny licznik. Kolumny po prawej mówią, ile jednostek jest w jednym pakiecie i ile zużywa jedna wizyta.</figcaption>
+    </figure>
+
+    <h3>Rodzaje ofert</h3>
+    <div class="step"><div class="num">1</div><div><strong>Pakiet (zabiegi na przyszłość)</strong><span>Klientka kupuje z góry kilka zabiegów. To typowy karnet.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Pojedynczy zabieg kupiony z góry</strong><span>Jeden zabieg opłacony przed wykonaniem. Po rejestracji każdy taki zakup potwierdzasz osobno.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Nie ewidencjonuj</strong><span>Zwykłe „1x” przy kasie po zabiegu. Nie tworzy prawa na przyszłość. To ustawienie domyślne i w większości salonów najczęstsze.</span></div></div>
+
+    <div class="warning"><strong>Zapis zmiany tworzy nową wersję, a nie przelicza starych zakupów.</strong> Jeśli za pół roku zmienisz pakiet z dziesięciu na dwanaście zabiegów, klientki, które kupiły wcześniej, zachowują swoje dziesięć. Historia nie jest przepisywana.</div>
+
+    <div class="scenario">
+      <span class="scenario-label">Z życia salonu · wtorek 9:40, pierwszy dzień z licznikiem</span>
+      <h4>„Mam w cenniku Meltivio bez liczby” — Patrycja mapuje ofertę, której nazwa nic nie mówi</h4>
+      <div class="scenario-body">
+        <div class="sample-call">
+          <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Przy „Meltivio / 1x” świeci się „Bez mapowania”, a obok podpowiedź: „z nazwy: 1 jednostka tej pozycji”.</div></div>
+          <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Bo nazwa nie mówi, czy to jeden zabieg kupiony z góry, czy zwykła sprzedaż po zabiegu. U nas Meltivio sprzedajemy po wykonaniu, więc ustawiam „Nie ewidencjonuj” i zatwierdzam.</div></div>
+          <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">A gdybyśmy kiedyś sprzedały je komuś z góry?</div></div>
+          <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Wtedy przy tej jednej sprzedaży klikniemy, że kupiono na przyszłość. Decyzja dotyczy tamtego zakupu, nie całej oferty.</div></div>
+        </div>
+        <div class="scenario-result">Dziesięć minut na cały cennik. Oferty bez pakietów oznaczone jako „nie ewidencjonuj”, trzy prawdziwe pakiety zatwierdzone ze składem.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" id="pakiety-przygotowanie">
+    <div class="card-header">
+      <div class="card-icon">📥</div>
+      <div class="card-header-text"><div class="subtitle">Krok 28 · Pakiety i zakupy</div><h2>Przygotowanie zakupów — które sprzedaże to pakiety</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Pakiety i zakupy → Przygotowanie zakupów</span></div>
+    <p class="lead">Tu system pokazuje sprzedaże z kartoteki i mówi, co z każdą zrobi. Samo wyświetlenie listy niczego nie zapisuje. Dopiero zaznaczenie pozycji i kliknięcie „Zarejestruj” tworzy liczniki.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-03-przygotowanie-zakupow.png" alt="Podgląd źródeł: sprzedaże gotowe do rejestracji oraz pominięte z podanym powodem">
+      <figcaption>Każdy wiersz ma stan i powód. Przy pominiętych widać, dlaczego: produkt, wiersz dopłaty, oferta nieewidencjonowana.</figcaption>
+    </figure>
+
+    <h3>Co system pomija i dlaczego</h3>
+    <div class="step"><div class="num">1</div><div><strong>Produkt z magazynu</strong><span>Krem to nie zabieg. Zero jednostek.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Wiersz „Dopłata”</strong><span>Gdy klientka płaci część z portfela, ekran sprzedaży dzieli pozycję na dwa wiersze. Pakiet jest jeden, a dopłata to tylko druga część zapłaty. Gdyby liczyć ją osobno, klientka dostałaby podwójnie.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Zwrot</strong><span>Ujemny wiersz nie jest zakupem. Jest powodem, żeby sprawdzić zakup, którego dotyczy.</span></div></div>
+    <div class="step"><div class="num">4</div><div><strong>Sprzedaż bez przypiętej klientki</strong><span>Prawo do zabiegu musi mieć właściciela. Taki wiersz czeka na ręczne wskazanie.</span></div></div>
+
+    <div class="tip"><strong>Powielone pozycje to dwa osobne pakiety.</strong> Gdy recepcja powieliła pozycję przyciskiem, powstały dwa wiersze sprzedaży i powstaną dwa zakupy. Dwa razy „5 + 4” to dziesięć endermologii i osiem Meltivio, a nie jeden większy pakiet.</div>
+    <div class="warning"><strong>Ponowne kliknięcie „Zarejestruj” nie tworzy drugiego pakietu.</strong> Jeśli nie masz pewności, czy zapis przeszedł, kliknij jeszcze raz. System rozpozna, że ten zakup już istnieje, i nie doda jednostek drugi raz.</div>
+  </section>
+
+  <section class="card" id="pakiety-stan">
+    <div class="card-header">
+      <div class="card-icon">✍️</div>
+      <div class="card-header-text"><div class="subtitle">Krok 29 · Pakiety i zakupy</div><h2>Stan pakietu — ile klientka już wykorzystała</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Pakiety i zakupy → Sprawdź stan pakietów</span></div>
+    <p class="lead">System nie wie, ile zabiegów klientka zrobiła, zanim zaczął liczyć. Tej informacji nie ma w żadnych danych, jest w karcie klientki i w Waszej pamięci. Dlatego każdy licznik czeka na potwierdzenie i dopóki go nie dostanie, nie udostępnia zabiegów do umawiania.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-04-stan-pakietow.png" alt="Sprawdź stan pakietów: osobne pola Wykorzystano, Wycofano i Potrącono dla każdego składnika">
+      <figcaption>Osobne pola dla każdego składnika. Pole zostawione puste znaczy „nie wiem” i nie zostanie potraktowane jak zero.</figcaption>
+    </figure>
+
+    <h3>Trzy pola i jedno pytanie przy każdym</h3>
+    <div class="step"><div class="num">1</div><div><strong>Wykorzystano wcześniej</strong><span>Ile zabiegów klientka już zrobiła z tego pakietu, zanim zaczęliście liczyć.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Wycofano</strong><span>Ile jednostek przepadło, na przykład po zwrocie części pakietu.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Potrącono</strong><span>Ile zabiegów zabrano jako karę, na przykład za niezgłoszoną nieobecność. To nie to samo co wykonanie.</span></div></div>
+
+    <div class="tip"><strong>Startujecie od dziś?</strong> Dla pakietów sprzedanych od dnia uruchomienia licznika wpisujecie zera i zaznaczacie potwierdzenie. Stare pakiety możecie zostawić na kartce, aż się wyczerpią, i nie rejestrować ich wcale. To najkrótsza droga do startu.</div>
+
+    <h3>Pakiet można potwierdzić po kawałku</h3>
+    <p>Przy pakiecie łączonym możesz potwierdzić endermologię, a Meltivio zostawić na później. Pakiet dostanie wtedy stan „Częściowo sprawdzony”: endermologia będzie już dostępna do umawiania, Meltivio nie. Późniejsze potwierdzenie drugiego składnika niczego nie przelicza od nowa.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-07-telefon-stan.png" alt="Ten sam ekran stanu pakietów na telefonie, szerokość 400 pikseli">
+      <figcaption>Na telefonie ten sam ekran układa się w karty. Wszystkie pola i przyciski zostają dostępne.</figcaption>
+    </figure>
+
+    <div class="warning"><strong>System nie przyjmie stanu, który się nie spina.</strong> Jeśli wpiszesz, że z dziesięciu zabiegów wykorzystano dwanaście, zapis zostanie odrzucony z wyjaśnieniem. Nie przytnie liczby po cichu i nie dorobi gratisowych zabiegów.</div>
+  </section>
+
+  <section class="card" id="pakiety-wizyty">
+    <div class="card-header">
+      <div class="card-icon">📌</div>
+      <div class="card-header-text"><div class="subtitle">Krok 30 · Pakiety i zakupy</div><h2>Istniejące wizyty — co z tym, co już jest w kalendarzu</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Pakiety i zakupy → Istniejące wizyty</span></div>
+    <p class="lead">Klientka ma już umówione wizyty sprzed włączenia licznika. System sam nie zgadnie, czy mają być rozliczone z pakietu. Pokazuje je wszystkie i prosi o decyzję przy każdej.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-05-istniejace-wizyty.png" alt="Lista istniejących wizyt z komunikatem o niedoborze: pięć zabiegów do przypisania przy siedmiu wizytach">
+      <figcaption>Scenka niedoboru: pięć zabiegów zostało, a w kalendarzu czeka siedem wizyt. System nie usunie dwóch i nie dorobi zabiegów, tylko poprosi o decyzję.</figcaption>
+    </figure>
+
+    <h3>Pięć możliwych decyzji</h3>
+    <div class="step"><div class="num">1</div><div><strong>Z tego pakietu</strong><span>Wizyta rezerwuje jednostkę. Rezerwacja to jeszcze nie zużycie: zabieg odejmie się dopiero po potwierdzeniu wykonania.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Usługa jednorazowa</strong><span>Klientka płaci osobno, poza pakietem.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Wymaga zakupu lub wyjaśnienia</strong><span>Trafia do centrum powiadomień jako sprawa z właścicielem i terminem.</span></div></div>
+    <div class="step"><div class="num">4</div><div><strong>Wykonana wcześniej, ujęta w stanie początkowym</strong><span>Dla wizyt z przeszłości, które już policzyliście w poprzednim kroku. Nie odejmie się drugi raz.</span></div></div>
+    <div class="step"><div class="num">5</div><div><strong>Niezwiązana z tym pakietem</strong><span>Na przykład dlatego, że klientka ma drugi pakiet i to z niego pójdzie ta wizyta. Decyzja dotyczy tylko tego pakietu: przy drugim wizyta nadal będzie do rozstrzygnięcia.</span></div></div>
+
+    <div class="scenario">
+      <span class="scenario-label">Z życia salonu · środa 11:20</span>
+      <h4>„Pani Zofia ma siedem wizyt, a w pakiecie pięć zabiegów” — Patrycja rozstrzyga niedobór</h4>
+      <div class="scenario-body">
+        <div class="sample-call">
+          <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Nie da się uruchomić, świeci „Niedobór: 2”.</div></div>
+          <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">I dobrze, bo gdyby się dało, dwie wizyty byłyby za darmo albo pani Zofia straciłaby dwa zabiegi i nikt by nie wiedział. Dzwonię do niej.</div></div>
+          <div class="sample-line"><div class="sample-who">Patrycja:</div><div class="sample-text">Ustaliłyśmy: pięć z pakietu, dwie ostatnie dokupi w grudniu. Zaznaczam pięć „z tego pakietu”, dwie „wymaga zakupu” z notatką o rozmowie i uruchamiam.</div></div>
+        </div>
+        <div class="scenario-result">Umówione 5, do umówienia 0, dwie wizyty zostają w kalendarzu z widocznym powodem. Żadna nie zniknęła, saldo nie zeszło poniżej zera.</div>
+      </div>
+    </div>
+
+    <div class="tip"><strong>Lista obejmuje też wizyty spoza bieżącego tygodnia i te z przeszłości, których nikt nie rozstrzygnął.</strong> Dzięki temu nie zostaje ogon spraw, o którym przypomni się za miesiąc.</div>
+  </section>
+
+  <section class="card" id="pakiety-uruchomienie">
+    <div class="card-header">
+      <div class="card-icon">🟢</div>
+      <div class="card-header-text"><div class="subtitle">Krok 31 · Pakiety i zakupy</div><h2>Uruchomienie licznika i wyłącznik na czarną godzinę</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Pakiety i zakupy → Gotowość ewidencji</span></div>
+    <p class="lead">Ostatni krok. Do tej pory konfigurowaliście; teraz licznik zaczyna działać w kalendarzu.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-06-gotowosc-ewidencji.png" alt="Gotowość ewidencji: wybór trybu licznika oraz ustawienie kontroli zakupów przy umawianiu">
+      <figcaption>Tryb licznika i osobne ustawienie: czy wolno umawiać zabieg bez zakupu.</figcaption>
+    </figure>
+
+    <h3>Tryby i co znaczą</h3>
+    <div class="step"><div class="num">1</div><div><strong>Nie uruchomiono</strong><span>Stan startowy. Nic się nie liczy.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Przygotowanie</strong><span>Konfigurujesz, zapisujesz plany, ale system nie rezerwuje jednostek na prawdziwych wizytach.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Aktywna</strong><span>Licznik działa: umówienie rezerwuje, potwierdzenie wykonania zużywa.</span></div></div>
+    <div class="step"><div class="num">4</div><div><strong>Wstrzymana</strong><span>Hamulec. Historia i rezerwacje zostają, nowe umówienia z pakietu są zablokowane. Kalendarz działa normalnie.</span></div></div>
+
+    <div class="tip"><strong>Kontrola zakupów przy umawianiu to osobna decyzja.</strong> Włączona oznacza, że zabiegu objętego pakietem nie da się umówić bez wskazania zakupu. Wyłączona pozwala umawiać swobodnie, a licznik tylko pokazuje stan. Na start zwykle lepiej zostawić wyłączoną.</div>
+    <div class="warning"><strong>Gdyby coś poszło nie tak, nie trzeba nic odinstalowywać.</strong> Przestaw tryb na „Wstrzymana” albo wyłącz dodatek w Administracji. Umówione wizyty, historia i liczniki zostają nietknięte. Po powrocie system poprosi o uzgodnienie, zamiast udawać, że przerwy nie było.</div>
+  </section>
+
+  <section class="card" id="pakiety-codziennie">
+    <div class="card-header">
+      <div class="card-icon">📆</div>
+      <div class="card-header-text"><div class="subtitle">Krok 32 · Codzienna praca</div><h2>Umawianie z pakietu i zabieg po terminie</h2></div>
+    </div>
+    <div class="kogo"><span><b>Dla kogo:</b> recepcja</span><span><b>Gdzie:</b> Nowa wizyta → po wybraniu klientki</span></div>
+    <p class="lead">Od tej chwili recepcja nie musi pamiętać ani sprawdzać w zeszycie. Po wybraniu klientki w kreatorze widać jej pakiety i stan każdego z nich.</p>
+
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-08-kreator-saldo.png" alt="Kreator nowej wizyty: zakupy klientki z liczbami Wykorzystano, Umówione i Do umówienia">
+      <figcaption>Przy każdym pakiecie trzy liczby w języku recepcji: ile wykorzystano, ile jest już umówione i ile zostało do umówienia.</figcaption>
+    </figure>
+
+    <h3>Co znaczą liczby</h3>
+    <div class="step"><div class="num">1</div><div><strong>Wykorzystano</strong><span>Zabiegi potwierdzone jako wykonane. Tylko one są „zużyte”.</span></div></div>
+    <div class="step"><div class="num">2</div><div><strong>Umówione</strong><span>Zarezerwowane na konkretne wizyty, jeszcze niewykonane. Odwołanie wizyty zwalnia tę jednostkę.</span></div></div>
+    <div class="step"><div class="num">3</div><div><strong>Do umówienia</strong><span>Tyle można jeszcze zapisać do kalendarza.</span></div></div>
+
+    <h3>Zabieg po terminie ważności</h3>
+    <p>Pakiet ma datę ważności z cennika. Gdy minie, zabiegu nadal <strong>da się umówić</strong>, ale system mówi o tym wprost: zmienia przycisk na „Umów mimo terminu”, dopisuje „po terminie” przy nazwie pakietu i pokazuje, do kiedy był ważny. Po zapisaniu wizyty przypomina o tym jeszcze raz.</p>
+    <figure class="zrzut">
+      <img src="/pomoc-terminarz/pak-09-po-terminie-komunikat.png" alt="Komunikat o zabiegu z pakietu po terminie ważności przy umawianiu wizyty">
+      <figcaption>Decyzja należy do salonu, nie do programu. System pilnuje tylko, żeby nikt nie zrobił tego przez nieuwagę.</figcaption>
+    </figure>
+
+    <h3>Nieobecność klientki</h3>
+    <p>Samo odwołanie wizyty zwalnia jednostkę i klientka jej nie traci. Zabieg przepada tylko wtedy, gdy recepcja oznaczy, że klientka <strong>nie przyszła</strong>, a salon ma włączone potrącanie za nieobecność. To świadome kliknięcie, nie automat, i zapisuje się w historii z osobą, która je wykonała.</p>
+
+    <div class="scenario">
+      <span class="scenario-label">Z życia salonu · piątek 16:05</span>
+      <h4>„Pani Kasia pyta, ile jej zostało” — odpowiedź w dwie sekundy</h4>
+      <div class="scenario-body">
+        <div class="sample-call">
+          <div class="sample-line"><div class="sample-who">Klientka:</div><div class="sample-text">Ile mi jeszcze zostało z tego karnetu? Bo mąż mówi, że cztery, a ja pamiętam trzy.</div></div>
+          <div class="sample-line"><div class="sample-who">Marta:</div><div class="sample-text">Już patrzę. Kupione dziesięć, wykorzystane sześć, jedna wizyta umówiona na przyszły czwartek. Do umówienia zostają trzy.</div></div>
+          <div class="sample-line"><div class="sample-who">Klientka:</div><div class="sample-text">O, czyli ja miałam rację. To proszę zapisać dwie na listopad.</div></div>
+        </div>
+        <div class="scenario-result">Bez zeszytu, bez „oddzwonię, sprawdzę”. Po zapisaniu dwóch wizyt licznik pokazuje: wykorzystane 6, umówione 3, do umówienia 1.</div>
+      </div>
+    </div>
+
+    <div class="tip"><strong>Gdy coś się nie zgadza, nie poprawiaj liczby na siłę.</strong> Wejdź w Ustawienia → Pakiety i zakupy → Sprawdź stan pakietów. Tam widać, skąd wzięła się każda liczba, kto i kiedy ją potwierdził.</div>
+  </section>
+
+
+</main>
 </div>
 </body>
 </html>
