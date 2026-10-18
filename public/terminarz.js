@@ -97,7 +97,7 @@
     const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
-    <div class="trm" data-wersja="20261017a">
+    <div class="trm" data-wersja="20261018a">
       <div class="trm-top">
         <div><h1>Terminarz</h1><div class="trm-sub" id="trm-sub"></div></div>
         <div class="trm-spacer"></div>
@@ -684,6 +684,8 @@
     const u = usluga(s.usluga_wyk_id); if (!u || !u.skonfigurowana || !u.aktywna) return toast('warning', 'Usługa z zakupu nie jest gotowa do umawiania', 'Ustaw czas trwania w Ustawieniach → Usługi.');
     const juz = n.pozycje.filter(p => p.zakup_skladnik_id === sklId).length;
     if (s.wolne - juz <= 0) return toast('warning', 'Brak wolnych jednostek w tym zakupie');
+    // Z8: po terminie ważności umawiamy, ale recepcja ma to zobaczyć, nie przeoczyć.
+    if (s.po_terminie || (z.data_waznosci && z.data_waznosci < n.start.slice(0, 10))) toast('warning', 'Ten zabieg z pakietu jest po terminie', s.ostrzezenie || `Pakiet „${z.nazwa}” był ważny do ${z.data_waznosci}. Umawiamy mimo to — potwierdź z klientką.`);
     const pref = n.prefPrac || n.domyslny;
     n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min, zakup_skladnik_id: sklId, zakup_nazwa: z.nazwa });
     nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); }
@@ -705,8 +707,10 @@
     return `<div class="trm-field"><label>Zakupy klientki</label>${lista.map(z => {
       const wygasly = z.data_waznosci && z.data_waznosci < dzien, zamkniety = z.stan !== 'aktywny';
       return `<div class="trm-zakup ${wygasly ? 'wygasly' : ''} ${zamkniety ? 'zamkniety' : ''}"><div class="trm-row"><div><div class="n">${esc(z.nazwa)}</div><div class="m">zakup ${esc(z.data_zakupu || '—')}${z.data_waznosci ? ` · ważny do ${esc(z.data_waznosci)}${wygasly ? ' (wygasł)' : ''}` : ' · bezterminowo'}${zamkniety ? ' · zamknięty' : ''}${z.bilans_status === 'niezweryfikowany' ? ' · <span class="trm-pill warn">do sprawdzenia</span>' : ''}${z.stan_zrodla && z.stan_zrodla !== 'ok' ? ' · <span class="trm-pill bad">wymaga wyjaśnienia</span>' : ''}</div></div>${manager() ? `<button class="trm-btn link sm fix" onclick="TRM.nowaBilans(${z.id})">Sprawdź stan pakietu</button>` : ''}</div>
-        ${z.skladniki.map(s => { const juz = n.pozycje.filter(p => p.zakup_skladnik_id === s.id).length; const wolneTeraz = s.wolne - juz; const u = usluga(s.usluga_wyk_id); const moge = !wygasly && !zamkniety && wolneTeraz > 0 && u && u.skonfigurowana && u.aktywna; const powod = wygasly ? 'zakup wygasł' : zamkniety ? 'zakup zamknięty' : wolneTeraz <= 0 ? 'brak wolnych jednostek' : !u || !u.skonfigurowana ? 'usługa bez czasu trwania (Ustawienia → Usługi)' : !u.aktywna ? 'usługa wyłączona w terminarzu' : '';
-          return `<div class="trm-zakup-skl"><span style="flex:1;min-width:140px"><b>${esc(s.usluga_nazwa)}</b></span><span class="saldo"><span title="wykorzystane">Wykorzystano ${s.wykonane}</span><span title="umówione">Umówione ${s.zaplanowane + juz}</span>${s.stan_weryfikacji && s.stan_weryfikacji !== 'zweryfikowany' ? '<span class="zero">Do sprawdzenia</span>' : `<span class="${wolneTeraz > 0 ? 'wolne' : 'zero'}">Do umówienia ${Math.max(0, wolneTeraz)}</span>`}</span><button class="trm-btn sm ${moge ? 'primary' : ''}" ${moge ? '' : 'disabled'} title="${esc(powod)}" onclick="TRM.nowaDodajZZakupu(${s.id})">${moge ? 'Umów z tego zakupu' : esc(powod || 'niedostępne')}</button></div>`; }).join('')}
+        ${z.skladniki.map(s => { const juz = n.pozycje.filter(p => p.zakup_skladnik_id === s.id).length; const wolneTeraz = s.wolne - juz; const u = usluga(s.usluga_wyk_id); // Z8 (zasada salonu): zabieg po terminie ważności WOLNO umówić — nie blokujemy, pokazujemy ostrzeżenie z serwera.
+          const poTerminie = !!s.po_terminie || wygasly; const ostrzTekst = s.ostrzezenie || (poTerminie && z.data_waznosci ? `Ten zabieg z pakietu jest już po terminie — pakiet był ważny do ${z.data_waznosci}.` : '');
+          const moge = !zamkniety && wolneTeraz > 0 && u && u.skonfigurowana && u.aktywna; const powod = zamkniety ? 'zakup zamknięty' : wolneTeraz <= 0 ? 'brak wolnych jednostek' : !u || !u.skonfigurowana ? 'usługa bez czasu trwania (Ustawienia → Usługi)' : !u.aktywna ? 'usługa wyłączona w terminarzu' : '';
+          return `<div class="trm-zakup-skl"><span style="flex:1;min-width:140px"><b>${esc(s.usluga_nazwa)}</b></span><span class="saldo"><span title="wykorzystane">Wykorzystano ${s.wykonane}</span><span title="umówione">Umówione ${s.zaplanowane + juz}</span>${s.stan_weryfikacji && s.stan_weryfikacji !== 'zweryfikowany' ? '<span class="zero">Do sprawdzenia</span>' : `<span class="${wolneTeraz > 0 ? 'wolne' : 'zero'}">Do umówienia ${Math.max(0, wolneTeraz)}</span>`}</span><button class="trm-btn sm ${moge ? 'primary' : ''}" ${moge ? '' : 'disabled'} title="${esc(powod || ostrzTekst)}" onclick="TRM.nowaDodajZZakupu(${s.id})">${moge ? (poTerminie ? 'Umów mimo terminu' : 'Umów z tego zakupu') : esc(powod || 'niedostępne')}</button></div>${moge && poTerminie ? `<div class="trm-note warn small po-terminie">⏳ ${esc(ostrzTekst)} Możesz umówić, ale potwierdź to z klientką.</div>` : ''}`; }).join('')}
       </div>`; }).join('')}${bez}</div>`;
   }
   TRM.nowaOdswiezZakupy = () => nowaLadujZakupy();
@@ -931,6 +935,8 @@
     if (d.status === 'konflikt') { n.dostep = { stan: 'zajety', wynik: { problemy: d.problemy, alternatywy: d.alternatywy } }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
     if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
     toast('success', d.powtorzenie ? 'Ta wizyta była już zapisana' : 'Zapisano wizytę', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)}`);
+    // Z8: wizyta zapisana, ale zabieg pochodzi z pakietu po terminie — osobny, widoczny komunikat po zapisie.
+    for (const o of (d.ostrzezenia || [])) if (o.kod === 'PO_TERMINIE') toast('warning', 'Zabieg z pakietu po terminie', `${o.zakup_nazwa ? '„' + o.zakup_nazwa + '”: ' : ''}${o.tekst}`);
     TRM.data = d.rezerwacja.start.slice(0, 10); const di = el('trm-data'); if (di) di.value = TRM.data;
     TRM.nowa = null; TRM.panel = null;
     await odswiez();

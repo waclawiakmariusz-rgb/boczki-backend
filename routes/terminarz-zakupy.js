@@ -736,7 +736,13 @@ const domena = {
     if (z_planu) { let plan = null; try { plan = s.plan_json ? JSON.parse(s.plan_json) : null; } catch (e) { plan = null; } if (!plan) throw new BladDomeny('Brak zapisanego planu dla tego składnika.'); lista = plan.decyzje; skrotPodgladu = s.plan_skrot; }
     if (!lista) throw new BladDomeny('Brak decyzji dla istniejących wizyt.');
     if (skrotPodgladu && skrotPodgladu !== kand.skrot) throw new BladDomeny('Istniejące wizyty zmieniły się od podglądu (nowa wizyta, zmiana terminu albo statusu). Odśwież listę i rozstrzygnij ponownie.', { code: 'PODGLAD_NIEAKTUALNY' });
-    const doDecyzji = kand.kandydaci.filter(k => !k.juz_powiazana && !k.rozliczenie);
+    // N05: wcześniejsze decyzje LOKALNE tego składnika (z planu) są trwałe — nie każemy ich podejmować po raz drugi
+    // przy ponownym uruchomieniu, ale nadal wchodzą do zapisu, żeby plan pozostał kompletny.
+    // Nie wchodzą do walidacji (dotyczą wizyt spoza aktualnej listy do decyzji), ale muszą przetrwać w planie.
+    const juzLokalne = kand.kandydaci.filter(k => k.decyzja_lokalna && !lista.some(x => Number(x.pozycja_id) === k.id))
+      .map(k => ({ pozycja_id: k.id, decyzja: k.decyzja_lokalna, uzasadnienie: k.uzasadnienie_lokalne || null }));
+    const planDecyzje = () => lista.concat(juzLokalne);
+    const doDecyzji = kand.kandydaci.filter(k => !k.juz_powiazana && !k.rozliczenie && !k.decyzja_lokalna);
     for (const k of doDecyzji) { const d = lista.find(x => Number(x.pozycja_id) === k.id); if (!d || !DECYZJE_WIZYT.includes(d.decyzja)) throw new BladDomeny(`Wizyta ${k.numer} (${String(k.start).slice(0, 16)}) nie ma rozstrzygnięcia.`, { code: 'BRAK_DECYZJI', pozycja_id: k.id }); if (['wyjasnienie', 'niezwiazana', 'historyczna'].includes(d.decyzja) && !String(d.uzasadnienie || '').trim()) throw new BladDomeny(`Wizyta ${k.numer}: decyzja „${d.decyzja}” wymaga uzasadnienia.`, { code: 'BRAK_UZASADNIENIA', pozycja_id: k.id }); }
     for (const d of lista) if (!doDecyzji.some(k => k.id === Number(d.pozycja_id))) throw new BladDomeny('Decyzja dotyczy wizyty spoza aktualnej listy — odśwież podgląd.', { code: 'PODGLAD_NIEAKTUALNY' });
     const powiaz = doDecyzji.filter(k => lista.find(x => Number(x.pozycja_id) === k.id).decyzja === 'powiaz');
@@ -744,7 +750,7 @@ const domena = {
     if (potrzeba > Math.max(0, kand.saldo.B)) throw new BladDomeny(`Masz ${Math.max(0, kand.saldo.B)} ${kand.saldo.B === 1 ? 'zabieg' : 'zabiegów'} do przypisania, a wybrano ${potrzeba}. Rozstrzygnij nadmiarowe wizyty jako wymagające zakupu/wyjaśnienia albo dopuszczoną usługę jednorazową.`, { code: 'NIEDOBOR', dostepne: Math.max(0, kand.saldo.B), potrzeba });
     if (!potwierdzenie_zaleznych && !z_planu) throw new BladDomeny('Potwierdź, że lista istniejących wizyt została przejrzana w całości.');
     if (ctx.tryb === 'przygotowanie' || ctx.tryb === 'uzgadnianie') { // plan bez R
-      await repo.aktualizujSkladnik(s.id, { plan_json: JSON.stringify({ decyzje: lista, zapisal: ctx.autor, kiedy: ctx.teraz }), plan_skrot: kand.skrot });
+      await repo.aktualizujSkladnik(s.id, { plan_json: JSON.stringify({ decyzje: planDecyzje(), zapisal: ctx.autor, kiedy: ctx.teraz }), plan_skrot: kand.skrot });
       return { skladnik_id: s.id, plan: true, powiazan: powiaz.length, decyzji: lista.length };
     }
     await domena.sprawdzZrodlaSkladnikow(repo, ctx, [s], { operacja: 'uruchomienie' });
@@ -766,7 +772,7 @@ const domena = {
       if (d.decyzja === 'powiaz' || DECYZJE_LOKALNE.has(d.decyzja)) continue;
       await repo.aktualizujPozycje(k.id, { rozliczenie: d.decyzja === 'jednorazowa' ? 'pojedynczy' : 'do_wyjasnienia' });
     }
-    await repo.aktualizujSkladnik(s.id, { zalezne_uzgodniono: 1, uzgodnienie_wersja: Number(s.uzgodnienie_wersja || 0) + 1, aktywny_od: s.aktywny_od || ctx.teraz, plan_json: JSON.stringify({ decyzje: lista, zapisal: ctx.autor, kiedy: ctx.teraz, uruchomiono: true }), plan_skrot: kand.skrot });
+    await repo.aktualizujSkladnik(s.id, { zalezne_uzgodniono: 1, uzgodnienie_wersja: Number(s.uzgodnienie_wersja || 0) + 1, aktywny_od: s.aktywny_od || ctx.teraz, plan_json: JSON.stringify({ decyzje: planDecyzje(), zapisal: ctx.autor, kiedy: ctx.teraz, uruchomiono: true }), plan_skrot: kand.skrot });
     const po = await domena.zapiszProjekcje(repo, [s.id]);
     return { skladnik_id: s.id, plan: false, przydzialy, powiazan: powiaz.length, do_wyjasnienia: doDecyzji.filter(k => lista.find(x => Number(x.pozycja_id) === k.id).decyzja === 'wyjasnienie').map(k => k.id), saldo: po[s.id] };
   },
@@ -784,13 +790,15 @@ const domena = {
     for (const s of skl) if (String(s.id_klienta || '') !== String(id_klienta)) throw new BladDomeny('Wskazany zakup należy do innej klientki.', { code: 'WLASCICIEL' });
     await domena.sprawdzZrodlaSkladnikow(repo, ctx, skl, { operacja: 'rezerwacja' });
     const salda = await domena.saldoSkladnikow(repo, ids);
-    const potrzeba = {};
+    const potrzeba = {}; const ostrzezenia = [];
     for (const p of pozycje) {
       const s = skl.find(x => x.id === Number(p.skladnik_id));
       const uslugaPoz = uslugaPozycji ? uslugaPozycji(p) : p.usluga_id;
       if (uslugaPoz && String(s.usluga_wyk_id) !== String(uslugaPoz)) throw new BladDomeny(`Pakiet „${s.zakup_nazwa || ''}” dotyczy innej usługi (${s.usluga_nazwa || s.usluga_wyk_id}). Wybierz zgodną usługę.`, { code: 'INNY_WARIANT' });
-      const powod = logika.powodNiedostepnosci(s, { stan: s.zakup_stan, stan_zrodla: s.stan_zrodla, data_waznosci: s.data_waznosci, kwalifikacja: s.kwalifikacja }, salda[s.id], data, ctx.tryb);
+      const zakupS = { stan: s.zakup_stan, stan_zrodla: s.stan_zrodla, data_waznosci: s.data_waznosci, kwalifikacja: s.kwalifikacja };
+      const powod = logika.powodNiedostepnosci(s, zakupS, salda[s.id], data, ctx.tryb);
       if (powod) throw new BladDomeny(`Nie można umówić z pakietu „${s.zakup_nazwa || ''}”: ${powod}.`, { code: 'NIEDOSTEPNY', powod });
+      for (const o of logika.ostrzezenia(s, zakupS, data)) ostrzezenia.push({ ...o, pozycja_id: p.pozycja_id, skladnik_id: s.id, zakup_nazwa: s.zakup_nazwa || null, usluga_nazwa: s.usluga_nazwa || null, waznosc: logika.waznosc(s, zakupS) }); // Z8
       const q = Math.max(1, Number(p.ilosc) || Number(s.jednostki_na_pozycje) || 1);
       potrzeba[s.id] = (potrzeba[s.id] || 0) + q;
       if (potrzeba[s.id] > salda[s.id].B) throw new BladDomeny(potrzeba[s.id] - q >= salda[s.id].B && salda[s.id].B > 0 ? `W pakiecie „${s.zakup_nazwa || ''}” została ${salda[s.id].B === 1 ? '1 jednostka' : salda[s.id].B + ' jednostki'} — ten formularz chce użyć ${potrzeba[s.id]}. Usuń jedną pozycję albo wybierz inny zakup.` : `Ostatni zabieg z pakietu „${s.zakup_nazwa || ''}” został przed chwilą przypisany do innej wizyty. Ta wizyta nie została zapisana.`, { code: 'BRAK_JEDNOSTEK', dostepne: salda[s.id].B });
@@ -805,7 +813,7 @@ const domena = {
     }
     for (const [pozId, np] of Object.entries(naPozycje)) await repo.aktualizujPozycje(Number(pozId), { zakup_skladnik_id: np.pierwszy, jednostki_wymagane: np.suma, rozliczenie: 'pakiet' }); // zakup_skladnik_id = POLE ZGODNOŚCI (pierwsze źródło); prawdą są przydziały
     await domena.zapiszProjekcje(repo, ids);
-    return { przydzialy };
+    return { przydzialy, ostrzezenia };
   },
 
   /** Zwolnienie aktywnych przydziałów pozycji (odwołanie, nieobecność, niewykonanie). R − q; U bez zmian. Spójne także przy wycofanym źródle (nie przywraca prawa). */
@@ -1001,11 +1009,13 @@ async function widokZakupow(repo, ctx, { id_klienta, data, katalogNazwa }) {
   return zakupy.map(z => {
     const sk = skl.filter(s => s.zakup_id === z.id).map(s => {
       const sa = salda[s.id]; const powod = logika.powodNiedostepnosci(s, z, sa, dzien, ctx.tryb);
+      const ostrz = logika.ostrzezenia(s, z, dzien); // Z8: po terminie ważności wolno umówić, ale z widoczną informacją
       return { id: s.id, usluga_wyk_id: s.usluga_wyk_id, usluga_nazwa: s.usluga_nazwa || (katalogNazwa ? katalogNazwa(s.usluga_wyk_id) : String(s.usluga_wyk_id)), jednostka_miary: s.jednostka_miary || 'sesja', jednostki_na_pozycje: s.jednostki_na_pozycje || 1,
         stan: s.stan, stan_weryfikacji: s.stan_weryfikacji, uruchomiony: !!(s.zalezne_uzgodniono && s.aktywny_od), ma_plan: !!s.plan_json && !s.aktywny_od, waznosc: logika.waznosc(s, z), zawieszono_do: s.zawieszono_do ? String(s.zawieszono_do).slice(0, 10) : null,
         hist: { wykorzystane: s.hist_wykorzystane, wycofane: s.hist_wycofane, potracone: s.hist_potracone, zrodlo_ustalen: s.zrodlo_ustalen, zweryfikowal: s.zweryfikowal, zweryfikowano: s.zweryfikowano ? String(s.zweryfikowano).slice(0, 19) : null },
         przyznane: sa.G, wycofane: sa.W, potracone: sa.F, wykorzystane: sa.U, wykorzystane_historycznie: sa.U_hist, umowione: sa.R, pozostalo: sa.L, do_umowienia: s.stan_weryfikacji === 'zweryfikowany' ? Math.max(0, sa.B) : null,
         niespojny: sa.niespojny, dostepny: !powod, powod: powod || null,
+        ostrzezenia: ostrz, po_terminie: ostrz.some(o => o.kod === 'PO_TERMINIE'), ostrzezenie: (ostrz[0] || {}).tekst || null,
         wykonane: sa.U, zaplanowane: sa.R, wolne: powod ? 0 : sa.B, historyczne: sa.U_hist }; // pola zgodności ze starym UI
     });
     const zwer = sk.filter(s => s.stan_weryfikacji === 'zweryfikowany').length;

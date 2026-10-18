@@ -444,3 +444,8 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
   .trm .pz-stan-wiersz .trm-row > div { flex:1 1 46%; }
   .trm .pz-stan-wiersz input[type=number] { width:100% !important; }
 }
+
+/* Z8 (18.10.2026): zabieg z pakietu po terminie ważności — wolno umówić, ale musi być widoczne. */
+.trm-zakup-skl + .trm-note.po-terminie { margin: -2px 0 8px; padding: 6px 10px; line-height: 1.35; }
+.trm-zakup.wygasly { opacity: 1; } /* wcześniej wygasły zakup był wyszarzany jako niedostępny */
+.trm-zakup.wygasly .n::after { content: ' · po terminie'; color: var(--trm-warn, #a15c00); font-weight: 600; font-size: .85em; }

@@ -1343,17 +1343,19 @@ module.exports = (db, opts = {}) => {
             pozIds.push(pi.insertId);
             for (const z of p.zajecia) await qc(conn, `INSERT INTO Term_Zajecia (tenant_id, rezerwacja_id, pozycja_id, typ_zasobu, klucz, od, do_, powod) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, rezId, pi.insertId, z.typ_zasobu, String(z.klucz), S.naStr(z.od), S.naStr(z.do), z.powod]);
           }
+          let ostrzezeniaZakupow = [];
           if (zakupPoz.some(Boolean)) { // przydziały jednostek: cała lista albo nic; brak jednostki = brak wizyty (rollback całości)
             const ctx = await ctxZ(tenant, imie, r);
             const lista = w.pozycje.map((p, i) => zakupPoz[i] ? { pozycja_id: pozIds[i], skladnik_id: zakupPoz[i], usluga_id: p.usluga_id, powod: `EST-${String(rezId).padStart(4, '0')} ${p.nazwa}` } : null).filter(Boolean);
-            await Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'zapisz', dane: skrotDane }, (operacja_id) => Z.domena.rezerwuj(repo, ctx, { pozycje: lista, id_klienta: idKlienta, data: start.slice(0, 10), uslugaPozycji: (p) => p.usluga_id, operacja_id }));
+            const wynRez = await Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'zapisz', dane: skrotDane }, (operacja_id) => Z.domena.rezerwuj(repo, ctx, { pozycje: lista, id_klienta: idKlienta, data: start.slice(0, 10), uslugaPozycji: (p) => p.usluga_id, operacja_id }));
+            ostrzezeniaZakupow = ((wynRez && wynRez.wynik && wynRez.wynik.ostrzezenia) || []); // Z8: np. zabieg po terminie ważności
           }
           await historia(conn, tenant, rezId, imie, 'utworzono', `${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}`, null, { start: w.start, koniec: w.koniec });
-          return { status: 'success', rezId, w };
+          return { status: 'success', rezId, w, ostrzezenia: ostrzezeniaZakupow };
         });
         if (wyn.status !== 'success' || wyn.powtorzenie) return wyn;
         zapiszLog(tenant, 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})`);
-        return { status: 'success', rezerwacja: await rezerwacja(tenant, wyn.rezId), przerwy_min: wyn.w.przerwy_min };
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, wyn.rezId), przerwy_min: wyn.w.przerwy_min, ostrzezenia: wyn.ostrzezenia || [] };
       }
       case 'trm_zmien': {
         wymagaj(r, ROLE_OPERACYJNE);
