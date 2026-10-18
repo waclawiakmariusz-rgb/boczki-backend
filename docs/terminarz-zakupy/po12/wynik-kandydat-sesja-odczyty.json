@@ -1,0 +1,313 @@
+{
+  "kiedy": "2026-10-18T12:49:56.717Z",
+  "serwer": "http://localhost:3999",
+  "tryb": "kandydat lokalny",
+  "wyniki": [
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: lista klientek → 403 bez danych",
+      "dowod": "GET /api/klienci?action=get_clients → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: lista klientek przez dispatcher GET (redirect) → 403 bez danych",
+      "dowod": "GET /api?action=get_clients → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: historia sprzedaży → 403 bez danych",
+      "dowod": "GET /api/sprzedaz?action=full_sales_history → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: portfele/zadatki → 403 bez danych",
+      "dowod": "GET /api/klienci?action=get_all_deposits → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: pracownicy → 403 bez danych",
+      "dowod": "GET /api/users?action=get_pin_users → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: zgody RODO / baza SMS → 403 bez danych",
+      "dowod": "GET /api/rodo?action=get_all_rodo → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: logi systemowe → 403 bez danych",
+      "dowod": "GET /api/get_system_logs?tenant_id=demo-test → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: sesje zdjęciowe → 403 bez danych",
+      "dowod": "GET /api/foto?action=foto_sesje → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: zgody płatności → 403 bez danych",
+      "dowod": "GET /api/zgody?action=zgody_lista → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: członkowie Klubu → 403 bez danych",
+      "dowod": "GET /api/lojalnosc?action=loj_czlonkowie → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: dokumenty dodatkowe → 403 bez danych",
+      "dowod": "GET /api/dokumenty_dodatkowe?tenant_id=demo-test → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: analityka BI → 403 bez danych",
+      "dowod": "GET /api/analityka?action=get_bi_data → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1",
+      "wynik": "PASS",
+      "opis": "bez tokenu: dodatki salonu → 403 bez danych",
+      "dowod": "GET /api/features?tenant_id=demo-test → 403 {\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu.\"}"
+    },
+    {
+      "id": "SO-1b",
+      "wynik": "PASS",
+      "opis": "/dbstatus bez tokenu admina → 404 (wcześniej host i nazwa bazy)",
+      "dowod": "404"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: foto.html: info z QR (zły token → błąd własny, nie 403 sesji) → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/foto/mobile-info?t=zly-token → 200 {\"status\":\"error\",\"message\":\"Link wygasł lub jest "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: foto.html: sparowany telefon → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/foto/urzadzenie?dt=zly → 200 {\"status\":\"error\",\"message\":\"Telefon nie jest spar"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: foto.html: potwierdzenie dnia PIN-em → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/foto/dzien → 200 {\"status\":\"error\",\"message\":\"Telefon nie jest spar"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: platnosc.html: zgoda z linku → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/zgoda/info?t=zly-token → 200 {\"status\":\"error\",\"message\":\"Link wygasł lub jest "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: platnosc.html: akceptacja → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/zgoda/akceptuj → 200 {\"status\":\"error\",\"message\":\"Link wygasł lub jest "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: klub.html: aplikacja klientki → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/klub/info → 200 {\"status\":\"error\",\"message\":\"Link aktywacyjny jest"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: klub.html: logowanie Klubu → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/klub/login → 200 {\"status\":\"error\",\"message\":\"Błędny numer telefonu"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: klub.html: obrazek nagrody → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/klub/img/demo-test/brak.jpg → 404 "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: zamow.html: konfiguracja Stripe → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/stripe/config → 200 {\"cena_grosze\":7900,\"cena_display\":\"79 zł\",\"nazwa\""
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: zamow.html: GUS → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/gus?nip=0000000000 → 200 {\"status\":\"error\",\"message\":\"Nie znaleziono firmy "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: zamow.html: voucher → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/voucher/weryfikuj?kod=X → 200 {\"status\":\"error\",\"message\":\"Nieprawidłowy kod rab"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: rejestracja.html: login wolny? → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/rejestracja/check-login?login=x → 200 {\"status\":\"success\",\"dostepny\":false,\"message\":\"Lo"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: rejestracja.html: katalog zabiegów → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/predef/zabiegi → 200 {\"status\":\"success\",\"kategorie\":[{\"id\":1,\"nazwa\":\""
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: reset-hasla.html → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/reset-hasla/weryfikuj?token=x → 200 {\"status\":\"error\",\"message\":\"Nieprawidłowy link.\"}"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: blog.html → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/blog/posts → 404 Artykuł nie istnieje."
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: czat pomocy: baza globalna → nie jest blokowane strażnikiem sesji",
+      "dowod": "GET /api/help-kb/global → 200 []"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: magda.html: logowanie księgowej → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/magda/login → 200 {\"status\":\"error\",\"message\":\"Panel Magdy nie jest "
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: billing.html → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/billing/login → 200 {\"status\":\"error\",\"message\":\"Błędny login lub hasł"
+    },
+    {
+      "id": "SO-2",
+      "wynik": "PASS",
+      "opis": "publiczne: admin.html → nie jest blokowane strażnikiem sesji",
+      "dowod": "POST /api/admin/login → 200 {\"status\":\"error\",\"message\":\"Podaj hasło.\"}"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /foto.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /klub.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /platnosc.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /zamow.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /rejestracja.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /reset-hasla.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /blog.html ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-2b",
+      "wynik": "PASS",
+      "opis": "strona publiczna /zaloguj ładuje się (200)",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3a",
+      "wynik": "PASS",
+      "opis": "z własnym tokenem: lista klientek wraca",
+      "dowod": "n=8"
+    },
+    {
+      "id": "SO-3b",
+      "wynik": "PASS",
+      "opis": "dispatcher GET z tokenem: przekierowanie zachowuje nagłówek",
+      "dowod": "n=8"
+    },
+    {
+      "id": "SO-3c",
+      "wynik": "PASS",
+      "opis": "token salonu A na danych salonu B → 403 bez danych",
+      "dowod": "403"
+    },
+    {
+      "id": "SO-3d",
+      "wynik": "PASS",
+      "opis": "nieznany/wygasły token → 401 „Sesja wygasła”",
+      "dowod": "401 Sesja wygasła. Zaloguj się ponownie."
+    },
+    {
+      "id": "SO-3e",
+      "wynik": "PASS",
+      "opis": "zalogowany odczyt przez dispatcher: get_pin_users → 200",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3e",
+      "wynik": "PASS",
+      "opis": "zalogowany odczyt przez dispatcher: get_months → 200",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3e",
+      "wynik": "PASS",
+      "opis": "zalogowany odczyt przez dispatcher: get_all_deposits → 200",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3e",
+      "wynik": "PASS",
+      "opis": "zalogowany odczyt przez dispatcher: get_features_catalog → 200",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3e",
+      "wynik": "PASS",
+      "opis": "zalogowany odczyt przez dispatcher: get_discounts → 200",
+      "dowod": "200"
+    },
+    {
+      "id": "SO-3f",
+      "wynik": "PASS",
+      "opis": "trasa z salonem w ścieżce nadal sprawdza dostęp sama (bez podwójnej blokady)",
+      "dowod": "400"
+    }
+  ]
+}

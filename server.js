@@ -20,6 +20,10 @@ const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
 // publiczne (foto/zgoda/klub z tenant_id w zapytaniu) i wymaga najpierw uzupełnienia PUBLIC_PATHS.
 // Wyłącznik awaryjny na Hostingerze: ENFORCE_SESSION_POST=false (bez apostrofów).
 const ENFORCE_SESSION_POST = env('ENFORCE_SESSION_POST') !== 'false';
+// Strażnik sesji dla tras routerów /api (odczyty GET i zapisy poza dispatcherem) — od 2026-10-18 rejestrowany PRZED routerami.
+// Wyłącznik awaryjny na Hostingerze: ENFORCE_SESSION_ROUTERY=false (bez apostrofów) → tylko log, jak przed tą wersją.
+const ENFORCE_SESSION_ROUTERY = env('ENFORCE_SESSION_ROUTERY') !== 'false';
+const { sesjaMiddleware } = require('./routes/sesja-middleware');
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -442,6 +446,8 @@ app.use('/api', (req, res, next) => {
 // ==========================================
 // REJESTRACJA ROUTERÓW
 // ==========================================
+// STRAŻNIK SESJI — PRZED routerami (2026-10-18: wcześniej stał po nich i nigdy się dla nich nie wykonywał; routes/sesja-middleware.js)
+app.use('/api', sesjaMiddleware({ validateTenantAccess, touchSession, enforce: ENFORCE_SESSION, enforceRoutery: ENFORCE_SESSION_ROUTERY, log: console }));
 app.use('/api', authRoutes);
 app.use('/api', magazynRoutes);
 app.use('/api', sprzedazRoutes);
@@ -478,62 +484,7 @@ app.use('/api', fotoRoutes);
 app.use('/api', zgodyRoutes);
 app.use('/api', lojalnoscRoutes);
 
-// ==========================================
-// MIDDLEWARE WERYFIKACJI SESJI
-// Sprawdza czy x-session-token pasuje do tenant_id w żądaniu.
-// ENFORCE_SESSION=false → tylko loguje naruszenia (tryb miękki)
-// ENFORCE_SESSION=true  → blokuje nieprawidłowe żądania (tryb produkcyjny)
-// ==========================================
-const PUBLIC_PATHS = [
-  '/login', '/admin/login',
-  '/reset-hasla/wyslij', '/reset-hasla/weryfikuj', '/reset-hasla/ustaw',
-  '/rejestracja/weryfikuj', '/rejestracja/zaloz',
-  '/zamowienie', '/voucher/weryfikuj',
-  '/stripe/webhook', '/kontakt',
-  '/billing/login',
-];
-
-app.use('/api', (req, res, next) => {
-  // Sesja jest "sliding" — KAŻDE żądanie z poprawnym tokenem przedłuża jej ważność (8h od
-  // ostatniej aktywności, nie od logowania). Celowo PRZED skipem poniżej: router kompatybilności
-  // (req.path === '/') obsługuje większość akcji w aplikacji (add_sale, get_clients itd.) i był
-  // dotąd całkiem pomijany przez ten middleware — bez tego touch() staff pracujący nieprzerwanie
-  // dłużej niż 8h i tak dostawałby "Sesja wygasła" przy akcjach, które faktycznie sprawdzają
-  // token (np. podgląd PDF w profilu klienta), mimo ciągłej aktywności w reszcie systemu.
-  const tokenAktywnosci = req.headers['x-session-token'];
-  if (tokenAktywnosci) touchSession(tokenAktywnosci);
-
-  // Pomiń publiczne endpointy, panel Magdy, admina i router kompatybilności (req.path = '/')
-  if (
-    req.path === '/' ||
-    PUBLIC_PATHS.includes(req.path) ||
-    req.path.startsWith('/magda') ||
-    req.path.startsWith('/admin')
-  ) {
-    return next();
-  }
-
-  const tenant_id = req.body?.tenant_id || req.query?.tenant_id;
-  if (!tenant_id) return next();
-
-  const token = req.headers['x-session-token'];
-  const result = validateTenantAccess(token, tenant_id);
-
-  if (!result.valid) {
-    console.warn(`[SESJA ${result.reason.toUpperCase()}] ${req.method} ${req.path} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${token ? 'obecny' : 'brak'}`);
-
-    // ENFORCE_SESSION=true blokuje — włączyć dopiero po aktualizacji frontendu
-    if (ENFORCE_SESSION) {
-      const status = result.reason === 'expired' ? 401 : 403;
-      const message = result.reason === 'expired'
-        ? 'Sesja wygasła. Zaloguj się ponownie.'
-        : 'Brak dostępu.';
-      return res.status(status).json({ status: 'error', message });
-    }
-  }
-
-  next();
-});
+// (strażnik sesji przeniesiony PRZED routery — routes/sesja-middleware.js, 2026-10-18)
 
 // ==========================================
 // TEST ENDPOINT
@@ -543,6 +494,8 @@ app.get('/test', (req, res) => {
 });
 
 app.get('/dbstatus', (req, res) => {
+    // 2026-10-18: bez tokenu admina 404 — odpowiedź ujawnia host i nazwę bazy
+    if (!process.env.ADMIN_TOKEN || req.headers['x-admin-token'] !== process.env.ADMIN_TOKEN) return res.status(404).end();
     const tabele = ['Licencje', 'Zamowienia', 'Kody_rabatowe', 'Tokeny_rejestracji'];
     const wyniki = {};
     let pozostalo = tabele.length;
