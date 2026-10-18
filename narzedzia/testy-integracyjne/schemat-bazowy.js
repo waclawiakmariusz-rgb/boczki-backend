@@ -20,7 +20,9 @@ const DODATKOWE = [ // kolumny dokładane idempotentnie przez moduły przy starc
   ['Klienci', 'status', "ENUM('AKTYWNY','USUNIETY','ZANONIMIZOWANY') DEFAULT 'AKTYWNY'"], ['Klienci', 'data_usuniecia', 'DATETIME NULL'], ['Klienci', 'kto_usunal', 'VARCHAR(100) NULL'], ['Klienci', 'powod_usuniecia', 'VARCHAR(255) NULL'], ['Klienci', 'zmarly', 'TINYINT(1) DEFAULT 0'], ['Klienci', 'data_zgonu', 'DATE NULL'], ['Klienci', 'ostrzezenie', 'VARCHAR(500) NULL'], ['Klienci', 'odwolanie_ulga', 'TINYINT(1) NOT NULL DEFAULT 0'], ['Klienci', 'odwolanie_ulga_data', 'DATE NULL'],
 ];
 (async () => {
-  const cel = envZ(path.join(ROOT, '.env.test')), prod = envZ(path.join(ROOT, '.env'));
+  const ENV_PLIK = (() => { const i = process.argv.indexOf('--env'); return i >= 0 ? process.argv[i + 1] : '.env.test'; })(); // --env <plik> = inna izolowana baza (np. .env.bezv2.local); nigdy .env
+  if (ENV_PLIK === '.env') { console.error('ODMOWA: to narzędzie nie pracuje na bazie z .env.'); process.exit(4); }
+  const cel = envZ(path.join(ROOT, ENV_PLIK)), prod = envZ(path.join(ROOT, '.env'));
   if (!cel || !cel.DB_HOST || !cel.DB_NAME) { console.error('Brak .env.test — nic nie wykonano.'); process.exit(3); }
   if (prod && String(prod.DB_HOST).trim() === String(cel.DB_HOST).trim() && String(prod.DB_NAME).trim() === String(cel.DB_NAME).trim()) { console.error('ODMOWA: .env.test = baza z .env.'); process.exit(4); }
   const c = await mysql.createConnection({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4', multipleStatements: true });

@@ -1,0 +1,49 @@
+{
+  "kiedy": "2026-10-18T10:37:04.292Z",
+  "baza": "estelio_test@127.0.0.1:3307",
+  "serwer": "http://localhost:3999",
+  "faza2": "http://localhost:3998",
+  "wyniki": [
+    {
+      "id": "W04-01",
+      "wynik": "PASS",
+      "opis": "logowanie: sesja salonu, PIN managera, PIN pracownika; zły PIN odrzucony",
+      "dowod": "manager=true pracownik=true zły=error"
+    },
+    {
+      "id": "W04-02",
+      "wynik": "PASS",
+      "opis": "operacja bez sesji odrzucona (ENFORCE_SESSION)",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu. Zaloguj się ponownie.\"}"
+    },
+    {
+      "id": "W05-07a",
+      "wynik": "INFO",
+      "opis": "token utworzony na A PRZED startem B: B AKCEPTUJE (preload z tabeli Sesje)",
+      "dowod": "[{\"imie\":\"Ola\",\"rola\":\"manager\"},{\"imie\":\"Anna\",\"rola\":\"kosmetolog\"}]"
+    },
+    {
+      "id": "W05-07b",
+      "wynik": "INFO",
+      "opis": "token utworzony na A PO starcie B: B ODRZUCA (pamięć procesu, bez odczytu tabeli przy żądaniu)",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Sesja wygasła. Zaloguj się ponownie.\"}"
+    },
+    {
+      "id": "W05-07c",
+      "wynik": "PASS",
+      "opis": "unieważnienie po zmianie PIN-u działa w procesie, który je wykonał (A)",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Sesja wygasła. Zaloguj się ponownie.\"}"
+    },
+    {
+      "id": "W05-07d",
+      "wynik": "INFO",
+      "opis": "stary token Anny wczytany wcześniej przez B: po unieważnieniu na A proces B NADAL HONORUJE (do restartu B / wygaśnięcia)",
+      "dowod": "[{\"imie\":\"Ola\",\"rola\":\"manager\"},{\"imie\":\"Anna\",\"rola\":\"kosmetolog\"}]"
+    },
+    {
+      "id": "W05-07e",
+      "wynik": "INFO",
+      "opis": "tabela Sesje po unieważnieniu: sesji Anny = 0 (źródło prawdy przy restarcie/preloadzie)"
+    }
+  ]
+}

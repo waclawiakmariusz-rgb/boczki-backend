@@ -6,11 +6,13 @@
 'use strict';
 const fs = require('fs'); const path = require('path'); const crypto = require('crypto');
 const mysql = require('mysql2/promise'); const bcrypt = require('bcrypt');
-const ROOT = path.join(__dirname, '..', '..'); const T = 'demo-test';
+const ROOT = path.join(__dirname, '..', '..');
 const arg = (n) => { const i = process.argv.indexOf(n); return i >= 0 ? process.argv[i + 1] : null; };
+const T = arg('--tenant') || 'demo-test'; // --tenant <id> = inny fikcyjny salon (W06); --env <plik> = inna izolowana baza (nigdy .env)
+const ENV_PLIK = arg('--env') || '.env.test'; if (ENV_PLIK === '.env' || !/^[a-z0-9-]{3,40}$/.test(T)) { console.error('ODMOWA: baza z .env albo nieprawidłowy tenant.'); process.exit(4); }
 function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for (const l of fs.readFileSync(plik, 'utf8').split(/\r?\n/)) { const m = l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/); if (m) out[m[1]] = m[2].replace(/^['"]|['"]$/g, ''); } return out; }
 (async () => {
-  const cel = envZ(path.join(ROOT, '.env.test')), prod = envZ(path.join(ROOT, '.env'));
+  const cel = envZ(path.join(ROOT, ENV_PLIK)), prod = envZ(path.join(ROOT, '.env'));
   if (!cel || !cel.DB_NAME) { console.error('Brak .env.test'); process.exit(3); }
   if (prod && String(prod.DB_HOST).trim() === String(cel.DB_HOST).trim() && String(prod.DB_NAME).trim() === String(cel.DB_NAME).trim()) { console.error('ODMOWA: baza wspólna z .env'); process.exit(4); }
   const c = await mysql.createConnection({ host: cel.DB_HOST, port: Number(cel.DB_PORT || 3306), user: cel.DB_USER, password: cel.DB_PASSWORD, database: cel.DB_NAME, charset: 'utf8mb4' });
@@ -29,7 +31,8 @@ function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for
   await q(`INSERT INTO Term_Ustawienia (tenant_id, godziny_json) VALUES (?, ?)`, [T, JSON.stringify({ 1: [{ od: '08:00', do: '20:00' }], 2: [{ od: '08:00', do: '20:00' }], 3: [{ od: '08:00', do: '20:00' }], 4: [{ od: '08:00', do: '20:00' }], 5: [{ od: '08:00', do: '20:00' }], 6: [{ od: '09:00', do: '14:00' }], 7: [] })]);
   for (let d = 1; d <= 6; d++) await q(`INSERT INTO Term_Grafik (tenant_id, pracownik, dzien_tyg, od, do_) VALUES (?, 'Anna', ?, '08:00', '20:00')`, [T, d]);
   const oferta = async (uid, rodzaj, skl) => { const o = (await q(`INSERT INTO Term_Oferty (tenant_id, usluga_id, stan, zrodlo, zatwierdzil, zatwierdzono, zmieniono) VALUES (?, ?, 'zatwierdzona', 'reczne', 'Ola', NOW(), NOW())`, [T, uid])).insertId; const w = (await q(`INSERT INTO Term_Oferty_Wersje (tenant_id, oferta_id, wersja, rodzaj, stan, obowiazuje_od, autor) VALUES (?, ?, 1, ?, 'zatwierdzona', '2026-01-01 00:00:00', 'Ola')`, [T, o, rodzaj])).insertId; for (const s of skl) await q(`INSERT INTO Term_Oferty_Skladniki (tenant_id, oferta_id, wersja_id, usluga_wyk_id, jednostki) VALUES (?, ?, ?, ?, ?)`, [T, o, w, s[0], s[1]]); };
-  await oferta(U.A5, 'pakiet', [[U.A, 5]]); await oferta(U.A10, 'pakiet', [[U.A, 10]]); await oferta(U.AB, 'pakiet', [[U.A, 5], [U.B, 4]]); await oferta(U.A, 'nie_ewidencjonuj', []); await oferta(U.K1, 'pojedynczy_z_gory', [[U.K1, 1]]);
+  const maV2 = (await q("SELECT COUNT(*) n FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'Term_Oferty_Wersje'"))[0].n > 0; // baza bez schematu v2 (W06): salon bez ofert/ewidencji, sam kalendarz
+  if (maV2) { await oferta(U.A5, 'pakiet', [[U.A, 5]]); await oferta(U.A10, 'pakiet', [[U.A, 10]]); await oferta(U.AB, 'pakiet', [[U.A, 5], [U.B, 4]]); await oferta(U.A, 'nie_ewidencjonuj', []); await oferta(U.K1, 'pojedynczy_z_gory', [[U.K1, 1]]); }
   const klientki = [['1001', 'Zestaw A (zwykły pakiet)'], ['1002', 'Zestaw B (pakiet łączony)'], ['1003', 'Zestaw C (dwa zakupy)'], ['1004', 'Zestaw D (stary pakiet z wizytami)'], ['1005', 'Zestaw E (portfel + dopłata)'], ['1006', 'Anna Nowak'], ['1007', 'Anna Nowak'], ['1008', 'Lena (tylko portfel)']];
   for (const [id, n] of klientki) await q(`INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, status) VALUES (UUID(), ?, ?, ?, '600000000', NOW(), 'AKTYWNY')`, [T, id, n]);
   const sp = async (id, idk, zabieg, szczegoly, kwota, extra = {}) => q(`INSERT INTO Sprzedaz (id, tenant_id, data_sprzedazy, klient, zabieg, szczegoly, kwota, status, platnosc, id_klienta, sprzedawca, grupa_id, data_waznosci) VALUES (?, ?, ?, ?, ?, ?, ?, 'AKTYWNY', ?, ?, 'Ola', ?, ?)`, [id, T, extra.data || '2026-10-12 11:00:00', klientki.find(k => k[0] === idk)[1], zabieg, szczegoly, kwota, extra.platnosc || 'Karta', idk, extra.grupa_id || null, extra.data_waznosci || null]);
@@ -48,7 +51,7 @@ function envZ(plik) { if (!fs.existsSync(plik)) return null; const out = {}; for
   for (const d of ['2026-10-13 10:00:00', '2026-10-21 10:00:00', '2026-10-28 10:00:00', '2026-11-04 10:00:00', '2026-11-18 10:00:00', '2026-12-02 10:00:00', '2026-12-16 10:00:00']) await wizyta('1004', d); // 1 przeszła nierozstrzygnięta + 6 przyszłych w okresie ważności (do 2027-01-01)
   for (const d of ['2026-10-22 12:00:00', '2026-11-05 12:00:00']) await wizyta('1001', d);
   for (let i = 1; i <= 7; i++) await wizyta('1005', `2026-11-${String(i + 9).padStart(2, '0')} 09:00:00`); // zestaw E: 5 praw (rozbita sprzedaż) i 7 wizyt → niedobór 2
-  await q(`INSERT INTO Term_Ewidencja (tenant_id, tryb, zmienil, zmieniono) VALUES (?, 'przygotowanie', 'Ola', NOW())`, [T]);
+  if (maV2) await q(`INSERT INTO Term_Ewidencja (tenant_id, tryb, zmienil, zmieniono) VALUES (?, 'przygotowanie', 'Ola', NOW())`, [T]);
   const n = await q(`SELECT (SELECT COUNT(*) FROM Sprzedaz WHERE tenant_id = ?) s, (SELECT COUNT(*) FROM Klienci WHERE tenant_id = ?) k, (SELECT COUNT(*) FROM Term_Pozycje WHERE tenant_id = ?) p`, [T, T, T]);
   console.log(`salon ${T}: sprzedaży ${n[0].s}, klientek ${n[0].k}, pozycji wizyt ${n[0].p}; login salonu = ${T} (hasło w pliku --haslo-do), PIN Ola/1111 (manager), Anna/2222`);
   await c.end();

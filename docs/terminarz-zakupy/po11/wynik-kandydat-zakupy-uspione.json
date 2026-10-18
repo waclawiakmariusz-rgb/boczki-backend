@@ -1,0 +1,99 @@
+{
+  "kiedy": "2026-10-18T10:44:04.201Z",
+  "konfiguracje": {
+    "A": "http://localhost:3998",
+    "B": "http://localhost:3999",
+    "C": "http://localhost:3996"
+  },
+  "wyniki": [
+    {
+      "id": "W06-A1",
+      "wynik": "PASS",
+      "opis": "A: po starcie serwera w bazie bez v2 NADAL nie ma żadnej tabeli v2 (start nie wykonuje DDL v2)",
+      "dowod": "tabele v2: brak"
+    },
+    {
+      "id": "W06-A2",
+      "wynik": "PASS",
+      "opis": "A: trm_init działa; integracja off; schemat v2 zgłoszony jako niegotowy (bez błędu)",
+      "dowod": "integracja=off, v2.gotowy=false, typ=v1_czysty"
+    },
+    {
+      "id": "W06-A3",
+      "wynik": "PASS",
+      "opis": "A: zwykła wizyta (zapis → przesunięcie → odwołanie → odczyt dnia) bez tabel v2",
+      "dowod": "zapisz=success zmien=success anuluj=success dzien=success"
+    },
+    {
+      "id": "W06-A4",
+      "wynik": "PASS",
+      "opis": "A: odczyt zakupów = pusto/off bez importu; podgląd i rezerwacja z zakupu odrzucone",
+      "dowod": "zakupy={\"status\":\"success\",\"integracja\":\"off\",\"zakupy\":[],\"bez_mapo | podgląd=INTEGRACJA | zapis z zakupem=Rezerwacja zabiegów z zakupów niedostępna — schemat bazy niekompletny."
+    },
+    {
+      "id": "W06-A5",
+      "wynik": "PASS",
+      "opis": "A: po operacjach nadal brak tabel v2 (żadna ścieżka nie tworzy ich „przy okazji”)"
+    },
+    {
+      "id": "W06-B1",
+      "wynik": "PASS",
+      "opis": "B: integracja off mimo schematu v2 i zapisanego trybu „aktywna” (stan zapisany nie jest maskowany, ale nic nie działa)",
+      "dowod": "integracja=off, ewidencja=niedostepna, zapisana=aktywna"
+    },
+    {
+      "id": "W06-B2",
+      "wynik": "PASS",
+      "opis": "B: zwykła wizyta działa przy wyłączonej integracji",
+      "dowod": "zapisz=success zmien=success anuluj=success dzien=success"
+    },
+    {
+      "id": "W06-B3",
+      "wynik": "PASS",
+      "opis": "B: zakupy istniejące w v2 NIE są serwowane ani uzgadniane; akcje ewidencji odrzucone",
+      "dowod": "klientki=off/0 | podgląd=INTEGRACJA | uzgodnij=INTEGRACJA | stan=INTEGRACJA"
+    },
+    {
+      "id": "W06-B4",
+      "wynik": "PASS",
+      "opis": "B: liczniki tabel v2 salonu bez zmian po operacjach kalendarza (zero zapisów do v2)",
+      "dowod": "{\"Term_Przydzialy\":11,\"Term_Realizacje\":0,\"Term_Zakupy_Ruchy2\":28,\"Term_Operacje\":8,\"Term_Ewidencja\":1,\"Term_Oferty_Wersje\":5,\"Term_Zakupy\":11,\"Term_Zakupy_Skladniki\":14}"
+    },
+    {
+      "id": "W06-C1",
+      "wynik": "PASS",
+      "opis": "C: integracja on (lista), ale ewidencja „nie uruchomiono” → kolejna bramka",
+      "dowod": "integracja=on, ewidencja=nie_uruchomiono"
+    },
+    {
+      "id": "W06-C2",
+      "wynik": "PASS",
+      "opis": "C: zwykła wizyta bez zakupu działa mimo integracji on i nieuruchomionej ewidencji",
+      "dowod": "zapisz=success zmien=success anuluj=success dzien=success"
+    },
+    {
+      "id": "W06-C3",
+      "wynik": "PASS",
+      "opis": "C: rezerwacja z zakupu i uruchomienie składnika odrzucone (ewidencja nie uruchomiona)",
+      "dowod": "zapis=EWIDENCJA | uruchom=EWIDENCJA"
+    },
+    {
+      "id": "W06-C4",
+      "wynik": "PASS",
+      "opis": "C: zero zapisów do v2 dla tego salonu",
+      "dowod": "{\"Term_Przydzialy\":0,\"Term_Realizacje\":0,\"Term_Zakupy_Ruchy2\":0,\"Term_Operacje\":0,\"Term_Ewidencja\":0,\"Term_Oferty_Wersje\":0,\"Term_Zakupy\":0,\"Term_Zakupy_Skladniki\":0}"
+    },
+    {
+      "id": "W06-D1",
+      "wynik": "PASS",
+      "opis": "D: bez dodatku Terminarz: trm_init = feature_on:false, a zakupy i zapis wizyty odrzucone (DODATEK) także bezpośrednim żądaniem",
+      "dowod": "init={\"status\":\"success\",\"feature_on\":false,\"rola\":\"manager\"} | podgląd=DODATEK | rejestruj=DODATEK | zapisz=DODATEK"
+    },
+    {
+      "id": "W06-D2",
+      "wynik": "PASS",
+      "opis": "D: rdzeń (ekran PIN) odpowiada normalnie bez dodatku",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu. Zaloguj się ponownie.\""
+    }
+  ]
+}

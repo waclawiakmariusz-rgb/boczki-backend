@@ -1,0 +1,49 @@
+{
+  "kiedy": "2026-10-18T10:41:33.236Z",
+  "wersja": "b3d774a (ostatnia-dobra-2026-10-16) z worktree",
+  "baza": "estelio_test (po zapisach kandydata)",
+  "wyniki": [
+    {
+      "id": "W07-1",
+      "wynik": "PASS",
+      "opis": "wersja awaryjna (tag b3d774a) startuje na bazie po kandydacie; trm_init działa",
+      "dowod": "zakupy_integracja=undefined schemat={}"
+    },
+    {
+      "id": "W07-2",
+      "wynik": "PASS",
+      "opis": "stary kod czyta wizytę zapisaną i odwołaną przez kandydata (2026-11-23)",
+      "dowod": "rezerwacji=1 statusy=anulowana"
+    },
+    {
+      "id": "W07-2b",
+      "wynik": "PASS",
+      "opis": "stary kod czyta dzień z wizytą W06-B",
+      "dowod": "rezerwacji=0"
+    },
+    {
+      "id": "W07-3",
+      "wynik": "PASS",
+      "opis": "stary kod zapisuje nową wizytę (Anna 10:00; wcześniejsza próba Ola 09:00 odrzucona przez grafik, nie schemat) i odczytuje ją",
+      "dowod": " | rezerwacji=1"
+    },
+    {
+      "id": "W07-4",
+      "wynik": "PASS",
+      "opis": "klientki przez stary kod",
+      "dowod": "n=8"
+    },
+    {
+      "id": "W07-5",
+      "wynik": "PASS",
+      "opis": "KLASYFIKACJA: GET odczytu bez tokenu na STARYM kodzie (main) → ZWRACA DANE (stan sprzed wydania, nie regresja)",
+      "dowod": "n=8"
+    },
+    {
+      "id": "W07-6",
+      "wynik": "PASS",
+      "opis": "stary kod: get_admin_users dla sesji PIN managera → klucze=imie,pin,rola — UJAWNIA PIN-y (zamykane przez E05)",
+      "dowod": ""
+    }
+  ]
+}

@@ -1,0 +1,169 @@
+{
+  "kiedy": "2026-10-18T10:33:00.002Z",
+  "baza": "estelio_test@127.0.0.1:3307",
+  "serwer": "http://localhost:3999",
+  "faza2": null,
+  "wyniki": [
+    {
+      "id": "W04-01",
+      "wynik": "PASS",
+      "opis": "logowanie: sesja salonu, PIN managera, PIN pracownika; zły PIN odrzucony",
+      "dowod": "manager=true pracownik=true zły=error"
+    },
+    {
+      "id": "W04-02",
+      "wynik": "PASS",
+      "opis": "operacja bez sesji odrzucona (ENFORCE_SESSION)",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu. Zaloguj się ponownie.\"}"
+    },
+    {
+      "id": "W04-03a",
+      "wynik": "PASS",
+      "opis": "klientki: odczyt listy, kształt wierszy (id, nazwa, telefon, status…)",
+      "dowod": "n=8, klucze=id,nazwa,telefon,rodo,osw,dodatkowe,status,ostrzezenie"
+    },
+    {
+      "id": "W04-03b",
+      "wynik": "PASS",
+      "opis": "klientki: kontrolowana zmiana telefonu fikcyjnej klientki zapisana i odczytana (prefiks znormalizowany)",
+      "dowod": "status=success, telefon=500100200"
+    },
+    {
+      "id": "W04-04a",
+      "wynik": "PASS",
+      "opis": "sprzedaż: zwykła sprzedaż kartą zapisana przez pracownika",
+      "dowod": "{\"status\":\"success\",\"message\":\"Sprzedaż zarejestrowana!\"}"
+    },
+    {
+      "id": "W04-04b",
+      "wynik": "INFO",
+      "opis": "wpłata do portfela przez manage_deposit nie przyjęta w tej próbie (kod portfela nie zmienia się w wydaniu) — płatność Portfel pominięta",
+      "dowod": "{\"status\":\"error\",\"message\":\"Nieznana operacja: undefined\"}"
+    },
+    {
+      "id": "W04-04c",
+      "wynik": "PASS",
+      "opis": "sprzedaż: historia klientki odczytana po zapisie",
+      "dowod": "pozycji=16"
+    },
+    {
+      "id": "W04-05",
+      "wynik": "PASS",
+      "opis": "konsultacje: odczyt miesięcy odpowiada (bez błędu HTTP/nieznanej akcji)",
+      "dowod": "{\"status\":\"success\",\"months\":[]}"
+    },
+    {
+      "id": "W04-06",
+      "wynik": "PASS",
+      "opis": "lojalność: odczyt salda klientki odpowiada kontrolowanie (dodatek wyłączony w salonie testowym → komunikat, nie 500)",
+      "dowod": "{\"status\":\"error\",\"message\":\"Dodatek „Klub\\\" nie jest aktywny.\"}"
+    },
+    {
+      "id": "W04-07",
+      "wynik": "PASS",
+      "opis": "reset hasła: brak SMTP → jawny błąd wysyłki (nic nie wyszło); link prawidłowy / błędny / zużyty rozpoznane; hasło ustawione na to samo",
+      "dowod": "wyslij=Nie udało się wysłać emaila. Sprawdź konfigurację SMTP. | ok=ok | zły=Nieprawidłowy link. | ustaw=success/Hasło zostało zmienione. Możesz się teraz zalogować. | zużyty=Ten link został już wykorzystany."
+    },
+    {
+      "id": "W04-07b",
+      "wynik": "PASS",
+      "opis": "po resecie na to samo hasło logowanie salonu nadal działa"
+    },
+    {
+      "id": "W04-08",
+      "wynik": "PASS",
+      "opis": "zgłoszenia: dodanie z sesją pracownika i odczyt listy (mail do admina bez SMTP = tylko log)",
+      "dowod": "id=2, na liście=2"
+    },
+    {
+      "id": "W04-09a",
+      "wynik": "PASS",
+      "opis": "dokumenty: MAŁY JPEG (697 B — bufor z puli Node) → PDF wygenerowany i odczytany",
+      "dowod": "{\"status\":\"success\",\"url\":\"/api/dokumenty/demo-test/24a86b9f-fff3-4d96-85a0-b89daa25a733.pdf\",\"pages"
+    },
+    {
+      "id": "W04-09b",
+      "wynik": "PASS",
+      "opis": "dokumenty: duży JPEG (571553 B) + PNG → PDF 2 strony (regresja PNG)",
+      "dowod": "{\"status\":\"success\",\"url\":\"/api/dokumenty/demo-test/4e964cfa-b5c9-4bd6-82d9-6c59d415679f.pdf\",\"pages"
+    },
+    {
+      "id": "W04-10a",
+      "wynik": "PASS",
+      "opis": "kalendarz: trm_init działa, integracja zakupów = off (lista pusta jak na produkcji)",
+      "dowod": "zakupy_integracja=off, schemat={\"wersja\":\"2026-10-15\",\"sprawdzono\":\"2026-10-18T10:24:57.754"
+    },
+    {
+      "id": "W04-10b",
+      "wynik": "PASS",
+      "opis": "kalendarz: nowa wizyta zapisana",
+      "dowod": "{\"status\":\"success\",\"rezerwacja\":{\"id\":82,\"numer\":\"EST-0082\",\"id_klienta\":\"1001\",\"klient_nazwa\":\"Zestaw A (zwykły pakiet"
+    },
+    {
+      "id": "W04-10c",
+      "wynik": "PASS",
+      "opis": "kalendarz: konflikt (ta sama osoba, ten sam termin) odrzucony",
+      "dowod": "{\"status\":\"konflikt\",\"message\":\"Anna ma w tym czasie inną wizytę (10:00–10:30).\",\"problemy\":[{\"kod\":\"PRACOWNIK_ZAJETY\",\""
+    },
+    {
+      "id": "W04-10d",
+      "wynik": "PASS",
+      "opis": "kalendarz: przesunięcie (podgląd → potwierdzenie), stan po ponownym odczycie z serwera = 11:00",
+      "dowod": "start=2026-11-23 11:00:00"
+    },
+    {
+      "id": "W04-10e",
+      "wynik": "PASS",
+      "opis": "kalendarz: podgląd skutków blokady (bez zapisu) wskazuje dotknięte wizyty",
+      "dowod": "{\"status\":\"success\",\"podglad\":true,\"dotkniete\":[{\"id\":82,\"rezerwacja_id\":82,\"pracownik\":\"Anna\",\"kategoria\":\"Endermologia\",\"wariant\":\"1x\",\"st"
+    },
+    {
+      "id": "W04-10f",
+      "wynik": "PASS",
+      "opis": "kalendarz: odwołanie zapisane, stan po odświeżeniu z serwera",
+      "dowod": "status=anulowana"
+    },
+    {
+      "id": "W04-10g",
+      "wynik": "PASS",
+      "opis": "kalendarz: powiadomienie (sprawa E05) po odwołaniu widoczne w centrum spraw",
+      "dowod": "spraw=2"
+    },
+    {
+      "id": "W05-01",
+      "wynik": "PASS",
+      "opis": "E05: lista użytkowników dla managera BEZ PIN-ów ani pól haseł",
+      "dowod": "klucze=imie,rola,pin_ustawiony"
+    },
+    {
+      "id": "W05-02",
+      "wynik": "PASS",
+      "opis": "E05: sama sesja salonu nie wystarcza do listy użytkowników",
+      "dowod": "{\"status\":\"error\",\"code\":\"UPRAWNIENIA\",\"message\":\"Zarządzanie kontami wymaga zalogowania PIN-em mana"
+    },
+    {
+      "id": "W05-03",
+      "wynik": "PASS",
+      "opis": "E05: zwykły pracownik nie dostaje listy użytkowników (odmowa po stronie serwera)",
+      "dowod": "{\"status\":\"error\",\"code\":\"UPRAWNIENIA\",\"message\":\"Zarządzanie kontami wymaga zalogowania PIN-em mana"
+    },
+    {
+      "id": "W05-04",
+      "wynik": "PASS",
+      "opis": "E05: lista do ekranu PIN (imiona/role) bez PIN-ów",
+      "dowod": "klucze=imie,rola"
+    },
+    {
+      "id": "W05-05",
+      "wynik": "PASS",
+      "opis": "E05: sesja salonu A wskazująca salon B → odmowa bez danych",
+      "dowod": "{\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Brak dostępu. Zaloguj się ponownie.\"}"
+    },
+    {
+      "id": "W05-06",
+      "wynik": "PASS",
+      "opis": "E05: zmiana PIN-u konta testowego → stara sesja odrzucona, stary PIN nie działa, nowy działa; przywrócono",
+      "dowod": "stara sesja={\"status\":\"error\",\"code\":\"SESJA\",\"message\":\"Sesja wygasła. Z"
+    }
+  ]
+}
