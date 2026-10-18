@@ -92,7 +92,7 @@ Dodatkowo dev.estelio.com.pl pracuje na tym kodzie na wspólnej bazie bez v2 od 
 
 **Plan awaryjny (dwa poziomy, bez `reset --hard` i bez force-push) — jedna kartka: `WROC_DO_OSTATNIEJ_DOBREJ.md`.** Wdrożenie i powrót idą przez panel Hostingera (Git → Pull from remote, Node.js → Restart application, Cache → Purge), bez konsoli na serwerze, więc powrót musi być zwykłym krokiem naprzód na `main`:
 1. **Problem w kalendarzu** → Administracja → Dodatki → wyłączyć Terminarz dla salonu. Zweryfikowane (W06-D): endpointy terminarza odmawiają, rdzeń działa, E05 zostaje. Bez pull, bez restartu.
-2. **Problem w rdzeniu** (logowanie, klientki, sprzedaż, dokumenty) → gałąź **`wroc-ostatnia-dobra-2026-10-16`** (commit `4f9ab25`, przygotowana PRZED wdrożeniem: odwrócenie `b3d774a..7df0c8f`, drzewo identyczne co do bajta z produkcją — `git diff b3d774a 4f9ab25` = pusto; kandydat jest jej przodkiem, więc po scaleniu `main → 4f9ab25` to fast-forward). `git checkout main && git merge --ff-only wroc-ostatnia-dobra-2026-10-16 && git push origin main` → Pull → Restart → Purge. Zweryfikowane lokalnie, że kod sprzed wydania czyta i zapisuje dane powstałe po kandydacie. Bazy z kopii **nie przywracamy** bez analizy — od kopii mogą powstać prawidłowe zapisy. Uwaga: lokalny bezpiecznik `pre-push` zatrzymuje pushe kasujące linie w `public/index.html`; powrót kasuje je świadomie, więc ten jeden push wymaga `--no-verify` (decyzja właściciela, §9).
+2. **Problem w rdzeniu** (logowanie, klientki, sprzedaż, dokumenty) → gałąź **`wroc-ostatnia-dobra-2026-10-16`** (przygotowana PRZED wdrożeniem: odwrócenie `b3d774a..<kandydat>`, drzewo identyczne co do bajta z produkcją — `git diff b3d774a wroc-ostatnia-dobra-2026-10-16` = pusto; kandydat jest jej przodkiem, więc po scaleniu powrót to fast-forward `main`; SHA: `git log -1 wroc-ostatnia-dobra-2026-10-16`). `git checkout main && git merge --ff-only wroc-ostatnia-dobra-2026-10-16 && git push origin main` → Pull → Restart → Purge. Zweryfikowane lokalnie, że kod sprzed wydania czyta i zapisuje dane powstałe po kandydacie. Bazy z kopii **nie przywracamy** bez analizy — od kopii mogą powstać prawidłowe zapisy. Uwaga: lokalny bezpiecznik `pre-push` zatrzymuje pushe kasujące linie w `public/index.html`; powrót kasuje je świadomie, więc ten jeden push wymaga `--no-verify` (decyzja właściciela, §9).
 3. Ścieżka do przodu dla E05 (gdyby problem był w logowaniu): naprawa w kodzie, bo cofnięcie otwiera ujawnianie PIN-ów (PIN-y bez zmian → stan dzisiejszy).
 
 ## 8. Bramka GO / NO-GO (§7 planu)
@@ -125,8 +125,9 @@ Dodatkowo dev.estelio.com.pl pracuje na tym kodzie na wspólnej bazie bez v2 od 
 ```
 # Właściciel, panel Hostingera, PRZED wszystkim: Node.js → Environment Variables → są: UPLOADS_DIR, ENFORCE_SESSION=true, DB_*, SMTP_*, STRIPE_*; brak TERMINARZ_ZAKUPY_TENANTS i DB_PORT
 # Claude, repozytorium lokalne (drzewo czyste, main = b3d774a):
-git fetch origin && git checkout main && git merge --ff-only 7df0c8f && git push origin main
-# Właściciel, panel Hostingera (estelio.com.pl): Git → Pull from remote (sprawdzić hash 7df0c8f) → Node.js → Restart application → Cache → Purge
+git fetch origin && git log --oneline -1 origin/dev   # = kandydat (ostatni commit dev; kod produktu w nim = 0718cb3)
+git checkout main && git merge --ff-only origin/dev && git push origin main
+# Właściciel, panel Hostingera (estelio.com.pl): Git → Pull from remote (sprawdzić, że hash = kandydat) → Node.js → Restart application → Cache → Purge
 # Claude, kontrola (wyłącznie odczyt; smoke-prod.js: login, get_pin_users, get_months, widoki w Chrome — bez zapisów):
 curl -s https://estelio.com.pl/zaloguj | grep -oE "[0-9]{2}\.[0-9]{2}\.[0-9]{4}[^<\"]{0,24}[0-9a-f]{7,12}"   # tożsamość wydania = SHA kandydata
 B=https://estelio.com.pl TENANT=demo-estelio PROFIL_LOGIN=<login demo> PROFIL_HASLO=<poza czatem> node narzedzia/smoke-prod.js
