@@ -3,7 +3,7 @@
 
 const request = require('supertest');
 const express = require('express');
-const { mockDb, mockDbAlways } = require('./helpers/mockDb');
+const { mockDbBezDDL, mockDbAlways } = require('./helpers/mockDb'); // UWAGA: ten moduł wykonuje CREATE TABLE przy require → wariant pomijający DDL (W02)
 
 function buildApp(db) {
     const app = express();
@@ -68,7 +68,7 @@ describe('POST /api/magazyn — add', () => {
 // ─── ACTION: update ───────────────────────────────────────────
 describe('POST /api/magazyn — update', () => {
     test('aktualizuje stan z poprawnymi danymi', async () => {
-        const db = mockDb(
+        const db = mockDbBezDDL(
             { rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] },
             { rows: { affectedRows: 1 } }
         );
@@ -83,7 +83,7 @@ describe('POST /api/magazyn — update', () => {
     });
 
     test('akceptuje przyrost z przecinkiem (2,5 szt.)', async () => {
-        const db = mockDb(
+        const db = mockDbBezDDL(
             { rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] },
             { rows: { affectedRows: 1 } }
         );
@@ -98,7 +98,7 @@ describe('POST /api/magazyn — update', () => {
     });
 
     test('odrzuca przyrost jako datę', async () => {
-        const db = mockDb({ rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] });
+        const db = mockDbBezDDL({ rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] });
         const res = await request(buildApp(db)).post('/api/magazyn').send({
             action: 'update',
             tenant_id: TENANT,
@@ -115,7 +115,7 @@ describe('POST /api/magazyn — edit_product', () => {
     const existingProduct = { id: '1', nazwa_produktu: 'Krem', ilosc: '10', data_waznosci: '2026-01-01', cena_netto: '20.00', cena_brutto: '24.60' };
 
     test('edytuje produkt z poprawnymi danymi', async () => {
-        const db = mockDb(
+        const db = mockDbBezDDL(
             { rows: [existingProduct] },
             { rows: { affectedRows: 1 } }
         );
@@ -134,7 +134,7 @@ describe('POST /api/magazyn — edit_product', () => {
     });
 
     test('odrzuca ujemną cenę netto', async () => {
-        const db = mockDb({ rows: [existingProduct] });
+        const db = mockDbBezDDL({ rows: [existingProduct] });
         const res = await request(buildApp(db)).post('/api/magazyn').send({
             action: 'edit_product',
             tenant_id: TENANT,
