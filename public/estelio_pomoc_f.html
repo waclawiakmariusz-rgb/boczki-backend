@@ -92,6 +92,10 @@
   .card:hover { box-shadow: var(--shadow-medium); }
   .card::before { content: ""; position: absolute; top: 0; left: 0; right: 0; height: 4px; background: linear-gradient(90deg, var(--pink-500) 0%, var(--pink-300) 100%); opacity: 0; transition: opacity 0.3s; }
   .card:hover::before { opacity: 1; }
+  .zrzut { margin: 26px 0; }
+  .zrzut img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 6px 24px rgba(26,14,26,.07); background: var(--card); }
+  .zrzut figcaption { margin-top: 10px; font-size: 13px; line-height: 1.6; color: var(--muted); padding: 0 4px; }
+  @media (max-width: 860px) { .zrzut { margin: 18px -8px; } .zrzut img { border-radius: 12px; } }
 
   .card-header { display: flex; align-items: flex-start; gap: 22px; margin-bottom: 24px; }
   .card-icon { width: 60px; height: 60px; border-radius: 18px; background: linear-gradient(135deg, var(--pink-100) 0%, #fff 100%); border: 1px solid var(--pink-200); color: var(--pink-600); display: grid; place-items: center; font-size: 28px; flex-shrink: 0; }
@@ -299,6 +303,15 @@
       </div>
       <p class="lead">Każdy pracownik ma swój 4-cyfrowy PIN. Po wybraniu siebie z ekranu i wpisaniu PIN-u system rozpozna kim jesteś i pokaże tylko te narzędzia, których potrzebujesz.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-01-logowanie.png" alt="Ekran logowania salonu w Estelio">
+        <figcaption>Pierwszy ekran: login i hasło salonu. Wpisuje się je raz na urządzeniu — potem pracownicy rozpoznają się PIN-ami.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-02-pin.png" alt="Wybor pracownika i pole PIN">
+        <figcaption>Po zalogowaniu salonu wybierasz siebie i wpisujesz swój 4-cyfrowy PIN. Od tej chwili każda operacja zapisuje się na Twoje nazwisko — dlatego nie używa się cudzego PIN-u.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Pierwszy dzień Marty</span>
         <h4>Marta wchodzi do salonu na 9:00, jej pierwsza zmiana</h4>
@@ -348,6 +361,11 @@
         </div>
       </div>
       <p class="lead">Pulpit to Twój ekran dowodzenia. Wszystko, co dzieje się "tu i teraz", zebrane w jednym widoku. Zaprojektowany żebyś po 5 sekundach wiedziała: co się działo, co Cię czeka, co masz robić.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-03-pulpit.png" alt="Pulpit: kafle dnia, zadania zespolu i szybki dostep">
+        <figcaption>Pulpit odpowiada na pytanie „co dziś?”: utarg i liczba transakcji, zadania do zrobienia, zbliżające się urodziny i skróty do najczęstszych akcji.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Marta o 9:00</span>
@@ -462,6 +480,23 @@
         </div>
       </div>
       <p class="lead">Najczęstsza rzecz, którą robisz w Estelio. Po zabiegu lub zakupie kosmetyku wpisujesz: ile, kto wykonał, jaką metodą zapłacił, kto był klientem. System sam zaktualizuje magazyn (jeśli to kosmetyk), saldo zadatków (jeśli płatność z portfela) i statystyki.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-04-sprzedaz-formularz.png" alt="Rejestracja sprzedazy: sprzedawca, klientka, zabieg, platnosc">
+        <figcaption>Cztery rzeczy w jednym ekranie: kto sprzedał, komu, co i jak zapłacono. Kwota wylicza się z cennika — tu pakiet „Mezoterapia igłowa 4x” za 1600 zł.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-05-dzisiejsza-sprzedaz.png" alt="Dzisiejsza sprzedaz: paragony z biezacego dnia">
+        <figcaption>Zakładka „Dzisiejsza sprzedaż” pokazuje wyłącznie dzisiejsze wpisy — to jest lista, którą sprawdza się przed zamknięciem zmiany.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-06-historia.png" alt="Historia sprzedazy z wyszukiwaniem">
+        <figcaption>Historia sięga wstecz i pozwala znaleźć paragon po nazwisku, zabiegu albo dacie. Stąd robi się też zwroty i korekty.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-08-podsumowanie.png" alt="Podsumowanie dnia z rozbiciem na metody platnosci">
+        <figcaption>Podsumowanie dnia rozbija utarg na gotówkę, kartę, BLIK i przelew — to liczby, które porównujesz z terminalem i kasetką.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Anna kupuje endermologię + krem</span>
@@ -595,6 +630,11 @@
       </div>
       <p class="lead">Klientka wpłaciła zaliczkę przed zabiegiem? Kupiła pakiet 5 zabiegów z góry? Dostała bon na urodziny? Zostawiła "kasę na koncie" do wykorzystania? To wszystko zadatki / portfel. System pilnuje, ile każda klientka ma do wykorzystania.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-07-zadatki.png" alt="Spis zadatkow: wplaty, cel i status">
+        <figcaption>Każda wpłata ma cel i status. „Aktywny” znaczy, że pieniądze czekają w portfelu klientki; „Wykorzystany” — że zostały rozliczone na paragonie.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Pakiet endermologii — wpłata</span>
         <h4>Pani Kasia kupuje pakiet 5 zabiegów Endermologii za 1500 zł</h4>
@@ -700,6 +740,11 @@
       </div>
       <p class="lead">Klientka kupuje krem, peeling, serum, witaminy, kosmetyczkę do domu? To wciąż zwykła sprzedaż w Estelio, w kategorii „Detal". System automatycznie zmniejszy stan magazynu i policzy osobno do statystyk kosmetyków lub suplementów (w zależności od typu produktu).</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-35-detal.png" alt="Sprzedaz detalu: produkt z magazynu, ilosc i cena">
+        <figcaption>Przy detalu wybierasz produkt z magazynu — system od razu pokazuje dostępny stan i zdejmie sztukę po zapisaniu paragonu.</figcaption>
+      </figure>
+
       <div class="tip" style="background:#faf5ff; border-color:#d8b4fe;"><strong>💡 Dlaczego „Detal" a nie „Kosmetyk"?</strong> Bo detal to nie tylko kremy, ale też suplementy, witaminy, kosmetyczki, próbki, akcesoria. Wybierasz produkt z dropdownu, system sam rozpozna czy to kosmetyk czy suplement (po typie z magazynu) i zaliczy do właściwego rankingu.</div>
 
       <div class="scenario">
@@ -795,6 +840,11 @@
       </div>
       <p class="lead">Klientka oddaje krem, rezygnuje z opłaconego zabiegu, należy jej się częściowy zwrot? System ma do tego osobny mechanizm. Zwrot to <strong>nowy, ujemny wpis</strong> w historii — pierwotna sprzedaż zostaje nietknięta, raporty z tamtego dnia się nie zmieniają, a dzisiejsza kasa pokazuje, że pieniądze wyszły. Wszystko się zgadza i wszystko widać.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-38-zwrot.png" alt="Profil klientki ze zwrotem w historii">
+        <figcaption>Zwrot nie kasuje pierwotnej sprzedaży: powstaje nowy, ujemny wpis z dzisiejszą datą. Dzięki temu raporty z poprzednich dni zostają nienaruszone.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Klientka oddaje krem (alergia)</span>
         <h4>Pani Karolina oddaje krem — alergia na składnik</h4>
@@ -857,6 +907,11 @@
         </div>
       </div>
       <p class="lead">Pakiety i karnety mają termin ważności. System pilnuje go za Ciebie: przy karnecie w historii klientki widać plakietkę z datą ważności, a te, które kończą się w ciągu 14 dni, trafiają na listę w panelu „Do sprawdzenia". Twoje narzędzia: <strong>Przedłuż</strong>, <strong>Zawieś</strong>, <strong>Ustaw datę</strong> i <strong>Zakończ</strong> — każde jednym kliknięciem, każde ze śladem w Dzienniku.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-37-karnety.png" alt="Karnety klientki z data waznosci">
+        <figcaption>Przy każdym pakiecie widać datę ważności. Karnet nie znika po cichu — system pokazuje, co wygasa, żeby dało się z klientką porozmawiać zawczasu.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Karnet się kończy, klientka chora</span>
@@ -941,6 +996,19 @@
         </div>
       </div>
       <p class="lead">Każda klientka ma swój profil ze wszystkim: dane kontaktowe, historia wizyt, dokumenty RODO, zadatki, notatki. To Twoja "encyklopedia klientek" — przed każdym zabiegiem zerknij, żeby przypomnieć sobie szczegóły.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-09-klienci.png" alt="Kartoteka klientek z wyszukiwarka">
+        <figcaption>Kartoteka to jedno miejsce na wszystkie klientki. Szukasz po nazwisku albo telefonie; ikony przy nazwisku mówią, czy są podpisane zgody.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-36-klient-profil.png" alt="Profil klientki: notatka, srodki, historia wizyt i podpowiedzi">
+        <figcaption>Profil zbiera wszystko: notatkę recepcji, dostępne środki, liczbę wizyt, sumę wydatków, nadchodzące urodziny i podpowiedź, co zaproponować.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-12-ranking.png" alt="Ranking klientek wedlug wydatkow">
+        <figcaption>Ranking pokazuje, kto u Was zostawia najwięcej — przydaje się przy zaproszeniach na nowości i przy programie lojalnościowym.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Pani Anna dzwoni</span>
@@ -1120,6 +1188,11 @@
       </div>
       <p class="lead">System sam pilnuje, kto ma urodziny — wystarczy mieć datę urodzenia w profilu. Twoja praca: zadzwonić, złożyć życzenia, zaproponować rabat lub bon. Mała czynność, wielki efekt na lojalność klientek.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-11-urodziny.png" alt="Lista urodzin w biezacym miesiacu">
+        <figcaption>Urodziny z kartoteki trafiają na listę miesiąca. Widać, kto zgodził się na SMS, a kto nie — i czy życzenia zostały już wysłane.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Poniedziałek 9:30 — przegląd urodzin</span>
         <h4>Marta zaczyna tydzień od sprawdzenia kto obchodzi urodziny</h4>
@@ -1195,6 +1268,11 @@
         </div>
       </div>
       <p class="lead">RODO to nie biurokracja — to ochrona klientki i Twojego salonu. Estelio pilnuje, kto co podpisał, alarmuje gdy brakuje, ułatwia procedurę "prawa do zapomnienia". Twoja rola: przy pierwszej wizycie dać do podpisu, zaznaczyć w systemie.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-36-klient-profil.png" alt="Przyciski REGULAMIN i ZGODY w profilu klientki">
+        <figcaption>Zgody RODO i regulamin są przy kliencie, nie w osobnym segregatorze. Zielony przycisk „ZGODY” pokazuje, co dokładnie zostało podpisane i kiedy.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Nowa klientka — pełna procedura RODO</span>
@@ -1302,6 +1380,23 @@
         </div>
       </div>
       <p class="lead">Wszystkie produkty (kosmetyki, akcesoria) są w magazynie. System pilnuje stanów, alarmuje gdy coś się kończy lub kończy ważność, mówi co zamówić. Twoja rola: sprawdzać alerty, dodawać nowe dostawy, robić cykliczne inwentaryzacje.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-13-magazyn.png" alt="Stan magazynowy: ilosci, kategorie i terminy waznosci">
+        <figcaption>Magazyn rozdziela detal (to, co sprzedajesz klientkom) i profesję (to, czego używasz w gabinecie). Kolory przy dacie ostrzegają przed krótkim terminem.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-14-co-zamowic.png" alt="Raport „Co zamowic”: stany krytyczne i krotkie terminy">
+        <figcaption>Raport zbiera dwie rzeczy, które łatwo przegapić: produkty poniżej minimum i te z kończącą się datą ważności.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-15-przyjecie.png" alt="Przyjecie towaru do magazynu">
+        <figcaption>Przyjęcie dostawy to osobny ekran — wpisujesz partię z ceną i datą ważności, a system sam ustawia kolejność zużycia.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-46-magazyn-pro.png" alt="Magazyn pro: kategorie, stany i zadania na dzis">
+        <figcaption>Salony z większym zapleczem mogą włączyć magazyn pro z własnym drzewem kategorii i listą „co dziś uzupełnić”.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Nowa dostawa — Vagheggi</span>
@@ -1465,6 +1560,11 @@
       </div>
       <p class="lead">Cyklicznie (raz w miesiącu, na koniec roku) sprawdzasz, czy stan systemu zgadza się z tym co fizycznie jest na półkach. To kluczowe — bez inwentaryzacji nie wiadomo czy ktoś coś bierze "po cichu", czy systemowe pomyłki rosną.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-16-inwentaryzacja.png" alt="Inwentaryzacja: spis z natury">
+        <figcaption>Inwentaryzacja porównuje stan z systemu ze stanem z półki. Różnice zapisują się z datą i osobą, która liczyła.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Miesięczna inwentaryzacja</span>
         <h4>Ostatni piątek miesiąca, 16:00 — Marta i Julia robią inwentaryzację</h4>
@@ -1537,6 +1637,11 @@
         </div>
       </div>
       <p class="lead">Manager zostawił Ci zadanie? Chcesz zostawić notatkę drugiej recepcjonistce? Praktykantka ma listę "do zrobienia"? Wszystko tutaj — wbudowane w Pulpit, z kategoriami, priorytetami, deadline'ami, komentarzami.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-39-zadania.png" alt="Zadania zespolu z priorytetami i terminami">
+        <figcaption>Zadania mają właściciela, priorytet i termin. „Pilne” podświetla się na czerwono, a wykonane zostają w historii — widać, kto i kiedy je zamknął.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Manager zlecił zadanie z klientem</span>
@@ -1702,6 +1807,11 @@
       </div>
       <p class="lead">Moduł Konsultacje służy do raportowania wyników konsultacji — kto ją przeprowadził, z jaką klientką, w ramach jakiej akcji promocyjnej i czy zakończyła się sprzedażą pakietu. Dzięki temu manager widzi, które kampanie i które osoby przynoszą efekty.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-40-konsultacje.png" alt="Analiza konsultacji: zrodlo klientki i skutek rozmowy">
+        <figcaption>Przy każdej konsultacji zapisuje się źródło (reklama, polecenie, Booksy) i efekt. Po miesiącu widać, która reklama naprawdę przyniosła sprzedaż.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Konsultacja Pani Magdaleny</span>
         <h4>Julia raportuje wynik konsultacji</h4>
@@ -1762,6 +1872,11 @@
       </div>
       <p class="lead">Codzienne lub tygodniowe zebrania zespołu. System pomaga je prowadzić — zamiast pisać kartki z porządkiem dziennym, otwierasz "Zebranie" i wszyscy widzą to samo na swoich ekranach.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-19-zebranie.png" alt="Zebranie: liczby do omowienia z zespolem">
+        <figcaption>Ekran zebrania zbiera w jednym miejscu liczby, o których i tak rozmawiacie na odprawie — bez przepisywania ich do zeszytu.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Poniedziałkowa odprawa o 9:00</span>
         <h4>Patrycja prowadzi 10-minutową odprawę zespołu</h4>
@@ -1821,6 +1936,11 @@
         </div>
       </div>
       <p class="lead">Klientki które dawno nie były — system pokazuje listę, sortuje wg ważności, daje narzędzia. Twoja praca: regularnie dzwoń. To jeden z najważniejszych elementów dochodu salonu — pozyskanie nowej klientki kosztuje 5x więcej niż utrzymanie obecnej.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-18-retencja.png" alt="Modul retencji: kogo oddzwonic i z jakim skutkiem">
+        <figcaption>Retencja podpowiada, kto dawno nie był, i zapisuje skutek rozmowy: umówiona, oddzwonić, brak zainteresowania. Następnym razem nikt nie dzwoni po raz drugi tego samego dnia.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Wtorkowy poranek — telefoniczny blok</span>
@@ -1910,6 +2030,11 @@
       </div>
       <p class="lead">Administracja to zaplecze, w którym manager i właściciel ustawiają „jak działa salon": kto ma jakie konto, co można sprzedawać i za ile, jakie są rabaty i zadatki, jakie podpowiedzi widzi recepcja. Zwykła recepcja i kosmetolog tu nie wchodzą — to ustawienia, które wpływają na całą resztę systemu.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-27-pracownicy.png" alt="Administracja: lista pracownikow salonu">
+        <figcaption>Administracja to ustawienia salonu: zespół, cennik, rabaty, zadatki i dodatki. Zmiany tutaj widzą od razu wszyscy pracownicy.</figcaption>
+      </figure>
+
       <p>Cały moduł znajdziesz w lewym menu pod pozycją <strong>Administracja</strong>. Po rozwinięciu zobaczysz listę pozycji (zależnie od Twojej roli część może być ukryta):</p>
       <ul>
         <li><strong>Edycja awaryjna</strong> — poprawianie transakcji z ostatnich 30 dni</li>
@@ -1966,6 +2091,11 @@
         </div>
       </div>
       <p class="lead">Tu powstają konta pracowników: imię (które jest jednocześnie loginem), 4-cyfrowy PIN i rola. To właśnie wybrana rola decyduje, co dany pracownik zobaczy w menu. Dostęp do tej sekcji ma tylko właściciel / megaadmin — bo to klucze do całego systemu.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-28-dostepy.png" alt="Kreator dostepow: role i PIN-y pracownikow">
+        <figcaption>Każda osoba ma rolę i własny PIN. Rola decyduje, co widzi w menu — recepcja nie ogląda wyników finansowych, a kosmetolog cudzych wizyt.</figcaption>
+      </figure>
 
       <div class="scenario">
         <span class="scenario-label">Nowa recepcjonistka</span>
@@ -2032,6 +2162,11 @@
         </div>
       </div>
       <p class="lead">Wszystko, co pojawia się w formularzu sprzedaży — lista zabiegów z cenami, lista sprzedawców, lista kosmetyków — pochodzi stąd. Jeśli czegoś nie da się wybrać przy kasie, to znaczy, że nie zostało jeszcze dodane do katalogu.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-26-zabiegi.png" alt="Katalog zabiegow: kategorie, warianty i ceny">
+        <figcaption>Cennik jest jeden dla całego systemu — ta sama pozycja trafia na paragon, do terminarza i do analizy.</figcaption>
+      </figure>
 
       <h3>Zabiegi — katalog usług z cenami</h3>
       <p>Sekcja <strong>Administracja → Zabiegi</strong>. To tutaj definiujesz wszystkie usługi, które salon sprzedaje, wraz z ceną podpowiadaną przy kasie.</p>
@@ -2107,6 +2242,11 @@
       </div>
       <p class="lead">Dwa ustawienia, które porządkują kasę: gotowa lista rabatów (żeby recepcja nie liczyła zniżek z głowy) oraz reguła, według której system sam proponuje wysokość zadatku. Obie rzeczy są tylko propozycją — przy konkretnej sprzedaży zawsze można je zmienić.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-29-rabaty.png" alt="Kreator rabatow">
+        <figcaption>Rabaty definiuje manager, recepcja tylko je wybiera z listy. Dzięki temu nikt nie wpisuje „minus 50 zł” z ręki.</figcaption>
+      </figure>
+
       <h3>Kreator rabatów</h3>
       <p>Sekcja <strong>Administracja → Kreator rabatów</strong>. Definiujesz tu zniżki, które potem recepcja wybiera z listy przy sprzedaży — bez ręcznego przeliczania.</p>
 
@@ -2161,6 +2301,11 @@
       </div>
       <p class="lead">To prosty mechanizm „jeśli klientka była na X, zaproponuj jej Y". Manager raz ustawia reguły, a potem przy sprzedaży system sam przypomina recepcji, co warto dołożyć — bez polegania na pamięci.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-30-sugestie.png" alt="Podpowiedzi sprzedazy: co proponowac do zabiegu">
+        <figcaption>Do każdego zabiegu można przypisać produkt i argument. Podpowiedź pojawi się w profilu klientki — recepcja nie musi pamiętać.</figcaption>
+      </figure>
+
       <p>Sekcja <strong>Administracja → Podpowiedzi (sugestie)</strong>. Zasada jest jedna: <em>jeśli klient kupił Zabieg A, system podpowie recepcji, by zaproponować Zabieg B</em>.</p>
 
       <h3>Jak ustawić regułę</h3>
@@ -2193,6 +2338,11 @@
         </div>
       </div>
       <p class="lead">Estelio+ to katalog dodatkowych funkcji, które właściciel może włączyć za niewielką dopłatą miesięczną. Każdy aktywny dodatek pojawia się w menu i jest doliczany do faktury. Dostęp do tej sekcji ma manager / właściciel.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-31-dodatki.png" alt="Moje Estelio+: lista dodatkow do wlaczenia">
+        <figcaption>Dodatki włącza się jednym kliknięciem. Wyłączenie nie kasuje danych — znika tylko pozycja w menu.</figcaption>
+      </figure>
 
       <p>Sekcja <strong>Administracja → Moje Estelio+ (Dodatki)</strong>. Zobaczysz listę rozszerzeń w formie kafelków — każdy z nazwą, opisem, ceną miesięczną i przełącznikiem aktywacji.</p>
 
@@ -2293,6 +2443,11 @@
         </div>
       </div>
       <p class="lead">Klientki dostają elegancką aplikację na telefon (saldo punktów, katalog nagród, promocje, wiadomości od salonu), a salon — narzędzie do nagradzania lojalności <strong>bez żadnego klikania punktów</strong>. Punkty naliczają się same z paragonów: recepcja wpisuje sprzedaż jak zawsze, resztą zajmuje się system.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-43-klub.png" alt="Klub: program lojalnosciowy salonu">
+        <figcaption>Punkty naliczają się same z paragonów. Manager ustawia przelicznik, poziomy i katalog nagród.</figcaption>
+      </figure>
 
       <h3>Zasada nr 1: punkty liczą się same</h3>
       <ul>
@@ -2434,6 +2589,11 @@
       </div>
       <p class="lead">Klientka pisze na Instagramie, że chce się umówić — a salon wymaga zadatku. Zamiast dyktować numer konta i liczyć na przelew „kiedyś", wysyłasz jej link: klientka <strong>najpierw akceptuje regulamin salonu, potem płaci online</strong> (tpay). System zapisuje kto, kiedy i z jakiego adresu IP zaakceptował — bezcenne przy sporze o odwołaną wizytę.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-32-platnosc-link.png" alt="Link do platnosci z akceptacja regulaminu">
+        <figcaption>Klientka płaci online i przy okazji potwierdza regulamin. Zapis akceptacji (kto, kiedy) zostaje w systemie.</figcaption>
+      </figure>
+
       <div class="scenario">
         <span class="scenario-label">Zadatek przez Instagram</span>
         <h4>Nowa klientka z IG chce termin na endermologię — salon prosi o 100 zł zadatku</h4>
@@ -2496,6 +2656,19 @@
       </div>
       <p class="lead">Moduł Analiza to wszystkie raporty finansowe i sprzedażowe salonu. Cały moduł widzą wyłącznie manager i właściciel — to liczby zarządcze. Recepcja, kosmetolog i praktykantka nie mają do niego dostępu.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-20-analiza-dzien.png" alt="Analiza / Dzien: utarg i rozbicie na metody platnosci">
+        <figcaption>Widok dnia pokazuje to samo, co podsumowanie zmiany, ale z wykresem i porównaniem — dobry punkt startowy przy zamykaniu kasy.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-21-analiza-miesiac.png" alt="Analiza / Miesiac: przychod, metody platnosci, sprzedaz dzienna">
+        <figcaption>Miesiąc zbiera przychód, podział na metody płatności, wykres dzień po dniu i listę najlepszych pracowników.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-23-analiza-rok.png" alt="Analiza / Rok: miesiac po miesiacu">
+        <figcaption>Rok pozwala porównać sezony: który miesiąc był mocny, a który trzeba było ratować promocją.</figcaption>
+      </figure>
+
       <h3>Podsumowanie dnia</h3>
       <p>Kasowy raport jednego dnia. Wybierasz datę i widzisz:</p>
       <ul>
@@ -2545,6 +2718,19 @@
         </div>
       </div>
       <p class="lead">Bardziej szczegółowe raporty w module Analiza — skupione na konkretnym pracowniku, konkretnym zabiegu, na skuteczności konsultacji oraz na wnioskach, których nie widać gołym okiem. Wszystkie tylko dla managera i właściciela.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-22-analiza-pracownik.png" alt="Analiza / Pracownik: wyniki jednej osoby">
+        <figcaption>Widok pracownika pokazuje, ile dana osoba sprzedała i z jakich zabiegów — bez zgadywania i bez ręcznych zestawień.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-42-audyt.png" alt="Audyt pelny: udzial uslug i produktow w obrocie">
+        <figcaption>Audyt pełny rozkłada obrót na usługi i produkty oraz pokazuje, ile z tego zostaje w salonie.</figcaption>
+      </figure>
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-41-bi.png" alt="Inteligentna analiza: wnioski z danych salonu">
+        <figcaption>Inteligentna analiza wyciąga wnioski z tych samych danych — zamiast tabel dostajesz zdania o tym, co się zmieniło.</figcaption>
+      </figure>
 
       <h3>Dashboard pracownika</h3>
       <p>Wybierasz pracownika i widzisz pełny obraz jego sprzedaży:</p>
@@ -2613,6 +2799,11 @@
       </div>
       <p class="lead">Tu manager ustawia miesięczne cele sprzedażowe dla pracowników i śledzi, jak im idzie. To narzędzie motywacyjne — pokazuje każdej osobie, ile już zrobiła i ile zostało do celu. Dostęp: manager i właściciel.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-25-targety.png" alt="Wyniki i cele: targety pracownikow">
+        <figcaption>Cel wpisuje manager, a system sam liczy realizację z paragonów. Pracownik widzi swój wynik bez pytania o niego.</figcaption>
+      </figure>
+
       <h3>Podgląd wyników pracownika</h3>
       <p>Sekcja <strong>Analiza → Wyniki i cele</strong>. Wybierasz pracownika i miesiąc, klikasz „Odśwież" — system generuje raport realizacji celu: ile sprzedał, jaki ma target, jaki procent realizacji, ile dni i utargu zostało.</p>
 
@@ -2641,6 +2832,11 @@
         </div>
       </div>
       <p class="lead">Sam przychód nie mówi, czy salon zarabia. Sekcja Koszty pozwala wpisać wydatki, dzięki czemu raporty roczne pokazują realny zysk, a nie tylko utarg. Dostęp ma właściciel / megaadmin (to najbardziej wrażliwe liczby).</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-24-koszty.png" alt="Koszty salonu wpisane recznie">
+        <figcaption>Koszty wpisuje się raz w miesiącu. Dopiero z nimi zysk w analizie jest prawdziwy, a nie „obrót minus nic”.</figcaption>
+      </figure>
 
       <p>Sekcja <strong>Analiza → Koszty</strong>. Koszty wpisujesz per miesiąc i dzielisz je na dwie części:</p>
       <ul>
@@ -2674,6 +2870,11 @@
         </div>
       </div>
       <p class="lead">Dziennik zdarzeń to czarna skrzynka systemu. Każda ważna akcja — sprzedaż, edycja, usunięcie, zmiana stanu magazynu, korekta awaryjna — zostaje tu zapisana z imieniem osoby i czasem. Manager używa go do kontroli i wyjaśniania nieścisłości.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-44-dziennik.png" alt="Dziennik zdarzen: kto, kiedy i co zrobil">
+        <figcaption>Dziennik zapisuje operacje w systemie z osobą i godziną. To nie jest kontrola pracowników — to sposób na odtworzenie, co się wydarzyło, gdy coś się nie zgadza.</figcaption>
+      </figure>
 
       <p>Sekcja <strong>Dziennik zdarzeń (logi)</strong>. Lista ma kolumny: <strong>Data · Kto · Akcja · Opis</strong>. U góry jest wyszukiwarka (filtruje po osobie, akcji i opisie) oraz przycisk „Odśwież".</p>
 
@@ -2715,6 +2916,11 @@
       </div>
       <p class="lead">Panel rozliczeniowy to osobna strona dla właściciela salonu, gdzie widzi status swojej subskrypcji Estelio, pobiera faktury i zarządza płatnością. To rozliczenie salonu z Estelio — nie ma nic wspólnego z kasą za zabiegi klientek.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-49-rozliczenia.png" alt="Ekran logowania do panelu rozliczeniowego Estelio">
+        <figcaption>Panel rozliczeniowy otwiera się w osobnej karcie pod adresem /billing — logujesz się tymi samymi danymi salonu co do Estelio. Znajdziesz tam faktury, status subskrypcji i zarządzanie kartą.</figcaption>
+      </figure>
+
       <p>Panel otwierasz pod osobnym adresem (strona rozliczeniowa), logując się <strong>osobnym loginem i hasłem</strong> — innym niż PIN do codziennej pracy. To celowe: do faktur i płatności wchodzi tylko właściciel.</p>
 
       <h3>Co widzisz w panelu</h3>
@@ -2746,6 +2952,11 @@
         </div>
       </div>
       <p class="lead">Esti to wbudowany asystent pomocy. Gdy nie wiesz, jak coś zrobić, zadajesz pytanie własnymi słowami, a Esti podpowiada odpowiedź na podstawie tego przewodnika i bazy pytań przygotowanej przez salon. To szybsza droga niż przewijanie całej dokumentacji.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-45-esti.png" alt="Esti odpowiada na pytanie z przewodnika">
+        <figcaption>Esti szuka odpowiedzi w tym przewodniku. Pyta się ją normalnym zdaniem — „jak zrobić zwrot?” — i dostaje fragment właściwego rozdziału.</figcaption>
+      </figure>
 
       <h3>Jak działa</h3>
       <p>Esti dopasowuje Twoje pytanie do słów kluczowych i pokazuje pasującą odpowiedź. Nie „zgaduje" — sięga do przygotowanych treści: tego przewodnika oraz wpisów dodanych przez managera w bazie wiedzy. Dzięki temu odpowiedzi są zgodne z tym, jak naprawdę działa system.</p>
@@ -2782,6 +2993,11 @@
         </div>
       </div>
       <p class="lead">System pokazuje każdej roli inny zestaw narzędzi. Zamiast czytać wszystko od deski do deski, znajdź poniżej swoją rolę i zacznij od tego, co naprawdę robisz na co dzień. Resztę doczytasz, gdy będzie potrzebna.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-47-recepcja.png" alt="Ten sam system w roli recepcji">
+        <figcaption>Ta sama aplikacja widziana przez recepcję: menu jest węższe, bo część modułów należy do managera. Rolę nadaje się w Kreatorze dostępów.</figcaption>
+      </figure>
 
       <h3>Jestem recepcją</h3>
       <p>Twoje codzienne narzędzia to sprzedaż, klienci, zadatki i magazyn. Najważniejsze sekcje tego przewodnika dla Ciebie:</p>
@@ -2899,6 +3115,11 @@
         </div>
       </div>
       <p class="lead">Pracujesz na danych klientek — imionach, telefonach, historii zabiegów, czasem zdjęciach. To dane wrażliwe. Kilka prostych nawyków sprawia, że salon jest bezpieczny i zgodny z RODO, a Ty masz spokój.</p>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-02-pin.png" alt="Ekran PIN-u przy wejsciu do systemu">
+        <figcaption>PIN to podpis pod operacją. Dlatego nie podaje się go koleżance i nie zostawia zalogowanego komputera na recepcji.</figcaption>
+      </figure>
 
       <h3>Twój PIN to Twój podpis</h3>
       <ul>
@@ -3041,6 +3262,11 @@
       </div>
       <p class="lead">Jeżeli w menu widzisz <strong>📅 Terminarz</strong>, Twój salon włączył wewnętrzny kalendarz Estelio. Wizyta łączy klientkę z kartoteki, usługę z cennika i wykonawczynię — a po zabiegu jednym przyciskiem przechodzi do zwykłej Sprzedaży. Nic nie wpisujesz dwa razy. Pełny przewodnik krok po kroku, ze scenkami i FAQ: <a href="/pomoc-terminarz/" target="_blank">/pomoc-terminarz/</a>.</p>
 
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-34-terminarz.png" alt="Terminarz w tym samym systemie">
+        <figcaption>Terminarz to dodatek w tej samej aplikacji: kalendarz zespołu, nowa wizyta i rozliczenie w zwykłej Sprzedaży. Pełny opis ma osobny przewodnik /pomoc-terminarz/.</figcaption>
+      </figure>
+
       <h3>Widoki</h3>
       <ul>
         <li><strong>Dzień</strong> — kolumna na każdą osobę, godziny pracy na jasnym tle, blokady i czas poza grafikiem zakreskowane. Kliknięcie wolnego pola otwiera nową wizytę o tej godzinie i u tej osoby.</li>
@@ -3107,6 +3333,11 @@
           <h2>FAQ — co zrobić gdy...</h2>
         </div>
       </div>
+
+      <figure class="zrzut">
+        <img src="/pomoc-zrzuty/pom-33-zgloszenia.png" alt="Zgloszenia do tworcy systemu">
+        <figcaption>Jeśli coś nie działa albo czegoś brakuje — Administracja → Zgłoszenia. Wiadomość trafia prosto do twórcy Estelio razem z informacją, kto ją wysłał.</figcaption>
+      </figure>
 
       <h3>Wpisałam pomyłkową sprzedaż — co teraz?</h3>
       <p>Wejdź w "Historię sprzedaży", znajdź transakcję, kliknij "Edytuj" lub "Usuń". Każda zmiana jest logowana — manager widzi historię edycji. Nie bój się korygować, lepiej poprawić niż zostawić błąd.</p>
