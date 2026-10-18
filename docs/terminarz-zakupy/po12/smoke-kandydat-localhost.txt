@@ -1,0 +1,21 @@
+Smoke test: http://localhost:3999 | tenant: demo-test
+  ✓ /zaloguj → 200
+  ✓ /pomoc/ → 200
+  ✓ /pomoc-manager/ → 200
+  ✓ /lib/chart.umd.min.js → 200
+  ✓ /lib/Sortable.min.js → 200
+  ✓ login API i pracownik Ola/manager
+  ✓ get_months → 4 miesięcy
+  ✓ aplikacja wystartowała po F5 z sesją (Estelio · 18.10.2026, 14:49 · 6a64b3e)
+  ✓ Chart.js załadowany
+  ✓ Sortable załadowany
+  ✓ Analiza → Miesiąc: total „11 371,00 zł", 4 miesięcy
+  ✓ widok dashboard: bez błędów
+  ✓ widok yearly: bez błędów
+  ✓ widok bi: bez błędów
+  ✓ widok treatment_analysis: bez błędów
+  ✓ widok analiza-konsultacji: bez błędów
+  ✓ CSP: zero zablokowanych zasobów
+  ✓ zero nieobsłużonych wyjątków JS
+  ✓ zero nieudanych zasobów sieciowych
+WYNIK: OK — wszystkie sprawdzenia przeszły.
