@@ -9268,6 +9268,11 @@ ANALIZA MANAGER
 
             <div id="an_payment-counts-info" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;"></div>
 
+            <!-- 2026-10-19, prośba Karoliny (Ambasada Urody): w podsumowaniu dnia ma być widać,
+                 ile z utargu zrobiła każda osoba. Liczone wyłącznie tutaj, z danych tego widoku —
+                 nie rusza modułu Sprzedaż ani panelu Magdy. -->
+            <div id="an_utarg-osoby" style="margin-bottom: 20px;"></div>
+
             <div class="card" style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
                 <h3 style="margin-top:0; font-size:16px; color:#334155; margin-bottom: 20px;">Lista transakcji z wybranego dnia:</h3>
                 <div style="overflow-x:auto;">
@@ -25510,6 +25515,90 @@ if (inputNazwaCheck) {
             const infoDiv = document.getElementById('an_payment-counts-info');
             if(infoDiv) infoDiv.innerHTML = countersHtml;
             an_updateSummaryTiles(total, gotowka, karta, przelew, mediraty, tubapay, booksySum);
+            an_utargWedlugOsob(lista, total);
+        }
+
+        // 2026-10-19 (prośba Karoliny z Ambasady Urody): ile z utargu dnia zrobiła każda osoba.
+        // Liczone w przeglądarce z tej samej listy, co tabela niżej, tą samą metodą co moduł
+        // miesięczny: przy kilku sprzedawcach kwota dzieli się po równo (Analiza → Pracownik).
+        // Dopłaty Mix nie mają w bazie sprzedawcy — doklejamy je do paragonu po numerze (baseId).
+        // Blok NIE zmienia niczego w module Sprzedaż ani w panelu Magdy.
+        function an_utargWedlugOsob(lista, utargDnia) {
+            const box = document.getElementById('an_utarg-osoby');
+            if (!box) return;
+            if (!lista || !lista.length) { box.innerHTML = ""; return; }
+
+            // paragon → sprzedawca, żeby dopłaty Mix trafiły do właściwej osoby
+            const sprzedawcaParagonu = {};
+            lista.forEach(r => {
+                const s = String(r.sprzedawca || '').trim();
+                if (r.baseId && s && s !== '-') sprzedawcaParagonu[r.baseId] = s;
+            });
+
+            const osoby = {};
+            const dodaj = (imie, pole, kwota) => {
+                if (!osoby[imie]) osoby[imie] = { zabiegi: 0, kosmetyki: 0, zadatki: 0, razem: 0, paragony: new Set() };
+                osoby[imie][pole] += kwota;
+                osoby[imie].razem += kwota;
+            };
+
+            lista.forEach(r => {
+                // wiersz "Mix" to tylko nagłówek paragonu — pieniądze są w dopłatach pod nim
+                if (String(r.platnosc || '').toLowerCase() === 'mix') return;
+                const kwota = parseFloat(r.kwota) || 0;
+                if (!kwota) return;
+
+                let surowi = String(r.sprzedawca || '').trim();
+                if (!surowi || surowi === '-') surowi = sprzedawcaParagonu[r.baseId] || '';
+                const imiona = surowi.split(',').map(x => x.trim()).filter(Boolean);
+                const lista_osob = imiona.length ? imiona : ['Nieprzypisane'];
+                const czesc = kwota / lista_osob.length;
+
+                const kat = String(r.kategoria_produktu || '').toLowerCase();
+                const nazwa = String(r.zabieg || '').toLowerCase();
+                const czyDetal = kat === 'kosmetyk' || kat === 'suplement' || nazwa.startsWith('kosmetyk:');
+                const pole = r.typ_rekordu === 'zadatek' ? 'zadatki' : (czyDetal ? 'kosmetyki' : 'zabiegi');
+
+                lista_osob.forEach(imie => {
+                    dodaj(imie, pole, czesc);
+                    if (r.baseId) osoby[imie].paragony.add(r.baseId);
+                });
+            });
+
+            const pozycje = Object.entries(osoby).sort((a, b) => b[1].razem - a[1].razem);
+            if (!pozycje.length) { box.innerHTML = ""; return; }
+
+            const zl = (v) => v.toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł';
+            let kafelki = "";
+            pozycje.forEach(([imie, o]) => {
+                const udzial = utargDnia > 0 ? Math.round((o.razem / utargDnia) * 100) : 0;
+                kafelki += `
+                <div style="background:#fff; border:1px solid #e9eef3; border-radius:12px; padding:16px 18px; min-width:220px; flex:1 1 220px;">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
+                        <strong style="font-size:15px; color:#0f172a;">${escHtml(imie)}</strong>
+                        <span style="font-size:11px; color:#94a3b8;">${udzial}% utargu</span>
+                    </div>
+                    <div style="font-size:13px; color:#475569; line-height:1.9;">
+                        ${o.zabiegi ? `<div style="display:flex; justify-content:space-between;"><span>zabiegi</span><span>${zl(o.zabiegi)}</span></div>` : ''}
+                        ${o.kosmetyki ? `<div style="display:flex; justify-content:space-between;"><span>kosmetyki</span><span>${zl(o.kosmetyki)}</span></div>` : ''}
+                        ${o.zadatki ? `<div style="display:flex; justify-content:space-between;"><span>zadatki</span><span>${zl(o.zadatki)}</span></div>` : ''}
+                        <div style="display:flex; justify-content:space-between; border-top:1px solid #f1f5f9; margin-top:6px; padding-top:6px; font-weight:700; color:#0f172a;"><span>razem</span><span>${zl(o.razem)}</span></div>
+                    </div>
+                    <div style="font-size:11px; color:#94a3b8; margin-top:8px;">${o.paragony.size} ${o.paragony.size === 1 ? 'paragon' : (o.paragony.size < 5 ? 'paragony' : 'paragonów')}</div>
+                </div>`;
+            });
+
+            const suma = pozycje.reduce((s, [, o]) => s + o.razem, 0);
+            const rozjazd = Math.abs(suma - utargDnia) > 0.5
+                ? `<div style="font-size:12px; color:#b45309; margin-top:10px;">Uwaga: suma osób (${zl(suma)}) różni się od utargu dnia (${zl(utargDnia)}).</div>` : '';
+
+            box.innerHTML = `
+            <div class="card" style="background:#fbfcfe; border-radius:12px; padding:22px 25px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+                <h3 style="margin-top:0; font-size:16px; color:#334155; margin-bottom:16px;">Utarg według osób</h3>
+                <div style="display:flex; flex-wrap:wrap; gap:14px;">${kafelki}</div>
+                ${rozjazd}
+                <div style="font-size:11px; color:#94a3b8; margin-top:12px;">Przy kilku sprzedawcach na jednej pozycji kwota dzieli się po równo — tak samo jak w zakładce Pracownik.</div>
+            </div>`;
         }
 
         function an_updateSummaryTiles(total, cash, card, transfer, medi, tuba, booksySum) {
