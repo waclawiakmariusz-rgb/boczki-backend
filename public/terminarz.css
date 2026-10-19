@@ -503,3 +503,23 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
   .trm-hist-poz .cena { text-align:left; }
   .trm-hist-daty { width:100%; }
 }
+
+/* ─── ZMIANY W GRAFIKU (19.10.2026) ───────────────────────────────────────────────────────────
+   Pasek pod licznikami dnia: ostrzeżenie, że z nadchodzących dni zniknęły wizyty. Celowo
+   bursztynowy, nie czerwony — to nie awaria, tylko rzecz do sprawdzenia. */
+.trm-zmiany-pasek { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:0 0 10px;
+  padding:10px 14px; border:1px solid #f0d9ae; border-left:4px solid #d9a441; border-radius:var(--t-r); background:#fffaf0; font-size:13.5px; }
+.trm-zmiany-pasek[hidden] { display:none; }   /* display:flex wygrywa z samym atrybutem hidden */
+.trm-zmiany-pasek .ikona { color:#b45309; font-weight:700; }
+.trm-zmiany-pasek .tresc { flex:1; color:#6b4f1d; }
+.trm-zmiany-pasek b { color:#8a5a00; }
+
+.trm-zmiany-lista { display:flex; flex-direction:column; gap:8px; }
+.trm-zmiana { background:var(--t-sur); border:1px solid var(--t-line); border-left:4px solid var(--t-line); border-radius:var(--t-r); padding:10px 12px; cursor:pointer; transition:.15s; }
+.trm-zmiana:hover { box-shadow:0 4px 14px rgba(26,14,26,.07); }
+.trm-zmiana.bad { border-left-color:#b91c1c; }
+.trm-zmiana.warn { border-left-color:#b45309; }
+.trm-zmiana.ok { border-left-color:#15803d; }
+.trm-zmiana .glowa { display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap; }
+.trm-zmiana .kto { font-size:13px; color:var(--t-txt); margin-top:2px; }
+.trm-zmiana .opis { font-size:12.5px; color:var(--t-mut); margin-top:4px; }

@@ -33,6 +33,20 @@ const STANY_REZ = ['szkic', 'hold', 'do_zatwierdzenia', 'do_wplaty', 'potwierdzo
 const OBECNOSCI = ['oczekiwana', 'przybyl', 'spozniony', 'nieobecny'];
 const STANY_POZ = ['zaplanowana', 'w_trakcie', 'wykonana', 'przerwana', 'anulowana', 'niewykonana', 'odmowa'];
 const KANALY = ['recepcja', 'telefon', 'wiadomosc', 'online', 'klub', 'import', 'kampania'];
+const TYPY_ZMIAN = new Set(['E02', 'E03', 'E05', 'E06', 'E08', 'E33']); // zakładka „Zmiany w wizytach” w centrum powiadomień
+
+/** Priorytet dla zdarzen typu "wizyta zniknela z grafiku" (19.10.2026).
+ *  Zwykly priorytetDlaCzasu dawal P1 az do dwoch godzin przed wizyta, a licznik dzwonka
+ *  liczy tylko P0/P1 z zakladki "do dzialania" — odwolanie wizyty na przyszly tydzien
+ *  ladowalo jako P2 i wykonawca nie dowiadywal sie o nim nigdy. Dlatego: do 48 godzin P0
+ *  (reagowac dzis), do 7 dni P1 (trzeba wiedziec), dalej P2. */
+function priorytetZnikaniaWizyty(terazStr, czasStr) {
+  if (!czasStr) return 'P2';
+  const minut = S.naMin(czasStr) - S.naMin(terazStr);
+  if (minut <= 48 * 60) return 'P0';
+  if (minut <= 7 * 24 * 60) return 'P1';
+  return 'P2';
+}
 
 class BladUzytkownika extends Error { constructor(msg, extra) { super(msg); this.extra = extra || {}; this.uzytkownika = true; } }
 
@@ -597,6 +611,41 @@ module.exports = (db, opts = {}) => {
     if (!czasStr) return 'P1';
     return (S.naMin(czasStr) - S.naMin(terazStr)) <= (prog || 120) ? 'P0' : 'P1';
   }
+  /** Zbiorcze powiadomienie o seryjnym odwoływaniu (19.10.2026).
+   *  Trzecie i kolejne odwołanie tego samego dnia, tej samej osobie, przez tego samego autora
+   *  w ciągu 30 minut tworzy JEDNĄ sprawę typu E33 (poza katalogiem z aneksu, który sięga E32) „Czyszczenie grafiku" zamiast kolejnych pojedynczych
+   *  wpisów. Pojedyncze sprawy zostają (są dowodem per wizyta), ale wykonawca dostaje jeden
+   *  mocny sygnał: „z Twojej środy zniknęło 8 wizyt". */
+  async function zbiorczaSprawaCzyszczenia(tenant, autor, terazStr, rez, pozycje) {
+    try {
+      const dzien = String(rez.start).slice(0, 10);
+      const osoby = [...new Set(pozycje.map(p => p.pracownik).filter(Boolean))];
+      const wynik = [];
+      for (const osoba of osoby) {
+        const rows = await q(
+          `SELECT r.id, r.klient_nazwa, DATE_FORMAT(r.start,'%H:%i') AS godzina
+             FROM Term_Rezerwacje r
+            WHERE r.tenant_id = ? AND DATE(r.start) = ? AND r.status = 'anulowana'
+              AND r.anulowal = ? AND r.anulowano >= DATE_SUB(?, INTERVAL 30 MINUTE)
+              AND EXISTS (SELECT 1 FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.pracownik = ?)
+            ORDER BY r.start`,
+          [tenant, dzien, autor, terazStr, osoba]);
+        if (rows.length < 3) continue;   // dwa odwołania to jeszcze nie czyszczenie grafiku
+        await sprawaUpsert(tenant, {
+          typ: 'E33', rezerwacja_id: null,
+          tytul: `Czyszczenie grafiku: ${osoba}, ${dzien} — ${rows.length} wizyt`,
+          opis: `${autor} odwołał(a) ${rows.length} wizyt z dnia ${dzien} w ciągu pół godziny: ` +
+                rows.map(x => `${x.godzina} ${x.klient_nazwa}`).join(', ') + '. Sprawdź, czy to było zamierzone.',
+          dane: { autor, dzien, pracownik: osoba, wizyty: rows, dotyczy: [osoba] },
+          priorytet: priorytetZnikaniaWizyty(terazStr, dzien + ' 00:00:00'),
+          powiazany_czas: dzien + ' 00:00:00',
+          klucz: `E33:${dzien}:${osoba}:${autor}`, kto: autor });
+        wynik.push({ pracownik: osoba, ile: rows.length, dzien });
+      }
+      return wynik;
+    } catch (e) { log.error('[terminarz] zbiorcza sprawa czyszczenia:', e.message); return []; }
+  }
+
   /** Tworzy sprawę albo cicho odświeża treść istniejącego otwartego wątku tej samej przyczyny (klucz_dedup) —
    * bez duplikatów przy powtórzeniu zdarzenia (np. kolejny tick pollera dla wciąż otwartego E13/E19).
    * Dziennik dostaje wpis TYLKO przy realnej zmianie (świeży wątek, podniesienie priorytetu, wznowienie) —
@@ -719,7 +768,10 @@ module.exports = (db, opts = {}) => {
     const odczytane = imie ? new Set((await q(`SELECT sprawa_id FROM Term_Sprawy_Odczyt WHERE tenant_id = ? AND pracownik = ?`, [tenant, imie])).map(x => x.sprawa_id)) : new Set();
     let widoczne = rows.map(x => sprawaDlaOdbiorcy(x, r, imie)).filter(Boolean);
     if (zakladka === 'do_dzialania') widoczne = widoczne.filter(x => ['P0', 'P1'].includes(x.priorytet) && !['rozwiazana', 'nieaktualna'].includes(x.stan));
-    else if (zakladka === 'zmiany') widoczne = widoczne.filter(x => x.rezerwacja_id);
+    // „Zmiany w wizytach” = tylko to, co zmieniło plan dnia (przełożenie, wykonawca, odwołanie,
+    // nieobecność, przerwany zabieg, seryjne czyszczenie). Brak wyniku wizyty czy sprawy
+    // o zakupach zostają w „Do działania” i „Informacje” — tutaj tylko zaciemniały obraz.
+    else if (zakladka === 'zmiany') widoczne = widoczne.filter(x => TYPY_ZMIAN.has(x.typ));
     else if (zakladka === 'dla_mnie') widoczne = widoczne.filter(x => x.wlasciciel === imie || (Array.isArray(x.dane.dotyczy) && x.dane.dotyczy.includes(imie)) || (Array.isArray(x.dane.dotkniete) && x.dane.dotkniete.some(y => y.pracownik === imie)));
     else if (zakladka === 'informacje') widoczne = widoczne.filter(x => x.priorytet === 'P2');
     return widoczne.map(x => ({ ...formatujSprawe(x), przeczytane: odczytane.has(x.id) }));
@@ -1108,6 +1160,56 @@ module.exports = (db, opts = {}) => {
           GROUP BY r.id ORDER BY ABS(TIMESTAMPDIFF(MINUTE, r.start, ?)) LIMIT 21`, [tenant, od, do_, like, like, fraza, cfg.terazStr]);
         const klienci = rows.length ? [] : await q(`SELECT id_klienta, imie_nazwisko FROM Klienci WHERE tenant_id = ? AND (status IS NULL OR status = 'AKTYWNY') AND (imie_nazwisko LIKE ? OR telefon LIKE ?) ORDER BY imie_nazwisko LIMIT 5`, [tenant, like, like]);
         return { status: 'success', dni: 60, wiecej: rows.length > 20, wizyty: rows.slice(0, 20), klienci: klienci.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko })) };
+      }
+
+      // ───────── ZMIANY: „co zniknęło z mojego grafiku" i „co się zmieniło w tym dniu" ─────────
+      // Scenariusz, który to wywołał: Ola widzi w niedzielę 10 wizyt na środę, rozmraża czynnik,
+      // a we wtorek zostają dwie i nikt nie pamięta, kto skasował resztę. Dane były w bazie od
+      // początku (Term_Historia, Term_Sprawy, anulowane rezerwacje) — brakowało ich podania.
+      case 'trm_zmiany_grafiku': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu do powiadomień.');
+        const cfg = await wspolneCfg(tenant);
+        const dni = Math.min(Math.max(parseInt(d.dni, 10) || 7, 1), 60);
+        const doKiedy = S.dzienZ(S.naMin(cfg.terazStr.slice(0, 10) + ' 00:00') + dni * 1440) + ' 23:59:59';
+        // Tylko sprawy o znikaniu wizyt (odwołanie, przełożenie, zmiana wykonawcy) z nadchodzących dni.
+        const rows = await q(`SELECT * FROM Term_Sprawy WHERE tenant_id = ? AND typ IN ('E02','E03','E05','E33')
+            AND stan NOT IN ('rozwiazana','nieaktualna')
+            AND powiazany_czas IS NOT NULL AND powiazany_czas BETWEEN ? AND ?
+          ORDER BY powiazany_czas`, [tenant, cfg.terazStr, doKiedy]);
+        const odczytane = new Set((await q(`SELECT sprawa_id FROM Term_Sprawy_Odczyt WHERE tenant_id = ? AND pracownik = ?`, [tenant, imie])).map(x => x.sprawa_id));
+        const moje = rows.map(x => sprawaDlaOdbiorcy(x, r, imie)).filter(Boolean);
+        const nowe = moje.filter(x => !odczytane.has(x.id));
+        const licz = (typy) => nowe.filter(x => typy.includes(x.typ)).length;
+        return { status: 'success', dni, do: doKiedy.slice(0, 10),
+          nowych: nowe.length, odwolane: licz(['E05']), przelozone: licz(['E02']), zmiana_wykonawcy: licz(['E03']), serie: licz(['E33']),
+          sprawy: nowe.slice(0, 20).map(x => ({ ...formatujSprawe(x), przeczytane: false })) };
+      }
+
+      case 'trm_zmiany_dnia': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const data = sprawdzData(d.data, 'data');
+        // Zmiany dotyczące wizyt z tego dnia — także tych, które z niego zniknęły: przełożenie
+        // zapisuje w historii „stara data → nowa", więc szukamy po obu stronach strzałki.
+        const rows = await q(
+          `SELECT h.id, DATE_FORMAT(h.kiedy,'%Y-%m-%d %H:%i') AS kiedy, h.kto, h.akcja, h.opis,
+                  r.id AS rezerwacja_id, r.klient_nazwa, r.status,
+                  DATE_FORMAT(r.start,'%Y-%m-%d %H:%i') AS start,
+                  (SELECT GROUP_CONCAT(DISTINCT p.pracownik ORDER BY p.kolejnosc SEPARATOR ', ')
+                     FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id) AS pracownicy
+             FROM Term_Historia h
+             JOIN Term_Rezerwacje r ON r.tenant_id = h.tenant_id AND r.id = h.rezerwacja_id
+            WHERE h.tenant_id = ? AND (DATE(r.start) = ? OR h.opis LIKE ?)
+            ORDER BY h.kiedy DESC, h.id DESC
+            LIMIT 200`,
+          [tenant, data, data + '%']);
+        const WAZNE = new Set(['anulowano', 'anulowano_pozycje', 'przelozono', 'utworzono', 'przywrocono']);
+        const zmiany = rows.filter(x => WAZNE.has(x.akcja)).map(x => ({
+          kiedy: x.kiedy, kto: x.kto || 'system', akcja: x.akcja, opis: x.opis,
+          rezerwacja_id: x.rezerwacja_id, numer: 'EST-' + String(x.rezerwacja_id).padStart(4, '0'),
+          klient: x.klient_nazwa, status: x.status, start: x.start, pracownicy: x.pracownicy,
+        }));
+        const odwolan = zmiany.filter(x => x.akcja.startsWith('anulowano')).length;
+        return { status: 'success', data, zmiany, podsumowanie: { wszystkich: zmiany.length, odwolan, przelozen: zmiany.filter(x => x.akcja === 'przelozono').length, dodanych: zmiany.filter(x => x.akcja === 'utworzono').length } };
       }
 
       // ───────── HISTORIA (2026-10-19, prośba właściciela): dwa spojrzenia na te same dane ─────────
@@ -1541,7 +1643,7 @@ module.exports = (db, opts = {}) => {
               await sprawaUpsert(tenant, { typ: 'E03', rezerwacja_id: rez.id, tytul: `Zmieniono wykonawcę — ${rez.klient_nazwa}`,
                 opis: podglad.obecny.pozycje.map((pp, i) => pp.pracownik !== w2.pozycje[i].pracownik ? `${pp.nazwa}: ${pp.pracownik || '—'} → ${w2.pozycje[i].pracownik || '—'}` : null).filter(Boolean).join('; '),
                 dane: { pozycje: podglad.obecny.pozycje.map((pp, i) => ({ nazwa: pp.nazwa, poprzedni: pp.pracownik, nowy: w2.pozycje[i].pracownik })), dotyczy: dotyczyWszyscy },
-                priorytet: 'P2', powiazany_czas: w2.start, klucz: `E03:${rez.id}`, kto: imie });
+                priorytet: priorytetZnikaniaWizyty(cfg.terazStr, w2.start), powiazany_czas: w2.start, klucz: `E03:${rez.id}`, kto: imie });
             }
             await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta przełożona / zmieniony wykonawca'); // E02
             return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
@@ -1587,11 +1689,13 @@ module.exports = (db, opts = {}) => {
           return zw;
         });
         zapiszLog(tenant, 'TERMINARZ: ODWOŁANIE', imie, `${rez.numer} ${rez.klient_nazwa} (${kto}): ${pozn} — ${powod}`);
+        const terazOdw = await teraz();   // do priorytetu „jak blisko jest odwołana wizyta" i do okna seryjnego czyszczenia
         await sprawaUpsert(tenant, { typ: 'E05', rezerwacja_id: rez.id, tytul: `Odwołano wizytę — ${rez.klient_nazwa}`,
           opis: `${kto === 'klient' ? 'Klientka odwołała' : 'Salon odwołał'}: ${pozn} — ${powod}`,
           dane: { pozycje: cel.map(p => ({ kategoria: p.kategoria, wariant: p.wariant, pracownik: p.pracownik, start: p.start })), kto, powod, dotyczy: prIz(cel) },
-          priorytet: 'P2', powiazany_czas: null, klucz: `E05:${rez.id}`, kto: imie });
+          priorytet: priorytetZnikaniaWizyty(terazOdw, rez.start), powiazany_czas: rez.start, klucz: `E05:${rez.id}`, kto: imie });
         for (const p of cel) await sprawaAutoZamknij(tenant, `E13:poz:${p.id}`, 'Wizyta odwołana', 'nieaktualna');
+        await zbiorczaSprawaCzyszczenia(tenant, imie, terazOdw, rez, cel);
         const po = await rezerwacja(tenant, rez.id);
         await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta odwołana'); // E02
         return { status: 'success', rezerwacja: po, zwolnione_jednostki: zwolnione, rozrachunek: zwolnione ? `Do pakietu ${zwolnione === 1 ? 'wrócił 1 zabieg' : 'wróciły ' + zwolnione + ' zabiegi'}. Rozliczenie środków (zadatki) wykonuje się w istniejących modułach — terminarz ich nie zmienia.` : 'Rozliczenie środków (zadatki, karnet) wykonuje się w istniejących modułach — terminarz ich nie zmienia.' };
@@ -1894,4 +1998,5 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

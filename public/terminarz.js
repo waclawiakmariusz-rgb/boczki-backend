@@ -119,6 +119,7 @@
         ${manager() ? `<button class="trm-btn ust ${TRM.widok === 'ustawienia' ? 'on' : ''}" id="trm-btn-ust" onclick="TRM.widokZmien('ustawienia')" aria-label="Ustawienia terminarza">⚙ Ustawienia</button>` : ''}
       </div>
       <div class="trm-counters" id="trm-counters"></div>
+      <div class="trm-zmiany-pasek" id="trm-zmiany-pasek" hidden></div>
       <div class="trm-filtry" id="trm-filtry" hidden></div>
       <div class="trm-body" id="trm-body"><div class="trm-main" id="trm-main"></div><aside class="trm-panel" id="trm-panel" hidden></aside></div>
       <div class="trm-bubble-layer" id="trm-bubble-layer"></div>
@@ -208,11 +209,57 @@
     if (d.status !== 'success') { main.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
     TRM.dzien = d;
     liczniki(d);
+    odswiezPasekZmian();
     nowaSynchronizujDate();
     if (TRM.widok === 'zasoby') { renderZasoby(); przywrocScroll(); return; }
     if (TRM.widok === 'moj' || waski()) { renderAgendaDnia(); przywrocScroll(); return; }
     renderDzien(); przywrocScroll();
   }
+  // ── Zmiany w grafiku (19.10.2026) ────────────────────────────────────────────────────────────
+  // Scenariusz Oli: w niedzielę dziesięć wizyt na środę, we wtorek zostają dwie i nikt nie wie,
+  // kto skasował resztę. Pasek pokazuje, co zniknęło z NADCHODZĄCYCH dni i czego jeszcze nie
+  // widziałaś — znika po otwarciu, bo wtedy sprawy są oznaczane jako przeczytane.
+  async function odswiezPasekZmian() {
+    const pasek = el('trm-zmiany-pasek'); if (!pasek) return;
+    const d = await api('trm_zmiany_grafiku', { dni: 7 });
+    if (d.status !== 'success' || !d.nowych) { pasek.hidden = true; pasek.innerHTML = ''; return; }
+    const czesci = [];
+    if (d.odwolane) czesci.push(`<b>${d.odwolane}</b> ${d.odwolane === 1 ? 'wizyta odwołana' : (d.odwolane < 5 ? 'wizyty odwołane' : 'wizyt odwołanych')}`);
+    if (d.przelozone) czesci.push(`<b>${d.przelozone}</b> ${d.przelozone === 1 ? 'przełożona' : 'przełożone'}`);
+    if (d.zmiana_wykonawcy) czesci.push(`<b>${d.zmiana_wykonawcy}</b> ze zmianą wykonawcy`);
+    if (d.serie) czesci.push(`<b>${d.serie}</b> seryjne czyszczenie grafiku`);
+    pasek.hidden = false;
+    pasek.innerHTML = `<span class="ikona">⚠</span>
+      <span class="tresc">W najbliższych ${d.dni} dniach ${operacyjna() ? 'w grafiku' : 'w Twoim grafiku'}: ${czesci.join(' · ')}.</span>
+      <button class="trm-btn sm" onclick="TRM.zmianyPokaz()">Zobacz co zniknęło</button>`;
+  }
+  TRM.zmianyPokaz = () => { TRM.otworzPowiadomienia('zmiany'); const p = el('trm-zmiany-pasek'); if (p) { p.hidden = true; p.innerHTML = ''; } };
+
+  // ── „Co się zmieniło w tym dniu" ─────────────────────────────────────────────────────────────
+  // Jedno miejsce z odpowiedzią na „nikt nie pamięta, kto tam był zapisany": kto, kiedy, co i dlaczego.
+  TRM.zmianyDnia = async () => {
+    panelOtworz(naglowekPanelu('Zmiany w tym dniu', ladnaData(TRM.data)) + '<div class="trm-empty"><div class="big">⏳</div><p>Pobieramy…</p></div>');
+    const d = await api('trm_zmiany_dnia', { data: TRM.data });
+    if (d.status !== 'success') return panelOtworz(naglowekPanelu('Zmiany w tym dniu') + `<div class="trm-note bad">${esc(d.message)}</div>`);
+    const p = d.podsumowanie;
+    const AKCJA = { anulowano: ['Odwołano wizytę', 'bad'], anulowano_pozycje: ['Odwołano zabiegi', 'bad'], przelozono: ['Przełożono', 'warn'], utworzono: ['Dodano wizytę', 'ok'], przywrocono: ['Przywrócono', 'ok'] };
+    const lista = d.zmiany.length ? d.zmiany.map(x => {
+      const a = AKCJA[x.akcja] || [x.akcja, 'neu'];
+      return `<div class="trm-zmiana ${a[1]}" onclick="TRM.otworzSzczegoly(${x.rezerwacja_id})" title="Otwórz wizytę">
+        <div class="glowa"><b>${esc(a[0])}</b> <span class="muted small">${esc(x.kiedy)} · ${esc(x.kto)}</span></div>
+        <div class="kto">${esc(x.klient || '—')}${x.pracownicy ? ' · ' + esc(x.pracownicy) : ''}${x.start ? ' · ' + esc(x.start.slice(11, 16)) : ''} <span class="muted small">${esc(x.numer)}</span></div>
+        ${x.opis ? `<div class="opis">${esc(x.opis)}</div>` : ''}
+      </div>`;
+    }).join('') : '<div class="trm-empty"><div class="big">🗓️</div><p>W tym dniu nic się nie zmieniało.</p></div>';
+    panelOtworz(naglowekPanelu('Zmiany w tym dniu', ladnaData(TRM.data)) + `
+      <div class="trm-card"><div class="trm-row" style="gap:18px; flex-wrap:wrap">
+        <div><div class="muted small">odwołań</div><b style="font-size:18px">${p.odwolan}</b></div>
+        <div><div class="muted small">przełożeń</div><b style="font-size:18px">${p.przelozen}</b></div>
+        <div><div class="muted small">dodanych</div><b style="font-size:18px">${p.dodanych}</b></div>
+      </div></div>
+      <div class="trm-zmiany-lista">${lista}</div>`);
+  };
+
   function liczniki(d) {
     const c = el('trm-counters'); if (!c) return;
     const akt = d.rezerwacje.filter(r => !['anulowana', 'odrzucona', 'wygasla'].includes(r.status));
@@ -220,7 +267,7 @@
     const nieob = d.nieobecnosci.length;
     const anul = d.rezerwacje.length - akt.length;
     const lm = (n, j, m, w) => n === 1 ? j : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? m : w;
-    c.innerHTML = `<span><b>${akt.length}</b> ${lm(akt.length, 'wizyta', 'wizyty', 'wizyt')}</span><span><b>${akt.filter(r => r.obecnosc === 'przybyl').length}</b> przybyło</span>${doRozl ? `<span><b>${doRozl}</b> do rozliczenia</span>` : ''}${nieob ? `<span><b>${nieob}</b> nieobecności/blokad</span>` : ''}${anul ? `<label style="display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;margin:0;cursor:pointer"><input type="checkbox" ${TRM.pokazAnul ? 'checked' : ''} onchange="TRM.pokazAnul=this.checked;TRM.widokZmien(TRM.widok)" style="width:auto;min-height:0"> pokaż anulowane (${anul})</label>` : ''}<span class="small">Ostatnia aktualizacja ${hhmm(d.teraz)}</span>`;
+    c.innerHTML = `<span><b>${akt.length}</b> ${lm(akt.length, 'wizyta', 'wizyty', 'wizyt')}</span><span><b>${akt.filter(r => r.obecnosc === 'przybyl').length}</b> przybyło</span>${doRozl ? `<span><b>${doRozl}</b> do rozliczenia</span>` : ''}${nieob ? `<span><b>${nieob}</b> nieobecności/blokad</span>` : ''}${anul ? `<label style="display:inline-flex;align-items:center;gap:4px;text-transform:none;letter-spacing:0;font-size:12px;margin:0;cursor:pointer"><input type="checkbox" ${TRM.pokazAnul ? 'checked' : ''} onchange="TRM.pokazAnul=this.checked;TRM.widokZmien(TRM.widok)" style="width:auto;min-height:0"> pokaż anulowane (${anul})</label>` : ''}${operacyjna() ? '<button class="trm-btn link sm" onclick="TRM.zmianyDnia()" title="Kto odwołał, przełożył albo dodał wizytę w tym dniu">Co się zmieniło?</button>' : ''}<span class="small">Ostatnia aktualizacja ${hhmm(d.teraz)}</span>`;
   }
 
   // ── wspólne: zakres godzin siatki ─────────────────────────────────────
@@ -1111,10 +1158,10 @@
   };
 
   // ── CENTRUM POWIADOMIEŃ: Sprawy ─────────────────────────────────────────
-  TRM.otworzPowiadomienia = async () => {
+  TRM.otworzPowiadomienia = async (zakladka) => {
     TRM.panel = 'powiadomienia';
     panelOtworz(naglowekPanelu('Powiadomienia', 'Pobieramy…'));
-    await zaladujSprawy(TRM.sprawy.zakladka);
+    await zaladujSprawy(zakladka || TRM.sprawy.zakladka);
   };
   async function zaladujSprawy(zakladka) {
     TRM.sprawy.zakladka = zakladka;
@@ -1160,17 +1207,25 @@
       return `${d.dotkniete.length === 1 ? 'Wizyta' : d.dotkniete.length + ' wizyt'}${kiedy ? ': od ' + kiedy : ''}${osoby.length ? ' · ' + osoby.join(', ') : ''}`;
     }
     const prac = (Array.isArray(d.pozycje) && d.pozycje[0] && (d.pozycje[0].nowy || d.pozycje[0].pracownik)) || d.pracownik || d.kogo || null;
+    // E33 nie dotyczy jednej wizyty, a całego dnia — godzina 00:00 z powiązanego czasu nic nie znaczy
+    if (sp.typ === 'E33') return `Dzień: ${ladnaData(String(d.dzien || (sp.powiazany_czas || '')).slice(0, 10), true)}${prac ? ' · ' + prac : ''}${Array.isArray(d.wizyty) ? ' · ' + d.wizyty.length + ' wizyt' : ''}`;
     if (!kiedy && !prac) return '';
     return `Wizyta${kiedy ? ': ' + kiedy : ''}${prac ? ' · ' + prac : ''}`;
   }
   // D04: powód pilności widoczny na karcie — z typu zdarzenia i czasu wizyty (reguła eskalacji: P0 w ciągu 2 h od wizyty)
   function powodPriorytetu(sp) {
     const typ = sp.typ || '';
-    const baza = { E13: 'brak wyniku po zakończeniu wizyty', E19: 'wizyta zakończona bez zapisanego rozliczenia', E15: 'wizyty w czasie nieobecności', E16: 'wizyty na niedostępnym zasobie', E18: 'wizyty poza nową dostępnością', E02: 'przełożona wizyta', E03: 'zmiana wykonawcy', E05: 'odwołana wizyta', E06: 'nieobecność klientki', E08: 'przerwany zabieg', E20: 'zakup zmieniony w Sprzedaży — nowe umówienia z tego pakietu wstrzymane', E21: 'wizyta bez zakupu — wymaga zakupu albo wyjaśnienia', E22: 'zmiana ważności dotyka umówionych wizyt', E23: 'wykonanie oczekuje na przypisanie do zakupu', E24: 'uzgadnianie zakupów nie powiodło się' }[typ] || '';
+    const baza = { E13: 'brak wyniku po zakończeniu wizyty', E19: 'wizyta zakończona bez zapisanego rozliczenia', E15: 'wizyty w czasie nieobecności', E16: 'wizyty na niedostępnym zasobie', E18: 'wizyty poza nową dostępnością', E02: 'przełożona wizyta', E03: 'zmiana wykonawcy', E05: 'odwołana wizyta', E06: 'nieobecność klientki', E08: 'przerwany zabieg', E20: 'zakup zmieniony w Sprzedaży — nowe umówienia z tego pakietu wstrzymane', E21: 'wizyta bez zakupu — wymaga zakupu albo wyjaśnienia', E22: 'zmiana ważności dotyka umówionych wizyt', E23: 'wykonanie oczekuje na przypisanie do zakupu', E24: 'uzgadnianie zakupów nie powiodło się', E33: 'seryjne odwoływanie wizyt z jednego dnia' }[typ] || '';
     if (sp.priorytet !== 'P0') return baza;
     const teraz = TRM.dzien && TRM.dzien.teraz ? TRM.dzien.teraz : null;
     const pc = sp.powiazany_czas || '';
-    const dlaczego = pc && teraz ? (pc <= teraz ? 'wizyta już się odbyła' : 'wizyta w ciągu 2 h') : 'eskalacja czasowa';
+    // znikanie wizyt ma własną regułę (P0 do 48 h, P1 do 7 dni) — nie wolno mówić „w ciągu 2 h”
+    const ZNIKANIE = ['E02', 'E03', 'E05', 'E33'];
+    const dlaczego = pc && teraz
+      ? (pc <= teraz ? 'wizyta już się odbyła'
+        : typ === 'E33' ? 'ten dzień jest już blisko'
+          : ZNIKANIE.includes(typ) ? 'wizyta w najbliższych dwóch dniach' : 'wizyta w ciągu 2 h')
+      : 'eskalacja czasowa';
     return `pilne, bo ${dlaczego}${baza ? ' — ' + baza : ''}`;
   }
   function akcjaWizytySprawy(sp, naKarcie) {
@@ -1211,7 +1266,7 @@
     }
     return '';
   }
-  const TYP_SPRAWY_LABEL = { E02: 'Zmiana terminu', E03: 'Zmiana wykonawcy', E05: 'Odwołanie wizyty', E06: 'Nieobecność klientki', E08: 'Przerwany zabieg', E13: 'Brak wyniku wizyty', E15: 'Nieobecność wykonawcy', E16: 'Niedostępny zasób', E18: 'Zmiana grafiku', E19: 'Rozliczenie wizyty', E20: 'Zakup zmieniony w Sprzedaży', E21: 'Wizyta wymaga zakupu lub wyjaśnienia', E22: 'Zmiana ważności pakietu', E23: 'Wykonanie do wyjaśnienia', E24: 'Błąd uzgadniania zakupów' };
+  const TYP_SPRAWY_LABEL = { E02: 'Zmiana terminu', E03: 'Zmiana wykonawcy', E05: 'Odwołanie wizyty', E06: 'Nieobecność klientki', E08: 'Przerwany zabieg', E13: 'Brak wyniku wizyty', E15: 'Nieobecność wykonawcy', E16: 'Niedostępny zasób', E18: 'Zmiana grafiku', E19: 'Rozliczenie wizyty', E20: 'Zakup zmieniony w Sprzedaży', E21: 'Wizyta wymaga zakupu lub wyjaśnienia', E22: 'Zmiana ważności pakietu', E23: 'Wykonanie do wyjaśnienia', E24: 'Błąd uzgadniania zakupów', E33: 'Czyszczenie grafiku' };
   const pozostaloWizyt = (sp) => { const d = sp.dane || {}; return Array.isArray(d.dotkniete) ? d.dotkniete.filter(x => !x.rozwiazana).length : 0; };
   function akcjeSprawy(sp) {
     if (['rozwiazana', 'nieaktualna'].includes(sp.stan)) return operacyjna() ? `<button class="trm-btn fix" onclick="TRM.sprawaWznow(${sp.id})">Wznów sprawę</button>` : '';
