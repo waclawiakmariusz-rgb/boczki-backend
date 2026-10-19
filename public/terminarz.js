@@ -104,7 +104,7 @@
         ${operacyjna() ? `<div class="trm-szukaj"><input id="trm-szukaj" placeholder="Szukaj wizyty lub klientki…" autocomplete="off" oninput="TRM.szukajWizyt(this.value)" onfocus="TRM.szukajWizyt(this.value)" aria-label="Szukaj wizyty lub klientki"><div class="trm-szukaj-wyniki" id="trm-szukaj-wyniki" hidden></div></div>` : ''}
         <a class="trm-btn" href="/pomoc-terminarz/" target="_blank" rel="noopener" title="Przewodnik po Terminarzu — scenki, FAQ" style="text-decoration:none;display:inline-flex;align-items:center">📖 Pomoc</a>
         ${(operacyjna() || specjalista()) ? `<button class="trm-btn trm-dzwonek fix" onclick="TRM.otworzPowiadomienia()" title="Powiadomienia i sprawy">🔔<span class="trm-dzwonek-licz" id="trm-dzwonek-licz" hidden>0</span></button>` : ''}
-        ${operacyjna() ? `<button class="trm-btn primary" onclick="TRM.nowaWizyta()">+ Nowa wizyta</button>` : ''}
+        ${operacyjna() ? `<button class="trm-btn fix" onclick="TRM.blokadaNowa()" title="Zarezerwuj czas albo gabinet na szkolenie, rozmowę, serwis">⛔ Rezerwacja techniczna</button><button class="trm-btn primary" onclick="TRM.nowaWizyta()">+ Nowa wizyta</button>` : ''}
       </div>
       <div class="trm-top2">
         <div class="trm-nav">
@@ -376,7 +376,17 @@
     let s = '';
     for (let m = zak.od; m <= zak.do; m += 30) s += `<div class="hline ${m % 60 ? 'half' : ''}" style="top:${(m - zak.od) * PX}px"></div>`;
     (dostepnosc || []).forEach(p => { const a = Math.max(zak.od, minDnia(p.od)), b = Math.min(zak.do, minDnia(p.do) || 1440); if (b > a) s += `<div class="dost" style="top:${(a - zak.od) * PX}px;height:${(b - a) * PX}px"></div>`; });
-    (bloki || []).forEach(b => { const a = Math.max(zak.od, minDnia(b.od)), c = Math.min(zak.do, minDnia(b.do) || 1440); if (c > a) s += `<div class="blok" style="top:${(a - zak.od) * PX}px;height:${(c - a) * PX}px">${esc(b.opis || 'Niedostępne')}</div>`; });
+    // Blokada w siatce: rezerwację techniczną recepcja zdejmuje jednym kliknięciem; urlop
+    // i choroba zostają sprawą managera (podpowiedź tłumaczy, dlaczego klik nic nie robi).
+    (bloki || []).forEach(bl => {
+      const a = Math.max(zak.od, minDnia(bl.od)), c = Math.min(zak.do, minDnia(bl.do) || 1440);
+      if (c <= a) return;
+      const techniczna = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(bl.typ);
+      const mozeZdjac = operacyjna() && techniczna && bl.id;
+      const klik = mozeZdjac ? `onclick="event.stopPropagation(); TRM.blokadaUsun(${bl.id}, '${esc(String(bl.opis || '')).replace(/'/g, "\\'")}')" ` : '';
+      const tytul = techniczna ? (mozeZdjac ? 'Rezerwacja techniczna — kliknij, żeby zdjąć' : 'Rezerwacja techniczna') : 'Nieobecność — zmienia manager w Ustawieniach';
+      s += `<div class="blok" title="${esc(tytul)}" ${klik}style="${mozeZdjac ? 'cursor:pointer;' : ''}top:${(a - zak.od) * PX}px;height:${(c - a) * PX}px">${esc(bl.opis || 'Niedostępne')}</div>`;
+    });
     for (let m = zak.od; m <= zak.do; m += 30) s += `<div class="hline ${m % 60 ? 'half' : ''}" style="top:${(m - zak.od) * PX}px"></div>`;
     rezerwacje.forEach(r => {
       // anulowane domyślnie nie zajmują siatki (05: filtr „Pokaż anulowane”); agenda pokazuje je zawsze
@@ -420,7 +430,66 @@
     const zak = TRM._zak || { od: 480 };
     const siatka = (TRM.dane.ustawienia.siatka_min || 15);
     let m = zak.od + Math.floor((ev.clientY - rect.top) / PX); m = Math.floor(m / siatka) * siatka;
-    TRM.nowaWizyta({ start: `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`, pracownik });
+    const start = `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+    // Alt/Ctrl + klik = rezerwacja techniczna zamiast wizyty (ten sam gest, inny zamiar)
+    if (ev.altKey || ev.ctrlKey) return TRM.blokadaNowa({ start, osoba: pracownik });
+    TRM.nowaWizyta({ start, pracownik });
+  };
+
+  // ── REZERWACJA TECHNICZNA (19.10.2026) ───────────────────────────────────────────────────────
+  // „Ola chciałaby zarezerwować gabinet na szkolenie albo rozmowę kwalifikacyjną." Blokady
+  // istniały w Ustawieniach u managera; tutaj to samo z poziomu kalendarza, dla recepcji,
+  // bez spraw kadrowych (urlop i choroba zostają w Ustawieniach).
+  const POWODY_BLOKADY = [['szkolenie', 'Szkolenie'], ['przerwa', 'Rozmowa / spotkanie'], ['serwis', 'Serwis, naprawa'], ['inne', 'Inne']];
+  TRM.blokadaNowa = (o) => {
+    if (!operacyjna()) return;
+    const start = (o && o.start) || `${TRM.data} 09:00`;
+    const koniec = S_dodajMin(start, 60);
+    TRM.blok = { od: start, do: koniec, typ: 'szkolenie', osoba: (o && o.osoba) || '', zasob_id: (o && o.zasob_id) || '', opis: '', dotkniete: null };
+    renderBlokada();
+  };
+  const S_dodajMin = (dt, min) => { const [d, g] = String(dt).split(' '); const [h, m] = g.split(':').map(Number); const t = h * 60 + m + min; return `${d} ${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`; };
+  function renderBlokada() {
+    const b = TRM.blok; if (!b) return;
+    const zas = (TRM.dane.zasoby || []).filter(z => !z.archiwalny);
+    panelOtworz(naglowekPanelu('Rezerwacja techniczna', ladnaData(b.od.slice(0, 10))) + `
+      <div class="trm-card">
+        <div class="trm-note info small">Czas zarezerwowany na coś innego niż wizyta: szkolenie, rozmowa kwalifikacyjna, serwis urządzenia. W grafiku pojawi się blokada, więc nikt nie umówi tu klientki.</div>
+        <div class="trm-grid2" style="margin-top:10px">
+          <div class="trm-field"><label>Od</label><input type="datetime-local" value="${esc(b.od.replace(' ', 'T'))}" onchange="TRM.blokadaPole('od', this.value)"></div>
+          <div class="trm-field"><label>Do</label><input type="datetime-local" value="${esc(b.do.replace(' ', 'T'))}" onchange="TRM.blokadaPole('do', this.value)"></div>
+        </div>
+        <div class="trm-grid2">
+          <div class="trm-field"><label>Powód</label><select onchange="TRM.blokadaPole('typ', this.value)">${POWODY_BLOKADY.map(([k, n]) => `<option value="${k}" ${b.typ === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+          <div class="trm-field"><label>Osoba (opcjonalnie)</label><select onchange="TRM.blokadaPole('osoba', this.value)"><option value="">— nikogo nie zajmuje —</option>${(TRM.dane.pracownicy || []).map(p => `<option ${b.osoba === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
+        </div>
+        <div class="trm-field"><label>Gabinet lub urządzenie (opcjonalnie)</label>
+          <select onchange="TRM.blokadaPole('zasob_id', this.value)"><option value="">— żadnego —</option>${zas.map(z => `<option value="${z.id}" ${String(b.zasob_id) === String(z.id) ? 'selected' : ''}>${esc(z.nazwa)}${z.typ === 'urzadzenie' ? ' (urządzenie)' : ''}</option>`).join('')}</select></div>
+        <div class="trm-field"><label>Czego dotyczy</label><input value="${esc(b.opis)}" placeholder="np. szkolenie Vagheggi, rozmowa kwalifikacyjna" onchange="TRM.blokadaPole('opis', this.value)"></div>
+        <div class="trm-pomoc">${b.osoba ? 'Zobaczysz to w kolumnie osoby w widoku Dzień' : 'Bez wskazanej osoby rezerwacja pokaże się w widoku <b>Zasoby</b> — w grafiku dnia nie zajmie niczyjej kolumny'}${b.zasob_id ? ', a gabinet będzie zajęty dla całego zespołu' : ''}.</div>
+        ${b.dotkniete && b.dotkniete.length ? `<div class="trm-note warn small"><b>W tym czasie ${b.dotkniete.length === 1 ? 'jest już wizyta' : 'są już wizyty'}:</b>
+          ${b.dotkniete.slice(0, 6).map(x => `<div>${esc((x.start || '').slice(11, 16))}–${esc((x.koniec || '').slice(11, 16))} · ${esc(x.klient_nazwa || '')} · ${esc(x.pracownik || '')}</div>`).join('')}
+          Rezerwacja ich nie odwołuje — przestaw je albo zapisz świadomie.</div>` : ''}
+        <div class="trm-row" style="margin-top:10px">
+          <button class="trm-btn primary" onclick="TRM.blokadaZapisz()">${b.dotkniete && b.dotkniete.length ? 'Zapisz mimo wizyt' : 'Zarezerwuj czas'}</button>
+          <button class="trm-btn fix" onclick="TRM.panelZamknij()">Anuluj</button>
+        </div>
+      </div>`);
+  }
+  TRM.blokadaPole = (pole, wartosc) => { if (!TRM.blok) return; TRM.blok[pole] = String(wartosc || '').replace('T', ' ').slice(0, pole === 'opis' ? 255 : 16); if (pole === 'od' || pole === 'do' || pole === 'osoba' || pole === 'zasob_id') TRM.blok.dotkniete = null; };
+  TRM.blokadaZapisz = async () => {
+    const b = TRM.blok; if (!b) return;
+    const d = await api('trm_blokada_zapisz', { od: b.od, do: b.do, typ: b.typ, osoba: b.osoba, zasob_id: b.zasob_id, opis: b.opis, wymus: !!(b.dotkniete && b.dotkniete.length) });
+    if (d.status !== 'success') return toast('error', 'Nie zarezerwowano', d.message);
+    if (d.wymaga_decyzji) { b.dotkniete = d.dotkniete || []; return renderBlokada(); }
+    toast('success', 'Czas zarezerwowany', b.opis);
+    TRM.blok = null; TRM.panelZamknij(); odswiez({ cicho: true });
+  };
+  TRM.blokadaUsun = async (id, opis) => {
+    if (!window.confirm(`Zdjąć rezerwację „${opis || ''}”? Czas wróci jako wolny.`)) return;
+    const d = await api('trm_blokada_usun', { id });
+    if (d.status !== 'success') return toast('error', 'Nie zdjęto rezerwacji', d.message);
+    toast('success', 'Rezerwacja zdjęta'); odswiez({ cicho: true });
   };
 
   // ── CHMURKA: krótki podgląd po najechaniu/kliknięciu karty, bez otwierania pełnego panelu ──
@@ -953,7 +1022,7 @@
     // data = kontekst kalendarza, godzinę wybiera użytkownik (slot lub pole). Z pustej komórki siatki godzina jest wskazana.
     const start = o.start || `${TRM.data} 00:00`;
     // dataReczna: użytkownik świadomie wpisał datę w formularzu — wtedy nawigacja kalendarza jej nie nadpisuje (raport T01)
-    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], nowyKlient: false, pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, godzina: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
+    TRM.nowa = { idem: uuid(), klient: null, fraza: '', wyniki: [], pozycje: [], start, kanal: 'recepcja', notatka: '', wynik: null, zapis: false, filtrUsl: '', szybka: !!o.start, godzina: !!o.start, krok: 1, dataReczna: !!o.start, dostep: null, sloty: null, req: 0, prefPrac: o.pracownik || '' };
     if (o.pracownik) TRM.nowa.domyslny = o.pracownik;
     TRM.panel = 'nowa';
     renderNowa();
@@ -965,12 +1034,9 @@
   function sekcjaKlientHtml(n) {
     return `<div class="trm-field"><label>Klientka</label>
       ${n.klient ? `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`
-      : n.nowyKlient ? `<div class="trm-wybrana"><div class="trm-grid2"><div><label>Imię i nazwisko</label><input id="trm-nk-nazwa" value="${esc(n.nkNazwa || '')}"></div><div><label>Telefon</label><input id="trm-nk-tel" value="${esc(n.nkTel || '')}" inputmode="tel"></div></div>
-          <div class="trm-row" style="margin-top:8px"><button class="trm-btn primary sm fix" onclick="TRM.nowaDodajKlienta()">Dodaj do kartoteki</button><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=false;TRM.renderNowa()">Wróć do szukania</button></div>
-          <div class="muted small" style="margin-top:6px">Powstanie jeden profil w kartotece Klientów (tak jak przez „Dodaj klienta”). Zgody i dokumenty uzupełnia się w profilu.</div></div>`
       : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
          <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${klientWynikiHtml(n.wyniki)}</div>
-         <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.nowa.nowyKlient=true;TRM.nowa.nkNazwa=TRM.nowa.fraza;TRM.renderNowa()">+ Dodaj nową klientkę</button><span class="muted small">Samo nazwisko nie łączy historii — sprawdź podobny profil po telefonie.</span></div>`}
+         <div class="trm-row" style="margin-top:6px"><span class="muted small">Klientki zakłada się w module <b>Klienci</b> — tam są zgody, dokumenty i kontrola duplikatów. Tutaj tylko wyszukujesz istniejący profil.</span></div>`}
     </div>`;
   }
   // T02/T03: zakupy klientki na pierwszym planie kroku „Zabieg”; cennik jako „pojedynczy zabieg” (albo tylko informacja o Sprzedaży przy włączonej kontroli)
@@ -1122,17 +1188,6 @@
   let szukajT = null;
   TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = klientWynikiHtml(TRM.nowa.wyniki); } }, 250); };
   TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
-  TRM.nowaDodajKlienta = async () => {
-    const nazwa = (el('trm-nk-nazwa').value || '').trim(), tel = (el('trm-nk-tel').value || '').trim();
-    if (nazwa.length < 3) return toast('warning', 'Podaj imię i nazwisko');
-    const d = await api('add_client', { tryb: 'FULL', klient: nazwa, telefon: tel, zgoda_regulamin: false, data_podpisu: null });
-    if (d.status !== 'success') return toast('error', 'Nie dodano klientki', d.message);
-    const s = await api('trm_szukaj_klienta', { fraza: tel || nazwa });
-    const k = (s.klienci || []).find(x => x.nazwa === nazwa) || (s.klienci || [])[0];
-    if (typeof zaladujListeKlientow === 'function') zaladujListeKlientow(true);
-    TRM.nowa.nowyKlient = false; TRM.nowa.klient = k || null; TRM.nowa.zakupy = null; nowaResetDostep(TRM.nowa); renderNowa(); if (k) nowaLadujZakupy(); if (nowaNaTerminie(TRM.nowa)) { nowaLadujSloty(); TRM.nowaZmiana(); }
-    toast('success', 'Klientka dodana', k ? 'Profil powiązany z wizytą.' : 'Wyszukaj ją i wybierz.');
-  };
   // czy krok „Termin” jest aktualnie widoczny (tryb szybki pokazuje wszystko na raz)
   const nowaNaTerminie = (n) => n && (n.szybka || n.krok === 3);
   const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; };

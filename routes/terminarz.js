@@ -1111,6 +1111,52 @@ module.exports = (db, opts = {}) => {
         return { status: 'success' };
       }
 
+      // ───────── REZERWACJA TECHNICZNA (19.10.2026) ─────────────────────────────────────────
+      // Prośba właścicielki: „chciałabym zarezerwować gabinet na szkolenie albo rozmowę
+      // kwalifikacyjną". Tabela blokad (Term_Nieobecnosci) obsługiwała to od początku, ale
+      // zakładać je mógł wyłącznie manager i wyłącznie z Ustawień — recepcja, która widzi
+      // wolne okno w grafiku, nie miała jak. Tu jest to samo, tylko z poziomu kalendarza,
+      // dla ról operacyjnych i z listą powodów bez spraw kadrowych (urlop i choroba
+      // zostają w Ustawieniach, u managera).
+      case 'trm_blokada_zapisz': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const od = sprawdzDt(d.od, 'od'), do_ = sprawdzDt(d.do, 'do');
+        if (do_ <= od) throw new BladUzytkownika('Koniec rezerwacji musi być po jej początku.');
+        if (S.naMin(do_) - S.naMin(od) > 14 * 1440) throw new BladUzytkownika('Rezerwacja techniczna może trwać najwyżej 14 dni. Dłuższe przerwy zakłada manager w Ustawieniach.');
+        const typ = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(d.typ) ? d.typ : 'inne';
+        const prac = d.osoba ? String(d.osoba).trim() : null;
+        const zasob = d.zasob_id ? Number(d.zasob_id) : null;
+        if (!prac && !zasob) throw new BladUzytkownika('Wskaż, czyj czas albo który gabinet rezerwujesz.');
+        if (prac && !(await pracownicy(tenant)).includes(prac)) throw new BladUzytkownika('Nieznana osoba.');
+        if (zasob && !(await zasoby(tenant, true)).some(z => Number(z.id) === zasob)) throw new BladUzytkownika('Nieznany gabinet albo urządzenie.');
+        const opis = String(d.opis || '').trim().slice(0, 255);
+        if (!opis) throw new BladUzytkownika('Napisz jednym zdaniem, czego dotyczy rezerwacja — zobaczy to cała zmiana.');
+
+        const dotk = await wizytyDotkniete(tenant, prac, zasob, od.slice(0, 10), do_.slice(0, 10), (p) => !S.nakladaja(S.naMin(p.start), S.naMin(p.koniec), S.naMin(od), S.naMin(do_)));
+        if (d.podglad) return { status: 'success', podglad: true, dotkniete: dotk };
+        if (dotk.length && !d.wymus) {
+          return { status: 'success', wymaga_decyzji: true, dotkniete: dotk,
+            message: `W tym czasie ${dotk.length === 1 ? 'jest już wizyta' : 'są już ' + dotk.length + ' wizyty'}. Rezerwacja ich nie odwołuje — najpierw przestaw albo odwołaj wizyty, albo zapisz rezerwację świadomie.` };
+        }
+        const res_ = await q(`INSERT INTO Term_Nieobecnosci (tenant_id, pracownik, zasob_id, od, do_, typ, opis, utworzyl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tenant, prac, zasob, od, do_, typ, opis, imie || null]);
+        const co = [prac, zasob ? (await zasoby(tenant, true)).find(z => Number(z.id) === zasob).nazwa : null].filter(Boolean).join(' + ');
+        zapiszLog(tenant, 'TERMINARZ: REZERWACJA TECHNICZNA', imie, `${co} ${od.slice(0, 16)}–${do_.slice(11, 16)} (${typ}): ${opis}`);
+        return { status: 'success', id: res_.insertId, dotkniete: dotk };
+      }
+      case 'trm_blokada_usun': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const row = (await q(`SELECT id, typ, opis FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
+        if (!row) throw new BladUzytkownika('Nie znaleziono rezerwacji.');
+        // recepcja zdejmuje tylko rezerwacje techniczne; urlop i choroba to decyzja managera
+        if (!['szkolenie', 'przerwa', 'serwis', 'inne'].includes(row.typ) && !ROLE_MANAGER_PLUS.has(r)) {
+          throw new BladUzytkownika('Urlop i chorobę zdejmuje manager w Ustawieniach.');
+        }
+        await q(`DELETE FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]);
+        zapiszLog(tenant, 'TERMINARZ: REZERWACJA TECHNICZNA', imie, `zdjęto: ${row.opis || row.typ}`);
+        return { status: 'success' };
+      }
+
       // ───────── odczyt ─────────
       case 'trm_dzien': {
         const data = sprawdzData(d.data, 'data');
@@ -2002,4 +2048,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
