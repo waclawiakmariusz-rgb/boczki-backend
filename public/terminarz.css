@@ -636,3 +636,13 @@ body.dark-mode .trm .trm-pref-znak { background:#22332f; border-color:#36514a; }
 body.dark-mode .trm .trm-karta .u { color:#d2c5bd; }
 body.dark-mode .trm .trm-karta .zn span { background:rgba(255,255,255,.14); color:#f0e7e1; }
 body.dark-mode .trm .trm-karta.anul { background:#2b2522; }
+/* Poprawka po przeklikaniu (19.10.2026): w ciemnym motywie świeciły jeszcze trzy rzeczy
+   zbudowane z jasnych pasteli — licznik przy dzwonku i awatary osób. Na jasnym tle są
+   delikatne, na ciemnym stają się najjaśniejszym punktem ekranu. Ściemniamy tła,
+   rozjaśniamy litery — ten sam kod kolorystyczny, tylko odwrócony. */
+body.dark-mode .trm .trm-dzwonek-licz { background:#7d5718; color:#ffe6bd; }
+body.dark-mode .trm .trm-dzwonek-licz.pilne { background:#9c3341; color:#ffd7dd; }
+body.dark-mode .trm .trm-awatar { background:#4a2a35; color:#f0a9c0; }
+body.dark-mode .trm .trm-awatar.mint { background:#23402f; color:#8ed4b7; }
+body.dark-mode .trm .trm-awatar.gold { background:#453515; color:#e6c57c; }
+body.dark-mode .trm .trm-awatar.blue { background:#233648; color:#9cc6e8; }

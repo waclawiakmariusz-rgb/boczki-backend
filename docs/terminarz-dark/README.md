@@ -38,6 +38,12 @@ Dodatkowo pomiar kontrastu (WCAG) wyliczonych kolorów w przeglądarce:
 | karta klientki i usługi w kreatorze | 13,1:1 |
 | liczniki dnia | 8,3:1 |
 
+## Poprawka po przeklikaniu
+
+Właściciel sprawdził na żywo: przy „Pilne teraz” zostały jeszcze **jasne elementy mocno kontrastujące z resztą** — licznik przy dzwonku (jasnoróżowe kółko z liczbą) i awatary osób (pastelowe kółka z inicjałami). Na jasnym tle są delikatne, na ciemnym stawały się najjaśniejszym punktem ekranu. Ściemniliśmy tła i rozjaśniliśmy litery — kod kolorystyczny osób zostaje ten sam, tylko odwrócony.
+
+Po poprawce skan strony nie znajduje już w module żadnego tła jaśniejszego niż 170/255; zostają wyłącznie półprzezroczyste biele 14–16% (obramowania kart i znaczniki stanu), które z założenia mają być ledwie widoczne.
+
 ### Zrzuty
 
 | Plik | Co widać |
