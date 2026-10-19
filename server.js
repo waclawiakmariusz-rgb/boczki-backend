@@ -283,6 +283,9 @@ app.get(['/pomoc', '/pomoc/'], (req, res) => res.sendFile(path.join(__dirname, '
 app.get(['/pomoc-manager', '/pomoc-manager/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_manager.html')));
 // Przewodnik po Terminarzu (dodatek Estelio+, 2026-10-12) — Esti indeksuje go, gdy salon ma włączony dodatek
 app.get(['/pomoc-terminarz', '/pomoc-terminarz/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_terminarz.html')));
+// Przewodnik wdrozeniowy dla nas (19.10.2026): jak przebiega wprowadzenie nowego salonu —
+// od zakupu, przez kreator, po pierwsze kroki klienta. Linkowany z panelu admina, zakladka Pomoc.
+app.get(['/przewodnik-klienta', '/przewodnik-klienta/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'przewodnik-wdrozenie-klienta.html')));
 
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));

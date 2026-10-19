@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik wprowadzania nowego klienta</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#f4efe6;--cream2:#ede6d8;--dark:#1c1a18;
+  --rose:#b87080;--rose-dark:#a05e6e;--rose-light:#f3dfe3;
+  --gold:#c9a96e;--gold-light:#d9bc88;
+  --text-muted:#6b6459;--border:#ddd4c4;--white:#ffffff;
+  --green:#166534;--green-bg:#f0fdf4;--green-border:#bbf7d0;
+  --sidebar:270px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:#faf7f2;color:var(--dark);display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar);flex-shrink:0;background:var(--white);border-right:1.5px solid var(--border);
+  position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
+  padding:0 0 60px;z-index:100;
+}
+#sidebar::-webkit-scrollbar{width:4px}
+#sidebar::-webkit-scrollbar-thumb{background:var(--border)}
+.sb-top{padding:28px 24px 20px;border-bottom:1px solid var(--border)}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:600;color:var(--dark);letter-spacing:.02em}
+.sb-logo em{color:var(--rose);font-style:italic}
+.sb-tagline{font-size:.72rem;color:var(--text-muted);margin-top:3px}
+.sb-search{margin:14px 16px 0;position:relative}
+.sb-search input{
+  width:100%;background:var(--cream);border:1px solid var(--border);border-radius:8px;
+  padding:7px 12px 7px 30px;font-family:'DM Sans',sans-serif;
+  font-size:.8rem;color:var(--dark);outline:none;
+}
+.sb-search input::placeholder{color:#a89c8c}
+.sb-search::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#a89c8c;font-size:.9rem}
+.sb-nav{padding:8px 0}
+.sb-group-label{font-size:.64rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#a89c8c;padding:14px 24px 4px}
+.sb-link{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 24px;font-size:.82rem;color:var(--text-muted);
+  text-decoration:none;border-left:3px solid transparent;transition:all .15s;
+}
+.sb-link .sb-icon{font-size:.85rem;width:18px;text-align:center;flex-shrink:0}
+.sb-link:hover{color:var(--dark);background:var(--cream)}
+.sb-link.active{color:var(--rose-dark);border-left-color:var(--rose);background:var(--rose-light);font-weight:500}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar);flex:1;padding:0 0 100px;max-width:calc(100% - var(--sidebar))}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,#fdf7f8 0%,#f9efe4 100%);border-bottom:1.5px solid var(--border);padding:64px 64px 50px;position:relative;overflow:hidden}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none}
+.hb1{width:300px;height:300px;background:#f3dfe3;top:-80px;right:60px}
+.hb2{width:200px;height:200px;background:#fef3d0;bottom:-60px;right:300px}
+.hero .eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:16px;position:relative;z-index:1}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,4vw,3.2rem);font-weight:600;color:var(--dark);line-height:1.15;margin-bottom:16px;position:relative;z-index:1}
+.hero h1 em{font-style:italic;font-weight:400;color:var(--rose)}
+.hero p{font-size:.95rem;color:var(--text-muted);line-height:1.8;max-width:620px;position:relative;z-index:1}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;position:relative;z-index:1}
+.hero-chip{background:var(--white);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:.76rem;color:var(--text-muted)}
+
+/* ── CONTENT WRAPPER ── */
+.content{padding:0 64px}
+
+/* ── SECTION ── */
+.section{padding:56px 0;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px}
+.section h2{font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,2.5vw,2rem);font-weight:600;color:var(--dark);margin-bottom:14px;line-height:1.25}
+.section h2 em{font-style:italic;font-weight:400}
+.section > p{font-size:.93rem;color:var(--text-muted);line-height:1.85;margin-bottom:16px;max-width:700px}
+.section h3{font-size:1rem;font-weight:600;color:var(--dark);margin:28px 0 10px}
+.section ul.lista{margin:10px 0 16px 18px;font-size:.86rem;color:var(--text-muted);line-height:1.75;max-width:760px}
+.section ul.lista li{margin-bottom:5px}
+.section ul.lista strong{color:var(--dark)}
+
+/* ── MODULE HEADER ── */
+.mod-header{display:flex;align-items:flex-start;gap:18px;margin-bottom:22px}
+.mod-icon{width:52px;height:52px;border-radius:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.mod-icon.rose{background:var(--rose-light)}
+.mod-icon.gold{background:#fef3d0}
+.mod-icon.green{background:var(--green-bg)}
+.mod-icon.blue{background:#eff6ff}
+.mod-icon.purple{background:#f5f3ff}
+.mod-title h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.mod-title p{font-size:.85rem;color:var(--text-muted);line-height:1.6}
+
+/* ── CARDS ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.cards.col2{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.cards.col3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 8px 28px rgba(0,0,0,.07);transform:translateY(-2px)}
+.card-icon{font-size:1.1rem;margin-bottom:8px}
+.card h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:5px}
+.card p{font-size:.82rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── STEPS ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.step{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative}
+.step-num{width:28px;height:28px;border-radius:50%;background:var(--rose);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;margin-bottom:10px}
+.step h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.step p{font-size:.82rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── TWO-COL ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:18px 0}
+.two-col.uneven{grid-template-columns:1.2fr 1fr}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--white);border:1.5px solid var(--border);border-radius:18px;padding:28px}
+.info-box h3{font-size:.95rem;font-weight:600;color:var(--dark);margin:0 0 14px}
+.info-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:.85rem}
+.info-row:last-child{margin-bottom:0}
+.info-row .dot{width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0;margin-top:6px}
+.info-row p{color:var(--text-muted);line-height:1.6;margin:0}
+.info-row strong{color:var(--dark)}
+
+/* ── HIGHLIGHT ── */
+.highlight{background:var(--rose-light);border:1.5px solid #e8c9d0;border-radius:20px;padding:30px 34px;margin:22px 0;color:var(--dark);position:relative;overflow:hidden}
+.highlight-blob{display:none}
+.highlight h3{font-family:'Cormorant Garamond',serif;font-size:1.35rem;font-weight:600;margin:0 0 10px;color:var(--rose-dark)}
+.highlight p{font-size:.88rem;color:var(--dark);line-height:1.8}
+.highlight ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.highlight ul li{font-size:.85rem;color:var(--dark);padding-left:16px;position:relative;line-height:1.6}
+.highlight ul li::before{content:'✦';color:var(--rose);font-size:.65rem;position:absolute;left:0;top:3px}
+.highlight ul li strong{color:var(--rose-dark)}
+
+/* ── TABLE ── */
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:.85rem;background:var(--white)}
+.tbl th{text-align:left;padding:9px 14px;font-size:.71rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);background:var(--cream2);border-bottom:2px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--dark);line-height:1.55;vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#faf7f2}
+.tbl td:first-child{font-weight:600;color:var(--rose)}
+
+/* ── CALLOUT ── */
+.callout{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:.87rem;line-height:1.7}
+.callout.warn{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e}
+.callout.tip{background:var(--green-bg);border:1.5px solid var(--green-border);color:#166534}
+.callout.note{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1e40af}
+.callout.danger{background:#fef2f2;border:1.5px solid #fecaca;color:#991b1b}
+.callout strong{font-weight:700}
+.callout ul{margin:6px 0 0 18px}
+
+/* ── FLOW ── */
+.flow{position:relative;margin:18px 0;display:flex;flex-direction:column;gap:0}
+.flow-item{display:flex;gap:14px;align-items:flex-start}
+.flow-left{display:flex;flex-direction:column;align-items:center;align-self:stretch}
+.flow-num{width:30px;height:30px;border-radius:50%;background:var(--rose);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.flow-line{width:2px;flex:1;background:var(--border);margin:4px 0;min-height:16px}
+.flow-body{padding-bottom:16px}
+.flow-body strong{display:block;font-size:.88rem;font-weight:600;color:var(--dark);margin-bottom:2px}
+.flow-body span{font-size:.84rem;color:var(--text-muted);line-height:1.6}
+
+/* ── BADGE ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.71rem;font-weight:600;margin:1px;white-space:nowrap}
+.badge.rose{background:var(--rose-light);color:var(--rose-dark)}
+.badge.gold{background:#fef3d0;color:#a07030}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.gray{background:var(--cream2);color:var(--text-muted)}
+.badge.blue{background:#eff6ff;color:#1e40af}
+.badge.red{background:#fef2f2;color:#991b1b}
+.btn{display:inline-block;border:1px solid var(--border);background:var(--white);border-radius:7px;padding:1px 8px;font-size:.76rem;font-weight:500;color:var(--dark);white-space:nowrap}
+code{font-family:Consolas,'Courier New',monospace;font-size:.8em;background:var(--cream2);padding:1px 6px;border-radius:5px;color:var(--dark)}
+
+/* ── CHECKLIST ── */
+.check{background:var(--white);border:1.5px solid var(--border);border-radius:18px;padding:14px 22px;margin:18px 0}
+.check label{display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px dashed var(--border);cursor:pointer;font-size:.84rem;color:var(--text-muted);line-height:1.6}
+.check label:last-child{border-bottom:none}
+.check input{margin-top:4px;accent-color:var(--rose);transform:scale(1.15);flex-shrink:0}
+.check strong{color:var(--dark)}
+
+/* ── FOOTER NOTE ── */
+.foot{margin:40px 0 0;font-size:.74rem;color:var(--text-muted);line-height:1.7;border-top:1px solid var(--border);padding-top:14px}
+
+/* ── TOP BTN ── */
+#top-btn{position:fixed;bottom:28px;right:28px;width:42px;height:42px;border-radius:50%;background:var(--white);color:var(--rose-dark);border:1.5px solid var(--border);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;z-index:200}
+#top-btn.visible{opacity:1}
+
+@media(max-width:960px){
+  #sidebar{display:none}
+  #main{margin-left:0;max-width:100%}
+  .content{padding:0 24px}
+  .hero{padding:48px 24px 40px}
+  .two-col,.cards.col3{grid-template-columns:1fr}
+}
+@media print{
+  #sidebar,#top-btn{display:none}
+  #main{margin-left:0;max-width:100%}
+  .card,.step,.info-box,.callout,.tbl,.check{page-break-inside:avoid}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">✦ <em>Estelio</em></div>
+    <div class="sb-tagline">Przewodnik wprowadzania nowego klienta</div>
+    <div class="sb-search"><input type="text" placeholder="Szukaj..." id="searchInput" oninput="filterNav(this.value)"></div>
+  </div>
+  <div class="sb-nav" id="sbNav">
+    <div class="sb-group-label">Start</div>
+    <a class="sb-link" href="#mapa"><span class="sb-icon">🗺️</span>Mapa procesu i adresy</a>
+    <a class="sb-link" href="#przed"><span class="sb-icon">✅</span>Zanim zaprosisz klienta</a>
+
+    <div class="sb-group-label">Dwie drogi do salonu</div>
+    <a class="sb-link" href="#sciezka-a"><span class="sb-icon">🛒</span>Klient kupuje sam</a>
+    <a class="sb-link" href="#kreator"><span class="sb-icon">🧭</span>Kreator rejestracji</a>
+    <a class="sb-link" href="#sciezka-b"><span class="sb-icon">🤝</span>Ty zakładasz klienta</a>
+    <a class="sb-link" href="#trial"><span class="sb-icon">🎁</span>14 dni za darmo</a>
+    <a class="sb-link" href="#vouchery"><span class="sb-icon">🏷️</span>Vouchery i rabaty</a>
+
+    <div class="sb-group-label">Twój panel admina</div>
+    <a class="sb-link" href="#admin"><span class="sb-icon">👑</span>Zakładka po zakładce</a>
+    <a class="sb-link" href="#szczegoly"><span class="sb-icon">🔍</span>Szczegóły salonu</a>
+    <a class="sb-link" href="#zgloszenia"><span class="sb-icon">📋</span>Zgłoszenia i statusy</a>
+
+    <div class="sb-group-label">Życie klienta w systemie</div>
+    <a class="sb-link" href="#klient"><span class="sb-icon">🌸</span>Pierwsze kroki klienta</a>
+    <a class="sb-link" href="#billing"><span class="sb-icon">💳</span>Rozliczenia i faktury</a>
+    <a class="sb-link" href="#cykl"><span class="sb-icon">🔄</span>Cykl subskrypcji</a>
+
+    <div class="sb-group-label">Gdy coś nie gra</div>
+    <a class="sb-link" href="#problemy"><span class="sb-icon">🧯</span>Problemy i rozwiązania</a>
+    <a class="sb-link" href="#zasady"><span class="sb-icon">🔒</span>Zasady bezpieczeństwa</a>
+    <a class="sb-link" href="#test"><span class="sb-icon">🧪</span>Test ścieżki kodem 100AK</a>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main id="main">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-blob hb1"></div>
+  <div class="hero-blob hb2"></div>
+  <div class="eyebrow">Przewodnik dla administratora</div>
+  <h1>Nowy klient <em>w Estelio</em><br>od zamówienia do faktury</h1>
+  <p>Co się dzieje, kiedy ktoś kupuje Estelio, co robisz Ty, co widzi klient, gdzie szukać, gdy coś nie dojdzie. Krok po kroku, z nazwami przycisków, dokładnie tak, jak wygląda to w systemie w październiku 2026.</p>
+  <div class="hero-chips">
+    <span class="hero-chip">🛒 Zamówienie</span>
+    <span class="hero-chip">💳 Stripe</span>
+    <span class="hero-chip">🎁 14 dni za darmo</span>
+    <span class="hero-chip">📩 Link i maile</span>
+    <span class="hero-chip">🧭 Kreator</span>
+    <span class="hero-chip">👑 Panel admina</span>
+    <span class="hero-chip">🧾 Faktury</span>
+    <span class="hero-chip">🔄 Subskrypcja</span>
+    <span class="hero-chip">🧪 Test 100AK</span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ══════════════ MAPA ══════════════ -->
+<div class="section" id="mapa">
+  <div class="section-eyebrow">Start</div>
+  <h2>Mapa procesu <em>i adresy</em></h2>
+  <p>Cała droga klienta to osiem przystanków. Pięć z nich dzieje się samo, trzy zależą od klienta, a Ty wkraczasz tylko wtedy, gdy coś się zatrzyma. Zacznij od tego obrazka, do niego odsyłają wszystkie dalsze rozdziały.</p>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Zamówienie</h4><p>Klient wypełnia formularz na stronie <code>zamow.html</code>.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Płatność</h4><p>Stripe Checkout, karta. Dziś 0 zł, pierwsze 79 zł po 14 dniach za darmo.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Webhook</h4><p>Stripe daje znać serwerowi. Powstaje link, wychodzi mail.</p></div>
+    <div class="step"><div class="step-num">4</div><h4>Strona sukcesu</h4><p>Klient widzi, na jaki adres poszedł link.</p></div>
+    <div class="step"><div class="step-num">5</div><h4>Kreator</h4><p>Pięć kroków: salon, login, PIN-y, usługi, zapis.</p></div>
+    <div class="step"><div class="step-num">6</div><h4>Salon istnieje</h4><p>Licencja, konta pracowników, usługi. Mail powitalny.</p></div>
+    <div class="step"><div class="step-num">7</div><h4>Logowanie</h4><p>Login, hasło, wybór pracownika, PIN.</p></div>
+    <div class="step"><div class="step-num">8</div><h4>Rozliczenia</h4><p>Klient sam ogląda faktury i kartę na <code>billing.html</code>.</p></div>
+  </div>
+
+  <h3>Gdzie co jest</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Miejsce</th><th>Adres</th><th>Kto tego używa</th></tr>
+    <tr><td>Strona zamówienia</td><td><code>https://estelio.com.pl/zamow.html</code></td><td>Klient, z reklamy albo z Twojego linku</td></tr>
+    <tr><td>Strona po płatności</td><td><code>/platnosc-sukces.html?session_id=…</code></td><td>Klient, automatycznie po Stripe</td></tr>
+    <tr><td>Kreator rejestracji</td><td><code>/rejestracja.html?token=…</code></td><td>Klient, z linku w mailu</td></tr>
+    <tr><td>Logowanie do aplikacji</td><td><code>https://estelio.com.pl/zaloguj</code></td><td>Klient i jego pracownicy</td></tr>
+    <tr><td>Panel rozliczeniowy</td><td><code>https://estelio.com.pl/billing.html</code></td><td>Klient, tymi samymi danymi co do aplikacji</td></tr>
+    <tr><td>Twój panel admina</td><td><code>https://estelio.com.pl/admin.html</code></td><td>Tylko Ty</td></tr>
+    <tr><td>Stripe</td><td><code>dashboard.stripe.com</code></td><td>Ty: klienci, subskrypcje, zdarzenia webhooka</td></tr>
+    <tr><td>Fakturownia</td><td><code>estelio.fakturownia.pl</code></td><td>Ty: wszystkie faktury i korekty</td></tr>
+    <tr><td>Hostinger</td><td>panel hostingu</td><td>Ty: wdrożenia, zmienne środowiska, restart</td></tr>
+  </table></div>
+
+  <div class="highlight">
+    <div class="highlight-blob hl-b1"></div><div class="highlight-blob hl-b2"></div>
+    <h3>Jedna zasada, która tłumaczy prawie wszystko</h3>
+    <p>Stripe nie wie nic o Estelio poza jednym: po płatności wysyła webhook. To webhook tworzy link rejestracyjny, wysyła mail i wystawia fakturę. Dlatego gdy klient mówi „nic nie przyszło", pierwsze pytanie zawsze brzmi tak samo:</p>
+    <ul>
+      <li><strong>Czy webhook dotarł?</strong> Stripe → Developers → Events, zdarzenie <code>checkout.session.completed</code> z odpowiedzią 200.</li>
+      <li><strong>Jaki status ma zamówienie?</strong> Twój panel → zakładka Zgłoszenia. Status mówi, na którym kroku proces stanął.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════ PRZED ══════════════ -->
+<div class="section" id="przed">
+  <div class="section-eyebrow">Start</div>
+  <h2>Zanim zaprosisz <em>pierwszego klienta</em></h2>
+  <p>Ta lista zajmuje dziesięć minut. Przejdź ją raz przed pierwszym płacącym klientem i powtarzaj po każdej zmianie zmiennych środowiska na Hostingerze. Odhaczone pola zostają tylko w Twojej przeglądarce.</p>
+
+  <div class="check">
+    <label><input type="checkbox"><span><strong>Cennik odpowiada.</strong> Otwórz <code>https://estelio.com.pl/api/stripe/config</code>. Ma być <code>"aktywny":true</code>, cena 79 zł i <code>"trial_dni":14</code>.</span></label>
+    <label><input type="checkbox"><span><strong>Strony się otwierają.</strong> zamow.html, rejestracja.html, platnosc-sukces.html, billing.html, admin.html.</span></label>
+    <label><input type="checkbox"><span><strong>Stripe jest w trybie live.</strong> Klucze <code>sk_live_</code> na Hostingerze. Webhook wskazuje <code>/api/stripe/webhook</code> i ma włączone cztery zdarzenia: <code>checkout.session.completed</code>, <code>invoice.paid</code>, <code>invoice.payment_failed</code>, <code>customer.subscription.deleted</code>.</span></label>
+    <label><input type="checkbox"><span><strong>Mail wychodzi.</strong> Zakładka Linki → Generuj z Twoim adresem e-mail. Mail ma przyjść w minutę. Jeśli nie przychodzi, sprawdź zmienne SMTP na Hostingerze.</span></label>
+    <label><input type="checkbox"><span><strong>Fakturownia ma stawkę „zw".</strong> KSeF jest włączony, więc błędnej faktury nie poprawisz. Można ją tylko skorygować.</span></label>
+    <label><input type="checkbox"><span><strong>Voucher z reklamy jest aktywny</strong> i ma datę wygaśnięcia ustawioną na dzień po końcu promocji. Kod gaśnie o północy UTC, czyli około 2:00 w Polsce.</span></label>
+    <label><input type="checkbox"><span><strong>Twój adres do powiadomień</strong> (zmienna <code>ADMIN_EMAIL</code>) jest poprawny. Na niego przychodzą maile „💰 Nowy zakup", „🎉 Nowy salon zarejestrowany" i „⚠️ Nieudana płatność".</span></label>
+    <label><input type="checkbox"><span><strong>Hasło admina znasz tylko Ty.</strong> Nie zapisuj go w tym pliku ani w żadnym innym.</span></label>
+  </div>
+
+  <div class="callout warn"><strong>Zmienne środowiska na Hostingerze.</strong> Zawsze w formacie <code>KLUCZ=wartość</code>, bez apostrofów. Zmienna <code>UPLOADS_DIR</code> znikała już dwa razy. Gdy klient mówi, że „zniknęły dokumenty klientek", sprawdź ją pierwszą. Po każdej zmianie zmiennych aplikację trzeba zrestartować.</div>
+</div>
+
+<!-- ══════════════ ŚCIEŻKA A ══════════════ -->
+<div class="section" id="sciezka-a">
+  <div class="mod-header">
+    <div class="mod-icon rose">🛒</div>
+    <div class="mod-title">
+      <h2>Ścieżka A: klient kupuje sam</h2>
+      <p>Reklama, Instagram, polecenie. Klient robi wszystko sam, Ty dostajesz maile i patrzysz, czy proces idzie.</p>
+    </div>
+  </div>
+
+  <h3>Krok 1. Klient wypełnia zamówienie</h3>
+  <p>Na stronie zamówienia podaje imię, nazwę salonu, e-mail, telefon i miasto. Może dodać NIP, wtedy pojawia się pole „Nazwa firmy" do faktur, oraz kod rabatowy. Musi zaakceptować regulamin, politykę prywatności i umowę powierzenia danych. System zapisuje wersje dokumentów, datę, adres IP i przeglądarkę.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Co dzieje się w tle</h3>
+      <div class="info-row"><div class="dot"></div><p>W zakładce <strong>Zgłoszenia</strong> powstaje karta ze statusem <span class="badge gray">🆕 Nowe</span>.</p></div>
+      <div class="info-row"><div class="dot"></div><p>Porzucony koszyk też zostawia taką kartę. <strong>„Nowe" nie znaczy „zapłacone".</strong></p></div>
+      <div class="info-row"><div class="dot"></div><p>Voucher na tym etapie nie zużywa jeszcze limitu. Licznik rośnie dopiero po płatności.</p></div>
+    </div>
+    <div class="info-box">
+      <h3>E-mail klienta to klucz do wszystkiego</h3>
+      <div class="info-row"><div class="dot"></div><p>Ten adres trafia do Stripe, do Fakturowni i do licencji. Po nim dopasowywane są odnowienia.</p></div>
+      <div class="info-row"><div class="dot"></div><p>Literówka to kłopot na miesiące. Da się ją naprawić przyciskiem <span class="btn">✎ Popraw e-mail</span> w Zgłoszeniach, ale im wcześniej, tym lepiej.</p></div>
+    </div>
+  </div>
+
+  <h3>Krok 2. Płatność w Stripe</h3>
+  <p>Klient trafia do Stripe Checkout i płaci kartą. Bez kodu rabatowego dostaje domyślnie 14 dni okresu próbnego: karta jest zapisana od razu, a pierwsze obciążenie 79 zł następuje po 14 dniach. Z kodem rabatowym zamiast trialu jest rabat. Z kodem typu „okres próbny" trial trwa tyle dni, ile ustawiłeś w kodzie.</p>
+
+  <h3>Krok 3. Webhook, link i mail. Automatycznie, w kilka sekund</h3>
+  <div class="flow">
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Stripe wysyła zdarzenie checkout.session.completed</strong><span>Każde zdarzenie jest zapisywane raz. Powtórka, czy to retry Stripe, czy ręczne „resend", nic nie robi.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Zamówienie przechodzi na „Opłacone, mail w toku"</strong><span>Zmiana jest atomowa: drugie takie samo zdarzenie zobaczy, że status już nie jest „nowe", i się wycofa.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Voucher dostaje +1 do licznika użyć</strong><span>Dopiero tutaj, nie przy wypełnieniu formularza.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>Powstaje jednorazowy link rejestracyjny ważny 30 dni</strong><span>Przy dłuższym trialu z kodu link jest ważny trial + 7 dni.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">5</div><div class="flow-line"></div></div><div class="flow-body"><strong>Wychodzi mail „Twój link rejestracyjny — Estelio"</strong><span>Po udanej wysyłce status zmienia się na „Wysłano link". Gdy SMTP zawiedzie, zamówienie dostaje status „Opłacone, mail nie wysłany" i czerwoną kartę w Zgłoszeniach.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">6</div><div class="flow-line"></div></div><div class="flow-body"><strong>Fakturownia wystawia fakturę, jeśli kwota jest większa od zera</strong><span>PDF idzie do klienta mailem. Przy trialu za 0 zł faktury nie ma. Pierwsza wychodzi po pierwszym realnym obciążeniu.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">7</div></div><div class="flow-body"><strong>Ty dostajesz mail „💰 Nowy zakup"</strong><span>Z kwotą, voucherem i informacją, czy mail do klienta wyszedł.</span></div></div>
+  </div>
+
+  <h3>Krok 4. Strona po płatności</h3>
+  <p>Klient widzi „Płatność zakończona!" i cztery kroki do zrobienia. Strona sama pyta serwer o stan zamówienia i pokazuje zamaskowany adres, na który poszedł link, na przykład <code>a***@gmail.com</code>.</p>
+  <div class="callout tip"><strong>Strona sukcesu ma plan B.</strong> Jeśli webhook ze Stripe nie dotarł, strona sama dokańcza proces: tworzy link i wysyła mail. Gdy mail nie wyszedł, klient widzi czerwony komunikat z adresem <code>kontakt@estelio.com.pl</code>. Dlatego pierwsza rada dla klienta, który „nic nie dostał", to odświeżenie tej strony.</div>
+</div>
+
+<!-- ══════════════ KREATOR ══════════════ -->
+<div class="section" id="kreator">
+  <div class="mod-header">
+    <div class="mod-icon gold">🧭</div>
+    <div class="mod-title">
+      <h2>Kreator rejestracji salonu</h2>
+      <p>Klient klika link z maila i w 2–5 minut zakłada salon. Pola z zamówienia są wypełnione z góry.</p>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Dane salonu</h4><p>Nazwa, imię, adres, telefon. E-mail jest wzięty z zakupu i nie da się go tu podmienić. To celowe: odnowienia idą po nim.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Login i hasło</h4><p>Login 3–40 znaków: małe litery, cyfry, myślniki, sprawdzany na żywo, czy wolny. Hasło minimum 6 znaków. Hasła nigdy nie wysyłamy mailem.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Pracownicy i PIN-y</h4><p>Imię, 4-cyfrowy PIN, rola: Kosmetolog, Recepcja albo Manager. Co najmniej jeden Manager jest wymagany, bo to rola właściciela.</p></div>
+    <div class="step"><div class="step-num">4</div><h4>Usługi</h4><p>Wybór z katalogu branżowego (Twoja zakładka Predef. usługi) albo własne. Usługi z katalogu mają cenę 0 zł, klient uzupełni ją po zalogowaniu.</p></div>
+    <div class="step"><div class="step-num">5</div><h4>Podsumowanie i „Załóż salon"</h4><p>Wszystko zapisuje się w jednej transakcji: albo powstaje cały salon, albo nic, a link zostaje ważny. Ekran sukcesu pokazuje login i PIN-y.</p></div>
+  </div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Co powstaje po „Załóż salon"</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Licencja</strong> ze statusem <span class="badge green">aktywny</span>, ważnością +1 miesiąc i identyfikatorem salonu w postaci nazwa-xxxxxxxx.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Konta PIN</strong> pracowników, lista pracowników do sprzedaży, usługi.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Dane Stripe</strong> z zakupu (klient, subskrypcja) wpisane do licencji od razu.</p></div>
+      <div class="info-row"><div class="dot"></div><p>Link przechodzi na „wykorzystany". Kliknięty ponownie pokazuje: „Salon X jest już założony, zaloguj się".</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Jakie maile wychodzą</h3>
+      <div class="info-row"><div class="dot"></div><p>Do klienta: <strong>„Witaj w Estelio"</strong> z loginem. Bez hasła.</p></div>
+      <div class="info-row"><div class="dot"></div><p>Do Ciebie: <strong>„🎉 Nowy salon zarejestrowany"</strong>.</p></div>
+      <div class="info-row"><div class="dot"></div><p>Odpowiedź dla klienta pojawia się od razu, maile idą w tle. Nawet gdy mail się spóźni, salon już istnieje.</p></div>
+    </div>
+  </div>
+
+  <h3>Pierwsze logowanie</h3>
+  <p>Na stronie <code>/zaloguj</code> klient wpisuje login i hasło salonu, a potem wybiera pracownika i podaje PIN. Właściciel loguje się jako Manager. Aplikacja działa bez ponownego logowania przez 8 godzin od ostatniej aktywności. Potem pokazuje „Sesja wygasła" i wraca do ekranu logowania.</p>
+</div>
+
+<!-- ══════════════ ŚCIEŻKA B ══════════════ -->
+<div class="section" id="sciezka-b">
+  <div class="mod-header">
+    <div class="mod-icon green">🤝</div>
+    <div class="mod-title">
+      <h2>Ścieżka B: Ty zakładasz klienta</h2>
+      <p>Bez Stripe albo w zastępstwie. Trzy warianty do trzech różnych sytuacji.</p>
+    </div>
+  </div>
+
+  <div class="cards col3">
+    <div class="card"><div class="card-icon">🔗</div><h4>B1. Wyślij link rejestracyjny</h4><p>Klient sam wypełnia kreator. Dla płatności przelewem poza Stripe, dostępu gratis, testu, polecenia.</p></div>
+    <div class="card"><div class="card-icon">➕</div><h4>B2. Nowy salon</h4><p>Ty wypełniasz wszystko. Dla klienta, który nie chce klikać, migracji z innego systemu, salonu testowego.</p></div>
+    <div class="card"><div class="card-icon">🎬</div><h4>B3. Salon demonstracyjny</h4><p>Klon salonu demo do pokazów, nagrań i Twoich testów. Nigdy dla prawdziwych klientek.</p></div>
+  </div>
+
+  <h3>B1. Wyślij link rejestracyjny</h3>
+  <div class="flow">
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Panel admina → 🔗 Linki → „Wygeneruj link rejestracyjny"</strong><span>Wpisz notatkę (imię klienta), wybierz ważność: 3, 7, 14 albo 30 dni.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Opcjonalnie podaj e-mail klienta</strong><span>Wtedy mail z linkiem wychodzi od razu. Bez e-maila kopiujesz link i wysyłasz go sam.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div></div><div class="flow-body"><strong>Kliknij ➕ Generuj</strong><span>Link pojawia się na liście tokenów ze statusem „nowy". Klient przechodzi kreator jak w ścieżce A, z tą różnicą, że pole e-mail jest edytowalne.</span></div></div>
+  </div>
+  <div class="callout warn"><strong>Czym różni się taki salon od kupionego przez Stripe.</strong> Nie ma subskrypcji, więc nie odnowi się sam. Ważność licencji ustawiasz i pilnujesz ręcznie w Szczegółach salonu. Klient nie dostanie faktury automatycznie, wystawiasz ją w Fakturowni.</div>
+
+  <h3>B2. ➕ Nowy salon</h3>
+  <p>Zakładka Nowy salon prowadzi Cię przez te same kroki co kreator klienta: dane salonu (nazwa, miasto, telefon, e-mail), login i hasło z polem „Licencja ważna do", pracownicy z PIN-ami, usługi, zapis. Hasło i PIN-y przekazujesz klientowi sam, bezpiecznym kanałem, najlepiej telefonicznie. Nie mailem.</p>
+
+  <h3>B3. Salon demonstracyjny</h3>
+  <p>Zakładka 🎬 Demo → „Sklonuj salon demonstracyjny" tworzy salon <code>demo-estelio</code> z danymi testowymi i loginem <code>demo</code>. Używaj go do pokazów przed sprzedażą i do własnych prób nowych funkcji.</p>
+</div>
+
+<!-- ══════════════ TRIAL ══════════════ -->
+<div class="section" id="trial">
+  <div class="mod-header">
+    <div class="mod-icon rose">🎁</div>
+    <div class="mod-title">
+      <h2>14 dni za darmo: jak to działa naprawdę</h2>
+      <p>Strona główna (estelio.com.pl prowadzi na zamow.html) obiecuje: „Podpinasz kartę przez Stripe, ale przez 14 dni nic nie płacisz. Po 14 dniach 79 zł/mies., anuluj kiedy chcesz. Jeśli w trakcie 14 dni zrezygnujesz, nie pobierzemy ani grosza." Tu masz, co za tą obietnicą stoi.</p>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Dzień 0: zakup</h4><p>Klient podaje kartę w Stripe Checkout. Stripe zapisuje kartę, ale pobiera 0 zł. Karta jest wymagana, bo bez niej nie byłoby czym obciążyć po trialu.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Dzień 0: link i mail</h4><p>Webhook, link rejestracyjny i mail idą dokładnie tak samo jak przy płatnym zakupie. Faktury nie ma, bo kwota to 0 zł. Ty dostajesz „💰 Nowy zakup" z kwotą 0 zł.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Dni 1–14: pełny dostęp</h4><p>Klient rejestruje salon i pracuje bez ograniczeń. Licencja ma status aktywny. Żadna funkcja nie jest przycięta na czas trialu.</p></div>
+    <div class="step"><div class="step-num">4</div><h4>Dzień 14: pierwsze 79 zł</h4><p>Stripe sam obciąża kartę. Przychodzi zdarzenie invoice.paid, Fakturownia wystawia pierwszą fakturę, ważność licencji rośnie o miesiąc.</p></div>
+    <div class="step"><div class="step-num">5</div><h4>Rezygnacja w trakcie</h4><p>Klient anuluje w billing.html przez portal Stripe. Stripe nic nie pobiera, a po anulowaniu licencja przechodzi na nieaktywny.</p></div>
+    <div class="step"><div class="step-num">6</div><h4>Karta odrzucona w dniu 14</h4><p>Zwykła ścieżka nieudanej płatności: status opóźniony, 7 dni karencji, maile do klienta i do Ciebie. Opisane w rozdziale Cykl subskrypcji.</p></div>
+  </div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Kiedy trial jest, a kiedy go nie ma</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Zakup bez kodu:</strong> zawsze 14 dni za darmo. To domyślna zasada dla każdego nowego salonu.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Zakup z kodem rabatowym (% albo zł):</strong> trialu nie ma. Klient płaci od razu, ale ze zniżką. Rabat i trial się wykluczają.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Zakup z kodem „okres próbny":</strong> trial trwa tyle dni, ile wpisałeś w kodzie, zamiast 14. Dla partnera, który ma dostać np. 30 dni.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Ścieżka B (Ty zakładasz klienta):</strong> trialu nie ma, bo nie ma Stripe. Dostęp i ważność ustawiasz ręcznie.</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Gdzie to widzisz</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Stripe → Customers → klient → Subscription:</strong> status „Trialing" i data „Trial ends". To jedyne miejsce z dokładną datą końca trialu.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Twój panel → Zgłoszenia:</strong> karta zakupu wygląda jak każda inna, z kwotą 0 zł.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Twój panel → Salony → Szczegóły:</strong> licencja aktywna, „Ważna do" za miesiąc od rejestracji. Ta data nie pilnuje trialu, pilnuje go Stripe.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>billing.html u klienta:</strong> status aktywny i abonament 79 zł/mies. Panel nie pokazuje osobnej informacji o trialu.</p></div>
+    </div>
+  </div>
+
+  <div class="callout warn"><strong>Czego system dziś nie robi.</strong> Estelio samo nie przypomina klientowi, że za 3 dni skończy się trial i karta zostanie obciążona. To pozycja z audytu do zrobienia (baner w aplikacji na podstawie danych ze Stripe). Do tego czasu przypomnienie może wysyłać sam Stripe: w dashboardzie Stripe, w ustawieniach subskrypcji i e-maili, jest opcja wysyłki przypomnienia przed końcem okresu próbnego. Sprawdź, czy masz ją włączoną.</div>
+
+  <div class="callout note"><strong>Jak zmienić długość trialu.</strong> Liczba dni pochodzi ze zmiennej <code>STRIPE_TRIAL_DNI</code> na Hostingerze (bez apostrofów, potem restart). Brak zmiennej znaczy 14, a 0 wyłącza trial dla wszystkich. Formularz zamówienia sam odczyta nową wartość i zmieni nagłówek oraz przycisk, ale teksty reklamowe w górnej części strony głównej i w sekcji „Najczęstsze pytania" mają „14" wpisane na stałe. Przy zmianie liczby dni trzeba je poprawić ręcznie, inaczej strona obieca co innego, niż zrobi Stripe.</div>
+</div>
+
+<!-- ══════════════ VOUCHERY ══════════════ -->
+<div class="section" id="vouchery">
+  <div class="mod-header">
+    <div class="mod-icon gold">🏷️</div>
+    <div class="mod-title">
+      <h2>Vouchery i rabaty</h2>
+      <p>Trzy typy kodów. Klient wpisuje kod na stronie zamówienia, wielkość liter nie ma znaczenia.</p>
+    </div>
+  </div>
+
+  <div class="cards col3">
+    <div class="card"><div class="card-icon">％</div><h4>Procentowy</h4><p>Obniża 79 zł o X%. „Czas trwania": na zawsze albo przez X miesięcy. Miesiące liczy Stripe, nie aplikacja. Dla promocji grupowych, np. 5% dla absolwentek szkoły.</p></div>
+    <div class="card"><div class="card-icon">zł</div><h4>Kwotowy</h4><p>Obniża o X zł. <strong>Wartość to rabat, nie cena docelowa.</strong> Żeby klient płacił 29 zł, wpisz 50. Dla reklam typu „29 zł przez 3 miesiące".</p></div>
+    <div class="card"><div class="card-icon">🎁</div><h4>Okres próbny</h4><p>X dni za darmo z kartą zapisaną z góry, potem pełne 79 zł automatycznie. Zastępuje domyślne 14 dni. Dla partnera, który dostaje np. 30 dni.</p></div>
+  </div>
+
+  <div class="info-box">
+    <h3>Pola w formularzu vouchera</h3>
+    <div class="info-row"><div class="dot"></div><p><strong>Kod.</strong> To, co klient wpisuje na stronie zamówienia.</p></div>
+    <div class="info-row"><div class="dot"></div><p><strong>Limit użyć.</strong> Puste znaczy bez limitu. Licznik rośnie dopiero po opłaceniu, nie po wypełnieniu formularza.</p></div>
+    <div class="info-row"><div class="dot"></div><p><strong>Data wygaśnięcia.</strong> Kod przestaje działać o północy UTC w dniu z pola, czyli około 2:00 w Polsce. Ustaw dzień po końcu promocji.</p></div>
+    <div class="info-row"><div class="dot"></div><p><strong>Notatka wewnętrzna.</strong> Widzisz ją tylko Ty. Kod można wyłączyć i usunąć z listy.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Kod 100AK daje 100% rabatu.</strong> Służy do testowania pełnej ścieżki za 0 zł z prawdziwym Stripe (ostatni rozdział). Pilnuj, żeby nie trafił do reklamy.</div>
+</div>
+
+<!-- ══════════════ ADMIN ══════════════ -->
+<div class="section" id="admin">
+  <div class="mod-header">
+    <div class="mod-icon purple">👑</div>
+    <div class="mod-title">
+      <h2>Twój panel admina, zakładka po zakładce</h2>
+      <p>Adres <code>https://estelio.com.pl/admin.html</code>, logowanie hasłem admina. Dziesięć zakładek, cztery z nich używasz na co dzień.</p>
+    </div>
+  </div>
+
+  <div class="cards col2">
+    <div class="card"><div class="card-icon">📊</div><h4>Pulpit</h4><p>Liczby na dziś: salony aktywne i zablokowane, salony z subskrypcją Stripe, nowe w tym miesiącu, wygasające w 7 dni, wygasłe, nowe zgłoszenia. „Pokaż salony →" przy wygasających prowadzi do listy z filtrem.</p></div>
+    <div class="card"><div class="card-icon">🏪</div><h4>Salony</h4><p>Lista wszystkich licencji z filtrami statusu (aktywne, zablokowane) i ważności (wygasa w 7 dni, wygasła), sortowaniem i eksportem CSV. Każdy salon ma przycisk <span class="btn">🔍 Szczegóły</span>, opisany w następnym rozdziale.</p></div>
+    <div class="card"><div class="card-icon">📋</div><h4>Zgłoszenia</h4><p>Każde zamówienie ze strony zamówienia, ze statusem i przyciskami. Tu patrzysz, gdy klient mówi „zapłaciłam i nic nie przyszło". Statusy w osobnym rozdziale.</p></div>
+    <div class="card"><div class="card-icon">🔗</div><h4>Linki</h4><p>Generowanie linków rejestracyjnych poza Stripe (ścieżka B1) i lista wszystkich tokenów: nowy, wykorzystany (z identyfikatorem utworzonego salonu), wygasły. Niepotrzebny token możesz usunąć.</p></div>
+    <div class="card"><div class="card-icon">🏷️</div><h4>Vouchery</h4><p>Kody rabatowe z użyciami, limitem, datą wygaśnięcia i stanem. Opisane w rozdziale Vouchery i okres próbny.</p></div>
+    <div class="card"><div class="card-icon">💬</div><h4>Baza Wiedzy</h4><p>Wpisy, z których korzysta asystentka Esti w aplikacji klienta. Dodawaj to, o co klienci pytają najczęściej, a Esti odpowie za Ciebie.</p></div>
+    <div class="card"><div class="card-icon">💅</div><h4>Predef. usługi</h4><p>Katalog branżowy pokazywany w kroku 4 kreatora. Kategorie i pozycje bez cen. Im lepszy katalog, tym mniej klient wpisuje ręcznie.</p></div>
+    <div class="card"><div class="card-icon">➕</div><h4>Nowy salon, Demo, Migracja typów</h4><p>Nowy salon to ścieżka B2, Demo to klon salonu demonstracyjnego. Migracja typów to jednorazowe narzędzie dla starszych salonów, dla nowych klientów nieużywane.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ SZCZEGÓŁY ══════════════ -->
+<div class="section" id="szczegoly">
+  <div class="section-eyebrow">Twój panel admina</div>
+  <h2>Szczegóły salonu, <em>czyli konto klienta w Twoim adminie</em></h2>
+  <p>Salony → <span class="btn">🔍 Szczegóły</span> przy wybranym salonie. To jedno okno, w którym zarządzasz kontem klienta przez cały czas trwania umowy.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Co możesz zmienić</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Dane salonu:</strong> nazwa, miasto, telefon, e-mail, data ważności, status. Zapis przyciskiem <span class="btn">💾 Zapisz zmiany</span>.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Status:</strong> aktywny albo nieaktywny. Nieaktywny blokuje logowanie wszystkich pracowników salonu. Zalogowani pracują do końca sesji, najwyżej 8 godzin.</p></div>
+      <div class="info-row"><div class="dot"></div><p><span class="btn">🚀 Aktywuj salon</span> przywraca zablokowanemu salonowi dostęp.</p></div>
+      <div class="info-row"><div class="dot"></div><p><span class="btn">🔑 Nadaj nowe hasło dostępu</span> losuje nowe hasło logowania salonu i pokazuje je Tobie. Przekazujesz je telefonicznie. Klient może je potem zmienić przez „Nie pamiętam hasła".</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Co możesz podejrzeć</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Aktywność:</strong> ostatnie logowania i sprzedaże. „Brak aktywności, salon nie wystartował" to sygnał, żeby zadzwonić do klienta.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Eksporty CSV:</strong> Klienci, Sprzedaż z zadatkami, Zabiegi, Magazyn, Inne. Przydają się, gdy klient odchodzi i prosi o swoje dane albo przy migracji.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Powiązanie ze Stripe:</strong> identyfikatory klienta i subskrypcji. Nowe zakupy mają je od razu.</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Włączone dodatki</strong> z Moje Estelio+ (Klub, Foto przed/po, Link do płatności).</p></div>
+    </div>
+  </div>
+
+  <div class="callout warn"><strong>Dwie pułapki przy edycji.</strong> Zmiana e-maila w Szczegółach zmienia e-mail licencji, po którym idą odnowienia, ale nie zmienia e-maila klienta w Stripe. Do pełnej zmiany służy <span class="btn">✎ Popraw e-mail</span> w Zgłoszeniach. Druga pułapka: „Brak powiązania ze Stripe" u klienta, który kupował przed 12 czerwca 2026, to stary wyścig webhooka. Identyfikatory <code>cus_…</code> i <code>sub_…</code> uzupełniasz z dashboardu Stripe (Customer → Subscription).</div>
+</div>
+
+<!-- ══════════════ ZGŁOSZENIA ══════════════ -->
+<div class="section" id="zgloszenia">
+  <div class="section-eyebrow">Twój panel admina</div>
+  <h2>Zgłoszenia <em>i co znaczą statusy</em></h2>
+  <p>Każda karta w Zgłoszeniach to jedno zamówienie ze strony zamówienia. Status mówi, na którym kroku proces jest albo gdzie stanął. Przyciski przy karcie zmieniają się razem ze statusem.</p>
+
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Status</th><th>Co znaczy</th><th>Twoje przyciski</th></tr>
+    <tr><td><span class="badge gray">🆕 Nowe</span></td><td>Formularz wysłany, płatności nie było (porzucony koszyk) albo zgłoszenie z czasów bez Stripe.</td><td><span class="btn">📩 Wyślij link</span> generuje nowy link i mail, <span class="btn">✎ Popraw e-mail</span>, <span class="btn">✗ Odrzuć</span></td></tr>
+    <tr><td><span class="badge blue">💳 Opłacone, mail w toku</span></td><td>Płatność przeszła, system właśnie wysyła mail. Jeśli status trwa dłużej niż minutę, mail utknął.</td><td><span class="btn">🔁 Wyślij ponownie ten sam link</span></td></tr>
+    <tr><td><span class="badge blue">📩 Wysłano link</span></td><td>Mail z linkiem wyszedł. Klient ma 30 dni na rejestrację.</td><td><span class="btn">🔁 Wyślij ponownie ten sam link</span>, <span class="btn">✎ Popraw e-mail</span></td></tr>
+    <tr><td><span class="badge red">⚠️ Opłacone, mail nie wysłany</span></td><td>Klient zapłacił, SMTP zawiódł. Pilne, bo klient czeka.</td><td>Sprawdź SMTP, potem <span class="btn">🔁 Wyślij ponownie ten sam link</span>. Jeśli adres był zły, najpierw <span class="btn">✎ Popraw e-mail</span></td></tr>
+    <tr><td><span class="badge green">✅ Zrealizowane</span></td><td>Oznaczasz ręcznie, gdy salon powstał i wszystko gra.</td><td>brak</td></tr>
+    <tr><td><span class="badge gray">✗ Odrzucone</span></td><td>Spam, duplikat, rezygnacja.</td><td>brak</td></tr>
+  </table></div>
+
+  <div class="callout danger"><strong>„Wyślij ponownie ten sam link" to nie to samo co „Wyślij link".</strong> Przy opłaconym zamówieniu zawsze używaj tego samego linku. Nowy link z modalu „Wyślij link" nie jest powiązany z zakupem: rejestracja z niego nie dostanie danych Stripe ani wypełnionych pól, a stary link nadal będzie ważny.</div>
+</div>
+
+<!-- ══════════════ KLIENT ══════════════ -->
+<div class="section" id="klient">
+  <div class="mod-header">
+    <div class="mod-icon rose">🌸</div>
+    <div class="mod-title">
+      <h2>Pierwsze kroki klienta w jego aplikacji</h2>
+      <p>Co warto przejść z klientem przez telefon w pierwszym tygodniu. Kolejność ma znaczenie: najpierw ludzie i ceny, potem klientki i sprzedaż.</p>
+    </div>
+  </div>
+
+  <div class="flow">
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Logowanie na dwóch stanowiskach</strong><span>Login i hasło salonu są wspólne, PIN jest osobisty. Recepcja na komputerze, właściciel na telefonie. Oba działają równolegle.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Administracja → Dostępy</strong><span>Dodanie kolejnych pracowników i PIN-ów. Role: Praktykantka, Kosmetolog, Recepcja, Manager, Megaadmin. Tylko Manager i wyżej widzi Analizę i ustawienia.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Usługi i ceny</strong><span>Usługi z katalogu mają 0 zł i system pokaże managerowi ostrzeżenie. Ceny uzupełnia się w Administracji, ołówkiem przy pozycji.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>Pierwsza klientka i pierwsza sprzedaż</strong><span>Klienci → Nowy klient, potem Sprzedaż → wybór klientki z podpowiedzi (z telefonem i ID), zabieg, kwota, forma płatności.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">5</div><div class="flow-line"></div></div><div class="flow-body"><strong>Magazyn</strong><span>Nowy produkt, przyjęcie towaru z partią i terminem. „Zadania na dziś" pokażą braki.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">6</div><div class="flow-line"></div></div><div class="flow-body"><strong>Zadatki i karnety</strong><span>Wpłata zadatku w profilu klientki, karnety z datą ważności i przypomnieniami.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">7</div><div class="flow-line"></div></div><div class="flow-body"><strong>Dodatki z Moje Estelio+</strong><span>Klub lojalnościowy, Foto przed/po, Link do płatności. Klient włącza je sam w aplikacji, Ty widzisz je w Szczegółach salonu.</span></div></div>
+    <div class="flow-item"><div class="flow-left"><div class="flow-num">8</div></div><div class="flow-body"><strong>Przewodnik i Esti</strong><span>W aplikacji jest przewodnik po systemie i asystentka Esti. Esti odpowiada na podstawie Bazy Wiedzy z Twojego panelu.</span></div></div>
+  </div>
+
+  <div class="callout note"><strong>Numer wersji na dole Pulpitu.</strong> Gdy klient dzwoni z problemem, poproś o odczytanie napisu „Estelio · wersja …" na samym dole Pulpitu. Tak sprawdzisz, czy jego przeglądarka ma aktualną wersję po wdrożeniu. Jeśli nie, wystarczy Ctrl+F5.</div>
+</div>
+
+<!-- ══════════════ BILLING ══════════════ -->
+<div class="section" id="billing">
+  <div class="mod-header">
+    <div class="mod-icon blue">💳</div>
+    <div class="mod-title">
+      <h2>Rozliczenia i faktury</h2>
+      <p>Klient ma własny panel rozliczeniowy. Ty masz Stripe, Fakturownię i Szczegóły salonu. Nikt nie musi logować się na cudze konto.</p>
+    </div>
+  </div>
+
+  <h3>Co widzi klient na billing.html</h3>
+  <p>Loguje się tymi samymi danymi co do aplikacji: loginem i hasłem salonu, bez PIN-u.</p>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🟢</div><h4>Status i „Ważna do"</h4><p>Status subskrypcji i data z licencji. Data przedłuża się o miesiąc po każdej opłaconej fakturze.</p></div>
+    <div class="card"><div class="card-icon">💸</div><h4>Abonament</h4><p>Realna kwota ze Stripe po voucherze, na przykład „29 zł/mies. do 2026-12-31, potem 79 zł".</p></div>
+    <div class="card"><div class="card-icon">🔧</div><h4>Zarządzaj płatnością i subskrypcją</h4><p>Przekierowanie do Stripe Customer Portal. Klient sam zmienia kartę, pobiera paragony Stripe i może anulować subskrypcję.</p></div>
+    <div class="card"><div class="card-icon">🧾</div><h4>Historia faktur</h4><p>Faktury z Fakturowni z przyciskiem <span class="btn">Pobierz PDF</span>. Dobierane po nazwie nabywcy: nazwie firmy albo nazwie salonu z zakupu lub rejestracji.</p></div>
+  </div>
+  <div class="callout note"><strong>Klient z zaległością też się tu zaloguje.</strong> Przy statusie „opóźniony" lub „nieaktywny" logowanie do aplikacji jest blokowane z komunikatem i linkiem do billing.html, a reset hasła działa, żeby klient mógł uregulować płatność.</div>
+
+  <h3>Gdzie Ty podglądasz faktury i płatności klienta</h3>
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Potrzebujesz</th><th>Gdzie</th><th>Jak</th></tr>
+    <tr><td>Wszystkie faktury klienta, korekta, ponowna wysyłka PDF</td><td>Fakturownia</td><td>Przychody → Faktury, szukaj po nazwie nabywcy lub e-mailu. Korekta to zawsze nowa faktura korygująca, nigdy edycja.</td></tr>
+    <tr><td>Czy płatność przeszła, kiedy następne obciążenie, karta, anulowanie</td><td>Stripe</td><td>Customers → szukaj po e-mailu → Subscriptions. Zakładka Invoices w Stripe to dokumenty Stripe, nie Twoje faktury VAT.</td></tr>
+    <tr><td>Czy webhook dotarł, dlaczego mail nie wyszedł</td><td>Stripe → Developers → Events</td><td>Widzisz odpowiedź serwera. Odpowiedź z <code>"duplikat":true</code> znaczy, że zdarzenie przyszło drugi raz i zostało celowo pominięte.</td></tr>
+    <tr><td>Status licencji, ważność, powiązanie ze Stripe, nowe hasło</td><td>Twój panel → Salony → Szczegóły</td><td>Rozdział Szczegóły salonu.</td></tr>
+    <tr><td>To, co widzi klient</td><td>billing.html</td><td>Tylko klient ma tam dostęp swoimi danymi. Do podglądu służą Fakturownia i Stripe.</td></tr>
+  </table></div>
+
+  <div class="callout tip"><strong>Faktura za pierwszy miesiąc przy trialu.</strong> W dniu zakupu nie ma faktury, bo kwota to 0 zł. Pierwsza wychodzi automatycznie, gdy Stripe pobierze pierwsze 79 zł po 14 dniach (zdarzenie <code>invoice.paid</code>), i od razu idzie PDF-em do klienta.</div>
+</div>
+
+<!-- ══════════════ CYKL ══════════════ -->
+<div class="section" id="cykl">
+  <div class="mod-header">
+    <div class="mod-icon green">🔄</div>
+    <div class="mod-title">
+      <h2>Cykl subskrypcji i statusy licencji</h2>
+      <p>Po rejestracji system pracuje sam: odnawia, blokuje, odblokowuje. Ty tylko wiesz, co który status znaczy.</p>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step"><div class="step-num">1</div><h4>Zakup</h4><p>Trial 14 dni, karta zapisana.</p></div>
+    <div class="step"><div class="step-num">2</div><h4>Dzień 14</h4><p>Pierwsze 79 zł, faktura, ważność +1 miesiąc.</p></div>
+    <div class="step"><div class="step-num">3</div><h4>Co miesiąc</h4><p>Zdarzenie invoice.paid: +1 miesiąc i faktura.</p></div>
+    <div class="step"><div class="step-num">4</div><h4>Nieudana płatność</h4><p>Status opóźniony, 7 dni karencji, maile do klienta i do Ciebie.</p></div>
+    <div class="step"><div class="step-num">5</div><h4>Po karencji</h4><p>Logowanie zablokowane, billing.html otwarte.</p></div>
+    <div class="step"><div class="step-num">6</div><h4>Anulowanie</h4><p>Status nieaktywny z końcem opłaconego okresu.</p></div>
+  </div>
+
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Status</th><th>Co może klient</th><th>Jak powstaje</th><th>Jak wychodzi</th></tr>
+    <tr><td><span class="badge green">aktywny</span></td><td>Wszystko.</td><td>Rejestracja, Twoja aktywacja, opłacona faktura.</td><td>Nieudana płatność, anulowanie, Twoja blokada.</td></tr>
+    <tr><td><span class="badge gold">opóźniony</span></td><td>Przez 7 dni karencji wszystko, z czerwonym banerem „Opóźnienie w płatności" i linkiem do billing. Po karencji tylko billing.html.</td><td>Stripe: <code>invoice.payment_failed</code>. Klient dostaje mail „⚠️ Nieudana płatność", Ty też.</td><td>Udana płatność (Stripe ponawia sam) → aktywny. Albo Ty, w Szczegółach.</td></tr>
+    <tr><td><span class="badge red">nieaktywny</span></td><td>Tylko billing.html, reset hasła działa.</td><td>Stripe: <code>customer.subscription.deleted</code> (klient anulował) albo Ty w Szczegółach.</td><td><span class="btn">🚀 Aktywuj salon</span> w Szczegółach. Klient ze Stripe najpierw potrzebuje nowej subskrypcji: nowy zakup albo portal.</td></tr>
+  </table></div>
+
+  <div class="callout warn"><strong>Trzy szczegóły mechaniki, które warto znać.</strong>
+    <ul>
+      <li>Dostęp jest sprawdzany przy logowaniu, po statusie. Zalogowani pracują do końca sesji. Data „Ważna do" jest informacyjna i sama z siebie nie blokuje.</li>
+      <li>Odnowienia dopasowują licencję po e-mailu klienta w Stripe. Dwa salony na jeden adres to ryzyko odnowienia niewłaściwego. Zanim pozwolisz na drugi salon na ten sam e-mail, daj mi znać.</li>
+      <li>Restart aplikacji na Hostingerze wylogowuje wszystkich raz („Sesja wygasła"). Wdrażaj po godzinach pracy salonów.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════ PROBLEMY ══════════════ -->
+<div class="section" id="problemy">
+  <div class="mod-header">
+    <div class="mod-icon rose">🧯</div>
+    <div class="mod-title">
+      <h2>Problemy i co wtedy robić</h2>
+      <p>Każdy sygnał od klienta ma jedno miejsce, w które patrzysz najpierw, i jedno rozwiązanie. Szukaj po lewej kolumnie.</p>
+    </div>
+  </div>
+
+  <div class="tbl-wrap"><table class="tbl">
+    <tr><th>Sygnał</th><th>Najpierw sprawdź</th><th>Rozwiązanie</th></tr>
+    <tr><td>„Zapłaciłam i nic nie przyszło"</td><td>Zgłoszenia: status karty. Stripe → Events: czy <code>checkout.session.completed</code> ma odpowiedź 200.</td><td>Status „mail nie wysłany": napraw SMTP i <span class="btn">🔁 Wyślij ponownie ten sam link</span>. Status „nowe" mimo płatności: klient odświeża stronę sukcesu (dokończy proces) albo Ty w Stripe → Events robisz resend zdarzenia. Zawsze: „sprawdź Spam".</td></tr>
+    <tr><td>Literówka w e-mailu klienta</td><td>Zgłoszenia → karta klienta</td><td><span class="btn">✎ Popraw e-mail</span> poprawia zamówienie, klienta w Stripe i licencję, jeśli salon już jest. Potem <span class="btn">🔁 Wyślij ponownie ten sam link</span>.</td></tr>
+    <tr><td>„Link wygasł"</td><td>Linki: token ma 30 dni od zakupu</td><td>Zgłoszenia → <span class="btn">📩 Wyślij link</span> (nowy link, bez danych Stripe) albo Linki → Generuj z notatką. Po rejestracji uzupełnij powiązanie ze Stripe z dashboardu.</td></tr>
+    <tr><td>„Ten link został już wykorzystany"</td><td>Linki: identyfikator utworzonego salonu</td><td>Salon istnieje. Klient loguje się na /zaloguj. Hasło przez „Nie pamiętam hasła" albo Ty: <span class="btn">🔑 Nadaj nowe hasło dostępu</span>.</td></tr>
+    <tr><td>Klient nie pamięta hasła</td><td>Czy e-mail w licencji jest poprawny</td><td>Klient: „Nie pamiętam hasła" na ekranie logowania, link ważny godzinę. Ty: Szczegóły → nowe hasło, przekazane telefonicznie.</td></tr>
+    <tr><td>Pracownik nie pamięta PIN-u</td><td>nic</td><td>Właściciel w aplikacji: Administracja → Dostępy → edycja PIN-u. Ty nie musisz nic robić.</td></tr>
+    <tr><td>„Sesja wygasła" u wszystkich naraz</td><td>Czy był restart lub wdrożenie</td><td>Normalne po wdrożeniu. Jeśli bez wdrożenia i się powtarza: zgłoś mi. Wyłącznik awaryjny to zmienna <code>ENFORCE_SESSION_POST=false</code> na Hostingerze.</td></tr>
+    <tr><td>Nieudana płatność klienta</td><td>Stripe → Customer → Subscription</td><td>Przez 7 dni nic nie rób: Stripe ponawia, klient dostał mail i widzi baner. Po karencji klient reguluje w billing.html (portal → nowa karta). Licencja wraca sama przy udanej płatności.</td></tr>
+    <tr><td>Klient chce anulować</td><td>nic</td><td>billing.html → portal → anuluj. Status przejdzie na nieaktywny z końcem okresu. Chce wrócić: nowy zakup albo Ty aktywujesz ręcznie i pilnujesz ważności.</td></tr>
+    <tr><td>Dwie faktury za jedno zdarzenie</td><td>Stripe → Events</td><td>Od 9 października 2026 nie powinno się zdarzyć, bo zdarzenia są zapisywane raz. Jeśli jednak: korekta w Fakturowni.</td></tr>
+    <tr><td>Chcę celowo powtórzyć zdarzenie Stripe</td><td>tabela <code>Stripe_zdarzenia</code></td><td>Powtórka jest ignorowana, dopóki wpis zdarzenia jest w tabeli. Poproś mnie o usunięcie wpisu przed „resend".</td></tr>
+    <tr><td>Zmiana danych do faktur</td><td>Szczegóły salonu</td><td>Nazwę firmy zmieniasz w licencji, kolejne faktury pójdą na nową. Dane w Stripe zmienia klient w portalu albo Ty w dashboardzie.</td></tr>
+    <tr><td>„Brak powiązania ze Stripe"</td><td>Data rejestracji salonu</td><td>Stare zakupy: wpisz <code>cus_…</code> i <code>sub_…</code> z dashboardu. Nowe mają je automatycznie.</td></tr>
+    <tr><td>Dokumenty klientek zniknęły</td><td>Zmienna <code>UPLOADS_DIR</code> na Hostingerze</td><td>Przywróć zmienną i zrestartuj. Pliki leżą na serwerze poza repozytorium.</td></tr>
+  </table></div>
+</div>
+
+<!-- ══════════════ ZASADY ══════════════ -->
+<div class="section" id="zasady">
+  <div class="mod-header">
+    <div class="mod-icon purple">🔒</div>
+    <div class="mod-title">
+      <h2>Zasady bezpieczeństwa</h2>
+      <p>Krótko, ale na zawsze. Siedem zasad, które chronią klientów, Ciebie i system.</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">🔑</div><h4>Hasła i PIN-y nigdy mailem</h4><p>System sam nie wysyła hasła, Ty też nie. Przekazujesz je telefonicznie. Nie zapisuj ich w tym pliku ani w notatkach.</p></div>
+    <div class="card"><div class="card-icon">👑</div><h4>Hasło admina znasz tylko Ty</h4><p>Panel admina nie jest dla recepcji ani dla klientów.</p></div>
+    <div class="card"><div class="card-icon">🙈</div><h4>Nie loguj się na konta klientów</h4><p>Podgląd masz w Stripe, Fakturowni i Szczegółach salonu. Konto klienta jest jego.</p></div>
+    <div class="card"><div class="card-icon">🌙</div><h4>Wdrożenia po godzinach</h4><p>Restart wylogowuje wszystkich. Przed zmianą ruszającą dane lub schemat bazy: kopia bazy.</p></div>
+    <div class="card"><div class="card-icon">🏷️</div><h4>Datowany punkt powrotu</h4><p>Po sprawdzonym wdrożeniu tag w gicie, żeby zawsze było do czego wrócić.</p></div>
+    <div class="card"><div class="card-icon">⚙️</div><h4>Nie włączaj nieznanych zmiennych</h4><p>Szczególnie <code>ENFORCE_SESSION</code>. Wyłącznik awaryjny to <code>ENFORCE_SESSION_POST=false</code>.</p></div>
+    <div class="card"><div class="card-icon">🧾</div><h4>Fakturownia z KSeF</h4><p>Zero edycji wystawionych faktur. Tylko korekty.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ TEST ══════════════ -->
+<div class="section" id="test">
+  <div class="mod-header">
+    <div class="mod-icon gold">🧪</div>
+    <div class="mod-title">
+      <h2>Test pełnej ścieżki kodem 100AK</h2>
+      <p>Rób raz po każdej większej zmianie w sprzedaży lub rejestracji. Potrzebujesz skrzynki testowej, telefonu, komputera i karty. Stripe z rabatem 100% jej nie obciąży, ale może poprosić o dane.</p>
+    </div>
+  </div>
+
+  <div class="check">
+    <label><input type="checkbox"><span><strong>1. Telefon:</strong> zamow.html, dane z adresem skrzynki testowej, kod <code>100AK</code>. Cena ma pokazać 0 zł.</span></label>
+    <label><input type="checkbox"><span><strong>2. Stripe Checkout</strong> przechodzi, lądujesz na stronie sukcesu. Ma pokazać „Link wysłany na t***@…", nie ogólny tekst.</span></label>
+    <label><input type="checkbox"><span><strong>3. Panel admina → Zgłoszenia:</strong> karta ze statusem „📩 Wysłano link", nie „mail nie wysłany".</span></label>
+    <label><input type="checkbox"><span><strong>4. Mail:</strong> „Twój link rejestracyjny" przyszedł w minutę, treść mówi o 30 dniach ważności. Faktury za 0 zł nie dostajesz.</span></label>
+    <label><input type="checkbox"><span><strong>5. Telefon:</strong> klik w link. Kreator ma pola wypełnione z zamówienia, e-mail nieedytowalny, kroki czytelne na ekranie.</span></label>
+    <label><input type="checkbox"><span><strong>6. Krok 3 kreatora:</strong> spróbuj bez Managera, ma odmówić. Dodaj Managera z PIN-em.</span></label>
+    <label><input type="checkbox"><span><strong>7. Krok 4 i 5:</strong> wybierz trzy usługi z katalogu, kliknij „Załóż salon". Ekran sukcesu z loginem i PIN-ami.</span></label>
+    <label><input type="checkbox"><span><strong>8. Klik w link z maila drugi raz:</strong> komunikat „Salon X jest już założony, zaloguj się".</span></label>
+    <label><input type="checkbox"><span><strong>9. Maile:</strong> „Witaj w Estelio" z loginem, bez hasła. Do Ciebie „🎉 Nowy salon zarejestrowany".</span></label>
+    <label><input type="checkbox"><span><strong>10. Komputer:</strong> /zaloguj → login, hasło → wybór Managera, PIN → Pulpit. Po chwili toast „Uzupełnij ceny usług".</span></label>
+    <label><input type="checkbox"><span><strong>11. Klienci → Nowy klient → Sprzedaż:</strong> w podpowiedziach klientka z telefonem i ID. Sprzedaż za 100 zł gotówką widoczna w „Dzisiejsza sprzedaż".</span></label>
+    <label><input type="checkbox"><span><strong>12. Administracja → Dostępy:</strong> dodaj Recepcję z PIN-em. Na telefonie zaloguj się tym PIN-em równolegle.</span></label>
+    <label><input type="checkbox"><span><strong>13. billing.html</strong> loginem i hasłem salonu: status aktywny, „Ważna do" za miesiąc, abonament 0 zł, portal Stripe się otwiera, historia faktur pusta.</span></label>
+    <label><input type="checkbox"><span><strong>14. Panel admina → Salony → Szczegóły:</strong> powiązanie ze Stripe obecne, aktywność pokazuje logowanie i sprzedaż.</span></label>
+    <label><input type="checkbox"><span><strong>15. Po teście:</strong> w Stripe anuluj subskrypcję testową, w panelu ustaw salon testowy na nieaktywny. Nie usuwaj go, to punkt odniesienia.</span></label>
+  </div>
+
+  <div class="foot">Estelio · przewodnik operacyjny dla administratora · stan na 10 października 2026, po audycie ścieżki sprzedażowej (etapy 0–2) i poprawce wydajności. Aktualizuj po każdej zmianie w ścieżce zakupu, rejestracji lub rozliczeń.</div>
+</div>
+
+</div><!-- /content -->
+</main>
+
+<button id="top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})" title="Na górę">↑</button>
+
+<script>
+window.addEventListener('scroll', () => {
+  document.getElementById('top-btn').classList.toggle('visible', window.scrollY > 400);
+});
+
+// Aktywny link w sidebarze
+const links = document.querySelectorAll('.sb-link');
+const sections = document.querySelectorAll('.section[id]');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector('.sb-link[href="#'+e.target.id+'"]');
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+sections.forEach(s => io.observe(s));
+
+// Szukajka w sidebarze
+function filterNav(val) {
+  const v = val.trim().toLowerCase();
+  document.querySelectorAll('.sb-link').forEach(link => {
+    const text = link.textContent.toLowerCase();
+    link.style.display = (!v || text.includes(v)) ? '' : 'none';
+  });
+  document.querySelectorAll('.sb-group-label').forEach(g => {
+    let anyVisible = false;
+    let el = g.nextElementSibling;
+    while (el && !el.classList.contains('sb-group-label')) {
+      if (el.classList.contains('sb-link') && el.style.display !== 'none') anyVisible = true;
+      el = el.nextElementSibling;
+    }
+    g.style.display = anyVisible ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
