@@ -78,6 +78,9 @@ setInterval(() => {
   for (const [token, s] of sessions.entries()) {
     if (now > s.expires) sessions.delete(token);
   }
+  for (const [token, kiedy] of nieznane.entries()) {
+    if (now - kiedy > NIEZNANE_TTL_MS) nieznane.delete(token); // ujemny cache nie ma rosnąć bez końca
+  }
   if (_db) {
     _db.query('DELETE FROM `Sesje` WHERE `expires` < NOW()',
       (err) => { if (err) console.error('[sessions cleanup interval]', err.message); });
@@ -106,7 +109,61 @@ function getSession(token) {
 
 function deleteSession(token) {
   sessions.delete(token);
+  nieznane.set(token, Date.now()); // DELETE z bazy leci bez czekania — przez minutę nie doczytujemy tego tokenu z powrotem
   persistDelete(token);
+}
+
+// ─── DOCZYTANIE SESJI Z BAZY (19.10.2026) ──────────────────────────────────
+// Zgłoszenie: „za często wylogowuje z systemu”. Pamięć procesu dostaje komplet sesji TYLKO przy
+// starcie (preload). Sesja założona po tym momencie przez INNY proces Node (Hostinger potrafi
+// trzymać kilka instancji aplikacji, każda z własną pamięcią) była tutaj nieznana — i kończyło
+// się to odpowiedzią „Brak dostępu”, mimo że w tabeli `Sesje` token był ważny. Teraz brak w
+// pamięci oznacza jedno pytanie do bazy, a nie wyrzucenie z systemu.
+// Ujemny cache: token, którego w bazie nie ma (stary, podrobiony, po wylogowaniu), nie pyta
+// bazy częściej niż raz na minutę — inaczej pętla odświeżania w przeglądarce zasypałaby bazę.
+const NIEZNANE_TTL_MS = 60 * 1000;
+const nieznane = new Map(); // token -> kiedy sprawdzono w bazie
+
+function doczytajZBazy(token) {
+  return new Promise((resolve) => {
+    if (!_db || !token) return resolve(null);
+    const sprawdzono = nieznane.get(token);
+    if (sprawdzono && Date.now() - sprawdzono < NIEZNANE_TTL_MS) return resolve(null);
+    _db.query(
+      'SELECT `tenant_id`, `login`, UNIX_TIMESTAMP(`expires`) AS expires_unix FROM `Sesje` WHERE `token` = ? AND `expires` > NOW()',
+      [token],
+      (err, rows) => {
+        if (err) { console.error('[sessions doczytaj]', err.message); return resolve(null); }
+        const r = rows && rows[0];
+        if (!r) { nieznane.set(token, Date.now()); return resolve(null); }
+        nieznane.delete(token);
+        sessions.set(token, { tenant_id: r.tenant_id, login: r.login, expires: Number(r.expires_unix) * 1000 });
+        console.log(`[sessions] sesja doczytana z bazy (powstała poza tym procesem): ${r.tenant_id}${r.login ? ' / ' + r.login : ''}`);
+        resolve(sessions.get(token));
+      }
+    );
+  });
+}
+
+/** Jak getSession(), ale brak w pamięci sprawdza jeszcze w tabeli `Sesje`. */
+async function getSessionAsync(token) {
+  if (!token) return null;
+  if (!sessions.has(token)) await doczytajZBazy(token);
+  return getSession(token);
+}
+
+/** Jak validateTenantAccess(), ale z doczytaniem sesji z bazy przy braku w pamięci. */
+async function validateTenantAccessAsync(token, tenant_id) {
+  if (!token) return { valid: false, reason: 'missing' };
+  if (!sessions.has(token)) await doczytajZBazy(token);
+  return validateTenantAccess(token, tenant_id);
+}
+
+/** Przedłużenie ważności z doczytaniem sesji założonej w innym procesie. */
+async function touchSessionAsync(token) {
+  if (!token) return;
+  if (!sessions.has(token)) await doczytajZBazy(token);
+  touchSession(token);
 }
 // E05: unieważnienie WSZYSTKICH sesji osoby w salonie (zmiana PIN-u, zmiana roli, usunięcie konta, decyzja właściciela).
 // `login` = imię pracownika (sesje z verify_pin) albo login konta salonu; bez `login` — wszystkie sesje salonu.
@@ -118,7 +175,7 @@ function deleteSessionsFor(tenant_id, login, zachowajToken) {
     if (String(s.tenant_id) !== t) continue;
     if (l !== null && String(s.login || '').trim() !== l) continue;
     if (zachowajToken && token === zachowajToken) continue;
-    sessions.delete(token); n++;
+    sessions.delete(token); nieznane.set(token, Date.now()); n++;   // nie doczytywać z powrotem, zanim DELETE dojdzie do bazy
   }
   if (_db) {
     const sql = l === null ? 'DELETE FROM `Sesje` WHERE `tenant_id` = ?' + (zachowajToken ? ' AND `token` <> ?' : '') : 'DELETE FROM `Sesje` WHERE `tenant_id` = ? AND TRIM(`login`) = ?' + (zachowajToken ? ' AND `token` <> ?' : '');
@@ -287,6 +344,9 @@ module.exports = {
   initSessions,
   createSession,
   getSession,
+  getSessionAsync,
+  validateTenantAccessAsync,
+  touchSessionAsync,
   deleteSession,
   deleteSessionsFor,
   touchSession,

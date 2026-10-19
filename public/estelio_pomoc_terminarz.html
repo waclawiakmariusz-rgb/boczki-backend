@@ -287,7 +287,8 @@
         <tr><td>Obecność klientki (przybyła / nieobecna)</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
         <tr><td>Rozpocznij / Zakończ / Przerwij usługę</td><td>każdą</td><td>każdą</td><td>tylko własną</td><td>nie</td></tr>
         <tr><td>Rozlicz w Sprzedaży, Powiąż</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
-        <tr><td>Ceny przy wizycie, notatka, historia, karta klientki</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
+        <tr><td>Notatka przy wizycie</td><td>tak</td><td>tak</td><td>przy swoich wizytach</td><td>nie</td></tr>
+        <tr><td>Ceny przy wizycie, historia, karta klientki</td><td>tak</td><td>tak</td><td>nie</td><td>nie</td></tr>
         <tr><td>Ustawienia (usługi, zasoby, grafik, nieobecności)</td><td>tak</td><td>podgląd przez widoki</td><td>nie</td><td>nie</td></tr>
       </table>
       <div class="info"><strong>Dlaczego kosmetolog nie widzi nazwisk cudzych klientek?</strong> Bo nie potrzebuje ich do pracy, a kartoteka to dane osobowe. Widzi, że koleżanka jest zajęta od 12:00 do 12:40 — to wystarczy, żeby zaplanować gabinet. Jeśli ma przejąć usługę, recepcja zmienia wykonawczynię w wizycie i wtedy dane się pojawiają.</div>
@@ -724,7 +725,7 @@
 
     <figure class="zrzut">
       <img src="/pomoc-terminarz/trm-31-znak-notatki.png" alt="Agenda dnia: przy dwoch wizytach bursztynowy znaczek notatki i tresc notatki pod zabiegiem">
-      <figcaption>Dwie wizyty z notatkami — znaczek przy nazwisku i treść pod zabiegiem („prosi o cieplejszy gabinet, alergia na olejek migdałowy"). Notatka jest wewnętrzna i widzi ją recepcja oraz manager; kosmetolożce nie pokazujemy ani znaczka, ani treści.</figcaption>
+      <figcaption>Dwie wizyty z notatkami — znaczek przy nazwisku i treść pod zabiegiem („prosi o cieplejszy gabinet, alergia na olejek migdałowy"). Notatka jest wewnętrzna — widzi ją recepcja, manager i wykonawczyni przy swojej wizycie. Przy cudzej wizycie kosmetolożka nadal widzi tylko „Zajęte”.</figcaption>
     </figure>
       <h3>Liczniki na górze</h3>
       <p>Liczba wizyt, ile klientek już przybyło, ile wizyt czeka na rozliczenie, ile jest blokad, godzina ostatniej aktualizacji. Recepcja nie widzi tu obrotu salonu — to nie jest Analiza.</p>
@@ -785,7 +786,7 @@
     </figure>
 
       <h3>Kanał i notatka</h3>
-      <p>Kanał (recepcja, telefon, wiadomość, kampania) to informacja, skąd przyszło umówienie — przyda się w raportach. Notatka jest wewnętrzna („prosi o cieplejszy gabinet", „pierwsza wizyta po konsultacji"); kosmetolog jej nie widzi.</p>
+      <p>Kanał (recepcja, telefon, wiadomość, kampania) to informacja, skąd przyszło umówienie — przyda się w raportach. Notatka jest wewnętrzna („prosi o cieplejszy gabinet", „pierwsza wizyta po konsultacji"). Widzi ją recepcja, manager i osoba, która wykonuje ten zabieg — przy cudzych wizytach notatki nie ma.</p>
 
       <div class="scenario">
         <span class="scenario-label">Z życia salonu · telefon o 11:05</span>
@@ -1135,9 +1136,10 @@
       <figcaption>Ten sam dzień widziany przez kosmetolożkę: tylko jej wizyty, a w kolumnie rozliczenia „brak uprawnień”. Ceny i cudze wizyty jej nie dotyczą.</figcaption>
     </figure>
       <ul>
-        <li><strong>Co możesz:</strong> otworzyć swoją wizytę, kliknąć „Rozpocznij", „Zakończ", „Przerwij" (z powodem), „Odmowa kwalifikacji" (z powodem). Widzisz notatkę o klientce? Nie — notatka i ceny są dla recepcji.</li>
+        <li><strong>Co możesz:</strong> otworzyć swoją wizytę, kliknąć „Rozpocznij", „Zakończ", „Przerwij" (z powodem), „Odmowa kwalifikacji" (z powodem). Notatkę przy swojej wizycie widzisz — znaczek na karcie i treść w „Moim dniu". Ceny nadal są tylko dla recepcji.</li>
         <li><strong>Czego nie możesz:</strong> umawiać, przekładać, odwoływać, rozliczać, oznaczać obecności. To robi recepcja, która ma pełny obraz dnia.</li>
         <li><strong>Przejęcie cudzej usługi:</strong> poproś recepcję o zmianę wykonawczyni w wizycie — wtedy pojawi się u Ciebie. Kliknięcie „Rozpocznij" przy cudzej usłudze kończy się komunikatem.</li>
+        <li><strong>Notatka przy wizycie:</strong> jeśli recepcja coś dopisała („alergia na olejek migdałowy”, „pierwsza wizyta”), zobaczysz to w „Moim dniu” pod zabiegiem i jako znaczek na karcie. Notatki z cudzych wizyt nie widzisz — cała karta jest wtedy zasłonięta.</li>
         <li><strong>Gdy coś zniknie z Twojego grafiku:</strong> nad listą pojawi się pasek „W najbliższych 7 dniach w Twoim grafiku…”. To jedyne miejsce, w którym dowiesz się o odwołaniu, zanim staniesz przed pustym gabinetem — warto spojrzeć na nie przed planowaniem dnia (<a href="#zmiany">Krok 26</a>). Swoją pracę z poprzednich tygodni przejrzysz w widoku <strong>Historia</strong> (<a href="#historia">Krok 27</a>).</li>
       </ul>
       <div class="scenario">
@@ -1624,7 +1626,7 @@
       <p>Nad grafikiem powinien być pasek „W najbliższych 7 dniach…” — klikasz „Zobacz co zniknęło” i masz listę z nazwiskami i powodami. Jeśli ktoś wyczyścił cały dzień, znajdziesz tam jedną sprawę zbiorczą „Czyszczenie grafiku” z kompletem godzin. Gdy paska nie ma, bo ktoś już go u Ciebie zamknął — to samo jest w dzwonku, zakładka „Zmiany w wizytach”.</p>
 
       <h3>Skąd mam wiedzieć, że przy wizycie jest notatka?</h3>
-      <p>Po bursztynowym znaczku w prawym górnym rogu karty — najedź na niego, a zobaczysz treść. W Agendzie i „Moim dniu" notatka jest wypisana wprost pod zabiegiem (<a href="#widoki">Krok 15</a>). Kosmetolożka notatek nie widzi: są wewnętrzne, dla recepcji i managera.</p>
+      <p>Po bursztynowym znaczku w prawym górnym rogu karty — najedź na niego, a zobaczysz treść. W Agendzie i „Moim dniu" notatka jest wypisana wprost pod zabiegiem (<a href="#widoki">Krok 15</a>). Wykonawczyni widzi notatkę przy swojej wizycie; przy cudzych wizytach notatki nie ma, bo cała karta jest zasłonięta („Zajęte”).</p>
 
       <h3>Chcę zobaczyć, co klientka miała przez ostatni rok</h3>
       <p>Przełącznik widoków → <strong>Historia</strong> → zakładka „Klientka”, zakres „rok”. Widzisz wizyty, zabiegi, osoby i powody odwołań. W drugą stronę działa zakładka „Pracownik” (<a href="#historia">Krok 27</a>).</p>

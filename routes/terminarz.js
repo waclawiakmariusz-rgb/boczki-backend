@@ -798,7 +798,10 @@ module.exports = (db, opts = {}) => {
   function maskuj(rez, r, imie) {
     if (ROLE_OPERACYJNE.has(r)) return rez;
     const moja = ROLE_SPECJALISTA.has(r) && rez.pozycje.some(p => p.pracownik === imie);
-    if (moja) return { ...rez, klient_telefon: null, notatka: null };
+    // 19.10.2026 (decyzja właściciela): notatka przy WŁASNEJ wizycie jest też dla wykonawczyni —
+    // „prosi o cieplejszy gabinet”, „alergia na olejek” to informacje potrzebne przy zabiegu.
+    // Przy cudzej wizycie nadal nie pokazujemy niczego poza „Zajęte”.
+    if (moja) return { ...rez, klient_telefon: null };
     return { ...rez, klient_nazwa: 'Zajęte', klient_telefon: null, id_klienta: null, notatka: null, pozycje: rez.pozycje.map(p => ({ ...p, cena: null })) };
   }
 

@@ -56,10 +56,15 @@ function czyPubliczna(sciezka) {
 function sesjaMiddleware(opts) {
   const { validateTenantAccess, touchSession, log = console } = opts;
   const enforceRoutery = opts.enforceRoutery !== false;
-  return function (req, res, next) {
+  // Sprawdzenie sesji może sięgnąć do bazy (sesja założona w innym procesie Node — patrz
+  // routes/sessions.js, „doczytanie sesji z bazy”), więc strażnik jest asynchroniczny.
+  // Błąd po drodze idzie do zwykłej obsługi błędów Express, a nie w nieobsłużone odrzucenie.
+  return function (req, res, next) { Promise.resolve(sprawdz(req, res, next)).catch(next); };
+
+  async function sprawdz(req, res, next) {
     // Sesja „sliding”: każde żądanie z tokenem przedłuża ważność (także dispatcher '/', który poniżej pomijamy).
     const tokenAktywnosci = req.headers['x-session-token'];
-    if (tokenAktywnosci && touchSession) touchSession(tokenAktywnosci);
+    if (tokenAktywnosci && touchSession) await touchSession(tokenAktywnosci);
 
     if (czyPubliczna(req.path)) return next();
 
@@ -67,7 +72,7 @@ function sesjaMiddleware(opts) {
     if (!tenant_id) return next();
 
     const token = req.headers['x-session-token'];
-    const result = validateTenantAccess(token, tenant_id);
+    const result = await validateTenantAccess(token, tenant_id);
     if (result.valid) return next();
 
     log.warn(`[SESJA ${String(result.reason).toUpperCase()}] ${req.method} ${req.path} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${token ? 'obecny' : 'brak'}`);
@@ -76,7 +81,7 @@ function sesjaMiddleware(opts) {
     const status = result.reason === 'expired' ? 401 : 403;
     const message = result.reason === 'expired' ? 'Sesja wygasła. Zaloguj się ponownie.' : 'Brak dostępu.';
     return res.status(status).json({ status: 'error', code: 'SESJA', message });
-  };
+  }
 }
 
 module.exports = { sesjaMiddleware, PUBLIC_PATHS, PUBLIC_PREFIXES, czyPubliczna };

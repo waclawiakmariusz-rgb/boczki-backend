@@ -9,7 +9,7 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.set('trust proxy', 1); // Hostinger używa reverse proxy — bez tego rate-limit nie działa poprawnie
-const { validateTenantAccess, initSessions, touchSession } = require('./routes/sessions');
+const { validateTenantAccess, validateTenantAccessAsync, initSessions, touchSession, touchSessionAsync } = require('./routes/sessions');
 
 // ENFORCE_SESSION=true w .env przełącza z trybu "loguj" na tryb "blokuj"
 const ENFORCE_SESSION = env('ENFORCE_SESSION') === 'true';
@@ -456,7 +456,8 @@ app.use('/api', (req, res, next) => {
 // REJESTRACJA ROUTERÓW
 // ==========================================
 // STRAŻNIK SESJI — PRZED routerami (2026-10-18: wcześniej stał po nich i nigdy się dla nich nie wykonywał; routes/sesja-middleware.js)
-app.use('/api', sesjaMiddleware({ validateTenantAccess, touchSession, enforce: ENFORCE_SESSION, enforceRoutery: ENFORCE_SESSION_ROUTERY, log: console }));
+// wersje …Async doczytują sesję z tabeli `Sesje`, gdy powstała w innym procesie Node (19.10.2026)
+app.use('/api', sesjaMiddleware({ validateTenantAccess: validateTenantAccessAsync, touchSession: touchSessionAsync, enforce: ENFORCE_SESSION, enforceRoutery: ENFORCE_SESSION_ROUTERY, log: console }));
 app.use('/api', authRoutes);
 app.use('/api', magazynRoutes);
 app.use('/api', sprzedazRoutes);
@@ -644,7 +645,7 @@ app.post('/api/kontakt', async (req, res) => {
 // POST /api - ROUTER KOMPATYBILNOŚCI
 // Obsługa starych klientów wysyłających JSON z action
 // ==========================================
-app.post('/api', (req, res) => {
+app.post('/api', async (req, res) => {
     const d = req.body || {};
     const action = d.action;
 
@@ -665,7 +666,11 @@ app.post('/api', (req, res) => {
     // czyści sesję i pokazuje logowanie (obsluzWygasnieciaSesji w index.html).
     {
       const tokenSesji = req.headers['x-session-token'];
-      const wynik = validateTenantAccess(tokenSesji, tenant_id);
+      // Doczytanie z bazy może się nie udać (chwilowy problem z połączeniem) — wtedy wracamy do
+      // sprawdzenia w pamięci, czyli do zachowania sprzed 19.10.2026. Żądanie ma się nie zawiesić.
+      let wynik;
+      try { wynik = await validateTenantAccessAsync(tokenSesji, tenant_id); }
+      catch (e) { console.error('[SESJA doczytanie]', e.message); wynik = validateTenantAccess(tokenSesji, tenant_id); }
       if (!wynik.valid) {
         console.warn(`[SESJA ${wynik.reason.toUpperCase()}] POST /api action=${action} | IP: ${req.ip} | tenant: ${tenant_id} | token: ${tokenSesji ? 'obecny' : 'brak'}`);
         if (ENFORCE_SESSION_POST) {
