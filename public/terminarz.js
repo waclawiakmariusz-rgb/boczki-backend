@@ -94,7 +94,7 @@
   function szkielet() {
     const root = el('trm-root');
     // R04: przełącznik widoków kalendarza w jednej grupie; Ustawienia modułu jako osobne wejście (nie „kolejny widok dnia”)
-    const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby']];
+    const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby'], ['historia', 'Historia']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
     <div class="trm" data-wersja="20261018a">
@@ -169,7 +169,7 @@
   TRM.widokZmien = (w) => {
     if (w === 'ustawienia' && TRM.widok !== 'ustawienia') TRM.widokPoprzedni = TRM.widok; // R04: powrót do tego samego widoku, dnia i filtrów
     TRM.widok = w;
-    document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', tydzien: 'Tydzień', agenda: 'Agenda', zasoby: 'Zasoby', moj: 'Mój dzień' })[w]));
+    document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', tydzien: 'Tydzień', agenda: 'Agenda', zasoby: 'Zasoby', historia: 'Historia', moj: 'Mój dzień' })[w]));
     const root = document.querySelector('#trm-root .trm'); if (root) root.classList.toggle('tryb-ustawienia', w === 'ustawienia');
     const bu = el('trm-btn-ust'); if (bu) bu.classList.toggle('on', w === 'ustawienia');
     odswiez();
@@ -189,6 +189,7 @@
     const di = el('trm-data'); if (di && di.value !== TRM.data) di.value = TRM.data;
     if (TRM.widok !== 'dzien') renderFiltry(null); // chipy osób tylko w widoku Dzień
     if (TRM.widok === 'ustawienia') { if (sub) sub.textContent = 'Ustawienia modułu'; document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); return renderUstawienia(); }
+    if (TRM.widok === 'historia') { if (sub) sub.textContent = 'Historia wizyt'; document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); return renderHistoria(); }
     if (TRM.widok === 'tydzien' || TRM.widok === 'agenda') {
       const od = TRM.widok === 'tydzien' ? poniedzialek(TRM.data) : TRM.data, do_ = dodajDni(od, 6);
       if (sub) sub.textContent = `${ladnaData(od, true)} – ${ladnaData(do_, true)}`;
@@ -593,6 +594,172 @@
       <div class="trm-ag-rozl">${!operacyjna() ? '<span class="muted small">brak uprawnień</span>' : anul ? '<span class="muted small">nie dotyczy</span>' : (r.pozycje.some(p => p.zakup_skladnik_id) ? '<span class="trm-pill pakiet">Z pakietu</span> ' : '') + (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : !r.id_klienta ? '<span class="muted small">bez kartoteki</span>' : r.pozycje.some(p => p.zakup_skladnik_id) ? '' : '<span class="muted small">pojedynczy zabieg</span>')}</div>
     </div>`;
   }
+  // ─── HISTORIA (2026-10-19) ──────────────────────────────────────────────────────────────────
+  // Dwa spojrzenia na te same dane: historia jednej klientki (co, kiedy, u kogo) i historia
+  // jednej osoby z zespołu (kogo obsługiwała, jakie zabiegi) w wybranym zakresie dat.
+  // Dane biorą się z gotowych akcji tylko do odczytu — ten widok niczego nie zapisuje.
+  TRM.hist = { tryb: 'klientka', od: null, do: null, klient: null, fraza: '', wyniki: [], pracownik: null, dane: null, laduje: false };
+
+  const histDomyslnyZakres = () => {
+    const do_ = TRM.data || new Date().toISOString().slice(0, 10);
+    const od = dodajDni(do_, -90);
+    return { od, do: do_ };
+  };
+  TRM.histZakres = (dni) => {
+    const do_ = TRM.data || new Date().toISOString().slice(0, 10);
+    TRM.hist.od = dni ? dodajDni(do_, -dni) : TRM.hist.od; TRM.hist.do = do_;
+    histPobierz();
+  };
+  TRM.histTryb = (t) => { TRM.hist.tryb = t; TRM.hist.dane = null; renderHistoria(); if ((t === 'pracownik' && TRM.hist.pracownik) || (t === 'klientka' && TRM.hist.klient)) histPobierz(); };
+  TRM.histPole = (co, v) => { TRM.hist[co] = v; };
+  TRM.histSzukaj = (v) => {
+    TRM.hist.fraza = v;
+    clearTimeout(TRM.hist._t);
+    TRM.hist._t = setTimeout(async () => {
+      if (!v || v.trim().length < 2) { TRM.hist.wyniki = []; return renderHistoria(); }
+      const d = await api('trm_szukaj_klienta', { fraza: v });
+      TRM.hist.wyniki = d.klienci || []; renderHistoria();
+    }, 250);
+  };
+  TRM.histKlient = (i) => { TRM.hist.klient = TRM.hist.wyniki[i] || null; TRM.hist.wyniki = []; TRM.hist.fraza = ''; histPobierz(); };
+  TRM.histPracownik = (v) => { TRM.hist.pracownik = v || null; histPobierz(); };
+
+  async function histPobierz() {
+    const h = TRM.hist;
+    if (!h.od || !h.do) { const z = histDomyslnyZakres(); h.od = h.od || z.od; h.do = h.do || z.do; }
+    if (h.tryb === 'klientka' && !h.klient) return renderHistoria();
+    if (h.tryb === 'pracownik' && !h.pracownik && operacyjna()) return renderHistoria();
+    h.laduje = true; renderHistoria();
+    const d = h.tryb === 'klientka'
+      ? await api('trm_historia_klientki', { id_klienta: h.klient.id_klienta, klient_nazwa: h.klient.nazwa, od: h.od, do: h.do })
+      : await api('trm_historia_pracownika', { osoba: h.pracownik, od: h.od, do: h.do });
+    h.laduje = false;
+    if (d.status !== 'success') { h.dane = null; h.blad = d.message; } else { h.dane = d; h.blad = null; }
+    renderHistoria();
+  }
+
+  const histKafel = (etykieta, wartosc, kolor) => `
+    <div class="trm-hist-kafel"><div class="w" ${kolor ? `style="color:${kolor}"` : ''}>${wartosc}</div><div class="e">${etykieta}</div></div>`;
+
+  function renderHistoria() {
+    const main = el('trm-main'); if (!main) return;
+    const h = TRM.hist;
+    if (!h.od || !h.do) { const z = histDomyslnyZakres(); h.od = z.od; h.do = z.do; }
+    if (!operacyjna() && h.tryb !== 'pracownik') h.tryb = 'pracownik';   // specjalista widzi tylko własną historię
+
+    const zakres = `
+      <div class="trm-hist-pasek">
+        <div class="trm-segment">
+          ${operacyjna() ? `<button type="button" class="${h.tryb === 'klientka' ? 'active' : ''}" onclick="TRM.histTryb('klientka')">Klientka</button>` : ''}
+          <button type="button" class="${h.tryb === 'pracownik' ? 'active' : ''}" onclick="TRM.histTryb('pracownik')">${operacyjna() ? 'Pracownik' : 'Moja historia'}</button>
+        </div>
+        <div class="trm-hist-daty">
+          <label>Od</label><input type="date" value="${h.od}" onchange="TRM.histPole('od', this.value)">
+          <label>do</label><input type="date" value="${h.do}" onchange="TRM.histPole('do', this.value)">
+          <button class="trm-btn sm" onclick="TRM.histZakres(0)">Pokaż</button>
+          <span class="trm-hist-szybkie">
+            <button class="trm-btn link sm" onclick="TRM.histZakres(30)">30 dni</button>
+            <button class="trm-btn link sm" onclick="TRM.histZakres(90)">3 miesiące</button>
+            <button class="trm-btn link sm" onclick="TRM.histZakres(365)">rok</button>
+          </span>
+        </div>
+      </div>`;
+
+    let wybor = '';
+    if (h.tryb === 'klientka') {
+      wybor = h.klient
+        ? `<div class="trm-wybrana"><b>${esc(h.klient.nazwa)}</b> <span class="muted small">· ${esc(h.klient.telefon || 'brak telefonu')} · ID ${esc(h.klient.id_klienta || '—')}</span>
+             <button class="trm-btn link sm" onclick="TRM.hist.klient=null; TRM.hist.dane=null; TRM.histTryb('klientka')">zmień</button></div>`
+        : `<div class="trm-card"><label>Klientka</label>
+             <input placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(h.fraza)}" oninput="TRM.histSzukaj(this.value)" autocomplete="off">
+             ${h.wyniki.length ? `<div class="trm-hist-wyniki">${h.wyniki.map((k, i) => `<button type="button" class="trm-klient-karta" onclick="TRM.histKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span></button>`).join('')}</div>` : ''}
+           </div>`;
+    } else if (operacyjna()) {
+      const lista = (TRM.dane.pracownicy || []);
+      wybor = `<div class="trm-card"><label>Pracownik</label>
+          <select onchange="TRM.histPracownik(this.value)"><option value="">— wybierz osobę —</option>
+            ${lista.map(p => `<option ${h.pracownik === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
+    }
+
+    let tresc = '';
+    if (h.laduje) tresc = `<div class="trm-empty"><div class="big">⏳</div><p>Pobieramy historię…</p></div>`;
+    else if (h.blad) tresc = `<div class="trm-note bad">${esc(h.blad)}</div>`;
+    else if (!h.dane) tresc = h.tryb === 'klientka'
+      ? `<div class="trm-empty"><div class="big">🔎</div><p>Wybierz klientkę, żeby zobaczyć jej historię wizyt.</p></div>`
+      : (operacyjna() ? `<div class="trm-empty"><div class="big">🔎</div><p>Wybierz osobę z zespołu i zakres dat.</p></div>` : '');
+    else tresc = h.tryb === 'klientka' ? histKlientkaHtml(h.dane) : histPracownikHtml(h.dane);
+
+    main.innerHTML = `<div class="trm-historia">${zakres}${wybor}${tresc}</div>`;
+    if (!h.dane && h.tryb === 'pracownik' && !operacyjna()) histPobierz();   // specjalista: od razu własna historia
+  }
+
+  function histKlientkaHtml(d) {
+    const p = d.podsumowanie;
+    if (!d.wizyty.length) return `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym zakresie.</p></div>`;
+    const kafelki = `<div class="trm-hist-kafelki">
+      ${histKafel('wizyt', p.wizyt)}
+      ${histKafel('wykonanych', p.wykonane, '#15803d')}
+      ${histKafel('odwołanych', p.odwolane, p.odwolane ? '#b45309' : '')}
+      ${histKafel('nieobecności', p.nieobecnosci, p.nieobecnosci ? '#b91c1c' : '')}
+      ${operacyjna() ? histKafel('wartość wykonanych', zl(p.wartosc)) : ''}
+    </div>`;
+    const listy = `<div class="trm-hist-listy">
+      ${p.zabiegi.length ? `<div><div class="mini">Najczęstsze zabiegi</div>${p.zabiegi.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
+      ${p.osoby.length ? `<div><div class="mini">U kogo bywa</div>${p.osoby.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
+    </div>`;
+    const os = d.wizyty.map(w => {
+      const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(w.status);
+      const klasa = anul ? 'odwolana' : (w.obecnosc === 'nieobecny' ? 'nieobecna' : (w.pozycje.some(x => x.stan === 'wykonana' || x.stan === 'przerwana') ? 'wykonana' : 'planowana'));
+      const poz = w.pozycje.map(x => `
+        <div class="trm-hist-poz">
+          <span class="nazwa">${esc(x.kategoria)}${x.wariant ? ' · ' + esc(x.wariant) : ''}</span>
+          <span class="kto">${esc(x.wykonawca || '—')}${x.wykonawca && x.pracownik && x.wykonawca !== x.pracownik ? ' <span class="muted">(zastępstwo za ' + esc(x.pracownik) + ')</span>' : ''}</span>
+          <span class="stan">${POZ_LABEL[x.stan] || x.stan}${x.z_pakietu ? ' <span class="trm-pill pakiet">z pakietu</span>' : ''}</span>
+          <span class="cena">${operacyjna() && x.cena != null ? zl(x.cena) : ''}</span>
+        </div>`).join('');
+      return `
+        <div class="trm-hist-wizyta ${klasa}" onclick="TRM.otworzSzczegoly(${w.id})" title="Otwórz wizytę">
+          <div class="glowa">
+            <div class="data"><b>${ladnaData(w.start.slice(0, 10), true)}</b> <span class="muted">${w.start.slice(11, 16)}–${w.koniec.slice(11, 16)}</span></div>
+            <div class="numer muted small">${esc(w.numer || '')}</div>
+          </div>
+          ${poz}
+          ${anul && w.powod_anulacji ? `<div class="uwaga">Odwołane przez ${w.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}: ${esc(w.powod_anulacji)}</div>` : ''}
+          ${w.obecnosc === 'nieobecny' ? `<div class="uwaga">Klientka nie przyszła.</div>` : ''}
+          ${w.notatka ? `<div class="notatka">${esc(w.notatka)}</div>` : ''}
+        </div>`;
+    }).join('');
+    return `${kafelki}${listy}<div class="trm-hist-os">${os}</div>`;
+  }
+
+  function histPracownikHtml(d) {
+    const p = d.podsumowanie;
+    if (!d.dni.length) return `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym zakresie.</p></div>`;
+    const godziny = Math.floor(p.minuty / 60), minuty = p.minuty % 60;
+    const kafelki = `<div class="trm-hist-kafelki">
+      ${histKafel('wykonanych zabiegów', p.wykonane, '#15803d')}
+      ${histKafel('klientek', p.klientek)}
+      ${histKafel('czas przy pracy', godziny + ' h' + (minuty ? ' ' + minuty + ' min' : ''))}
+      ${histKafel('odwołanych', p.odwolane, p.odwolane ? '#b45309' : '')}
+      ${histKafel('nieobecności', p.nieobecnosci, p.nieobecnosci ? '#b91c1c' : '')}
+      ${p.wartosc != null ? histKafel('wartość wykonanych', zl(p.wartosc)) : ''}
+    </div>`;
+    const zabiegi = p.zabiegi.length ? `<div class="trm-hist-listy"><div><div class="mini">Co robi najczęściej</div>${p.zabiegi.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div></div>` : '';
+    const dni = d.dni.map(dz => `
+      <div class="trm-hist-dzien">
+        <div class="naglowek">${ladnaData(dz.dzien, true)} <span class="muted small">· ${dz.wizyty.length} ${dz.wizyty.length === 1 ? 'pozycja' : (dz.wizyty.length < 5 ? 'pozycje' : 'pozycji')}</span></div>
+        ${dz.wizyty.map(w => `
+          <div class="trm-hist-poz klik" onclick="TRM.otworzSzczegoly(${w.id})" title="Otwórz wizytę">
+            <span class="godz">${esc(w.godzina)}</span>
+            <span class="nazwa">${esc(w.klient || '—')}</span>
+            <span class="kto">${esc(w.kategoria)}${w.wariant ? ' · ' + esc(w.wariant) : ''}${w.zastepstwo ? ' <span class="muted">(zastępstwo)</span>' : ''}</span>
+            <span class="stan">${POZ_LABEL[w.stan] || w.stan}${w.z_pakietu ? ' <span class="trm-pill pakiet">z pakietu</span>' : ''}</span>
+            <span class="cena">${w.cena != null ? zl(w.cena) : ''}</span>
+          </div>`).join('')}
+      </div>`).join('');
+    return `${kafelki}${zabiegi}<div class="trm-hist-dni">${dni}</div>`;
+  }
+
   function renderAgenda(od, do_) {
     const main = el('trm-main'), rez = TRM.zakres.rezerwacje;
     let html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value||null;TRM.widokZmien('agenda')" style="width:auto"><option value="">Cały zespół</option>${TRM.dane.pracownicy.map(p => `<option ${p === TRM.osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="fix muted small">${rez.length} wizyt · każda pozycja otwiera tę samą wizytę</div></div>`;

@@ -449,3 +449,57 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
 .trm-zakup-skl + .trm-note.po-terminie { margin: -2px 0 8px; padding: 6px 10px; line-height: 1.35; }
 .trm-zakup.wygasly { opacity: 1; } /* wcześniej wygasły zakup był wyszarzany jako niedostępny */
 .trm-zakup.wygasly .n::after { content: ' · po terminie'; color: var(--trm-warn, #a15c00); font-weight: 600; font-size: .85em; }
+
+/* ─── HISTORIA (19.10.2026) ───────────────────────────────────────────────────────────────────
+   Dwa widoki na tych samych danych: historia klientki i historia osoby z zespołu. Układ trzyma
+   się konwencji modułu: karty na powierzchni --t-sur, odstępy przez --t-r, kolory statusów jak
+   na kartach wizyt (zielony wykonane, bursztyn odwołane, czerwony nieobecności). */
+.trm-historia { display:flex; flex-direction:column; gap:14px; }
+.trm-hist-pasek { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+.trm-hist-daty { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+.trm-hist-daty label { margin:0; font-size:12px; color:var(--t-mut); }
+.trm-hist-daty input[type=date] { width:auto; min-width:150px; }
+.trm-hist-szybkie { display:inline-flex; gap:2px; }
+
+.trm-hist-wyniki { display:flex; flex-direction:column; gap:6px; margin-top:8px; }
+
+.trm-hist-kafelki { display:flex; flex-wrap:wrap; gap:10px; }
+.trm-hist-kafel { flex:1 1 130px; background:var(--t-sur); border:1px solid var(--t-line); border-radius:var(--t-r); padding:14px 16px; }
+.trm-hist-kafel .w { font-size:20px; font-weight:700; color:var(--t-txt); line-height:1.2; }
+.trm-hist-kafel .e { font-size:11.5px; color:var(--t-mut); margin-top:4px; }
+
+.trm-hist-listy { display:flex; flex-wrap:wrap; gap:14px; }
+.trm-hist-listy > div { flex:1 1 260px; background:var(--t-sur); border:1px solid var(--t-line); border-radius:var(--t-r); padding:14px 16px; }
+.trm-hist-listy .mini { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--t-mut); margin-bottom:8px; }
+.trm-hist-listy .poz { display:flex; justify-content:space-between; gap:10px; font-size:13.5px; padding:4px 0; border-bottom:1px solid var(--t-line); }
+.trm-hist-listy .poz:last-child { border-bottom:0; }
+
+.trm-hist-os { display:flex; flex-direction:column; gap:10px; }
+.trm-hist-wizyta { background:var(--t-sur); border:1px solid var(--t-line); border-left:4px solid var(--t-line); border-radius:var(--t-r); padding:12px 14px; cursor:pointer; transition:.15s; }
+.trm-hist-wizyta:hover { box-shadow:0 4px 14px rgba(26,14,26,.07); }
+.trm-hist-wizyta.wykonana { border-left-color:#15803d; }
+.trm-hist-wizyta.planowana { border-left-color:#9aa5b1; }
+.trm-hist-wizyta.odwolana { border-left-color:#b45309; opacity:.82; }
+.trm-hist-wizyta.nieobecna { border-left-color:#b91c1c; }
+.trm-hist-wizyta .glowa { display:flex; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.trm-hist-wizyta .uwaga { font-size:12.5px; color:#8a5a00; margin-top:6px; }
+.trm-hist-wizyta.nieobecna .uwaga { color:#9b1c1c; }
+.trm-hist-wizyta .notatka { font-size:12.5px; color:var(--t-mut); margin-top:6px; font-style:italic; }
+
+.trm-hist-poz { display:grid; grid-template-columns:1.6fr 1.1fr .9fr auto; gap:10px; align-items:center; font-size:13.5px; padding:4px 0; }
+.trm-hist-poz .nazwa { font-weight:600; color:var(--t-txt); }
+.trm-hist-poz .kto, .trm-hist-poz .stan { color:var(--t-mut); }
+.trm-hist-poz .cena { text-align:right; color:var(--t-txt); white-space:nowrap; }
+.trm-hist-poz.klik { grid-template-columns:auto 1.4fr 1.4fr .9fr auto; cursor:pointer; border-radius:8px; padding:6px 8px; }
+.trm-hist-poz.klik:hover { background:var(--t-bg, #faf7f8); }
+.trm-hist-poz .godz { font-variant-numeric:tabular-nums; color:var(--t-mut); }
+
+.trm-hist-dni { display:flex; flex-direction:column; gap:12px; }
+.trm-hist-dzien { background:var(--t-sur); border:1px solid var(--t-line); border-radius:var(--t-r); padding:12px 14px; }
+.trm-hist-dzien .naglowek { font-weight:600; margin-bottom:6px; }
+
+@media (max-width: 760px) {
+  .trm-hist-poz, .trm-hist-poz.klik { grid-template-columns:1fr; gap:2px; padding:8px 0; border-bottom:1px solid var(--t-line); }
+  .trm-hist-poz .cena { text-align:left; }
+  .trm-hist-daty { width:100%; }
+}

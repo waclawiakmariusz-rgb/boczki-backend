@@ -1110,6 +1110,114 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', dni: 60, wiecej: rows.length > 20, wizyty: rows.slice(0, 20), klienci: klienci.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko })) };
       }
 
+      // ───────── HISTORIA (2026-10-19, prośba właściciela): dwa spojrzenia na te same dane ─────────
+      // Wszystko, co pokazują te dwie akcje, i tak leży w Term_Rezerwacje/Term_Pozycje — brakowało
+      // widoku, który by to zebrał. Obie są WYŁĄCZNIE do odczytu: żadnych UPDATE/INSERT.
+      // Zakres dat jest obowiązkowy i ograniczony do 400 dni, żeby jedno kliknięcie nie ciągnęło
+      // całej historii salonu. Specjalista widzi tylko własne wizyty i bez cen (tak jak „Mój dzień").
+      case 'trm_historia_klientki': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const od = sprawdzData(d.od, 'od'), do_ = sprawdzData(d.do, 'do');
+        if (S.naMin(do_ + ' 00:00') - S.naMin(od + ' 00:00') > 400 * 1440) throw new BladUzytkownika('Zakres maksymalnie 400 dni.');
+        const idKlienta = d.id_klienta ? String(d.id_klienta).slice(0, 50) : null;
+        const nazwa = d.klient_nazwa ? String(d.klient_nazwa).slice(0, 255) : null;
+        if (!idKlienta && !nazwa) throw new BladUzytkownika('Wskaż klientkę.');
+
+        const warunek = idKlienta ? 'r.id_klienta = ?' : 'r.klient_nazwa = ?';
+        const rows = await q(
+          `SELECT r.id, r.klient_nazwa, r.id_klienta, r.status, r.obecnosc, r.kanal, r.notatka,
+                  r.powod_anulacji, r.kto_anulowal, r.sprzedaz_id,
+                  DATE_FORMAT(r.start,'%Y-%m-%d %H:%i') AS start,
+                  DATE_FORMAT(r.koniec,'%Y-%m-%d %H:%i') AS koniec,
+                  p.kategoria, p.wariant, p.pracownik, p.wykonawca_fakt, p.stan, p.cena, p.czas_min, p.zakup_skladnik_id,
+                  DATE_FORMAT(p.start_fakt,'%H:%i') AS start_fakt, DATE_FORMAT(p.koniec_fakt,'%H:%i') AS koniec_fakt
+             FROM Term_Rezerwacje r
+             JOIN Term_Pozycje p ON p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id
+            WHERE r.tenant_id = ? AND r.start BETWEEN ? AND ? AND ${warunek}
+            ORDER BY r.start DESC, p.kolejnosc`,
+          [tenant, od + ' 00:00:00', do_ + ' 23:59:59', idKlienta || nazwa]);
+
+        // Pozycje wracają spłaszczone (jedna wizyta = kilka wierszy) — składamy je w wizyty.
+        const wizyty = []; const poId = new Map();
+        for (const x of rows) {
+          let w = poId.get(x.id);
+          if (!w) {
+            w = { id: x.id, numer: 'EST-' + String(x.id).padStart(4, '0'), start: x.start, koniec: x.koniec, status: x.status, obecnosc: x.obecnosc,
+                  kanal: x.kanal, notatka: x.notatka, powod_anulacji: x.powod_anulacji, kto_anulowal: x.kto_anulowal,
+                  rozliczona: !!x.sprzedaz_id, pozycje: [] };
+            poId.set(x.id, w); wizyty.push(w);
+          }
+          w.pozycje.push({ kategoria: x.kategoria, wariant: x.wariant, pracownik: x.pracownik,
+            wykonawca: x.wykonawca_fakt || x.pracownik, stan: x.stan, cena: x.cena == null ? null : Number(x.cena),
+            czas_min: x.czas_min, z_pakietu: !!x.zakup_skladnik_id, start_fakt: x.start_fakt, koniec_fakt: x.koniec_fakt });
+        }
+
+        const WYKONANE = new Set(['wykonana', 'przerwana']);
+        const p = { wizyt: wizyty.length, wykonane: 0, odwolane: 0, nieobecnosci: 0, wartosc: 0, zabiegi: {}, osoby: {} };
+        for (const w of wizyty) {
+          if (['anulowana', 'odrzucona', 'wygasla'].includes(w.status)) p.odwolane++;
+          else if (w.obecnosc === 'nieobecny') p.nieobecnosci++;
+          else if (w.pozycje.some(x => WYKONANE.has(x.stan))) p.wykonane++;
+          for (const x of w.pozycje) {
+            if (!WYKONANE.has(x.stan)) continue;
+            p.wartosc += Number(x.cena) || 0;
+            const nz = x.kategoria + (x.wariant ? ' · ' + x.wariant : '');
+            p.zabiegi[nz] = (p.zabiegi[nz] || 0) + 1;
+            if (x.wykonawca) p.osoby[x.wykonawca] = (p.osoby[x.wykonawca] || 0) + 1;
+          }
+        }
+        const najczesciej = (obj) => Object.entries(obj).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([nazwa2, ile]) => ({ nazwa: nazwa2, ile }));
+        return { status: 'success', od, do: do_, klient: wizyty.length ? rows[0].klient_nazwa : (nazwa || idKlienta),
+          id_klienta: rows.length ? rows[0].id_klienta : idKlienta, wizyty,
+          podsumowanie: { ...p, wartosc: Math.round(p.wartosc * 100) / 100, zabiegi: najczesciej(p.zabiegi), osoby: najczesciej(p.osoby) } };
+      }
+
+      case 'trm_historia_pracownika': {
+        const od = sprawdzData(d.od, 'od'), do_ = sprawdzData(d.do, 'do');
+        if (S.naMin(do_ + ' 00:00') - S.naMin(od + ' 00:00') > 400 * 1440) throw new BladUzytkownika('Zakres maksymalnie 400 dni.');
+        // Specjalista ogląda wyłącznie siebie; recepcja, manager i właściciel — dowolną osobę.
+        // UWAGA: parametrem jest `osoba`, nie `pracownik` — to drugie pole niesie tożsamość
+        // wywołującego (api() wysyła pracownik: kto()), więc kolidowałoby z wyborem z listy.
+        const kogo = ROLE_OPERACYJNE.has(r) ? String(d.osoba || '').trim().slice(0, 100) : imie;
+        if (!kogo) throw new BladUzytkownika('Wskaż pracownika.');
+        const ceny = ROLE_OPERACYJNE.has(r);
+
+        const rows = await q(
+          `SELECT r.id, r.klient_nazwa, r.id_klienta, r.status, r.obecnosc,
+                  DATE_FORMAT(r.start,'%Y-%m-%d') AS dzien, DATE_FORMAT(r.start,'%H:%i') AS godzina,
+                  p.kategoria, p.wariant, p.pracownik, p.wykonawca_fakt, p.stan, p.cena, p.czas_min, p.zakup_skladnik_id
+             FROM Term_Rezerwacje r
+             JOIN Term_Pozycje p ON p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id
+            WHERE r.tenant_id = ? AND r.start BETWEEN ? AND ?
+              AND (p.pracownik = ? OR p.wykonawca_fakt = ?)
+            ORDER BY r.start DESC, p.kolejnosc`,
+          [tenant, od + ' 00:00:00', do_ + ' 23:59:59', kogo, kogo]);
+
+        const dni = []; const poDniu = new Map();
+        const WYKONANE = new Set(['wykonana', 'przerwana']);
+        const p = { pozycji: rows.length, wykonane: 0, odwolane: 0, nieobecnosci: 0, minuty: 0, wartosc: 0, zabiegi: {}, klientki: new Set() };
+        for (const x of rows) {
+          let dzien = poDniu.get(x.dzien);
+          if (!dzien) { dzien = { dzien: x.dzien, wizyty: [] }; poDniu.set(x.dzien, dzien); dni.push(dzien); }
+          dzien.wizyty.push({ id: x.id, numer: 'EST-' + String(x.id).padStart(4, '0'), godzina: x.godzina, klient: x.klient_nazwa, id_klienta: x.id_klienta,
+            kategoria: x.kategoria, wariant: x.wariant, stan: x.stan, status: x.status, obecnosc: x.obecnosc,
+            zastepstwo: !!(x.wykonawca_fakt && x.wykonawca_fakt !== x.pracownik),
+            cena: ceny && x.cena != null ? Number(x.cena) : null, czas_min: x.czas_min, z_pakietu: !!x.zakup_skladnik_id });
+          if (x.klient_nazwa) p.klientki.add(x.klient_nazwa);
+          if (['anulowana', 'odrzucona', 'wygasla'].includes(x.status)) { p.odwolane++; continue; }
+          if (x.obecnosc === 'nieobecny') { p.nieobecnosci++; continue; }
+          if (WYKONANE.has(x.stan)) {
+            p.wykonane++; p.minuty += Number(x.czas_min) || 0; p.wartosc += Number(x.cena) || 0;
+            const nz = x.kategoria + (x.wariant ? ' · ' + x.wariant : '');
+            p.zabiegi[nz] = (p.zabiegi[nz] || 0) + 1;
+          }
+        }
+        return { status: 'success', od, do: do_, pracownik: kogo, dni,
+          podsumowanie: { pozycji: p.pozycji, wykonane: p.wykonane, odwolane: p.odwolane, nieobecnosci: p.nieobecnosci,
+            klientek: p.klientki.size, minuty: p.minuty, wartosc: ceny ? Math.round(p.wartosc * 100) / 100 : null,
+            zabiegi: Object.entries(p.zabiegi).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([nazwa, ile]) => ({ nazwa, ile })) } };
+      }
+
       // ───────── ZK-02: zakupy klientki (odczyt BEZ mutacji), uzgodnienie źródeł, mapowanie ofert (wersje), ewidencja, korekty ─────────
       case 'trm_zakupy_klientki': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -1786,4 +1894,4 @@ module.exports = (db, opts = {}) => {
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
