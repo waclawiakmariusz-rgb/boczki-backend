@@ -68,36 +68,59 @@ module.exports = function (db, opts = {}) {
     } catch (e) { log.error('[maile-wprow] init tabel:', e.message); }
   }
 
-  // Treść obowiązująca: domyślna z pliku + nadpisania z panelu. Pola techniczne (etap, okno)
-  // zostają z pliku — panel zmienia tylko teksty, nie harmonogram.
+  // Treść obowiązująca: wiadomości z pliku + zmiany i NOWE wiadomości dopisane w panelu.
+  // Wiersz w bazie, którego nie ma w pliku, to dodatkowy mail edukacyjny (ósmy, dziewiąty, dowolny).
+  // Kolejność wynika z terminu wysyłki, a nie z tego, gdzie wiadomość powstała.
   async function wczytajSerie() {
-    let nadpisania = [];
-    try { nadpisania = await q(`SELECT etap, dane, zmieniono, kto FROM Maile_wprowadzajace_tresc`); }
+    let wiersze = [];
+    try { wiersze = await q(`SELECT etap, dane, zmieniono, kto FROM Maile_wprowadzajace_tresc`); }
     catch (e) { return SERIA.map(m => ({ ...m, _zrodlo: 'plik' })); }
-    const mapa = new Map(nadpisania.map(r => [r.etap, r]));
-    return SERIA.map(m => {
+    const mapa = new Map();
+    for (const r of wiersze) { try { mapa.set(r.etap, { dane: JSON.parse(r.dane), meta: r }); } catch (e) { /* uszkodzony JSON = ignorujemy, zostaje plik */ } }
+
+    const zPliku = SERIA.map(m => {
       const r = mapa.get(m.etap);
-      if (!r) return { ...m, _zrodlo: 'plik' };
-      let dane = {};
-      try { dane = JSON.parse(r.dane); } catch (e) { return { ...m, _zrodlo: 'plik' }; }
-      return { ...m, ...dane, etap: m.etap, okno: m.okno, _zrodlo: 'panel', _zmieniono: r.zmieniono, _kto: r.kto };
+      if (!r) return { ...m, _zrodlo: 'plik', _wlasna: false };
+      mapa.delete(m.etap);
+      return { ...m, ...r.dane, etap: m.etap, _zrodlo: 'panel', _wlasna: false, _zmieniono: r.meta.zmieniono, _kto: r.meta.kto };
     });
+    const wlasne = [...mapa.entries()].map(([etap, r]) => ({
+      kotwica: '', cta: 'Otwórz przewodnik', sekcje: [], okno: [30, 40],
+      ...r.dane, etap, _zrodlo: 'panel', _wlasna: true, _zmieniono: r.meta.zmieniono, _kto: r.meta.kto,
+    }));
+    return [...zPliku, ...wlasne].sort((a, b) => (a.okno[0] - b.okno[0]) || (a.okno[1] - b.okno[1]));
   }
 
-  const POLA_EDYTOWALNE = ['temat', 'preheader', 'naglowek', 'wstep', 'sekcje', 'zrzut', 'uwaga', 'dzis', 'cta', 'kotwica', 'link_wlasny'];
+  const POLA_EDYTOWALNE = ['temat', 'preheader', 'podtytul', 'naglowek', 'wstep', 'sekcje', 'zrzut', 'uwaga', 'dzis', 'cta', 'kotwica', 'link_wlasny', 'okno', 'wylaczona'];
+  const RE_ETAP = /^[a-z0-9][a-z0-9-]{1,39}$/;
 
+  // Zapis działa i dla wiadomości z pliku (nadpisanie tekstów), i dla nowych (pełna definicja).
   async function zapiszTresc(etap, dane, kto) {
-    if (!SERIA.some(m => m.etap === etap)) throw new Error('Nieznany etap: ' + etap);
+    if (!RE_ETAP.test(String(etap || ''))) throw new Error('Identyfikator: 2–40 znaków, małe litery, cyfry i myślniki.');
+    const zPliku = SERIA.find(m => m.etap === etap);
     const czyste = {};
     for (const p of POLA_EDYTOWALNE) if (dane[p] !== undefined) czyste[p] = dane[p];
+
+    if (czyste.okno !== undefined) {
+      const od = parseInt(czyste.okno[0], 10), do_ = parseInt(czyste.okno[1], 10);
+      if (!Number.isFinite(od) || !Number.isFinite(do_) || od < 0 || do_ <= od || do_ > 400) throw new Error('Termin: „od" musi być mniejsze niż „do", a oba w zakresie 0–400 dni.');
+      czyste.okno = [od, do_];
+    } else if (!zPliku) {
+      throw new Error('Nowa wiadomość musi mieć ustawiony termin wysyłki.');
+    }
+    if (!zPliku && !String(czyste.temat || '').trim()) throw new Error('Nowa wiadomość musi mieć temat.');
+
     await q(`INSERT INTO Maile_wprowadzajace_tresc (etap, dane, kto) VALUES (?, ?, ?)
              ON DUPLICATE KEY UPDATE dane = VALUES(dane), zmieniono = NOW(), kto = VALUES(kto)`,
       [etap, JSON.stringify(czyste), kto || null]);
     return czyste;
   }
 
+  // Dla wiadomości z pliku: powrót do treści domyślnej. Dla własnej: skasowanie jej na dobre.
   async function przywrocDomyslne(etap) {
+    const zPliku = SERIA.some(m => m.etap === etap);
     await q(`DELETE FROM Maile_wprowadzajace_tresc WHERE etap = ?`, [etap]);
+    return { usunieta: !zPliku };
   }
 
   // Ile salonów dostało dany etap — do podglądu w panelu.
@@ -130,6 +153,7 @@ module.exports = function (db, opts = {}) {
     let wyslane = 0;
     const seria = await wczytajSerie();
     for (const mail of seria) {
+      if (mail.wylaczona) continue;   // wyłączona w panelu — zostaje w liście, ale nie wychodzi
       let lista = [];
       try { lista = await kandydaci(mail.etap, mail.okno); }
       catch (e) { log.error(`[maile-wprow] ${mail.etap}: odczyt kandydatów:`, e.message); continue; }
@@ -143,7 +167,7 @@ module.exports = function (db, opts = {}) {
           if (!r || !r.affectedRows) continue;
         } catch (e) { log.error(`[maile-wprow] ${mail.etap}: rezerwacja:`, e.message); continue; }
         try {
-          await mailer.wyslijMailWprowadzajacy({ email: s.email, nazwa_salonu: s.nazwa_salonu, mail, numer: seria.indexOf(mail) + 1, ile: seria.length });
+          await mailer.wyslijMailWprowadzajacy({ email: s.email, nazwa_salonu: s.nazwa_salonu, mail });
           wyslane++;
           log.info(`[maile-wprow] wysłano „${mail.etap}" do ${s.email} (${s.nazwa_salonu})`);
         } catch (e) {

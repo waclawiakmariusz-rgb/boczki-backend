@@ -646,8 +646,13 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
       <div class="narrow">
         <div class="gen-card" style="margin-bottom:20px;">
           <h3>✉️ Seria powitalna dla nowych salonów</h3>
-          <div class="card-sub">Siedem wiadomości przez pierwsze trzy tygodnie od założenia salonu. Czytasz i poprawiasz tutaj; harmonogram i przełącznik wysyłki są poza panelem (zmienna <code>MAILE_WPROWADZAJACE</code> na serwerze) — żeby nikt nie uruchomił wysyłki przez przypadek.</div>
+          <div class="card-sub">Wiadomości edukacyjne wysyłane po założeniu salonu — czytasz, poprawiasz i dopisujesz kolejne tutaj. Termin każdej ustawiasz sam. Poza panelem zostaje tylko przełącznik wysyłki (zmienna <code>MAILE_WPROWADZAJACE</code> na serwerze), żeby nikt nie uruchomił jej przez przypadek.</div>
           <div id="mw-stan" class="loading">Ładowanie…</div>
+        </div>
+
+        <div class="toolbar" style="margin:0 0 14px;">
+          <button class="btn-primary" onclick="mw_nowa()">➕ Nowa wiadomość</button>
+          <span style="font-size:12.5px; color:var(--muted);">Możesz dopisać ósmą, dziewiątą i kolejne — wystarczy ustawić, w którym dniu ma wyjść.</span>
         </div>
 
         <div id="mw-lista"></div>
@@ -655,6 +660,24 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
         <div id="mw-edytor" class="gen-card" style="display:none;">
           <h3 id="mw-edytor-tytul">Edycja wiadomości</h3>
           <div class="card-sub" id="mw-edytor-info"></div>
+
+          <div class="toolbar" style="margin:0 0 14px; align-items:flex-end;">
+            <div style="flex:0 0 150px;">
+              <div class="mini-label">Wysyłka od dnia</div>
+              <input type="number" id="mw-okno-od" min="0" max="399" style="width:100%;">
+            </div>
+            <div style="flex:0 0 150px;">
+              <div class="mini-label">do dnia (wyłącznie)</div>
+              <input type="number" id="mw-okno-do" min="1" max="400" style="width:100%;">
+            </div>
+            <div style="flex:1; min-width:220px;">
+              <div class="mini-label">Podtytuł w nagłówku maila</div>
+              <input type="text" id="mw-podtytul" placeholder="Pierwsze kroki w systemie" style="width:100%;">
+            </div>
+            <label style="flex:0 0 auto; display:flex; align-items:center; gap:8px; font-size:13px; padding-bottom:10px;">
+              <input type="checkbox" id="mw-wylaczona"> wyłączona (nie wysyłaj)
+            </label>
+          </div>
 
           <div class="mini-label">Temat (to widać na liście w skrzynce)</div>
           <input type="text" id="mw-temat" style="width:100%; margin-bottom:14px;">
@@ -3255,7 +3278,7 @@ function mw_rysujListe() {
           <div style="font-weight:600; margin-bottom:3px;">${mwEsc(m.temat)}</div>
           <div style="font-size:12.5px; color:var(--muted);">
             dzień ${m.okno[0]}–${m.okno[1] - 1} po założeniu salonu · ${m.sekcje ? m.sekcje.length : 0} sekcji ·
-            ${m._zrodlo === 'panel' ? '✏️ treść zmieniona w panelu' : 'treść domyślna'} ·
+            ${m._wlasna ? '🆕 wiadomość dopisana w panelu' : (m._zrodlo === 'panel' ? '✏️ treść zmieniona w panelu' : 'treść domyślna')} ·${m.wylaczona ? ' <strong style="color:#b45309;">WYŁĄCZONA</strong> ·' : ''}
             wysłano: ${m.wyslane.ile}${m.wyslane.ostatni ? ' (ostatnio ' + String(m.wyslane.ostatni).slice(0, 10) + ')' : ''}
           </div>
         </div>
@@ -3268,12 +3291,14 @@ function mw_otworz(etap) {
   const m = mw_seria.find(x => x.etap === etap); if (!m) return;
   mw_wybrany = etap;
   document.getElementById('mw-edytor').style.display = '';
-  document.getElementById('mw-edytor-tytul').textContent = `Wiadomość ${m.numer}: ${m.temat}`;
+  document.getElementById('mw-edytor-tytul').textContent = m.temat || 'Nowa wiadomość';
   document.getElementById('mw-edytor-info').textContent =
     `Wychodzi między ${m.okno[0]} a ${m.okno[1] - 1} dniem od założenia salonu. ` +
-    (m._zrodlo === 'panel' ? `Treść zmieniona w panelu${m._zmieniono ? ' ' + String(m._zmieniono).slice(0, 16).replace('T', ' ') : ''}.` : 'Obowiązuje treść domyślna z kodu.');
+    (m._wlasna ? 'Wiadomość dopisana w panelu — identyfikator: ' + m.etap + '.' : (m._zrodlo === 'panel' ? `Treść zmieniona w panelu${m._zmieniono ? ' ' + String(m._zmieniono).slice(0, 16).replace('T', ' ') : ''}.` : 'Obowiązuje treść domyślna z kodu.'));
   const v = (id, val) => { document.getElementById(id).value = val == null ? '' : val; };
   v('mw-temat', m.temat); v('mw-preheader', m.preheader); v('mw-naglowek', m.naglowek); v('mw-wstep', m.wstep);
+  v('mw-okno-od', m.okno[0]); v('mw-okno-do', m.okno[1]); v('mw-podtytul', m.podtytul);
+  document.getElementById('mw-wylaczona').checked = !!m.wylaczona;
   v('mw-uwaga-tytul', m.uwaga && m.uwaga.tytul); v('mw-uwaga-tekst', m.uwaga && m.uwaga.tekst);
   v('mw-dzis', m.dzis); v('mw-cta', m.cta);
   v('mw-zrzut-plik', m.zrzut && m.zrzut.plik); v('mw-zrzut-podpis', m.zrzut && m.zrzut.podpis);
@@ -3301,7 +3326,8 @@ function mw_zbierz() {
   const sekcje = [...document.querySelectorAll('#mw-sekcje .mw-sekcja')]
     .map(w => [w.querySelector('.mw-s-tytul').value.trim(), w.querySelector('.mw-s-tresc').value.trim()])
     .filter(([t, o]) => t || o);
-  const dane = { temat: g('mw-temat'), preheader: g('mw-preheader'), naglowek: g('mw-naglowek'), wstep: g('mw-wstep'), sekcje, dzis: g('mw-dzis'), cta: g('mw-cta') };
+  const dane = { temat: g('mw-temat'), preheader: g('mw-preheader'), podtytul: g('mw-podtytul'), naglowek: g('mw-naglowek'), wstep: g('mw-wstep'), sekcje, dzis: g('mw-dzis'), cta: g('mw-cta'),
+    okno: [parseInt(g('mw-okno-od'), 10) || 0, parseInt(g('mw-okno-do'), 10) || 0], wylaczona: document.getElementById('mw-wylaczona').checked };
   const ut = g('mw-uwaga-tytul'), ux = g('mw-uwaga-tekst');
   dane.uwaga = (ut || ux) ? { tytul: ut, tekst: ux } : null;
   const zp = g('mw-zrzut-plik'), zo = g('mw-zrzut-podpis');
@@ -3326,10 +3352,35 @@ async function mw_zapisz() {
 
 async function mw_przywroc() {
   if (!mw_wybrany) return;
-  if (!confirm('Przywrócić treść domyślną z kodu? Zmiany wpisane w panelu dla tej wiadomości przepadną.')) return;
+  const m = mw_seria.find(x => x.etap === mw_wybrany);
+  const pytanie = m && m._wlasna
+    ? 'Skasować tę wiadomość na dobre? Nie ma jej w kodzie, więc nie da się jej odtworzyć.'
+    : 'Przywrócić treść domyślną z kodu? Zmiany wpisane w panelu dla tej wiadomości przepadną.';
+  if (!confirm(pytanie)) return;
   const d = await mwApi('/admin/maile_wprow_reset', { etap: mw_wybrany });
   alert(d.message);
   if (d.status === 'success') { const e = mw_wybrany; await mw_init(); mw_otworz(e); }
+}
+
+// Nowa wiadomość: identyfikator powstaje z tematu (po nim system pamięta, komu już wysłał),
+// termin podajesz sam. Zapisuje się dopiero przyciskiem „Zapisz treść".
+function mw_nowa() {
+  const temat = prompt('Temat nowej wiadomości:');
+  if (!temat || !temat.trim()) return;
+  const bazowy = temat.toLowerCase()
+    .replace(/[ąàâ]/g, 'a').replace(/ć/g, 'c').replace(/[ęèé]/g, 'e').replace(/ł/g, 'l')
+    .replace(/ń/g, 'n').replace(/[óô]/g, 'o').replace(/ś/g, 's').replace(/[źż]/g, 'z')
+    .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30) || 'wiadomosc';
+  let etap = bazowy, i = 2;
+  while (mw_seria.some(x => x.etap === etap)) etap = `${bazowy}-${i++}`;
+  const ostatni = mw_seria.length ? Math.max(...mw_seria.map(x => x.okno[1])) : 30;
+  mw_seria.push({
+    etap, temat: temat.trim(), okno: [ostatni, ostatni + 7], sekcje: [], _zrodlo: 'panel', _wlasna: true,
+    wyslane: { ile: 0, ostatni: null }, cta: 'Otwórz przewodnik', kotwica: 'faq',
+  });
+  mw_rysujListe();
+  mw_otworz(etap);
+  alert(`Nowa wiadomość „${temat.trim()}" jest gotowa do wypełnienia.\nIdentyfikator: ${etap}\nTermin: dzień ${ostatni}–${ostatni + 6} od założenia salonu (możesz zmienić).\n\nZapisz ją przyciskiem „Zapisz treść" — do tego czasu istnieje tylko na ekranie.`);
 }
 
 async function mw_test() {

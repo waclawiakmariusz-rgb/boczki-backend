@@ -1,4 +1,4 @@
-# Seria powitalna dla nowego salonu — 7 maili na pierwsze trzy tygodnie
+# Seria powitalna dla nowego salonu — maile edukacyjne po założeniu konta
 
 **Stan:** gotowa, **wyłączona** (`MAILE_WPROWADZAJACE=off`). Nic nie wychodzi do klientów, dopóki właściciel nie przestawi zmiennej.
 **Podglądy:** `docs/maile-wprowadzajace/podglad/` — HTML (otwórz w przeglądarce) i PNG (do szybkiego obejrzenia).
@@ -12,6 +12,8 @@ Nowy salon dostaje dziś jeden mail powitalny i zostaje sam z całym systemem. S
 ## 2. Harmonogram
 
 Dzień liczony od **założenia salonu** (nie od zakupu). Okno jest domknięte z obu stron — jeśli serwer nie działał w danym dniu, mail wyjdzie w kolejnym, byle w oknie.
+
+To jest stan wyjściowy z kodu. **Liczba wiadomości nie jest ustalona na stałe** — w panelu dopisujesz ósmą, dziewiątą i kolejne, ustawiasz im własny termin, a dowolną możesz wyłączyć bez kasowania. Kolejność na liście wynika z terminu, nie z tego, gdzie wiadomość powstała.
 
 | # | Etap | Dzień | Temat | Zrzut w mailu | Prowadzi do |
 |---|---|---|---|---|---|
@@ -59,11 +61,14 @@ Przebieg uruchamia się 5 minut po starcie serwera, potem raz na dobę.
 
 Co tam jest:
 
-- **Lista siedmiu wiadomości** — temat, kiedy wychodzi, ile ma sekcji, czy treść jest domyślna czy zmieniona w panelu, i do ilu salonów już poszła;
+- **Lista wiadomości** — temat, kiedy wychodzi, ile ma sekcji, czy treść jest domyślna, zmieniona czy dopisana w panelu, i do ilu salonów już poszła;
+- **➕ Nowa wiadomość** — dopisujesz kolejny mail edukacyjny: podajesz temat, system nadaje identyfikator i proponuje termin po ostatniej wiadomości, resztę wypełniasz jak zwykle;
+- **Termin i wyłącznik przy każdej wiadomości** — „wysyłka od dnia / do dnia" oraz pole „wyłączona", które zatrzymuje jedną wiadomość bez kasowania jej treści;
+- **Podtytuł w nagłówku maila** — domyślnie „Pierwsze kroki w systemie", możesz wpisać własny (np. przy mailach spoza serii startowej);
 - **Edytor** — temat, druga linijka podglądu w skrzynce, nagłówek, wstęp, sekcje (dodawanie i usuwanie), ramka „na co uważać", „jedna rzecz na dziś", napis na przycisku, plik zrzutu i podpis;
 - **Podgląd na żywo** — dokładnie ten HTML, który pójdzie do klientki, budowany z niezapisanej jeszcze wersji z edytora;
 - **Wysyłka próbna** pod dowolny adres — nie zapisuje się w historii wysyłek, więc nie zablokuje prawdziwej wiadomości dla salonu;
-- **Przywróć domyślną** — kasuje zmiany z panelu dla jednej wiadomości i wraca do treści z kodu.
+- **Przywróć domyślną** — przy wiadomości z kodu cofa Twoje zmiany; przy wiadomości dopisanej w panelu kasuje ją na dobre (pyta o potwierdzenie).
 
 Czego w panelu celowo **nie ma**: przełącznika wysyłki i harmonogramu. Tryb siedzi w zmiennej środowiskowej na serwerze, okna dni w kodzie — żeby jedno kliknięcie w przeglądarce nie uruchomiło wysyłki do klientów.
 
@@ -88,6 +93,11 @@ Jedna wiadomość to pola:
 | `uwaga` | ramka „na co uważać" — częsty błąd albo pułapka |
 | `dzis` | jedna konkretna rzecz do zrobienia tego dnia |
 | `cta` + `kotwica` | napis na przycisku i rozdział `/pomoc/`, do którego prowadzi |
+| `podtytul` | napis pod logo; domyślnie „Pierwsze kroki w systemie" |
+| `okno` | `[od, do)` w dniach od założenia salonu |
+| `wylaczona` | `true` = wiadomość zostaje w liście, ale nie wychodzi |
+
+W mailu **nie ma licznika „N z M"** — liczba wiadomości należy do właściciela i może rosnąć, a klientka nie ma powodu oglądać numeracji.
 
 **Jedyne pole, którego nie zmieniamy po uruchomieniu serii:** `etap`. Po nim system pamięta, co już wysłał — zmiana oznacza, że ktoś dostanie tę samą wiadomość drugi raz.
 

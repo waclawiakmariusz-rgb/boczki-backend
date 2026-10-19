@@ -1347,7 +1347,7 @@ module.exports = (db) => {
         cutoff: m._CUTOFF,
         // adres podstawiany w polu wysyłki próbnej — skrzynka kontaktowa Estelio
         domyslny_email: String(process.env.ADMIN_EMAIL || process.env.SMTP_USER || '').replace(/^['"]|['"]$/g, ''),
-        seria: seria.map((x, i) => ({ ...x, numer: i + 1, wyslane: mapa[x.etap] || { ile: 0, ostatni: null } })),
+        seria: seria.map((x, i) => ({ ...x, numer: i + 1, wyslane: mapa[x.etap] || { ile: 0, ostatni: null } })),  // numer tylko do listy w panelu — w mailu go nie ma
       });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
@@ -1365,8 +1365,8 @@ module.exports = (db) => {
     const { etap } = req.body || {};
     if (!etap) return res.json({ status: 'error', message: 'Brak etapu.' });
     try {
-      await maileWprow().przywrocDomyslne(etap);
-      return res.json({ status: 'success', message: 'Przywrócono treść domyślną z pliku.' });
+      const r = await maileWprow().przywrocDomyslne(etap);
+      return res.json({ status: 'success', usunieta: !!r.usunieta, message: r.usunieta ? 'Wiadomość skasowana.' : 'Przywrócono treść domyślną z kodu.' });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 
@@ -1380,7 +1380,7 @@ module.exports = (db) => {
       const i = seria.findIndex(x => x.etap === etap);
       if (i < 0) return res.json({ status: 'error', message: 'Nieznany etap.' });
       const mail = dane && typeof dane === 'object' ? { ...seria[i], ...dane } : seria[i];
-      const html = require('./mailer').zbudujMailWprowadzajacy({ nazwa_salonu: 'Salon Przykładowy', mail, numer: i + 1, ile: seria.length });
+      const html = require('./mailer').zbudujMailWprowadzajacy({ nazwa_salonu: 'Salon Przykładowy', mail });
       return res.json({ status: 'success', html, temat: mail.temat });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
@@ -1397,7 +1397,7 @@ module.exports = (db) => {
       const i = seria.findIndex(x => x.etap === etap);
       if (i < 0) return res.json({ status: 'error', message: 'Nieznany etap.' });
       const mail = dane && typeof dane === 'object' ? { ...seria[i], ...dane } : seria[i];
-      await require('./mailer').wyslijMailWprowadzajacy({ email: adres, nazwa_salonu: 'Salon Przykładowy', mail, numer: i + 1, ile: seria.length });
+      await require('./mailer').wyslijMailWprowadzajacy({ email: adres, nazwa_salonu: 'Salon Przykładowy', mail });
       return res.json({ status: 'success', message: `Wysłano próbnie na ${adres}.` });
     } catch (e) { return res.json({ status: 'error', message: 'Błąd wysyłki: ' + e.message }); }
   });

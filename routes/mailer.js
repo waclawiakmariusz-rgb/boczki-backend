@@ -650,9 +650,12 @@ function emailWrapperJasny(podtytul, tresc) {
 // Treść etapów trzyma routes/maile-wprowadzajace.js (SERIA) — tutaj tylko składanie i wysyłka.
 // Mail prowadzi do rozdziału przewodnika /pomoc/ (ten ma zrzuty ekranu), nie tłumaczy wszystkiego sam.
 // Kopia do właściciela (BCC), żeby widział dokładnie to, co dostają klientki.
-function zbudujMailWprowadzajacy({ nazwa_salonu, mail, numer, ile }) {
+// Bez licznika „N z M" — liczba wiadomości w serii należy do właściciela i może rosnąć
+// (dochodzą kolejne maile edukacyjne), a klientka nie ma powodu oglądać numeracji.
+// Podtytuł w nagłówku jest edytowalny per wiadomość; domyślnie „Pierwsze kroki w systemie".
+function zbudujMailWprowadzajacy({ nazwa_salonu, mail }) {
   const link = `${APP_URL()}${mail.link_wlasny || ('/pomoc/#' + mail.kotwica)}`;
-  const n = numer || 0, wszystkich = ile || 7;
+  const podtytul = mail.podtytul || 'Pierwsze kroki w systemie';
 
   // Sekcje merytoryczne: numerowany krążek + tytuł + akapit. Tabela, bo Outlook nie radzi sobie z flexem.
   const sekcje = (mail.sekcje || []).map(([tytul, opis], i) => `
@@ -689,7 +692,7 @@ function zbudujMailWprowadzajacy({ nazwa_salonu, mail, numer, ile }) {
         </td></tr>
       </table>` : '';
 
-  return emailWrapperJasny(`Pierwsze kroki · ${n}/${wszystkich}`, `
+  return emailWrapperJasny(podtytul, `
       ${mail.preheader ? `<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">${mail.preheader}</div>` : ''}
       <p style="font-size:17px; font-weight:700; color:#1c1a18; margin:0 0 10px; line-height:1.4;">${mail.naglowek}</p>
       <p style="font-size:14px; color:#6f655e; line-height:1.8; margin:0 0 24px;">${mail.wstep}</p>
@@ -708,7 +711,7 @@ function zbudujMailWprowadzajacy({ nazwa_salonu, mail, numer, ile }) {
       </p>
       ${blokKontakt()}
       <p style="font-size:11px; color:#c4bcb6; line-height:1.6; margin-top:18px; border-top:1px solid #f4efe6; padding-top:14px;">
-        Wiadomość ${n} z ${wszystkich} w serii pierwszych kroków${nazwa_salonu ? ` dla salonu ${nazwa_salonu}` : ''}.
+        Wiadomość z serii pierwszych kroków${nazwa_salonu ? ` dla salonu ${nazwa_salonu}` : ''}.
         Nie chcesz ich dostawać? Odpisz jednym słowem „stop" — wyłączymy serię i nic więcej nie przyjdzie.
       </p>
     `);
