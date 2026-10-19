@@ -581,6 +581,8 @@
       <h4>${esc(r.klient_nazwa)}${r.id_klienta && op ? ` <button class="trm-btn link sm" style="font-size:12px;vertical-align:middle" onclick="TRM.zamknijBuble();pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil ↗</button>` : ''}</h4>
       <div class="muted small">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b> · ${lista.length} ${lista.length === 1 ? 'zabieg' : lista.length < 5 ? 'zabiegi' : 'zabiegów'}</div>
       <div style="margin-top:10px">${lista.map(x => `<div class="trm-bubble-poz"><span class="g">${hhmm(x.start)}–${hhmm(x.koniec)}</span><span><b>${esc(x.kategoria)}${x.wariant ? ' · ' + esc(x.wariant) : ''}</b></span><span class="m">${esc(x.wykonawca_fakt || x.pracownik || '—')}${x.gabinet ? ' · ' + esc(x.gabinet) : ''}${x.urzadzenie ? ' · ' + esc(x.urzadzenie) : ''}${x.stan !== 'zaplanowana' ? ' · ' + esc(POZ_LABEL[x.stan] || x.stan) : ''}</span></div>`).join('')}</div>
+      ${chipsyPreferencji(r, 5)}
+      ${notatkaTekst(r) ? `<div class="trm-bubble-notatka">${IKONA_NOTATKI}<span>${esc(notatkaTekst(r))}</span></div>` : ''}
       ${rozl ? `<div class="trm-bubble-rozl">${rozl}</div>` : ''}
       <div class="trm-bubble-foot">
         ${akcja ? akcja.replace('class="trm-btn sm primary"', 'class="trm-btn primary glowna"') : ''}

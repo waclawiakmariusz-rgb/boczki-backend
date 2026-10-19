@@ -646,3 +646,12 @@ body.dark-mode .trm .trm-awatar { background:#4a2a35; color:#f0a9c0; }
 body.dark-mode .trm .trm-awatar.mint { background:#23402f; color:#8ed4b7; }
 body.dark-mode .trm .trm-awatar.gold { background:#453515; color:#e6c57c; }
 body.dark-mode .trm .trm-awatar.blue { background:#233648; color:#9cc6e8; }
+
+/* Notatka w chmurce podglądu wizyty (19.10.2026) — prośba: „jak jest notatka, pokaż ją też
+   w dymku", żeby recepcja nie musiała otwierać szczegółów tylko po to, by ją przeczytać. */
+.trm-bubble-notatka { display:flex; align-items:flex-start; gap:7px; margin-top:9px; padding:8px 10px;
+  background:#fffaf0; border:1px solid #f0d9ae; border-left:3px solid #d9a441; border-radius:var(--t-rs);
+  font-size:12.5px; line-height:1.45; color:#6b4f1d; }
+.trm-bubble-notatka svg { width:13px; height:13px; flex:0 0 auto; margin-top:1px; color:#b45309; }
+body.dark-mode .trm .trm-bubble-notatka { background:#392d15; border-color:#6b5423; border-left-color:#d9a441; color:#f0dcb6; }
+body.dark-mode .trm .trm-bubble-notatka svg { color:#ffc46b; }
