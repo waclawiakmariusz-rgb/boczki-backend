@@ -30034,19 +30034,67 @@ function rap_zapiszKategorie(e) {
     });
 }
 
-function rap_renderCategoryTree() { 
+// Drzewo kategorii budujemy z PEŁNEJ ŚCIEŻKI, nie z rodzic_id (zgłoszenie #8, 19.10.2026).
+// Starsze wpisy mają w rodzic_id identyfikatory, których już nie ma w tabeli — przy budowie po
+// rodzic_id wszystkie podkategorie lądowały jako osobne gałęzie główne i drzewo było płaskie.
+// Ścieżka („Inwentaryzacja Tygodniowa > Płyny") jest spójna i to po niej chodzą produkty.
+function rap_renderCategoryTree() {
     const c = document.getElementById('rap_tree-container');
     if (!c) return;
-    const m = {}, r = []; 
-    rap_categoriesFlat.forEach(i => m[i[0]] = {id:i[0], name:i[1], parent:i[2], children:[]}); 
-    rap_categoriesFlat.forEach(i => {
-        if(i[2] && m[i[2]]) m[i[2]].children.push(m[i[0]]); 
-        else r.push(m[i[0]]);
-    }); 
-    
-    const g = n => '<ul style="padding-left:20px; list-style:none;">' + n.map(x => `<li style="margin:12px 0; font-size:14px; font-weight:600; color:var(--text-dark); display:flex; align-items:center;"><b>📂 ${x.name}</b> <button onclick="rap_deleteCategory('${x.id}')" style="margin-left:10px; color:#ef4444; border:none; background:#fee2e2; font-weight:bold; cursor:pointer; border-radius:50%; width:24px; height:24px; display:inline-flex; justify-content:center; align-items:center;">×</button>` + (x.children.length ? g(x.children) : '') + '</li>').join('') + '</ul>'; 
-    
-    c.innerHTML = r.length ? g(r) : "<span style='color:#64748b;'>Brak kategorii.</span>"; 
+    const wezly = {}, korzen = [];
+    const posortowane = [...rap_categoriesFlat].sort((a, b) => String(a[3] || a[1]).localeCompare(String(b[3] || b[1]), 'pl'));
+    posortowane.forEach(i => { wezly[String(i[3] || i[1])] = { id: i[0], name: i[1], sciezka: String(i[3] || i[1]), children: [] }; });
+    Object.values(wezly).forEach(w => {
+        const i = w.sciezka.lastIndexOf(' > ');
+        const rodzic = i < 0 ? null : wezly[w.sciezka.slice(0, i)];
+        (rodzic ? rodzic.children : korzen).push(w);
+    });
+
+    const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    const guzik = (tytul, znak, onclick, kolor, tlo) => `<button onclick="${onclick}" title="${tytul}" style="margin-left:6px; color:${kolor}; border:none; background:${tlo}; font-weight:bold; cursor:pointer; border-radius:50%; width:24px; height:24px; display:inline-flex; justify-content:center; align-items:center;">${znak}</button>`;
+    const g = n => '<ul style="padding-left:22px; list-style:none; margin:0;">' + n.map(x => `<li style="margin:10px 0;"><div style="display:flex; align-items:center; flex-wrap:wrap; font-size:14px; font-weight:600; color:var(--text-dark);"><b>📂 ${esc(x.name)}</b>`
+        + guzik('Zmień nazwę', '✏️', `rap_zmienNazweKategorii('${x.id}', '${esc(x.name).replace(/'/g, "\\'")}')`, '#6e49df', '#ede9fe')
+        + guzik('Przenieś do innej kategorii', '↪', `rap_przeniesKategorie('${x.id}', '${esc(x.sciezka).replace(/'/g, "\\'")}')`, '#0f766e', '#ccfbf1')
+        + guzik('Usuń', '×', `rap_deleteCategory('${x.id}')`, '#ef4444', '#fee2e2')
+        + '</div>' + (x.children.length ? g(x.children) : '') + '</li>').join('') + '</ul>';
+
+    c.innerHTML = korzen.length ? g(korzen) : "<span style='color:#64748b;'>Brak kategorii.</span>";
+}
+
+// Zmiana nazwy kategorii/podkategorii — serwer przepisuje ścieżki podkategorii i produktów.
+function rap_zmienNazweKategorii(id, obecna) {
+    const nazwa = prompt('Nowa nazwa kategorii:', obecna);
+    if (nazwa === null) return;
+    const czysta = nazwa.trim();
+    if (!czysta) return alert('Nazwa nie może być pusta.');
+    if (czysta.includes('>')) return alert('Nazwa nie może zawierać znaku „>” — to separator poziomów.');
+    if (czysta === obecna) return;
+    rap_apiCall('rap_editCategory', { id, nazwa: czysta }).then(res => {
+        if (!(res.success || res.status === 'success')) return alert(res.message || 'Nie udało się zmienić nazwy.');
+        alert(`✅ Zmieniono nazwę na „${res.sciezka}”.` + (res.produkty ? `\nPrzepisano produktów: ${res.produkty}.` : '') + (res.podkategorie ? `\nPodkategorii: ${res.podkategorie}.` : ''));
+        rap_fetchCategories();
+        if (typeof rap_fetchInventory === 'function') rap_fetchInventory();
+    });
+}
+
+// Przeniesienie kategorii pod inną (np. „Płyny” z inwentaryzacji tygodniowej do miesięcznej).
+function rap_przeniesKategorie(id, sciezka) {
+    const kandydaci = rap_categoriesFlat
+        .map(c => ({ id: c[0], sciezka: String(c[3] || c[1]) }))
+        .filter(c => c.id !== id && !(c.sciezka + ' > ').startsWith(sciezka + ' > '))
+        .sort((a, b) => a.sciezka.localeCompare(b.sciezka, 'pl'));
+    const lista = kandydaci.map((c, i) => `${i + 1}. ${c.sciezka}`).join('\n');
+    const wybor = prompt(`Przenieś „${sciezka}” do:\n\n0. (kategoria główna — bez rodzica)\n${lista}\n\nWpisz numer:`, '0');
+    if (wybor === null) return;
+    const nr = parseInt(wybor, 10);
+    if (isNaN(nr) || nr < 0 || nr > kandydaci.length) return alert('Nie rozpoznaję tego numeru.');
+    const parentId = nr === 0 ? '' : kandydaci[nr - 1].id;
+    rap_apiCall('rap_editCategory', { id, parentId }).then(res => {
+        if (!(res.success || res.status === 'success')) return alert(res.message || 'Nie udało się przenieść kategorii.');
+        alert(`✅ Przeniesiono do „${res.sciezka}”.` + (res.produkty ? `\nPrzepisano produktów: ${res.produkty}.` : '') + (res.podkategorie ? `\nPodkategorii: ${res.podkategorie}.` : ''));
+        rap_fetchCategories();
+        if (typeof rap_fetchInventory === 'function') rap_fetchInventory();
+    });
 }
 
 function rap_deleteCategory(id) { 

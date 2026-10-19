@@ -3,11 +3,14 @@
 //                    rap_archiveProduct, rap_saveProduct, rap_saveCategory, rap_deleteCategory
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
 
 module.exports = (db) => {
+  // Router powstaje PER WYWOŁANIE fabryki. Wcześniej był tworzony na poziomie modułu, więc
+  // drugie użycie (np. w próbach z inną atrapą bazy) doklejało kolejny handler do tego samego
+  // routera, a żądania obsługiwał ten pierwszy — z bazą z poprzedniego użycia.
+  const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
   // Idempotentna migracja: produkty wycofane z raportu "Zadania na dziś" (nie zamawiamy).
@@ -214,16 +217,115 @@ module.exports = (db) => {
         );
       }
 
-    } else if (action === 'rap_deleteCategory') {
-      db.query(
-        `DELETE FROM Raport_Kategorie WHERE tenant_id = ? AND id = ? LIMIT 1`,
-        [tenant_id, d.id],
-        (err, result) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono kategorii' });
-          return res.json({ status: 'success' });
+    // ─── ZMIANA NAZWY I PRZENIESIENIE KATEGORII (zgłoszenie #8, 19.10.2026) ────────────────────
+    // Dotąd kategorię można było tylko dodać albo skasować. Recepcja chciała przenieść „Płyny"
+    // z inwentaryzacji tygodniowej do miesięcznej („z tygodnia na tydzień nic tam nie schodzi")
+    // i nie miała jak — poza skasowaniem i założeniem od nowa, co odcina produkty od kategorii.
+    //
+    // Uwaga na model: produkty trzymają PEŁNĄ ŚCIEŻKĘ tekstem (Raport_Magazyn.kategoria =
+    // „Inwentaryzacja Tygodniowa > Płyny"), a kolumna rodzic_id w starszych wpisach wskazuje
+    // identyfikatory, których już nie ma. Źródłem prawdy jest więc `pelna_sciezka` — po niej
+    // przepisujemy potomków i produkty, a rodzic_id przy okazji naprawiamy.
+    } else if (action === 'rap_editCategory') {
+      const id = String(d.id || '').trim();
+      if (!id) return res.json({ status: 'error', message: 'Nie wskazano kategorii.' });
+      const nowaNazwa = d.nazwa == null ? null : String(d.nazwa).trim();
+      if (nowaNazwa !== null && (!nowaNazwa || nowaNazwa.includes('>'))) {
+        return res.json({ status: 'error', message: 'Nazwa nie może być pusta ani zawierać znaku „>".' });
+      }
+      const zmianaRodzica = Object.prototype.hasOwnProperty.call(d, 'parentId');
+      const parentId = zmianaRodzica ? String(d.parentId || '').trim() : null;
+
+      db.query(`SELECT id, nazwa, rodzic_id, pelna_sciezka FROM Raport_Kategorie WHERE tenant_id = ? ORDER BY pelna_sciezka`, [tenant_id], (err, kategorie) => {
+        if (err) return res.json({ status: 'error', message: err.message });
+        const ta = (kategorie || []).find(k => String(k.id) === id);
+        if (!ta) return res.json({ status: 'error', message: 'Nie znaleziono kategorii.' });
+
+        const staraSciezka = String(ta.pelna_sciezka || ta.nazwa);
+        const nazwa = nowaNazwa === null ? String(ta.nazwa) : nowaNazwa;
+        let sciezkaRodzica;
+        if (zmianaRodzica) {
+          if (parentId && parentId === id) return res.json({ status: 'error', message: 'Kategoria nie może być swoim własnym rodzicem.' });
+          const rodzic = parentId ? (kategorie || []).find(k => String(k.id) === parentId) : null;
+          if (parentId && !rodzic) return res.json({ status: 'error', message: 'Nie znaleziono kategorii nadrzędnej.' });
+          sciezkaRodzica = rodzic ? String(rodzic.pelna_sciezka || rodzic.nazwa) : '';
+        } else {
+          const i = staraSciezka.lastIndexOf(' > ');
+          sciezkaRodzica = i < 0 ? '' : staraSciezka.slice(0, i);
         }
-      );
+        const nowaSciezka = sciezkaRodzica ? sciezkaRodzica + ' > ' + nazwa : nazwa;
+
+        if (nowaSciezka === staraSciezka) return res.json({ status: 'success', bez_zmian: true, sciezka: nowaSciezka });
+        // przeniesienie pod własnego potomka zapętliłoby drzewo
+        if ((nowaSciezka + ' > ').startsWith(staraSciezka + ' > ')) {
+          return res.json({ status: 'error', message: 'Nie można przenieść kategorii do jej własnej podkategorii.' });
+        }
+        if ((kategorie || []).some(k => String(k.id) !== id && String(k.pelna_sciezka) === nowaSciezka)) {
+          return res.json({ status: 'error', message: `Kategoria „${nowaSciezka}" już istnieje.` });
+        }
+
+        const przedrostek = staraSciezka + ' > ';
+        const noweRodzicId = zmianaRodzica ? (parentId || '') : (ta.rodzic_id || '');
+        db.getConnection((errC, conn) => {
+          if (errC) return res.json({ status: 'error', message: errC.message });
+          const koniec = (wynik) => { conn.release(); return res.json(wynik); };
+          const odwolaj = (msg) => conn.rollback(() => koniec({ status: 'error', message: msg }));
+          conn.beginTransaction((errT) => {
+            if (errT) { conn.release(); return res.json({ status: 'error', message: errT.message }); }
+            conn.query(`UPDATE Raport_Kategorie SET nazwa = ?, pelna_sciezka = ?, rodzic_id = ? WHERE tenant_id = ? AND id = ?`,
+              [nazwa, nowaSciezka, noweRodzicId, tenant_id, id], (e1) => {
+                if (e1) return odwolaj(e1.message);
+                // potomkowie: przepisujemy tylko początek ścieżki, reszta zostaje nietknięta
+                conn.query(`UPDATE Raport_Kategorie SET pelna_sciezka = CONCAT(?, SUBSTRING(pelna_sciezka, ?)) WHERE tenant_id = ? AND pelna_sciezka LIKE ?`,
+                  [nowaSciezka + ' > ', przedrostek.length + 1, tenant_id, przedrostek + '%'], (e2, wPotomkowie) => {
+                    if (e2) return odwolaj(e2.message);
+                    conn.query(`UPDATE Raport_Magazyn SET kategoria = ? WHERE tenant_id = ? AND kategoria = ?`,
+                      [nowaSciezka, tenant_id, staraSciezka], (e3, wProdukty) => {
+                        if (e3) return odwolaj(e3.message);
+                        conn.query(`UPDATE Raport_Magazyn SET kategoria = CONCAT(?, SUBSTRING(kategoria, ?)) WHERE tenant_id = ? AND kategoria LIKE ?`,
+                          [nowaSciezka + ' > ', przedrostek.length + 1, tenant_id, przedrostek + '%'], (e4, wProduktyPod) => {
+                            if (e4) return odwolaj(e4.message);
+                            conn.commit((e5) => {
+                              if (e5) return odwolaj(e5.message);
+                              const ileProd = (wProdukty.affectedRows || 0) + (wProduktyPod.affectedRows || 0);
+                              zapiszLog(tenant_id, 'MAGAZYN: KATEGORIA', d.pracownik, `„${staraSciezka}" → „${nowaSciezka}” (podkategorie: ${wPotomkowie.affectedRows || 0}, produkty: ${ileProd})`);
+                              return koniec({ status: 'success', sciezka: nowaSciezka, podkategorie: wPotomkowie.affectedRows || 0, produkty: ileProd });
+                            });
+                          });
+                      });
+                  });
+              });
+          });
+        });
+      });
+
+    } else if (action === 'rap_deleteCategory') {
+      // Kasowanie sprawdza teraz, czy kategoria nie ma podkategorii i produktów — wcześniej
+      // zostawiało sieroty: produkty ze ścieżką do nieistniejącej już kategorii.
+      db.query(`SELECT id, nazwa, pelna_sciezka FROM Raport_Kategorie WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, d.id], (errK, rowsK) => {
+        if (errK) return res.json({ status: 'error', message: errK.message });
+        if (!rowsK.length) return res.json({ status: 'error', message: 'Nie znaleziono kategorii' });
+        const sciezka = String(rowsK[0].pelna_sciezka || rowsK[0].nazwa);
+        db.query(`SELECT (SELECT COUNT(*) FROM Raport_Kategorie WHERE tenant_id = ? AND pelna_sciezka LIKE ?) AS dzieci,
+                         (SELECT COUNT(*) FROM Raport_Magazyn WHERE tenant_id = ? AND (kategoria = ? OR kategoria LIKE ?)) AS produkty`,
+          [tenant_id, sciezka + ' > %', tenant_id, sciezka, sciezka + ' > %'], (errC, rowsC) => {
+            if (errC) return res.json({ status: 'error', message: errC.message });
+            const { dzieci, produkty } = rowsC[0];
+            if ((dzieci || produkty) && !d.force) {
+              // polska odmiana: 1 produkt · 2–4 produkty · 5+ produktów (to samo dla podkategorii)
+              const lm = (n, jeden, kilka, wiele) => (n === 1 ? jeden : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? kilka : wiele));
+              const co = [dzieci ? `${dzieci} ${lm(dzieci, 'podkategorię', 'podkategorie', 'podkategorii')}` : null,
+                          produkty ? `${produkty} ${lm(produkty, 'produkt', 'produkty', 'produktów')}` : null].filter(Boolean).join(' i ');
+              return res.json({ status: 'error', code: 'NIEPUSTA', dzieci, produkty, message: `Kategoria „${sciezka}" zawiera ${co}. Przenieś je albo zmień nazwę kategorii zamiast kasować.` });
+            }
+            db.query(`DELETE FROM Raport_Kategorie WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, d.id], (err, result) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono kategorii' });
+              zapiszLog(tenant_id, 'MAGAZYN: KATEGORIA', d.pracownik, `usunięto „${sciezka}"`);
+              return res.json({ status: 'success' });
+            });
+          });
+      });
 
     } else if (action === 'rap_getHidden') {
       db.query(
