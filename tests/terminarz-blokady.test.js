@@ -176,4 +176,9 @@ describe('B04 — dodawanie klientki zniknęło z Terminarza', () => {
     expect(M.AKCJE).toContain('trm_blokada_zapisz');
     expect(M.AKCJE).toContain('trm_blokada_usun');
   });
+  test('rezerwacja techniczna nie chowa się pod skrótem klawiaturowym', () => {
+    expect(src).not.toMatch(/altKey|ctrlKey/);                                   // gest Alt/Ctrl + klik usunięty
+    expect(src).toMatch(/⛔ Rezerwacja techniczna<\/button>/);                   // przycisk w nagłówku
+    expect(src).toMatch(/To nie wizyta — zarezerwuj czas technicznie/);          // przejście z kreatora wizyty
+  });
 });

@@ -431,8 +431,6 @@
     const siatka = (TRM.dane.ustawienia.siatka_min || 15);
     let m = zak.od + Math.floor((ev.clientY - rect.top) / PX); m = Math.floor(m / siatka) * siatka;
     const start = `${TRM.data} ${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
-    // Alt/Ctrl + klik = rezerwacja techniczna zamiast wizyty (ten sam gest, inny zamiar)
-    if (ev.altKey || ev.ctrlKey) return TRM.blokadaNowa({ start, osoba: pracownik });
     TRM.nowaWizyta({ start, pracownik });
   };
 
@@ -1032,7 +1030,10 @@
     return wyniki.map((k, i) => `<button type="button" class="trm-klient-karta" onclick="TRM.nowaKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span>${k.ostrzezenie ? ' <span class="trm-pill warn">⚠</span>' : ''}</button>`).join('');
   }
   function sekcjaKlientHtml(n) {
-    return `<div class="trm-field"><label>Klientka</label>
+    // Przejście „to nie wizyta" bez chowania funkcji pod skrótem klawiaturowym: rezerwacja
+    // techniczna jest normalnym elementem pracy salonu, więc stoi obok, z gotową godziną.
+    return `${n.klient || n.pozycje.length ? '' : `<div class="trm-row" style="justify-content:flex-end;margin:-4px 0 6px"><button class="trm-btn link sm" onclick="TRM.blokadaNowa({ start: '${esc(n.start)}', osoba: '${esc(n.prefPrac || n.domyslny || '')}' })">To nie wizyta — zarezerwuj czas technicznie</button></div>`}
+      <div class="trm-field"><label>Klientka</label>
       ${n.klient ? `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`
       : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
          <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${klientWynikiHtml(n.wyniki)}</div>

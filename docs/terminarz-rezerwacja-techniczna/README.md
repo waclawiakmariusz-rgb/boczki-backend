@@ -15,7 +15,7 @@ Powód jest praktyczny: kartoteka założona w biegu przy ladzie to profil bez z
 
 Blokady czasu istniały w module od początku (`Term_Nieobecnosci`), ale zakładać je mógł **tylko manager** i **tylko w Ustawieniach → Nieobecności i blokady**, razem z urlopami i chorobami. Recepcja, która patrzy na wolne okno w grafiku, nie miała jak zarezerwować gabinetu.
 
-**Teraz:** przycisk **⛔ Rezerwacja techniczna** obok „+ Nowa wizyta" (role operacyjne), a w siatce **Alt/Ctrl + klik** w wolne miejsce otwiera ten sam panel z podstawioną godziną i osobą z klikniętej kolumny.
+**Teraz:** przycisk **⛔ Rezerwacja techniczna** obok „+ Nowa wizyta" (role operacyjne) oraz przejście **„To nie wizyta — zarezerwuj czas technicznie"** w kreatorze wizyty, z już podstawioną godziną i osobą z klikniętej kolumny. Świadomie bez skrótu klawiaturowego: rezerwacja techniczna to normalny element pracy salonu, a nie funkcja do chowania pod gestem.
 
 W panelu: od–do, powód (szkolenie · rozmowa/spotkanie · serwis, naprawa · inne), osoba (opcjonalnie), gabinet lub urządzenie (opcjonalnie), opis — obowiązkowy, bo zobaczy go cała zmiana. Pod spodem podpowiedź, gdzie rezerwacja będzie widoczna.
 
