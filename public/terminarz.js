@@ -199,6 +199,7 @@
       if (req !== odswiezReq) return;
       if (d.status !== 'success') { main.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
       TRM.zakres = d;
+      pobierzPreferencje(d.rezerwacje, TRM.data).then(() => { if (req === odswiezReq) odswiezWidokPoPreferencjach(); });
       return TRM.widok === 'tydzien' ? renderTydzien(od) : renderAgenda(od, do_);
     }
     if (sub) sub.textContent = ladnaData(TRM.data);
@@ -210,6 +211,7 @@
     TRM.dzien = d;
     liczniki(d);
     odswiezPasekZmian();
+    pobierzPreferencje(d.rezerwacje, TRM.data).then(() => { if (req === odswiezReq && TRM.pref.dzien === TRM.data) odswiezWidokPoPreferencjach(); });
     nowaSynchronizujDate();
     if (TRM.widok === 'zasoby') { renderZasoby(); przywrocScroll(); return; }
     if (TRM.widok === 'moj' || waski()) { renderAgendaDnia(); przywrocScroll(); return; }
@@ -279,6 +281,84 @@
     if (wsz.length) { od = Math.min(od, ...wsz.map(x => x[0])); do_ = Math.max(do_, ...wsz.map(x => x[1])); }
     return { od: Math.floor(od / 60) * 60, do: Math.min(1440, Math.ceil(do_ / 60) * 60) };
   }
+  // ── Preferencje klientki (19.10.2026) ────────────────────────────────────────────────────────
+  // „Chcę jednym rzutem oka wiedzieć, że lubi kawę z mlekiem i woli ciepło”. Dane są per klientka
+  // (moduł preferencji), więc dla całego dnia pytamy raz — jedno żądanie na listę identyfikatorów.
+  // Serwer sam ogranicza zakres: kosmetolog dostaje tylko preferencje oznaczone „przy zabiegu”.
+  TRM.pref = { mapa: {}, slownik: null, dzien: null, edycja: null };
+  const preferencje = (r) => (r && r.id_klienta && TRM.pref.mapa[r.id_klienta]) || [];
+
+  async function pobierzPreferencje(rezerwacje, dzien) {
+    const idy = [...new Set((rezerwacje || []).map(r => r.id_klienta).filter(Boolean))];
+    if (!idy.length) { TRM.pref.mapa = {}; TRM.pref.dzien = dzien; return; }
+    const d = await api('pref_wielu', { id_klientow: idy });
+    if (d.status === 'success') { TRM.pref.mapa = d.preferencje || {}; TRM.pref.dzien = dzien; }
+  }
+  /** Chipsy preferencji — „☕ Kawa z mlekiem · 🌡️ Woli ciepło”. */
+  function chipsyPreferencji(r, limit) {
+    const p = preferencje(r); if (!p.length) return '';
+    const widoczne = limit ? p.slice(0, limit) : p;
+    const reszta = p.length - widoczne.length;
+    return `<div class="trm-pref">${widoczne.map(x => `<span class="trm-pref-chip" title="${esc(x.nazwa + ': ' + x.wartosc)}">${x.ikona ? `<span class="ik">${esc(x.ikona)}</span>` : ''}${esc(x.wartosc)}</span>`).join('')}${reszta > 0 ? `<span class="trm-pref-chip wiecej">+${reszta}</span>` : ''}</div>`;
+  }
+  /** Znak przy nazwisku: są preferencje, zobacz szczegóły. */
+  function znakPreferencji(r) {
+    const p = preferencje(r); if (!p.length) return '';
+    return `<span class="trm-pref-znak" title="${esc(p.map(x => x.nazwa + ': ' + x.wartosc).join(' · '))}" aria-label="Klientka ma zapisane preferencje">${esc(p[0].ikona || '★')}</span>`;
+  }
+  /** Przerysowanie bieżącego widoku po doczytaniu preferencji — bez ponownego pytania o dane.
+   *  Pozycję przewinięcia odtwarzamy sami: to przerysowanie dzieje się „w tle”, już po tym,
+   *  jak recepcja zobaczyła dzień, i nie może jej zrzucić na górę listy. */
+  function odswiezWidokPoPreferencjach() {
+    const kontener = document.querySelector('.main-content');
+    const scrollPrzed = kontener ? kontener.scrollTop : 0;
+    const wroc = () => { if (kontener) kontener.scrollTop = scrollPrzed; };
+    if (TRM.szcz && TRM.szcz.rez) renderSzczegoly();
+    if ((TRM.widok === 'tydzien' || TRM.widok === 'agenda') && TRM.zakres) {
+      const od = TRM.widok === 'tydzien' ? poniedzialek(TRM.data) : TRM.data;
+      TRM.widok === 'tydzien' ? renderTydzien(od) : renderAgenda(od, dodajDni(od, 6));
+      return wroc();
+    }
+    if (!TRM.dzien) return;
+    if (TRM.widok === 'zasoby') { renderZasoby(); return wroc(); }
+    if (TRM.widok === 'moj' || waski()) { renderAgendaDnia(); return wroc(); }
+    if (TRM.widok === 'dzien') { renderDzien(); wroc(); }
+  }
+  /** Karta preferencji w szczegółach wizyty — z edycją dla recepcji i managera. */
+  function prefKartaHtml(r) {
+    if (!r.id_klienta) return '';
+    const p = preferencje(r), edycja = TRM.pref.edycja === r.id_klienta, mozna = operacyjna();
+    if (!p.length && !mozna) return '';
+    const naglowek = `<div class="trm-row" style="justify-content:space-between;align-items:center"><h3 style="margin:0">Preferencje klientki</h3>${mozna ? `<button class="trm-btn link sm" onclick="TRM.prefEdytor('${esc(r.id_klienta)}')">${edycja ? 'Gotowe' : (p.length ? 'Zmień' : '+ dodaj')}</button>` : ''}</div>`;
+    if (!edycja) return `<div class="trm-card">${naglowek}${p.length ? chipsyPreferencji(r) : '<div class="muted small">Nic jeszcze nie zapisano. Kawa czy herbata? Woli ciepło? Jedno kliknięcie i następnym razem wie o tym cała zmiana.</div>'}</div>`;
+    const sl = TRM.pref.slownik || [];
+    const teraz = Object.fromEntries(p.map(x => [x.klucz, x.wartosc]));
+    return `<div class="trm-card">${naglowek}
+      <div class="trm-pref-edytor">${sl.map(s => {
+        const w = teraz[s.klucz] || '';
+        if (s.typ === 'tekst') return `<label class="trm-pref-pole"><span>${esc(s.ikona || '')} ${esc(s.nazwa)}</span>
+          <input type="text" maxlength="120" value="${esc(w)}" placeholder="wpisz…" onchange="TRM.prefUstaw('${esc(r.id_klienta)}','${esc(s.klucz)}', this.value)"></label>`;
+        return `<label class="trm-pref-pole"><span>${esc(s.ikona || '')} ${esc(s.nazwa)}</span>
+          <select onchange="TRM.prefUstaw('${esc(r.id_klienta)}','${esc(s.klucz)}', this.value)">
+            <option value="">—</option>${(s.opcje || []).map(o => `<option ${o === w ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+          </select></label>`;
+      }).join('')}</div>
+      <div class="trm-pomoc">Preferencje to komfort obsługi. Alergie, choroby i leki zapisuj w konsultacji i dokumentach klientki — nie tutaj.</div>
+    </div>`;
+  }
+  TRM.prefEdytor = async (id) => {
+    if (TRM.pref.edycja === id) { TRM.pref.edycja = null; return renderSzczegoly(); }
+    if (!TRM.pref.slownik) { const d = await api('pref_slownik'); if (d.status !== 'success') return toast('error', 'Nie udało się pobrać listy preferencji', d.message); TRM.pref.slownik = d.slownik || []; }
+    TRM.pref.edycja = id; renderSzczegoly();
+  };
+  TRM.prefUstaw = async (id, klucz, wartosc) => {
+    const d = await api('pref_zapisz', { id_klienta: id, klucz, wartosc });
+    if (d.status !== 'success') return toast('error', 'Nie zapisano preferencji', d.message);
+    TRM.pref.mapa[id] = d.preferencje || [];
+    toast('success', wartosc ? 'Zapisano preferencję' : 'Usunięto preferencję');
+    renderSzczegoly(); odswiezWidokPoPreferencjach();
+  };
+
   // ── Znak notatki (19.10.2026) ────────────────────────────────────────────────────────────────
   // Prośba z recepcji: „jak nie kliknę, to się nie dowiem, że przy wizycie jest notatka”.
   // Notatka przychodzi tylko do ról operacyjnych (serwer zeruje ją kosmetologom), więc sam fakt
@@ -317,7 +397,7 @@
       const pozIdsCsv = poz.map(x => x.id).join(',');
       const krotka = (b - a) < 40, mini = (b - a) < 20; // D01: 20–39 min = 2 linie (godzina·klientka / usługa), <20 min = 1 linia
       s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
-        ${znakNotatki(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
+        ${znakNotatki(r)}${znakPreferencji(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
       </div>`;
     });
     return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
@@ -647,7 +727,7 @@
     const uslugi = r.pozycje.map(p => `${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}${pracownicy.length > 1 ? ' — ' + esc(p.pracownik) : ''}`).join(' + ');
     return `<div class="trm-ag-row" style="--kat:${kolorKat(u0)};${anul ? 'opacity:.5' : ''}" onclick="TRM.otworzSzczegoly(${r.id})">
       <div class="t">${hhmm(r.start)}–${hhmm(r.koniec)}</div>
-      <div><div class="k">${esc(r.klient_nazwa)}${znakNotatki(r)}</div><div class="u">${uslugi}</div>${notatkaTekst(r) ? `<div class="trm-ag-notatka">${esc(notatkaTekst(r))}</div>` : ''}</div>
+      <div><div class="k">${esc(r.klient_nazwa)}${znakNotatki(r)}</div><div class="u">${uslugi}</div>${chipsyPreferencji(r, 4)}${notatkaTekst(r) ? `<div class="trm-ag-notatka">${esc(notatkaTekst(r))}</div>` : ''}</div>
       <div class="trm-ag-prac">${prac}</div>
       <div class="trm-ag-status">${pill(ST_LABEL[r.status])}${r.obecnosc !== 'oczekiwana' ? pill(OB_LABEL[r.obecnosc]) : ''}${r.wykonanie !== 'zaplanowana' ? pill(WYK_LABEL[r.wykonanie]) : ''}</div>
       <div class="trm-ag-rozl">${!operacyjna() ? '<span class="muted small">brak uprawnień</span>' : anul ? '<span class="muted small">nie dotyczy</span>' : (r.pozycje.some(p => p.zakup_skladnik_id) ? '<span class="trm-pill pakiet">Z pakietu</span> ' : '') + (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : !r.id_klienta ? '<span class="muted small">bez kartoteki</span>' : r.pozycje.some(p => p.zakup_skladnik_id) ? '' : '<span class="muted small">pojedynczy zabieg</span>')}</div>
@@ -1460,6 +1540,7 @@
     if (!anul && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo')) pomoc.push(r.sprzedaz_id ? 'rozliczona' : 'do rozliczenia');
     html += `<div class="trm-status-glowny">${pill(glowny)}${pomoc.length ? `<span class="pomoc">${esc(pomoc.join(' · '))}</span>` : ''}</div>`;
     html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
+    html += prefKartaHtml(r);
     if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
     if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
     const karta = op ? (s.karta || 'wizyta') : 'wizyta';

@@ -382,6 +382,8 @@ const blogRoutes       = require('./routes/blog')(db);
 const predefRoutes     = require('./routes/predef')(db);
 const kosztPlanRoutes  = require('./routes/koszty_plan')(db);
 const zadaniaRoutes    = require('./routes/zadania')(db);
+const preferencjeRoutes = require('./routes/preferencje')(db); // preferencje klientki (chipsy przy nazwisku)
+const preferencjeActions = ['pref_slownik', 'pref_slownik_zapisz', 'pref_klientki', 'pref_wielu', 'pref_zapisz'];
 const typyZabiegowRoutes = require('./routes/typy_zabiegow')(db);
 const leadyRoutes      = require('./routes/leady')(db);
 const featuresRoutes   = require('./routes/features')(db);
@@ -481,6 +483,7 @@ app.use('/api', blogRoutes);
 app.use('/api', predefRoutes);
 app.use('/api', kosztPlanRoutes);
 app.use('/api', zadaniaRoutes);
+app.use('/api', preferencjeRoutes);
 app.use('/api', ticketyRoutes);
 if (terminarzRoutes) app.use('/api', terminarzRoutes);
 app.use('/api', typyZabiegowRoutes);
@@ -765,6 +768,9 @@ app.post('/api', async (req, res) => {
     } else if (terminarzRoutes && terminarzActions.includes(action)) {
         req.url = '/terminarz';
         return terminarzRoutes(req, res, () => {});
+    } else if (preferencjeActions.includes(action)) {
+        req.url = '/preferencje';
+        return preferencjeRoutes(req, res, () => {});
     }
 
     return res.json({ status: 'error', message: 'Nieznana akcja POST: ' + action });

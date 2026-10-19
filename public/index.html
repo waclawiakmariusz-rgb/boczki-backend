@@ -8146,6 +8146,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <button onclick="otworzOkienkoRODO(window.aktualnyProfilKlientId, window.aktualnyProfilKlientNazwa)" style="display:inline-flex; align-items:center; gap:6px; border:0; background:#13a05f; color:#fff; border-radius:999px; padding:7px 13px; font-size:13px; font-weight:800; cursor:pointer;">🔓 ZGODY</button>
                             <span id="dd-hero-pigulki" style="display:inline-flex; gap:6px; flex-wrap:wrap;"></span>
                         </div>
+                        <!-- Preferencje klientki (19.10.2026): kawa/herbata, ciepło, cisza — widoczne od razu, bez wchodzenia w zakładki -->
+                        <div id="pref-hero" style="display:none; margin-top:10px;"></div>
                         <!-- Treść notatki o kliencie — pod chipsami; pełna edycja w tabie Podsumowanie -->
                         <div id="memo-hero" style="display:none; margin-top:10px; padding:12px 16px; background:#fffbf5; border:1px solid #f3e0c8; border-radius:12px; font-size:16px; font-weight:700; color:#3b2e1f; line-height:1.5; white-space:pre-wrap; word-break:break-word;"></div>
                     </div>
@@ -15249,6 +15251,10 @@ function otworzProfil(idKlienta) {
     if (typeof dd_loadDokumenty === 'function') {
         dd_loadDokumenty(idKlienta);
     }
+    // Preferencje klientki (chipsy w hero) — też w tle
+    if (typeof pref_wczytaj === 'function') {
+        pref_wczytaj(idKlienta);
+    }
 
     // 1. Przełącz widok
     document.getElementById('widok-listy-klientow').style.display = 'none';
@@ -22195,6 +22201,135 @@ function filtrujLogi() {
         document.getElementById('bd-month-select').value = miesiacCap;
         zmienMiesiac();
     });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PREFERENCJE KLIENTKI (19.10.2026) — „jednym rzutem oka”
+// Kawa czy herbata, ciepło czy chłód, rozmowa czy cisza. Krótkie, stałe rzeczy,
+// których nie da się wyłowić ze ściany tekstu w notatce. Chipsy w hero profilu,
+// te same dane widzi Terminarz przy wizycie.
+// UWAGA: alergie i sprawy zdrowotne NIE idą tutaj — to konsultacja i dokumenty.
+// ═══════════════════════════════════════════════════════════════════════════
+window.prefStan = { slownik: null, lista: [], id: null, mozna: false, edycja: false };
+
+async function pref_api(action, dane) {
+    try {
+        const r = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ action, pracownik: localStorage.getItem('boczki_pracownik_imie') || '', ...(dane || {}) }) });
+        return await r.json();
+    } catch (e) { return { status: 'error', message: 'Brak połączenia.' }; }
+}
+
+async function pref_wczytaj(idKlienta) {
+    const hero = document.getElementById('pref-hero');
+    if (!hero) return;
+    window.prefStan = { ...window.prefStan, id: idKlienta, lista: [], edycja: false };
+    const d = await pref_api('pref_klientki', { id_klienta: idKlienta });
+    if (d.status !== 'success' || window.prefStan.id !== idKlienta) { hero.style.display = 'none'; return; }
+    window.prefStan.lista = d.preferencje || [];
+    window.prefStan.mozna = !!d.mozna_edytowac;
+    pref_render();
+}
+
+function pref_render() {
+    const hero = document.getElementById('pref-hero');
+    if (!hero) return;
+    const s = window.prefStan;
+    if (!s.lista.length && !s.mozna) { hero.style.display = 'none'; return; }
+    hero.style.display = 'block';
+    const chipsy = s.lista.map(p => `<span style="display:inline-flex; align-items:center; gap:5px; background:#eef4f3; color:#2f5b52; border:1px solid #d6e5e1; border-radius:999px; padding:4px 11px; font-size:13px; font-weight:600;" title="${escHtml(p.nazwa)}">${escHtml(p.ikona || '')} ${escHtml(p.wartosc)}</span>`).join(' ');
+    const przycisk = s.mozna ? `<button onclick="pref_edytor()" style="border:0; background:none; color:#6e49df; font-size:13px; font-weight:700; cursor:pointer; padding:4px 6px;">${s.edycja ? 'Gotowe' : (s.lista.length ? '✎ Zmień' : '➕ Dodaj preferencje')}</button>` : '';
+    let html = `<div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">${chipsy || '<span style="color:#8c8fa1; font-size:13px;">Brak zapisanych preferencji (kawa/herbata, ciepło, cisza…)</span>'}${przycisk}</div>`;
+    if (s.edycja && s.slownik) {
+        const teraz = Object.fromEntries(s.lista.map(p => [p.klucz, p.wartosc]));
+        // Edytor jako warstwa nad treścią — kolumna hero jest wąska, a pozycji bywa kilkanaście.
+        html += `<div style="position:relative;"><div style="position:absolute; z-index:60; left:0; top:8px; width:min(560px, 92vw); padding:14px 16px; background:#fff; border:1px solid #dfeae7; border-radius:14px; box-shadow:0 18px 40px rgba(26,14,26,.14);">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(165px, 1fr)); gap:10px;">${s.slownik.map(sl => {
+                const w = teraz[sl.klucz] || '';
+                const etykieta = `<div style="font-size:12px; color:#63697b; margin-bottom:3px;">${escHtml(sl.ikona || '')} ${escHtml(sl.nazwa)}</div>`;
+                if (sl.typ === 'tekst') return `<label>${etykieta}<input type="text" maxlength="120" value="${escHtml(w)}" placeholder="wpisz…" onchange="pref_ustaw('${escHtml(sl.klucz)}', this.value)" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px; font-size:14px;"></label>`;
+                return `<label>${etykieta}<select onchange="pref_ustaw('${escHtml(sl.klucz)}', this.value)" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px; font-size:14px;"><option value="">—</option>${(sl.opcje || []).map(o => `<option ${o === w ? 'selected' : ''}>${escHtml(o)}</option>`).join('')}</select></label>`;
+            }).join('')}</div>
+            <div style="margin-top:8px; font-size:12px; color:#8c8fa1;">Preferencje to komfort obsługi. Alergie, choroby i leki zapisuj w konsultacji i dokumentach klientki — nie tutaj.
+            ${pref_czyManager() ? ` · <a href="#" onclick="event.preventDefault(); pref_slownikPanel();" style="color:#6e49df; font-weight:700;">Zarządzaj listą preferencji</a>` : ''}</div>
+            ${s.slownikPanel ? pref_slownikFormHtml() : ''}
+        </div></div>`;
+    }
+    hero.innerHTML = html;
+}
+
+// ── Lista preferencji salonu (manager/właściciel): dopisywanie własnych pozycji ──────────────
+function pref_czyManager() {
+    return ['manager', 'admin', 'megaadmin'].includes((localStorage.getItem('boczki_pracownik_rola') || '').toLowerCase().trim());
+}
+function pref_slownikPanel() {
+    window.prefStan.slownikPanel = !window.prefStan.slownikPanel;
+    window.prefStan.edytowana = null;
+    pref_render();
+}
+function pref_slownikFormHtml() {
+    const s = window.prefStan, e = s.edytowana || {};
+    const lista = (s.slownik || []).map(x => `<span style="display:inline-flex; gap:4px; align-items:center; background:#fff; border:1px solid #e3e7f0; border-radius:999px; padding:3px 10px; font-size:12.5px;">
+        ${escHtml(x.ikona || '')} ${escHtml(x.nazwa)}${x.dla_zabiegu ? ' <span title="widoczna przy zabiegu" style="color:#2f5b52;">●</span>' : ''}
+        <a href="#" onclick="event.preventDefault(); pref_slownikEdytuj('${escHtml(x.klucz)}')" style="color:#6e49df; font-weight:700;">edytuj</a></span>`).join(' ');
+    return `<div style="margin-top:10px; padding:12px 14px; background:#fff; border:1px dashed #cfd6e6; border-radius:12px;">
+        <div style="font-size:13px; font-weight:800; color:#2a3040; margin-bottom:6px;">Lista preferencji w tym salonie</div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;">${lista}</div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:8px; align-items:end;">
+            <label><div style="font-size:12px; color:#63697b;">Nazwa</div><input id="pref-sl-nazwa" value="${escHtml(e.nazwa || '')}" placeholder="np. Napój" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px;"></label>
+            <label><div style="font-size:12px; color:#63697b;">Ikona</div><input id="pref-sl-ikona" value="${escHtml(e.ikona || '')}" maxlength="4" placeholder="☕" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px;"></label>
+            <label><div style="font-size:12px; color:#63697b;">Rodzaj</div><select id="pref-sl-typ" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px;"><option value="wybor" ${e.typ !== 'tekst' ? 'selected' : ''}>lista wyboru</option><option value="tekst" ${e.typ === 'tekst' ? 'selected' : ''}>własny tekst</option></select></label>
+            <label style="grid-column:1/-1;"><div style="font-size:12px; color:#63697b;">Opcje do wyboru (oddziel przecinkiem)</div><input id="pref-sl-opcje" value="${escHtml((e.opcje || []).join(', '))}" placeholder="Kawa czarna, Herbata, Woda" style="width:100%; padding:7px 10px; border:1px solid #d9dde8; border-radius:8px;"></label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" id="pref-sl-zabieg" ${e.dla_zabiegu ? 'checked' : ''}> widoczna przy zabiegu</label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px;"><input type="checkbox" id="pref-sl-aktywna" ${e.aktywna === false ? '' : 'checked'}> używana</label>
+            <button onclick="pref_slownikZapisz()" style="border:0; background:#6e49df; color:#fff; border-radius:8px; padding:8px 14px; font-weight:800; cursor:pointer;">Zapisz pozycję</button>
+        </div>
+        <div style="margin-top:6px; font-size:12px; color:#8c8fa1;">„Widoczna przy zabiegu” = zobaczy ją też kosmetolożka w swoim dniu (temperatura, cisza, zapachy). Reszta zostaje przy recepcji.</div>
+    </div>`;
+}
+function pref_slownikEdytuj(klucz) {
+    window.prefStan.edytowana = (window.prefStan.slownik || []).find(x => x.klucz === klucz) || null;
+    pref_render();
+}
+async function pref_slownikZapisz() {
+    const s = window.prefStan;
+    const nazwa = (document.getElementById('pref-sl-nazwa').value || '').trim();
+    if (!nazwa) return pokazPowiadomienie('warning', 'Podaj nazwę preferencji', 'Np. „Napój” albo „Muzyka”.');
+    const typ = document.getElementById('pref-sl-typ').value;
+    const opcje = (document.getElementById('pref-sl-opcje').value || '').split(',').map(x => x.trim()).filter(Boolean);
+    const klucz = (s.edytowana && s.edytowana.klucz) || nazwa.toLowerCase()
+        .replace(/[ąàáâä]/g, 'a').replace(/[ćç]/g, 'c').replace(/[ęèéêë]/g, 'e').replace(/[ł]/g, 'l')
+        .replace(/[ńñ]/g, 'n').replace(/[óòôö]/g, 'o').replace(/[śş]/g, 's').replace(/[żź]/g, 'z')
+        .replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40);
+    const d = await pref_api('pref_slownik_zapisz', {
+        klucz, nazwa, ikona: (document.getElementById('pref-sl-ikona').value || '').trim(), typ, opcje,
+        dla_zabiegu: document.getElementById('pref-sl-zabieg').checked,
+        aktywna: document.getElementById('pref-sl-aktywna').checked,
+    });
+    if (d.status !== 'success') return pokazPowiadomienie('error', 'Nie zapisano pozycji', d.message || '');
+    s.slownik = (d.slownik || []).filter(x => x.aktywna !== false);
+    s.edytowana = null;
+    pokazPowiadomienie('success', 'Zapisano', `Pozycja „${nazwa}” jest na liście preferencji.`);
+    pref_render();
+}
+
+async function pref_edytor() {
+    const s = window.prefStan;
+    if (s.edycja) { s.edycja = false; return pref_render(); }
+    if (!s.slownik) {
+        const d = await pref_api('pref_slownik');
+        if (d.status !== 'success') return pokazPowiadomienie('error', 'Nie udało się pobrać listy preferencji', d.message || '');
+        s.slownik = (d.slownik || []).filter(x => x.aktywna !== false);
+    }
+    s.edycja = true; pref_render();
+}
+
+async function pref_ustaw(klucz, wartosc) {
+    const s = window.prefStan;
+    if (!s.id) return;
+    const d = await pref_api('pref_zapisz', { id_klienta: s.id, klucz, wartosc });
+    if (d.status !== 'success') return pokazPowiadomienie('error', 'Nie zapisano preferencji', d.message || '');
+    s.lista = d.preferencje || [];
+    pref_render();
 }
 
 // --- OBSŁUGA NOTATEK (MEMO) ---
