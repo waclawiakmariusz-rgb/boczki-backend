@@ -1124,9 +1124,13 @@ module.exports = (db, opts = {}) => {
         if (do_ <= od) throw new BladUzytkownika('Koniec rezerwacji musi być po jej początku.');
         if (S.naMin(do_) - S.naMin(od) > 14 * 1440) throw new BladUzytkownika('Rezerwacja techniczna może trwać najwyżej 14 dni. Dłuższe przerwy zakłada manager w Ustawieniach.');
         const typ = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(d.typ) ? d.typ : 'inne';
-        const prac = d.osoba ? String(d.osoba).trim() : null;
-        const zasob = d.zasob_id ? Number(d.zasob_id) : null;
-        if (!prac && !zasob) throw new BladUzytkownika('Wskaż, czyj czas albo który gabinet rezerwujesz.');
+        // „Cały salon" (spotkanie zespołu, remanent, szkolenie dla wszystkich) = wpis bez osoby
+        // i bez zasobu — silnik dostępności odejmuje taki czas każdej osobie i każdemu gabinetowi.
+        // Wymaga jawnego zaznaczenia, żeby pusty formularz nie zablokował przez przypadek salonu.
+        const calySalon = d.caly_salon === true || d.caly_salon === 'true' || d.caly_salon === 1;
+        const prac = calySalon ? null : (d.osoba ? String(d.osoba).trim() : null);
+        const zasob = calySalon ? null : (d.zasob_id ? Number(d.zasob_id) : null);
+        if (!calySalon && !prac && !zasob) throw new BladUzytkownika('Wskaż, czyj czas albo który gabinet rezerwujesz — albo zaznacz „cały salon".');
         if (prac && !(await pracownicy(tenant)).includes(prac)) throw new BladUzytkownika('Nieznana osoba.');
         if (zasob && !(await zasoby(tenant, true)).some(z => Number(z.id) === zasob)) throw new BladUzytkownika('Nieznany gabinet albo urządzenie.');
         const opis = String(d.opis || '').trim().slice(0, 255);
@@ -1138,7 +1142,7 @@ module.exports = (db, opts = {}) => {
           return { status: 'success', wymaga_decyzji: true, dotkniete: dotk,
             message: `W tym czasie ${dotk.length === 1 ? 'jest już wizyta' : 'są już ' + dotk.length + ' wizyty'}. Rezerwacja ich nie odwołuje — najpierw przestaw albo odwołaj wizyty, albo zapisz rezerwację świadomie.` };
         }
-        const co = [prac, zasob ? (await zasoby(tenant, true)).find(z => Number(z.id) === zasob).nazwa : null].filter(Boolean).join(' + ');
+        const co = calySalon ? 'CAŁY SALON' : [prac, zasob ? (await zasoby(tenant, true)).find(z => Number(z.id) === zasob).nazwa : null].filter(Boolean).join(' + ');
         // Zmiana istniejącej rezerwacji (przesunięcie, wydłużenie, inny powód) albo nowy wpis.
         if (d.id) {
           const stara = (await q(`SELECT id, typ, opis FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
@@ -1163,7 +1167,7 @@ module.exports = (db, opts = {}) => {
         if (!b) throw new BladUzytkownika('Nie znaleziono rezerwacji — mogła zostać zdjęta.');
         const zas = b.zasob_id ? (await zasoby(tenant, true)).find(z => Number(z.id) === Number(b.zasob_id)) : null;
         const techniczna = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(b.typ);
-        return { status: 'success', blokada: { ...b, do: b.do_, zasob_nazwa: zas ? zas.nazwa : null, techniczna },
+        return { status: 'success', blokada: { ...b, do: b.do_, zasob_nazwa: zas ? zas.nazwa : null, techniczna, caly_salon: !b.pracownik && !b.zasob_id },
           mozna_edytowac: techniczna ? ROLE_OPERACYJNE.has(r) : ROLE_MANAGER_PLUS.has(r) };
       }
       case 'trm_blokada_usun': {

@@ -443,7 +443,7 @@
     if (!operacyjna()) return;
     const start = (o && o.start) || `${TRM.data} 09:00`;
     const koniec = S_dodajMin(start, 60);
-    TRM.blok = { od: start, do: koniec, typ: 'szkolenie', osoba: (o && o.osoba) || '', zasob_id: (o && o.zasob_id) || '', opis: '', dotkniete: null };
+    TRM.blok = { od: start, do: koniec, typ: 'szkolenie', osoba: (o && o.osoba) || '', zasob_id: (o && o.zasob_id) || '', opis: '', caly_salon: !!(o && o.caly_salon), dotkniete: null };
     renderBlokada();
   };
   // Dodanie minut z poprawnym przejściem przez północ (próba wyłapała „+1 godz." do 23:59,
@@ -490,14 +490,21 @@
           <div class="trm-field"><label>Od</label><input type="datetime-local" value="${esc(b.od.replace(' ', 'T'))}" onchange="TRM.blokadaPole('od', this.value)"></div>
           <div class="trm-field"><label>Do</label><input type="datetime-local" value="${esc(b.do.replace(' ', 'T'))}" onchange="TRM.blokadaPole('do', this.value)"></div>
         </div>
-        <div class="trm-grid2">
-          <div class="trm-field"><label>Powód</label><select onchange="TRM.blokadaPole('typ', this.value)">${POWODY_BLOKADY.map(([k, n]) => `<option value="${k}" ${b.typ === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
+        <div class="trm-field"><label>Kogo dotyczy</label>
+          <div class="trm-segment">
+            <button class="${b.caly_salon ? '' : 'active'}" onclick="TRM.blokadaZakres(false)">Wybrana osoba / gabinet</button>
+            <button class="${b.caly_salon ? 'active' : ''}" onclick="TRM.blokadaZakres(true)">Cały salon</button>
+          </div></div>
+        ${b.caly_salon
+          ? '<div class="trm-note warn small"><b>Cały salon</b> — w tym czasie nikt nie przyjmuje i żaden gabinet nie jest dostępny. Tak zapisuje się zebranie zespołu, remanent czy szkolenie dla wszystkich.</div>'
+          : `<div class="trm-grid2">
           <div class="trm-field"><label>Osoba (opcjonalnie)</label><select onchange="TRM.blokadaPole('osoba', this.value)"><option value="">— nikogo nie zajmuje —</option>${(TRM.dane.pracownicy || []).map(p => `<option ${b.osoba === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
-        </div>
-        <div class="trm-field"><label>Gabinet lub urządzenie (opcjonalnie)</label>
-          <select onchange="TRM.blokadaPole('zasob_id', this.value)"><option value="">— żadnego —</option>${zas.map(z => `<option value="${z.id}" ${String(b.zasob_id) === String(z.id) ? 'selected' : ''}>${esc(z.nazwa)}${z.typ === 'urzadzenie' ? ' (urządzenie)' : ''}</option>`).join('')}</select></div>
+          <div class="trm-field"><label>Gabinet lub urządzenie (opcjonalnie)</label>
+            <select onchange="TRM.blokadaPole('zasob_id', this.value)"><option value="">— żadnego —</option>${zas.map(z => `<option value="${z.id}" ${String(b.zasob_id) === String(z.id) ? 'selected' : ''}>${esc(z.nazwa)}${z.typ === 'urzadzenie' ? ' (urządzenie)' : ''}</option>`).join('')}</select></div>
+        </div>`}
+        <div class="trm-field"><label>Powód</label><select onchange="TRM.blokadaPole('typ', this.value)">${POWODY_BLOKADY.map(([k, n]) => `<option value="${k}" ${b.typ === k ? 'selected' : ''}>${n}</option>`).join('')}</select></div>
         <div class="trm-field"><label>Czego dotyczy</label><input value="${esc(b.opis)}" placeholder="np. szkolenie Vagheggi, rozmowa kwalifikacyjna" onchange="TRM.blokadaPole('opis', this.value)"></div>
-        <div class="trm-pomoc">${b.osoba ? 'Zobaczysz to w kolumnie osoby w widoku Dzień' : 'Bez wskazanej osoby rezerwacja pokaże się w widoku <b>Zasoby</b> — w grafiku dnia nie zajmie niczyjej kolumny'}${b.zasob_id ? ', a gabinet będzie zajęty dla całego zespołu' : ''}.</div>
+        <div class="trm-pomoc">${b.caly_salon ? 'Blokada obejmie wszystkie kolumny w widoku Dzień i wszystkie gabinety' : b.osoba ? 'Zobaczysz to w kolumnie osoby w widoku Dzień' : 'Bez wskazanej osoby rezerwacja pokaże się w widoku <b>Zasoby</b> — w grafiku dnia nie zajmie niczyjej kolumny'}${b.zasob_id ? ', a gabinet będzie zajęty dla całego zespołu' : ''}.</div>
         ${b.dotkniete && b.dotkniete.length ? `<div class="trm-note warn small"><b>W tym czasie ${b.dotkniete.length === 1 ? 'jest już wizyta' : 'są już wizyty'}:</b>
           ${b.dotkniete.slice(0, 6).map(x => `<div>${esc((x.start || '').slice(11, 16))}–${esc((x.koniec || '').slice(11, 16))} · ${esc(x.klient_nazwa || '')} · ${esc(x.pracownik || '')}</div>`).join('')}
           Rezerwacja ich nie odwołuje — przestaw je albo zapisz świadomie.</div>` : ''}
@@ -508,10 +515,11 @@
         </div>
       </div>`);
   }
+  TRM.blokadaZakres = (calySalon) => { const b = TRM.blok; if (!b) return; b.caly_salon = !!calySalon; if (calySalon) { b.osoba = ''; b.zasob_id = ''; } b.dotkniete = null; renderBlokada(); };
   TRM.blokadaPole = (pole, wartosc) => { if (!TRM.blok) return; TRM.blok[pole] = String(wartosc || '').replace('T', ' ').slice(0, pole === 'opis' ? 255 : 16); if (pole === 'od' || pole === 'do' || pole === 'osoba' || pole === 'zasob_id') TRM.blok.dotkniete = null; };
   TRM.blokadaZapisz = async () => {
     const b = TRM.blok; if (!b) return;
-    const d = await api('trm_blokada_zapisz', { id: b.id || undefined, od: b.od, do: b.do, typ: b.typ, osoba: b.osoba, zasob_id: b.zasob_id, opis: b.opis, wymus: !!(b.dotkniete && b.dotkniete.length) });
+    const d = await api('trm_blokada_zapisz', { id: b.id || undefined, od: b.od, do: b.do, typ: b.typ, osoba: b.osoba, zasob_id: b.zasob_id, caly_salon: !!b.caly_salon, opis: b.opis, wymus: !!(b.dotkniete && b.dotkniete.length) });
     if (d.status !== 'success') return toast('error', 'Nie zarezerwowano', d.message);
     if (d.wymaga_decyzji) { b.dotkniete = d.dotkniete || []; return renderBlokada(); }
     toast('success', b.id ? 'Rezerwacja zmieniona' : 'Czas zarezerwowany', b.opis);
@@ -528,7 +536,7 @@
     const d = await api('trm_blokada_szczegoly', { id });
     if (d.status !== 'success') return toast('error', 'Nie otwarto rezerwacji', d.message);
     const b = d.blokada;
-    TRM.blok = { id: b.id, od: b.od, do: b.do, typ: b.typ, osoba: b.pracownik || '', zasob_id: b.zasob_id || '', opis: b.opis || '',
+    TRM.blok = { id: b.id, od: b.od, do: b.do, typ: b.typ, osoba: b.pracownik || '', zasob_id: b.zasob_id || '', opis: b.opis || '', caly_salon: !!b.caly_salon,
       dotkniete: null, utworzyl: b.utworzyl, techniczna: b.techniczna, mozna: d.mozna_edytowac, podglad: true };
     renderBlokada();
   };

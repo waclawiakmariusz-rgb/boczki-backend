@@ -27,6 +27,23 @@ Nieobecności (urlop, choroba) otwierają się **tylko do podglądu** — ten pa
 
 **Zdejmowanie:** kliknięcie w blokadę w siatce zdejmuje ją (po potwierdzeniu) — ale tylko rezerwacje techniczne. Urlop i chorobę nadal zmienia manager w Ustawieniach; klik na nich tylko to tłumaczy.
 
+### Cały salon
+
+Przełącznik **„Kogo dotyczy"** ma dwa ustawienia: *Wybrana osoba / gabinet* i *Cały salon*. To drugie zapisuje blokadę bez osoby i bez zasobu — silnik dostępności odejmuje taki czas **każdej osobie i każdemu gabinetowi**. Tak zapisuje się zebranie zespołu, remanent albo szkolenie dla wszystkich.
+
+Zaznaczenie „cały salon" ma pierwszeństwo nad przypadkowo wybraną wcześniej osobą czy gabinetem, a pusty formularz **bez** tego zaznaczenia nadal jest odrzucany — żeby nikt nie zablokował salonu przez nieuwagę.
+
+Próba na izolowanej bazie (zebranie 09:00–11:00):
+
+```
+PRZED — dostępność: {"Anna":"","Marta":"","Ola":"09:00-17:00"}
+PO    — dostępność: {"Anna":"","Marta":"","Ola":"11:00-17:00"}
+PO    — blokady:    ["Zebranie zespołu — podsumowanie miesiąca 09:00-11:00 prac:— zasob:—"]
+umówienie o 10:00 → „Anna nie pracuje w tym czasie (10:00–11:00)."
+```
+
+W grafiku blokada rysuje się **we wszystkich kolumnach naraz** (zrzut `blok-07`).
+
 ### Uprawnienia
 
 | Rola | Zakłada rezerwację | Zdejmuje rezerwację | Urlop / choroba |
@@ -77,3 +94,5 @@ Po zapisie nagłówek kolumny Oli pokazuje `09:00–12:00, 15:00–17:00` — cz
 | `blok-03-grafik.png` | blokada w kolumnie Oli (12:00–15:00) i zmieniony nagłówek jej godzin |
 | `blok-04-zasoby.png` | ta sama rezerwacja w widoku Zasoby — Gabinet 1 zajęty |
 | `blok-05-szczegoly.png` | szczegóły po kliknięciu w blokadę: godziny, powód, skróty czasu, „Zdejmij rezerwację” |
+| `blok-06-caly-salon.png` | przełącznik „Kogo dotyczy" ustawiony na *Cały salon* z ostrzeżeniem |
+| `blok-07-caly-salon-grafik.png` | zebranie zespołu w grafiku — blokada we wszystkich kolumnach |

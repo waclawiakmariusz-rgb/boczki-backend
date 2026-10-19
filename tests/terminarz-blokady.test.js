@@ -250,3 +250,47 @@ describe('B05 — szczegóły i zmiana istniejącej rezerwacji', () => {
     expect(src).toMatch(/TRM\.blokadaWydluz/);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// „Zrób jeszcze możliwość rezerwacji technicznej dla całego salonu — np. spotkanie zespołu."
+describe('B06 — rezerwacja dla całego salonu', () => {
+  test('zapis bez osoby i bez gabinetu, gdy zakres to cały salon', async () => {
+    const db = baza('recepcja');
+    const { body } = await post(aplikacja(db), { ...DOBRA, osoba: '', zasob_id: '', caly_salon: true, opis: 'Zebranie zespołu' }, 'Ola');
+    expect(body.status).toBe('success');
+    const ins = zapisy(db)[0];
+    expect(ins.params[1]).toBeNull();        // pracownik
+    expect(ins.params[2]).toBeNull();        // zasób
+    expect(ins.params[6]).toBe('Zebranie zespołu');
+  });
+
+  test('zaznaczenie całego salonu ma pierwszeństwo nad przypadkowo wybraną osobą', async () => {
+    const db = baza('recepcja');
+    await post(aplikacja(db), { ...DOBRA, osoba: 'Ola', zasob_id: 1, caly_salon: true }, 'Ola');
+    const ins = zapisy(db)[0];
+    expect(ins.params[1]).toBeNull();
+    expect(ins.params[2]).toBeNull();
+  });
+
+  test('bez zaznaczenia „cały salon" pusty formularz nadal jest odrzucany', async () => {
+    const db = baza('recepcja');
+    const { body } = await post(aplikacja(db), { ...DOBRA, osoba: '', zasob_id: '' }, 'Ola');
+    expect(body.status).toBe('error');
+    expect(body.message).toMatch(/cały salon/);
+    expect(zapisy(db)).toEqual([]);
+  });
+
+  test('szczegóły rozpoznają rezerwację całego salonu', async () => {
+    const caly = [{ id: 90, pracownik: null, zasob_id: null, od: '2026-10-22 08:00', do_: '2026-10-22 10:00', typ: 'przerwa', opis: 'Zebranie zespołu', utworzyl: 'Ola' }];
+    const db = baza('recepcja', [[/FROM Term_Nieobecnosci WHERE tenant_id = \? AND id = \?/, caly]]);
+    const { body } = await post(aplikacja(db), { action: 'trm_blokada_szczegoly', id: 90 }, 'Ola');
+    expect(body.blokada.caly_salon).toBe(true);
+    expect(body.mozna_edytowac).toBe(true);
+  });
+
+  test('panel ma przełącznik zakresu i ostrzeżenie przy całym salonie', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'terminarz.js'), 'utf8');
+    expect(src).toContain('TRM.blokadaZakres(true)');
+    expect(src).toContain('w tym czasie nikt nie przyjmuje i żaden gabinet nie jest dostępny');
+  });
+});
