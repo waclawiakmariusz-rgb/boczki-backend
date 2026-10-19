@@ -21,9 +21,9 @@ Preferencje_Slownik(tenant_id, klucz, nazwa, ikona, typ, opcje_json, dla_zabiegu
 Klienci_Preferencje(tenant_id, id_klienta, klucz, wartosc, kto, kiedy)
 ```
 
-- **Słownik jest per salon.** Przy pierwszym wejściu zakłada się lista startowa (11 pozycji: napój, temperatura, rozmowa, muzyka, zapachy, pora wizyty, ulubiona osoba, kontakt, dojazd, towarzystwo, inne). Manager dopisuje własne i chowa nieużywane.
+- **Słownik jest per salon.** Przy pierwszym wejściu zakłada się lista startowa (9 pozycji: napój, temperatura, rozmowa, muzyka, pora wizyty, ulubiona osoba, kontakt, dojazd, inne). Manager dopisuje własne i chowa nieużywane.
 - **Jedna wartość na rodzaj i klientkę** (UNIQUE) — „kawa z mlekiem” zastępuje „herbatę”, nie dokłada się obok.
-- **`dla_zabiegu`** decyduje, czy pozycję widzi osoba wykonująca zabieg. Temperatura, cisza i zapachy — tak. Napój i kanał kontaktu — nie, to sprawa recepcji.
+- **`dla_zabiegu`** decyduje, czy pozycję widzi osoba wykonująca zabieg. Temperatura, cisza i uwagi — tak. Napój i kanał kontaktu — nie, to sprawa recepcji.
 
 ## Uprawnienia
 
@@ -70,8 +70,8 @@ Pełny przebieg po zmianie: **625 prób w 29 zestawach, wszystkie przechodzą.**
 ### Próba na izolowanej bazie (MariaDB 3307, salon `demo-test`)
 
 ```
-słownik startowy: ☕Napój · 🌡️Temperatura · 💬Rozmowa · 🎵Muzyka · 🌿Zapachy · ⏰Pora wizyty
-                  · 👤Ulubiona osoba · 📱Kontakt · 🚗Dojazd · 👶Towarzystwo · ✏️Inne
+słownik startowy: ☕Napój · 🌡️Temperatura · 💬Rozmowa · 🎵Muzyka · ⏰Pora wizyty
+                  · 👤Ulubiona osoba · 📱Kontakt · 🚗Dojazd · ✏️Inne
 klientka 1002 (recepcja):     ☕ Kawa z mlekiem · 🌡️ Woli ciepło · 💬 Woli ciszę · 📱 SMS | edycja: true
 ta sama klientka (kosmetolog): 🌡️ Woli ciepło · 💬 Woli ciszę                        | edycja: false
 chipsów w agendzie: 9 | błędy JS: brak

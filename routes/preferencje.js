@@ -11,8 +11,8 @@
 // Jedna wartość na klucz i klientkę (UNIQUE) — „kawa z mlekiem” zastępuje „herbatę”, nie dokłada się.
 //
 // Uprawnienia: czytają wszyscy zalogowani; zapisuje recepcja/manager/właściciel. Specjalista
-// (kosmetolog) dostaje wyłącznie preferencje oznaczone `dla_zabiegu` — temperatura, cisza,
-// zapachy — czyli to, co potrzebne przy pracy, bez reszty profilu klientki.
+// (kosmetolog) dostaje wyłącznie preferencje oznaczone `dla_zabiegu` — temperatura, cisza i uwagi,
+// czyli to, co potrzebne przy pracy, bez reszty profilu klientki.
 //
 // RODO: to są preferencje komfortu. Alergie, choroby i leki NIE są tu zapisywane — ich miejsce
 // jest w konsultacji i dokumentach klientki. Walidacja tego nie wymusi, więc mówi o tym
@@ -32,12 +32,10 @@ const DOMYSLNE = [
   { klucz: 'temperatura', nazwa: 'Temperatura',      ikona: '🌡️', opcje: ['Woli ciepło', 'Woli chłód', 'Prosi o koc'], dla_zabiegu: 1 },
   { klucz: 'rozmowa',     nazwa: 'Rozmowa',          ikona: '💬', opcje: ['Lubi pogawędkę', 'Woli ciszę'], dla_zabiegu: 1 },
   { klucz: 'muzyka',      nazwa: 'Muzyka',           ikona: '🎵', opcje: ['Relaksacyjna', 'Ciszej', 'Bez muzyki'], dla_zabiegu: 1 },
-  { klucz: 'zapachy',     nazwa: 'Zapachy',          ikona: '🌿', opcje: ['Bez zapachowych olejków', 'Lubi lawendę', 'Lubi cytrusy'], dla_zabiegu: 1 },
   { klucz: 'pora',        nazwa: 'Pora wizyty',      ikona: '⏰', opcje: ['Rano', 'Popołudnie', 'Po 17:00', 'Weekend'], dla_zabiegu: 0 },
   { klucz: 'osoba',       nazwa: 'Ulubiona osoba',   ikona: '👤', typ: 'tekst', dla_zabiegu: 0 },
   { klucz: 'kontakt',     nazwa: 'Kontakt',          ikona: '📱', opcje: ['SMS', 'Telefon', 'WhatsApp', 'E-mail'], dla_zabiegu: 0 },
   { klucz: 'dojazd',      nazwa: 'Dojazd',           ikona: '🚗', opcje: ['Pyta o parking', 'Przyjeżdża komunikacją'], dla_zabiegu: 0 },
-  { klucz: 'towarzystwo', nazwa: 'Towarzystwo',      ikona: '👶', opcje: ['Bywa z dzieckiem', 'Przychodzi z koleżanką'], dla_zabiegu: 0 },
   { klucz: 'uwagi',       nazwa: 'Inne',             ikona: '✏️', typ: 'tekst', dla_zabiegu: 1 },
 ];
 
