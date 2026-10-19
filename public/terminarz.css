@@ -551,3 +551,88 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
 .trm-pref-edytor { display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:8px; margin-top:8px; }
 .trm-pref-pole { display:flex; flex-direction:column; gap:3px; font-size:12px; color:var(--t-mut); }
 .trm-pref-pole select, .trm-pref-pole input { min-height:34px; }
+
+/* ═══════════════════════════════════════════════════════════════════════════════════════════
+   TRYB CIEMNY — pełne pokrycie (19.10.2026)
+   Zgłoszenie: „terminarz ma kulejący tryb dark, po zmianie niewiele tam widać”. Powód: sam
+   moduł nadpisywał w ciemnym motywie tylko podstawowe zmienne, a kilkadziesiąt miejsc miało
+   kolory wpisane na sztywno — jasne tła z jasnym tekstem (nieprzeczytana sprawa, podpowiedzi
+   terminów, karty w kreatorze), niewidoczne obramowania i bordowy akcent na ciemnym tle.
+   Zasada: najpierw zmienne, potem punktowe poprawki tych miejsc, które zmiennych nie używały.
+   ═══════════════════════════════════════════════════════════════════════════════════════════ */
+body.dark-mode .trm {
+  --t-acc:#e98aa4;                                  /* bordo nie istnieje na ciemnym tle — akcent jaśnieje */
+  --t-gold:#caa468;
+  --t-sh:0 16px 44px rgba(0,0,0,.55), 0 3px 12px rgba(0,0,0,.4);
+}
+/* Wypełnienia akcentem: na jaśniejszym różu biały tekst znika — piszemy ciemnym. */
+body.dark-mode .trm .trm-views button.on,
+body.dark-mode .trm .trm-btn.primary,
+body.dark-mode .trm .trm-segment button.active,
+body.dark-mode .trm .trm-krok-el.aktywny b,
+body.dark-mode .trm .trm-sloty button.selected { color:#2b1017; }
+body.dark-mode .trm .trm-btn.primary:hover { color:#2b1017; }
+body.dark-mode .trm .trm-dzwonek-licz { color:#33240a; }   /* licznik na jasnym bursztynie */
+
+/* Pola formularzy: moduł ma własną paletę, globalne style ciemne aplikacji dawały obcy granat. */
+body.dark-mode .trm input, body.dark-mode .trm select, body.dark-mode .trm textarea {
+  background:var(--t-bg); color:var(--t-ink); border-color:var(--t-line); }
+body.dark-mode .trm input::placeholder, body.dark-mode .trm textarea::placeholder { color:var(--t-mut); }
+
+/* Obramowania stanów (jasne pastele) i delikatne tła notatek. */
+body.dark-mode .trm .trm-note.ok, body.dark-mode .trm .trm-dostep.ok, body.dark-mode .trm .trm-btn.ok { border-color:#2f6a51; }
+body.dark-mode .trm .trm-note.warn, body.dark-mode .trm .trm-dostep.blad { border-color:#7a5f1c; }
+body.dark-mode .trm .trm-note.bad, body.dark-mode .trm .trm-dostep.zajety, body.dark-mode .trm .trm-btn.danger { border-color:#7d3344; }
+body.dark-mode .trm .trm-note.info { border-color:#2e5570; }
+body.dark-mode .trm .trm-pill.pakiet { background:#24354d; color:#a8c8ef; }
+
+/* Siatka dnia: karta wizyty (tło z koloru kategorii), bufory i blokady. */
+body.dark-mode .trm .trm-karta { border-color:rgba(255,255,255,.16); }
+body.dark-mode .trm .trm-karta.wyk { border-color:#2f6a51; }
+body.dark-mode .trm .trm-karta:hover, body.dark-mode .trm .trm-karta:focus-visible { filter:brightness(1.18); box-shadow:0 4px 14px rgba(0,0,0,.45); }
+body.dark-mode .trm .trm-karta.bufor { background:repeating-linear-gradient(135deg, #332b27 0 5px, #3d342f 5px 6px); }
+body.dark-mode .trm .trm-col .blok { background:repeating-linear-gradient(135deg, var(--t-bg) 0 8px, #3a322c 8px 16px); }
+
+/* Kreator wizyty: karty klientki i usługi, podpowiedzi terminów, slot „na brudno”. */
+body.dark-mode .trm .trm-klient-karta:hover { background:var(--t-acc2); border-color:var(--t-acc); }
+body.dark-mode .trm .trm-usl-karta:hover { background:var(--t-acc2); }
+body.dark-mode .trm .trm-wynik-termin.ok { background:var(--t-ok-bg); border-color:#2f6a51; }
+body.dark-mode .trm .trm-wynik-termin.zajety { background:var(--t-bad-bg); border-color:#7d3344; }
+body.dark-mode .trm .trm-wynik-termin.blad { background:var(--t-warn-bg); border-color:#7a5f1c; }
+body.dark-mode .trm .trm-sloty button { background:var(--t-bg); border-color:#7a4557; color:var(--t-ink); }
+body.dark-mode .trm .trm-propozycja, body.dark-mode .trm .trm-draft-slot { background:#1d2f45e0; border-color:#5d8fd6; color:var(--t-ink); }
+body.dark-mode .trm .trm-draft-slot.zle { background:#43202ae0; border-color:#b4546a; color:#ffc9d4; }
+body.dark-mode .trm .trm-kroki::before { background:#4a403a; }
+body.dark-mode .trm .trm-krok-el b { background:#3a322e; color:#cdc2bb; }
+body.dark-mode .trm .trm-switch span { background:#564c46; }
+
+/* Centrum powiadomień: nieprzeczytana sprawa miała jasne tło pod jasnym tekstem — najgorszy przypadek. */
+body.dark-mode .trm .trm-sprawa-karta.nieprz { background:#332a22; }
+
+/* Historia wizyt: kolory stanów i adnotacje. */
+body.dark-mode .trm .trm-hist-wizyta.wykonana { border-left-color:#4ba877; }
+body.dark-mode .trm .trm-hist-wizyta.odwolana { border-left-color:#d8903c; }
+body.dark-mode .trm .trm-hist-wizyta.nieobecna { border-left-color:#e06464; }
+body.dark-mode .trm .trm-hist-wizyta .uwaga { color:#e8c88a; }
+body.dark-mode .trm .trm-hist-wizyta.nieobecna .uwaga { color:#f2a8a8; }
+
+/* Pasek „co zniknęło”, znak notatki i treść notatki w agendzie — bursztyn na ciemno. */
+body.dark-mode .trm .trm-zmiany-pasek { background:#392d15; border-color:#6b5423; border-left-color:#d9a441; }
+body.dark-mode .trm .trm-zmiany-pasek .ikona { color:#ffc46b; }
+body.dark-mode .trm .trm-zmiany-pasek .tresc { color:#ecdcc0; }
+body.dark-mode .trm .trm-zmiany-pasek b { color:#ffd9a0; }
+body.dark-mode .trm .trm-notatka-znak { background:#4a3a14; color:#ffd9a0; border-color:#6b5423; }
+body.dark-mode .trm .trm-ag-notatka { background:#392d15; color:#f0dcb6; border-left-color:#8a6a22; }
+body.dark-mode .trm .trm-zmiana.bad { border-left-color:#e06464; }
+body.dark-mode .trm .trm-zmiana.warn { border-left-color:#d8903c; }
+body.dark-mode .trm .trm-zmiana.ok { border-left-color:#4ba877; }
+
+/* Preferencje klientki — zielony chłód zamiast jasnej mięty. */
+body.dark-mode .trm .trm-pref-chip { background:#22332f; color:#a9ceC3; border-color:#36514a; }
+body.dark-mode .trm .trm-pref-chip.wiecej { background:var(--t-bg); color:var(--t-mut); }
+body.dark-mode .trm .trm-pref-znak { background:#22332f; border-color:#36514a; }
+/* Karta wizyty: nazwa usługi szła kolorem „wyciszonym" na barwnym tle kategorii — w ciemnym
+   motywie dawało to kontrast 2.7:1, czyli tekst na granicy czytelności. Podnosimy jasność. */
+body.dark-mode .trm .trm-karta .u { color:#d2c5bd; }
+body.dark-mode .trm .trm-karta .zn span { background:rgba(255,255,255,.14); color:#f0e7e1; }
+body.dark-mode .trm .trm-karta.anul { background:#2b2522; }
