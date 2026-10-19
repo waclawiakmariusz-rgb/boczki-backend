@@ -3446,6 +3446,8 @@ async function mw_test() {
   if (!mw_wybrany) return;
   const email = document.getElementById('mw-test-email').value.trim();
   if (!email) return alert('Podaj adres, na który mam wysłać próbkę.');
+  // Pytanie przed wysyłką: pole bywa wypełnione z góry, a to jest prawdziwy mail, nie podgląd.
+  if (!confirm(`Wysłać tę wiadomość na adres ${email}?\n\nTo prawdziwa wysyłka — wiadomość dotrze do tej skrzynki i zapisze się w dzienniku jako „próbka".`)) return;
   const d = await mwApi('/admin/maile_wprow_test', { etap: mw_wybrany, email, dane: mw_zbierz() });
   alert(d.message);
   mw_logZaladuj();   // próbka też jest wpisem w dzienniku
