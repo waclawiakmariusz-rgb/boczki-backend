@@ -726,6 +726,18 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
           <div class="mini-label">Podgląd — dokładnie to, co dostanie klientka</div>
           <iframe id="mw-podglad" style="width:100%; height:760px; border:1px solid var(--line, #e7ddd5); border-radius:12px; background:#f8f5f1;"></iframe>
         </div>
+
+        <!-- Dziennik wysyłek: dowód nadania na rozmowę z salonem -->
+        <div class="gen-card" style="margin-top:20px;">
+          <h3>📒 Dziennik wysyłek</h3>
+          <div class="card-sub">Każda wysyłka z datą, godziną, adresem i potwierdzeniem serwera pocztowego. To jest odpowiedź na „nie dostaliśmy żadnego maila".</div>
+          <div class="toolbar" style="margin:0 0 14px;">
+            <input type="text" id="mw-log-szukaj" class="grow" placeholder="Szukaj: nazwa salonu, adres e-mail albo identyfikator" onkeydown="if(event.key==='Enter') mw_logZaladuj()">
+            <button class="btn-secondary" onclick="mw_logZaladuj()">Szukaj</button>
+            <button class="btn-secondary" onclick="document.getElementById('mw-log-szukaj').value=''; mw_logZaladuj()">Wyczyść</button>
+          </div>
+          <div id="mw-log-tresc" class="loading">Ładowanie…</div>
+        </div>
       </div>
     </div>
 
@@ -3249,6 +3261,7 @@ const mwApi = (sciezka, body) => fetch(`${API}${sciezka}`, {
   ...(body ? { body: JSON.stringify(body) } : {}),
 }).then(r => r.json());
 
+const mwSkroc = (t, n) => { t = String(t || ''); return t.length > n ? t.slice(0, n - 1) + '…' : t; };
 const mwEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 async function mw_init() {
@@ -3267,6 +3280,7 @@ async function mw_init() {
   const pole = document.getElementById('mw-test-email');
   if (pole && !pole.value && d.domyslny_email) pole.value = d.domyslny_email;
   mw_rysujListe();
+  mw_logZaladuj();
 }
 
 function mw_rysujListe() {
@@ -3362,6 +3376,51 @@ async function mw_przywroc() {
   if (d.status === 'success') { const e = mw_wybrany; await mw_init(); mw_otworz(e); }
 }
 
+// ── Dziennik wysyłek ──────────────────────────────────────────────────────────────────────────
+// Odpowiedź na telefon „nie dostaliśmy maila": data, godzina, adres i numer wiadomości u operatora.
+// Przy wierszach dotyczących salonu jest przycisk ponownej wysyłki — ona też trafia do dziennika.
+const MW_RODZAJ = { seria: ['automat', '#0f766e'], ponowna: ['wysłane ponownie', '#b45309'], proba: ['próbka', '#6b7280'] };
+
+async function mw_logZaladuj() {
+  const box = document.getElementById('mw-log-tresc');
+  box.className = 'loading'; box.textContent = 'Ładowanie…';
+  const szukaj = document.getElementById('mw-log-szukaj').value.trim();
+  const d = await mwApi('/admin/maile_wprow_log' + (szukaj ? '?szukaj=' + encodeURIComponent(szukaj) : ''));
+  box.className = '';
+  if (d.status !== 'success') { box.textContent = 'Błąd: ' + d.message; return; }
+  if (!d.wiersze.length) { box.innerHTML = '<p style="font-size:13px; color:var(--muted); margin:0;">Jeszcze nic nie wysłano' + (szukaj ? ' dla tego wyszukiwania.' : '. Pierwsze wpisy pojawią się po włączeniu serii albo po wysyłce próbnej.') + '</p>'; return; }
+  box.innerHTML = `<div style="overflow-x:auto;"><table style="width:100%; min-width:820px; border-collapse:collapse; font-size:13px;">
+      <tr style="text-align:left; color:var(--taupe); font-size:11px; text-transform:uppercase; letter-spacing:.4px;">
+        <th style="padding:8px 10px;">Kiedy</th><th style="padding:8px 10px;">Salon</th><th style="padding:8px 10px;">Adres</th>
+        <th style="padding:8px 10px;">Wiadomość</th><th style="padding:8px 10px;">Rodzaj</th><th style="padding:8px 10px;">Potwierdzenie</th>
+      </tr>
+      ${d.wiersze.map(w => {
+        const r = MW_RODZAJ[w.rodzaj] || [w.rodzaj, '#6b7280'];
+        const kiedy = String(w.kiedy).replace('T', ' ').slice(0, 16);
+        const ok = w.status === 'wyslany';
+        return `<tr style="border-top:1px solid #efe6df;">
+          <td style="padding:9px 10px; white-space:nowrap;"><strong>${mwEsc(kiedy)}</strong></td>
+          <td style="padding:9px 10px;">${mwEsc(w.nazwa_salonu || '—')}${w.tenant_id ? `<div style="font-size:11px; color:var(--muted);">${mwEsc(w.tenant_id)}</div><button class="btn-sm" style="margin-top:6px; padding:5px 10px; font-size:11px;" onclick="mw_ponow('${mwEsc(w.etap)}','${mwEsc(w.tenant_id)}','${mwEsc(w.nazwa_salonu || w.tenant_id)}')">Wyślij ponownie</button>` : ''}</td>
+          <td style="padding:9px 10px;">${mwEsc(w.email)}</td>
+          <td style="padding:9px 10px; max-width:260px;">${mwEsc(w.temat || w.etap)}</td>
+          <td style="padding:9px 10px; white-space:nowrap;"><span style="color:${r[1]}; font-weight:600;">${r[0]}</span></td>
+          <td style="padding:9px 10px;">${ok
+            ? `<span style="color:#15803d; font-weight:600;">✓ przyjęty przez serwer</span>${w.smtp_odpowiedz ? `<div style="font-size:11px; color:var(--muted);" title="${mwEsc(w.smtp_odpowiedz)}">${mwEsc(mwSkroc(w.smtp_odpowiedz, 46))}</div>` : ''}${w.smtp_id ? `<div style="font-size:11px; color:var(--muted);">${mwEsc(w.smtp_id)}</div>` : ''}`
+            : `<span style="color:#b91c1c; font-weight:600;">✕ błąd</span><div style="font-size:11px; color:var(--muted);" title="${mwEsc(w.blad || '')}">${mwEsc(mwSkroc(w.blad || '', 46))}</div>`}</td>
+          <td style="padding:9px 10px; white-space:nowrap;">${w.tenant_id ? `<button class="btn-sm" onclick="mw_ponow('${mwEsc(w.etap)}','${mwEsc(w.tenant_id)}','${mwEsc(w.nazwa_salonu || w.tenant_id)}')">Wyślij ponownie</button>` : ''}</td>
+        </tr>`;
+      }).join('')}
+    </table></div>
+    <p style="font-size:12px; color:var(--muted); margin:14px 0 0;">„Przyjęty przez serwer" znaczy, że poczta Estelio oddała wiadomość operatorowi i dostała potwierdzenie. Co się z nią stało dalej (skrzynka, spam, blokada po stronie odbiorcy) jest już poza naszym zasięgiem — ale data, godzina i numer wiadomości wystarczą, żeby odbiorca odnalazł ją u siebie.</p>`;
+}
+
+async function mw_ponow(etap, tenant_id, nazwa) {
+  if (!confirm(`Wysłać tę wiadomość jeszcze raz do „${nazwa}"?\n\nPierwsza wysyłka zostaje w dzienniku jako dowód, ponowienie dopisze się osobnym wpisem.`)) return;
+  const d = await mwApi('/admin/maile_wprow_ponow', { etap, tenant_id });
+  alert(d.message);
+  if (d.status === 'success') mw_logZaladuj();
+}
+
 // Nowa wiadomość: identyfikator powstaje z tematu (po nim system pamięta, komu już wysłał),
 // termin podajesz sam. Zapisuje się dopiero przyciskiem „Zapisz treść".
 function mw_nowa() {
@@ -3389,6 +3448,7 @@ async function mw_test() {
   if (!email) return alert('Podaj adres, na który mam wysłać próbkę.');
   const d = await mwApi('/admin/maile_wprow_test', { etap: mw_wybrany, email, dane: mw_zbierz() });
   alert(d.message);
+  mw_logZaladuj();   // próbka też jest wpisem w dzienniku
 }
 </script>
 </body>

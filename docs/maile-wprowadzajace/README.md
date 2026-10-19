@@ -76,7 +76,30 @@ Pod spodem: treść domyślna leży w pliku, panel zapisuje nadpisania do tabeli
 
 Endpointy (wszystkie za hasłem admina): `GET /api/admin/maile_wprow`, `POST …_zapisz`, `…_reset`, `…_podglad`, `…_test`.
 
-## 6. Zmiana treści w kodzie
+## 6. Dziennik wysyłek — dowód nadania
+
+Zrzut: `podglad/panel-06-dziennik.png`. Pod listą wiadomości w panelu jest tabela z **każdą próbą wysyłki**:
+
+| Kolumna | Co zawiera |
+|---|---|
+| Kiedy | data i godzina co do minuty |
+| Salon | nazwa salonu + identyfikator, pod spodem przycisk „Wyślij ponownie" |
+| Adres | dokładny adres, na który poszła wiadomość |
+| Wiadomość | temat, który klient zobaczył w skrzynce |
+| Rodzaj | `automat` (seria), `wysłane ponownie` (Ty, ręcznie), `próbka` (test pod dowolny adres) |
+| Potwierdzenie | „✓ przyjęty przez serwer" z odpowiedzią operatora i numerem wiadomości, albo „✕ błąd" z powodem |
+
+Wyszukiwarka u góry filtruje po nazwie salonu, adresie e-mail i identyfikatorze.
+
+**Rozmowa z salonem wygląda wtedy tak:** wpisujesz nazwę salonu, widzisz wiersz „2026-10-22 11:35 · Ambasada Urody · k.lasocka@o2.pl · Pierwsza sprzedaż… · automat · ✓ przyjęty przez serwer" i mówisz: sprawdźcie pocztę z 22.10 z godziny 11:35, temat taki a taki.
+
+**Ponowna wysyłka** (przycisk przy salonie) wysyła tę samą wiadomość jeszcze raz pod adres salonu. Pierwsza wysyłka **zostaje w dzienniku jako dowód**, a ponowienie dopisuje się osobnym wierszem z rodzajem „wysłane ponownie" i adnotacją, że zrobił to admin. Nie rusza tabeli idempotencji, więc automat nie potraktuje tego jak „jeszcze nie wysłano".
+
+**Czego dziennik nie wie:** co stało się z wiadomością po stronie odbiorcy. „Przyjęty przez serwer" znaczy, że poczta Estelio oddała wiadomość operatorowi i dostała potwierdzenie — czy trafiła do skrzynki, do spamu, czy została zablokowana, tego nie widzimy. Ale data, godzina i numer wiadomości wystarczą, żeby odbiorca odnalazł ją u siebie albo żeby jego dostawca sprawdził, co z nią zrobił.
+
+Tabela: `Maile_wprowadzajace_log` (osobna od tabeli idempotencji — tam jeden wiersz na salon i wiadomość, tutaj każda próba).
+
+## 7. Zmiana treści w kodzie
 
 Cała treść domyślna siedzi w **jednym pliku bez żadnej logiki**: `routes/maile-wprowadzajace-tresc.js`. Można go edytować bez ryzyka, że coś przestanie działać — harmonogram i bezpieczniki są obok (`maile-wprowadzajace.js`), a wygląd w `mailer.js`.
 
@@ -103,11 +126,11 @@ W mailu **nie ma licznika „N z M"** — liczba wiadomości należy do właści
 
 Do czytania i komentowania bez wchodzenia w kod: **`docs/maile-wprowadzajace/TRESCI.md`** (plik generowany z treści — nie edytuj go, bo przy kolejnym przeglądzie się nadpisze).
 
-## 7. Wymóg przed włączeniem
+## 8. Wymóg przed włączeniem
 
 Maile pokazują zrzuty ekranu spod `/pomoc-zrzuty/`. Pliki są w repozytorium od commita z 18.10, ale **na serwerze pojawią się dopiero po `Pull` + `Restart`**. Dopóki tego nie zrobisz, obrazki w wiadomościach będą puste. Kolejność: najpierw wdrożenie, potem `proba`, potem `on`.
 
-## 8. Co jeszcze warto rozważyć (nie zrobione)
+## 9. Co jeszcze warto rozważyć (nie zrobione)
 
 - **Rezygnacja jednym kliknięciem** zamiast odpisywania „stop" — wymaga publicznej trasy z tokenem HMAC, jak przy zgodach.
 - **Reakcja na zachowanie**: pominąć mail o magazynie, gdy salon już wpisał 20 produktów. Dziś seria leci po kalendarzu, nie po postępach.

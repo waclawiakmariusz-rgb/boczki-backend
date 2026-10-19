@@ -717,11 +717,20 @@ function zbudujMailWprowadzajacy({ nazwa_salonu, mail }) {
     `);
 }
 
+// Zwraca to, co oddał serwer pocztowy: identyfikator wiadomości i jego odpowiedź („250 OK ...”).
+// To jest dowód nadania, który trafia do dziennika wysyłek — gdy salon mówi „nie dostaliśmy maila",
+// mamy datę, godzinę, adres i numer wiadomości u operatora.
 async function wyslijMailWprowadzajacy({ email, nazwa_salonu, mail }) {
   const transport = createTransport();
   const html = zbudujMailWprowadzajacy({ nazwa_salonu, mail });
   // Temat bez emoji — w skrzynce firmowej wygląda poważniej i rzadziej ląduje w „Oferty".
-  return transport.sendMail(mailDoKlienta({ to: email, bcc: ADMIN_EMAIL(), subject: mail.temat, html }));
+  const wynik = await transport.sendMail(mailDoKlienta({ to: email, bcc: ADMIN_EMAIL(), subject: mail.temat, html }));
+  return {
+    messageId: (wynik && wynik.messageId) || null,
+    odpowiedz: (wynik && wynik.response) || null,
+    przyjete: (wynik && wynik.accepted) || [],
+    odrzucone: (wynik && wynik.rejected) || [],
+  };
 }
 
 module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie, wyslijMailWprowadzajacy, zbudujMailWprowadzajacy };

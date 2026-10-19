@@ -1397,9 +1397,36 @@ module.exports = (db) => {
       const i = seria.findIndex(x => x.etap === etap);
       if (i < 0) return res.json({ status: 'error', message: 'Nieznany etap.' });
       const mail = dane && typeof dane === 'object' ? { ...seria[i], ...dane } : seria[i];
-      await require('./mailer').wyslijMailWprowadzajacy({ email: adres, nazwa_salonu: 'Salon Przykładowy', mail });
-      return res.json({ status: 'success', message: `Wysłano próbnie na ${adres}.` });
+      try {
+        const w = await require('./mailer').wyslijMailWprowadzajacy({ email: adres, nazwa_salonu: 'Salon Przykładowy', mail });
+        await m.zapiszLog({ email: adres, etap, temat: mail.temat, rodzaj: 'proba', status: 'wyslany', smtp_id: w.messageId, smtp_odpowiedz: w.odpowiedz, kto: 'admin' });
+        return res.json({ status: 'success', message: `Wysłano próbnie na ${adres}.` });
+      } catch (e) {
+        await m.zapiszLog({ email: adres, etap, temat: mail.temat, rodzaj: 'proba', status: 'blad', blad: e.message, kto: 'admin' });
+        throw e;
+      }
     } catch (e) { return res.json({ status: 'error', message: 'Błąd wysyłki: ' + e.message }); }
+  });
+
+  // ─── Dziennik wysyłek: dowód nadania na rozmowę z salonem ──────────────────────────────────────
+  // Każda próba wysyłki (automat, ponowienie, próbka) z data, godzina, adresem i odpowiedzia serwera
+  // pocztowego. To jest to, co pokazuje sie salonowi mowiacemu „nie dostalismy zadnego maila".
+  router.get('/admin/maile_wprow_log', requireAdmin, async (req, res) => {
+    try {
+      const wiersze = await maileWprow().dziennik({ szukaj: req.query.szukaj, etap: req.query.etap, limit: req.query.limit });
+      return res.json({ status: 'success', wiersze });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // Ponowna wysyłka tej samej wiadomości do konkretnego salonu. Nie rusza historii pierwszej
+  // wysyłki (ta zostaje jako dowód), a samo ponowienie tez ladu je w dzienniku.
+  router.post('/admin/maile_wprow_ponow', requireAdmin, async (req, res) => {
+    const { etap, tenant_id } = req.body || {};
+    if (!etap || !tenant_id) return res.json({ status: 'error', message: 'Brak wiadomości albo salonu.' });
+    try {
+      const r = await maileWprow().wyslijPonownie(etap, tenant_id, 'admin');
+      return res.json({ status: 'success', message: `Wysłano ponownie do ${r.nazwa_salonu || tenant_id} (${r.email}). Zapisane w dzienniku.`, ...r });
+    } catch (e) { return res.json({ status: 'error', message: 'Nie wysłano: ' + e.message }); }
   });
 
   return router;

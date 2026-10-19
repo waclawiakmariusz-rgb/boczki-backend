@@ -65,7 +65,72 @@ module.exports = function (db, opts = {}) {
         zmieniono DATETIME DEFAULT CURRENT_TIMESTAMP,
         kto VARCHAR(100) NULL
       ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
+      // Dziennik wysyłek — dowód nadania na rozmowę z salonem („nie dostaliśmy żadnego maila").
+      // Osobny od tabeli idempotencji: tam jeden wiersz na salon i etap, tutaj KAŻDA próba wysyłki,
+      // razem z ponowieniami i próbkami, z odpowiedzią serwera pocztowego.
+      await q(`CREATE TABLE IF NOT EXISTS Maile_wprowadzajace_log (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        kiedy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        tenant_id VARCHAR(100) NULL,
+        nazwa_salonu VARCHAR(255) NULL,
+        email VARCHAR(255) NOT NULL,
+        etap VARCHAR(40) NOT NULL,
+        temat VARCHAR(255) NULL,
+        rodzaj VARCHAR(16) NOT NULL,
+        status VARCHAR(12) NOT NULL,
+        smtp_id VARCHAR(255) NULL,
+        smtp_odpowiedz VARCHAR(255) NULL,
+        blad VARCHAR(500) NULL,
+        kto VARCHAR(100) NULL,
+        INDEX idx_tenant (tenant_id, kiedy),
+        INDEX idx_kiedy (kiedy)
+      ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`);
     } catch (e) { log.error('[maile-wprow] init tabel:', e.message); }
+  }
+
+  // rodzaj: 'seria' (automat), 'ponowna' (admin wysłał drugi raz temu samemu salonowi),
+  //         'proba' (wysyłka testowa pod dowolny adres). status: 'wyslany' | 'blad'.
+  async function zapiszLog(w) {
+    try {
+      await q(`INSERT INTO Maile_wprowadzajace_log
+               (tenant_id, nazwa_salonu, email, etap, temat, rodzaj, status, smtp_id, smtp_odpowiedz, blad, kto)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [w.tenant_id || null, w.nazwa_salonu || null, w.email, w.etap, (w.temat || '').slice(0, 255), w.rodzaj, w.status,
+         (w.smtp_id || null), String(w.smtp_odpowiedz || '').slice(0, 255) || null, String(w.blad || '').slice(0, 500) || null, w.kto || 'system']);
+    } catch (e) { log.error('[maile-wprow] zapis dziennika:', e.message); }
+  }
+
+  // Dziennik do panelu: najnowsze na górze, opcjonalnie zawężony do salonu / adresu / wiadomości.
+  async function dziennik({ szukaj, etap, limit } = {}) {
+    const warunki = [], parametry = [];
+    if (szukaj) { warunki.push('(nazwa_salonu LIKE ? OR email LIKE ? OR tenant_id LIKE ?)'); const s = `%${szukaj}%`; parametry.push(s, s, s); }
+    if (etap) { warunki.push('etap = ?'); parametry.push(etap); }
+    const ile = Math.min(Math.max(parseInt(limit, 10) || 200, 1), 1000);
+    try {
+      return await q(`SELECT * FROM Maile_wprowadzajace_log
+                      ${warunki.length ? 'WHERE ' + warunki.join(' AND ') : ''}
+                      ORDER BY kiedy DESC, id DESC LIMIT ${ile}`, parametry);
+    } catch (e) { return []; }
+  }
+
+  // Ponowna wysyłka tej samej wiadomości do konkretnego salonu — gdy salon twierdzi, że nic nie dostał.
+  // NIE rusza tabeli idempotencji (pierwsza wysyłka zostaje w historii), ale zapisuje się w dzienniku.
+  async function wyslijPonownie(etap, tenant_id, kto) {
+    const seria = await wczytajSerie();
+    const mail = seria.find(m => m.etap === etap);
+    if (!mail) throw new Error('Nieznana wiadomość: ' + etap);
+    const salony = await q(`SELECT id_bazy AS tenant_id, email, nazwa_salonu FROM Licencje WHERE id_bazy = ? LIMIT 1`, [tenant_id]);
+    const s = salony && salony[0];
+    if (!s) throw new Error('Nie znaleziono salonu: ' + tenant_id);
+    if (!s.email) throw new Error('Ten salon nie ma zapisanego adresu e-mail.');
+    try {
+      const w = await mailer.wyslijMailWprowadzajacy({ email: s.email, nazwa_salonu: s.nazwa_salonu, mail });
+      await zapiszLog({ tenant_id: s.tenant_id, nazwa_salonu: s.nazwa_salonu, email: s.email, etap, temat: mail.temat, rodzaj: 'ponowna', status: 'wyslany', smtp_id: w.messageId, smtp_odpowiedz: w.odpowiedz, kto });
+      return { email: s.email, nazwa_salonu: s.nazwa_salonu, smtp_id: w.messageId };
+    } catch (e) {
+      await zapiszLog({ tenant_id: s.tenant_id, nazwa_salonu: s.nazwa_salonu, email: s.email, etap, temat: mail.temat, rodzaj: 'ponowna', status: 'blad', blad: e.message, kto });
+      throw e;
+    }
   }
 
   // Treść obowiązująca: wiadomości z pliku + zmiany i NOWE wiadomości dopisane w panelu.
@@ -167,11 +232,13 @@ module.exports = function (db, opts = {}) {
           if (!r || !r.affectedRows) continue;
         } catch (e) { log.error(`[maile-wprow] ${mail.etap}: rezerwacja:`, e.message); continue; }
         try {
-          await mailer.wyslijMailWprowadzajacy({ email: s.email, nazwa_salonu: s.nazwa_salonu, mail });
+          const w = await mailer.wyslijMailWprowadzajacy({ email: s.email, nazwa_salonu: s.nazwa_salonu, mail });
           wyslane++;
+          await zapiszLog({ tenant_id: s.tenant_id, nazwa_salonu: s.nazwa_salonu, email: s.email, etap: mail.etap, temat: mail.temat, rodzaj: 'seria', status: 'wyslany', smtp_id: w.messageId, smtp_odpowiedz: w.odpowiedz });
           log.info(`[maile-wprow] wysłano „${mail.etap}" do ${s.email} (${s.nazwa_salonu})`);
         } catch (e) {
           log.error(`[maile-wprow] ${mail.etap}: SMTP:`, e.message);
+          await zapiszLog({ tenant_id: s.tenant_id, nazwa_salonu: s.nazwa_salonu, email: s.email, etap: mail.etap, temat: mail.temat, rodzaj: 'seria', status: 'blad', blad: e.message });
           await q(`DELETE FROM Maile_wprowadzajace_wyslane WHERE tenant_id = ? AND etap = ?`, [s.tenant_id, mail.etap]).catch(() => {});
         }
       }
@@ -188,7 +255,7 @@ module.exports = function (db, opts = {}) {
     });
   }
 
-  return { tick, start, init, SERIA, wczytajSerie, zapiszTresc, przywrocDomyslne, statystyki, _CUTOFF: CUTOFF, _TRYB: TRYB };
+  return { tick, start, init, SERIA, wczytajSerie, zapiszTresc, przywrocDomyslne, statystyki, zapiszLog, dziennik, wyslijPonownie, _CUTOFF: CUTOFF, _TRYB: TRYB };
 };
 
 module.exports.SERIA = SERIA;
