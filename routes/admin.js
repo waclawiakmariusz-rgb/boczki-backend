@@ -1327,5 +1327,80 @@ module.exports = (db) => {
     });
   });
 
+  // ─── Seria powitalna: czytanie i edycja treści z panelu (2026-10-18) ───────────────────────────
+  // Treść domyślna leży w routes/maile-wprowadzajace-tresc.js; panel zapisuje nadpisania do bazy.
+  // Panel NIE zmienia harmonogramu ani trybu wysyłki — tryb to zmienna środowiskowa, celowo poza UI.
+  let serwisMaili = null;
+  const maileWprow = () => {
+    if (!serwisMaili) { serwisMaili = require('./maile-wprowadzajace')(db); serwisMaili.init().catch(() => {}); }
+    return serwisMaili;
+  };
+
+  router.get('/admin/maile_wprow', requireAdmin, async (req, res) => {
+    try {
+      const m = maileWprow();
+      const [seria, stat] = await Promise.all([m.wczytajSerie(), m.statystyki()]);
+      const mapa = {}; (stat || []).forEach(s => { mapa[s.etap] = { ile: s.ile, ostatni: s.ostatni }; });
+      return res.json({
+        status: 'success',
+        tryb: m._TRYB(),
+        cutoff: m._CUTOFF,
+        // adres podstawiany w polu wysyłki próbnej — skrzynka kontaktowa Estelio
+        domyslny_email: String(process.env.ADMIN_EMAIL || process.env.SMTP_USER || '').replace(/^['"]|['"]$/g, ''),
+        seria: seria.map((x, i) => ({ ...x, numer: i + 1, wyslane: mapa[x.etap] || { ile: 0, ostatni: null } })),
+      });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  router.post('/admin/maile_wprow_zapisz', requireAdmin, async (req, res) => {
+    const { etap, dane } = req.body || {};
+    if (!etap || !dane || typeof dane !== 'object') return res.json({ status: 'error', message: 'Brak etapu albo treści.' });
+    try {
+      await maileWprow().zapiszTresc(etap, dane, 'admin');
+      return res.json({ status: 'success', message: 'Treść zapisana. Obowiązuje od następnej wysyłki.' });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  router.post('/admin/maile_wprow_reset', requireAdmin, async (req, res) => {
+    const { etap } = req.body || {};
+    if (!etap) return res.json({ status: 'error', message: 'Brak etapu.' });
+    try {
+      await maileWprow().przywrocDomyslne(etap);
+      return res.json({ status: 'success', message: 'Przywrócono treść domyślną z pliku.' });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // Podgląd dokładnie takiego HTML-a, jaki pójdzie do klientki. `dane` (opcjonalne) = wersja
+  // z edytora jeszcze niezapisana, żeby dało się podejrzeć zmianę przed zapisem.
+  router.post('/admin/maile_wprow_podglad', requireAdmin, async (req, res) => {
+    const { etap, dane } = req.body || {};
+    try {
+      const m = maileWprow();
+      const seria = await m.wczytajSerie();
+      const i = seria.findIndex(x => x.etap === etap);
+      if (i < 0) return res.json({ status: 'error', message: 'Nieznany etap.' });
+      const mail = dane && typeof dane === 'object' ? { ...seria[i], ...dane } : seria[i];
+      const html = require('./mailer').zbudujMailWprowadzajacy({ nazwa_salonu: 'Salon Przykładowy', mail, numer: i + 1, ile: seria.length });
+      return res.json({ status: 'success', html, temat: mail.temat });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // Wysyłka próbna pod wskazany adres — działa niezależnie od trybu serii i niczego nie zapisuje
+  // w historii wysyłek, więc nie zablokuje prawdziwej wiadomości dla salonu.
+  router.post('/admin/maile_wprow_test', requireAdmin, async (req, res) => {
+    const { etap, email, dane } = req.body || {};
+    const adres = String(email || '').trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(adres)) return res.json({ status: 'error', message: 'Podaj poprawny adres e-mail.' });
+    try {
+      const m = maileWprow();
+      const seria = await m.wczytajSerie();
+      const i = seria.findIndex(x => x.etap === etap);
+      if (i < 0) return res.json({ status: 'error', message: 'Nieznany etap.' });
+      const mail = dane && typeof dane === 'object' ? { ...seria[i], ...dane } : seria[i];
+      await require('./mailer').wyslijMailWprowadzajacy({ email: adres, nazwa_salonu: 'Salon Przykładowy', mail, numer: i + 1, ile: seria.length });
+      return res.json({ status: 'success', message: `Wysłano próbnie na ${adres}.` });
+    } catch (e) { return res.json({ status: 'error', message: 'Błąd wysyłki: ' + e.message }); }
+  });
+
   return router;
 };

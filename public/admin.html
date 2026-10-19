@@ -454,6 +454,7 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
       <div class="nav-group-title">Wsparcie</div>
       <button class="nav-item tab-btn" data-tab="tab-tickety" onclick="showTab('tab-tickety')"><span class="ico">🎫</span><span class="lbl">Tickety</span><span id="badge-tickety" class="nav-badge" style="display:none;">0</span></button>
       <button class="nav-item tab-btn" data-tab="tab-kb" onclick="showTab('tab-kb')"><span class="ico">💬</span><span class="lbl">Baza wiedzy Esti</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-maile" onclick="showTab('tab-maile'); mw_init();"><span class="ico">✉️</span><span class="lbl">Maile powitalne</span></button>
     </div>
 
     <div class="nav-group">
@@ -636,6 +637,71 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
         <!-- Lista kategorii -->
         <div id="predef-lista">
           <div class="loading">Ładowanie...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: Maile powitalne — seria dla nowych salonów (routes/maile-wprowadzajace.js, 2026-10-18) -->
+    <div id="tab-maile" class="tab-panel">
+      <div class="narrow">
+        <div class="gen-card" style="margin-bottom:20px;">
+          <h3>✉️ Seria powitalna dla nowych salonów</h3>
+          <div class="card-sub">Siedem wiadomości przez pierwsze trzy tygodnie od założenia salonu. Czytasz i poprawiasz tutaj; harmonogram i przełącznik wysyłki są poza panelem (zmienna <code>MAILE_WPROWADZAJACE</code> na serwerze) — żeby nikt nie uruchomił wysyłki przez przypadek.</div>
+          <div id="mw-stan" class="loading">Ładowanie…</div>
+        </div>
+
+        <div id="mw-lista"></div>
+
+        <div id="mw-edytor" class="gen-card" style="display:none;">
+          <h3 id="mw-edytor-tytul">Edycja wiadomości</h3>
+          <div class="card-sub" id="mw-edytor-info"></div>
+
+          <div class="mini-label">Temat (to widać na liście w skrzynce)</div>
+          <input type="text" id="mw-temat" style="width:100%; margin-bottom:14px;">
+
+          <div class="mini-label">Druga linijka podglądu w skrzynce</div>
+          <input type="text" id="mw-preheader" style="width:100%; margin-bottom:14px;">
+
+          <div class="mini-label">Nagłówek w treści</div>
+          <input type="text" id="mw-naglowek" style="width:100%; margin-bottom:14px;">
+
+          <div class="mini-label">Wstęp — 2–3 zdania, po co to komu</div>
+          <textarea id="mw-wstep" rows="3" style="width:100%; margin-bottom:14px;"></textarea>
+
+          <div class="mini-label">Sekcje — mięso wiadomości</div>
+          <div id="mw-sekcje" style="margin-bottom:10px;"></div>
+          <button class="btn-sm" onclick="mw_dodajSekcje()" style="margin-bottom:18px;">+ Dodaj sekcję</button>
+
+          <div class="mini-label">Ramka „na co uważać" — częsty błąd</div>
+          <input type="text" id="mw-uwaga-tytul" placeholder="Tytuł ramki" style="width:100%; margin-bottom:8px;">
+          <textarea id="mw-uwaga-tekst" rows="3" style="width:100%; margin-bottom:14px;"></textarea>
+
+          <div class="mini-label">Jedna rzecz na dziś</div>
+          <input type="text" id="mw-dzis" style="width:100%; margin-bottom:14px;">
+
+          <div class="toolbar" style="margin:0 0 14px;">
+            <div style="flex:1;">
+              <div class="mini-label">Napis na przycisku</div>
+              <input type="text" id="mw-cta" style="width:100%;">
+            </div>
+            <div style="flex:1;">
+              <div class="mini-label">Zrzut ekranu (plik z /pomoc-zrzuty/)</div>
+              <input type="text" id="mw-zrzut-plik" style="width:100%;">
+            </div>
+          </div>
+          <div class="mini-label">Podpis pod zrzutem</div>
+          <textarea id="mw-zrzut-podpis" rows="2" style="width:100%; margin-bottom:18px;"></textarea>
+
+          <div class="toolbar" style="margin:0 0 18px; flex-wrap:wrap; gap:10px;">
+            <button class="btn-primary" onclick="mw_zapisz()">💾 Zapisz treść</button>
+            <button class="btn-secondary" onclick="mw_podglad()">👁 Odśwież podgląd</button>
+            <button class="btn-secondary" onclick="mw_przywroc()">↩ Przywróć domyślną</button>
+            <input type="email" id="mw-test-email" placeholder="adres do próbnej wysyłki" class="grow" style="min-width:230px;">
+            <button class="btn-secondary" onclick="mw_test()">📤 Wyślij próbnie</button>
+          </div>
+
+          <div class="mini-label">Podgląd — dokładnie to, co dostanie klientka</div>
+          <iframe id="mw-podglad" style="width:100%; height:760px; border:1px solid var(--line, #e7ddd5); border-radius:12px; background:#f8f5f1;"></iframe>
         </div>
       </div>
     </div>
@@ -3145,6 +3211,133 @@ async function predef_usunZabieg(id, katId) {
     await predef_zaladuj();
     predef_initialized = true;
   } else { alert(d.message); }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+// MAILE POWITALNE — czytanie i edycja treści serii (2026-10-18)
+// Panel zmienia wyłącznie teksty. Harmonogram (okna dni) i przełącznik wysyłki zostają w kodzie
+// i w zmiennej środowiskowej — celowo, żeby jedno kliknięcie w przeglądarce nie ruszyło wysyłki.
+// ═══════════════════════════════════════════════════════════════════════════════════════════════
+let mw_seria = [], mw_wybrany = null;
+
+const mwApi = (sciezka, body) => fetch(`${API}${sciezka}`, {
+  method: body ? 'POST' : 'GET',
+  headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken },
+  ...(body ? { body: JSON.stringify(body) } : {}),
+}).then(r => r.json());
+
+const mwEsc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+async function mw_init() {
+  const stan = document.getElementById('mw-stan');
+  stan.className = 'loading'; stan.textContent = 'Ładowanie…';
+  const d = await mwApi('/admin/maile_wprow');
+  if (d.status !== 'success') { stan.textContent = 'Błąd: ' + d.message; return; }
+  mw_seria = d.seria;
+  const opisTrybu = { off: '⏸ wyłączona — nic nie wychodzi do klientów', proba: '🧪 próba — tylko wpis w logu, bez wysyłki', on: '▶ włączona — wiadomości wychodzą' };
+  stan.className = '';
+  stan.innerHTML = `<div style="display:flex; gap:22px; flex-wrap:wrap; align-items:center;">
+      <div><div class="mini-label">Stan serii</div><div style="font-weight:600;">${opisTrybu[d.tryb] || d.tryb}</div></div>
+      <div><div class="mini-label">Dotyczy salonów od</div><div style="font-weight:600;">${mwEsc(d.cutoff)}</div></div>
+      <div><div class="mini-label">Wiadomości w serii</div><div style="font-weight:600;">${mw_seria.length}</div></div>
+    </div>`;
+  const pole = document.getElementById('mw-test-email');
+  if (pole && !pole.value && d.domyslny_email) pole.value = d.domyslny_email;
+  mw_rysujListe();
+}
+
+function mw_rysujListe() {
+  document.getElementById('mw-lista').innerHTML = mw_seria.map(m => `
+    <div class="gen-card" style="margin-bottom:12px; cursor:pointer;" onclick="mw_otworz('${m.etap}')">
+      <div style="display:flex; gap:14px; align-items:flex-start;">
+        <div style="flex:0 0 34px; height:34px; border-radius:50%; background:#f7f0f2; color:#b87080; font-weight:700; text-align:center; line-height:34px;">${m.numer}</div>
+        <div style="flex:1;">
+          <div style="font-weight:600; margin-bottom:3px;">${mwEsc(m.temat)}</div>
+          <div style="font-size:12.5px; color:var(--muted);">
+            dzień ${m.okno[0]}–${m.okno[1] - 1} po założeniu salonu · ${m.sekcje ? m.sekcje.length : 0} sekcji ·
+            ${m._zrodlo === 'panel' ? '✏️ treść zmieniona w panelu' : 'treść domyślna'} ·
+            wysłano: ${m.wyslane.ile}${m.wyslane.ostatni ? ' (ostatnio ' + String(m.wyslane.ostatni).slice(0, 10) + ')' : ''}
+          </div>
+        </div>
+        <button class="btn-sm" onclick="event.stopPropagation(); mw_otworz('${m.etap}')">Otwórz</button>
+      </div>
+    </div>`).join('');
+}
+
+function mw_otworz(etap) {
+  const m = mw_seria.find(x => x.etap === etap); if (!m) return;
+  mw_wybrany = etap;
+  document.getElementById('mw-edytor').style.display = '';
+  document.getElementById('mw-edytor-tytul').textContent = `Wiadomość ${m.numer}: ${m.temat}`;
+  document.getElementById('mw-edytor-info').textContent =
+    `Wychodzi między ${m.okno[0]} a ${m.okno[1] - 1} dniem od założenia salonu. ` +
+    (m._zrodlo === 'panel' ? `Treść zmieniona w panelu${m._zmieniono ? ' ' + String(m._zmieniono).slice(0, 16).replace('T', ' ') : ''}.` : 'Obowiązuje treść domyślna z kodu.');
+  const v = (id, val) => { document.getElementById(id).value = val == null ? '' : val; };
+  v('mw-temat', m.temat); v('mw-preheader', m.preheader); v('mw-naglowek', m.naglowek); v('mw-wstep', m.wstep);
+  v('mw-uwaga-tytul', m.uwaga && m.uwaga.tytul); v('mw-uwaga-tekst', m.uwaga && m.uwaga.tekst);
+  v('mw-dzis', m.dzis); v('mw-cta', m.cta);
+  v('mw-zrzut-plik', m.zrzut && m.zrzut.plik); v('mw-zrzut-podpis', m.zrzut && m.zrzut.podpis);
+  document.getElementById('mw-sekcje').innerHTML = '';
+  (m.sekcje || []).forEach(([t, o]) => mw_dodajSekcje(t, o));
+  document.getElementById('mw-edytor').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  mw_podglad();
+}
+
+function mw_dodajSekcje(tytul, tresc) {
+  const box = document.getElementById('mw-sekcje');
+  const id = 'mws-' + Date.now() + '-' + Math.random().toString(16).slice(2, 6);
+  box.insertAdjacentHTML('beforeend', `
+    <div class="mw-sekcja" id="${id}" style="border:1px solid #efe6df; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fdfbf9;">
+      <div style="display:flex; gap:10px; align-items:center; margin-bottom:8px;">
+        <input type="text" class="mw-s-tytul" placeholder="Tytuł sekcji" value="${mwEsc(tytul)}" style="flex:1;">
+        <button class="btn-sm" style="flex:0 0 auto;" onclick="document.getElementById('${id}').remove()">Usuń</button>
+      </div>
+      <textarea class="mw-s-tresc" rows="3" placeholder="Treść sekcji (można używać &lt;strong&gt;pogrubienia&lt;/strong&gt;)" style="width:100%;">${mwEsc(tresc)}</textarea>
+    </div>`);
+}
+
+function mw_zbierz() {
+  const g = (id) => document.getElementById(id).value.trim();
+  const sekcje = [...document.querySelectorAll('#mw-sekcje .mw-sekcja')]
+    .map(w => [w.querySelector('.mw-s-tytul').value.trim(), w.querySelector('.mw-s-tresc').value.trim()])
+    .filter(([t, o]) => t || o);
+  const dane = { temat: g('mw-temat'), preheader: g('mw-preheader'), naglowek: g('mw-naglowek'), wstep: g('mw-wstep'), sekcje, dzis: g('mw-dzis'), cta: g('mw-cta') };
+  const ut = g('mw-uwaga-tytul'), ux = g('mw-uwaga-tekst');
+  dane.uwaga = (ut || ux) ? { tytul: ut, tekst: ux } : null;
+  const zp = g('mw-zrzut-plik'), zo = g('mw-zrzut-podpis');
+  dane.zrzut = zp ? { plik: zp, podpis: zo } : null;
+  return dane;
+}
+
+async function mw_podglad() {
+  if (!mw_wybrany) return;
+  const d = await mwApi('/admin/maile_wprow_podglad', { etap: mw_wybrany, dane: mw_zbierz() });
+  const ramka = document.getElementById('mw-podglad');
+  if (d.status !== 'success') { ramka.srcdoc = '<p style="font-family:sans-serif;padding:20px;color:#b00;">Błąd podglądu: ' + mwEsc(d.message) + '</p>'; return; }
+  ramka.srcdoc = d.html;
+}
+
+async function mw_zapisz() {
+  if (!mw_wybrany) return;
+  const d = await mwApi('/admin/maile_wprow_zapisz', { etap: mw_wybrany, dane: mw_zbierz() });
+  alert(d.message);
+  if (d.status === 'success') { const e = mw_wybrany; await mw_init(); mw_otworz(e); }
+}
+
+async function mw_przywroc() {
+  if (!mw_wybrany) return;
+  if (!confirm('Przywrócić treść domyślną z kodu? Zmiany wpisane w panelu dla tej wiadomości przepadną.')) return;
+  const d = await mwApi('/admin/maile_wprow_reset', { etap: mw_wybrany });
+  alert(d.message);
+  if (d.status === 'success') { const e = mw_wybrany; await mw_init(); mw_otworz(e); }
+}
+
+async function mw_test() {
+  if (!mw_wybrany) return;
+  const email = document.getElementById('mw-test-email').value.trim();
+  if (!email) return alert('Podaj adres, na który mam wysłać próbkę.');
+  const d = await mwApi('/admin/maile_wprow_test', { etap: mw_wybrany, email, dane: mw_zbierz() });
+  alert(d.message);
 }
 </script>
 </body>

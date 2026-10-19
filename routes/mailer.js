@@ -604,4 +604,121 @@ async function powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu, pracownik,
   });
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie };
+// ─── Szablon jasny: prawdziwe logo zamiast ciemnego paska ────
+// Używany przez serię powitalną (decyzja właściciela 2026-10-18: żadnych zastępczych napisów
+// „Estelio", żadnego ciemnego nagłówka). Logo to ten sam plik co w aplikacji i na stronie:
+// /img/estelio-logo.png. Gdy klient pocztowy blokuje obrazki, alt pokazuje nazwę — stąd też
+// czytelny `alt` i wysokość ustawiona atrybutem, żeby układ nie skakał przed pobraniem grafiki.
+function emailWrapperJasny(podtytul, tresc) {
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estelio</title>
+</head>
+<body style="margin:0; padding:24px; background:#f8f5f1; font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #ece4dc; box-shadow:0 4px 20px rgba(28,26,24,0.06);">
+
+    <!-- Nagłówek: logo na jasnym tle -->
+    <div style="background:#ffffff; padding:34px 40px 22px; text-align:center; border-bottom:1px solid #f1eae2;">
+      <img src="${APP_URL()}/img/estelio-logo.png" alt="Estelio — Beauty Management" width="230" style="width:230px; max-width:76%; height:auto; display:block; margin:0 auto;">
+      <p style="color:#a89e96; margin:14px 0 0; font-size:11px; letter-spacing:1.4px; text-transform:uppercase;">${podtytul}</p>
+    </div>
+
+    <!-- Treść -->
+    <div style="padding:32px 40px 36px;">
+      ${tresc}
+    </div>
+
+    <!-- Stopka -->
+    <div style="background:#faf7f4; border-top:1px solid #f1eae2; padding:18px 40px; text-align:center;">
+      <p style="font-size:11px; color:#a89e96; margin:0;">© Estelio · System zarządzania salonem beauty</p>
+      <p style="font-size:11px; color:#a89e96; margin:6px 0 0;">
+        <a href="${APP_URL()}" style="color:#a89e96; text-decoration:none;">${APP_URL().replace(/^https?:\/\//, '')}</a>
+        &nbsp;·&nbsp;
+        <a href="mailto:${ADMIN_EMAIL()}" style="color:#a89e96; text-decoration:none;">${ADMIN_EMAIL()}</a>
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+// ─── Seria powitalna: jeden etap = jeden mail ────────────────
+// Treść etapów trzyma routes/maile-wprowadzajace.js (SERIA) — tutaj tylko składanie i wysyłka.
+// Mail prowadzi do rozdziału przewodnika /pomoc/ (ten ma zrzuty ekranu), nie tłumaczy wszystkiego sam.
+// Kopia do właściciela (BCC), żeby widział dokładnie to, co dostają klientki.
+function zbudujMailWprowadzajacy({ nazwa_salonu, mail, numer, ile }) {
+  const link = `${APP_URL()}${mail.link_wlasny || ('/pomoc/#' + mail.kotwica)}`;
+  const n = numer || 0, wszystkich = ile || 7;
+
+  // Sekcje merytoryczne: numerowany krążek + tytuł + akapit. Tabela, bo Outlook nie radzi sobie z flexem.
+  const sekcje = (mail.sekcje || []).map(([tytul, opis], i) => `
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin-bottom:18px;">
+        <tr>
+          <td width="32" valign="top" style="padding-top:2px;">
+            <div style="width:26px; height:26px; border-radius:50%; background:#f7f0f2; color:#b87080; font-size:12px; font-weight:700; text-align:center; line-height:26px; font-family:Georgia,serif;">${i + 1}</div>
+          </td>
+          <td valign="top" style="padding-left:12px;">
+            <p style="margin:0 0 4px; font-size:14.5px; font-weight:700; color:#1c1a18; line-height:1.4;">${tytul}</p>
+            <p style="margin:0; font-size:13.5px; color:#6f655e; line-height:1.75;">${opis}</p>
+          </td>
+        </tr>
+      </table>`).join('');
+
+  // Zrzut ekranu z przewodnika — ten sam plik, który klient zobaczy u siebie w /pomoc/.
+  const zrzut = mail.zrzut ? `
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:6px 0 24px;">
+        <tr><td style="border:1px solid #ece4dc; border-radius:10px; padding:8px; background:#fcfaf8;">
+          <a href="${link}" target="_blank" style="display:block; text-decoration:none;">
+            <img src="${APP_URL()}/pomoc-zrzuty/${mail.zrzut.plik}" alt="${(mail.zrzut.podpis || '').replace(/"/g, '')}" width="476" style="width:100%; max-width:476px; height:auto; display:block; border-radius:6px;">
+          </a>
+        </td></tr>
+        <tr><td style="padding:8px 4px 0;">
+          <p style="margin:0; font-size:12px; color:#a89e96; line-height:1.6;">${mail.zrzut.podpis || ''}</p>
+        </td></tr>
+      </table>` : '';
+
+  const uwaga = mail.uwaga ? `
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:4px 0 22px;">
+        <tr><td style="background:#fbf4f5; border-left:3px solid #d4a0ad; border-radius:0 8px 8px 0; padding:14px 18px;">
+          <p style="margin:0 0 5px; font-size:11px; font-weight:700; color:#b87080; text-transform:uppercase; letter-spacing:0.6px;">${mail.uwaga.tytul}</p>
+          <p style="margin:0; font-size:13px; color:#6f655e; line-height:1.75;">${mail.uwaga.tekst}</p>
+        </td></tr>
+      </table>` : '';
+
+  return emailWrapperJasny(`Pierwsze kroki · ${n}/${wszystkich}`, `
+      ${mail.preheader ? `<div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; height:0; width:0;">${mail.preheader}</div>` : ''}
+      <p style="font-size:17px; font-weight:700; color:#1c1a18; margin:0 0 10px; line-height:1.4;">${mail.naglowek}</p>
+      <p style="font-size:14px; color:#6f655e; line-height:1.8; margin:0 0 24px;">${mail.wstep}</p>
+      ${zrzut}
+      ${sekcje}
+      ${uwaga}
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:4px 0 0;">
+        <tr><td style="background:#fdf9f3; border:1px solid #e8d8c4; border-radius:10px; padding:14px 18px;">
+          <p style="font-size:11px; font-weight:700; color:#c9a96e; margin:0 0 5px; text-transform:uppercase; letter-spacing:0.6px;">Jedna rzecz na dziś</p>
+          <p style="font-size:13.5px; color:#5c5046; margin:0; line-height:1.7;">${mail.dzis}</p>
+        </td></tr>
+      </table>
+      ${emailBtn(link, mail.cta || 'Otwórz przewodnik')}
+      <p style="font-size:12px; color:#a89e96; line-height:1.7; text-align:center; margin:0;">
+        Rozdział w przewodniku ma zrzuty ekranu z działającego systemu — pokazuje dokładnie to, co widzisz u siebie.
+      </p>
+      ${blokKontakt()}
+      <p style="font-size:11px; color:#c4bcb6; line-height:1.6; margin-top:18px; border-top:1px solid #f4efe6; padding-top:14px;">
+        Wiadomość ${n} z ${wszystkich} w serii pierwszych kroków${nazwa_salonu ? ` dla salonu ${nazwa_salonu}` : ''}.
+        Nie chcesz ich dostawać? Odpisz jednym słowem „stop" — wyłączymy serię i nic więcej nie przyjdzie.
+      </p>
+    `);
+}
+
+async function wyslijMailWprowadzajacy({ email, nazwa_salonu, mail }) {
+  const transport = createTransport();
+  const html = zbudujMailWprowadzajacy({ nazwa_salonu, mail });
+  // Temat bez emoji — w skrzynce firmowej wygląda poważniej i rzadziej ląduje w „Oferty".
+  return transport.sendMail(mailDoKlienta({ to: email, bcc: ADMIN_EMAIL(), subject: mail.temat, html }));
+}
+
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie, wyslijMailWprowadzajacy, zbudujMailWprowadzajacy };

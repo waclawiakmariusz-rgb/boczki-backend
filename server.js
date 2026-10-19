@@ -417,6 +417,15 @@ try {
   console.error('[przypomnienia] nie wystartowano:', e.message);
 }
 
+// Seria powitalna dla nowych salonów: 7 maili przez pierwsze trzy tygodnie, raz na dobę jeden przebieg.
+// MAILE_WPROWADZAJACE = off (DOMYŚLNIE: nic nie wysyła) | proba (tylko log „wysłałbym") | on.
+// Jak wyżej: własne tabele, zero tras HTTP, błąd startu nie kładzie serwera.
+try {
+  require('./routes/maile-wprowadzajace')(db).start();
+} catch (e) {
+  console.error('[maile-wprow] nie wystartowano:', e.message);
+}
+
 // ==========================================
 // REJESTR BŁĘDÓW — każdy błąd API trafia do Dziennika Zdarzeń
 // ==========================================
