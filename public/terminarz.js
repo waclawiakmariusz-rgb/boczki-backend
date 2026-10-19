@@ -279,6 +279,18 @@
     if (wsz.length) { od = Math.min(od, ...wsz.map(x => x[0])); do_ = Math.max(do_, ...wsz.map(x => x[1])); }
     return { od: Math.floor(od / 60) * 60, do: Math.min(1440, Math.ceil(do_ / 60) * 60) };
   }
+  // ── Znak notatki (19.10.2026) ────────────────────────────────────────────────────────────────
+  // Prośba z recepcji: „jak nie kliknę, to się nie dowiem, że przy wizycie jest notatka”.
+  // Notatka przychodzi tylko do ról operacyjnych (serwer zeruje ją kosmetologom), więc sam fakt
+  // jej obecności wystarczy jako warunek — nic więcej nie trzeba sprawdzać po stronie przeglądarki.
+  const notatkaTekst = (r) => String((r && r.notatka) || '').trim();
+  const IKONA_NOTATKI = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path d="M8.5 9h7"/><path d="M8.5 13h4"/></svg>';
+  function znakNotatki(r) {
+    const n = notatkaTekst(r); if (!n) return '';
+    const skrot = n.length > 180 ? n.slice(0, 180) + '…' : n;
+    return `<span class="trm-notatka-znak" title="Notatka: ${esc(skrot)}" aria-label="Wizyta z notatką">${IKONA_NOTATKI}</span>`;
+  }
+
   function kolumnaHtml(rezerwacje, dostepnosc, bloki, zak, klik, filtrPoz, dragPrac) {
     const h = zak.do - zak.od;
     let s = '';
@@ -305,7 +317,7 @@
       const pozIdsCsv = poz.map(x => x.id).join(',');
       const krotka = (b - a) < 40, mini = (b - a) < 20; // D01: 20–39 min = 2 linie (godzina·klientka / usługa), <20 min = 1 linia
       s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
-        ${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
+        ${znakNotatki(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
       </div>`;
     });
     return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
@@ -635,7 +647,7 @@
     const uslugi = r.pozycje.map(p => `${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}${pracownicy.length > 1 ? ' — ' + esc(p.pracownik) : ''}`).join(' + ');
     return `<div class="trm-ag-row" style="--kat:${kolorKat(u0)};${anul ? 'opacity:.5' : ''}" onclick="TRM.otworzSzczegoly(${r.id})">
       <div class="t">${hhmm(r.start)}–${hhmm(r.koniec)}</div>
-      <div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${uslugi}</div></div>
+      <div><div class="k">${esc(r.klient_nazwa)}${znakNotatki(r)}</div><div class="u">${uslugi}</div>${notatkaTekst(r) ? `<div class="trm-ag-notatka">${esc(notatkaTekst(r))}</div>` : ''}</div>
       <div class="trm-ag-prac">${prac}</div>
       <div class="trm-ag-status">${pill(ST_LABEL[r.status])}${r.obecnosc !== 'oczekiwana' ? pill(OB_LABEL[r.obecnosc]) : ''}${r.wykonanie !== 'zaplanowana' ? pill(WYK_LABEL[r.wykonanie]) : ''}</div>
       <div class="trm-ag-rozl">${!operacyjna() ? '<span class="muted small">brak uprawnień</span>' : anul ? '<span class="muted small">nie dotyczy</span>' : (r.pozycje.some(p => p.zakup_skladnik_id) ? '<span class="trm-pill pakiet">Z pakietu</span> ' : '') + (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo' ? (r.sprzedaz_id ? pill(['Rozliczona', 'ok']) : pill(['Do rozliczenia', 'warn'])) : !r.id_klienta ? '<span class="muted small">bez kartoteki</span>' : r.pozycje.some(p => p.zakup_skladnik_id) ? '' : '<span class="muted small">pojedynczy zabieg</span>')}</div>
