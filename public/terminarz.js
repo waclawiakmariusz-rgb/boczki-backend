@@ -382,10 +382,10 @@
       const a = Math.max(zak.od, minDnia(bl.od)), c = Math.min(zak.do, minDnia(bl.do) || 1440);
       if (c <= a) return;
       const techniczna = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(bl.typ);
-      const mozeZdjac = operacyjna() && techniczna && bl.id;
-      const klik = mozeZdjac ? `onclick="event.stopPropagation(); TRM.blokadaUsun(${bl.id}, '${esc(String(bl.opis || '')).replace(/'/g, "\\'")}')" ` : '';
-      const tytul = techniczna ? (mozeZdjac ? 'Rezerwacja techniczna — kliknij, żeby zdjąć' : 'Rezerwacja techniczna') : 'Nieobecność — zmienia manager w Ustawieniach';
-      s += `<div class="blok" title="${esc(tytul)}" ${klik}style="${mozeZdjac ? 'cursor:pointer;' : ''}top:${(a - zak.od) * PX}px;height:${(c - a) * PX}px">${esc(bl.opis || 'Niedostępne')}</div>`;
+      // Klik otwiera szczegóły (jak przy wizycie): tam są godziny, powód, wydłużenie i zdjęcie.
+      const klik = bl.id ? `onclick="event.stopPropagation(); TRM.blokadaOtworz(${bl.id})" ` : '';
+      const tytul = techniczna ? 'Rezerwacja techniczna — kliknij, żeby zobaczyć i zmienić' : 'Nieobecność — kliknij, żeby zobaczyć szczegóły';
+      s += `<div class="blok" title="${esc(tytul)}" ${klik}style="${bl.id ? 'cursor:pointer;' : ''}top:${(a - zak.od) * PX}px;height:${(c - a) * PX}px">${esc(bl.opis || 'Niedostępne')}</div>`;
     });
     for (let m = zak.od; m <= zak.do; m += 30) s += `<div class="hline ${m % 60 ? 'half' : ''}" style="top:${(m - zak.od) * PX}px"></div>`;
     rezerwacje.forEach(r => {
@@ -446,13 +446,46 @@
     TRM.blok = { od: start, do: koniec, typ: 'szkolenie', osoba: (o && o.osoba) || '', zasob_id: (o && o.zasob_id) || '', opis: '', dotkniete: null };
     renderBlokada();
   };
-  const S_dodajMin = (dt, min) => { const [d, g] = String(dt).split(' '); const [h, m] = g.split(':').map(Number); const t = h * 60 + m + min; return `${d} ${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`; };
+  // Dodanie minut z poprawnym przejściem przez północ (próba wyłapała „+1 godz." do 23:59,
+  // które przy prostym liczeniu godzin gubiło datę i dawało koniec przed początkiem).
+  const S_dodajMin = (dt, min) => {
+    const [d, g] = String(dt).split(" ");
+    const [rok, mies, dzien] = d.split("-").map(Number);
+    const [h, m] = (g || "00:00").split(":").map(Number);
+    const t = new Date(rok, mies - 1, dzien, h, m);
+    t.setMinutes(t.getMinutes() + min);
+    return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())} ${pad(t.getHours())}:${pad(t.getMinutes())}`;
+  };
   function renderBlokada() {
     const b = TRM.blok; if (!b) return;
     const zas = (TRM.dane.zasoby || []).filter(z => !z.archiwalny);
-    panelOtworz(naglowekPanelu('Rezerwacja techniczna', ladnaData(b.od.slice(0, 10))) + `
+    const istniejaca = !!b.id;
+    const nazwaZasobu = (id) => { const z = (TRM.dane.zasoby || []).find(x => String(x.id) === String(id)); return z ? z.nazwa : null; };
+    // Podgląd: dla osób bez prawa zmiany, a także dla KAŻDEJ nieobecności (urlop, choroba).
+    // Ten panel zna tylko powody techniczne, więc edycja urlopu po cichu zmieniłaby mu rodzaj —
+    // nieobecności zostają tam, gdzie się je zakłada, czyli w Ustawieniach.
+    if (istniejaca && (b.mozna === false || b.techniczna === false)) {
+      return panelOtworz(naglowekPanelu(b.techniczna ? 'Rezerwacja techniczna' : 'Nieobecność', ladnaData(b.od.slice(0, 10))) + `
+        <div class="trm-card">
+          <h3 style="margin-bottom:6px">${esc(b.opis || POWODY_BLOKADY.reduce((a, [k, n]) => (k === b.typ ? n : a), b.typ))}</h3>
+          <div class="muted small">${esc(b.od.slice(11, 16))}–${esc(b.do.slice(11, 16))}${b.osoba ? ' · ' + esc(b.osoba) : ''}${b.zasob_id ? ' · ' + esc(nazwaZasobu(b.zasob_id) || '') : ''}</div>
+          <div class="trm-note info small" style="margin-top:10px">${b.techniczna ? 'Ten czas jest zarezerwowany, więc nie można tu umówić klientki. Zmienia go recepcja albo manager.' : 'Nieobecność zakłada i zdejmuje manager w Ustawieniach.'}</div>
+          ${b.utworzyl ? `<div class="trm-pomoc">Zapisał(a): ${esc(b.utworzyl)}</div>` : ''}
+          <div class="trm-row" style="margin-top:10px"><button class="trm-btn fix" onclick="TRM.panelZamknij()">Zamknij</button></div>
+        </div>`);
+    }
+    panelOtworz(naglowekPanelu(istniejaca ? 'Rezerwacja techniczna' : 'Rezerwacja techniczna', `${ladnaData(b.od.slice(0, 10))}${istniejaca ? ' · ' + esc(b.od.slice(11, 16)) + '–' + esc(b.do.slice(11, 16)) : ''}`) + `
       <div class="trm-card">
-        <div class="trm-note info small">Czas zarezerwowany na coś innego niż wizyta: szkolenie, rozmowa kwalifikacyjna, serwis urządzenia. W grafiku pojawi się blokada, więc nikt nie umówi tu klientki.</div>
+        <div class="trm-note info small">${istniejaca
+          ? 'Możesz przesunąć godziny, zmienić powód albo dopisać, czego dotyczy. Zmiana działa od razu — czas zwolni się albo zajmie w grafiku.'
+          : 'Czas zarezerwowany na coś innego niż wizyta: szkolenie, rozmowa kwalifikacyjna, serwis urządzenia. W grafiku pojawi się blokada, więc nikt nie umówi tu klientki.'}</div>
+        ${istniejaca ? `<div class="trm-row" style="margin:10px 0 2px">
+          <span class="muted small fix">Czas trwania:</span>
+          <button class="trm-btn sm fix" onclick="TRM.blokadaWydluz(-30)">−30 min</button>
+          <button class="trm-btn sm fix" onclick="TRM.blokadaWydluz(30)">+30 min</button>
+          <button class="trm-btn sm fix" onclick="TRM.blokadaWydluz(60)">+1 godz.</button>
+          ${b.utworzyl ? `<span class="muted small">Zapisał(a): ${esc(b.utworzyl)}</span>` : ''}
+        </div>` : ''}
         <div class="trm-grid2" style="margin-top:10px">
           <div class="trm-field"><label>Od</label><input type="datetime-local" value="${esc(b.od.replace(' ', 'T'))}" onchange="TRM.blokadaPole('od', this.value)"></div>
           <div class="trm-field"><label>Do</label><input type="datetime-local" value="${esc(b.do.replace(' ', 'T'))}" onchange="TRM.blokadaPole('do', this.value)"></div>
@@ -469,25 +502,42 @@
           ${b.dotkniete.slice(0, 6).map(x => `<div>${esc((x.start || '').slice(11, 16))}–${esc((x.koniec || '').slice(11, 16))} · ${esc(x.klient_nazwa || '')} · ${esc(x.pracownik || '')}</div>`).join('')}
           Rezerwacja ich nie odwołuje — przestaw je albo zapisz świadomie.</div>` : ''}
         <div class="trm-row" style="margin-top:10px">
-          <button class="trm-btn primary" onclick="TRM.blokadaZapisz()">${b.dotkniete && b.dotkniete.length ? 'Zapisz mimo wizyt' : 'Zarezerwuj czas'}</button>
-          <button class="trm-btn fix" onclick="TRM.panelZamknij()">Anuluj</button>
+          <button class="trm-btn primary" onclick="TRM.blokadaZapisz()">${b.dotkniete && b.dotkniete.length ? 'Zapisz mimo wizyt' : (istniejaca ? 'Zapisz zmiany' : 'Zarezerwuj czas')}</button>
+          ${istniejaca ? `<button class="trm-btn danger fix" onclick="TRM.blokadaUsun(${b.id}, '${esc(String(b.opis || '')).replace(/'/g, "\\'")}')">Zdejmij rezerwację</button>` : ''}
+          <button class="trm-btn fix" onclick="TRM.panelZamknij()">${istniejaca ? 'Zamknij' : 'Anuluj'}</button>
         </div>
       </div>`);
   }
   TRM.blokadaPole = (pole, wartosc) => { if (!TRM.blok) return; TRM.blok[pole] = String(wartosc || '').replace('T', ' ').slice(0, pole === 'opis' ? 255 : 16); if (pole === 'od' || pole === 'do' || pole === 'osoba' || pole === 'zasob_id') TRM.blok.dotkniete = null; };
   TRM.blokadaZapisz = async () => {
     const b = TRM.blok; if (!b) return;
-    const d = await api('trm_blokada_zapisz', { od: b.od, do: b.do, typ: b.typ, osoba: b.osoba, zasob_id: b.zasob_id, opis: b.opis, wymus: !!(b.dotkniete && b.dotkniete.length) });
+    const d = await api('trm_blokada_zapisz', { id: b.id || undefined, od: b.od, do: b.do, typ: b.typ, osoba: b.osoba, zasob_id: b.zasob_id, opis: b.opis, wymus: !!(b.dotkniete && b.dotkniete.length) });
     if (d.status !== 'success') return toast('error', 'Nie zarezerwowano', d.message);
     if (d.wymaga_decyzji) { b.dotkniete = d.dotkniete || []; return renderBlokada(); }
-    toast('success', 'Czas zarezerwowany', b.opis);
+    toast('success', b.id ? 'Rezerwacja zmieniona' : 'Czas zarezerwowany', b.opis);
     TRM.blok = null; TRM.panelZamknij(); odswiez({ cicho: true });
   };
   TRM.blokadaUsun = async (id, opis) => {
     if (!window.confirm(`Zdjąć rezerwację „${opis || ''}”? Czas wróci jako wolny.`)) return;
     const d = await api('trm_blokada_usun', { id });
     if (d.status !== 'success') return toast('error', 'Nie zdjęto rezerwacji', d.message);
-    toast('success', 'Rezerwacja zdjęta'); odswiez({ cicho: true });
+    toast('success', 'Rezerwacja zdjęta'); TRM.blok = null; TRM.panelZamknij(); odswiez({ cicho: true });
+  };
+  /** Kliknięcie w blokadę otwiera szczegóły (jak przy wizycie), a nie od razu kasuje. */
+  TRM.blokadaOtworz = async (id) => {
+    const d = await api('trm_blokada_szczegoly', { id });
+    if (d.status !== 'success') return toast('error', 'Nie otwarto rezerwacji', d.message);
+    const b = d.blokada;
+    TRM.blok = { id: b.id, od: b.od, do: b.do, typ: b.typ, osoba: b.pracownik || '', zasob_id: b.zasob_id || '', opis: b.opis || '',
+      dotkniete: null, utworzyl: b.utworzyl, techniczna: b.techniczna, mozna: d.mozna_edytowac, podglad: true };
+    renderBlokada();
+  };
+  /** Szybkie przesunięcie końca (wydłużenie/skrócenie) — najczęstsza zmiana przy szkoleniu. */
+  TRM.blokadaWydluz = (minuty) => {
+    const b = TRM.blok; if (!b) return;
+    const nowy = S_dodajMin(b.do, minuty);
+    if (nowy <= b.od) return toast('warning', 'Koniec musi być po początku');   // porównanie tekstu „RRRR-MM-DD GG:MM” działa jak porównanie czasu
+    b.do = nowy; renderBlokada();
   };
 
   // ── CHMURKA: krótki podgląd po najechaniu/kliknięciu karty, bez otwierania pełnego panelu ──

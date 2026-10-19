@@ -1138,11 +1138,33 @@ module.exports = (db, opts = {}) => {
           return { status: 'success', wymaga_decyzji: true, dotkniete: dotk,
             message: `W tym czasie ${dotk.length === 1 ? 'jest już wizyta' : 'są już ' + dotk.length + ' wizyty'}. Rezerwacja ich nie odwołuje — najpierw przestaw albo odwołaj wizyty, albo zapisz rezerwację świadomie.` };
         }
+        const co = [prac, zasob ? (await zasoby(tenant, true)).find(z => Number(z.id) === zasob).nazwa : null].filter(Boolean).join(' + ');
+        // Zmiana istniejącej rezerwacji (przesunięcie, wydłużenie, inny powód) albo nowy wpis.
+        if (d.id) {
+          const stara = (await q(`SELECT id, typ, opis FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
+          if (!stara) throw new BladUzytkownika('Nie znaleziono rezerwacji — mogła zostać zdjęta.');
+          if (!['szkolenie', 'przerwa', 'serwis', 'inne'].includes(stara.typ) && !ROLE_MANAGER_PLUS.has(r)) {
+            throw new BladUzytkownika('Urlop i chorobę zmienia manager w Ustawieniach.');
+          }
+          await q(`UPDATE Term_Nieobecnosci SET pracownik = ?, zasob_id = ?, od = ?, do_ = ?, typ = ?, opis = ? WHERE tenant_id = ? AND id = ?`,
+            [prac, zasob, od, do_, typ, opis, tenant, Number(d.id)]);
+          zapiszLog(tenant, 'TERMINARZ: REZERWACJA TECHNICZNA', imie, `zmiana #${d.id}: ${co} ${od.slice(0, 16)}–${do_.slice(11, 16)} (${typ}): ${opis}`);
+          return { status: 'success', id: Number(d.id), zmiana: true, dotkniete: dotk };
+        }
         const res_ = await q(`INSERT INTO Term_Nieobecnosci (tenant_id, pracownik, zasob_id, od, do_, typ, opis, utworzyl) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
           [tenant, prac, zasob, od, do_, typ, opis, imie || null]);
-        const co = [prac, zasob ? (await zasoby(tenant, true)).find(z => Number(z.id) === zasob).nazwa : null].filter(Boolean).join(' + ');
         zapiszLog(tenant, 'TERMINARZ: REZERWACJA TECHNICZNA', imie, `${co} ${od.slice(0, 16)}–${do_.slice(11, 16)} (${typ}): ${opis}`);
         return { status: 'success', id: res_.insertId, dotkniete: dotk };
+      }
+      case 'trm_blokada_szczegoly': {
+        if (!ROLE_OPERACYJNE.has(r) && !ROLE_SPECJALISTA.has(r)) throw new BladUzytkownika('Brak dostępu.');
+        const b = (await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i') AS do_, typ, opis, utworzyl
+                              FROM Term_Nieobecnosci WHERE tenant_id = ? AND id = ?`, [tenant, Number(d.id)]))[0];
+        if (!b) throw new BladUzytkownika('Nie znaleziono rezerwacji — mogła zostać zdjęta.');
+        const zas = b.zasob_id ? (await zasoby(tenant, true)).find(z => Number(z.id) === Number(b.zasob_id)) : null;
+        const techniczna = ['szkolenie', 'przerwa', 'serwis', 'inne'].includes(b.typ);
+        return { status: 'success', blokada: { ...b, do: b.do_, zasob_nazwa: zas ? zas.nazwa : null, techniczna },
+          mozna_edytowac: techniczna ? ROLE_OPERACYJNE.has(r) : ROLE_MANAGER_PLUS.has(r) };
       }
       case 'trm_blokada_usun': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -2048,4 +2070,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

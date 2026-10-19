@@ -21,6 +21,10 @@ W panelu: od–do, powód (szkolenie · rozmowa/spotkanie · serwis, naprawa · 
 
 **Co z wizytami w tym czasie:** rezerwacja ich **nie odwołuje**. Jeśli nachodzi na umówione wizyty, panel najpierw pokazuje listę i dopiero drugie kliknięcie zapisuje („Zapisz mimo wizyt”). To ta sama zasada, co przy nieobecnościach.
 
+**Szczegóły i zmiana:** kliknięcie w blokadę w siatce otwiera panel — godziny, powód, osoba, gabinet, opis i kto to zapisał. Stamtąd można przesunąć termin, zmienić powód, a najczęstszą zmianę (wydłużenie szkolenia) załatwiają przyciski **−30 min / +30 min / +1 godz.**. Zapis działa od razu: czas zwalnia się albo zajmuje w grafiku.
+
+Nieobecności (urlop, choroba) otwierają się **tylko do podglądu** — ten panel zna wyłącznie powody techniczne, więc edycja urlopu po cichu zmieniłaby mu rodzaj. Zakłada się i zmienia je w Ustawieniach.
+
 **Zdejmowanie:** kliknięcie w blokadę w siatce zdejmuje ją (po potwierdzeniu) — ale tylko rezerwacje techniczne. Urlop i chorobę nadal zmienia manager w Ustawieniach; klik na nich tylko to tłumaczy.
 
 ### Uprawnienia
@@ -72,3 +76,4 @@ Po zapisie nagłówek kolumny Oli pokazuje `09:00–12:00, 15:00–17:00` — cz
 | `blok-02-panel.png` | panel rezerwacji technicznej |
 | `blok-03-grafik.png` | blokada w kolumnie Oli (12:00–15:00) i zmieniony nagłówek jej godzin |
 | `blok-04-zasoby.png` | ta sama rezerwacja w widoku Zasoby — Gabinet 1 zajęty |
+| `blok-05-szczegoly.png` | szczegóły po kliknięciu w blokadę: godziny, powód, skróty czasu, „Zdejmij rezerwację” |

@@ -182,3 +182,71 @@ describe('B04 — dodawanie klientki zniknęło z Terminarza', () => {
     expect(src).toMatch(/To nie wizyta — zarezerwuj czas technicznie/);          // przejście z kreatora wizyty
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────
+// Po pierwszym przeklikaniu: „jak klikam w termin techniczny, to nie pokazuje szczegółów;
+// chcę móc edytować, wydłużać". Klik otwiera panel, a nie od razu kasuje.
+describe('B05 — szczegóły i zmiana istniejącej rezerwacji', () => {
+  const ISTNIEJACA = [{ id: 77, pracownik: 'Ola', zasob_id: 1, od: '2026-10-22 12:00', do_: '2026-10-22 15:00', typ: 'szkolenie', opis: 'Szkolenie Vagheggi', utworzyl: 'Ola' }];
+  const zBlokada = (rola, wiersz = ISTNIEJACA) => baza(rola, [[/FROM Term_Nieobecnosci WHERE tenant_id = \? AND id = \?/, wiersz]]);
+
+  test('szczegóły wracają z godzinami, powodem, osobą, gabinetem i autorem', async () => {
+    const { body } = await post(aplikacja(zBlokada('recepcja')), { action: 'trm_blokada_szczegoly', id: 77 }, 'Ola');
+    expect(body.status).toBe('success');
+    expect(body.blokada).toMatchObject({ id: 77, pracownik: 'Ola', typ: 'szkolenie', opis: 'Szkolenie Vagheggi', utworzyl: 'Ola', techniczna: true });
+    expect(body.blokada.od).toBe('2026-10-22 12:00');
+    expect(body.blokada.do).toBe('2026-10-22 15:00');
+    expect(body.blokada.zasob_nazwa).toBe('Gabinet 1');
+    expect(body.mozna_edytowac).toBe(true);
+  });
+
+  test('zmiana godzin zapisuje się jako UPDATE, bez drugiego wpisu', async () => {
+    const db = zBlokada('recepcja');
+    const { body } = await post(aplikacja(db), { ...DOBRA, id: 77, do: '2026-10-22 16:00' }, 'Ola');
+    expect(body.status).toBe('success');
+    expect(body.zmiana).toBe(true);
+    expect(db.zap.some(z => /^UPDATE Term_Nieobecnosci SET/.test(z.sql))).toBe(true);
+    expect(zapisy(db)).toEqual([]);                                   // żadnego INSERT-a
+  });
+
+  test('zmiana nieistniejącej rezerwacji kończy się czytelnym błędem', async () => {
+    const db = zBlokada('recepcja', []);
+    const { body } = await post(aplikacja(db), { ...DOBRA, id: 999 }, 'Ola');
+    expect(body.status).toBe('error');
+    expect(body.message).toMatch(/mogła zostać zdjęta/);
+  });
+
+  test('kosmetolog widzi szczegóły, ale bez prawa zmiany', async () => {
+    const { body } = await post(aplikacja(zBlokada('kosmetolog')), { action: 'trm_blokada_szczegoly', id: 77 }, 'Anna');
+    expect(body.status).toBe('success');
+    expect(body.mozna_edytowac).toBe(false);
+  });
+
+  test('urlopu recepcja nie zmieni, manager tak', async () => {
+    const urlop = [{ id: 80, pracownik: 'Anna', zasob_id: null, od: '2026-10-22 08:00', do_: '2026-10-22 20:00', typ: 'urlop', opis: 'Urlop', utworzyl: 'Ola' }];
+    const db = zBlokada('recepcja', urlop);
+    const { body } = await post(aplikacja(db), { ...DOBRA, id: 80 }, 'Ola');
+    expect(body.status).toBe('error');
+    expect(db.zap.some(z => /^UPDATE Term_Nieobecnosci SET/.test(z.sql))).toBe(false);
+    const db2 = zBlokada('manager', urlop);
+    expect((await post(aplikacja(db2), { ...DOBRA, id: 80 }, 'Ola')).body.status).toBe('success');
+  });
+
+  test('nieobecności nie da się przerobić na szkolenie przez panel rezerwacji', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'terminarz.js'), 'utf8');
+    expect(src).toContain('b.mozna === false || b.techniczna === false');   // urlop i choroba tylko do podglądu
+  });
+
+  test('wydłużenie przechodzi przez północ bez gubienia daty', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'terminarz.js'), 'utf8');
+    expect(src).toContain('t.setMinutes(t.getMinutes() + min)');            // liczone na dacie, nie na samych godzinach
+    expect(src).not.toContain('% 24');                                      // stare liczenie gubiło dzień przy przejściu przez północ
+  });
+
+  test('klik w blokadę otwiera szczegóły, a nie kasowanie', () => {
+    const src = require('fs').readFileSync(require('path').join(__dirname, '..', 'public', 'terminarz.js'), 'utf8');
+    expect(src).toMatch(/TRM\.blokadaOtworz\(\$\{bl\.id\}\)/);
+    expect(src).toMatch(/Rezerwacja techniczna — kliknij, żeby zobaczyć i zmienić/);
+    expect(src).toMatch(/TRM\.blokadaWydluz/);
+  });
+});
