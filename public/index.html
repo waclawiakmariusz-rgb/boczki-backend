@@ -18744,7 +18744,8 @@ function renderMagazyn(d) {
                     + '<br><span style="font-size:11px; color:#94a3b8; margin-top:2px; display:inline-block;">↓ sprzedaż pobiera automatycznie z najstarszej</span>';
                 akcjaHtml = '<span style="font-size:11px; color:#94a3b8; font-style:italic;">(kliknij wiersz, by zobaczyć)</span>';
             } else {
-                podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ === 'Witaminy' ? 'Suplement' : (g.typ || '')) + ' | ' + (g.kto_dodal || '-') + '</small>';
+                let dostawaJednej = dataDostawy(g.partie[0] && g.partie[0].data_dodania);
+                podtytulHtml = '<br><small style="color:#94a3b8; font-size:12px;">' + (g.typ === 'Witaminy' ? 'Suplement' : (g.typ || '')) + ' | ' + (g.kto_dodal || '-') + (dostawaJednej ? ' | dostawa ' + dostawaJednej : '') + '</small>';
                 let obiektPartii = encodeURIComponent(JSON.stringify(g.partie[0]));
                 akcjaHtml = '<button onclick="otworzEdycjeProduktu(\'' + obiektPartii + '\'); event.stopPropagation();" style="background:none; border:none; cursor:pointer; color:#16a34a; padding:6px;" title="Edytuj produkt">' + ICON_EDIT + '</button>';
             }
@@ -18783,7 +18784,7 @@ function renderMagazyn(d) {
                     <tr class="${rowId}" style="display:none; background:#fafafa;">
                         <td style="padding-left:40px; border-bottom:1px dashed #e2e8f0; padding-top:10px; padding-bottom:10px;">
                             <span style="font-size:13px; color:#475569;">${etykietaDostawy}</span><br>
-                            <small style="color:#94a3b8; margin-left:18px;">Dodał: ${p.kto_dodal || '-'}</small>
+                            <small style="color:#94a3b8; margin-left:18px;">Dodał: ${p.kto_dodal || '-'}${dataDostawy(p.data_dodania) ? ' · dostawa ' + dataDostawy(p.data_dodania) : ''}</small>
                         </td>
                         <td style="border-bottom:1px dashed #e2e8f0; text-align:center; font-size:12px; color:#475569;">${dzieckoIlosc}</td>
                         <td style="border-bottom:1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${new Date(p.waznosc).toLocaleDateString()}</div></td>
@@ -18801,6 +18802,14 @@ function renderMagazyn(d) {
 }
 
 // --- Funkcja do odsłaniania partii magazynowych w akordeonie ---
+// 2026-10-19, ticket #5 (Ania, recepcja): „przy dostawach produktów detalicznych ma być widoczna data dostawy".
+// Pole data_dodania magazyn zwraca od początku — brakowało tylko pokazania go w tabeli.
+function dataDostawy(wartosc) {
+    if (!wartosc) return '';
+    const d = new Date(wartosc);
+    return isNaN(d) ? '' : d.toLocaleDateString('pl-PL');
+}
+
 function toggleMagazynAkordeon(groupId) {
     const rows = document.querySelectorAll(`.${groupId}`);
     let isHidden = false;
