@@ -249,8 +249,15 @@ module.exports = function (db, opts = {}) {
   function start() {
     init().then(() => {
       const uruchom = () => tick().catch(e => log.error('[maile-wprow] tick:', e.message));
-      setTimeout(uruchom, 5 * 60 * 1000);          // pierwszy przebieg 5 minut po starcie serwera
-      setInterval(uruchom, 24 * 60 * 60 * 1000);   // potem raz na dobę
+      // 20.10.2026 — Ambasada Urody (pierwszy prawdziwy klient) czekała na mail „start" pół doby:
+      // salon wchodzi w okno dokładnie dobę po założeniu, a przebieg dobowy wypadł wcześniej tego dnia,
+      // więc następny byłby dopiero 24 h później. Godzina przebiegu zależała od tego, kiedy akurat
+      // restartowaliśmy serwer — czyli od przypadku. Teraz co godzinę: salon czeka najwyżej 60 minut.
+      // Bezpieczne, bo rezerwacja w Maile_wprowadzajace_wyslane (UNIQUE tenant_id+etap) idzie PRZED
+      // wysyłką — częstsze przebiegi nie mogą wysłać niczego dwa razy, a gdy nikt nie jest w oknie,
+      // cały przebieg to siedem lekkich SELECT-ów.
+      setTimeout(uruchom, 2 * 60 * 1000);          // pierwszy przebieg 2 minuty po starcie serwera
+      setInterval(uruchom, 60 * 60 * 1000);        // potem co godzinę
       log.info(`[maile-wprow] seria powitalna gotowa (tryb: ${TRYB()}, etapów: ${SERIA.length})`);
     });
   }
