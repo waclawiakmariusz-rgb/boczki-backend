@@ -7243,6 +7243,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <th>Typ / Metoda</th>
                         <th>Cel / Opis</th>
                         <th>Status</th>
+                        <th>Akcja</th>
                     </tr>
                 </thead>
                 <tbody id="tabela-zadatki-body">
@@ -14625,8 +14626,19 @@ function sortujZamowienia(kolumna) {
 }
 
 
+// Przywracanie z profilu klientki (zakładka Wizyty) — rekord z window.cacheZadatkow.
 function przywrocZadatek(id) {
-    const zadatek = window.cacheZadatkow.find(x => x.id == id);
+    przywrocZadatekRekord((window.cacheZadatkow || []).find(x => x.id == id), id);
+}
+
+// Przywracanie ze Spisu Zadatków (zgłoszenie #7) — ten sam przebieg, inny magazyn danych.
+// Po powodzeniu odświeżamy listę, żeby wiersz od razu pokazał status AKTYWNY.
+function przywrocZadatekZeSpisu(id) {
+    przywrocZadatekRekord((zadatkiCache || []).find(x => String(x.id) === String(id)), id, pobierzZadatkiWszystkie);
+}
+
+function przywrocZadatekRekord(zadatek, id, poSukcesie) {
+    if (!zadatek) { alert('Nie znaleziono tego zadatku na liście. Odśwież stronę i spróbuj ponownie.'); return; }
     // Ta sama akcja obsługuje utracone (KARA) i zwrócone — komunikat musi pasować
     // do sytuacji, bo przy zwrocie pieniądze fizycznie wyszły z salonu.
     const st = String((zadatek && zadatek.status) || '').toUpperCase();
@@ -14664,6 +14676,7 @@ function przywrocZadatek(id) {
         if (window.aktualnyProfilKlientNazwa) {
             pobierzPortfel(window.aktualnyProfilKlientNazwa);
         }
+        if (typeof poSukcesie === 'function') poSukcesie();
     })
     .catch(err => {
         document.body.style.cursor = 'default';
@@ -14962,7 +14975,7 @@ let zadatkiPage = 1;   // Bieżąca strona spisu
 
 function pobierzZadatkiWszystkie() {
     const tbody = document.getElementById('tabela-zadatki-body');
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:#666;">⏳ Pobieranie listy wpłat...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px; color:#666;">⏳ Pobieranie listy wpłat...</td></tr>';
 
     fetch(API_URL + "?action=get_all_deposits")
     .then(r => r.json())
@@ -14973,7 +14986,7 @@ function pobierzZadatkiWszystkie() {
     })
     .catch(err => {
         console.error(err);
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Błąd pobierania danych.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:red;">Błąd pobierania danych.</td></tr>';
     });
 }
 
@@ -14989,7 +15002,7 @@ function renderTabelaZadatkow(page) {
     });
 
     if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Brak wpisów.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:20px;">Brak wpisów.</td></tr>';
         pagBox.innerHTML = "";
         return;
     }
@@ -15017,7 +15030,13 @@ function renderTabelaZadatkow(page) {
 
         if (st === 'AKTYWNY') { statusClass = 'st-aktywny'; statusIcon = '✅'; }
         else if (st === 'SCALONY') { statusClass = 'st-scalony'; statusIcon = '🔗'; }
-        else if (st.includes('ZWROT') || st.includes('KARA')) { statusClass = 'st-zwrot'; statusIcon = '↩️'; }
+        // Zgłoszenie #7 (Ania, recepcja): „Cofnij" było tylko w profilu klientki → Wizyty, a recepcja
+        // szuka go właśnie tutaj. Przycisk pokazujemy wyłącznie dla zadatków, które da się przywrócić:
+        // przepadłych (KARA) i zwróconych. Statusy w bazie: 'PRZEPADŁ (KARA)', 'ZWRÓCONY'.
+        const doCofniecia = st.includes('KARA') || st.includes('PRZEPAD') || st.includes('ZWRÓC') || st.includes('ZWROC') || st.includes('ZWROT');
+        // ...a przy okazji: dotąd warunek szukał słowa „ZWROT", więc status 'ZWRÓCONY' dostawał
+        // ikonę kłódki jak wykorzystany zadatek. Teraz oba przypadki mają strzałkę powrotu.
+        if (doCofniecia) { statusClass = 'st-zwrot'; statusIcon = '↩️'; }
 
         // Formatowanie Kwoty
         const kwotaStr = parseFloat(r.kwota).toFixed(2) + " zł";
@@ -15041,6 +15060,7 @@ function renderTabelaZadatkow(page) {
             <td style="padding:12px;">
                 <span class="badge-status ${statusClass}">${statusIcon} ${escHtml(r.status)}</span>
             </td>
+            <td style="padding:12px;">${doCofniecia ? `<button onclick="przywrocZadatekZeSpisu('${r.id}')" class="btn-mini" style="background:#e0f2fe; color:#0369a1; width:auto; padding:4px 10px; font-size:11px; font-weight:bold;" title="Przywróć zadatek — kwota wróci na saldo klientki">Cofnij</button>` : ''}</td>
         </tr>
         `;
     });
