@@ -672,11 +672,15 @@ function zbudujMailWprowadzajacy({ nazwa_salonu, mail }) {
       </table>`).join('');
 
   // Zrzut ekranu z przewodnika — ten sam plik, który klient zobaczy u siebie w /pomoc/.
+  // Sama nazwa pliku = katalog /pomoc-zrzuty/ (przewodnik główny). Zrzut z innego przewodnika
+  // podaje się ze ścieżką, np. '/pomoc-terminarz/trm-09-widok-dzien.png' — 20.10.2026 okazało się,
+  // że sklejanie na sztywno dawało adres, pod którym nic nie leży, i mail miał dziurę zamiast obrazka.
+  const sciezkaZrzutu = (p) => (String(p).startsWith('/') ? String(p) : '/pomoc-zrzuty/' + p);
   const zrzut = mail.zrzut ? `
       <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:6px 0 24px;">
         <tr><td style="border:1px solid #ece4dc; border-radius:10px; padding:8px; background:#fcfaf8;">
           <a href="${link}" target="_blank" style="display:block; text-decoration:none;">
-            <img src="${APP_URL()}/pomoc-zrzuty/${mail.zrzut.plik}" alt="${(mail.zrzut.podpis || '').replace(/"/g, '')}" width="476" style="width:100%; max-width:476px; height:auto; display:block; border-radius:6px;">
+            <img src="${APP_URL()}${sciezkaZrzutu(mail.zrzut.plik)}" alt="${(mail.zrzut.podpis || '').replace(/"/g, '')}" width="476" style="width:100%; max-width:476px; height:auto; display:block; border-radius:6px;">
           </a>
         </td></tr>
         <tr><td style="padding:8px 4px 0;">

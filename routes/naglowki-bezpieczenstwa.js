@@ -12,8 +12,8 @@
 // może je otworzyć. Zdjęcia klientek (/uploads) zostają przy 'same-origin' — tego nie ruszamy.
 'use strict';
 
-// Tylko te dwa katalogi: logo w nagłówku maili i zrzuty ekranu z przewodnika /pomoc/.
-const GRAFIKA_DO_MAILI = /^\/(img|pomoc-zrzuty)\//i;
+// Tylko te katalogi: logo w nagłówku maili i zrzuty ekranu z przewodników (/pomoc/ i Terminarza).
+const GRAFIKA_DO_MAILI = /^\/(img|pomoc-zrzuty|pomoc-terminarz)\//i;
 
 const CSP = [
   "default-src 'self'",

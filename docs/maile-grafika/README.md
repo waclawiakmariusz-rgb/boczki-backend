@@ -62,3 +62,67 @@ katalogów (`/imgur/`, `/pomoc-zrzuty-prywatne/`).
 Wysłany już mail do Ambasady Urody zostaje bez grafiki — nagłówek działa w chwili wczytywania
 obrazka, ale klient pocztowy często zapamiętuje pierwszy wynik. Po wdrożeniu poprawki kolejne
 maile serii będą miały grafikę; ewentualne powtórzenie pierwszego to decyzja właściciela.
+
+---
+
+## Audyt pozostałych maili (20.10.2026, po pytaniu „dlaczego to nie wyszło wcześniej")
+
+Przeszedłem **każdy obrazek i każdy link w każdym mailu**, jaki system wysyła. Wyszedł drugi błąd,
+niezależny od nagłówka:
+
+```
+404  /pomoc-zrzuty/trm-09-widok-dzien.png   ← mail „terminarz" (6. w serii)
+```
+
+Zrzut istnieje, ale w katalogu przewodnika Terminarza (`/pomoc-terminarz/`), a szablon sklejał
+adres na sztywno z `/pomoc-zrzuty/`. Ten mail przyszedłby z dziurą zamiast obrazka **nawet po
+naprawie nagłówka**. Poprawione: `zrzut.plik` może być podany pełną ścieżką, a katalog
+`/pomoc-terminarz` dołączył do otwartych dla skrzynek.
+
+Pozostałe adresy — bez zastrzeżeń:
+
+```
+OBRAZKI (8 unikalnych)   wszystkie 200 image/png, wszystkie w katalogach otwartych po wdrożeniu
+LINKI (8 unikalnych)     /pomoc/#logowanie #sprzedaz #klienci #zadatki #magazyn #analiza,
+                         /pomoc-terminarz/ — wszystkie 200; stopka → estelio.com.pl (301 na /zamow.html)
+ZRZUTY 7/7              każdy przypisany plik istnieje na dysku
+```
+
+Maile spoza serii (powitalny, reset hasła, ostrzeżenia o płatności, przypomnienia) nie zawierają
+**żadnej grafiki** — mają ciemny nagłówek z emoji, więc ta wada ich nie dotyczyła.
+
+### Sprawdzenie końcowe: czy obrazki naprawdę się wczytują
+
+Wszystkie siedem maili otwarte w przeglądarce **z innej domeny** (`file://`), z nowymi nagłówkami:
+
+```
+1. start      obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+2. sprzedaz   obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+3. klienci    obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+4. zadatki    obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+5. magazyn    obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+6. terminarz  obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+7. liczby     obrazkow: 2  wczytane: 2  NIEWCZYTANE: 0
+```
+
+## Dlaczego nie wykryły tego testy i wdrożenia
+
+1. **Nagłówki HTTP nie były objęte żadnym testem** — blok siedział wklejony w `server.js`.
+2. **Podgląd maila w panelu dawał fałszywe „OK"** — panel stoi na estelio.com.pl, czyli na tej
+   samej domenie, więc obrazki wczytują się tam zawsze, niezależnie od nagłówka.
+3. **Wysyłka próbna poszła na Gmaila**, a Gmail pobiera grafikę własnym serwerem pośredniczącym —
+   reguła `same-origin` dotyczy przeglądarki, więc akurat tam problem był niewidoczny.
+
+## Zabezpieczenie na przyszłość
+
+`tests/maile-grafika.test.js` (20 testów) buduje **każdy** mail serii i sprawdza offline:
+każdy obrazek ma plik na dysku i leży w katalogu otwartym dla skrzynek, każdy ma sensowny `alt`,
+każdy link prowadzi na naszą domenę. Sprawdziłem, że testy padają na obu dzisiejszych błędach:
+
+```
+PRÓBA 1 (stary adres zrzutu):   BRAK PLIKU: .../pomoc-zrzuty/trm-09-widok-dzien.png  → 2 failed
+PRÓBA 2 (stary nagłówek):       KATALOG ZAMKNIETY DLA POCZTY: .../pomoc-terminarz/... → 1 failed
+po przywróceniu poprawek:       20 passed
+```
+
+Pełny zestaw: **702/702**.

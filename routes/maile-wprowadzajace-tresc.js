@@ -190,7 +190,9 @@ const SERIA = [
       ['Dzwonek zbiera to, co wymaga działania',
        'Wizyta bez wpisanego wyniku, przełożony termin do potwierdzenia, przerwany zabieg — trafiają do centrum spraw przy dzwonku, z priorytetem i właścicielem. Nic nie wisi „gdzieś w pamięci recepcji".'],
     ],
-    zrzut: { plik: 'trm-09-widok-dzien.png', podpis: 'Widok dnia: kolumna na każdą osobę, liczniki u góry i kolory stanów na kartach wizyt.' },
+    // Ten zrzut należy do przewodnika Terminarza, nie do głównego — stąd pełna ścieżka.
+    // Bez niej adres wskazywał na /pomoc-zrzuty/trm-09-widok-dzien.png, gdzie nic nie leży (404).
+    zrzut: { plik: '/pomoc-terminarz/trm-09-widok-dzien.png', podpis: 'Widok dnia: kolumna na każdą osobę, liczniki u góry i kolory stanów na kartach wizyt.' },
     uwaga: {
       tytul: 'Pusty kalendarz to nie błąd',
       tekst: 'Dopóki nie wpiszecie czasu trwania zabiegów i grafiku zespołu, terminarz nie pokaże żadnych wolnych godzin — bo ich nie zna. To jest celowe: lepszy pusty kalendarz niż taki, który obiecuje termin, którego nie ma.',
