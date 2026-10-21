@@ -103,3 +103,29 @@ błąd SMTP (rezerwacja wycofana), godzina przypomnień, treść obu wiadomości
 ## Czego jeszcze nie ma
 
 Wiadomości o **odwołaniu i przeniesieniu** wizyty — ustaliliśmy, że to drugi etap.
+
+---
+
+## Przewodnik ze zrzutami (21.10.2026)
+
+Na pytanie „czy jest jakaś grafika, makieta, gdzie zobaczę, jak to wygląda i gdzie się klika"
+powstała osobna strona: **`/pomoc-maile`** (plik `public/pomoc-maile-wizyt.html`).
+
+Zawiera:
+
+- obie wiadomości tak, jak zobaczy je klientka (zrzuty z prawdziwego szablonu),
+- **krok 1**: karta klientki ze zrzutem okna „Edytuj dane" i numerowanymi znacznikami
+  (adres, „nie chce wiadomości", zapis),
+- **krok 2**: Terminarz → Ustawienia → Powiadomienia e-mail — pięć znaczników: przełącznik główny,
+  potwierdzenia i przypomnienia osobno, godzina, adres do próbki, przycisk próbki,
+- **krok 3**: dziennik wysyłek i co odpowiedzieć na „nie dostałam żadnej wiadomości",
+- tabelę **„kto nie dostanie wiadomości"** z powodami,
+- sekcję o dwóch przełącznikach i kolejności uruchamiania.
+
+Strona jest podlinkowana w panelu admina (Pomoc i dokumenty → Dla salonu). Sprawdzone:
+`/pomoc-maile` → 200, wszystkie zrzuty → 200.
+
+| Plik | Co widać |
+|---|---|
+| `przewodnik-krok1.png` | krok 1 przewodnika: znaczniki na polu e-mail, zgodzie i zapisie |
+| `przewodnik-krok2.png` | krok 2: pięć znaczników na ustawieniach powiadomień |

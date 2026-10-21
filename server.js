@@ -266,6 +266,9 @@ app.get(['/pomoc-terminarz', '/pomoc-terminarz/'], (req, res) => res.sendFile(pa
 // Przewodnik wdrozeniowy dla nas (19.10.2026): jak przebiega wprowadzenie nowego salonu —
 // od zakupu, przez kreator, po pierwsze kroki klienta. Linkowany z panelu admina, zakladka Pomoc.
 app.get(['/przewodnik-klienta', '/przewodnik-klienta/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'przewodnik-wdrozenie-klienta.html')));
+// Przewodnik po powiadomieniach e-mail o wizytach (21.10.2026): gdzie się klika, jak wygląda
+// wiadomość u klientki i kto jej NIE dostanie. Ze zrzutami z działającego systemu.
+app.get(['/pomoc-maile', '/pomoc-maile/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'pomoc-maile-wizyt.html')));
 
 // Serwowanie plików statycznych (index.html, etc.)
 app.use(express.static('public'));

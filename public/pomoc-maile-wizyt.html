@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Powiadomienia e-mail o wizytach</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --pink-50:#fff5f9; --pink-100:#ffe9f2; --pink-200:#ffd0e3; --pink-300:#ffacc9; --pink-500:#ec3f91; --pink-600:#df247e; --pink-700:#be1264;
+    --gold:#d4a574; --gold-soft:#fef3e6; --bg:#fffaf9; --text:#1a0e1a; --text-soft:#4a3848; --muted:#8a7a85;
+    --line:#f5dde7; --line-soft:#fbe9f0; --card:#fff; --green:#18bf7b; --green-soft:#e0f7ec; --orange:#ff961f; --orange-soft:#fef3e6; --red:#dc2626; --red-soft:#fef2f2;
+    --shadow-soft:0 4px 20px rgba(193,60,110,.05); --shadow-medium:0 16px 40px rgba(193,60,110,.08);
+    --serif:"Playfair Display",serif; --sans:"Poppins",sans-serif;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; font-family:var(--sans); background:var(--bg); color:var(--text); font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased; }
+  .wrap { max-width:1000px; margin:0 auto; padding:48px 28px 100px; }
+  .hero { background:linear-gradient(135deg,#fff 0%,var(--pink-50) 50%,var(--pink-100) 100%); border:1px solid var(--pink-200); border-radius:28px; padding:48px 44px; margin-bottom:36px; box-shadow:var(--shadow-soft); }
+  .hero-badge { display:inline-block; background:rgba(255,255,255,.75); color:var(--pink-600); padding:8px 16px; border:1px solid var(--pink-200); border-radius:999px; font-size:10.5px; font-weight:700; letter-spacing:2px; text-transform:uppercase; margin-bottom:20px; }
+  .hero h1 { font-family:var(--serif); margin:0 0 14px; font-size:44px; font-weight:800; letter-spacing:-1.2px; line-height:1.1; }
+  .hero h1 em { font-style:italic; color:var(--pink-600); }
+  .hero p { margin:0; font-size:16.5px; color:var(--text-soft); max-width:680px; }
+  h2 { font-family:var(--serif); font-size:28px; margin:48px 0 6px; letter-spacing:-.5px; }
+  h2 .krok { display:inline-grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--pink-500); color:#fff; font-family:var(--sans); font-size:16px; font-weight:700; margin-right:12px; vertical-align:3px; }
+  .lead { color:var(--text-soft); margin:0 0 20px; }
+  .karta { background:var(--card); border:1px solid var(--line); border-radius:20px; padding:26px 28px; margin-bottom:18px; box-shadow:var(--shadow-soft); }
+  .zrzut { position:relative; display:block; border:1px solid var(--line); border-radius:16px; overflow:hidden; box-shadow:var(--shadow-medium); margin:18px 0 10px; }
+  .zrzut img { display:block; width:100%; height:auto; }
+  .pin { position:absolute; width:30px; height:30px; margin:-15px 0 0 -15px; border-radius:50%; background:var(--pink-600); color:#fff; display:grid; place-items:center; font-size:14px; font-weight:700; box-shadow:0 0 0 4px rgba(236,63,145,.25), 0 6px 16px rgba(0,0,0,.2); }
+  .podpis { font-size:13px; color:var(--muted); margin:0 0 26px; }
+  .lista-pinow { list-style:none; padding:0; margin:10px 0 0; }
+  .lista-pinow li { display:flex; gap:12px; align-items:flex-start; margin-bottom:10px; font-size:14.5px; color:var(--text-soft); }
+  .lista-pinow .n { flex:0 0 26px; height:26px; border-radius:50%; background:var(--pink-100); color:var(--pink-700); display:grid; place-items:center; font-size:12.5px; font-weight:700; }
+  .dwa { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:820px) { .dwa { grid-template-columns:1fr; } .wrap { padding:28px 16px 60px; } .hero { padding:32px 24px; } .hero h1 { font-size:32px; } }
+  .uwaga { border-left:4px solid var(--orange); background:var(--orange-soft); padding:16px 20px; border-radius:0 14px 14px 0; margin:18px 0; }
+  .uwaga b { color:#8a4b00; }
+  .ok { border-left:4px solid var(--green); background:var(--green-soft); padding:16px 20px; border-radius:0 14px 14px 0; margin:18px 0; }
+  .stop { border-left:4px solid var(--red); background:var(--red-soft); padding:16px 20px; border-radius:0 14px 14px 0; margin:18px 0; }
+  table { width:100%; border-collapse:collapse; font-size:14.5px; margin-top:8px; }
+  th, td { text-align:left; padding:10px 12px; border-bottom:1px solid var(--line-soft); vertical-align:top; }
+  th { font-size:11px; letter-spacing:1.4px; text-transform:uppercase; color:var(--pink-600); }
+  code { background:var(--pink-50); border:1px solid var(--line); border-radius:6px; padding:1px 6px; font-size:13px; }
+  .stopka { margin-top:60px; padding-top:22px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero-badge">Przewodnik · powiadomienia e-mail</div>
+    <h1>Klientka dostaje <em>potwierdzenie</em> i <em>przypomnienie</em></h1>
+    <p>Dwie wiadomości wychodzą same: potwierdzenie zaraz po umówieniu wizyty i przypomnienie dzień wcześniej.
+       Ten przewodnik pokazuje, gdzie się to włącza, co klientka zobaczy w skrzynce i kiedy wiadomość <b>nie</b> pójdzie.</p>
+  </div>
+
+  <h2>Jak wygląda wiadomość</h2>
+  <p class="lead">Nadawcą jest Wasz salon, nie Estelio — klientka widzi nazwę, którą zna. Odpowiedź na tę wiadomość trafia na Wasz adres.</p>
+  <div class="dwa">
+    <div>
+      <div class="zrzut"><img src="/pomoc-maile/mail-potwierdzenie.png" alt="Mail: potwierdzenie wizyty"></div>
+      <p class="podpis"><b>Potwierdzenie</b> — wychodzi w ciągu kilku sekund od zapisania wizyty.</p>
+    </div>
+    <div>
+      <div class="zrzut"><img src="/pomoc-maile/mail-przypomnienie.png" alt="Mail: przypomnienie o wizycie"></div>
+      <p class="podpis"><b>Przypomnienie</b> — dzień wcześniej, o godzinie, którą sami ustawicie.</p>
+    </div>
+  </div>
+
+  <h2><span class="krok">1</span>Wpisz adres w karcie klientki</h2>
+  <p class="lead">To jedyne miejsce, z którego system bierze adres. Nie szuka go w zgodach RODO, w imporcie z Booksy ani „po nazwisku" —
+     żeby wiadomość o wizycie nigdy nie trafiła do przypadkowej osoby o tym samym imieniu.</p>
+  <div class="karta">
+    <b>Klienci → wybierz klientkę → przycisk „Edytuj dane"</b>
+    <div class="zrzut">
+      <img src="/pomoc-maile/karta-klientki.png" alt="Okno edycji danych klientki z polem e-mail">
+      <div class="pin" style="left:46%; top:45%">1</div>
+      <div class="pin" style="left:38.5%; top:54.5%">2</div>
+      <div class="pin" style="left:57.5%; top:69.5%">3</div>
+    </div>
+    <ul class="lista-pinow">
+      <li><span class="n">1</span><span><b>Adres e-mail</b> — tutaj wpisujecie adres. Puste pole znaczy: żadnych wiadomości dla tej klientki.</span></li>
+      <li><span class="n">2</span><span><b>„Klientka nie chce wiadomości o wizytach"</b> — zaznaczcie, gdy poprosi o ciszę. To ustawienie jest ważniejsze od wszystkiego innego: nawet przy wpisanym adresie nic nie wyjdzie.</span></li>
+      <li><span class="n">3</span><span><b>Zapisz zmiany.</b> Zmiana adresu odnotowuje się w notatkach klientki i w Dzienniku Zdarzeń.</span></li>
+    </ul>
+    <div class="uwaga"><b>Wpis musi być adresem.</b> Słowa w rodzaju „nie dotyczy" czy „brak” system odrzuci z komunikatem — lepiej zostawić pole puste niż udawać, że adres jest.</div>
+    <p style="margin:12px 0 0; color:var(--text-soft)">Adres widać potem w nagłówku profilu obok telefonu, a gdy klientka poprosiła o ciszę — zamiast adresu pojawia się <b>🔕 bez wiadomości o wizytach</b>.</p>
+  </div>
+
+  <h2><span class="krok">2</span>Włącz powiadomienia w salonie</h2>
+  <p class="lead">Ustawienie jest po stronie salonu i zmienia je manager. Nowy salon startuje z wyłączoną wysyłką — nic nie wychodzi, dopóki ktoś świadomie tego nie włączy.</p>
+  <div class="karta">
+    <b>Terminarz → ⚙ Ustawienia → zakładka „Powiadomienia e-mail"</b>
+    <div class="zrzut">
+      <img src="/pomoc-maile/ustawienia.png" alt="Ustawienia powiadomień e-mail w Terminarzu">
+      <div class="pin" style="left:27%; top:47%">1</div>
+      <div class="pin" style="left:31.5%; top:53.5%">2</div>
+      <div class="pin" style="left:35%; top:68%">3</div>
+      <div class="pin" style="left:47%; top:89%">4</div>
+      <div class="pin" style="left:77.5%; top:89%">5</div>
+    </div>
+    <ul class="lista-pinow">
+      <li><span class="n">1</span><span><b>Główny przełącznik.</b> Wyłączony = cisza, niezależnie od reszty ustawień.</span></li>
+      <li><span class="n">2</span><span><b>Potwierdzenie i przypomnienie osobno.</b> Możecie zostawić samo przypomnienie, jeśli potwierdzenia uznacie za zbędne.</span></li>
+      <li><span class="n">3</span><span><b>Godzina przypomnienia.</b> Domyślnie 18:00 dnia poprzedniego — klientka ma czas odwołać rano, a Wy zdążycie obsadzić termin.</span></li>
+      <li><span class="n">4</span><span><b>Adres do próbki.</b> Wpiszcie własny — zobaczycie wiadomość w prawdziwej skrzynce.</span></li>
+      <li><span class="n">5</span><span><b>Wyślij próbkę.</b> Idzie z przykładową wizytą, żadna klientka jej nie dostanie.</span></li>
+    </ul>
+    <p style="margin:14px 0 0; color:var(--text-soft)">Pod ustawieniami jest zdanie <b>„Do ilu klientek to dotrze"</b> — ile kart ma adres, ile go nie ma i ile klientek poprosiło o ciszę.
+       To najszybsza odpowiedź na pytanie, czy w ogóle warto już włączać wysyłkę.</p>
+  </div>
+
+  <h2><span class="krok">3</span>Sprawdź dziennik wysyłek</h2>
+  <p class="lead">Każda wiadomość — wysłana, pominięta czy nieudana — zostawia ślad z datą, adresem i odpowiedzią serwera pocztowego.</p>
+  <div class="karta">
+    <b>Ta sama zakładka, sekcja „Dziennik wysyłek" (pod ustawieniami)</b>
+    <p style="margin:10px 0 0; color:var(--text-soft)">Gdy klientka mówi „nie dostałam żadnej wiadomości", w dzienniku widać datę, godzinę, adres i numer nadania.
+       „Przyjęty przez serwer" znaczy, że poczta oddała wiadomość operatorowi — co stało się dalej (skrzynka, spam, blokada) jest już poza naszym zasięgiem,
+       ale te dane wystarczą, żeby odbiorca odszukał ją u siebie.</p>
+  </div>
+
+  <h2>Kto <u>nie</u> dostanie wiadomości</h2>
+  <p class="lead">System woli milczeć, niż wysłać coś do niewłaściwej osoby. Powód zawsze zapisuje się w dzienniku.</p>
+  <div class="karta">
+    <table>
+      <tr><th>Sytuacja</th><th>Co się dzieje</th></tr>
+      <tr><td>Brak adresu w karcie klientki</td><td>Cisza. Nie szukamy adresu w zgodach RODO ani w Booksy.</td></tr>
+      <tr><td>Zaznaczone „nie chce wiadomości o wizytach"</td><td>Cisza, nawet gdy adres jest wpisany.</td></tr>
+      <tr><td>Karta usunięta, zanonimizowana albo oznaczona jako zmarła</td><td>Cisza.</td></tr>
+      <tr><td>Wizyta odwołana, odrzucona albo wygasła</td><td>Przypomnienie nie wychodzi.</td></tr>
+      <tr><td>Rezerwacja techniczna (szkolenie, zebranie, serwis)</td><td>Cisza — nie ma klientki, nie ma do kogo pisać.</td></tr>
+      <tr><td>Ta sama wizyta, drugie podejście</td><td>Jedno potwierdzenie i jedno przypomnienie na wizytę. Dubel jest niemożliwy.</td></tr>
+    </table>
+  </div>
+
+  <h2>Zanim pójdzie pierwsza prawdziwa wiadomość</h2>
+  <div class="karta">
+    <div class="ok"><b>Tryb próbny.</b> Estelio ma osobny, nadrzędny przełącznik. W trybie próbnym system tylko zapisuje w logu, <i>do kogo</i> wysłałby wiadomość — nic nie wychodzi na zewnątrz.
+      Dopiero po sprawdzeniu tych wpisów włącza się wysyłkę na dobre.</div>
+    <div class="stop"><b>Dwa przełączniki naraz.</b> Wysyłka działa tylko wtedy, gdy włączona jest i po stronie Estelio, i w salonie. Wyłączenie któregokolwiek zatrzymuje wszystko natychmiast.</div>
+    <p style="margin:12px 0 0; color:var(--text-soft)">Kolejność przy uruchamianiu: wpiszcie adres jednej, własnej karcie → włączcie przełącznik w salonie → umówcie wizytę testową →
+       sprawdźcie dziennik i próbkę w skrzynce → dopiero wtedy wysyłka dla wszystkich.</p>
+  </div>
+
+  <div class="stopka">
+    Estelio · przewodnik po powiadomieniach e-mail o wizytach. Wiadomości o <b>odwołaniu</b> i <b>przeniesieniu</b> wizyty to kolejny etap — jeszcze ich nie ma.
+  </div>
+
+</div>
+</body>
+</html>
