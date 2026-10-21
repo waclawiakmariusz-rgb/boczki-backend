@@ -848,3 +848,17 @@ body.dark-mode .trm .trm-hist-chip.on { color:#f3d9e2; }
   .trm-hist-osoba { grid-template-columns:1fr; }
   .trm-hist-osoba .dalej { justify-self:start; }
 }
+
+/* „Więcej działań" (21.10.2026): przyciski stały w .trm-row, czyli w jednym rzędzie bez zawijania.
+   Przy pięciu akcjach („Przełóż całą wizytę", „Spóźniona", „Nieobecna (potwierdzona)",
+   „Odwołaj wizytę", „Skasuj wizytę") napisy ucinały się w połowie słowa — właściciel przysłał
+   zrzut, na którym widać „Przełóż całą w" i „Nieobecna (po". Teraz rząd się zawija, a żaden
+   przycisk nie zwęża się poniżej swojej treści. Usunięty przy okazji akapit z objaśnieniem:
+   przyciski mają mówić same za siebie, a tłumaczenie różnicy odwołanie/skasowanie jest
+   w formularzu kasowania, czyli dokładnie tam, gdzie decyzja zapada. */
+.trm-akcje { display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.trm-akcje > .trm-btn { flex:0 0 auto; white-space:nowrap; }
+@media (max-width: 560px) {
+  .trm-akcje { flex-direction:column; align-items:stretch; }
+  .trm-akcje > .trm-btn { width:100%; }
+}

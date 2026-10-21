@@ -1988,15 +1988,13 @@
       const wszystkieWykonane = akt.length && akt.every(p => ['wykonana', 'przerwana'].includes(p.stan));
       h += `<div class="trm-card">${glowna ? `<div class="trm-akcja-glowna">${glowna}</div>` : wszystkieWykonane ? `<div class="trm-note ok small">Wizyta wykonana — podsumowanie i rozliczenie w zakładce „Rozliczenie”.</div>` : ''}
       <details class="trm-wiecej"><summary>Więcej działań</summary>
-        <div class="trm-row">
+        <div class="trm-akcje">
           ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Przełóż całą wizytę</button>` : ''}
           ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
           ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
           ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj wizytę</button>` : ''}
           ${!r.usunieta && !r.sprzedaz_id && !r.pozycje.some(p => ['wykonana', 'w_trakcie', 'przerwana'].includes(p.stan)) ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='usun';TRM.us={powod:''};TRM.renderSzczegoly()" title="Wizyta wpisana przez pomyłkę — zniknie z kalendarza, ale ślad zostanie">Skasuj wizytę</button>` : ''}
         </div>
-        <div class="trm-pomoc">Nieobecność potwierdza człowiek — system jej nie zgaduje i nie zużywa jednostki karnetu.
-          <b>Odwołanie</b> to zdarzenie z życia salonu i zostaje w statystykach; <b>skasowanie</b> jest dla pomyłek przy zapisie — wypada ze statystyk odwołań, ale zapisuje kto, kiedy i dlaczego.</div>
       </details></div>`;
       h += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
     } else if (r.notatka && op) h += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
