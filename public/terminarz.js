@@ -168,7 +168,10 @@
   function szkielet() {
     const root = el('trm-root');
     // R04: przełącznik widoków kalendarza w jednej grupie; Ustawienia modułu jako osobne wejście (nie „kolejny widok dnia”)
-    const widoki = [['dzien', 'Dzień'], ['tydzien', 'Tydzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby'], ['historia', 'Historia']];
+    // Widok „Tydzień" usunięty 21.10.2026 na prośbę właściciela („nie rozumiem jego zastosowania,
+    // zostaw tylko dzienny"). Pokazywał siatkę tygodnia JEDNEJ osoby — tygodniowy przegląd pracy
+    // daje Agenda (lista 7 dni), a planowanie i tak odbywa się w widoku dnia.
+    const widoki = [['dzien', 'Dzień'], ['agenda', 'Agenda'], ['zasoby', 'Zasoby'], ['historia', 'Historia']];
     if (specjalista()) widoki.unshift(['moj', 'Mój dzień']);
     root.innerHTML = `
     <div class="trm" data-wersja="20261018a">
@@ -209,7 +212,7 @@
     if (d.otwarte > 0) { b.hidden = false; b.textContent = d.otwarte; b.classList.toggle('pilne', d.pilne > 0); }
     else { b.hidden = true; b.classList.remove('pilne'); }
   }
-  TRM.idz = (n) => { if (n === 0) TRM.data = dzisStr(); else TRM.data = dodajDni(TRM.data, (TRM.widok === 'tydzien' || TRM.widok === 'agenda') ? 7 * n : n); el('trm-data').value = TRM.data; odswiez(); };
+  TRM.idz = (n) => { if (n === 0) TRM.data = dzisStr(); else TRM.data = dodajDni(TRM.data, TRM.widok === 'agenda' ? 7 * n : n); el('trm-data').value = TRM.data; odswiez(); };
   TRM.ustawDate = (v) => { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { TRM.data = v; odswiez(); } };
 
   // ── filtr osób (widok Dzień) + wyszukiwarka wizyt/klientek (raport T08) ──
@@ -242,9 +245,10 @@
   TRM.szukajOtworz = async (id, data) => { const box = el('trm-szukaj-wyniki'); if (box) { box.hidden = true; box.innerHTML = ''; } const inp = el('trm-szukaj'); if (inp) inp.value = ''; if (data && data !== TRM.data) { TRM.data = data; const di = el('trm-data'); if (di) di.value = data; } if (TRM.widok !== 'dzien' && TRM.widok !== 'moj') TRM.widokZmien('dzien'); else await odswiez(); TRM.otworzSzczegoly(id); };
   document.addEventListener('click', (e) => { const box = el('trm-szukaj-wyniki'); if (box && !box.hidden && !e.target.closest('.trm-szukaj')) { box.hidden = true; } });
   TRM.widokZmien = (w) => {
+    if (w === 'tydzien') w = 'dzien';                       // widok tygodnia zdjęty 21.10.2026 — stare wejścia prowadzą do dnia
     if (w === 'ustawienia' && TRM.widok !== 'ustawienia') TRM.widokPoprzedni = TRM.widok; // R04: powrót do tego samego widoku, dnia i filtrów
     TRM.widok = w;
-    document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', tydzien: 'Tydzień', agenda: 'Agenda', zasoby: 'Zasoby', historia: 'Historia', moj: 'Mój dzień' })[w]));
+    document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', agenda: 'Agenda', zasoby: 'Zasoby', historia: 'Historia', moj: 'Mój dzień' })[w]));
     const root = document.querySelector('#trm-root .trm'); if (root) root.classList.toggle('tryb-ustawienia', w === 'ustawienia');
     const bu = el('trm-btn-ust'); if (bu) bu.classList.toggle('on', w === 'ustawienia');
     odswiez();
@@ -265,16 +269,16 @@
     if (TRM.widok !== 'dzien') renderFiltry(null); // chipy osób tylko w widoku Dzień
     if (TRM.widok === 'ustawienia') { if (sub) sub.textContent = 'Ustawienia modułu'; document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); return renderUstawienia(); }
     if (TRM.widok === 'historia') { if (sub) sub.textContent = 'Historia wizyt'; document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); return renderHistoria(); }
-    if (TRM.widok === 'tydzien' || TRM.widok === 'agenda') {
-      const od = TRM.widok === 'tydzien' ? poniedzialek(TRM.data) : TRM.data, do_ = dodajDni(od, 6);
+    if (TRM.widok === 'agenda') {
+      const od = TRM.data, do_ = dodajDni(od, 6);
       if (sub) sub.textContent = `${ladnaData(od, true)} – ${ladnaData(do_, true)}`;
       main.innerHTML = `<div class="trm-empty"><div class="big">⏳</div>Pobieramy…</div>`;
-      const d = await api('trm_zakres', { od, do: do_, pracownik_filtr: TRM.widok === 'tydzien' ? (TRM.osoba || TRM.dane.pracownicy[0] || null) : (TRM.osoba || null) });
+      const d = await api('trm_zakres', { od, do: do_, pracownik_filtr: TRM.osoba || null });
       if (req !== odswiezReq) return;
       if (d.status !== 'success') { main.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
       TRM.zakres = d;
       pobierzPreferencje(d.rezerwacje, TRM.data).then(() => { if (req === odswiezReq) odswiezWidokPoPreferencjach(); });
-      return TRM.widok === 'tydzien' ? renderTydzien(od) : renderAgenda(od, do_);
+      return renderAgenda(od, do_);
     }
     if (sub) sub.textContent = ladnaData(TRM.data);
     if (!cicho) main.innerHTML = `<div class="trm-empty"><div class="big">⏳</div>Pobieramy terminarz…</div>`; else main.classList.add('trm-odswiezanie');
@@ -388,9 +392,8 @@
     const scrollPrzed = kontener ? kontener.scrollTop : 0;
     const wroc = () => { if (kontener) kontener.scrollTop = scrollPrzed; };
     if (TRM.szcz && TRM.szcz.rez) renderSzczegoly();
-    if ((TRM.widok === 'tydzien' || TRM.widok === 'agenda') && TRM.zakres) {
-      const od = TRM.widok === 'tydzien' ? poniedzialek(TRM.data) : TRM.data;
-      TRM.widok === 'tydzien' ? renderTydzien(od) : renderAgenda(od, dodajDni(od, 6));
+    if (TRM.widok === 'agenda' && TRM.zakres) {
+      renderAgenda(TRM.data, dodajDni(TRM.data, 6));
       return wroc();
     }
     if (!TRM.dzien) return;
@@ -918,24 +921,7 @@
     liniaTeraz(zak);
   }
 
-  // ── widok TYDZIEŃ jednej osoby (E02) ───────────────────────────────────
-  function renderTydzien(od) {
-    const main = el('trm-main'), rez = TRM.zakres.rezerwacje;
-    const osoba = TRM.osoba || TRM.dane.pracownicy[0];
-    const dni = [0, 1, 2, 3, 4, 5, 6].map(i => dodajDni(od, i));
-    const zak = TRM._zak = zakresGodzin(Object.values(TRM.dane.ustawienia.godziny).flat().map(p => ({ od: od + ' ' + p.od, do: od + ' ' + p.do })), rez);
-    const graf = TRM.dane.grafik.filter(g => g.pracownik === osoba);
-    const html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value;TRM.widokZmien('tydzien')" style="width:auto">${TRM.dane.pracownicy.map(p => `<option ${p === osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div></div>
-    <div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(7, minmax(150px,1fr))">
-      <div class="trm-col-h hours"></div>${dni.map(dz => { const g = graf.filter(x => Number(x.dzien_tyg) === dzienTyg(dz)); return `<div class="trm-col-h" style="cursor:pointer" onclick="TRM.data='${dz}';TRM.widokZmien('dzien')"><div class="name">${ladnaData(dz, true)}</div><div class="hrs">${g.length ? g.map(x => x.od + '–' + x.do).join(', ') : 'wolne'}</div></div>`; }).join('')}
-      ${kolumnaGodzin(zak)}${dni.map(dz => {
-        const dost = graf.filter(x => Number(x.dzien_tyg) === dzienTyg(dz)).map(x => ({ od: dz + ' ' + x.od, do: dz + ' ' + x.do }));
-        const rd = rez.filter(r => r.start.slice(0, 10) === dz);
-        return kolumnaHtml(rd, dost, [], zak, `TRM.data='${dz}';TRM.klikSiatka(event, '${esc(osoba).replace(/'/g, "\\'")}')`, (p) => p.pracownik === osoba);
-      }).join('')}
-    </div></div><div class="trm-legenda"><span class="muted">Nieobecności i blokady pokazuje widok dnia. Kliknij nagłówek dnia, żeby przejść do zespołu.</span></div>`;
-    main.innerHTML = html;
-  }
+  // Widok TYDZIEŃ (E02) usunięty 21.10.2026 — patrz komentarz przy liście widoków w szkielet().
 
   // ── AGENDA (E03) ───────────────────────────────────────────────────────
   const TRM_AG_HEAD = `<div class="trm-ag-head"><span>Godzina</span><span>Klientka i zabiegi</span><span>Pracownik</span><span>Status</span><span>Rozliczenie</span></div>`;

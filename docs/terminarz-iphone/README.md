@@ -81,3 +81,9 @@ Pełny zestaw testów: **715/715**.
 Widok **Dzień na telefonie to lista**, nie siatka z kolumnami — i tak zostaje: siatka z pięcioma
 kolumnami na 390 px byłaby nieczytelna. Przeciąganie kafelka-szkicu (#11) działa myszą i piórem;
 na dotyku pierwszeństwo ma przewijanie ekranu, więc na telefonie godzinę wybiera się z listy.
+
+## Dopisek 21.10.2026
+
+Po zdjęciu widoku „Tydzień" (patrz `docs/terminarz-widoki/`) pasek widoków ma cztery pozycje
+i **mieści się w jednym rzędzie**: 312 px przy ekranie 390 px, zero pikseli poza krawędzią.
+Zawijanie do dwóch rzędów zostaje jako zabezpieczenie dla węższych telefonów.
