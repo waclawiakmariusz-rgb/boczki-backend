@@ -746,3 +746,22 @@ body.dark-mode .trm .trm-szkic.ustalony { background:rgba(240,169,192,.22); }
 @media (max-width: 760px) {
   .trm-pref-chip { max-width:100%; white-space:normal; text-align:left; }
 }
+
+/* Historia klientki (21.10.2026, prośba właściciela): „jakoś trzeba jasno pokazać, jakie zabiegi
+   są zaplanowane, a jakie już się odbyły, np. z szarym tłem te odbyte". Stąd: wizyta odbyta ma
+   szare tło i przygaszony tekst (rzecz zamknięta), zaplanowana zostaje na białym (rzecz przed nami).
+   Kolor nie jest jedynym nośnikiem — każda wizyta ma też plakietkę słowną i legendę nad listą. */
+.trm-hist-wizyta.wykonana { background:#f4f4f6; border-color:#e4e4ea; }
+.trm-hist-wizyta.wykonana .data b { color:var(--t-mut); }
+.trm-hist-wizyta.planowana { background:var(--t-sur); border-left-color:var(--t-acc); }
+.trm-hist-wizyta.planowana .data b { color:var(--t-txt); }
+.trm-hist-wizyta .glowa .data { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.trm-hist-legenda { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin:4px 0 10px; font-size:12px; color:var(--t-mut); }
+.trm-hist-legenda .poz { display:inline-flex; align-items:center; gap:6px; }
+.trm-hist-legenda .pr { width:12px; height:12px; border-radius:3px; display:inline-block; border:1px solid var(--t-line); }
+.trm-hist-legenda .pr.wykonana { background:#f4f4f6; border-left:3px solid #15803d; }
+.trm-hist-legenda .pr.planowana { background:var(--t-sur); border-left:3px solid var(--t-acc); }
+.trm-hist-legenda .pr.odwolana { background:var(--t-sur); border-left:3px solid #b45309; }
+.trm-hist-legenda .pr.nieobecna { background:var(--t-sur); border-left:3px solid #b91c1c; }
+body.dark-mode .trm .trm-hist-wizyta.wykonana { background:#241c22; border-color:#3a2f36; }
+body.dark-mode .trm .trm-hist-legenda .pr.wykonana { background:#241c22; }

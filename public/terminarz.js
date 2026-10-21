@@ -959,14 +959,36 @@
   // Dane biorą się z gotowych akcji tylko do odczytu — ten widok niczego nie zapisuje.
   TRM.hist = { tryb: 'klientka', od: null, do: null, klient: null, fraza: '', wyniki: [], pracownik: null, dane: null, laduje: false };
 
+  // Zakres sięga też W PRZÓD (21.10.2026, prośba właściciela): historia ma pokazywać nie tylko to,
+  // co się odbyło, ale i to, co klientka ma umówione. Przy zakresie kończącym się „dzisiaj"
+  // zaplanowane wizyty były niewidoczne, więc pytanie „kiedy ma następną?" wymagało drugiego ekranu.
+  const HIST_PRZOD_DNI = 90;   // serwer przyjmuje zakres do 400 dni — 300 wstecz + 90 w przód mieści się z zapasem
   const histDomyslnyZakres = () => {
-    const do_ = TRM.data || new Date().toISOString().slice(0, 10);
-    const od = dodajDni(do_, -90);
-    return { od, do: do_ };
+    const dzis = TRM.data || new Date().toISOString().slice(0, 10);
+    return { od: dodajDni(dzis, -90), do: dodajDni(dzis, HIST_PRZOD_DNI) };
   };
   TRM.histZakres = (dni) => {
-    const do_ = TRM.data || new Date().toISOString().slice(0, 10);
-    TRM.hist.od = dni ? dodajDni(do_, -dni) : TRM.hist.od; TRM.hist.do = do_;
+    const dzis = TRM.data || new Date().toISOString().slice(0, 10);
+    TRM.hist.od = dni ? dodajDni(dzis, -dni) : TRM.hist.od;
+    TRM.hist.do = dodajDni(dzis, HIST_PRZOD_DNI);
+    histPobierz();
+  };
+  // Wejście z panelu wizyty: „Historia wizyt ↗" przy konkretnej klientce — bez szukania jej po nazwisku.
+  // Imię i telefon bierzemy z otwartej wizyty, a nie z atrybutu onclick: nazwiska bywają z apostrofem
+  // („O'Brien"), a cudzysłów w atrybucie HTML rozbijał wywołanie (złapane w próbie 21.10.2026).
+  TRM.historiaKlientki = (id, nazwa, telefon) => {
+    const dzis = TRM.data || new Date().toISOString().slice(0, 10);
+    const zPanelu = (TRM.szcz && TRM.szcz.rez && String(TRM.szcz.rez.id_klienta) === String(id)) ? TRM.szcz.rez : null;
+    TRM.panelZamknij();
+    TRM.hist.tryb = 'klientka';
+    TRM.hist.klient = {
+      id_klienta: id,
+      nazwa: nazwa || (zPanelu ? zPanelu.klient_nazwa : '') || '',
+      telefon: telefon || (zPanelu ? zPanelu.klient_telefon : '') || '',
+    };
+    TRM.hist.wyniki = []; TRM.hist.fraza = ''; TRM.hist.dane = null; TRM.hist.blad = null;
+    TRM.hist.od = dodajDni(dzis, -300); TRM.hist.do = dodajDni(dzis, HIST_PRZOD_DNI);
+    TRM.widokZmien('historia');
     histPobierz();
   };
   TRM.histTryb = (t) => { TRM.hist.tryb = t; TRM.hist.dane = null; renderHistoria(); if ((t === 'pracownik' && TRM.hist.pracownik) || (t === 'klientka' && TRM.hist.klient)) histPobierz(); };
@@ -1066,7 +1088,11 @@
       ${p.zabiegi.length ? `<div><div class="mini">Najczęstsze zabiegi</div>${p.zabiegi.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
       ${p.osoby.length ? `<div><div class="mini">U kogo bywa</div>${p.osoby.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
     </div>`;
-    const os = d.wizyty.map(w => {
+    // Sortowanie od najnowszych do najstarszych (prośba właściciela 21.10.2026). Serwer już tak
+    // oddaje dane, ale kolejność jest tu częścią umowy z użytkownikiem — pilnujemy jej na miejscu.
+    const wizytyPosortowane = [...d.wizyty].sort((a, b) => String(b.start).localeCompare(String(a.start)));
+    const ETYKIETY = { wykonana: ['Odbyła się', 'ok'], planowana: ['Zaplanowana', 'info'], odwolana: ['Odwołana', 'warn'], nieobecna: ['Nieobecność', 'bad'] };
+    const os = wizytyPosortowane.map(w => {
       const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(w.status);
       const klasa = anul ? 'odwolana' : (w.obecnosc === 'nieobecny' ? 'nieobecna' : (w.pozycje.some(x => x.stan === 'wykonana' || x.stan === 'przerwana') ? 'wykonana' : 'planowana'));
       const poz = w.pozycje.map(x => `
@@ -1079,7 +1105,8 @@
       return `
         <div class="trm-hist-wizyta ${klasa}" onclick="TRM.otworzSzczegoly(${w.id})" title="Otwórz wizytę">
           <div class="glowa">
-            <div class="data"><b>${ladnaData(w.start.slice(0, 10), true)}</b> <span class="muted">${w.start.slice(11, 16)}–${w.koniec.slice(11, 16)}</span></div>
+            <div class="data"><b>${ladnaData(w.start.slice(0, 10), true)}</b> <span class="muted">${w.start.slice(11, 16)}–${w.koniec.slice(11, 16)}</span>
+              <span class="trm-pill ${ETYKIETY[klasa][1]}">${ETYKIETY[klasa][0]}</span></div>
             <div class="numer muted small">${esc(w.numer || '')}</div>
           </div>
           ${poz}
@@ -1088,7 +1115,15 @@
           ${w.notatka ? `<div class="notatka">${esc(w.notatka)}</div>` : ''}
         </div>`;
     }).join('');
-    return `${kafelki}${listy}<div class="trm-hist-os">${os}</div>`;
+    // Legenda: kolor i tło mają znaczyć zawsze to samo, a nie być ozdobą.
+    const legenda = `<div class="trm-hist-legenda">
+      <span class="poz"><i class="pr wykonana"></i>odbyła się</span>
+      <span class="poz"><i class="pr planowana"></i>zaplanowana</span>
+      <span class="poz"><i class="pr odwolana"></i>odwołana</span>
+      <span class="poz"><i class="pr nieobecna"></i>nieobecność</span>
+      <span class="muted">najnowsze na górze · zakres obejmuje też wizyty zaplanowane</span>
+    </div>`;
+    return `${kafelki}${listy}${legenda}<div class="trm-hist-os">${os}</div>`;
   }
 
   function histPracownikHtml(d) {
@@ -1876,7 +1911,7 @@
     if (!anul && glowny !== OB_LABEL[r.obecnosc] && r.obecnosc !== 'oczekiwana') pomoc.push('obecność: ' + OB_LABEL[r.obecnosc][0].toLowerCase());
     if (!anul && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo')) pomoc.push(r.sprzedaz_id ? 'rozliczona' : 'do rozliczenia');
     html += `<div class="trm-status-glowny">${pill(glowny)}${pomoc.length ? `<span class="pomoc">${esc(pomoc.join(' · '))}</span>` : ''}</div>`;
-    html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
+    html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="TRM.historiaKlientki('${esc(r.id_klienta)}')" title="Wszystkie wizyty tej klientki — odbyte i zaplanowane">Historia wizyt ↗</button>` : ''}${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
     html += prefKartaHtml(r);
     if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
     if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
