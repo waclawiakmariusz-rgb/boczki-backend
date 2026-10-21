@@ -50,6 +50,55 @@ describe('to, co naprawdę zamyka sprawę, zostaje', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Reguła pilności (21.10.2026). U właściciela 13 z 14 spraw miało plakietkę „Pilne teraz",
+// wszystkie z powodem „bo wizyta już się odbyła" — czyli czerwony kolor przestał cokolwiek
+// wyróżniać. „Pilne" ma znaczyć: trzeba zdążyć przed czymś, co się jeszcze nie wydarzyło.
+describe('co robi sprawę pilną', () => {
+  const tick = SERWER.slice(SERWER.indexOf('async function tickSprawy()'), SERWER.indexOf('// ZK-03 (Z3-07)'));
+
+  test('eskalacja działa tylko na termin z PRZYSZŁOŚCI', () => {
+    expect(tick).toMatch(/powiazany_czas >= NOW\(\) AND powiazany_czas <= DATE_ADD\(NOW\(\), INTERVAL 120 MINUTE\)/);
+  });
+
+  test('zaległość (E13/E19) upomina się po dobie ciszy, ale tylko przez tydzień', () => {
+    const z = tick.slice(tick.indexOf("typ IN ('E13', 'E19')"));
+    expect(z).toMatch(/stan = 'nowa'/);                                  // „bez reakcji" = nikt nie dotknął
+    expect(z).toMatch(/utworzono <= DATE_SUB\(NOW\(\), INTERVAL \$\{ZALEGLOSC_H\} HOUR\)/);
+    expect(z).toMatch(/utworzono >= DATE_SUB\(NOW\(\), INTERVAL \$\{ZALEGLOSC_DNI\} DAY\)/);
+    // same wartości progów — doba i tydzień, nie „kiedyś"
+    expect(SERWER).toMatch(/const ZALEGLOSC_H = 24;/);
+    expect(SERWER).toMatch(/const ZALEGLOSC_DNI = 7;/);
+  });
+
+  test('sprawa, której moment minął ponad dobę temu, przestaje krzyczeć — ale zostaje w dzwonku', () => {
+    const w = tick.slice(tick.indexOf('przeterminowane'));
+    expect(w).toMatch(/priorytet = 'P0'/);                               // tylko te, które krzyczą
+    expect(w).toMatch(/SET priorytet = 'P1'/);                           // schodzą do P1, nie znikają
+    expect(w).not.toMatch(/stan = 'rozwiazana'/);                        // nic nie zamyka się samo
+    // liczy się moment, którego sprawa dotyczy — nie data jej wpisania (na tym poległa 1. wersja)
+    expect(w).toMatch(/powiazany_czas <= DATE_SUB\(NOW\(\), INTERVAL \$\{ZALEGLOSC_H\} HOUR\)/);
+  });
+
+  test('reguły (2) i (3) nie przerzucają tej samej sprawy w kółko', () => {
+    const z = tick.slice(tick.indexOf("typ IN ('E13', 'E19')"));
+    expect(z).toMatch(/eskalowano_o IS NULL/);                           // podniesienie tylko raz
+    const w = tick.slice(tick.indexOf('przeterminowane'));
+    expect(w).toMatch(/typ NOT IN \('E13', 'E19'\) OR utworzono <= DATE_SUB/); // okno doby–tygodnia zostaje nietknięte
+  });
+
+  test('każda zmiana priorytetu zostawia wpis w dzienniku sprawy', () => {
+    const wpisy = tick.match(/INSERT INTO Term_Sprawy_Dziennik/g) || [];
+    expect(wpisy.length).toBeGreaterThanOrEqual(3);
+    expect(tick).toMatch(/doba bez reakcji/);
+    expect(tick).toMatch(/wygaszenie/);
+  });
+
+  test('panel nie mówi już „pilne, bo wizyta już się odbyła"', () => {
+    expect(JS).not.toMatch(/wizyta już się odbyła/);
+  });
+});
+
 describe('przewodnik nie uczy nieistniejącego przycisku', () => {
   test('w /pomoc-terminarz/ nie ma już „Przejmij"', () => {
     expect(POMOC).not.toMatch(/Przejmij/);

@@ -69,3 +69,86 @@ To osobny temat, czeka na decyzję — razem ze sposobem na masowe domknięcie s
 o nieprzejętej sprawie, zachowane „Prowadzi: …", zachowane Zapisz kontakt / Rozwiąż / Przekaż,
 serwer nadal nie wymaga właściciela do zamknięcia sprawy, przewodnik bez „Przejmij".
 Pełny zestaw: 790/790.
+
+---
+
+# Reguła pilności (ta sama rozmowa, decyzja „1")
+
+Po zdjęciu „Przejmij" zostało pytanie, dlaczego **13 z 14 spraw** miało plakietkę „Pilne teraz",
+wszystkie z powodem *„bo wizyta już się odbyła"*. Czerwony kolor przestał cokolwiek wyróżniać.
+
+## Co było nie tak
+
+Dwie reguły liczyły czas **bez kierunku**:
+
+1. `priorytetZnikaniaWizyty()` — P0, gdy do terminu zostało mniej niż 48 h. Dla wizyty **z przeszłości**
+   różnica wychodziła ujemna, więc warunek „mniej niż 48 h" był spełniony **na zawsze**.
+2. Przebieg eskalacji — P1 → P0, gdy `powiazany_czas <= NOW() + 120 min`. Termin sprzed trzech
+   tygodni też spełnia ten warunek, więc każda zaległość stawała się pilna w ciągu minuty.
+
+## Jak jest teraz
+
+**„Pilne teraz" (P0) znaczy: trzeba zdążyć, zanim coś się wydarzy.**
+
+| Sytuacja | Priorytet |
+|---|---|
+| wizyta w najbliższych 48 h (odwołana, przełożona, zmieniony wykonawca) | **P0 — Pilne teraz** |
+| powiązany termin w ciągu 2 h | **P0** |
+| termin minął mniej niż dobę temu | **P0** (dziś jeszcze da się to domknąć) |
+| **termin minął ponad dobę temu** | **P1 — Wymaga działania** |
+| „brak wyniku wizyty" / „potwierdź rozliczenie", doba bez żadnej reakcji | **P0** (tu chodzi o pieniądze) |
+| te same sprawy po tygodniu | **P1 — zaległość do nadrobienia** |
+
+Nic się nie zamyka samo i nic nie znika z dzwonka — „Do działania" to nadal P0 **i** P1.
+Zmienia się tylko to, co krzyczy. Każda zmiana priorytetu zostawia wpis w dzienniku sprawy
+(`eskalacja` albo `wygaszenie`), więc widać, dlaczego sprawa zmieniła kolor.
+
+Progi: `ZALEGLOSC_H = 24`, `ZALEGLOSC_DNI = 7` w `routes/terminarz.js`.
+
+## Pułapka, którą złapał dopiero pomiar
+
+Pierwsza wersja wygaszania patrzyła na **wiek sprawy** (`utworzono`). W próbie nie zadziałała:
+sprawy w środowisku testowym były świeże, choć dotyczyły wizyt sprzed tygodnia. Liczy się
+**moment, którego sprawa dotyczy**, nie data jej wpisania — poprawione i opisane próbą niżej.
+
+Druga pułapka: reguły (2) i (3) mogłyby przerzucać tę samą sprawę w tę i z powrotem co minutę.
+Dlatego podniesienie następuje tylko raz (`eskalowano_o IS NULL`), a wygaszanie omija okno
+doba–tydzień dla E13/E19.
+
+## Próba na izolowanej bazie
+
+Trzy sytuacje ustawione ręcznie na „Pilne teraz", potem jeden przebieg reguły:
+
+```
+PRZED przebiegiem (wszystkie ustawione na „Pilne teraz"):
+   E05  P0  Odwołano wizytę — Julia Wiśniewska    termin: 2026-10-19 17:46  (dwa dni temu)
+   E05  P0  Odwołano wizytę — Julia Wiśniewska    termin: 2026-10-22 13:00  (jutro)
+   E13  P0  Brak wyniku wizyty — Beata Pawlak     termin: 2026-10-13 17:46  (tydzień temu)
+
+   zmiana po ~25 s
+
+PO przebiegu:
+   E05  P1  Odwołano wizytę — Julia Wiśniewska    termin: 2026-10-19 17:46   ← przestało krzyczeć
+   E05  P0  Odwołano wizytę — Julia Wiśniewska    termin: 2026-10-22 13:00   ← nadal pilne (jutro!)
+   E13  P1  Brak wyniku wizyty — Beata Pawlak     termin: 2026-10-21 17:30   ← zaległość do nadrobienia
+
+wpisy w dzienniku spraw:
+   sprawa 26 · wygaszenie · Obniżono priorytet do P1 — termin minął ponad dobę temu…
+   sprawa 16 · wygaszenie · Obniżono priorytet do P1 — termin minął ponad dobę temu…
+```
+
+Kontrola z drugiej strony: odwołanie wizyty **na jutro** utworzyło sprawę od razu jako **P0** —
+reguła nie wycisza tego, co naprawdę pilne.
+
+W panelu widać to w powodach przy plakietkach: „pilne, bo **termin minął w ostatniej dobie**",
+„pilne, bo **minęła doba bez reakcji**" — zamiast dawnego „bo wizyta już się odbyła".
+
+| Plik | Co widać |
+|---|---|
+| `pilnosc-01-panel.png` | dzwonek z nowymi powodami i mieszanką „Pilne teraz" / „Wymaga działania" |
+| `proba-pilnosc.js` | próba na izolowanej bazie (trzy sytuacje + przebieg reguły) |
+
+## Czego NIE zrobiłem
+
+Masowego domykania starych spraw (punkt 2 z rozmowy) — czeka na decyzję. Po tej zmianie
+zaległości przestają udawać alarm, ale nadal są na liście i nadal trzeba je kiedyś domknąć.

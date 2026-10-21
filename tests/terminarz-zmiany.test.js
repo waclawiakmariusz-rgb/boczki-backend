@@ -99,9 +99,14 @@ describe('ZM01 — priorytet wizyty, która zniknęła z grafiku', () => {
     expect(p(TERAZ, null)).toBe('P2');
     expect(p(TERAZ, '')).toBe('P2');
   });
-  test('wizyta już minęła (odwołanie wpisane po terminie) nadal jest P0, nie znika z dzwonka', () => {
-    expect(p(TERAZ, '2026-10-19 08:00')).toBe('P0');
-    expect(p(TERAZ, '2026-10-01 08:00')).toBe('P0');
+  // Zmiana 21.10.2026 (właściciel: „13 z 14 spraw na czerwono"). Wizyta, która JUŻ SIĘ ODBYŁA,
+  // zostaje w dzwonku — ale jako P1 „Wymaga działania", nie jako P0 „Pilne teraz". „Pilne" ma
+  // znaczyć „trzeba zdążyć", a przed czymś, co minęło, zdążyć się nie da.
+  test('wizyta już minęła (odwołanie wpisane po terminie) → P1: zostaje w dzwonku, ale nie udaje alarmu', () => {
+    expect(p(TERAZ, '2026-10-19 08:00')).toBe('P1');
+    expect(p(TERAZ, '2026-10-01 08:00')).toBe('P1');
+    // „Do działania" w dzwonku to P0 + P1 — sprawa nadal się liczy i nadal widać ją na liście
+    expect(['P0', 'P1']).toContain(p(TERAZ, '2026-10-01 08:00'));
   });
 });
 

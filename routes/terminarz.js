@@ -40,9 +40,17 @@ const TYPY_ZMIAN = new Set(['E02', 'E03', 'E05', 'E06', 'E08', 'E33']); // zakł
  *  liczy tylko P0/P1 z zakladki "do dzialania" — odwolanie wizyty na przyszly tydzien
  *  ladowalo jako P2 i wykonawca nie dowiadywal sie o nim nigdy. Dlatego: do 48 godzin P0
  *  (reagowac dzis), do 7 dni P1 (trzeba wiedziec), dalej P2. */
+// Reguła pilności (poprawiona 21.10.2026). „Pilne teraz" ma znaczyć: TRZEBA ZDĄŻYĆ przed czymś,
+// co jeszcze się nie wydarzyło. Wcześniej liczyliśmy odległość od terminu bez kierunku, więc wizyta
+// sprzed trzech tygodni była „pilna" tak samo jak jutrzejsza — u właściciela 13 z 14 spraw miało
+// czerwoną plakietkę i przestała ona cokolwiek wyróżniać. Wizyta, która już się odbyła, to zaległość
+// (P1 — dalej w dzwonku, dalej do zrobienia), a nie alarm.
+const ZALEGLOSC_H = 24;    // po tylu godzinach ciszy zaległość (E13/E19) ma prawo się upomnieć
+const ZALEGLOSC_DNI = 7;   // po tylu dniach przestaje być pilna i zostaje zwykłą rzeczą do nadrobienia
 function priorytetZnikaniaWizyty(terazStr, czasStr) {
   if (!czasStr) return 'P2';
   const minut = S.naMin(czasStr) - S.naMin(terazStr);
+  if (minut < 0) return 'P1';                  // termin minął — zaległość, nie „pilne teraz"
   if (minut <= 48 * 60) return 'P0';
   if (minut <= 7 * 24 * 60) return 'P1';
   return 'P2';
@@ -2190,10 +2198,35 @@ module.exports = (db, opts = {}) => {
   // nie startuje w testach. Baza wspólna dla dev+prod — UPDATE z warunkiem w WHERE jest atomowym claimem.
   async function tickSprawy() {
     try {
-      const kandydaciEskalacji = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje') AND powiazany_czas IS NOT NULL AND powiazany_czas <= DATE_ADD(NOW(), INTERVAL 120 MINUTE) LIMIT 100`).catch(() => []);
+      // (1) ZBLIŻAJĄCY SIĘ TERMIN — jedyny powód, dla którego coś robi się „pilne teraz".
+      // `powiazany_czas >= NOW()` dopisane 21.10.2026: wcześniej warunek łapał także terminy
+      // z przeszłości, więc każda zaległa sprawa stawała się P0 w ciągu minuty od powstania.
+      const kandydaciEskalacji = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje') AND powiazany_czas IS NOT NULL AND powiazany_czas >= NOW() AND powiazany_czas <= DATE_ADD(NOW(), INTERVAL 120 MINUTE) LIMIT 100`).catch(() => []);
       for (const s of (kandydaciEskalacji || [])) {
         const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch(() => null);
         if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — zbliża się powiązany termin' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+      }
+      // (2) ZALEGŁOŚĆ BEZ REAKCJI — „brak wyniku wizyty" i „potwierdź rozliczenie" dotykają pieniędzy,
+      // więc po dobie ciszy mają prawo się upomnieć. Ale tylko przez tydzień: sprawa sprzed miesiąca
+      // to materiał do nadrobienia, nie alarm (inaczej wracalibyśmy do ściany czerwonych plakietek).
+      const zaleglosci = await q(`SELECT id FROM Term_Sprawy WHERE typ IN ('E13', 'E19') AND priorytet = 'P1' AND stan = 'nowa' AND eskalowano_o IS NULL
+        AND utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_H} HOUR) AND utworzono >= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY) LIMIT 100`).catch(() => []);
+      for (const s of (zaleglosci || [])) {
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch(() => null);
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — doba bez reakcji' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+      }
+      // (3) WYGASZENIE — sprawa, której moment minął ponad dobę temu, przestaje krzyczeć.
+      // Zostaje w „Do działania" jako P1: nie znika, nie zamyka się sama, ale nie udaje już alarmu.
+      // Pierwsza wersja patrzyła na wiek SPRAWY i w próbie nie zadziałała (sprawy były świeże,
+      // choć dotyczyły wizyt sprzed tygodnia) — liczy się moment, którego dotyczą, nie data wpisu.
+      // Wyjątek: E13/E19 w oknie doba–tydzień, bo to właśnie je podnosi reguła (2) — inaczej
+      // obie reguły przerzucałyby tę samą sprawę w tę i z powrotem co minutę.
+      const przeterminowane = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P0' AND stan IN ('nowa', 'w_trakcie', 'oczekuje')
+        AND (powiazany_czas IS NULL OR powiazany_czas <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_H} HOUR))
+        AND (typ NOT IN ('E13', 'E19') OR utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY)) LIMIT 100`).catch(() => []);
+      for (const s of (przeterminowane || [])) {
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P1', zmieniono = NOW() WHERE id = ? AND priorytet = 'P0'`, [s.id]).catch(() => null);
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'wygaszenie', 'Obniżono priorytet do P1 — termin minął ponad dobę temu, sprawa zostaje do nadrobienia' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
       }
       const bezWyniku = await q(`SELECT p.id AS pozycja_id, p.rezerwacja_id, p.tenant_id, p.pracownik, p.kategoria, p.wariant, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec, r.klient_nazwa
         FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.id = p.rezerwacja_id AND r.tenant_id = p.tenant_id

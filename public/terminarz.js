@@ -1682,11 +1682,14 @@
     const pc = sp.powiazany_czas || '';
     // znikanie wizyt ma własną regułę (P0 do 48 h, P1 do 7 dni) — nie wolno mówić „w ciągu 2 h”
     const ZNIKANIE = ['E02', 'E03', 'E05', 'E33'];
-    const dlaczego = pc && teraz
-      ? (pc <= teraz ? 'wizyta już się odbyła'
-        : typ === 'E33' ? 'ten dzień jest już blisko'
-          : ZNIKANIE.includes(typ) ? 'wizyta w najbliższych dwóch dniach' : 'wizyta w ciągu 2 h')
-      : 'eskalacja czasowa';
+    // 21.10.2026: powód „bo termin już minął" zniknął razem z regułą, która go powodowała —
+    // termin z przeszłości nie robi już sprawy pilną. P0 bez przyszłego terminu zostaje tylko tam,
+    // gdzie zaległość upomniała się po dobie ciszy (E13/E19), i tak to teraz nazywamy.
+    const dlaczego = pc && teraz && pc > teraz
+      ? (typ === 'E33' ? 'ten dzień jest już blisko'
+        : ZNIKANIE.includes(typ) ? 'wizyta w najbliższych dwóch dniach' : 'wizyta w ciągu 2 h')
+      : (typ === 'E13' || typ === 'E19') ? 'minęła doba bez reakcji'
+        : pc ? 'termin minął w ostatniej dobie' : 'eskalacja czasowa';
     return `pilne, bo ${dlaczego}${baza ? ' — ' + baza : ''}`;
   }
   function akcjaWizytySprawy(sp, naKarcie) {
