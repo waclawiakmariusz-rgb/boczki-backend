@@ -772,3 +772,51 @@ body.dark-mode .trm .trm-hist-legenda .pr.wykonana { background:#241c22; }
 .trm-hist-wizyta.skasowana .data b { color:var(--t-mut); text-decoration:line-through; }
 .trm-hist-legenda .pr.skasowana { background:repeating-linear-gradient(135deg, #f6f6f8, #f6f6f8 4px, #e8e8ee 4px, #e8e8ee 8px); border-left:3px solid #9aa5b1; }
 body.dark-mode .trm .trm-hist-wizyta.skasowana { background:repeating-linear-gradient(135deg, #241c22, #241c22 10px, #2b2129 10px, #2b2129 20px); }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Kolory stanów w historii klientki — poprawka 21.10.2026 po uwadze właściciela:
+   „te kolory są takie same, zrób jakieś zupełnie odmienne typu niebieski, zielony,
+   czerwony". Wcześniej kwadracik legendy był biały z 3-pikselowym paskiem z boku —
+   przy 12 px różnicy praktycznie nie było widać. Teraz:
+     • kwadrat legendy wypełniony JEDNYM, mocnym kolorem stanu,
+     • pasek z lewej strony wizyty 5 px w tym samym kolorze,
+     • delikatne tło w tym samym odcieniu (odbyta zostaje szara — tak prosił wcześniej),
+     • plakietka słowna dopasowana kolorem do paska.
+   Kolor nadal nie jest jedynym nośnikiem: każdy stan ma podpis w legendzie i plakietkę,
+   a skasowana pomyłka dodatkowo kreskowane tło (działa też przy daltonizmie i na wydruku). */
+.trm { --h-wyk:#15803D; --h-plan:#1D4ED8; --h-odw:#D97706; --h-nieob:#DC2626; --h-skas:#6B7280; }
+body.dark-mode .trm { --h-wyk:#4BA877; --h-plan:#7FA7F5; --h-odw:#E0A14A; --h-nieob:#F07878; --h-skas:#A5ADBA; }
+
+.trm-hist-wizyta.wykonana  { border-left:5px solid var(--h-wyk); }
+.trm-hist-wizyta.planowana { background:#F3F7FE; border-color:#DCE6FA; border-left:5px solid var(--h-plan); }
+.trm-hist-wizyta.odwolana  { background:#FFF8EC; border-color:#F3E3C6; opacity:1; border-left:5px solid var(--h-odw); }
+.trm-hist-wizyta.nieobecna { background:#FDF1F1; border-color:#F6D7D7; border-left:5px solid var(--h-nieob); }
+.trm-hist-wizyta.skasowana { border-left:5px solid var(--h-skas); }
+.trm-hist-wizyta.planowana .data b { color:var(--t-ink); }
+
+/* plakietka stanu w wierszu — ten sam kolor co pasek, żeby jedno tłumaczyło drugie */
+.trm-hist-wizyta.wykonana  .trm-pill { background:#E3F2E9; color:#14633A; }
+.trm-hist-wizyta.planowana .trm-pill { background:#E2EBFD; color:#1A41A8; }
+.trm-hist-wizyta.odwolana  .trm-pill { background:#FDEBCF; color:#9A5508; }
+.trm-hist-wizyta.nieobecna .trm-pill { background:#FBDEDE; color:#A81D1D; }
+.trm-hist-wizyta.skasowana .trm-pill { background:#E9EBEF; color:#4B5563; }
+body.dark-mode .trm .trm-hist-wizyta .trm-pill { background:rgba(255,255,255,.10); color:var(--t-ink); }
+
+/* legenda: pełny kolor zamiast białego kwadratu z cienkim paskiem */
+.trm-hist-legenda .pr { width:14px; height:14px; border-radius:4px; border:none; }
+.trm-hist-legenda .pr.wykonana  { background:var(--h-wyk); border-left:none; }
+.trm-hist-legenda .pr.planowana { background:var(--h-plan); border-left:none; }
+.trm-hist-legenda .pr.odwolana  { background:var(--h-odw); border-left:none; }
+.trm-hist-legenda .pr.nieobecna { background:var(--h-nieob); border-left:none; }
+.trm-hist-legenda .pr.skasowana { background:repeating-linear-gradient(135deg, var(--h-skas), var(--h-skas) 3px, #D8DCE3 3px, #D8DCE3 6px); border-left:none; }
+body.dark-mode .trm .trm-hist-wizyta.planowana { background:#1e2634; border-color:#33415a; }
+body.dark-mode .trm .trm-hist-wizyta.odwolana { background:#2e2718; border-color:#4a3f26; }
+body.dark-mode .trm .trm-hist-wizyta.nieobecna { background:#30201f; border-color:#4d3030; }
+/* Tryb ciemny: starsze reguły (szare tło wizyty odbytej, kwadrat legendy) są bardziej
+   szczegółowe niż powyższe, więc kolor paska i kwadratu trzeba tu powtórzyć wprost. */
+body.dark-mode .trm .trm-hist-legenda .pr.wykonana { background:var(--h-wyk); }
+body.dark-mode .trm .trm-hist-wizyta.wykonana  { border-left-color:var(--h-wyk); }
+body.dark-mode .trm .trm-hist-wizyta.planowana { border-left-color:var(--h-plan); }
+body.dark-mode .trm .trm-hist-wizyta.odwolana  { border-left-color:var(--h-odw); }
+body.dark-mode .trm .trm-hist-wizyta.nieobecna { border-left-color:var(--h-nieob); }
+body.dark-mode .trm .trm-hist-wizyta.skasowana { border-left-color:var(--h-skas); }
