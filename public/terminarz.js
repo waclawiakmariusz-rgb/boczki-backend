@@ -1643,7 +1643,6 @@
   function kartaSprawy(sp) {
     const [plab, pcls] = PRIOR_LABEL[sp.priorytet] || ['', 'neu'];
     const termin = sp.termin_dzialania ? terminEtykieta(sp.termin_dzialania) : null;
-    const mozePrzejac = sp.priorytet !== 'P2' && !sp.wlasciciel && !['rozwiazana', 'nieaktualna'].includes(sp.stan);
     const w = wizytaSprawy(sp), powod = powodPriorytetu(sp);
     return `<div class="trm-sprawa-karta ${pcls} ${sp.przeczytane ? '' : 'nieprz'}" role="button" tabindex="0" onclick="TRM.otworzSprawe(${sp.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.otworzSprawe(${sp.id});}" aria-label="${esc(sp.tytul)}">
       <div class="trm-sprawa-gora"><span class="trm-pill ${pcls}">${esc(termin ? `${plab} · ${termin}` : plab)}</span>${!sp.przeczytane ? '<span class="trm-kropka" title="Nieprzeczytane"></span>' : ''}${powod ? `<span class="muted small">${esc(powod)}</span>` : ''}</div>
@@ -1651,8 +1650,12 @@
       ${w ? `<div class="small trm-sprawa-wizyta">${esc(w)}</div>` : ''}
       ${sp.opis ? `<div class="muted small trm-sprawa-opis">${esc(sp.opis)}</div>` : ''}
       <div class="trm-sprawa-dol">
-        <div class="trm-sprawa-prowadzi">${sp.wlasciciel ? `${avatarHtml(sp.wlasciciel, true)}<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : (sp.priorytet !== 'P2' ? '<span class="muted small">Nikt jeszcze nie przejął</span>' : '')}</div>
-        <div class="trm-row" style="gap:6px">${akcjaWizytySprawy(sp, true)}${mozePrzejac ? `<button class="trm-btn primary sm fix" onclick="event.stopPropagation();TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>` : ''}</div>
+        <!-- „Przejmij" i „Nikt jeszcze nie przejął" zdjęte 21.10.2026: terminarzem zajmuje się recepcja,
+             nie ma od kogo przejmować, a przycisk kazał zrobić krok, który niczego nie odblokowywał
+             (zamknięcie sprawy nigdy nie wymagało bycia jej właścicielem). Kto prowadzi, pokazujemy
+             tylko wtedy, gdy sprawa naprawdę została komuś przekazana. -->
+        <div class="trm-sprawa-prowadzi">${sp.wlasciciel ? `${avatarHtml(sp.wlasciciel, true)}<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : ''}</div>
+        <div class="trm-row" style="gap:6px">${akcjaWizytySprawy(sp, true)}</div>
       </div>
     </div>`;
   }
@@ -1730,7 +1733,6 @@
     if (['rozwiazana', 'nieaktualna'].includes(sp.stan)) return operacyjna() ? `<button class="trm-btn fix" onclick="TRM.sprawaWznow(${sp.id})">Wznów sprawę</button>` : '';
     const btns = [];
     const otw = akcjaWizytySprawy(sp, false); if (otw) btns.push(otw);
-    if (!sp.wlasciciel || sp.wlasciciel !== kto()) btns.push(`<button class="trm-btn primary fix" onclick="TRM.sprawaPrzejmij(${sp.id})">Przejmij</button>`);
     btns.push(`<button class="trm-btn fix" onclick="TRM.sprawaFormaPokaz('kontakt')">Zapisz kontakt</button>`);
     const pozostalo = pozostaloWizyt(sp);
     // E02: sprawa z listą wizyt zamyka się dopiero, gdy każda wizyta ma rozstrzygnięcie (przełożona / inny wykonawca / odwołana / poza kolizją). Notatka tego nie zastępuje.
@@ -1761,7 +1763,7 @@
       <div class="trm-sprawa-naglowek">
         <span class="trm-pill ${pcls}">${esc(plab)}</span>
         <span class="trm-pill neu">${esc(STAN_SPRAWY_LABEL[sp.stan] || sp.stan)}</span>
-        ${sp.wlasciciel ? `<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : '<span class="muted small">Nikt jeszcze nie przejął</span>'}
+        ${sp.wlasciciel ? `<span class="muted small">Prowadzi: <b>${esc(sp.wlasciciel)}</b></span>` : ''}
       </div>
       <h2 style="margin:8px 0 4px">${esc(sp.tytul)}</h2>
       ${wizytaSprawy(sp) ? `<div class="small" style="margin-bottom:4px"><b>${esc(wizytaSprawy(sp))}</b></div>` : ''}
@@ -1791,13 +1793,8 @@
     toast('success', 'Zapisano');
     await TRM.otworzSprawe(id);
   };
-  TRM.sprawaPrzejmij = async (id) => {
-    const d = await api('trm_sprawa_przejmij', { id });
-    if (d.status !== 'success') return toast('error', 'Nie udało się', d.message);
-    if (d.juz_przejeta) toast('warning', 'Sprawa jest już przejęta', 'Prowadzi: ' + (d.sprawa.wlasciciel || '—'));
-    else toast('success', 'Przejęto sprawę');
-    await TRM.otworzSprawe(id);
-  };
+  // TRM.sprawaPrzejmij usunięte 21.10.2026 — akcja trm_sprawa_przejmij zostaje po stronie serwera
+  // (używa jej „Przekaż", które nadaje sprawie właściciela), ale recepcja nie ma już czego klikać.
   TRM.sprawaWznow = async (id) => {
     const d = await api('trm_sprawa_wznow', { id, powod: 'Wznowiono ręcznie' });
     if (d.status !== 'success') return toast('error', 'Nie wznowiono', d.message);
