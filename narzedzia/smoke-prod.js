@@ -81,7 +81,13 @@ async function main() {
       localStorage.setItem('boczki_pracownik_imie', ${JSON.stringify(prac.imie)});
       localStorage.setItem('boczki_pracownik_rola', ${JSON.stringify(prac.rola)});
       localStorage.setItem('boczki_features', '[]'); 'ok'` });
-    await send('Page.reload', { ignoreCache: true }); await sleep(9000);
+    // Pierwsze wejście leci BEZ sesji (token wstawiamy dopiero wyżej), więc aplikacja dostaje tam
+    // 401 na /api/zadania — i słusznie, tak właśnie ma działać strażnik sesji. Liczymy dopiero to,
+    // co dzieje się po F5 z sesją; inaczej test zawsze zgłasza problem, którego nie ma, a wtedy
+    // przestaje się go czytać (2026-10-21).
+    await send('Page.reload', { ignoreCache: true });
+    csp.length = 0; wyjatki.length = 0; bledyKonsoli.length = 0; failed.length = 0;
+    await sleep(9000);
 
     const start = await evalJs(`({ chart: typeof Chart, sortable: typeof Sortable, app: !!document.getElementById('app-container') && document.getElementById('app-container').style.display !== 'none', wersja: (document.querySelector('.ds-wersja')||{}).textContent })`);
     start.app ? ok('aplikacja wystartowała po F5 z sesją (' + (start.wersja || 'bez wersji') + ')') : zle('aplikacja NIE wystartowała (app-container ukryty)');
