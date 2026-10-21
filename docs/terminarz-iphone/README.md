@@ -87,3 +87,11 @@ na dotyku pierwszeństwo ma przewijanie ekranu, więc na telefonie godzinę wybi
 Po zdjęciu widoku „Tydzień" (patrz `docs/terminarz-widoki/`) pasek widoków ma cztery pozycje
 i **mieści się w jednym rzędzie**: 312 px przy ekranie 390 px, zero pikseli poza krawędzią.
 Zawijanie do dwóch rzędów zostaje jako zabezpieczenie dla węższych telefonów.
+
+## Sprostowanie 21.10.2026
+
+Zapisana wyżej decyzja — „**Widok Dzień na telefonie to lista**, nie siatka z kolumnami — i tak
+zostaje" — **była błędna** i została cofnięta. Właściciel: „chcę widzieć kafelki, a nie zastępczy
+uproszczony interfejs". Siatka od początku umiała przewijać się w poziomie, więc wystarczyło
+przestać ją podmieniać; przy okazji wyszło, że kolumna godzin wcale się nie przyklejała,
+a kafelek blokował przesuwanie palcem. Szczegóły i pomiary: `docs/terminarz-siatka-telefon/`.

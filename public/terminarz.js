@@ -246,6 +246,7 @@
   document.addEventListener('click', (e) => { const box = el('trm-szukaj-wyniki'); if (box && !box.hidden && !e.target.closest('.trm-szukaj')) { box.hidden = true; } });
   TRM.widokZmien = (w) => {
     if (w === 'tydzien') w = 'dzien';                       // widok tygodnia zdjęty 21.10.2026 — stare wejścia prowadzą do dnia
+    if (w === 'dzien' && waski()) TRM._przewinDoSiatki = true;   // telefon: po wejściu w Dzień pokaż od razu siatkę
     if (w === 'ustawienia' && TRM.widok !== 'ustawienia') TRM.widokPoprzedni = TRM.widok; // R04: powrót do tego samego widoku, dnia i filtrów
     TRM.widok = w;
     document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', agenda: 'Agenda', zasoby: 'Zasoby', historia: 'Historia', moj: 'Mój dzień' })[w]));
@@ -292,8 +293,18 @@
     pobierzPreferencje(d.rezerwacje, TRM.data).then(() => { if (req === odswiezReq && TRM.pref.dzien === TRM.data) odswiezWidokPoPreferencjach(); });
     nowaSynchronizujDate();
     if (TRM.widok === 'zasoby') { renderZasoby(); przywrocScroll(); return; }
-    if (TRM.widok === 'moj' || waski()) { renderAgendaDnia(); przywrocScroll(); return; }
+    // 21.10.2026: na telefonie widok Dnia pokazywał listę zamiast siatki („chcę widzieć kafelki,
+    // a nie zastępczy uproszczony interfejs" — właściciel). Siatka i tak umie się przewijać
+    // w poziomie (kolumna godzin przyklejona z lewej), więc pokazujemy tę samą siatkę co na
+    // komputerze. Listą zostaje „Mój dzień" — tam jest jedna osoba i kolumny nie mają sensu.
+    if (TRM.widok === 'moj') { renderAgendaDnia(); przywrocScroll(); return; }
     renderDzien(); przywrocScroll();
+    // Dwa razy, bo zaraz po tym renderze dociągają się preferencje klientek i widok rysuje się
+    // jeszcze raz, odtwarzając pozycję przewinięcia sprzed naszego skoku.
+    if (waski() && TRM._przewinDoSiatki) {
+      przewinDoSiatki();
+      setTimeout(() => { if (TRM._przewinDoSiatki) { TRM._przewinDoSiatki = false; przewinDoSiatki(); } }, 350);
+    }
   }
   // ── Zmiany w grafiku (19.10.2026) ────────────────────────────────────────────────────────────
   // Scenariusz Oli: w niedzielę dziesięć wizyt na środę, we wtorek zostają dwie i nikt nie wie,
@@ -398,7 +409,7 @@
     }
     if (!TRM.dzien) return;
     if (TRM.widok === 'zasoby') { renderZasoby(); return wroc(); }
-    if (TRM.widok === 'moj' || waski()) { renderAgendaDnia(); return wroc(); }
+    if (TRM.widok === 'moj') { renderAgendaDnia(); return wroc(); }
     if (TRM.widok === 'dzien') { renderDzien(); wroc(); }
   }
   /** Karta preferencji w szczegółach wizyty — z edycją dla recepcji i managera. */
@@ -509,7 +520,10 @@
   function kolumnaGodzin(zak) {
     let s = '';
     for (let m = zak.od; m <= zak.do; m += 60) s += `<div class="trm-hour" style="top:${(m - zak.od) * PX}px;${m === zak.od ? 'transform:none' : ''}">${pad(m / 60)}:00</div>`;
-    return `<div class="trm-hours" style="height:${(zak.do - zak.od) * PX}px;position:relative">${s}</div>`;
+    // Bez `position` w stylu wiersza — przyklejenie z lewej robi arkusz (.trm-hours{position:sticky}).
+    // Inline `position:relative` wygrywało z arkuszem i przy przewijaniu siatki w bok (telefon)
+    // godziny odjeżdżały razem z kolumnami, więc nie było wiadomo, która to godzina.
+    return `<div class="trm-hours" style="height:${(zak.do - zak.od) * PX}px">${s}</div>`;
   }
   function liniaTeraz(zak) {
     if (TRM.data !== dzisStr()) return;
@@ -651,8 +665,14 @@
     const layer = el('trm-bubble-layer'); if (!layer || !TRM.bubla) return;
     const r = rezZDnia(TRM.bubla.id);
     if (!r) { layer.innerHTML = ''; TRM.bubla = null; return; }
-    const rect = TRM.bubla.rect, szer = 380;
-    let left = rect.right + 14; if (left + szer > window.innerWidth - 16) left = Math.max(12, rect.left - szer - 14);
+    // Dymek mieści się w ekranie także na telefonie: najpierw po prawej od kafelka, jeśli się nie
+    // mieści — po lewej, a na wąskim ekranie po prostu na całej szerokości z marginesem. Bez
+    // ostatniego kroku wystawał o 20 px poza lewą krawędź (pomiar na iPhonie 390 px, 21.10.2026).
+    const rect = TRM.bubla.rect;
+    const szer = Math.min(380, window.innerWidth - 24);
+    let left = rect.right + 14;
+    if (left + szer > window.innerWidth - 16) left = rect.left - szer - 14;
+    left = Math.max(12, Math.min(left, window.innerWidth - szer - 12));
     const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
     const aktywna = !anul && r.wykonanie !== 'wykonana';
     const poz = r.pozycje.filter(x => x.stan !== 'anulowana');
@@ -881,7 +901,14 @@
     if (brakGrafiku.length === prac.length && !d.rezerwacje.length) {
       html += `<div class="trm-note warn">Nikt nie ma grafiku na ten dzień, więc nie ma dostępnych terminów. ${manager() ? 'Ustaw grafik w <b>Ustawienia → Grafik</b> (albo skopiuj godziny salonu jednym kliknięciem).' : 'Poproś managera o ustawienie grafiku.'}</div>`;
     }
-    html += `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${prac.length}, minmax(180px,1fr))">
+    // Na telefonie kolumny są węższe (ale nadal czytelne) i siatkę przesuwa się palcem w bok.
+    // Podpowiedź pokazujemy tylko wtedy, gdy naprawdę jest co przesuwać — przy jednej osobie
+    // albo na szerokim ekranie byłaby szumem.
+    const kolMin = waski() ? 132 : 180;
+    if (waski() && prac.length > 2) {
+      html += `<div class="trm-przesun muted small">↔ Przesuń siatkę w bok, żeby zobaczyć pozostałe osoby</div>`;
+    }
+    html += `<div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(${prac.length}, minmax(${kolMin}px,1fr))">
       <div class="trm-col-h hours"></div>${prac.map(p => { const dp = d.dostepnosc[p] || []; return `<div class="trm-col-h">${avatarHtml(p)}<div><div class="name">${esc(p)}</div><div class="hrs">${dp.length ? dp.map(x => hhmm(x.od) + '–' + hhmm(x.do)).join(', ') : 'brak grafiku'}</div></div></div>`; }).join('')}
       ${kolumnaGodzin(zak)}${prac.map(p => kolumnaHtml(d.rezerwacje, d.dostepnosc[p], d.nieobecnosci.filter(n => n.pracownik === p || (!n.pracownik && !n.zasob_id)), zak, `TRM.klikSiatka(event, '${esc(p).replace(/'/g, "\\'")}')`, (x) => x.pracownik === p, p)).join('')}
     </div></div>
@@ -891,6 +918,33 @@
     liniaTeraz(zak);
     nowaRysujPropozycje();
     if (TRM.panel === 'szczegoly' && TRM.szcz) renderSzczegoly();
+  }
+
+  // Na telefonie nagłówek (szukajka, liczniki, pasek zmian, chipsy osób) zajmuje pierwszy ekran,
+  // więc po ŚWIADOMYM wejściu w widok Dnia przewijamy do siatki — tak jak kalendarz w telefonie.
+  // Tylko raz, po kliknięciu zakładki: przy odświeżaniu danych pozycja zostaje tam, gdzie ją
+  // zostawiono (inaczej ekran skakałby pod palcem co minutę).
+  // `behavior: 'auto'` świadomie: kontener ma w arkuszu `scroll-behavior: smooth`, więc samo
+  // przypisanie scrollTop ANIMUJE przewijanie — a wtedy kolejny render (po dociągnięciu
+  // preferencji) odtwarzał pozycję złapaną w połowie animacji i ekran wracał na górę.
+  // Ile ekranu zajmuje przyklejony pasek aplikacji na górze (na telefonie belka z hamburgerem).
+  // Bez tego siatka wjeżdżała POD belkę i znikał rząd z imionami — złapane na zrzucie 21.10.2026.
+  function wysokoscBelki() {
+    const e = document.elementFromPoint(Math.round(window.innerWidth / 2), 6);
+    for (let x = e; x && x !== document.body; x = x.parentElement) {
+      const s = getComputedStyle(x);
+      if (s.position === 'fixed' || s.position === 'sticky') { const r = x.getBoundingClientRect(); if (r.top <= 4 && r.bottom > 0 && r.bottom < 200) return Math.round(r.bottom); }
+    }
+    return 0;
+  }
+  function przewinDoSiatki() {
+    const g = document.querySelector('#trm-main .trm-grid'); if (!g) return;
+    const kont = document.querySelector('.main-content') || document.scrollingElement; if (!kont) return;
+    kont.scrollTo({ top: Math.max(0, kont.scrollTop + g.getBoundingClientRect().top - wysokoscBelki() - 8), behavior: 'auto' });
+    // …i od razu pokazujemy zajętą część dnia zamiast pustego poranka: pierwsza wizyta pod
+    // rzędem z imionami. Gdy dziś nie ma wizyt, siatka zostaje tam, gdzie zaczyna się dzień.
+    const k = g.querySelector('.trm-karta');
+    if (k) g.scrollTop = Math.max(0, g.scrollTop + k.getBoundingClientRect().top - g.getBoundingClientRect().top - 64);
   }
 
   // ── widok ZASOBY (E04) ────────────────────────────────────────────────

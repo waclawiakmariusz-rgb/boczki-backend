@@ -862,3 +862,44 @@ body.dark-mode .trm .trm-hist-chip.on { color:#f3d9e2; }
   .trm-akcje { flex-direction:column; align-items:stretch; }
   .trm-akcje > .trm-btn { width:100%; }
 }
+
+/* Siatka dnia NA TELEFONIE (21.10.2026). Do tej pory telefon dostawał listę zamiast siatki —
+   właściciel: „chcę widzieć kafelki, a nie zastępczy uproszczony interfejs". Siatka od początku
+   umiała się przewijać w poziomie (kolumna godzin przyklejona z lewej), więc wystarczyło jej
+   nie podmieniać i dopasować proporcje: węższe kolumny, mniejsze nagłówki, wyższy obszar
+   przewijania. Dwie kolumny mieszczą się w kadrze, trzecia wystaje — i to samo podpowiada,
+   że siatkę da się przesunąć palcem. */
+@media (max-width: 760px) {
+  .trm-grid { max-height:calc(100vh - 230px); overscroll-behavior-x:contain; }
+  .trm-col-h { min-width:132px; padding:8px 10px; gap:8px; }
+  .trm-col-h .name { font-size:13px; }
+  .trm-col-h .hrs { font-size:10.5px; }
+  .trm-col-h.hours { min-width:48px; }
+  .trm-karta { padding:5px 7px; font-size:12px; }
+  .trm-karta .godz { font-size:11px; }
+  .trm-col, .trm-hours { min-width:unset; }
+  .trm-hours { min-width:48px; }
+  /* kafelek nie blokuje przesuwania siatki palcem w bok (przeciaganie i tak ustepuje przewijaniu) */
+  .trm-karta { touch-action:pan-x pan-y; }
+  .trm-przesun { margin:2px 0 6px; }
+}
+
+/* Telefon: zanim siatka w ogóle się pokazała, nagłówek zjadał cały ekran (pomiar 21.10.2026:
+   siatka zaczynała się na 758 px przy ekranie 844 px, czyli pod zgięciem). Skoro widok Dnia na
+   telefonie to teraz siatka, a nie lista, trzeba ją było zrobić osiągalną: ścieśniamy to, co nad
+   nią stoi, i oddajemy siatce resztę ekranu. Nic nie znika — zmieniają się odstępy i rozmiary. */
+@media (max-width: 760px) {
+  .trm-top { gap:8px; margin-bottom:8px; }
+  .trm-top h1 { font-size:21px; }
+  .trm-counters { gap:8px 12px; font-size:12px; margin:-2px 0 6px; }
+  .trm-counters .small { display:none; }           /* „Ostatnia aktualizacja 19:55" — na telefonie zbędne */
+  .trm-filtry { gap:4px; margin:-2px 0 6px; font-size:12.5px; }
+  .trm-filtry .trm-chip { padding:4px 8px; }
+  .trm-zmiany-pasek { padding:8px 10px; font-size:12.5px; gap:8px; margin:0 0 8px; }
+  .trm-zmiany-pasek .trm-btn { min-height:34px; padding:6px 10px; font-size:12.5px; }
+  .trm-przesun { margin:0 0 4px; font-size:11.5px; }
+  .trm-views { margin:0 0 8px; }
+  .trm-top2 { margin:-2px 0 6px; }
+  .trm-top2 .trm-btn { min-height:38px; padding:7px 12px; }
+  .trm-grid { max-height:calc(100vh - 150px); }
+}
