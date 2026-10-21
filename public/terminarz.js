@@ -1152,7 +1152,7 @@
     // D04: wizyta otwarta ze sprawy ma drogę powrotu do tej sprawy (kontekst listy zostaje w TRM.sprawy)
     if (TRM.panel === 'szczegoly' && TRM.szcz && TRM.szcz.powrotSprawa) { const head = p.querySelector('.trm-panel-head'); if (head) head.insertAdjacentHTML('afterend', `<button class="trm-btn link sm" onclick="TRM.otworzSprawe(${TRM.szcz.powrotSprawa})">← wróć do sprawy</button>`); }
   }
-  TRM.panelZamknij = () => { document.querySelectorAll('.trm-propozycja').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); document.body.classList.remove('trm-panel-otwarty', 'trm-pomoc-otwarta'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
+  TRM.panelZamknij = () => { document.querySelectorAll('.trm-propozycja, .trm-szkic').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); document.body.classList.remove('trm-panel-otwarty', 'trm-pomoc-otwarta'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
   // E01: pomoc (Esti) jako mała akcja nagłówka panelu — pływający widget hosta jest schowany, dopóki panel jest otwarty (CSS: body.trm-panel-otwarty)
   const naglowekPanelu = (tytul, sub) => `<div class="trm-panel-head"><div><h2>${tytul}</h2>${sub ? `<div class="muted small">${sub}</div>` : ''}</div><div class="trm-row" style="gap:6px"><button class="trm-x trm-pomoc-btn" onclick="TRM.pomocOtworz()" title="Pomoc (Esti)" aria-label="Pomoc">?</button><button class="trm-x" onclick="TRM.panelZamknij()" title="Zamknij" aria-label="Zamknij">✕</button></div></div>`;
   TRM.pomocOtworz = () => { document.body.classList.add('trm-pomoc-otwarta'); const btn = document.getElementById('est-help-btn'), pan = document.getElementById('est-help-panel'); if (btn && pan && !pan.classList.contains('est-open')) btn.click(); };
@@ -1450,16 +1450,92 @@
   }
   TRM.nowaWiecejSlotow = () => { const n = TRM.nowa; if (!n) return; n.limitSlotow = Math.min(30, (n.limitSlotow || 12) + 12); nowaLadujSloty(); };
   // R03: tymczasowa propozycja wizyty w siatce (właściwa kolumna i godzina) — tylko podgląd, bez zapisu
+  // ─── Kafelek-szkic na siatce (zgłoszenie #11, Gosia, 20.10.2026) ──────────────────────────────
+  // „Gdy wpisuje się usługę, nie pojawia się ona od razu na ekranie. Dopiero po wybraniu godziny ją
+  // widać. Łatwiej byłoby, gdyby kafelek był przesuwalny, po pojawieniu się można byłoby go od razu
+  // przestawić w odpowiednie miejsce." Szkic pojawia się więc zaraz po dodaniu zabiegu — zanim
+  // padnie decyzja o godzinie — i da się go przeciągnąć: w pionie ustawia godzinę, w poziomie osobę.
+  // Nic nie zapisuje: po puszczeniu idzie zwykłe sprawdzenie dostępności, to samo co przy wyborze
+  // godziny z listy. Dopóki termin nie jest potwierdzony, szkic jest przerywany i półprzezroczysty.
+  let szkicDrag = null;
+  function nowaRysujSzkic() {
+    document.querySelectorAll('.trm-szkic').forEach(x => x.remove());
+    const n = TRM.nowa;
+    if (!n || TRM.panel !== 'nowa' || !n.pozycje.length || !operacyjna()) return;
+    if (TRM.widok !== 'dzien' || n.start.slice(0, 10) !== TRM.data || !TRM._zak) return;
+    if (n.godzina && n.dostep && n.dostep.stan === 'ok' && n.dostep.wynik) return;   // jest już zielona propozycja
+    const zak = TRM._zak;
+    const kolumny = [...document.querySelectorAll('#trm-main .trm-col')].filter(c => c.dataset.prac);
+    if (!kolumny.length) return;
+    const celPrac = n.prefPrac || n.domyslny || ((n.pozycje.find(p => p.pracownik) || {}).pracownik || '');
+    const col = kolumny.find(c => c.dataset.prac === celPrac) || kolumny[0];
+    const trwanie = n.pozycje.reduce((s, p) => s + (Number(p.czas_min) || 0), 0) || 30;
+    const a = Math.max(zak.od, Math.min(zak.do - 10, minDnia(n.start)));
+    const e = document.createElement('div');
+    e.className = 'trm-szkic' + (n.godzina ? ' ustalony' : '');
+    e.style.top = ((a - zak.od) * PX) + 'px';
+    e.style.height = Math.max(24, trwanie * PX - 2) + 'px';
+    e.innerHTML = `<b>${pad(Math.floor(a / 60))}:${pad(a % 60)}–${pad(Math.floor((a + trwanie) / 60))}:${pad((a + trwanie) % 60)}</b>
+      <span>${esc(n.pozycje.map(p => nazwaUslugi(usluga(p.usluga_id))).join(' + '))}</span>
+      <em>${n.godzina ? 'przeciągnij, żeby zmienić' : 'przeciągnij na właściwą godzinę'}</em>`;
+    e.addEventListener('pointerdown', szkicDown);
+    col.appendChild(e);
+  }
+  function szkicDown(ev) {
+    if (ev.button !== 0) return;
+    const e = ev.currentTarget;
+    szkicDrag = { id: ev.pointerId, e, offsetY: ev.clientY - e.getBoundingClientRect().top, kolumny: [...document.querySelectorAll('#trm-main .trm-col')].filter(c => c.dataset.prac) };
+    e.classList.add('ciagniety');
+    try { e.setPointerCapture(ev.pointerId); } catch (x) {}
+    ev.preventDefault(); ev.stopPropagation();
+  }
+  function szkicMove(ev) {
+    if (!szkicDrag || ev.pointerId !== szkicDrag.id) return;
+    const n = TRM.nowa; if (!n) return;
+    const zak = TRM._zak || { od: 480, do: 1200 }, krok = (TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.siatka_min) || 15;
+    const trwanie = n.pozycje.reduce((s, p) => s + (Number(p.czas_min) || 0), 0) || 30;
+    const kol = szkicDrag.kolumny.find(c => { const r = c.getBoundingClientRect(); return ev.clientX >= r.left && ev.clientX < r.right; }) || szkicDrag.e.parentElement;
+    const rect = kol.getBoundingClientRect();
+    let m = zak.od + (ev.clientY - szkicDrag.offsetY - rect.top) / PX;
+    m = Math.max(zak.od, Math.min(zak.do - trwanie, Math.round(m / krok) * krok));
+    if (kol !== szkicDrag.e.parentElement) kol.appendChild(szkicDrag.e);
+    szkicDrag.e.style.top = ((m - zak.od) * PX) + 'px';
+    szkicDrag.e.querySelector('b').textContent = `${pad(Math.floor(m / 60))}:${pad(m % 60)}–${pad(Math.floor((m + trwanie) / 60))}:${pad((m + trwanie) % 60)}`;
+    szkicDrag.cel = { m, prac: kol.dataset.prac };
+  }
+  function szkicUp(ev) {
+    if (!szkicDrag || ev.pointerId !== szkicDrag.id) return;
+    const d = szkicDrag; szkicDrag = null;
+    d.e.classList.remove('ciagniety');
+    const n = TRM.nowa; if (!n || !d.cel) return;
+    n.start = `${TRM.data}T${pad(Math.floor(d.cel.m / 60))}:${pad(d.cel.m % 60)}`;
+    n.godzina = true; n.dataReczna = true; n.dostep = null;
+    // Przeciągnięcie JEST wyborem terminu, więc kreator przeskakuje na krok „Termin" — inaczej
+    // dostępność nie byłaby sprawdzana (sprawdzamy tylko na tym kroku) i szkic wisiałby bez odpowiedzi.
+    if (!n.szybka && n.krok !== 3) n.krok = 3;
+    // Zmiana kolumny = zmiana osoby; ta sama ścieżka co wybór z listy, więc reguły „kto wykonuje
+    // zabieg" i ostrzeżenie z #10 działają tak samo.
+    if (d.cel.prac && d.cel.prac !== (n.prefPrac || '')) TRM.nowaPrefPrac(d.cel.prac);
+    else { renderNowa(); TRM.nowaZmiana(true); }
+  }
+  document.addEventListener('pointermove', szkicMove);
+  document.addEventListener('pointerup', szkicUp);
+  document.addEventListener('pointercancel', () => { if (szkicDrag) { szkicDrag.e.classList.remove('ciagniety'); szkicDrag = null; nowaRysujSzkic(); } });
+
   function nowaRysujPropozycje() {
     document.querySelectorAll('.trm-propozycja').forEach(x => x.remove());
+    nowaRysujSzkic();
     const n = TRM.nowa; if (!n || TRM.panel !== 'nowa' || !n.godzina || !n.dostep || n.dostep.stan !== 'ok' || !n.dostep.wynik) return;
     if (TRM.widok !== 'dzien' || n.start.slice(0, 10) !== TRM.data || !TRM._zak) return;
     const zak = TRM._zak;
-    n.dostep.wynik.pozycje.forEach(p => {
+    n.dostep.wynik.pozycje.forEach((p, i) => {
       const col = [...document.querySelectorAll('#trm-main .trm-col')].find(c => c.dataset.prac === p.pracownik); if (!col) return;
       const a = minDnia(p.start), b = minDnia(p.koniec) || 1440; if (b <= zak.od || a >= zak.do) return;
       const el2 = document.createElement('div'); el2.className = 'trm-propozycja'; el2.style.top = ((Math.max(a, zak.od) - zak.od) * PX) + 'px'; el2.style.height = (Math.max(18, (Math.min(b, zak.do) - Math.max(a, zak.od)) * PX - 2)) + 'px';
       el2.innerHTML = `<b>${hhmm(p.start)}–${hhmm(p.koniec)} · propozycja</b>${esc(n.klient ? n.klient.nazwa : '')}`;
+      // #11: gotową propozycję też da się chwycić i przestawić — ta sama obsługa co szkicu,
+      // żeby „przesuwalny kafelek" działał niezależnie od tego, czy godzina już padła.
+      if (!i) { el2.classList.add('ciagalna'); el2.addEventListener('pointerdown', szkicDown); }
       col.appendChild(el2);
     });
   }
