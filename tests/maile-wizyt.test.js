@@ -223,7 +223,11 @@ describe('treść wiadomości', () => {
     expect(html).toMatch(/piątek, 23 października 2026/);
     expect(html).toContain('Endermologia');
     expect(html).toContain('600100200');
-    expect(html).not.toContain('Estelio');                    // stopka salonu, nie nasza
+    // Logo Estelio stoi w nagłówku (prośba właściciela 21.10.2026), ale STOPKA należy do salonu:
+    // klientka ma w niej dane swojego salonu, nie naszą wizytówkę i nie nasz adres kontaktowy.
+    expect(html).toContain('/img/estelio-logo.png');
+    expect(html).not.toContain('System zarządzania salonem beauty');
+    expect(html).not.toContain('kontakt@estelio.com.pl');
   });
 
   test('przypomnienie ma inny nagłówek i zapowiada jutro', () => {

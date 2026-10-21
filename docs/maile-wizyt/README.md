@@ -34,7 +34,7 @@ Bez tego 70% wiadomości nie miałoby dokąd pójść, a literówka w adresie ni
   zapisuje dopiero z `wykonaj: true`, nigdy nie nadpisuje adresu już wpisanego ręcznie.
 
 **2. Dwie wiadomości** (`routes/mailer.js`: `zbudujMailWizyty`, `wyslijMailWizyty`)
-- stylistyka serii wprowadzającej: jasny nagłówek, karta z terminem, szeryfowe tytuły,
+- stylistyka serii wprowadzającej: jasne logo Estelio na górze, pod nim nazwa salonu, karta z terminem, szeryfowe tytuły,
 - **nadawcą jest salon**, nie Estelio: `„Boczki na bok" <kontakt@estelio.com.pl>`, a odpowiedź
   (Reply-To) leci na adres salonu z licencji — klientka widzi swój salon i ma gdzie odpisać,
 - stopka: nazwa, adres i telefon salonu + zdanie o rezygnacji,

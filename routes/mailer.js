@@ -815,7 +815,11 @@ function emailWrapperJasnySalon(nazwaSalonu, podtytul, tresc, stopka) {
 <body style="margin:0; padding:24px; background:#f8f5f1; font-family:'Segoe UI',Arial,sans-serif;">
   <div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #ece4dc; box-shadow:0 4px 20px rgba(28,26,24,0.06);">
 
-    <div style="background:#ffffff; padding:30px 40px 20px; text-align:center; border-bottom:1px solid #f1eae2;">
+    <div style="background:#ffffff; padding:28px 40px 20px; text-align:center; border-bottom:1px solid #f1eae2;">
+      <!-- Jasne logo Estelio nad nazwą salonu (prośba właściciela 21.10.2026). Klientka widzi
+           przede wszystkim swój salon, ale wiadomość ma rozpoznawalny nagłówek systemu.
+           Plik ten sam co w aplikacji; alt zostaje czytelny, gdy skrzynka blokuje grafikę. -->
+      <img src="${APP_URL()}/img/estelio-logo.png" alt="Estelio" width="150" style="width:150px; max-width:52%; height:auto; display:block; margin:0 auto 16px;">
       <p style="margin:0; font-size:22px; color:#1c1a18; font-weight:600; font-family:Georgia,'Times New Roman',serif; letter-spacing:.3px;">${nazwaSalonu}</p>
       <p style="color:#a89e96; margin:10px 0 0; font-size:11px; letter-spacing:1.4px; text-transform:uppercase;">${podtytul}</p>
     </div>
