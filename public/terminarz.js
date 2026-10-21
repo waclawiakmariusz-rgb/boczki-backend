@@ -53,7 +53,81 @@
   const usluga = (id) => (TRM.dane ? TRM.dane.uslugi.find(u => String(u.id) === String(id)) : null);
   const zasob = (id) => (TRM.dane ? TRM.dane.zasoby.find(z => Number(z.id) === Number(id)) : null);
   const nazwaUslugi = (u) => u ? (u.kategoria + (u.wariant ? ' / ' + u.wariant : '')) : '';
-  const kolorKat = (u) => (u && u.kolor && /^#[0-9a-f]{6}$/i.test(u.kolor)) ? u.kolor : '#BD9560';
+  // ─── Kolory kafelków (zgłoszenie #12, Gosia, 20.10.2026) ──────────────────────────────────────
+  // „Chodzi o to, aby każda usługa miała swój kolor… wizyty się nie zlewają ze sobą."
+  // Kolor jest w bazie przypisany do TYPU zabiegu, nie do kategorii — u Boczków daje to cztery
+  // kolory na 483 usługi (202 usługi „ciało" = ten sam niebieski w 21 kategoriach). Dlatego
+  // kategoria dostaje własny odcień WEWNĄTRZ rodziny koloru swojego typu: „ciało" zostaje niebieskie,
+  // ale endermologia, kriolipoliza i wakuum różnią się od siebie na pierwszy rzut oka.
+  // Odcień liczy się z nazwy kategorii, więc jest stały — ta sama usługa ma zawsze ten sam kolor,
+  // bez żadnej konfiguracji i bez zapisywania czegokolwiek w bazie.
+  const haszNazwy = (s) => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
+  function hexNaHsl(hex) {
+    const r = parseInt(hex.slice(1, 3), 16) / 255, g = parseInt(hex.slice(3, 5), 16) / 255, b = parseInt(hex.slice(5, 7), 16) / 255;
+    const max = Math.max(r, g, b), min = Math.min(r, g, b), l = (max + min) / 2;
+    if (max === min) return [0, 0, l * 100];
+    const d = max - min, s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    const h = max === r ? ((g - b) / d + (g < b ? 6 : 0)) : max === g ? ((b - r) / d + 2) : ((r - g) / d + 4);
+    return [h * 60, s * 100, l * 100];
+  }
+  function hslNaHex(h, s, l) {
+    h = ((h % 360) + 360) % 360; s = Math.max(0, Math.min(100, s)) / 100; l = Math.max(0, Math.min(100, l)) / 100;
+    const k = (n) => (n + h / 30) % 12, a = s * Math.min(l, 1 - l);
+    const f = (n) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)))));
+    return '#' + [f(0), f(8), f(4)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  // Odcienie rozkładamy znając CAŁY cennik, a nie każdą kategorię z osobna: inaczej dwie kategorie
+  // potrafią wylosować ten sam kolor (przy cenniku Boczków zdarzało się to 8 razy na 57 kategorii).
+  // Kolejność alfabetyczna w obrębie rodziny daje stały wynik — ta sama kategoria ma zawsze ten sam
+  // odcień, dopóki nie zmieni się jej nazwa albo kolor typu. Mapa liczy się raz na wczytanie danych.
+  let kolCache = { zrodlo: null, mapa: new Map() };
+  function zbudujKolory() {
+    const uslugi = (TRM.dane && TRM.dane.uslugi) || [];
+    const rodziny = new Map();                      // kolor typu (albo '') → lista kategorii
+    const bazaKat = new Map();                      // kategoria → kolor typu
+    uslugi.forEach(u => {
+      const kat = String(u.kategoria || '').trim(); if (!kat || bazaKat.has(kat)) return;
+      const baza = (u.kolor && /^#[0-9a-f]{6}$/i.test(u.kolor)) ? u.kolor.toLowerCase() : '';
+      bazaKat.set(kat, baza);
+      if (!rodziny.has(baza)) rodziny.set(baza, []);
+      rodziny.get(baza).push(kat);
+    });
+    const mapa = new Map();
+    for (const [baza, katy] of rodziny) {
+      katy.sort((a, b) => a.localeCompare(b, 'pl'));
+      const n = katy.length;
+      katy.forEach((kat, i) => {
+        if (!baza) {                                 // brak koloru typu — pełne koło barw
+          mapa.set(kat, hslNaHex((i * 360) / Math.max(1, n) + 18, 48, 52));
+          return;
+        }
+        // Im więcej kategorii w rodzinie, tym szerszy wachlarz barw — przy 21 kategoriach „ciała"
+        // ciasny zakres dawał odcienie nie do odróżnienia (zmierzona odległość RGB 14).
+        // Do tego naprzemienna jasność i nasycenie, żeby sąsiedzi w kolejności różnili się nie
+        // tylko barwą. Rodzina nadal jest rozpoznawalna: niebieskie zostaje niebieskim.
+        const [H, S, L] = hexNaHsl(baza);
+        const rozpietosc = Math.max(36, Math.min(90, n * 7));
+        const srodek = n === 1 ? 0 : (i / (n - 1)) - 0.5;   // -0.5 … +0.5 w obrębie rodziny
+        const jasnosc = [0, 12, -11, 6][i % 4];
+        const nasycenie = [0, -14, 10, -6][i % 4];
+        mapa.set(kat, hslNaHex(H + srodek * rozpietosc, Math.max(30, Math.min(90, S + nasycenie)), Math.max(36, Math.min(70, L + jasnosc))));
+      });
+    }
+    kolCache = { zrodlo: uslugi, mapa };
+  }
+  const kolorKat = (u) => {
+    const kat = u && u.kategoria ? String(u.kategoria).trim() : '';
+    const bazowy = (u && u.kolor && /^#[0-9a-f]{6}$/i.test(u.kolor)) ? u.kolor : null;
+    if (!kat) return bazowy || '#BD9560';
+    const uslugi = (TRM.dane && TRM.dane.uslugi) || [];
+    if (kolCache.zrodlo !== uslugi) zbudujKolory();
+    if (kolCache.mapa.has(kat)) return kolCache.mapa.get(kat);
+    // Kategoria spoza wczytanego cennika (np. archiwalna wizyta) — wtedy stały kolor z nazwy.
+    const h = haszNazwy(kat.toLowerCase());
+    if (!bazowy) return hslNaHex(h % 360, 48, 52);
+    const [H, S, L] = hexNaHsl(bazowy);
+    return hslNaHex(H + (((h % 7) - 3) * 9), Math.max(32, Math.min(88, S + ((((h >> 3) % 3) - 1) * 10))), Math.max(38, Math.min(68, L + ((((h >> 6) % 3) - 1) * 9))));
+  };
   const pill = (para, extra) => para ? `<span class="trm-pill ${para[1]} ${extra || ''}">${esc(para[0])}</span>` : '';
   const AWATAR_KOLORY = ['', 'mint', 'gold', 'blue'];
   const awatarKolor = (nazwa) => { let h = 0; for (const ch of String(nazwa || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AWATAR_KOLORY[h % AWATAR_KOLORY.length]; };
@@ -412,6 +486,21 @@
     });
     return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
   }
+  // Legenda kolorów dla kategorii widocznych TEGO dnia (zgłoszenie #12). Bez niej kolor jest ładny,
+  // ale nic nie znaczy — recepcja musiałaby zgadywać, co oznacza odcień. Pokazujemy tylko to,
+  // co faktycznie jest na ekranie; przy dniu z kilkunastoma kategoriami reszta ląduje pod „+N".
+  function legendaKategorii(rezerwacje) {
+    const mapa = new Map();
+    (rezerwacje || []).forEach(r => (r.pozycje || []).forEach(p => {
+      const u = usluga(p.usluga_id); const kat = (p.kategoria || (u && u.kategoria) || '').trim();
+      if (kat && !mapa.has(kat)) mapa.set(kat, kolorKat(u || { kategoria: kat }));
+    }));
+    if (!mapa.size) return '';
+    const lista = [...mapa.entries()].sort((a, b) => a[0].localeCompare(b[0], 'pl'));
+    const widoczne = lista.slice(0, 12), reszta = lista.length - widoczne.length;
+    return `<div class="trm-legenda-kat"><span class="e">Kolory zabiegów:</span>${widoczne.map(([kat, kol]) =>
+      `<span class="poz"><i style="background:${kol}"></i>${esc(kat)}</span>`).join('')}${reszta > 0 ? `<span class="muted">+${reszta} ${reszta === 1 ? 'inna' : 'innych'}</span>` : ''}</div>`;
+  }
   function kolumnaGodzin(zak) {
     let s = '';
     for (let m = zak.od; m <= zak.do; m += 60) s += `<div class="trm-hour" style="top:${(m - zak.od) * PX}px;${m === zak.od ? 'transform:none' : ''}">${pad(m / 60)}:00</div>`;
@@ -598,6 +687,9 @@
   TRM.bublaSzczegoly = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); };
   TRM.bublaPrzelozenie = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); if (!TRM.szcz || !TRM.szcz.rez) return; TRM.szcz.tryb = 'zmiana'; TRM.zm = { start: TRM.szcz.rez.start.slice(0, 16), prac: {} }; TRM.renderSzczegoly(); };
   TRM.bublaObecnosc = async (stan) => { const id = TRM.bubla.id; TRM.zamknijBuble(); const d = await api('trm_obecnosc', { id, obecnosc: stan }); if (d.status !== 'success') return toast('error', 'Nie udało się', d.message); toast('success', 'Zapisano'); await odswiez(); };
+  // Hak do prób: pozwala sprawdzić kolory kategorii bez klikania po całym terminarzu
+  // (używany przez harness przy zgłoszeniu #12 — rozróżnialność odcieni na prawdziwym cenniku).
+  TRM._kolorKat = kolorKat;
   TRM.kartaKlik = (ev, id) => {
     if (TRM._suprimKlik && Date.now() < TRM._suprimKlik) return;
     clearTimeout(trmHoverT); clearTimeout(trmLeaveT);
@@ -788,7 +880,8 @@
       <div class="trm-col-h hours"></div>${prac.map(p => { const dp = d.dostepnosc[p] || []; return `<div class="trm-col-h">${avatarHtml(p)}<div><div class="name">${esc(p)}</div><div class="hrs">${dp.length ? dp.map(x => hhmm(x.od) + '–' + hhmm(x.do)).join(', ') : 'brak grafiku'}</div></div></div>`; }).join('')}
       ${kolumnaGodzin(zak)}${prac.map(p => kolumnaHtml(d.rezerwacje, d.dostepnosc[p], d.nieobecnosci.filter(n => n.pracownik === p || (!n.pracownik && !n.zasob_id)), zak, `TRM.klikSiatka(event, '${esc(p).replace(/'/g, "\\'")}')`, (x) => x.pracownik === p, p)).join('')}
     </div></div>
-    <div class="trm-legenda"><span style="--c:#fff;border:1px solid #E6DBD5">dostępność</span><span style="--c:#efe6dd">poza grafikiem / blokada</span><span style="--c:#BD9560">karta wizyty (kolor = kategoria)</span>${operacyjna() ? '<span class="muted">Kliknij wolne pole, żeby dodać wizytę</span>' : ''}</div>`;
+    <div class="trm-legenda"><span style="--c:#fff;border:1px solid #E6DBD5">dostępność</span><span style="--c:#efe6dd">poza grafikiem / blokada</span>${operacyjna() ? '<span class="muted">Kliknij wolne pole, żeby dodać wizytę</span>' : ''}</div>
+    ${legendaKategorii(d.rezerwacje)}`;
     main.innerHTML = html;
     liniaTeraz(zak);
     nowaRysujPropozycje();

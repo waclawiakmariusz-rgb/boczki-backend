@@ -666,3 +666,11 @@ body.dark-mode .trm .trm-bubble-notatka svg { color:#ffc46b; }
 body.dark-mode .trm .trm-pref-uwaga { background:#392d15; border-color:#6b5423; border-left-color:#d9a441; color:#f0dcb6; }
 body.dark-mode .trm .trm-pref-uwaga b { color:#ffe2ad; }
 body.dark-mode .trm .trm-pref-uwaga .trm-btn.link { color:#ffc46b; }
+
+/* Legenda kolorów zabiegów pod siatką dnia (zgłoszenie #12, 21.10.2026). Kolor kafelka ma
+   znaczyć konkretny zabieg, więc pokazujemy wprost, który odcień to która kategoria. */
+.trm-legenda-kat { display:flex; gap:6px 12px; flex-wrap:wrap; align-items:center; margin-top:6px; font-size:12px; color:var(--t-mut); }
+.trm-legenda-kat .e { font-weight:600; color:var(--t-txt); }
+.trm-legenda-kat .poz { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.trm-legenda-kat .poz i { width:10px; height:10px; border-radius:3px; display:inline-block; flex:0 0 auto; box-shadow:0 0 0 1px rgba(48,39,32,.12) inset; }
+body.dark-mode .trm .trm-legenda-kat .poz i { box-shadow:0 0 0 1px rgba(255,255,255,.18) inset; }
