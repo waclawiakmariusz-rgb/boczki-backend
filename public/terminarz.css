@@ -699,3 +699,50 @@ body.dark-mode .trm .trm-szkic { background:rgba(240,169,192,.14); border-color:
 body.dark-mode .trm .trm-szkic.ustalony { background:rgba(240,169,192,.22); }
 .trm-propozycja.ciagalna { cursor:grab; }
 .trm-propozycja.ciagalna.ciagniety { cursor:grabbing; opacity:.92; }
+
+/* ─── iPhone / wąski ekran (21.10.2026) ───────────────────────────────────────────────────────
+   Audyt na emulowanym iPhonie 14 (390×844) i SE (375×667) wykazał trzy rzeczy do poprawy.
+   Cała strona się nie rozjeżdżała (dokument = szerokość ekranu), ale: zakładka „Historia"
+   była ucięta prawą krawędzią, karty wizyt wystawały o ~56 px, a część przycisków miała
+   24 px wysokości zamiast wymaganych palcem ~44. */
+@media (max-width: 760px) {
+  /* 1. Pasek widoków: pięć zakładek nie mieści się w jednym rzędzie — zawijamy zamiast chować
+     „Historię" poza ekranem. Zawijanie jest uczciwsze od przewijania w poziomie: widać wszystko. */
+  .trm-views { flex-wrap:wrap; border-radius:18px; row-gap:4px; justify-content:flex-start; }
+  .trm-views button { flex:1 1 auto; min-height:38px; font-size:13.5px; }
+
+  /* 2. Karty wizyt (widok dnia i agenda): dzieci siatki mają domyślnie min-width:auto, więc
+     długa notatka albo rząd chipsów rozpychał wiersz poza ekran. Zero minimalnej szerokości
+     + zawijanie treści trzyma je w ryzach. */
+  .trm-ag-row > * { min-width:0; }
+  .trm-ag-row .k, .trm-ag-row .u { overflow-wrap:anywhere; }
+  .trm-ag-notatka { overflow-wrap:anywhere; white-space:normal; }
+  .trm-ag-prac { flex-wrap:wrap; }
+  .trm-pref { flex-wrap:wrap; }
+
+  /* 3. Cele dotyku poza panelem (w panelu było to zrobione już wcześniej): linki-przyciski
+     w rodzaju „Co się zmieniło?", „30 dni", „+ Dodaj przerwę" miały 24 px wysokości. */
+  .trm .trm-btn.sm, .trm .trm-btn.link { min-height:38px; min-width:44px; padding-top:8px; padding-bottom:8px; }
+  .trm input[type=checkbox] { width:20px; height:20px; }
+  .trm-filtry label, .trm-counters label { display:inline-flex; align-items:center; gap:8px; min-height:38px; }
+}
+
+/* Ustawienia → Godziny otwarcia: wiersz dnia (nazwa + przełącznik + dwa pola czasu + „Dodaj przerwę")
+   miał na telefonie 380 px minimalnej szerokości i rozpychał kartę poza ekran o 12 px.
+   Na wąskim ekranie pozwalamy mu się zawinąć — pola czasu lądują w drugiej linii. */
+@media (max-width: 760px) {
+  .trm-card { min-width:0; }
+  .trm-dzien-wiersz { flex-wrap:wrap; gap:8px 10px; }
+  .trm-dz-godz { flex-wrap:wrap; row-gap:6px; }
+  .trm-hist-daty input[type=date] { flex:1 1 140px; min-width:0; }
+}
+
+/* Pływający przycisk pomocy (Esti) siedzi na telefonie w prawym dolnym rogu i zasłaniał ostatnią
+   kartę listy. Zapas na dole modułu sprawia, że da się doczytać ostatnią wizytę dnia. */
+@media (max-width: 760px) { .trm { padding-bottom:72px; } }
+
+/* Chipsy preferencji na telefonie: długa uwaga („Zawsze przychodzi 15 minut wcześniej") nie mieści
+   się w jednej linii i była ucięta krawędzią karty — pozwalamy jej się zawinąć. */
+@media (max-width: 760px) {
+  .trm-pref-chip { max-width:100%; white-space:normal; text-align:left; }
+}
