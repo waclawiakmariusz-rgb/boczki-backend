@@ -765,3 +765,10 @@ body.dark-mode .trm .trm-szkic.ustalony { background:rgba(240,169,192,.22); }
 .trm-hist-legenda .pr.nieobecna { background:var(--t-sur); border-left:3px solid #b91c1c; }
 body.dark-mode .trm .trm-hist-wizyta.wykonana { background:#241c22; border-color:#3a2f36; }
 body.dark-mode .trm .trm-hist-legenda .pr.wykonana { background:#241c22; }
+
+/* Wizyta skasowana jako pomyłka (21.10.2026) — w historii klientki ma wyglądać na wykreśloną,
+   a nie na odwołaną: odwołanie to zdarzenie, skasowanie to naprawa błędnego wpisu. */
+.trm-hist-wizyta.skasowana { background:repeating-linear-gradient(135deg, #f6f6f8, #f6f6f8 10px, #f1f1f4 10px, #f1f1f4 20px); border-left-color:#9aa5b1; opacity:.9; }
+.trm-hist-wizyta.skasowana .data b { color:var(--t-mut); text-decoration:line-through; }
+.trm-hist-legenda .pr.skasowana { background:repeating-linear-gradient(135deg, #f6f6f8, #f6f6f8 4px, #e8e8ee 4px, #e8e8ee 8px); border-left:3px solid #9aa5b1; }
+body.dark-mode .trm .trm-hist-wizyta.skasowana { background:repeating-linear-gradient(135deg, #241c22, #241c22 10px, #2b2129 10px, #2b2129 20px); }

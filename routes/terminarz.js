@@ -287,6 +287,14 @@ module.exports = (db, opts = {}) => {
     )${KOL}`, 'Term_Zakupy_Ruchy');
   alterKolumna('Term_Pozycje', 'zakup_skladnik_id', 'INT NULL');
   alterKolumna('Term_Ustawienia', 'kontrola_zakupow', "VARCHAR(5) NOT NULL DEFAULT 'off'");
+  // Skasowanie wizyty (21.10.2026, prośba właściciela): pomyłka przy zapisie to NIE jest odwołanie.
+  // Odwołanie opisuje coś, co wydarzyło się w życiu salonu (klientka nie może przyjść) i zostaje
+  // w statystykach; pomyłka ma zniknąć z kalendarza, ale zostawić ślad — kto, kiedy i dlaczego.
+  // Wiersz zostaje w bazie: „klientka była umówiona, wizytę skasowano" musi dać się odtworzyć.
+  alterKolumna('Term_Rezerwacje', 'usunieta', 'TINYINT(1) NOT NULL DEFAULT 0');
+  alterKolumna('Term_Rezerwacje', 'usunieta_kiedy', 'DATETIME NULL');
+  alterKolumna('Term_Rezerwacje', 'usunieta_przez', 'VARCHAR(100) NULL');
+  alterKolumna('Term_Rezerwacje', 'usunieta_powod', 'VARCHAR(500) NULL');
   // ── C07: rejestr stanu schematu. Każdy krok DDL powyżej jest idempotentny, ale jego wynik był dotąd tylko w logu.
   // Term_Migracje zapisuje, które elementy schematu zakupów są obecne; brak kolumny NIE może cicho wyłączyć kontroli —
   // trm_zapisz/trm_ustawienia_zapisz odmawiają włączenia/użycia zakupów, gdy schemat jest niekompletny.
@@ -655,6 +663,8 @@ module.exports = (db, opts = {}) => {
       status: r.status, obecnosc: r.obecnosc, kanal: r.kanal, zrodlo: r.zrodlo, start: r.start_s, koniec: r.koniec_s, notatka: r.notatka, brak_kontaktu: !!r.brak_kontaktu,
       wersja: r.wersja, utworzyl: r.utworzyl, utworzono: dt(r.utworzono), anulowano: dt(r.anulowano), anulowal: r.anulowal, powod_anulacji: r.powod_anulacji, kto_anulowal: r.kto_anulowal,
       sprzedaz_id: r.sprzedaz_id, rozliczenie_od: dt(r.rozliczenie_od),
+      // ślad po skasowanej pomyłce — widoczny w szczegółach i w historii klientki
+      usunieta: !!r.usunieta, usunieta_kiedy: dt(r.usunieta_kiedy), usunieta_przez: r.usunieta_przez || null, usunieta_powod: r.usunieta_powod || null,
       pozycje: poz.map(p => ({ id: p.id, kolejnosc: p.kolejnosc, usluga_id: p.usluga_id, kategoria: p.kategoria, wariant: p.wariant, cena: p.cena == null ? null : Number(p.cena), czas_min: p.czas_min, pracownik: p.pracownik, start: p.start_s, koniec: p.koniec_s, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, gabinet: p.gabinet, urzadzenie: p.urzadzenie, stan: p.stan, start_fakt: dt(p.start_fakt), koniec_fakt: dt(p.koniec_fakt), wykonawca_fakt: p.wykonawca_fakt, zakup_skladnik_id: p.zakup_skladnik_id || null, sprzedaz_id: p.sprzedaz_id })),
       wykonanie: podsumujWykonanie(poz),
     };
@@ -1412,7 +1422,7 @@ module.exports = (db, opts = {}) => {
         const warunek = idKlienta ? 'r.id_klienta = ?' : 'r.klient_nazwa = ?';
         const rows = await q(
           `SELECT r.id, r.klient_nazwa, r.id_klienta, r.status, r.obecnosc, r.kanal, r.notatka,
-                  r.powod_anulacji, r.kto_anulowal, r.sprzedaz_id,
+                  r.powod_anulacji, r.kto_anulowal, r.usunieta, r.usunieta_przez, r.usunieta_powod, DATE_FORMAT(r.usunieta_kiedy, '%Y-%m-%d %H:%i') AS usunieta_kiedy, r.sprzedaz_id,
                   DATE_FORMAT(r.start,'%Y-%m-%d %H:%i') AS start,
                   DATE_FORMAT(r.koniec,'%Y-%m-%d %H:%i') AS koniec,
                   p.kategoria, p.wariant, p.pracownik, p.wykonawca_fakt, p.stan, p.cena, p.czas_min, p.zakup_skladnik_id,
@@ -1430,7 +1440,7 @@ module.exports = (db, opts = {}) => {
           if (!w) {
             w = { id: x.id, numer: 'EST-' + String(x.id).padStart(4, '0'), start: x.start, koniec: x.koniec, status: x.status, obecnosc: x.obecnosc,
                   kanal: x.kanal, notatka: x.notatka, powod_anulacji: x.powod_anulacji, kto_anulowal: x.kto_anulowal,
-                  rozliczona: !!x.sprzedaz_id, pozycje: [] };
+                  rozliczona: !!x.sprzedaz_id, usunieta: !!x.usunieta, usunieta_przez: x.usunieta_przez || null, usunieta_powod: x.usunieta_powod || null, usunieta_kiedy: x.usunieta_kiedy || null, pozycje: [] };
             poId.set(x.id, w); wizyty.push(w);
           }
           w.pozycje.push({ kategoria: x.kategoria, wariant: x.wariant, pracownik: x.pracownik,
@@ -1439,9 +1449,10 @@ module.exports = (db, opts = {}) => {
         }
 
         const WYKONANE = new Set(['wykonana', 'przerwana']);
-        const p = { wizyt: wizyty.length, wykonane: 0, odwolane: 0, nieobecnosci: 0, wartosc: 0, zabiegi: {}, osoby: {} };
+        const p = { wizyt: wizyty.length, wykonane: 0, odwolane: 0, skasowane: 0, nieobecnosci: 0, wartosc: 0, zabiegi: {}, osoby: {} };
         for (const w of wizyty) {
-          if (['anulowana', 'odrzucona', 'wygasla'].includes(w.status)) p.odwolane++;
+          if (w.usunieta) p.skasowane++;                       // pomylka przy zapisie — nie zasmieca statystyki odwolan
+          else if (['anulowana', 'odrzucona', 'wygasla'].includes(w.status)) p.odwolane++;
           else if (w.obecnosc === 'nieobecny') p.nieobecnosci++;
           else if (w.pozycje.some(x => WYKONANE.has(x.stan))) p.wykonane++;
           for (const x of w.pozycje) {
@@ -1837,6 +1848,52 @@ module.exports = (db, opts = {}) => {
           } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
       }
+      // Skasowanie wizyty wpisanej przez pomyłkę (21.10.2026). Świadomie osobno od odwołania:
+      //  • odwołanie opisuje zdarzenie z życia salonu i zostaje w statystykach odwołań,
+      //  • skasowanie mówi „tej wizyty nie powinno tu być" i z tych statystyk wypada,
+      //    ale ślad zostaje: kto, kiedy, dlaczego — i widać go w historii klientki.
+      // Czego NIE wolno skasować: wizyty rozpoczętej, wykonanej albo rozliczonej. Tam pomyłkę
+      // naprawia się korektą, bo w grę wchodzą pieniądze i wykonana praca.
+      case 'trm_usun': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const rez = await rezerwacja(tenant, d.id);
+        if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
+        if (rez.usunieta) return { status: 'success', powtorzenie: true, rezerwacja: rez };
+        if (Number(d.wersja) !== Number(rez.wersja)) throw new BladUzytkownika('Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem.', { code: 'WERSJA', rezerwacja: rez });
+        if (rez.sprzedaz_id) throw new BladUzytkownika('Wizyta jest rozliczona w Sprzedaży — pomyłkę naprawia się korektą sprzedaży, nie kasowaniem.');
+        if (rez.pozycje.some(p => ['wykonana', 'w_trakcie', 'przerwana'].includes(p.stan))) {
+          throw new BladUzytkownika('Wizyta jest w trakcie albo wykonana — tego nie kasujemy. Użyj korekty wykonania.');
+        }
+        const powod = String(d.powod || '').trim().slice(0, 500);
+        if (powod.length < 3) throw new BladUzytkownika('Napisz krótko, dlaczego kasujesz tę wizytę (np. „pomyłka przy zapisie").');
+        const doZwolnienia = rez.pozycje.filter(p => p.stan !== 'anulowana');
+        const opisPoz = doZwolnienia.map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
+
+        const zwolnione = await wTransakcjiSalonu(tenant, async (conn, repo) => {
+          const ctx = schematV2.gotowy ? await ctxZ(tenant, imie, r) : null; let zw = 0;
+          for (const p of doZwolnienia) {
+            await qc(conn, `UPDATE Term_Pozycje SET stan = 'anulowana' WHERE tenant_id = ? AND id = ?`, [tenant, p.id]);
+            if (ctx) zw += (await Z.domena.zwolnij(repo, ctx, { pozycja_id: p.id, powod: `${rez.numer}: skasowano (pomyłka)` })).zwolniono;
+          }
+          await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
+          await qc(conn,
+            `UPDATE Term_Rezerwacje SET status = 'anulowana', usunieta = 1, usunieta_kiedy = NOW(), usunieta_przez = ?, usunieta_powod = ?,
+                    anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW()
+              WHERE tenant_id = ? AND id = ? AND wersja = ?`,
+            [imie || null, powod, imie || null, 'Skasowano: ' + powod, tenant, rez.id, rez.wersja]);
+          await historia(conn, tenant, rez.id, imie, 'usunieto', `Skasowano wizytę (${opisPoz || 'bez pozycji'}) — ${powod}${zw ? ` (do pakietu wróciło: ${zw})` : ''}`, null, { powod, zwolnione_jednostki: zw });
+          return zw;
+        });
+        // Dziennik Zdarzeń: zapis ma przetrwać nawet wtedy, gdy ktoś nie zajrzy do historii wizyty
+        zapiszLog(tenant, 'TERMINARZ: SKASOWANIE WIZYTY', imie, `${rez.numer} ${rez.klient_nazwa} ${rez.start.slice(0, 16)} (${opisPoz}) — ${powod}`);
+        // Skasowanie pomyłki nie jest sprawą do obsługi (nikogo nie trzeba przepraszać ani przekładać),
+        // ale sprawy wiszące przy tej wizycie trzeba domknąć, żeby nie zostały sierotami.
+        for (const p of doZwolnienia) await sprawaAutoZamknij(tenant, `E13:poz:${p.id}`, 'Wizyta skasowana', 'nieaktualna');
+        await sprawaAutoZamknij(tenant, `E05:${rez.id}`, 'Wizyta skasowana', 'nieaktualna');
+        await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta skasowana');
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), zwolnione_jednostki: zwolnione,
+          message: `Wizyta skasowana. Ślad został zapisany: ${imie || 'użytkownik'}, powód „${powod}".` };
+      }
       case 'trm_anuluj': {
         wymagaj(r, ROLE_OPERACYJNE);
         const rez = await rezerwacja(tenant, d.id);
@@ -2188,4 +2245,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

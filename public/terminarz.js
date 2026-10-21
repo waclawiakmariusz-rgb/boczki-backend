@@ -472,7 +472,9 @@
       const kol = kolorKat(u0);
       const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(r.status);
       const zn = [];
-      if (r.status !== 'potwierdzona') zn.push(`<span class="st">${esc(ST_LABEL[r.status] ? ST_LABEL[r.status][0] : r.status)}</span>`);
+      // Skasowana pomyłka widoczna tylko przy „pokaż anulowane" — i wtedy ma mówić prawdę o sobie.
+      if (r.usunieta) zn.push('<span class="st">Skasowana</span>');
+      else if (r.status !== 'potwierdzona') zn.push(`<span class="st">${esc(ST_LABEL[r.status] ? ST_LABEL[r.status][0] : r.status)}</span>`);
       if (r.obecnosc === 'nieobecny') zn.push('<span class="st">Nieobecna</span>'); else if (r.obecnosc === 'spozniony') zn.push('<span class="st">Spóźniona</span>');
       if (r.wykonanie === 'wykonana') zn.push(r.sprzedaz_id ? '<span class="st">Rozliczona</span>' : '<span class="st">Do rozliczenia</span>'); else if (r.wykonanie === 'w_toku') zn.push('<span class="st">W trakcie</span>'); else if (r.obecnosc === 'przybyl') zn.push('<span class="st">Przybyła</span>');
       if (r.kanal === 'online' || r.kanal === 'klub') zn.push('<span>Online</span>');
@@ -654,7 +656,7 @@
     const lista = poz.length ? poz : r.pozycje;
     const op = operacyjna();
     // jeden główny stan obsługi (T05/T06): odwołana > nieobecna > wykonana > w trakcie > przybyła > zaplanowana
-    const glowny = anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
     // rozliczenie: tylko to, co system naprawdę wie (bez fikcyjnych liczników pakietu — etap A nie śledzi jednostek zakupu)
     const zPakietu = lista.some(x => x.zakup_skladnik_id);
     const rozl = !op ? '' : (zPakietu ? `<span class="trm-pill pakiet">Z pakietu</span>` : '') + (r.sprzedaz_id ? `<span class="trm-pill ok">Rozliczona</span><span>sprzedaż ${esc(r.sprzedaz_id)}</span>` : (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo') ? `<span class="trm-pill warn">Do rozliczenia</span><span>w Sprzedaży, po wykonaniu</span>` : zPakietu ? `<span>jednostka zarezerwowana</span>` : `<span class="trm-pill neu">Rozliczenie po wykonaniu</span>`);
@@ -1082,6 +1084,7 @@
       ${histKafel('wykonanych', p.wykonane, '#15803d')}
       ${histKafel('odwołanych', p.odwolane, p.odwolane ? '#b45309' : '')}
       ${histKafel('nieobecności', p.nieobecnosci, p.nieobecnosci ? '#b91c1c' : '')}
+      ${p.skasowane ? histKafel('skasowanych (pomyłki)', p.skasowane) : ''}
       ${operacyjna() ? histKafel('wartość wykonanych', zl(p.wartosc)) : ''}
     </div>`;
     const listy = `<div class="trm-hist-listy">
@@ -1091,10 +1094,12 @@
     // Sortowanie od najnowszych do najstarszych (prośba właściciela 21.10.2026). Serwer już tak
     // oddaje dane, ale kolejność jest tu częścią umowy z użytkownikiem — pilnujemy jej na miejscu.
     const wizytyPosortowane = [...d.wizyty].sort((a, b) => String(b.start).localeCompare(String(a.start)));
-    const ETYKIETY = { wykonana: ['Odbyła się', 'ok'], planowana: ['Zaplanowana', 'info'], odwolana: ['Odwołana', 'warn'], nieobecna: ['Nieobecność', 'bad'] };
+    // „Skasowana" to osobny stan od „Odwołana": odwołanie zrobiła klientka albo salon, skasowanie
+    // to naprawa pomyłki przy zapisie. Oba zostają widoczne, ale nie znaczą tego samego.
+    const ETYKIETY = { wykonana: ['Odbyła się', 'ok'], planowana: ['Zaplanowana', 'info'], odwolana: ['Odwołana', 'warn'], nieobecna: ['Nieobecność', 'bad'], skasowana: ['Skasowana', 'neu'] };
     const os = wizytyPosortowane.map(w => {
       const anul = ['anulowana', 'odrzucona', 'wygasla'].includes(w.status);
-      const klasa = anul ? 'odwolana' : (w.obecnosc === 'nieobecny' ? 'nieobecna' : (w.pozycje.some(x => x.stan === 'wykonana' || x.stan === 'przerwana') ? 'wykonana' : 'planowana'));
+      const klasa = w.usunieta ? 'skasowana' : anul ? 'odwolana' : (w.obecnosc === 'nieobecny' ? 'nieobecna' : (w.pozycje.some(x => x.stan === 'wykonana' || x.stan === 'przerwana') ? 'wykonana' : 'planowana'));
       const poz = w.pozycje.map(x => `
         <div class="trm-hist-poz">
           <span class="nazwa">${esc(x.kategoria)}${x.wariant ? ' · ' + esc(x.wariant) : ''}</span>
@@ -1110,7 +1115,8 @@
             <div class="numer muted small">${esc(w.numer || '')}</div>
           </div>
           ${poz}
-          ${anul && w.powod_anulacji ? `<div class="uwaga">Odwołane przez ${w.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}: ${esc(w.powod_anulacji)}</div>` : ''}
+          ${w.usunieta ? `<div class="uwaga">Wizyta skasowana jako pomyłka — klientka była umówiona, ale wpis usunięto${w.usunieta_przez ? ' (' + esc(w.usunieta_przez) + ')' : ''}${w.usunieta_kiedy ? ', ' + esc(String(w.usunieta_kiedy).slice(0, 16).replace('T', ' ')) : ''}${w.usunieta_powod ? ': ' + esc(w.usunieta_powod) : ''}.</div>` : ''}
+          ${anul && !w.usunieta && w.powod_anulacji ? `<div class="uwaga">Odwołane przez ${w.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}: ${esc(w.powod_anulacji)}</div>` : ''}
           ${w.obecnosc === 'nieobecny' ? `<div class="uwaga">Klientka nie przyszła.</div>` : ''}
           ${w.notatka ? `<div class="notatka">${esc(w.notatka)}</div>` : ''}
         </div>`;
@@ -1121,6 +1127,7 @@
       <span class="poz"><i class="pr planowana"></i>zaplanowana</span>
       <span class="poz"><i class="pr odwolana"></i>odwołana</span>
       <span class="poz"><i class="pr nieobecna"></i>nieobecność</span>
+      <span class="poz"><i class="pr skasowana"></i>skasowana (pomyłka)</span>
       <span class="muted">najnowsze na górze · zakres obejmuje też wizyty zaplanowane</span>
     </div>`;
     return `${kafelki}${listy}${legenda}<div class="trm-hist-os">${os}</div>`;
@@ -1877,12 +1884,16 @@
           ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
           ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
           ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj wizytę</button>` : ''}
+          ${!r.usunieta && !r.sprzedaz_id && !r.pozycje.some(p => ['wykonana', 'w_trakcie', 'przerwana'].includes(p.stan)) ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='usun';TRM.us={powod:''};TRM.renderSzczegoly()" title="Wizyta wpisana przez pomyłkę — zniknie z kalendarza, ale ślad zostanie">Skasuj wizytę</button>` : ''}
         </div>
-        <div class="trm-pomoc">Nieobecność potwierdza człowiek — system jej nie zgaduje i nie zużywa jednostki karnetu.</div>
+        <div class="trm-pomoc">Nieobecność potwierdza człowiek — system jej nie zgaduje i nie zużywa jednostki karnetu.
+          <b>Odwołanie</b> to zdarzenie z życia salonu i zostaje w statystykach; <b>skasowanie</b> jest dla pomyłek przy zapisie — wypada ze statystyk odwołań, ale zapisuje kto, kiedy i dlaczego.</div>
       </details></div>`;
       h += `<div class="trm-card"><h3>Notatka</h3><textarea rows="2" id="trm-s-notatka">${esc(r.notatka || '')}</textarea><div class="trm-row" style="margin-top:6px"><button class="trm-btn sm fix" onclick="TRM.zapiszNotatke()">Zapisz notatkę</button></div></div>`;
     } else if (r.notatka && op) h += `<div class="trm-card"><h3>Notatka</h3><div class="small">${esc(r.notatka)}</div></div>`;
-    if (anul) h += `<div class="trm-note bad">Odwołana ${esc(hhmm(r.anulowano || ''))} ${r.anulowano ? esc(r.anulowano.slice(0, 10)) : ''} przez ${r.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}${r.anulowal ? ' (' + esc(r.anulowal) + ')' : ''}: ${esc(r.powod_anulacji || '')}. Odtworzenie to nowa rezerwacja z pełną walidacją.</div>`;
+    // Skasowana pomyłka ma własne zdanie — „odwołana przez salon" byłoby nieprawdą i myliło przy czytaniu historii.
+    if (anul && r.usunieta) h += `<div class="trm-note bad">Skasowana ${esc(String(r.usunieta_kiedy || '').slice(11, 16))} ${esc(String(r.usunieta_kiedy || '').slice(0, 10))}${r.usunieta_przez ? ' przez ' + esc(r.usunieta_przez) : ''}: ${esc(r.usunieta_powod || '')}. Wpis uznany za pomyłkę — termin wrócił do puli, a ślad został w historii klientki.</div>`;
+    else if (anul) h += `<div class="trm-note bad">Odwołana ${esc(hhmm(r.anulowano || ''))} ${r.anulowano ? esc(r.anulowano.slice(0, 10)) : ''} przez ${r.kto_anulowal === 'klient' ? 'klientkę' : 'salon'}${r.anulowal ? ' (' + esc(r.anulowal) + ')' : ''}: ${esc(r.powod_anulacji || '')}. Odtworzenie to nowa rezerwacja z pełną walidacją.</div>`;
     return h;
   }
   function rozliczenieHtml(r, s, suma, anul) {
@@ -1905,16 +1916,18 @@
     // nagłówek: klientka na pierwszym planie, numer EST-… jako informacja pomocnicza (raport T06)
     let html = `<div class="trm-panel-head"><div><h2>${esc(r.klient_nazwa)}</h2><div class="trm-numer">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b> · ${aktywne} ${aktywne === 1 ? 'zabieg' : aktywne < 5 ? 'zabiegi' : 'zabiegów'} · ${esc(r.numer)}</div></div><button class="trm-x" onclick="TRM.panelZamknij()" aria-label="Zamknij">✕</button></div>`;
     // jeden główny stan obsługi + pozostałe osie modelu słownie (dane zostają, zmienia się tylko hierarchia prezentacji)
-    const glowny = anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
     const pomoc = [];
     if (!anul && r.status !== 'potwierdzona') pomoc.push('rezerwacja: ' + (ST_LABEL[r.status] || [r.status])[0].toLowerCase());
     if (!anul && glowny !== OB_LABEL[r.obecnosc] && r.obecnosc !== 'oczekiwana') pomoc.push('obecność: ' + OB_LABEL[r.obecnosc][0].toLowerCase());
     if (!anul && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo')) pomoc.push(r.sprzedaz_id ? 'rozliczona' : 'do rozliczenia');
+    if (r.usunieta) html += `<div class="trm-note warn" style="margin:10px 0"><b>Ta wizyta została skasowana jako pomyłka.</b> Klientka <b>${esc(r.klient_nazwa)}</b> była umówiona na ${esc(ladnaData(r.start.slice(0,10)))} ${hhmm(r.start)}. Skasował(a): <b>${esc(r.usunieta_przez || "—")}</b>${r.usunieta_kiedy ? ", " + esc(String(r.usunieta_kiedy).slice(0,16).replace("T"," ")) : ""}. Powód: ${esc(r.usunieta_powod || "—")}</div>`;
     html += `<div class="trm-status-glowny">${pill(glowny)}${pomoc.length ? `<span class="pomoc">${esc(pomoc.join(' · '))}</span>` : ''}</div>`;
     html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="TRM.historiaKlientki('${esc(r.id_klienta)}')" title="Wszystkie wizyty tej klientki — odbyte i zaplanowane">Historia wizyt ↗</button>` : ''}${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
     html += prefKartaHtml(r);
     if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
     if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
+    if (s.tryb === 'usun') return panelOtworz(html + formUsuniecia());
     const karta = op ? (s.karta || 'wizyta') : 'wizyta';
     if (op) html += `<div class="trm-tabs">${[['wizyta', 'Wizyta'], ['rozliczenie', 'Rozliczenie'], ['historia', 'Historia']].map(([k, n]) => `<button class="${karta === k ? 'aktywny' : ''}" onclick="TRM.szczegolyTab('${k}')">${n}</button>`).join('')}</div>`;
     if (karta === 'rozliczenie') html += rozliczenieHtml(r, s, suma, anul);
@@ -1982,6 +1995,26 @@
       <div class="trm-note warn small"><b>Wynik przed decyzją:</b> termin zostanie zwolniony; jednostka karnetu nie jest zużyta; zadatek i ewentualna ulga za późne odwołanie rozliczane są w kartotece klientki (flaga „Odwołanie po czasie”) — terminarz nie potrąca środków sam.</div>
       <div class="trm-row"><button class="trm-btn danger" onclick="TRM.anulujPotwierdz()">Potwierdź odwołanie</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
   }
+  // Skasowanie pomyłki — osobny formularz, bo i decyzja jest inna niż przy odwołaniu.
+  function formUsuniecia() {
+    const r = TRM.szcz.rez, u = TRM.us || { powod: '' };
+    return `<div class="trm-card"><h3>Skasuj wizytę</h3>
+      <div class="trm-pomoc" style="margin-bottom:8px">Dla wizyt wpisanych przez pomyłkę. Wizyta zniknie z kalendarza i nie wejdzie do statystyk odwołań, ale <b>ślad zostanie</b>: kto skasował, kiedy i dlaczego — widać go w historii klientki i w Dzienniku Zdarzeń.</div>
+      <div class="trm-field"><label>Dlaczego kasujesz tę wizytę?</label><input id="trm-u-powod" placeholder="np. pomyłka przy zapisie, podwójny wpis" value="${esc(u.powod)}"></div>
+      <div class="trm-note warn small"><b>Wynik przed decyzją:</b> termin zostanie zwolniony, jednostka pakietu wróci do klientki, a sprawy przypisane do tej wizyty zostaną zamknięte jako nieaktualne. Jeśli klientka naprawdę odwołała wizytę — użyj <b>Odwołaj wizytę</b>, nie kasowania.</div>
+      <div class="trm-row"><button class="trm-btn danger" onclick="TRM.usunPotwierdz()">Potwierdź skasowanie</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
+  }
+  TRM.usunPotwierdz = async () => {
+    const r = TRM.szcz.rez;
+    const powod = (el('trm-u-powod') || {}).value || '';
+    if (powod.trim().length < 3) return toast('warning', 'Napisz krótko, dlaczego kasujesz', 'np. „pomyłka przy zapisie"');
+    const d = await api('trm_usun', { id: r.id, wersja: r.wersja, powod: powod.trim() });
+    if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane.'); return przeladujSzczegoly(d.rezerwacja); }
+    if (d.status !== 'success') return toast('error', 'Nie skasowano', d.message);
+    toast('success', 'Wizyta skasowana', d.message || '');
+    await przeladujSzczegoly(d.rezerwacja);
+    odswiez();
+  };
   TRM.anulujPotwierdz = async () => {
     const r = TRM.szcz.rez, a = TRM.an; a.powod = el('trm-a-powod').value.trim();
     if (!a.powod) return toast('warning', 'Podaj powód odwołania');
