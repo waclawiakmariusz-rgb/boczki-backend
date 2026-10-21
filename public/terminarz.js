@@ -1071,8 +1071,9 @@
       ${histKafel('odwołanych', p.odwolane, p.odwolane ? '#b45309' : '')}
       ${histKafel('nieobecności', p.nieobecnosci, p.nieobecnosci ? '#b91c1c' : '')}
       ${p.skasowane ? histKafel('skasowanych (pomyłki)', p.skasowane) : ''}
-      ${operacyjna() ? histKafel('wartość wykonanych', zl(p.wartosc)) : ''}
     </div>`;
+    // Kafelek „wartość wykonanych" zdjęty 21.10.2026 na polecenie właściciela: Historia ma mówić,
+    // CO się działo, a nie ile klientka wydała. Od pieniędzy jest Sprzedaż i profil klientki.
     const listy = `<div class="trm-hist-listy">
       ${p.zabiegi.length ? `<div><div class="mini">Najczęstsze zabiegi</div>${p.zabiegi.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
       ${p.osoby.length ? `<div><div class="mini">U kogo bywa</div>${p.osoby.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div>` : ''}
@@ -1129,8 +1130,8 @@
       ${histKafel('czas przy pracy', godziny + ' h' + (minuty ? ' ' + minuty + ' min' : ''))}
       ${histKafel('odwołanych', p.odwolane, p.odwolane ? '#b45309' : '')}
       ${histKafel('nieobecności', p.nieobecnosci, p.nieobecnosci ? '#b91c1c' : '')}
-      ${p.wartosc != null ? histKafel('wartość wykonanych', zl(p.wartosc)) : ''}
     </div>`;
+    // Bez kafelka „wartość wykonanych" — tak samo jak w historii klientki (21.10.2026).
     const zabiegi = p.zabiegi.length ? `<div class="trm-hist-listy"><div><div class="mini">Co robi najczęściej</div>${p.zabiegi.map(x => `<div class="poz"><span>${esc(x.nazwa)}</span><b>${x.ile}×</b></div>`).join('')}</div></div>` : '';
     const dni = d.dni.map(dz => `
       <div class="trm-hist-dzien">
