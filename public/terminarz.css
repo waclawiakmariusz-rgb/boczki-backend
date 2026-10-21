@@ -655,3 +655,14 @@ body.dark-mode .trm .trm-awatar.blue { background:#233648; color:#9cc6e8; }
 .trm-bubble-notatka svg { width:13px; height:13px; flex:0 0 auto; margin-top:1px; color:#b45309; }
 body.dark-mode .trm .trm-bubble-notatka { background:#392d15; border-color:#6b5423; border-left-color:#d9a441; color:#f0dcb6; }
 body.dark-mode .trm .trm-bubble-notatka svg { color:#ffc46b; }
+
+/* Ostrzeżenie pod polem „Wykonawca dla wszystkich zabiegów" (zgłoszenie #10, 21.10.2026):
+   wybrana osoba nie wykonuje części zabiegów, więc dobierzemy kogoś innego — mówimy to wprost,
+   zamiast po cichu podmieniać wykonawcę. */
+.trm-pref-uwaga { margin-top:6px; padding:8px 10px; border-radius:var(--t-rs); font-size:12.5px; line-height:1.5;
+  background:#fff8ed; border:1px solid #f0d9ae; border-left:3px solid #d9a441; color:#6b4f1d; }
+.trm-pref-uwaga b { color:#5a3f12; }
+.trm-pref-uwaga .trm-btn.link { color:#9a6b12; }
+body.dark-mode .trm .trm-pref-uwaga { background:#392d15; border-color:#6b5423; border-left-color:#d9a441; color:#f0dcb6; }
+body.dark-mode .trm .trm-pref-uwaga b { color:#ffe2ad; }
+body.dark-mode .trm .trm-pref-uwaga .trm-btn.link { color:#ffc46b; }

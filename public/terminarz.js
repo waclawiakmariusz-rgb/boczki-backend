@@ -1164,6 +1164,35 @@
   }
   // Krok 3 (raport T01/T04): data zawsze jawna, wolne godziny jako przyciski, dostępność sprawdzana automatycznie
   // po każdej istotnej zmianie (bez ręcznego „Sprawdź komplet”), 4 stany: czekam / ok / zajęty / błąd.
+  // Zgłoszenie #10 (Gosia, recepcja, 20.10.2026): „jest w dwóch miejscach wykonawca, nie rozumiem
+  // dlaczego — Julia wykona usługę, a wykonawca to Dominika". Pole niżej NIE jest wykonawcą wizyty,
+  // tylko ustawieniem hurtowym: wstawia wybraną osobę przy każdym zabiegu, ale wyłącznie tam, gdzie
+  // wolno jej go wykonywać (lista „Kto wykonuje zabieg?" przy usłudze). Przy pozostałych zabiegach
+  // po cichu wracało „ktokolwiek" i silnik dobierał kogo innego — a w polu dalej widniała wybrana
+  // osoba. Stąd wrażenie dwóch wykonawców. Teraz mówimy to wprost, zamiast kazać się domyślać.
+  function uslugiPozaZasiegiem(n) {
+    if (!n.prefPrac) return [];
+    const nazwy = n.pozycje
+      .filter(p => { const u = usluga(p.usluga_id); return u && u.pracownicy && u.pracownicy.length && !u.pracownicy.includes(n.prefPrac); })
+      .map(p => nazwaUslugi(usluga(p.usluga_id)));
+    return [...new Set(nazwy)];
+  }
+
+  // Komunikat pod polem: co się naprawdę stanie z wyborem. Manager dostaje skrót do przypisania
+  // osoby do usługi, recepcja — zdanie, kogo o to poprosić (sama tego nie zmieni).
+  function prefOstrzezenieHtml(n) {
+    const zle = uslugiPozaZasiegiem(n);
+    if (!zle.length) return '';
+    const kto = esc(n.prefPrac);
+    const lista = esc(zle.join(', '));
+    const pierwsza = n.pozycje.find(p => { const u = usluga(p.usluga_id); return u && u.pracownicy && u.pracownicy.length && !u.pracownicy.includes(n.prefPrac); });
+    const link = manager() && pierwsza
+      ? ` <button class="trm-btn link sm" onclick="TRM.panelZamknij();TRM.ust.tab='uslugi';TRM.ust.uslWybrana='${esc(String(pierwsza.usluga_id)).replace(/'/g, "\\'")}';TRM.widokZmien('ustawienia')">Przypisz ${kto} do tego zabiegu →</button>`
+      : ' <span class="muted">Przypisanie osoby do zabiegu ustawia manager w Ustawieniach → Usługi.</span>';
+    return `<div class="trm-pref-uwaga">⚠ <b>${kto}</b> nie wykonuje ${zle.length === 1 ? 'zabiegu' : 'zabiegów'}: <b>${lista}</b>.
+      Ten ${zle.length === 1 ? 'zabieg wykona' : 'zabiegi wykona'} osoba dobrana automatycznie — zobaczysz ją niżej, po wybraniu godziny.${link}</div>`;
+  }
+
   function sekcjaTerminuHtml(n) {
     const prac = TRM.dane.pracownicy;
     const dost = n.dostep || {}, st = dost.stan;
@@ -1195,7 +1224,7 @@
     const innaOtwarta = n.innaGodzina || (sloty && Array.isArray(sloty) && sloty.length && !sloty.some(s => s.start.slice(0, 16) === n.start));
     return `<div class="trm-grid2">
         <div class="trm-field"><label>Data wizyty</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
-        <div class="trm-field"><label>Wykonawca</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
+        <div class="trm-field"><label>Wykonawca dla wszystkich zabiegów</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>${prefOstrzezenieHtml(n)}</div>
       </div>
       <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}</div>
       <details class="trm-wiecej" ${innaOtwarta ? 'open' : ''} ontoggle="TRM.nowa&&(TRM.nowa.innaGodzina=this.open)"><summary>Inna godzina</summary><div class="trm-field"><label>Godzina rozpoczęcia</label><input type="time" id="trm-n-godz" step="300" value="${n.godzina ? n.start.slice(11, 16) : ''}" onchange="TRM.nowaStart()"></div></details>
@@ -1222,7 +1251,9 @@
     nowaRysujPropozycje();
   }
   function renderNowaSzybka(n, lista) {
-    return naglowekPanelu('Nowa wizyta', `${esc(ladnaData(n.start.slice(0, 10)))}${n.domyslny ? ' · ' + esc(n.domyslny) : ''}`)
+    // „· DominikaR" w nagłówku brzmiało jak wykonawca wizyty, a to tylko kolumna, w którą kliknięto
+    // (zgłoszenie #10). Nazywamy rzecz po imieniu — wykonawcę ustawia się niżej, przy zabiegach.
+    return naglowekPanelu('Nowa wizyta', `${esc(ladnaData(n.start.slice(0, 10)))}${n.domyslny ? ' · z kolumny ' + esc(n.domyslny) : ''}`)
       + sekcjaKlientHtml(n) + sekcjaUslugiHtml(n, lista) + sekcjaTerminuHtml(n) + stopkaNowej(n);
   }
   function renderNowaKreator(n, lista) {
