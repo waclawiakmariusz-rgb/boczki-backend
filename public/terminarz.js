@@ -481,7 +481,7 @@
       const pozIdsCsv = poz.map(x => x.id).join(',');
       const krotka = (b - a) < 40, mini = (b - a) < 20; // D01: 20–39 min = 2 linie (godzina·klientka / usługa), <20 min = 1 linia
       s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
-        ${znakNotatki(r)}${znakPreferencji(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
+        ${znakNotatki(r)}${znakPreferencji(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}${poz.some(p => p.pierwsza) ? ' <span class="trm-pierwsza">1. wizyta</span>' : ''}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
       </div>`;
     });
     return `<div class="trm-col" data-prac="${dragPrac ? esc(dragPrac) : ''}" style="height:${h * PX}px" ${klik ? `onclick="${klik}"` : ''}>${s}<div id="trm-teraz-slot"></div></div>`;
@@ -1204,6 +1204,17 @@
     n.zakupy = d && d.status === 'success' ? d.zakupy : Object.assign([], { blad: true }); n.zakupyBezMapowania = d ? d.bez_mapowania : 0;
     renderNowa();
   }
+  // Historia wybranych zabiegów u tej klientki (#12b). Jedno żądanie na zmianę wyboru, nie na zabieg.
+  async function nowaLadujHistorie() {
+    const n = TRM.nowa; if (!n) return;
+    const kategorie = [...new Set(n.pozycje.map(p => { const u = usluga(p.usluga_id); return u ? u.kategoria : null; }).filter(Boolean))];
+    if (!n.klient || !kategorie.length) { if (n.hist) { n.hist = null; renderNowa(); } return; }
+    const req = n.reqHist = (n.reqHist || 0) + 1;
+    let d; try { d = await api('trm_pierwsza_wizyta', { id_klienta: n.klient.id_klienta, kategorie }); } catch (e) { d = null; }
+    if (TRM.nowa !== n || req !== n.reqHist) return;
+    n.hist = d && d.status === 'success' ? d.historia : null;
+    renderNowa();
+  }
   TRM.nowaDodajZZakupu = (sklId) => {
     const n = TRM.nowa; if (!n || !n.zakupy) return;
     let z = null, s = null; n.zakupy.forEach(x => x.skladniki.forEach(y => { if (y.id === sklId) { z = x; s = y; } })); if (!s) return;
@@ -1240,13 +1251,23 @@
       </div>`; }).join('')}${bez}</div>`;
   }
   TRM.nowaOdswiezZakupy = () => nowaLadujZakupy();
+  // Zgłoszenie #12b: przy każdym zabiegu mówimy, czy klientka ma go po raz pierwszy. Liczone na żywo
+  // na serwerze (wizyty wykonane + sprzedaż), więc po nieobecności oznaczenie samo wraca na kolejny termin.
+  function historiaZabieguHtml(n, u) {
+    if (!n.klient || !u || !n.hist) return '';
+    const h = n.hist[u.kategoria];
+    if (!h) return '';
+    if (!h.ile) return `<div class="trm-hist-zab pierwsza">✦ Pierwsza wizyta na „${esc(u.kategoria)}" — klientka nie miała tego zabiegu ani w terminarzu, ani w sprzedaży.</div>`;
+    return `<div class="trm-hist-zab">Była już ${h.ile}× na „${esc(u.kategoria)}"${h.ostatnia ? ' · ostatnio ' + esc(ladnaData(h.ostatnia, true)) : ''}</div>`;
+  }
+
   function sekcjaUslugiHtml(n, lista) {
     const skonf = TRM.dane.uslugi.filter(u => u.skonfigurowana && u.aktywna);
     const kontrola = TRM.dane.ustawienia && TRM.dane.ustawienia.kontrola_zakupow === 'on';
     return `<div class="trm-field"><label>Usługi i wykonawcy</label>
       ${n.pozycje.map((p, i) => { const u = usluga(p.usluga_id); return `<div class="trm-wybrana"><div class="trm-row"><b>${esc(nazwaUslugi(u))}</b>${p.zakup_skladnik_id ? `<span class="trm-pill pakiet fix">Z pakietu${p.zakup_nazwa ? ': ' + esc(p.zakup_nazwa) : ''}</span>` : ''}<span class="fix muted small">${u.cena != null && !p.zakup_skladnik_id ? zl(u.cena) : ''}</span><button class="trm-btn link sm fix" onclick="TRM.nowaUsunPoz(${i})">usuń</button></div>
         <div class="r"><select onchange="TRM.nowa.pozycje[${i}].pracownik=this.value||null;TRM.nowaUniewaznij()"><option value="">Dowolna właściwa osoba</option>${(u.pracownicy && u.pracownicy.length ? u.pracownicy : TRM.dane.pracownicy).map(x => `<option ${p.pracownik === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-        <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div></div>`; }).join('')}
+        <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div>${historiaZabieguHtml(n, u)}</div>`; }).join('')}
     </div>
     ${zakupyKlientkiHtml(n)}
     ${kontrola ? (n.klient ? `<div class="trm-pomoc">Nowy zakup (pojedynczy zabieg lub pakiet) zarejestruj w <b>Sprzedaży</b> — po zapisaniu pojawi się tutaj.</div>` : '') : `<div class="trm-field"><label>Pojedynczy zabieg z cennika</label>
@@ -1372,12 +1393,12 @@
   TRM.renderNowaUslugi = () => { const fr = (TRM.nowa.filtrUsl || '').toLowerCase(); const l = el('trm-usl-lista'); if (l) l.innerHTML = listaUslugHtml(TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60)); };
   let szukajT = null;
   TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = klientWynikiHtml(TRM.nowa.wyniki); } }, 250); };
-  TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
+  TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
   // czy krok „Termin” jest aktualnie widoczny (tryb szybki pokazuje wszystko na raz)
   const nowaNaTerminie = (n) => n && (n.szybka || n.krok === 3);
   const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; };
-  TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
-  TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUniewaznij = () => { const n = TRM.nowa; if (!n) return; nowaResetDostep(n); const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaPrefPrac = (v) => { const n = TRM.nowa; if (!n) return; n.prefPrac = v || ''; n.pozycje.forEach(p => { const u = usluga(p.usluga_id); p.pracownik = v && (!u || !u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(v)) ? v : null; }); nowaResetDostep(n); renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(); };
   TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.godzina = true; n.dataReczna = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };

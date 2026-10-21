@@ -478,6 +478,71 @@ module.exports = (db, opts = {}) => {
     return q(`SELECT id, typ, nazwa, pojemnosc, aktywny, kolejnosc, zarchiwizowano FROM Term_Zasoby WHERE tenant_id = ? ${tylkoAktywne ? 'AND aktywny = 1 AND zarchiwizowano IS NULL' : ''} ORDER BY typ, kolejnosc, nazwa`, [tenant]);
   }
 
+  /**
+   * Ile razy klientka miała już dany zabieg — z DWÓCH źródeł, bo Terminarz działa od niedawna,
+   * a salon ma historię w Sprzedaży (zgłoszenie #12b). Zwraca mapę: kategoria → { ile, ostatnia, zrodlo }.
+   * Liczymy tylko to, co się ODBYŁO: wizyty ze stanem „wykonana" i sprzedaże (bez zwrotów).
+   * Nic nie zapisujemy — dzięki temu nieobecność na pierwszym terminie sama przenosi „1. wizytę"
+   * na kolejny. `przed` (opcjonalne) ogranicza liczenie do zdarzeń wcześniejszych niż dana chwila.
+   */
+  async function historiaZabiegow(tenant, idKlienta, kategorie, przed) {
+    const wynik = {};
+    kategorie.forEach(k => { wynik[k] = { ile: 0, ostatnia: null, zrodlo: null }; });
+    if (!idKlienta || !kategorie.length) return wynik;
+    const luki = kategorie.map(() => '?').join(',');
+    const dodaj = (kat, ile, ostatnia, zrodlo) => {
+      const w = wynik[kategorie.find(k => k.toLowerCase() === String(kat || '').toLowerCase()) || kat];
+      if (!w) return;
+      w.ile += Number(ile) || 0;
+      if (ostatnia && (!w.ostatnia || ostatnia > w.ostatnia)) { w.ostatnia = ostatnia; w.zrodlo = zrodlo; }
+    };
+    const [zTerminarza, zeSprzedazy] = await Promise.all([
+      q(`SELECT p.kategoria AS kat, COUNT(*) AS ile, DATE_FORMAT(MAX(r.start),'%Y-%m-%d') AS ostatnia
+           FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.tenant_id = p.tenant_id AND r.id = p.rezerwacja_id
+          WHERE p.tenant_id = ? AND r.id_klienta = ? AND p.stan = 'wykonana' AND p.kategoria IN (${luki})
+            ${przed ? 'AND r.start < ?' : ''}
+          GROUP BY p.kategoria`, przed ? [tenant, idKlienta, ...kategorie, przed] : [tenant, idKlienta, ...kategorie]),
+      q(`SELECT zabieg AS kat, COUNT(*) AS ile, DATE_FORMAT(MAX(data_sprzedazy),'%Y-%m-%d') AS ostatnia
+           FROM Sprzedaz
+          WHERE tenant_id = ? AND id_klienta = ? AND zwrot_do_id IS NULL AND zabieg IN (${luki})
+            ${przed ? 'AND data_sprzedazy < ?' : ''}
+          GROUP BY zabieg`, przed ? [tenant, idKlienta, ...kategorie, przed] : [tenant, idKlienta, ...kategorie]),
+    ]);
+    zTerminarza.forEach(x => dodaj(x.kat, x.ile, x.ostatnia, 'terminarz'));
+    zeSprzedazy.forEach(x => dodaj(x.kat, x.ile, x.ostatnia, 'sprzedaz'));
+    return wynik;
+  }
+
+  /**
+   * Dopisuje pozycjom dnia flagę `pierwsza` (zgłoszenie #12b) — dwa zapytania na CAŁY dzień,
+   * nie jedno na wizytę. Granica: początek dnia, więc wizyta jest „pierwsza", gdy przed tym dniem
+   * klientka nie miała tego zabiegu ani wykonanego w Terminarzu, ani kupionego w Sprzedaży.
+   */
+  async function oznaczPierwszeWizyty(tenant, rezerwacje, dzien) {
+    const klienci = new Set(), kategorie = new Set();
+    (rezerwacje || []).forEach(r => { if (!r.id_klienta) return; (r.pozycje || []).forEach(p => { if (!p.kategoria) return; klienci.add(String(r.id_klienta)); kategorie.add(String(p.kategoria)); }); });
+    if (!klienci.size || !kategorie.size) return;
+    const kl = [...klienci].slice(0, 200), kat = [...kategorie].slice(0, 100);
+    const lk = kl.map(() => '?').join(','), lkat = kat.map(() => '?').join(',');
+    const granica = dzien + ' 00:00:00';
+    let byly = new Set();
+    try {
+      const [zTerm, zSprz] = await Promise.all([
+        q(`SELECT r.id_klienta AS k, p.kategoria AS kat
+             FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.tenant_id = p.tenant_id AND r.id = p.rezerwacja_id
+            WHERE p.tenant_id = ? AND p.stan = 'wykonana' AND r.start < ? AND r.id_klienta IN (${lk}) AND p.kategoria IN (${lkat})
+            GROUP BY r.id_klienta, p.kategoria`, [tenant, granica, ...kl, ...kat]),
+        q(`SELECT id_klienta AS k, zabieg AS kat FROM Sprzedaz
+            WHERE tenant_id = ? AND data_sprzedazy < ? AND zwrot_do_id IS NULL AND id_klienta IN (${lk}) AND zabieg IN (${lkat})
+            GROUP BY id_klienta, zabieg`, [tenant, granica, ...kl, ...kat]),
+      ]);
+      byly = new Set([...zTerm, ...zSprz].map(x => String(x.k) + '|' + String(x.kat || '').toLowerCase()));
+    } catch (e) { log.error('[terminarz] pierwsze wizyty:', e.message); return; }   // oznaczenie jest dodatkiem, nie może położyć widoku dnia
+    (rezerwacje || []).forEach(r => (r.pozycje || []).forEach(p => {
+      if (r.id_klienta && p.kategoria) p.pierwsza = !byly.has(String(r.id_klienta) + '|' + String(p.kategoria).toLowerCase());
+    }));
+  }
+
   /** Usługi z cennika (Uslugi) złączone z konfiguracją terminarza. */
   async function uslugi(tenant) {
     const rows = await q(`SELECT u.id, u.kategoria, u.wariant, u.cena, u.typ_zabiegu, t.czas_min, t.bufor_przed_min, t.bufor_po_min, t.bufor_dotyczy, t.wymaga_gabinet, t.gabinety_json, t.urzadzenia_json, t.pracownicy_json, t.aktywna, t.wersja AS konfig_wersja, tz.kolor, tz.ikona
@@ -1184,12 +1249,26 @@ module.exports = (db, opts = {}) => {
       }
 
       // ───────── odczyt ─────────
+      // Zgłoszenie #12b (Gosia, 20.10.2026): „warto, aby Estelio samo stwierdzało, czy ktoś miał już
+      // umówioną taką wizytę… gdy ktoś nie zjawi się na pierwszej, drugi termin będzie pierwszą wizytą".
+      // Liczymy NA ŻYWO, nic nie zapisując: wtedy nieobecność sama przesuwa oznaczenie na kolejny termin.
+      // „Już była" = wizyta WYKONANA w Terminarzu albo sprzedaż tego zabiegu w Sprzedaży (zabiegi sprzed
+      // Terminarza i wpisywane ręcznie też się liczą — inaczej stała klientka dostałaby „1. wizyta").
+      case 'trm_pierwsza_wizyta': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const idKlienta = String(d.id_klienta || '').slice(0, 50);
+        const kategorie = (Array.isArray(d.kategorie) ? d.kategorie : []).map(x => String(x || '').trim()).filter(Boolean).slice(0, 20);
+        if (!idKlienta || !kategorie.length) return { status: 'success', historia: {} };
+        const hist = await historiaZabiegow(tenant, idKlienta, kategorie, d.przed ? String(d.przed).slice(0, 19) : null);
+        return { status: 'success', historia: hist };
+      }
       case 'trm_dzien': {
         const data = sprawdzData(d.data, 'data');
         const cfg = await wspolneCfg(tenant);
         const k = await kontekstDnia(tenant, data, cfg, null);
         let lista = await rezerwacjeZakres(tenant, data, data, ROLE_SPECJALISTA.has(r) && d.tylko_moje ? imie : null, null);
         lista = lista.map(x => maskuj(x, r, imie));
+        await oznaczPierwszeWizyty(tenant, lista, data);     // #12b: „1. wizyta" na kafelku
         const dostep = {}; Object.keys(k.dostepnoscPracownikow).forEach(p => { dostep[p] = k.dostepnoscPracownikow[p].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
         const dostepZas = {}; Object.keys(k.dostepnoscZasobow).forEach(z => { dostepZas[z] = k.dostepnoscZasobow[z].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
         return { status: 'success', data, teraz: cfg.terazStr, rezerwacje: lista, dostepnosc: dostep, dostepnosc_zasobow: dostepZas, salon: k.salon.map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })), nieobecnosci: k.nieobecnosci.map(n => ({ ...n, do: n.do_ })), zajecia: ROLE_OPERACYJNE.has(r) ? k.zajete : [] };
@@ -2070,8 +2149,10 @@ module.exports = (db, opts = {}) => {
   }
 
   router.sprawdzSchemat = sprawdzSchemat; router.sprawdzSchematV2 = sprawdzSchematV2; // do testów kontraktu (jest): wymuszenie sprawdzenia schematów na atrapie bazy
+  // „1. wizyta" (#12b) — wystawione do prób jednostkowych: to reguła biznesowa, nie detal widoku.
+  router._historiaZabiegow = historiaZabiegow; router._oznaczPierwszeWizyty = oznaczPierwszeWizyty;
   return router;
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
