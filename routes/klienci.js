@@ -19,6 +19,15 @@ module.exports = (db) => {
     return new Promise((res, rej) => db.query(sql, params, (e, r) => e ? rej(e) : res(r)));
   }
 
+  // Adres e-mail klientki — jedno miejsce decydujące o tym, co w ogóle wolno uznać za adres.
+  // W Rejestrze RODO pole bywa wypełnione słowami („nie dotyczy", „brak"), więc sam niepusty
+  // tekst to za mało: wiadomość o wizycie ma trafić do właściwej osoby albo do nikogo.
+  const RE_EMAIL = /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/i;
+  const czystyEmail = (v) => {
+    const s = String(v == null ? '' : v).trim().toLowerCase();
+    return RE_EMAIL.test(s) ? s : null;
+  };
+
   // Idempotentna migracja: znacznik bonu podarunkowego na zadatku.
   // W salonie bon podarunkowy jest zapisywany jako zadatek — bez tej kolumny nie da się
   // go odróżnić od zwykłej zaliczki na zabieg. Znacznik decyduje, czy wolno przepisać
@@ -30,6 +39,22 @@ module.exports = (db) => {
         console.error('[klienci] ALTER Zadatki.bon:', err.message);
       }
     }
+  );
+
+  // Idempotentna migracja (21.10.2026): adres e-mail klientki w kartotece.
+  // Dotąd adresów w kartotece NIE BYŁO — leżały wyłącznie w Rejestrze RODO (pole „e-mail
+  // kontaktowy"), czyli w rejestrze zgód, do którego recepcja nie zagląda przy zwykłej pracy.
+  // Powiadomienia o wizytach muszą mieć jedno, pewne źródło adresu, które da się poprawić
+  // w karcie klientki — stąd te dwie kolumny:
+  //   email      — adres do potwierdzeń i przypomnień o wizycie,
+  //   bez_maili  — „nie chcę wiadomości o wizytach"; ma pierwszeństwo przed wszystkim innym.
+  db.query(
+    `ALTER TABLE Klienci ADD COLUMN email VARCHAR(255) NULL`,
+    (err) => { if (err && !/Duplicate column/i.test(err.message)) console.error('[klienci] ALTER Klienci.email:', err.message); }
+  );
+  db.query(
+    `ALTER TABLE Klienci ADD COLUMN bez_maili TINYINT(1) NOT NULL DEFAULT 0`,
+    (err) => { if (err && !/Duplicate column/i.test(err.message)) console.error('[klienci] ALTER Klienci.bez_maili:', err.message); }
   );
 
   // Idempotentna migracja: jednorazowa "ulga" na odwołanie zabiegu po czasie regulaminowym
@@ -110,7 +135,7 @@ module.exports = (db) => {
       // zmian (testy mockują sekwencyjnie). NULL = brak wpisu RODO; wpis bez wartości
       // = 'NIE'. Filtr „Zgoda na publikację" w Kartotece (prośba recepcji 2026-09-30).
       db.query(
-        `SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.rodo, K.osw, K.status, K.ostrzezenie, K.zmarly, K.data_zgonu, K.data_usuniecia, K.kto_usunal, K.powod_usuniecia, K.odwolanie_ulga, K.odwolanie_ulga_data,
+        `SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.email, K.bez_maili, K.rodo, K.osw, K.status, K.ostrzezenie, K.zmarly, K.data_zgonu, K.data_usuniecia, K.kto_usunal, K.powod_usuniecia, K.odwolanie_ulga, K.odwolanie_ulga_data,
                 (SELECT COALESCE(R.wizerunek, 'NIE') FROM Rejestr_RODO R WHERE R.tenant_id = K.tenant_id AND R.id_klienta = K.id_klienta ORDER BY R.data_podpisu DESC LIMIT 1) AS wizerunek
            FROM Klienci K WHERE K.tenant_id = ? ${filtrStatus} ORDER BY K.imie_nazwisko`,
         [tenant_id],
@@ -129,6 +154,8 @@ module.exports = (db) => {
                 id: r.id_klienta,
                 nazwa: r.imie_nazwisko,
                 telefon: r.telefon || '',
+                email: r.email || '',                       // 21.10.2026: adres do powiadomień o wizytach
+                bez_maili: Number(r.bez_maili || 0),        // „nie chcę wiadomości o wizytach"
                 rodo: r.rodo && (r.rodo.toUpperCase() === 'TAK' || r.rodo === '1' || r.rodo === 'TRUE'),
                 osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE'),
                 dodatkowe: dodMap.get(String(r.id_klienta)) || 0,
@@ -577,9 +604,10 @@ module.exports = (db) => {
         // a zapisany z prefiksem numer później nie zgadza się z tym, który klientka
         // podaje sama w apce Klubu. Kartoteka ma być zawsze "gołym" numerem.
         const telefonCzysty = normalizujTelefon(d.telefon);
+        const emailCzysty = czystyEmail(d.email);
         db.query(
-          `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki) VALUES (?, ?, ?, ?, ?, NOW(), ?, ?)`,
-          [id, tenant_id, String(noweId), d.klient, telefonCzysty, tekstZgody, 'Dodano przez: ' + (d.pracownik || '')],
+          `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, email, data_rejestracji, zgody_rodo_reg, notatki) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
+          [id, tenant_id, String(noweId), d.klient, telefonCzysty, emailCzysty, tekstZgody, 'Dodano przez: ' + (d.pracownik || '')],
           (err) => {
             if (err) return res.json({ status: 'error', message: err.message });
 
@@ -634,7 +662,7 @@ module.exports = (db) => {
 
     } else if (action === 'edit_client_data') {
       db.query(
-        `SELECT id_klienta, imie_nazwisko, telefon, notatki FROM Klienci WHERE tenant_id = ? AND id_klienta = ?`,
+        `SELECT id_klienta, imie_nazwisko, telefon, email, bez_maili, notatki FROM Klienci WHERE tenant_id = ? AND id_klienta = ?`,
         [tenant_id, d.id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono klienta o ID: ' + d.id });
@@ -654,10 +682,27 @@ module.exports = (db) => {
           if (nowyTelefonCzysty && String(row.telefon) !== nowyTelefonCzysty) {
             zmianyOpis.push(`Tel: "${row.telefon}" -> "${nowyTelefonCzysty}"`);
           }
+          // E-mail: puste pole = świadome skasowanie adresu, wpis niebędący adresem odrzucamy
+          // (inaczej do kartoteki wróciłoby „nie dotyczy" z Rejestru RODO). Zmiana adresu idzie
+          // do notatek i do Dziennika — to dane kontaktowe klientki, nie drobiazg.
+          const podanoEmail = Object.prototype.hasOwnProperty.call(d, 'nowy_email');
+          const nowyEmail = podanoEmail ? czystyEmail(d.nowy_email) : (row.email || null);
+          const pusteEmailem = podanoEmail && !String(d.nowy_email || '').trim();
+          if (podanoEmail && !pusteEmailem && !nowyEmail) {
+            return res.json({ status: 'error', message: 'To nie wygląda na adres e-mail. Popraw albo zostaw pole puste.' });
+          }
+          const emailDoZapisu = pusteEmailem ? null : nowyEmail;
+          if (podanoEmail && String(row.email || '') !== String(emailDoZapisu || '')) {
+            zmianyOpis.push(`E-mail: "${row.email || '—'}" -> "${emailDoZapisu || '—'}"`);
+            const wpis = `[SYSTEM]: zmiana adresu e-mail (${teraz})`;
+            noweNotatki = noweNotatki ? noweNotatki + '\n' + wpis : wpis;
+          }
+          const bezMaili = Object.prototype.hasOwnProperty.call(d, 'bez_maili') ? (d.bez_maili ? 1 : 0) : (row.bez_maili ? 1 : 0);
+          if (Number(row.bez_maili || 0) !== bezMaili) zmianyOpis.push(bezMaili ? 'Wiadomości o wizytach: WYŁĄCZONE' : 'Wiadomości o wizytach: włączone');
 
           db.query(
-            `UPDATE Klienci SET imie_nazwisko = ?, telefon = ?, notatki = ? WHERE tenant_id = ? AND id_klienta = ?`,
-            [d.nowa_nazwa, nowyTelefonCzysty || row.telefon, noweNotatki, tenant_id, d.id],
+            `UPDATE Klienci SET imie_nazwisko = ?, telefon = ?, email = ?, bez_maili = ?, notatki = ? WHERE tenant_id = ? AND id_klienta = ?`,
+            [d.nowa_nazwa, nowyTelefonCzysty || row.telefon, emailDoZapisu, bezMaili, noweNotatki, tenant_id, d.id],
             (err2) => {
               if (err2) return res.json({ status: 'error', message: err2.message });
               if (zmianyOpis.length > 0) zapiszLog(tenant_id, 'EDYCJA DANYCH KLIENTA', d.pracownik || 'Admin', `ID ${d.id}: ${zmianyOpis.join(' | ')}`);
@@ -1056,6 +1101,56 @@ module.exports = (db) => {
           }
         );
       });
+
+    } else if (action === 'klienci_migruj_maile') {
+      // Jednorazowe przeniesienie adresów z Rejestru RODO do kartoteki (21.10.2026).
+      // Adresy klientek istniały tylko w rejestrze zgód — wysyłka powiadomień o wizytach
+      // potrzebuje ich w karcie klientki, gdzie recepcja może je poprawić.
+      //
+      // Zasady, bo to dane kontaktowe prawdziwych osób:
+      //  • bierzemy wyłącznie wpisy wyglądające na adres (w rejestrze bywa „nie dotyczy"),
+      //  • NIE nadpisujemy adresu już wpisanego w kartotece — ręczna poprawka jest ważniejsza,
+      //  • przy kilku wpisach RODO jednej klientki bierzemy najnowszy podpis,
+      //  • domyślnie tylko LICZYMY (podgląd); zapis dopiero przy wykonaj=true.
+      const wykonaj = d.wykonaj === true || d.wykonaj === 'true';
+      const kto = d.pracownik || d.user_log || '';
+      db.query(
+        `SELECT K.id_klienta, K.imie_nazwisko, K.email AS obecny,
+                (SELECT R.email_kontaktowy FROM Rejestr_RODO R
+                  WHERE R.tenant_id = K.tenant_id AND R.id_klienta = K.id_klienta AND R.email_kontaktowy LIKE '%@%.%'
+                  ORDER BY R.data_podpisu DESC LIMIT 1) AS z_rodo
+           FROM Klienci K
+          WHERE K.tenant_id = ? AND (K.status = 'AKTYWNY' OR K.status IS NULL)`,
+        [tenant_id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          const doPrzeniesienia = (rows || []).filter(r => {
+            const nowy = czystyEmail(r.z_rodo);
+            return nowy && !String(r.obecny || '').trim();
+          });
+          const podglad = doPrzeniesienia.slice(0, 5).map(r => ({ klient: r.imie_nazwisko, email: czystyEmail(r.z_rodo) }));
+          if (!wykonaj) {
+            return res.json({ status: 'success', tryb: 'podglad', sprawdzonych: (rows || []).length, do_przeniesienia: doPrzeniesienia.length, przyklady: podglad,
+              message: `Do przeniesienia: ${doPrzeniesienia.length} ${doPrzeniesienia.length === 1 ? 'adres' : 'adresów'}. Nic jeszcze nie zapisano.` });
+          }
+          if (!doPrzeniesienia.length) return res.json({ status: 'success', tryb: 'zapis', przeniesiono: 0, message: 'Nie ma czego przenosić.' });
+          let zrobione = 0, bledy = 0, zostalo = doPrzeniesienia.length;
+          doPrzeniesienia.forEach(r => {
+            db.query(
+              `UPDATE Klienci SET email = ? WHERE tenant_id = ? AND id_klienta = ? AND (email IS NULL OR TRIM(email) = '')`,
+              [czystyEmail(r.z_rodo), tenant_id, r.id_klienta],
+              (e2, wynik) => {
+                if (e2) bledy++; else zrobione += (wynik && wynik.affectedRows) ? 1 : 0;
+                if (--zostalo === 0) {
+                  zapiszLog(tenant_id, 'MIGRACJA ADRESÓW', kto, `Przeniesiono z Rejestru RODO do kartoteki: ${zrobione}${bledy ? `, błędów: ${bledy}` : ''}`);
+                  return res.json({ status: 'success', tryb: 'zapis', przeniesiono: zrobione, bledy,
+                    message: `Przeniesiono ${zrobione} ${zrobione === 1 ? 'adres' : 'adresów'} do kartoteki.` });
+                }
+              }
+            );
+          });
+        }
+      );
 
     } else if (action === 'set_warning') {
       // ⚠️ Klient problematyczny (BAN) — flaga ostrzeżenia, NIE soft-delete

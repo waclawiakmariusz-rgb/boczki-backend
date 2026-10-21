@@ -737,4 +737,124 @@ async function wyslijMailWprowadzajacy({ email, nazwa_salonu, mail }) {
   };
 }
 
-module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie, wyslijMailWprowadzajacy, zbudujMailWprowadzajacy };
+module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wyslijWitamy, wyslijPotwierdzeniZgloszenia, wyslijKontakt, wyslijOstrzezenieOPlatnosci, powiadomAdminaOFailedPayment, powiadomAdminaOZakupie, powiadomAdminaORejestracji, wyslijPrzypomnienieLink, wyslijPrzypomnienieStart, powiadomAdminaOTickecie, wyslijMailWprowadzajacy, zbudujMailWprowadzajacy, wyslijMailWizyty, zbudujMailWizyty };
+
+// ─── Powiadomienia o wizycie dla KLIENTEK salonu (21.10.2026) ────────────────────────────────
+// Stylistyka serii wprowadzającej (jasny nagłówek z logo, karta z treścią, jeden przycisk),
+// ale nadawcą i podpisem jest SALON, nie Estelio: klientka salonu nie zna naszej marki,
+// a wiadomość od nieznanego nadawcy ląduje w spamie albo w koszu.
+//   • nadawca:  „Boczki na bok" <kontakt@estelio.com.pl>   (nazwa salonu, adres techniczny nasz)
+//   • odpowiedz: adres salonu z licencji — żeby odpowiedź klientki trafiła tam, gdzie ktoś ją przeczyta
+//   • stopka:   nazwa, adres i telefon salonu + zdanie o rezygnacji
+const DNI_TYG = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+const MIESIACE_PL = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+function dataPoPolsku(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(iso || ''));
+  if (!m) return String(iso || '');
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return `${DNI_TYG[d.getDay()]}, ${Number(m[3])} ${MIESIACE_PL[Number(m[2]) - 1]} ${m[1]}`;
+}
+
+function zbudujMailWizyty({ salon, wizyta, typ }) {
+  const s = salon || {};
+  const w = wizyta || {};
+  const przypomnienie = typ === 'przypomnienie';
+  const nazwaSalonu = s.nazwa || 'Salon';
+  const zabiegi = (w.pozycje || []).map(p => {
+    const nazwa = [p.kategoria, p.wariant].filter(Boolean).join(' · ');
+    const kto = p.pracownik ? ` — ${p.pracownik}` : '';
+    return `<tr>
+        <td style="padding:6px 0; font-size:13.5px; color:#6f655e; white-space:nowrap; vertical-align:top;">${p.od || w.godzina}–${p.do_ || w.koniec}</td>
+        <td style="padding:6px 0 6px 14px; font-size:13.5px; color:#1c1a18; font-weight:600;">${nazwa}<span style="font-weight:400; color:#6f655e;">${kto}</span></td>
+      </tr>`;
+  }).join('') || `<tr><td style="padding:6px 0; font-size:13.5px; color:#6f655e;">${w.godzina || ''}–${w.koniec || ''}</td><td style="padding:6px 0 6px 14px; font-size:13.5px;">wizyta</td></tr>`;
+
+  const naglowek = przypomnienie ? 'Przypominamy o jutrzejszej wizycie' : 'Wizyta umówiona';
+  const wstep = przypomnienie
+    ? `Do zobaczenia jutro. Gdyby coś się zmieniło, daj nam znać najszybciej jak możesz — termin przejmie wtedy ktoś z listy oczekujących.`
+    : `Dziękujemy za umówienie wizyty. Poniżej szczegóły — zachowaj tę wiadomość, żeby mieć je pod ręką.`;
+
+  const kontakt = [s.telefon ? `tel. ${s.telefon}` : null, s.email ? s.email : null].filter(Boolean).join(' · ');
+
+  const tresc = `
+      <h2 style="margin:0 0 14px; font-size:21px; color:#1c1a18; font-weight:600; font-family:Georgia,'Times New Roman',serif;">${naglowek}</h2>
+      <p style="margin:0 0 20px; font-size:14px; color:#6f655e; line-height:1.75;">${wstep}</p>
+
+      <table border="0" cellspacing="0" cellpadding="0" width="100%" style="margin:0 0 22px; border:1px solid #ece4dc; border-radius:10px; background:#fcfaf8;">
+        <tr><td style="padding:18px 20px;">
+          <p style="margin:0 0 2px; font-size:11px; letter-spacing:1.2px; text-transform:uppercase; color:#a89e96;">Termin</p>
+          <p style="margin:0 0 14px; font-size:19px; color:#1c1a18; font-weight:700; font-family:Georgia,serif;">${dataPoPolsku(w.dzien)}, godz. ${w.godzina || ''}</p>
+          <table border="0" cellspacing="0" cellpadding="0" width="100%">${zabiegi}</table>
+          ${s.adres ? `<p style="margin:14px 0 0; font-size:13px; color:#6f655e;">Miejsce: <b style="color:#1c1a18;">${nazwaSalonu}</b>, ${s.adres}</p>` : ''}
+        </td></tr>
+      </table>
+
+      <p style="margin:0 0 6px; font-size:13.5px; color:#6f655e; line-height:1.75;">
+        <b style="color:#1c1a18;">Nie możesz przyjść?</b> Odpisz na tę wiadomość${s.telefon ? ` albo zadzwoń: <b style="color:#1c1a18;">${s.telefon}</b>` : ''}.
+        Im wcześniej wiemy, tym łatwiej znaleźć inny termin dla Ciebie i obsadzić ten.
+      </p>`;
+
+  const stopka = `
+      <p style="font-size:11px; color:#a89e96; margin:0;">${nazwaSalonu}${s.adres ? ' · ' + s.adres : ''}</p>
+      ${kontakt ? `<p style="font-size:11px; color:#a89e96; margin:6px 0 0;">${kontakt}</p>` : ''}
+      <p style="font-size:11px; color:#a89e96; margin:10px 0 0;">Dostajesz tę wiadomość, bo masz umówioną wizytę w naszym salonie.
+        Nie chcesz takich powiadomień? Odpisz jednym słowem „stop" albo powiedz nam przy najbliższej wizycie.</p>`;
+
+  return emailWrapperJasnySalon(nazwaSalonu, przypomnienie ? 'Przypomnienie o wizycie' : 'Potwierdzenie wizyty', tresc, stopka);
+}
+
+// Ten sam jasny szablon co seria wprowadzająca, ale z podpisem salonu w stopce.
+function emailWrapperJasnySalon(nazwaSalonu, podtytul, tresc, stopka) {
+  return `<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${podtytul}</title>
+</head>
+<body style="margin:0; padding:24px; background:#f8f5f1; font-family:'Segoe UI',Arial,sans-serif;">
+  <div style="max-width:560px; margin:0 auto; background:#ffffff; border-radius:16px; overflow:hidden; border:1px solid #ece4dc; box-shadow:0 4px 20px rgba(28,26,24,0.06);">
+
+    <div style="background:#ffffff; padding:30px 40px 20px; text-align:center; border-bottom:1px solid #f1eae2;">
+      <p style="margin:0; font-size:22px; color:#1c1a18; font-weight:600; font-family:Georgia,'Times New Roman',serif; letter-spacing:.3px;">${nazwaSalonu}</p>
+      <p style="color:#a89e96; margin:10px 0 0; font-size:11px; letter-spacing:1.4px; text-transform:uppercase;">${podtytul}</p>
+    </div>
+
+    <div style="padding:30px 40px 34px;">
+      ${tresc}
+    </div>
+
+    <div style="background:#faf7f4; border-top:1px solid #f1eae2; padding:18px 40px; text-align:center;">
+      ${stopka}
+    </div>
+
+  </div>
+</body>
+</html>`;
+}
+
+async function wyslijMailWizyty({ email, salon, wizyta, typ }) {
+  const transport = createTransport();
+  const s = salon || {};
+  const html = zbudujMailWizyty({ salon: s, wizyta, typ });
+  const przypomnienie = typ === 'przypomnienie';
+  const kiedy = `${dataPoPolsku((wizyta || {}).dzien)}, godz. ${(wizyta || {}).godzina || ''}`;
+  const temat = przypomnienie ? `Przypomnienie o wizycie — ${kiedy}` : `Potwierdzenie wizyty — ${kiedy}`;
+  // Nadawca podpisany salonem; odpowiedź leci do salonu, a gdy salon nie ma adresu — na naszą
+  // skrzynkę kontaktową, żeby odpowiedź klientki nigdy nie trafiła w próżnię.
+  const nazwa = String(s.nazwa || 'Salon').replace(/["<>\r\n]/g, ' ').trim();
+  const wynik = await transport.sendMail({
+    from: `"${nazwa}" <${stripQuotes(process.env.SMTP_USER)}>`,
+    to: email,
+    replyTo: s.email || ADMIN_EMAIL(),
+    subject: temat,
+    html,
+    text: htmlDoTekstu(html),
+  });
+  return {
+    messageId: (wynik && wynik.messageId) || null,
+    odpowiedz: (wynik && wynik.response) || null,
+    przyjete: (wynik && wynik.accepted) || [],
+    odrzucone: (wynik && wynik.rejected) || [],
+  };
+}

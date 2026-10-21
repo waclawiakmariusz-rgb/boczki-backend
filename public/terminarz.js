@@ -2012,12 +2012,13 @@
   // ── USTAWIENIA (E16/E17/E18/E19 — zakres etapu A) ──────────────────────
   function renderUstawienia() {
     if (!manager()) { el('trm-main').innerHTML = '<div class="trm-note bad">Ustawienia terminarza zmienia manager lub właściciel.</div>'; return; }
-    const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ...((TRM.dane.ustawienia || {}).zakupy_integracja === 'on' ? [['pakiety', 'Pakiety i zakupy']] : []), ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady']];
+    const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ...((TRM.dane.ustawienia || {}).zakupy_integracja === 'on' ? [['pakiety', 'Pakiety i zakupy']] : []), ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady'], ['maile', 'Powiadomienia e-mail']];
     const t = tabs.some(x => x[0] === TRM.ust.tab) ? TRM.ust.tab : 'ogolne'; TRM.ust.tab = t; // zakładka niedostępna (np. zakupy przy wyłączonej integracji) → Godziny i zasady
     let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ustTab('${k}')">${n}</button>`).join('')}</div>`;
     TRM.ust.brudne = false;
-    html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, pakiety: ustPakiety, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob })[t]();
+    html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, pakiety: ustPakiety, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob, maile: ustMaile })[t]();
     el('trm-main').innerHTML = html;
+    if (t === 'maile') TRM.maileWczytaj();
     if (t === 'nieobecnosci') TRM.nieobZmiana(true); // podgląd skutków od razu dla domyślnie wypełnionego formularza
     if (t === 'pakiety' && !TRM.ust.oferty) ustPakietyZaladuj();
     if (t === 'grafik' && TRM.ust.dzien) ustDzienPodglad();
@@ -2503,6 +2504,92 @@
     }, natychmiast ? 0 : 400);
   };
   function nieobOdswiez() { const p = el('trm-nb-podglad'); if (p) p.innerHTML = nieobPodgladHtml(); const b = el('trm-nb-zapisz'); if (b) { const s = TRM.ust.nieobPodglad; b.textContent = s && s.stan === 'wynik' && s.dotkniete.length ? 'Zapisz blokadę i przejdź do wizyt' : 'Zapisz blokadę'; } }
+  // ─── Ustawienia → Powiadomienia e-mail (21.10.2026) ───────────────────────────────────────────
+  // Decyzja o pisaniu do klientek należy do salonu, więc przełącznik stoi tutaj, a nie w naszym
+  // panelu. Pokazujemy wprost dwie rzeczy, które łatwo przeoczyć: ile klientek ma w kartotece
+  // adres (bez adresu nikt nic nie dostanie) i czy wysyłka jest w ogóle włączona po naszej stronie.
+  function ustMaile() {
+    const m = TRM.ust.maile;
+    if (!m) return `<div class="trm-card"><div class="muted">⏳ Wczytuję ustawienia…</div></div>`;
+    if (m.blad) return `<div class="trm-card"><div class="trm-note bad">Nie udało się wczytać ustawień: ${esc(m.blad)}</div></div>`;
+    const u = m.ustawienia, p = m.pokrycie || {};
+    const bezAdresu = Math.max(0, (p.wszystkie || 0) - (p.z_adresem || 0));
+    const globalnie = m.tryb_globalny;
+    return `<div class="trm-card">
+      <h3>Powiadomienia e-mail dla klientek</h3>
+      <div class="trm-pomoc" style="margin-bottom:12px">Dwie wiadomości: <b>potwierdzenie</b> zaraz po umówieniu wizyty i <b>przypomnienie</b> dzień wcześniej. Wysyłamy wyłącznie na adres z karty klientki — nigdy z innego źródła.</div>
+
+      ${globalnie !== 'on' ? `<div class="trm-note warn" style="margin-bottom:12px">Wysyłka jest teraz wstrzymana po stronie Estelio (tryb: <b>${esc(globalnie)}</b>). Ustawienia możesz zapisać — zaczną działać, gdy wysyłka zostanie włączona.</div>` : ''}
+
+      <label class="trm-switch-wiersz" style="display:flex;align-items:center;gap:10px;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="trm-m-on" ${u.wlaczone ? 'checked' : ''} style="width:20px;height:20px">
+        <span><b>Wysyłaj powiadomienia o wizytach</b></span>
+      </label>
+      <div style="margin-left:30px">
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer"><input type="checkbox" id="trm-m-potw" ${u.potwierdzenia ? 'checked' : ''} style="width:18px;height:18px"> Potwierdzenie zaraz po umówieniu</label>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="trm-m-przyp" ${u.przypomnienia ? 'checked' : ''} style="width:18px;height:18px"> Przypomnienie dzień przed wizytą</label>
+        <div class="trm-field" style="max-width:260px"><label>O której wysyłać przypomnienie</label>
+          <select id="trm-m-godz">${Array.from({ length: 24 }, (_, h) => `<option value="${h}" ${u.godzina === h ? 'selected' : ''}>${String(h).padStart(2, '0')}:00</option>`).join('')}</select>
+          <div class="trm-pomoc">Wieczorem dnia poprzedniego klientka ma czas odwołać rano, a Wy zdążycie obsadzić termin.</div>
+        </div>
+      </div>
+
+      <div class="trm-note" style="margin:12px 0">
+        <b>Do ilu klientek to dotrze:</b> ${p.z_adresem || 0} z ${p.wszystkie || 0} ma adres e-mail w kartotece${bezAdresu ? `, ${bezAdresu} nie ma go wcale` : ''}${p.bez_zgody ? `, ${p.bez_zgody} poprosiło o brak wiadomości` : ''}.
+        Adres uzupełnia się w karcie klientki (Klienci → profil → Edytuj dane).
+      </div>
+
+      <div class="trm-row" style="gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div class="trm-field" style="flex:1 1 240px;margin:0"><label>Wyślij próbnie na adres</label><input id="trm-m-test" type="email" placeholder="twoj@adres.pl" value="${esc(m.salon && m.salon.email ? m.salon.email : '')}"></div>
+        <button class="trm-btn fix" onclick="TRM.maileProba('potwierdzenie')">Próbka: potwierdzenie</button>
+        <button class="trm-btn fix" onclick="TRM.maileProba('przypomnienie')">Próbka: przypomnienie</button>
+      </div>
+      <div class="trm-pomoc" style="margin-top:6px">Próbka idzie na wskazany adres z przykładową wizytą — żadna klientka jej nie dostanie.</div>
+
+      <div class="trm-stopka"><span class="muted small fix">Nadawca: <b>${esc((m.salon && m.salon.nazwa) || 'Salon')}</b>${m.salon && m.salon.email ? ` · odpowiedzi trafią na ${esc(m.salon.email)}` : ''}</span><button class="trm-btn primary" onclick="TRM.maileZapisz()">Zapisz ustawienia</button></div>
+    </div>
+
+    <div class="trm-card" style="margin-top:12px">
+      <h3>Dziennik wysyłek</h3>
+      <div class="trm-pomoc" style="margin-bottom:10px">Każda wiadomość z datą, adresem i potwierdzeniem serwera pocztowego — to odpowiedź na „nie dostałam żadnego maila".</div>
+      ${!m.dziennik ? '<div class="muted small">⏳ Wczytuję…</div>' : (!m.dziennik.length ? '<div class="muted small">Jeszcze nic nie wysłano.</div>' : `<table class="trm-table"><thead><tr><th>Kiedy</th><th>Klientka</th><th>Adres</th><th>Rodzaj</th><th>Wynik</th></tr></thead><tbody>
+        ${m.dziennik.map(x => `<tr>
+          <td>${esc(String(x.kiedy).replace('T', ' ').slice(0, 16))}</td>
+          <td>${esc(x.klient || '—')}</td>
+          <td>${esc(x.email)}</td>
+          <td>${x.typ === 'przypomnienie' ? 'przypomnienie' : x.typ === 'proba' ? 'próbka' : 'potwierdzenie'}</td>
+          <td>${x.status === 'wyslany' ? '<span style="color:#15803d;font-weight:600">✓ wysłane</span>' : `<span style="color:#b91c1c;font-weight:600">✕ błąd</span> <span class="muted small">${esc(String(x.blad || '').slice(0, 60))}</span>`}</td>
+        </tr>`).join('')}</tbody></table>`)}
+    </div>`;
+  }
+  TRM.maileWczytaj = async () => {
+    TRM.ust.maile = null;
+    const d = await api('trm_maile_ustawienia', {});
+    if (!d || d.status !== 'success') { TRM.ust.maile = { blad: (d && d.message) || 'brak odpowiedzi' }; TRM.widokZmien('ustawienia'); return; }
+    TRM.ust.maile = { ...d, dziennik: null };
+    TRM.widokZmien('ustawienia');
+    const dz = await api('trm_maile_dziennik', { limit: 20 });
+    if (TRM.ust.maile) { TRM.ust.maile.dziennik = (dz && dz.wiersze) || []; TRM.widokZmien('ustawienia'); }
+  };
+  TRM.maileZapisz = async () => {
+    const d = await api('trm_maile_ustawienia', {
+      zapisz: true,
+      wlaczone: el('trm-m-on').checked,
+      potwierdzenia: el('trm-m-potw').checked,
+      przypomnienia: el('trm-m-przyp').checked,
+      godzina: Number(el('trm-m-godz').value),
+    });
+    if (!d || d.status !== 'success') return toast('error', 'Nie zapisano ustawień', (d && d.message) || '');
+    toast('success', d.ustawienia.wlaczone ? 'Powiadomienia o wizytach włączone' : 'Powiadomienia wyłączone');
+    TRM.maileWczytaj();
+  };
+  TRM.maileProba = async (typ) => {
+    const adres = (el('trm-m-test') || {}).value || '';
+    const d = await api('trm_maile_proba', { email: adres.trim(), typ });
+    toast(d && d.status === 'success' ? 'success' : 'error', d && d.status === 'success' ? 'Próbka wysłana' : 'Nie wysłano próbki', (d && d.message) || '');
+    if (d && d.status === 'success') TRM.maileWczytaj();
+  };
+
   function ustNieob() {
     const n = TRM.dane.nieobecnosci || [], zas = TRM.dane.zasoby.filter(z => z.aktywny && !z.zarchiwizowano);
     const gab = zas.filter(z => z.typ === 'gabinet'), urz = zas.filter(z => z.typ === 'urzadzenie');

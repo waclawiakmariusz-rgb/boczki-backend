@@ -54,6 +54,10 @@ module.exports = (db, opts = {}) => {
   const router = express.Router();
   const log = opts.log || console;
   const zapiszLog = makeZapiszLog(db);
+  // Powiadomienia e-mail o wizytach (21.10.2026) — tworzone leniwie, żeby test jednostkowy
+  // Terminarza nie musiał znać modułu poczty, a brak poczty nie blokował umawiania wizyt.
+  let serwisMailiWizyt = null;
+  const maileWizyt = () => (serwisMailiWizyt || (serwisMailiWizyt = require('./maile-wizyt')(db, { log })));
   const hasFeature = opts.hasFeature || require('./features').makeHasFeature(db);
   const q = (sql, params = []) => new Promise((resolve, reject) => db.query(sql, params, (e, r) => (e ? reject(e) : resolve(r))));
   const polacz = () => new Promise((resolve, reject) => db.getConnection((err, conn) => (err ? reject(err) : resolve(conn))));
@@ -1254,6 +1258,32 @@ module.exports = (db, opts = {}) => {
       // Liczymy NA ŻYWO, nic nie zapisując: wtedy nieobecność sama przesuwa oznaczenie na kolejny termin.
       // „Już była" = wizyta WYKONANA w Terminarzu albo sprzedaż tego zabiegu w Sprzedaży (zabiegi sprzed
       // Terminarza i wpisywane ręcznie też się liczą — inaczej stała klientka dostałaby „1. wizyta").
+      // ─── Powiadomienia e-mail o wizytach (21.10.2026) ────────────────────────────────────────
+      // Ustawienia widzi i zmienia wyłącznie manager: to decyzja o pisaniu do klientek salonu.
+      case 'trm_maile_ustawienia': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const m = maileWizyt();
+        if (d.zapisz) await m.zapiszUstawienia(tenant, { wlaczone: !!d.wlaczone, potwierdzenia: d.potwierdzenia !== false, przypomnienia: d.przypomnienia !== false, godzina: d.godzina }, imie);
+        const ust = await m.ustawienia(tenant);
+        const s = await m.salon(tenant);
+        // Ile klientek w ogóle da się powiadomić — bez tej liczby przełącznik niewiele mówi.
+        const [pokrycie] = await q(
+          `SELECT COUNT(*) AS wszystkie,
+                  SUM(email IS NOT NULL AND email LIKE '%@%.%') AS z_adresem,
+                  SUM(bez_maili = 1) AS bez_zgody
+             FROM Klienci WHERE tenant_id = ? AND (status = 'AKTYWNY' OR status IS NULL)`, [tenant]);
+        return { status: 'success', ustawienia: ust, tryb_globalny: m._TRYB(), salon: s,
+          pokrycie: { wszystkie: Number(pokrycie.wszystkie || 0), z_adresem: Number(pokrycie.z_adresem || 0), bez_zgody: Number(pokrycie.bez_zgody || 0) } };
+      }
+      case 'trm_maile_proba': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        const wynik = await maileWizyt().probka(tenant, d.email, d.typ, imie);
+        return { status: 'success', message: `Wysłano próbnie na ${wynik.email}.`, ...wynik };
+      }
+      case 'trm_maile_dziennik': {
+        wymagaj(r, ROLE_MANAGER_PLUS);
+        return { status: 'success', wiersze: await maileWizyt().dziennik({ tenant, szukaj: d.szukaj, limit: d.limit }) };
+      }
       case 'trm_pierwsza_wizyta': {
         wymagaj(r, ROLE_OPERACYJNE);
         const idKlienta = String(d.id_klienta || '').slice(0, 50);
@@ -1737,6 +1767,9 @@ module.exports = (db, opts = {}) => {
         });
         if (wyn.status !== 'success' || wyn.powtorzenie) return wyn;
         zapiszLog(tenant, 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})`);
+        // Potwierdzenie e-mail dla klientki (21.10.2026) — w tle i z własnym try/catch:
+        // wizyta jest już zapisana i żaden problem z pocztą nie może tego cofnąć ani opóźnić.
+        try { maileWizyt().potwierdzenieWTle(tenant, wyn.rezId, imie); } catch (e) { log.error('[terminarz] potwierdzenie e-mail:', e.message); }
         return { status: 'success', rezerwacja: await rezerwacja(tenant, wyn.rezId), przerwy_min: wyn.w.przerwy_min, ostrzezenia: wyn.ostrzezenia || [] };
       }
       case 'trm_zmien': {
@@ -2155,4 +2188,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

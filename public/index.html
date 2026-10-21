@@ -15292,7 +15292,14 @@ function otworzProfil(idKlienta) {
     const idRow = document.getElementById('profil-id-row');
     if (idRow) idRow.textContent = 'ID: ' + klientObj.id;
     const telRow = document.getElementById('profil-tel-row');
-    if (telRow) telRow.innerHTML = tel ? '📞 ' + tel : '<span style="color:#8c8fa1;">Brak telefonu</span>';
+    // Adres e-mail obok telefonu (21.10.2026): recepcja ma od razu widzieć, czy klientka dostanie
+    // potwierdzenie i przypomnienie o wizycie — i czy sama tych wiadomości nie wyłączyła.
+    const mail = klientObj.email && klientObj.email !== 'undefined' ? String(klientObj.email) : null;
+    const bezMaili = !!Number(klientObj.bez_maili || 0);
+    const mailHtml = bezMaili
+        ? '<span style="color:#b45309;" title="Klientka nie chce wiadomości o wizytach">🔕 bez wiadomości o wizytach</span>'
+        : (mail ? '✉️ ' + escHtml(mail) : '<span style="color:#8c8fa1;">Brak adresu e-mail</span>');
+    if (telRow) telRow.innerHTML = (tel ? '📞 ' + tel : '<span style="color:#8c8fa1;">Brak telefonu</span>') + ' &nbsp;·&nbsp; ' + mailHtml;
 
     // Alarm BAN + badge statusu (USUNIETY/ZANONIMIZOWANY/ZMARLY)
     if (typeof aktualizujAlarmKlienta === 'function') aktualizujAlarmKlienta();
@@ -22480,6 +22487,7 @@ function toggleMobileMenu() {
 function otworzPopupNowyKlient() {
     document.getElementById('nk_nazwa').value = "";
     document.getElementById('nk_telefon').value = ""; // Reset telefonu
+    if (document.getElementById('nk_email')) document.getElementById('nk_email').value = "";
     document.getElementById('nk_zgoda').checked = false;
     
     // Reset alertu duplikatów
@@ -22560,6 +22568,7 @@ function zapiszNowegoKlienta(e) {
             tryb: 'FULL',
             klient: nazwa,
             telefon: tel, // Wysyłamy telefon do backendu
+            email: (document.getElementById('nk_email') ? document.getElementById('nk_email').value.trim() : ''),
             data_podpisu: dataPodpisu,
             zgoda_regulamin: zgoda, // true (podpisal) lub false (nie podpisal)
             pracownik: currentUser,
@@ -24021,7 +24030,12 @@ function otworzEdycjeKlienta() {
     document.getElementById('cek_nazwa').value = nazwa;
     
     // Tutaj trafi numer telefonu wprost z bazy
-    document.getElementById('cek_telefon').value = telefon; 
+    document.getElementById('cek_telefon').value = telefon;
+
+    // E-mail i zgoda na wiadomości o wizytach (21.10.2026)
+    const kDane = (window.wszyscyKlienciDane || []).find(x => String(x.id) === String(id)) || {};
+    document.getElementById('cek_email').value = kDane.email || '';
+    document.getElementById('cek_bez_maili').checked = !!Number(kDane.bez_maili || 0);
 
     // Otwieramy okno
     document.getElementById('client-edit-modal-overlay').style.display = 'flex';
@@ -24048,7 +24062,9 @@ function zapiszEdycjeKlienta(e) {
             action: 'edit_client_data',
             id: id,
             nowa_nazwa: nowaNazwa,
-            nowy_telefon: nowyTelefon
+            nowy_telefon: nowyTelefon,
+            nowy_email: document.getElementById('cek_email').value.trim(),
+            bez_maili: document.getElementById('cek_bez_maili').checked
         })
     })
     .then(r => r.json())
@@ -31305,6 +31321,11 @@ initTheme();
             
             <label style="font-size:12px; color:#64748b;">Numer telefonu (opcjonalnie):</label>
             <input type="text" id="nk_telefon" class="form-control" placeholder="np. 500 123 456" style="margin-bottom:15px;">
+            <!-- 21.10.2026: adres od razu przy zakładaniu karty — na niego idzie potwierdzenie
+                 wizyty i przypomnienie dzień wcześniej. Pole nieobowiązkowe. -->
+            <label style="font-size:12px; color:#475569; font-weight:bold; display:block; margin-bottom:5px;">Adres e-mail (opcjonalnie):</label>
+            <input type="email" id="nk_email" class="form-control" placeholder="np. anna.nowak@poczta.pl" style="margin-bottom:5px;">
+            <p style="font-size:11px; color:#64748b; margin:0 0 15px;">Na ten adres klientka dostanie potwierdzenie wizyty i przypomnienie dzień wcześniej.</p>
             <div id="nk_duplikat_alert" style="display:none; background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; padding: 10px; border-radius: 6px; margin-bottom: 15px; font-size: 13px; line-height: 1.4;"></div>
 
             <div style="background:#f0f9ff; padding:15px; border:1px solid #bae6fd; border-radius:8px; margin-bottom:20px;">
@@ -32341,6 +32362,21 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
             <div style="margin-bottom:20px;">
                 <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:5px;">Numer Telefonu:</label>
                 <input type="text" id="cek_telefon" class="modern-form-control">
+            </div>
+
+            <!-- Adres e-mail w kartotece (21.10.2026): jedyne źródło adresu dla potwierdzeń
+                 i przypomnień o wizycie. Wcześniej adresy leżały tylko w Rejestrze RODO. -->
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px; font-weight:bold; color:#475569; display:block; margin-bottom:5px;">Adres e-mail:</label>
+                <input type="email" id="cek_email" class="modern-form-control" placeholder="np. anna.nowak@poczta.pl">
+                <p style="font-size:11px; color:#64748b; margin-top:4px;">Na ten adres pójdzie potwierdzenie wizyty i przypomnienie dzień wcześniej. Puste pole = bez wiadomości.</p>
+            </div>
+
+            <div style="margin-bottom:20px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:13px; color:#475569; cursor:pointer;">
+                    <input type="checkbox" id="cek_bez_maili" style="width:18px; height:18px;">
+                    Klientka nie chce wiadomości o wizytach
+                </label>
             </div>
 
             <div style="background:#f8fafc; padding:10px; border-radius:8px; border:1px solid #e2e8f0; font-size:11px; color:#64748b; margin-bottom:20px;">

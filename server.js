@@ -80,7 +80,10 @@ app.use((req, res, next) => {
 // Rate limiting — ogólny limit na całe API
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,        // okno 1 minuta
-    max: 120,                    // max 120 zapytań / minutę z jednego IP
+    // 120 zapytań/minutę z jednego IP. Wartość z env tylko po to, żeby środowisko testowe
+    // (headless + pełny start aplikacji = kilkadziesiąt zapytań w kilka sekund) nie wpadało
+    // w limit podczas prób. Produkcja zostaje przy 120 — brak zmiennej = dotychczasowe zachowanie.
+    max: Math.max(10, parseInt(process.env.API_RATE_LIMIT, 10) || 120),
     standardHeaders: true,
     legacyHeaders: false,
     message: { status: 'error', message: 'Zbyt wiele zapytań. Spróbuj za chwilę.' },
@@ -408,6 +411,15 @@ try {
   console.error('[maile-wprow] nie wystartowano:', e.message);
 }
 
+// Powiadomienia o wizytach dla KLIENTEK salonu (21.10.2026): potwierdzenie przy umówieniu
+// i przypomnienie dzień wcześniej. MAILE_WIZYT = off (DOMYŚLNIE) | proba | on, a do tego
+// osobny przełącznik per salon — oba muszą być włączone, żeby cokolwiek wyszło.
+try {
+  require('./routes/maile-wizyt')(db).start();
+} catch (e) {
+  console.error('[maile-wizyt] nie wystartowano:', e.message);
+}
+
 // ==========================================
 // REJESTR BŁĘDÓW — każdy błąd API trafia do Dziennika Zdarzeń
 // ==========================================
@@ -667,7 +679,7 @@ app.post('/api', async (req, res) => {
     // Mapowanie akcji na route handlery
     const magazynActions = ['update', 'add', 'add_model', 'delete', 'restore', 'edit_product', 'edit_dictionary_entry', 'delete_dictionary_entry', 'hide_reorder', 'unhide_reorder'];
     const sprzedazActions = ['add_sale', 'edit_sale', 'delete_sale', 'add_zwrot', 'add_sales_def', 'add_multi_sale', 'emergency_edit_sale', 'add_discount_def', 'delete_employee', 'delete_service', 'edit_service', 'extend_karnet', 'close_karnet', 'reopen_karnet', 'suspend_karnet', 'suspend_all_karnety'];
-    const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule', 'soft_delete_client', 'anonymize_client', 'mark_deceased', 'set_warning', 'clear_warning', 'restore_client', 'mark_retail_proposed', 'unmark_retail_proposed', 'ds_pomin', 'ds_przywroc', 'ds_przypisz_zadatek', 'set_odwolanie_ulga', 'clear_odwolanie_ulga'];
+    const klienciActions = ['add_client', 'add_client_fast_sales', 'edit_client_data', 'save_client_memo', 'manage_deposit', 'merge_deposits', 'add_suggestion_rule', 'delete_suggestion_rule', 'soft_delete_client', 'anonymize_client', 'mark_deceased', 'set_warning', 'clear_warning', 'restore_client', 'mark_retail_proposed', 'unmark_retail_proposed', 'ds_pomin', 'ds_przywroc', 'ds_przypisz_zadatek', 'set_odwolanie_ulga', 'clear_odwolanie_ulga', 'klienci_migruj_maile'];
     const rodoActions = ['save_rodo', 'update_consents'];
     const urodzinyActions = ['add_birthday', 'edit_birthday', 'update_birthday_status', 'update_birthday_comment', 'update_birthday_field'];
     const retencjaActions = ['save_retention'];
