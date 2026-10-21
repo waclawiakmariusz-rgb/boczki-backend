@@ -80,10 +80,19 @@ app.use((req, res, next) => {
 // Rate limiting — ogólny limit na całe API
 const apiLimiter = rateLimit({
     windowMs: 60 * 1000,        // okno 1 minuta
-    // 120 zapytań/minutę z jednego IP. Wartość z env tylko po to, żeby środowisko testowe
-    // (headless + pełny start aplikacji = kilkadziesiąt zapytań w kilka sekund) nie wpadało
-    // w limit podczas prób. Produkcja zostaje przy 120 — brak zmiennej = dotychczasowe zachowanie.
-    max: Math.max(10, parseInt(process.env.API_RATE_LIMIT, 10) || 120),
+    // 21.10.2026: limit liczony per IP wywalał się w salonie, bo recepcja, manager i tablet
+    // wychodzą do internetu jednym adresem — licznik jednego stanowiska zabierał budżet pozostałym.
+    // Teraz kluczem jest IP + token sesji: każde stanowisko ma własny licznik, a żądania bez sesji
+    // (czyli logowanie i ruch anonimowy) nadal dzielą pulę po IP.
+    // Wartość: start aplikacji to ~22 zapytania, przejście po widokach Terminarza kolejne ~10,
+    // więc 300/min daje zapas na normalną pracę i wciąż ucina zapętlenie (po wpadce z zakładką
+    // powiadomień, która potrafiła wystrzelić 349 zapytań w kilka sekund).
+    max: Math.max(10, parseInt(process.env.API_RATE_LIMIT, 10) || 300),
+    keyGenerator: (req) => {
+        const token = req.headers['x-session-token'] || (req.body && req.body.session_token) || '';
+        const ip = (typeof rateLimit.ipKeyGenerator === 'function') ? rateLimit.ipKeyGenerator(req) : (req.ip || '');
+        return token ? ip + '|' + String(token).slice(0, 16) : ip;
+    },
     standardHeaders: true,
     legacyHeaders: false,
     message: { status: 'error', message: 'Zbyt wiele zapytań. Spróbuj za chwilę.' },

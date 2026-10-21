@@ -2053,7 +2053,7 @@
     TRM.ust.brudne = false;
     html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, pakiety: ustPakiety, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob, maile: ustMaile })[t]();
     el('trm-main').innerHTML = html;
-    if (t === 'maile') TRM.maileWczytaj();
+    if (t === 'maile' && !TRM.ust.maile && !TRM.ust.maileLaduje) TRM.maileWczytaj();   // bez tego warunku render i pobieranie napedzaja sie wzajemnie
     if (t === 'nieobecnosci') TRM.nieobZmiana(true); // podgląd skutków od razu dla domyślnie wypełnionego formularza
     if (t === 'pakiety' && !TRM.ust.oferty) ustPakietyZaladuj();
     if (t === 'grafik' && TRM.ust.dzien) ustDzienPodglad();
@@ -2597,15 +2597,25 @@
         </tr>`).join('')}</tbody></table>`)}
     </div>`;
   }
+  // UWAGA na pętlę (wpadka 21.10.2026): przerysowanie Ustawień samo wywołuje wczytanie tej zakładki,
+  // więc KAŻDE `widokZmien('ustawienia')` w środku tej funkcji startowało ją od nowa — 349 zapytań
+  // w kilka sekund i komunikat „Zbyt wiele zapytań" u użytkownika. Dlatego: jedna blokada na czas
+  // pobierania i JEDEN render dopiero po komplecie danych.
   TRM.maileWczytaj = async () => {
-    TRM.ust.maile = null;
-    const d = await api('trm_maile_ustawienia', {});
-    if (!d || d.status !== 'success') { TRM.ust.maile = { blad: (d && d.message) || 'brak odpowiedzi' }; TRM.widokZmien('ustawienia'); return; }
-    TRM.ust.maile = { ...d, dziennik: null };
-    TRM.widokZmien('ustawienia');
-    const dz = await api('trm_maile_dziennik', { limit: 20 });
-    if (TRM.ust.maile) { TRM.ust.maile.dziennik = (dz && dz.wiersze) || []; TRM.widokZmien('ustawienia'); }
+    if (TRM.ust.maileLaduje) return;
+    TRM.ust.maileLaduje = true;
+    try {
+      const d = await api('trm_maile_ustawienia', {});
+      if (!d || d.status !== 'success') { TRM.ust.maile = { blad: (d && d.message) || 'brak odpowiedzi' }; return; }
+      const dz = await api('trm_maile_dziennik', { limit: 20 });
+      TRM.ust.maile = { ...d, dziennik: (dz && dz.wiersze) || [] };
+    } finally {
+      TRM.ust.maileLaduje = false;
+      if (TRM.widok === 'ustawienia' && TRM.ust.tab === 'maile') TRM.widokZmien('ustawienia');
+    }
   };
+  // Wymuszone odświeżenie po zapisie albo próbce — czyści dane i pobiera je raz jeszcze.
+  TRM.maileOdswiez = () => { TRM.ust.maile = null; TRM.maileWczytaj(); };
   TRM.maileZapisz = async () => {
     const d = await api('trm_maile_ustawienia', {
       zapisz: true,
@@ -2616,13 +2626,13 @@
     });
     if (!d || d.status !== 'success') return toast('error', 'Nie zapisano ustawień', (d && d.message) || '');
     toast('success', d.ustawienia.wlaczone ? 'Powiadomienia o wizytach włączone' : 'Powiadomienia wyłączone');
-    TRM.maileWczytaj();
+    TRM.maileOdswiez();
   };
   TRM.maileProba = async (typ) => {
     const adres = (el('trm-m-test') || {}).value || '';
     const d = await api('trm_maile_proba', { email: adres.trim(), typ });
     toast(d && d.status === 'success' ? 'success' : 'error', d && d.status === 'success' ? 'Próbka wysłana' : 'Nie wysłano próbki', (d && d.message) || '');
-    if (d && d.status === 'success') TRM.maileWczytaj();
+    if (d && d.status === 'success') TRM.maileOdswiez();
   };
 
   function ustNieob() {
