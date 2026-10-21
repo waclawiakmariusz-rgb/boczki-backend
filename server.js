@@ -130,10 +130,20 @@ function ustalWersjeAplikacji() {
 const WERSJA_APLIKACJI = ustalWersjeAplikacji();
 console.log('[wersja] Uruchomiono:', WERSJA_APLIKACJI);
 
+// Znacznik przy adresach plików modułów (terminarz.js/.css) — ten sam powód, co numer wersji
+// na Pulpicie, tylko po stronie przeglądarki. Do 21.10.2026 w index.html stało ręczne
+// `?v=20261018a`: po wdrożeniu przeglądarka miała w pamięci STARY terminarz.js, więc zmiany
+// nie pojawiały się u nikogo, kto wcześniej otworzył aplikację — i nikt o tym nie wiedział
+// (właściciel po wdrożeniu nadal widział zdjęty widok „Tydzień"). Teraz znacznik liczy się sam
+// z hasha wdrożenia, więc każde wdrożenie = nowy adres pliku = świeża wersja u wszystkich.
+const WERSJA_PLIKOW = String(WERSJA_APLIKACJI).replace(/[^A-Za-z0-9]/g, '').slice(-14) || String(Date.now());
+
 // index.html czytany i podmieniany RAZ przy starcie (nie przy każdym żądaniu) —
 // spójne z resztą aplikacji: zmiana kodu i tak wymaga restartu, żeby zadziałać.
 const INDEX_HTML_PATH = path.join(__dirname, 'public', 'index.html');
-let INDEX_HTML_CACHE = fs.readFileSync(INDEX_HTML_PATH, 'utf8').replaceAll('__WERSJA__', WERSJA_APLIKACJI);
+let INDEX_HTML_CACHE = fs.readFileSync(INDEX_HTML_PATH, 'utf8')
+    .replaceAll('__WERSJA__', WERSJA_APLIKACJI)
+    .replaceAll('__WERSJA_PLIKOW__', WERSJA_PLIKOW);
 
 // /zaloguj — główna aplikacja
 app.get('/zaloguj', (req, res) => res.type('html').send(INDEX_HTML_CACHE));
