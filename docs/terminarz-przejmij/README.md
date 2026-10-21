@@ -152,3 +152,70 @@ W panelu widać to w powodach przy plakietkach: „pilne, bo **termin minął w 
 
 Masowego domykania starych spraw (punkt 2 z rozmowy) — czeka na decyzję. Po tej zmianie
 zaległości przestają udawać alarm, ale nadal są na liście i nadal trzeba je kiedyś domknąć.
+
+---
+
+# Masowe domykanie zaległości (punkt „2" z tej samej rozmowy)
+
+Po naprawieniu reguły pilności zaległości przestały udawać alarm, ale nadal wiszą na liście
+i trzeba je kiedyś domknąć. Klikanie po jednej przy kilkunastu sprawach to zajęcie na kwadrans.
+
+## Jak to działa
+
+W zakładce „Do działania" (gdy są co najmniej trzy sprawy bez pilnego terminu) pojawia się
+**„Domknij zaległości…"**. Otwiera się karta z wyborem progu — **tydzień / dwa tygodnie /
+miesiąc / trzy miesiące** — i **podglądem**:
+
+```
+Zniknie z listy: 6 spraw.
+Zmiana terminu: 1 · Odwołanie wizyty: 4 · Brak wyniku wizyty: 1
+np. Zmieniono termin — Zestaw A (2026-09-26), Odwołano wizytę — Patrycja Adamczyk (2026-09-26)…
+```
+
+Dopiero przycisk **„Domknij 6"** coś zapisuje.
+
+## Czego to NIE rusza
+
+- **spraw pilnych (P0)** — bierze wyłącznie P1,
+- **świeżych spraw** — tylko takie, których moment minął wcześniej niż wybrany próg,
+- **spraw z nieobsłużonymi wizytami** (E02/E18/E33 z listą „dotkniętych" terminów). Tam zamknięcie
+  znaczyłoby „udawajmy, że kolizji nie ma", więc wracają jako **pominięte**, z podaną liczbą wizyt
+  do rozstrzygnięcia. To ta sama zasada, co przy zamykaniu pojedynczej sprawy.
+
+Każda domknięta sprawa dostaje wpis w swoim dzienniku („Domknięcie zbiorcze: …"), a cała operacja
+jeden wpis w **Dzienniku Zdarzeń**. Nic nie znika — domkniętą sprawę widać w zakładce „Informacje"
+i da się ją **wznowić**.
+
+Jedno wywołanie obejmuje maksymalnie 300 spraw.
+
+## Próba w izolowanym środowisku
+
+```
+otwarte sprawy przed: P0: 10 | P1: 8 | P2: 1
+
+PODGLĄD (bez `wykonaj`): {"podglad":true,"do_zamkniecia":6,"pominietych":0,"wg_typu":{"E13":1,"E02":1,"E05":4}}
+   czy podgląd cokolwiek zamknął: nie — jak ma być
+
+WYKONANIE:
+   success · Domknięto 6 spraw. | zamknięte: 6 | pominięte: 0
+   otwarte sprawy po: P0: 10 | P1: 2 | P2: 1
+   dziennik sprawy: Ola · rozwiazano · Domknięcie zbiorcze: Domknięte zbiorczo jako zaległość…
+   Dziennik Zdarzeń: TERMINARZ: ZBIORCZE DOMKNIĘCIE SPRAW — 6 spraw starszych niż 7 dni
+
+wznowienie domkniętej sprawy: success — Brak wyniku wizyty — Patrycja Adamczyk
+BLEDY JS: brak
+```
+
+Liczby zgadzają się co do sztuki: **P1 spadło z 8 na 2**, pilne (P0: 10) **nietknięte**.
+
+| Plik | Co widać |
+|---|---|
+| `domkniecie-01-podglad.png` | karta podglądu z rozbiciem na typy i przyciskiem „Domknij 6" |
+| `proba-domkniecie.js` | próba: podgląd bez zapisu, wykonanie, dziennik, wznowienie |
+
+## Testy
+
+6 dodatkowych prób w `tests/terminarz-powiadomienia.test.js`: podgląd nic nie zapisuje,
+wykonanie zostawia ślad w dzienniku każdej sprawy i w Dzienniku Zdarzeń, sprawa z nieobsłużonymi
+wizytami zostaje (z powodem), zapytanie bierze tylko P1 ze starym terminem, próg trzymany
+w granicach 1–365 dni, specjalistka nie domyka hurtem. Pełny zestaw: **811/811**.

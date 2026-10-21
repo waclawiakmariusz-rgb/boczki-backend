@@ -2198,6 +2198,55 @@ module.exports = (db, opts = {}) => {
         await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'rozwiazano', ?)`, [tenant, id, imie, wynik]);
         return { status: 'success' };
       }
+      // Masowe domknięcie zaległości (21.10.2026, decyzja właściciela po tym, jak w dzwonku uzbierało
+      // się kilkanaście spraw sprzed tygodni). Zamykanie hurtem jest z natury ryzykowne, więc:
+      //  • DOMYŚLNIE TYLKO PODGLĄD — bez `wykonaj: true` nic się nie zapisuje (jak przy migracji adresów),
+      //  • bierze wyłącznie zaległości: P1 (to, co pilne, zostaje) i moment starszy niż `dni`,
+      //  • NIE rusza spraw z nieobsłużonymi wizytami (E02/E18/E33 z listą „dotkniete") — tam zamknięcie
+      //    oznaczałoby „udawajmy, że kolizji nie ma"; takie sprawy raportujemy jako pominięte,
+      //  • każda sprawa dostaje wpis w swoim dzienniku, a całość jeden wpis w Dzienniku Zdarzeń,
+      //  • nic nie znika — zamknięte sprawy da się wznowić („Wznów sprawę").
+      case 'trm_sprawy_domknij': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const dni = Math.min(365, Math.max(1, parseInt(d.dni, 10) || ZALEGLOSC_DNI));
+        const wykonaj = d.wykonaj === true;
+        const powod = String(d.powod || '').trim().slice(0, 300) || `Domknięte zbiorczo jako zaległość starsza niż ${dni} dni`;
+        const kandydaci = await q(
+          `SELECT id, typ, tytul, dane_json, DATE_FORMAT(COALESCE(powiazany_czas, utworzono), '%Y-%m-%d') AS kiedy
+             FROM Term_Sprawy
+            WHERE tenant_id = ? AND priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje')
+              AND COALESCE(powiazany_czas, utworzono) <= DATE_SUB(NOW(), INTERVAL ? DAY)
+            ORDER BY COALESCE(powiazany_czas, utworzono) LIMIT 300`,
+          [tenant, dni]);
+
+        const doZamkniecia = [], pominiete = [];
+        for (const s of kandydaci) {
+          let dane = {}; try { dane = typeof s.dane_json === 'string' ? JSON.parse(s.dane_json) : (s.dane_json || {}); } catch (e) { dane = {}; }
+          const nieobsluzone = Array.isArray(dane.dotkniete) ? dane.dotkniete.filter(x => !x.rozwiazana).length : 0;
+          if (nieobsluzone) pominiete.push({ id: s.id, typ: s.typ, tytul: s.tytul, powod: `${nieobsluzone} ${nieobsluzone === 1 ? 'wizyta wymaga' : 'wizyt wymaga'} rozstrzygnięcia` });
+          else doZamkniecia.push({ id: s.id, typ: s.typ, tytul: s.tytul, kiedy: s.kiedy });
+        }
+        const wgTypu = {};
+        for (const s of doZamkniecia) wgTypu[s.typ] = (wgTypu[s.typ] || 0) + 1;
+        const podsumowanie = { dni, do_zamkniecia: doZamkniecia.length, pominietych: pominiete.length, wg_typu: wgTypu,
+          przyklady: doZamkniecia.slice(0, 5).map(s => ({ tytul: s.tytul, kiedy: s.kiedy })) };
+
+        if (!wykonaj) return { status: 'success', podglad: true, ...podsumowanie, pominiete: pominiete.slice(0, 10) };
+
+        let zamkniete = 0;
+        for (const s of doZamkniecia) {
+          const up = await q(`UPDATE Term_Sprawy SET stan = 'rozwiazana', wynik = ?, rozwiazal = ?, rozwiazano = NOW(), zmieniono = NOW()
+                               WHERE tenant_id = ? AND id = ? AND stan IN ('nowa', 'w_trakcie', 'oczekuje')`, [powod, imie || null, tenant, s.id]).catch(() => null);
+          if (up && up.affectedRows) {
+            zamkniete++;
+            await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, ?, 'rozwiazano', ?)`,
+              [tenant, s.id, imie || 'System', `Domknięcie zbiorcze: ${powod}`.slice(0, 500)]).catch(() => {});
+          }
+        }
+        zapiszLog(tenant, 'TERMINARZ: ZBIORCZE DOMKNIĘCIE SPRAW', imie, `${zamkniete} spraw starszych niż ${dni} dni — ${powod}${pominiete.length ? ` (pominięto ${pominiete.length} z nieobsłużonymi wizytami)` : ''}`);
+        return { status: 'success', ...podsumowanie, zamkniete, pominiete: pominiete.slice(0, 10),
+          message: `Domknięto ${zamkniete} ${zamkniete === 1 ? 'sprawę' : zamkniete < 5 ? 'sprawy' : 'spraw'}.${pominiete.length ? ` Pominięto ${pominiete.length} — mają nieobsłużone wizyty.` : ''}` };
+      }
       case 'trm_sprawa_wznow': {
         wymagaj(r, ROLE_OPERACYJNE);
         const id = Number(d.id), powod = String(d.powod || '').trim().slice(0, 300) || 'Wznowiono';
@@ -2324,4 +2373,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawy_domknij', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

@@ -7,7 +7,7 @@
 (function () {
   'use strict';
   const TRM = window.TRM = { dane: null, zaladowano: 0, data: null, widok: 'dzien', osoba: null, dzien: null, zakres: null, panel: null, nowa: null, szcz: null, ust: { tab: 'ogolne', prac: null }, rozliczanie: null, szukajT: null,
-    sprawy: { zakladka: 'do_dzialania', lista: [], szczegolyId: null, szczegoly: null, dziennik: [], forma: null } };
+    sprawy: { zakladka: 'do_dzialania', lista: [], szczegolyId: null, szczegoly: null, dziennik: [], forma: null, domkniecie: null } };
   const PRIOR_LABEL = { P0: ['Pilne teraz', 'bad'], P1: ['Wymaga działania', 'warn'], P2: ['Informacja', 'neu'] };
   const STAN_SPRAWY_LABEL = { nowa: 'Nowa', w_trakcie: 'W trakcie', oczekuje: 'Oczekuje', rozwiazana: 'Rozwiązana', nieaktualna: 'Nieaktualna' };
   const SPRAWY_TABY = [['do_dzialania', 'Do działania'], ['zmiany', 'Zmiany w wizytach'], ['dla_mnie', 'Dla mnie'], ['informacje', 'Informacje']];
@@ -1700,11 +1700,68 @@
     const lm = (n, j, m, w) => n === 1 ? j : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20)) ? m : w;
     const pilne = lista.filter(x => x.priorytet === 'P0').length;
     const podtytul = z === 'do_dzialania' ? `${lista.length} ${lm(lista.length, 'sprawa', 'sprawy', 'spraw')} do działania${pilne ? ` · ${pilne} ${lm(pilne, 'pilna', 'pilne', 'pilnych')}` : ''} — to liczy dzwonek` : `${lista.length} ${lm(lista.length, 'sprawa', 'sprawy', 'spraw')} w tej zakładce`;
+    // Zaległości (P1 ze starym terminem) da się domknąć hurtem — ale nigdy jednym kliknięciem
+    // w ciemno: najpierw podgląd, co dokładnie zniknie z listy. Przycisk pokazujemy tylko wtedy,
+    // gdy w „Do działania" naprawdę są takie sprawy.
+    const zalegle = z === 'do_dzialania' ? lista.filter(x => x.priorytet === 'P1').length : 0;
     const html = naglowekPanelu('Powiadomienia', podtytul) +
       `<div class="trm-tabs sm">${SPRAWY_TABY.map(([k, n]) => `<button class="${z === k ? 'on' : ''}" onclick="TRM.sprawyZakladka('${k}')">${n}</button>`).join('')}</div>` +
+      (zalegle >= 3 && operacyjna() ? `<div class="trm-row" style="margin:4px 0 8px"><button class="trm-btn link sm fix" onclick="TRM.domkniecieOtworz()">Domknij zaległości…</button><span class="muted small">${zalegle} ${lm(zalegle, 'sprawa czeka', 'sprawy czekają', 'spraw czeka')} bez pilnego terminu</span></div>` : '') +
+      domkniecieHtml() +
       (lista.length ? `<div class="trm-sprawy-lista">${lista.map(kartaSprawy).join('')}</div>` : `<div class="trm-empty"><div class="big">✅</div><p>Brak spraw w tej zakładce.</p></div>`);
     panelOtworz(html);
   }
+  // ── Domykanie zaległości hurtem (21.10.2026) ────────────────────────────────────────────────
+  // Dwa kroki, nigdy jeden: najpierw serwer liczy, co by zniknęło (podgląd, bez zapisu), potem
+  // człowiek potwierdza. Sprawy z nieobsłużonymi wizytami nie dają się domknąć zbiorczo — tam
+  // zamknięcie znaczyłoby „udawajmy, że kolizji nie ma", więc wracają jako lista pominiętych.
+  TRM.domkniecieOtworz = () => { TRM.sprawy.domkniecie = { dni: 7, podglad: null, laduje: false }; TRM.domkniecieOdswiez(); };
+  TRM.domkniecieZamknij = () => { TRM.sprawy.domkniecie = null; renderSprawyLista(); };
+  TRM.domkniecieDni = (v) => { TRM.sprawy.domkniecie.dni = Number(v) || 7; TRM.domkniecieOdswiez(); };
+  TRM.domkniecieOdswiez = async () => {
+    const d0 = TRM.sprawy.domkniecie; if (!d0 || d0.laduje) return;
+    d0.laduje = true; d0.podglad = null; renderSprawyLista();
+    const d = await api('trm_sprawy_domknij', { dni: d0.dni });          // bez `wykonaj` = sam podgląd
+    d0.laduje = false;
+    if (d.status !== 'success') { toast('error', 'Nie udało się policzyć', d.message); d0.podglad = null; }
+    else d0.podglad = d;
+    renderSprawyLista();
+  };
+  TRM.domkniecieWykonaj = async () => {
+    const d0 = TRM.sprawy.domkniecie; if (!d0 || !d0.podglad || !d0.podglad.do_zamkniecia) return;
+    d0.laduje = true; renderSprawyLista();
+    const d = await api('trm_sprawy_domknij', { dni: d0.dni, wykonaj: true });
+    d0.laduje = false;
+    if (d.status !== 'success') { renderSprawyLista(); return toast('error', 'Nie domknięto', d.message); }
+    toast('success', d.message || 'Domknięto zaległości', 'Każdą z nich można wznowić z zakładki „Informacje".');
+    TRM.sprawy.domkniecie = null;
+    await zaladujSprawy(TRM.sprawy.zakladka);
+  };
+  function domkniecieHtml() {
+    const d0 = TRM.sprawy && TRM.sprawy.domkniecie; if (!d0) return '';
+    const p = d0.podglad;
+    const typy = p && p.wg_typu ? Object.entries(p.wg_typu).map(([t, n]) => `${esc(TYP_SPRAWY_LABEL[t] || t)}: ${n}`).join(' · ') : '';
+    return `<div class="trm-card trm-domkniecie">
+      <div class="trm-row"><b class="fix">Domknij zaległości</b><div class="trm-spacer"></div><button class="trm-x" onclick="TRM.domkniecieZamknij()" aria-label="Zamknij">✕</button></div>
+      <div class="trm-pomoc" style="margin:4px 0 10px">Zamyka sprawy <b>bez pilnego terminu</b>, których moment minął dawno. Pilne zostają nietknięte, a każdą domkniętą sprawę da się wznowić.</div>
+      <div class="trm-field"><label>Starsze niż</label>
+        <select onchange="TRM.domkniecieDni(this.value)">
+          ${[[7, 'tydzień'], [14, 'dwa tygodnie'], [30, 'miesiąc'], [90, 'trzy miesiące']].map(([v, n]) => `<option value="${v}" ${d0.dni === v ? 'selected' : ''}>${n}</option>`).join('')}
+        </select></div>
+      ${d0.laduje ? `<div class="muted small">Liczę…</div>` : !p ? '' : `
+        <div class="trm-note ${p.do_zamkniecia ? 'warn' : 'info'}" style="margin:10px 0">
+          <b>Zniknie z listy: ${p.do_zamkniecia} ${p.do_zamkniecia === 1 ? 'sprawa' : p.do_zamkniecia < 5 ? 'sprawy' : 'spraw'}.</b>
+          ${typy ? `<div class="small" style="margin-top:4px">${typy}</div>` : ''}
+          ${p.przyklady && p.przyklady.length ? `<div class="small" style="margin-top:6px">np. ${p.przyklady.map(x => esc(x.tytul) + ' <span class="muted">(' + esc(x.kiedy) + ')</span>').join(', ')}</div>` : ''}
+          ${p.pominietych ? `<div class="small" style="margin-top:6px"><b>Pominięte: ${p.pominietych}</b> — mają wizyty, które trzeba najpierw rozstrzygnąć.</div>` : ''}
+        </div>
+        <div class="trm-row">
+          <button class="trm-btn danger fix" onclick="TRM.domkniecieWykonaj()" ${p.do_zamkniecia ? '' : 'disabled'}>Domknij ${p.do_zamkniecia}</button>
+          <button class="trm-btn fix" onclick="TRM.domkniecieZamknij()">Wróć</button>
+        </div>`}
+    </div>`;
+  }
+
   function kartaSprawy(sp) {
     const [plab, pcls] = PRIOR_LABEL[sp.priorytet] || ['', 'neu'];
     const termin = sp.termin_dzialania ? terminEtykieta(sp.termin_dzialania) : null;

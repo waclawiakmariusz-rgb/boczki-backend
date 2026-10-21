@@ -99,6 +99,93 @@ describe('co robi sprawę pilną', () => {
   });
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Masowe domykanie zaległości (21.10.2026). Zamykanie hurtem jest z natury ryzykowne,
+// więc działa jak migracja adresów: najpierw PODGLĄD bez zapisu, dopiero potem `wykonaj: true`.
+// Sprawy z nieobsłużonymi wizytami nie dają się zamknąć zbiorczo — tam zamknięcie znaczyłoby
+// „udawajmy, że kolizji nie ma".
+describe('domykanie zaległości hurtem', () => {
+  const request = require('supertest'); const express = require('express');
+  const M = require('../routes/terminarz');
+  const T = 'salon-test-001';
+
+  function atrapa(odpowiedzi) {
+    const zap = [];
+    const query = (sql, p, cb) => {
+      const c = typeof p === 'function' ? p : cb; const params = typeof p === 'function' ? [] : p;
+      zap.push({ sql: String(sql).replace(/\s+/g, ' ').trim(), params: params || [] });
+      let w = [];
+      for (const [re, v] of odpowiedzi) if (re.test(sql)) { w = v; break; }
+      if (c) c(null, w);
+    };
+    return { query, getConnection: (cb) => cb(null, { query, beginTransaction: (x) => x(null), commit: (x) => x(null), rollback: (x) => x(null), release: () => {} }), zap };
+  }
+  const SPRAWA = (nad = {}) => ({ id: 11, typ: 'E05', tytul: 'Odwołano wizytę — Ala', dane_json: null, kiedy: '2026-09-26', ...nad });
+  const baza = (kandydaci, rola = 'recepcja') => atrapa([
+    [/SELECT rola FROM Użytkownicy/, [{ rola }]],
+    [/priorytet = 'P1' AND stan IN/, kandydaci],
+    [/UPDATE Term_Sprawy SET stan = 'rozwiazana'/, { affectedRows: 1 }],
+  ]);
+  const app = (db) => { const a = express(); a.use(express.json()); a.use('/api', M(db, { hasFeature: (t, k, cb) => cb(true) })); return a; };
+  const domknij = (db, body, pracownik = 'Ola') => request(app(db)).post('/api/terminarz')
+    .send({ tenant_id: T, pracownik, action: 'trm_sprawy_domknij', ...body });
+  const zamkniecia = (db) => db.zap.filter(z => /UPDATE Term_Sprawy SET stan = 'rozwiazana'/.test(z.sql));
+
+  test('bez `wykonaj` to sam podgląd — nic się nie zapisuje', async () => {
+    const db = baza([SPRAWA(), SPRAWA({ id: 12, typ: 'E13' })]);
+    const { body } = await domknij(db, { dni: 7 });
+    expect(body.status).toBe('success');
+    expect(body.podglad).toBe(true);
+    expect(body.do_zamkniecia).toBe(2);
+    expect(body.wg_typu).toEqual({ E05: 1, E13: 1 });
+    expect(zamkniecia(db)).toHaveLength(0);
+  });
+
+  test('z `wykonaj` zamyka i zostawia ślad w dzienniku każdej sprawy', async () => {
+    const db = baza([SPRAWA(), SPRAWA({ id: 12 })]);
+    const { body } = await domknij(db, { dni: 7, wykonaj: true });
+    expect(body.zamkniete).toBe(2);
+    expect(zamkniecia(db)).toHaveLength(2);
+    const wpisy = db.zap.filter(z => /INSERT INTO Term_Sprawy_Dziennik/.test(z.sql) && /'rozwiazano'/.test(z.sql) && /Domkniecie zbiorcze|Domknięcie zbiorcze/.test(JSON.stringify(z.params)));
+    expect(wpisy).toHaveLength(2);
+    expect(db.zap.some(z => /INSERT INTO Logi/i.test(z.sql) && /ZBIORCZE DOMKNIĘCIE/.test(JSON.stringify(z.params)))).toBe(true);
+  });
+
+  test('sprawa z nieobsłużonymi wizytami zostaje — i wiadomo dlaczego', async () => {
+    const zDotknietymi = SPRAWA({ id: 13, typ: 'E02', dane_json: JSON.stringify({ dotkniete: [{ rezerwacja_id: 5, rozwiazana: false }, { rezerwacja_id: 6, rozwiazana: true }] }) });
+    const db = baza([SPRAWA(), zDotknietymi]);
+    const { body } = await domknij(db, { dni: 7, wykonaj: true });
+    expect(body.zamkniete).toBe(1);
+    expect(body.pominietych).toBe(1);
+    expect(body.pominiete[0]).toMatchObject({ id: 13 });
+    expect(body.pominiete[0].powod).toMatch(/rozstrzygnięcia/);
+    expect(zamkniecia(db)).toHaveLength(1);
+  });
+
+  test('bierze tylko P1 ze starym terminem — pilne zostają nietknięte', async () => {
+    const db = baza([SPRAWA()]);
+    await domknij(db, { dni: 30 });
+    const wybor = db.zap.find(z => /priorytet = 'P1' AND stan IN/.test(z.sql));
+    expect(wybor.sql).toMatch(/COALESCE\(powiazany_czas, utworzono\) <= DATE_SUB\(NOW\(\), INTERVAL \? DAY\)/);
+    expect(wybor.params).toEqual(expect.arrayContaining([T, 30]));
+  });
+
+  test('liczba dni trzymana w ryzach (1–365)', async () => {
+    for (const [podane, oczekiwane] of [[0, 7], [-5, 1], [9999, 365], [14, 14]]) {
+      const db = baza([SPRAWA()]);
+      const { body } = await domknij(db, { dni: podane });
+      expect(body.dni).toBe(oczekiwane);
+    }
+  });
+
+  test('specjalistka nie domyka cudzych spraw hurtem', async () => {
+    const db = baza([SPRAWA()], 'kosmetolog');
+    const { body } = await domknij(db, { dni: 7, wykonaj: true }, 'Anna');
+    expect(body.status).toBe('error');
+    expect(zamkniecia(db)).toHaveLength(0);
+  });
+});
+
 describe('przewodnik nie uczy nieistniejącego przycisku', () => {
   test('w /pomoc-terminarz/ nie ma już „Przejmij"', () => {
     expect(POMOC).not.toMatch(/Przejmij/);
