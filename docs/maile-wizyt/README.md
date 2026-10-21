@@ -36,7 +36,8 @@ Bez tego 70% wiadomości nie miałoby dokąd pójść, a literówka w adresie ni
 **2. Dwie wiadomości** (`routes/mailer.js`: `zbudujMailWizyty`, `wyslijMailWizyty`)
 - stylistyka serii wprowadzającej: jasne logo Estelio na górze, pod nim nazwa salonu, karta z terminem, szeryfowe tytuły,
 - **nadawcą jest salon**, nie Estelio: `„Boczki na bok" <kontakt@estelio.com.pl>`, a odpowiedź
-  (Reply-To) leci na adres salonu z licencji — klientka widzi swój salon i ma gdzie odpisać,
+  (Reply-To) leci na adres salonu z licencji; gdy salon go nie uzupełnił — na naszą skrzynkę kontaktową,
+- **treść nigdy nie każe klientce odpisywać** (poprawka 21.10.2026 — patrz na końcu),
 - stopka: nazwa, adres i telefon salonu + zdanie o rezygnacji,
 - temat: `Potwierdzenie wizyty — piątek, 23 października 2026, godz. 14:00`.
 
@@ -129,3 +130,38 @@ Strona jest podlinkowana w panelu admina (Pomoc i dokumenty → Dla salonu). Spr
 |---|---|
 | `przewodnik-krok1.png` | krok 1 przewodnika: znaczniki na polu e-mail, zgodzie i zapisie |
 | `przewodnik-krok2.png` | krok 2: pięć znaczników na ustawieniach powiadomień |
+
+---
+
+## Poprawka 21.10.2026 — dwie obietnice, których nie umieliśmy dotrzymać
+
+Właściciel zarezerwował wizytę sam sobie i przeczytał maila uważnie. Zgłosił dwie rzeczy:
+
+**1. „Nie możesz przyjść? Odpisz na tę wiadomość."** — mylące. Wiadomość wychodzi z naszej
+skrzynki technicznej (`kontakt@estelio.com.pl`), więc odpowiedź klientki trafia do nas albo —
+w najlepszym razie — na adres właściciela z licencji. Nie trafia do recepcji, która za chwilę
+ma zwolnić termin. Klientka, która odwołała wizytę „odpisując na maila", byłaby przekonana,
+że załatwiła sprawę — a salon o niczym by nie wiedział.
+
+**2. „Nie chcesz takich powiadomień? Odpisz jednym słowem »stop«."** — nieprawda.
+Nic w systemie nie czyta poczty przychodzącej (jedyny IMAP to `routes/booksy.js`, do zupełnie
+innego zadania). Rezygnację zaznacza salon w karcie klientki (`Klienci.bez_maili`).
+Obiecany kanał rezygnacji, który nie działa, jest gorszy niż brak takiego kanału.
+
+**Jak jest teraz:**
+
+| Było | Jest |
+|---|---|
+| „Nie możesz przyjść? Odpisz na tę wiadomość albo zadzwoń: 600 100 200." | „Nie możesz przyjść albo chcesz zmienić termin? Skontaktuj się bezpośrednio z salonem: telefonicznie **600 100 200** albo mailowo **kontakt@boczkinabok.pl**." |
+| — | „Ta wiadomość jest wysyłana automatycznie — odpowiedź na nią nie trafi do recepcji." |
+| „Odpisz jednym słowem »stop« albo powiedz nam przy najbliższej wizycie." | „Powiedz nam przy najbliższej wizycie albo zadzwoń: 600 100 200 — wyłączymy je w Twojej karcie." |
+
+Dane kontaktowe biorą się z **Ustawienia → Profil salonu** (tabela `Licencje`). Gdy salon ich
+nie uzupełnił, zdanie kończy się na „Skontaktuj się bezpośrednio z salonem." — nie wymyślamy
+drogi, której nie ma.
+
+Dwie próby w `tests/maile-wizyt.test.js` pilnują, żeby oba zdania nie wróciły:
+`nie obiecuje, że odpowiedź na maila cokolwiek załatwi` oraz `kieruje do salonu jego własnym kanałem`.
+
+Zrzuty `mail-potwierdzenie.png` i `mail-przypomnienie.png` (również te w przewodniku
+`/pomoc-maile`) odtworzone po zmianie — pokazują aktualną treść.

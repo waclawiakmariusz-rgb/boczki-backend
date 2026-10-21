@@ -242,6 +242,31 @@ describe('treść wiadomości', () => {
     }
   });
 
+  // Dwie obietnice, których nie umiemy dotrzymać (uwaga właściciela 21.10.2026):
+  //  • „odpisz na tę wiadomość" — odpowiedź nie trafia do recepcji, tylko do nas albo do właściciela,
+  //  • „odpisz »stop«" — nikt nie czyta przychodzącej poczty, rezygnację zaznacza salon w karcie klientki.
+  // Tych zdań nie wolno przywrócić, dlatego mają własną próbę.
+  test('nie obiecuje, że odpowiedź na maila cokolwiek załatwi', () => {
+    for (const typ of ['potwierdzenie', 'przypomnienie']) {
+      const html = mailer.zbudujMailWizyty({ salon, wizyta, typ });
+      expect(html).not.toMatch(/Odpisz na tę wiadomość/i);
+      expect(html).not.toMatch(/odpisz[^<]{0,40}stop/i);
+      expect(html).toMatch(/wysyłana automatycznie/i);
+      expect(html).toMatch(/nie trafi do recepcji/i);
+    }
+  });
+
+  test('kieruje do salonu jego własnym kanałem', () => {
+    const html = mailer.zbudujMailWizyty({ salon, wizyta, typ: 'potwierdzenie' });
+    expect(html).toMatch(/Skontaktuj się bezpośrednio z salonem/);
+    expect(html).toContain('600100200');
+    expect(html).toContain('salon@example.pl');
+    // salon bez kontaktu w licencji: żadnej drogi nie wymyślamy, ale zdanie ma zostać sensowne
+    const bezKontaktu = mailer.zbudujMailWizyty({ salon: { nazwa: 'Salon' }, wizyta, typ: 'potwierdzenie' });
+    expect(bezKontaktu).toMatch(/Skontaktuj się bezpośrednio z salonem\./);
+    expect(bezKontaktu).not.toMatch(/telefonicznie|mailowo/);
+  });
+
   test('salon bez telefonu i adresu nie psuje układu', () => {
     const html = mailer.zbudujMailWizyty({ salon: { nazwa: 'Salon' }, wizyta, typ: 'potwierdzenie' });
     expect(html).toContain('Salon');

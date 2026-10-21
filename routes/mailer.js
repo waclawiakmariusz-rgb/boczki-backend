@@ -744,7 +744,8 @@ module.exports = { wyslijLinkRejestracji, powiadomAdmina, wyslijResetHasla, wysl
 // ale nadawcą i podpisem jest SALON, nie Estelio: klientka salonu nie zna naszej marki,
 // a wiadomość od nieznanego nadawcy ląduje w spamie albo w koszu.
 //   • nadawca:  „Boczki na bok" <kontakt@estelio.com.pl>   (nazwa salonu, adres techniczny nasz)
-//   • odpowiedz: adres salonu z licencji — żeby odpowiedź klientki trafiła tam, gdzie ktoś ją przeczyta
+//   • odpowiedz: adres salonu z licencji, a gdy go nie ma — nasza skrzynka kontaktowa (odpowiedź nie
+//     przepada, ale TRAFIA DO NAS, nie do recepcji; dlatego treść nigdy nie każe klientce odpisywać)
 //   • stopka:   nazwa, adres i telefon salonu + zdanie o rezygnacji
 const DNI_TYG = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
 const MIESIACE_PL = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
@@ -775,6 +776,15 @@ function zbudujMailWizyty({ salon, wizyta, typ }) {
     : `Dziękujemy za umówienie wizyty. Poniżej szczegóły — zachowaj tę wiadomość, żeby mieć je pod ręką.`;
 
   const kontakt = [s.telefon ? `tel. ${s.telefon}` : null, s.email ? s.email : null].filter(Boolean).join(' · ');
+  // 21.10.2026 — poprawka po uwadze właściciela. Wcześniej pisaliśmy „nie możesz przyjść? odpisz na tę
+  // wiadomość". To wprowadzało w błąd: wiadomość wychodzi z NASZEJ skrzynki technicznej, więc odpowiedź
+  // klientki ląduje w kontakt@estelio.com.pl (albo w skrzynce właściciela z licencji), a nie u recepcji,
+  // która za chwilę ma zwolnić termin. Podajemy więc wprost drogę do salonu i mówimy, że mail jest
+  // automatyczny. Gdy salon nie uzupełnił kontaktu w „Ustawienia → Profil salonu", nie obiecujemy nic.
+  const drogiKontaktu = [
+    s.telefon ? `telefonicznie <b style="color:#1c1a18;">${s.telefon}</b>` : null,
+    s.email ? `mailowo <b style="color:#1c1a18;">${s.email}</b>` : null,
+  ].filter(Boolean).join(' albo ');
 
   const tresc = `
       <h2 style="margin:0 0 14px; font-size:21px; color:#1c1a18; font-weight:600; font-family:Georgia,'Times New Roman',serif;">${naglowek}</h2>
@@ -790,15 +800,16 @@ function zbudujMailWizyty({ salon, wizyta, typ }) {
       </table>
 
       <p style="margin:0 0 6px; font-size:13.5px; color:#6f655e; line-height:1.75;">
-        <b style="color:#1c1a18;">Nie możesz przyjść?</b> Odpisz na tę wiadomość${s.telefon ? ` albo zadzwoń: <b style="color:#1c1a18;">${s.telefon}</b>` : ''}.
+        <b style="color:#1c1a18;">Nie możesz przyjść albo chcesz zmienić termin?</b> Skontaktuj się bezpośrednio z salonem${drogiKontaktu ? ': ' + drogiKontaktu : ''}.
         Im wcześniej wiemy, tym łatwiej znaleźć inny termin dla Ciebie i obsadzić ten.
-      </p>`;
+      </p>
+      <p style="margin:12px 0 0; font-size:12px; color:#a89e96; line-height:1.6;">Ta wiadomość jest wysyłana automatycznie — odpowiedź na nią nie trafi do recepcji.</p>`;
 
   const stopka = `
       <p style="font-size:11px; color:#a89e96; margin:0;">${nazwaSalonu}${s.adres ? ' · ' + s.adres : ''}</p>
       ${kontakt ? `<p style="font-size:11px; color:#a89e96; margin:6px 0 0;">${kontakt}</p>` : ''}
-      <p style="font-size:11px; color:#a89e96; margin:10px 0 0;">Dostajesz tę wiadomość, bo masz umówioną wizytę w naszym salonie.
-        Nie chcesz takich powiadomień? Odpisz jednym słowem „stop" albo powiedz nam przy najbliższej wizycie.</p>`;
+      <p style="font-size:11px; color:#a89e96; margin:10px 0 0;">Dostajesz tę wiadomość, bo masz umówioną wizytę w salonie ${nazwaSalonu}.
+        Nie chcesz takich powiadomień? Powiedz nam przy najbliższej wizycie${s.telefon ? ` albo zadzwoń: ${s.telefon}` : ''} — wyłączymy je w Twojej karcie.</p>`;
 
   return emailWrapperJasnySalon(nazwaSalonu, przypomnienie ? 'Przypomnienie o wizycie' : 'Potwierdzenie wizyty', tresc, stopka);
 }
