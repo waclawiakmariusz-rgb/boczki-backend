@@ -945,7 +945,7 @@
   // Dwa spojrzenia na te same dane: historia jednej klientki (co, kiedy, u kogo) i historia
   // jednej osoby z zespołu (kogo obsługiwała, jakie zabiegi) w wybranym zakresie dat.
   // Dane biorą się z gotowych akcji tylko do odczytu — ten widok niczego nie zapisuje.
-  TRM.hist = { tryb: 'klientka', od: null, do: null, klient: null, fraza: '', wyniki: [], pracownik: null, dane: null, laduje: false };
+  TRM.hist = { tryb: 'klientka', od: null, do: null, klient: null, fraza: '', wyniki: [], pracownik: null, zabiegi: [], dane: null, laduje: false };
 
   // Zakres sięga też W PRZÓD (21.10.2026, prośba właściciela): historia ma pokazywać nie tylko to,
   // co się odbyło, ale i to, co klientka ma umówione. Przy zakresie kończącym się „dzisiaj"
@@ -979,7 +979,21 @@
     TRM.widokZmien('historia');
     histPobierz();
   };
-  TRM.histTryb = (t) => { TRM.hist.tryb = t; TRM.hist.dane = null; renderHistoria(); if ((t === 'pracownik' && TRM.hist.pracownik) || (t === 'klientka' && TRM.hist.klient)) histPobierz(); };
+  TRM.histTryb = (t) => { TRM.hist.tryb = t; TRM.hist.dane = null; renderHistoria(); if ((t === 'pracownik' && TRM.hist.pracownik) || (t === 'klientka' && TRM.hist.klient) || (t === 'zabieg' && TRM.hist.zabiegi.length)) histPobierz(); };
+  // Kategorie z cennika — chipsy do zaznaczania. Jedna kategoria = jeden zabieg („Endermologia"),
+  // bez wariantów (1x / 10x), bo pytanie brzmi „kto na to chodzi", a nie „w jakim pakiecie".
+  const histKategorie = () => [...new Set(((TRM.dane && TRM.dane.uslugi) || []).map(u => String(u.kategoria || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pl'));
+  TRM.histZabieg = (kat) => {
+    const z = TRM.hist.zabiegi;
+    const i = z.indexOf(kat);
+    if (i >= 0) z.splice(i, 1); else z.push(kat);
+    TRM.hist.dane = null; renderHistoria();                 // render NIE pobiera sam — od tego jest „Pokaż"
+  };
+  TRM.histZabiegiWszystkie = (wszystkie) => { TRM.hist.zabiegi = wszystkie ? histKategorie() : []; TRM.hist.dane = null; renderHistoria(); };
+  TRM.histOtworzOsobe = (i) => {
+    const k = ((TRM.hist.dane || {}).klientki || [])[i];
+    if (k && k.id_klienta) TRM.historiaKlientki(k.id_klienta, k.nazwa, k.telefon);
+  };
   TRM.histPole = (co, v) => { TRM.hist[co] = v; };
   TRM.histSzukaj = (v) => {
     TRM.hist.fraza = v;
@@ -998,10 +1012,13 @@
     if (!h.od || !h.do) { const z = histDomyslnyZakres(); h.od = h.od || z.od; h.do = h.do || z.do; }
     if (h.tryb === 'klientka' && !h.klient) return renderHistoria();
     if (h.tryb === 'pracownik' && !h.pracownik && operacyjna()) return renderHistoria();
+    if (h.tryb === 'zabieg' && !h.zabiegi.length) return renderHistoria();
     h.laduje = true; renderHistoria();
     const d = h.tryb === 'klientka'
       ? await api('trm_historia_klientki', { id_klienta: h.klient.id_klienta, klient_nazwa: h.klient.nazwa, od: h.od, do: h.do })
-      : await api('trm_historia_pracownika', { osoba: h.pracownik, od: h.od, do: h.do });
+      : h.tryb === 'zabieg'
+        ? await api('trm_historia_zabiegu', { kategorie: h.zabiegi, od: h.od, do: h.do })
+        : await api('trm_historia_pracownika', { osoba: h.pracownik, od: h.od, do: h.do });
     h.laduje = false;
     if (d.status !== 'success') { h.dane = null; h.blad = d.message; } else { h.dane = d; h.blad = null; }
     renderHistoria();
@@ -1021,6 +1038,7 @@
         <div class="trm-segment">
           ${operacyjna() ? `<button type="button" class="${h.tryb === 'klientka' ? 'active' : ''}" onclick="TRM.histTryb('klientka')">Klientka</button>` : ''}
           <button type="button" class="${h.tryb === 'pracownik' ? 'active' : ''}" onclick="TRM.histTryb('pracownik')">${operacyjna() ? 'Pracownik' : 'Moja historia'}</button>
+          ${operacyjna() ? `<button type="button" class="${h.tryb === 'zabieg' ? 'active' : ''}" onclick="TRM.histTryb('zabieg')">Zabieg</button>` : ''}
         </div>
         <div class="trm-hist-daty">
           <label>Od</label><input type="date" value="${h.od}" onchange="TRM.histPole('od', this.value)">
@@ -1043,6 +1061,21 @@
              <input placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(h.fraza)}" oninput="TRM.histSzukaj(this.value)" autocomplete="off">
              ${h.wyniki.length ? `<div class="trm-hist-wyniki">${h.wyniki.map((k, i) => `<button type="button" class="trm-klient-karta" onclick="TRM.histKlient(${i})"><b>${esc(k.nazwa)}</b> <span class="m">· ${esc(k.telefon || 'brak tel.')} · ID ${esc(k.id_klienta)}</span></button>`).join('')}</div>` : ''}
            </div>`;
+    } else if (h.tryb === 'zabieg' && operacyjna()) {
+      const katy = histKategorie();
+      wybor = `<div class="trm-card">
+          <div class="trm-row"><label class="fix" style="margin:0">Zabiegi — zaznacz jeden albo kilka</label><div class="trm-spacer"></div>
+            <button class="trm-btn link sm fix" onclick="TRM.histZabiegiWszystkie(true)">zaznacz wszystkie</button>
+            ${h.zabiegi.length ? `<button class="trm-btn link sm fix" onclick="TRM.histZabiegiWszystkie(false)">wyczyść</button>` : ''}</div>
+          ${katy.length ? `<div class="trm-hist-chipsy">${katy.map(k => {
+            const on = h.zabiegi.includes(k);
+            return `<button type="button" class="trm-hist-chip ${on ? 'on' : ''}" style="--kat:${kolorKat({ kategoria: k })}" aria-pressed="${on}" onclick="TRM.histZabieg(${JSON.stringify(k).replace(/"/g, '&quot;')})"><i></i>${esc(k)}</button>`;
+          }).join('')}</div>` : `<div class="muted small">W cenniku nie ma jeszcze żadnych zabiegów.</div>`}
+          <div class="trm-row" style="margin-top:10px">
+            <button class="trm-btn primary sm fix" onclick="TRM.histZakres(0)" ${h.zabiegi.length ? '' : 'disabled'}>Pokaż klientki</button>
+            <span class="muted small">${h.zabiegi.length ? `zaznaczone: ${h.zabiegi.length}` : 'zaznacz przynajmniej jeden zabieg'}</span>
+          </div>
+        </div>`;
     } else if (operacyjna()) {
       const lista = (TRM.dane.pracownicy || []);
       wybor = `<div class="trm-card"><label>Pracownik</label>
@@ -1055,11 +1088,43 @@
     else if (h.blad) tresc = `<div class="trm-note bad">${esc(h.blad)}</div>`;
     else if (!h.dane) tresc = h.tryb === 'klientka'
       ? `<div class="trm-empty"><div class="big">🔎</div><p>Wybierz klientkę, żeby zobaczyć jej historię wizyt.</p></div>`
-      : (operacyjna() ? `<div class="trm-empty"><div class="big">🔎</div><p>Wybierz osobę z zespołu i zakres dat.</p></div>` : '');
-    else tresc = h.tryb === 'klientka' ? histKlientkaHtml(h.dane) : histPracownikHtml(h.dane);
+      : h.tryb === 'zabieg'
+        ? `<div class="trm-empty"><div class="big">🔎</div><p>Zaznacz zabiegi i kliknij „Pokaż klientki" — zobaczysz listę osób, które na nie chodziły.</p></div>`
+        : (operacyjna() ? `<div class="trm-empty"><div class="big">🔎</div><p>Wybierz osobę z zespołu i zakres dat.</p></div>` : '');
+    else tresc = h.tryb === 'klientka' ? histKlientkaHtml(h.dane) : h.tryb === 'zabieg' ? histZabiegHtml(h.dane) : histPracownikHtml(h.dane);
 
     main.innerHTML = `<div class="trm-historia">${zakres}${wybor}${tresc}</div>`;
     if (!h.dane && h.tryb === 'pracownik' && !operacyjna()) histPobierz();   // specjalista: od razu własna historia
+  }
+
+  // Historia po zabiegu = lista KLIENTEK, nie lista wizyt. Jeden wiersz to jedna osoba, choćby
+  // chodziła dziesięć razy. Telefon stoi na pierwszym planie, bo z taką listą idzie się dzwonić.
+  function histZabiegHtml(d) {
+    const p = d.podsumowanie;
+    if (!d.klientki.length) return `<div class="trm-empty"><div class="big">🗓️</div><p>Nikt nie był na tych zabiegach w wybranym zakresie.</p></div>`;
+    const kafelki = `<div class="trm-hist-kafelki">
+      ${histKafel('klientek', p.klientek)}
+      ${histKafel('wizyt razem', p.wizyt)}
+      ${histKafel('wykonanych', p.wykonanych, '#15803d')}
+      ${histKafel('z telefonem', p.z_telefonem, p.z_telefonem < p.klientek ? '#b45309' : '')}
+      ${histKafel('ma umówioną', p.umowionych, p.umowionych ? '#1D4ED8' : '')}
+    </div>`;
+    // Klik w wiersz otwiera pełną historię tej klientki. Przekazujemy INDEKS, nie dane — nazwisko
+    // z apostrofem („O'Brien") rozbijało kiedyś wywołanie w atrybucie onclick (próba 21.10.2026).
+    const wiersze = d.klientki.map((k, i) => `
+      <div class="trm-hist-osoba" ${k.id_klienta ? `role="button" tabindex="0" onclick="TRM.histOtworzOsobe(${i})" onkeydown="if(event.key==='Enter'){TRM.histOtworzOsobe(${i})}" title="Pokaż pełną historię tej klientki"` : ''}>
+        <div class="kto">
+          <b>${esc(k.nazwa)}</b>
+          <span class="tel">${k.telefon ? esc(k.telefon) : '<span class="brak">brak telefonu</span>'}</span>
+          ${k.id_klienta ? '' : '<span class="muted small">bez kartoteki</span>'}
+        </div>
+        <div class="ile"><b>${k.wizyt}</b> ${k.wizyt === 1 ? 'wizyta' : k.wizyt < 5 ? 'wizyty' : 'wizyt'}${k.wykonanych !== k.wizyt ? ` <span class="muted small">(${k.wykonanych} wykonanych)</span>` : ''}</div>
+        <div class="kiedy">${k.ostatnia ? `ostatnia: <b>${esc(ladnaData(k.ostatnia, true))}</b>` : '<span class="muted">jeszcze nie była</span>'}</div>
+        <div class="dalej">${k.najblizsza ? `<span class="trm-pill info">umówiona ${esc(ladnaData(k.najblizsza.slice(0, 10), true))} ${esc(k.najblizsza.slice(11, 16))}</span>` : '<span class="muted small">bez umówionej wizyty</span>'}</div>
+        <div class="zab muted small">${esc(k.zabiegi)}</div>
+      </div>`).join('');
+    const naglowek = `<div class="trm-hist-legenda"><span class="muted">Zaznaczone zabiegi: <b>${esc(d.kategorie.join(' · '))}</b> · ${esc(ladnaData(d.od, true))} – ${esc(ladnaData(d.do, true))} · najpierw te, które były ostatnio</span></div>`;
+    return `${kafelki}${naglowek}<div class="trm-hist-osoby">${wiersze}</div>`;
   }
 
   function histKlientkaHtml(d) {

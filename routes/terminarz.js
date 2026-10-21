@@ -1523,6 +1523,52 @@ module.exports = (db, opts = {}) => {
             zabiegi: Object.entries(p.zabiegi).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([nazwa, ile]) => ({ nazwa, ile })) } };
       }
 
+      // Historia po ZABIEGU (prośba właściciela 21.10.2026): „pokaż zabieg, żeby można było kilka naraz
+      // wybrać, wtedy pokazuj UNIKALNE osoby — nawet jak Ala chodziła 10 razy, chcę ją mieć pojedynczo,
+      // najlepiej z numerem telefonu na wierzchu".
+      // To jest lista KLIENTEK, nie lista wizyt: jeden wiersz = jedna osoba, z liczbą wizyt, ostatnią
+      // i najbliższą umówioną. Taką listę bierze się do ręki i dzwoni — stąd telefon jako pierwsza rzecz.
+      // Telefon czytamy z kartoteki (Klienci.telefon), a gdy klientka nie ma karty — z samej rezerwacji.
+      case 'trm_historia_zabiegu': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const od = sprawdzData(d.od, 'od'), do_ = sprawdzData(d.do, 'do');
+        if (S.naMin(do_ + ' 00:00') - S.naMin(od + ' 00:00') > 400 * 1440) throw new BladUzytkownika('Zakres maksymalnie 400 dni.');
+        const kategorie = [...new Set((Array.isArray(d.kategorie) ? d.kategorie : []).map(x => String(x || '').trim()).filter(Boolean))].slice(0, 30);
+        if (!kategorie.length) throw new BladUzytkownika('Wybierz przynajmniej jeden zabieg.');
+        const znaki = kategorie.map(() => '?').join(', ');
+        const rows = await q(
+          `SELECT MAX(r.id_klienta) AS id_klienta, MAX(COALESCE(k.imie_nazwisko, r.klient_nazwa)) AS nazwa,
+                  MAX(COALESCE(k.telefon, r.klient_telefon)) AS telefon, MAX(k.email) AS email,
+                  COUNT(DISTINCT r.id) AS wizyt,
+                  SUM(CASE WHEN p.stan IN ('wykonana', 'przerwana') THEN 1 ELSE 0 END) AS wykonanych,
+                  DATE_FORMAT(MAX(CASE WHEN p.stan IN ('wykonana', 'przerwana') THEN r.start END), '%Y-%m-%d') AS ostatnia,
+                  DATE_FORMAT(MIN(CASE WHEN r.start > NOW() AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla') THEN r.start END), '%Y-%m-%d %H:%i') AS najblizsza,
+                  GROUP_CONCAT(DISTINCT p.kategoria ORDER BY p.kategoria SEPARATOR ' · ') AS zabiegi
+             FROM Term_Rezerwacje r
+             JOIN Term_Pozycje p ON p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id
+             LEFT JOIN Klienci k ON k.tenant_id = r.tenant_id AND k.id_klienta = r.id_klienta
+            WHERE r.tenant_id = ? AND r.start BETWEEN ? AND ? AND r.usunieta = 0
+              AND p.stan <> 'anulowana' AND p.kategoria IN (${znaki})
+            GROUP BY COALESCE(r.id_klienta, r.klient_nazwa)
+            ORDER BY (MAX(CASE WHEN p.stan IN ('wykonana', 'przerwana') THEN r.start END)) DESC, wizyt DESC
+            LIMIT 500`,
+          [tenant, od + ' 00:00:00', do_ + ' 23:59:59', ...kategorie]);
+
+        const klientki = rows.map(x => ({
+          id_klienta: x.id_klienta || null, nazwa: x.nazwa || '—', telefon: x.telefon || null, ma_email: !!x.email,
+          wizyt: Number(x.wizyt) || 0, wykonanych: Number(x.wykonanych) || 0,
+          ostatnia: x.ostatnia || null, najblizsza: x.najblizsza || null, zabiegi: x.zabiegi || '',
+        }));
+        return { status: 'success', od, do: do_, kategorie, klientki,
+          podsumowanie: {
+            klientek: klientki.length,
+            wizyt: klientki.reduce((s, x) => s + x.wizyt, 0),
+            wykonanych: klientki.reduce((s, x) => s + x.wykonanych, 0),
+            z_telefonem: klientki.filter(x => x.telefon).length,
+            umowionych: klientki.filter(x => x.najblizsza).length,
+          } };
+      }
+
       // ───────── ZK-02: zakupy klientki (odczyt BEZ mutacji), uzgodnienie źródeł, mapowanie ofert (wersje), ewidencja, korekty ─────────
       case 'trm_zakupy_klientki': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -2278,4 +2324,4 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];

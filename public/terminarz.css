@@ -820,3 +820,31 @@ body.dark-mode .trm .trm-hist-wizyta.planowana { border-left-color:var(--h-plan)
 body.dark-mode .trm .trm-hist-wizyta.odwolana  { border-left-color:var(--h-odw); }
 body.dark-mode .trm .trm-hist-wizyta.nieobecna { border-left-color:var(--h-nieob); }
 body.dark-mode .trm .trm-hist-wizyta.skasowana { border-left-color:var(--h-skas); }
+
+/* Historia → Zabieg (21.10.2026): chipsy do zaznaczania zabiegów i lista UNIKALNYCH klientek.
+   „nawet jak Ala chodziła 10 zabiegów, chcę ją mieć pojedynczą, najlepiej z numerem telefonu
+   na wierzchu" — stąd telefon jest w wierszu drugim co do ważności zaraz po nazwisku, a nie
+   schowany w szarym podpisie. */
+.trm-hist-chipsy { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px; }
+.trm-hist-chip { display:inline-flex; align-items:center; gap:7px; border:1px solid var(--t-line); background:var(--t-sur); color:var(--t-ink);
+  border-radius:999px; padding:7px 13px; font-size:13px; font-weight:600; cursor:pointer; transition:.12s; min-height:36px; }
+.trm-hist-chip i { width:10px; height:10px; border-radius:3px; background:var(--kat, var(--t-gold)); display:inline-block; flex:0 0 auto; }
+.trm-hist-chip:hover { border-color:var(--t-acc); }
+.trm-hist-chip.on { background:var(--t-acc2); border-color:var(--t-acc); color:var(--t-acc); }
+body.dark-mode .trm .trm-hist-chip.on { color:#f3d9e2; }
+
+.trm-hist-osoby { display:flex; flex-direction:column; gap:8px; }
+.trm-hist-osoba { display:grid; grid-template-columns:minmax(220px,1.4fr) auto minmax(150px,1fr) minmax(170px,auto); gap:6px 16px;
+  align-items:center; background:var(--t-sur); border:1px solid var(--t-line); border-left:4px solid var(--t-acc); border-radius:var(--t-r); padding:12px 14px; }
+.trm-hist-osoba[role="button"] { cursor:pointer; transition:.15s; }
+.trm-hist-osoba[role="button"]:hover { box-shadow:0 4px 14px rgba(26,14,26,.07); }
+.trm-hist-osoba .kto { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.trm-hist-osoba .kto b { font-size:15px; }
+.trm-hist-osoba .kto .tel { font-size:15px; font-weight:600; color:var(--t-acc); letter-spacing:.2px; }
+.trm-hist-osoba .kto .tel .brak { font-size:12.5px; font-weight:500; color:var(--t-mut); }
+.trm-hist-osoba .ile, .trm-hist-osoba .kiedy { font-size:13px; color:var(--t-mut); }
+.trm-hist-osoba .zab { grid-column:1 / -1; }
+@media (max-width: 760px) {
+  .trm-hist-osoba { grid-template-columns:1fr; }
+  .trm-hist-osoba .dalej { justify-self:start; }
+}
