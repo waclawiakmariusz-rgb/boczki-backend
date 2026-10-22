@@ -1,0 +1,71 @@
+{
+  "wersjaKatalogu": "2026-10-22.1",
+  "sprawdzonoWobec": "main 96d8b50 (22.10.2026)",
+  "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
+  "konteksty": {
+    "magazyn.stan": {
+      "parentContextId": null,
+      "eyebrow": "STAN MAGAZYNOWY",
+      "title": "Sprawdź swoje zapasy",
+      "body": "Lista wszystkich kosmetyków z ilościami. Filtry u góry dzielą ją na detal (to, co sprzedajesz) i listę zbiorczą.",
+      "items": [
+        { "icon": "szukaj", "text": "Szukaj po nazwie albo kategorii." },
+        { "icon": "alarm", "text": "Kolory przy dacie ostrzegają przed krótkim terminem." },
+        { "icon": "lista", "text": "Legenda nad tabelą tłumaczy oznaczenia." }
+      ],
+      "tip": "Przyjęcie dostawy to osobny ekran — tutaj tylko oglądasz stan.",
+      "tipTyp": "informacja",
+      "article": { "label": "Magazyn — pilnowanie zapasów", "href": "/pomoc/", "anchor": "magazyn" },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy\", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",
+        "public/estelio_pomoc_f.html: rozdział #magazyn („Przyjęcie dostawy to osobny ekran\")"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "96d8b50",
+      "contentVersion": 1
+    },
+
+    "magazyn.pro.produkt.nowy": {
+      "parentContextId": "magazyn.stan",
+      "eyebrow": "NOWY PRODUKT",
+      "title": "Dodajesz nowy produkt",
+      "body": "Wybierz kategorię i wpisz nazwę. Obecna ilość to tyle, ile masz teraz w salonie.",
+      "items": [],
+      "tip": "Minimum (próg alarmowy) pomaga zauważyć kończący się zapas.",
+      "tipTyp": "informacja",
+      "article": { "label": "Magazyn — pilnowanie zapasów", "href": "/pomoc/", "anchor": "magazyn" },
+      "availability": { "dodatek": "rap_module" },
+      "sources": [
+        "public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",
+        "makiety/01-chmurka-formularza.png — tekst bazowy, dostosowany do rzeczywistych nazw pól"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "96d8b50",
+      "contentVersion": 1,
+      "notatkaWdrozeniowa": "Makieta mówi „stan początkowy\" i „minimum\"; formularz ma „Obecna Ilość\" i „Minimum (Próg Alarmowy)\". Zgodnie ze specyfikacją dostosowano POMOC do formularza, a nie odwrotnie."
+    },
+
+    "klient.profil": {
+      "parentContextId": null,
+      "eyebrow": "PROFIL KLIENTKI",
+      "title": "Wszystko o jednej klientce",
+      "titleOgolny": "Profil klientki — ogólnie",
+      "body": "Zakładki dzielą kartę na obszary: podsumowanie, wizyty, kupione produkty, zadatki, analitykę i dokumenty.",
+      "items": [
+        { "icon": "osoba", "text": "Dane kontaktowe i zgody zmieniasz przyciskiem edycji." },
+        { "icon": "kalendarz", "text": "Zakładka Wizyty pokazuje historię i to, co umówione." }
+      ],
+      "tip": null,
+      "article": { "label": "Klienci — kartoteka", "href": "/pomoc/", "anchor": "klienci" },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",
+        "public/estelio_pomoc_f.html: rozdział #klienci"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "96d8b50",
+      "contentVersion": 1
+    }
+  }
+}

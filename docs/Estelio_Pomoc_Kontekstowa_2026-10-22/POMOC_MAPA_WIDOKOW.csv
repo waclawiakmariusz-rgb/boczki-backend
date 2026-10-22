@@ -1,0 +1,111 @@
+﻿kontekst,sciezka,nadrzedny,tytul,rola,dodatek,kotwica,zrodlo,link,status
+klient.profil,"public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",,Wszystko o jednej klientce,,,podpięte,"public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty) ; public/estelio_pomoc_f.html: rozdział #klienci",/pomoc/#klienci,wdrozone-sprawdzone
+magazyn.pro.produkt.nowy,"public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",magazyn.stan,Dodajesz nowy produkt,,rap_module,podpięte,"public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto) ; makiety/01-chmurka-formularza.png — tekst bazowy, dostosowany do rzeczywistych nazw pól",/pomoc/#magazyn,wdrozone-sprawdzone
+magazyn.stan,"public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy"", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",,Sprawdź swoje zapasy,,,podpięte,"public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy"", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda) ; public/estelio_pomoc_f.html: rozdział #magazyn („Przyjęcie dostawy to osobny ekran"")",/pomoc/#magazyn,wdrozone-sprawdzone
+modal.birthday-modal,public/index.html #birthday-modal-overlay,,(modal) birthday-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.client-edit-modal,public/index.html #client-edit-modal-overlay,,(modal) client-edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.consent-modal,public/index.html #consent-modal-overlay,,(modal) consent-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.dd-modal,public/index.html #dd-modal-overlay,,(modal) dd-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.deposit,public/index.html #deposit-overlay,,(modal) deposit-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.deposit-edit-modal,public/index.html #deposit-edit-modal-overlay,,(modal) deposit-edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.edit-dict,public/index.html #edit-dict-overlay,,(modal) edit-dict-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.edit-modal,public/index.html #edit-modal-overlay,,(modal) edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.edit-product,public/index.html #edit-product-overlay,,(modal) edit-product-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.emergency-modal,public/index.html #emergency-modal-overlay,,(modal) emergency-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.foto-modal,public/index.html #foto-modal-overlay,,(modal) foto-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.hkb-modal,public/index.html #hkb-modal-overlay,,(modal) hkb-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.hkb-modal,public/index.html #hkb-modal,,(modal) hkb-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.hkb-toast-modal,public/index.html #hkb-toast-modal,,(modal) hkb-toast-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.kon_edit-modal,public/index.html #kon_edit-modal,,(modal) kon_edit-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.kp_kat_overlay,public/index.html #kp_kat_overlay,,(modal) kp_kat_overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.kp_powiel_overlay,public/index.html #kp_powiel_overlay,,(modal) kp_powiel_overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.leady-modal-szczegoly,public/index.html #leady-modal-szczegoly,,(modal) leady-modal-szczegoly,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.leady-modal-zrodlo,public/index.html #leady-modal-zrodlo,,(modal) leady-modal-zrodlo,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.login,public/index.html #login-overlay,,(modal) login-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.memo-modal,public/index.html #memo-modal-overlay,,(modal) memo-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.modal-nowy-typ,public/index.html #modal-nowy-typ,,(modal) modal-nowy-typ,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.new-client,public/index.html #new-client-overlay,,(modal) new-client-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.pin,public/index.html #pin-overlay,,(modal) pin-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.ret-modal-historia,public/index.html #ret-modal-historia,,(modal) ret-modal-historia,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.ret-modal-klient,public/index.html #ret-modal-klient,,(modal) ret-modal-klient,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.retention-modal,public/index.html #retention-modal-overlay,,(modal) retention-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.rodo-modal,public/index.html #rodo-modal-overlay,,(modal) rodo-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-anonimizacja,public/index.html #sd-anonimizacja-overlay,,(modal) sd-anonimizacja-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-ban,public/index.html #sd-ban-overlay,,(modal) sd-ban-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-odw,public/index.html #sd-odw-overlay,,(modal) sd-odw-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-soft-delete,public/index.html #sd-soft-delete-overlay,,(modal) sd-soft-delete-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-ustawdate,public/index.html #sd-ustawdate-overlay,,(modal) sd-ustawdate-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-zawwszystkie,public/index.html #sd-zawwszystkie-overlay,,(modal) sd-zawwszystkie-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.sd-zmarly,public/index.html #sd-zmarly-overlay,,(modal) sd-zmarly-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.split-deposit-modal,public/index.html #split-deposit-modal,,(modal) split-deposit-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.split-payment-modal,public/index.html #split-payment-modal,,(modal) split-payment-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.tgt-modal,public/index.html #tgt-modal,,(modal) tgt-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.tk-podglad,public/index.html #tk-podglad-overlay,,(modal) tk-podglad-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zd-comments-modal,public/index.html #zd-comments-modal-overlay,,(modal) zd-comments-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zd-kat-popup,public/index.html #zd-kat-popup,,(modal) zd-kat-popup,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zd-modal,public/index.html #zd-modal-overlay,,(modal) zd-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zd-prz-popup,public/index.html #zd-prz-popup,,(modal) zd-prz-popup,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zg-modal,public/index.html #zg-modal-overlay,,(modal) zg-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zwrot-modal,public/index.html #zwrot-modal-overlay,,(modal) zwrot-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+sekcja.addons,public/index.html:8442 #addons,,Dodatki,,,nagłówek sekcji,,,do-opisania
+sekcja.analiza-konsultacji,public/index.html:10501 #analiza-konsultacji,,Analiza Konsultacji,,,nagłówek sekcji,,,do-opisania
+sekcja.awaryjna-zmiana,public/index.html:7469 #awaryjna-zmiana,,🚨 Awaryjna Edycja (30 dni),,,nagłówek sekcji,,,do-opisania
+sekcja.booksy-dzis,public/index.html:7323 #booksy-dzis,,Wizyty z Booksy na dzisiaj,,,nagłówek sekcji,,,do-opisania
+sekcja.co-zamowic,public/index.html:5715 #co-zamowic,,Raport: Co zamówić?,,,nagłówek sekcji,,,do-opisania
+sekcja.demo-dodatek,public/index.html:8524 #demo-dodatek,,DODATEK!,,,nagłówek sekcji,,,do-opisania
+sekcja.do-sprawdzenia,public/index.html:7259 #do-sprawdzenia,,do-sprawdzenia,,,nagłówek sekcji,,,do-opisania
+sekcja.dzisiejsza-sprzedaz,public/index.html:6485 #dzisiejsza-sprzedaz,,✏️ Dzisiejsza sprzedaż,,,nagłówek sekcji,,,do-opisania
+sekcja.historia,public/index.html:7210 #historia,,Historia Sprzedaży,,,nagłówek sekcji,,,do-opisania
+sekcja.inwentaryzacja,public/index.html:5694 #inwentaryzacja,,Inwentaryzacja,,,nagłówek sekcji,,,do-opisania
+sekcja.kartoteka,public/index.html:7561 #kartoteka,,Kartoteka Klienta,,,nagłówek sekcji,,,do-opisania
+sekcja.klient-profil,public/index.html:8047 #klient-profil,,📞 ${w.telefon},,,nagłówek sekcji,,,do-opisania
+sekcja.klub-admin,public/index.html:8592 #klub-admin,,💎 Klub,,lojalnosc,nagłówek sekcji,,,do-opisania
+sekcja.kon_admin-panel,public/index.html:7089 #kon_admin-panel,,Zarządzanie (Admin),,konsultacje,nagłówek sekcji,,,do-opisania
+sekcja.kon_historia-panel,public/index.html:7144 #kon_historia-panel,,Historia Edycji i Zmian,,konsultacje,nagłówek sekcji,,,do-opisania
+sekcja.kon_raportowanie,public/index.html:6500 #kon_raportowanie,,Wyniki Konsultacji,,konsultacje,nagłówek sekcji,,,do-opisania
+sekcja.kon_raportowanie,public/index.html:6574 #kon_raportowanie,,Konsultacje,,konsultacje,nagłówek sekcji,,,do-opisania
+sekcja.kreator_dostepow,public/index.html:10450 #kreator_dostepow,,Zarządzanie Użytkownikami,,,nagłówek sekcji,,,do-opisania
+sekcja.kreator_dostepow,public/index.html:10452 #kreator_dostepow,,Zarządzanie Użytkownikami,,,nagłówek sekcji,,,do-opisania
+sekcja.leady,public/index.html:10191 #leady,,📋 Leady,,,nagłówek sekcji,,,do-opisania
+sekcja.logi,public/index.html:8939 #logi,,Dziennik Zdarzeń,,,nagłówek sekcji,,,do-opisania
+sekcja.magazyn,public/index.html:5683 #magazyn,,Stan Magazynowy,,,nagłówek sekcji,,,do-opisania
+sekcja.nowy,public/index.html:5700 #nowy,,Przyjęcie towaru,,,nagłówek sekcji,,,do-opisania
+sekcja.odprawa,public/index.html:10876 #odprawa,,📢 Mega Raport Operacyjny,,,nagłówek sekcji,,,do-opisania
+sekcja.podsumowanie,public/index.html:7496 #podsumowanie,,Pełny raport z dzisiejszych działań,,,nagłówek sekcji,,,do-opisania
+sekcja.pulpit,public/index.html:7857 #pulpit,,Dzień dobry! 👋,,,nagłówek sekcji,,,do-opisania
+sekcja.ranking-klientow,public/index.html:7739 #ranking-klientow,,Ranking klientów,,,nagłówek sekcji,,,do-opisania
+sekcja.rap_add,public/index.html:10819 #rap_add,,📂 Kategorie Magazynowe,,rap_module,nagłówek sekcji,,,do-opisania
+sekcja.rap_categories,public/index.html:10845 #rap_categories,,📂 Kategorie Magazynowe,,rap_module,nagłówek sekcji,,,do-opisania
+sekcja.rap_logs,public/index.html:10859 #rap_logs,,📜 Historia Operacji Magazynowych,,rap_module,nagłówek sekcji,,,do-opisania
+sekcja.rap_magazyn,public/index.html:10804 #rap_magazyn,,📦 Stan Magazynowy,,rap_module,nagłówek sekcji,,,do-opisania
+sekcja.rap_report,public/index.html:10787 #rap_report,,⚠️ Zadania Magazynowe,,rap_module,nagłówek sekcji,,,do-opisania
+sekcja.retencja,public/index.html:5867 #retencja,,📞 Retencja Klientów,,,nagłówek sekcji,,,do-opisania
+sekcja.sekcja-help-kb,public/index.html:5964 #sekcja-help-kb,,sekcja-help-kb,,,nagłówek sekcji,,,do-opisania
+sekcja.sekcja-kreator-rabatow,public/index.html:8944 #sekcja-kreator-rabatow,,✂️ Kreator Rabatów,,,nagłówek sekcji,,,do-opisania
+sekcja.sekcja-platnosc-link,public/index.html:8470 #sekcja-platnosc-link,,Płatności online (tpay),,,nagłówek sekcji,,,do-opisania
+sekcja.sekcja-zadatki-config,public/index.html:8988 #sekcja-zadatki-config,,💰 Ustawienia zadatków,,,nagłówek sekcji,,,do-opisania
+sekcja.setup-pracownicy,public/index.html:7691 #setup-pracownicy,,Pracownicy,,,nagłówek sekcji,,,do-opisania
+sekcja.setup-sugestie,public/index.html:7700 #setup-sugestie,,🧠 Kreator Sugestii (Cross-selling),,,nagłówek sekcji,,,do-opisania
+sekcja.setup-zabiegi,public/index.html:7577 #setup-zabiegi,,Kreator Zabiegów,,,nagłówek sekcji,,,do-opisania
+sekcja.slownik,public/index.html:6404 #slownik,,Kreator Produktu / Kosmetyku,,,nagłówek sekcji,,,do-opisania
+sekcja.sms-baza,public/index.html:5772 #sms-baza,,📣 Baza do akcji SMS,,,nagłówek sekcji,,,do-opisania
+sekcja.sprzedaz,public/index.html:6437 #sprzedaz,,Rejestracja Sprzedaży,,,nagłówek sekcji,,,do-opisania
+sekcja.terminarz,public/index.html:8522 #terminarz,,DODATEK!,,,nagłówek sekcji,,,do-opisania
+sekcja.tgt-modal,public/index.html:11011 #tgt-modal,,🎯 Konfigurator Targetów,,,nagłówek sekcji,,,do-opisania
+sekcja.tickety,public/index.html:5805 #tickety,,🎫 Zgłoszenia,,,nagłówek sekcji,,,do-opisania
+sekcja.urodziny,public/index.html:7788 #urodziny,,🎂 Urodziny,,,nagłówek sekcji,,,do-opisania
+sekcja.widok-pracownicy-targety,public/index.html:11152 #widok-pracownicy-targety,,🏆 Dashboard Wyników Pracownika,,,nagłówek sekcji,,,do-opisania
+sekcja.zadatki-lista,public/index.html:7225 #zadatki-lista,,Spis Zadatków i Wpłat,,,nagłówek sekcji,,,do-opisania
+terminarz.nowa.krok1,"public/terminarz.js: renderNowa(), krok === 1",sekcja.terminarz,Nowa wizyta — krok 1,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.nowa.krok2,"public/terminarz.js: renderNowa(), krok === 2",sekcja.terminarz,Nowa wizyta — krok 2,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.nowa.krok3,"public/terminarz.js: renderNowa(), krok === 3",sekcja.terminarz,Nowa wizyta — krok 3,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.panel.powiadomienia,public/terminarz.js: panelOtworz(),sekcja.terminarz,Panel: powiadomienia,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.panel.szczegoly,public/terminarz.js: panelOtworz(),sekcja.terminarz,Panel: szczegoly,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.grafik,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Grafik zespołu,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.maile,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Powiadomienia e-mail,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.nieobecnosci,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Nieobecności i blokady,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.ogolne,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Godziny i zasady,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.pakiety,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Pakiety i zakupy,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.uslugi,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Usługi,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.zasoby,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Gabinety i urządzenia,,terminarz,nagłówek widoku/panelu,,,do-opisania
+terminarz.ustawienia.zespol,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Zespół,,terminarz,nagłówek widoku/panelu,,,do-opisania

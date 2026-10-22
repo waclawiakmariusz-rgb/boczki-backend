@@ -5682,7 +5682,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         <main class="main-content">
             <div id="magazyn" class="section active">
 			<input type="text" id="szukaj-magazyn" onkeyup="_db('mag',szukajWMagazynie)" placeholder="🔍 Szukaj produktu w magazynie..." style="width:100%; padding:12px 16px; margin-bottom:20px; border:1px solid #e2e8f0; border-radius:10px; box-sizing:border-box; font-size:14px; background:#f8fafc;">
-                <div class="header"><h1>Stan Magazynowy</h1><div style="display:flex; gap:8px; flex-wrap:wrap;"><button onclick="pobierzDane()" class="btn-primary" style="width:auto; background:#9f1239; border-radius:10px; padding:10px 20px;">🔄 Odśwież</button><button onclick="eksportujPDF('magazyn','Stan Magazynowy — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div></div>
+                <div class="header"><h1>Stan Magazynowy</h1><div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><span class="pk-slot" data-pomoc="magazyn.stan" data-pomoc-nazwa="Stan magazynowy"></span><button onclick="pobierzDane()" class="btn-primary" style="width:auto; background:#9f1239; border-radius:10px; padding:10px 20px;">🔄 Odśwież</button><button onclick="eksportujPDF('magazyn','Stan Magazynowy — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div></div>
                 <div class="filters" style="gap:8px;">
                     <button class="filter-btn active" onclick="filtrujMagazyn('Wszystkie', this)">Wszystkie</button>
                     <button class="filter-btn" onclick="filtrujMagazyn('Detal', this)">Detal</button>
@@ -8191,6 +8191,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="pp-tab" onclick="przelaczTabProfilu('zadatki',this)">💳 Zadatki</button>
                     <button class="pp-tab" onclick="przelaczTabProfilu('analityki',this)">📊 Analityki</button>
                     <button class="pp-tab" onclick="przelaczTabProfilu('dokumenty',this)">📎 Dokumenty</button>
+                    <!-- Pomoc do zakładki: jeden przycisk we wspólnym pasku, kontekst aktualizuje przelaczTabProfilu() -->
+                    <span class="pk-slot" id="pk-profil-slot" data-pomoc="klient.profil.podsumowanie" data-pomoc-nazwa="Profil klientki" style="margin-left:auto; align-self:center;"></span>
                 </div>
 
                 <div style="padding:22px 18px 20px;">
@@ -10815,7 +10817,7 @@ ANALIZA MANAGER
                 </div>
 
                 <div id="rap_add" class="section rap_view-section">
-                  <h2>➕ Nowy Produkt / Edycja</h2>
+                  <h2 style="display:flex; align-items:center; gap:6px;">➕ Nowy Produkt / Edycja<span class="pk-slot" data-pomoc="magazyn.pro.produkt.nowy" data-pomoc-nazwa="Nowy produkt"></span></h2>
                   <div class="rap_card" style="max-width:800px;">
                     <form id="rap_product-form" onsubmit="rap_zapiszProdukt(event)">
                       <input type="hidden" id="rap_p_id">
@@ -16952,6 +16954,13 @@ function przelaczTabProfilu(tabId, btn) {
         b.classList.remove('pp-tab-active', 'profil-tab-active');
     });
     if (btn) { btn.classList.add('pp-tab-active'); btn.classList.add('profil-tab-active'); }
+    // Pomoc kontekstowa: jeden przycisk „?" w pasku zakładek, ale kontekst zmienia się razem
+    // z zakładką — a otwarta chmurka starej zakładki musi się zamknąć (22.10.2026).
+    const pkSlot = document.getElementById('pk-profil-slot');
+    if (pkSlot) {
+        if (window.POMOC && typeof POMOC.zamknij === 'function') POMOC.zamknij();
+        pkSlot.setAttribute('data-pomoc', 'klient.profil.' + tabId);
+    }
     if (tabId === 'dokumenty' && window.aktualnyProfilKlientId && typeof dd_loadDokumenty === 'function') {
         dd_loadDokumenty(window.aktualnyProfilKlientId);
     }
@@ -36653,5 +36662,11 @@ document.addEventListener('DOMContentLoaded', function() {
      na 20261018a i po wdrożeniu przeglądarki podawały stary plik; 21.10.2026 -->
 <link rel="stylesheet" href="/terminarz.css?v=__WERSJA_PLIKOW__">
 <script src="/terminarz.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- ❓ POMOC KONTEKSTOWA (22.10.2026) — jeden wspólny przycisk „?" i katalog krótkich treści.
+     W znaczniku wystarczy pusty <span class="pk-slot"> z atrybutem data-pomoc ustawionym na klucz
+     kontekstu; komponent sam podmienia slot na przycisk, także na ekranach rysowanych z JS.
+     Spec: docs/Estelio_Pomoc_Kontekstowa_2026-10-22/WDROZENIE_DLA_CLAUDE.md -->
+<link rel="stylesheet" href="/pomoc-kontekstowa.css?v=__WERSJA_PLIKOW__">
+<script src="/pomoc-kontekstowa.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>

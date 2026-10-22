@@ -1,0 +1,139 @@
+/* ============================================================================
+   POMOC KONTEKSTOWA — wspólny komponent „?" (22.10.2026)
+   Specyfikacja: docs/Estelio_Pomoc_Kontekstowa_2026-10-22/WDROZENIE_DLA_CLAUDE.md
+   Makiety: makiety/01-chmurka-formularza.png, makiety/02-przycisk-lista-mobile.png
+
+   Wymiary i kolory są WIĄŻĄCE i przepisane z tabeli w rozdziale 7 specyfikacji,
+   nie odczytane z powiększonego PNG. Komponent nie zmienia niczego dookoła:
+   dokłada wyłącznie miejsce na przycisk w istniejącym nagłówku.
+   ========================================================================== */
+
+.pk-slot { display:inline-flex; align-items:center; justify-content:center; flex:0 0 auto; }
+
+/* ── przycisk „?" ─────────────────────────────────────────────────────────
+   Koło 36×36 px w polu interakcji 44×44 px — palec trafia w 44, oko widzi 36. */
+.pk-btn {
+  width:44px; height:44px; padding:0; margin:0; border:none; background:none;
+  display:inline-flex; align-items:center; justify-content:center;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+  font-family:inherit; line-height:1; flex:0 0 auto;
+}
+.pk-btn::before {
+  content:'?'; display:flex; align-items:center; justify-content:center;
+  width:36px; height:36px; border-radius:50%;
+  background:#F8EDF1; color:#842D49; font-size:22px; font-weight:600;
+  font-family:'DM Sans','Segoe UI',system-ui,sans-serif;
+  transition:background .14s ease;
+}
+.pk-btn:hover::before { background:#F2E1E7; }
+.pk-btn:focus { outline:none; }
+.pk-btn:focus-visible::before { outline:2px solid #842D49; outline-offset:3px; }
+.pk-btn[aria-expanded="true"]::before { background:#F2E1E7; }
+
+/* mały tooltip przy najeździe/fokusie — tylko etykieta, nie treść pomocy */
+.pk-tip {
+  position:fixed; z-index:10050; pointer-events:none;
+  background:#FFFFFF; color:#45434A; border:1px solid #E7E1DE; border-radius:10px;
+  padding:7px 11px; font-size:12.5px; line-height:1.3;
+  font-family:'DM Sans','Segoe UI',system-ui,sans-serif;
+  box-shadow:0 6px 18px rgba(45,30,35,.10);
+  opacity:0; transform:translateY(2px); transition:opacity .12s ease, transform .12s ease;
+}
+.pk-tip.pk-widoczny { opacity:1; transform:translateY(0); }
+
+/* ── chmurka ──────────────────────────────────────────────────────────── */
+.pk-karta {
+  /* „Szerokość 360 px WRAZ Z PADDINGIEM" (spec, rozdz. 7) — aplikacja nie ustawia border-box
+     globalnie, więc bez tej linii karta wychodziła 402 px i na telefonie wystawała poza ekran. */
+  box-sizing:border-box;
+  position:fixed; z-index:10060; width:360px; max-width:calc(100vw - 24px);
+  background:#FFFFFF; border:1px solid #E7E1DE; border-radius:16px; padding:20px;
+  box-shadow:0 12px 32px rgba(45,30,35,.12), 0 2px 6px rgba(45,30,35,.04);
+  font-family:'DM Sans','Segoe UI',system-ui,sans-serif;
+  color:#45434A; font-size:14px; line-height:21px;
+  opacity:0; transform:translateY(4px); transition:opacity .14s ease, transform .14s ease;
+  max-height:calc(100vh - 24px); overflow-y:auto; overflow-x:hidden;
+  overscroll-behavior:contain;
+}
+.pk-karta.pk-widoczny { opacity:1; transform:translateY(0); }
+.pk-karta:focus { outline:none; }
+
+/* grot — wskazuje rzeczywisty przycisk; gdy nie da się go ustawić, jest ukrywany z JS */
+.pk-grot { position:fixed; z-index:10061; width:14px; height:14px; background:#FFFFFF;
+  border-left:1px solid #E7E1DE; border-top:1px solid #E7E1DE; transform:rotate(45deg); }
+.pk-grot.pk-dol { border-left:none; border-top:none; border-right:1px solid #E7E1DE; border-bottom:1px solid #E7E1DE; }
+
+.pk-gora { display:flex; align-items:flex-start; gap:12px; }
+.pk-etykieta {
+  font-size:11px; line-height:16px; color:#68636A; letter-spacing:.08em;
+  text-transform:uppercase; font-weight:600; flex:1 1 auto; min-width:0;
+  overflow-wrap:anywhere;
+}
+.pk-x {
+  width:44px; height:44px; margin:-12px -12px -12px 0; padding:0; flex:0 0 auto;
+  border:none; background:none; cursor:pointer; color:#68636A;
+  display:inline-flex; align-items:center; justify-content:center; border-radius:10px;
+}
+.pk-x svg { width:18px; height:18px; }
+.pk-x:hover { color:#242126; background:#F6F3F1; }
+.pk-x:focus-visible { outline:2px solid #842D49; outline-offset:2px; }
+
+.pk-tytul {
+  margin:8px 0 0; font-size:17px; line-height:23px; font-weight:600; color:#242126;
+  padding-right:4px; overflow-wrap:anywhere;
+}
+.pk-opis { margin:12px 0 0; font-size:14px; line-height:21px; color:#45434A; overflow-wrap:anywhere; }
+
+/* lista — maksymalnie trzy krótkie zdania, ikony dekoracyjne (nie emoji) */
+.pk-lista { list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:10px; }
+.pk-lista li { display:flex; align-items:flex-start; gap:10px; font-size:14px; line-height:21px; }
+.pk-ikona {
+  width:32px; height:32px; flex:0 0 auto; border-radius:50%; background:#FBF0F3;
+  display:inline-flex; align-items:center; justify-content:center; color:#842D49;
+}
+.pk-ikona svg { width:18px; height:18px; }
+
+/* wskazówka — ikona „i"; wykrzyknik tylko dla rzeczywistego ostrzeżenia */
+.pk-wskazowka {
+  margin:12px 0 0; padding:12px; border-radius:10px; background:#FBF0F3; color:#842D49;
+  font-size:13px; line-height:19px; display:flex; align-items:flex-start; gap:10px;
+}
+.pk-wskazowka svg { width:18px; height:18px; flex:0 0 auto; margin-top:1px; }
+
+.pk-stopka { margin-top:16px; padding-top:14px; border-top:1px solid #EFEAE7; }
+.pk-link {
+  display:inline-flex; align-items:center; gap:6px;
+  font-size:14px; line-height:20px; font-weight:600; color:#842D49; text-decoration:none;
+}
+.pk-link:hover, .pk-link:focus-visible { text-decoration:underline; }
+.pk-link:focus-visible { outline:2px solid #842D49; outline-offset:3px; border-radius:4px; }
+.pk-link svg { width:14px; height:14px; }
+.pk-podpis { margin:4px 0 0; font-size:12.5px; line-height:18px; color:#68636A; }
+
+/* stan zastępczy — uczciwie mówi, że treści jeszcze nie ma */
+.pk-brak { margin:12px 0 0; font-size:14px; line-height:21px; color:#68636A; }
+
+@media (max-width: 420px) {
+  .pk-karta { padding:16px; }
+}
+@media (max-width: 340px) {
+  .pk-karta { width:296px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pk-karta, .pk-tip { transition:none; transform:none; }
+}
+
+/* Tryb ciemny aplikacji — komponent ma być czytelny, ale zostaje przy swojej
+   tożsamości kolorystycznej (bordowy akcent Estelio). */
+body.dark-mode .pk-karta { background:#241f22; border-color:#413a3e; color:#e6dfe2; }
+body.dark-mode .pk-tytul { color:#f6f1f3; }
+body.dark-mode .pk-opis, body.dark-mode .pk-lista li { color:#e6dfe2; }
+body.dark-mode .pk-etykieta, body.dark-mode .pk-podpis, body.dark-mode .pk-brak { color:#b5a9ae; }
+body.dark-mode .pk-wskazowka { background:#3a2730; color:#f3cdd9; }
+body.dark-mode .pk-ikona { background:#3a2730; color:#f3cdd9; }
+body.dark-mode .pk-link { color:#f0a9c0; }
+body.dark-mode .pk-stopka { border-top-color:#413a3e; }
+body.dark-mode .pk-grot { background:#241f22; border-color:#413a3e; }
+body.dark-mode .pk-btn::before { background:#3a2730; color:#f3cdd9; }
+body.dark-mode .pk-btn:hover::before { background:#4a3340; }
+body.dark-mode .pk-tip { background:#241f22; border-color:#413a3e; color:#e6dfe2; }

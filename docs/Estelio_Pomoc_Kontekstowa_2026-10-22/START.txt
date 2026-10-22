@@ -1,0 +1,6 @@
+Zacznij od WDROZENIE_DLA_CLAUDE.md.
+Zakres: tylko komponent pomocy kontekstowej, treści i podłączenie do istniejących ekranów.
+Makiety są powiększonymi wzorcami komponentu. Wymiary CSS i zasady w MD są wiążące.
+Przewodniki z czerwca 2026 to źródła historyczne; sprawdź procesy z aktualnym kodem.
+INDEKS_ZRODEL.csv zawiera nagłówki dokumentacji, nie inwentaryzację aplikacji.
+Nie ma tu kodu produkcyjnego ani zlecenia redesignu pozostałych modułów.

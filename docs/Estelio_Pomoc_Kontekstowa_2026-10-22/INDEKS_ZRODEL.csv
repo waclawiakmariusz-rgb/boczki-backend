@@ -1,0 +1,278 @@
+﻿plik,poziom,naglowek,id_naglowka,dostepna_kotwica,typ_kotwicy,lokalny_cel
+przewodnik-manager-2026-06-08.html,h1,Wszystko o Esteliow jednym miejscu,,main,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#main
+przewodnik-manager-2026-06-08.html,h2,Czym jest Estelio?,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h4,Dla właściciela salonu,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h4,Dla pracownika,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h4,Dla admina systemu,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h4,Izolacja danych,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h3,Model: 79 zł miesięcznie,,czym-jest,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#czym-jest
+przewodnik-manager-2026-06-08.html,h2,Jak to działa pod spodem?,,jak-dziala-system,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#jak-dziala-system
+przewodnik-manager-2026-06-08.html,h3,🏗️ Stack technologiczny,,jak-dziala-system,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#jak-dziala-system
+przewodnik-manager-2026-06-08.html,h3,🏢 Co to jest tenant_id?,,jak-dziala-system,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#jak-dziala-system
+przewodnik-manager-2026-06-08.html,h3,Sesje — jak system wie że to Ty?,,jak-dziala-system,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#jak-dziala-system
+przewodnik-manager-2026-06-08.html,h2,Logowanie i dostęp,,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h4,Właściciel salonu,,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h4,Pracownik (PIN),,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h4,Admin systemu,,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h4,Reset hasła,,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h3,Role pracowników,,logowanie,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logowanie
+przewodnik-manager-2026-06-08.html,h2,Sprzedaż i wizyty,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Multisprzedaż (3 typy),,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Kasowanie kosmetyków / suplementów,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Metody płatności,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Rabaty,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Zadatek w sprzedaży,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h4,Edycja i anulowanie,,sprzedaz,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#sprzedaz
+przewodnik-manager-2026-06-08.html,h2,Klienci — baza i profile,,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h4,Karta klienta,,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h4,Portfel (zadatki),,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h4,Notatki (Memo),,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h4,Cross-sell (sugestie),,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h3,🔍 Wyszukiwanie klientów,,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h3,📊 Flagi w liście,,klienci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#klienci
+przewodnik-manager-2026-06-08.html,h2,Magazyn — stany i produkty,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Stany na żywo,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Przyjęcie towaru,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Inwentaryzacja,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Lista zakupów,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Słownik produktów,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Typy produktów (Suplement),,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Daty ważności (widok Profesja),,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h4,Archiwum,,magazyn,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magazyn
+przewodnik-manager-2026-06-08.html,h2,Analityka — raporty i wyniki,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Raport dzienny,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Podsumowanie miesięczne,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Zestawienie roczne,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Ranking pracowników,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Analiza zabiegów,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h4,Koszty operacyjne,,analityka,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#analityka
+przewodnik-manager-2026-06-08.html,h2,Vouchery i rabaty,,vouchery,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#vouchery
+przewodnik-manager-2026-06-08.html,h3,🎁 Vouchery dla klientów,,vouchery,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#vouchery
+przewodnik-manager-2026-06-08.html,h3,🏷️ Kody rabatowe (Stripe),,vouchery,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#vouchery
+przewodnik-manager-2026-06-08.html,h2,Kampania urodzinowa,,urodziny,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#urodziny
+przewodnik-manager-2026-06-08.html,h4,12 zakładek,,urodziny,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#urodziny
+przewodnik-manager-2026-06-08.html,h4,Okno 5 dni,,urodziny,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#urodziny
+przewodnik-manager-2026-06-08.html,h4,Statusy kampanii,,urodziny,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#urodziny
+przewodnik-manager-2026-06-08.html,h4,Komentarze,,urodziny,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#urodziny
+przewodnik-manager-2026-06-08.html,h2,Retencja — klienci którzy zniknęli,,retencja,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#retencja
+przewodnik-manager-2026-06-08.html,h3,Jak używać?,,retencja,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#retencja
+przewodnik-manager-2026-06-08.html,h3,Co zapisujesz?,,retencja,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#retencja
+przewodnik-manager-2026-06-08.html,h2,Konsultacje — kampanie sprzedażowe,,konsultacje,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#konsultacje
+przewodnik-manager-2026-06-08.html,h4,Wyniki kampanii,,konsultacje,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#konsultacje
+przewodnik-manager-2026-06-08.html,h4,Konfiguracja kampanii,,konsultacje,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#konsultacje
+przewodnik-manager-2026-06-08.html,h4,Konsultanci,,konsultacje,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#konsultacje
+przewodnik-manager-2026-06-08.html,h4,Zabiegi i upsell,,konsultacje,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#konsultacje
+przewodnik-manager-2026-06-08.html,h2,Targety — cele dla pracowników,,targety,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#targety
+przewodnik-manager-2026-06-08.html,h4,Dodawanie targetu,,targety,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#targety
+przewodnik-manager-2026-06-08.html,h4,Dashboard pracownika,,targety,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#targety
+przewodnik-manager-2026-06-08.html,h3,Co liczy dashboard?,,targety,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#targety
+przewodnik-manager-2026-06-08.html,h2,RODO — zgody i dokumenty,,rodo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#rodo
+przewodnik-manager-2026-06-08.html,h4,Rejestr RODO,,rodo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#rodo
+przewodnik-manager-2026-06-08.html,h4,Rejestr oświadczeń,,rodo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#rodo
+przewodnik-manager-2026-06-08.html,h4,Upload dokumentów,,rodo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#rodo
+przewodnik-manager-2026-06-08.html,h4,Flagi w kartotece,,rodo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#rodo
+przewodnik-manager-2026-06-08.html,h2,Logi — historia akcji,,logi,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#logi
+przewodnik-manager-2026-06-08.html,h2,Panel admina,,panel-admina,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#panel-admina
+przewodnik-manager-2026-06-08.html,h4,Lista salonów,,panel-admina,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#panel-admina
+przewodnik-manager-2026-06-08.html,h4,Nowy salon ręcznie,,panel-admina,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#panel-admina
+przewodnik-manager-2026-06-08.html,h4,Tokeny rejestracji,,panel-admina,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#panel-admina
+przewodnik-manager-2026-06-08.html,h4,Baza wiedzy Esti,,panel-admina,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#panel-admina
+przewodnik-manager-2026-06-08.html,h2,Onboarding — jak pojawia się nowy salon,,onboarding,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#onboarding
+przewodnik-manager-2026-06-08.html,h3,Ścieżka przez Stripe (automatyczna),,onboarding,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#onboarding
+przewodnik-manager-2026-06-08.html,h3,Ścieżka ręczna (admin),,onboarding,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#onboarding
+przewodnik-manager-2026-06-08.html,h2,Płatności — Stripe i vouchery,,platnosci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#platnosci
+przewodnik-manager-2026-06-08.html,h3,💳 Jak działa Stripe?,,platnosci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#platnosci
+przewodnik-manager-2026-06-08.html,h3,🏷️ Kody rabatowe,,platnosci,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#platnosci
+przewodnik-manager-2026-06-08.html,h2,Automatyczne emaile,,emaile,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#emaile
+przewodnik-manager-2026-06-08.html,h2,Esti — Twoja asystentka,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h3,Jak Esti znajduje odpowiedź?,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h3,Źródło wiedzy,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h3,Po odpowiedzi — powiązane pytania,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h3,9 kategorii wpisów,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Ogólne,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Magazyn,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Klienci,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Sprzedaż,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Pracownicy,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Usługi,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Analityka,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Vouchery,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h4,Ustawienia,,esti,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#esti
+przewodnik-manager-2026-06-08.html,h2,Bezpieczeństwo — co chroni Twoje dane,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h3,Co już działa ✅,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,Izolacja salonów,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,Limit logowań,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,Tokeny sesji,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,SQL Injection,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,HTTPS,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h4,Ukryte błędy,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h3,Do naprawienia ⚠️,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h3,Dane i RODO,,bezpieczenstwo,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#bezpieczenstwo
+przewodnik-manager-2026-06-08.html,h2,Panel Magdy,,magda,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magda
+przewodnik-manager-2026-06-08.html,h3,Do czego służy?,,magda,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magda
+przewodnik-manager-2026-06-08.html,h3,Jak wejść?,,magda,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#magda
+przewodnik-manager-2026-06-08.html,h2,Sprzedaż SaaS i funkcje zaawansowane,,main,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#main
+przewodnik-manager-2026-06-08.html,h2,Zadatki — konfiguracja,,zadatki-konfig,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadatki-konfig
+przewodnik-manager-2026-06-08.html,h3,Pola konfiguracji,,zadatki-konfig,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadatki-konfig
+przewodnik-manager-2026-06-08.html,h3,Trzeci typ pozycji w multisprzedaży: 🌸 Zadatek,,zadatki-konfig,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadatki-konfig
+przewodnik-manager-2026-06-08.html,h3,Soft-delete zadatku,,zadatki-konfig,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadatki-konfig
+przewodnik-manager-2026-06-08.html,h2,Suplementy vs kosmetyki,,suplementy,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#suplementy
+przewodnik-manager-2026-06-08.html,h3,Mechanizm wykrywania (3 ścieżki),,suplementy,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#suplementy
+przewodnik-manager-2026-06-08.html,h3,Gdzie widać rozdzielenie,,suplementy,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#suplementy
+przewodnik-manager-2026-06-08.html,h2,Dodatkowe dokumenty klienta,,dodatkowe-dokumenty,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#dodatkowe-dokumenty
+przewodnik-manager-2026-06-08.html,h3,Struktura bazodanowa,,dodatkowe-dokumenty,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#dodatkowe-dokumenty
+przewodnik-manager-2026-06-08.html,h3,Memo-hero — pigułki nad profilem,,dodatkowe-dokumenty,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#dodatkowe-dokumenty
+przewodnik-manager-2026-06-08.html,h3,Typy pigułek,,dodatkowe-dokumenty,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#dodatkowe-dokumenty
+przewodnik-manager-2026-06-08.html,h2,Soft-delete klienta,,soft-delete,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#soft-delete
+przewodnik-manager-2026-06-08.html,h3,Cztery typy usunięcia,,soft-delete,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#soft-delete
+przewodnik-manager-2026-06-08.html,h3,Wymagania procesowe,,soft-delete,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#soft-delete
+przewodnik-manager-2026-06-08.html,h2,Billing — panel klienta,,billing-klienta,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#billing-klienta
+przewodnik-manager-2026-06-08.html,h3,Co zawiera billing,,billing-klienta,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#billing-klienta
+przewodnik-manager-2026-06-08.html,h3,Fail-secure tenant lookup,,billing-klienta,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#billing-klienta
+przewodnik-manager-2026-06-08.html,h2,Fakturownia — automatyczne faktury,,fakturownia,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#fakturownia
+przewodnik-manager-2026-06-08.html,h3,Webhooks i triggery,,fakturownia,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#fakturownia
+przewodnik-manager-2026-06-08.html,h3,Pola faktury,,fakturownia,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#fakturownia
+przewodnik-manager-2026-06-08.html,h2,Zgody RODO przy zakupie,,zgody-zakupu,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zgody-zakupu
+przewodnik-manager-2026-06-08.html,h3,Zapis zgód,,zgody-zakupu,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zgody-zakupu
+przewodnik-manager-2026-06-08.html,h2,Zadania cykliczne — anti-duplikacja,,zadania-cykliczne,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadania-cykliczne
+przewodnik-manager-2026-06-08.html,h3,Warstwa 1 — warunek SQL przy wstawianiu,,zadania-cykliczne,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadania-cykliczne
+przewodnik-manager-2026-06-08.html,h3,Warstwa 2 — UNIQUE INDEX na bazie,,zadania-cykliczne,nadrzedna,zrodla/przewodnik-manager-2026-06-08.html#zadania-cykliczne
+przewodnik-pracownik-2026-06-08.html,h1,Witaj w Estelio,,,brak,zrodla/przewodnik-pracownik-2026-06-08.html
+przewodnik-pracownik-2026-06-08.html,h2,Logowanie i pierwsze kroki,,logowanie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#logowanie
+przewodnik-pracownik-2026-06-08.html,h4,"Marta wchodzi do salonu na 9:00, jej pierwsza zmiana",,logowanie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#logowanie
+przewodnik-pracownik-2026-06-08.html,h3,Standardowa procedura logowania,,logowanie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#logowanie
+przewodnik-pracownik-2026-06-08.html,h3,Wylogowanie,,logowanie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#logowanie
+przewodnik-pracownik-2026-06-08.html,h2,Pulpit — co widzisz po zalogowaniu,,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h4,Co widzi Marta gdy zaloguje się rano,,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""📊 Na dziś"" (tylko admin/manager)",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""📋 Twoje zadania""",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""⚡ Szybki dostęp""",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""⚠️ Wymaga uwagi""",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""💳 Ostatnie transakcje (dziś)""",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h3,"Sekcja ""💡 Co możesz zrobić teraz?""",,pulpit,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#pulpit
+przewodnik-pracownik-2026-06-08.html,h2,Sprzedaż — jak wpisać transakcję,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h4,Pani Anna Nowak po endermologii bierze do tego krem Vagheggi,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h3,Standardowa procedura sprzedaży,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h3,Multisprzedaż z zadatkiem — Zabieg + Detal + Zaliczka w jednym,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h4,Pani Magda wychodzi po zabiegu i jeszcze coś dokupuje,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h3,Płatność typu Mix,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h4,Pani Maria zostawia 700 zł w 3 metodach,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h3,Wykorzystanie portfela / zadatku,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h3,Edycja / usunięcie pomyłkowej sprzedaży,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h4,Marta zła wpisała kwotę — zamiast 350 wpisała 35,,sprzedaz,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#sprzedaz
+przewodnik-pracownik-2026-06-08.html,h2,Zadatki i portfel klienta,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h4,Pani Kasia kupuje pakiet 5 zabiegów Endermologii za 1500 zł,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h3,Wpisanie zadatku / wpłaty na portfel,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h3,Sprawdzanie salda klientki,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h4,"Telefon: ""Marta, ile mi zostało po ostatnim zabiegu?""",,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h3,Wykorzystanie zadatku przy sprzedaży,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h3,Statusy zadatków,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h3,Zwrot zadatku,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h4,Pani Anna prosi o zwrot 500 zł zadatku,,zadatki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadatki
+przewodnik-pracownik-2026-06-08.html,h2,"Detal — kosmetyki, suplementy i akcesoria do domu",,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h4,Pani Beata po endermologii bierze 2 słoiki kremu Vagheggi po 180 zł,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h3,Co specyficzne dla kosmetyków,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h3,"Sprzedaż 0,5 szt. (np. próbka albo połowa)",,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h3,Zwrot kosmetyku,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h4,Pani Karolina oddaje krem — alergia na składnik,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h3,💊 Suplementy i witaminy,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h4,Pani Iwona kupuje witaminy + krem po konsultacji,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h4,Gdzie zobaczysz osobne sumy?,,kosmetyki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#kosmetyki
+przewodnik-pracownik-2026-06-08.html,h2,Klienci — kartoteka i profil,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h4,"Telefon o 11:30: ""Pani Marto, czy mogę przyjść jutro o 14?""",,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Wejście do kartoteki,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Co znajdziesz w profilu klientki,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Dodawanie nowego klienta,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h4,"Do salonu wchodzi nowa klientka, polecona przez znajomą",,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Edycja danych klientki,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Notatki — najlepszy schowek na info,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,Memo-hero — najważniejsze info od razu na wierzchu,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h3,🗑️ Soft-delete — gdy trzeba usunąć klientkę,,klienci,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#klienci
+przewodnik-pracownik-2026-06-08.html,h2,Urodziny klientów,,urodziny,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#urodziny
+przewodnik-pracownik-2026-06-08.html,h4,Marta zaczyna tydzień od sprawdzenia kto obchodzi urodziny,,urodziny,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#urodziny
+przewodnik-pracownik-2026-06-08.html,h3,Co pokazuje sekcja Urodziny,,urodziny,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#urodziny
+przewodnik-pracownik-2026-06-08.html,h3,Procedura urodzinowa salonu,,urodziny,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#urodziny
+przewodnik-pracownik-2026-06-08.html,h3,Kiedy NIE dzwonić,,urodziny,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#urodziny
+przewodnik-pracownik-2026-06-08.html,h2,Dokumenty RODO i regulamin,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h4,Pani Magdalena przyszła na konsultację po raz pierwszy,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h3,Co klientka podpisuje przy pierwszej wizycie,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h3,Sprawdzanie kompletności dokumentów,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h3,"Klientka prosi o ""zapomnienie""",,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h4,Pani Karolina prosi o usunięcie wszystkich danych,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h3,Co system pomaga z RODO,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h3,Dodatkowe dokumenty klienta,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h4,Pani Hania przynosi wynik wizyty u dermatologa,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h4,Co można wgrywać?,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h4,Czym to się różni od RODO?,,dokumenty,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#dokumenty
+przewodnik-pracownik-2026-06-08.html,h2,Magazyn — pilnowanie zapasów,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h4,Wczoraj przyszedł karton kremów Vagheggi — 12 słoików,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Stan magazynowy — co widzisz,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Dodanie nowego produktu (nowy artykuł w cenniku),,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Edycja produktu — zmiana stanu,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h4,Julia bierze tester kremu dla siebie,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Co zamówić — automatyczna lista,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h4,Marta sprawdza co trzeba zamówić u dostawców,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Historia ruchu,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,Zmiana typu produktu,,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h4,"Dominika zauważa: „Aliness Czerwona koniczyna nie powinna być w kosmetykach""",,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h3,"📦 Akordeon w „Zadaniach Magazynowych""",,magazyn,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#magazyn
+przewodnik-pracownik-2026-06-08.html,h2,Inwentaryzacja,,inwentaryzacja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#inwentaryzacja
+przewodnik-pracownik-2026-06-08.html,h4,"Ostatni piątek miesiąca, 16:00 — Marta i Julia robią inwentaryzację",,inwentaryzacja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#inwentaryzacja
+przewodnik-pracownik-2026-06-08.html,h3,Procedura inwentaryzacji,,inwentaryzacja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#inwentaryzacja
+przewodnik-pracownik-2026-06-08.html,h3,Po inwentaryzacji — analiza różnic,,inwentaryzacja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#inwentaryzacja
+przewodnik-pracownik-2026-06-08.html,h2,Zadania zespołu,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,"Patrycja zostawiła Marcie zadanie ""Zadzwoń do Pani Kowalskiej""",,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Gdzie znajdziesz zadania?,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Co widzisz w widget'cie,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Co możesz zrobić — wg roli,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,Recepcja,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,Praktykantka,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Tworzenie zadania (recepcja+),,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,"""Zadzwoń do dostawcy w piątek o 11"" — żeby nie zapomnieć",,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,"Pola modalu ""Nowe zadanie""",,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Powtarzające się zadania,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,"""Codziennie o 18:00 sprawdź czy klientki na jutro są umówione""",,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,Komentarze pod zadaniem,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h4,Marta zostawia uwagę dla Ani po wykonaniu zadania,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h3,🛡️ Zabezpieczenia zadań cyklicznych,,zadania,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zadania
+przewodnik-pracownik-2026-06-08.html,h2,Konsultacje,,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h4,Julia przeprowadza wywiad z nową klientką,,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h3,Trzy widoki Konsultacji,,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h4,Raportowanie,,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h4,Historia,,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h4,Panel admin (manager),,konsultacje,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#konsultacje
+przewodnik-pracownik-2026-06-08.html,h2,Zebranie / Odprawa,,zebranie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zebranie
+przewodnik-pracownik-2026-06-08.html,h4,Patrycja prowadzi 10-minutową odprawę zespołu,,zebranie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zebranie
+przewodnik-pracownik-2026-06-08.html,h3,"Co widzisz w ""Zebranie""",,zebranie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zebranie
+przewodnik-pracownik-2026-06-08.html,h3,Praktyka odpraw — formaty,,zebranie,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#zebranie
+przewodnik-pracownik-2026-06-08.html,h2,Moduł Retencji,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h4,Marta dzwoni do 8 klientek z listy retencji,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h3,Algorytm B+C — jak system sortuje,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h3,Workflow recepcji — najlepsza praktyka,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h3,Co możesz zaznaczyć przy klientce,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h3,Sleeping VIPs — najlepsza lista,,retencja,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#retencja
+przewodnik-pracownik-2026-06-08.html,h2,Wskazówki techniczne,,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h3,Dark Mode,,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h3,Hard refresh — gdy coś dziwnie wygląda,,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h3,Skróty przeglądarki,,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h3,Praca na tablecie / telefonie,,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h3,"Co robić jak system ""się zawiesi""",,wskazowki,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#wskazowki
+przewodnik-pracownik-2026-06-08.html,h2,FAQ — co zrobić gdy...,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Wpisałam pomyłkową sprzedaż — co teraz?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,"Klientka nie pojawia się w wyszukiwarce, choć była dziś",,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,System się zawiesił/wolno działa,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Nie pamiętam swojego PIN-u,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Czy mogę używać Estelio na telefonie?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Co robić jak zauważę błąd albo brakującą funkcję?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Klientka prosi o paragon / fakturę,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Wpisałam zadatek na złą klientkę,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Klientka straciła swoją kartę lojalnościową — czy mogę odtworzyć?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Mam wpisać sprzedaż w niedzielę gdy salon zamknięty,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Praktykantka chce dodać klientkę — może?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,"System pokazuje ""Brak uprawnień"" — dlaczego?",,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Klientka kupiła krem ale w raportach pokazuje się jako Suplement (lub odwrotnie),,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,"Multisprzedaż — co to ""+ Detal"" zamiast ""+ Kosmetyk""?",,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,"Co to różowy plus „+ Zadatek"" w sprzedaży?",,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Klientka pyta o swoje dodatkowe dokumenty — gdzie je wgrałam?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,Zadanie cykliczne się rozmnożyło — co robić?,,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq
+przewodnik-pracownik-2026-06-08.html,h3,"Klientka zapłaciła za zabieg ale nie widać go w „Łącznie wydano""",,faq,nadrzedna,zrodla/przewodnik-pracownik-2026-06-08.html#faq

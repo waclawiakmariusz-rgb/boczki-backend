@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estelio — Przewodnik po Systemie</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cream:#f4efe6;--cream2:#ede6d8;--dark:#1c1a18;
+  --rose:#b87080;--rose-dark:#a05e6e;--rose-light:#f3dfe3;
+  --gold:#c9a96e;--gold-light:#d9bc88;
+  --text-muted:#6b6459;--border:#ddd4c4;--white:#ffffff;
+  --green:#166534;--green-bg:#f0fdf4;--green-border:#bbf7d0;
+  --sidebar:270px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--dark);display:flex;min-height:100vh}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  width:var(--sidebar);flex-shrink:0;background:var(--dark);
+  position:fixed;top:0;left:0;height:100vh;overflow-y:auto;
+  padding:0 0 60px;z-index:100;
+}
+#sidebar::-webkit-scrollbar{width:3px}
+#sidebar::-webkit-scrollbar-thumb{background:#3a342c}
+.sb-top{padding:28px 24px 20px;border-bottom:1px solid #2a2620}
+.sb-logo{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;color:#f4efe6;letter-spacing:.02em}
+.sb-logo em{color:var(--rose);font-style:italic}
+.sb-tagline{font-size:.7rem;color:#6b6050;margin-top:3px}
+.sb-search{margin:14px 16px 0;position:relative}
+.sb-search input{
+  width:100%;background:#ffffff0d;border:1px solid #2e2a24;border-radius:8px;
+  padding:7px 12px 7px 30px;font-family:'DM Sans',sans-serif;
+  font-size:.78rem;color:#c9b99a;outline:none;
+}
+.sb-search input::placeholder{color:#4a4030}
+.sb-search::before{content:'⌕';position:absolute;left:10px;top:50%;transform:translateY(-50%);color:#4a4030;font-size:.9rem}
+.sb-nav{padding:8px 0}
+.sb-group-label{font-size:.62rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:#4a4030;padding:12px 24px 4px}
+.sb-link{
+  display:flex;align-items:center;gap:8px;
+  padding:6px 24px;font-size:.8rem;color:#8a7a6a;
+  text-decoration:none;border-left:2px solid transparent;transition:all .15s;
+}
+.sb-link .sb-icon{font-size:.85rem;width:18px;text-align:center;flex-shrink:0}
+.sb-link:hover{color:#e8ddd0;background:#ffffff08;border-left-color:#3a342c}
+.sb-link.active{color:var(--rose);border-left-color:var(--rose);background:#ffffff0a}
+
+/* ── MAIN ── */
+#main{margin-left:var(--sidebar);flex:1;padding:0 0 100px;max-width:calc(100% - var(--sidebar))}
+
+/* ── HERO ── */
+.hero{
+  background:var(--dark);padding:70px 64px 56px;position:relative;overflow:hidden;
+}
+.hero-blob{position:absolute;border-radius:50%;filter:blur(80px);pointer-events:none}
+.hb1{width:300px;height:300px;background:#c9849044;top:-60px;right:60px}
+.hb2{width:180px;height:180px;background:#c9a96e33;bottom:-40px;right:260px}
+.hero .eyebrow{font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--rose);margin-bottom:16px;position:relative;z-index:1}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(2.2rem,4vw,3.2rem);font-weight:600;color:#f4efe6;line-height:1.15;margin-bottom:16px;position:relative;z-index:1}
+.hero h1 em{font-style:italic;font-weight:400;color:var(--rose)}
+.hero p{font-size:.93rem;color:#a09080;line-height:1.8;max-width:580px;position:relative;z-index:1}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:24px;position:relative;z-index:1}
+.hero-chip{background:#ffffff0f;border:1px solid #3a342c;border-radius:20px;padding:5px 14px;font-size:.75rem;color:#8a7a6a}
+
+/* ── CONTENT WRAPPER ── */
+.content{padding:0 64px}
+
+/* ── SECTION ── */
+.section{padding:56px 0;border-bottom:1px solid var(--border)}
+.section:last-child{border-bottom:none}
+.section-eyebrow{font-size:.68rem;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--rose);margin-bottom:10px}
+.section h2{font-family:'Cormorant Garamond',serif;font-size:clamp(1.5rem,2.5vw,2rem);font-weight:600;color:var(--dark);margin-bottom:14px;line-height:1.25}
+.section h2 em{font-style:italic;font-weight:400}
+.section > p{font-size:.9rem;color:var(--text-muted);line-height:1.85;margin-bottom:16px;max-width:700px}
+.section h3{font-size:1rem;font-weight:600;color:var(--dark);margin:28px 0 10px}
+
+/* ── MODULE HEADER ── */
+.mod-header{display:flex;align-items:flex-start;gap:18px;margin-bottom:22px}
+.mod-icon{
+  width:52px;height:52px;border-radius:16px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:1.3rem;
+}
+.mod-icon.rose{background:var(--rose-light)}
+.mod-icon.gold{background:#fef3d0}
+.mod-icon.green{background:var(--green-bg)}
+.mod-icon.blue{background:#eff6ff}
+.mod-icon.purple{background:#f5f3ff}
+.mod-title h2{font-family:'Cormorant Garamond',serif;font-size:1.6rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.mod-title p{font-size:.85rem;color:var(--text-muted);line-height:1.6}
+
+/* ── CARDS ── */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.cards.col2{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+.cards.col3{grid-template-columns:repeat(3,1fr)}
+.card{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;transition:box-shadow .2s,transform .2s}
+.card:hover{box-shadow:0 8px 28px rgba(0,0,0,.07);transform:translateY(-2px)}
+.card-icon{font-size:1.1rem;margin-bottom:8px}
+.card h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:5px}
+.card p{font-size:.78rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── HOW IT WORKS STEPS ── */
+.steps{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin:18px 0}
+.step{background:var(--white);border:1.5px solid var(--border);border-radius:16px;padding:20px;position:relative}
+.step-num{
+  width:28px;height:28px;border-radius:50%;
+  background:var(--rose);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;font-weight:700;margin-bottom:10px;
+}
+.step h4{font-size:.86rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.step p{font-size:.78rem;color:var(--text-muted);line-height:1.65;margin:0}
+
+/* ── TWO-COL LAYOUT ── */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:18px 0}
+.two-col.uneven{grid-template-columns:1.2fr 1fr}
+
+/* ── INFO BOX ── */
+.info-box{background:var(--white);border:1.5px solid var(--border);border-radius:18px;padding:28px}
+.info-box h3{font-size:.95rem;font-weight:600;color:var(--dark);margin-bottom:14px}
+.info-row{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;font-size:.82rem}
+.info-row:last-child{margin-bottom:0}
+.info-row .dot{width:6px;height:6px;border-radius:50%;background:var(--rose);flex-shrink:0;margin-top:6px}
+.info-row p{color:var(--text-muted);line-height:1.6;margin:0}
+.info-row strong{color:var(--dark)}
+
+/* ── HIGHLIGHT BOX ── */
+.highlight{
+  background:linear-gradient(135deg,#1c1a18,#2a2420);
+  border-radius:20px;padding:32px 36px;margin:22px 0;color:#f4efe6;
+  position:relative;overflow:hidden;
+}
+.highlight-blob{position:absolute;border-radius:50%;filter:blur(50px);pointer-events:none}
+.hl-b1{width:200px;height:200px;background:#c9849030;top:-60px;right:-40px}
+.hl-b2{width:120px;height:120px;background:#c9a96e25;bottom:-30px;left:60px}
+.highlight h3{font-family:'Cormorant Garamond',serif;font-size:1.3rem;font-weight:600;margin-bottom:10px;position:relative;z-index:1}
+.highlight p{font-size:.86rem;color:#a09080;line-height:1.8;position:relative;z-index:1}
+.highlight ul{list-style:none;margin-top:14px;display:flex;flex-direction:column;gap:6px;position:relative;z-index:1}
+.highlight ul li{font-size:.83rem;color:#a09080;padding-left:16px;position:relative;line-height:1.6}
+.highlight ul li::before{content:'✦';color:var(--gold);font-size:.65rem;position:absolute;left:0;top:3px}
+
+/* ── TABLE ── */
+.tbl{width:100%;border-collapse:collapse;margin:14px 0;font-size:.82rem}
+.tbl th{text-align:left;padding:9px 14px;font-size:.71rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text-muted);background:var(--cream2);border-bottom:2px solid var(--border)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--dark);line-height:1.55;vertical-align:top}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:#faf7f2}
+.tbl td:first-child{font-weight:600;color:var(--rose)}
+
+/* ── CALLOUT ── */
+.callout{border-radius:12px;padding:14px 18px;margin:16px 0;font-size:.84rem;line-height:1.7}
+.callout.warn{background:#fffbeb;border:1.5px solid #fde68a;color:#92400e}
+.callout.tip{background:var(--green-bg);border:1.5px solid var(--green-border);color:#166534}
+.callout.note{background:#eff6ff;border:1.5px solid #bfdbfe;color:#1e40af}
+.callout strong{font-weight:700}
+
+/* ── FLOW ── */
+.flow{position:relative;margin:18px 0;display:flex;flex-direction:column;gap:0}
+.flow-item{display:flex;gap:14px;align-items:flex-start}
+.flow-left{display:flex;flex-direction:column;align-items:center}
+.flow-num{width:30px;height:30px;border-radius:50%;background:var(--rose);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0}
+.flow-line{width:2px;flex:1;background:var(--border);margin:4px 0;min-height:16px}
+.flow-body{padding-bottom:16px}
+.flow-body strong{display:block;font-size:.88rem;font-weight:600;color:var(--dark);margin-bottom:2px}
+.flow-body span{font-size:.8rem;color:var(--text-muted);line-height:1.6}
+
+/* ── BADGE ── */
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:.71rem;font-weight:600;margin:1px}
+.badge.rose{background:var(--rose-light);color:var(--rose-dark)}
+.badge.gold{background:#fef3d0;color:#a07030}
+.badge.green{background:var(--green-bg);color:var(--green)}
+.badge.gray{background:var(--cream2);color:var(--text-muted)}
+
+/* ── SCORE VIZ ── */
+.score-bars{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.score-bar-row{display:flex;align-items:center;gap:12px}
+.score-bar-label{font-size:.8rem;color:var(--dark);width:220px;flex-shrink:0}
+.score-bar-track{height:10px;background:var(--cream2);border-radius:5px;flex:1;overflow:hidden}
+.score-bar-fill{height:100%;border-radius:5px;background:var(--rose)}
+.score-bar-val{font-size:.75rem;font-weight:700;color:var(--text-muted);width:30px;text-align:right;flex-shrink:0}
+
+/* ── DIVIDER ── */
+.divider{height:1px;background:var(--border);margin:0}
+
+/* ── TOP BTN ── */
+#top-btn{position:fixed;bottom:28px;right:28px;width:42px;height:42px;border-radius:50%;background:var(--dark);color:#f4efe6;border:1.5px solid #3a342c;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 16px rgba(0,0,0,.2);opacity:0;transition:opacity .3s;z-index:200}
+#top-btn.visible{opacity:1}
+
+@media(max-width:960px){
+  #sidebar{display:none}
+  #main{margin-left:0}
+  .content{padding:0 24px}
+  .hero{padding:48px 24px 40px}
+  .two-col,.cards.col3{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<nav id="sidebar">
+  <div class="sb-top">
+    <div class="sb-logo">✦ <em>Estelio</em></div>
+    <div class="sb-tagline">Przewodnik po systemie</div>
+    <div class="sb-search"><input type="text" placeholder="Szukaj..." id="searchInput" oninput="filterNav(this.value)"></div>
+  </div>
+  <div class="sb-nav" id="sbNav">
+    <div class="sb-group-label">Wstęp</div>
+    <a class="sb-link" href="#czym-jest"><span class="sb-icon">🌸</span>Czym jest Estelio?</a>
+    <a class="sb-link" href="#jak-dziala-system"><span class="sb-icon">🏗️</span>Jak to działa pod spodem</a>
+    <a class="sb-link" href="#logowanie"><span class="sb-icon">🔐</span>Logowanie i dostęp</a>
+
+    <div class="sb-group-label">Moduły salonu</div>
+    <a class="sb-link" href="#sprzedaz"><span class="sb-icon">💰</span>Sprzedaż i wizyty</a>
+    <a class="sb-link" href="#klienci"><span class="sb-icon">👥</span>Klienci</a>
+    <a class="sb-link" href="#magazyn"><span class="sb-icon">📦</span>Magazyn</a>
+    <a class="sb-link" href="#analityka"><span class="sb-icon">📊</span>Analityka</a>
+    <a class="sb-link" href="#vouchery"><span class="sb-icon">🎟️</span>Vouchery i rabaty</a>
+    <a class="sb-link" href="#urodziny"><span class="sb-icon">🎂</span>Kampania urodzinowa</a>
+    <a class="sb-link" href="#retencja"><span class="sb-icon">🔄</span>Retencja klientów</a>
+    <a class="sb-link" href="#konsultacje"><span class="sb-icon">📋</span>Konsultacje</a>
+    <a class="sb-link" href="#targety"><span class="sb-icon">🎯</span>Targety pracowników</a>
+    <a class="sb-link" href="#rodo"><span class="sb-icon">🛡️</span>RODO i zgody</a>
+    <a class="sb-link" href="#logi"><span class="sb-icon">📝</span>Logi systemu</a>
+
+    <div class="sb-group-label">Właściciel &amp; Admin</div>
+    <a class="sb-link" href="#panel-admina"><span class="sb-icon">👑</span>Panel admina</a>
+    <a class="sb-link" href="#onboarding"><span class="sb-icon">🚀</span>Onboarding nowego salonu</a>
+    <a class="sb-link" href="#platnosci"><span class="sb-icon">💳</span>Płatności Stripe</a>
+    <a class="sb-link" href="#emaile"><span class="sb-icon">📧</span>Automatyczne emaile</a>
+
+    <div class="sb-group-label">Esti &amp; inne</div>
+    <a class="sb-link" href="#esti"><span class="sb-icon">💬</span>Esti — chatbot</a>
+    <a class="sb-link" href="#bezpieczenstwo"><span class="sb-icon">🔒</span>Bezpieczeństwo</a>
+    <a class="sb-link" href="#magda"><span class="sb-icon">💼</span>Panel Magdy</a>
+
+    <div class="sb-group-label">Sprzedaż SaaS</div>
+    <a class="sb-link" href="#billing-klienta"><span class="sb-icon">💳</span>Billing — panel klienta</a>
+    <a class="sb-link" href="#fakturownia"><span class="sb-icon">🧾</span>Fakturownia</a>
+    <a class="sb-link" href="#zgody-zakupu"><span class="sb-icon">✅</span>Zgody przy zakupie</a>
+
+    <div class="sb-group-label">Funkcje rozszerzone</div>
+    <a class="sb-link" href="#zadatki-konfig"><span class="sb-icon">💰</span>Zadatki — konfiguracja</a>
+    <a class="sb-link" href="#suplementy"><span class="sb-icon">💊</span>Suplementy vs kosmetyki</a>
+    <a class="sb-link" href="#dodatkowe-dokumenty"><span class="sb-icon">📄</span>Dodatkowe dokumenty</a>
+    <a class="sb-link" href="#soft-delete"><span class="sb-icon">🗑️</span>Soft-delete klienta</a>
+    <a class="sb-link" href="#zadania-cykliczne"><span class="sb-icon">🔁</span>Zadania cykliczne</a>
+  </div>
+</nav>
+
+<!-- ══ MAIN ══ -->
+<main id="main">
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-blob hb1"></div>
+  <div class="hero-blob hb2"></div>
+  <div class="eyebrow">Przewodnik po systemie</div>
+  <h1>Wszystko o <em>Estelio</em><br>w jednym miejscu</h1>
+  <p>Jak działa każdy moduł, co widzi użytkownik, jak system myśli pod spodem — i dlaczego jest zbudowany tak, a nie inaczej.</p>
+  <div class="hero-chips">
+    <span class="hero-chip">📦 Magazyn</span>
+    <span class="hero-chip">👥 Klienci</span>
+    <span class="hero-chip">💰 Sprzedaż</span>
+    <span class="hero-chip">📊 Analityka</span>
+    <span class="hero-chip">🎂 Urodziny</span>
+    <span class="hero-chip">🎯 Targety</span>
+    <span class="hero-chip">🛡️ RODO</span>
+    <span class="hero-chip">💬 Esti</span>
+    <span class="hero-chip">💳 Stripe</span>
+    <span class="hero-chip">🧾 Fakturownia</span>
+    <span class="hero-chip">💊 Suplementy</span>
+    <span class="hero-chip">🗑️ Soft-delete</span>
+  </div>
+</div>
+
+<div class="content">
+
+<!-- ══════════════ CZYM JEST ══════════════ -->
+<div class="section" id="czym-jest">
+  <div class="section-eyebrow">Wstęp</div>
+  <h2>Czym jest <em>Estelio?</em></h2>
+  <p>Estelio to system SaaS do zarządzania salonami beauty. Jeden właściciel — jedna aplikacja — wszystko w przeglądarce. Bez instalacji, bez pendrive'ów, bez Excela.</p>
+
+  <div class="cards col2">
+    <div class="card"><div class="card-icon">🏪</div><h4>Dla właściciela salonu</h4><p>Jedno miejsce do zarządzania klientami, sprzedażą, magazynem, pracownikami i raportami. Dostęp z każdego urządzenia przez przeglądarkę.</p></div>
+    <div class="card"><div class="card-icon">💇</div><h4>Dla pracownika</h4><p>Loguje się PINem przy stanowisku. Widzi tylko to, co potrzebuje — klientów, historię, kasowanie wizyt. Bez dostępu do finansów czy raportów.</p></div>
+    <div class="card"><div class="card-icon">👑</div><h4>Dla admina systemu</h4><p>Panel do zarządzania wszystkimi salonami naraz — tworzenie kont, tokeny rejestracyjne, globalna baza wiedzy Esti.</p></div>
+    <div class="card"><div class="card-icon">🔒</div><h4>Izolacja danych</h4><p>Każdy salon widzi tylko swoje dane. Ta sama baza danych, ale każdy rekord ma tenant_id — coś jak numer pokoju w hotelu.</p></div>
+  </div>
+
+  <div class="highlight">
+    <div class="highlight-blob hl-b1"></div>
+    <div class="highlight-blob hl-b2"></div>
+    <h3>Model: 79 zł miesięcznie</h3>
+    <p>Klient wchodzi na <strong>estelio.com.pl/zamow.html</strong>, wypełnia formularz (z polem <strong>ulica</strong> dla faktur), zaznacza 3 zgody (regulamin, RODO, marketing), płaci kartą przez Stripe. System automatycznie generuje link aktywacyjny i wysyła go emailem (<strong>welcome email</strong> + link rejestracyjny + link do <strong>billing.html</strong>). Salon gotowy w kilka minut.</p>
+    <ul>
+      <li>Dostęp roczny — 948 zł z góry lub <strong>79 zł/mies.</strong> (recurring Stripe)</li>
+      <li><strong>Vouchery dynamiczne</strong> — system generuje Stripe Coupony na żądanie (procent/kwota, jednorazowe/wieczne/N-miesięcy)</li>
+      <li><strong>Fakturownia</strong> — automatyczne faktury po każdej płatności (initial + recurring) + wysyłka mailem</li>
+      <li><strong>billing.html</strong> — panel klienta z historią faktur, zmianą karty, anulacją</li>
+      <li>Możliwy fallback bez Stripe — ręczny token od admina</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════ JAK DZIAŁA SYSTEM ══════════════ -->
+<div class="section" id="jak-dziala-system">
+  <div class="section-eyebrow">Architektura</div>
+  <h2>Jak to <em>działa pod spodem?</em></h2>
+  <p>Nie musisz tego znać żeby używać systemu — ale warto wiedzieć jak jest zbudowany, żeby rozumieć co się dzieje gdy coś pójdzie nie tak.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>🏗️ Stack technologiczny</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Backend:</strong> Node.js + Express — serwer aplikacji, obsługa API</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Baza danych:</strong> MySQL — jedna wspólna baza, dane rozdzielone przez tenant_id</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Frontend:</strong> Vanilla HTML + JavaScript — zero frameworków, ~17 000 linii index.html</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Hosting:</strong> Hostinger VPS, domena estelio.com.pl</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Email:</strong> Nodemailer + SMTP Hostinger (kontakt@estelio.com.pl)</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Dokumenty:</strong> Upload zdjęć → automatyczna konwersja do PDF (Jimp + pdf-lib)</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏢 Co to jest tenant_id?</h3>
+      <p style="font-size:.83rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">Wyobraź sobie hotel. Wszystkie pokoje są w jednym budynku (jedna baza danych), ale każdy gość ma swój klucz i widzi tylko swój pokój.</p>
+      <p style="font-size:.83rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">tenant_id to właśnie ten klucz — unikalny identyfikator salonu (np. <code style="background:var(--cream2);padding:1px 5px;border-radius:4px;font-size:.76rem">boczki-salon-8574</code>). Każdy rekord w bazie ma tenant_id — klient, sprzedaż, produkt w magazynie.</p>
+      <div class="info-row"><div class="dot"></div><p>Salon A nigdy nie zobaczy danych salonu B — nawet przez przypadek</p></div>
+      <div class="info-row"><div class="dot"></div><p>Jeden serwer obsługuje dziesiątki salonów jednocześnie</p></div>
+      <div class="info-row"><div class="dot"></div><p>tenant_id weryfikowany przy każdym żądaniu API</p></div>
+    </div>
+  </div>
+
+  <h3>Sesje — jak system wie że to Ty?</h3>
+  <p>Po zalogowaniu serwer generuje losowy token (UUID) i zapamiętuje go w pamięci na 8 godzin. Ten token jest wysyłany przy każdym żądaniu w nagłówku. Jeśli serwer się zrestartuje — wszystkie sesje giną i trzeba zalogować się ponownie.</p>
+  <div class="callout warn"><strong>Znana słabość:</strong> Sesje są przechowywane w pamięci RAM — restart serwera wylogowuje wszystkich. To planowane do naprawy (docelowo Redis lub baza danych).</div>
+</div>
+
+<!-- ══════════════ LOGOWANIE ══════════════ -->
+<div class="section" id="logowanie">
+  <div class="section-eyebrow">Dostęp</div>
+  <h2>Logowanie <em>i dostęp</em></h2>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">🔑</div><h4>Właściciel salonu</h4><p>Loguje się przez login + hasło na stronie głównej. Dostęp do wszystkich modułów i ustawień.</p></div>
+    <div class="card"><div class="card-icon">🔢</div><h4>Pracownik (PIN)</h4><p>Wybiera imię z listy i wpisuje swój PIN (4–6 cyfr). Widzi tylko wybrane sekcje — bez finansów, bez raportów.</p></div>
+    <div class="card"><div class="card-icon">👑</div><h4>Admin systemu</h4><p>Loguje się hasłem z konfiguracji serwera do osobnego panelu admin.html. Zarządza wszystkimi salonami.</p></div>
+    <div class="card"><div class="card-icon">🔄</div><h4>Reset hasła</h4><p>Link na stronie logowania — email z jednorazowym tokenem ważnym 1 godzinę. Link zużyty = nie działa drugi raz.</p></div>
+  </div>
+
+  <h3>Role pracowników</h3>
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Rola</th><th>Co widzi i może robić</th></tr></thead>
+    <tbody>
+      <tr><td>właściciel</td><td>Pełny dostęp — wszystkie moduły, raporty, ustawienia, pracownicy</td></tr>
+      <tr><td>manager</td><td>Sprzedaż, klienci, magazyn, podstawowe raporty — bez krytycznych ustawień</td></tr>
+      <tr><td>recepcja</td><td>Klienci, wizyty, kasowanie — codzienna obsługa bez dostępu do finansów</td></tr>
+      <tr><td>pracownik</td><td>Minimalny widok — kasowanie swojej sprzedaży, podgląd klientów</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ SPRZEDAŻ ══════════════ -->
+<div class="section" id="sprzedaz">
+  <div class="mod-header">
+    <div class="mod-icon rose">💰</div>
+    <div class="mod-title">
+      <h2>Sprzedaż <em>i wizyty</em></h2>
+      <p>Serce systemu — rejestrowanie każdej wizyty, każdej usługi, każdej płatności</p>
+    </div>
+  </div>
+
+  <p>Każda wizyta w salonie trafia do modułu Sprzedaż. Niezależnie czy to strzyżenie, manicure czy sprzedaż kosmetyku — wszystko ląduje w jednym miejscu z pełną historią.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">➕</div><h4>Multisprzedaż (3 typy)</h4><p>W jednej transakcji można dodać Zabieg + Detal + Zadatek (3 kolorowe plusy). Wszystko leci na jeden paragon.</p></div>
+    <div class="card"><div class="card-icon">🛒</div><h4>Kasowanie kosmetyków / suplementów</h4><p>Sprzedaż produktu z magazynu (etykieta „Detal"). System automatycznie odejmuje ilość ze stanu (FIFO) i klasyfikuje jako kosmetyk lub suplement w raportach.</p></div>
+    <div class="card"><div class="card-icon">💳</div><h4>Metody płatności</h4><p>Gotówka, karta, BLIK, przelew, MediRaty, TubaPay, voucher, portfel/zadatek, Mix. Każda zapisana osobno w statystykach.</p></div>
+    <div class="card"><div class="card-icon">🎫</div><h4>Rabaty</h4><p>Stały rabat procentowy lub kwotowy podczas kasowania. Konfigurowalne per salon w zakładce Rabaty.</p></div>
+    <div class="card"><div class="card-icon">🌸</div><h4>Zadatek w sprzedaży</h4><p>Trzeci plus „+ Zadatek" pozwala dodać wpłatę na portfel klientki przy okazji zabiegu. Procent i progi konfigurowalne w Administracja → Zadatki.</p></div>
+    <div class="card"><div class="card-icon">✏️</div><h4>Edycja i anulowanie</h4><p>Każdą wizytę można edytować lub oznaczyć jako anulowaną/no-show. Anulowane nie trafiają do przychodów. Zadatki — soft-delete z logiem.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Jak działa FIFO przy kosmetykach?</strong> Gdy sprzedajesz produkt, system zdejmuje go z najstarszego przyjęcia towaru. Dzięki temu rotacja stocku jest poprawna, a stare partie nie zalegają.</div>
+
+  <div class="callout" style="margin-top:12px; background:#faf5ff; border-color:#d8b4fe;"><strong>💊 Suplementy:</strong> produkty z typem „Suplement" w magazynie są <strong>rozdzielane od kosmetyków w 7 raportach</strong> — Analiza/Miesiąc, Analiza/Pracownik, Podsumowanie dnia, Zebranie, Targety, KPI pracownika, rankingi. Dla recepcji wpisywane są identycznie jak kosmetyki (etykieta „Detal").</div>
+</div>
+
+<!-- ══════════════ KLIENCI ══════════════ -->
+<div class="section" id="klienci">
+  <div class="mod-header">
+    <div class="mod-icon gold">👥</div>
+    <div class="mod-title">
+      <h2>Klienci — <em>baza i profile</em></h2>
+      <p>Kartoteka klientów z historią wizyt, portfelem i notatkami</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p>Każdy klient w systemie to coś więcej niż imię i numer telefonu. To pełna historia relacji z salonem — od pierwszej wizyty po ostatnią uwagę pracownika.</p>
+      <div class="cards">
+        <div class="card"><div class="card-icon">📋</div><h4>Karta klienta</h4><p>Historia wizyt, wydane kwoty, notatki, flagi RODO — wszystko po kliknięciu na klienta.</p></div>
+        <div class="card"><div class="card-icon">💰</div><h4>Portfel (zadatki)</h4><p>Klient może mieć środki "na koncie". Wpłaty i pobrania z historią każdej transakcji. Saldo widoczne od razu.</p></div>
+        <div class="card"><div class="card-icon">📝</div><h4>Notatki (Memo)</h4><p>Alergia na produkt? Ulubiony kolor? Preferencje? Wpisz raz — widoczne przy każdej wizycie.</p></div>
+        <div class="card"><div class="card-icon">🔗</div><h4>Cross-sell (sugestie)</h4><p>Reguły: "po strzyżeniu zaproponuj odżywkę". System podpowiada pracownikowi co zaproponować.</p></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <h3>🔍 Wyszukiwanie klientów</h3>
+      <p style="font-size:.82rem;color:var(--text-muted);line-height:1.75;margin-bottom:12px">Szukasz po imieniu, nazwisku lub numerze telefonu — pole wyszukiwania w górze listy klientów. Wyniki pojawiają się w locie.</p>
+      <h3 style="margin-top:16px">📊 Flagi w liście</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>RODO</strong> — czy klient podpisał zgodę na przetwarzanie danych</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>OSW</strong> — czy klient podpisał oświadczenie (regulamin)</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Portfel</strong> — czy klient ma aktywne zadatki (saldo)</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAGAZYN ══════════════ -->
+<div class="section" id="magazyn">
+  <div class="mod-header">
+    <div class="mod-icon green">📦</div>
+    <div class="mod-title">
+      <h2>Magazyn — <em>stany i produkty</em></h2>
+      <p>Śledzenie stanów kosmetyków i towarów na bieżąco</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📊</div><h4>Stany na żywo</h4><p>Każdy produkt ma aktualną ilość. Czerwony kolor = poniżej minimum — czas zamawiać.</p></div>
+    <div class="card"><div class="card-icon">📥</div><h4>Przyjęcie towaru</h4><p>Dodaj dostawę — wybierz produkt i wpisz liczbę sztuk. Stan aktualizuje się natychmiast.</p></div>
+    <div class="card"><div class="card-icon">📋</div><h4>Inwentaryzacja</h4><p>Fizyczne przeliczenie z korektą stanów. System zapamięta datę i kto przeprowadził spis.</p></div>
+    <div class="card"><div class="card-icon">🛒</div><h4>Lista zakupów</h4><p>Sekcja "Co zamówić?" — automatycznie wylicza produkty poniżej minimum. Gotowa lista zamówień.</p></div>
+    <div class="card"><div class="card-icon">📚</div><h4>Słownik produktów</h4><p>Baza firm i modeli z cenami detalicznymi. Przyspiesza dodawanie nowych produktów (autocomplete).</p></div>
+    <div class="card"><div class="card-icon">💊</div><h4>Typy produktów (Suplement)</h4><p>Dropdown <strong>Typ</strong> w dodawaniu i edycji — Krem / Serum / Maska / Peeling / Ampułki / <strong>Suplement</strong> / Akcesorium / Inny. Suplementy rozdzielone w raportach.</p></div>
+    <div class="card"><div class="card-icon">📅</div><h4>Daty ważności (widok Profesja)</h4><p>Kolumna „Ważność" widoczna w obu widokach — Kosmetolog i Profesja. Recepcja widzi co się przeterminuje.</p></div>
+    <div class="card"><div class="card-icon">🗄️</div><h4>Archiwum</h4><p>Produkty wycofane ze sprzedaży nie są usuwane — trafiają do archiwum. Można przywrócić w każdej chwili.</p></div>
+  </div>
+
+  <div class="callout note"><strong>Minimum magazynowe:</strong> Dla każdego produktu możesz ustawić minimalną ilość. Gdy stan spadnie poniżej — produkt pojawi się w "Co zamówić?" i w raporcie niskich stanów. Czerwony kolor na liście to automatyczny alert.</div>
+
+  <div class="callout tip" style="margin-top:12px;"><strong>📦 Akordeon „Zadania Magazynowe":</strong> sekcja zadań na pulpicie ma zwijane kategorie (Niski stan / Krytyczny stan / Po dacie / Bliska data). Pozwala ukryć kategorie nieistotne danego dnia.</div>
+</div>
+
+<!-- ══════════════ ANALITYKA ══════════════ -->
+<div class="section" id="analityka">
+  <div class="mod-header">
+    <div class="mod-icon blue">📊</div>
+    <div class="mod-title">
+      <h2>Analityka — <em>raporty i wyniki</em></h2>
+      <p>Przychody, zestawienia, rankingi — wszystko z filtrem dat</p>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📅</div><h4>Raport dzienny</h4><p>Wszystkie transakcje z wybranego dnia — sprzedaż, zadatki, płatności. Podsumowanie kasy na koniec dnia.</p></div>
+    <div class="card"><div class="card-icon">📆</div><h4>Podsumowanie miesięczne</h4><p>Łączny obrót, podział na pracowników, porównanie z poprzednim miesiącem, koszty i przychód netto.</p></div>
+    <div class="card"><div class="card-icon">📈</div><h4>Zestawienie roczne</h4><p>Przychody miesiąc po miesiącu z wykresem trendu. Widać sezonowość i wzrost salonu.</p></div>
+    <div class="card"><div class="card-icon">🏆</div><h4>Ranking pracowników</h4><p>Top pracownicy według przychodów, liczby wizyt i sprzedanych produktów. Motywacja przez dane.</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Analiza zabiegów</h4><p>Które usługi generują największy przychód? Które są najczęściej wykonywane? Top zabiegi od razu widoczne.</p></div>
+    <div class="card"><div class="card-icon">💸</div><h4>Koszty operacyjne</h4><p>Wpisuj koszty miesiąca — kosmetyki, czynsz, media. System liczy przychód netto automatycznie.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Filtr dat</strong> działa w każdym widoku analitycznym — wybierz zakres "od–do" i wszystkie wykresy zaktualizują się automatycznie.</div>
+</div>
+
+<!-- ══════════════ VOUCHERY ══════════════ -->
+<div class="section" id="vouchery">
+  <div class="mod-header">
+    <div class="mod-icon purple">🎟️</div>
+    <div class="mod-title">
+      <h2>Vouchery <em>i rabaty</em></h2>
+      <p>Bony podarunkowe dla klientów + kody rabatowe na zakup Estelio</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>🎁 Vouchery dla klientów</h3>
+      <div class="info-row"><div class="dot"></div><p>Tworzysz bon na dowolną kwotę dla wybranego klienta</p></div>
+      <div class="info-row"><div class="dot"></div><p>Każdy voucher ma unikalny kod i opcjonalną datę ważności</p></div>
+      <div class="info-row"><div class="dot"></div><p>Przy kasowaniu wizyty wybierz "Voucher" i wpisz kod — system odejmie kwotę od salda automatycznie</p></div>
+      <div class="info-row"><div class="dot"></div><p>PDF do wydrukowania lub wysłania klientowi emailem</p></div>
+      <div class="info-row"><div class="dot"></div><p>Saldo vouchera widoczne w każdej chwili w sekcji Vouchery</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏷️ Kody rabatowe (Stripe)</h3>
+      <div class="info-row"><div class="dot"></div><p>Kody dla nowych klientów kupujących Estelio na zamow.html</p></div>
+      <div class="info-row"><div class="dot"></div><p>Typ: procentowy lub kwotowy (np. -20% lub -100 zł)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Opcjonalna data ważności i limit użyć</p></div>
+      <div class="info-row"><div class="dot"></div><p>Zarządzane przez admina systemu</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ URODZINY ══════════════ -->
+<div class="section" id="urodziny">
+  <div class="mod-header">
+    <div class="mod-icon rose">🎂</div>
+    <div class="mod-title">
+      <h2>Kampania <em>urodzinowa</em></h2>
+      <p>Automatyczne przypomnienia o urodzinach klientów i śledzenie kampanii</p>
+    </div>
+  </div>
+
+  <p>System potrafi powiedzieć komu za 5 dni są urodziny. Wystarczy wcześniej dodać datę urodzin do klienta — reszta działa sama.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📅</div><h4>12 zakładek</h4><p>Klienci pogrupowani po miesiącach urodzin. Każda zakładka to lista posortowana po dniu.</p></div>
+    <div class="card"><div class="card-icon">🔔</div><h4>Okno 5 dni</h4><p>Dashboard pokazuje klientów z urodzinami w ciągu najbliższych 5 dni — gotowa lista do działania.</p></div>
+    <div class="card"><div class="card-icon">📊</div><h4>Statusy kampanii</h4><p>Dla każdego klienta zaznaczasz: wysłano SMS, zadzwoniono, zaproponowano bon, brak kontaktu.</p></div>
+    <div class="card"><div class="card-icon">📝</div><h4>Komentarze</h4><p>Do każdego rekordu można dodać notatkę — np. "klient prosił żeby nie dzwonić, tylko SMS".</p></div>
+  </div>
+
+  <div class="callout note"><strong>Dane techniczne:</strong> Urodziny przechowywane są w 12 osobnych tabelach — po jednej na miesiąc (Styczeń, Luty, ..., Grudzień). To celowe — pozwala szybko pobierać tylko jeden miesiąc bez skanowania całej tabeli.</div>
+</div>
+
+<!-- ══════════════ RETENCJA ══════════════ -->
+<div class="section" id="retencja">
+  <div class="mod-header">
+    <div class="mod-icon gold">🔄</div>
+    <div class="mod-title">
+      <h2>Retencja — <em>klienci którzy zniknęli</em></h2>
+      <p>Kampania kontaktu z klientami którzy dawno nie odwiedzili salonu</p>
+    </div>
+  </div>
+
+  <p>Retencja to moduł do zarządzania "odejściem" klientów. Wyfiltruj klientów którzy nie byli od 60 dni, zadzwoń, zapisz wynik rozmowy. Proste — ale skuteczne.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Jak używać?</h3>
+      <div class="info-row"><div class="dot"></div><p>Przejdź do sekcji Retencja w menu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Filtruj klientów według kategorii kampanii</p></div>
+      <div class="info-row"><div class="dot"></div><p>Zadzwoń lub napisz SMS — zapisz status i notatkę</p></div>
+      <div class="info-row"><div class="dot"></div><p>Śledź którzy klienci wrócili po kontakcie</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Co zapisujesz?</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Data kontaktu</strong> — kiedy się odezwałeś</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Kampania</strong> — jakiego typu akcja (np. "klienci 60+ dni")</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Status</strong> — umówił wizytę / brak odpowiedzi / nie wraca</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Notatka</strong> — co powiedział klient</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Pracownik</strong> — kto przeprowadził kontakt</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ KONSULTACJE ══════════════ -->
+<div class="section" id="konsultacje">
+  <div class="mod-header">
+    <div class="mod-icon blue">📋</div>
+    <div class="mod-title">
+      <h2>Konsultacje — <em>kampanie sprzedażowe</em></h2>
+      <p>Śledzenie wyników reklam i pakietów — ile klientów z reklamy kupiło, ile wydało</p>
+    </div>
+  </div>
+
+  <p>Ten moduł odpowiada na pytanie: czy reklama na Facebooku przyniosła zwrot? Rejestrujesz każdą konsultację z potencjalnym klientem, wpisujesz kwotę zakupu — system sam liczy czy przekroczono próg opłacalności.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">📈</div><h4>Wyniki kampanii</h4><p>Lista konsultacji z flagą sukcesu (zielona = kupiła powyżej progu, czerwona = poniżej).</p></div>
+    <div class="card"><div class="card-icon">⚙️</div><h4>Konfiguracja kampanii</h4><p>Tworzysz typy kampanii (np. "FB Cera+") z progiem kwoty uznawanym za sukces.</p></div>
+    <div class="card"><div class="card-icon">👩</div><h4>Konsultanci</h4><p>Lista pracowników przeprowadzających konsultacje. Aktywni/nieaktywni — filtrowani osobno.</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Zabiegi i upsell</h4><p>Dla każdej konsultacji wpisujesz: jakie zabiegi (ciało/twarz), kwotę pakietu, kwotę upsell.</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ TARGETY ══════════════ -->
+<div class="section" id="targety">
+  <div class="mod-header">
+    <div class="mod-icon purple">🎯</div>
+    <div class="mod-title">
+      <h2>Targety — <em>cele dla pracowników</em></h2>
+      <p>Miesięczne cele sprzedażowe i dashboard wyników każdego pracownika</p>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p>Ustawiasz pracownikowi cel na miesiąc — np. 8 000 zł obrotu lub 120 wizyt. System na bieżąco liczy wyniki i pokazuje jak daleko do celu.</p>
+      <div class="cards">
+        <div class="card"><div class="card-icon">📝</div><h4>Dodawanie targetu</h4><p>Wybierz pracownika, miesiąc, typ celu (kwota / liczba wizyt / liczba produktów) i wartość.</p></div>
+        <div class="card"><div class="card-icon">📊</div><h4>Dashboard pracownika</h4><p>Pełne zestawienie: utarg, split usługi/kosmetyki, liczba transakcji, średni paragon (AOV), konsultacje.</p></div>
+      </div>
+    </div>
+    <div class="info-box">
+      <h3>Co liczy dashboard?</h3>
+      <div class="info-row"><div class="dot"></div><p><strong>Utarg łączny</strong> — suma sprzedaży z wybranego okresu</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Usługi vs kosmetyki</strong> — podział procentowy i kwotowy</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Liczba transakcji</strong> — ile wizyt/sprzedaży w okresie</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>AOV</strong> — średnia wartość jednego paragonu</p></div>
+      <div class="info-row"><div class="dot"></div><p><strong>Konsultacje</strong> — ile przeprowadziła i jaki % sukcesu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Dane pobierane z Sprzedaży, Zadatków i Wyników konsultacji jednocześnie</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ RODO ══════════════ -->
+<div class="section" id="rodo">
+  <div class="mod-header">
+    <div class="mod-icon rose">🛡️</div>
+    <div class="mod-title">
+      <h2>RODO — <em>zgody i dokumenty</em></h2>
+      <p>Rejestr zgód na przetwarzanie danych, oświadczeń i dokumentów PDF</p>
+    </div>
+  </div>
+
+  <div class="cards col2">
+    <div class="card"><div class="card-icon">📝</div><h4>Rejestr RODO</h4><p>Dla każdego klienta: zgoda na wizerunek, SMS marketing, newsletter, kontakt telefoniczny, Booksy. Data podpisu i kto przyjął.</p></div>
+    <div class="card"><div class="card-icon">📜</div><h4>Rejestr oświadczeń</h4><p>Osobny rejestr: czy klient zapoznał się z regulaminem i czy przekazano wyciąg. Obowiązkowe przy pierwszej wizycie.</p></div>
+    <div class="card"><div class="card-icon">📷</div><h4>Upload dokumentów</h4><p>Zrób zdjęcie podpisanego formularza (do 6 zdjęć) — system automatycznie optymalizuje i łączy w PDF. Link do pliku zapisuje się w kartotece klienta.</p></div>
+    <div class="card"><div class="card-icon">✅</div><h4>Flagi w kartotece</h4><p>Klienci z wypełnionym RODO mają zieloną flagę w liście. Łatwo widać kto jeszcze nie podpisał.</p></div>
+  </div>
+
+  <div class="callout tip"><strong>Jak działa upload?</strong> Zdjęcia (JPEG, PNG, HEIC) są automatycznie: konwertowane do skali szarości, skalowane do A4, kompresowane (jakość 75%) i łączone w jeden plik PDF. Plik zapisuje się w folderze salonu na serwerze i link trafia do bazy danych.</div>
+</div>
+
+<!-- ══════════════ LOGI ══════════════ -->
+<div class="section" id="logi">
+  <div class="mod-header">
+    <div class="mod-icon gray" style="background:var(--cream2)">📝</div>
+    <div class="mod-title">
+      <h2>Logi — <em>historia akcji</em></h2>
+      <p>Co, kiedy i kto zrobił w systemie</p>
+    </div>
+  </div>
+
+  <p>Każda ważna akcja w systemie jest logowana — dodanie sprzedaży, zmiana stanu magazynowego, dodanie klienta. Logi są widoczne w sekcji Logi i pokazują ostatnie 300 zdarzeń.</p>
+
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Rodzaj akcji</th><th>Kiedy logowane</th></tr></thead>
+    <tbody>
+      <tr><td>SPRZEDAŻ ADD</td><td>Dodanie nowej wizyty lub sprzedaży kosmetyku</td></tr>
+      <tr><td>MAGAZYN UPDATE</td><td>Przyjęcie towaru, ręczna zmiana stanu, archiwizacja produktu</td></tr>
+      <tr><td>KLIENT ADD</td><td>Dodanie nowego klienta do bazy</td></tr>
+      <tr><td>PRACOWNIK ADD/DELETE</td><td>Dodanie lub usunięcie pracownika</td></tr>
+      <tr><td>KONSULTACJA ADD</td><td>Zapisanie wyniku konsultacji</td></tr>
+      <tr><td>LOGIN</td><td>Udane logowanie właściciela lub pracownika</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ PANEL ADMINA ══════════════ -->
+<div class="section" id="panel-admina">
+  <div class="section-eyebrow">Zarządzanie</div>
+  <h2>Panel <em>admina</em></h2>
+  <p>Osobna aplikacja pod adresem <strong>/admin.html</strong>. Dostęp tylko z hasłem admina. Tu zarządzasz wszystkimi salonami naraz — jak centrum dowodzenia.</p>
+
+  <div class="cards">
+    <div class="card"><div class="card-icon">🏪</div><h4>Lista salonów</h4><p>Wszystkie salony, ich status (aktywny/zablokowany), data waznosci dostępu. Jednym kliknięciem zablokujesz lub odblokujesz salon.</p></div>
+    <div class="card"><div class="card-icon">➕</div><h4>Nowy salon ręcznie</h4><p>Wizard 5 kroków: dane salonu → kontakt → pracownicy → usługi → podsumowanie. Bez Stripe — od razu aktywny.</p></div>
+    <div class="card"><div class="card-icon">🔗</div><h4>Tokeny rejestracji</h4><p>Generujesz link dla klienta który już zapłacił (lub dostaje próbę). Ważność 7 dni domyślnie. Można wysłać email automatycznie.</p></div>
+    <div class="card"><div class="card-icon">💬</div><h4>Baza wiedzy Esti</h4><p>Globalne wpisy które pojawiają się w chatbocie każdego salonu. CRUD + przycisk seeda 48 gotowych wpisów.</p></div>
+  </div>
+
+  <div class="callout warn"><strong>Sesje admina</strong> — jak sesje salonów — są in-memory. Po restarcie serwera trzeba zalogować się ponownie. Jeśli widzisz "Brak salonów" po restarcie — to właśnie ten problem.</div>
+</div>
+
+<!-- ══════════════ ONBOARDING ══════════════ -->
+<div class="section" id="onboarding">
+  <div class="section-eyebrow">Nowy klient</div>
+  <h2>Onboarding — <em>jak pojawia się nowy salon</em></h2>
+
+  <div class="two-col">
+    <div>
+      <h3>Ścieżka przez Stripe (automatyczna)</h3>
+      <div class="flow">
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient wypełnia formularz na zamow.html</strong><span>Imię, salon, email, telefon. Opcjonalnie kod rabatowy.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Płaci kartą przez Stripe Checkout</strong><span>Przekierowanie na stronę płatności Stripe. Gotówka, BLIK, karta.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Stripe wysyła webhook do serwera</strong><span>Automatycznie po potwierdzeniu płatności.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>System generuje link rejestracyjny</strong><span>UUID token, ważność 7 dni. Email wysyłany automatycznie.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">5</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient rejestruje salon</strong><span>Formularz: login, hasło, dane salonu → konto gotowe.</span></div></div>
+      </div>
+    </div>
+    <div>
+      <h3>Ścieżka ręczna (admin)</h3>
+      <div class="flow">
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">1</div><div class="flow-line"></div></div><div class="flow-body"><strong>Admin generuje token w panelu</strong><span>Podaje email klienta i klika "Generuj i wyślij email".</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">2</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient dostaje email z linkiem</strong><span>Link ważny 7 dni (lub inny okres ustawiony przez admina).</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">3</div><div class="flow-line"></div></div><div class="flow-body"><strong>Klient wypełnia formularz rejestracji</strong><span>To samo co po Stripe — login, hasło, dane salonu.</span></div></div>
+        <div class="flow-item"><div class="flow-left"><div class="flow-num">4</div><div class="flow-line"></div></div><div class="flow-body"><strong>Salon aktywny od razu</strong><span>Email powitalny z danymi logowania wysyłany automatycznie.</span></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ PŁATNOŚCI ══════════════ -->
+<div class="section" id="platnosci">
+  <div class="section-eyebrow">Finanse</div>
+  <h2>Płatności — <em>Stripe i vouchery</em></h2>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>💳 Jak działa Stripe?</h3>
+      <div class="info-row"><div class="dot"></div><p>System tworzy "sesję płatności" w Stripe — klient trafia na stronę Stripe (nie na naszą)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Stripe obsługuje całą płatność — karta, BLIK, wszystko przez nich</p></div>
+      <div class="info-row"><div class="dot"></div><p>Po sukcesie Stripe "oddzwania" do naszego serwera (webhook)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Webhook jest podpisany — serwer weryfikuje że to naprawdę Stripe, nie ktoś kto udaje</p></div>
+      <div class="info-row"><div class="dot"></div><p>Cena ustawiana przez env STRIPE_CENA_GROSZE (domyślnie 7900 = 79 zł)</p></div>
+    </div>
+    <div class="info-box">
+      <h3>🏷️ Kody rabatowe</h3>
+      <div class="info-row"><div class="dot"></div><p>Klient wpisuje kod na zamow.html przed płatnością</p></div>
+      <div class="info-row"><div class="dot"></div><p>System sprawdza: czy kod istnieje, czy aktywny, czy nie wygasł, czy nie przekroczył limitu użyć</p></div>
+      <div class="info-row"><div class="dot"></div><p>Jeśli OK — pokazuje nową cenę i liczy rabat (procent lub kwota stała)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Po udanej płatności licznik użyć kodu rośnie o 1</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ EMAILE ══════════════ -->
+<div class="section" id="emaile">
+  <div class="section-eyebrow">Komunikacja</div>
+  <h2>Automatyczne <em>emaile</em></h2>
+  <p>System wysyła kilka typów emaili automatycznie — wszystkie przez SMTP Hostinger z adresu kontakt@estelio.com.pl. Każdy email ma spójny szablon graficzny z logo Estelio.</p>
+
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Kiedy</th><th>Do kogo</th><th>Co zawiera</th></tr></thead>
+    <tbody>
+      <tr><td>Nowe zgłoszenie (formularz)</td><td>Admin systemu</td><td>Dane klienta, nazwa salonu, wiadomość, przycisk do panelu admina</td></tr>
+      <tr><td>Nowe zgłoszenie (formularz)</td><td>Klient</td><td>Potwierdzenie przyjęcia zgłoszenia, info o czasie oczekiwania</td></tr>
+      <tr><td>Po płatności Stripe</td><td>Klient</td><td>Link rejestracyjny do założenia salonu (jednorazowy, ważny 7 dni)</td></tr>
+      <tr><td>Rejestracja salonu</td><td>Klient</td><td>Dane logowania (login + hasło), link do systemu, co robić dalej</td></tr>
+      <tr><td>Reset hasła</td><td>Właściciel salonu</td><td>Jednorazowy link do ustawienia nowego hasła (ważny 1 godzinę)</td></tr>
+      <tr><td>Token rejestracyjny (ręczny)</td><td>Klient</td><td>Link rejestracyjny wygenerowany przez admina</td></tr>
+      <tr><td>Formularz kontaktowy</td><td>Admin systemu</td><td>Imię, email, typ (zainteresowany/klient), wiadomość. Reply-To ustawiony na nadawcę.</td></tr>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ ESTI ══════════════ -->
+<div class="section" id="esti">
+  <div class="section-eyebrow">Chatbot</div>
+  <h2>Esti — <em>Twoja asystentka</em></h2>
+  <p>Esti to chatbot wbudowany w aplikację salonu. Odpowiada na pytania pracowników bez połączenia z AI — używa własnej bazy wiedzy i prostego, ale skutecznego algorytmu scoringowego.</p>
+
+  <div class="highlight">
+    <div class="highlight-blob hl-b1"></div>
+    <div class="highlight-blob hl-b2"></div>
+    <h3>Jak Esti znajduje odpowiedź?</h3>
+    <p>Dla każdej karty w bazie wiedzy system liczy punkty. Wygrywa karta z największą liczbą punktów.</p>
+    <ul>
+      <li>Normalizacja pytania: małe litery, bez polskich znaków, bez interpunkcji</li>
+      <li>Całe wyrażenie kluczowe w pytaniu → +2 pkt × liczba słów w wyrażeniu</li>
+      <li>Pojedyncze słowo (min. 4 litery) w pytaniu → +1 pkt za każde</li>
+      <li>Bonus za źródło (wpisy salonu: +3, wpisy globalne: +1, wbudowane: 0)</li>
+      <li>Bonus za kategorię aktywnej sekcji (+2) — ale tylko gdy karta już coś trafiła</li>
+    </ul>
+  </div>
+
+  <h3>Źródło wiedzy</h3>
+  <p>Esti czerpie wiedzę z <strong>jednego źródła</strong> — pliku <code>public/Estelio_Przewodnik_Pracownik.html</code> (przewodnik dla pracownika). Po przebudowach algorytmu (audyt wbudowanej bazy → intent → title-boost) zdecydowano że jeden zawsze aktualny plik HTML jest skuteczniejszy niż rozproszone źródła. <strong>Edycja przewodnika = aktualizacja Esti.</strong></p>
+
+  <div class="callout"><strong>Implementacja:</strong> chatbot parsuje sekcje HTML przewodnika i indeksuje je przy starcie aplikacji. Nowy nagłówek <code>h3</code> w przewodniku = nowa karta wiedzy w Esti. Detale w <code>esti_architecture.md</code> w pamięci projektu.</div>
+
+  <h3>Po odpowiedzi — powiązane pytania</h3>
+  <p>Po każdej odpowiedzi Esti pokazuje 2–3 chipy z pytaniami z tej samej kategorii. Kliknięcie w chip zadaje to pytanie automatycznie. Chipy tylko z tej samej kategorii — bez losowych sugestii z innych działów.</p>
+
+  <h3>9 kategorii wpisów</h3>
+  <div class="cards">
+    <div class="card"><div class="card-icon">🌸</div><h4>Ogólne</h4><p>Logowanie, kontakt, informacje o systemie, błędy techniczne</p></div>
+    <div class="card"><div class="card-icon">📦</div><h4>Magazyn</h4><p>Stany, przyjęcia towaru, inwentaryzacja, alerty minimalne</p></div>
+    <div class="card"><div class="card-icon">👥</div><h4>Klienci</h4><p>Dodawanie, wyszukiwanie, historia, notatki, portfel</p></div>
+    <div class="card"><div class="card-icon">💰</div><h4>Sprzedaż</h4><p>Wizyty, kasowanie, kalendarz, rabaty, anulowanie</p></div>
+    <div class="card"><div class="card-icon">👩</div><h4>Pracownicy</h4><p>PINy, role, dezaktywacja, przypisanie do usług</p></div>
+    <div class="card"><div class="card-icon">💆</div><h4>Usługi</h4><p>Cennik, czas trwania, kategorie zabiegów</p></div>
+    <div class="card"><div class="card-icon">📊</div><h4>Analityka</h4><p>Raporty, rankingi, filtry dat, zestawienia</p></div>
+    <div class="card"><div class="card-icon">🎟️</div><h4>Vouchery</h4><p>Tworzenie, saldo, realizacja, drukowanie</p></div>
+    <div class="card"><div class="card-icon">⚙️</div><h4>Ustawienia</h4><p>Hasła, powiadomienia, profil salonu, backup</p></div>
+  </div>
+</div>
+
+<!-- ══════════════ BEZPIECZEŃSTWO ══════════════ -->
+<div class="section" id="bezpieczenstwo">
+  <div class="section-eyebrow">Ochrona danych</div>
+  <h2>Bezpieczeństwo — <em>co chroni Twoje dane</em></h2>
+
+  <div class="two-col">
+    <div>
+      <h3>Co już działa ✅</h3>
+      <div class="cards">
+        <div class="card"><div class="card-icon">🏢</div><h4>Izolacja salonów</h4><p>Każde zapytanie filtrowane po tenant_id. Salon A fizycznie nie może zobaczyć danych salonu B.</p></div>
+        <div class="card"><div class="card-icon">⏱️</div><h4>Limit logowań</h4><p>Max 10 prób logowania na 15 minut z jednego IP. Dalej blokada 429.</p></div>
+        <div class="card"><div class="card-icon">🔑</div><h4>Tokeny sesji</h4><p>Losowy UUID przy każdym logowaniu, wygasa po 8h. Weryfikowany przy każdym żądaniu.</p></div>
+        <div class="card"><div class="card-icon">🛡️</div><h4>SQL Injection</h4><p>Wszystkie zapytania do bazy używają prepared statements — brak możliwości wstrzyknięcia kodu.</p></div>
+        <div class="card"><div class="card-icon">🔒</div><h4>HTTPS</h4><p>Certyfikat SSL, HSTS (1 rok), nagłówki bezpieczeństwa we wszystkich odpowiedziach.</p></div>
+        <div class="card"><div class="card-icon">🚫</div><h4>Ukryte błędy</h4><p>Szczegóły błędów MySQL nie trafiają do przeglądarki — tylko ogólny komunikat.</p></div>
+      </div>
+    </div>
+    <div>
+      <h3>Do naprawienia ⚠️</h3>
+      <div class="callout warn" style="margin-bottom:12px"><strong>Hasła w bazie</strong> — przechowywane jako plaintext. Przed pełnym SaaS konieczne wdrożenie <strong>bcrypt</strong> (hash + sól).</div>
+      <div class="callout warn" style="margin-bottom:12px"><strong>Sesje in-memory</strong> — znikają przy restarcie serwera. Docelowo <strong>Redis</strong> lub tabela w bazie danych z TTL.</div>
+      <div class="callout warn"><strong>ID z timestampa</strong> — ID sprzedaży generowane z YYYYMMDDHHmmss. Przy dużym ruchu możliwe kolizje. Docelowo <strong>UUID</strong> wszędzie.</div>
+
+      <h3 style="margin-top:24px">Dane i RODO</h3>
+      <div class="info-box" style="margin-top:10px">
+        <div class="info-row"><div class="dot"></div><p>Dane przechowywane na serwerach w UE (Hostinger)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Automatyczne kopie zapasowe przez Hostinger (codziennie)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Każdy salon ma własny folder na PDFy (<code style="font-size:.75rem">/uploads/tenant_id/</code>)</p></div>
+        <div class="info-row"><div class="dot"></div><p>Dostęp do PDFów tylko z poprawnym tenant_id w URL</p></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAGDA ══════════════ -->
+<div class="section" id="magda">
+  <div class="section-eyebrow">Moduł specjalny</div>
+  <h2>Panel <em>Magdy</em></h2>
+  <p>Osobny panel rozliczeniowy dostępny tylko dla głównego salonu (<code style="background:var(--cream2);padding:1px 5px;border-radius:4px;font-size:.8rem">boczki-salon-glowny-001</code>). Służy do rozliczania transakcji między właścicielami — co jest już rozliczone, a co jeszcze czeka.</p>
+
+  <div class="two-col">
+    <div class="info-box">
+      <h3>Do czego służy?</h3>
+      <div class="info-row"><div class="dot"></div><p>Przeglądanie sprzedaży i zadatków z wybranego zakresu dat</p></div>
+      <div class="info-row"><div class="dot"></div><p>Oznaczanie transakcji jako "rozliczone" (checkbox przy każdej pozycji)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Oddzielna sesja (x-magda-token, 12h TTL) — niezależna od sesji właściciela</p></div>
+    </div>
+    <div class="info-box">
+      <h3>Jak wejść?</h3>
+      <div class="info-row"><div class="dot"></div><p>Osobna strona logowania z hasłem z konfiguracji serwera (env MAGDA_HASLO)</p></div>
+      <div class="info-row"><div class="dot"></div><p>Dostęp wyłącznie z tenant_id głównego salonu</p></div>
+      <div class="info-row"><div class="dot"></div><p>Widok: lista transakcji z filtrem dat i możliwością oznaczania</p></div>
+    </div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ══════════════ MODUŁY ROZSZERZONE ══════════════ -->
+<div class="section">
+  <div class="section-eyebrow" style="color:#df247e;">Moduły rozszerzone</div>
+  <h2>Sprzedaż SaaS i funkcje zaawansowane</h2>
+  <p>Poniżej szczegółowa dokumentacja modułów wykraczających poza podstawową funkcjonalność salonu — sprzedaż subskrypcji, zarządzanie kartami klienta, integracje zewnętrzne, mechanizmy anti-duplikacji.</p>
+</div>
+
+<!-- ZADATKI - KONFIGURACJA -->
+<div class="section" id="zadatki-konfig">
+  <div class="mod-header">
+    <div class="mod-icon rose">💰</div>
+    <div class="mod-title">
+      <h2>Zadatki — <em>konfiguracja</em></h2>
+      <p>Panel administratora do ustawiania procentów i progów zadatków sugerowanych</p>
+    </div>
+  </div>
+
+  <p>Zadatki nie są sztywno wpisane w kod — administrator/manager konfiguruje je w panelu <strong>Administracja → Zadatki</strong>. Pozwala to różnym salonom mieć różne polityki: jeden chce 20 % zaliczki od każdego zabiegu powyżej 300 zł, inny — 30 % od 500 zł.</p>
+
+  <h3>Pola konfiguracji</h3>
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Pole</th><th>Co ustawia</th></tr></thead>
+    <tbody>
+      <tr><td>Procent zadatku</td><td>Domyślnie 20 %. System sugeruje tę wartość przy każdym zabiegu powyżej progu.</td></tr>
+      <tr><td>Próg kwoty zabiegu</td><td>Od jakiej kwoty zabiegu sugerować zadatek (np. 300 zł). Poniżej — bez sugestii.</td></tr>
+      <tr><td>Możliwość ręcznej korekty</td><td>Tak — recepcja może zaproponować inną kwotę niż wyliczona (np. okrągłą).</td></tr>
+      <tr><td>Możliwość pominięcia</td><td>Tak — klientka stała może nie wpłacać zadatku w ogóle.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Trzeci typ pozycji w multisprzedaży: 🌸 Zadatek</h3>
+  <p>W formularzu sprzedaży obok plusów „+ Zabieg" i „+ Detal" pojawił się <strong>różowy „+ Zadatek"</strong>. Pozwala dorzucić wpłatę na portfel klientki przy okazji aktualnej transakcji — np. „klientka wychodzi po zabiegu i zostawia 200 zł na pakiet".</p>
+
+  <h3>Soft-delete zadatku</h3>
+  <p>Wpisany na niewłaściwą klientkę zadatek może być usunięty (recepcja+) z opcjonalnym komentarzem. W bazie pozostaje rekord ze statusem <code>USUNIĘTY</code> — historia nigdy nie znika, ale saldo klientki nie obejmuje skasowanego wpisu.</p>
+
+  <div class="callout"><strong>Pod spodem:</strong> dodanie typu <code>'zadatek'</code> do enum'a pozycji multisprzedaży, panel admin <code>Administracja → Zadatki</code>, kolumna <code>status</code> w tabeli <code>Zadatki</code> (ACTIVE/USUNIĘTY), endpoint <code>/api/usun_zadatek</code> z logiem zmian.</div>
+</div>
+
+<!-- SUPLEMENTY -->
+<div class="section" id="suplementy">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#faf5ff; color:#7e22ce;">💊</div>
+    <div class="mod-title">
+      <h2>Suplementy vs <em>kosmetyki</em></h2>
+      <p>Rozróżnienie produktów typu „Witamina/Suplement" od kosmetyków w 7 widokach raportów</p>
+    </div>
+  </div>
+
+  <p>Produkty oznaczone w magazynie jako typ <strong>„Suplement"</strong> (lub historycznie <strong>„Witamina"</strong> z polskiej nomenklatury) są <strong>traktowane jako osobna kategoria</strong> w analityce. Powód biznesowy: właściciele salonów chcą wiedzieć osobno ile sprzedali kosmetyków zewnętrznych, a ile suplementów wewnętrznych — bo to różne marże, różni dostawcy, różne cele targetów.</p>
+
+  <h3>Mechanizm wykrywania (3 ścieżki)</h3>
+  <ol>
+    <li><strong>Prefix w nazwie zabiegu</strong> — nowe sprzedaże zapisywane są jako <code>„Suplement: nazwa"</code> lub <code>„Kosmetyk: nazwa"</code>. Sprawdza się go w pierwszej kolejności.</li>
+    <li><strong>Kolumna <code>kategoria_produktu</code></strong> — nowe pole w tabeli <code>Sprzedaz</code> (ENUM 'Kosmetyk' / 'Suplement' / NULL). Zapisywane przy każdej multisprzedaży.</li>
+    <li><strong>Fallback — Magazyn lookup</strong> dla starszych sprzedaży: jeśli rekord ma stary prefix „Kosmetyk: X", ale X w magazynie ma dziś typ „Suplement" — runtime klasyfikujemy go jako suplement. Baza danych nie jest migrowana; klasyfikacja dzieje się przy generowaniu raportu.</li>
+  </ol>
+
+  <h3>Gdzie widać rozdzielenie</h3>
+  <ul>
+    <li><strong>Analiza → Miesiąc</strong> — dwa hero-boxy obok siebie</li>
+    <li><strong>Analiza → Pracownik</strong> — kafle KPI rozdzielone</li>
+    <li><strong>Podsumowanie dziennej sprzedaży</strong> — dwa chipy w wierszu (kosmetyki + suplementy)</li>
+    <li><strong>Raport końca dnia (Zebranie)</strong> — osobne rankingi „💄 Kosmetyki" i „💊 Suplementy"</li>
+    <li><strong>Targety</strong> — nowy typ celu „Suplementy (szt.)"</li>
+    <li><strong>Top employees</strong> w analityce — rozdzielona suma utargu kosmetycznego i suplementowego</li>
+    <li><strong>Edycja typu produktu</strong> w magazynie — kosmetolożka może poprawić błędną klasyfikację</li>
+  </ul>
+
+  <div class="callout"><strong>Decyzja architektoniczna:</strong> NIE migrujemy historycznych wpisów w bazie. Zostają „Kosmetyk: X" zapisane w roku 2025-2026. Magazyn lookup załatwia ich poprawną klasyfikację runtime. To znacznie bezpieczniejsze (jeden punkt prawdy: aktualny stan magazynu) i odwracalne (zmiana typu = natychmiastowy update raportów).</div>
+</div>
+
+<!-- DODATKOWE DOKUMENTY -->
+<div class="section" id="dodatkowe-dokumenty">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#e0f7ec; color:#166534;">📄</div>
+    <div class="mod-title">
+      <h2>Dodatkowe dokumenty <em>klienta</em></h2>
+      <p>Sekcja na pliki klientki które nie są standardowymi zgodami RODO — wyniki konsultacji, alergeny, etykiety kosmetyków</p>
+    </div>
+  </div>
+
+  <p>Każda klientka ma w profilu sekcję <strong>„Dodatkowe dokumenty"</strong>. Funkcjonalnie podobna do RODO (upload pliku + meta), ale przeznaczona do dokumentów które nie są wymagane prawem — są <strong>narzędziem pracy kosmetologa</strong>.</p>
+
+  <h3>Struktura bazodanowa</h3>
+  <ul>
+    <li><strong>Tabela 1:</strong> <code>DokumentyDodatkoweTypy</code> — słownik typów dokumentów. Dwie warstwy: <em>global</em> (typy domyślne dla wszystkich salonów) + <em>per-tenant</em> (typy specyficzne dla konkretnego salonu).</li>
+    <li><strong>Tabela 2:</strong> <code>DokumentyDodatkowe</code> — same pliki klienta. Klucze: <code>id_klienta</code>, <code>typ_id</code>, <code>nazwa</code>, <code>notatka</code>, <code>file_path</code>, <code>data_dodania</code>, <code>dodane_przez</code>.</li>
+  </ul>
+
+  <h3>Memo-hero — pigułki nad profilem</h3>
+  <p>Jeśli klientka ma dodatkowe dokumenty (lub alergie / ciążę / inne ostrzeżenia w notatkach), nad profilem pojawia się <strong>„memo-hero"</strong> — pasek kolorowych pigułek z najważniejszymi informacjami. Recepcja widzi je od razu, bez konieczności przewijania profilu.</p>
+
+  <h3>Typy pigułek</h3>
+  <ul>
+    <li>🔴 Alergia (z parsera notatek po słowie „alergia" / „uczulenie")</li>
+    <li>🟡 Ciąża / karmienie</li>
+    <li>🟣 Choroby przewlekłe</li>
+    <li>🔵 Notatka recepcji (najnowsza istotna)</li>
+    <li>🟢 Dodatkowe dokumenty (chip z liczbą plików)</li>
+  </ul>
+
+  <div class="callout"><strong>Tip:</strong> notatki są parsowane regexami — pisz precyzyjnie, system wyłapie. „Alergia: retinol" lepiej niż „nie znosi pewnych kosmetyków".</div>
+</div>
+
+<!-- SOFT-DELETE -->
+<div class="section" id="soft-delete">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#fef2f2; color:#dc2626;">🗑️</div>
+    <div class="mod-title">
+      <h2>Soft-delete <em>klienta</em></h2>
+      <p>4 funkcje „usunięcia" klientki, z których żadna nie kasuje historii finansowej</p>
+    </div>
+  </div>
+
+  <p>W fazie projektowej — pełne wdrożenie czeka na odpowiedzi techniczne (A/B/C/D w dokumentacji <code>soft_delete_klienta_design.md</code>). Projekt zakłada 4 osobne ścieżki usunięcia z logiem i 30-dniowym oknem cofnięcia.</p>
+
+  <h3>Cztery typy usunięcia</h3>
+  <div class="tbl" style="overflow-x:auto"><table class="tbl">
+    <thead><tr><th>Typ</th><th>Co się dzieje</th><th>Cofnięcie</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Duplikat</strong></td><td>Łączenie z innym profilem (transfer sprzedaży, zadatków, dokumentów). Stary profil oznaczony jako MERGED.</td><td>Możliwe — rozłączenie z logu</td></tr>
+      <tr><td><strong>Zapomnienie RODO</strong></td><td>Anonimizacja danych personalnych (imię → „Klient #1234", telefon/email puste). Historia finansowa zostaje dla US.</td><td>Niemożliwe (RODO jest definitywne)</td></tr>
+      <tr><td><strong>Klient zmarły</strong></td><td>Profil oznaczony jako nieaktywny, nie pojawia się w urodzinach / retencji. Pełne dane zachowane dla potencjalnych rozliczeń z rodziną.</td><td>Możliwe</td></tr>
+      <tr><td><strong>Klient problematyczny</strong></td><td>Recepcja widzi ostrzeżenie przy próbie umówienia. Historia zachowana.</td><td>Możliwe</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Wymagania procesowe</h3>
+  <ul>
+    <li>Każde usunięcie wymaga <strong>potwierdzenia managera</strong> (nie sama recepcja)</li>
+    <li>Wpis w <strong>logu</strong> z powodem, użytkownikiem, czasem</li>
+    <li>30 dni okno na cofnięcie (kolumna <code>data_planowanego_usuniecia</code>)</li>
+    <li>Po 30 dniach — dla typów odwracalnych: dalsze przechowywanie ze statusem; dla RODO — definitywna anonimizacja</li>
+  </ul>
+
+  <div class="callout warn"><strong>Status:</strong> design ustalony biznesowo, 4 pytania techniczne (A/B/C/D) czekają na rozstrzygnięcie przed implementacją. Notatka w <code>soft_delete_klienta_design.md</code> w pamięci projektu.</div>
+</div>
+
+<!-- BILLING KLIENTA -->
+<div class="section" id="billing-klienta">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#fef3e6; color:#ff961f;">💳</div>
+    <div class="mod-title">
+      <h2>Billing — <em>panel klienta</em></h2>
+      <p>Strona <code>billing.html</code> z historią faktur, kartą płatniczą, możliwością anulacji subskrypcji</p>
+    </div>
+  </div>
+
+  <p>Każdy klient SaaS (właściciel salonu) ma dostęp do panelu <strong><code>estelio.com.pl/billing.html</code></strong> — zalogowany swoim mailem widzi historię swoich faktur, dane karty z Stripe, daty kolejnych płatności, oraz przycisk „Anuluj subskrypcję".</p>
+
+  <h3>Co zawiera billing</h3>
+  <ul>
+    <li><strong>Historia faktur</strong> (Fakturownia) — z PDF do pobrania</li>
+    <li><strong>Stan subskrypcji</strong> Stripe — aktywna / zawieszona / anulowana</li>
+    <li><strong>Karta płatnicza</strong> — last4 + data wygaśnięcia + przycisk „Zmień kartę" (przekierowanie do Stripe Customer Portal)</li>
+    <li><strong>Data kolejnej płatności</strong></li>
+    <li><strong>Przycisk „Anuluj subskrypcję"</strong> — kasuje recurring na koniec bieżącego okresu rozliczeniowego</li>
+  </ul>
+
+  <h3>Fail-secure tenant lookup</h3>
+  <p>Lista faktur klienta filtrowana jest <strong>dwoma kluczami</strong>: adres e-mail kupującego (<code>buyer_email</code>) <strong>oraz</strong> nazwa salonu (<code>buyer_name</code>). Plus fail-secure: jeśli nazwa salonu jest pusta w tenant'cie, lista faktur jest blokowana. Mechanizm chroni przed sytuacją w której dwa salony z tym samym adresem e-mail mogłyby widzieć sobie nawzajem dokumenty.</p>
+
+  <div class="callout"><strong>Wejście do billing:</strong> link <em>„Panel rozliczeniowy"</em> w pasku górnym aplikacji + w welcome emailu po rejestracji + w każdym recurring email od Fakturowni.</div>
+</div>
+
+<!-- FAKTUROWNIA -->
+<div class="section" id="fakturownia">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#e0f2fe; color:#0369a1;">🧾</div>
+    <div class="mod-title">
+      <h2>Fakturownia — <em>automatyczne faktury</em></h2>
+      <p>Integracja z Fakturownia.pl API: faktura po każdej płatności (initial + recurring)</p>
+    </div>
+  </div>
+
+  <p>Każda płatność Stripe (zarówno pierwsza po zakupie, jak i każda kolejna recurring) <strong>automatycznie generuje fakturę w Fakturownia.pl</strong> i wysyła ją mailem do klienta. Integracja przez REST API z tokenem dostępu.</p>
+
+  <h3>Webhooks i triggery</h3>
+  <ul>
+    <li><code>checkout.session.completed</code> — pierwsza płatność: wystawia fakturę 1/MM/YYYY</li>
+    <li><code>invoice.paid</code> — kolejna recurring: faktura X/MM/YYYY</li>
+    <li><code>invoice.payment_failed</code> — alert do admina + zawieszenie subskrypcji po 3 nieudanych próbach</li>
+  </ul>
+
+  <h3>Pola faktury</h3>
+  <ul>
+    <li>Sprzedawca: dane firmy Estelio</li>
+    <li>Nabywca: dane salonu (nazwa, adres z polem <strong>ulica + numer</strong>, NIP jeśli podany)</li>
+    <li>Pozycja: „Subskrypcja Estelio — miesiąc XX/YYYY" — kwota 79 zł</li>
+    <li>Płatność: <code>payment_type: 'card'</code>, <code>paid: 1</code>, <code>paid_date: data płatności</code> → faktura wystawiona jako „zapłacona"</li>
+    <li>Wysyłka: osobny endpoint <code>/invoices/:id/send_by_email.json</code></li>
+  </ul>
+
+  <div class="callout"><strong>Tryb KSeF:</strong> obecnie wyłączony — gotowy do aktywacji w panelu Fakturownia gdy regulacje ostatecznie wejdą w życie. Brak zmian w kodzie wymaganych.</div>
+</div>
+
+<!-- ZGODY ZAKUPU -->
+<div class="section" id="zgody-zakupu">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#dcfce7; color:#15803d;">✅</div>
+    <div class="mod-title">
+      <h2>Zgody RODO <em>przy zakupie</em></h2>
+      <p>3 checkboxy w formularzu zamówienia subskrypcji</p>
+    </div>
+  </div>
+
+  <p>Zakup subskrypcji wymaga zaznaczenia 3 zgód przed przejściem do Stripe Checkout:</p>
+
+  <ol>
+    <li><strong>Akceptacja regulaminu Estelio</strong> — link do <code>/regulamin.html</code></li>
+    <li><strong>Zgoda na przetwarzanie danych (RODO)</strong> — link do <code>/polityka-prywatnosci.html</code></li>
+    <li><strong>Zgoda marketingowa</strong> (opcjonalna) — pozwala wysyłać emaile z nowościami</li>
+  </ol>
+
+  <p>Pierwsze dwa są <strong>wymagane</strong> (przycisk „Zamawiam" wyszary, dopóki nie zaznaczone). Trzecia jest opcjonalna.</p>
+
+  <h3>Zapis zgód</h3>
+  <p>Każda zgoda zapisywana w bazie z <strong>datą i godziną</strong>, plus IP klienta. Dzięki temu w razie kontroli UODO można pokazać moment zgody.</p>
+
+  <div class="callout"><strong>Dlaczego ważne:</strong> bez zgody na regulamin sprzedaż SaaS jest prawnie wątpliwa. Bez RODO — naruszamy GDPR. To ostatni element przed publicznym launchem (zob. <code>plan_startu_sprzedazy.md</code>).</div>
+</div>
+
+<!-- ZADANIA CYKLICZNE -->
+<div class="section" id="zadania-cykliczne">
+  <div class="mod-header">
+    <div class="mod-icon" style="background:#fef9c3; color:#a16207;">🔁</div>
+    <div class="mod-title">
+      <h2>Zadania cykliczne — <em>anti-duplikacja</em></h2>
+      <p>Dwuwarstwowe zabezpieczenie przed duplikacją instancji zadań powtarzalnych</p>
+    </div>
+  </div>
+
+  <p>Zadania powtarzalne (codzienne, tygodniowe, miesięczne) są materializowane do tabeli <code>Zadania</code> jako konkretne instancje per dzień. Mechanizm chroni przed sytuacją w której to samo zadanie zostałoby utworzone wielokrotnie tego samego dnia.</p>
+
+  <h3>Warstwa 1 — warunek SQL przy wstawianiu</h3>
+  <p>Funkcja <code>materializujWzorce</code> w <code>routes/zadania.js</code> sprawdza istnienie instancji zadania warunkiem pokrywającym oba przypadki (z deadline'em i bez):</p>
+  <pre style="background:#0f172a; color:#e2e8f0; padding:14px; border-radius:8px; overflow-x:auto; font-size:.78rem;">WHERE (deadline IS NOT NULL AND DATE(deadline) = ?)
+   OR (deadline IS NULL AND DATE(data_utworzenia) = ?)</pre>
+
+  <p><strong>Pułapka której unikamy:</strong> <code>DATE(NULL) = ?</code> w SQL zwraca <code>NULL</code> (nie <code>FALSE</code>). Naiwny warunek <code>WHERE DATE(deadline) = ?</code> nie wykryłby istniejących instancji zadań bez deadline'u i tworzyłby je wielokrotnie.</p>
+
+  <h3>Warstwa 2 — UNIQUE INDEX na bazie</h3>
+  <p>Twarde zabezpieczenie na poziomie schematu — generated STORED column + UNIQUE INDEX:</p>
+  <pre style="background:#0f172a; color:#e2e8f0; padding:14px; border-radius:8px; overflow-x:auto; font-size:.78rem;">ALTER TABLE Zadania
+  ADD COLUMN dzien_instancji DATE
+  GENERATED ALWAYS AS (DATE(COALESCE(deadline, data_utworzenia))) STORED;
+
+CREATE UNIQUE INDEX uniq_instance
+  ON Zadania(tenant_id, parent_powtarzajacy_id, dzien_instancji);</pre>
+
+  <p>INSERT zmieniony na <code>INSERT IGNORE</code> + sprawdzenie <code>affectedRows</code>. Nawet w przypadku błędu logiki aplikacji, baza fizycznie nie pozwoli na duplikat — nie potrzeba ufać samej logice.</p>
+
+  <div class="callout"><strong>Lekcja architektoniczna:</strong> każda funkcja materializująca cokolwiek cyklicznie powinna mieć UNIQUE INDEX jako twarde zabezpieczenie, niezależnie od poprawności logiki aplikacji. Dwie warstwy — aplikacja + baza — chronią przed klasą błędów (race condition, retry, restart workera).</div>
+</div>
+
+</div><!-- /content -->
+</main>
+
+<button id="top-btn" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+<script>
+// Scroll to top
+window.addEventListener('scroll', () => {
+  document.getElementById('top-btn').classList.toggle('visible', window.scrollY > 400);
+});
+
+// Active sidebar link
+const links = document.querySelectorAll('.sb-link');
+const sections = document.querySelectorAll('.section[id]');
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove('active'));
+      const a = document.querySelector('.sb-link[href="#'+e.target.id+'"]');
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-10% 0px -80% 0px' });
+sections.forEach(s => io.observe(s));
+
+// Search / filter nav
+function filterNav(val) {
+  const v = val.trim().toLowerCase();
+  document.querySelectorAll('.sb-link').forEach(link => {
+    const text = link.textContent.toLowerCase();
+    link.style.display = (!v || text.includes(v)) ? '' : 'none';
+  });
+  document.querySelectorAll('.sb-group-label').forEach(g => {
+    const next = g.nextElementSibling;
+    let anyVisible = false;
+    let el = g.nextElementSibling;
+    while (el && !el.classList.contains('sb-group-label')) {
+      if (el.classList.contains('sb-link') && el.style.display !== 'none') anyVisible = true;
+      el = el.nextElementSibling;
+    }
+    g.style.display = anyVisible ? '' : 'none';
+  });
+}
+</script>
+
+</body>
+</html>
