@@ -1,0 +1,220 @@
+{
+  "etykieta": "po",
+  "czas": "2026-10-22T16:47:25.250Z",
+  "pola": [
+    {
+      "id": "n_firma",
+      "tag": "select",
+      "type": "select-one",
+      "required": false,
+      "min": null,
+      "step": null,
+      "disabled": false,
+      "widoczny": true,
+      "opcji": 3
+    },
+    {
+      "id": "n_model",
+      "tag": "select",
+      "type": "select-one",
+      "required": false,
+      "min": null,
+      "step": null,
+      "disabled": true,
+      "widoczny": true,
+      "opcji": 0
+    },
+    {
+      "id": "n_nazwa",
+      "tag": "input",
+      "type": "hidden",
+      "required": false,
+      "min": null,
+      "step": null,
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": false,
+      "opcji": null
+    },
+    {
+      "id": "n_ilosc",
+      "tag": "input",
+      "type": "number",
+      "required": true,
+      "min": "1",
+      "step": null,
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": true,
+      "opcji": null
+    },
+    {
+      "id": "n_typ",
+      "tag": "select",
+      "type": "select-one",
+      "required": false,
+      "min": null,
+      "step": null,
+      "disabled": false,
+      "widoczny": true,
+      "opcji": 4
+    },
+    {
+      "id": "n_netto",
+      "tag": "input",
+      "type": "number",
+      "required": true,
+      "min": "0.01",
+      "step": "0.01",
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": true,
+      "opcji": null
+    },
+    {
+      "id": "n_brutto",
+      "tag": "input",
+      "type": "number",
+      "required": true,
+      "min": "0.01",
+      "step": "0.01",
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": true,
+      "opcji": null
+    },
+    {
+      "id": "n_min",
+      "tag": "input",
+      "type": "number",
+      "required": false,
+      "min": null,
+      "step": null,
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": false,
+      "opcji": null
+    },
+    {
+      "id": "n_waznosc",
+      "tag": "input",
+      "type": "date",
+      "required": true,
+      "min": null,
+      "step": null,
+      "disabled": false,
+      "readOnly": false,
+      "widoczny": true,
+      "opcji": null
+    }
+  ],
+  "kategoriaChecked": "Detal",
+  "kategoriaWidoczna": false,
+  "onsubmit": "dodajProdukt(event)",
+  "pomocSlot": "magazyn.przyjecie",
+  "przyciskSubmit": "Przyjmij towar",
+  "firmyWSlowniku": 2,
+  "pustySubmit": {
+    "alerty": [],
+    "posty": 0,
+    "formValid": false,
+    "pierwszeNiepoprawne": "n_ilosc"
+  },
+  "wybor": {
+    "firma": "BioVital",
+    "model": "Kolagen do picia 30 saszetek",
+    "nazwa": "BioVital Kolagen do picia 30 saszetek",
+    "modelDisabled": false,
+    "modeliDlaFirmy": 2
+  },
+  "poZmianieFirmy": {
+    "firma": "Estelio Care",
+    "model": "",
+    "nazwa": "Wybierz firmę i model..."
+  },
+  "typOpcje": [
+    {
+      "v": "Kremy",
+      "t": "Kremy"
+    },
+    {
+      "v": "Olejek",
+      "t": "Olejek"
+    },
+    {
+      "v": "Witaminy",
+      "t": "Suplement"
+    },
+    {
+      "v": "Inne",
+      "t": "Inne"
+    }
+  ],
+  "podsumowanie": "Podsumowanie Kolagen do picia 30 saszetek BioVital Kremy Liczba sztuk 6 Brutto za sztukę 98,40 zł Łączna wartość brutto 590,40 zł 6 szt. × 98,40 zł",
+  "zapis": {
+    "posty": [
+      {
+        "action": "add",
+        "nazwa": "BioVital Kolagen do picia 30 saszetek",
+        "typ": "Kremy",
+        "ilosc": "6",
+        "kategoria": "Detal",
+        "pracownik": "Ola",
+        "min": 2,
+        "waznosc": "2027-12-31",
+        "netto": "80.00",
+        "brutto": "98.40"
+      }
+    ],
+    "alerty": [
+      "✅ Dodano produkt pomyślnie!"
+    ],
+    "nawigacja": [],
+    "aktywnaSekcja": "nowy",
+    "poZapisie": {
+      "firma": "",
+      "model": "",
+      "modelDisabled": true,
+      "modeliOpcji": 1,
+      "nazwa": "Wybierz firmę i model...",
+      "ilosc": "",
+      "netto": "",
+      "waznosc": ""
+    },
+    "submitTekst": "Przyjmij towar",
+    "submitDisabled": false
+  },
+  "walidacjaJS": [
+    {
+      "opis": "ilosc 0",
+      "alert": "⛔ BŁĄD: Ilość musi być większa od 0!",
+      "wyslano": 0,
+      "payload": null
+    },
+    {
+      "opis": "netto 0",
+      "alert": "⛔ BŁĄD: Podaj cenę netto!",
+      "wyslano": 0,
+      "payload": null
+    },
+    {
+      "opis": "brak daty",
+      "alert": "⛔ BŁĄD: Podaj datę ważności!",
+      "wyslano": 0,
+      "payload": null
+    },
+    {
+      "opis": "brak modelu",
+      "alert": "⛔ BŁĄD: Musisz wybrać konkretny model!",
+      "wyslano": 0,
+      "payload": null
+    },
+    {
+      "opis": "poprawne, netto 80,50 z przecinkiem",
+      "alert": "⛔ BŁĄD: Podaj cenę netto!",
+      "wyslano": 0,
+      "payload": null
+    }
+  ],
+  "bledyJS": []
+}

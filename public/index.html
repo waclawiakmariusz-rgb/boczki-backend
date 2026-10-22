@@ -5697,18 +5697,76 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                 <div class="filters"><button class="filter-btn active" onclick="filtrujInwentaryzacje('Wszystkie', this)">Wszystkie</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Profesja', this)">🧴 Profesja</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Detal', this)">🛍️ Detal</button><button class="btn-archive filter-btn" onclick="filtrujInwentaryzacje('Archiwum', this)">🗑️ Archiwum</button></div>
                 <div class="card"><p style="color:#666; margin-bottom:20px;" id="inv-desc"></p><div id="lista-inv"></div></div>
             </div>
-            <div id="nowy" class="section">
-                <div class="header"><h1>Przyjęcie towaru</h1><span class="pk-slot" data-pomoc="magazyn.przyjecie" data-pomoc-nazwa="Przyjęcie towaru"></span></div>
-                <div class="card">
-                    <form onsubmit="dodajProdukt(event)">
-                        <div style="background:#f0f9ff; padding:10px; margin-bottom:15px; border:1px solid #bae6fd;"><!--<input type="radio" name="kategoria" value="Profesja" checked> Profesja --><input type="radio" name="kategoria" value="Detal" checked> Detal</div>
-                        <div class="form-grid"><div><label>Firma:</label><select id="n_firma" onchange="zaladujModeleDlaFirmy()"></select></div><div><label>Model:</label><select id="n_model" onchange="generujNazwe()" disabled></select></div></div>
-                        <input type="text" id="n_nazwa" readonly style="background:#eee; font-weight:bold;">
-                        <div class="form-grid"><div><label>Ilość:</label><input type="number" id="n_ilosc" required min="1"></div><div><label>Typ:</label><select id="n_typ"><option>Kremy</option><option>Olejek</option><option value="Witaminy">Suplement</option><option>Inne</option></select></div></div>
-                        <div class="form-grid"><div><label>Netto (szt):</label><input type="number" step="0.01" id="n_netto" required min="0.01"></div><div><label>Brutto (szt):</label><input type="number" step="0.01" id="n_brutto" required min="0.01"></div></div>
-                        <div class="form-grid"><div style="display:none"><label>Min:</label><input type="number" id="n_min" value="2"></div><div><label>Ważność:</label><input type="date" id="n_waznosc" required></div></div>
-                        <button type="submit" class="btn-primary">Zapisz</button>
+            <!-- Przyjęcie towaru — redesign 22.10.2026 wg docs/redesign/Estelio_Przyjecie_Towaru_Kod_2026-10-19.
+                 Zmieniona jest WYŁĄCZNIE oprawa. ID pól, atrybuty walidacji natywnej (required/min/step/type),
+                 onsubmit="dodajProdukt(event)" i payload action:'add' są te same, co przed redesignem.
+                 Style: /przyjecie-towaru.css, warstwa prezentacji (−/+, podsumowanie, Anuluj): /przyjecie-towaru.js. -->
+            <div id="nowy" class="section estelio-goods-receipt">
+                <div class="egr-content">
+                    <header class="egr-page-heading">
+                        <div class="egr-title-row"><h1>Przyjęcie towaru</h1><span class="pk-slot" data-pomoc="magazyn.przyjecie" data-pomoc-nazwa="Przyjęcie towaru"></span></div>
+                        <p>Wybierz produkt i uzupełnij dane przyjęcia.</p>
+                    </header>
+                    <div class="egr-layout">
+                    <form class="egr-card egr-form" onsubmit="dodajProdukt(event)" aria-label="Przyjęcie towaru">
+                        <!-- Rodzaj przyjęcia. Przed redesignem: jedyna, zawsze zaznaczona opcja „Detal” w niebieskim pasku
+                             (Profesja od dawna wykomentowana). Użytkownik niczego tu nie wybierał, więc pasek znika z ekranu;
+                             kontrolka zostaje ukryta, bo dodajProdukt() czyta z niej wartość — funkcja zapisu jest przez to
+                             co do znaku taka sama jak dotąd. Nie jest required, nie bierze fokusu, nie blokuje walidacji. -->
+                        <input type="radio" name="kategoria" value="Detal" checked hidden tabindex="-1" aria-hidden="true">
+                        <!-- Nazwa „Firma Model” składana przez generujNazwe(); dawniej widoczny zielony pasek, dziś pole ukryte. -->
+                        <input type="hidden" id="n_nazwa">
+                        <section class="egr-section egr-product" aria-labelledby="egr-product-title">
+                            <h2 id="egr-product-title">Produkt</h2>
+                            <div class="egr-grid egr-product-grid">
+                                <div class="egr-field"><label for="n_firma">Marka</label><div class="egr-select-wrap"><select id="n_firma" onchange="zaladujModeleDlaFirmy()"></select><svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                                <div class="egr-field"><label for="n_model">Model</label><div class="egr-select-wrap"><select id="n_model" onchange="generujNazwe()" disabled></select><svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                                <div class="egr-field"><label for="n_typ">Typ</label><div class="egr-select-wrap"><select id="n_typ"><option>Kremy</option><option>Olejek</option><option value="Witaminy">Suplement</option><option>Inne</option></select><svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                            </div>
+                        </section>
+                        <section class="egr-section egr-batch" aria-labelledby="egr-batch-title">
+                            <h2 id="egr-batch-title">Przyjmowana partia</h2>
+                            <div class="egr-grid egr-batch-grid">
+                                <div class="egr-field"><label for="n_ilosc">Liczba sztuk</label>
+                                    <div class="egr-stepper">
+                                        <button type="button" data-krok="-1" aria-label="Zmniejsz liczbę sztuk" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+                                        <input type="number" id="n_ilosc" required min="1">
+                                        <button type="button" data-krok="1" aria-label="Zwiększ liczbę sztuk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+                                    </div>
+                                </div>
+                                <div class="egr-field"><label for="n_waznosc">Data ważności</label><input type="date" id="n_waznosc" required></div>
+                            </div>
+                        </section>
+                        <section class="egr-section egr-prices" aria-labelledby="egr-prices-title">
+                            <h2 id="egr-prices-title">Ceny za sztukę</h2>
+                            <div class="egr-grid egr-price-grid">
+                                <div class="egr-field"><label for="n_netto">Netto</label><div class="egr-money-wrap"><input type="number" step="0.01" id="n_netto" required min="0.01"><span aria-hidden="true">zł</span></div></div>
+                                <div class="egr-field"><label for="n_brutto">Brutto</label><div class="egr-money-wrap"><input type="number" step="0.01" id="n_brutto" required min="0.01"><span aria-hidden="true">zł</span></div></div>
+                            </div>
+                        </section>
+                        <div style="display:none"><label>Min:</label><input type="number" id="n_min" value="2"></div>
+                        <footer class="egr-form-footer">
+                            <button type="button" class="egr-button egr-button-secondary" data-anuluj>Anuluj</button>
+                            <button type="submit" class="egr-button egr-button-primary">Przyjmij towar</button>
+                        </footer>
                     </form>
+                    <aside class="egr-card egr-summary" aria-labelledby="egr-summary-title">
+                        <h2 id="egr-summary-title">Podsumowanie</h2>
+                        <div class="egr-summary-product">
+                            <div class="egr-package-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="m8 15 23-8 25 8v34L32 58 8 49Zm0 0 24 9 24-9M32 24v34M19 11l24 9M19 19v10l7 2V21"/></svg></div>
+                            <div class="egr-product-description"><h3 data-podsumowanie="model">Wybierz produkt</h3><p data-podsumowanie="marka">—</p><p data-podsumowanie="typ">—</p></div>
+                        </div>
+                        <dl class="egr-summary-metrics">
+                            <div><dt>Liczba sztuk</dt><dd data-podsumowanie="ilosc">—</dd></div>
+                            <div><dt>Brutto za sztukę</dt><dd data-podsumowanie="brutto">—</dd></div>
+                        </dl>
+                        <div class="egr-summary-total">
+                            <p>Łączna wartość brutto</p>
+                            <output data-podsumowanie="suma">—</output>
+                            <p class="egr-equation" data-podsumowanie="dzialanie">Uzupełnij ilość i cenę brutto.</p>
+                        </div>
+                    </aside>
+                    </div>
                 </div>
             </div>
 			<!-- Co zamowic -->
@@ -19819,7 +19877,7 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
             if (!waznosc) { alert("⛔ BŁĄD: Podaj datę ważności!"); return; }
 
             btn.disabled = true;
-            btn.innerText = "⏳ Zapisywanie...";
+            btn.innerText = "Przyjmowanie…"; // etykieta wg makiety (redesign 22.10.2026); logika bez zmian
 
             fetch(API_URL, {
                 method: "POST",
@@ -19851,7 +19909,7 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
             })
             .finally(() => {
                 btn.disabled = false;
-                btn.innerText = "Zapisz";
+                btn.innerText = "Przyjmij towar"; // etykieta wg makiety (redesign 22.10.2026); logika bez zmian
             });
         }
 
@@ -36668,5 +36726,8 @@ document.addEventListener('DOMContentLoaded', function() {
      Spec: docs/Estelio_Pomoc_Kontekstowa_2026-10-22/WDROZENIE_DLA_CLAUDE.md -->
 <link rel="stylesheet" href="/pomoc-kontekstowa.css?v=__WERSJA_PLIKOW__">
 <script src="/pomoc-kontekstowa.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Przyjęcie towaru — oprawa po redesignie 22.10.2026 (tylko ten jeden ekran; selektory zawężone do .estelio-goods-receipt) -->
+<link rel="stylesheet" href="/przyjecie-towaru.css?v=__WERSJA_PLIKOW__">
+<script src="/przyjecie-towaru.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>

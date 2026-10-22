@@ -1,0 +1,120 @@
+<!-- Fragment do osadzenia wewnątrz istniejącej powłoki Estelio. Bez bocznego menu. -->
+<section class="estelio-goods-receipt" data-goods-receipt aria-labelledby="egr-title">
+  <div class="egr-content">
+    <header class="egr-page-heading">
+      <h1 id="egr-title">Przyjęcie towaru</h1>
+      <p>Wybierz produkt i uzupełnij dane przyjęcia.</p>
+    </header>
+    <div class="egr-layout">
+      <form class="egr-card egr-form" novalidate aria-label="Przyjęcie towaru">
+        <fieldset class="egr-fields" data-editable>
+          <legend class="egr-sr-only">Dane przyjęcia</legend>
+          <section class="egr-section egr-product" aria-labelledby="egr-product-title">
+            <h2 id="egr-product-title">Produkt</h2>
+            <div class="egr-grid egr-product-grid">
+              <div class="egr-field">
+                <label for="egr-brand">Marka</label>
+                <div class="egr-select-wrap">
+                  <select id="egr-brand" name="brandId" required aria-describedby="egr-brand-error"><option value="">Wybierz markę</option></select>
+                  <svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <p class="egr-error" id="egr-brand-error" hidden></p>
+              </div>
+              <div class="egr-field">
+                <label for="egr-model">Model</label>
+                <div class="egr-select-wrap">
+                  <select id="egr-model" name="productId" required disabled aria-describedby="egr-model-error"><option value="">Najpierw wybierz markę</option></select>
+                  <svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <p class="egr-error" id="egr-model-error" hidden></p>
+              </div>
+              <div class="egr-field">
+                <label for="egr-type">Typ</label>
+                <div class="egr-select-wrap">
+                  <select id="egr-type" name="typeId" required aria-describedby="egr-type-error"><option value="">Wybierz typ</option></select>
+                  <svg class="egr-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <p class="egr-error" id="egr-type-error" hidden></p>
+              </div>
+            </div>
+            <p class="egr-catalog-status" data-catalog-status role="status" hidden></p>
+            <button class="egr-text-button" type="button" data-reload-catalog hidden>Spróbuj pobrać ponownie</button>
+          </section>
+          <section class="egr-section egr-batch" aria-labelledby="egr-batch-title">
+            <h2 id="egr-batch-title">Przyjmowana partia</h2>
+            <div class="egr-grid egr-batch-grid">
+              <div class="egr-field">
+                <label for="egr-quantity">Liczba sztuk</label>
+                <div class="egr-stepper">
+                  <button type="button" data-step="-1" aria-label="Zmniejsz liczbę sztuk" disabled><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+                  <input id="egr-quantity" name="quantity" type="text" inputmode="numeric" autocomplete="off" required aria-describedby="egr-quantity-error">
+                  <button type="button" data-step="1" aria-label="Zwiększ liczbę sztuk"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M12 5v14"/></svg></button>
+                </div>
+                <p class="egr-error" id="egr-quantity-error" hidden></p>
+              </div>
+              <div class="egr-field">
+                <label for="egr-expiry">Data ważności</label>
+                <div class="egr-date-wrap">
+                  <input id="egr-expiry" name="expiryDate" type="text" inputmode="numeric" placeholder="dd.mm.rrrr" autocomplete="off" aria-describedby="egr-expiry-error">
+                  <button class="egr-calendar-button" type="button" data-open-date aria-label="Otwórz kalendarz daty ważności"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4m8-4v4M4 11h16m-10 4h.01m3 3h.01"/></svg></button>
+                  <input class="egr-native-date" type="date" data-native-date tabindex="-1" aria-hidden="true">
+                </div>
+                <p class="egr-error" id="egr-expiry-error" hidden></p>
+              </div>
+            </div>
+          </section>
+          <section class="egr-section egr-prices" aria-labelledby="egr-prices-title">
+            <h2 id="egr-prices-title">Ceny za sztukę</h2>
+            <div class="egr-grid egr-price-grid">
+              <div class="egr-field">
+                <label for="egr-net">Netto</label>
+                <div class="egr-money-wrap"><input id="egr-net" name="net" type="text" inputmode="decimal" autocomplete="off" required aria-describedby="egr-net-error"><span aria-hidden="true">zł</span></div>
+                <p class="egr-error" id="egr-net-error" hidden></p>
+              </div>
+              <div class="egr-field">
+                <label for="egr-gross">Brutto</label>
+                <div class="egr-money-wrap"><input id="egr-gross" name="gross" type="text" inputmode="decimal" autocomplete="off" required aria-describedby="egr-gross-error"><span aria-hidden="true">zł</span></div>
+                <p class="egr-error" id="egr-gross-error" hidden></p>
+              </div>
+            </div>
+          </section>
+        </fieldset>
+        <div class="egr-feedback" data-feedback role="alert" hidden></div>
+        <div class="egr-recovery" data-recovery hidden>
+          <button class="egr-button egr-button-secondary" type="button" data-check-result hidden>Sprawdź wynik</button>
+          <p data-recovery-help>Nie wysyłaj tego przyjęcia ponownie przed sprawdzeniem wyniku.</p>
+        </div>
+        <footer class="egr-form-footer">
+          <button class="egr-button egr-button-secondary" type="button" data-cancel>Anuluj</button>
+          <button class="egr-button egr-button-primary" type="submit" data-submit disabled><span class="egr-spinner" hidden aria-hidden="true"></span><span data-submit-label>Przyjmij towar</span></button>
+        </footer>
+      </form>
+      <aside class="egr-card egr-summary" aria-labelledby="egr-summary-title">
+        <h2 id="egr-summary-title">Podsumowanie</h2>
+        <div class="egr-summary-product">
+          <div class="egr-package-icon"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="m8 15 23-8 25 8v34L32 58 8 49Zm0 0 24 9 24-9M32 24v34M19 11l24 9M19 19v10l7 2V21"/></svg></div>
+          <div class="egr-product-description"><h3 data-summary="product">Wybierz produkt</h3><p data-summary="brand">—</p><p data-summary="type">—</p></div>
+        </div>
+        <dl class="egr-summary-metrics">
+          <div><dt>Liczba sztuk</dt><dd data-summary="quantity">—</dd></div>
+          <div><dt>Brutto za sztukę</dt><dd data-summary="unit">—</dd></div>
+        </dl>
+        <div class="egr-summary-total">
+          <p>Łączna wartość brutto</p>
+          <output data-summary="total">—</output>
+          <p class="egr-equation" data-summary="equation">Uzupełnij ilość i cenę brutto.</p>
+        </div>
+      </aside>
+    </div>
+    <div class="egr-toast" data-toast role="status" hidden></div>
+    <p class="egr-sr-only" data-announcement role="status"></p>
+    <dialog class="egr-dialog" aria-labelledby="egr-dialog-title" aria-describedby="egr-dialog-description">
+      <h2 id="egr-dialog-title">Odrzucić wprowadzone zmiany?</h2>
+      <p id="egr-dialog-description">Dane tego przyjęcia nie zostały zapisane.</p>
+      <div class="egr-dialog-actions">
+        <button class="egr-button egr-button-secondary" type="button" data-keep autofocus>Kontynuuj wpisywanie</button>
+        <button class="egr-button egr-button-primary" type="button" data-discard>Odrzuć zmiany</button>
+      </div>
+    </dialog>
+  </div>
+</section>

@@ -1,0 +1,41 @@
+/* Tylko otoczka podglądu index.html. NIE importować do istniejącego Estelio. */
+body.estelio-demo { margin: 0; background: #fdf9f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #101828; }
+.estelio-demo .demo-shell { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; }
+.estelio-demo .demo-sidebar { box-sizing: border-box; background: white; padding: 32px 20px 20px; border-right: 1px solid #eef0f4; }
+.estelio-demo .demo-logo { display: block; position: relative; width: 170px; height: 40px; overflow: hidden; margin: 4px 12px 45px; }
+.estelio-demo .demo-logo img { position: absolute; width: 245px; height: auto; max-width: none; left: -10px; top: -19px; }
+.estelio-demo .demo-nav { display: grid; gap: 10px; }
+.estelio-demo .demo-nav-item { box-sizing: border-box; display: flex; align-items: center; gap: 12px; min-height: 50px; width: 100%; padding: 12px 18px; border-radius: 16px; color: #8598b2; font-size: 16px; font-weight: 500; }
+.estelio-demo .demo-nav-item svg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.estelio-demo .demo-chevron { margin-left: auto; font-size: 12px; }
+.estelio-demo .demo-home { color: #f8448b; background: #fff2f6; }
+.estelio-demo .demo-subnav { margin-bottom: 14px; }
+.estelio-demo .demo-subnav .demo-nav-item { min-height: 50px; padding-left: 40px; font-size: 14px; border-radius: 15px; }
+.estelio-demo .demo-subnav .demo-nav-item + .demo-nav-item { margin-top: 1px; }
+.estelio-demo .demo-nav-item.demo-active { color: #b3526e; background: #fdf1f5; }
+.estelio-demo .demo-order { color: #ef8c00; }
+.estelio-demo .demo-calendar { color: #a42545; }
+.estelio-demo .demo-retention { border: 1px solid #bceadd; color: #00b889; margin: 2px 0; }
+.estelio-demo .demo-workspace { min-width: 0; }
+.estelio-demo .demo-mobile-header { display: none; }
+.estelio-demo .demo-tools { box-sizing: border-box; margin: 0 30px 28px; padding: 18px 22px; border: 1px dashed #d3c7cb; border-radius: 14px; font-size: 14px; color: #667085; background: #fffaf9; }
+.estelio-demo .demo-tools summary { cursor: pointer; font-weight: 600; color: #69515d; }
+.estelio-demo .demo-tools p { margin: 12px 0; max-width: 900px; line-height: 1.6; }
+.estelio-demo .demo-controls { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+.estelio-demo .demo-controls button, .estelio-demo .demo-controls select { min-height: 44px; border-radius: 10px; border: 1px solid #d8dce3; background: white; color: #3e4653; font: inherit; padding: 8px 14px; }
+.estelio-demo .demo-controls button { cursor: pointer; }
+.estelio-demo .demo-controls label { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.estelio-demo .demo-controls button:focus-visible, .estelio-demo .demo-controls select:focus-visible { outline: 3px solid #a85d7260; outline-offset: 2px; }
+.estelio-demo .demo-status { margin-top: 12px; }
+@media (max-width: 1100px) {
+  .estelio-demo .demo-shell { display: block; }
+  .estelio-demo .demo-sidebar { display: none; }
+  .estelio-demo .demo-mobile-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; background: white; border-bottom: 1px solid #e7e9ee; gap: 16px; font-size: 12px; color: #667085; }
+  .estelio-demo .demo-mobile-header .demo-logo { width: 135px; height: 28px; margin: 0; }
+  .estelio-demo .demo-mobile-header .demo-logo img { width: 190px; left: -8px; top: -14px; }
+}
+@media (max-width: 520px) {
+  .estelio-demo .demo-tools { margin: 0 16px 24px; padding: 16px; }
+  .estelio-demo .demo-controls { align-items: stretch; flex-direction: column; }
+  .estelio-demo .demo-controls select { max-width: 100%; }
+}
