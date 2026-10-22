@@ -1,5 +1,5 @@
 {
-  "wersjaKatalogu": "2026-10-22.10",
+  "wersjaKatalogu": "2026-10-22.11",
   "sprawdzonoWobec": "main 16d049c (22.10.2026)",
   "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
   "konteksty": {
@@ -8,16 +8,7 @@
       "eyebrow": "PULPIT",
       "title": "Co wymaga uwagi dzisiaj",
       "body": "Ekran startowy: skróty do najczęstszych akcji i lista zadań. Liczby u góry widzą manager i właściciel.",
-      "items": [
-        {
-          "icon": "lista",
-          "text": "Zadania odhaczasz tu, nie w osobnym module."
-        },
-        {
-          "icon": "szukaj",
-          "text": "Wyszukiwarka u góry prowadzi do klientki."
-        }
-      ],
+      "items": [],
       "tip": null,
       "article": {
         "label": "Pulpit — pierwszy ekran",
@@ -31,7 +22,7 @@
       ],
       "reviewStatus": "verified",
       "verifiedAgainst": "16d049c",
-      "contentVersion": 1
+      "contentVersion": 2
     },
     "magazyn.stan": {
       "parentContextId": null,
