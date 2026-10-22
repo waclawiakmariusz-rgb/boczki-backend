@@ -31322,7 +31322,7 @@ initTheme();
 
 <div id="new-client-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10005; justify-content: center; align-items: center;">
     <div style="background: white; width: 90%; max-width: 450px; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-        <h3 style="margin-top:0; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">👤 Nowy Klient</h3>
+        <h3 style="margin-top:0; color:var(--primary); border-bottom:1px solid #eee; padding-bottom:10px;">👤 Nowy Klient</h3><span class="pk-slot" data-pomoc="modal.klient.nowy" data-pomoc-nazwa="Nowy klient"></span>
         
         <form onsubmit="zapiszNowegoKlienta(event)">
             <label style="font-weight:bold;">Imię i Nazwisko:</label>
@@ -31360,7 +31360,7 @@ initTheme();
 
 <div id="deposit-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10005; justify-content: center; align-items: center;">
     <div style="background: white; width: 90%; max-width: 400px; padding: 25px; border-radius: 15px;">
-        <h3 style="margin-top:0;">💸 Wpłata Zadatku</h3>
+        <h3 style="margin-top:0;">💸 Wpłata Zadatku</h3><span class="pk-slot" data-pomoc="modal.zadatek" data-pomoc-nazwa="Wpłata zadatku"></span>
         <form onsubmit="wyslijZadatek(event)">
             <label>Cel (np. Endermologia - nazwa pakietu, data):</label>
             <input type="text" id="dep_cel" required class="form-control" style="margin-bottom:10px;" placeholder="Wpisz zabieg...">
@@ -31626,7 +31626,7 @@ initTheme();
 
 <div id="split-payment-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
     <div style="background:white; padding:25px; border-radius:12px; width:480px; max-width:95%; max-height:90vh; overflow-y:auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
-        <h3 style="margin-top:0; color:#374151;">🔀 Rozdziel płatność (Mix)</h3>
+        <h3 style="margin-top:0; color:#374151;">🔀 Rozdziel płatność (Mix)</h3><span class="pk-slot" data-pomoc="modal.mix" data-pomoc-nazwa="Płatność mieszana"></span>
         <p style="color:#6b7280; font-size:14px;">Kwota do rozliczenia: <strong id="split-total-display" style="color:#111; font-size:16px;">0.00 zł</strong></p>
 
         <div id="split-rows-container" style="margin-top:15px;"></div>
@@ -31733,7 +31733,7 @@ initTheme();
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
             <div>
-                <h3 style="margin:0; color:#0f766e; font-size: 22px;">🔒 Deklaracja RODO / Marketing</h3>
+                <h3 style="margin:0; color:#0f766e; font-size: 22px;">🔒 Deklaracja RODO / Marketing</h3><span class="pk-slot" data-pomoc="modal.rodo" data-pomoc-nazwa="Deklaracja RODO"></span>
                 <p id="rodo-client-name" style="margin: 5px 0 0 0; font-weight:600; color:#475569; font-size: 14px;"></p>
             </div>
             <button onclick="document.getElementById('rodo-modal-overlay').style.display='none'" style="border:none; background:none; font-size:28px; color:#94a3b8; cursor:pointer; line-height: 1;">&times;</button>
@@ -31877,7 +31877,7 @@ initTheme();
     <div style="background:#fff; width:95%; max-width:520px; padding:25px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,0.2); margin-bottom:30px;">
         <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #eee; padding-bottom:12px; margin-bottom:18px;">
             <div>
-                <h3 id="dd-modal-title" style="margin:0; color:#0369a1;">📁 Dodaj dokument</h3>
+                <h3 id="dd-modal-title" style="margin:0; color:#0369a1;">📁 Dodaj dokument</h3><span class="pk-slot" data-pomoc="modal.dokument" data-pomoc-nazwa="Dodaj dokument"></span>
                 <p id="dd-modal-client" style="margin:5px 0 0 0; font-size:13px; color:#64748b; font-weight:600;"></p>
             </div>
             <button onclick="dd_closeModal()" style="border:none; background:none; font-size:24px; color:#94a3b8; cursor:pointer;">&times;</button>
@@ -32096,7 +32096,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
 <div id="zwrot-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.55); z-index:10018; justify-content:center; align-items:flex-start; padding-top:30px; overflow-y:auto;">
     <div id="zwrot-modal-card" style="background:#fff; border-radius:18px; padding:24px; width:94%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,.25); margin-bottom:30px;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
-            <h3 style="margin:0; font-size:17px;">↩ Zwrot sprzedaży</h3>
+            <h3 style="margin:0; font-size:17px;">↩ Zwrot sprzedaży</h3><span class="pk-slot" data-pomoc="modal.zwrot" data-pomoc-nazwa="Zwrot sprzedaży"></span>
             <button onclick="zamknijZwrot()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#94a3b8;">✕</button>
         </div>
         <div id="zwrot-info-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:12px 14px; font-size:13px; color:#334155; margin-bottom:14px; line-height:1.6;"></div>
@@ -32221,7 +32221,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
 <!-- 🗑️ Modal: Usuń duplikat -->
 <div id="sd-soft-delete-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
   <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
-    <h3 style="margin-top:0; color:#1f2430;">🗑️ Usuń profil klienta</h3>
+    <h3 style="margin-top:0; color:#1f2430;">🗑️ Usuń profil klienta</h3><span class="pk-slot" data-pomoc="modal.klient.usun" data-pomoc-nazwa="Usuń profil"></span>
     <p style="font-size:13px; color:#6b7280;">Profil zostanie oznaczony jako USUNIĘTY i zniknie z listy klientów. <strong>Akcja jest przywracalna</strong> z panelu logów.</p>
     <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-soft-delete-imie">—</span></p>
     <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Powód</label>
@@ -32242,7 +32242,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
 <!-- 🔒 Modal: Anonimizacja RODO -->
 <div id="sd-anonimizacja-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
   <div style="background:#fff; width:95%; max-width:520px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2); max-height:90vh; overflow-y:auto;">
-    <h3 style="margin-top:0; color:#7c2d12;">🔒 Anonimizacja RODO</h3>
+    <h3 style="margin-top:0; color:#7c2d12;">🔒 Anonimizacja RODO</h3><span class="pk-slot" data-pomoc="modal.klient.anonimizacja" data-pomoc-nazwa="Anonimizacja RODO"></span>
     <div style="background:#fef2f2; border:1px solid #fecaca; color:#991b1b; padding:10px; border-radius:8px; font-size:13px; margin-bottom:14px;">
       <strong>⚠ Akcja nieodwracalna.</strong> Dane osobowe zostaną usunięte z: Klienci, Rejestr RODO, Rejestr Oświadczeń, Memo. Dane księgowe (Sprzedaż, Zadatki) zostają zgodnie z art. 86 Ordynacji podatkowej (5 lat).
     </div>
@@ -32268,7 +32268,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
 <!-- ⚰️ Modal: Zmarły -->
 <div id="sd-zmarly-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.5); z-index:10050; justify-content:center; align-items:center;">
   <div style="background:#fff; width:95%; max-width:480px; padding:24px; border-radius:14px; box-shadow:0 15px 40px rgba(0,0,0,.2);">
-    <h3 style="margin-top:0; color:#1f2430;">⚰️ Oznacz klienta jako zmarłego</h3>
+    <h3 style="margin-top:0; color:#1f2430;">⚰️ Oznacz klienta jako zmarłego</h3><span class="pk-slot" data-pomoc="modal.klient.zmarly" data-pomoc-nazwa="Oznacz jako zmarłego"></span>
     <p style="font-size:13px; color:#6b7280;">Klient zniknie z urodzin, retencji i marketingu. Profil zostaje (rodzina może wrócić po pakiet). Akcja przywracalna z logu.</p>
     <p style="font-size:14px; color:#1f2430; background:#f9fafb; padding:10px; border-radius:8px;"><strong>Klient:</strong> <span id="sd-zmarly-imie">—</span></p>
     <label style="display:block; font-size:12px; font-weight:700; color:#6b7280; margin-bottom:6px; text-transform:uppercase; letter-spacing:.04em;">Data zgonu (opcjonalne)</label>
@@ -32355,7 +32355,7 @@ body.dark-mode #zwrot-info-box { background:#0f172a !important; border-color:#33
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #f1f5f9; padding-bottom:15px;">
             <div>
-                <h3 style="margin:0; color:#1e293b; font-size: 18px;">✏️ Edycja Danych Klienta</h3>
+                <h3 style="margin:0; color:#1e293b; font-size: 18px;">✏️ Edycja Danych Klienta</h3><span class="pk-slot" data-pomoc="modal.klient.edycja" data-pomoc-nazwa="Edycja danych klientki"></span>
                 <p style="margin: 5px 0 0 0; font-size: 12px; color:#64748b;">Zmiana nazwiska zachowa historię zabiegów.</p>
             </div>
             <button onclick="zamknijEdycjeKlienta()" style="border:none; background:none; font-size:24px; color:#94a3b8; cursor:pointer;">&times;</button>

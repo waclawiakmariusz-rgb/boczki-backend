@@ -47,6 +47,7 @@ modal.consent-modal,public/index.html #consent-modal-overlay,,(modal) consent-mo
 modal.dd-modal,public/index.html #dd-modal-overlay,,(modal) dd-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.deposit,public/index.html #deposit-overlay,,(modal) deposit-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.deposit-edit-modal,public/index.html #deposit-edit-modal-overlay,,(modal) deposit-edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.dokument,"public/index.html: #dd-modal-overlay („Dodaj dokument"")",klient.profil.dokumenty,Dodajesz dokument klientki,,,podpięte,"public/index.html: #dd-modal-overlay („Dodaj dokument"") ; routes/dokumenty_dodatkowe.js",/pomoc/#dokumenty,wdrozone-sprawdzone
 modal.edit-dict,public/index.html #edit-dict-overlay,,(modal) edit-dict-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.edit-modal,public/index.html #edit-modal-overlay,,(modal) edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.edit-product,public/index.html #edit-product-overlay,,(modal) edit-product-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
@@ -55,6 +56,11 @@ modal.foto-modal,public/index.html #foto-modal-overlay,,(modal) foto-modal-overl
 modal.hkb-modal,public/index.html #hkb-modal-overlay,,(modal) hkb-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.hkb-modal,public/index.html #hkb-modal,,(modal) hkb-modal,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.hkb-toast-modal,public/index.html #hkb-toast-modal,,(modal) hkb-toast-modal,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.klient.anonimizacja,"public/index.html: #sd-anonimizacja-overlay („Akcja nieodwracalna. Dane osobowe zostaną usunięte z: Klienci, Rejestr RODO, Rejestr Oświadczeń, Memo. Dane księgowe (Sprzedaż, Zadatki) zostają zgodnie z art. 86 Ordynacji podatkowej (5 lat)"")",klient.profil,Kasujesz dane osobowe na stałe,,,podpięte,"public/index.html: #sd-anonimizacja-overlay („Akcja nieodwracalna. Dane osobowe zostaną usunięte z: Klienci, Rejestr RODO, Rejestr Oświadczeń, Memo. Dane księgowe (Sprzedaż, Zadatki) zostają zgodnie z art. 86 Ordynacji podatkowej (5 lat)"")",/pomoc/#bezpieczenstwo,wdrozone-sprawdzone
+modal.klient.edycja,"public/index.html: #client-edit-modal-overlay („Edycja Danych Klienta"", pola cek_email i cek_bez_maili)",klient.profil,Poprawiasz dane klientki,,,podpięte,"public/index.html: #client-edit-modal-overlay („Edycja Danych Klienta"", pola cek_email i cek_bez_maili) ; routes/klienci.js: edit_client_data — zapis zmian do notatek i logu",/pomoc/#klienci,wdrozone-sprawdzone
+modal.klient.nowy,"public/index.html: #new-client-overlay („Nowy Klient"": Imię i Nazwisko, dane kontaktowe)",klient.profil,Zakładasz kartę klientki,,,podpięte,"public/index.html: #new-client-overlay („Nowy Klient"": Imię i Nazwisko, dane kontaktowe) ; public/estelio_pomoc_f.html: rozdział #klienci",/pomoc/#klienci,wdrozone-sprawdzone
+modal.klient.usun,"public/index.html: #sd-soft-delete-overlay („Profil zostanie oznaczony jako USUNIĘTY i zniknie z listy klientów. Akcja jest przywracalna z panelu logów""; powody: Duplikat, Pomyłka recepcji, Klient prosił o usunięcie (nie RODO), Inne)",klient.profil,Chowasz kartę z listy,,,podpięte,"public/index.html: #sd-soft-delete-overlay („Profil zostanie oznaczony jako USUNIĘTY i zniknie z listy klientów. Akcja jest przywracalna z panelu logów""; powody: Duplikat, Pomyłka recepcji, Klient prosił o usunięcie (nie RODO), Inne)",/pomoc/#klienci,wdrozone-sprawdzone
+modal.klient.zmarly,"public/index.html: #sd-zmarly-overlay („Klient zniknie z urodzin, retencji i marketingu. Profil zostaje (rodzina może wrócić po pakiet). Akcja przywracalna z logu"")",klient.profil,Wyłączasz osobę z kontaktu,,,podpięte,"public/index.html: #sd-zmarly-overlay („Klient zniknie z urodzin, retencji i marketingu. Profil zostaje (rodzina może wrócić po pakiet). Akcja przywracalna z logu"")",/pomoc/#klienci,wdrozone-sprawdzone
 modal.kon_edit-modal,public/index.html #kon_edit-modal,,(modal) kon_edit-modal,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.kp_kat_overlay,public/index.html #kp_kat_overlay,,(modal) kp_kat_overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.kp_powiel_overlay,public/index.html #kp_powiel_overlay,,(modal) kp_powiel_overlay,,,"nagłówek modalu, przed ×",,,do-opisania
@@ -62,12 +68,14 @@ modal.leady-modal-szczegoly,public/index.html #leady-modal-szczegoly,,(modal) le
 modal.leady-modal-zrodlo,public/index.html #leady-modal-zrodlo,,(modal) leady-modal-zrodlo,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.login,public/index.html #login-overlay,,(modal) login-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.memo-modal,public/index.html #memo-modal-overlay,,(modal) memo-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.mix,"public/index.html: #split-payment-modal („Rozdziel płatność (Mix)"": Kwota do rozliczenia, Dodaj metodę płatności, Suma wpisana)",sprzedaz.rejestracja,Klientka płaci na kilka sposobów,,,podpięte,"public/index.html: #split-payment-modal („Rozdziel płatność (Mix)"": Kwota do rozliczenia, Dodaj metodę płatności, Suma wpisana)",/pomoc/#rozliczenia,wdrozone-sprawdzone
 modal.modal-nowy-typ,public/index.html #modal-nowy-typ,,(modal) modal-nowy-typ,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.new-client,public/index.html #new-client-overlay,,(modal) new-client-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.pin,public/index.html #pin-overlay,,(modal) pin-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.ret-modal-historia,public/index.html #ret-modal-historia,,(modal) ret-modal-historia,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.ret-modal-klient,public/index.html #ret-modal-klient,,(modal) ret-modal-klient,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.retention-modal,public/index.html #retention-modal-overlay,,(modal) retention-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.rodo,"public/index.html: #rodo-modal-overlay („Deklaracja RODO / Marketing"", „Cyfrowy Skan Dokumentu"", 1–6 zdjęć)",klient.profil.dokumenty,Zgody klientki na piśmie,,,podpięte,"public/index.html: #rodo-modal-overlay („Deklaracja RODO / Marketing"", „Cyfrowy Skan Dokumentu"", 1–6 zdjęć) ; public/index.html: #sms-baza — lista buduje się z tych zgód",/pomoc/#dokumenty,wdrozone-sprawdzone
 modal.rodo-modal,public/index.html #rodo-modal-overlay,,(modal) rodo-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.sd-anonimizacja,public/index.html #sd-anonimizacja-overlay,,(modal) sd-anonimizacja-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.sd-ban,public/index.html #sd-ban-overlay,,(modal) sd-ban-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
@@ -80,11 +88,13 @@ modal.split-deposit-modal,public/index.html #split-deposit-modal,,(modal) split-
 modal.split-payment-modal,public/index.html #split-payment-modal,,(modal) split-payment-modal,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.tgt-modal,public/index.html #tgt-modal,,(modal) tgt-modal,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.tk-podglad,public/index.html #tk-podglad-overlay,,(modal) tk-podglad-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zadatek,"public/index.html: #deposit-overlay („Wpłata Zadatku"": Cel, Kwota, Metoda płatności, „To jest bon podarunkowy"")",sprzedaz.zadatki,Przyjmujesz wpłatę na przyszłość,,,podpięte,"public/index.html: #deposit-overlay („Wpłata Zadatku"": Cel, Kwota, Metoda płatności, „To jest bon podarunkowy"") ; public/estelio_pomoc_f.html: rozdział #zadatki",/pomoc/#zadatki,wdrozone-sprawdzone
 modal.zd-comments-modal,public/index.html #zd-comments-modal-overlay,,(modal) zd-comments-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zd-kat-popup,public/index.html #zd-kat-popup,,(modal) zd-kat-popup,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zd-modal,public/index.html #zd-modal-overlay,,(modal) zd-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zd-prz-popup,public/index.html #zd-prz-popup,,(modal) zd-prz-popup,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zg-modal,public/index.html #zg-modal-overlay,,(modal) zg-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+modal.zwrot,"public/index.html: #zwrot-modal-overlay (Kwota zwrotu, Całość, Sposób zwrotu, „Produkt wraca na stan magazynu"")",sprzedaz.dzisiejsza,Oddajesz pieniądze klientce,,,podpięte,"public/index.html: #zwrot-modal-overlay (Kwota zwrotu, Całość, Sposób zwrotu, „Produkt wraca na stan magazynu"") ; public/estelio_pomoc_f.html: rozdział #zwroty",/pomoc/#zwroty,wdrozone-sprawdzone
 modal.zwrot-modal,public/index.html #zwrot-modal-overlay,,(modal) zwrot-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 pulpit,"public/index.html: sekcja #pulpit (.ds-topbar, KPI dla admin/megaadmin/manager, lista zadań)",,Co wymaga uwagi dzisiaj,,,podpięte,"public/index.html: sekcja #pulpit (.ds-topbar, KPI dla admin/megaadmin/manager, lista zadań) ; public/estelio_pomoc_f.html: rozdział #pulpit",/pomoc/#pulpit,wdrozone-sprawdzone
 retencja,"public/index.html: sekcja #retencja (pobierzDaneDoRetencji, filtr Kategoria/Zabieg)",,Do kogo warto zadzwonić,,,podpięte,"public/index.html: sekcja #retencja (pobierzDaneDoRetencji, filtr Kategoria/Zabieg) ; public/estelio_pomoc_f.html: rozdział #retencja",/pomoc/#retencja,wdrozone-sprawdzone

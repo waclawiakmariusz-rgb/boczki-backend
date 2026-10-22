@@ -259,3 +259,62 @@ widok-pracownicy-targety · klub-admin
 Zakładki Ustawień Terminarza (7 sprawdzonych): każda ma własną treść, zero pomocy nadrzędnej.
 
 Pełny zestaw testów: **844/844**.
+
+---
+
+# P-03, partia 3 — modale z decyzją (22.10.2026)
+
+Katalog: **69 kontekstów**. Mapa: 168 wierszy.
+
+## Które modale dostały pomoc — i dlaczego akurat te
+
+Z 45 nakładek w mapie pomoc dostało **10**: te, w których użytkownik podejmuje decyzję
+z konsekwencjami — pieniądze, dane osobowe albo nieodwracalność. Przy zwykłym „czy na pewno?"
+przycisk „?" byłby szumem, a nie pomocą.
+
+| Modal | Dlaczego |
+|---|---|
+| Wpłata zadatku | pieniądze klientki na przyszłość, osobna ścieżka dla bonu |
+| Zwrot sprzedaży | pieniądze w drugą stronę + powrót towaru na stan |
+| Płatność mieszana (Mix) | suma musi się zgodzić, inaczej rozjeżdża się utarg |
+| Nowy klient / Edycja danych | duplikat kartoteki rozdziela historię klientki |
+| Deklaracja RODO | od tych zgód zależy, kto trafi na listę do SMS |
+| Dodaj dokument | dowód w razie sporu |
+| Usuń profil / Oznacz zmarłego / **Anonimizacja RODO** | trzy różne rzeczy, które łatwo pomylić |
+
+Trzy ostatnie są najważniejsze: **usunięcie** chowa kartę i da się cofnąć, **zmarły** wycisza
+kontakt, ale zostawia pakiety dla rodziny, a **anonimizacja** kasuje dane bezpowrotnie. Pomoc
+mówi to wprost, a przy anonimizacji wskazówka ma ikonę ostrzeżenia (jedyne takie miejsce
+w katalogu — zgodnie z zasadą, że wykrzyknik zostaje dla realnego zagrożenia).
+
+## Próba: 10/10, bez zastrzeżeń
+
+```
+MODAL                     PRZYCISK  TYTUŁ CHMURKI                     POZA EKRANEM
+deposit-overlay           jest      Przyjmujesz wpłatę na przyszłość  nie
+zwrot-modal-overlay       jest      Oddajesz pieniądze klientce       nie
+split-payment-modal       jest      Klientka płaci na kilka sposobów  nie
+new-client-overlay        jest      Zakładasz kartę klientki          nie
+client-edit-modal-overlay jest      Poprawiasz dane klientki          nie
+rodo-modal-overlay        jest      Zgody klientki na piśmie          nie
+dd-modal-overlay          jest      Dodajesz dokument klientki        nie
+sd-soft-delete-overlay    jest      Chowasz kartę z listy             nie
+sd-zmarly-overlay         jest      Wyłączasz osobę z kontaktu        nie
+sd-anonimizacja-overlay   jest      Kasujesz dane osobowe na stałe    nie
+→ 10/10 · BLEDY JS: brak
+```
+
+Każdy przypadek sprawdzony pod trzema kątami, których nie widać na zrzucie:
+**chmurka jest NAD modalem** (`elementFromPoint` w jej obszarze trafia w nią, nie w tło),
+**Esc zamyka tylko pomoc** — modal zostaje otwarty, i **chmurka mieści się w ekranie**.
+
+Zrzut: `pomoc-07-modal-anonimizacja.png`. Próba: `modale.js`.
+
+## Stan całości
+
+| | |
+|---|---|
+| Konteksty z pomocą | **69** |
+| Ekrany sprawdzone obchodem | 35 sekcji + 7 zakładek Terminarza + 6 zakładek profilu + 10 modali |
+| Pozostaje w mapie | 99 wierszy — głównie modale bez decyzji (potwierdzenia, podglądy), podstrony Klubu i panele Terminarza, które mają własną pomoc |
+| Testy | 844/844 |

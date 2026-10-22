@@ -1,5 +1,5 @@
 {
-  "wersjaKatalogu": "2026-10-22.9",
+  "wersjaKatalogu": "2026-10-22.10",
   "sprawdzonoWobec": "main 16d049c (22.10.2026)",
   "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
   "konteksty": {
@@ -1456,6 +1456,222 @@
       },
       "sources": [
         "public/terminarz.js: renderUstawienia() — zakładka widoczna, gdy ustawienia.zakupy_integracja === on; ustPakiety()"
+      ]
+    },
+    "modal.zadatek": {
+      "parentContextId": "sprzedaz.zadatki",
+      "items": [],
+      "tip": "Bon podarunkowy zaznaczasz osobnym polem — rozlicza się inaczej niż zwykły zadatek.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "WPŁATA ZADATKU",
+      "title": "Przyjmujesz wpłatę na przyszłość",
+      "body": "Podajesz cel (na co jest ta wpłata), kwotę i metodę płatności. Zadatek czeka na karcie klientki, aż rozliczysz wizytę.",
+      "article": {
+        "label": "Zadatki i wpłaty",
+        "href": "/pomoc/",
+        "anchor": "zadatki"
+      },
+      "sources": [
+        "public/index.html: #deposit-overlay („Wpłata Zadatku\": Cel, Kwota, Metoda płatności, „To jest bon podarunkowy\")",
+        "public/estelio_pomoc_f.html: rozdział #zadatki"
+      ]
+    },
+    "modal.zwrot": {
+      "parentContextId": "sprzedaz.dzisiejsza",
+      "items": [],
+      "tip": "Zwrot tworzy nowy wpis z dzisiejszą datą — pierwotna sprzedaż i stare raporty zostają nietknięte.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "ZWROT SPRZEDAŻY",
+      "title": "Oddajesz pieniądze klientce",
+      "body": "Kwota zwrotu (całość albo część) i sposób: karta, gotówka, przelew. Produkt można jednocześnie przywrócić na stan magazynu.",
+      "article": {
+        "label": "Zwroty i korekty",
+        "href": "/pomoc/",
+        "anchor": "zwroty"
+      },
+      "sources": [
+        "public/index.html: #zwrot-modal-overlay (Kwota zwrotu, Całość, Sposób zwrotu, „Produkt wraca na stan magazynu\")",
+        "public/estelio_pomoc_f.html: rozdział #zwroty"
+      ]
+    },
+    "modal.mix": {
+      "parentContextId": "sprzedaz.rejestracja",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "PŁATNOŚĆ MIESZANA",
+      "title": "Klientka płaci na kilka sposobów",
+      "body": "Rozbijasz kwotę na metody, na przykład część gotówką, część kartą. Suma wpisana musi zgodzić się z kwotą do rozliczenia.",
+      "article": {
+        "label": "Rozliczenia dnia",
+        "href": "/pomoc/",
+        "anchor": "rozliczenia"
+      },
+      "sources": [
+        "public/index.html: #split-payment-modal („Rozdziel płatność (Mix)\": Kwota do rozliczenia, Dodaj metodę płatności, Suma wpisana)"
+      ]
+    },
+    "modal.klient.nowy": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "Zanim założysz nową kartę, sprawdź wyszukiwarką, czy klientka już nie istnieje — duplikaty rozdzielają historię.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "NOWY KLIENT",
+      "title": "Zakładasz kartę klientki",
+      "body": "Imię i nazwisko plus dane kontaktowe. Kartę zakłada się raz — potem wszystko (wizyty, zakupy, zgody) trafia do niej.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #new-client-overlay („Nowy Klient\": Imię i Nazwisko, dane kontaktowe)",
+        "public/estelio_pomoc_f.html: rozdział #klienci"
+      ]
+    },
+    "modal.klient.edycja": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "EDYCJA DANYCH",
+      "title": "Poprawiasz dane klientki",
+      "body": "Telefon, e-mail, data urodzin i zgoda na wiadomości o wizytach. Zmiany zapisują się w notatkach i w Dzienniku Zdarzeń.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #client-edit-modal-overlay („Edycja Danych Klienta\", pola cek_email i cek_bez_maili)",
+        "routes/klienci.js: edit_client_data — zapis zmian do notatek i logu"
+      ]
+    },
+    "modal.rodo": {
+      "parentContextId": "klient.profil.dokumenty",
+      "items": [],
+      "tip": "Bez zgody marketingowej klientka nie trafi na listę do akcji SMS.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "RODO I MARKETING",
+      "title": "Zgody klientki na piśmie",
+      "body": "Deklaracja RODO i zgody marketingowe. Możesz dołączyć skan podpisanego dokumentu — od jednego do sześciu zdjęć stron.",
+      "article": {
+        "label": "Dokumenty i zgody",
+        "href": "/pomoc/",
+        "anchor": "dokumenty"
+      },
+      "sources": [
+        "public/index.html: #rodo-modal-overlay („Deklaracja RODO / Marketing\", „Cyfrowy Skan Dokumentu\", 1–6 zdjęć)",
+        "public/index.html: #sms-baza — lista buduje się z tych zgód"
+      ]
+    },
+    "modal.dokument": {
+      "parentContextId": "klient.profil.dokumenty",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "DOKUMENT",
+      "title": "Dodajesz dokument klientki",
+      "body": "Skan albo zdjęcie dokumentu przypisanego do tej osoby: zgoda, oświadczenie, karta zabiegowa.",
+      "article": {
+        "label": "Dokumenty i zgody",
+        "href": "/pomoc/",
+        "anchor": "dokumenty"
+      },
+      "sources": [
+        "public/index.html: #dd-modal-overlay („Dodaj dokument\")",
+        "routes/dokumenty_dodatkowe.js"
+      ]
+    },
+    "modal.klient.usun": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "To nie jest RODO ani kasowanie danych — akcję da się cofnąć z Dziennika Zdarzeń.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "USUNIĘCIE PROFILU",
+      "title": "Chowasz kartę z listy",
+      "body": "Profil zostaje oznaczony jako usunięty i znika z listy klientek. Podajesz powód: duplikat, pomyłka recepcji albo prośba klientki.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #sd-soft-delete-overlay („Profil zostanie oznaczony jako USUNIĘTY i zniknie z listy klientów. Akcja jest przywracalna z panelu logów\"; powody: Duplikat, Pomyłka recepcji, Klient prosił o usunięcie (nie RODO), Inne)"
+      ]
+    },
+    "modal.klient.zmarly": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "Akcja jest przywracalna z Dziennika Zdarzeń.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "ZMARŁA KLIENTKA",
+      "title": "Wyłączasz osobę z kontaktu",
+      "body": "Osoba znika z urodzin, retencji i marketingu, ale profil zostaje — rodzina może wrócić po niewykorzystany pakiet.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #sd-zmarly-overlay („Klient zniknie z urodzin, retencji i marketingu. Profil zostaje (rodzina może wrócić po pakiet). Akcja przywracalna z logu\")"
+      ]
+    },
+    "modal.klient.anonimizacja": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "Akcja nieodwracalna. Używaj jej tylko na pisemne żądanie klientki, nie do porządkowania listy.",
+      "tipTyp": "ostrzezenie",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "ac468fa",
+      "contentVersion": 1,
+      "eyebrow": "ANONIMIZACJA RODO",
+      "title": "Kasujesz dane osobowe na stałe",
+      "body": "Dane znikają z kartoteki, Rejestru RODO, Rejestru Oświadczeń i Memo. Dane księgowe zostają — wymaga tego Ordynacja podatkowa.",
+      "article": {
+        "label": "Bezpieczeństwo i zgody",
+        "href": "/pomoc/",
+        "anchor": "bezpieczenstwo"
+      },
+      "sources": [
+        "public/index.html: #sd-anonimizacja-overlay („Akcja nieodwracalna. Dane osobowe zostaną usunięte z: Klienci, Rejestr RODO, Rejestr Oświadczeń, Memo. Dane księgowe (Sprzedaż, Zadatki) zostają zgodnie z art. 86 Ordynacji podatkowej (5 lat)\")"
       ]
     }
   }
