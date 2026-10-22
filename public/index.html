@@ -5771,7 +5771,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
      zobaczyć, kto zgodził się na marketing: zgody czytały się tylko per profil. -->
 <div id="sms-baza" class="section">
     <div class="header">
-        <h1>📣 Baza do akcji SMS</h1>
+        <h1>📣 Baza do akcji SMS</h1><span class="pk-slot" data-pomoc="admin.sms" data-pomoc-nazwa="Baza do SMS"></span>
         <button onclick="pobierzBazeSMS()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
 
@@ -6574,7 +6574,7 @@ body.dark-mode #analiza-missing-list li {
 <div id="kon_raportowanie" class="section kr-redesign" style="overflow-y: auto;">
 
   <div class="kr-page-header">
-    <h1>Konsultacje</h1>
+    <h1 style="display:flex; align-items:center; gap:4px;">Konsultacje<span class="pk-slot" data-pomoc="konsultacje.wyniki" data-pomoc-nazwa="Konsultacje"></span></h1>
     <p>Raportowanie wyników i analiza skuteczności</p>
   </div>
 
@@ -7087,7 +7087,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 
 <div id="kon_admin-panel" class="section" style="padding: 20px; overflow-y: auto;">
-    <div class="kon_header"><h1>Zarządzanie (Admin)</h1></div>
+    <div class="kon_header"><h1>Zarządzanie (Admin)</h1><span class="pk-slot" data-pomoc="konsultacje.admin" data-pomoc-nazwa="Ustawienia konsultacji"></span></div>
     
     <div class="kon_card">
         <h3 style="margin-top:0; border-bottom:1px solid #eee; padding-bottom:10px;">👥 Konsultanci</h3>
@@ -7471,7 +7471,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	<input type="text" id="search-emergency" onkeyup="_db('aw',filtrujAwaryjne)"
            placeholder="🔍 Szukaj (Klient, Data, Usługa)..."
            style="flex:1; padding:12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px; max-width:400px;">
-        <h1 style="color:#b91c1c;">🚨 Awaryjna Edycja (30 dni)</h1>
+        <h1 style="color:#b91c1c;">🚨 Awaryjna Edycja (30 dni)</h1><span class="pk-slot" data-pomoc="admin.awaryjna" data-pomoc-nazwa="Awaryjna edycja"></span>
         <button onclick="pobierzAwaryjneTransakcje()" class="btn-primary" style="width:auto; background:#dc2626;">🔄 Odśwież</button>
     </div>
 
@@ -7576,7 +7576,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div id="setup-zabiegi" class="section">
 			<input type="text" id="szukaj-zabieg" onkeyup="_db('zab',filtrujZabiegi)" placeholder="🔍 Szukaj kategorii lub wariantu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
-                <div class="header"><h1>Kreator Zabiegów</h1></div>
+                <div class="header"><h1>Kreator Zabiegów</h1><span class="pk-slot" data-pomoc="admin.zabiegi" data-pomoc-nazwa="Kreator zabiegów"></span></div>
                 <div class="card">
                     <form onsubmit="dodajDefinicje(event, 'Zabieg')" id="form-zabieg">
                         <input type="hidden" id="edit_old_kat">
@@ -7689,7 +7689,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
             <div id="setup-pracownicy" class="section">
-			<div class="header"><h1>Pracownicy</h1></div>
+			<div class="header"><h1>Pracownicy</h1><span class="pk-slot" data-pomoc="admin.pracownicy" data-pomoc-nazwa="Pracownicy"></span></div>
 			<div class="card">
 			<form onsubmit="dodajDefinicje(event, 'Pracownik')">
 			<label>Imię i Nazwisko:</label>
@@ -7698,7 +7698,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			</form><div style="margin-top:20px;"><h3>Lista pracowników biorących udział w sprzedaży:</h3><ul id="pracownicy-list" style="list-style:none; padding:0;"></ul></div></div></div>
             
            <div id="setup-sugestie" class="section">
-    <div class="header"><h1>🧠 Kreator Sugestii (Cross-selling)</h1></div>
+    <div class="header"><h1>🧠 Kreator Sugestii (Cross-selling)</h1><span class="pk-slot" data-pomoc="admin.sugestie" data-pomoc-nazwa="Kreator sugestii"></span></div>
     
     <div class="card">
         <p style="color:#666; margin-bottom:20px; font-size:14px;">
@@ -8442,7 +8442,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="addons" class="section">
                 <div class="header" style="margin-bottom:20px;">
                     <div>
-                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">Dodatki</h1>
+                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">Dodatki</h1><span class="pk-slot" data-pomoc="admin.dodatki" data-pomoc-nazwa="Dodatki"></span>
                         <p style="margin:6px 0 0 0; color:#6b7280; font-size:14px;">Rozszerzenia dla Twojego salonu — aktywuj funkcje za drobną opłatę miesięczną.</p>
                     </div>
                 </div>
@@ -8470,7 +8470,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <div id="sekcja-platnosc-link" class="section">
                 <div class="header" style="margin-bottom:20px;">
                     <div>
-                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">Płatności online (tpay)</h1>
+                        <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0;">Płatności online (tpay)</h1><span class="pk-slot" data-pomoc="admin.platnosci" data-pomoc-nazwa="Płatności online"></span>
                         <p style="margin:6px 0 0 0; color:#6b7280; font-size:14px;">Linki do płatności z akceptacją regulaminu — klient potwierdza regulamin, zanim przejdzie do tpay.</p>
                     </div>
                     <button onclick="zg_otworzZPulpitu()" style="background:#0f9d8a; color:#fff; border:0; border-radius:10px; padding:11px 20px; font-size:14px; font-weight:700; cursor:pointer;">+ Nowy link do płatności</button>
@@ -8591,7 +8591,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </style>
             <div id="klub-admin" class="section">
                 <div style="margin-bottom:6px;">
-                    <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0; letter-spacing:-.01em;">Klub <span style="color:#c54f7f;">·</span> program lojalnościowy</h1>
+                    <h1 style="font-family:'Cormorant Garamond',serif; font-weight:600; margin:0; letter-spacing:-.01em;">Klub <span style="color:#c54f7f;">·</span> program lojalnościowy</h1><span class="pk-slot" data-pomoc="klub" data-pomoc-nazwa="Klub"></span>
                     <p style="margin:6px 0 0 0; color:#8a8f9c; font-size:13.5px;">Punkty naliczają się automatycznie z paragonów członkiniom Klubu.</p>
                 </div>
 
@@ -8944,7 +8944,7 @@ document.addEventListener('DOMContentLoaded', () => {
 		<div id="sekcja-kreator-rabatow" class="section" >
     <h2 style="border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; color: var(--primary);">
         ✂️ Kreator Rabatów
-    </h2>
+    </h2><span class="pk-slot" data-pomoc="admin.rabaty" data-pomoc-nazwa="Kreator rabatów"></span>
     
     <div class="card" style="background:white; padding:25px; border-radius:12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px;">
         <div class="form-group" style="margin-bottom:15px;">
@@ -8988,7 +8988,7 @@ document.addEventListener('DOMContentLoaded', () => {
 <div id="sekcja-zadatki-config" class="section">
     <h2 style="border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; color: var(--primary);">
         💰 Ustawienia zadatków
-    </h2>
+    </h2><span class="pk-slot" data-pomoc="admin.zadatki" data-pomoc-nazwa="Ustawienia zadatków"></span>
     <p style="color:#64748b; margin-bottom:24px; max-width:680px;">
         Konfiguracja domyślnego wyliczenia zadatku przy multisprzedaży. Wartość zawsze edytowalna w trakcie sprzedaży — to tylko propozycja systemu.
     </p>
@@ -9091,7 +9091,7 @@ ANALIZA MANAGER
                 <div class="header-left">
                     <!-- <button class="hamburger-btn" onclick="an_toggleMenu()">☰</button> -->
                     <div>
-                        <h1 style="margin:0; font-size:24px;">Analiza Sprzedaży</h1>
+                        <h1 style="margin:0; font-size:24px;">Analiza Sprzedaży</h1><span class="pk-slot" data-pomoc="analiza.dashboard" data-pomoc-nazwa="Analiza sprzedaży"></span>
                         <span style="color:#6b7280; font-size:14px;">Przegląd wyników finansowych</span>
                     </div>
                 </div>
@@ -9234,7 +9234,7 @@ ANALIZA MANAGER
                 <div class="header-left">
                     <!-- <button class="hamburger-btn" onclick="an_toggleMenu()">☰</button>-->
                     <div>
-                        <h2 style="margin:0;">Podsumowanie Dnia</h2>
+                        <h2 style="margin:0;">Podsumowanie Dnia</h2><span class="pk-slot" data-pomoc="analiza.dzien" data-pomoc-nazwa="Podsumowanie dnia"></span>
                         <p style="margin:5px 0 0 0; opacity:0.7;">Raport dzienny transakcji</p>
                     </div>
                 </div>
@@ -9304,7 +9304,7 @@ ANALIZA MANAGER
         <!-- Topbar -->
         <div class="anm-topbar">
             <div>
-                <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;">Podsumowanie Miesiąca</h2>
+                <h2 style="margin:0; font-size:22px; font-weight:800; letter-spacing:-.03em; color:#1f2430;">Podsumowanie Miesiąca</h2><span class="pk-slot" data-pomoc="analiza.miesiac" data-pomoc-nazwa="Podsumowanie miesiąca"></span>
                 <p style="margin:6px 0 0; font-size:14px; color:#6f7486;">Analiza finansowa i trendy sprzedaży</p>
             </div>
             <div class="anm-top-actions">
@@ -9466,7 +9466,7 @@ ANALIZA MANAGER
 
     <!-- Nagłówek -->
     <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:20px;">
-        <h2 style="margin:0;">💰 Planowanie Kosztów</h2>
+        <h2 style="margin:0;">💰 Planowanie Kosztów</h2><span class="pk-slot" data-pomoc="analiza.koszty" data-pomoc-nazwa="Planowanie kosztów"></span>
         <button onclick="kp_otworzKat()" style="padding:8px 16px; background:#f1f5f9; border:1.5px solid #e2e8f0; border-radius:8px; cursor:pointer; font-size:13px; font-weight:600;">➕ Dodaj kategorię</button>
     </div>
 
@@ -9833,7 +9833,7 @@ ANALIZA MANAGER
 </div>
 <div id="an_view-yearly" style="display:none;">
     <div class="header-flex" style="margin-bottom:20px;">
-        <h2>Zestawienie Roczne</h2>
+        <h2>Zestawienie Roczne</h2><span class="pk-slot" data-pomoc="analiza.rok" data-pomoc-nazwa="Zestawienie roczne"></span>
         <select id="an_yearSelect" onchange="an_loadYearlyData()" style="font-size:16px; padding:8px;"></select>
     </div>
 
@@ -9928,7 +9928,7 @@ ANALIZA MANAGER
         <div class="header-left">
            <!-- <button class="hamburger-btn" onclick="an_toggleMenu()">☰</button>-->
             <div>
-                <h2 style="margin:0;">Analiza Zabiegu</h2>
+                <h2 style="margin:0;">Analiza Zabiegu</h2><span class="pk-slot" data-pomoc="analiza.zabieg" data-pomoc-nazwa="Analiza zabiegu"></span>
                 <p style="margin:5px 0 0 0; opacity:0.7;">Analityka behawioralna i finansowa</p>
             </div>
         </div>
@@ -10125,7 +10125,7 @@ ANALIZA MANAGER
         <div class="header-left">
             <!-- <button class="hamburger-btn" onclick="an_toggleMenu()">☰</button> -->
             <div>
-                <h2 style="margin:0; color:#db2777;">Inteligentna Analiza (BI)</h2>
+                <h2 style="margin:0; color:#db2777;">Inteligentna Analiza (BI)</h2><span class="pk-slot" data-pomoc="analiza.bi" data-pomoc-nazwa="Inteligentna analiza"></span>
                 <p style="margin:5px 0 0 0; opacity:0.7;">Zachowania klientów, koszyki i optymalizacja zysków.</p>
             </div>
         </div>
@@ -10299,7 +10299,7 @@ ANALIZA MANAGER
 <div id="an_view-zadania" style="display:none; padding-bottom:50px;">
     <div class="dash-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
         <div>
-            <h1 style="margin:0; font-size:24px;">📋 Zadania zespołu</h1>
+            <h1 style="margin:0; font-size:24px;">📋 Zadania zespołu</h1><span class="pk-slot" data-pomoc="analiza.zadania" data-pomoc-nazwa="Zadania zespołu"></span>
             <span style="color:#6b7280; font-size:14px;">Zlecaj zadania recepcji i pracownikom — śledź wykonanie</span>
         </div>
         <button onclick="zd_addOpen()" style="background:#ec4899; color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px;">+ Nowe zadanie</button>
@@ -10451,7 +10451,7 @@ ANALIZA MANAGER
     
 <div id="kreator_dostepow" class="section">
     <div class="header">
-        <h1>Zarządzanie Użytkownikami</h1>
+        <h1>Zarządzanie Użytkownikami</h1><span class="pk-slot" data-pomoc="admin.uzytkownicy" data-pomoc-nazwa="Zarządzanie użytkownikami"></span>
     </div>
 
     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
@@ -10500,7 +10500,7 @@ ANALIZA MANAGER
 </div>
 <div id="analiza-konsultacji" class="section">
     <div class="header">
-        <h1>Analiza Konsultacji</h1>
+        <h1>Analiza Konsultacji</h1><span class="pk-slot" data-pomoc="konsultacje.analiza" data-pomoc-nazwa="Analiza konsultacji"></span>
     </div>
 
     <div class="filters" style="margin-bottom: 30px; border-bottom: 2px dashed #e2e8f0; padding-bottom: 20px;">
@@ -10877,7 +10877,7 @@ ANALIZA MANAGER
                 <div class="odp-no-print">
                     <div class="dash-header" style="margin-bottom: 20px;">
                         <div>
-                            <h2 style="margin:0; color: #8b5cf6;">📢 Mega Raport Operacyjny</h2>
+                            <h2 style="margin:0; color: #8b5cf6;">📢 Mega Raport Operacyjny</h2><span class="pk-slot" data-pomoc="analiza.zebranie" data-pomoc-nazwa="Zebranie"></span>
                             <p style="margin:5px 0 0 0; color:var(--text-muted); font-size:13px;">Pełna analityka sprzedaży i skuteczności zespołu.</p>
                         </div>
                         <button onclick="window.print()" class="btn-primary" style="width:auto; background:#374151; border:none; box-shadow:none;">🖨️ DRUKUJ DO PDF</button>
@@ -11151,7 +11151,7 @@ ANALIZA MANAGER
 
 <div id="widok-pracownicy-targety" class="section" style="display:none;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:15px;">
-        <h1 style="color:var(--text-dark); margin:0;">🏆 Dashboard Wyników Pracownika</h1>
+        <h1 style="color:var(--text-dark); margin:0;">🏆 Dashboard Wyników Pracownika</h1><span class="pk-slot" data-pomoc="analiza.targety" data-pomoc-nazwa="Wyniki pracownika"></span>
         
         <div style="display:flex; gap:10px; background:white; padding:10px 15px; border-radius:12px; box-shadow:0 2px 4px rgba(0,0,0,0.05); align-items:center;">
             <div>

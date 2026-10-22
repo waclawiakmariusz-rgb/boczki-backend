@@ -17,6 +17,8 @@ const JS = fs.readFileSync(path.join(KORZEN, 'public', 'pomoc-kontekstowa.js'), 
 const CSS = fs.readFileSync(path.join(KORZEN, 'public', 'pomoc-kontekstowa.css'), 'utf8');
 const INDEX = fs.readFileSync(path.join(KORZEN, 'public', 'index.html'), 'utf8');
 const POMOC_F = fs.readFileSync(path.join(KORZEN, 'public', 'estelio_pomoc_f.html'), 'utf8');
+// Terminarz rysuje sloty z JS (POMOC.slot) — bez tego pliku jego konteksty wyglądałyby na martwe.
+const TRM = fs.readFileSync(path.join(KORZEN, 'public', 'terminarz.js'), 'utf8');
 const { sprawdzKatalog } = require('../narzedzia/pomoc-mapa-widokow');
 
 const wpisy = Object.entries(KATALOG.konteksty || {});
@@ -174,7 +176,10 @@ describe('podpięcie w aplikacji', () => {
     const uzyte = new Set([...INDEX.matchAll(/data-pomoc="([a-z0-9.-]+)"/g)].map(m => m[1]));
     // Konteksty ustawiane w locie (jeden przycisk, wiele zakładek) nie są widoczne w znaczniku —
     // zbieramy też prefiksy sklejane w kodzie, np. setAttribute('data-pomoc', 'klient.profil.' + tabId)
-    const prefiksy = [...INDEX.matchAll(/setAttribute\('data-pomoc', '([a-z0-9.-]+\.)'\s*\+/g)].map(m => m[1]);
+    const prefiksy = [
+      ...INDEX.matchAll(/setAttribute\('data-pomoc', '([a-z0-9.-]+\.)'\s*\+/g),
+      ...TRM.matchAll(/POMOC\.slot\('([a-z0-9.-]+\.)'\s*\+/g),
+    ].map(m => m[1]);
     for (const [id] of wpisy) {
       const jestUzyty = uzyte.has(id)
         || [...uzyte].some(u => u.startsWith(id + '.'))

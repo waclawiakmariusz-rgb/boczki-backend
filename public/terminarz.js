@@ -2243,7 +2243,11 @@
     if (!manager()) { el('trm-main').innerHTML = '<div class="trm-note bad">Ustawienia terminarza zmienia manager lub właściciel.</div>'; return; }
     const tabs = [['ogolne', 'Godziny i zasady'], ['zespol', 'Zespół'], ['uslugi', 'Usługi'], ...((TRM.dane.ustawienia || {}).zakupy_integracja === 'on' ? [['pakiety', 'Pakiety i zakupy']] : []), ['zasoby', 'Gabinety i urządzenia'], ['grafik', 'Grafik zespołu'], ['nieobecnosci', 'Nieobecności i blokady'], ['maile', 'Powiadomienia e-mail']];
     const t = tabs.some(x => x[0] === TRM.ust.tab) ? TRM.ust.tab : 'ogolne'; TRM.ust.tab = t; // zakładka niedostępna (np. zakupy przy wyłączonej integracji) → Godziny i zasady
-    let html = `<div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ustTab('${k}')">${n}</button>`).join('')}</div>`;
+    // Pomoc kontekstowa (22.10.2026): jeden przycisk „?" przy pasku zakładek, kontekst idzie za
+    // zakładką. W panelach Terminarza NIE dokładamy drugiego — mają już własne „?" (Esti),
+    // a reguła mówi: jedna aktywna powierzchnia, jeden przycisk pomocy.
+    const pomocSlot = (window.POMOC && POMOC.slot) ? POMOC.slot('terminarz.ustawienia.' + t, 'Ustawienia terminarza') : '';
+    let html = `<div class="trm-row" style="align-items:center; gap:4px"><div class="trm-tabs">${tabs.map(([k, n]) => `<button class="${t === k ? 'on' : ''}" onclick="TRM.ustTab('${k}')">${n}</button>`).join('')}</div>${pomocSlot}</div>`;
     TRM.ust.brudne = false;
     html += ({ ogolne: ustOgolne, zespol: ustZespol, uslugi: ustUslugi, pakiety: ustPakiety, zasoby: ustZasoby, grafik: ustGrafik, nieobecnosci: ustNieob, maile: ustMaile })[t]();
     el('trm-main').innerHTML = html;

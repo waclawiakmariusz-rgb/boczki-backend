@@ -207,3 +207,55 @@ wada produktu; limit podniesiony do 15 s z komentarzem. Dwa kolejne pełne przeb
 
 Analiza (8 widoków), Administracja (11), Konsultacje (3), Klub (10 podstron), Terminarz (18 —
 ma własny system pomocy „Pomoc" w nagłówku, do uzgodnienia czy dublować), modale (45).
+
+---
+
+# P-03, partia 2 — administracja, analiza, konsultacje, klub, Terminarz (22.10.2026)
+
+Katalog urósł z 25 do **59 kontekstów**. Mapa: 158 wierszy, **99 zostaje do opisania** (głównie modale).
+
+## Co doszło
+
+| Obszar | Konteksty |
+|---|---|
+| **Administracja** (10) | dostępy i PIN-y, rabaty, ustawienia zadatków, kreator zabiegów, pracownicy, sugestie, awaryjna edycja, płatności online, dodatki, baza do SMS |
+| **Analiza** (10) | przegląd, dzień, miesiąc, rok, analiza zabiegu, BI, koszty, zadania zespołu, zebranie, wyniki pracownika |
+| **Konsultacje** (3) | wyniki, ustawienia modułu, analiza skuteczności |
+| **Klub** (1) | przegląd programu lojalnościowego |
+| **Terminarz — Ustawienia** (9) | godziny i zasady, zespół, usługi, pakiety, gabinety, grafik, nieobecności, powiadomienia e-mail |
+
+## Terminarz: świadomie bez drugiego „?"
+
+Panele Terminarza **mają już własny przycisk pomocy** (`trm-pomoc-btn` → Esti), a nagłówek modułu
+— link do `/pomoc-terminarz/`. Specyfikacja mówi: jedna aktywna powierzchnia, jeden przycisk
+pomocy. Dlatego pomoc kontekstowa trafiła **tylko do paska zakładek Ustawień**, gdzie nie było
+niczego. Sprawdzone: w panelu powiadomień liczba przycisków `.pk-btn` wynosi **0**.
+
+## Dwa znaleziska przy okazji
+
+1. **Martwa kopia sekcji „Konsultacje".** W `index.html` są dwa bloki o tym samym
+   `id="kon_raportowanie"`: starszy („Wyniki Konsultacji") leży **w komentarzu HTML** i nie jest
+   renderowany, a użytkownik widzi nowszy (`kr-redesign`, „Konsultacje"). Mój slot trafił
+   najpierw do martwej kopii — obchód to wychwycił („brak przycisku"), bo sprawdza stan
+   w przeglądarce, a nie obecność tekstu w pliku. Slot przeniesiony do żywej sekcji, a treść
+   poprawiona na to, co ekran naprawdę pokazuje.
+2. **Serwer trzyma `index.html` z chwili startu.** Obchód pokazywał „brak przycisku" także wtedy,
+   gdy slot już był w pliku — dopóki nie zrestartowałem serwera testowego. Warto o tym pamiętać
+   przy każdej próbie dotyczącej znacznika, nie tylko przy wdrożeniu.
+
+## Obchód: 35/35 ekranów, bez zastrzeżeń
+
+```
+pulpit · magazyn · inwentaryzacja · nowy · co-zamowic · rap_add · slownik
+sprzedaz · dzisiejsza-sprzedaz · historia · zadatki-lista · podsumowanie
+klient-profil · urodziny · ranking-klientow · leady · retencja · tickety · logi
+kreator_dostepow · rabaty · zadatki-config · setup-zabiegi · setup-pracownicy
+setup-sugestie · awaryjna-zmiana · platnosc-link · addons · sms-baza
+kon_raportowanie · kon_admin-panel · analiza-konsultacji · odprawa
+widok-pracownicy-targety · klub-admin
+→ 35/35 działa · zero chmurek poza ekranem · zero błędów JS
+```
+
+Zakładki Ustawień Terminarza (7 sprawdzonych): każda ma własną treść, zero pomocy nadrzędnej.
+
+Pełny zestaw testów: **844/844**.

@@ -29,6 +29,22 @@ const EKRANY = [
   ['retencja', 'retencja'],
   ['tickety', 'zgloszenia'],
   ['logi', 'dziennik'],
+  ['kreator_dostepow','admin.uzytkownicy'],
+  ['sekcja-kreator-rabatow','admin.rabaty'],
+  ['sekcja-zadatki-config','admin.zadatki'],
+  ['setup-zabiegi','admin.zabiegi'],
+  ['setup-pracownicy','admin.pracownicy'],
+  ['setup-sugestie','admin.sugestie'],
+  ['awaryjna-zmiana','admin.awaryjna'],
+  ['sekcja-platnosc-link','admin.platnosci'],
+  ['addons','admin.dodatki'],
+  ['sms-baza','admin.sms'],
+  ['kon_raportowanie','konsultacje.wyniki'],
+  ['kon_admin-panel','konsultacje.admin'],
+  ['analiza-konsultacji','konsultacje.analiza'],
+  ['odprawa','analiza.zebranie'],
+  ['widok-pracownicy-targety','analiza.targety'],
+  ['klub-admin','klub'],
 ];
 
 (async () => {
