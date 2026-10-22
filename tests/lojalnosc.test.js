@@ -484,6 +484,10 @@ describe('normalizujTelefon', () => {
 describe('POST /api/lojalnosc — loj_aktywacja_token', () => {
     const valid = { action: 'loj_aktywacja_token', tenant_id: 't-loj-akt1', id_klienta: '42', user_log: 'Szefowa' };
 
+    // Timeout 15 s zamiast domyślnych 5: ta próba naprawdę generuje kod QR (QRCode.toDataURL,
+    // 320 px) i przy pełnym zestawie potrafiła przekroczyć limit — trzy razy 21.10.2026 padała
+    // w PIERWSZYM przebiegu i przechodziła przy powtórce. To była zadyszka maszyny, nie wada
+    // produktu; przyczynę widać dopiero w pełnym logu („Exceeded timeout of 5000 ms”).
     test('admin generuje QR + link aktywacyjny', async () => {
         const db = mockDb(
             ...INIT,
@@ -497,7 +501,7 @@ describe('POST /api/lojalnosc — loj_aktywacja_token', () => {
         expect(res.body.url).toMatch(/\/klub\/\?a=/);
         expect(res.body.qr).toMatch(/^data:image\/png/);
         expect(res.body.ma_konto).toBe(0);
-    });
+    }, 15000);
 
     test('praktykantka NIE wygeneruje linku (pilot admin-only)', async () => {
         const db = mockDb(...INIT, FEATURE_ON, ROLA_INNA);

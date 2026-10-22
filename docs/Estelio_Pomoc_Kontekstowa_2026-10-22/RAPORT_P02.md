@@ -139,3 +139,71 @@ Reszty nie pytam — mapa, treści i linki powstają z kodu i dokumentacji.
 Rozszerzenie na pozostałe konteksty partiami, modułami: dla każdego sprawdzenie przepływu
 w kodzie, napisanie 35–65 słów, podpięcie slotu i dopisanie wiersza do mapy. Po każdej partii
 `node narzedzia/pomoc-mapa-widokow.js` aktualizuje CSV i kontroluje format.
+
+---
+
+# P-03, partia 1 — codzienne ekrany recepcji (22.10.2026)
+
+Po akceptacji wzorca („obejrzałem jak to wygląda w Magazyn, jest ok, zastosuj do całego systemu")
+pomoc dostało **19 ekranów** i **6 zakładek profilu klientki** — razem **25 kontekstów**.
+
+## Obchód wszystkich podpiętych ekranów
+
+```
+EKRAN                 PRZYCISK  TYTUŁ CHMURKI                   SŁÓW  POZA EKRANEM
+pulpit                jest      Co wymaga uwagi dzisiaj          29    nie
+magazyn               jest      Sprawdź swoje zapasy             45    nie
+inwentaryzacja        jest      Liczenie tego, co na półce       32    nie
+nowy                  jest      Wpisujesz nową dostawę           35    nie
+co-zamowic            jest      Czego zaraz zabraknie            29    nie
+rap_add               jest      Dodajesz nowy produkt            22    nie
+slownik               jest      Firmy, modele i ceny sprzedaży   29    nie
+sprzedaz              jest      Zapisujesz sprzedaż              36    nie
+dzisiejsza-sprzedaz   jest      Poprawianie dzisiejszych wpisów  27    nie
+historia              jest      Szukasz w starszych wpisach      12    nie
+zadatki-lista         jest      Kto ma wpłacony zadatek          29    nie
+podsumowanie          jest      Zamykasz dzień                   14    nie
+klient-profil         jest      Najważniejsze o klientce         28    nie
+urodziny              jest      Kto ma urodziny w tym miesiącu   15    nie
+ranking-klientow      jest      Kto zostawia najwięcej           13    nie
+leady                 jest      Zgłoszenia z reklam              29    nie
+retencja              jest      Do kogo warto zadzwonić          16    nie
+tickety               jest      Piszesz do nas o problemie       17    nie
+logi                  jest      Kto co zrobił w systemie         16    nie
+ekranów z działającą pomocą: 19/19 — bez zastrzeżeń · BLEDY JS: brak
+```
+
+Zakładki profilu klientki (jeden przycisk, sześć kontekstów):
+
+```
+podsumowanie  klient.profil.podsumowanie  Najważniejsze o klientce
+wizyty        klient.profil.wizyty        Historia zabiegów klientki
+produkty      klient.profil.produkty      Co klientka u nas kupiła
+zadatki       klient.profil.zadatki       Wpłaty tej klientki
+analityki     klient.profil.analityki     Wzorce tej klientki
+dokumenty     klient.profil.dokumenty     Zgody i podpisane papiery
+zakładek z pomocą nadrzędną (ma być 0): 0
+```
+
+## Trzy błędy złapane próbami, nie okiem
+
+1. **Wszystkie zakładki pokazywały treść pierwszej.** Przycisk zapamiętywał klucz w chwili
+   podpięcia, a przy zakładkach zmienia się on w locie. Teraz klucz czytany jest ze slotu przy
+   każdym kliknięciu — osobna próba tego pilnuje.
+2. **Chmurka otwierała się w rogu okna**, gdy przycisk należał do ekranu, który nie jest
+   wyświetlony (zerowy rozmiar). Teraz w takiej sytuacji pomoc po prostu się nie otwiera.
+3. **Zła treść dla „Kreatora Produktu / Kosmetyku".** Napisałem, że to słownik firm i modeli dla
+   przyjęcia towaru; w kodzie ten ekran ustala też **ceny sprzedaży** i zasila „Rejestrację
+   Sprzedaży". Poprawione po przeczytaniu sekcji, zanim trafiło do odbioru.
+
+## Przy okazji: rozwiązana migotliwa próba
+
+Trzy razy 21.10 pojedyncza próba w `lojalnosc.test.js` padała w pierwszym przebiegu i przechodziła
+przy powtórce. Pełny log pokazał przyczynę: **`Exceeded timeout of 5000 ms`** — ta próba naprawdę
+generuje kod QR (320 px) i przy 45 zestawach potrafi nie zdążyć. To była zadyszka maszyny, nie
+wada produktu; limit podniesiony do 15 s z komentarzem. Dwa kolejne pełne przebiegi: 844/844.
+
+## Co zostaje (107 kontekstów)
+
+Analiza (8 widoków), Administracja (11), Konsultacje (3), Klub (10 podstron), Terminarz (18 —
+ma własny system pomocy „Pomoc" w nagłówku, do uzgodnienia czy dublować), modale (45).

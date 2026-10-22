@@ -1,31 +1,154 @@
 {
-  "wersjaKatalogu": "2026-10-22.1",
-  "sprawdzonoWobec": "main 96d8b50 (22.10.2026)",
+  "wersjaKatalogu": "2026-10-22.3",
+  "sprawdzonoWobec": "main 16d049c (22.10.2026)",
   "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
   "konteksty": {
+    "pulpit": {
+      "parentContextId": null,
+      "eyebrow": "PULPIT",
+      "title": "Co wymaga uwagi dzisiaj",
+      "body": "Ekran startowy: skróty do najczęstszych akcji i lista zadań. Liczby u góry widzą manager i właściciel.",
+      "items": [
+        {
+          "icon": "lista",
+          "text": "Zadania odhaczasz tu, nie w osobnym module."
+        },
+        {
+          "icon": "szukaj",
+          "text": "Wyszukiwarka u góry prowadzi do klientki."
+        }
+      ],
+      "tip": null,
+      "article": {
+        "label": "Pulpit — pierwszy ekran",
+        "href": "/pomoc/",
+        "anchor": "pulpit"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #pulpit (.ds-topbar, KPI dla admin/megaadmin/manager, lista zadań)",
+        "public/estelio_pomoc_f.html: rozdział #pulpit"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
     "magazyn.stan": {
       "parentContextId": null,
       "eyebrow": "STAN MAGAZYNOWY",
       "title": "Sprawdź swoje zapasy",
       "body": "Lista wszystkich kosmetyków z ilościami. Filtry u góry dzielą ją na detal (to, co sprzedajesz) i listę zbiorczą.",
       "items": [
-        { "icon": "szukaj", "text": "Szukaj po nazwie albo kategorii." },
-        { "icon": "alarm", "text": "Kolory przy dacie ostrzegają przed krótkim terminem." },
-        { "icon": "lista", "text": "Legenda nad tabelą tłumaczy oznaczenia." }
+        {
+          "icon": "szukaj",
+          "text": "Szukaj po nazwie albo kategorii."
+        },
+        {
+          "icon": "alarm",
+          "text": "Kolory przy dacie ostrzegają przed krótkim terminem."
+        },
+        {
+          "icon": "lista",
+          "text": "Legenda nad tabelą tłumaczy oznaczenia."
+        }
       ],
       "tip": "Przyjęcie dostawy to osobny ekran — tutaj tylko oglądasz stan.",
       "tipTyp": "informacja",
-      "article": { "label": "Magazyn — pilnowanie zapasów", "href": "/pomoc/", "anchor": "magazyn" },
+      "article": {
+        "label": "Magazyn — pilnowanie zapasów",
+        "href": "/pomoc/",
+        "anchor": "magazyn"
+      },
       "availability": null,
       "sources": [
-        "public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy\", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",
+        "public/index.html: sekcja #magazyn (filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",
+        "public/estelio_pomoc_f.html: rozdział #magazyn"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 2
+    },
+    "magazyn.inwentaryzacja": {
+      "parentContextId": "magazyn.stan",
+      "eyebrow": "INWENTARYZACJA",
+      "title": "Liczenie tego, co na półce",
+      "body": "Lista produktów do policzenia, z podziałem na profesję, detal i archiwum. Szukajka u góry znajduje pozycję po nazwie.",
+      "items": [
+        {
+          "icon": "lista",
+          "text": "Filtry zawężają listę do jednego rodzaju."
+        },
+        {
+          "icon": "i",
+          "text": "Eksport PDF przyda się, gdy liczycie na kartce."
+        }
+      ],
+      "tip": null,
+      "article": {
+        "label": "Inwentaryzacja krok po kroku",
+        "href": "/pomoc/",
+        "anchor": "inwentaryzacja"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #inwentaryzacja (filtry Wszystkie/Profesja/Detal/Archiwum, eksportujPDF)",
+        "public/estelio_pomoc_f.html: rozdział #inwentaryzacja"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "magazyn.przyjecie": {
+      "parentContextId": "magazyn.stan",
+      "eyebrow": "PRZYJĘCIE TOWARU",
+      "title": "Wpisujesz nową dostawę",
+      "body": "Wybierasz firmę i model — nazwa produktu układa się sama. Podajesz ilość, ceny netto i brutto, minimum oraz datę ważności.",
+      "items": [],
+      "tip": "Każda dostawa to osobna partia z własną ważnością — dlatego nie podbijamy ilości w magazynie.",
+      "tipTyp": "informacja",
+      "article": {
+        "label": "Magazyn — pilnowanie zapasów",
+        "href": "/pomoc/",
+        "anchor": "magazyn"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #nowy, formularz dodajProdukt() (Firma, Model, Ilość, Typ, Netto, Brutto, Min, Ważność)",
         "public/estelio_pomoc_f.html: rozdział #magazyn („Przyjęcie dostawy to osobny ekran\")"
       ],
       "reviewStatus": "verified",
-      "verifiedAgainst": "96d8b50",
+      "verifiedAgainst": "16d049c",
       "contentVersion": 1
     },
-
+    "magazyn.co-zamowic": {
+      "parentContextId": "magazyn.stan",
+      "eyebrow": "CO ZAMÓWIĆ",
+      "title": "Czego zaraz zabraknie",
+      "body": "Raport zbiera dwie rzeczy, które łatwo przegapić: produkty na stanie 0–1 sztuki oraz te z kończącą się datą ważności.",
+      "items": [
+        {
+          "icon": "alarm",
+          "text": "Krytyczne stany liczymy tylko dla detalu."
+        },
+        {
+          "icon": "lista",
+          "text": "Kliknięcie nagłówka sortuje listę."
+        }
+      ],
+      "tip": null,
+      "article": {
+        "label": "Magazyn — pilnowanie zapasów",
+        "href": "/pomoc/",
+        "anchor": "magazyn"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #co-zamowic („Krytyczne stany (0 lub 1 sztuka)\", „Tylko produkty z kategorii DETAL\", sortujZamowienia)"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
     "magazyn.pro.produkt.nowy": {
       "parentContextId": "magazyn.stan",
       "eyebrow": "NOWY PRODUKT",
@@ -34,18 +157,138 @@
       "items": [],
       "tip": "Minimum (próg alarmowy) pomaga zauważyć kończący się zapas.",
       "tipTyp": "informacja",
-      "article": { "label": "Magazyn — pilnowanie zapasów", "href": "/pomoc/", "anchor": "magazyn" },
-      "availability": { "dodatek": "rap_module" },
+      "article": {
+        "label": "Magazyn — pilnowanie zapasów",
+        "href": "/pomoc/",
+        "anchor": "magazyn"
+      },
+      "availability": {
+        "dodatek": "rap_module"
+      },
       "sources": [
-        "public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",
-        "makiety/01-chmurka-formularza.png — tekst bazowy, dostosowany do rzeczywistych nazw pól"
+        "public/index.html: sekcja #rap_add, formularz #rap_product-form (Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",
+        "makiety/01-chmurka-formularza.png — tekst bazowy dostosowany do rzeczywistych nazw pól"
       ],
       "reviewStatus": "verified",
-      "verifiedAgainst": "96d8b50",
-      "contentVersion": 1,
-      "notatkaWdrozeniowa": "Makieta mówi „stan początkowy\" i „minimum\"; formularz ma „Obecna Ilość\" i „Minimum (Próg Alarmowy)\". Zgodnie ze specyfikacją dostosowano POMOC do formularza, a nie odwrotnie."
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 2,
+      "notatkaWdrozeniowa": "Makieta mówi „stan początkowy\"; formularz ma „Obecna Ilość\". Dostosowano POMOC do formularza, nie odwrotnie."
     },
-
+    "sprzedaz.rejestracja": {
+      "parentContextId": null,
+      "eyebrow": "NOWA SPRZEDAŻ",
+      "title": "Zapisujesz sprzedaż",
+      "body": "Trzy kroki: kto sprzedał, komu, a potem rodzaj wpisu — zabieg, detal albo zadatek. Reszta pól zmienia się zależnie od wyboru.",
+      "items": [
+        {
+          "icon": "osoba",
+          "text": "Klientkę wybierasz z kartoteki, nie wpisujesz od nowa."
+        },
+        {
+          "icon": "i",
+          "text": "Zadatek to wpłata na przyszłość, nie sprzedaż."
+        }
+      ],
+      "tip": null,
+      "article": {
+        "label": "Sprzedaż — jak zapisać",
+        "href": "/pomoc/",
+        "anchor": "sprzedaz"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #sprzedaz (1. Sprzedawca, 2. Imię i nazwisko klienta, przyciski Zabieg / Detal / Zadatek)",
+        "public/estelio_pomoc_f.html: rozdział #sprzedaz"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "sprzedaz.dzisiejsza": {
+      "parentContextId": "sprzedaz.rejestracja",
+      "eyebrow": "DZISIEJSZA SPRZEDAŻ",
+      "title": "Poprawianie dzisiejszych wpisów",
+      "body": "Lista tego, co dziś zapisaliście. Stąd poprawisz pomyłkę albo zrobisz zwrot, zanim dzień się zamknie.",
+      "items": [],
+      "tip": "Zwrot tworzy nowy wpis z dzisiejszą datą — stare raporty zostają nietknięte.",
+      "tipTyp": "informacja",
+      "article": {
+        "label": "Zwroty i korekty",
+        "href": "/pomoc/",
+        "anchor": "zwroty"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #dzisiejsza-sprzedaz (odswiezSprzedaz)",
+        "public/estelio_pomoc_f.html: rozdział #zwroty"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "sprzedaz.historia": {
+      "parentContextId": "sprzedaz.rejestracja",
+      "eyebrow": "HISTORIA SPRZEDAŻY",
+      "title": "Szukasz w starszych wpisach",
+      "body": "Wszystkie sprzedaże z datą, klientką, zabiegiem i sprzedawcą. Wyszukiwarka obejmuje też komentarze.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Sprzedaż — jak zapisać",
+        "href": "/pomoc/",
+        "anchor": "sprzedaz"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #historia (kolumny Data, Klient, Zabieg/Produkt, Sprzedawca, Kwota; pole historia-search)"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "sprzedaz.zadatki": {
+      "parentContextId": "sprzedaz.rejestracja",
+      "eyebrow": "SPIS ZADATKÓW",
+      "title": "Kto ma wpłacony zadatek",
+      "body": "Wszystkie wpłaty na przyszłość razem ze stanem: aktywny, wykorzystany, utracony. Szukasz po kliencie, kwocie albo celu.",
+      "items": [],
+      "tip": "Utracony zadatek da się cofnąć — przyciskiem przy wpisie, nie ręcznym dopisywaniem kwoty.",
+      "tipTyp": "informacja",
+      "article": {
+        "label": "Zadatki i wpłaty",
+        "href": "/pomoc/",
+        "anchor": "zadatki"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #zadatki-lista (filtrujZadatkiUI, przycisk Cofnij przy utraconym)",
+        "public/estelio_pomoc_f.html: rozdział #zadatki"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "sprzedaz.podsumowanie": {
+      "parentContextId": "sprzedaz.rejestracja",
+      "eyebrow": "PODSUMOWANIE DNIA",
+      "title": "Zamykasz dzień",
+      "body": "Zestawienie jednego dnia: co sprzedano, ile wpłacono i jakimi metodami. Datę wybierasz u góry.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Rozliczenia dnia",
+        "href": "/pomoc/",
+        "anchor": "rozliczenia"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #podsumowanie (zaladujPodsumowanieDnia, wybór daty)",
+        "public/estelio_pomoc_f.html: rozdział #rozliczenia"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
     "klient.profil": {
       "parentContextId": null,
       "eyebrow": "PROFIL KLIENTKI",
@@ -53,19 +296,299 @@
       "titleOgolny": "Profil klientki — ogólnie",
       "body": "Zakładki dzielą kartę na obszary: podsumowanie, wizyty, kupione produkty, zadatki, analitykę i dokumenty.",
       "items": [
-        { "icon": "osoba", "text": "Dane kontaktowe i zgody zmieniasz przyciskiem edycji." },
-        { "icon": "kalendarz", "text": "Zakładka Wizyty pokazuje historię i to, co umówione." }
+        {
+          "icon": "osoba",
+          "text": "Dane kontaktowe i zgody zmieniasz przyciskiem edycji."
+        },
+        {
+          "icon": "kalendarz",
+          "text": "Zakładka Wizyty pokazuje historię i to, co umówione."
+        }
       ],
       "tip": null,
-      "article": { "label": "Klienci — kartoteka", "href": "/pomoc/", "anchor": "klienci" },
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
       "availability": null,
       "sources": [
-        "public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",
+        "public/index.html: sekcja #klient-profil, przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",
         "public/estelio_pomoc_f.html: rozdział #klienci"
       ],
       "reviewStatus": "verified",
-      "verifiedAgainst": "96d8b50",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 2
+    },
+    "klienci.urodziny": {
+      "parentContextId": null,
+      "eyebrow": "URODZINY",
+      "title": "Kto ma urodziny w tym miesiącu",
+      "body": "Lista klientek z datą urodzin, miesiąc wybierasz u góry. Dobry pretekst do telefonu albo rabatu.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Urodziny klientek",
+        "href": "/pomoc/",
+        "anchor": "urodziny"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #urodziny (bd-month-select, pobierzUrodziny)",
+        "public/estelio_pomoc_f.html: rozdział #urodziny"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
       "contentVersion": 1
+    },
+    "klienci.ranking": {
+      "parentContextId": null,
+      "eyebrow": "RANKING KLIENTÓW",
+      "title": "Kto zostawia najwięcej",
+      "body": "Dwa spojrzenia: wydatki klientek albo ich aktywne pakiety. Przełączasz je przyciskami nad listą.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #ranking-klientow (rnk_przelaczTryb: wydatki | pakiety)"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "klienci.leady": {
+      "parentContextId": null,
+      "eyebrow": "LEADY",
+      "title": "Zgłoszenia z reklam",
+      "body": "Potencjalne klientki z kampanii, importowane z arkusza Google. Źródła dodajesz i odświeżasz przyciskami u góry.",
+      "items": [],
+      "tip": "To jeszcze nie są klientki z kartoteki — kartę zakładasz dopiero, gdy osoba przyjdzie.",
+      "tipTyp": "informacja",
+      "article": null,
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #leady („Potencjalni klienci z agencji marketingowych — import z Google Sheets\", leady_dodajZrodloOpen)"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "notatkaWdrozeniowa": "Brak rozdziału o leadach w /pomoc/ — świadomie bez linku, zamiast prowadzić do niepasującego tematu."
+    },
+    "retencja": {
+      "parentContextId": null,
+      "eyebrow": "MODUŁ RETENCJI",
+      "title": "Do kogo warto zadzwonić",
+      "body": "Lista klientek, które dawno nie były, z podziałem na kategorie i zabiegi. Rozmowę zapisujesz przy wpisie.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Retencja — powroty klientek",
+        "href": "/pomoc/",
+        "anchor": "retencja"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #retencja (pobierzDaneDoRetencji, filtr Kategoria/Zabieg)",
+        "public/estelio_pomoc_f.html: rozdział #retencja"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "kosmetyki.slownik": {
+      "parentContextId": null,
+      "eyebrow": "KREATOR KOSMETYKU",
+      "title": "Firmy, modele i ceny sprzedaży",
+      "body": "Słownik kosmetyków: firma, model i cena sprzedaży. Stąd biorą się nazwy przy przyjęciu towaru i pozycje w rejestracji sprzedaży.",
+      "items": [],
+      "tip": "Jedna poprawka nazwy tutaj porządkuje ją we wszystkich nowych wpisach.",
+      "tipTyp": "informacja",
+      "article": {
+        "label": "Kosmetyki — słownik",
+        "href": "/pomoc/",
+        "anchor": "kosmetyki"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #slownik („Kreator Produktu / Kosmetyku\", pola Firma, Model (Nazwa), Cena Sprzedaży; opis w sekcji: „Te dane pojawią się w Rejestracji Sprzedaży\")",
+        "public/index.html: sekcja #nowy — select firmy/modelu (zaladujModeleDlaFirmy, generujNazwe)",
+        "public/estelio_pomoc_f.html: rozdział #kosmetyki"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 2
+    },
+    "zgloszenia": {
+      "parentContextId": null,
+      "eyebrow": "ZGŁOSZENIA",
+      "title": "Piszesz do nas o problemie",
+      "body": "Zgłoszenia trafiają prosto do zespołu Estelio. Odpowiedź wraca w tym samym wątku — nie trzeba pisać maila.",
+      "items": [],
+      "tip": null,
+      "article": null,
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #tickety (tk_pokazFormularz, tk_zaladuj, wątek z odpowiedziami)"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "notatkaWdrozeniowa": "Brak rozdziału o zgłoszeniach w /pomoc/ — bez linku."
+    },
+    "dziennik": {
+      "parentContextId": null,
+      "eyebrow": "DZIENNIK ZDARZEŃ",
+      "title": "Kto co zrobił w systemie",
+      "body": "Zapis zdarzeń: data, osoba, akcja i opis. Tu sprawdzisz, kto zmienił wpis albo kiedy coś zniknęło.",
+      "items": [],
+      "tip": null,
+      "article": {
+        "label": "Dziennik zdarzeń",
+        "href": "/pomoc/",
+        "anchor": "dziennik"
+      },
+      "availability": null,
+      "sources": [
+        "public/index.html: sekcja #logi (kolumny Data, Kto, Akcja, Opis; filtrujLogi)",
+        "public/estelio_pomoc_f.html: rozdział #dziennik"
+      ],
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1
+    },
+    "klient.profil.podsumowanie": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "PODSUMOWANIE",
+      "title": "Najważniejsze o klientce",
+      "body": "Skrót karty: sugestie dla recepcji, dane kontaktowe i to, co warto wiedzieć przed rozmową.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-podsumowanie (asystent-box „Sugestie dla Recepcji\", pp-summary-grid)"
+      ]
+    },
+    "klient.profil.wizyty": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "Pełną historię z filtrami otworzysz w Terminarzu, w zakładce Historia.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "WIZYTY",
+      "title": "Historia zabiegów klientki",
+      "body": "Wszystkie zabiegi tej osoby — odbyte i umówione. Szukajka u góry przeszukuje historię.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-wizyty (profil-history-search, filtrujHistorieWProfilu)",
+        "public/terminarz.js: TRM.historiaKlientki — szerszy widok historii"
+      ]
+    },
+    "klient.profil.produkty": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "PRODUKTY",
+      "title": "Co klientka u nas kupiła",
+      "body": "Kupione kosmetyki i karnety z datą, ilością, kwotą i formą płatności. Dobre miejsce, żeby sprawdzić, co poleciłaś ostatnio.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-produkty (grupy Kosmetyki/karnety, kolumny Data, Produkt, Ilość, Kwota, Płatność)"
+      ]
+    },
+    "klient.profil.zadatki": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": "Zadatek zmniejsza kwotę do zapłaty dopiero przy rozliczaniu wizyty.",
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "ZADATKI",
+      "title": "Wpłaty tej klientki",
+      "body": "Zadatki i wpłaty na przyszłość razem ze stanem. Nową wpłatę dodajesz przyciskiem nad listą.",
+      "article": {
+        "label": "Zadatki i wpłaty",
+        "href": "/pomoc/",
+        "anchor": "zadatki"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-zadatki (przycisk „+ Wpłać zadatek\")",
+        "public/estelio_pomoc_f.html: rozdział #zadatki"
+      ]
+    },
+    "klient.profil.analityki": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "ANALITYKI",
+      "title": "Wzorce tej klientki",
+      "body": "Podsumowanie zachowań: częstotliwość wizyt, ulubione zabiegi, wydatki. Liczy się z historii, więc dla nowej osoby będzie puste.",
+      "article": {
+        "label": "Klienci — kartoteka",
+        "href": "/pomoc/",
+        "anchor": "klienci"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-analityki („Pełna analityka dostępna po przejrzeniu historii klientki\", analiza-klienta-container)"
+      ]
+    },
+    "klient.profil.dokumenty": {
+      "parentContextId": "klient.profil",
+      "items": [],
+      "tip": null,
+      "tipTyp": "informacja",
+      "availability": null,
+      "reviewStatus": "verified",
+      "verifiedAgainst": "16d049c",
+      "contentVersion": 1,
+      "eyebrow": "DOKUMENTY",
+      "title": "Zgody i podpisane papiery",
+      "body": "Regulamin, zgody RODO i dodatkowe dokumenty klientki — podpisane i te do uzupełnienia.",
+      "article": {
+        "label": "Dokumenty i zgody",
+        "href": "/pomoc/",
+        "anchor": "dokumenty"
+      },
+      "sources": [
+        "public/index.html: #tab-profil-dokumenty (Regulamin, Zgody RODO, dd_loadDokumenty)",
+        "public/estelio_pomoc_f.html: rozdział #dokumenty"
+      ]
     }
   }
 }

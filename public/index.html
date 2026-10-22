@@ -5693,12 +5693,12 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
             </div>
             <div id="inwentaryzacja" class="section">
 			<input type="text" id="szukaj-inv" onkeyup="_db('inv',szukajWInwentaryzacji)" placeholder="🔍 Szukaj produktu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
-                <div class="header"><h1>Inwentaryzacja</h1><button onclick="eksportujPDF('inwentaryzacja','Inwentaryzacja — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div>
+                <div class="header"><h1>Inwentaryzacja</h1><span class="pk-slot" data-pomoc="magazyn.inwentaryzacja" data-pomoc-nazwa="Inwentaryzacja"></span><button onclick="eksportujPDF('inwentaryzacja','Inwentaryzacja — Kosmetyki')" class="btn-primary" style="width:auto; background:#374151; border-radius:10px; padding:10px 20px;">🖨️ Eksport PDF</button></div>
                 <div class="filters"><button class="filter-btn active" onclick="filtrujInwentaryzacje('Wszystkie', this)">Wszystkie</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Profesja', this)">🧴 Profesja</button><button class="filter-btn" onclick="filtrujInwentaryzacje('Detal', this)">🛍️ Detal</button><button class="btn-archive filter-btn" onclick="filtrujInwentaryzacje('Archiwum', this)">🗑️ Archiwum</button></div>
                 <div class="card"><p style="color:#666; margin-bottom:20px;" id="inv-desc"></p><div id="lista-inv"></div></div>
             </div>
             <div id="nowy" class="section">
-                <div class="header"><h1>Przyjęcie towaru</h1></div>
+                <div class="header"><h1>Przyjęcie towaru</h1><span class="pk-slot" data-pomoc="magazyn.przyjecie" data-pomoc-nazwa="Przyjęcie towaru"></span></div>
                 <div class="card">
                     <form onsubmit="dodajProdukt(event)">
                         <div style="background:#f0f9ff; padding:10px; margin-bottom:15px; border:1px solid #bae6fd;"><!--<input type="radio" name="kategoria" value="Profesja" checked> Profesja --><input type="radio" name="kategoria" value="Detal" checked> Detal</div>
@@ -5714,7 +5714,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 			<!-- Co zamowic -->
 			<div id="co-zamowic" class="section">
     <div class="header">
-        <h1>Raport: Co zamówić?</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">Raport: Co zamówić?<span class="pk-slot" data-pomoc="magazyn.co-zamowic" data-pomoc-nazwa="Co zamówić"></span></h1>
         <button onclick="renderCoZamowic()" class="btn-primary" style="width:auto;">🔄 Odśwież widok</button>
     </div>
 
@@ -5804,7 +5804,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 <!-- ===== 🎫 ZGŁOSZENIA DO ESTELIO (tickety) — 2026-10-11. Osobny moduł: routes/tickety.js, akcje tk_* ===== -->
 <div id="tickety" class="section">
     <div class="header">
-        <h1>🎫 Zgłoszenia do Estelio</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">🎫 Zgłoszenia do Estelio<span class="pk-slot" data-pomoc="zgloszenia" data-pomoc-nazwa="Zgłoszenia"></span></h1>
         <div style="display:flex; gap:8px; flex-wrap:wrap;">
             <button onclick="tk_pokazFormularz()" class="btn-primary" id="tk-btn-nowe">➕ Nowe zgłoszenie</button>
             <button onclick="tk_zaladuj()" class="btn-primary" style="background:#64748b;">🔄 Odśwież</button>
@@ -5866,7 +5866,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 
 <div id="retencja" class="section">
     <div class="header">
-        <h1>📞 Retencja Klientów</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">📞 Retencja Klientów<span class="pk-slot" data-pomoc="retencja" data-pomoc-nazwa="Moduł retencji"></span></h1>
         <button onclick="pobierzDaneDoRetencji()" class="btn-primary" style="width:auto; background:#10b981;">🔄 Odśwież</button>
     </div>
 
@@ -6402,7 +6402,7 @@ body.dark-mode #analiza-missing-list li {
 </div>
 
 		<div id="slownik" class="section">
-    <div class="header"><h1>Kreator Produktu / Kosmetyku</h1></div>
+    <div class="header"><h1>Kreator Produktu / Kosmetyku</h1><span class="pk-slot" data-pomoc="kosmetyki.slownik" data-pomoc-nazwa="Kreator kosmetyku"></span></div>
     <div class="card">
         <p style="font-size:12px; color:#666; margin-bottom:15px;">Tutaj definiujesz nazwy i ceny sprzedaży kosmetyków. Te dane pojawią się w "Rejestracji Sprzedaży".</p>
         <!-- <input type="text" id="szukaj-slownik" onkeyup="szukajWSlowniku()" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;"> -->
@@ -6435,7 +6435,7 @@ body.dark-mode #analiza-missing-list li {
 			
 			
            <div id="sprzedaz" class="section">
-    <div class="header"><h1>Rejestracja Sprzedaży</h1></div>
+    <div class="header"><h1 style="display:flex; align-items:center; gap:4px;">Rejestracja Sprzedaży<span class="pk-slot" data-pomoc="sprzedaz.rejestracja" data-pomoc-nazwa="Rejestracja sprzedaży"></span></h1></div>
     
     <input type="hidden" id="edit_sale_id">
 
@@ -6484,7 +6484,7 @@ body.dark-mode #analiza-missing-list li {
 
 <div id="dzisiejsza-sprzedaz" class="section">
     <div class="header">
-        <h1>✏️ Dzisiejsza sprzedaż</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">✏️ Dzisiejsza sprzedaż<span class="pk-slot" data-pomoc="sprzedaz.dzisiejsza" data-pomoc-nazwa="Dzisiejsza sprzedaż"></span></h1>
         <button onclick="odswiezSprzedaz(true)" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
     <div class="card">
@@ -7208,7 +7208,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             
             <div id="historia" class="section">
-                <div class="header"><h1>Historia Sprzedaży</h1><button onclick="pobierzHistorie()" class="btn-primary" style="width:auto;">Odśwież</button></div>
+                <div class="header"><h1 style="display:flex; align-items:center; gap:4px;">Historia Sprzedaży<span class="pk-slot" data-pomoc="sprzedaz.historia" data-pomoc-nazwa="Historia sprzedaży"></span></h1><button onclick="pobierzHistorie()" class="btn-primary" style="width:auto;">Odśwież</button></div>
                 <div class="card">
                     <input type="text" id="historia-search" placeholder="Szukaj klienta, zabiegu, sprzedawcy, komentarza..." onkeyup="_db('hist',()=>renderHistoriaTable(1))" style="width:100%; padding:10px; margin-bottom:6px; border:1px solid #ddd; border-radius:8px;">
                     <div id="historia-search-info" style="margin-bottom:15px; font-size:12.5px; color:#8a8f9c;"></div>
@@ -7224,7 +7224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			
 			<div id="zadatki-lista" class="section">
     <div class="header">
-        <h1>Spis Zadatków i Wpłat</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">Spis Zadatków i Wpłat<span class="pk-slot" data-pomoc="sprzedaz.zadatki" data-pomoc-nazwa="Spis zadatków"></span></h1>
         <button onclick="pobierzZadatkiWszystkie()" class="btn-primary" style="width:auto;">🔄 Odśwież</button>
     </div>
     
@@ -7495,7 +7495,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			<!-- 			Podsumowanie dnia link -->
 			<div id="podsumowanie" class="section">
     <div class="header">
-        <h1>Podsumowanie Dnia</h1>
+        <h1 style="display:flex; align-items:center; gap:4px;">Podsumowanie Dnia<span class="pk-slot" data-pomoc="sprzedaz.podsumowanie" data-pomoc-nazwa="Podsumowanie dnia"></span></h1>
         <div style="display:flex; gap:10px; align-items:center;">
             <input type="date" id="podsumowanie-data" onchange="zaladujPodsumowanieDnia()" style="padding:10px; border:1px solid #ddd; border-radius:8px; font-family:inherit;">
             <button onclick="zaladujPodsumowanieDnia()" class="btn-primary" style="width:auto; margin:0;">🔄 Odśwież</button>
@@ -7737,7 +7737,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 		   <div id="ranking-klientow" class="section">
-    <div class="header"><h1>Ranking klientów</h1></div>
+    <div class="header"><h1>Ranking klientów</h1><span class="pk-slot" data-pomoc="klienci.ranking" data-pomoc-nazwa="Ranking klientów"></span></div>
 
     <div class="filters" style="margin-bottom:16px;">
         <button class="filter-btn active" id="rnk-tryb-btn-wydatki" onclick="rnk_przelaczTryb('wydatki')">💰 Wydatki</button>
@@ -7787,7 +7787,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		   <div id="urodziny" class="section">
     <div class="header">
-        <h1 id="bd-title">Urodziny</h1>
+        <h1 id="bd-title" style="display:flex; align-items:center; gap:4px;">Urodziny<span class="pk-slot" data-pomoc="klienci.urodziny" data-pomoc-nazwa="Urodziny"></span></h1>
         <div style="display:flex;gap:5px">
             <select id="bd-month-select" onchange="zmienMiesiac()"></select>
             <button onclick="pobierzUrodziny()" class="btn-primary" style="width:auto; margin:0;">Wczytaj</button>
@@ -7860,7 +7860,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <h2 id="ds-greeting">Dzień dobry! 👋</h2>
       <p>Sprawdź, co wymaga Twojej uwagi i co możesz zrobić dzisiaj.</p>
     </div>
-    <div class="ds-update">⟳ <span id="ds-kpi-time">—</span></div>
+    <div class="ds-update" style="display:flex; align-items:center; gap:4px;">⟳ <span id="ds-kpi-time">—</span><span class="pk-slot" data-pomoc="pulpit" data-pomoc-nazwa="Pulpit"></span></div>
   </div>
 
   <!-- KPI — widoczne tylko dla admin/megaadmin/manager -->
@@ -8937,7 +8937,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <div id="logi" class="section"><input type="text" id="szukaj-logi" onkeyup="_db('log',filtrujLogi)" placeholder="🔍 Szukaj w logach (kto, akcja, opis)..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box; margin-top: 10px;">
-			<div class="header"><h1>Dziennik Zdarzeń</h1>
+			<div class="header"><h1 style="display:inline-flex; align-items:center; gap:4px;">Dziennik Zdarzeń<span class="pk-slot" data-pomoc="dziennik" data-pomoc-nazwa="Dziennik zdarzeń"></span></h1>
 			<button onclick="pobierzLogi()" class="btn-primary" style="width:auto;">Odśwież</button></div><div class="card"><table class="logs-table"><thead><tr><th>Data</th><th>Kto</th><th>Akcja</th><th>Opis</th></tr></thead><tbody id="logs-list"></tbody></table></div></div>
       
 		
@@ -10191,7 +10191,7 @@ ANALIZA MANAGER
 <div id="leady" class="section" style="padding-bottom:50px;">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
         <div>
-            <h1 style="margin:0; font-size:24px;">📋 Leady</h1>
+            <h1 style="margin:0; font-size:24px; display:flex; align-items:center; gap:4px;">📋 Leady<span class="pk-slot" data-pomoc="klienci.leady" data-pomoc-nazwa="Leady"></span></h1>
             <span style="color:#6b7280; font-size:14px;">Potencjalni klienci z agencji marketingowych — import z Google Sheets</span>
         </div>
         <div style="display:flex; gap:8px;">

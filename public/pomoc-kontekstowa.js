@@ -241,6 +241,10 @@
 
   function otworz(ctx, btn) {
     if (otwarta && otwarta.btn === btn) return zamknij(true);
+    // Przycisk schowany (jego ekran nie jest wyświetlony) — chmurka nie ma do czego przylgnąć
+    // i lądowała w rogu okna. Lepiej nic nie pokazać niż pokazać pomoc znikąd.
+    var rb = btn.getBoundingClientRect();
+    if (!rb.width || !rb.height) return;
     zamknij(false);
     schowajTooltip();
     wczytaj().then(function () {
@@ -288,8 +292,7 @@
   // rysowanych z JS (Terminarz), bez dopisywania czegokolwiek w ich kodzie.
   function podlacz(slot) {
     if (!slot || slot.dataset.pkGotowy === '1') return;
-    var ctx = slot.getAttribute('data-pomoc');
-    if (!ctx) return;
+    if (!slot.getAttribute('data-pomoc')) return;
     slot.dataset.pkGotowy = '1';
     var btn = el('button', 'pk-btn');
     btn.type = 'button';
@@ -297,7 +300,10 @@
     btn.setAttribute('aria-label', 'Pomoc: ' + (slot.getAttribute('data-pomoc-nazwa') || 'ten widok'));
     btn.addEventListener('click', function (ev) {
       ev.preventDefault(); ev.stopPropagation();   // nie wysyłamy formularza, nie klikamy tła
-      otworz(ctx, btn);
+      // Klucz czytamy ZA KAŻDYM RAZEM ze slotu, a nie z chwili podpięcia: jeden przycisk
+      // w pasku zakładek obsługuje wszystkie zakładki i jego kontekst zmienia się w locie.
+      // Zapamiętany klucz dawał we wszystkich zakładkach treść tej pierwszej (złapane próbą).
+      otworz(slot.getAttribute('data-pomoc'), btn);
     });
     btn.addEventListener('mouseenter', function () { tooltipT = setTimeout(function () { pokazTooltip(btn); }, 350); });
     btn.addEventListener('mouseleave', schowajTooltip);

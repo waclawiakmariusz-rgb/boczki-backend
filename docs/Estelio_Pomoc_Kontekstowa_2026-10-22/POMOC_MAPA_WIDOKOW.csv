@@ -1,7 +1,21 @@
 ﻿kontekst,sciezka,nadrzedny,tytul,rola,dodatek,kotwica,zrodlo,link,status
-klient.profil,"public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",,Wszystko o jednej klientce,,,podpięte,"public/index.html: sekcja #klient-profil, pasek zakładek przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty) ; public/estelio_pomoc_f.html: rozdział #klienci",/pomoc/#klienci,wdrozone-sprawdzone
-magazyn.pro.produkt.nowy,"public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",magazyn.stan,Dodajesz nowy produkt,,rap_module,podpięte,"public/index.html: sekcja #rap_add, formularz #rap_product-form (pola: Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto) ; makiety/01-chmurka-formularza.png — tekst bazowy, dostosowany do rzeczywistych nazw pól",/pomoc/#magazyn,wdrozone-sprawdzone
-magazyn.stan,"public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy"", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",,Sprawdź swoje zapasy,,,podpięte,"public/index.html: sekcja #magazyn (nagłówek „Stan Magazynowy"", filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda) ; public/estelio_pomoc_f.html: rozdział #magazyn („Przyjęcie dostawy to osobny ekran"")",/pomoc/#magazyn,wdrozone-sprawdzone
+dziennik,"public/index.html: sekcja #logi (kolumny Data, Kto, Akcja, Opis; filtrujLogi)",,Kto co zrobił w systemie,,,podpięte,"public/index.html: sekcja #logi (kolumny Data, Kto, Akcja, Opis; filtrujLogi) ; public/estelio_pomoc_f.html: rozdział #dziennik",/pomoc/#dziennik,wdrozone-sprawdzone
+klienci.leady,"public/index.html: sekcja #leady („Potencjalni klienci z agencji marketingowych — import z Google Sheets"", leady_dodajZrodloOpen)",,Zgłoszenia z reklam,,,podpięte,"public/index.html: sekcja #leady („Potencjalni klienci z agencji marketingowych — import z Google Sheets"", leady_dodajZrodloOpen)",,wdrozone-sprawdzone
+klienci.ranking,public/index.html: sekcja #ranking-klientow (rnk_przelaczTryb: wydatki | pakiety),,Kto zostawia najwięcej,,,podpięte,public/index.html: sekcja #ranking-klientow (rnk_przelaczTryb: wydatki | pakiety),/pomoc/#klienci,wdrozone-sprawdzone
+klienci.urodziny,"public/index.html: sekcja #urodziny (bd-month-select, pobierzUrodziny)",,Kto ma urodziny w tym miesiącu,,,podpięte,"public/index.html: sekcja #urodziny (bd-month-select, pobierzUrodziny) ; public/estelio_pomoc_f.html: rozdział #urodziny",/pomoc/#urodziny,wdrozone-sprawdzone
+klient.profil,"public/index.html: sekcja #klient-profil, przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty)",,Wszystko o jednej klientce,,,podpięte,"public/index.html: sekcja #klient-profil, przelaczTabProfilu(podsumowanie|wizyty|produkty|zadatki|analityki|dokumenty) ; public/estelio_pomoc_f.html: rozdział #klienci",/pomoc/#klienci,wdrozone-sprawdzone
+klient.profil.analityki,"public/index.html: #tab-profil-analityki („Pełna analityka dostępna po przejrzeniu historii klientki"", analiza-klienta-container)",klient.profil,Wzorce tej klientki,,,podpięte,"public/index.html: #tab-profil-analityki („Pełna analityka dostępna po przejrzeniu historii klientki"", analiza-klienta-container)",/pomoc/#klienci,wdrozone-sprawdzone
+klient.profil.dokumenty,"public/index.html: #tab-profil-dokumenty (Regulamin, Zgody RODO, dd_loadDokumenty)",klient.profil,Zgody i podpisane papiery,,,podpięte,"public/index.html: #tab-profil-dokumenty (Regulamin, Zgody RODO, dd_loadDokumenty) ; public/estelio_pomoc_f.html: rozdział #dokumenty",/pomoc/#dokumenty,wdrozone-sprawdzone
+klient.profil.podsumowanie,"public/index.html: #tab-profil-podsumowanie (asystent-box „Sugestie dla Recepcji"", pp-summary-grid)",klient.profil,Najważniejsze o klientce,,,podpięte,"public/index.html: #tab-profil-podsumowanie (asystent-box „Sugestie dla Recepcji"", pp-summary-grid)",/pomoc/#klienci,wdrozone-sprawdzone
+klient.profil.produkty,"public/index.html: #tab-profil-produkty (grupy Kosmetyki/karnety, kolumny Data, Produkt, Ilość, Kwota, Płatność)",klient.profil,Co klientka u nas kupiła,,,podpięte,"public/index.html: #tab-profil-produkty (grupy Kosmetyki/karnety, kolumny Data, Produkt, Ilość, Kwota, Płatność)",/pomoc/#klienci,wdrozone-sprawdzone
+klient.profil.wizyty,"public/index.html: #tab-profil-wizyty (profil-history-search, filtrujHistorieWProfilu)",klient.profil,Historia zabiegów klientki,,,podpięte,"public/index.html: #tab-profil-wizyty (profil-history-search, filtrujHistorieWProfilu) ; public/terminarz.js: TRM.historiaKlientki — szerszy widok historii",/pomoc/#klienci,wdrozone-sprawdzone
+klient.profil.zadatki,"public/index.html: #tab-profil-zadatki (przycisk „+ Wpłać zadatek"")",klient.profil,Wpłaty tej klientki,,,podpięte,"public/index.html: #tab-profil-zadatki (przycisk „+ Wpłać zadatek"") ; public/estelio_pomoc_f.html: rozdział #zadatki",/pomoc/#zadatki,wdrozone-sprawdzone
+kosmetyki.slownik,"public/index.html: sekcja #slownik („Kreator Produktu / Kosmetyku"", pola Firma, Model (Nazwa), Cena Sprzedaży; opis w sekcji: „Te dane pojawią się w Rejestracji Sprzedaży"")",,"Firmy, modele i ceny sprzedaży",,,podpięte,"public/index.html: sekcja #slownik („Kreator Produktu / Kosmetyku"", pola Firma, Model (Nazwa), Cena Sprzedaży; opis w sekcji: „Te dane pojawią się w Rejestracji Sprzedaży"") ; public/index.html: sekcja #nowy — select firmy/modelu (zaladujModeleDlaFirmy, generujNazwe) ; public/estelio_pomoc_f.html: rozdział #kosmetyki",/pomoc/#kosmetyki,wdrozone-sprawdzone
+magazyn.co-zamowic,"public/index.html: sekcja #co-zamowic („Krytyczne stany (0 lub 1 sztuka)"", „Tylko produkty z kategorii DETAL"", sortujZamowienia)",magazyn.stan,Czego zaraz zabraknie,,,podpięte,"public/index.html: sekcja #co-zamowic („Krytyczne stany (0 lub 1 sztuka)"", „Tylko produkty z kategorii DETAL"", sortujZamowienia)",/pomoc/#magazyn,wdrozone-sprawdzone
+magazyn.inwentaryzacja,"public/index.html: sekcja #inwentaryzacja (filtry Wszystkie/Profesja/Detal/Archiwum, eksportujPDF)",magazyn.stan,"Liczenie tego, co na półce",,,podpięte,"public/index.html: sekcja #inwentaryzacja (filtry Wszystkie/Profesja/Detal/Archiwum, eksportujPDF) ; public/estelio_pomoc_f.html: rozdział #inwentaryzacja",/pomoc/#inwentaryzacja,wdrozone-sprawdzone
+magazyn.pro.produkt.nowy,"public/index.html: sekcja #rap_add, formularz #rap_product-form (Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto)",magazyn.stan,Dodajesz nowy produkt,,rap_module,podpięte,"public/index.html: sekcja #rap_add, formularz #rap_product-form (Kategoria, Nazwa Produktu, Obecna Ilość, Jednostka, Minimum (Próg Alarmowy), Data ważności, Cena Brutto) ; makiety/01-chmurka-formularza.png — tekst bazowy dostosowany do rzeczywistych nazw pól",/pomoc/#magazyn,wdrozone-sprawdzone
+magazyn.przyjecie,"public/index.html: sekcja #nowy, formularz dodajProdukt() (Firma, Model, Ilość, Typ, Netto, Brutto, Min, Ważność)",magazyn.stan,Wpisujesz nową dostawę,,,podpięte,"public/index.html: sekcja #nowy, formularz dodajProdukt() (Firma, Model, Ilość, Typ, Netto, Brutto, Min, Ważność) ; public/estelio_pomoc_f.html: rozdział #magazyn („Przyjęcie dostawy to osobny ekran"")",/pomoc/#magazyn,wdrozone-sprawdzone
+magazyn.stan,"public/index.html: sekcja #magazyn (filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda)",,Sprawdź swoje zapasy,,,podpięte,"public/index.html: sekcja #magazyn (filtry Wszystkie/Detal/Lista Zbiorcza, #magazyn-legenda) ; public/estelio_pomoc_f.html: rozdział #magazyn",/pomoc/#magazyn,wdrozone-sprawdzone
 modal.birthday-modal,public/index.html #birthday-modal-overlay,,(modal) birthday-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.client-edit-modal,public/index.html #client-edit-modal-overlay,,(modal) client-edit-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.consent-modal,public/index.html #consent-modal-overlay,,(modal) consent-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
@@ -47,15 +61,17 @@ modal.zd-modal,public/index.html #zd-modal-overlay,,(modal) zd-modal-overlay,,,"
 modal.zd-prz-popup,public/index.html #zd-prz-popup,,(modal) zd-prz-popup,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zg-modal,public/index.html #zg-modal-overlay,,(modal) zg-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
 modal.zwrot-modal,public/index.html #zwrot-modal-overlay,,(modal) zwrot-modal-overlay,,,"nagłówek modalu, przed ×",,,do-opisania
+pulpit,"public/index.html: sekcja #pulpit (.ds-topbar, KPI dla admin/megaadmin/manager, lista zadań)",,Co wymaga uwagi dzisiaj,,,podpięte,"public/index.html: sekcja #pulpit (.ds-topbar, KPI dla admin/megaadmin/manager, lista zadań) ; public/estelio_pomoc_f.html: rozdział #pulpit",/pomoc/#pulpit,wdrozone-sprawdzone
+retencja,"public/index.html: sekcja #retencja (pobierzDaneDoRetencji, filtr Kategoria/Zabieg)",,Do kogo warto zadzwonić,,,podpięte,"public/index.html: sekcja #retencja (pobierzDaneDoRetencji, filtr Kategoria/Zabieg) ; public/estelio_pomoc_f.html: rozdział #retencja",/pomoc/#retencja,wdrozone-sprawdzone
 sekcja.addons,public/index.html:8442 #addons,,Dodatki,,,nagłówek sekcji,,,do-opisania
 sekcja.analiza-konsultacji,public/index.html:10501 #analiza-konsultacji,,Analiza Konsultacji,,,nagłówek sekcji,,,do-opisania
 sekcja.awaryjna-zmiana,public/index.html:7469 #awaryjna-zmiana,,🚨 Awaryjna Edycja (30 dni),,,nagłówek sekcji,,,do-opisania
 sekcja.booksy-dzis,public/index.html:7323 #booksy-dzis,,Wizyty z Booksy na dzisiaj,,,nagłówek sekcji,,,do-opisania
-sekcja.co-zamowic,public/index.html:5715 #co-zamowic,,Raport: Co zamówić?,,,nagłówek sekcji,,,do-opisania
+sekcja.co-zamowic,public/index.html:5715 #co-zamowic,,co-zamowic,,,nagłówek sekcji,,,do-opisania
 sekcja.demo-dodatek,public/index.html:8524 #demo-dodatek,,DODATEK!,,,nagłówek sekcji,,,do-opisania
 sekcja.do-sprawdzenia,public/index.html:7259 #do-sprawdzenia,,do-sprawdzenia,,,nagłówek sekcji,,,do-opisania
-sekcja.dzisiejsza-sprzedaz,public/index.html:6485 #dzisiejsza-sprzedaz,,✏️ Dzisiejsza sprzedaż,,,nagłówek sekcji,,,do-opisania
-sekcja.historia,public/index.html:7210 #historia,,Historia Sprzedaży,,,nagłówek sekcji,,,do-opisania
+sekcja.dzisiejsza-sprzedaz,public/index.html:6485 #dzisiejsza-sprzedaz,,Wyniki Konsultacji,,,nagłówek sekcji,,,do-opisania
+sekcja.historia,public/index.html:7210 #historia,,historia,,,nagłówek sekcji,,,do-opisania
 sekcja.inwentaryzacja,public/index.html:5694 #inwentaryzacja,,Inwentaryzacja,,,nagłówek sekcji,,,do-opisania
 sekcja.kartoteka,public/index.html:7561 #kartoteka,,Kartoteka Klienta,,,nagłówek sekcji,,,do-opisania
 sekcja.klient-profil,public/index.html:8047 #klient-profil,,📞 ${w.telefon},,,nagłówek sekcji,,,do-opisania
@@ -66,8 +82,8 @@ sekcja.kon_raportowanie,public/index.html:6500 #kon_raportowanie,,Wyniki Konsult
 sekcja.kon_raportowanie,public/index.html:6574 #kon_raportowanie,,Konsultacje,,konsultacje,nagłówek sekcji,,,do-opisania
 sekcja.kreator_dostepow,public/index.html:10450 #kreator_dostepow,,Zarządzanie Użytkownikami,,,nagłówek sekcji,,,do-opisania
 sekcja.kreator_dostepow,public/index.html:10452 #kreator_dostepow,,Zarządzanie Użytkownikami,,,nagłówek sekcji,,,do-opisania
-sekcja.leady,public/index.html:10191 #leady,,📋 Leady,,,nagłówek sekcji,,,do-opisania
-sekcja.logi,public/index.html:8939 #logi,,Dziennik Zdarzeń,,,nagłówek sekcji,,,do-opisania
+sekcja.leady,public/index.html:10191 #leady,,leady,,,nagłówek sekcji,,,do-opisania
+sekcja.logi,public/index.html:8939 #logi,,✂️ Kreator Rabatów,,,nagłówek sekcji,,,do-opisania
 sekcja.magazyn,public/index.html:5683 #magazyn,,Stan Magazynowy,,,nagłówek sekcji,,,do-opisania
 sekcja.nowy,public/index.html:5700 #nowy,,Przyjęcie towaru,,,nagłówek sekcji,,,do-opisania
 sekcja.odprawa,public/index.html:10876 #odprawa,,📢 Mega Raport Operacyjny,,,nagłówek sekcji,,,do-opisania
@@ -79,7 +95,7 @@ sekcja.rap_categories,public/index.html:10845 #rap_categories,,📂 Kategorie Ma
 sekcja.rap_logs,public/index.html:10859 #rap_logs,,📜 Historia Operacji Magazynowych,,rap_module,nagłówek sekcji,,,do-opisania
 sekcja.rap_magazyn,public/index.html:10804 #rap_magazyn,,📦 Stan Magazynowy,,rap_module,nagłówek sekcji,,,do-opisania
 sekcja.rap_report,public/index.html:10787 #rap_report,,⚠️ Zadania Magazynowe,,rap_module,nagłówek sekcji,,,do-opisania
-sekcja.retencja,public/index.html:5867 #retencja,,📞 Retencja Klientów,,,nagłówek sekcji,,,do-opisania
+sekcja.retencja,public/index.html:5867 #retencja,,retencja,,,nagłówek sekcji,,,do-opisania
 sekcja.sekcja-help-kb,public/index.html:5964 #sekcja-help-kb,,sekcja-help-kb,,,nagłówek sekcji,,,do-opisania
 sekcja.sekcja-kreator-rabatow,public/index.html:8944 #sekcja-kreator-rabatow,,✂️ Kreator Rabatów,,,nagłówek sekcji,,,do-opisania
 sekcja.sekcja-platnosc-link,public/index.html:8470 #sekcja-platnosc-link,,Płatności online (tpay),,,nagłówek sekcji,,,do-opisania
@@ -89,13 +105,18 @@ sekcja.setup-sugestie,public/index.html:7700 #setup-sugestie,,🧠 Kreator Suges
 sekcja.setup-zabiegi,public/index.html:7577 #setup-zabiegi,,Kreator Zabiegów,,,nagłówek sekcji,,,do-opisania
 sekcja.slownik,public/index.html:6404 #slownik,,Kreator Produktu / Kosmetyku,,,nagłówek sekcji,,,do-opisania
 sekcja.sms-baza,public/index.html:5772 #sms-baza,,📣 Baza do akcji SMS,,,nagłówek sekcji,,,do-opisania
-sekcja.sprzedaz,public/index.html:6437 #sprzedaz,,Rejestracja Sprzedaży,,,nagłówek sekcji,,,do-opisania
+sekcja.sprzedaz,public/index.html:6437 #sprzedaz,,sprzedaz,,,nagłówek sekcji,,,do-opisania
 sekcja.terminarz,public/index.html:8522 #terminarz,,DODATEK!,,,nagłówek sekcji,,,do-opisania
 sekcja.tgt-modal,public/index.html:11011 #tgt-modal,,🎯 Konfigurator Targetów,,,nagłówek sekcji,,,do-opisania
 sekcja.tickety,public/index.html:5805 #tickety,,🎫 Zgłoszenia,,,nagłówek sekcji,,,do-opisania
 sekcja.urodziny,public/index.html:7788 #urodziny,,🎂 Urodziny,,,nagłówek sekcji,,,do-opisania
 sekcja.widok-pracownicy-targety,public/index.html:11152 #widok-pracownicy-targety,,🏆 Dashboard Wyników Pracownika,,,nagłówek sekcji,,,do-opisania
-sekcja.zadatki-lista,public/index.html:7225 #zadatki-lista,,Spis Zadatków i Wpłat,,,nagłówek sekcji,,,do-opisania
+sekcja.zadatki-lista,public/index.html:7225 #zadatki-lista,,zadatki-lista,,,nagłówek sekcji,,,do-opisania
+sprzedaz.dzisiejsza,public/index.html: sekcja #dzisiejsza-sprzedaz (odswiezSprzedaz),sprzedaz.rejestracja,Poprawianie dzisiejszych wpisów,,,podpięte,"public/index.html: sekcja #dzisiejsza-sprzedaz (odswiezSprzedaz) ; public/estelio_pomoc_f.html: rozdział #zwroty",/pomoc/#zwroty,wdrozone-sprawdzone
+sprzedaz.historia,"public/index.html: sekcja #historia (kolumny Data, Klient, Zabieg/Produkt, Sprzedawca, Kwota; pole historia-search)",sprzedaz.rejestracja,Szukasz w starszych wpisach,,,podpięte,"public/index.html: sekcja #historia (kolumny Data, Klient, Zabieg/Produkt, Sprzedawca, Kwota; pole historia-search)",/pomoc/#sprzedaz,wdrozone-sprawdzone
+sprzedaz.podsumowanie,"public/index.html: sekcja #podsumowanie (zaladujPodsumowanieDnia, wybór daty)",sprzedaz.rejestracja,Zamykasz dzień,,,podpięte,"public/index.html: sekcja #podsumowanie (zaladujPodsumowanieDnia, wybór daty) ; public/estelio_pomoc_f.html: rozdział #rozliczenia",/pomoc/#rozliczenia,wdrozone-sprawdzone
+sprzedaz.rejestracja,"public/index.html: sekcja #sprzedaz (1. Sprzedawca, 2. Imię i nazwisko klienta, przyciski Zabieg / Detal / Zadatek)",,Zapisujesz sprzedaż,,,podpięte,"public/index.html: sekcja #sprzedaz (1. Sprzedawca, 2. Imię i nazwisko klienta, przyciski Zabieg / Detal / Zadatek) ; public/estelio_pomoc_f.html: rozdział #sprzedaz",/pomoc/#sprzedaz,wdrozone-sprawdzone
+sprzedaz.zadatki,"public/index.html: sekcja #zadatki-lista (filtrujZadatkiUI, przycisk Cofnij przy utraconym)",sprzedaz.rejestracja,Kto ma wpłacony zadatek,,,podpięte,"public/index.html: sekcja #zadatki-lista (filtrujZadatkiUI, przycisk Cofnij przy utraconym) ; public/estelio_pomoc_f.html: rozdział #zadatki",/pomoc/#zadatki,wdrozone-sprawdzone
 terminarz.nowa.krok1,"public/terminarz.js: renderNowa(), krok === 1",sekcja.terminarz,Nowa wizyta — krok 1,,terminarz,nagłówek widoku/panelu,,,do-opisania
 terminarz.nowa.krok2,"public/terminarz.js: renderNowa(), krok === 2",sekcja.terminarz,Nowa wizyta — krok 2,,terminarz,nagłówek widoku/panelu,,,do-opisania
 terminarz.nowa.krok3,"public/terminarz.js: renderNowa(), krok === 3",sekcja.terminarz,Nowa wizyta — krok 3,,terminarz,nagłówek widoku/panelu,,,do-opisania
@@ -109,3 +130,4 @@ terminarz.ustawienia.pakiety,public/terminarz.js: renderUstawienia(),sekcja.term
 terminarz.ustawienia.uslugi,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Usługi,,terminarz,nagłówek widoku/panelu,,,do-opisania
 terminarz.ustawienia.zasoby,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Gabinety i urządzenia,,terminarz,nagłówek widoku/panelu,,,do-opisania
 terminarz.ustawienia.zespol,public/terminarz.js: renderUstawienia(),sekcja.terminarz,Ustawienia terminarza — Zespół,,terminarz,nagłówek widoku/panelu,,,do-opisania
+zgloszenia,"public/index.html: sekcja #tickety (tk_pokazFormularz, tk_zaladuj, wątek z odpowiedziami)",,Piszesz do nas o problemie,,,podpięte,"public/index.html: sekcja #tickety (tk_pokazFormularz, tk_zaladuj, wątek z odpowiedziami)",,wdrozone-sprawdzone

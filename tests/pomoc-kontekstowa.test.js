@@ -160,7 +160,7 @@ describe('podpięcie w aplikacji', () => {
   });
 
   test('każdy użyty w aplikacji kontekst ma wpis albo świadomego rodzica', () => {
-    const uzyte = [...INDEX.matchAll(/data-pomoc="([a-z0-9.]+)"/g)].map(m => m[1]);
+    const uzyte = [...INDEX.matchAll(/data-pomoc="([a-z0-9.-]+)"/g)].map(m => m[1]);
     expect(uzyte.length).toBeGreaterThan(0);
     for (const ctx of uzyte) {
       const czesci = ctx.split('.');
@@ -171,10 +171,26 @@ describe('podpięcie w aplikacji', () => {
   });
 
   test('nie ma nieużywanych kluczy katalogu bez roli nadrzędnej', () => {
-    const uzyte = new Set([...INDEX.matchAll(/data-pomoc="([a-z0-9.]+)"/g)].map(m => m[1]));
+    const uzyte = new Set([...INDEX.matchAll(/data-pomoc="([a-z0-9.-]+)"/g)].map(m => m[1]));
+    // Konteksty ustawiane w locie (jeden przycisk, wiele zakładek) nie są widoczne w znaczniku —
+    // zbieramy też prefiksy sklejane w kodzie, np. setAttribute('data-pomoc', 'klient.profil.' + tabId)
+    const prefiksy = [...INDEX.matchAll(/setAttribute\('data-pomoc', '([a-z0-9.-]+\.)'\s*\+/g)].map(m => m[1]);
     for (const [id] of wpisy) {
-      const jestUzyty = uzyte.has(id) || [...uzyte].some(u => u.startsWith(id + '.'));
+      const jestUzyty = uzyte.has(id)
+        || [...uzyte].some(u => u.startsWith(id + '.'))
+        || prefiksy.some(p => id.startsWith(p) || p.startsWith(id + '.'));
       expect(`${id}: ${jestUzyty ? 'używany' : 'MARTWY KLUCZ'}`).toBe(`${id}: używany`);
     }
+  });
+});
+
+// Regres złapany próbą 22.10.2026: jeden przycisk w pasku zakładek obsługuje sześć kontekstów,
+// a pierwsza wersja zapamiętywała klucz w chwili podpięcia — przez co KAŻDA zakładka pokazywała
+// treść tej pierwszej. Klucz musi być czytany ze slotu przy każdym kliknięciu.
+describe('przycisk o zmiennym kontekście', () => {
+  test('klucz czytany ze slotu przy kliknięciu, nie zapamiętany przy podpięciu', () => {
+    const podlacz = JS.slice(JS.indexOf('function podlacz(slot)'), JS.indexOf('function skanuj'));
+    expect(podlacz).toMatch(/otworz\(slot\.getAttribute\('data-pomoc'\), btn\)/);
+    expect(podlacz).not.toMatch(/var ctx = slot\.getAttribute\('data-pomoc'\);[\s\S]*otworz\(ctx, btn\)/);
   });
 });
