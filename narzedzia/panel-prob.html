@@ -63,7 +63,10 @@
       <div id="biezacy-link" style="margin-top:10px"></div>
     </div>
     <div class="karta" style="margin-top:22px">
-      <h2>Wyniki</h2>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px">
+        <h2 style="margin:0">Wyniki</h2>
+        <label style="font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="tylko-najnowsze" checked> tylko najnowszy przebieg każdego scenariusza</label>
+      </div>
       <div id="wyniki"><div class="pusto">Brak wyników.</div></div>
     </div>
   </section>
@@ -91,8 +94,9 @@
     $('#log').textContent = 'W kolejce: ' + plik + ' (' + srodowisko + ')\n'; biezacyId = r.id; $('#biezacy-tytul').textContent = '— ' + plik + ' · ' + srodowisko; $('#biezacy-link').innerHTML = '';
   }
   async function wczytajWyniki() {
-    const w = await (await fetch('/api/wyniki')).json();
-    $('#wyniki').innerHTML = w.length ? '<table><tr><th>Kiedy</th><th>Scenariusz</th><th>Środ.</th><th>Stan</th><th>Zrzuty</th><th></th></tr>' + w.slice(0, 40).map(r => `
+    let w = await (await fetch('/api/wyniki')).json();   // posortowane od najnowszego
+    if ($('#tylko-najnowsze').checked) { const seen = new Set(); w = w.filter(r => { const k = r.scenariusz + '|' + r.srodowisko; if (seen.has(k)) return false; seen.add(k); return true; }); }
+    $('#wyniki').innerHTML = w.length ? '<table><tr><th>Kiedy</th><th>Scenariusz</th><th>Środ.</th><th>Stan</th><th>Zrzuty</th><th></th></tr>' + w.slice(0, 60).map(r => `
       <tr><td>${czas(r.czas)}</td><td>${esc(r.scenariusz)}</td><td>${esc(r.srodowisko)}</td>
       <td><span class="stan ${r.fail === 0 && !r.bledyJS ? 'ok' : 'zle'}">${r.fail === 0 && !r.bledyJS ? 'OK' : (r.fail < 0 ? 'błąd' : r.fail + ' FAIL' + (r.bledyJS ? ', JS ' + r.bledyJS : ''))}</span> <small style="color:var(--mut)">${r.sprawdzen} spr. · ${r.posty} POST</small></td>
       <td>${r.zrzutow}</td><td>${r.maHtml ? `<a href="/wyniki/${encodeURIComponent(r.katalog)}/raport.html" target="_blank">galeria</a>` : ''} · <a href="/wyniki/${encodeURIComponent(r.katalog)}/raport.md" target="_blank">md</a></td></tr>`).join('') + '</table>' : '<div class="pusto">Brak wyników.</div>';
@@ -106,6 +110,7 @@
   }
   $('#b-start').onclick = async () => { $('#b-start').disabled = true; $('#srod-opis').textContent = 'Startuję bazę i serwer…'; await fetch('/api/srodowisko/start', { method: 'POST' }); };
   $('#b-stop').onclick = async () => { await fetch('/api/srodowisko/stop', { method: 'POST' }); setTimeout(wczytajSrodowisko, 3000); };
+  $('#tylko-najnowsze').onchange = wczytajWyniki;
   document.querySelectorAll('input[name=srod]').forEach(r => r.onchange = () => $('#prod-box').classList.toggle('widoczny', r.value === 'prod' && r.checked));
 
   const es = new EventSource('/api/strumien');
