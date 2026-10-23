@@ -1,0 +1,48 @@
+<section class="est-categories" aria-label="Kategorie magazynowe">
+  <div class="cat-shell">
+    <header class="cat-header"><div><h1>Kategorie magazynowe</h1><p>Uporządkuj produkty w kategorie i podkategorie.</p></div><button type="button" class="cat-help-button" data-help aria-label="Pomoc: Kategorie magazynowe">?</button></header>
+    <div class="cat-grid">
+      <section class="cat-card" data-create-card>
+        <h2>Dodaj kategorię</h2>
+        <form data-create-form novalidate>
+          <label class="cat-label">Nazwa kategorii<input type="text" data-name autocomplete="off" placeholder="np. Materiały jednorazowe" required></label>
+          <p class="cat-error" data-name-error hidden></p>
+          <span class="cat-label cat-label-space" data-parent-label>Umieść w</span>
+          <button type="button" class="cat-parent" data-parent><span aria-hidden="true" class="cat-folder"></span><span data-parent-text>Poziom główny</span><span aria-hidden="true">⌄</span></button>
+          <p class="cat-description" data-parent-hint>Kategoria pojawi się bezpośrednio na liście.</p>
+          <button type="submit" class="cat-primary cat-full" data-add>＋ Dodaj kategorię</button>
+        </form>
+      </section>
+      <section class="cat-card cat-tree-card" aria-label="Lista kategorii">
+        <div class="cat-title-row"><h2 tabindex="-1" data-tree-heading>Twoje kategorie</h2><span class="cat-count" data-count hidden></span></div>
+        <div class="cat-toolbar"><label class="cat-search"><span class="cat-sr">Szukaj kategorii</span><input type="search" data-search placeholder="Szukaj kategorii…" autocomplete="off"></label><div class="cat-tools"><button type="button" data-expand>Rozwiń wszystko</button><button type="button" data-collapse>Zwiń wszystko</button></div></div>
+        <p class="cat-description" data-search-info role="status"></p>
+        <p class="cat-description" data-load-state role="status"></p>
+        <button type="button" class="cat-secondary" data-retry hidden>Spróbuj ponownie</button>
+        <div data-tree></div>
+      </section>
+    </div>
+    <p class="cat-status" data-status role="status" aria-live="polite"></p>
+  </div>
+  <div class="cat-actions" data-actions hidden role="group" aria-label="Działania kategorii">
+    <button type="button" data-action="rename">Zmień nazwę</button><button type="button" data-action="move">Przenieś</button><button type="button" class="cat-danger-text" data-action="remove">Usuń</button>
+  </div>
+  <dialog class="cat-dialog cat-picker" data-picker aria-label="Wybór miejsca kategorii">
+    <form data-picker-form>
+      <div class="cat-dialog-header"><h2 data-picker-title>Wybierz miejsce kategorii</h2><button type="button" class="cat-close" data-picker-cancel aria-label="Zamknij wybór miejsca">×</button></div>
+      <p class="cat-description" data-picker-description>Wybierz kategorię nadrzędną lub poziom główny.</p>
+      <label class="cat-search cat-picker-search"><span class="cat-sr">Szukaj kategorii nadrzędnej</span><input type="search" data-picker-search placeholder="Szukaj kategorii…" autocomplete="off"></label>
+      <div class="cat-picker-options" data-picker-options></div>
+      <p class="cat-description" data-picker-selection role="status"></p>
+      <p class="cat-error" data-picker-error hidden role="alert"></p>
+      <footer class="cat-dialog-footer"><button type="button" class="cat-secondary" data-picker-cancel>Anuluj</button><button type="submit" class="cat-primary" data-picker-submit>Wybierz miejsce</button></footer>
+    </form>
+  </dialog>
+  <dialog class="cat-dialog" data-edit aria-label="Zmień nazwę kategorii">
+    <form data-edit-form novalidate><h2>Zmień nazwę</h2><p class="cat-description" data-edit-path></p><label class="cat-label cat-label-space">Nazwa kategorii<input type="text" data-edit-name required autocomplete="off"></label><p class="cat-error" data-edit-error hidden role="alert"></p><footer class="cat-dialog-footer"><button type="button" class="cat-secondary" data-edit-cancel>Anuluj</button><button type="submit" class="cat-primary" data-edit-save>Zapisz nazwę</button></footer></form>
+  </dialog>
+  <dialog class="cat-dialog" data-remove aria-label="Potwierdzenie usunięcia kategorii">
+    <form data-remove-form><h2>Usunąć kategorię?</h2><p class="cat-question" data-remove-name></p><p class="cat-description" data-remove-impact></p><p class="cat-error" data-remove-error hidden role="alert"></p><footer class="cat-dialog-footer"><button type="button" class="cat-secondary" data-remove-cancel>Anuluj</button><button type="submit" class="cat-danger" data-remove-submit>Usuń kategorię</button></footer></form>
+  </dialog>
+  <dialog class="cat-dialog" data-help-dialog aria-label="Pomoc: Kategorie magazynowe"><h2>Kategorie magazynowe</h2><p class="cat-question">Kategorie porządkują produkty w magazynie. Dodaj kategorię na poziomie głównym lub wybierz kategorię nadrzędną. Rozwijaj gałęzie, aby zobaczyć podkategorie. Wyszukiwarka uwzględnia nazwy i ścieżki.</p><a data-help-link hidden>Więcej w pomocy →</a><footer class="cat-dialog-footer"><button class="cat-secondary" type="button" data-help-close>Zamknij</button></footer></dialog>
+</section>

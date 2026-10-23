@@ -1,0 +1,30 @@
+const assert=require('node:assert/strict');
+const M=require('./kategorie-model.js');
+const demo=require('./demo-adapter.js');
+(async()=>{
+  let passed=0;
+  async function test(name,fn){await fn();passed++;console.log('PASS '+name);}
+  const a=demo({delay:0}), original=await a.list();
+  await test('01 poprawne drzewo 12 kategorii',()=>assert.equal(M.index(original).byId.size,12));
+  await test('02 pełna ścieżka',()=>assert.deepEqual(M.path(original,'mj').map(n=>n.name),['Inwentaryzacja miesięczna','Materiały jednorazowe']));
+  await test('03 wyszukiwanie bez polskich znaków',()=>assert.equal(M.search(original,'materialy').matches.has('mj'),true));
+  await test('04 przodkowie widoczni w wynikach',()=>assert.equal(M.search(original,'materialy').visible.has('m'),true));
+  await test('05 własna kategoria odrzucona',()=>assert.equal(M.canMove(original,'m','m'),false));
+  await test('06 potomek odrzucony',()=>assert.equal(M.canMove(original,'m','mj'),false));
+  await test('07 poziom główny dozwolony',()=>assert.equal(M.canMove(original,'mj',null),true));
+  await test('08 uszkodzony cykl odrzucony',()=>assert.throws(()=>M.index([{id:'a',name:'A',parentId:'b'},{id:'b',name:'B',parentId:'a'}])));
+  await test('09 brak rodzica odrzucony',()=>assert.throws(()=>M.index([{id:'a',name:'A',parentId:'missing'}])));
+  await test('10 powtórzony identyfikator odrzucony',()=>assert.throws(()=>M.index([...original,original[0]])));
+  let added;
+  await test('11 dodanie podkategorii w demo',async()=>{added=await a.create({name:'Nowa',parentId:'mj'});assert.equal((await a.list()).length,13);});
+  await test('12 duplikat w tym samym miejscu odrzucony w demo',()=>assert.rejects(()=>a.create({name:'Nowa',parentId:'mj'}),{code:'DUPLICATE'}));
+  await test('13 ta sama nazwa w innym miejscu dozwolona w demo',async()=>{await a.create({name:'Nowa',parentId:'d'});assert.equal((await a.list()).length,14);});
+  await test('14 zmiana nazwy zachowuje ID',async()=>{await a.rename({id:added.id,name:'Zmieniona'});assert.equal((await a.list()).find(n=>n.id===added.id).name,'Zmieniona');});
+  await test('15 przeniesienie gałęzi zachowuje dzieci',async()=>{await a.move({id:'mj',parentId:'t'});assert.deepEqual(M.path(await a.list(),added.id).map(n=>n.id),['t','mj',added.id]);});
+  await test('16 cykl blokowany również przez adapter demo',()=>assert.rejects(()=>a.move({id:'t',parentId:added.id}),{code:'CYCLE'}));
+  await test('17 usunięcie rodzica zablokowane w demo',()=>assert.rejects(()=>a.remove({id:'mj'}),{code:'HAS_CHILDREN'}));
+  await test('18 usunięcie liścia w demo',async()=>{await a.remove({id:added.id});assert.equal((await a.list()).some(n=>n.id===added.id),false);});
+  await test('19 głęboka hierarchia bez cyklu',async()=>assert.equal(M.path(await demo({delay:0,mode:'glebokie'}).list(),'deep6').length,9));
+  await test('20 pusta lista',async()=>assert.equal(M.index(await demo({delay:0,mode:'pusty'}).list()).byId.size,0));
+  console.log(passed+'/20 PASS — model i adapter demonstracyjny, bez testów DOM/backendu Estelio.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

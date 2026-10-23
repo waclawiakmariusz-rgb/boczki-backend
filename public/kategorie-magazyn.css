@@ -1,0 +1,123 @@
+/* Magazyn → Kategorie — oprawa „lekki nowy” wg docs/redesign/Estelio_Kategorie_Magazynowe_Lekki_Nowy_2026-10-23.
+   Wyłącznie wygląd; selektory zawężone do .est-categories. Logika (rap_zapiszKategorie, rap_renderCategoryTree,
+   rap_zmienNazweKategorii, rap_przeniesKategorie, rap_deleteCategory) bez zmian. */
+.est-categories {
+  --kat-text: #242126; --kat-muted: #67616b; --kat-border: #e7e1de; --kat-card: #ffffff; --kat-field-bg: #ffffff;
+  --kat-accent: #842d49; --kat-accent-hover: #70243d; --kat-accent-bg: #f8edf1; --kat-danger: #9b2442; --kat-hover: #f6f3f1;
+  container: categories / inline-size; color: var(--kat-text); font-size: 16px; line-height: 1.5; min-width: 0;
+}
+.est-categories *, .est-categories *::before, .est-categories *::after { box-sizing: border-box; }
+.est-categories h1, .est-categories h2, .est-categories p, .est-categories ul { margin: 0; }
+.est-categories svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.est-categories .kat-shell { max-width: 1180px; margin: 0 auto; }
+.est-categories .kat-header { margin-bottom: 24px; }
+.est-categories h1 { font-size: 28px; line-height: 36px; font-weight: 700; letter-spacing: -.4px; color: var(--kat-text); }
+.est-categories .kat-header p { font-size: 16px; line-height: 24px; color: var(--kat-muted); margin-top: 4px; }
+.est-categories .kat-grid { display: grid; grid-template-columns: 34fr 66fr; gap: 24px; align-items: start; }
+.est-categories .kat-card { background: var(--kat-card); border: 1px solid var(--kat-border); border-radius: 18px; padding: 24px; box-shadow: 0 6px 24px rgba(36, 33, 38, .04); min-width: 0; }
+.est-categories h2 { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--kat-text); }
+.est-categories .kat-label { display: block; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--kat-text); margin: 18px 0 8px; text-transform: none; letter-spacing: 0; }
+.est-categories form input.modern-form-control { width: 100%; height: 48px; padding: 0 14px; font-size: 16px; font-weight: 400; color: var(--kat-text); background: var(--kat-field-bg); border: 1px solid var(--kat-border); border-radius: 12px; box-shadow: none; transform: none; transition: border-color .12s; }
+.est-categories form input.modern-form-control::placeholder { color: #9a949c; }
+.est-categories form input.modern-form-control:focus { outline: 2px solid var(--kat-accent); outline-offset: 3px; border-color: var(--kat-border); background: var(--kat-field-bg); box-shadow: none; transform: none; }
+.est-categories .kat-parent-box { position: relative; }
+.est-categories .kat-select-ukryty { position: absolute; inset: 0; width: 100%; height: 48px; opacity: 0; pointer-events: none; margin: 0; }
+.est-categories .kat-parent-trigger { position: relative; display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 14px; font: inherit; font-size: 16px; text-align: left; color: var(--kat-text); background: var(--kat-field-bg); border: 1px solid var(--kat-border); border-radius: 12px; cursor: pointer; transform: none; }
+.est-categories .kat-parent-trigger svg { width: 20px; height: 20px; flex: 0 0 20px; }
+.est-categories .kat-parent-trigger span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.est-categories .kat-parent-trigger:hover { border-color: #c9c2c5; transform: none; }
+.est-categories .kat-parent-trigger:focus-visible { outline: 2px solid var(--kat-accent); outline-offset: 3px; }
+.est-categories .kat-help { font-size: 14px; line-height: 20px; color: var(--kat-muted); margin-top: 8px; }
+.est-categories .kat-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 20px; padding: 0 20px; font: inherit; font-size: 16px; font-weight: 600; color: #fff; background: var(--kat-accent); border: 0; border-radius: 12px; cursor: pointer; text-transform: none; letter-spacing: 0; box-shadow: none; transform: none; transition: background .12s; }
+.est-categories .kat-primary svg { width: 20px; height: 20px; }
+.est-categories .kat-primary:hover:not(:disabled) { background: var(--kat-accent-hover); transform: none; box-shadow: none; }
+.est-categories .kat-primary:disabled { opacity: .6; cursor: default; }
+.est-categories .kat-primary-auto { width: auto; margin: 0; }
+.est-categories .kat-secondary { min-height: 48px; padding: 0 20px; font: inherit; font-size: 16px; font-weight: 500; color: var(--kat-text); background: var(--kat-card); border: 1px solid var(--kat-border); border-radius: 12px; cursor: pointer; transform: none; }
+.est-categories .kat-secondary:hover { background: var(--kat-hover); transform: none; }
+.est-categories .kat-primary:focus-visible, .est-categories .kat-secondary:focus-visible, .est-categories .kat-link:focus-visible, .est-categories .kat-x:focus-visible { outline: 2px solid var(--kat-accent); outline-offset: 3px; }
+/* lista */
+.est-categories .kat-list-heading { display: flex; align-items: center; gap: 10px; }
+.est-categories .kat-count { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 10px; border-radius: 999px; background: var(--kat-accent-bg); color: var(--kat-accent); font-size: 15px; font-weight: 600; }
+.est-categories .kat-toolbar { display: flex; align-items: center; gap: 8px; margin-top: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--kat-border); flex-wrap: wrap; }
+.est-categories .kat-search { position: relative; display: block; flex: 1 1 240px; min-width: 0; }
+.est-categories .kat-search > svg { position: absolute; left: 14px; top: 14px; width: 20px; height: 20px; color: var(--kat-muted); }
+.est-categories .kat-search input { width: 100%; height: 48px; padding: 0 14px 0 44px; font: inherit; font-size: 16px; color: var(--kat-text); background: var(--kat-field-bg); border: 1px solid var(--kat-border); border-radius: 12px; outline: none; }
+.est-categories .kat-search input:focus { outline: 2px solid var(--kat-accent); outline-offset: 3px; }
+.est-categories .kat-link { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 500; color: var(--kat-accent); background: transparent; border: 0; border-left: 1px solid var(--kat-border); border-radius: 0; cursor: pointer; transform: none; }
+.est-categories .kat-link svg { width: 18px; height: 18px; }
+.est-categories .kat-link:hover { color: var(--kat-accent-hover); transform: none; }
+.est-categories .kat-tree { margin-top: 4px; }
+.est-categories .kat-galaz { list-style: none; padding: 0; margin: 0; }
+.est-categories .kat-galaz .kat-galaz { display: none; margin-left: 20px; padding-left: 20px; border-left: 2px dashed var(--kat-border); }
+.est-categories .kat-galaz[data-poziom="4"], .est-categories .kat-galaz[data-poziom="5"], .est-categories .kat-galaz[data-poziom="6"] { margin-left: 8px; padding-left: 10px; }
+.est-categories .kat-wezel.kat-otwarte > .kat-galaz { display: block; }
+.est-categories .kat-wezel.kat-ukryty { display: none; }
+.est-categories .kat-wiersz { position: relative; display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 6px 0; border-bottom: 1px solid var(--kat-border); }
+.est-categories .kat-wezel:last-child > .kat-wiersz { border-bottom: 0; }
+.est-categories .kat-wezel.kat-dopasowany > .kat-wiersz { background: var(--kat-accent-bg); border-radius: 10px; padding-left: 6px; padding-right: 6px; }
+.est-categories .kat-chevron-btn { display: grid; place-items: center; flex: 0 0 32px; width: 32px; height: 44px; border: 0; background: transparent; color: var(--kat-text); cursor: pointer; border-radius: 8px; transform: none; }
+.est-categories .kat-chevron-btn svg { width: 18px; height: 18px; transition: transform .12s; }
+.est-categories .kat-otwarte > .kat-wiersz .kat-chevron-btn svg { transform: rotate(90deg); }
+.est-categories .kat-chevron-btn:hover { background: var(--kat-hover); transform: none; }
+.est-categories .kat-chevron-puste { flex: 0 0 32px; }
+.est-categories .kat-folder { width: 22px; height: 22px; flex: 0 0 22px; color: var(--kat-accent); }
+.est-categories .kat-nazwa { flex: 1; min-width: 0; font-size: 16px; line-height: 24px; overflow-wrap: anywhere; }
+.est-categories .kat-galaz[data-poziom="0"] > .kat-wezel > .kat-wiersz .kat-nazwa { font-weight: 600; }
+.est-categories .kat-dzieci { display: inline-grid; place-items: center; min-width: 28px; height: 26px; padding: 0 8px; border-radius: 999px; background: var(--kat-accent-bg); color: var(--kat-accent); font-size: 14px; font-weight: 600; }
+.est-categories .kat-menu-box { position: relative; flex: 0 0 auto; }
+.est-categories .kat-menu-btn { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--kat-border); border-radius: 10px; background: var(--kat-card); color: var(--kat-text); cursor: pointer; transform: none; }
+.est-categories .kat-menu-btn svg { width: 20px; height: 20px; fill: currentColor; stroke: none; }
+.est-categories .kat-menu-btn:hover, .est-categories .kat-menu-btn[aria-expanded="true"] { background: var(--kat-accent-bg); color: var(--kat-accent); border-color: #e8c9d3; transform: none; }
+.est-categories .kat-menu-btn:focus-visible { outline: 2px solid var(--kat-accent); outline-offset: 3px; }
+.est-categories .kat-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 50; min-width: 200px; padding: 6px; background: var(--kat-card); border: 1px solid var(--kat-border); border-radius: 12px; box-shadow: 0 12px 32px rgba(36, 33, 38, .12); }
+.est-categories .kat-menu.kat-menu-gora { top: auto; bottom: calc(100% + 6px); }
+.est-categories .kat-akcja { display: block; width: 100%; padding: 10px 12px; font: inherit; font-size: 15px; text-align: left; color: var(--kat-text); background: transparent; border: 0; border-radius: 8px; cursor: pointer; transform: none; }
+.est-categories .kat-akcja:hover { background: var(--kat-hover); transform: none; }
+.est-categories .kat-akcja-usun { color: var(--kat-danger); border-top: 1px solid var(--kat-border); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; }
+.est-categories .kat-state { padding: 18px 0; color: var(--kat-muted); font-size: 15px; }
+.est-categories .kat-state strong { color: var(--kat-text); font-weight: 600; }
+.est-categories .kat-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* dialog wyboru miejsca */
+.est-categories .kat-dialog { width: min(580px, 100% - 32px); max-height: calc(100vh - 32px); padding: 24px; border: 0; border-radius: 18px; background: var(--kat-card); color: var(--kat-text); box-shadow: 0 24px 80px rgba(16, 24, 40, .25); display: none; flex-direction: column; gap: 14px; }
+.est-categories .kat-dialog[open] { display: flex; }
+.est-categories .kat-dialog::backdrop { background: rgba(36, 33, 38, .35); }
+.est-categories .kat-dialog-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.est-categories .kat-dialog-head h2 { font-size: 24px; line-height: 32px; font-weight: 700; }
+.est-categories .kat-dialog-head p { color: var(--kat-muted); font-size: 15px; margin-top: 2px; }
+.est-categories .kat-x { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border: 0; border-radius: 12px; background: var(--kat-accent-bg); color: var(--kat-text); cursor: pointer; transform: none; }
+.est-categories .kat-x svg { width: 18px; height: 18px; }
+.est-categories .kat-opcje { overflow-y: auto; min-height: 120px; max-height: 50vh; }
+.est-categories .kat-grupa { padding: 14px 4px 6px; font-size: 15px; font-weight: 600; color: var(--kat-muted); border-top: 1px solid var(--kat-border); margin-top: 6px; }
+/* Globalna reguła `label` aplikacji (wersaliki 13 px, szary, bold, margines) — tu etykieta to wiersz opcji, więc ją zerujemy. */
+.est-categories .kat-opcja { display: flex; align-items: center; gap: 14px; min-height: 52px; margin: 0; padding: 8px 12px 8px calc(12px + var(--glebokosc, 0) * 28px); border-radius: 12px; cursor: pointer; border-bottom: 1px solid var(--kat-border); font-size: 16px; font-weight: 400; color: var(--kat-text); text-transform: none; letter-spacing: 0; }
+.est-categories .kat-search { margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.est-categories .kat-search input { display: block; padding-left: 44px !important; } /* globalna reguła mobilna (≤480 px) nadpisuje padding inputów — lupka nachodziła na tekst */
+/* W dialogu (kolumna flex) szukajka nie może rosnąć — `flex: 1 1 240px` jest dla paska narzędzi; rośnie tylko lista opcji. */
+.est-categories .kat-dialog .kat-search { flex: 0 0 auto; }
+.est-categories .kat-dialog .kat-opcje { flex: 0 1 auto; min-height: 0; }
+.est-categories .kat-opcja:last-child { border-bottom: 0; }
+.est-categories .kat-opcja-glowna { border: 1px solid transparent; border-radius: 12px; margin-bottom: 6px; }
+.est-categories .kat-opcja.kat-wybrana { background: var(--kat-accent-bg); }
+.est-categories .kat-opcja input { width: 22px; height: 22px; margin: 0; accent-color: var(--kat-accent); flex: 0 0 22px; }
+.est-categories .kat-opcja > svg { width: 22px; height: 22px; flex: 0 0 22px; color: var(--kat-accent); }
+.est-categories .kat-opcja-tekst { display: grid; min-width: 0; }
+.est-categories .kat-opcja-tekst strong { font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+.est-categories .kat-opcja-tekst small { font-size: 14px; color: var(--kat-muted); }
+.est-categories .kat-dialog-stopka { display: flex; justify-content: flex-end; gap: 12px; padding-top: 14px; border-top: 1px solid var(--kat-border); }
+@container categories (width < 960px) {
+  .est-categories .kat-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .est-categories .kat-card { padding: 20px; }
+}
+@container categories (width < 420px) {
+  .est-categories .kat-card { padding: 16px; }
+  .est-categories .kat-chevron-btn, .est-categories .kat-chevron-puste { flex-basis: 24px; width: 24px; }
+  .est-categories .kat-folder { display: none; }
+  .est-categories .kat-galaz .kat-galaz { margin-left: 10px; padding-left: 10px; }
+  .est-categories .kat-link { border-left: 0; padding: 0 6px; }
+}
+@media (prefers-reduced-motion: reduce) { .est-categories * { transition: none !important; } }
+body.dark-mode .est-categories { --kat-text: #f8fafc; --kat-muted: #94a3b8; --kat-border: #334155; --kat-card: #1e293b; --kat-field-bg: #0f172a; --kat-accent: #e3a0b2; --kat-accent-hover: #d08a9e; --kat-accent-bg: rgba(184, 112, 128, .2); --kat-hover: #334155; --kat-danger: #f2a1b3; }
+body.dark-mode .est-categories .kat-primary { color: #1e293b; }
+body.dark-mode .est-categories form input.modern-form-control, body.dark-mode .est-categories .kat-search input { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .est-categories .kat-card, body.dark-mode .est-categories .kat-menu { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }

@@ -10967,18 +10967,51 @@ ANALIZA MANAGER
                   </div>
                 </div>
                 
-                <div id="rap_categories" class="section rap_view-section">
-                    <h2>📂 Kategorie Magazynowe</h2>
-                    <div class="rap_card" style="max-width: 800px;">
-                         <form id="rap_cat-form" onsubmit="rap_zapiszKategorie(event)">
-                            <div class="form-grid" style="align-items: end;">
-                                <div><label>Nazwa Kategorii</label><input type="text" id="rap_c_name" required class="modern-form-control" style="margin:0;"></div>
-                                <div><label>Rodzic (Podkategoria dla:)</label><select id="rap_c_parent" class="modern-form-control" style="margin:0;"><option value="">-- Kategoria Główna --</option></select></div>
-                            </div>
-                            <button type="submit" class="btn-primary" style="margin-top:20px; width:auto;">➕ DODAJ KATEGORIĘ</button>
-                         </form>
-                         <div id="rap_tree-container" style="margin-top:30px; border-top: 2px dashed #f1f5f9; padding-top: 20px;">...</div>
+                <!-- Magazyn → Kategorie — redesign 23.10.2026 wg docs/redesign/Estelio_Kategorie_Magazynowe_Lekki_Nowy_2026-10-23.
+                     Tylko oprawa: #rap_cat-form (onsubmit rap_zapiszKategorie), #rap_c_name required, #rap_c_parent (ten sam select
+                     z id kategorii, '' = poziom główny; ukryty pod przyciskiem wyboru), #rap_tree-container, akcje
+                     rap_zmienNazweKategorii / rap_przeniesKategorie / rap_deleteCategory i payloady rap_saveCategory /
+                     rap_editCategory / rap_deleteCategory — bez zmian. Style: /kategorie-magazyn.css, prezentacja
+                     (wybór miejsca, rozwijanie, szukanie, menu „⋯”): /kategorie-magazyn.js. -->
+                <div id="rap_categories" class="section rap_view-section est-categories">
+                  <div class="kat-shell">
+                    <header class="kat-header"><div><h1>Kategorie magazynowe</h1><p>Uporządkuj produkty w kategorie i podkategorie.</p></div></header>
+                    <div class="kat-grid">
+                      <section class="kat-card kat-form-card" aria-labelledby="kat-dodaj-tytul">
+                        <h2 id="kat-dodaj-tytul">Dodaj kategorię</h2>
+                        <form id="rap_cat-form" onsubmit="rap_zapiszKategorie(event)">
+                          <label class="kat-label" for="rap_c_name">Nazwa kategorii</label>
+                          <input type="text" id="rap_c_name" required class="modern-form-control" placeholder="np. Materiały jednorazowe" autocomplete="off">
+                          <label class="kat-label" for="rap_c_parent">Umieść w</label>
+                          <div class="kat-parent-box">
+                            <!-- Dotychczasowy select rodzica (wartość = id kategorii, '' = poziom główny) — nadal czytany przez zapis. -->
+                            <select id="rap_c_parent" class="modern-form-control kat-select-ukryty" tabindex="-1" aria-hidden="true"><option value="">-- Kategoria Główna --</option></select>
+                            <button type="button" class="kat-parent-trigger" data-kat-trigger aria-haspopup="dialog" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v12H3V6Z"/></svg><span data-kat-parent-tekst>Poziom główny</span><svg class="kat-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+                          </div>
+                          <p class="kat-help" data-kat-parent-opis>Kategoria pojawi się bezpośrednio na liście.</p>
+                          <button type="submit" class="kat-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Dodaj kategorię</button>
+                        </form>
+                      </section>
+                      <section class="kat-card kat-list-card" aria-labelledby="kat-lista-tytul">
+                        <div class="kat-list-heading"><h2 id="kat-lista-tytul">Twoje kategorie</h2><span class="kat-count" id="rap_kat-licznik" hidden>0</span></div>
+                        <div class="kat-toolbar">
+                          <label class="kat-search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 6 6"/></svg><span class="kat-sr">Szukaj kategorii</span><input type="search" data-kat-szukaj placeholder="Szukaj kategorii…" autocomplete="off"></label>
+                          <button type="button" class="kat-link" data-kat-rozwin><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>Rozwiń wszystko</button>
+                          <button type="button" class="kat-link" data-kat-zwin><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 15 6-6 6 6"/></svg>Zwiń wszystko</button>
+                        </div>
+                        <p class="kat-help" data-kat-dopasowania hidden></p>
+                        <div id="rap_tree-container" class="kat-tree"><p class="kat-state">Wczytywanie kategorii…</p></div>
+                      </section>
                     </div>
+                  </div>
+                  <!-- Dialog wyboru miejsca (prezentacja): ustawia wartość #rap_c_parent i wysyła 'change'. -->
+                  <dialog class="kat-dialog" data-kat-dialog aria-labelledby="kat-dialog-tytul">
+                    <div class="kat-dialog-head"><div><h2 id="kat-dialog-tytul">Wybierz miejsce kategorii</h2><p>Wybierz kategorię nadrzędną lub poziom główny.</p></div><button type="button" class="kat-x" data-kat-zamknij aria-label="Zamknij"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+                    <label class="kat-search"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 6 6"/></svg><span class="kat-sr">Szukaj kategorii</span><input type="search" data-kat-dialog-szukaj placeholder="Szukaj kategorii…" autocomplete="off"></label>
+                    <div class="kat-opcje" data-kat-opcje></div>
+                    <p class="kat-help" data-kat-brak hidden>Nie znaleziono kategorii. Zmień wyszukiwanie.</p>
+                    <div class="kat-dialog-stopka"><button type="button" class="kat-secondary" data-kat-anuluj>Anuluj</button><button type="button" class="kat-primary kat-primary-auto" data-kat-wybierz>Wybierz miejsce</button></div>
+                  </dialog>
                 </div>
 
                 <div id="rap_logs" class="section rap_view-section">
@@ -30212,7 +30245,7 @@ function rap_zapiszKategorie(e) {
             alert("Błąd: " + res.message);
         }
     }).finally(() => {
-        btn.innerText = "➕ DODAJ KATEGORIĘ"; btn.disabled = false;
+        btn.innerText = "Dodaj kategorię"; btn.disabled = false; // etykieta wg makiety (redesign 23.10.2026); logika bez zmian
     });
 }
 
@@ -30233,14 +30266,24 @@ function rap_renderCategoryTree() {
     });
 
     const esc = (s) => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
-    const guzik = (tytul, znak, onclick, kolor, tlo) => `<button onclick="${onclick}" title="${tytul}" style="margin-left:6px; color:${kolor}; border:none; background:${tlo}; font-weight:bold; cursor:pointer; border-radius:50%; width:24px; height:24px; display:inline-flex; justify-content:center; align-items:center;">${znak}</button>`;
-    const g = n => '<ul style="padding-left:22px; list-style:none; margin:0;">' + n.map(x => `<li style="margin:10px 0;"><div style="display:flex; align-items:center; flex-wrap:wrap; font-size:14px; font-weight:600; color:var(--text-dark);"><b>📂 ${esc(x.name)}</b>`
-        + guzik('Zmień nazwę', '✏️', `rap_zmienNazweKategorii('${x.id}', '${esc(x.name).replace(/'/g, "\\'")}')`, '#6e49df', '#ede9fe')
-        + guzik('Przenieś do innej kategorii', '↪', `rap_przeniesKategorie('${x.id}', '${esc(x.sciezka).replace(/'/g, "\\'")}')`, '#0f766e', '#ccfbf1')
-        + guzik('Usuń', '×', `rap_deleteCategory('${x.id}')`, '#ef4444', '#fee2e2')
-        + '</div>' + (x.children.length ? g(x.children) : '') + '</li>').join('') + '</ul>';
+    // redesign 23.10.2026: te same dane i TE SAME trzy akcje (rap_zmienNazweKategorii / rap_przeniesKategorie /
+    // rap_deleteCategory), inny znacznik: wiersz z chevronem, folderem, nazwą, liczbą podkategorii i menu „⋯”
+    // (akcje w tekstowym panelu). Rozwijanie/szukanie/menu obsługuje /kategorie-magazyn.js.
+    const akcja = (etykieta, onclick, klasa) => `<button type="button" class="kat-akcja${klasa ? ' ' + klasa : ''}" onclick="${onclick}">${etykieta}</button>`;
+    const g = (n, poziom) => '<ul class="kat-galaz" data-poziom="' + poziom + '">' + n.map(x => `<li class="kat-wezel${x.children.length ? ' kat-ma-dzieci' : ''}" data-id="${esc(x.id)}" data-sciezka="${esc(x.sciezka)}" data-nazwa="${esc(x.name)}"><div class="kat-wiersz">`
+        + (x.children.length ? `<button type="button" class="kat-chevron-btn" data-kat-toggle aria-expanded="false" aria-label="Rozwiń ${esc(x.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>` : '<span class="kat-chevron-puste" aria-hidden="true"></span>')
+        + `<svg class="kat-folder" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 3h9v12H3V6Z"/></svg><span class="kat-nazwa">${esc(x.name)}</span>`
+        + (x.children.length ? `<span class="kat-dzieci" title="Podkategorie">${x.children.length}</span>` : '')
+        + `<div class="kat-menu-box"><button type="button" class="kat-menu-btn" data-kat-menu aria-haspopup="true" aria-expanded="false" aria-label="Działania: ${esc(x.name)}"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg></button><div class="kat-menu" hidden>`
+        + akcja('Zmień nazwę', `rap_zmienNazweKategorii('${x.id}', '${esc(x.name).replace(/'/g, "\\'")}')`)
+        + akcja('Przenieś', `rap_przeniesKategorie('${x.id}', '${esc(x.sciezka).replace(/'/g, "\\'")}')`)
+        + akcja('Usuń', `rap_deleteCategory('${x.id}')`, 'kat-akcja-usun')
+        + '</div></div></div>' + (x.children.length ? g(x.children, poziom + 1) : '') + '</li>').join('') + '</ul>';
 
-    c.innerHTML = korzen.length ? g(korzen) : "<span style='color:#64748b;'>Brak kategorii.</span>";
+    const licznik = document.getElementById('rap_kat-licznik');
+    if (licznik) { licznik.textContent = String(rap_categoriesFlat.length); licznik.hidden = false; }
+    c.innerHTML = korzen.length ? g(korzen, 0) : '<p class="kat-state"><strong>Nie ma jeszcze kategorii</strong><br>Dodaj pierwszą w formularzu.</p>';
+    if (window.KATEGORIE_PREZENTACJA && typeof KATEGORIE_PREZENTACJA.poRenderze === 'function') KATEGORIE_PREZENTACJA.poRenderze();
 }
 
 // Zmiana nazwy kategorii/podkategorii — serwer przepisuje ścieżki podkategorii i produktów.
@@ -36816,5 +36859,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="/magazyn-produkt.js?v=__WERSJA_PLIKOW__" defer></script>
 <!-- Pracownicy — oprawa po redesignie 23.10.2026 (selektory zawężone do .est-employees; bez własnego JS) -->
 <link rel="stylesheet" href="/pracownicy.css?v=__WERSJA_PLIKOW__">
+<!-- Magazyn → Kategorie — oprawa po redesignie 23.10.2026 (selektory zawężone do .est-categories) -->
+<link rel="stylesheet" href="/kategorie-magazyn.css?v=__WERSJA_PLIKOW__">
+<script src="/kategorie-magazyn.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>
