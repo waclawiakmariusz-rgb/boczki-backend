@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Estelio — Pracownicy · lekki nowy</title><link rel="stylesheet" href="pracownicy.css"><style>body{margin:0;background:#faf8f5}.demo-notice{font:12px/1.5 system-ui;color:#67616b;text-align:center;padding:8px 16px;border-bottom:1px solid #e7e1de}</style></head><body><div class="demo-notice">Podgląd demonstracyjny · fikcyjne dane · zmiany znikają po odświeżeniu</div>
+<section class="est-employees" aria-label="Pracownicy">
+  <div class="emp-shell">
+    <header class="emp-header">
+      <div><h1>Pracownicy</h1><p>Lista osób biorących udział w sprzedaży.</p></div>
+      <div class="emp-help-wrap">
+        <button type="button" class="emp-help-button" data-help-toggle aria-label="Pomoc: Pracownicy" aria-expanded="false">?</button>
+        <aside class="emp-help" data-help hidden aria-label="Pomoc kontekstowa">
+          <div class="emp-help-heading"><h2>Pracownicy w sprzedaży</h2><button type="button" class="emp-close" data-help-close aria-label="Zamknij pomoc">×</button></div>
+          <p>Tutaj zarządzasz listą osób biorących udział w sprzedaży. Wpisz nazwę osoby i wybierz „Dodaj pracownika”.</p>
+          <a data-help-link hidden>Więcej w pomocy →</a>
+        </aside>
+      </div>
+    </header>
+    <div class="emp-grid">
+      <section class="emp-card emp-add-card">
+        <h2>Dodaj pracownika</h2>
+        <p class="emp-description">Wpisz osobę, którą chcesz dodać do listy.</p>
+        <form data-add-form novalidate>
+          <label class="emp-label">Imię i nazwisko<input name="name" type="text" placeholder="np. Anna Kowalska" autocomplete="off" required data-name></label>
+          <p class="emp-error" data-field-error hidden></p>
+          <button class="emp-primary" type="submit" data-add-button><span aria-hidden="true">＋</span> Dodaj pracownika</button>
+        </form>
+      </section>
+      <section class="emp-card emp-list-card" aria-label="Lista pracowników">
+        <div class="emp-list-heading"><h2 tabindex="-1" data-list-heading>Lista pracowników</h2><span class="emp-count" data-count hidden></span></div>
+        <p class="emp-description">Osoby biorące udział w sprzedaży.</p>
+        <div class="emp-list-state" data-list-state role="status"></div>
+        <button type="button" class="emp-secondary emp-retry" data-retry hidden>Spróbuj ponownie</button>
+        <ul class="emp-list" data-list></ul>
+      </section>
+    </div>
+    <p class="emp-status" data-status role="status" aria-live="polite"></p>
+  </div>
+  <dialog class="emp-dialog" data-dialog aria-label="Potwierdzenie usunięcia pracownika">
+    <form method="dialog" data-remove-form>
+      <div class="emp-dialog-icon" aria-hidden="true">−</div>
+      <h2>Usunąć pracownika?</h2>
+      <p data-remove-question></p>
+      <p class="emp-description" data-remove-impact></p>
+      <p class="emp-error" data-remove-error role="alert" hidden></p>
+      <p class="emp-sr" data-remove-status role="status"></p>
+      <div class="emp-dialog-actions"><button type="button" class="emp-secondary" data-cancel>Anuluj</button><button type="submit" class="emp-danger" data-confirm>Usuń</button></div>
+    </form>
+  </dialog>
+</section>
+
+<script src="pracownicy.js"></script><script src="demo.js"></script></body></html>

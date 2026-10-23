@@ -7746,14 +7746,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-            <div id="setup-pracownicy" class="section">
-			<div class="header"><h1>Pracownicy</h1><span class="pk-slot" data-pomoc="admin.pracownicy" data-pomoc-nazwa="Pracownicy"></span></div>
-			<div class="card">
-			<form onsubmit="dodajDefinicje(event, 'Pracownik')">
-			<label>Imię i Nazwisko:</label>
-			<input type="text" id="def_prac" required>
-			<button type="submit" class="btn-primary">Dodaj</button>
-			</form><div style="margin-top:20px;"><h3>Lista pracowników biorących udział w sprzedaży:</h3><ul id="pracownicy-list" style="list-style:none; padding:0;"></ul></div></div></div>
+            <!-- Pracownicy — redesign 23.10.2026 wg docs/redesign/Estelio_Pracownicy_Lekki_Nowy_2026-10-23. Tylko oprawa:
+                 #def_prac (required), onsubmit="dodajDefinicje(event, 'Pracownik')", #pracownicy-list, usunPracownika() i payloady
+                 add_sales_def / delete_employee bez zmian. Style: /pracownicy.css (selektory zawężone do .est-employees). -->
+            <div id="setup-pracownicy" class="section est-employees">
+              <div class="emp-shell">
+                <header class="emp-header">
+                  <div><div class="emp-title-row"><h1>Pracownicy</h1><span class="pk-slot" data-pomoc="admin.pracownicy" data-pomoc-nazwa="Pracownicy"></span></div><p>Lista osób biorących udział w sprzedaży.</p></div>
+                </header>
+                <div class="emp-grid">
+                  <section class="emp-card emp-add-card" aria-labelledby="emp-dodaj-tytul">
+                    <h2 id="emp-dodaj-tytul">Dodaj pracownika</h2>
+                    <p class="emp-description">Wpisz osobę, którą chcesz dodać do listy.</p>
+                    <form onsubmit="dodajDefinicje(event, 'Pracownik')">
+                      <label class="emp-label" for="def_prac">Imię i nazwisko</label>
+                      <input type="text" id="def_prac" required placeholder="np. Anna Kowalska" autocomplete="off">
+                      <button type="submit" class="emp-primary"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>Dodaj pracownika</button>
+                    </form>
+                  </section>
+                  <section class="emp-card emp-list-card" aria-labelledby="emp-lista-tytul">
+                    <div class="emp-list-heading"><h2 id="emp-lista-tytul">Lista pracowników</h2><span class="emp-count" id="pracownicy-licznik" hidden>0</span></div>
+                    <p class="emp-description">Osoby biorące udział w sprzedaży.</p>
+                    <ul id="pracownicy-list" class="emp-list"><li class="emp-state">Wczytywanie pracowników…</li></ul>
+                  </section>
+                </div>
+              </div>
+            </div>
             
            <div id="setup-sugestie" class="section">
     <div class="header"><h1>🧠 Kreator Sugestii (Cross-selling)</h1><span class="pk-slot" data-pomoc="admin.sugestie" data-pomoc-nazwa="Kreator sugestii"></span></div>
@@ -18162,9 +18180,16 @@ function _renderSalesDictUI(d) {
     // Lista pracowników w kreatorze
     const listPrac = document.getElementById('pracownicy-list');
     if (listPrac) {
+        // redesign 23.10.2026: te same dane i ta sama akcja usunPracownika(imie), inny znacznik wiersza (patrz /pracownicy.css)
+        const licznikPrac = document.getElementById('pracownicy-licznik');
+        if (licznikPrac) { licznikPrac.textContent = String(d.pracownicy.length); licznikPrac.hidden = false; }
         let htmlList = "";
+        if (!d.pracownicy.length) {
+            htmlList = '<li class="emp-empty"><strong>Nie ma jeszcze pracowników</strong><span>Dodaj pierwszą osobę w formularzu.</span></li>';
+        }
         d.pracownicy.forEach(p => {
-            htmlList += `<li style="padding:10px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center;"><span style="font-weight:500;">${p}</span> <button class="btn-delete-small" onclick="usunPracownika('${p}')" style="cursor:pointer; color:red; border:none; background:none; font-weight:bold; font-size:18px;">×</button></li>`;
+            const inicjal = escHtml(String(p).trim().charAt(0).toUpperCase() || '?');
+            htmlList += `<li class="emp-row"><span class="emp-avatar" aria-hidden="true">${inicjal}</span><span class="emp-name">${escHtml(p)}</span><button type="button" class="emp-remove" onclick="usunPracownika('${p}')" aria-label="Usuń pracownika: ${escHtml(p)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Usuń</button></li>`;
         });
         listPrac.innerHTML = htmlList;
     }
@@ -18507,7 +18532,9 @@ document.addEventListener('keydown', function(event) {
         function anulujEdycje() { document.getElementById('edit_sale_id').value = ""; document.getElementById('btn-sell-submit').innerText = "Zarejestruj"; document.getElementById('btn-sell-submit').style.background = "var(--primary)"; document.getElementById('btn-sell-cancel').style.display = "none"; document.querySelector('#sprzedaz form').reset(); document.querySelectorAll('.seller-chip').forEach(c=>c.classList.remove('selected')); }
         //function odswiezSprzedaz() { pobierzSlownikSprzedazy(); fetch(API_URL + "?action=sales_history").then(r => r.json()).then(d => { const t = document.getElementById('sales-history-body'); t.innerHTML = ""; const today = new Date().toLocaleDateString(); d.forEach(r => { let salesDate = new Date(r.data).toLocaleDateString(); if(salesDate === today) { let time = new Date(r.data).toLocaleTimeString().slice(0,5); let details = r.szczegoly ? ` (${r.szczegoly})` : ''; const rowStr = encodeURIComponent(JSON.stringify(r)); t.innerHTML += `<tr><td>${time}</td><td>${r.klient}</td><td>${r.zabieg}${details}</td><td><b style="color:var(--primary)">${r.kwota} zł</b></td><td>${r.sprzedawca}</td><td style="display:flex;gap:5px;"><button class="btn-edit" onclick="edytujSprzedaz('${rowStr}')">✎</button><button class="btn-delete" style="width:40px;height:40px;margin:0;" onclick="ukryjSprzedaz('${r.id}')">×</button></td></tr>`; } }); }); }
         function ukryjSprzedaz(id) { if(confirm("Ukryć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_sale', id, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); odswiezSprzedaz(true);}); }
-        function usunPracownika(imie) { if(confirm("Usunąć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy(true);}); }
+        // Treść pytania wg redesignu 23.10.2026 — skutek sprawdzony w kodzie: delete_employee kasuje wpis z tabeli Pracownicy;
+        // sprzedaże trzymają sprzedawcę jako tekst, więc wcześniejsze zapisy zostają. Logika (confirm → delete_employee) bez zmian.
+        function usunPracownika(imie) { if(confirm("Usunąć pracownika?\n\nCzy chcesz usunąć " + imie + " z listy pracowników?\nOsoba zniknie z listy przy sprzedaży. Wcześniejsze sprzedaże zapisane na tę osobę zostają.")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy(true);}); }
         function toggleDefKat(force) { const s=document.getElementById('def_kat_select'), i=document.getElementById('def_kat_input'); if(force || s.value==='NEW'){s.style.display='none';i.style.display='block';i.value='';} else {i.style.display='none';s.style.display='block';} }
 
 
@@ -36787,5 +36814,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Magazyn → Nowy produkt / Edycja — oprawa po redesignie 23.10.2026 (selektory zawężone do .estelio-inventory) -->
 <link rel="stylesheet" href="/magazyn-produkt.css?v=__WERSJA_PLIKOW__">
 <script src="/magazyn-produkt.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Pracownicy — oprawa po redesignie 23.10.2026 (selektory zawężone do .est-employees; bez własnego JS) -->
+<link rel="stylesheet" href="/pracownicy.css?v=__WERSJA_PLIKOW__">
 </body>
 </html>

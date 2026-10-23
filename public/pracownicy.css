@@ -1,0 +1,56 @@
+/* Administracja → Pracownicy — oprawa „lekki nowy” wg docs/redesign/Estelio_Pracownicy_Lekki_Nowy_2026-10-23.
+   Wyłącznie wygląd; selektory zawężone do .est-employees. Logika (dodajDefinicje, usunPracownika, pobierzSlownikSprzedazy) bez zmian. */
+.est-employees {
+  --emp-text: #242126; --emp-muted: #67616b; --emp-border: #e7e1de; --emp-card: #ffffff; --emp-field-bg: #ffffff;
+  --emp-accent: #842d49; --emp-accent-hover: #70243d; --emp-accent-bg: #f8edf1; --emp-remove: #744555; --emp-remove-hover: #9b2442;
+  container: employees / inline-size; color: var(--emp-text); font-size: 16px; line-height: 1.5; min-width: 0;
+}
+.est-employees *, .est-employees *::before, .est-employees *::after { box-sizing: border-box; }
+.est-employees h1, .est-employees h2, .est-employees p, .est-employees ul { margin: 0; }
+.est-employees svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.est-employees .emp-shell { max-width: 1120px; margin: 0 auto; }
+.est-employees .emp-header { margin-bottom: 24px; }
+.est-employees .emp-title-row { display: flex; align-items: center; gap: 8px; }
+.est-employees h1 { font-size: 28px; line-height: 36px; font-weight: 700; letter-spacing: -.4px; color: var(--emp-text); }
+.est-employees .emp-header p { font-size: 16px; line-height: 24px; color: var(--emp-muted); margin-top: 4px; }
+.est-employees .emp-grid { display: grid; grid-template-columns: 38fr 62fr; gap: 24px; align-items: start; }
+.est-employees .emp-card { background: var(--emp-card); border: 1px solid var(--emp-border); border-radius: 18px; padding: 24px; box-shadow: 0 6px 24px rgba(36, 33, 38, .04); min-width: 0; }
+.est-employees h2 { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--emp-text); }
+.est-employees .emp-description { font-size: 14px; line-height: 20px; color: var(--emp-muted); margin-top: 4px; }
+.est-employees form { margin-top: 20px; }
+.est-employees .emp-label { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--emp-text); margin-bottom: 8px; text-transform: none; letter-spacing: 0; }
+.est-employees form input[type="text"] { width: 100%; height: 48px; padding: 0 14px; font-size: 16px; font-weight: 400; color: var(--emp-text); background: var(--emp-field-bg); border: 1px solid #d9d4d8; border-radius: 12px; box-shadow: none; transform: none; transition: border-color .12s; }
+.est-employees form input[type="text"]::placeholder { color: #9a949c; }
+.est-employees form input[type="text"]:focus { outline: 2px solid var(--emp-accent); outline-offset: 2px; border-color: #d9d4d8; background: var(--emp-field-bg); box-shadow: none; transform: none; }
+.est-employees .emp-primary { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 48px; margin-top: 16px; padding: 0 20px; font: inherit; font-size: 16px; font-weight: 600; color: #fff; background: var(--emp-accent); border: 0; border-radius: 12px; cursor: pointer; text-transform: none; letter-spacing: 0; box-shadow: none; transform: none; transition: background .12s; }
+.est-employees .emp-primary svg { width: 20px; height: 20px; }
+.est-employees .emp-primary:hover { background: var(--emp-accent-hover); transform: none; box-shadow: none; }
+.est-employees .emp-primary:focus-visible { outline: 2px solid var(--emp-accent); outline-offset: 2px; }
+.est-employees .emp-list-heading { display: flex; align-items: center; gap: 10px; }
+.est-employees .emp-count { display: inline-grid; place-items: center; min-width: 32px; height: 32px; padding: 0 10px; border-radius: 999px; background: var(--emp-accent-bg); color: var(--emp-accent); font-size: 15px; font-weight: 600; }
+.est-employees .emp-list { list-style: none; padding: 0; margin-top: 12px; }
+.est-employees .emp-row { display: flex; align-items: center; gap: 16px; min-height: 60px; padding: 10px 0; border-bottom: 1px solid var(--emp-border); }
+.est-employees .emp-row:last-child { border-bottom: 0; }
+.est-employees .emp-avatar { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; background: var(--emp-accent-bg); color: var(--emp-accent); font-size: 16px; font-weight: 600; }
+.est-employees .emp-name { flex: 1; min-width: 0; font-size: 16px; line-height: 24px; overflow-wrap: anywhere; }
+.est-employees .emp-remove { display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto; min-height: 44px; padding: 0 12px; font: inherit; font-size: 15px; font-weight: 500; color: var(--emp-remove); background: transparent; border: 0; border-radius: 10px; cursor: pointer; transform: none; transition: color .12s, background .12s; }
+.est-employees .emp-remove svg { width: 20px; height: 20px; }
+.est-employees .emp-remove:hover { color: var(--emp-remove-hover); background: #fbf3f5; transform: none; }
+.est-employees .emp-remove:focus-visible { outline: 2px solid var(--emp-accent); outline-offset: 2px; }
+.est-employees .emp-state, .est-employees .emp-empty { padding: 18px 0; color: var(--emp-muted); font-size: 15px; list-style: none; }
+.est-employees .emp-empty strong { display: block; color: var(--emp-text); font-size: 16px; font-weight: 600; margin-bottom: 2px; }
+@container employees (width < 900px) {
+  .est-employees .emp-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .est-employees .emp-card { padding: 20px; }
+}
+@container employees (width < 340px) {
+  .est-employees .emp-card { padding: 16px; }
+  .est-employees .emp-row { gap: 10px; }
+  .est-employees .emp-remove { padding: 0 8px; }
+}
+@media (prefers-reduced-motion: reduce) { .est-employees * { transition: none !important; } }
+body.dark-mode .est-employees { --emp-text: #f8fafc; --emp-muted: #94a3b8; --emp-border: #334155; --emp-card: #1e293b; --emp-field-bg: #0f172a; --emp-accent: #e3a0b2; --emp-accent-hover: #d08a9e; --emp-accent-bg: rgba(184, 112, 128, .2); --emp-remove: #e3a0b2; --emp-remove-hover: #f2bccb; }
+body.dark-mode .est-employees .emp-primary { color: #1e293b; }
+body.dark-mode .est-employees .emp-remove:hover { background: #334155; }
+body.dark-mode .est-employees form input[type="text"] { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .est-employees .emp-card { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }
