@@ -1,0 +1,32 @@
+{
+  "nazwa": "rabaty",
+  "sekcja": "sekcja-kreator-rabatow",
+  "korzen": "#sekcja-kreator-rabatow",
+  "przechwyc": ["add_discount_def"],
+  "opoznienieAtrapy": 600,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "zrzut": "pusty" },
+    { "wpisz": "#rabat-nazwa", "wartosc": "Stała klientka" },
+    { "wpisz": "#rabat-wartosc", "wartosc": "10" },
+    { "czekaj": 200 },
+    { "js": "document.querySelector('.rb-podglad').innerText.replace(/\\s+/g,' ').trim()", "opis": "podgląd" },
+    { "zrzut": "wypelniony-procent" },
+    { "kliknij": "button[onclick='zapiszDefinicjeRabatu()']", "dwuklik": true },
+    { "czekaj": 200 },
+    { "js": "document.querySelector('button[onclick=\"zapiszDefinicjeRabatu()\"]').disabled", "opis": "przycisk zablokowany w trakcie zapisu" },
+    { "zrzut": "w-trakcie-zapisu" },
+    { "czekaj": 1200 },
+    { "sprawdz": "window.__proba.posty.length === 1", "opis": "jeden POST przy dwukliku" },
+    { "sprawdz": "window.__proba.posty[0].typ === 'PROCENT' && window.__proba.posty[0].wartosc === '10'", "opis": "payload PROCENT 10" },
+    { "kliknij": "input[name='rb-typ-segment'][value='KWOTA']" },
+    { "wpisz": "#rabat-nazwa", "wartosc": "Bon 50" },
+    { "wpisz": "#rabat-wartosc", "wartosc": "50" },
+    { "czekaj": 200 },
+    { "sprawdz": "document.getElementById('rabat-typ').value === 'KWOTA'", "opis": "segment ustawia select rabat-typ" },
+    { "zrzut": "wypelniony-kwota" },
+    { "ciemny": true }, { "zrzut": "ciemny" }, { "ciemny": false },
+    { "viewport": [390, 844] }, { "zrzut": "telefon" }, { "pomiar": true },
+    { "viewport": [320, 640] }, { "pomiar": true }
+  ]
+}

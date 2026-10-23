@@ -1,0 +1,29 @@
+{
+  "nazwa": "przyjecie-towaru",
+  "sekcja": "nowy",
+  "korzen": "#nowy",
+  "przechwyc": ["add"],
+  "opoznienieAtrapy": 800,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "zrzut": "pusty" },
+    { "wybierz": "#n_firma", "wartosc": "1", "opis": "pierwsza marka ze słownika" },
+    { "czekaj": 300 },
+    { "wybierz": "#n_model", "wartosc": "1", "opis": "pierwszy model" },
+    { "czekaj": 300 },
+    { "wpisz": "#n_ilosc", "wartosc": "6" },
+    { "wpisz": "#n_netto", "wartosc": "80.00" },
+    { "wpisz": "#n_brutto", "wartosc": "98.40" },
+    { "wpisz": "#n_waznosc", "wartosc": "2027-12-31" },
+    { "czekaj": 300 },
+    { "sprawdz": "document.querySelector('[data-podsumowanie=suma]').textContent === '590,40 zł'", "opis": "podsumowanie 6 × 98,40" },
+    { "zrzut": "referencyjny" },
+    { "kliknij": "#nowy [data-krok='1']" },
+    { "sprawdz": "document.querySelector('[data-podsumowanie=suma]').textContent === '688,80 zł'", "opis": "po + : 7 × 98,40" },
+    { "kliknij": "#nowy [data-krok='-1']" },
+    { "kliknij": "#nowy button[type=submit]", "dwuklik": true },
+    { "czekaj": 200 }, { "zrzut": "w-trakcie-zapisu" }, { "czekaj": 1500 },
+    { "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].kategoria === 'Detal'", "opis": "jeden POST, kategoria Detal" },
+    { "viewport": [390, 844] }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

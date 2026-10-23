@@ -13,3 +13,6 @@ design/
 memory-backup/
 .env.test
 .env.*.local
+
+# wyniki prob ekranu (zrzuty, raporty) — lokalne
+proby-wyniki/
