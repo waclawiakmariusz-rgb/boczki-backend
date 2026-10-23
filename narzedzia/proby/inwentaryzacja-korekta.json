@@ -1,0 +1,31 @@
+{
+  "nazwa": "inwentaryzacja-korekta",
+  "modul": "Kosmetyki",
+  "opis": "Inwentaryzacja: filtry, wyszukiwarka, korekta stanu +1 pierwszej grupy — payload action:update z delta (zapis przechwycony)",
+  "sekcja": "inwentaryzacja",
+  "korzen": "#inwentaryzacja",
+  "przechwyc": ["update"],
+  "opoznienieAtrapy": 400,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 1500 },
+    { "zrzut": "lista" },
+    { "kliknij": "button[onclick=\"filtrujInwentaryzacje('Detal', this)\"]" },
+    { "czekaj": 400 },
+    { "zrzut": "filtr-detal" },
+    { "kliknij": "button[onclick=\"filtrujInwentaryzacje('Wszystkie', this)\"]" },
+    { "js": "document.querySelectorAll('#lista-inv button[onclick*=zmienGrupowo]').length", "opis": "przycisków korekty (+/−) w liście" },
+    { "js": "(document.querySelector('#lista-inv button[onclick*=zmienGrupowo]').closest('div, tr, li')||{innerText:''}).innerText.replace(/\\s+/g,' ').trim().slice(0,120)", "opis": "pierwsza grupa przed korektą" },
+    { "kliknij": "#lista-inv button[onclick*=zmienGrupowo]" },
+    { "czekaj": 900 },
+    { "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].action === 'update'", "opis": "jeden POST action:update po kliknięciu korekty" },
+    { "js": "JSON.stringify(window.__proba.posty[0] || null)", "opis": "payload korekty (id, delta ilosc, opis)" },
+    { "js": "JSON.stringify({alerty: window.__proba.alerty, confirmy: window.__proba.confirmy})", "opis": "alerty / pytania" },
+    { "zrzut": "po-korekcie" },
+    { "wpisz": "#szukaj-inv", "wartosc": "Kolagen" },
+    { "js": "typeof szukajWInwentaryzacji === 'function' && szukajWInwentaryzacji(); 'ok'" },
+    { "czekaj": 400 },
+    { "zrzut": "szukaj-kolagen" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

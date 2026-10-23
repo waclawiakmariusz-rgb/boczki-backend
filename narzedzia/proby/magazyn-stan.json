@@ -1,0 +1,26 @@
+{
+  "nazwa": "magazyn-stan",
+  "modul": "Kosmetyki",
+  "opis": "Stan Magazynowy: filtry Profesja/Detal, wyszukiwarka, telefon (tylko odczyt)",
+  "sekcja": "magazyn",
+  "korzen": "#magazyn",
+  "przechwyc": [],
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 1500 },
+    { "js": "document.querySelectorAll('#tabela-body tr').length", "opis": "wierszy w tabeli" },
+    { "zrzut": "wszystkie" },
+    { "kliknij": "button[onclick=\"filtrujMagazyn('Detal', this)\"]" },
+    { "czekaj": 400 },
+    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].filter(r => r.offsetParent !== null).every(r => /DETAL/i.test(r.innerText))", "opis": "po filtrze Detal widać tylko Detal" },
+    { "zrzut": "filtr-detal" },
+    { "kliknij": "button[onclick=\"filtrujMagazyn('Wszystkie', this)\"]" },
+    { "wpisz": "#szukaj-magazyn", "wartosc": "Kolagen" },
+    { "js": "szukajWMagazynie(); [...document.querySelectorAll('#tabela-body tr')].filter(r => r.offsetParent !== null).length", "opis": "widocznych wierszy po wpisaniu „Kolagen”" },
+    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].filter(r => r.offsetParent !== null).every(r => /Kolagen/i.test(r.innerText))", "opis": "wyszukiwarka zostawia tylko pasujące" },
+    { "zrzut": "szukaj-kolagen" },
+    { "wpisz": "#szukaj-magazyn", "wartosc": "" },
+    { "js": "szukajWMagazynie(); 'ok'" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

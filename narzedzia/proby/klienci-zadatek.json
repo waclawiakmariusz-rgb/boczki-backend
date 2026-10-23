@@ -1,0 +1,30 @@
+{
+  "nazwa": "klienci-zadatek",
+  "modul": "Klienci",
+  "opis": "Zadatek: otwarcie okna wpłaty z profilu pierwszej klientki, kwota 100 zł, payload manage_deposit (zapis przechwycony)",
+  "sekcja": "klient-profil",
+  "korzen": "#klient-profil",
+  "przechwyc": ["manage_deposit"],
+  "opoznienieAtrapy": 500,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 2000 },
+    { "js": "(function(){ const el=[...document.querySelectorAll('#klient-profil [onclick]')].find(e => /otworzProfil|pokazProfil|wybierzKlienta|otworzKlienta/.test(e.getAttribute('onclick'))); if(el){ el.click(); return el.getAttribute('onclick').slice(0,60); } return 'brak przycisku profilu'; })()", "opis": "wejście w profil pierwszej klientki" },
+    { "czekaj": 1500 },
+    { "zrzut": "profil-klientki" },
+    { "js": "otworzWplateZadatku(); 'ok'" },
+    { "czekaj": 500 },
+    { "sprawdz": "getComputedStyle(document.getElementById('deposit-overlay')).display !== 'none'", "opis": "okno wpłaty zadatku otwarte" },
+    { "wpisz": "#dep_cel", "wartosc": "Zabieg testowy" },
+    { "wpisz": "#dep_kwota", "wartosc": "100" },
+    { "wybierz": "#dep_seller_add_select", "wartosc": "1", "opis": "pierwszy pracownik odpowiedzialny za zadatek" },
+    { "czekaj": 300 },
+    { "zrzut": "okno-zadatku" },
+    { "kliknij": "#deposit-overlay button[type=submit]" },
+    { "czekaj": 1200 },
+    { "js": "JSON.stringify({posty: window.__proba.posty, alerty: window.__proba.alerty})", "opis": "payload manage_deposit / alerty" },
+    { "sprawdz": "window.__proba.posty.length === 1 && String(window.__proba.posty[0].kwota) === '100'", "opis": "jeden POST manage_deposit z kwotą 100" },
+    { "zrzut": "po-zapisie" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

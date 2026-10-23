@@ -1,0 +1,26 @@
+{
+  "nazwa": "sprzedaz-rejestracja",
+  "modul": "Sprzedaż",
+  "opis": "Dodanie Sprzedaży: klientka, wiersz z kosmetykiem, sprzedawca, próba rejestracji — payload add_multi_sale albo walidacja (zapis przechwycony)",
+  "sekcja": "sprzedaz",
+  "korzen": "#sprzedaz",
+  "przechwyc": ["add_multi_sale", "add_sale"],
+  "opoznienieAtrapy": 500,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 2000 },
+    { "zrzut": "pusty" },
+    { "wpisz": "#multi_klient", "wartosc": "Anna Nowak" },
+    { "czekaj": 800 },
+    { "zrzut": "podpowiedzi-klientki" },
+    { "js": "dodajNowyWiersz('Kosmetyk'); document.querySelectorAll('#items-container .item-prod').length", "opis": "wierszy pozycji po dodaniu" },
+    { "js": "(function(){ const p=document.querySelector('#items-container .item-prod'); if(!p) return 'brak'; if(p.tagName==='SELECT'){ p.selectedIndex = p.options.length > 1 ? 1 : 0; p.dispatchEvent(new Event('change',{bubbles:true})); return p.value; } p.value='Kolagen'; p.dispatchEvent(new Event('input',{bubbles:true})); return p.value; })()", "opis": "wybrany produkt" },
+    { "js": "(function(){ const q=document.querySelector('#items-container .item-qty'); if(q){ q.value='1'; q.dispatchEvent(new Event('input',{bubbles:true})); } const s=document.querySelector('#seller-grid .seller-chip'); if(s) s.click(); return document.getElementById('total-sum') ? document.getElementById('total-sum').innerText : '?'; })()", "opis": "suma po wyborze" },
+    { "zrzut": "wypelniona" },
+    { "kliknij": "button[onclick='wyslijMultiSprzedaz()']" },
+    { "czekaj": 1200 },
+    { "js": "JSON.stringify({posty: window.__proba.posty.map(p => ({action: p.action, pozycji: (p.items||p.pozycje||[]).length})), alerty: window.__proba.alerty, confirmy: window.__proba.confirmy})", "opis": "co się stało po kliknięciu ZAREJESTRUJ" },
+    { "zrzut": "po-rejestracji" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

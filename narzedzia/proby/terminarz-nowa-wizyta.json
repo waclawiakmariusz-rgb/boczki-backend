@@ -1,0 +1,27 @@
+{
+  "nazwa": "terminarz-nowa-wizyta",
+  "modul": "Terminarz",
+  "opis": "Terminarz: siatka dnia, kreator nowej wizyty (krok 1: szukanie klientki), telefon — bez zapisu wizyty",
+  "sekcja": "terminarz",
+  "czekajPoSekcji": 4500,
+  "korzen": "#trm-root",
+  "przechwyc": [],
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "sprawdz": "!!window.TRM && !!document.querySelector('#trm-root') && document.querySelector('#trm-root').children.length > 0", "opis": "Terminarz się wyrenderował" },
+    { "js": "TRM.data", "opis": "dzień siatki" },
+    { "zrzut": "siatka-dnia" },
+    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 10:00' }); 'ok'" },
+    { "czekaj": 900 },
+    { "sprawdz": "!!document.getElementById('trm-k-fraza')", "opis": "kreator nowej wizyty otwarty (krok 1)" },
+    { "zrzut": "kreator-krok1" },
+    { "wpisz": "#trm-k-fraza", "wartosc": "an" },
+    { "js": "TRM.nowaSzukaj('an'); 'ok'" },
+    { "czekaj": 1500 },
+    { "js": "(document.getElementById('trm-k-wyniki')||{innerText:'brak'}).innerText.replace(/\\s+/g,' ').trim().slice(0,160)", "opis": "wyniki szukania klientki" },
+    { "zrzut": "kreator-wyniki" },
+    { "klawisz": "Escape" },
+    { "czekaj": 500 },
+    { "viewport": [390, 844] }, { "czekaj": 1200 }, { "zrzut": "telefon-siatka" }, { "pomiar": true }
+  ]
+}

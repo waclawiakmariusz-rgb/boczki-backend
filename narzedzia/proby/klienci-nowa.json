@@ -1,0 +1,33 @@
+{
+  "nazwa": "klienci-nowa",
+  "modul": "Klienci",
+  "opis": "Nowa klientka: okno, dane, zgoda RODO, payload add_client (zapis przechwycony); lista i wyszukiwarka klientek",
+  "sekcja": "klient-profil",
+  "korzen": "#klient-profil",
+  "przechwyc": ["add_client"],
+  "opoznienieAtrapy": 500,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 2000 },
+    { "zrzut": "lista-klientek" },
+    { "wpisz": "#szukaj-klienta-profil", "wartosc": "an" },
+    { "js": "typeof filtrujListeKlientow === 'function' && filtrujListeKlientow(); 'ok'" },
+    { "czekaj": 400 },
+    { "zrzut": "szukaj-an" },
+    { "js": "otworzPopupNowyKlient(); 'ok'" },
+    { "czekaj": 400 },
+    { "sprawdz": "getComputedStyle(document.getElementById('new-client-overlay')).display !== 'none'", "opis": "okno nowej klientki otwarte" },
+    { "wpisz": "#nk_nazwa", "wartosc": "Testowa Klientka" },
+    { "wpisz": "#nk_telefon", "wartosc": "500 100 200" },
+    { "wpisz": "#nk_email", "wartosc": "testowa@przyklad.pl" },
+    { "kliknij": "#nk_zgoda" },
+    { "wpisz": "#nk_data_podpisu", "wartosc": "2026-10-23" },
+    { "zrzut": "okno-wypelnione" },
+    { "kliknij": "#new-client-overlay button[type=submit]" },
+    { "czekaj": 1200 },
+    { "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].action === 'add_client'", "opis": "jeden POST add_client" },
+    { "js": "JSON.stringify(window.__proba.posty[0] || window.__proba.alerty)", "opis": "payload / alerty" },
+    { "zrzut": "po-zapisie" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

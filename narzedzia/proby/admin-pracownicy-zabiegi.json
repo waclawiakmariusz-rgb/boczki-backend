@@ -1,0 +1,32 @@
+{
+  "nazwa": "admin-pracownicy-zabiegi",
+  "modul": "Administracja",
+  "opis": "Pracownicy i Zabiegi: dodanie pracownika i nowego zabiegu z nową kategorią — payloady add_sales_def (zapis przechwycony)",
+  "sekcja": "setup-pracownicy",
+  "korzen": ".section.active",
+  "przechwyc": ["add_sales_def"],
+  "opoznienieAtrapy": 400,
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 1500 },
+    { "zrzut": "pracownicy" },
+    { "wpisz": "#def_prac", "wartosc": "Testowy Pracownik" },
+    { "kliknij": "#setup-pracownicy form button[type=submit]" },
+    { "czekaj": 900 },
+    { "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].action === 'add_sales_def'", "opis": "POST add_sales_def dla pracownika" },
+    { "js": "JSON.stringify(window.__proba.posty[0] || window.__proba.alerty)", "opis": "payload pracownika" },
+    { "pokaz": "setup-zabiegi", "czekajPo": 1500 },
+    { "zrzut": "zabiegi" },
+    { "wybierz": "#def_kat_select", "wartosc": "NEW" },
+    { "wpisz": "#def_kat_input", "wartosc": "Kategoria testowa" },
+    { "wpisz": "#def_war", "wartosc": "Wariant A" },
+    { "wpisz": "#def_cena", "wartosc": "150" },
+    { "zrzut": "zabieg-wypelniony" },
+    { "kliknij": "#btn-zabieg-submit" },
+    { "czekaj": 900 },
+    { "js": "JSON.stringify({posty: window.__proba.posty.map(p => ({action:p.action, typ:p.typ, kategoria:p.kategoria, wariant:p.wariant, cena:p.cena, nazwa:p.nazwa})), alerty: window.__proba.alerty})", "opis": "payloady" },
+    { "sprawdz": "window.__proba.posty.length === 2", "opis": "dwa POST-y: pracownik + zabieg" },
+    { "zrzut": "po-zapisie" },
+    { "viewport": [390, 844] }, { "czekaj": 500 }, { "zrzut": "telefon" }, { "pomiar": true }
+  ]
+}

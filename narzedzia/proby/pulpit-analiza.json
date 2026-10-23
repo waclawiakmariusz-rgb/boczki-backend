@@ -1,0 +1,22 @@
+{
+  "nazwa": "pulpit-analiza",
+  "modul": "Pulpit i Analiza",
+  "opis": "Pulpit, Raport dzienny (podsumowanie) i Zebranie: render bez błędów JS, licznik zapytań do API (strażnik pętli), telefon",
+  "sekcja": "pulpit",
+  "korzen": ".section.active",
+  "przechwyc": [],
+  "kroki": [
+    { "viewport": [1663, 946] },
+    { "czekaj": 1500 },
+    { "js": "window.__apiStart = performance.getEntriesByType('resource').filter(r => /\\/api/.test(r.name)).length", "opis": "zapytań do API na starcie" },
+    { "zrzut": "pulpit" },
+    { "pokaz": "podsumowanie", "czekajPo": 3000 },
+    { "zrzut": "raport-dzienny" },
+    { "pokaz": "odprawa", "czekajPo": 3000 },
+    { "zrzut": "zebranie" },
+    { "js": "performance.getEntriesByType('resource').filter(r => /\\/api/.test(r.name)).length - window.__apiStart", "opis": "zapytań do API za trzy ekrany" },
+    { "sprawdz": "performance.getEntriesByType('resource').filter(r => /\\/api/.test(r.name)).length - window.__apiStart < 60", "opis": "mniej niż 60 zapytań za 3 ekrany (brak pętli renderu)" },
+    { "pokaz": "pulpit", "czekajPo": 1500 },
+    { "viewport": [390, 844] }, { "czekaj": 800 }, { "zrzut": "pulpit-telefon" }, { "pomiar": true }
+  ]
+}
