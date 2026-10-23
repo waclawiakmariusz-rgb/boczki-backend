@@ -1,0 +1,76 @@
+/* Rabaty (Administracja) — oprawa „lekki nowy” wg docs/redesign/Estelio_Rabaty_Lekki_Nowy_2026-10-22.
+   Wyłącznie wygląd; selektory zawężone do .estelio-discounts. Logika (zapiszDefinicjeRabatu, zaladujRabaty) bez zmian. */
+.estelio-discounts {
+  --rb-text: #242126; --rb-muted: #67616b; --rb-border: #e7e1de; --rb-field-border: #d9d4d8; --rb-card: #ffffff;
+  --rb-primary: #842d49; --rb-primary-hover: #70243d; --rb-akcent-bg: #f8edf1; --rb-segment-bg: #f7f5f6; --rb-podglad-bg: #f7f6f5;
+  container: discounts / inline-size; color: var(--rb-text); font-size: 16px; line-height: 1.4; min-width: 0;
+}
+.estelio-discounts *, .estelio-discounts *::before, .estelio-discounts *::after { box-sizing: border-box; }
+.estelio-discounts h1, .estelio-discounts h2, .estelio-discounts p { margin: 0; }
+.estelio-discounts svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.estelio-discounts .rb-content { max-width: 1120px; margin: 0 auto; }
+.estelio-discounts .rb-head { margin-bottom: 28px; }
+.estelio-discounts .rb-okruszek { font-size: 14px; line-height: 20px; color: var(--rb-muted); margin-bottom: 6px; }
+.estelio-discounts .rb-title-row { display: flex; align-items: center; gap: 8px; }
+.estelio-discounts h1 { font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: -.4px; color: var(--rb-text); }
+.estelio-discounts .rb-opis, .estelio-discounts .rb-pomoc { font-size: 13px; line-height: 19px; color: var(--rb-muted); }
+.estelio-discounts .rb-head .rb-opis { font-size: 16px; line-height: 24px; margin-top: 4px; }
+.estelio-discounts .rb-layout { display: grid; grid-template-columns: 54fr 46fr; gap: 24px; align-items: start; }
+.estelio-discounts .rb-card { background: var(--rb-card); border: 1px solid var(--rb-border); border-radius: 18px; padding: 26px; box-shadow: 0 4px 18px rgba(45, 30, 35, .04); min-width: 0; }
+.estelio-discounts .rb-card h2 { font-size: 20px; line-height: 28px; font-weight: 600; color: var(--rb-text); }
+.estelio-discounts .rb-card > .rb-opis { margin-top: 2px; font-size: 14px; line-height: 20px; }
+.estelio-discounts .rb-field { margin-top: 22px; border: 0; padding: 0; min-width: 0; }
+.estelio-discounts .rb-field label, .estelio-discounts .rb-field legend { display: block; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--rb-text); margin-bottom: 8px; text-transform: none; letter-spacing: 0; padding: 0; }
+.estelio-discounts .rb-field input.form-control { width: 100%; min-height: 44px; height: 44px; padding: 0 14px; font-size: 16px; font-weight: 400; color: var(--rb-text); background: #fff; border: 1px solid var(--rb-field-border); border-radius: 10px; box-shadow: none; transform: none; transition: border-color .12s; }
+.estelio-discounts .rb-field input.form-control:focus { outline: 2px solid var(--rb-primary); outline-offset: 2px; border-color: var(--rb-field-border); background: #fff; box-shadow: none; transform: none; }
+.estelio-discounts .rb-field input.form-control::placeholder { color: #9a949c; }
+.estelio-discounts .rb-pomoc { margin-top: 6px; }
+.estelio-discounts .rb-segmenty { display: grid; grid-template-columns: 1fr 1fr; background: var(--rb-segment-bg); border: 1px solid var(--rb-border); border-radius: 10px; padding: 3px; }
+.estelio-discounts .rb-segment { position: relative; display: block; margin: 0; }
+.estelio-discounts .rb-segment input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.estelio-discounts .rb-segment span { display: grid; place-items: center; min-height: 38px; border-radius: 8px; font-size: 15px; font-weight: 500; color: var(--rb-muted); transition: background .12s, color .12s; }
+.estelio-discounts .rb-segment input:checked + span { background: var(--rb-akcent-bg); color: var(--rb-primary); font-weight: 600; }
+.estelio-discounts .rb-segment input:focus-visible + span { outline: 2px solid var(--rb-primary); outline-offset: 2px; }
+.estelio-discounts .rb-ukryty { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); opacity: 0; pointer-events: none; }
+.estelio-discounts .rb-jednostka-wrap { position: relative; }
+.estelio-discounts .rb-jednostka-wrap input.form-control { padding-right: 48px; -moz-appearance: textfield; appearance: textfield; }
+.estelio-discounts .rb-jednostka-wrap input::-webkit-inner-spin-button, .estelio-discounts .rb-jednostka-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.estelio-discounts .rb-jednostka-wrap > span { position: absolute; right: 14px; top: 0; height: 44px; display: grid; place-items: center; font-size: 16px; color: var(--rb-muted); pointer-events: none; }
+.estelio-discounts .rb-podglad { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 22px; padding: 16px; background: var(--rb-podglad-bg); border-radius: 12px; }
+.estelio-discounts .rb-podglad-etykieta { font-size: 13px; line-height: 19px; color: var(--rb-muted); }
+.estelio-discounts .rb-podglad-nazwa { font-size: 16px; line-height: 22px; font-weight: 600; overflow-wrap: anywhere; }
+.estelio-discounts .rb-badge { display: inline-block; flex: 0 0 auto; padding: 6px 12px; background: var(--rb-akcent-bg); color: var(--rb-primary); font-size: 20px; line-height: 26px; font-weight: 600; border-radius: 10px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.estelio-discounts .rb-stopka { display: flex; justify-content: flex-end; margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--rb-border); }
+.estelio-discounts .rb-btn-primary { min-height: 44px; padding: 0 20px; background: var(--rb-primary); color: #fff; font: inherit; font-size: 15px; font-weight: 600; border: 0; border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; width: auto; margin: 0; box-shadow: none; transition: background .12s; transform: none; }
+.estelio-discounts .rb-btn-primary:hover:not(:disabled) { background: var(--rb-primary-hover); transform: none; box-shadow: none; }
+.estelio-discounts .rb-btn-primary:disabled { opacity: .6; cursor: default; }
+.estelio-discounts .rb-btn-primary:focus-visible { outline: 2px solid var(--rb-primary); outline-offset: 2px; }
+.estelio-discounts .rb-lista-naglowek { display: flex; align-items: center; gap: 10px; }
+.estelio-discounts .rb-licznik { display: inline-grid; place-items: center; min-width: 28px; height: 28px; padding: 0 8px; border-radius: 999px; background: #efeceb; color: var(--rb-muted); font-size: 14px; font-weight: 600; }
+.estelio-discounts .rb-wiersze { display: grid; gap: 10px; margin-top: 18px; }
+.estelio-discounts .rb-wiersz { display: flex; align-items: center; gap: 12px; padding: 16px; border: 1px solid var(--rb-border); border-radius: 12px; }
+.estelio-discounts .rb-ikona { display: grid; place-items: center; flex: 0 0 48px; height: 48px; border-radius: 10px; background: var(--rb-akcent-bg); color: var(--rb-primary); }
+.estelio-discounts .rb-ikona svg { width: 20px; height: 20px; }
+.estelio-discounts .rb-wiersz-tekst { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.estelio-discounts .rb-wiersz-tekst strong { font-size: 16px; line-height: 22px; font-weight: 600; overflow-wrap: anywhere; }
+.estelio-discounts .rb-wiersz-tekst small { font-size: 13px; line-height: 19px; color: var(--rb-muted); }
+.estelio-discounts .rb-pusto { padding: 18px 16px; border: 1px dashed var(--rb-border); border-radius: 12px; }
+.estelio-discounts .rb-pusto p:first-child { font-size: 15px; font-weight: 500; }
+.estelio-discounts .rb-lista-stopka { display: flex; align-items: center; gap: 8px; margin-top: 14px; }
+.estelio-discounts .rb-lista-stopka svg { width: 18px; height: 18px; flex: 0 0 18px; }
+@container discounts (width < 920px) {
+  .estelio-discounts .rb-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@container discounts (width < 520px) {
+  .estelio-discounts .rb-card { padding: 20px; }
+  .estelio-discounts .rb-btn-primary { width: 100%; }
+  .estelio-discounts .rb-wiersz { flex-wrap: wrap; }
+  .estelio-discounts .rb-wiersz .rb-badge { margin-left: 60px; }
+}
+@container discounts (width < 340px) {
+  .estelio-discounts .rb-card { padding: 16px; }
+}
+body.dark-mode .estelio-discounts { --rb-text: #f8fafc; --rb-muted: #94a3b8; --rb-border: #334155; --rb-field-border: #334155; --rb-card: #1e293b; --rb-akcent-bg: rgba(184, 112, 128, .2); --rb-segment-bg: #0f172a; --rb-podglad-bg: #0f172a; --rb-primary: #e3a0b2; --rb-primary-hover: #d08a9e; }
+body.dark-mode .estelio-discounts .rb-btn-primary { color: #1e293b; }
+body.dark-mode .estelio-discounts .rb-field input.form-control { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .estelio-discounts .rb-licznik { background: #334155; }

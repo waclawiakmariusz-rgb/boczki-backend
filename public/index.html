@@ -8999,41 +8999,61 @@ document.addEventListener('DOMContentLoaded', () => {
 			<button onclick="pobierzLogi()" class="btn-primary" style="width:auto;">Odśwież</button></div><div class="card"><table class="logs-table"><thead><tr><th>Data</th><th>Kto</th><th>Akcja</th><th>Opis</th></tr></thead><tbody id="logs-list"></tbody></table></div></div>
       
 		
-		<div id="sekcja-kreator-rabatow" class="section" >
-    <h2 style="border-bottom: 2px solid var(--primary); padding-bottom: 10px; margin-bottom: 20px; color: var(--primary);">
-        ✂️ Kreator Rabatów
-    </h2><span class="pk-slot" data-pomoc="admin.rabaty" data-pomoc-nazwa="Kreator rabatów"></span>
-    
-    <div class="card" style="background:white; padding:25px; border-radius:12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px;">
-        <div class="form-group" style="margin-bottom:15px;">
-            <label style="font-weight:bold; display:block; margin-bottom:5px;">Nazwa Rabatu:</label>
-            <input type="text" id="rabat-nazwa" class="form-control" placeholder="np. Urodzinowy, Stały Klient -10%" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-            <small style="color:#666;">Ta nazwa będzie widoczna na liście przy sprzedaży.</small>
-        </div>
-        
-        <div class="form-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom:20px;">
+		<!-- Rabaty — redesign 23.10.2026 wg docs/redesign/Estelio_Rabaty_Lekki_Nowy_2026-10-22. Tylko oprawa:
+		     ID pól (rabat-nazwa, rabat-typ, rabat-wartosc, lista-rabatow-podglad), zapiszDefinicjeRabatu() i zaladujRabaty()
+		     zostają. Segmenty Procentowy/Kwotowy to radio, które ustawiają wartość ukrytego <select id="rabat-typ">
+		     (źródło prawdy dla zapisu). Style: /rabaty.css, prezentacja (segmenty, podgląd): /rabaty.js. -->
+		<div id="sekcja-kreator-rabatow" class="section estelio-discounts">
+    <div class="rb-content">
+        <header class="rb-head">
             <div>
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">Typ Rabatu:</label>
-                <select id="rabat-typ" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-                    <option value="PROCENT">Procentowy (%)</option>
-                    <option value="KWOTA">Kwotowy (PLN)</option>
-                </select>
+                <p class="rb-okruszek" aria-hidden="true">Administracja&nbsp;/&nbsp;Rabaty</p>
+                <div class="rb-title-row"><h1>Rabaty</h1><span class="pk-slot" data-pomoc="admin.rabaty" data-pomoc-nazwa="Rabaty"></span></div>
+                <p class="rb-opis">Przygotuj rabaty dostępne przy sprzedaży.</p>
             </div>
-            <div>
-                <label style="font-weight:bold; display:block; margin-bottom:5px;">Wartość:</label>
-                <input type="number" id="rabat-wartosc" class="form-control" placeholder="np. 15 lub 50" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-            </div>
-        </div>
-        
-        <button onclick="zapiszDefinicjeRabatu()" class="btn-primary" style="width:100%; background:#8b5cf6; color:white; padding:12px; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:16px;">
-            💾 ZAPISZ NOWY RABAT
-        </button>
-    </div>
-
-    <div style="margin-top:30px;">
-        <h3>Aktywne Rabaty:</h3>
-        <div id="lista-rabatow-podglad" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
-            <div style="color:#666; font-style:italic;">Ładowanie listy...</div>
+        </header>
+        <div class="rb-layout">
+            <section class="rb-card rb-form" aria-labelledby="rb-nowy-tytul">
+                <h2 id="rb-nowy-tytul">Nowy rabat</h2>
+                <p class="rb-opis">Podaj nazwę, wybierz typ i ustaw wartość.</p>
+                <div class="rb-field">
+                    <label for="rabat-nazwa">Nazwa rabatu</label>
+                    <input type="text" id="rabat-nazwa" class="form-control" placeholder="Np. Stała klientka" aria-describedby="rb-nazwa-pomoc">
+                    <p class="rb-pomoc" id="rb-nazwa-pomoc">Ta nazwa pojawi się na liście przy sprzedaży.</p>
+                </div>
+                <fieldset class="rb-field rb-typ">
+                    <legend>Typ rabatu</legend>
+                    <div class="rb-segmenty" role="radiogroup" aria-label="Typ rabatu">
+                        <label class="rb-segment"><input type="radio" name="rb-typ-segment" value="PROCENT" checked><span>Procentowy</span></label>
+                        <label class="rb-segment"><input type="radio" name="rb-typ-segment" value="KWOTA"><span>Kwotowy</span></label>
+                    </div>
+                    <!-- Dotychczasowa kontrolka typu — nadal czytana przez zapiszDefinicjeRabatu(); segmenty wyżej ją ustawiają. -->
+                    <select id="rabat-typ" class="form-control rb-ukryty" tabindex="-1" aria-hidden="true">
+                        <option value="PROCENT">Procentowy (%)</option>
+                        <option value="KWOTA">Kwotowy (PLN)</option>
+                    </select>
+                </fieldset>
+                <div class="rb-field">
+                    <label for="rabat-wartosc">Wartość rabatu</label>
+                    <div class="rb-jednostka-wrap"><input type="number" id="rabat-wartosc" class="form-control" placeholder="Np. 10" aria-describedby="rb-wartosc-pomoc"><span data-rb-jednostka aria-hidden="true">%</span></div>
+                    <p class="rb-pomoc" id="rb-wartosc-pomoc" data-rb-wartosc-pomoc>Wpisz wartość procentową rabatu.</p>
+                </div>
+                <div class="rb-podglad" aria-hidden="true">
+                    <div><p class="rb-podglad-etykieta">Podgląd</p><p class="rb-podglad-nazwa" data-rb-podglad-nazwa>Nazwa rabatu</p></div>
+                    <span class="rb-badge" data-rb-podglad-wartosc>—</span>
+                </div>
+                <div class="rb-stopka">
+                    <button type="button" onclick="zapiszDefinicjeRabatu()" class="rb-btn-primary">Dodaj rabat</button>
+                </div>
+            </section>
+            <section class="rb-card rb-lista" aria-labelledby="rb-lista-tytul">
+                <div class="rb-lista-naglowek"><h2 id="rb-lista-tytul">Aktywne rabaty</h2><span class="rb-licznik" id="rabaty-licznik" hidden>0</span></div>
+                <p class="rb-opis">Dostępne do wyboru przy sprzedaży.</p>
+                <div id="lista-rabatow-podglad" class="rb-wiersze">
+                    <p class="rb-pomoc">Wczytywanie rabatów…</p>
+                </div>
+                <p class="rb-pomoc rb-lista-stopka"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>Zapisany rabat pojawi się na tej liście.</p>
+            </section>
         </div>
     </div>
 </div>
@@ -12086,21 +12106,23 @@ function normNumOr0(val) {
         
         // --- NOWOŚĆ: Generowanie podglądu w kreatorze ---
         const container = document.getElementById('lista-rabatow-podglad');
+        const licznik = document.getElementById('rabaty-licznik');
+        if (licznik) { licznik.textContent = String(d.length); licznik.hidden = false; }
         if(container) {
             if(d.length === 0) {
-                container.innerHTML = "Brak zdefiniowanych rabatów.";
+                // redesign 23.10.2026: te same dane, inny znacznik wiersza (patrz /rabaty.css)
+                container.innerHTML = '<div class="rb-pusto"><p>Nie ma jeszcze aktywnych rabatów</p><p class="rb-pomoc">Dodaj pierwszy rabat w formularzu.</p></div>';
             } else {
                 let html = "";
                 d.forEach(r => {
                     let symbol = r.typ === 'PROCENT' ? '%' : ' zł';
-                    let kolor = r.typ === 'PROCENT' ? '#dcfce7' : '#e0f2fe'; // Zielony dla %, Niebieski dla PLN
-                    let tekstKolor = r.typ === 'PROCENT' ? '#166534' : '#0369a1';
-                    
+                    let typTekst = r.typ === 'PROCENT' ? 'Rabat procentowy' : (r.typ === 'KWOTA' ? 'Rabat kwotowy' : escHtml(String(r.typ)));
+
                     html += `
-                    <div style="background:${kolor}; color:${tekstKolor}; padding:15px; border-radius:8px; border:1px solid rgba(0,0,0,0.05);">
-                        <div style="font-weight:bold; font-size:16px;">${r.nazwa}</div>
-                        <div style="font-size:24px; margin-top:5px;">-${r.wartosc}${symbol}</div>
-                        <div style="font-size:12px; opacity:0.8; margin-top:5px;">${r.typ}</div>
+                    <div class="rb-wiersz">
+                        <span class="rb-ikona" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>
+                        <span class="rb-wiersz-tekst"><strong>${escHtml(String(r.nazwa))}</strong><small>${typTekst}</small></span>
+                        <span class="rb-badge">−${escHtml(String(r.wartosc))}${symbol}</span>
                     </div>
                     `;
                 });
@@ -12240,8 +12262,9 @@ function zapiszDefinicjeRabatu() {
         return; 
     }
 
-    // Blokada przycisku na czas zapisu
-    const btn = document.querySelector('#sekcja-kreator-rabatow button');
+    // Blokada przycisku na czas zapisu. Selektor celuje w przycisk zapisu, bo od 22.10 w sekcji jest też
+    // przycisk pomocy „?" (pierwszy <button> w DOM) — ogólny selektor blokowałby pomoc zamiast zapisu.
+    const btn = document.querySelector('#sekcja-kreator-rabatow button[onclick="zapiszDefinicjeRabatu()"]');
     const oldText = btn.innerText;
     btn.innerText = "⏳ Zapisywanie...";
     btn.disabled = true;
@@ -36729,5 +36752,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Przyjęcie towaru — oprawa po redesignie 22.10.2026 (tylko ten jeden ekran; selektory zawężone do .estelio-goods-receipt) -->
 <link rel="stylesheet" href="/przyjecie-towaru.css?v=__WERSJA_PLIKOW__">
 <script src="/przyjecie-towaru.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Rabaty — oprawa po redesignie 23.10.2026 (selektory zawężone do .estelio-discounts) -->
+<link rel="stylesheet" href="/rabaty.css?v=__WERSJA_PLIKOW__">
+<script src="/rabaty.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>
