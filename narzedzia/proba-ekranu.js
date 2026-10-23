@@ -70,6 +70,32 @@ const ZAPIS_WOLNO = ENV.zapisWolno || flaga('zapis-tak');
 // Na produkcji bez --zapis-tak przepuszczamy tylko akcje odczytowe; wszystko inne dostaje odpowiedź-atrapę.
 const ODCZYTY_PROD = /^(login|verify_pin|get_|an_get_|akon_get_|rap_get|tk_list|tk_get|tk_licznik|pref_slownik$|pref_klientki$|pref_wielu$|loj_stan|get_pin_users|get_admin_users|get_targets|odp_getReportData|booksy_preview)/;
 
+// ─── galeria HTML z wyniku (zrzuty z podpisem kroku + tabela) ──────────────
+function galeriaHtml(r) {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const zrzutyKroki = r.kroki.filter(k => k.plik);
+  const fail = r.sprawdzenia.filter(s => s.wynik === 'FAIL').length + r.kroki.filter(k => k.blad).length;
+  const wiersz = (a, b) => `<tr><th>${esc(a)}</th><td>${b}</td></tr>`;
+  return `<!doctype html><html lang="pl"><meta charset="utf-8"><title>Próba: ${esc(r.scenariusz)}</title>
+<style>body{font:15px/1.45 system-ui,sans-serif;margin:0;padding:24px 32px;background:#faf8f5;color:#242126}h1{font-size:24px;margin:0 0 4px}.sub{color:#67616b;margin-bottom:18px}
+.stan{display:inline-block;padding:4px 12px;border-radius:999px;font-weight:600;margin-left:8px}.ok{background:#e6f4ea;color:#1e6b3a}.zle{background:#fdecee;color:#9b1c2e}
+table{border-collapse:collapse;background:#fff;border:1px solid #e7e1de;border-radius:12px;overflow:hidden;margin-bottom:28px}th,td{padding:8px 14px;text-align:left;vertical-align:top;border-bottom:1px solid #eee}th{color:#67616b;font-weight:500;white-space:nowrap}
+.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(480px,1fr));gap:20px}figure{margin:0;background:#fff;border:1px solid #e7e1de;border-radius:14px;overflow:hidden}figure img{display:block;width:100%;height:auto;border-bottom:1px solid #eee}
+figcaption{padding:10px 14px}figcaption b{display:block}figcaption small{color:#67616b}.steps{margin-top:28px;font-size:13px}.steps li{margin:3px 0}.steps .b{color:#9b1c2e}pre{background:#fff;border:1px solid #e7e1de;border-radius:12px;padding:12px;overflow:auto;font-size:12px}</style>
+<h1>Próba: ${esc(r.scenariusz)} <span class="stan ${fail ? 'zle' : 'ok'}">${fail ? fail + ' problem(y)' : 'wszystko OK'}</span></h1>
+<div class="sub">${esc(r.srodowisko)}${r.zapisWolno ? ', zapis wolno' : ', tylko odczyt'} · ${esc(r.czas)}</div>
+<table>${wiersz('POST-y przechwycone', r.nagrane.posty.length + (r.nagrane.posty.length ? ' — ' + esc(r.nagrane.posty.map(p => p.action).join(', ')) : ''))}
+${wiersz('POST-y zablokowane', String(r.nagrane.zablokowane.length))}${wiersz('Alerty', esc(r.nagrane.alerty.join(' | ')) || '—')}${wiersz('Confirm-y', esc(r.nagrane.confirmy.join(' | ')) || '—')}
+${wiersz('Sprawdzenia', r.sprawdzenia.map(s => `<span class="stan ${s.wynik === 'PASS' ? 'ok' : 'zle'}" style="margin:2px 6px 2px 0">${s.wynik}</span>${esc(s.opis)}`).join('<br>') || '—')}
+${wiersz('Błędy JS', r.bledyJS.length ? esc(r.bledyJS.join(' | ')) : 'brak')}</table>
+<div class="g">${zrzutyKroki.map(k => { const i = r.kroki.indexOf(k); const prev = r.kroki.slice(Math.max(0, i - 4), i).filter(p => p.krok.wpisz || p.krok.kliknij || p.krok.wybierz || p.krok.viewport || p.krok.ciemny !== undefined).map(p => esc(JSON.stringify(p.krok)).slice(0, 70)).join(' · ');
+    return `<figure><a href="${esc(k.plik)}" target="_blank"><img src="${esc(k.plik)}" alt="${esc(k.krok.zrzut)}" loading="lazy"></a><figcaption><b>${esc(k.plik)}</b><small>${prev || 'stan początkowy'}</small></figcaption></figure>`; }).join('')}</div>
+<details class="steps"><summary>Wszystkie kroki (${r.kroki.length})</summary><ol>${r.kroki.map(k => `<li class="${k.blad ? 'b' : ''}">${esc(JSON.stringify(k.krok)).slice(0, 120)}${k.wynik !== undefined ? ' → <b>' + esc(typeof k.wynik === 'string' ? k.wynik : JSON.stringify(k.wynik)) + '</b>' : ''}${k.blad ? ' → BŁĄD: ' + esc(k.blad) : ''}</li>`).join('')}</ol></details>
+<details class="steps"><summary>Payloady POST</summary><pre>${esc(JSON.stringify(r.nagrane.posty, null, 2))}</pre></details></html>`;
+}
+// Tryb: --galeria <katalog wyniku> — odbudowuje raport.html z raport.json bez ponownej próby
+if (flaga('galeria')) { const dir = opcja('galeria'); const r = JSON.parse(fs.readFileSync(path.join(dir, 'raport.json'), 'utf8')); fs.writeFileSync(path.join(dir, 'raport.html'), galeriaHtml(r)); console.log('raport.html: ' + path.join(dir, 'raport.html')); process.exit(0); }
+
 const scenariusz = JSON.parse(fs.readFileSync(plikScenariusza, 'utf8'));
 const NAZWA = scenariusz.nazwa || path.basename(plikScenariusza, '.json');
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe';
@@ -187,6 +213,7 @@ const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : 
     '| Zrzuty | ' + zrzuty.join(', ') + ' |', '',
     '## Payloady', '```json', JSON.stringify(raport.nagrane.posty, null, 2), '```'].join('\n');
   fs.writeFileSync(path.join(OUT, 'raport.md'), md);
+  fs.writeFileSync(path.join(OUT, 'raport.html'), galeriaHtml(raport));
   const fail = raport.sprawdzenia.filter(s => s.wynik === 'FAIL').length + raport.kroki.filter(k => k.blad).length;
   console.log('\nWynik: ' + OUT + '\nsprawdzenia FAIL: ' + raport.sprawdzenia.filter(s => s.wynik === 'FAIL').length + ' | kroki z błędem: ' + raport.kroki.filter(k => k.blad).length + ' | błędy JS: ' + bledyJS.length + ' | zrzutów: ' + zrzuty.length);
   ws.close(); ch.kill(); await sleep(800); sprzatnij(); process.exit(fail ? 1 : 0);
