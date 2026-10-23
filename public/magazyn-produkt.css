@@ -1,0 +1,102 @@
+/* Magazyn → Nowy produkt / Edycja — oprawa „lekki nowy” wg docs/redesign/Estelio_Magazyn_Lekki_Nowy_2026-10-21.
+   Wyłącznie wygląd; selektory zawężone do .estelio-inventory. Logika (rap_zapiszProdukt, rap_edit, rap_resetProdForm) bez zmian. */
+.estelio-inventory {
+  --ei-text: #101828; --ei-muted: #667085; --ei-line: #e7e9ee; --ei-border: #d8dce3; --ei-card: #ffffff;
+  --ei-accent: #a54868; --ei-accent-hover: #8f3b58; --ei-accent-bg: #fcf0f4; --ei-field-bg: #ffffff; --ei-suffix-bg: #f5f5f7;
+  container: inventory / inline-size; color: var(--ei-text); font-size: 16px; line-height: 1.4; min-width: 0;
+}
+.estelio-inventory *, .estelio-inventory *::before, .estelio-inventory *::after { box-sizing: border-box; }
+.estelio-inventory h1, .estelio-inventory h2, .estelio-inventory p { margin: 0; }
+.estelio-inventory svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.estelio-inventory .ei-wrap { max-width: 1312px; margin: 0 auto; }
+.estelio-inventory .ei-top nav { display: flex; gap: 8px; font-size: 15px; color: var(--ei-muted); margin-bottom: 10px; }
+.estelio-inventory .ei-top strong { color: var(--ei-accent); font-weight: 500; }
+.estelio-inventory .ei-title-row { display: flex; align-items: center; gap: 8px; }
+.estelio-inventory h1 { font-size: 36px; line-height: 44px; font-weight: 700; letter-spacing: -.8px; color: var(--ei-text); }
+.estelio-inventory .ei-header p { font-size: 19px; line-height: 28px; color: var(--ei-muted); margin-top: 4px; }
+.estelio-inventory .ei-card { margin: 26px 0 0; padding: 30px; background: var(--ei-card); border-radius: 22px; box-shadow: 0 8px 28px rgba(82, 44, 39, .035); }
+.estelio-inventory .ei-section { padding: 0 0 26px; margin-bottom: 26px; border-bottom: 1px solid var(--ei-line); }
+.estelio-inventory .ei-section h2 { display: flex; align-items: center; gap: 16px; font-size: 23px; line-height: 30px; font-weight: 650; letter-spacing: -.4px; margin-bottom: 18px; color: var(--ei-text); }
+.estelio-inventory .ei-section-icon { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 14px; background: var(--ei-accent-bg); color: var(--ei-accent); flex: 0 0 48px; }
+.estelio-inventory .ei-section-icon svg { width: 24px; height: 24px; }
+.estelio-inventory .ei-field { min-width: 0; margin-top: 18px; }
+.estelio-inventory .ei-section > .ei-field:first-of-type { margin-top: 0; }
+.estelio-inventory .ei-field label { display: block; font-size: 16px; line-height: 22px; font-weight: 500; color: var(--ei-text); margin-bottom: 8px; text-transform: none; letter-spacing: 0; }
+.estelio-inventory .ei-optional { color: var(--ei-muted); font-weight: 400; }
+.estelio-inventory .ei-field input.modern-form-control {
+  width: 100%; min-width: 0; height: 56px; padding: 0 18px; font-size: 16px; font-weight: 400; color: var(--ei-text);
+  background: var(--ei-field-bg); border: 1px solid var(--ei-border); border-radius: 12px; box-shadow: none; transform: none; transition: border-color .12s, box-shadow .12s;
+}
+.estelio-inventory .ei-field input.modern-form-control::placeholder { color: #98a2b3; }
+.estelio-inventory .ei-field input.modern-form-control:focus { border-color: var(--ei-accent); box-shadow: 0 0 0 3px rgba(165, 72, 104, .12); background: var(--ei-field-bg); transform: none; outline: none; }
+.estelio-inventory .ei-field input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.estelio-inventory .ei-field input[type="number"]::-webkit-inner-spin-button, .estelio-inventory .ei-field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.estelio-inventory .ei-help { display: block; margin-top: 6px; font-size: 14px; line-height: 20px; color: var(--ei-muted); }
+.estelio-inventory .ei-grid { display: grid; gap: 28px; }
+.estelio-inventory .ei-grid .ei-field { margin-top: 0; }
+.estelio-inventory .ei-grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.estelio-inventory .ei-grid-two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
+.estelio-inventory .ei-input-group { position: relative; display: block; }
+.estelio-inventory .ei-input-group input.modern-form-control { padding-right: 90px; }
+.estelio-inventory .ei-suffix { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 88px; display: grid; place-items: center; border-left: 1px solid var(--ei-border); border-radius: 0 11px 11px 0; background: var(--ei-suffix-bg); color: var(--ei-text); font-size: 16px; pointer-events: none; }
+/* Kategoria: przycisk-wyzwalacz nad ukrytym selectem. Select zostaje w drzewie (required, czytany przez zapis). */
+.estelio-inventory .ei-category-box { position: relative; }
+.estelio-inventory .ei-select-ukryty { position: absolute; inset: 0; width: 100%; height: 56px; opacity: 0; pointer-events: none; margin: 0; }
+.estelio-inventory .ei-category-trigger { position: relative; display: flex; align-items: center; gap: 14px; width: 100%; height: 56px; padding: 0 18px; font: inherit; font-size: 16px; text-align: left; color: var(--ei-text); background: var(--ei-field-bg); border: 1px solid var(--ei-border); border-radius: 12px; cursor: pointer; transition: border-color .12s, box-shadow .12s; transform: none; }
+.estelio-inventory .ei-category-trigger svg { width: 22px; height: 22px; flex: 0 0 22px; color: var(--ei-text); }
+.estelio-inventory .ei-category-trigger span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.estelio-inventory .ei-category-trigger .ei-chevron { transition: transform .12s; }
+.estelio-inventory .ei-category-trigger[aria-expanded="true"] { border-color: var(--ei-accent); box-shadow: 0 0 0 3px rgba(165, 72, 104, .12); }
+.estelio-inventory .ei-category-trigger[aria-expanded="true"] .ei-chevron { transform: rotate(180deg); }
+.estelio-inventory .ei-category-trigger:hover { border-color: #b9bfc9; transform: none; }
+.estelio-inventory .ei-category-trigger:focus-visible { outline: 2px solid var(--ei-accent); outline-offset: 2px; }
+.estelio-inventory .ei-category-trigger .ei-pusta { color: #98a2b3; }
+.estelio-inventory .ei-picker { position: absolute; left: 0; top: calc(100% + 6px); z-index: 60; width: min(760px, 100%); background: var(--ei-card); border: 1px solid var(--ei-line); border-radius: 16px; box-shadow: 0 18px 48px rgba(16, 24, 40, .14); padding: 14px; }
+.estelio-inventory .ei-picker.ei-nad { top: auto; bottom: calc(100% + 6px); }
+.estelio-inventory .ei-search { position: relative; display: block; }
+.estelio-inventory .ei-search > svg { position: absolute; left: 14px; top: 13px; width: 22px; height: 22px; color: var(--ei-muted); }
+.estelio-inventory .ei-search input { width: 100%; height: 48px; padding: 0 14px 0 46px; font: inherit; font-size: 16px; border: 1px solid var(--ei-border); border-radius: 10px; background: var(--ei-field-bg); color: var(--ei-text); outline: none; }
+.estelio-inventory .ei-search input:focus { border-color: var(--ei-accent); box-shadow: 0 0 0 3px rgba(165, 72, 104, .12); }
+.estelio-inventory .ei-options { margin-top: 10px; max-height: min(380px, 50vh); overflow-y: auto; padding-right: 4px; }
+.estelio-inventory .ei-group { display: flex; align-items: center; gap: 12px; padding: 12px 10px 6px; font-size: 17px; font-weight: 650; color: var(--ei-text); border-top: 1px solid var(--ei-line); margin-top: 6px; }
+.estelio-inventory .ei-group:first-child { border-top: 0; margin-top: 0; }
+.estelio-inventory .ei-group svg { width: 22px; height: 22px; color: var(--ei-text); }
+.estelio-inventory .ei-option { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 10px 14px 10px 46px; font: inherit; font-size: 17px; text-align: left; color: var(--ei-text); background: transparent; border: 0; border-radius: 10px; cursor: pointer; transform: none; }
+.estelio-inventory .ei-option.ei-root { padding-left: 14px; font-weight: 600; }
+.estelio-inventory .ei-option:hover, .estelio-inventory .ei-option.ei-aktywna { background: #f6f3f4; transform: none; }
+.estelio-inventory .ei-option[aria-selected="true"] { background: var(--ei-accent-bg); color: var(--ei-accent); font-weight: 600; }
+.estelio-inventory .ei-option svg { width: 20px; height: 20px; flex: 0 0 20px; visibility: hidden; }
+.estelio-inventory .ei-option[aria-selected="true"] svg { visibility: visible; }
+.estelio-inventory .ei-no-results { padding: 14px 10px; color: var(--ei-muted); font-size: 15px; }
+.estelio-inventory .ei-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+.estelio-inventory .ei-footer { display: flex; justify-content: flex-end; gap: 16px; padding-top: 4px; }
+.estelio-inventory .ei-button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 56px; padding: 0 28px; font: inherit; font-size: 17px; font-weight: 600; border-radius: 12px; cursor: pointer; text-transform: none; letter-spacing: 0; width: auto; margin: 0; box-shadow: none; transform: none; transition: background .12s, border-color .12s; }
+.estelio-inventory .ei-button:hover, .estelio-inventory .ei-button:active { transform: none; }
+.estelio-inventory .ei-primary { background: var(--ei-accent); color: #fff; border: 1px solid var(--ei-accent); }
+.estelio-inventory .ei-primary::before { content: ""; width: 18px; height: 18px; background: currentColor; -webkit-mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M12 5v14M5 12h14'/></svg>") center / contain no-repeat; mask: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round'><path d='M12 5v14M5 12h14'/></svg>") center / contain no-repeat; }
+.estelio-inventory.ei-tryb-edycja .ei-primary::before, .estelio-inventory .ei-primary:disabled::before { display: none; }
+.estelio-inventory .ei-primary:hover:not(:disabled) { background: var(--ei-accent-hover); border-color: var(--ei-accent-hover); }
+.estelio-inventory .ei-primary:disabled { opacity: .6; cursor: default; }
+.estelio-inventory .ei-secondary { background: var(--ei-card); color: var(--ei-accent); border: 1px solid var(--ei-accent); }
+.estelio-inventory .ei-secondary:hover { background: var(--ei-accent-bg); }
+.estelio-inventory .ei-button:focus-visible { outline: 2px solid var(--ei-accent); outline-offset: 2px; }
+@container inventory (width < 760px) {
+  .estelio-inventory .ei-grid-three, .estelio-inventory .ei-grid-two { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .estelio-inventory .ei-picker { width: 100%; }
+}
+@container inventory (width < 600px) {
+  .estelio-inventory h1 { font-size: 27px; line-height: 34px; }
+  .estelio-inventory .ei-header p { font-size: 16px; line-height: 24px; }
+  .estelio-inventory .ei-card { padding: 16px; border-radius: 18px; margin-top: 18px; }
+  .estelio-inventory .ei-section h2 { font-size: 19px; line-height: 26px; gap: 12px; }
+  .estelio-inventory .ei-section-icon { width: 40px; height: 40px; flex-basis: 40px; }
+  .estelio-inventory .ei-field input.modern-form-control, .estelio-inventory .ei-category-trigger, .estelio-inventory .ei-select-ukryty { height: 50px; }
+  .estelio-inventory .ei-footer { flex-direction: column-reverse; gap: 12px; }
+  .estelio-inventory .ei-button { min-height: 50px; width: 100%; }
+  .estelio-inventory .ei-options { max-height: 45vh; }
+}
+body.dark-mode .estelio-inventory { --ei-text: #f8fafc; --ei-muted: #94a3b8; --ei-line: #334155; --ei-border: #334155; --ei-card: #1e293b; --ei-field-bg: #0f172a; --ei-suffix-bg: #1e293b; --ei-accent: #e3a0b2; --ei-accent-hover: #d08a9e; --ei-accent-bg: rgba(184, 112, 128, .2); }
+body.dark-mode .estelio-inventory .ei-primary { color: #1e293b; }
+body.dark-mode .estelio-inventory .ei-option:hover, body.dark-mode .estelio-inventory .ei-option.ei-aktywna { background: #334155; }
+body.dark-mode .estelio-inventory .ei-field input.modern-form-control, body.dark-mode .estelio-inventory .ei-search input { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .estelio-inventory .ei-card { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }
