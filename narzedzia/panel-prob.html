@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="pl">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estelio — panel prób</title>
+<style>
+  :root { --tekst:#242126; --mut:#67616b; --ramka:#e7e1de; --akcent:#842d49; --akcent-tlo:#f8edf1; --ok:#1e6b3a; --ok-tlo:#e6f4ea; --zle:#9b1c2e; --zle-tlo:#fdecee; --tlo:#faf8f5; }
+  * { box-sizing:border-box } body { margin:0; font:15px/1.45 system-ui,sans-serif; color:var(--tekst); background:var(--tlo) }
+  header { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px 28px; background:#fff; border-bottom:1px solid var(--ramka); flex-wrap:wrap }
+  h1 { font-size:20px; margin:0 } h2 { font-size:17px; margin:0 0 10px } h3 { font-size:14px; color:var(--mut); margin:18px 0 8px; text-transform:uppercase; letter-spacing:.4px }
+  main { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:22px; padding:22px 28px; align-items:start }
+  @media (max-width:980px) { main { grid-template-columns:1fr } }
+  .karta { background:#fff; border:1px solid var(--ramka); border-radius:14px; padding:18px 20px }
+  .lampka { display:inline-flex; align-items:center; gap:7px; padding:5px 11px; border-radius:999px; font-size:13px; font-weight:600; background:#efeceb; color:var(--mut) }
+  .lampka i { width:9px; height:9px; border-radius:50%; background:#b9b2b5 } .lampka.on { background:var(--ok-tlo); color:var(--ok) } .lampka.on i { background:var(--ok) }
+  button { font:inherit; cursor:pointer; border:1px solid var(--ramka); background:#fff; color:var(--tekst); padding:8px 14px; border-radius:10px } button:hover { background:#f6f3f1 }
+  button.glowny { background:var(--akcent); color:#fff; border-color:var(--akcent) } button.glowny:hover { background:#70243d } button:disabled { opacity:.5; cursor:default }
+  .scen { display:flex; gap:12px; align-items:center; padding:12px 0; border-top:1px solid var(--ramka) } .scen:first-of-type { border-top:0 }
+  .scen .t { flex:1; min-width:0 } .scen b { display:block } .scen small { color:var(--mut) } .tag { display:inline-block; font-size:12px; padding:2px 8px; border-radius:999px; background:#efeceb; color:var(--mut); margin-right:4px }
+  .tag.zapis { background:#fff3e0; color:#8a5a00 }
+  .opcje { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:6px 0 14px; font-size:14px } .opcje label { display:flex; gap:6px; align-items:center }
+  .prod { display:none; gap:10px; align-items:center; padding:10px 12px; border:1px solid #f0c4cc; background:#fff6f7; border-radius:10px; font-size:13px } .prod.widoczny { display:flex; flex-wrap:wrap }
+  .prod input[type=text] { font:inherit; padding:6px 8px; border:1px solid var(--ramka); border-radius:8px; width:150px }
+  pre.log { background:#1f1a1c; color:#eee; font:12.5px/1.5 ui-monospace,Consolas,monospace; padding:12px 14px; border-radius:10px; max-height:360px; overflow:auto; margin:0; white-space:pre-wrap }
+  pre.log .zle { color:#ff8a98 } pre.log .ok { color:#8fe3a8 } pre.log .wynik { color:#ffd27f }
+  table { width:100%; border-collapse:collapse; font-size:14px } th,td { text-align:left; padding:8px 8px; border-bottom:1px solid var(--ramka); vertical-align:top } th { color:var(--mut); font-weight:500; font-size:13px }
+  .stan { display:inline-block; padding:2px 9px; border-radius:999px; font-size:12px; font-weight:600 } .stan.ok { background:var(--ok-tlo); color:var(--ok) } .stan.zle { background:var(--zle-tlo); color:var(--zle) } .stan.trwa { background:var(--akcent-tlo); color:var(--akcent) } .stan.kolejka { background:#efeceb; color:var(--mut) }
+  a { color:var(--akcent) } .pusto { color:var(--mut); font-style:italic; padding:10px 0 }
+  .srod-log { font:12px/1.4 ui-monospace,Consolas,monospace; color:var(--mut); max-height:90px; overflow:auto; margin-top:8px; white-space:pre-wrap }
+</style>
+<header>
+  <div><h1>Estelio — panel prób</h1><div style="color:var(--mut);font-size:13px">Scenariusze z <code>narzedzia/proby/</code> · wyniki w <code>proby-wyniki/</code></div></div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span class="lampka" id="l-baza"><i></i>MariaDB 3307</span><span class="lampka" id="l-serwer"><i></i>serwer 3999</span>
+    <button id="b-start">Uruchom środowisko testowe</button><button id="b-stop">Zatrzymaj</button>
+  </div>
+</header>
+<main>
+  <section>
+    <div class="karta">
+      <h2>Scenariusze</h2>
+      <div class="opcje">
+        <label><input type="radio" name="srod" value="test" checked> środowisko testowe (izolowana baza)</label>
+        <label><input type="radio" name="srod" value="prod"> produkcja (tylko odczyt)</label>
+      </div>
+      <div class="prod" id="prod-box">
+        <span>Produkcja = prawdziwy salon i wspólna baza. Wpisz <b>PRODUKCJA</b>, żeby odblokować:</span>
+        <input type="text" id="prod-potw" placeholder="PRODUKCJA" autocomplete="off">
+        <label><input type="checkbox" id="prod-zapis"> zezwól na zapisy (--zapis-tak)</label>
+      </div>
+      <div id="lista-scen"><div class="pusto">Wczytywanie…</div></div>
+    </div>
+    <div class="karta" style="margin-top:22px">
+      <h2>Środowisko</h2>
+      <div id="srod-opis" style="font-size:14px;color:var(--mut)">Sprawdzam porty…</div>
+      <div class="srod-log" id="srod-log"></div>
+    </div>
+  </section>
+  <section>
+    <div class="karta">
+      <h2>Przebieg <span id="biezacy-tytul" style="font-weight:400;color:var(--mut)"></span></h2>
+      <pre class="log" id="log">Wybierz scenariusz i kliknij „Uruchom”.</pre>
+      <div id="biezacy-link" style="margin-top:10px"></div>
+    </div>
+    <div class="karta" style="margin-top:22px">
+      <h2>Wyniki</h2>
+      <div id="wyniki"><div class="pusto">Brak wyników.</div></div>
+    </div>
+  </section>
+</main>
+<script>
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const czas = iso => iso ? new Date(iso).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+  let biezacyId = null;
+
+  async function wczytajScenariusze() {
+    const lista = await (await fetch('/api/scenariusze')).json();
+    const grupy = {}; lista.forEach(s => (grupy[s.modul] = grupy[s.modul] || []).push(s));
+    $('#lista-scen').innerHTML = Object.keys(grupy).sort().map(m => '<h3>' + esc(m) + '</h3>' + grupy[m].map(s => `
+      <div class="scen"><div class="t"><b>${esc(s.nazwa)}</b><small>${esc(s.opis || ('sekcja ' + s.sekcja))}</small><div style="margin-top:4px">
+        <span class="tag">${s.krokow} kroków</span><span class="tag">${s.zrzutow} zrzutów</span><span class="tag">${s.sprawdzen} sprawdzeń</span>${s.zapisPrawdziwy ? '<span class="tag zapis">prawdziwy zapis</span>' : '<span class="tag">zapis przechwycony</span>'}</div></div>
+        <button class="glowny" data-plik="${esc(s.plik)}">Uruchom</button></div>`).join('')).join('') || '<div class="pusto">Brak scenariuszy w narzedzia/proby/.</div>';
+    $('#lista-scen').querySelectorAll('button[data-plik]').forEach(b => b.onclick = () => uruchom(b.dataset.plik));
+  }
+  async function uruchom(plik) {
+    const srodowisko = document.querySelector('input[name=srod]:checked').value;
+    const b = { plik, srodowisko, potwierdzenie: $('#prod-potw').value.trim(), zapisTak: $('#prod-zapis').checked };
+    const r = await (await fetch('/api/uruchom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) })).json();
+    if (r.blad) { alert(r.blad); return; }
+    $('#log').textContent = 'W kolejce: ' + plik + ' (' + srodowisko + ')\n'; biezacyId = r.id; $('#biezacy-tytul').textContent = '— ' + plik + ' · ' + srodowisko; $('#biezacy-link').innerHTML = '';
+  }
+  async function wczytajWyniki() {
+    const w = await (await fetch('/api/wyniki')).json();
+    $('#wyniki').innerHTML = w.length ? '<table><tr><th>Kiedy</th><th>Scenariusz</th><th>Środ.</th><th>Stan</th><th>Zrzuty</th><th></th></tr>' + w.slice(0, 40).map(r => `
+      <tr><td>${czas(r.czas)}</td><td>${esc(r.scenariusz)}</td><td>${esc(r.srodowisko)}</td>
+      <td><span class="stan ${r.fail === 0 && !r.bledyJS ? 'ok' : 'zle'}">${r.fail === 0 && !r.bledyJS ? 'OK' : (r.fail < 0 ? 'błąd' : r.fail + ' FAIL' + (r.bledyJS ? ', JS ' + r.bledyJS : ''))}</span> <small style="color:var(--mut)">${r.sprawdzen} spr. · ${r.posty} POST</small></td>
+      <td>${r.zrzutow}</td><td>${r.maHtml ? `<a href="/wyniki/${encodeURIComponent(r.katalog)}/raport.html" target="_blank">galeria</a>` : ''} · <a href="/wyniki/${encodeURIComponent(r.katalog)}/raport.md" target="_blank">md</a></td></tr>`).join('') + '</table>' : '<div class="pusto">Brak wyników.</div>';
+  }
+  async function wczytajSrodowisko() {
+    const s = await (await fetch('/api/srodowisko')).json();
+    $('#l-baza').classList.toggle('on', s.baza); $('#l-serwer').classList.toggle('on', s.serwer);
+    $('#srod-opis').textContent = s.baza && s.serwer ? 'Gotowe: izolowana MariaDB 3307 i serwer 3999 działają' + (s.dzieci.serwer ? ' (uruchomione z panelu).' : ' (uruchomione poza panelem).') : (!s.baza && !s.serwer ? 'Zatrzymane. Kliknij „Uruchom środowisko testowe” — start trwa ok. 20 s.' : 'Częściowo: baza ' + (s.baza ? 'tak' : 'nie') + ', serwer ' + (s.serwer ? 'tak' : 'nie') + '.');
+    $('#b-start').disabled = s.baza && s.serwer; $('#b-stop').disabled = !s.baza && !s.serwer;
+    $('#srod-log').textContent = (s.log || []).join('\n');
+  }
+  $('#b-start').onclick = async () => { $('#b-start').disabled = true; $('#srod-opis').textContent = 'Startuję bazę i serwer…'; await fetch('/api/srodowisko/start', { method: 'POST' }); };
+  $('#b-stop').onclick = async () => { await fetch('/api/srodowisko/stop', { method: 'POST' }); setTimeout(wczytajSrodowisko, 3000); };
+  document.querySelectorAll('input[name=srod]').forEach(r => r.onchange = () => $('#prod-box').classList.toggle('widoczny', r.value === 'prod' && r.checked));
+
+  const es = new EventSource('/api/strumien');
+  es.onmessage = e => {
+    const z = JSON.parse(e.data);
+    if (z.typ === 'start') { biezacyId = z.przebieg.id; $('#log').textContent = ''; $('#biezacy-tytul').textContent = '— ' + z.przebieg.plik + ' · ' + z.przebieg.srodowisko + ' · trwa'; $('#biezacy-link').innerHTML = ''; }
+    if (z.typ === 'log' && z.id === biezacyId) { const kl = /BŁĄD|FAIL/.test(z.linia) ? 'zle' : /PASS|→ .*png/.test(z.linia) ? 'ok' : /^Wynik|^sprawdzenia/.test(z.linia) ? 'wynik' : ''; $('#log').insertAdjacentHTML('beforeend', '<span class="' + kl + '">' + esc(z.linia) + '</span>\n'); $('#log').scrollTop = 1e9; }
+    if (z.typ === 'koniec' && z.przebieg.id === biezacyId) { $('#biezacy-tytul').textContent = '— ' + z.przebieg.plik + ' · ' + (z.przebieg.kod === 0 ? 'zakończony OK' : 'zakończony z problemami'); if (z.przebieg.katalog) $('#biezacy-link').innerHTML = `<a href="/wyniki/${encodeURIComponent(z.przebieg.katalog)}/raport.html" target="_blank"><b>Otwórz galerię wyniku →</b></a>`; wczytajWyniki(); }
+    if (z.typ === 'srodowisko' || z.typ === 'srodowisko-log') wczytajSrodowisko();
+  };
+  wczytajScenariusze(); wczytajWyniki(); wczytajSrodowisko(); setInterval(wczytajSrodowisko, 15000);
+</script>
+</html>

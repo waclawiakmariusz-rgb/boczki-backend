@@ -1,38 +1,119 @@
 {
   "nazwa": "przyjecie-towaru-pelny",
+  "modul": "Kosmetyki",
+  "opis": "Przyjęcie towaru — PEŁNY przebieg z prawdziwym zapisem do izolowanej bazy i sprawdzeniem w Stanie Magazynowym",
   "sekcja": "nowy",
   "korzen": "#nowy",
   "przechwyc": [],
   "kroki": [
-    { "viewport": [1663, 946] },
-    { "zrzut": "01-pusty-formularz" },
-    { "wybierz": "#n_firma", "wartosc": "1", "opis": "pierwsza marka ze słownika" },
-    { "czekaj": 300 },
-    { "wybierz": "#n_model", "wartosc": "1", "opis": "pierwszy model" },
-    { "czekaj": 300 },
-    { "zrzut": "02-po-wyborze-produktu" },
-    { "wpisz": "#n_ilosc", "wartosc": "3" },
-    { "zrzut": "03-ilosc-wpisana" },
-    { "kliknij": "#nowy [data-krok='1']" },
-    { "zrzut": "04-po-plusie-4-szt" },
-    { "wpisz": "#n_netto", "wartosc": "80.00" },
-    { "wpisz": "#n_brutto", "wartosc": "98.40" },
-    { "wpisz": "#n_waznosc", "wartosc": "2027-12-31" },
-    { "czekaj": 300 },
-    { "js": "document.getElementById('n_nazwa').value", "opis": "nazwa produktu, która pójdzie do zapisu" },
-    { "js": "document.querySelector('#nowy .egr-summary').innerText.replace(/\\s+/g,' ').trim()", "opis": "podsumowanie" },
-    { "sprawdz": "document.querySelector('[data-podsumowanie=suma]').textContent === '393,60 zł'", "opis": "podsumowanie 4 × 98,40 = 393,60" },
-    { "zrzut": "05-gotowy-do-zapisu" },
-    { "kliknij": "#nowy button[type=submit]" },
-    { "czekaj": 150 },
-    { "zrzut": "06-w-trakcie-zapisu" },
-    { "czekaj": 2500 },
-    { "js": "window.__proba.alerty", "opis": "alert po zapisie" },
-    { "sprawdz": "window.__proba.alerty.some(a => a.includes('Dodano'))", "opis": "serwer potwierdził zapis (prawdziwy POST do izolowanej bazy)" },
-    { "zrzut": "07-po-zapisie-formularz-wyczyszczony" },
-    { "pokaz": "magazyn", "czekajPo": 3000 },
-    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r => r.innerText.includes('BioVital Kolagen do picia 30 saszetek') && r.innerText.includes('98,40'))", "opis": "NOWY wiersz (BioVital Kolagen…, 98,40) widać w Stanie Magazynowym" },
-    { "js": "[...document.querySelectorAll('#tabela-body tr')].map(r => r.innerText.replace(/\\s+/g,' ').trim()).filter(t => t.includes('BioVital Kolagen'))", "opis": "wiersze nowego produktu w magazynie" },
-    { "zrzut": "08-stan-magazynowy-z-nowym-produktem" }
+    {
+      "viewport": [
+        1663,
+        946
+      ]
+    },
+    {
+      "zrzut": "01-pusty-formularz"
+    },
+    {
+      "wybierz": "#n_firma",
+      "wartosc": "1",
+      "opis": "pierwsza marka ze słownika"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "wybierz": "#n_model",
+      "wartosc": "1",
+      "opis": "pierwszy model"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "02-po-wyborze-produktu"
+    },
+    {
+      "wpisz": "#n_ilosc",
+      "wartosc": "3"
+    },
+    {
+      "zrzut": "03-ilosc-wpisana"
+    },
+    {
+      "kliknij": "#nowy [data-krok='1']"
+    },
+    {
+      "zrzut": "04-po-plusie-4-szt"
+    },
+    {
+      "wpisz": "#n_netto",
+      "wartosc": "80.00"
+    },
+    {
+      "wpisz": "#n_brutto",
+      "wartosc": "98.40"
+    },
+    {
+      "wpisz": "#n_waznosc",
+      "wartosc": "2027-12-31"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "js": "document.getElementById('n_nazwa').value",
+      "opis": "nazwa produktu, która pójdzie do zapisu"
+    },
+    {
+      "js": "document.querySelector('#nowy .egr-summary').innerText.replace(/\\s+/g,' ').trim()",
+      "opis": "podsumowanie"
+    },
+    {
+      "sprawdz": "document.querySelector('[data-podsumowanie=suma]').textContent === '393,60 zł'",
+      "opis": "podsumowanie 4 × 98,40 = 393,60"
+    },
+    {
+      "zrzut": "05-gotowy-do-zapisu"
+    },
+    {
+      "kliknij": "#nowy button[type=submit]"
+    },
+    {
+      "czekaj": 150
+    },
+    {
+      "zrzut": "06-w-trakcie-zapisu"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "window.__proba.alerty",
+      "opis": "alert po zapisie"
+    },
+    {
+      "sprawdz": "window.__proba.alerty.some(a => a.includes('Dodano'))",
+      "opis": "serwer potwierdził zapis (prawdziwy POST do izolowanej bazy)"
+    },
+    {
+      "zrzut": "07-po-zapisie-formularz-wyczyszczony"
+    },
+    {
+      "pokaz": "magazyn",
+      "czekajPo": 3000
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r => r.innerText.includes('BioVital Kolagen do picia 30 saszetek') && r.innerText.includes('98,40'))",
+      "opis": "NOWY wiersz (BioVital Kolagen…, 98,40) widać w Stanie Magazynowym"
+    },
+    {
+      "js": "[...document.querySelectorAll('#tabela-body tr')].map(r => r.innerText.replace(/\\s+/g,' ').trim()).filter(t => t.includes('BioVital Kolagen'))",
+      "opis": "wiersze nowego produktu w magazynie"
+    },
+    {
+      "zrzut": "08-stan-magazynowy-z-nowym-produktem"
+    }
   ]
 }
