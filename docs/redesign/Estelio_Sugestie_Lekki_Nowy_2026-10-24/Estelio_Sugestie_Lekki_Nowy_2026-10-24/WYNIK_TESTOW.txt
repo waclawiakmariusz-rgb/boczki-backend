@@ -1,0 +1,44 @@
+✔ Normalizacja polskich znaków (1.240155ms)
+✔ Normalizacja pustej wartości (0.130848ms)
+✔ Nie mutuje źródła podczas filtrowania (0.6749ms)
+✔ Wyszukuje po zabiegu początkowym (0.309899ms)
+✔ Wyszukuje po zabiegu proponowanym (0.133963ms)
+✔ Wyszukuje po wskazówce bez diakrytyków (0.176136ms)
+✔ Wszystkie wyrazy zapytania muszą pasować (0.226552ms)
+✔ Puste wyszukiwanie daje całą listę (0.182946ms)
+✔ Lista podpowiedzi po nazwie (0.310339ms)
+✔ Payload nie zawiera stanu UI (0.355688ms)
+✔ Payload przycina odstępy (0.134583ms)
+✔ Payload zachowuje ID (0.106471ms)
+✔ Pusty formularz nie jest dirty (0.09228ms)
+✔ Sama wskazówka jest dirty (0.862384ms)
+✔ Odrzuca puste oba zabiegi (0.226823ms)
+✔ Wskazówka opcjonalna (0.12543ms)
+✔ Dowolny tekst w trybie tekstowym (0.106782ms)
+✔ W trybie katalogowym tekst bez ID nie przechodzi (0.093331ms)
+✔ Zmieniona nazwa nie dziedziczy tożsamości (0.069896ms)
+✔ Nie wprowadza zakazu A → A w demo (0.055935ms)
+✔ Dodanie potwierdzone i odczytane (0.414497ms)
+✔ Idempotentny zapis nie duplikuje reguły (0.1923ms)
+✔ Inna treść z tym samym kluczem jest odrzucana (0.513607ms)
+✔ Konflikt wersji nie dodaje reguły (0.214334ms)
+✔ Usunięcie dotyczy tylko właściwego ID (0.20549ms)
+✔ Ponowione usunięcie idempotentne (0.16522ms)
+✔ Brak rekordu nie usuwa innego (0.15898ms)
+✔ Rola tylko odczyt blokuje dodawanie (0.196767ms)
+✔ Rola tylko odczyt blokuje usuwanie (0.21196ms)
+✔ Błąd zapisu nie mutuje danych (0.21844ms)
+✔ Niepewny wynik ma osobny kod (0.194534ms)
+✔ Błąd odczytu można ponowić (0.168325ms)
+✔ Odczyt zwraca kopię (0.212421ms)
+✔ Pusta lista to poprawny stan demo (0.084848ms)
+✔ HTML w tekście nie jest modyfikowany przez model (0.067812ms)
+✔ Powtórzenie starej operacji zwraca bieżącą listę (0.251089ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 112.226722

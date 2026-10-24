@@ -54,6 +54,11 @@
 .estelio-discounts .rb-wiersz-tekst { display: grid; gap: 2px; min-width: 0; flex: 1; }
 .estelio-discounts .rb-wiersz-tekst strong { font-size: 16px; line-height: 22px; font-weight: 600; overflow-wrap: anywhere; }
 .estelio-discounts .rb-wiersz-tekst small { font-size: 13px; line-height: 19px; color: var(--rb-muted); }
+/* Usuwanie rabatu (24.10.2026): ikona kosza przy wierszu, pytanie przed usunięciem w usunDefinicjeRabatu(). */
+.estelio-discounts .rb-usun { display: grid; place-items: center; flex: 0 0 44px; width: 44px; height: 44px; margin-left: 4px; border: 1px solid var(--rb-border); border-radius: 10px; background: var(--rb-card); color: var(--rb-muted); cursor: pointer; transform: none; transition: color .12s, background .12s, border-color .12s; }
+.estelio-discounts .rb-usun svg { width: 20px; height: 20px; }
+.estelio-discounts .rb-usun:hover { color: #9b2442; background: #fdecee; border-color: #f0c4cc; transform: none; }
+.estelio-discounts .rb-usun:focus-visible { outline: 2px solid var(--rb-primary); outline-offset: 2px; }
 .estelio-discounts .rb-pusto { padding: 18px 16px; border: 1px dashed var(--rb-border); border-radius: 12px; }
 .estelio-discounts .rb-pusto p:first-child { font-size: 15px; font-weight: 500; }
 .estelio-discounts .rb-lista-stopka { display: flex; align-items: center; gap: 8px; margin-top: 14px; }

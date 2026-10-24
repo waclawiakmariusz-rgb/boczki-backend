@@ -1,11 +1,12 @@
 {
   "nazwa": "rabaty",
   "modul": "Administracja",
-  "opis": "Rabaty: podgląd, segment Procentowy/Kwotowy, payload add_discount_def, dwuklik, tryb ciemny, telefon (zapis przechwycony)",
+  "opis": "Rabaty: podgląd, segment Procentowy/Kwotowy, payload add_discount_def, dwuklik, tryb ciemny, telefon + usuwanie rabatu: kosz → confirm → delete_discount_def (zapisy przechwycone)",
   "sekcja": "sekcja-kreator-rabatow",
   "korzen": "#sekcja-kreator-rabatow",
   "przechwyc": [
-    "add_discount_def"
+    "add_discount_def",
+    "delete_discount_def"
   ],
   "opoznienieAtrapy": 600,
   "kroki": [
@@ -81,6 +82,30 @@
     },
     {
       "zrzut": "wypelniony-kwota"
+    },
+    {
+      "js": "window.__proba.posty = []; window.__proba.confirmy = []; const org=window.confirm; window.confirm = m => { window.__proba.confirmy.push(String(m)); window.confirm = org; return false; }; const b=document.querySelector('#lista-rabatow-podglad .rb-usun'); if(b) b.click(); b ? 'kliknięto kosz' : 'brak kosza (brak rabatów z id)'",
+      "opis": "usuwanie rabatu: kosz → anuluj"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "sprawdz": "window.__proba.confirmy.length === 1 && /Usunąć rabat/.test(window.__proba.confirmy[0]) && window.__proba.posty.length === 0",
+      "opis": "kosz → anuluj: pytanie o usunięcie, 0 mutacji"
+    },
+    {
+      "kliknij": "#lista-rabatow-podglad .rb-usun"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].action === 'delete_discount_def' && !!window.__proba.posty[0].id",
+      "opis": "kosz → potwierdź: jeden POST delete_discount_def {id}"
+    },
+    {
+      "zrzut": "kosz-przy-rabacie"
     },
     {
       "ciemny": true

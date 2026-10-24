@@ -1,0 +1,98 @@
+/* Administracja → Sugestie (cross-selling) — oprawa „lekki nowy” wg docs/redesign/Estelio_Sugestie_Lekki_Nowy_2026-10-24.
+   Wyłącznie wygląd; selektory zawężone do .estelio-suggestions. Logika (zapiszReguleSugestii, usunRegule, renderKreatorSugestii) bez zmian. */
+.estelio-suggestions {
+  --sug-text: #242126; --sug-muted: #67616b; --sug-border: #e7e1de; --sug-field-border: #d9d4d8; --sug-card: #ffffff; --sug-field-bg: #ffffff;
+  --sug-accent: #842d49; --sug-accent-hover: #70243d; --sug-accent-bg: #f8edf1; --sug-hover: #f6f3f1;
+  container: suggestions / inline-size; color: var(--sug-text); font-size: 16px; line-height: 1.5; min-width: 0;
+}
+.estelio-suggestions *, .estelio-suggestions *::before, .estelio-suggestions *::after { box-sizing: border-box; }
+.estelio-suggestions h1, .estelio-suggestions h2, .estelio-suggestions p { margin: 0; }
+.estelio-suggestions svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.estelio-suggestions .sug-shell { max-width: 1120px; margin: 0 auto; }
+.estelio-suggestions .sug-header { margin-bottom: 22px; }
+.estelio-suggestions .sug-okruszek { font-size: 14px; line-height: 20px; color: var(--sug-muted); margin-bottom: 6px; }
+.estelio-suggestions .sug-title-row { display: flex; align-items: center; gap: 8px; }
+.estelio-suggestions h1 { font-size: 30px; line-height: 38px; font-weight: 650; letter-spacing: -.7px; color: var(--sug-text); }
+.estelio-suggestions .sug-header .sug-opis { font-size: 16px; line-height: 24px; margin-top: 4px; }
+.estelio-suggestions .sug-opis, .estelio-suggestions .sug-help { font-size: 14px; line-height: 20px; color: var(--sug-muted); }
+.estelio-suggestions .sug-gora { display: grid; grid-template-columns: 1.62fr 1fr; gap: 20px; align-items: stretch; margin-bottom: 20px; }
+.estelio-suggestions .sug-card { display: flex; flex-direction: column; background: var(--sug-card); border: 1px solid var(--sug-border); border-radius: 18px; box-shadow: 0 4px 18px rgba(45, 30, 35, .04); min-width: 0; }
+.estelio-suggestions .sug-card-body { padding: 26px; flex: 1; }
+.estelio-suggestions .sug-card-stopka { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 26px; border-top: 1px solid var(--sug-border); }
+.estelio-suggestions h2 { font-size: 21px; line-height: 29px; font-weight: 650; color: var(--sug-text); }
+.estelio-suggestions .sug-card-body > .sug-opis { margin-top: 2px; }
+.estelio-suggestions .sug-para { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 14px; align-items: end; margin-top: 20px; }
+.estelio-suggestions .sug-field { min-width: 0; }
+.estelio-suggestions .sug-para + .sug-field { margin-top: 20px; }
+.estelio-suggestions .sug-label { display: block; font-size: 14px; line-height: 20px; font-weight: 550; color: var(--sug-text); margin-bottom: 8px; text-transform: none; letter-spacing: 0; }
+.estelio-suggestions .sug-opcjonalnie { color: var(--sug-muted); font-weight: 400; }
+.estelio-suggestions .sug-field input.form-control, .estelio-suggestions .sug-field textarea.form-control { width: 100%; min-width: 0; padding: 0 14px; font: inherit; font-size: 16px; font-weight: 400; color: var(--sug-text); background: var(--sug-field-bg); border: 1px solid var(--sug-field-border); border-radius: 10px; box-shadow: none; transform: none; transition: border-color .12s; }
+.estelio-suggestions .sug-field input.form-control { height: 48px; }
+.estelio-suggestions .sug-field textarea.form-control { padding: 12px 14px; min-height: 96px; resize: vertical; line-height: 1.5; }
+.estelio-suggestions .sug-field input.form-control::placeholder, .estelio-suggestions .sug-field textarea.form-control::placeholder { color: #9a949c; }
+.estelio-suggestions .sug-field input.form-control:focus, .estelio-suggestions .sug-field textarea.form-control:focus { outline: 2px solid var(--sug-accent); outline-offset: 3px; border-color: var(--sug-field-border); background: var(--sug-field-bg); box-shadow: none; transform: none; }
+.estelio-suggestions .sug-combo { position: relative; }
+.estelio-suggestions .sug-combo input.form-control { padding-right: 44px; }
+.estelio-suggestions .sug-combo > svg { position: absolute; right: 14px; top: 14px; width: 20px; height: 20px; color: var(--sug-text); pointer-events: none; }
+.estelio-suggestions .sug-combo input::-webkit-calendar-picker-indicator { opacity: 0; }
+.estelio-suggestions .sug-strzalka { display: grid; place-items: center; height: 48px; color: var(--sug-muted); }
+.estelio-suggestions .sug-strzalka svg { width: 24px; height: 24px; }
+.estelio-suggestions .sug-field .sug-help { margin-top: 6px; }
+.estelio-suggestions .sug-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 22px; font: inherit; font-size: 14px; font-weight: 600; color: #fff; background: var(--sug-accent); border: 0; border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; width: auto; margin: 0; box-shadow: none; transform: none; transition: background .12s; white-space: nowrap; }
+.estelio-suggestions .sug-primary:hover:not(:disabled) { background: var(--sug-accent-hover); transform: none; box-shadow: none; }
+.estelio-suggestions .sug-primary:disabled { opacity: .6; cursor: default; }
+.estelio-suggestions .sug-primary:focus-visible, .estelio-suggestions .sug-usun:focus-visible { outline: 2px solid var(--sug-accent); outline-offset: 3px; }
+/* podgląd */
+.estelio-suggestions .sug-podglad { margin-top: 18px; padding: 20px 22px; background: var(--sug-accent-bg); border-radius: 12px; }
+.estelio-suggestions .sug-podglad-warunek { font-size: 16px; color: var(--sug-text); }
+.estelio-suggestions .sug-podglad-warunek strong { font-weight: 650; }
+.estelio-suggestions .sug-podglad-strzalka { display: block; width: 22px; height: 22px; margin: 12px 0; color: var(--sug-accent); }
+.estelio-suggestions .sug-podglad-propozycja { font-size: 20px; line-height: 28px; font-weight: 650; overflow-wrap: anywhere; }
+.estelio-suggestions .sug-podglad-opis { margin-top: 10px; font-size: 15px; line-height: 22px; color: var(--sug-text); overflow-wrap: anywhere; white-space: pre-wrap; }
+/* lista */
+.estelio-suggestions .sug-lista-naglowek { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 26px; flex-wrap: wrap; }
+.estelio-suggestions .sug-lista-tytul { display: flex; align-items: center; gap: 10px; }
+.estelio-suggestions .sug-licznik { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 10px; border-radius: 999px; background: var(--sug-accent-bg); color: var(--sug-accent); font-size: 14px; font-weight: 600; }
+.estelio-suggestions .sug-szukaj { position: relative; display: block; flex: 0 1 300px; min-width: 200px; margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.estelio-suggestions .sug-szukaj > svg { position: absolute; left: 14px; top: 13px; width: 20px; height: 20px; color: var(--sug-muted); }
+.estelio-suggestions .sug-szukaj input { display: block; width: 100%; height: 46px; padding: 0 14px 0 44px !important; font: inherit; font-size: 16px; color: var(--sug-text); background: var(--sug-field-bg); border: 1px solid var(--sug-field-border); border-radius: 10px; outline: none; }
+.estelio-suggestions .sug-szukaj input:focus { outline: 2px solid var(--sug-accent); outline-offset: 3px; }
+.estelio-suggestions .sug-wyniki { padding: 0 26px 10px; }
+.estelio-suggestions .sug-lista { border-top: 1px solid var(--sug-border); }
+.estelio-suggestions .sug-wiersz { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1.3fr) auto; gap: 18px; align-items: center; padding: 18px 26px; border-bottom: 1px solid var(--sug-border); }
+.estelio-suggestions .sug-wiersz:last-child { border-bottom: 0; }
+.estelio-suggestions .sug-wiersz.sug-ukryty { display: none; }
+.estelio-suggestions .sug-kol { min-width: 0; display: grid; gap: 2px; }
+.estelio-suggestions .sug-kol small { font-size: 13px; line-height: 18px; color: var(--sug-muted); }
+.estelio-suggestions .sug-kol strong { font-size: 16px; line-height: 22px; font-weight: 600; overflow-wrap: anywhere; }
+.estelio-suggestions .sug-wskazowka { font-size: 14px; line-height: 20px; color: var(--sug-muted); overflow-wrap: anywhere; }
+.estelio-suggestions .sug-wiersz-strzalka { display: grid; place-items: center; color: var(--sug-muted); }
+.estelio-suggestions .sug-wiersz-strzalka svg { width: 24px; height: 24px; }
+.estelio-suggestions .sug-usun { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; font: inherit; font-size: 14px; font-weight: 600; color: var(--sug-accent); background: var(--sug-card); border: 1px solid var(--sug-accent); border-radius: 10px; cursor: pointer; transform: none; transition: background .12s; white-space: nowrap; }
+.estelio-suggestions .sug-usun svg { width: 18px; height: 18px; }
+.estelio-suggestions .sug-usun:hover { background: var(--sug-accent-bg); transform: none; }
+.estelio-suggestions .sug-state { padding: 22px 26px; color: var(--sug-muted); font-size: 15px; }
+.estelio-suggestions .sug-state strong { color: var(--sug-text); font-weight: 600; }
+.estelio-suggestions .sug-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+@container suggestions (width < 920px) {
+  .estelio-suggestions .sug-gora { grid-template-columns: minmax(0, 1fr); }
+  .estelio-suggestions .sug-card-body { padding: 20px; }
+  .estelio-suggestions .sug-card-stopka, .estelio-suggestions .sug-lista-naglowek { padding-left: 20px; padding-right: 20px; }
+  .estelio-suggestions .sug-wiersz { padding: 16px 20px; }
+}
+@container suggestions (width < 580px) {
+  .estelio-suggestions .sug-para { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .estelio-suggestions .sug-strzalka { display: none; }
+  .estelio-suggestions .sug-card-stopka { flex-direction: column; align-items: stretch; }
+  .estelio-suggestions .sug-primary { width: 100%; }
+  .estelio-suggestions .sug-lista-naglowek { flex-direction: column; align-items: stretch; }
+  .estelio-suggestions .sug-szukaj { flex: 1 1 auto; }
+  .estelio-suggestions .sug-wiersz { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .estelio-suggestions .sug-wiersz-strzalka { display: none; }
+  .estelio-suggestions .sug-usun { justify-self: start; }
+}
+@media (prefers-reduced-motion: reduce) { .estelio-suggestions * { transition: none !important; } }
+body.dark-mode .estelio-suggestions { --sug-text: #f8fafc; --sug-muted: #94a3b8; --sug-border: #334155; --sug-field-border: #334155; --sug-card: #1e293b; --sug-field-bg: #0f172a; --sug-accent: #e3a0b2; --sug-accent-hover: #d08a9e; --sug-accent-bg: rgba(184, 112, 128, .2); --sug-hover: #334155; }
+body.dark-mode .estelio-suggestions .sug-primary { color: #1e293b; }
+body.dark-mode .estelio-suggestions .sug-field input.form-control, body.dark-mode .estelio-suggestions .sug-field textarea.form-control, body.dark-mode .estelio-suggestions .sug-szukaj input { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .estelio-suggestions .sug-card { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }

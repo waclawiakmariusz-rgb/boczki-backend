@@ -426,11 +426,12 @@ module.exports = (db) => {
 
     } else if (action === 'get_discounts') {
       db.query(
-        `SELECT nazwa, typ, wartosc FROM Rabaty WHERE tenant_id = ? AND UPPER(aktywny) = 'TAK'`,
+        `SELECT id, nazwa, typ, wartosc FROM Rabaty WHERE tenant_id = ? AND UPPER(aktywny) = 'TAK'`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
-          return res.json(rows.map(r => ({ nazwa: r.nazwa, typ: r.typ, wartosc: parseFloat(r.wartosc) })));
+          // `id` dodane 24.10.2026 (usuwanie rabatów z panelu); pozostałe pola bez zmian — sprzedaż czyta nazwa/typ/wartosc.
+          return res.json(rows.map(r => ({ id: r.id, nazwa: r.nazwa, typ: r.typ, wartosc: parseFloat(r.wartosc) })));
         }
       );
 
@@ -1193,6 +1194,21 @@ module.exports = (db) => {
           if (err) return res.json({ status: 'error', message: err.message });
           zapiszLog(tenant_id, 'DODANO RABAT', d.pracownik, `${d.nazwa} (${d.wartosc} ${d.typ})`);
           return res.json({ status: 'success', message: 'Dodano nowy rabat!' });
+        }
+      );
+
+    // --- DELETE_DISCOUNT_DEF (24.10.2026) --- wyłączenie definicji rabatu: aktywny='NIE', bez kasowania wiersza
+    // (dziennik i wcześniejsze sprzedaże zostają; get_discounts filtruje po aktywny='TAK', więc rabat znika z listy).
+    } else if (action === 'delete_discount_def') {
+      if (!d.id) return res.json({ status: 'error', message: 'Nie wskazano rabatu.' });
+      db.query(
+        `UPDATE Rabaty SET aktywny = 'NIE' WHERE tenant_id = ? AND id = ? AND UPPER(aktywny) = 'TAK' LIMIT 1`,
+        [tenant_id, String(d.id)],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result || !result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono aktywnego rabatu.' });
+          zapiszLog(tenant_id, 'USUNIĘCIE RABATU', d.pracownik, String(d.id));
+          return res.json({ status: 'success', message: 'Usunięto rabat.' });
         }
       );
 

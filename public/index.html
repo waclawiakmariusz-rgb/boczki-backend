@@ -7773,41 +7773,53 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
             
-           <div id="setup-sugestie" class="section">
-    <div class="header"><h1>🧠 Kreator Sugestii (Cross-selling)</h1><span class="pk-slot" data-pomoc="admin.sugestie" data-pomoc-nazwa="Kreator sugestii"></span></div>
-    
-    <div class="card">
-        <p style="color:#666; margin-bottom:20px; font-size:14px;">
-            Zdefiniuj "inteligencję" systemu. <br>
-            <i>Zasada: "Jeśli klient kupił <b>Zabieg A</b>, system podpowie recepcji, by zaproponować <b>Zabieg B</b>".</i>
-        </p>
-
-        <div style="background:#f0f9ff; border:1px solid #bae6fd; padding:20px; border-radius:10px; margin-bottom:30px;">
-            <h3 style="margin-top:0; color:#0369a1;">➕ Dodaj nową regułę</h3>
-            <div class="form-grid" style="align-items:end;">
-                <div>
-                    <label style="font-weight:bold; color:#0369a1;">Jeśli klient był na...</label>
-                    <input type="text" id="sug_matka" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz...">
+           <!-- Sugestie (cross-selling) — redesign 24.10.2026 wg docs/redesign/Estelio_Sugestie_Lekki_Nowy_2026-10-24.
+                Tylko oprawa: #sug_matka / #sug_dziecko (datalist #lista-zabiegow-sugestie — dowolny tekst, jak dotąd),
+                #sug_opis, onclick="zapiszReguleSugestii()", #lista-regul-sugestii, usunRegule(matka, dziecko) i payloady
+                add_suggestion_rule / delete_suggestion_rule — bez zmian. Style: /sugestie.css, prezentacja (podgląd,
+                wyszukiwarka listy, licznik): /sugestie.js. -->
+           <div id="setup-sugestie" class="section estelio-suggestions">
+    <div class="sug-shell">
+        <header class="sug-header">
+            <div><p class="sug-okruszek" aria-hidden="true">Administracja&nbsp;/&nbsp;Sugestie</p><div class="sug-title-row"><h1>Sugestie zabiegów</h1><span class="pk-slot" data-pomoc="admin.sugestie" data-pomoc-nazwa="Sugestie"></span></div><p class="sug-opis">Ustal, co zespół może zaproponować przy kolejnej rozmowie z klientką.</p></div>
+        </header>
+        <div class="sug-gora">
+            <section class="sug-card sug-form-card" aria-labelledby="sug-dodaj-tytul">
+                <div class="sug-card-body">
+                    <h2 id="sug-dodaj-tytul">Dodaj regułę</h2>
+                    <p class="sug-opis">Połącz zakupiony zabieg z kolejną propozycją.</p>
+                    <div class="sug-para">
+                        <div class="sug-field"><label class="sug-label" for="sug_matka">Po zakupie</label><div class="sug-combo"><input type="text" id="sug_matka" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                        <span class="sug-strzalka" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+                        <div class="sug-field"><label class="sug-label" for="sug_dziecko">Zaproponuj</label><div class="sug-combo"><input type="text" id="sug_dziecko" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                    </div>
+                    <datalist id="lista-zabiegow-sugestie"></datalist>
+                    <div class="sug-field"><label class="sug-label" for="sug_opis">Wskazówka dla zespołu <span class="sug-opcjonalnie">(opcjonalnie)</span></label><textarea id="sug_opis" class="form-control" rows="3" placeholder="np. Dla podtrzymania efektu, uzupełnienie terapii…"></textarea><p class="sug-help">Krótki argument, który pomoże w rozmowie.</p></div>
                 </div>
-                <div style="text-align:center; font-size:24px;">👉</div>
-                <div>
-                    <label style="font-weight:bold; color:#166534;">Zaproponuj mu...</label>
-                    <input type="text" id="sug_dziecko" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz...">
+                <div class="sug-card-stopka"><span class="sug-help">Reguła pojawi się na liście po zapisaniu.</span><button type="button" onclick="zapiszReguleSugestii()" class="sug-primary">Dodaj regułę</button></div>
+            </section>
+            <section class="sug-card sug-podglad-card" aria-labelledby="sug-podglad-tytul">
+                <div class="sug-card-body">
+                    <h2 id="sug-podglad-tytul">Podgląd sugestii</h2>
+                    <p class="sug-opis">Przykład treści dla zespołu</p>
+                    <div class="sug-podglad" aria-hidden="true">
+                        <p class="sug-podglad-warunek">Po zakupie: <strong data-sug-podglad-matka>—</strong></p>
+                        <svg class="sug-podglad-strzalka" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14m-6-6 6 6 6-6"/></svg>
+                        <p class="sug-podglad-propozycja">Zaproponuj: <span data-sug-podglad-dziecko>—</span></p>
+                        <p class="sug-podglad-opis" data-sug-podglad-opis hidden></p>
+                    </div>
                 </div>
-            </div>
-            
-            <datalist id="lista-zabiegow-sugestie"></datalist>
-            <div style="margin-top:15px;">
-                <label>Argumentacja (opcjonalnie):</label>
-                <input type="text" id="sug_opis" class="form-control" placeholder="np. Dla podtrzymania efektu, Uzupełnienie terapii...">
-            </div>
-            <button onclick="zapiszReguleSugestii()" class="btn-primary" style="margin-top:15px; width:auto;">Zapisz Regułę</button>
+                <div class="sug-card-stopka"><span class="sug-help">Podgląd nie zapisuje reguły.</span></div>
+            </section>
         </div>
-
-        <h3>📋 Aktywne reguły:</h3>
-        <div id="lista-regul-sugestii" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:15px;">
-            Ładowanie...
-        </div>
+        <section class="sug-card sug-lista-card" aria-labelledby="sug-lista-tytul">
+            <div class="sug-lista-naglowek">
+                <div class="sug-lista-tytul"><h2 id="sug-lista-tytul">Aktywne reguły</h2><span class="sug-licznik" id="sugestie-licznik" hidden>0</span></div>
+                <label class="sug-szukaj"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 6 6"/></svg><span class="sug-sr">Szukaj reguły</span><input type="search" data-sug-szukaj placeholder="Szukaj reguły…" autocomplete="off"></label>
+            </div>
+            <p class="sug-help sug-wyniki" data-sug-wyniki hidden></p>
+            <div id="lista-regul-sugestii" class="sug-lista"><p class="sug-state">Wczytywanie reguł…</p></div>
+        </section>
     </div>
 </div>
 
@@ -12203,6 +12215,7 @@ function normNumOr0(val) {
                         <span class="rb-ikona" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z"/><circle cx="7.5" cy="7.5" r="1.5"/></svg></span>
                         <span class="rb-wiersz-tekst"><strong>${escHtml(String(r.nazwa))}</strong><small>${typTekst}</small></span>
                         <span class="rb-badge">−${escHtml(String(r.wartosc))}${symbol}</span>
+                        ${r.id ? `<button type="button" class="rb-usun" onclick="usunDefinicjeRabatu('${escHtml(String(r.id))}', '${escHtml(String(r.nazwa)).replace(/'/g, "\\'")}')" aria-label="Usuń rabat: ${escHtml(String(r.nazwa))}" title="Usuń rabat"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>` : ''}
                     </div>
                     `;
                 });
@@ -12329,6 +12342,22 @@ function uz_zapisz() {
         uz_msg('✓ Zapisano!', '#10b981');
         setTimeout(() => uz_msg('', ''), 2500);
     });
+}
+
+// Usunięcie definicji rabatu (24.10.2026, prośba właściciela: „w Rabatach nie ma możliwości kasowania”).
+// Serwer wyłącza rabat (aktywny = 'NIE') — znika z listy przy sprzedaży, wcześniejsze sprzedaże mają już policzoną cenę.
+function usunDefinicjeRabatu(id, nazwa) {
+    if (!confirm("Usunąć rabat „" + nazwa + "”?\n\nRabat zniknie z listy przy sprzedaży. Wcześniejsze sprzedaże z tym rabatem zostają bez zmian.")) return;
+    fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({ action: 'delete_discount_def', id: id, pracownik: currentUser })
+    })
+    .then(r => r.json())
+    .then(d => {
+        alert(d.message || (d.status === 'success' ? 'Usunięto rabat.' : 'Nie udało się usunąć rabatu.'));
+        if (d.status === 'success') zaladujRabaty();
+    })
+    .catch(err => alert("Błąd połączenia: " + err));
 }
 
 function zapiszDefinicjeRabatu() {
@@ -14066,27 +14095,28 @@ function renderKreatorSugestii() {
     const div = document.getElementById('lista-regul-sugestii');
     if(!div) return;
     
+    // redesign 24.10.2026: te same dane i ta sama akcja usunRegule(matka, dziecko), inny znacznik wiersza (patrz /sugestie.css)
+    const licznikSug = document.getElementById('sugestie-licznik');
+    if (licznikSug) { licznikSug.textContent = String(regulyCache.length); licznikSug.hidden = false; }
     if(regulyCache.length === 0) {
-        div.innerHTML = '<div style="color:#999;">Brak zdefiniowanych reguł. Dodaj pierwszą powyżej!</div>';
+        div.innerHTML = '<p class="sug-state"><strong>Nie ma jeszcze reguł</strong><br>Dodaj pierwszą w formularzu powyżej.</p>';
+        if (window.SUGESTIE_PREZENTACJA) SUGESTIE_PREZENTACJA.poRenderze();
         return;
     }
 
-    div.innerHTML = "";
+    let htmlRegul = "";
     regulyCache.forEach(r => {
-        div.innerHTML += `
-        <div style="background:white; border:1px solid #e2e8f0; padding:15px; border-radius:8px; box-shadow:0 2px 4px rgba(0,0,0,0.05); position:relative;">
-            <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:bold;">Gdy klient kupił:</div>
-            <div style="font-weight:bold; color:#0369a1; margin-bottom:5px;">${r.matka}</div>
-            
-            <div style="font-size:11px; color:#64748b; text-transform:uppercase; font-weight:bold; margin-top:10px;">Zaproponuj:</div>
-            <div style="font-weight:bold; color:#166534;">${r.dziecko}</div>
-            
-            <div style="font-size:12px; color:#666; font-style:italic; margin-top:5px;">"${r.opis || ''}"</div>
-            
-            <button onclick="usunRegule('${r.matka}', '${r.dziecko}')" style="position:absolute; top:10px; right:10px; border:none; background:#fee2e2; color:#991b1b; width:25px; height:25px; border-radius:5px; cursor:pointer;">×</button>
-        </div>
-        `;
+        const m = escHtml(String(r.matka || '')), dz = escHtml(String(r.dziecko || '')), op = escHtml(String(r.opis || ''));
+        htmlRegul += `
+        <div class="sug-wiersz" data-sug-tekst="${m} ${dz} ${op}">
+            <div class="sug-kol"><small>Po zakupie</small><strong>${m}</strong></div>
+            <span class="sug-wiersz-strzalka" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
+            <div class="sug-kol sug-kol-cel"><small>Zaproponuj</small><strong>${dz}</strong>${op ? `<span class="sug-wskazowka">${op}</span>` : ''}</div>
+            <button type="button" class="sug-usun" onclick="usunRegule('${r.matka}', '${r.dziecko}')" aria-label="Usuń regułę: ${m} → ${dz}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Usuń</button>
+        </div>`;
     });
+    div.innerHTML = htmlRegul;
+    if (window.SUGESTIE_PREZENTACJA) SUGESTIE_PREZENTACJA.poRenderze();
 }
 
 // 4. Zapisywanie nowej reguły
@@ -14119,12 +14149,13 @@ function zapiszReguleSugestii() {
         pobierzReguly(); // Odśwież listę
     })
     .catch(e => alert("Błąd: " + e))
-    .finally(() => { btn.innerText = "Zapisz Regułę"; btn.disabled = false; });
+    .finally(() => { btn.innerText = "Dodaj regułę"; btn.disabled = false; }); // etykieta wg makiety (redesign 24.10.2026); logika bez zmian
 }
 
 // 5. Usuwanie reguły
 function usunRegule(matka, dziecko) {
-    if(!confirm("Usunąć tę sugestię?")) return;
+    // Treść pytania wg redesignu 24.10.2026 (z parą źródło → propozycja); logika confirm → delete_suggestion_rule bez zmian.
+    if(!confirm("Usunąć tę regułę?\n\n" + matka + " → " + dziecko + "\n\nTa reguła zostanie usunięta z listy sugestii.")) return;
     fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({
@@ -36862,5 +36893,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Magazyn → Kategorie — oprawa po redesignie 23.10.2026 (selektory zawężone do .est-categories) -->
 <link rel="stylesheet" href="/kategorie-magazyn.css?v=__WERSJA_PLIKOW__">
 <script src="/kategorie-magazyn.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Sugestie — oprawa po redesignie 24.10.2026 (selektory zawężone do .estelio-suggestions) -->
+<link rel="stylesheet" href="/sugestie.css?v=__WERSJA_PLIKOW__">
+<script src="/sugestie.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>
