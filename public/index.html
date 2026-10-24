@@ -6459,35 +6459,46 @@ body.dark-mode #analiza-missing-list li {
 </div>
 </div>
 
-		<div id="slownik" class="section">
-    <div class="header"><h1>Kreator Produktu / Kosmetyku</h1><span class="pk-slot" data-pomoc="kosmetyki.slownik" data-pomoc-nazwa="Kreator kosmetyku"></span></div>
-    <div class="card">
-        <p style="font-size:12px; color:#666; margin-bottom:15px;">Tutaj definiujesz nazwy i ceny sprzedaży kosmetyków. Te dane pojawią się w "Rejestracji Sprzedaży".</p>
-        <!-- <input type="text" id="szukaj-slownik" onkeyup="szukajWSlowniku()" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;"> -->
-        <input type="text" id="szukaj-slownik" onkeyup="_db('sl',()=>window.szukajWSlowniku())" placeholder="🔍 Szukaj firmy lub modelu..." style="width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #e2e8f0; border-radius: 8px; box-sizing: border-box;">
-        <form onsubmit="dodajModel(event)">
-            <div class="form-grid" style="align-items:end;">
-                <div>
-                    <label>Firma:</label>
-                    <select id="s_firma_select" onchange="obslugaWyboruFirmy()"></select>
-                    <input type="text" id="s_firma_input" placeholder="Nowa firma..." style="display:none;">
-                    <small style="color:var(--primary);cursor:pointer" onclick="przelaczTrybFirmy()">Dodaj nową</small>
+		<!-- Kreator Produktu / Kosmetyku — redesign 24.10.2026 wg docs/redesign/Estelio_Kosmetyki_Lekki_Nowy_2026-10-24.
+		     Tylko oprawa: #szukaj-slownik (onkeyup → szukajWSlowniku po <li>), form onsubmit="dodajModel(event)",
+		     #s_firma_select (opcje + „Nowa…” z renderSlownik) / #s_firma_input (przełączane przez obslugaWyboruFirmy /
+		     przelaczTrybFirmy — te same funkcje), #s_model required, #s_cena, #lista-slownik, edytujSlownikUI /
+		     usunZeSlownikaUI i payloady add_model / edit_dictionary_entry / delete_dictionary_entry — bez zmian.
+		     Style: /kosmetyki.css (selektory zawężone do .estelio-cosmetics). Bez własnego JS. -->
+		<div id="slownik" class="section estelio-cosmetics">
+    <div class="ksm-shell">
+        <header class="ksm-header">
+            <div><p class="ksm-okruszek" aria-hidden="true">Administracja&nbsp;/&nbsp;Kosmetyki</p><div class="ksm-title-row"><h1>Produkty i kosmetyki</h1><span class="pk-slot" data-pomoc="kosmetyki.slownik" data-pomoc-nazwa="Produkty i kosmetyki"></span></div><p class="ksm-opis">Nazwy i ceny produktów dostępnych w rejestracji sprzedaży.</p></div>
+        </header>
+        <section class="ksm-card" aria-labelledby="ksm-dodaj-tytul">
+            <form onsubmit="dodajModel(event)">
+                <div class="ksm-card-body">
+                    <h2 id="ksm-dodaj-tytul">Dodaj produkt</h2>
+                    <div class="ksm-pola">
+                        <div class="ksm-field ksm-firma">
+                            <label class="ksm-label" for="s_firma_select">Firma</label>
+                            <div class="ksm-select-wrap"><select id="s_firma_select" onchange="obslugaWyboruFirmy()"></select><svg class="ksm-chevron" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div>
+                            <!-- Tryb nowej firmy: te same elementy co dotąd (select ukrywany, input pokazywany przez obslugaWyboruFirmy). -->
+                            <input type="text" id="s_firma_input" placeholder="Wpisz nazwę firmy" style="display:none;" autocomplete="off" aria-label="Nazwa nowej firmy">
+                            <p class="ksm-help ksm-help-nowa">Firma dla dodawanego produktu.</p>
+                            <button type="button" class="ksm-link ksm-link-dodaj" onclick="przelaczTrybFirmy()">+ Dodaj firmę</button>
+                            <button type="button" class="ksm-link ksm-link-wroc" onclick="document.getElementById('s_firma_select').value=''; obslugaWyboruFirmy(); document.getElementById('s_firma_input').value='';">Wróć do listy firm</button>
+                        </div>
+                        <div class="ksm-field"><label class="ksm-label" for="s_model">Nazwa produktu</label><input type="text" id="s_model" required placeholder="np. Krem pod oczy" autocomplete="off"></div>
+                        <div class="ksm-field"><label class="ksm-label" for="s_cena">Cena sprzedaży</label><div class="ksm-cena-wrap"><input type="number" id="s_cena" step="0.01" placeholder="0.00" aria-label="Cena sprzedaży w złotych"><span aria-hidden="true">zł</span></div></div>
+                    </div>
                 </div>
-                <div>
-                    <label>Model (Nazwa):</label>
-                    <input type="text" id="s_model" required placeholder="np. Krem pod oczy">
-                </div>
-                <div>
-                    <label>Cena Sprzedaży (PLN):</label>
-                    <input type="number" id="s_cena" step="0.01" placeholder="0.00" style="font-weight:bold;">
-                </div>
+                <div class="ksm-card-stopka"><span class="ksm-help">Produkt pojawi się w katalogu po zapisaniu.</span><button type="submit" class="ksm-primary">Dodaj produkt</button></div>
+            </form>
+        </section>
+        <section class="ksm-card ksm-katalog" aria-labelledby="ksm-katalog-tytul">
+            <div class="ksm-katalog-naglowek">
+                <div class="ksm-katalog-tytul"><h2 id="ksm-katalog-tytul">Katalog produktów</h2><span class="ksm-licznik" id="slownik-licznik" hidden>0</span></div>
+                <label class="ksm-szukaj"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17a7 7 0 1 0 0-14 7 7 0 0 0 0 14Zm5-2 6 6"/></svg><span class="ksm-sr">Szukaj firmy lub produktu</span><input type="text" id="szukaj-slownik" onkeyup="_db('sl',()=>window.szukajWSlowniku())" placeholder="Szukaj firmy lub produktu…" autocomplete="off"></label>
             </div>
-            <button type="submit" class="btn-primary">Dodaj do bazy</button>
-        </form>
-    </div>
-    <div class="card" style="margin-top:20px;">
-        <h3>Istniejące produkty:</h3>
-        <ul id="lista-slownik" class="dict-list"></ul>
+            <div class="ksm-naglowki" aria-hidden="true"><span>Firma</span><span>Produkt</span><span class="ksm-kol-cena">Cena sprzedaży</span><span>Działania</span></div>
+            <ul id="lista-slownik" class="dict-list ksm-lista"></ul>
+        </section>
     </div>
 </div>
 			
@@ -19816,27 +19827,34 @@ function renderSlownik() {
     // Sortowanie alfabetyczne
     slownikCache.sort((a, b) => a.firma.localeCompare(b.firma) || a.model.localeCompare(b.model));
 
+    // redesign 24.10.2026: te same dane i te same akcje (edytujSlownikUI / usunZeSlownikaUI z tymi samymi argumentami),
+    // inny znacznik wiersza: kolumny Firma / Produkt / Cena / Działania (patrz /kosmetyki.css). <li> zostaje — po nim
+    // filtruje szukajWSlowniku(). Licznik #slownik-licznik, stan pusty.
+    const licznikSl = document.getElementById('slownik-licznik');
+    if (licznikSl) { licznikSl.textContent = String(slownikCache.length); licznikSl.hidden = false; }
+    if (!slownikCache.length) { l.innerHTML = '<li class="ksm-state"><strong>Katalog jest jeszcze pusty</strong><br>Dodaj pierwszy produkt w formularzu powyżej.</li>'; return; }
+    let htmlSl = "";
     slownikCache.forEach(i => {
         const fSafe = encodeURIComponent(i.firma);
         const mSafe = encodeURIComponent(i.model);
         const cSafe = i.cena || ""; // Cena może być pusta
-        
-        const cenaDisplay = i.cena ? `<span style="color:#166534; font-weight:bold; margin-left:10px;">${parseFloat(i.cena).toFixed(2)} zł</span>` : '<span style="color:#ccc; font-size:11px; margin-left:10px;">(brak ceny)</span>';
 
-        // ZMIANA: Dodałem przycisk usuwania obok przycisku edycji
-        l.innerHTML += `
+        const cenaDisplay = i.cena ? `<span class="ksm-cena">${parseFloat(i.cena).toFixed(2).replace('.', ',')} zł</span>` : '<span class="ksm-cena ksm-cena-brak">brak ceny</span>';
+
+        htmlSl += `
         <li class="dict-row">
-            <div style="flex: 1;">
-                <strong>${i.firma}</strong> 
-                <span style="color:#333;">${i.model}</span>
+            <div class="ksm-row">
+                <span class="ksm-kol-firma">${escHtml(String(i.firma))}</span>
+                <span class="ksm-kol-produkt">${escHtml(String(i.model))}</span>
                 ${cenaDisplay}
-            </div>
-            <div style="display:flex; gap:5px;">
-                <button class="btn-edit" onclick="edytujSlownikUI('${fSafe}', '${mSafe}', '${cSafe}')" style="width:35px; height:35px; margin:0;" title="Edytuj">✎</button>
-                <button class="btn-delete" onclick="usunZeSlownikaUI('${fSafe}', '${mSafe}')" style="width:35px; height:35px; margin:0;" title="Usuń z bazy">✖</button>
+                <span class="ksm-akcje">
+                    <button type="button" class="ksm-btn ksm-btn-edytuj" onclick="edytujSlownikUI('${fSafe}', '${mSafe}', '${cSafe}')" aria-label="Edytuj: ${escHtml(String(i.firma))} ${escHtml(String(i.model))}">Edytuj</button>
+                    <button type="button" class="ksm-btn ksm-btn-usun" onclick="usunZeSlownikaUI('${fSafe}', '${mSafe}')" aria-label="Usuń: ${escHtml(String(i.firma))} ${escHtml(String(i.model))}">Usuń</button>
+                </span>
             </div>
         </li>`;
     });
+    l.innerHTML = htmlSl;
 }
 
 function dodajModel(e) {
@@ -19868,7 +19886,7 @@ function dodajModel(e) {
         s.style.display = 'block';
         i.style.display = 'none';
         e.target.reset();
-        btn.innerText = "Dodaj do bazy";
+        btn.innerText = "Dodaj produkt"; // etykieta wg makiety (redesign 24.10.2026); logika bez zmian
         btn.disabled = false;
     });
 }
@@ -19923,7 +19941,8 @@ function usunZeSlownikaUI(firmaEncoded, modelEncoded) {
     const firma = decodeURIComponent(firmaEncoded);
     const model = decodeURIComponent(modelEncoded);
 
-    if (!confirm(`Czy na pewno chcesz wycofać kosmetyk:\n${firma} ${model}?\n\nUsunięcie powiedzie się TYLKO, jeśli stan w magazynie wynosi 0 sztuk.`)) {
+    // Treść pytania wg redesignu 24.10.2026; warunek o stanie magazynowym sprawdzony w kodzie (delete_dictionary_entry odmawia, gdy stan > 0).
+    if (!confirm(`Usunąć produkt?\n\n${firma} — ${model}\n\nSprawdź wybraną pozycję przed potwierdzeniem. Usunięcie powiedzie się tylko, jeśli stan w magazynie wynosi 0 sztuk.`)) {
         return;
     }
 
@@ -31501,30 +31520,18 @@ initTheme();
 
 
 <div id="edit-dict-overlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 10000; justify-content: center; align-items: center; backdrop-filter: blur(2px);">
-    <div style="background: white; width: 90%; max-width: 450px; padding: 30px; border-radius: 15px; box-shadow: 0 20px 25px rgba(0,0,0,0.1);">
-        <h3 style="margin-top:0; color:var(--primary);">Edycja Kosmetyku</h3>
+    <!-- Edycja produktu — oprawa wg redesignu 24.10.2026 (.estelio-cosmetics w /kosmetyki.css); ID pól, onsubmit i zamykanie bez zmian. -->
+    <div class="estelio-cosmetics ksm-dialog">
+        <div class="ksm-dialog-head"><div><h2>Edytuj produkt</h2><p class="ksm-opis">Zaktualizuj dane wybranego produktu.</p></div><button type="button" class="ksm-x" onclick="document.getElementById('edit-dict-overlay').style.display='none'" aria-label="Zamknij"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
         <form onsubmit="zapiszEdycjeSlownika(event)">
             <input type="hidden" id="ed_old_firma">
             <input type="hidden" id="ed_old_model">
-            
-            <div style="margin-bottom:15px;">
-                <label>Firma:</label>
-                <input type="text" id="ed_new_firma" required class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-            </div>
-
-            <div style="margin-bottom:15px;">
-                <label>Model:</label>
-                <input type="text" id="ed_new_model" required class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px;">
-            </div>
-
-            <div style="margin-bottom:20px;">
-                <label>Cena Sprzedaży (PLN):</label>
-                <input type="number" id="ed_new_cena" step="0.01" class="form-control" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:6px; font-weight:bold;">
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:10px;">
-                <button type="button" onclick="document.getElementById('edit-dict-overlay').style.display='none'" style="background:#e5e7eb; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;">Anuluj</button>
-                <button type="submit" class="btn-primary" style="width:auto;">Zapisz zmiany</button>
+            <div class="ksm-field"><label class="ksm-label" for="ed_new_firma">Firma</label><input type="text" id="ed_new_firma" required class="form-control" autocomplete="off"></div>
+            <div class="ksm-field"><label class="ksm-label" for="ed_new_model">Nazwa produktu</label><input type="text" id="ed_new_model" required class="form-control" autocomplete="off"></div>
+            <div class="ksm-field"><label class="ksm-label" for="ed_new_cena">Cena sprzedaży</label><div class="ksm-cena-wrap"><input type="number" id="ed_new_cena" step="0.01" class="form-control" aria-label="Cena sprzedaży w złotych"><span aria-hidden="true">zł</span></div></div>
+            <div class="ksm-dialog-stopka">
+                <button type="button" class="ksm-secondary" onclick="document.getElementById('edit-dict-overlay').style.display='none'">Anuluj</button>
+                <button type="submit" class="ksm-primary">Zapisz zmiany</button>
             </div>
         </form>
     </div>
@@ -36896,5 +36903,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Sugestie — oprawa po redesignie 24.10.2026 (selektory zawężone do .estelio-suggestions) -->
 <link rel="stylesheet" href="/sugestie.css?v=__WERSJA_PLIKOW__">
 <script src="/sugestie.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Produkty i kosmetyki (słownik) — oprawa po redesignie 24.10.2026 (selektory zawężone do .estelio-cosmetics; bez własnego JS) -->
+<link rel="stylesheet" href="/kosmetyki.css?v=__WERSJA_PLIKOW__">
 </body>
 </html>

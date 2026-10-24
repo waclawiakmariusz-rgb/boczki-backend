@@ -1,0 +1,25 @@
+Use case ui-mockup. Create a premium practical web application content-only redesign for Estelio called "Produkty i kosmetyki". Style "lekki nowy": warm ivory #FAF8F5, white cards, light #E7E1DE borders,18px radius, very subtle shadows, burgundy #842D49 action buttons flat color, blush #F8EDF1 small highlights, dark#242126 text, muted#67616B. Crisp Polish sans-serif typography. Wide landscape approx1536x1100. Flat front view, no browser or operating system chrome, no sidebar, no logo, no marketing photography. This is a sales product catalog, NOT stock/inventory. No stock numbers, categories, photos, VAT labels, net/gross labels, reorder alerts or dashboard metrics.
+At top eyebrow "Administracja / Kosmetyki", H1 "Produkty i kosmetyki", subtitle "Nazwy i ceny produktów dostępnych w rejestracji sprzedaży.", circular ? right.
+Top full-width white card, H2 "Dodaj produkt". One horizontal row of 3 labelled fields, first32%, second45%, third23%:
+"Firma" dropdown value "Bruno Vassari"; under dropdown small burgundy text button "+ Dodaj firmę".
+"Nazwa produktu" input value "Illuminating Eye Contour".
+"Cena sprzedaży" input value "260,00" suffix "zł".
+Card footer border, small muted "Produkt pojawi się w katalogu po zapisaniu.", right primary "Dodaj produkt".
+Below fullwidth white card title "Katalog produktów" and compact count badge "13". On right search field placeholder "Szukaj firmy lub produktu…". Table with columns "Firma", "Produkt", "Cena sprzedaży", "Działania". Price right aligned with tabular digits and each row has subtle outlined "Edytuj" and small outlined red/burgundy "Usuń" action. No icon-only crosses. Six visible rows:
+Aliness | Berberine sulphate |70,00 zł
+Aliness | Biotyna |35,00 zł
+Aliness | CDP Choline |95,00 zł
+Aliness | Cynk chelatowany |32,00 zł
+Aliness | Czerwona koniczyna |55,00 zł
+Aliness | Green Coffee |50,00 zł
+Footer "1–6 z 13 produktów" on left, small navigation buttons "Poprzednia", centered "1 / 3", "Następna" on right. Prev disabled pale, Next outlined.
+Typography hierarchy H1 approximately30 CSSpx, card header21px, fields16px, row14-15px. Content max1120CSSpx inside enough page margins. Product names not huge blank gaps. Visual breathing room yet dense readable table. Header row gently tinted warm neutral, thin separators. Avoid gradients, emojis, excessive colored boxes or giant fullwidth action button. Output a realistic polished browser-rendered looking design mockup, correct Polish text.
+
+---
+
+Use case ui-mockup. Supporting component design sheet for Estelio "Produkty i kosmetyki" redesign, style "lekki nowy". Three isolated components on ivory#FAF8F5 canvas, landscape1536x1024. White cards,18px corners, subtle shadows, thin#E7E1DE borders, dark#242126 text, muted#67616B, burgundy#842D49 primary flat buttons, blush#F8EDF1. Readable Polish sans-serif. No browser chrome, sidebar, logo, other modules, people or decorative objects.
+Three columns with headings outside UI "01 / Nowa firma", "02 / Edycja produktu", "03 / Usunięcie produktu". Center column slightly wider.
+Left isolated fragment card: label "Nazwa nowej firmy", input placeholder "Wpisz nazwę firmy", under muted "Firma dla dodawanego produktu.", burgundy text button "Wróć do listy firm". This is inline form state, NOT a separate save-company dialog. No save button.
+Middle modal: title "Edytuj produkt", small top-right close X44px hit target; description "Zaktualizuj dane wybranego produktu.". Three vertically stacked fields: label "Firma", text input "Bruno Vassari"; label "Nazwa produktu", input "Illuminating Eye Contour"; label "Cena sprzedaży", input "260,00" suffix"zł". Bottom secondary "Anuluj", primary "Zapisz zmiany". Good44px targets, input48px, spacious but efficient.
+Right smaller modal: title "Usunąć produkt?", body "Sprawdź wybraną pozycję przed potwierdzeniem.", blush summary showing small "Bruno Vassari", bold "Illuminating Eye Contour", "260,00 zł". Footer secondary "Zostaw produkt" and burgundy "Usuń produkt", on two stacked rows if needed for legibility.
+No net/gross or VAT labels, no stock, no explanation of historical accounting impact, no additional fields. This is a precise implementation reference sheet for the existing create/edit/delete catalog UI.

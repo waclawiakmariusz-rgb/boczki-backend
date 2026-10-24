@@ -1,0 +1,120 @@
+/* Administracja → Kosmetyki (Produkty i kosmetyki) — oprawa „lekki nowy” wg docs/redesign/Estelio_Kosmetyki_Lekki_Nowy_2026-10-24.
+   Wyłącznie wygląd; selektory zawężone do .estelio-cosmetics. Logika (dodajModel, renderSlownik, obslugaWyboruFirmy, przelaczTrybFirmy,
+   szukajWSlowniku, edytujSlownikUI, zapiszEdycjeSlownika, usunZeSlownikaUI) bez zmian. */
+.estelio-cosmetics {
+  --ksm-text: #242126; --ksm-muted: #67616b; --ksm-border: #e7e1de; --ksm-field-border: #d9d4d8; --ksm-card: #ffffff; --ksm-field-bg: #ffffff;
+  --ksm-accent: #842d49; --ksm-accent-hover: #70243d; --ksm-accent-bg: #f8edf1; --ksm-hover: #f6f3f1; --ksm-suffix-bg: #f5f3f2;
+  container: cosmetics / inline-size; color: var(--ksm-text); font-size: 16px; line-height: 1.5; min-width: 0;
+}
+.estelio-cosmetics *, .estelio-cosmetics *::before, .estelio-cosmetics *::after { box-sizing: border-box; }
+.estelio-cosmetics h1, .estelio-cosmetics h2, .estelio-cosmetics p, .estelio-cosmetics ul { margin: 0; }
+.estelio-cosmetics svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.estelio-cosmetics .ksm-shell { max-width: 1120px; margin: 0 auto; }
+.estelio-cosmetics .ksm-header { margin-bottom: 22px; }
+.estelio-cosmetics .ksm-okruszek { font-size: 14px; line-height: 20px; color: var(--ksm-muted); margin-bottom: 6px; }
+.estelio-cosmetics .ksm-title-row { display: flex; align-items: center; gap: 8px; }
+.estelio-cosmetics h1 { font-size: 30px; line-height: 38px; font-weight: 650; letter-spacing: -.7px; color: var(--ksm-text); }
+.estelio-cosmetics .ksm-header .ksm-opis { font-size: 16px; line-height: 24px; margin-top: 4px; }
+.estelio-cosmetics .ksm-opis, .estelio-cosmetics .ksm-help { font-size: 14px; line-height: 20px; color: var(--ksm-muted); }
+.estelio-cosmetics .ksm-card { background: var(--ksm-card); border: 1px solid var(--ksm-border); border-radius: 18px; box-shadow: 0 4px 18px rgba(45, 30, 35, .04); min-width: 0; margin-bottom: 20px; }
+.estelio-cosmetics .ksm-card-body { padding: 26px; }
+.estelio-cosmetics .ksm-card-stopka { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 16px 26px; border-top: 1px solid var(--ksm-border); }
+.estelio-cosmetics h2 { font-size: 21px; line-height: 29px; font-weight: 650; color: var(--ksm-text); }
+.estelio-cosmetics .ksm-pola { display: grid; grid-template-columns: 1.2fr 1.5fr .85fr; gap: 20px; align-items: start; margin-top: 18px; }
+.estelio-cosmetics .ksm-field { min-width: 0; }
+.estelio-cosmetics .ksm-label { display: block; font-size: 14px; line-height: 20px; font-weight: 550; color: var(--ksm-text); margin-bottom: 8px; text-transform: none; letter-spacing: 0; }
+.estelio-cosmetics .ksm-field input, .estelio-cosmetics .ksm-field select, .estelio-cosmetics .ksm-dialog .ksm-field input.form-control { width: 100%; min-width: 0; height: 48px; padding: 0 14px; font: inherit; font-size: 16px; font-weight: 400; color: var(--ksm-text); background: var(--ksm-field-bg); border: 1px solid var(--ksm-field-border); border-radius: 10px; box-shadow: none; transform: none; transition: border-color .12s; }
+.estelio-cosmetics .ksm-field input::placeholder { color: #9a949c; font-weight: 400; }
+.estelio-cosmetics .ksm-field input:focus, .estelio-cosmetics .ksm-field select:focus { outline: 2px solid var(--ksm-accent); outline-offset: 3px; border-color: var(--ksm-field-border); background: var(--ksm-field-bg); box-shadow: none; transform: none; }
+.estelio-cosmetics .ksm-field input[type="number"] { -moz-appearance: textfield; appearance: textfield; font-variant-numeric: tabular-nums; }
+.estelio-cosmetics .ksm-field input[type="number"]::-webkit-inner-spin-button, .estelio-cosmetics .ksm-field input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.estelio-cosmetics .ksm-select-wrap { position: relative; }
+.estelio-cosmetics .ksm-field select { appearance: none; -webkit-appearance: none; padding-right: 42px; text-overflow: ellipsis; cursor: pointer; }
+.estelio-cosmetics .ksm-chevron { position: absolute; right: 14px; top: 14px; width: 20px; height: 20px; color: var(--ksm-text); pointer-events: none; }
+/* Tryb nowej firmy: obslugaWyboruFirmy() ukrywa select (display:none) i pokazuje input. Kiedy select jest schowany, chowamy też
+   chevron i „+ Dodaj firmę”, a pokazujemy podpowiedź i „Wróć do listy firm”. */
+.estelio-cosmetics .ksm-select-wrap:has(select[style*="none"]) .ksm-chevron { display: none; }
+.estelio-cosmetics .ksm-help-nowa, .estelio-cosmetics .ksm-link-wroc { display: none; }
+.estelio-cosmetics .ksm-firma:has(#s_firma_input[style*="block"]) .ksm-help-nowa, .estelio-cosmetics .ksm-firma:has(#s_firma_input[style*="block"]) .ksm-link-wroc { display: inline-flex; }
+.estelio-cosmetics .ksm-firma:has(#s_firma_input[style*="block"]) .ksm-link-dodaj { display: none; }
+.estelio-cosmetics .ksm-firma .ksm-help-nowa { display: none; margin-top: 6px; }
+.estelio-cosmetics .ksm-firma:has(#s_firma_input[style*="block"]) .ksm-help-nowa { display: block; }
+.estelio-cosmetics .ksm-link { display: inline-flex; align-items: center; min-height: 36px; margin-top: 6px; padding: 0 2px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ksm-accent); background: transparent; border: 0; cursor: pointer; text-transform: none; letter-spacing: 0; transform: none; }
+.estelio-cosmetics .ksm-link:hover { color: var(--ksm-accent-hover); text-decoration: underline; transform: none; }
+.estelio-cosmetics .ksm-cena-wrap { position: relative; }
+.estelio-cosmetics .ksm-cena-wrap input { padding-right: 60px; }
+.estelio-cosmetics .ksm-cena-wrap > span { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 48px; display: grid; place-items: center; border-left: 1px solid var(--ksm-field-border); border-radius: 0 9px 9px 0; background: var(--ksm-suffix-bg); color: var(--ksm-muted); font-size: 15px; pointer-events: none; }
+.estelio-cosmetics .ksm-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 22px; font: inherit; font-size: 14px; font-weight: 600; color: #fff; background: var(--ksm-accent); border: 0; border-radius: 10px; cursor: pointer; text-transform: none; letter-spacing: 0; width: auto; margin: 0; box-shadow: none; transform: none; transition: background .12s; white-space: nowrap; }
+.estelio-cosmetics .ksm-primary:hover:not(:disabled) { background: var(--ksm-accent-hover); transform: none; box-shadow: none; }
+.estelio-cosmetics .ksm-primary:disabled { opacity: .6; cursor: default; }
+.estelio-cosmetics .ksm-secondary { min-height: 44px; padding: 0 20px; font: inherit; font-size: 14px; font-weight: 500; color: var(--ksm-text); background: var(--ksm-card); border: 1px solid var(--ksm-border); border-radius: 10px; cursor: pointer; transform: none; }
+.estelio-cosmetics .ksm-secondary:hover { background: var(--ksm-hover); transform: none; }
+.estelio-cosmetics .ksm-primary:focus-visible, .estelio-cosmetics .ksm-secondary:focus-visible, .estelio-cosmetics .ksm-btn:focus-visible, .estelio-cosmetics .ksm-link:focus-visible, .estelio-cosmetics .ksm-x:focus-visible { outline: 2px solid var(--ksm-accent); outline-offset: 3px; }
+/* katalog */
+.estelio-cosmetics .ksm-katalog-naglowek { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 26px; flex-wrap: wrap; }
+.estelio-cosmetics .ksm-katalog-tytul { display: flex; align-items: center; gap: 10px; }
+.estelio-cosmetics .ksm-licznik { display: inline-grid; place-items: center; min-width: 30px; height: 30px; padding: 0 10px; border-radius: 999px; background: var(--ksm-accent-bg); color: var(--ksm-accent); font-size: 14px; font-weight: 600; }
+.estelio-cosmetics .ksm-szukaj { position: relative; display: block; flex: 0 1 340px; min-width: 220px; margin: 0; text-transform: none; letter-spacing: 0; font-weight: 400; }
+.estelio-cosmetics .ksm-szukaj > svg { position: absolute; left: 14px; top: 13px; width: 20px; height: 20px; color: var(--ksm-muted); }
+.estelio-cosmetics .ksm-szukaj input { display: block; width: 100%; height: 46px; padding: 0 14px 0 44px !important; margin: 0; font: inherit; font-size: 16px; font-weight: 400; color: var(--ksm-text); background: var(--ksm-field-bg); border: 1px solid var(--ksm-field-border); border-radius: 10px; outline: none; box-shadow: none; transform: none; }
+.estelio-cosmetics .ksm-szukaj input:focus { outline: 2px solid var(--ksm-accent); outline-offset: 3px; transform: none; box-shadow: none; }
+.estelio-cosmetics .ksm-naglowki, .estelio-cosmetics .ksm-row { display: grid; grid-template-columns: 1fr 1.6fr 150px 200px; gap: 16px; align-items: center; padding: 0 26px; }
+.estelio-cosmetics .ksm-naglowki { height: 44px; background: #faf8f5; border-top: 1px solid var(--ksm-border); border-bottom: 1px solid var(--ksm-border); font-size: 13px; color: var(--ksm-muted); }
+.estelio-cosmetics .ksm-naglowki .ksm-kol-cena { text-align: right; }
+.estelio-cosmetics .ksm-lista { list-style: none; padding: 0; margin: 0; }
+/* Globalny .dict-row (flex) ściskałby grid wiersza do szerokości treści — li ma być zwykłym blokiem, grid jest w .ksm-row. */
+.estelio-cosmetics .ksm-lista > li.dict-row { display: block; padding: 0; margin: 0; border-bottom: 1px solid var(--ksm-border); }
+.estelio-cosmetics .ksm-lista > li { border-bottom: 1px solid var(--ksm-border); }
+.estelio-cosmetics .ksm-lista > li > .ksm-row { width: 100%; }
+/* „Wróć do listy firm” i podpowiedź tylko w trybie nowej firmy (reguły z :has wyżej mają wyższą specyficzność i je pokazują). */
+.estelio-cosmetics .ksm-firma .ksm-link-wroc { display: none; }
+.estelio-cosmetics .ksm-lista > li:last-child { border-bottom: 0; }
+.estelio-cosmetics .ksm-row { min-height: 56px; padding-top: 6px; padding-bottom: 6px; font-size: 14px; }
+.estelio-cosmetics .ksm-kol-firma { color: var(--ksm-muted); overflow-wrap: anywhere; }
+.estelio-cosmetics .ksm-kol-produkt { font-weight: 500; overflow-wrap: anywhere; }
+.estelio-cosmetics .ksm-cena { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.estelio-cosmetics .ksm-cena-brak { color: #9a949c; font-size: 13px; }
+.estelio-cosmetics .ksm-akcje { display: flex; gap: 8px; justify-content: flex-start; }
+.estelio-cosmetics .ksm-btn { min-height: 40px; padding: 0 16px; font: inherit; font-size: 14px; font-weight: 500; border-radius: 10px; cursor: pointer; transform: none; transition: background .12s; white-space: nowrap; }
+.estelio-cosmetics .ksm-btn-edytuj { color: var(--ksm-text); background: var(--ksm-card); border: 1px solid var(--ksm-border); }
+.estelio-cosmetics .ksm-btn-edytuj:hover { background: var(--ksm-hover); transform: none; }
+.estelio-cosmetics .ksm-btn-usun { color: var(--ksm-accent); background: var(--ksm-card); border: 1px solid var(--ksm-accent); }
+.estelio-cosmetics .ksm-btn-usun:hover { background: var(--ksm-accent-bg); transform: none; }
+.estelio-cosmetics .ksm-state { padding: 22px 26px; color: var(--ksm-muted); font-size: 15px; list-style: none; }
+.estelio-cosmetics .ksm-state strong { color: var(--ksm-text); font-weight: 600; }
+.estelio-cosmetics .ksm-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+/* dialog edycji (#edit-dict-overlay zostaje overlayem z display:flex; w środku karta .ksm-dialog) */
+.estelio-cosmetics.ksm-dialog { width: min(500px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow-y: auto; padding: 26px; background: var(--ksm-card); border-radius: 18px; box-shadow: 0 24px 80px rgba(16, 24, 40, .25); container: none; }
+.estelio-cosmetics .ksm-dialog-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 18px; }
+.estelio-cosmetics .ksm-dialog-head h2 { font-size: 24px; line-height: 32px; font-weight: 700; }
+.estelio-cosmetics .ksm-x { display: grid; place-items: center; width: 44px; height: 44px; flex: 0 0 44px; border: 0; border-radius: 12px; background: #f3f0ee; color: var(--ksm-text); cursor: pointer; transform: none; }
+.estelio-cosmetics .ksm-x svg { width: 18px; height: 18px; }
+.estelio-cosmetics.ksm-dialog .ksm-field { margin-top: 16px; }
+.estelio-cosmetics .ksm-dialog-stopka { display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px; }
+@container cosmetics (width < 820px) {
+  .estelio-cosmetics .ksm-pola { grid-template-columns: 1fr 1fr; }
+  .estelio-cosmetics .ksm-pola .ksm-field:last-child { grid-column: 1 / -1; }
+  .estelio-cosmetics .ksm-card-body { padding: 20px; }
+  .estelio-cosmetics .ksm-card-stopka, .estelio-cosmetics .ksm-katalog-naglowek { padding-left: 20px; padding-right: 20px; }
+  .estelio-cosmetics .ksm-naglowki { display: none; }
+  .estelio-cosmetics .ksm-row { grid-template-columns: 1fr auto; padding: 14px 20px; row-gap: 4px; }
+  .estelio-cosmetics .ksm-kol-firma { font-size: 13px; }
+  .estelio-cosmetics .ksm-kol-produkt { grid-column: 1; }
+  .estelio-cosmetics .ksm-cena { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 600; }
+  .estelio-cosmetics .ksm-akcje { grid-column: 1 / -1; margin-top: 6px; }
+}
+@container cosmetics (width < 640px) {
+  .estelio-cosmetics .ksm-pola { grid-template-columns: minmax(0, 1fr); }
+  .estelio-cosmetics .ksm-card-stopka { flex-direction: column; align-items: stretch; }
+  .estelio-cosmetics .ksm-primary { width: 100%; }
+  .estelio-cosmetics .ksm-katalog-naglowek { flex-direction: column; align-items: stretch; }
+  .estelio-cosmetics .ksm-szukaj { flex: 1 1 auto; min-width: 0; }
+  .estelio-cosmetics .ksm-akcje .ksm-btn { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) { .estelio-cosmetics * { transition: none !important; } }
+body.dark-mode .estelio-cosmetics { --ksm-text: #f8fafc; --ksm-muted: #94a3b8; --ksm-border: #334155; --ksm-field-border: #334155; --ksm-card: #1e293b; --ksm-field-bg: #0f172a; --ksm-accent: #e3a0b2; --ksm-accent-hover: #d08a9e; --ksm-accent-bg: rgba(184, 112, 128, .2); --ksm-hover: #334155; --ksm-suffix-bg: #1e293b; }
+body.dark-mode .estelio-cosmetics .ksm-primary { color: #1e293b; }
+body.dark-mode .estelio-cosmetics .ksm-naglowki { background: #0f172a; }
+body.dark-mode .estelio-cosmetics .ksm-x { background: #334155; }
+body.dark-mode .estelio-cosmetics .ksm-field input, body.dark-mode .estelio-cosmetics .ksm-field select, body.dark-mode .estelio-cosmetics .ksm-szukaj input { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
+body.dark-mode .estelio-cosmetics .ksm-card, body.dark-mode .estelio-cosmetics.ksm-dialog { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }
