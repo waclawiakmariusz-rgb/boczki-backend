@@ -1,0 +1,118 @@
+/* Ustawienia zadatków (Administracja) — oprawa „lekki nowy” wg docs/redesign/Estelio_Zadatki_Lekki_Nowy_2026-10-23.
+   Wyłącznie wygląd; selektory zawężone do .estelio-deposit-settings. Logika (wczytajUstawieniaZadatkow, uz_zapisz,
+   uz_dodajProg, uz_usunProg, uz_przelaczTryb, uz_przelaczPowyzej) i ID kontrolek uz-* bez zmian. */
+.estelio-deposit-settings {
+  --ed-ink: #242126; --ed-muted: #67616b; --ed-border: #e7e1de; --ed-field-border: #d9d4d8; --ed-card: #ffffff;
+  --ed-accent: #842d49; --ed-accent-hover: #70243d; --ed-blush: #f8edf1; --ed-soft: #f7f5f6; --ed-error: #a52540;
+  container: deposit / inline-size; color: var(--ed-ink); font-size: 16px; line-height: 1.5; min-width: 0;
+}
+.estelio-deposit-settings *, .estelio-deposit-settings *::before, .estelio-deposit-settings *::after { box-sizing: border-box; }
+.estelio-deposit-settings h1, .estelio-deposit-settings h2, .estelio-deposit-settings p { margin: 0; }
+.estelio-deposit-settings .ed-content { max-width: 1120px; margin: 0 auto; }
+
+/* nagłówek */
+.estelio-deposit-settings .ed-header { margin-bottom: 28px; }
+.estelio-deposit-settings .ed-eyebrow { font-size: 12px; letter-spacing: .3px; color: var(--ed-muted); }
+.estelio-deposit-settings .ed-title-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 5px 0 8px; }
+.estelio-deposit-settings h1 { font-size: 28px; line-height: 36px; font-weight: 650; letter-spacing: -.7px; color: var(--ed-ink); }
+.estelio-deposit-settings .ed-opis { font-size: 14px; color: var(--ed-muted); }
+.estelio-deposit-settings h2 { font-size: 20px; line-height: 28px; font-weight: 650; letter-spacing: -.3px; color: var(--ed-ink); }
+.estelio-deposit-settings .ed-subtitle { font-size: 14px; color: var(--ed-muted); margin: 6px 0 28px; }
+
+/* siatka i karty */
+.estelio-deposit-settings .ed-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.estelio-deposit-settings .ed-card { background: var(--ed-card); border: 1px solid var(--ed-border); border-radius: 18px; padding: 28px; box-shadow: 0 4px 18px rgba(45, 30, 35, .04); min-width: 0; }
+
+/* pola — nadpisania globalnych label/input/select tylko w tym obszarze */
+.estelio-deposit-settings .ed-field { margin-bottom: 24px; }
+.estelio-deposit-settings .ed-field:last-child { margin-bottom: 0; }
+.estelio-deposit-settings label, .estelio-deposit-settings legend, .estelio-deposit-settings .ed-label {
+  display: block; font-size: 14px; line-height: 20px; font-weight: 550; color: var(--ed-ink); margin: 0 0 8px; text-transform: none; letter-spacing: 0;
+}
+.estelio-deposit-settings input.form-control, .estelio-deposit-settings select.form-control, .estelio-deposit-settings input[type="number"] {
+  width: 100%; min-height: 48px; border: 1px solid var(--ed-field-border); border-radius: 10px; background: var(--ed-card); color: var(--ed-ink);
+  padding: 0 14px !important; font-size: 16px; font-family: inherit; margin: 0; box-shadow: none;
+}
+.estelio-deposit-settings select.form-control { padding-right: 32px !important; }
+.estelio-deposit-settings input:focus-visible, .estelio-deposit-settings select:focus-visible, .estelio-deposit-settings button:focus-visible { outline: 2px solid var(--ed-accent); outline-offset: 3px; }
+.estelio-deposit-settings .ed-input-wrap { position: relative; }
+.estelio-deposit-settings .ed-input-wrap input { padding-right: 50px !important; }
+.estelio-deposit-settings .ed-input-wrap > span { position: absolute; right: 16px; top: 50%; transform: translateY(-50%); color: var(--ed-muted); pointer-events: none; font-size: 14px; }
+.estelio-deposit-settings .ed-hint { font-size: 13px; line-height: 19px; color: var(--ed-muted); margin-top: 7px; }
+.estelio-deposit-settings .ed-hint:empty { display: none; }
+
+/* bloki trybów — zostają zwykłymi div-ami, bo uz_przelaczTryb() steruje ich display */
+.estelio-deposit-settings #uz-blok-procent, .estelio-deposit-settings #uz-blok-kwotowy { margin-bottom: 24px; }
+.estelio-deposit-settings .ed-progi { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+.estelio-deposit-settings .ed-prog { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--ed-border); border-radius: 10px; background: var(--ed-soft); font-size: 14px; }
+.estelio-deposit-settings .ed-prog-tekst { flex: 1; min-width: 0; }
+.estelio-deposit-settings .ed-prog-tekst strong { font-weight: 650; }
+.estelio-deposit-settings .ed-prog-strzalka { color: var(--ed-muted); margin: 0 6px; }
+.estelio-deposit-settings .ed-prog-pusto { font-size: 13px; color: var(--ed-muted); font-style: italic; }
+.estelio-deposit-settings .ed-prog-usun { border: 1px solid var(--ed-border); background: var(--ed-card); color: var(--ed-error); border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.estelio-deposit-settings .ed-prog-usun:hover { border-color: var(--ed-error); }
+.estelio-deposit-settings .ed-dodaj { border: 1px dashed var(--ed-field-border); border-radius: 12px; padding: 16px; }
+.estelio-deposit-settings .ed-dodaj-tytul { font-size: 14px; font-weight: 550; margin-bottom: 12px; }
+.estelio-deposit-settings .ed-dodaj-row { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.estelio-deposit-settings .ed-dodaj-row .ed-field { flex: 1 1 140px; margin: 0; }
+.estelio-deposit-settings .ed-secondary { min-height: 48px; border: 1px solid var(--ed-border); background: var(--ed-card); color: var(--ed-ink); border-radius: 10px; padding: 8px 16px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.estelio-deposit-settings .ed-secondary:hover { border-color: var(--ed-accent); color: var(--ed-accent); }
+.estelio-deposit-settings .ed-powyzej { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--ed-border); }
+.estelio-deposit-settings #uz-fallback-box { margin-top: 14px; }
+
+/* zaokrąglenie — kafle radio sterują ukrytym <select id="uz-zaokraglenie"> (źródło prawdy dla uz_zapisz) */
+.estelio-deposit-settings fieldset { border: 0; padding: 0; margin: 0 0 24px; min-width: 0; }
+.estelio-deposit-settings .ed-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.estelio-deposit-settings .ed-option { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 10px 12px; border: 1px solid var(--ed-border); border-radius: 10px; cursor: pointer; margin: 0; font-size: 13px; font-weight: 550; flex: 1 0 auto; text-transform: none; color: var(--ed-ink); }
+.estelio-deposit-settings .ed-option:has(:checked) { background: var(--ed-blush); border-color: var(--ed-accent); color: var(--ed-accent); }
+.estelio-deposit-settings .ed-option input[type="radio"] { accent-color: var(--ed-accent); margin: 0; width: 16px; height: 16px; min-height: 0; padding: 0 !important; }
+.estelio-deposit-settings .ed-rounding { position: relative; }
+.estelio-deposit-settings .ed-zrodlo { position: absolute; left: 0; top: 0; width: 1px !important; min-height: 0 !important; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0 !important; margin: 0; opacity: 0; pointer-events: none; }
+
+.estelio-deposit-settings .ed-tip { display: flex; gap: 12px; background: var(--ed-blush); border-radius: 12px; padding: 16px; font-size: 13px; color: #624752; }
+.estelio-deposit-settings .ed-tip > span { width: 18px; height: 18px; line-height: 16px; border: 1px solid currentColor; border-radius: 50%; text-align: center; flex-shrink: 0; margin-top: 2px; font-weight: 650; font-size: 12px; }
+
+/* stopka z zapisem */
+.estelio-deposit-settings .ed-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-top: 1px solid var(--ed-border); padding-top: 22px; margin-top: 26px; }
+.estelio-deposit-settings .ed-footer-stan { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.estelio-deposit-settings .ed-save-state { font-size: 12px; color: var(--ed-muted); }
+.estelio-deposit-settings #uz-msg { font-size: 13px; font-weight: 600; min-height: 0; text-align: left; margin: 0; }
+.estelio-deposit-settings #uz-msg:empty { display: none; }
+.estelio-deposit-settings .ed-primary { border: 0; border-radius: 10px; background: var(--ed-accent); color: #fff; padding: 12px 20px; min-height: 46px; font: inherit; font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.estelio-deposit-settings .ed-primary:hover { background: var(--ed-accent-hover); }
+
+/* prawa karta: przykład */
+.estelio-deposit-settings .ed-summary { margin: 25px 0; display: grid; grid-template-columns: 1fr auto; gap: 14px; font-size: 14px; }
+.estelio-deposit-settings .ed-summary:empty { display: none; }
+.estelio-deposit-settings dt { color: var(--ed-muted); }
+.estelio-deposit-settings dd { margin: 0; text-align: right; font-weight: 550; overflow-wrap: anywhere; }
+.estelio-deposit-settings .ed-result { padding: 22px; background: var(--ed-blush); border-radius: 14px; color: var(--ed-accent); }
+.estelio-deposit-settings .ed-result > span { font-size: 13px; }
+.estelio-deposit-settings .ed-amount { display: block; font-size: 36px; line-height: 44px; font-weight: 650; letter-spacing: -1px; margin: 8px 0; overflow-wrap: anywhere; }
+.estelio-deposit-settings .ed-formula { font-size: 13px; color: #745762; overflow-wrap: anywhere; }
+.estelio-deposit-settings .ed-preview-note { font-size: 13px; color: var(--ed-muted); margin-top: 12px; }
+.estelio-deposit-settings .ed-preview-note:empty { display: none; }
+.estelio-deposit-settings .ed-disclaimer { font-size: 12px; color: var(--ed-muted); border-top: 1px solid var(--ed-border); padding-top: 20px; margin-top: 24px; }
+
+/* responsywność — po szerokości obszaru treści, nie okna */
+@container deposit (max-width: 920px) {
+  .estelio-deposit-settings .ed-grid { grid-template-columns: 1fr; }
+  .estelio-deposit-settings .ed-card { padding: 24px; }
+  .estelio-deposit-settings .ed-amount { font-size: 32px; line-height: 40px; }
+}
+@container deposit (max-width: 440px) {
+  .estelio-deposit-settings .ed-card { padding: 18px; }
+  .estelio-deposit-settings h1 { font-size: 24px; line-height: 32px; }
+  .estelio-deposit-settings .ed-footer { align-items: stretch; flex-direction: column; }
+  .estelio-deposit-settings .ed-primary { width: 100%; }
+  .estelio-deposit-settings .ed-option { flex-basis: 100%; }
+  .estelio-deposit-settings .ed-result { padding: 18px; }
+  .estelio-deposit-settings .ed-dodaj-row .ed-secondary { width: 100%; }
+}
+
+/* tryb ciemny aplikacji */
+body.dark-mode .estelio-deposit-settings { --ed-ink: #f8fafc; --ed-muted: #94a3b8; --ed-border: #334155; --ed-field-border: #334155; --ed-card: #1e293b; --ed-soft: #0f172a; --ed-blush: #3b1f2b; --ed-accent: #e9a6bb; --ed-accent-hover: #f1bccb; }
+body.dark-mode .estelio-deposit-settings .ed-primary { color: #1e293b; }
+body.dark-mode .estelio-deposit-settings .ed-tip { color: #f3d7e0; }
+body.dark-mode .estelio-deposit-settings .ed-formula { color: #e2b8c6; }
+body.dark-mode .estelio-deposit-settings input.form-control, body.dark-mode .estelio-deposit-settings select.form-control, body.dark-mode .estelio-deposit-settings input[type="number"] { background: var(--ed-card) !important; color: var(--ed-ink) !important; border-color: var(--ed-field-border) !important; }

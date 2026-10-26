@@ -1,0 +1,22 @@
+<section class="estelio-deposit-settings" aria-labelledby="deposit-title">
+  <header class="ed-header"><div><p class="ed-eyebrow">Administracja / Zadatki</p><h1 id="deposit-title">Ustawienia zadatków</h1><p>Ustal, jak Estelio podpowiada kwotę zadatku przy multisprzedaży.</p></div><button class="ed-help" type="button" aria-label="Pomoc dotycząca zadatków" aria-expanded="false" aria-controls="deposit-help">?</button></header>
+  <aside id="deposit-help" class="ed-help-content" hidden><strong>Jak działa podpowiedź zadatku?</strong><p>Wybierz sposób wyliczania i zaokrąglenia proponowanej kwoty. Podgląd pokazuje przykład dla ustawień z formularza. Zapisz ustawienia, aby zachować konfigurację. Kwotę zadatku możesz zmienić podczas sprzedaży.</p></aside>
+  <div class="ed-load" role="status">Wczytywanie ustawień…</div><button class="ed-retry ed-secondary" type="button" hidden>Spróbuj ponownie</button>
+  <div class="ed-grid" hidden>
+    <form class="ed-card ed-form" novalidate>
+      <h2>Sposób wyliczania</h2><p class="ed-subtitle">Wybierz regułę podpowiedzi dla salonu.</p>
+      <fieldset class="ed-controls"><div class="ed-field"><label for="deposit-mode">Tryb wyliczania</label><select id="deposit-mode" name="mode"></select></div>
+      <div class="ed-parameters"></div>
+      <fieldset class="ed-rounding"><legend>Zaokrąglenie kwoty</legend><div class="ed-options"></div></fieldset>
+      <div class="ed-tip"><span aria-hidden="true">i</span><p>To podpowiedź systemu. Kwotę zadatku możesz zmienić podczas sprzedaży.</p></div></fieldset>
+      <div class="ed-error" role="alert" hidden></div>
+      <footer class="ed-footer"><p class="ed-save-state" role="status"></p><button class="ed-primary" type="submit" disabled>Zapisz ustawienia</button></footer>
+    </form>
+    <section class="ed-card ed-preview" aria-labelledby="deposit-preview-title">
+      <h2 id="deposit-preview-title">Sprawdź na przykładzie</h2><p class="ed-subtitle">Podgląd dla wartości z formularza.</p>
+      <div class="ed-field"><label for="deposit-example">Przykładowa kwota zabiegu</label><div class="ed-input-wrap"><input id="deposit-example" type="text" inputmode="decimal" value="195,00" aria-describedby="deposit-example-hint"><span aria-hidden="true">zł</span></div><p class="ed-hint" id="deposit-example-hint">Ta kwota służy tylko do podglądu.</p></div>
+      <dl class="ed-summary"></dl><div class="ed-result"><span>Proponowany zadatek</span><strong class="ed-amount">—</strong><p class="ed-formula"></p></div><p class="ed-preview-note" role="status"></p>
+      <p class="ed-disclaimer">Podgląd nie zapisuje ustawień ani płatności.</p>
+    </section>
+  </div>
+</section>
