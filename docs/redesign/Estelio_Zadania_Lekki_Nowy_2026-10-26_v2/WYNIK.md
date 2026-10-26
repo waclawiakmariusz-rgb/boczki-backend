@@ -59,4 +59,4 @@ Pakiet v2 (makiety 01–06, `WDROZENIE_DLA_CLAUDE_CODE.md`, prototyp). Gałąź 
 ## 5. Wyniki
 
 - Jednostkowe: nowe 15/15; pełny zestaw repozytorium **963/963** (58 plików).
-- Panel prób `zadania-pulpit`: 20/20 PASS, 0 błędów JS; zrzuty w `wynik/` (01 widget, 02 formularz, 03 filtr Telefony, 04 wynik „Nie odebrała”, 05 szczegóły i historia, 06 ciemny, 07 telefon 400 px).
+- Panel prób `zadania-pulpit`: 21/21 PASS, 0 błędów JS; zrzuty w `wynik/` (01 widget, 02 formularz, 03 filtr Telefony, 04 wynik „Nie odebrała”, 05 szczegóły i historia, 06 ciemny, 07 telefon 400 px).

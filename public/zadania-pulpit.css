@@ -244,3 +244,5 @@ body.dark-mode .estelio-tasks .et-head h3, body.dark-mode .estelio-task-form .et
 .estelio-task-form .etf-chip-popup button { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; background: none; border-radius: 8px; font-size: 13px; min-height: 40px; color: var(--et-ink); }
 .estelio-task-form .etf-chip-popup button:hover { background: var(--et-pale); color: var(--et-brand); }
 body.dark-mode .estelio-task-form .etf-chip-KLIENT, body.dark-mode .estelio-task-form .etf-chip-MAGAZYN, body.dark-mode .estelio-task-form .etf-chip-KOSMETYK, body.dark-mode .estelio-task-form .etf-chip-SPRZEDAZ, body.dark-mode .estelio-task-form .etf-chip-INNE { background: var(--et-pale); color: var(--et-brand); }
+/* atrybut [hidden] ma wygrywać z regułami display (chip wybranego kontaktu, wyniki, panele) */
+.estelio-tasks [hidden], .estelio-task-form [hidden] { display: none !important; }

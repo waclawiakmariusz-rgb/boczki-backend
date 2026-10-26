@@ -52,6 +52,13 @@
       "opis": "Z04: rodzaj Telefon → pola kontaktu i numeru, obszar podpowiedziany: Klient"
     },
     {
+      "sprawdz": "document.getElementById('zd-kontakt-wybrany').hidden === true && getComputedStyle(document.getElementById('zd-kontakt-wybrany')).display === 'none' && getComputedStyle(document.getElementById('zd-kontakt-search')).display !== 'none'",
+      "opis": "Z04b: przed wyborem kontaktu widać tylko wyszukiwarkę (chip ukryty), pole można kliknąć"
+    },
+    {
+      "zrzut": "02a-formularz-przed-wyborem"
+    },
+    {
       "wpisz": "#zd-tytul",
       "wartosc": "Potwierdzić termin konsultacji (próba)"
     },
