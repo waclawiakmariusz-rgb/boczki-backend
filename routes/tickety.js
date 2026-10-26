@@ -25,7 +25,9 @@ const DOZWOLONE_TYPY = /^(image\/(png|jpeg|jpg|gif|webp)|application\/pdf)$/i;
 
 module.exports = (db, opts = {}) => {
   const router = express.Router();
-  const mailer = opts.mailer || require('./mailer');
+  // Powiadomienia o ticketach idą ODRĘBNYM kanałem (routes/powiadomienia-admina.js), nie przez routes/mailer.js,
+  // który obsługuje maile do klientów i salonów — decyzja właściciela 2026-10-26: jedno nie może psuć drugiego.
+  const powiadomienia = opts.powiadomienia || require('./powiadomienia-admina');
   const sessions = opts.sessions || require('./sessions');
   const log = opts.log || console;
   const zapiszLog = makeZapiszLog(db);
@@ -79,8 +81,51 @@ module.exports = (db, opts = {}) => {
       data_dodania DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       INDEX idx_ticket (ticket_id)
     ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, (e) => { if (e) log.error('[tickety] CREATE Zgloszenia_Zalaczniki:', e.message); });
+  // Dziennik powiadomień do admina (2026-10-26): od 15.10 powiadomienia o ticketach #5–#14 nie dochodziły i nikt
+  // tego nie widział, bo wysyłka była „odpal i zapomnij" z błędem wyłącznie na konsoli Node. Każda próba
+  // (udana lub nie) zostawia tu wiersz z odpowiedzią SMTP — jak w dzienniku serii powitalnej.
+  db.query(`CREATE TABLE IF NOT EXISTS Maile_admin_log (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      kiedy DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      rodzaj VARCHAR(20) NOT NULL,
+      ticket_id INT NULL,
+      tenant_id VARCHAR(100) NULL,
+      adresat VARCHAR(255) NULL,
+      temat VARCHAR(255) NULL,
+      status VARCHAR(20) NOT NULL,
+      smtp_id VARCHAR(255) NULL,
+      smtp_odpowiedz VARCHAR(500) NULL,
+      blad VARCHAR(500) NULL,
+      kto VARCHAR(100) NULL,
+      INDEX idx_ticket (ticket_id, id),
+      INDEX idx_kiedy (kiedy)
+    ) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`, (e) => { if (e) log.error('[tickety] CREATE Maile_admin_log:', e.message); });
 
   const s = (v, max) => String(v == null ? '' : v).trim().slice(0, max);
+
+  // Powiadomienie admina z dowodem nadania. Nigdy nie rzuca — błąd poczty nie może zepsuć zgłoszenia
+  // (jak dotąd), ale zostaje w Maile_admin_log i w Logi salonu (akcja „BŁĄD MAILA DO ESTELIO").
+  async function wyslijPowiadomienie(rodzaj, dane, kto) {
+    let temat = s(dane.tytul, 255);
+    try {
+      try { temat = s(powiadomienia.tresc(rodzaj, dane).temat, 255) || temat; } catch (e) { /* temat pomocniczy — nie blokuje wysyłki */ }
+      const info = (await powiadomienia.wyslij(rodzaj, dane)) || {};
+      const adresat = s(Array.isArray(info.accepted) && info.accepted.length ? info.accepted.join(', ')
+        : (info.envelope && Array.isArray(info.envelope.to) ? info.envelope.to.join(', ') : ''), 255) || null;
+      db.query(`INSERT INTO Maile_admin_log (rodzaj, ticket_id, tenant_id, adresat, temat, status, smtp_id, smtp_odpowiedz, kto) VALUES (?, ?, ?, ?, ?, 'wyslany', ?, ?, ?)`,
+        [rodzaj, dane.id || null, dane.tenant_id || null, adresat, temat, s(info.messageId, 255) || null, s(info.response, 500) || null, s(kto, 100) || null],
+        (e) => { if (e) log.error('[tickety] dziennik powiadomień:', e.message); });
+      return { ok: true, adresat };
+    } catch (e) {
+      const blad = s(e && e.message, 500) || 'nieznany błąd';
+      log.error(`[tickety] powiadomienie admina (${rodzaj} #${dane.id}):`, blad);
+      db.query(`INSERT INTO Maile_admin_log (rodzaj, ticket_id, tenant_id, temat, status, blad, kto) VALUES (?, ?, ?, ?, 'blad', ?, ?)`,
+        [rodzaj, dane.id || null, dane.tenant_id || null, temat, blad, s(kto, 100) || null],
+        (e2) => { if (e2) log.error('[tickety] dziennik powiadomień:', e2.message); });
+      if (dane.tenant_id) zapiszLog(dane.tenant_id, 'BŁĄD MAILA DO ESTELIO', 'System', `#${dane.id} (${rodzaj}) — ${blad}`);
+      return { ok: false, blad };
+    }
+  }
   const KOLUMNY_LISTY = `t.id, t.tenant_id, t.nazwa_salonu, t.pracownik, t.rola, t.kategoria, t.pilnosc, t.tytul, t.opis, t.kontekst,
       t.status, t.odpowiedz, t.odpowiedz_data, t.odpowiedz_przeczytana, t.data_utworzenia, t.data_zamkniecia,
       t.ostatni_ruch, t.czeka_na_estelio,
@@ -123,10 +168,8 @@ module.exports = (db, opts = {}) => {
           [tenant_id, nazwa_salonu, pracownik, rola, kategoria, pilnosc, tytul, opis, kontekst]);
         const id = r.insertId;
         zapiszLog(tenant_id, 'ZGŁOSZENIE DO ESTELIO', pracownik, `#${id} [${kategoria}/${pilnosc}] ${tytul}`);
-        // mail do admina — fire-and-forget, błąd poczty nie psuje zgłoszenia
-        Promise.resolve()
-          .then(() => mailer.powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu, pracownik, rola, kategoria, pilnosc, tytul, opis }))
-          .catch(e => log.error('[tickety] mail do admina:', e.message));
+        // powiadomienie admina — nie czekamy na nie (błąd poczty nie psuje zgłoszenia), wynik idzie do dziennika
+        wyslijPowiadomienie('ticket', { id, tenant_id, nazwa_salonu, pracownik, rola, kategoria, pilnosc, tytul, opis }, pracownik);
         return res.json({ status: 'success', id, message: `Zgłoszenie #${id} zapisane.` });
       }
 
@@ -168,9 +211,8 @@ module.exports = (db, opts = {}) => {
         const otwarte = rows[0].status === 'zamkniete';
         await q(`UPDATE Zgloszenia_Tickety SET ostatni_ruch = 'salon', czeka_na_estelio = 1${otwarte ? ", status = 'w_toku', data_zamkniecia = NULL" : ''} WHERE id = ? AND tenant_id = ?`, [id, tenant_id]);
         zapiszLog(tenant_id, 'ZGŁOSZENIE DO ESTELIO', autor, `#${id} dopisek${otwarte ? ' (zgłoszenie otwarte ponownie)' : ''}: ${tresc.slice(0, 120)}`);
-        Promise.resolve()
-          .then(() => mailer.powiadomAdminaOTickecie({ id, tenant_id, nazwa_salonu: s(d.nazwa_salonu, 255) || null, pracownik: autor, rola: s(d.rola, 50), kategoria: 'dopisek', pilnosc: otwarte ? 'otwarte ponownie' : 'dopisek', tytul: rows[0].tytul, opis: tresc }))
-          .catch(e => log.error('[tickety] mail o dopisku:', e.message));
+        // właściciel chce wiedzieć o każdym komentarzu salonu (2026-10-26) — osobny rodzaj w dzienniku
+        wyslijPowiadomienie('dopisek', { id, tenant_id, nazwa_salonu: s(d.nazwa_salonu, 255) || null, pracownik: autor, rola: s(d.rola, 50), tytul: rows[0].tytul, opis: tresc, otwarte_ponownie: otwarte }, autor);
         return res.json({ status: 'success', otwarte_ponownie: otwarte });
       }
 
@@ -236,6 +278,28 @@ module.exports = (db, opts = {}) => {
       if (req.query.tenant_id) { where.push('t.tenant_id = ?'); params.push(s(req.query.tenant_id, 100)); }
       const rows = await q(`SELECT ${KOLUMNY_ADMIN} FROM Zgloszenia_Tickety t ${JOIN_LICENCJE} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY t.id DESC LIMIT 500`, params);
       return res.json({ status: 'success', data: rows || [] });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // Dziennik powiadomień do admina: ostatnie wpisy (karta ticketu pokazuje najnowszy dla swojego numeru).
+  router.get('/admin/tickety/maile', wymagajAdmina, async (req, res) => {
+    try {
+      const rows = await q(`SELECT id, kiedy, rodzaj, ticket_id, tenant_id, adresat, temat, status, smtp_id, smtp_odpowiedz, blad, kto FROM Maile_admin_log ORDER BY id DESC LIMIT 300`);
+      const k = powiadomienia.konfiguracja();
+      return res.json({ status: 'success', data: rows || [], konfiguracja: { gotowa: k.gotowa, adresat: k.adresat, host: k.host || null } });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // Ponowna wysyłka powiadomienia o tickecie (ten sam szablon co przy zgłoszeniu) — też trafia do dziennika.
+  router.post('/admin/tickety/mail-ponownie', wymagajAdmina, async (req, res) => {
+    const id = parseInt(req.body && req.body.id, 10);
+    if (!id) return res.json({ status: 'error', message: 'Brak numeru zgłoszenia.' });
+    try {
+      const rows = await q(`SELECT ${KOLUMNY_ADMIN} FROM Zgloszenia_Tickety t ${JOIN_LICENCJE} WHERE t.id = ?`, [id]);
+      if (!rows || !rows.length) return res.json({ status: 'error', message: 'Nie ma takiego zgłoszenia.' });
+      const t = rows[0];
+      const w = await wyslijPowiadomienie('ponownie', { id: t.id, tenant_id: t.tenant_id, nazwa_salonu: t.nazwa_salonu, pracownik: t.pracownik, rola: t.rola, kategoria: t.kategoria, pilnosc: t.pilnosc, tytul: t.tytul, opis: t.opis }, 'admin');
+      return res.json(w.ok ? { status: 'success', adresat: w.adresat, message: `Wysłano ponownie${w.adresat ? ' na ' + w.adresat : ''}.` } : { status: 'error', message: 'Wysyłka nie powiodła się: ' + w.blad });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 

@@ -806,6 +806,8 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
         <button class="btn-secondary" onclick="tkAdmStatystyki()">📊 Statystyki</button>
       </div>
       <div id="tk-adm-stats" style="display:none; margin:10px 0 14px;"></div>
+      <!-- Stan kanału powiadomień + dziennik (Maile_admin_log, 2026-10-26) -->
+      <div id="tk-adm-dziennik" data-otwarty="0"></div>
       <div id="tk-adm-content"><div class="loading">Ładowanie zgłoszeń…</div></div>
     </div>
 
@@ -1816,6 +1818,62 @@ function kopiujLink() {
 
 // ═══════════ 🎫 TICKETY — zgłoszenia salonów do Estelio (routes/tickety.js, 2026-10-11) ═══════════
 let _ticketyAll = [];
+let _ticketyMaile = [];        // dziennik powiadomień do admina (Maile_admin_log), najnowsze pierwsze
+let _ticketyMailePoTickecie = {};   // ticket_id → najnowszy wpis
+let _ticketyMaileKonf = null;  // { gotowa, adresat, host } — stan konfiguracji kanału
+const TK_A_RODZAJ = { ticket: 'nowe zgłoszenie', dopisek: 'komentarz salonu', ponownie: 'wysyłka ręczna' };
+
+function tkAdmMailLinia(t) {
+  const w = _ticketyMailePoTickecie[t.id];
+  const przycisk = `<button class="btn-sm" onclick="tkAdmMailPonownie(${t.id})">🔁 Wyślij ponownie powiadomienie</button> <span id="tk-adm-mail-msg-${t.id}" style="font-size:12px;"></span>`;
+  if (!w) return `<div class="tk-small" style="margin:4px 0 8px;">✉️ Powiadomienie e-mail: brak wpisu w dzienniku (zgłoszenie sprzed uruchomienia dziennika). ${przycisk}</div>`;
+  const ok = w.status === 'wyslany';
+  return `<div class="tk-small" style="margin:4px 0 8px; color:${ok ? '#166534' : '#991b1b'};">✉️ Powiadomienie e-mail: ${ok ? '✅ wysłane' : '❌ BŁĄD'} ${tkData(w.kiedy)} (${TK_A_RODZAJ[w.rodzaj] || tkEsc(w.rodzaj)})${ok && w.adresat ? ' → ' + tkEsc(w.adresat) : ''}${!ok && w.blad ? ' — ' + tkEsc(w.blad) : ''}${ok && w.smtp_odpowiedz ? ` <span title="${tkEsc(w.smtp_odpowiedz)}">ⓘ</span>` : ''} ${przycisk}</div>`;
+}
+
+function tkAdmMailPonownie(id) {
+  const msg = document.getElementById(`tk-adm-mail-msg-${id}`);
+  if (!confirm(`Wysłać ponownie powiadomienie e-mail o zgłoszeniu #${id}?`)) return;
+  if (msg) { msg.textContent = 'Wysyłam…'; msg.style.color = 'var(--muted)'; }
+  fetch(`${API}/admin/tickety/mail-ponownie`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Admin-Token': adminToken }, body: JSON.stringify({ id }) })
+    .then(r => r.json())
+    .then(d => {
+      if (!msg) return;
+      msg.textContent = d.message || (d.status === 'success' ? 'Wysłano.' : 'Błąd wysyłki.');
+      msg.style.color = d.status === 'success' ? '#16a34a' : '#dc2626';
+      setTimeout(() => zaladujTickety(), 1200);
+    })
+    .catch(() => { if (msg) { msg.textContent = 'Błąd połączenia.'; msg.style.color = '#dc2626'; } });
+}
+
+// Pasek stanu kanału + rozwijany dziennik (ostatnie 300 wpisów) nad listą ticketów.
+function tkAdmRenderDziennik() {
+  const box = document.getElementById('tk-adm-dziennik'); if (!box) return;
+  const k = _ticketyMaileKonf;
+  const bledy = _ticketyMaile.filter(w => w.status !== 'wyslany').length;
+  const stan = !k ? '' : (k.gotowa
+    ? `<span style="color:#166534;">● kanał powiadomień skonfigurowany</span> · adresat: <strong>${tkEsc(k.adresat || '—')}</strong> · serwer: ${tkEsc(k.host || '—')}`
+    : `<span style="color:#991b1b;">● BRAK KONFIGURACJI SMTP</span> — powiadomienia o ticketach nie wychodzą (ustaw SMTP_HOST/SMTP_USER/SMTP_PASS, opcjonalnie TICKETY_EMAIL)`);
+  const otwarty = box.dataset.otwarty === '1';
+  box.innerHTML = `<div class="tk-small" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin:0 0 10px;">
+      <span>${stan}</span>
+      <button class="btn-sm" onclick="tkAdmToggleDziennik()">📒 Dziennik powiadomień (${_ticketyMaile.length}${bledy ? `, błędów: ${bledy}` : ''})</button>
+    </div>
+    <div id="tk-adm-dziennik-lista" style="display:${otwarty ? 'block' : 'none'}; margin-bottom:12px;">${otwarty ? tkAdmDziennikTabela() : ''}</div>`;
+}
+function tkAdmToggleDziennik() {
+  const box = document.getElementById('tk-adm-dziennik'); if (!box) return;
+  box.dataset.otwarty = box.dataset.otwarty === '1' ? '0' : '1';
+  tkAdmRenderDziennik();
+}
+function tkAdmDziennikTabela() {
+  if (!_ticketyMaile.length) return '<div class="tk-small">Dziennik jest pusty — pierwszy wpis pojawi się przy następnym zgłoszeniu lub komentarzu.</div>';
+  return `<div class="table-wrap"><table class="table"><thead><tr><th>Kiedy</th><th>Rodzaj</th><th>Ticket</th><th>Salon</th><th>Adresat</th><th>Status</th><th>Szczegóły</th><th>Kto</th></tr></thead><tbody>${_ticketyMaile.map(w => {
+    const ok = w.status === 'wyslany';
+    return `<tr><td style="white-space:nowrap;">${tkData(w.kiedy)}</td><td>${TK_A_RODZAJ[w.rodzaj] || tkEsc(w.rodzaj)}</td><td>#${w.ticket_id || '—'}</td><td>${tkEsc(w.tenant_id || '')}</td><td>${tkEsc(w.adresat || '—')}</td>
+      <td style="color:${ok ? '#166534' : '#991b1b'}; font-weight:700;">${ok ? '✅ wysłany' : '❌ błąd'}</td><td class="tk-small">${ok ? tkEsc(w.smtp_odpowiedz || w.smtp_id || '') : tkEsc(w.blad || '')}</td><td>${tkEsc(w.kto || '')}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
 const TK_A_KAT = { blad: '🐞 Błąd', prosba: '💡 Prośba', pytanie: '❓ Pytanie', inne: '📝 Inne' };
 const TK_A_PIL = { niska: ['niska', '#64748b'], normalna: ['normalna', '#2563eb'], wysoka: ['WYSOKA', '#d97706'], krytyczna: ['KRYTYCZNA', '#dc2626'] };
 const TK_A_ST = { nowe: ['🆕 Nowe', '#dbeafe', '#1e40af'], w_toku: ['🔧 W toku', '#fef3c7', '#92400e'], zamkniete: ['✅ Zamknięte', '#dcfce7', '#166534'] };
@@ -1825,9 +1883,15 @@ const tkData = (d) => { if (!d) return ''; const x = new Date(String(d).replace(
 function zaladujTickety(tylkoLicznik) {
   const cont = document.getElementById('tk-adm-content');
   if (!tylkoLicznik && cont) cont.innerHTML = '<div class="loading">Ładowanie zgłoszeń…</div>';
-  fetch(`${API}/admin/tickety`, { headers: { 'X-Admin-Token': adminToken } })
-    .then(r => r.json())
-    .then(d => {
+  // Dziennik powiadomień pobierany razem z listą; gdy padnie, lista i tak się wyświetla (bez stanu maila).
+  const maile = fetch(`${API}/admin/tickety/maile`, { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json()).catch(() => ({}));
+  Promise.all([fetch(`${API}/admin/tickety`, { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json()), maile])
+    .then(([d, m]) => {
+      _ticketyMaile = (m && m.status === 'success' && Array.isArray(m.data)) ? m.data : [];
+      _ticketyMaileKonf = (m && m.konfiguracja) || null;
+      _ticketyMailePoTickecie = {};
+      _ticketyMaile.forEach(w => { if (w.ticket_id && !_ticketyMailePoTickecie[w.ticket_id]) _ticketyMailePoTickecie[w.ticket_id] = w; });
+      if (!tylkoLicznik) tkAdmRenderDziennik();
       _ticketyAll = d.status === 'success' && Array.isArray(d.data) ? d.data : [];
       const nowe = _ticketyAll.filter(t => t.status === 'nowe').length;
       const badge = document.getElementById('badge-tickety');
@@ -1871,6 +1935,7 @@ function renderTickety() {
           ${t.kontekst ? `<br><span class="tk-small">${tkEsc(t.kontekst)}</span>` : ''}
         </div>
         <div class="zgl-msg" style="white-space:pre-line;">${tkEsc(t.opis || '')}</div>
+        ${tkAdmMailLinia(t)}
         <div class="tk-row" style="margin:8px 0;">
           ${Number(t.czeka_na_estelio) && t.status !== 'zamkniete' ? `<span class="pill" style="background:#fee2e2; color:#991b1b;">⏳ czeka na Twoją odpowiedź</span>` : ''}
           <button class="btn-sm" onclick="tkAdmRozmowa(${t.id})">💬 Rozmowa${Number(t.komentarze) ? ` (${t.komentarze})` : ''}</button>
