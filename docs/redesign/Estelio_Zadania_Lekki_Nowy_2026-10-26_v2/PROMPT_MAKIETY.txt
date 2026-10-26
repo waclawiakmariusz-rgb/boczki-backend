@@ -1,0 +1,13 @@
+Estelio, widget Zadania na Pulpicie — wizualny kierunek „lekki nowy”.
+Twórz precyzyjną makietę interfejsu, nie plakat reklamowy. Bez logo, menu, przeglądarki i innych kafli.
+Desktop 1536×1024; rzeczywisty widok mobilny 400×1024. Tło #FAF8F5, białe karty, burgund #842D49, róż #F8EDF1, tekst #242126, muted #67616B. Radius karty 18px. Typografia sans-serif, tytuł20/28, wiersze15/22, etykiety14/20, wskazówki13/19. Liniowe ikony, bez emoji, gradientów i zielono-żółtych wypełnień.
+Nagłówek „Masz 29 aktywnych zadań”, „14 telefonów · 5 po terminie · 4 na dziś”, Szablony cykliczne(1), Nowe zadanie, zwijanie.
+Filtry: Wszystkie29 / Telefony14 / Do zrobienia15; Tylko moje; Obszar: wszystkie; wyszukiwanie.
+Grupy czasu: Po terminie5, Na dziś4, Zaplanowane12, Bez terminu8. Przykładowe wiersze, jawne Pokaż pozostałeN. Nie sugeruj, że pięć pokazanych wierszy to całe29.
+Telefon: ikona, tytuł, akcja Zadzwoń z numerem, pierwszy obszar i +N, termin, komentarze, Zrobione, Oddzwonić później, menu. Lead ma jawne powiązanie i kampanię. Brak numeru: Brak numeru — dodaj.
+Obszary są wielokrotne; nie kasować kategorii. Dane: Anna/Ewa Kowalska, Lead104, nieoperacyjne numery000000101/102. Żadnych danych ze screenshotów źródłowych.
+Rozwinięcie telefonu: opis, ostatni komentarz, powiązanie, wyniki Umówiona/Nie odebrała/Nie zainteresowana, notatka, kolejny termin i zapis. Nie odebrała zachowuje aktywność zadania i status leada. Podpis jasno wskazuje skutek zapisu.
+Formularz: sześć grup Rodzaj/Tytuł/Klientka lub lead/Numer jeśli znany/Termin/Obszary. Więcej zawiera przypisania, priorytet, opis, dodatkowe powiązania, produkty i cykliczność.
+Mobile: segmenty w jednym rzędzie, filtry pod ikoną, pionowe karty, duże Zadzwoń i Zrobione, bez zależności od swipe.
+Stany: globalnie pusto, brak moich, brak wyników, ładowanie, błąd. Tryb ciemny zgodny z tokenami w instrukcji.
+Źródłem prawdy dla zachowań jest WDROZENIE_DLA_CLAUDE_CODE.md. Grafiki pokazują projekt, nie istniejącą działającą integrację.

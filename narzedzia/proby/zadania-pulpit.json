@@ -1,0 +1,271 @@
+{
+  "nazwa": "zadania-pulpit",
+  "modul": "Pulpit",
+  "opis": "Zadania na Pulpicie po redesignie: segmenty Wszystkie/Telefony/Do zrobienia, nowe zadanie typu Telefon z klientką i numerem (realny zapis na izolowanej bazie), Zadzwoń, filtr Telefony, szczegóły, wynik „Nie odebrała” (zadanie aktywne, 1 próba), wynik „Umówiona” (zadanie znika), Tylko moje, tryb ciemny, viewporty",
+  "sekcja": "pulpit",
+  "korzen": "#ds-zadania-section",
+  "przechwyc": [],
+  "czekajPoSekcji": 3000,
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "JSON.stringify({segmenty: [...document.querySelectorAll('#ds-zadania-tabs .et-seg')].map(b => b.textContent.trim() + '/' + b.getAttribute('aria-checked')), zakres: document.getElementById('ds-zadania-zakres').textContent, podsumowanie: document.getElementById('ds-zadania-summary').textContent, grupy: [...document.querySelectorAll('.et-group-head h4')].map(h => h.textContent)})",
+      "opis": "Z01: domyślnie „Wszystkie”, liczniki się sumują, grupy czasu"
+    },
+    {
+      "sprawdz": "document.querySelectorAll('#ds-zadania-tabs .et-seg').length === 3 && document.querySelector('#ds-zadania-tabs .et-seg[aria-checked=\"true\"]').textContent.includes('Wszystkie') && !document.querySelector('.ds-zd-tab')",
+      "opis": "Z01: trzy segmenty zamiast 7 zakładek, domyślnie Wszystkie"
+    },
+    {
+      "sprawdz": "(function(){ const n = [...document.querySelectorAll('#ds-zadania-tabs .et-seg b')].map(b => Number(b.textContent)); return n[0] === n[1] + n[2]; })()",
+      "opis": "Z02: Wszystkie = Telefony + Do zrobienia"
+    },
+    {
+      "zrzut": "01-widget-wszystkie"
+    },
+    {
+      "kliknij": "#ds-zadania-add-btn"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "sprawdz": "document.getElementById('zd-modal-overlay').style.display === 'flex' && document.querySelector('input[name=\"zd-rodzaj\"]:checked').value === 'DO_ZROBIENIA' && document.getElementById('zd-telefon-wrap').style.display === 'none' && document.getElementById('zd-wiecej').open === false",
+      "opis": "Z03: formularz: domyślnie Do zrobienia, bez pól telefonu, „Więcej” zwinięte"
+    },
+    {
+      "js": "document.querySelector('input[name=\"zd-rodzaj\"][value=\"TELEFON\"]').click(); 'ok'"
+    },
+    {
+      "czekaj": 200
+    },
+    {
+      "sprawdz": "document.getElementById('zd-telefon-wrap').style.display === '' && zd_kategorie.join() === 'KLIENT'",
+      "opis": "Z04: rodzaj Telefon → pola kontaktu i numeru, obszar podpowiedziany: Klient"
+    },
+    {
+      "wpisz": "#zd-tytul",
+      "wartosc": "Potwierdzić termin konsultacji (próba)"
+    },
+    {
+      "wpisz": "#zd-kontakt-search",
+      "wartosc": "Marta"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "!document.getElementById('zd-kontakt-results').hidden && document.querySelectorAll('#zd-kontakt-results button').length >= 1",
+      "opis": "Z05: wyszukiwarka kontaktu zwraca klientki tego salonu (kontakt_szukaj)"
+    },
+    {
+      "js": "document.querySelector('#zd-kontakt-results button[data-typ=\"KLIENT\"]').click(); 'ok'"
+    },
+    {
+      "czekaj": 200
+    },
+    {
+      "sprawdz": "!document.getElementById('zd-kontakt-wybrany').hidden && document.getElementById('zd-kontakt-typ').value === 'KLIENT' && document.getElementById('zd-kontakt-id').value !== '' && /\\d/.test(document.getElementById('zd-telefon').value)",
+      "opis": "Z06: wybrana klientka, numer z karty uzupełniony automatycznie"
+    },
+    {
+      "js": "zd_terminSzybki('jutro'); document.getElementById('zd-deadline').value",
+      "opis": "Z07: szybki termin Jutro 10:00"
+    },
+    {
+      "sprawdz": "/T10:00$/.test(document.getElementById('zd-deadline').value)",
+      "opis": "Z07: termin jutro 10:00 ustawiony"
+    },
+    {
+      "zrzut": "02-formularz-telefon"
+    },
+    {
+      "sprawdz": "zd_przypisani.length >= 1",
+      "opis": "Z08: domyślne przypisanie do zalogowanej osoby (w sekcji „Więcej”)"
+    },
+    {
+      "kliknij": "#zd-save-btn"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "document.getElementById('zd-modal-overlay').style.display === 'none'",
+      "opis": "Z09: zapis zamknął formularz (POST add z rodzaj/telefon/kontakt na izolowanej bazie)"
+    },
+    {
+      "js": "(function(){ const c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); return c ? JSON.stringify({grupa: c.closest('.et-group').querySelector('h4').textContent, tel: (c.querySelector('.et-call')||{}).textContent, chip: c.querySelector('.et-chip').textContent, href: (c.querySelector('.et-call')||{}).getAttribute && c.querySelector('.et-call').getAttribute('href')}) : 'BRAK'; })()",
+      "opis": "Z10: nowy telefon na liście — Zaplanowane, Zadzwoń z numerem, chip Klient"
+    },
+    {
+      "sprawdz": "(function(){ const c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); return !!c && c.classList.contains('et-task-tel') && /^tel:\\+?\\d+$/.test(c.querySelector('.et-call').getAttribute('href')) && c.closest('.et-group').querySelector('h4').textContent.startsWith('Zaplanowane'); })()",
+      "opis": "Z10: wiersz telefonu z działającym tel: i w grupie Zaplanowane"
+    },
+    {
+      "js": "ds_zd_setRodzaj('TELEFON'); 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('.et-task')].every(t => t.classList.contains('et-task-tel')) && document.getElementById('ds-zadania-zakres').textContent.startsWith('Telefony')",
+      "opis": "Z11: filtr Telefony pokazuje tylko telefony; opis zakresu"
+    },
+    {
+      "zrzut": "03-filtr-telefony"
+    },
+    {
+      "js": "var c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); c.querySelector('.et-title').click(); 'ok'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "!!document.querySelector('.et-details .et-wynik-form') && document.querySelectorAll('.et-details .et-wynik input[type=radio]').length === 3",
+      "opis": "Z12: szczegóły telefonu z panelem wyniku (3 stałe opcje)"
+    },
+    {
+      "js": "var f=document.querySelector('.et-wynik-form'); f.querySelector('input[value=NIE_ODEBRALA]').click(); f.querySelector('[name=notatka]').value='Nie odebrała, spróbuję jutro'; 'ok'"
+    },
+    {
+      "czekaj": 200
+    },
+    {
+      "sprawdz": "/pozostanie aktywne/.test(document.querySelector('.et-wynik-hint').textContent) && !document.querySelector('.et-kolejny').hidden",
+      "opis": "Z13: „Nie odebrała” → podpis o skutku i wybór kolejnego kontaktu (Jutro 10:00 domyślnie)"
+    },
+    {
+      "zrzut": "04-wynik-nie-odebrala"
+    },
+    {
+      "js": "document.querySelector('.et-wynik-form button[type=submit]').click(); 'ok'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ const c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); return c ? c.querySelector('.et-extra').textContent : 'BRAK'; })()",
+      "opis": "Z14: po „Nie odebrała” zadanie nadal aktywne, licznik prób"
+    },
+    {
+      "sprawdz": "(function(){ const c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); return !!c && /1 próba kontaktu/.test(c.querySelector('.et-extra').textContent); })()",
+      "opis": "Z14: zadanie aktywne z „1 próba kontaktu”"
+    },
+    {
+      "js": "var c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); c.querySelector('.et-title').click(); 'ok'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "document.querySelectorAll('#et-historia-' + [...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')).dataset.id + ' li').length >= 1 && /Nie odebrała/.test(document.querySelector('.et-historia').textContent)",
+      "opis": "Z15: historia pokazuje wpis „Nie odebrała” z autorem i notatką"
+    },
+    {
+      "zrzut": "05-szczegoly-historia"
+    },
+    {
+      "js": "var f=document.querySelector('.et-wynik-form'); f.querySelector('input[value=UMOWIONA]').click(); 'ok'"
+    },
+    {
+      "czekaj": 200
+    },
+    {
+      "sprawdz": "/zostanie zakończone/.test(document.querySelector('.et-wynik-hint').textContent) && /nie tworzy wizyty/.test(document.querySelector('.et-wynik-hint').textContent)",
+      "opis": "Z16: „Umówiona” → podpis: zadanie zakończone, bez tworzenia wizyty"
+    },
+    {
+      "js": "document.querySelector('.et-wynik-form button[type=submit]').click(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "(function(){ const c=[...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)')); return !!c && c.classList.contains('et-done'); })()",
+      "opis": "Z17: po zapisie wiersz przekreślony (3 s), potem znika"
+    },
+    {
+      "czekaj": 3500
+    },
+    {
+      "sprawdz": "![...document.querySelectorAll('.et-task')].find(t => t.querySelector('.et-title').textContent.includes('(próba)'))",
+      "opis": "Z17: zadanie zakończone zniknęło z listy aktywnych"
+    },
+    {
+      "js": "ds_zd_clearFilters(); document.getElementById('ds-zadania-moje').click(); 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "sprawdz": "document.getElementById('ds-zadania-zakres').textContent.startsWith('Przypisane do mnie') && [...document.querySelectorAll('.et-task')].length <= (window.__ds_zd_all||[]).length",
+      "opis": "Z18: „Tylko moje” = przypisane do mnie"
+    },
+    {
+      "js": "document.getElementById('ds-zadania-moje').click(); ds_zd_clearFilters(); 'ok'"
+    },
+    {
+      "ciemny": true
+    },
+    {
+      "zrzut": "06-ciemny"
+    },
+    {
+      "ciemny": false
+    },
+    {
+      "viewport": [
+        800,
+        600
+      ]
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "pomiar": true
+    },
+    {
+      "viewport": [
+        400,
+        900
+      ]
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "var s=document.getElementById('ds-zadania-section'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = s.offsetTop - 8; window.scrollTo(0, s.getBoundingClientRect().top + window.scrollY - 8); 'ok'",
+      "opis": "przewinięcie do widgetu przed zrzutem mobilnym"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "07-telefon-400"
+    },
+    {
+      "pomiar": true
+    },
+    {
+      "viewport": [
+        320,
+        700
+      ]
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "pomiar": true
+    }
+  ]
+}

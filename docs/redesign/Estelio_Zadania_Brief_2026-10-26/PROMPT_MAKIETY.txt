@@ -1,0 +1,10 @@
+Use case ui-mockup. Redesign only the "Zadania" widget on Estelio dashboard (Pulpit), warm premium understated "lekki nowy" UI. Source image is functional reference only (dark mode, old tabs). OMIT sidebar, logo, browser chrome, other dashboard cards. Landscape 1536x1024, crisp Polish typography, system sans-serif. Colors ivory #FAF8F5, white cards, thin #E7E1DE borders, burgundy #842D49, pale blush #F8EDF1, muted #67616B, dark #242126. Cards 18px radius, subtle shadow, no gradients, no emoji (thin line icons only), no yellow/green fills; red only for overdue.
+One wide card. Header left: target icon in soft circle, title "Masz 29 aktywnych zadań", muted subtitle "14 telefonów · 5 po terminie · 4 na dziś". Header right: search field "Szukaj zadania", small link "Szablony cykliczne (1)", burgundy button "+ Nowe zadanie", collapse chevron.
+Below header one segmented control (radio style, single choice): "Wszystkie 29" selected, "Telefony 14", "Do zrobienia 15". Right of it: small toggle pill "Tylko moje" (off) and dropdown "Obszar: wszystkie".
+List grouped by time with small group labels: "Do pilnego działania (5)", "Na dziś (4)", "Zaplanowane (12)". Show 5 rows total.
+Phone row: round icon with handset, title "Zadzwonić do Pani Magdy O. — potwierdzić termin", under it a phone chip "512 000 889" with handset icon, area chip "Klient" (soft pastel), date "24.10.2026 20:00 (po terminie!)" in red, comment count "1". Right actions: outlined button "Zrobione", outlined split button "Oddzwonić później", kebab "⋮".
+Lead phone row: same, title "Lead 261 — kampania Jesień, pytała o lipolizę", small tag "Lead", phone chip, area chip "Sprzedaż".
+Task row: round icon with check, title "Rolka do nagrania po dzisiejszym zabiegu", area chip "Inne", date "dziś 18:00", actions "Zrobione", "⋮".
+Another task row: title "Sprawdzić terminy ważności kosmetyków", area chip "Kosmetyk", date "28.10.2026".
+Phone row without number: title "Zadzwonić do Pani Sandry K.", muted chip "brak numeru — dodaj".
+Balanced realistic desktop UI, legible labels, restrained whitespace, no marketing, screenshot of application content only, not poster. Fictional names and numbers.

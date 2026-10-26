@@ -8022,28 +8022,44 @@ document.addEventListener('DOMContentLoaded', () => {
     <span style="font-weight:700; color:#6b21a8;">💎 Klub</span><span id="ds-klub-content" style="color:#7e22ce;"></span>
   </div>
 
-  <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje -->
-  <section class="ds-frame-card" id="ds-zadania-section" style="display:none;">
-    <div class="ds-section-head" id="ds-zadania-head" onclick="ds_zd_toggleCollapse(event)" style="display:flex; justify-content:space-between; align-items:center; cursor:pointer; user-select:none;">
-      <h3 style="margin:0; display:flex; align-items:center; gap:8px;">
-        <span id="ds-zadania-chevron" style="display:inline-block; transition:transform .2s; font-size:12px; color:#64748b;">▼</span>
-        📋 <span id="ds-zadania-title">Zadania zespołu</span>
-        <span id="ds-zadania-count" style="font-size:13px; color:#94a3b8; font-weight:600; margin-left:6px;"></span>
-      </h3>
-      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
-        <div class="ds-zd-search-wrap" onclick="event.stopPropagation();">
-          <span class="ds-zd-search-icon">🔍</span>
-          <input id="ds-zadania-search" onclick="event.stopPropagation();" oninput="event.stopPropagation(); ds_zd_setSearch(this.value);" placeholder="Szukaj zadań, klientów…">
+  <!-- ZADANIA — manager/admin widzi wszystkie aktywne, recepcja widzi swoje.
+       Redesign 26.10.2026 (docs/redesign/Estelio_Zadania_Lekki_Nowy_2026-10-26_v2): jedna lista, segmenty
+       Wszystkie / Telefony / Do zrobienia, filtr obszaru, „Tylko moje” = przypisane do mnie. Render: /zadania-pulpit.js,
+       style: /zadania-pulpit.css. Dane nadal z ds_loadZadania (list / moje), ID elementów bez zmian. -->
+  <section class="ds-frame-card estelio-tasks" id="ds-zadania-section" style="display:none;">
+    <div class="ds-section-head et-head" id="ds-zadania-head">
+      <div class="et-identity">
+        <span class="et-round" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg></span>
+        <div>
+          <h3 style="margin:0;"><span id="ds-zadania-title">Zadania zespołu</span> <span id="ds-zadania-count" class="et-count"></span></h3>
+          <p id="ds-zadania-summary" class="et-summary"></p>
         </div>
-        <span id="ds-zadania-summary" style="font-size:12px; color:#64748b; font-weight:600;"></span>
-        <button id="ds-zadania-add-btn" onclick="event.stopPropagation(); zd_addOpen();" style="display:none; color:#fff; cursor:pointer; font-size:13px; font-family:inherit;">+ Nowe zadanie</button>
+      </div>
+      <div class="et-head-actions">
+        <button type="button" id="ds-zadania-szablony-btn" class="et-link" onclick="ds_zd_toggleSzablony()" style="display:none;">Szablony cykliczne</button>
+        <button type="button" id="ds-zadania-add-btn" class="et-primary" onclick="zd_addOpen();" style="display:none;">+ Nowe zadanie</button>
+        <button type="button" id="ds-zadania-chevron" class="et-collapse" onclick="ds_zd_toggleCollapse(event)" aria-expanded="true" aria-label="Zwiń zadania"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
       </div>
     </div>
     <div id="ds-zadania-body">
       <div id="ds-zadania-banner" style="display:none;"></div>
-      <div id="ds-zadania-tabs" style="display:flex; gap:10px; flex-wrap:wrap;"></div>
-      <div id="ds-zadania-list">
-        <div style="color:#94a3b8;font-size:14px;padding:8px 0;">Ładowanie...</div>
+      <div class="et-filters">
+        <div id="ds-zadania-tabs" class="et-segments" role="radiogroup" aria-label="Rodzaj zadania"></div>
+        <label class="et-mine"><input type="checkbox" id="ds-zadania-moje" role="switch" onchange="ds_zd_setMoje(this.checked)"> Tylko moje</label>
+        <select id="ds-zadania-obszar" class="et-area" aria-label="Obszar" onchange="ds_zd_setObszar(this.value)">
+          <option value="ALL">Obszar: wszystkie</option>
+          <option value="KLIENT">Klient</option>
+          <option value="MAGAZYN">Magazyn</option>
+          <option value="KOSMETYK">Kosmetyk</option>
+          <option value="SPRZEDAZ">Sprzedaż</option>
+          <option value="INNE">Inne</option>
+        </select>
+        <label class="et-search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><input id="ds-zadania-search" type="search" oninput="ds_zd_setSearch(this.value);" placeholder="Szukaj zadania lub kontaktu" aria-label="Szukaj zadania lub kontaktu"></label>
+      </div>
+      <div class="et-list-meta"><span id="ds-zadania-zakres"></span><button type="button" id="ds-zadania-clear" class="et-link" onclick="ds_zd_clearFilters()" hidden>Wyczyść filtry</button><span class="et-order">Kolejność: najbliższy termin</span></div>
+      <div id="ds-zadania-szablony" class="et-szablony" hidden></div>
+      <div id="ds-zadania-list" aria-live="polite">
+        <div class="et-skeleton" aria-hidden="true"></div><div class="et-skeleton" aria-hidden="true"></div>
       </div>
       <details id="ds-zadania-zlecone-wrap" style="display:none; margin-top:14px; border-top:1px dashed #e2e8f0; padding-top:10px;">
         <summary style="cursor:pointer; font-size:13px; font-weight:700; color:#475569; list-style:none; padding:6px 0;">
@@ -10507,93 +10523,120 @@ ANALIZA MANAGER
 
 <!-- Modal: Nowe / Edytuj zadanie -->
 <div id="zd-modal-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:10000; justify-content:center; align-items:flex-start; backdrop-filter:blur(3px); overflow-y:auto; padding:30px 0;">
-    <div style="background:#fff; padding:28px; border-radius:16px; width:90%; max-width:520px; max-height:calc(100vh - 60px); overflow-y:auto; box-shadow:0 20px 25px -5px rgba(0,0,0,0.15); margin:auto;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #f1f5f9; padding-bottom:12px;">
-            <h3 id="zd-modal-title" style="margin:0; font-size:18px; color:#1f2430;">Nowe zadanie</h3>
-            <button onclick="zd_modalClose()" style="background:none; border:none; font-size:26px; cursor:pointer; color:#94a3b8;">&times;</button>
+    <!-- Formularz zadania — układ wg redesignu 26.10.2026: Rodzaj → Tytuł → Klientka/lead + numer (telefon) → Termin → Obszary → „Więcej”.
+         Wszystkie dotychczasowe ID i wywołania (zd_autoSuggest, zd_powtarzajChange, zd_magShowSearch, zd_showKlientSearch, zd_save…) zostają;
+         nowe pola: zd-rodzaj (radio), zd-kontakt-*, zd-telefon, szybkie terminy, zd-wiecej. Style: /zadania-pulpit.css (.estelio-task-form). -->
+    <div class="estelio-task-form" role="dialog" aria-labelledby="zd-modal-title" aria-modal="true">
+        <div class="etf-head">
+            <div><h3 id="zd-modal-title">Nowe zadanie</h3><p class="etf-sub">Ustal czynność, kontakt i termin.</p></div>
+            <button type="button" class="etf-x" onclick="zd_modalClose()" aria-label="Zamknij formularz">&times;</button>
         </div>
         <form onsubmit="event.preventDefault(); zd_save();">
             <input type="hidden" id="zd-edit-id" value="">
-            <div id="zd-edit-szablon-banner" style="display:none; background:linear-gradient(135deg,#fff7ed,#fff); border:1px solid #fdba74; color:#9a3412; padding:10px 12px; border-radius:8px; margin-bottom:12px; font-size:12.5px; font-weight:600;">
-                📆 Edytujesz całą serię cykliczną — zmiany dotyczą wszystkich przyszłych wystąpień.
+            <div id="zd-edit-szablon-banner" class="etf-banner" style="display:none;">Edytujesz całą serię cykliczną — zmiany dotyczą wszystkich przyszłych wystąpień.</div>
+
+            <fieldset class="etf-rodzaj">
+                <legend>Rodzaj</legend>
+                <label class="etf-kafel"><input type="radio" name="zd-rodzaj" value="TELEFON" onchange="zd_rodzajChange()"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg>Telefon</span></label>
+                <label class="etf-kafel"><input type="radio" name="zd-rodzaj" value="DO_ZROBIENIA" checked onchange="zd_rodzajChange()"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>Do zrobienia</span></label>
+            </fieldset>
+
+            <label class="etf-label" for="zd-tytul">Tytuł <span class="etf-req">*</span></label>
+            <input id="zd-tytul" class="etf-input" required maxlength="255" oninput="zd_autoSuggest()" placeholder="np. Potwierdzić termin konsultacji">
+
+            <div id="zd-telefon-wrap" style="display:none;">
+                <label class="etf-label" for="zd-kontakt-search">Klientka lub lead</label>
+                <div id="zd-kontakt-wybrany" class="etf-kontakt-wybrany" hidden><span id="zd-kontakt-wybrany-tekst"></span><button type="button" class="etf-chip-x" onclick="zd_kontaktWyczysc()" aria-label="Usuń powiązanie">&times;</button></div>
+                <div id="zd-kontakt-search-wrap" class="etf-search-wrap">
+                    <input type="text" id="zd-kontakt-search" class="etf-input" autocomplete="off" oninput="zd_kontaktSzukajInput()" placeholder="Nazwisko lub numer telefonu (min. 2 znaki)">
+                    <div id="zd-kontakt-results" class="etf-results" hidden></div>
+                </div>
+                <input type="hidden" id="zd-kontakt-typ" value=""><input type="hidden" id="zd-kontakt-id" value=""><input type="hidden" id="zd-kontakt-nazwa" value="">
+                <label class="etf-label" for="zd-telefon">Numer telefonu (jeśli znany)</label>
+                <input id="zd-telefon" class="etf-input" type="tel" maxlength="30" inputmode="tel" placeholder="np. 512 000 889">
+                <p class="etf-hint">Numer dla tego zadania. Zmiana nie edytuje karty klientki ani leada.</p>
             </div>
 
-            <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Tytuł <span style="color:#dc2626;">*</span></label>
-            <input id="zd-tytul" required maxlength="255" oninput="zd_autoSuggest()" placeholder="np. Zadzwoń do klientki w sprawie..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:12px; outline:none;">
+            <fieldset class="etf-termin">
+                <legend>Termin</legend>
+                <input id="zd-deadline" class="etf-input" type="datetime-local" aria-label="Data i godzina">
+                <div class="etf-quick">
+                    <button type="button" onclick="zd_terminSzybki('dzis')">Dziś 16:00</button>
+                    <button type="button" onclick="zd_terminSzybki('jutro')">Jutro 10:00</button>
+                    <button type="button" onclick="zd_terminSzybki('tydzien')">Za tydzień</button>
+                    <button type="button" onclick="zd_terminSzybki('brak')">Bez terminu</button>
+                </div>
+                <p class="etf-hint" id="zd-termin-hint"></p>
+            </fieldset>
 
-            <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Opis</label>
-            <textarea id="zd-opis" rows="4" oninput="zd_autoSuggest()" placeholder="Szczegóły, instrukcje, kontekst..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; margin-bottom:6px; outline:none; resize:vertical;"></textarea>
-            <div id="zd-klient-suggest" style="margin-bottom:12px;"></div>
-
-            <div style="margin-bottom:12px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Kategorie <span style="font-weight:400; color:#94a3b8;">(można wybrać więcej niż jedną)</span></label>
-                <div id="zd-kategorie-badges" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px; min-height:40px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"></div>
-            </div>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Priorytet</label>
-                <select id="zd-priorytet" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
-                    <option value="NORMALNY">▫️ Normalny</option>
-                    <option value="WAZNY">🟠 Ważny</option>
-                    <option value="PILNY">🔴 Pilny</option>
-                </select>
+            <div class="etf-blok">
+                <label class="etf-label">Obszary <span class="etf-muted">(można wybrać więcej niż jeden)</span></label>
+                <div id="zd-kategorie-badges" class="etf-badges"></div>
             </div>
 
-            <div style="margin-bottom:12px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Przypisz do <span style="color:#dc2626;">*</span> <span style="font-weight:400; color:#94a3b8;">(można dodać kilku)</span></label>
-                <div id="zd-przypisani-badges" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:6px; min-height:40px; border:1px solid #e2e8f0; border-radius:8px; background:#fff;"></div>
-                <!-- Ukryty select-source: trzymamy tu opcje z zd_fillPracownicy() — popup je czyta -->
-                <select id="zd-przypisane-source" style="display:none;"></select>
-            </div>
-            <div style="margin-bottom:12px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Deadline</label>
-                <input id="zd-deadline" type="datetime-local" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
-            </div>
-
-            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:12px; margin-bottom:12px;">
-                <div>
-                    <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powtarzaj</label>
-                    <select id="zd-powtarzaj" onchange="zd_powtarzajChange()" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;">
-                        <option value="NIE">🚫 Nie powtarzaj</option>
-                        <option value="CODZIENNIE">🌞 Codziennie</option>
-                        <option value="TYGODNIOWO">📆 Co tydzień</option>
-                        <option value="MIESIECZNIE">📅 Co miesiąc</option>
+            <details id="zd-wiecej" class="etf-wiecej">
+                <summary><span>Więcej</span><span id="zd-wiecej-summary" class="etf-muted"></span></summary>
+                <div class="etf-blok">
+                    <label class="etf-label">Przypisz do <span class="etf-req">*</span> <span class="etf-muted">(można dodać kilku)</span></label>
+                    <div id="zd-przypisani-badges" class="etf-badges"></div>
+                    <!-- Ukryty select-source: trzymamy tu opcje z zd_fillPracownicy() — popup je czyta -->
+                    <select id="zd-przypisane-source" style="display:none;"></select>
+                </div>
+                <div class="etf-blok">
+                    <label class="etf-label" for="zd-priorytet">Priorytet</label>
+                    <select id="zd-priorytet" class="etf-input">
+                        <option value="NORMALNY">Normalny</option>
+                        <option value="WAZNY">Ważny</option>
+                        <option value="PILNY">Pilny</option>
                     </select>
                 </div>
-                <div id="zd-powtarzaj-co-wrap" style="display:none;">
-                    <label id="zd-powtarzaj-co-label" style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Co ile</label>
-                    <select id="zd-powtarzaj-co" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;"></select>
+                <div class="etf-blok">
+                    <label class="etf-label" for="zd-opis">Opis / notatka</label>
+                    <textarea id="zd-opis" class="etf-input" rows="3" oninput="zd_autoSuggest()" placeholder="Szczegóły, instrukcje, kontekst..."></textarea>
+                    <div id="zd-klient-suggest"></div>
                 </div>
-                <div id="zd-powtarzaj-dzien-wrap" style="display:none;">
-                    <label id="zd-powtarzaj-dzien-label" style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Dzień</label>
-                    <select id="zd-powtarzaj-dzien" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none; background:#fff;"></select>
+                <div class="etf-blok">
+                    <label class="etf-label">Dodatkowe powiązane klientki <span class="etf-muted">(opcjonalnie)</span></label>
+                    <div id="zd-klienci-badges" class="etf-badges etf-badges-luzne"></div>
+                    <div id="zd-klient-search-wrap" class="etf-search-wrap" style="display:none;">
+                        <input type="text" id="zd-klient-search" class="etf-input" list="lista-klientow" oninput="zd_klientSearchInput()" autocomplete="off" placeholder="Wpisz fragment nazwiska, telefon lub ID...">
+                        <div id="zd-klient-results" class="etf-results" style="display:none;"></div>
+                    </div>
+                    <button type="button" id="zd-add-klient-btn" class="etf-dodaj" onclick="zd_showKlientSearch()">+ Dodaj klientkę</button>
                 </div>
-            </div>
+                <div class="etf-blok">
+                    <label class="etf-label">Powiązane produkty z magazynu / kosmetyki <span class="etf-muted">(opcjonalnie)</span></label>
+                    <div id="zd-magazyn-badges" class="etf-badges etf-badges-luzne"></div>
+                    <div id="zd-magazyn-search-wrap" class="etf-search-wrap" style="display:none;">
+                        <input type="text" id="zd-magazyn-search" class="etf-input" oninput="zd_magSearchInput()" onkeydown="zd_magSearchKey(event)" autocomplete="off" placeholder="Wpisz nazwę produktu... (Enter = dodaj własną)">
+                        <div id="zd-magazyn-results" class="etf-results" style="display:none;"></div>
+                    </div>
+                    <button type="button" id="zd-add-magazyn-btn" class="etf-dodaj" onclick="zd_magShowSearch()">+ Dodaj produkt</button>
+                </div>
+                <div class="etf-blok etf-powtarzaj">
+                    <div>
+                        <label class="etf-label" for="zd-powtarzaj">Powtarzaj</label>
+                        <select id="zd-powtarzaj" class="etf-input" onchange="zd_powtarzajChange()">
+                            <option value="NIE">Nie powtarzaj</option>
+                            <option value="CODZIENNIE">Codziennie</option>
+                            <option value="TYGODNIOWO">Co tydzień</option>
+                            <option value="MIESIECZNIE">Co miesiąc</option>
+                        </select>
+                    </div>
+                    <div id="zd-powtarzaj-co-wrap" style="display:none;">
+                        <label id="zd-powtarzaj-co-label" class="etf-label" for="zd-powtarzaj-co">Co ile</label>
+                        <select id="zd-powtarzaj-co" class="etf-input"></select>
+                    </div>
+                    <div id="zd-powtarzaj-dzien-wrap" style="display:none;">
+                        <label id="zd-powtarzaj-dzien-label" class="etf-label" for="zd-powtarzaj-dzien">Dzień</label>
+                        <select id="zd-powtarzaj-dzien" class="etf-input"></select>
+                    </div>
+                </div>
+            </details>
 
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">📦 Powiązane elementy z magazynu / kosmetyków <span style="font-weight:400; color:#94a3b8;">(opcjonalnie)</span></label>
-                <div id="zd-magazyn-badges" style="display:flex; flex-direction:column; gap:6px; margin-bottom:8px;"></div>
-                <div id="zd-magazyn-search-wrap" style="display:none; position:relative; margin-bottom:6px;">
-                    <input type="text" id="zd-magazyn-search" oninput="zd_magSearchInput()" onkeydown="zd_magSearchKey(event)" autocomplete="off" placeholder="🔍 Wpisz nazwę produktu... (Enter = dodaj custom)" style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
-                    <div id="zd-magazyn-results" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:220px; overflow-y:auto; background:#fff; border:1px solid #e2e8f0; border-radius:8px; z-index:100; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:2px;"></div>
-                </div>
-                <button type="button" id="zd-add-magazyn-btn" onclick="zd_magShowSearch()" style="background:#fff; color:#92400e; border:1px dashed #fdba74; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">+ Dodaj kolejne</button>
-            </div>
-
-            <div style="margin-bottom:16px;">
-                <label style="font-size:12px; font-weight:700; color:#475569; margin-bottom:4px; display:block;">Powiązani klienci (opcjonalnie)</label>
-                <!-- Lista wybranych klientów (badge) — można dodać kilku -->
-                <div id="zd-klienci-badges" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px;"></div>
-                <!-- Wyszukiwarka — ukryta dopóki user nie kliknie "+ Dodaj klienta" -->
-                <div id="zd-klient-search-wrap" style="display:none; position:relative; margin-bottom:6px;">
-                    <input type="text" id="zd-klient-search" list="lista-klientow" oninput="zd_klientSearchInput()" autocomplete="off" placeholder="🔍 Wpisz fragment nazwiska, telefon lub ID..." style="width:100%; padding:10px 12px; border:1px solid #e2e8f0; border-radius:8px; font-size:13px; outline:none;">
-                    <div id="zd-klient-results" style="display:none; position:absolute; top:100%; left:0; right:0; max-height:200px; overflow-y:auto; background:#fff; border:1px solid #e2e8f0; border-radius:8px; z-index:100; box-shadow:0 5px 15px rgba(0,0,0,0.1); margin-top:2px;"></div>
-                </div>
-                <button type="button" id="zd-add-klient-btn" onclick="zd_showKlientSearch()" style="background:#fff; color:#ec4899; border:1px dashed #f9a8d4; padding:7px 13px; border-radius:8px; font-size:12px; font-weight:600; cursor:pointer;">+ Dodaj klienta</button>
-            </div>
-
-            <div style="display:flex; justify-content:flex-end; gap:8px; border-top:1px solid #f1f5f9; padding-top:12px;">
-                <button type="button" onclick="zd_modalClose()" style="padding:9px 18px; background:#f3f4f6; color:#475569; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px;">Anuluj</button>
-                <button type="submit" style="padding:9px 22px; background:#ec4899; color:white; border:none; border-radius:8px; cursor:pointer; font-weight:700; font-size:13px;">Zapisz</button>
+            <div class="etf-footer">
+                <button type="button" class="etf-secondary" onclick="zd_modalClose()">Anuluj</button>
+                <button type="submit" class="etf-primary" id="zd-save-btn">Zapisz zadanie</button>
             </div>
         </form>
     </div>
@@ -13279,6 +13322,9 @@ function ds_zd_updateCollapsedSummary() {
     summ.innerHTML = parts.join(' • ');
 }
 
+// UWAGA (26.10.2026): ds_zd_updateCollapsedSummary, ds_zd_applyCollapseState, ds_zd_renderTabs, ds_zd_setTab, ds_zd_renderList,
+// ds_zd_renderTaskCard, ds_zd_toggleMore i ds_zadanieComplete są NADPISYWANE przez /zadania-pulpit.js (redesign widgetu:
+// segmenty Wszystkie/Telefony/Do zrobienia zamiast 7 zakładek). Poniższe definicje zostają jako zapis poprzedniego zachowania.
 function ds_zd_renderTabs() {
     const tabsBox = document.getElementById('ds-zadania-tabs');
     const list = document.getElementById('ds-zadania-list');
@@ -36944,5 +36990,9 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Ustawienia zadatków — oprawa po redesignie 26.10.2026 (selektory zawężone do .estelio-deposit-settings) -->
 <link rel="stylesheet" href="/zadatki-ustawienia.css?v=__WERSJA_PLIKOW__">
 <script src="/zadatki-ustawienia.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Zadania na Pulpicie + formularz zadania — redesign 26.10.2026 (.estelio-tasks / .estelio-task-form); JS nadpisuje
+     ds_zd_renderTabs/renderList/renderTaskCard/ds_zadanieComplete oraz zd_addOpen/zd_editOpen/zd_save z tego pliku -->
+<link rel="stylesheet" href="/zadania-pulpit.css?v=__WERSJA_PLIKOW__">
+<script src="/zadania-pulpit.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>

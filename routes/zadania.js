@@ -4,9 +4,24 @@
 
 const express = require('express');
 const { randomUUID } = require('crypto');
+const { getSession } = require('./sessions');
 
 module.exports = (db) => {
   const router = express.Router();
+
+  // Rodzaj czynności (redesign Zadań 26.10.2026, docs/redesign/Estelio_Zadania_Lekki_Nowy_2026-10-26_v2):
+  // TELEFON ma numer i adresata rozmowy (klientka albo lead), DO_ZROBIENIA — zwykłe zadanie. Stare rekordy
+  // dostają DO_ZROBIENIA; żadnej klasyfikacji po tytule (wymóg instrukcji: lista kandydatów dla właściciela).
+  const ALLOWED_RODZAJ = ['TELEFON', 'DO_ZROBIENIA'];
+  const ALLOWED_KONTAKT_TYP = ['KLIENT', 'LEAD'];
+  const ALLOWED_WYNIK = ['UMOWIONA', 'NIE_ODEBRALA', 'NIE_ZAINTERESOWANA'];
+  const TELEFON_REGEX = /^[+\d\s()-]{3,30}$/;
+  // Kto wykonuje akcję: imię z sesji PIN (albo login salonu), nie z treści żądania — ślad w historii ma być wiarygodny.
+  function aktorZSesji(req, d) {
+    const s = getSession(req.headers['x-session-token']);
+    const zSesji = s && s.login ? String(s.login).trim() : '';
+    return (zSesji || String(d.kto || d.wykonane_przez || d.utworzone_przez || '').trim()).slice(0, 100);
+  }
 
   const ALLOWED_KATEGORIE = ['MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE'];
   const ALLOWED_PRIORYTETY = ['NORMALNY','WAZNY','PILNY'];
@@ -91,9 +106,10 @@ module.exports = (db) => {
                 // wstawienie cicho się odrzuci. Sprawdzamy affectedRows by nie kopiować
                 // do podtabel niepotrzebnie (i nie tworzyć niespójności).
                 db.query(
-                  `INSERT IGNORE INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, parent_powtarzajacy_id, is_szablon)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, 0)`,
-                  [newId, tenant_id, w.utworzone_przez, w.przypisane_do, w.tytul, w.opis, w.kategoria, w.priorytet, instDeadline, w.id_klienta, w.klient_nazwa, w.id],
+                  `INSERT IGNORE INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, parent_powtarzajacy_id, is_szablon, rodzaj, telefon, kontakt_typ, kontakt_id, kontakt_nazwa)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, 0, ?, ?, ?, ?, ?)`,
+                  [newId, tenant_id, w.utworzone_przez, w.przypisane_do, w.tytul, w.opis, w.kategoria, w.priorytet, instDeadline, w.id_klienta, w.klient_nazwa, w.id,
+                   w.rodzaj || 'DO_ZROBIENIA', w.telefon || null, w.kontakt_typ || null, w.kontakt_id || null, w.kontakt_nazwa || null],
                   (errIns, resIns) => {
                     if (errIns || !resIns || resIns.affectedRows === 0) {
                       // Duplikat odrzucony przez UNIQUE INDEX — pomiń kopiowanie podtabel.
@@ -233,6 +249,31 @@ module.exports = (db) => {
       safeAlter(`ALTER TABLE Zadania ADD COLUMN parent_powtarzajacy_id VARCHAR(36) NULL`, 'parent_powtarzajacy_id');
       safeAlter(`ALTER TABLE Zadania ADD COLUMN is_szablon TINYINT(1) DEFAULT 0`, 'is_szablon');
       safeAlter(`ALTER TABLE Zadania ADD INDEX idx_szablon (tenant_id, is_szablon)`, 'idx_szablon');
+      // Telefon / kontakt (26.10.2026) — kolumny dodawane idempotentnie, stare wiersze = DO_ZROBIENIA bez numeru
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN rodzaj ENUM('TELEFON','DO_ZROBIENIA') NOT NULL DEFAULT 'DO_ZROBIENIA'`, 'rodzaj');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN telefon VARCHAR(30) NULL`, 'telefon');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN kontakt_typ ENUM('KLIENT','LEAD') NULL`, 'kontakt_typ');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN kontakt_id VARCHAR(50) NULL`, 'kontakt_id');
+      safeAlter(`ALTER TABLE Zadania ADD COLUMN kontakt_nazwa VARCHAR(200) NULL`, 'kontakt_nazwa');
+      safeAlter(`ALTER TABLE Zadania ADD INDEX idx_rodzaj (tenant_id, rodzaj, status)`, 'idx_rodzaj');
+      // Historia telefonu: wyniki rozmów i zmiany terminu („Oddzwonić później”). Autor i czas z serwera.
+      db.query(
+        `CREATE TABLE IF NOT EXISTS Zadania_Historia (
+           id VARCHAR(36) PRIMARY KEY,
+           tenant_id VARCHAR(64) NOT NULL,
+           id_zadania VARCHAR(36) NOT NULL,
+           typ ENUM('WYNIK','TERMIN') NOT NULL,
+           wynik ENUM('UMOWIONA','NIE_ODEBRALA','NIE_ZAINTERESOWANA') NULL,
+           notatka TEXT NULL,
+           kolejny_termin DATETIME NULL,
+           lead_status_przed VARCHAR(20) NULL,
+           lead_status_po VARCHAR(20) NULL,
+           autor VARCHAR(100) NULL,
+           data DATETIME DEFAULT CURRENT_TIMESTAMP,
+           INDEX idx_zh_zadanie (tenant_id, id_zadania, data)
+         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+        (eH) => { if (eH) console.error('[Zadania] CREATE TABLE Zadania_Historia:', eH.message); }
+      );
 
       // Twarde zabezpieczenie przed duplikatami instancji wzorców (incydent 2026-06-06).
       // Generated STORED column = data instancji (deadline lub data_utworzenia jeśli NULL).
@@ -452,6 +493,38 @@ module.exports = (db) => {
     );
   }
 
+  // Helper: rodzaj czynności + numer + adresat rozmowy. Zwraca { error } albo znormalizowane pola.
+  // Numer dotyczy tylko zadania (nie edytuje karty klientki/leada). Kontakt bez rodzaju TELEFON jest ignorowany.
+  function parseRodzajPayload(d) {
+    const rodzaj = ALLOWED_RODZAJ.includes(d.rodzaj) ? d.rodzaj : 'DO_ZROBIENIA';
+    let telefon = String(d.telefon || '').trim().slice(0, 30);
+    if (telefon && !TELEFON_REGEX.test(telefon)) return { error: 'Numer telefonu może zawierać cyfry, spacje, +, nawiasy i myślnik (3–30 znaków).' };
+    const kontakt_typ = ALLOWED_KONTAKT_TYP.includes(d.kontakt_typ) ? d.kontakt_typ : null;
+    const kontakt_id = kontakt_typ ? String(d.kontakt_id || '').trim().slice(0, 50) : '';
+    if (kontakt_typ && !kontakt_id) return { error: 'Wskaż klientkę lub lead albo usuń powiązanie.' };
+    if (rodzaj !== 'TELEFON') { telefon = ''; }
+    return { rodzaj, telefon: telefon || null, kontakt_typ: rodzaj === 'TELEFON' ? kontakt_typ : null, kontakt_id: rodzaj === 'TELEFON' && kontakt_typ ? kontakt_id : null };
+  }
+  // Adresat rozmowy musi istnieć W TYM salonie — nazwę bierzemy z bazy, nie z żądania (nie da się podpiąć cudzego rekordu).
+  function zweryfikujKontakt(tenant_id, typ, id, cb) {
+    if (!typ || !id) return cb(null, null);
+    if (typ === 'KLIENT') {
+      return db.query(`SELECT imie_nazwisko AS nazwa FROM Klienci WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`, [tenant_id, id],
+        (err, rows) => cb(err ? 'Błąd bazy danych.' : (!rows || !rows.length ? 'Nie znaleziono klientki w tym salonie.' : null), rows && rows[0] ? String(rows[0].nazwa || '').slice(0, 200) : null));
+    }
+    return db.query(`SELECT TRIM(CONCAT(IFNULL(imie,''), ' ', IFNULL(nazwisko,''))) AS nazwa, kampania FROM Leady WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, id],
+      (err, rows) => cb(err ? 'Błąd bazy danych.' : (!rows || !rows.length ? 'Nie znaleziono leada w tym salonie.' : null),
+        rows && rows[0] ? (String(rows[0].nazwa || '').trim() || 'Lead').slice(0, 200) : null));
+  }
+  // Format terminu z żądania → 'YYYY-MM-DD HH:MM:SS' albo null (odrzuca śmieci zamiast przekazać je do bazy)
+  function normalizujTermin(v) {
+    if (!v) return null;
+    const s = String(v).trim().replace('T', ' ');
+    const m = s.match(/^(\d{4}-\d{2}-\d{2})(?: (\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+    if (!m) return undefined;
+    return `${m[1]} ${m[2] || '23'}:${m[3] || '59'}:${m[4] || '00'}`;
+  }
+
   // Helper: parsuj kategorie z payloadu (akceptuje array `kategorie` LUB stare pole `kategoria`)
   function parseKategoriePayload(d) {
     if (Array.isArray(d.kategorie)) {
@@ -555,7 +628,17 @@ module.exports = (db) => {
                           mMap[r.id_zadania].push({ nazwa_produktu: r.nazwa_produktu, kategoria: r.kategoria });
                         });
                         zadania.forEach(z => { z.magazyn_pozycje = mMap[z.id] || []; });
-                        cb(zadania);
+                        // Próby kontaktu (historia telefonu) — licznik + ostatni wynik na kartę
+                        db.query(
+                          `SELECT id_zadania, COUNT(*) AS cnt, MAX(data) AS ostatnia FROM Zadania_Historia WHERE tenant_id = ? AND id_zadania IN (?) GROUP BY id_zadania`,
+                          [tenant_id, ids],
+                          (err6, hRows) => {
+                            const hMap = {};
+                            if (!err6) (hRows || []).forEach(r => { hMap[r.id_zadania] = { cnt: Number(r.cnt) || 0, ostatnia: r.ostatnia }; });
+                            zadania.forEach(z => { z.prob_kontaktu = hMap[z.id] ? hMap[z.id].cnt : 0; z.ostatni_kontakt = hMap[z.id] ? hMap[z.id].ostatnia : null; });
+                            cb(zadania);
+                          }
+                        );
                       }
                     );
                   }
@@ -622,7 +705,8 @@ module.exports = (db) => {
                         kategoria, priorytet, deadline, status,
                         data_wykonania, wykonane_przez, data_archiwizacji, kto_zarchiwizowal,
                         id_klienta, klient_nazwa,
-                        powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon
+                        powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon,
+                        rodzaj, telefon, kontakt_typ, kontakt_id, kontakt_nazwa
                  FROM Zadania WHERE tenant_id = ?`;
       // Filtr szablonu — domyślnie pomijamy szablony (instancje + jednorazowe)
       sql += tylkoSzablony ? ` AND is_szablon = 1` : ` AND is_szablon = 0`;
@@ -677,7 +761,8 @@ module.exports = (db) => {
         db.query(
           `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis, deadline, status,
                   kategoria, priorytet, id_klienta, klient_nazwa,
-                  powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id
+                  powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id,
+                  rodzaj, telefon, kontakt_typ, kontakt_id, kontakt_nazwa
              FROM Zadania
             WHERE tenant_id = ? AND status = 'AKTYWNE' AND is_szablon = 0
               AND (
@@ -704,7 +789,8 @@ module.exports = (db) => {
         `SELECT id, data_utworzenia, utworzone_przez, przypisane_do, tytul, opis,
                 kategoria, priorytet, deadline, status,
                 id_klienta, klient_nazwa,
-                powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon
+                powtarzaj, powtarzaj_dzien, powtarzaj_co, parent_powtarzajacy_id, is_szablon,
+                rodzaj, telefon, kontakt_typ, kontakt_id, kontakt_nazwa
            FROM Zadania WHERE tenant_id = ? AND id = ? LIMIT 1`,
         [tenant_id, id],
         (err, rows) => {
@@ -733,15 +819,20 @@ module.exports = (db) => {
       const { powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon } = pwt;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisaniList.length) return res.json({ status: 'error', message: 'Wskaż przynajmniej jedną osobę lub rolę' });
+      const rz = parseRodzajPayload(d);
+      if (rz.error) return res.json({ status: 'error', message: rz.error });
       // RBAC: sprawdź czy wykonujący ma prawo zlecić KAŻDEMU odbiorcy z listy
       pobierzRoleUzytkownika(tenant_id, utworzone_przez, (rolaKto) => {
         sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, przypisaniList, (mozna, msg) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
+          zweryfikujKontakt(tenant_id, rz.kontakt_typ, rz.kontakt_id, (bladK, kontaktNazwa) => {
+          if (bladK) return res.json({ status: 'error', message: bladK });
           const id = randomUUID();
           db.query(
-            `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, is_szablon)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, ?, ?, ?)`,
-            [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon],
+            `INSERT INTO Zadania (id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, status, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, is_szablon, rodzaj, telefon, kontakt_typ, kontakt_id, kontakt_nazwa)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'AKTYWNE', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [id, tenant_id, utworzone_przez, przypisane_do, tytul, opis, kategoria, priorytet, deadline, id_klienta, klient_nazwa, powtarzaj, powtarzaj_dzien, powtarzaj_co, isSzablon,
+             rz.rodzaj, rz.telefon, rz.kontakt_typ, rz.kontakt_id, kontaktNazwa],
             (err) => {
               if (err) return res.json({ status: 'error', message: err.message });
               // Zapisz multi: kategorie + klienci + przypisani + magazyn
@@ -757,6 +848,7 @@ module.exports = (db) => {
               });
             }
           );
+          });
         });
       });
 
@@ -781,16 +873,21 @@ module.exports = (db) => {
       const { powtarzaj: ePowt, powtarzaj_dzien: ePowtDz, powtarzaj_co: ePowtCo, isSzablon: eIsSzablon } = pwtE;
       if (!tytul) return res.json({ status: 'error', message: 'Tytuł jest wymagany' });
       if (!przypisaniListEdit.length) return res.json({ status: 'error', message: 'Wskaż przynajmniej jedną osobę lub rolę' });
+      const rzE = parseRodzajPayload(d);
+      if (rzE.error) return res.json({ status: 'error', message: rzE.error });
       pobierzRoleUzytkownika(tenant_id, kto_edytuje, (rolaKto) => {
         sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, przypisaniListEdit, (mozna, msg) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
+          zweryfikujKontakt(tenant_id, rzE.kontakt_typ, rzE.kontakt_id, (bladK, kontaktNazwaE) => {
+          if (bladK) return res.json({ status: 'error', message: bladK });
           db.query(
             `UPDATE Zadania SET tytul = ?, opis = ?, przypisane_do = ?, kategoria = ?, priorytet = ?, deadline = ?,
                                 id_klienta = ?, klient_nazwa = ?,
-                                powtarzaj = ?, powtarzaj_dzien = ?, powtarzaj_co = ?, is_szablon = ?
+                                powtarzaj = ?, powtarzaj_dzien = ?, powtarzaj_co = ?, is_szablon = ?,
+                                rodzaj = ?, telefon = ?, kontakt_typ = ?, kontakt_id = ?, kontakt_nazwa = ?
              WHERE tenant_id = ? AND id = ?`,
             [tytul, opis, przypisane_do, kategoriaEdit, priorytet, deadline, id_klienta, klient_nazwa,
-             ePowt, ePowtDz, ePowtCo, eIsSzablon, tenant_id, id],
+             ePowt, ePowtDz, ePowtCo, eIsSzablon, rzE.rodzaj, rzE.telefon, rzE.kontakt_typ, rzE.kontakt_id, kontaktNazwaE, tenant_id, id],
             (err, result) => {
               if (err) return res.json({ status: 'error', message: err.message });
               if (!result.affectedRows) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
@@ -806,6 +903,7 @@ module.exports = (db) => {
               });
             }
           );
+          });
         });
       });
 
@@ -905,6 +1003,123 @@ module.exports = (db) => {
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });
           return res.json({ status: 'success' });
+        }
+      );
+
+    } else if (action === 'przeloz') {
+      // „Oddzwonić później” — nowy termin TEGO zadania (nie szablonu), zadanie zostaje aktywne, wpis w historii.
+      const id = String(d.id || '').trim();
+      const termin = normalizujTermin(d.deadline);
+      if (!id) return res.json({ status: 'error', message: 'Brak id' });
+      if (!termin) return res.json({ status: 'error', message: 'Podaj poprawny termin (data i godzina).' });
+      const autor = aktorZSesji(req, d);
+      db.query(
+        `UPDATE Zadania SET deadline = ? WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNE' AND is_szablon = 0`,
+        [termin, tenant_id, id],
+        (err, result) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!result.affectedRows) return res.json({ status: 'error', message: 'Zadanie nie jest aktywne lub nie znaleziono' });
+          db.query(
+            `INSERT INTO Zadania_Historia (id, tenant_id, id_zadania, typ, kolejny_termin, autor) VALUES (?, ?, ?, 'TERMIN', ?, ?)`,
+            [randomUUID(), tenant_id, id, termin, autor],
+            (e2) => { if (e2) console.error('[Zadania] historia TERMIN:', e2.message); return res.json({ status: 'success', deadline: termin }); }
+          );
+        }
+      );
+
+    } else if (action === 'wynik_rozmowy') {
+      // Wynik telefonu. UMOWIONA / NIE_ZAINTERESOWANA kończą zadanie (jak „Zrobione”), NIE_ODEBRALA zostawia aktywne
+      // i opcjonalnie przekłada termin. Lead: status zmienia się tylko z nowy/kontakt (umówiony/odrzucony); przy
+      // NIE_ODEBRALA tylko licznik prób. Ponowny zapis na zakończonym zadaniu nie tworzy duplikatu (guard status='AKTYWNE').
+      const id = String(d.id || '').trim();
+      const wynik = String(d.wynik || '').trim().toUpperCase();
+      const notatka = String(d.notatka || '').trim().slice(0, 2000) || null;
+      const kolejny = d.kolejny_termin ? normalizujTermin(d.kolejny_termin) : null;
+      if (!id) return res.json({ status: 'error', message: 'Brak id' });
+      if (!ALLOWED_WYNIK.includes(wynik)) return res.json({ status: 'error', message: 'Wybierz wynik rozmowy.' });
+      if (d.kolejny_termin && !kolejny) return res.json({ status: 'error', message: 'Podaj poprawny termin kolejnego kontaktu.' });
+      const autor = aktorZSesji(req, d);
+      db.query(
+        `SELECT id, status, rodzaj, kontakt_typ, kontakt_id FROM Zadania WHERE tenant_id = ? AND id = ? LIMIT 1`,
+        [tenant_id, id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          if (!rows || !rows.length) return res.json({ status: 'error', message: 'Nie znaleziono zadania' });
+          const z = rows[0];
+          if (z.status !== 'AKTYWNE') return res.json({ status: 'error', message: 'Zadanie nie jest już aktywne — wynik został już zapisany.' });
+          if (z.rodzaj !== 'TELEFON') return res.json({ status: 'error', message: 'Wynik rozmowy można zapisać tylko dla zadania typu Telefon.' });
+          const konczy = wynik !== 'NIE_ODEBRALA';
+          const dalej = (leadPrzed, leadPo, leadBlad) => {
+            db.query(
+              `INSERT INTO Zadania_Historia (id, tenant_id, id_zadania, typ, wynik, notatka, kolejny_termin, lead_status_przed, lead_status_po, autor)
+               VALUES (?, ?, ?, 'WYNIK', ?, ?, ?, ?, ?, ?)`,
+              [randomUUID(), tenant_id, id, wynik, notatka, konczy ? null : kolejny, leadPrzed, leadPo, autor],
+              (eH) => {
+                if (eH) console.error('[Zadania] historia WYNIK:', eH.message);
+                const odp = { status: leadBlad ? 'error' : 'success', wynik, zadanie_zakonczone: konczy, kolejny_termin: konczy ? null : kolejny, lead_status_przed: leadPrzed, lead_status_po: leadPo };
+                if (leadBlad) odp.message = 'Wynik zapisany, ale nie udało się zmienić statusu leada: ' + leadBlad;
+                return res.json(odp);
+              }
+            );
+          };
+          const zadanieSql = konczy
+            ? [`UPDATE Zadania SET status = 'WYKONANE', data_wykonania = NOW(), wykonane_przez = ? WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNE'`, [autor, tenant_id, id]]
+            : (kolejny ? [`UPDATE Zadania SET deadline = ? WHERE tenant_id = ? AND id = ? AND status = 'AKTYWNE'`, [kolejny, tenant_id, id]] : null);
+          const poZadaniu = () => {
+            if (z.kontakt_typ !== 'LEAD' || !z.kontakt_id) return dalej(null, null, null);
+            db.query(`SELECT status FROM Leady WHERE tenant_id = ? AND id = ? LIMIT 1`, [tenant_id, z.kontakt_id], (eL, lRows) => {
+              if (eL || !lRows || !lRows.length) return dalej(null, null, eL ? eL.message : 'lead nie istnieje w tym salonie');
+              const przed = String(lRows[0].status || '');
+              if (!konczy) {
+                return db.query(`UPDATE Leady SET liczba_polaczen = IFNULL(liczba_polaczen, 0) + 1, data_ostatniego_kontaktu = NOW() WHERE tenant_id = ? AND id = ?`,
+                  [tenant_id, z.kontakt_id], (eU) => dalej(przed, przed, eU ? eU.message : null));
+              }
+              if (!['nowy', 'kontakt'].includes(przed)) return dalej(przed, przed, null);   // klient/umówiony/odrzucony — bez cichej zmiany
+              const po = wynik === 'UMOWIONA' ? 'umowiony' : 'odrzucony';
+              db.query(`UPDATE Leady SET status = ?, data_ostatniego_kontaktu = NOW(), liczba_polaczen = IFNULL(liczba_polaczen, 0) + 1 WHERE tenant_id = ? AND id = ? AND status = ?`,
+                [po, tenant_id, z.kontakt_id, przed], (eU, rU) => dalej(przed, (eU || !rU.affectedRows) ? przed : po, eU ? eU.message : null));
+            });
+          };
+          if (!zadanieSql) return poZadaniu();
+          db.query(zadanieSql[0], zadanieSql[1], (eZ, rZ) => {
+            if (eZ) return res.json({ status: 'error', message: eZ.message });
+            if (!rZ.affectedRows) return res.json({ status: 'error', message: 'Zadanie nie jest już aktywne — wynik został już zapisany.' });
+            poZadaniu();
+          });
+        }
+      );
+
+    } else if (action === 'historia') {
+      const id = String(d.id || '').trim();
+      if (!id) return res.json({ status: 'error', message: 'Brak id' });
+      db.query(
+        `SELECT typ, wynik, notatka, kolejny_termin, lead_status_przed, lead_status_po, autor, data FROM Zadania_Historia WHERE tenant_id = ? AND id_zadania = ? ORDER BY data DESC, id DESC LIMIT 50`,
+        [tenant_id, id],
+        (err, rows) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', data: rows || [] });
+        }
+      );
+
+    } else if (action === 'kontakt_szukaj') {
+      // Adresat rozmowy do formularza: klientki i leady TEGO salonu po nazwisku/telefonie (max 8 + 8).
+      const q = String(d.q || '').trim().slice(0, 60);
+      if (q.length < 2) return res.json({ status: 'success', klienci: [], leady: [] });
+      const like = '%' + q.replace(/[%_]/g, ' ') + '%';
+      db.query(
+        `SELECT id_klienta AS id, imie_nazwisko AS nazwa, telefon FROM Klienci WHERE tenant_id = ? AND (imie_nazwisko LIKE ? OR telefon LIKE ?) ORDER BY imie_nazwisko LIMIT 8`,
+        [tenant_id, like, like],
+        (err, kl) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          db.query(
+            `SELECT id, TRIM(CONCAT(IFNULL(imie,''), ' ', IFNULL(nazwisko,''))) AS nazwa, telefon, kampania, status FROM Leady
+              WHERE tenant_id = ? AND (imie LIKE ? OR nazwisko LIKE ? OR telefon LIKE ? OR CONCAT(IFNULL(imie,''), ' ', IFNULL(nazwisko,'')) LIKE ?) ORDER BY data_dodania DESC LIMIT 8`,
+            [tenant_id, like, like, like, like],
+            (err2, ld) => {
+              if (err2) return res.json({ status: 'error', message: err2.message });
+              return res.json({ status: 'success', klienci: kl || [], leady: ld || [] });
+            }
+          );
         }
       );
 

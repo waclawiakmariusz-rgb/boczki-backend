@@ -1,0 +1,246 @@
+/* Zadania na Pulpicie + formularz zadania — oprawa „lekki nowy” wg docs/redesign/Estelio_Zadania_Lekki_Nowy_2026-10-26_v2.
+   Selektory zawężone do .estelio-tasks (widget) i .estelio-task-form (modal). Tokeny z rozdz. 10 instrukcji. */
+.estelio-tasks, .estelio-task-form {
+  --et-bg: #faf8f5; --et-card: #ffffff; --et-ink: #242126; --et-muted: #67616b; --et-line: #e7e1de; --et-control: #d9d4d8;
+  --et-brand: #842d49; --et-hover: #70243d; --et-pale: #f8edf1; --et-onbrand: #ffffff; --et-red: #a52540; --et-soft: #f7f5f6;
+  color: var(--et-ink); font-size: 14px; line-height: 1.5;
+}
+.estelio-tasks *, .estelio-tasks *::before, .estelio-tasks *::after, .estelio-task-form *, .estelio-task-form *::before, .estelio-task-form *::after { box-sizing: border-box; }
+.estelio-tasks svg, .estelio-task-form svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.estelio-tasks button, .estelio-task-form button { font: inherit; color: inherit; cursor: pointer; }
+.estelio-tasks :focus-visible, .estelio-task-form :focus-visible { outline: 2px solid var(--et-brand); outline-offset: 2px; }
+
+/* ── widget: karta, nagłówek ───────────────────────────────────────────── */
+.estelio-tasks.ds-frame-card { background: var(--et-card); border: 1px solid var(--et-line); border-radius: 18px; box-shadow: 0 4px 18px rgba(45, 30, 35, .04); padding: 28px; container: tasks / inline-size; }
+.estelio-tasks .et-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 0 0 24px; border-bottom: 1px solid var(--et-line); margin-bottom: 0; }
+.estelio-tasks .et-identity { display: flex; gap: 16px; align-items: center; min-width: 0; }
+.estelio-tasks .et-round { width: 46px; height: 46px; border-radius: 13px; background: var(--et-pale); color: var(--et-brand); display: grid; place-items: center; flex-shrink: 0; }
+.estelio-tasks .et-round svg { width: 22px; height: 22px; }
+.estelio-tasks .et-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 650; letter-spacing: -.3px; color: var(--et-ink); display: flex; gap: 8px; align-items: center; }
+.estelio-tasks .et-count { font-size: 13px; color: var(--et-muted); font-weight: 600; }
+.estelio-tasks .et-summary { margin: 4px 0 0; font-size: 13px; line-height: 19px; color: var(--et-muted); display: block !important; }
+.estelio-tasks .et-head-actions { display: flex; gap: 10px; align-items: center; flex-shrink: 0; }
+.estelio-tasks .et-link { background: none; border: 0; color: var(--et-brand); font-weight: 600; font-size: 13px; padding: 8px 6px; min-height: 44px; }
+.estelio-tasks .et-link:hover { text-decoration: underline; }
+.estelio-tasks .et-primary { background: var(--et-brand); color: var(--et-onbrand); border: 0; border-radius: 10px; padding: 10px 18px; min-height: 44px; font-weight: 600; font-size: 14px; white-space: nowrap; }
+.estelio-tasks .et-primary:hover { background: var(--et-hover); }
+.estelio-tasks .et-collapse { width: 44px; height: 44px; border: 1px solid var(--et-line); border-radius: 10px; background: var(--et-card); color: var(--et-muted); display: grid; place-items: center; transition: transform .2s; }
+.estelio-tasks .et-collapse[aria-expanded="false"] svg { transform: rotate(180deg); }
+
+/* ── filtry ────────────────────────────────────────────────────────────── */
+.estelio-tasks .et-filters { display: flex; align-items: center; gap: 12px; margin: 24px 0 8px; flex-wrap: wrap; }
+.estelio-tasks .et-segments { display: flex; background: var(--et-bg); border: 1px solid var(--et-line); padding: 4px; border-radius: 12px; flex: 1 1 400px; min-width: 0; }
+.estelio-tasks .et-seg { flex: 1; border: 0; background: none; border-radius: 9px; min-height: 44px; padding: 10px 12px; color: var(--et-muted); font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 7px; white-space: nowrap; }
+.estelio-tasks .et-seg[aria-checked="true"] { background: var(--et-pale); color: var(--et-brand); font-weight: 650; }
+.estelio-tasks .et-seg b { font-weight: inherit; }
+.estelio-tasks .et-seg .et-seg-short { display: none; }
+.estelio-tasks .et-mine { display: flex; align-items: center; gap: 8px; min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; padding: 0 12px; cursor: pointer; font-size: 14px; font-weight: 500; color: var(--et-ink); text-transform: none; letter-spacing: 0; margin: 0; }
+.estelio-tasks .et-mine input { accent-color: var(--et-brand); width: 16px; height: 16px; margin: 0; }
+.estelio-tasks .et-area { min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); color: var(--et-ink); padding: 0 32px 0 12px !important; font: inherit; font-size: 14px; }
+.estelio-tasks .et-search { position: relative; display: flex; align-items: center; flex: 1 1 220px; min-width: 0; margin: 0; }
+.estelio-tasks .et-search svg { position: absolute; left: 14px; color: var(--et-muted); pointer-events: none; }
+.estelio-tasks .et-search input { width: 100%; min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); color: var(--et-ink); padding: 0 12px 0 42px !important; font: inherit; font-size: 14px; }
+.estelio-tasks .et-list-meta { display: flex; align-items: center; gap: 12px; min-height: 40px; color: var(--et-muted); font-size: 13px; flex-wrap: wrap; }
+.estelio-tasks .et-order { margin-left: auto; }
+
+/* ── lista ─────────────────────────────────────────────────────────────── */
+.estelio-tasks .et-group { margin: 14px 0 20px; }
+.estelio-tasks .et-group-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; }
+.estelio-tasks .et-group-head h4 { margin: 0; font-size: 14px; font-weight: 650; color: var(--et-ink); }
+.estelio-tasks .et-group-head h4.et-overdue-title { color: var(--et-red); }
+.estelio-tasks .et-task { border: 1px solid var(--et-line); border-radius: 12px; padding: 16px; display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 16px; align-items: start; margin-bottom: 10px; background: var(--et-card); min-height: 94px; }
+.estelio-tasks .et-task.et-done { opacity: .55; }
+.estelio-tasks .et-task.et-done .et-title { text-decoration: line-through; }
+.estelio-tasks .et-task .et-round { width: 40px; height: 40px; border-radius: 12px; }
+.estelio-tasks .et-task .et-round svg { width: 20px; height: 20px; }
+.estelio-tasks .et-main { min-width: 0; }
+.estelio-tasks .et-title { border: 0; background: none; padding: 0; text-align: left; white-space: normal; font-size: 15px; line-height: 22px; font-weight: 600; color: var(--et-ink); overflow-wrap: anywhere; }
+.estelio-tasks .et-title:hover { color: var(--et-brand); }
+.estelio-tasks .et-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; line-height: 18px; margin-top: 8px; color: var(--et-muted); }
+.estelio-tasks .et-call { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 12px; border: 1px solid var(--et-control); border-radius: 9px; background: var(--et-card); color: var(--et-ink); font-size: 13px; font-weight: 600; text-decoration: none; }
+.estelio-tasks .et-call:hover { border-color: var(--et-brand); color: var(--et-brand); }
+.estelio-tasks .et-call.et-call-brak { color: var(--et-muted); font-weight: 500; border-style: dashed; }
+.estelio-tasks .et-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 3px 10px; border-radius: 7px; background: var(--et-pale); color: var(--et-brand); font-size: 12px; font-weight: 600; border: 0; }
+.estelio-tasks .et-chip-KLIENT { background: #f8edf1; color: #78334d; }
+.estelio-tasks .et-chip-MAGAZYN { background: #eaf0f5; color: #435c72; }
+.estelio-tasks .et-chip-KOSMETYK { background: #f3ece5; color: #72543c; }
+.estelio-tasks .et-chip-SPRZEDAZ { background: #eeeaf5; color: #655077; }
+.estelio-tasks .et-chip-INNE { background: #f0eef1; color: #62586b; }
+.estelio-tasks .et-chip-pri { background: var(--et-soft); color: var(--et-ink); }
+.estelio-tasks .et-chip-cykl { background: var(--et-soft); color: var(--et-muted); }
+.estelio-tasks .et-date { color: var(--et-muted); }
+.estelio-tasks .et-date.et-overdue { color: var(--et-red); font-weight: 600; }
+.estelio-tasks .et-extra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--et-muted); margin-top: 4px; }
+.estelio-tasks .et-extra .et-link { min-height: 32px; padding: 4px 0; }
+.estelio-tasks .et-actions { display: flex; gap: 8px; align-items: center; padding-top: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.estelio-tasks .et-btn { min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); color: var(--et-ink); padding: 8px 16px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.estelio-tasks .et-btn:hover { border-color: var(--et-brand); color: var(--et-brand); background: var(--et-pale); }
+.estelio-tasks .et-btn.et-menu { width: 44px; padding: 0; font-size: 20px; }
+.estelio-tasks .et-btn.et-primary-sm { background: var(--et-brand); color: var(--et-onbrand); border-color: var(--et-brand); }
+.estelio-tasks .et-btn.et-primary-sm:hover { background: var(--et-hover); color: var(--et-onbrand); }
+.estelio-tasks .et-popover { position: absolute; right: 0; top: calc(100% + 6px); background: var(--et-card); border: 1px solid var(--et-line); border-radius: 12px; box-shadow: 0 10px 28px rgba(45, 30, 35, .12); min-width: 230px; padding: 6px; z-index: 50; }
+.estelio-tasks .et-popover button { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 10px 12px; border-radius: 8px; font-size: 13px; color: var(--et-ink); min-height: 44px; }
+.estelio-tasks .et-popover button:hover { background: var(--et-pale); color: var(--et-brand); }
+.estelio-tasks .et-popover button.et-danger { color: var(--et-red); }
+.estelio-tasks .et-popover-wrap { position: relative; }
+.estelio-tasks .et-popover p { margin: 4px 12px 8px; font-size: 12px; color: var(--et-muted); }
+
+/* szczegóły / wynik rozmowy */
+.estelio-tasks .et-details { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1.2fr; gap: 28px; background: var(--et-bg); border: 1px solid var(--et-line); border-radius: 12px; padding: 20px; margin-top: 4px; }
+.estelio-tasks .et-details h5 { margin: 0 0 10px; font-size: 14px; font-weight: 650; color: var(--et-ink); }
+.estelio-tasks .et-details p { margin: 0 0 12px; font-size: 13px; color: var(--et-ink); overflow-wrap: anywhere; }
+.estelio-tasks .et-details .et-muted { color: var(--et-muted); font-size: 12px; }
+.estelio-tasks .et-details .et-kv { font-size: 13px; color: var(--et-muted); }
+.estelio-tasks .et-details .et-kv b { color: var(--et-ink); font-weight: 600; }
+.estelio-tasks .et-historia { list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--et-muted); }
+.estelio-tasks .et-historia li { padding: 6px 0; border-top: 1px solid var(--et-line); }
+.estelio-tasks .et-wynik { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+.estelio-tasks .et-wynik label { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--et-control); border-radius: 10px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--et-ink); text-transform: none; letter-spacing: 0; margin: 0; flex: 1 0 auto; justify-content: center; }
+.estelio-tasks .et-wynik label:has(:checked) { background: var(--et-pale); border-color: var(--et-brand); color: var(--et-brand); }
+.estelio-tasks .et-wynik input { accent-color: var(--et-brand); width: 15px; height: 15px; margin: 0; }
+.estelio-tasks .et-textarea { width: 100%; min-height: 64px; border: 1px solid var(--et-control); border-radius: 10px; padding: 10px 12px !important; font: inherit; font-size: 13px; color: var(--et-ink); background: var(--et-card); resize: vertical; }
+.estelio-tasks .et-kolejny { margin: 12px 0; }
+.estelio-tasks .et-kolejny .et-label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 8px; text-transform: none; letter-spacing: 0; color: var(--et-ink); }
+.estelio-tasks .et-kolejny input[type="datetime-local"] { min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; padding: 0 12px !important; font: inherit; font-size: 13px; background: var(--et-card); color: var(--et-ink); max-width: 100%; }
+.estelio-tasks .et-wynik-hint { font-size: 12px; color: var(--et-muted); margin: 6px 0 12px; }
+.estelio-tasks .et-wynik-form .et-primary { width: auto; }
+
+/* stany */
+.estelio-tasks .et-empty { padding: 48px 20px; text-align: center; }
+.estelio-tasks .et-empty .et-round { margin: 0 auto 16px; }
+.estelio-tasks .et-empty h4 { margin: 0 0 6px; font-size: 18px; font-weight: 650; }
+.estelio-tasks .et-empty p { margin: 0 0 20px; color: var(--et-muted); }
+.estelio-tasks .et-skeleton { height: 78px; background: var(--et-bg); border-radius: 12px; margin: 14px 0; padding: 18px; }
+.estelio-tasks .et-skeleton::before, .estelio-tasks .et-skeleton::after { content: ""; display: block; height: 10px; background: var(--et-line); border-radius: 8px; width: 55%; margin-bottom: 12px; }
+.estelio-tasks .et-skeleton::after { width: 35%; }
+.estelio-tasks .et-error { padding: 16px; border: 1px solid var(--et-line); border-radius: 12px; color: var(--et-red); font-size: 13px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.estelio-tasks .et-szablony { border: 1px dashed var(--et-line); border-radius: 12px; padding: 12px 16px; margin: 8px 0 14px; font-size: 13px; }
+.estelio-tasks .et-szablony h5 { margin: 0 0 8px; font-size: 13px; font-weight: 650; }
+.estelio-tasks .et-szablony ul { margin: 0; padding-left: 18px; color: var(--et-muted); }
+.estelio-tasks #ds-zadania-zlecone-wrap { margin-top: 14px; border-top: 1px dashed var(--et-line); padding-top: 10px; }
+.estelio-tasks #ds-zadania-zlecone-wrap summary { cursor: pointer; font-size: 13px; font-weight: 650; color: var(--et-muted); list-style: none; padding: 6px 0; }
+.estelio-tasks .et-foot-note { font-size: 12px; color: var(--et-muted); margin: 6px 0 0; }
+
+/* ── responsywność (po szerokości karty) ───────────────────────────────── */
+@container tasks (max-width: 1100px) {
+  .estelio-tasks .et-task { grid-template-columns: 40px minmax(0, 1fr); }
+  .estelio-tasks .et-actions { grid-column: 2; justify-content: flex-start; }
+  .estelio-tasks .et-details { grid-template-columns: 1fr; }
+  .estelio-tasks .et-search { flex-basis: 100%; }
+}
+@container tasks (max-width: 700px) {
+  .estelio-tasks.ds-frame-card { padding: 16px; }
+  .estelio-tasks .et-head { flex-wrap: wrap; gap: 12px; }
+  .estelio-tasks .et-identity .et-round { display: none; }
+  .estelio-tasks .et-head-actions { width: 100%; display: grid; grid-template-columns: 1fr 44px; }
+  .estelio-tasks #ds-zadania-szablony-btn { grid-column: 1 / -1; justify-self: start; padding-left: 0; }
+  .estelio-tasks .et-segments { flex-basis: 100%; order: 1; }
+  .estelio-tasks .et-seg { padding: 10px 4px; font-size: 12px; gap: 4px; }
+  .estelio-tasks .et-seg .et-seg-long { display: none; }
+  .estelio-tasks .et-seg .et-seg-short { display: inline; }
+  .estelio-tasks .et-mine { order: 2; flex: 1; }
+  .estelio-tasks .et-area { order: 3; max-width: 60%; font-size: 12px; }
+  .estelio-tasks .et-search { order: 0; }
+  .estelio-tasks .et-order { display: none; }
+  .estelio-tasks .et-task { display: block; padding: 14px; }
+  .estelio-tasks .et-task > .et-round { display: none; }
+  .estelio-tasks .et-meta .et-call { width: 100%; order: 5; justify-content: center; font-size: 14px; background: var(--et-pale); color: var(--et-brand); border-color: var(--et-pale); }
+  .estelio-tasks .et-actions { display: grid; grid-template-columns: 1fr 44px; gap: 8px; margin-top: 8px; }
+  .estelio-tasks .et-actions .et-done-btn { grid-column: 1 / -1; }
+  .estelio-tasks .et-actions .et-later { text-align: left; }
+  .estelio-tasks .et-details { display: block; margin-top: 12px; padding: 14px; }
+  .estelio-tasks .et-details > div + div { border-top: 1px solid var(--et-line); padding-top: 16px; margin-top: 16px; }
+  .estelio-tasks .et-wynik { display: block; }
+  .estelio-tasks .et-wynik label { margin-bottom: 8px; }
+  .estelio-tasks .et-wynik-form .et-primary { width: 100%; }
+}
+
+/* ── modal formularza ──────────────────────────────────────────────────── */
+.estelio-task-form { background: var(--et-card); border: 1px solid var(--et-line); border-radius: 18px; width: min(840px, calc(100% - 32px)); max-height: calc(100vh - 60px); overflow-y: auto; margin: auto; box-shadow: 0 20px 40px rgba(45, 30, 35, .18); }
+.estelio-task-form .etf-head { padding: 24px 28px; display: flex; justify-content: space-between; align-items: center; gap: 20px; border-bottom: 1px solid var(--et-line); }
+.estelio-task-form .etf-head h3 { margin: 0; font-size: 20px; line-height: 28px; font-weight: 650; color: var(--et-ink); }
+.estelio-task-form .etf-sub { margin: 6px 0 0; font-size: 13px; color: var(--et-muted); }
+.estelio-task-form .etf-x { width: 44px; height: 44px; border: 1px solid var(--et-line); border-radius: 10px; background: var(--et-card); color: var(--et-muted); font-size: 24px; line-height: 1; }
+.estelio-task-form form { padding: 24px 28px 0; margin: 0; }
+.estelio-task-form .etf-banner { background: var(--et-pale); border: 1px solid var(--et-line); color: var(--et-brand); padding: 10px 12px; border-radius: 10px; margin-bottom: 16px; font-size: 13px; font-weight: 600; }
+.estelio-task-form fieldset { border: 0; margin: 0 0 20px; padding: 0; min-width: 0; }
+.estelio-task-form legend, .estelio-task-form .etf-label { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--et-ink); margin: 0 0 8px; text-transform: none; letter-spacing: 0; }
+.estelio-task-form .etf-req { color: var(--et-red); }
+.estelio-task-form .etf-muted { font-weight: 400; color: var(--et-muted); font-size: 12px; }
+.estelio-task-form .etf-hint { margin: 6px 0 0; font-size: 13px; color: var(--et-muted); }
+.estelio-task-form .etf-hint:empty { display: none; }
+.estelio-task-form .etf-input, .estelio-task-form select.etf-input, .estelio-task-form textarea.etf-input {
+  width: 100%; min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); color: var(--et-ink); padding: 10px 14px !important; font: inherit; font-size: 15px; margin: 0 0 20px; box-shadow: none;
+}
+.estelio-task-form textarea.etf-input { resize: vertical; min-height: 84px; }
+.estelio-task-form .etf-rodzaj { display: flex; gap: 12px; flex-wrap: wrap; }
+.estelio-task-form .etf-rodzaj legend { width: 100%; }
+.estelio-task-form .etf-kafel { flex: 1 1 200px; position: relative; margin: 0; text-transform: none; letter-spacing: 0; }
+.estelio-task-form .etf-kafel input { position: absolute; opacity: 0; pointer-events: none; }
+.estelio-task-form .etf-kafel span { display: flex; align-items: center; justify-content: center; gap: 10px; min-height: 62px; border: 1px solid var(--et-control); border-radius: 12px; padding: 18px; font-size: 15px; font-weight: 500; color: var(--et-ink); cursor: pointer; }
+.estelio-task-form .etf-kafel input:checked + span { background: var(--et-pale); border-color: var(--et-brand); color: var(--et-brand); font-weight: 650; }
+.estelio-task-form .etf-kafel input:focus-visible + span { outline: 2px solid var(--et-brand); outline-offset: 2px; }
+.estelio-task-form .etf-search-wrap { position: relative; }
+.estelio-task-form .etf-results { position: absolute; top: calc(100% - 20px); left: 0; right: 0; max-height: 240px; overflow-y: auto; background: var(--et-card); border: 1px solid var(--et-line); border-radius: 10px; z-index: 100; box-shadow: 0 8px 24px rgba(45, 30, 35, .12); }
+.estelio-task-form .etf-results button, .estelio-task-form .etf-results > div { display: block; width: 100%; text-align: left; border: 0; border-bottom: 1px solid var(--et-line); background: none; padding: 10px 12px; font-size: 13px; color: var(--et-ink); min-height: 44px; cursor: pointer; }
+.estelio-task-form .etf-results button:hover, .estelio-task-form .etf-results > div:hover { background: var(--et-pale); }
+.estelio-task-form .etf-results small { color: var(--et-muted); }
+.estelio-task-form .etf-results .etf-results-tytul { font-size: 11px; font-weight: 650; color: var(--et-muted); text-transform: uppercase; letter-spacing: .4px; padding: 8px 12px 4px; min-height: 0; cursor: default; }
+.estelio-task-form .etf-kontakt-wybrany { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; padding: 8px 8px 8px 14px; margin-bottom: 20px; font-size: 15px; background: var(--et-card); }
+.estelio-task-form .etf-kontakt-wybrany small { color: var(--et-muted); font-size: 13px; }
+.estelio-task-form .etf-chip-x { width: 32px; height: 32px; border: 0; border-radius: 8px; background: var(--et-soft); color: var(--et-muted); font-size: 18px; line-height: 1; }
+.estelio-task-form .etf-quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: -8px; }
+.estelio-task-form .etf-quick button { min-height: 44px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); padding: 8px 16px; font-size: 13px; font-weight: 600; color: var(--et-ink); }
+.estelio-task-form .etf-quick button:hover { border-color: var(--et-brand); color: var(--et-brand); }
+.estelio-task-form .etf-quick button[disabled] { opacity: .5; cursor: not-allowed; }
+.estelio-task-form .etf-quick button.etf-quick-on { background: var(--et-pale); border-color: var(--et-brand); color: var(--et-brand); }
+.estelio-task-form .etf-blok { margin-bottom: 20px; }
+.estelio-task-form .etf-blok .etf-input { margin-bottom: 0; }
+.estelio-task-form .etf-badges { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 6px; min-height: 48px; border: 1px solid var(--et-control); border-radius: 10px; background: var(--et-card); }
+.estelio-task-form .etf-badges-luzne { border: 0; padding: 0; min-height: 0; margin-bottom: 8px; }
+.estelio-task-form .etf-dodaj { background: var(--et-card); color: var(--et-brand); border: 1px dashed var(--et-control); padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; min-height: 40px; }
+.estelio-task-form .etf-wiecej { border: 1px solid var(--et-line); border-radius: 12px; padding: 0 14px; margin-bottom: 20px; }
+.estelio-task-form .etf-wiecej summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; font-weight: 600; color: var(--et-ink); list-style: none; }
+.estelio-task-form .etf-wiecej summary::-webkit-details-marker { display: none; }
+.estelio-task-form .etf-wiecej summary::after { content: "⌄"; color: var(--et-muted); font-size: 18px; margin-left: auto; }
+.estelio-task-form .etf-wiecej[open] summary { border-bottom: 1px solid var(--et-line); margin-bottom: 16px; }
+.estelio-task-form .etf-wiecej[open] summary::after { content: "⌃"; }
+.estelio-task-form .etf-powtarzaj { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.estelio-task-form .etf-footer { position: sticky; bottom: 0; border-top: 1px solid var(--et-line); background: var(--et-card); padding: 20px 28px; margin: 0 -28px; display: flex; justify-content: flex-end; gap: 12px; }
+.estelio-task-form .etf-primary { background: var(--et-brand); color: var(--et-onbrand); border: 0; border-radius: 10px; padding: 12px 22px; min-height: 46px; font-weight: 600; font-size: 14px; }
+.estelio-task-form .etf-primary:hover { background: var(--et-hover); }
+.estelio-task-form .etf-primary[disabled] { opacity: .6; cursor: wait; }
+.estelio-task-form .etf-secondary { background: var(--et-card); color: var(--et-ink); border: 1px solid var(--et-control); border-radius: 10px; padding: 12px 18px; min-height: 46px; font-weight: 600; font-size: 14px; }
+@media (max-width: 640px) {
+  .estelio-task-form { width: calc(100% - 16px); border-radius: 14px; }
+  .estelio-task-form .etf-head, .estelio-task-form form { padding-left: 16px; padding-right: 16px; }
+  .estelio-task-form .etf-footer { padding: 16px; margin: 0 -16px; }
+  .estelio-task-form .etf-powtarzaj { grid-template-columns: 1fr; }
+  .estelio-task-form .etf-quick button { flex: 1; }
+}
+
+/* ── tryb ciemny ───────────────────────────────────────────────────────── */
+body.dark-mode .estelio-tasks, body.dark-mode .estelio-task-form {
+  --et-bg: #19171c; --et-card: #242127; --et-ink: #f5f0f3; --et-muted: #beb5c1; --et-line: #49414b; --et-control: #746a78;
+  --et-brand: #f0aec6; --et-hover: #f6c6d8; --et-pale: #412b36; --et-onbrand: #242126; --et-red: #ffadb9; --et-soft: #2d2930;
+}
+body.dark-mode .estelio-tasks.ds-frame-card { background: var(--et-card) !important; border-color: var(--et-line) !important; box-shadow: none; }
+body.dark-mode .estelio-tasks .et-chip-KLIENT, body.dark-mode .estelio-tasks .et-chip-MAGAZYN, body.dark-mode .estelio-tasks .et-chip-KOSMETYK, body.dark-mode .estelio-tasks .et-chip-SPRZEDAZ, body.dark-mode .estelio-tasks .et-chip-INNE { background: var(--et-pale); color: var(--et-brand); }
+body.dark-mode .estelio-tasks .et-search input, body.dark-mode .estelio-tasks .et-area, body.dark-mode .estelio-task-form .etf-input, body.dark-mode .estelio-tasks .et-textarea { background: var(--et-card) !important; color: var(--et-ink) !important; border-color: var(--et-control) !important; }
+body.dark-mode .estelio-tasks .et-head h3, body.dark-mode .estelio-task-form .etf-head h3 { color: var(--et-ink) !important; }
+
+/* nadpisania globalnych reguł index.html (id-selektory i select { width:100% }) — tylko w obrębie widgetu */
+.estelio-tasks #ds-zadania-add-btn { background: var(--et-brand) !important; color: var(--et-onbrand) !important; border: 0 !important; border-radius: 10px !important; padding: 10px 18px !important; font-weight: 600; }
+.estelio-tasks #ds-zadania-add-btn:hover { background: var(--et-hover) !important; }
+.estelio-tasks select.et-area { width: auto !important; flex: 0 0 auto; max-width: 240px; }
+.estelio-tasks .et-search input[type="search"] { width: 100% !important; margin: 0 !important; }
+/* chipy obszarów w formularzu (nadpisany renderer w zadania-pulpit.js) */
+.estelio-task-form .etf-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 4px 10px; border-radius: 7px; font-size: 13px; font-weight: 600; }
+.estelio-task-form .etf-chip button { background: none; border: 0; padding: 0 2px; font-size: 16px; line-height: 1; color: inherit; opacity: .7; }
+.estelio-task-form .etf-chip-KLIENT { background: #f8edf1; color: #78334d; } .estelio-task-form .etf-chip-MAGAZYN { background: #eaf0f5; color: #435c72; } .estelio-task-form .etf-chip-KOSMETYK { background: #f3ece5; color: #72543c; } .estelio-task-form .etf-chip-SPRZEDAZ { background: #eeeaf5; color: #655077; } .estelio-task-form .etf-chip-INNE { background: #f0eef1; color: #62586b; }
+.estelio-task-form .etf-chip-dodaj { position: relative; display: inline-block; }
+.estelio-task-form .etf-chip-dodaj > button { background: var(--et-card); color: var(--et-brand); border: 1px dashed var(--et-control); padding: 6px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; min-height: 32px; }
+.estelio-task-form .etf-chip-popup { position: absolute; top: 100%; left: 0; margin-top: 4px; background: var(--et-card); border: 1px solid var(--et-line); border-radius: 10px; box-shadow: 0 8px 20px rgba(45, 30, 35, .12); z-index: 120; min-width: 170px; padding: 4px; }
+.estelio-task-form .etf-chip-popup button { display: block; width: 100%; text-align: left; padding: 9px 12px; border: 0; background: none; border-radius: 8px; font-size: 13px; min-height: 40px; color: var(--et-ink); }
+.estelio-task-form .etf-chip-popup button:hover { background: var(--et-pale); color: var(--et-brand); }
+body.dark-mode .estelio-task-form .etf-chip-KLIENT, body.dark-mode .estelio-task-form .etf-chip-MAGAZYN, body.dark-mode .estelio-task-form .etf-chip-KOSMETYK, body.dark-mode .estelio-task-form .etf-chip-SPRZEDAZ, body.dark-mode .estelio-task-form .etf-chip-INNE { background: var(--et-pale); color: var(--et-brand); }
