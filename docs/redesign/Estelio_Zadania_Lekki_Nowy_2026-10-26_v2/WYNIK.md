@@ -60,3 +60,9 @@ Pakiet v2 (makiety 01–06, `WDROZENIE_DLA_CLAUDE_CODE.md`, prototyp). Gałąź 
 
 - Jednostkowe: nowe 15/15; pełny zestaw repozytorium **963/963** (58 plików).
 - Panel prób `zadania-pulpit`: 21/21 PASS, 0 błędów JS; zrzuty w `wynik/` (01 widget, 02 formularz, 03 filtr Telefony, 04 wynik „Nie odebrała”, 05 szczegóły i historia, 06 ciemny, 07 telefon 400 px).
+
+## 6. Ticket #17 (26.10.2026) — edycja i przekładanie terminów przez recepcję
+- „Przełóż termin” (dla telefonów „Oddzwonić później”) przy KAŻDYM zadaniu, które dana osoba może wykonać (przypisane do niej) — niezależnie od autora; wpis w historii zadania.
+- Menu „Edytuj / Archiwizuj” także dla zadań przypisanych recepcji (dotąd tylko własne); „Usuń” nadal autor/manager. Backend: przy edycji uprawnienie do zlecania sprawdzane tylko dla NOWYCH odbiorców (dotychczasowi, np. manager, zostają).
+- Przy zadaniu bez prawa edycji menu tłumaczy, kto zmienia treść i że termin można przełożyć.
+- Testy: +2 (edit przypisanego zadania przez recepcję / odmowa dopisania managera), scenariusz Z02b.

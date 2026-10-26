@@ -29,6 +29,10 @@
       "opis": "Z02: Wszystkie = Telefony + Do zrobienia"
     },
     {
+      "sprawdz": "[...document.querySelectorAll('.et-task-zad .et-later')].length >= 1 && [...document.querySelectorAll('.et-task-zad .et-later')].every(b => /Przełóż termin/.test(b.textContent))",
+      "opis": "Z02b (ticket #17): „Przełóż termin” także przy zadaniach Do zrobienia"
+    },
+    {
       "zrzut": "01-widget-wszystkie"
     },
     {

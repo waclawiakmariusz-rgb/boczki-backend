@@ -158,9 +158,12 @@
   window.ds_zd_renderTaskCard = function (z, isReceiver, isPraktykantka, nowMs) {
     var teraz = new Date(nowMs || Date.now()), tel = rodzaj(z) === 'TELEFON', kat = kategorie(z), id = esc(z.id);
     var utworzylJa = z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === mojeImie();
-    var mozeMenu = jestManager() || (mojaRola() === 'recepcja' && utworzylJa);
+    // Ticket #17 (26.10.2026): recepcja edytuje zadania własne ORAZ do niej przypisane; usuwanie zostaje dla autora/managera
+    var mozeMenu = jestManager() || (mojaRola() === 'recepcja' && (utworzylJa || jestMoje(z)));
+    var mozeUsunac = jestManager() || (mojaRola() === 'recepcja' && utworzylJa);
     var mozeWykonac = isReceiver && !z.is_szablon;
     var mozeTelefon = (mozeWykonac || mozeMenu) && tel && !z.is_szablon;
+    var mozePrzelozyc = (mozeWykonac || mozeMenu) && !z.is_szablon;   // termin przekłada każdy, kto może zadanie wykonać
     var meta = '';
     if (tel) meta += z.telefon ? '<a class="et-call" href="tel:' + esc(telDoWybierania(z.telefon)) + '" onclick="event.stopPropagation()">' + IKONA_TEL + 'Zadzwoń · ' + esc(z.telefon) + '</a>' : (mozeMenu ? '<button type="button" class="et-call et-call-brak" onclick="ds_zd_actionEdit(\'' + id + '\')">Brak numeru — dodaj</button>' : '<span class="et-call et-call-brak">Brak numeru</span>');
     meta += '<span class="et-chip et-chip-' + esc(kat[0]) + '">' + esc(OBSZAR[kat[0]] || kat[0]) + '</span>';
@@ -175,8 +178,8 @@
     if (z.komentarzy > 0) extra.push('<button type="button" class="et-link" onclick="zd_openComments(\'' + id + '\', \'' + esc(String(z.tytul || '').replace(/'/g, '’')) + '\')">Komentarze (' + z.komentarzy + ')</button>');
     var akcje = '';
     if (mozeWykonac) akcje += '<button type="button" class="et-btn et-done-btn" onclick="ds_zadanieComplete(\'' + id + '\')">Zrobione</button>';
-    if (mozeTelefon) akcje += '<div class="et-popover-wrap"><button type="button" class="et-btn et-later" onclick="ds_zd_later(\'' + id + '\', this)">Oddzwonić później ⌄</button></div>';
-    if (mozeMenu || mozeTelefon) akcje += '<div class="et-popover-wrap"><button type="button" class="et-btn et-menu" onclick="ds_zd_toggleMore(\'' + id + '\', this)" aria-label="Opcje zadania: ' + esc(z.tytul) + '">⋮</button></div>';
+    if (mozePrzelozyc) akcje += '<div class="et-popover-wrap"><button type="button" class="et-btn et-later" onclick="ds_zd_later(\'' + id + '\', this)">' + (tel ? 'Oddzwonić później' : 'Przełóż termin') + ' ⌄</button></div>';
+    if (mozeMenu || mozeTelefon || mozePrzelozyc) akcje += '<div class="et-popover-wrap"><button type="button" class="et-btn et-menu" onclick="ds_zd_toggleMore(\'' + id + '\', this)" aria-label="Opcje zadania: ' + esc(z.tytul) + '">⋮</button></div>';
     return '<article class="et-task et-task-' + (tel ? 'tel' : 'zad') + '" data-id="' + id + '">' +
       '<span class="et-round" aria-hidden="true">' + (tel ? IKONA_TEL : IKONA_OK) + '</span>' +
       '<div class="et-main"><button type="button" class="et-title" onclick="ds_zd_toggleDetails(\'' + id + '\')" aria-expanded="' + (otwarte === z.id) + '">' + esc(z.tytul) + '</button>' +
@@ -299,10 +302,13 @@
     if (btn.parentElement.querySelector('.et-popover')) { zamknijPopovery(); return; }
     var z = (window.__ds_zd_all || []).find(function (x) { return x.id === id; }) || (window.__ds_zd_szablony || []).find(function (x) { return x.id === id; }) || {};
     var utworzylJa = z.utworzone_przez && String(z.utworzone_przez).trim().toLowerCase() === mojeImie();
-    var mozeMenu = jestManager() || (mojaRola() === 'recepcja' && utworzylJa);
+    var mozeMenu = jestManager() || (mojaRola() === 'recepcja' && (utworzylJa || jestMoje(z)));
+    var mozeUsunac = jestManager() || (mojaRola() === 'recepcja' && utworzylJa);
     var html = '';
     if (rodzaj(z) === 'TELEFON') html += '<button type="button" onclick="ds_zd_toggleDetails(\'' + esc(id) + '\'); setTimeout(function(){ var f=document.querySelector(\'[data-id=&quot;' + esc(id) + '&quot;] .et-wynik-form input\'); if(f) f.focus(); }, 50)">Zapisz wynik rozmowy</button>' + (z.telefon ? '<button type="button" onclick="ds_zd_copyNumber(\'' + esc(z.telefon) + '\')">Kopiuj numer</button>' : '');
-    if (mozeMenu) html += '<button type="button" onclick="ds_zd_actionEdit(\'' + esc(id) + '\')">Edytuj zadanie</button><button type="button" onclick="ds_zd_actionArchive(\'' + esc(id) + '\')">Archiwizuj zadanie</button><button type="button" class="et-danger" onclick="ds_zd_actionDelete(\'' + esc(id) + '\')">Usuń</button>';
+    if (mozeMenu) html += '<button type="button" onclick="ds_zd_actionEdit(\'' + esc(id) + '\')">Edytuj zadanie</button><button type="button" onclick="ds_zd_actionArchive(\'' + esc(id) + '\')">Archiwizuj zadanie</button>';
+    if (mozeUsunac) html += '<button type="button" class="et-danger" onclick="ds_zd_actionDelete(\'' + esc(id) + '\')">Usuń</button>';
+    if (!mozeMenu) html += '<p>Treść zadania zmienia zleceniodawca' + (utworzylJa ? '' : ' (' + esc(z.utworzone_przez || 'manager') + ')') + '. Termin możesz przełożyć przyciskiem obok.</p>';
     popover(btn, html || '<p>Brak dostępnych opcji.</p>');
   };
   window.ds_zd_copyNumber = function (tel) {

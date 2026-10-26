@@ -127,3 +127,25 @@ describe('przeloz / historia / kontakt_szukaj', () => {
         expect(res.body).toEqual({ status: 'success', klienci: [], leady: [] });
     });
 });
+
+describe('ticket #17 — recepcja edytuje zadania do niej przypisane (uprawnienie tylko dla NOWYCH odbiorców)', () => {
+    test('zadanie zlecone przez managera z przypisaniem [Ola(manager), Marta]: Marta (recepcja) edytuje termin bez zmiany odbiorców → sukces', async () => {
+        const TOKEN_MARTA = createSession(SALON_A, 'Marta');
+        const db = dbWg([ROLA_RECEPCJA, { re: /SELECT przypisany FROM Zadania_Przypisani WHERE tenant_id = \? AND id_zadania = \?/, rows: [{ przypisany: 'Ola' }, { przypisany: 'Marta' }] }]);
+        const res = await post(db, { action: 'edit', id: 'Z-9', tytul: 'Oddzwonić do Pani M.', przypisani: ['Ola', 'Marta'], kto_edytuje: 'Marta', deadline: '2026-10-28 10:00:00' }, TOKEN_MARTA);
+        expect(res.body.status).toBe('success');
+        expect(db._sql(/UPDATE Zadania SET tytul/)[0][1]).toContain('2026-10-28 10:00:00');
+        expect(db._sql(/SELECT rola FROM Użytkownicy WHERE tenant_id = \? AND TRIM\(imie_login\)/).length).toBeLessThanOrEqual(1);   // bez sprawdzania roli Oli jako NOWEGO odbiorcy
+    });
+    test('…ale dopisanie managera jako NOWEGO odbiorcy przez recepcję → odmowa', async () => {
+        const TOKEN_MARTA = createSession(SALON_A, 'Marta');
+        const db = dbWg([
+            { re: /SELECT rola FROM Użytkownicy WHERE tenant_id = \? AND TRIM\(imie_login\) = TRIM\(\?\)/, rows: (p) => [{ rola: p[1] === 'Marta' ? 'recepcja' : 'manager' }] },
+            { re: /SELECT przypisany FROM Zadania_Przypisani/, rows: [{ przypisany: 'Marta' }] },
+        ]);
+        const res = await post(db, { action: 'edit', id: 'Z-9', tytul: 'x', przypisani: ['Marta', 'Ola'], kto_edytuje: 'Marta' }, TOKEN_MARTA);
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/Recepcja może zlecać tylko/);
+        expect(db._sql(/UPDATE Zadania SET tytul/).length).toBe(0);
+    });
+});

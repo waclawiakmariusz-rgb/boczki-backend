@@ -875,8 +875,14 @@ module.exports = (db) => {
       if (!przypisaniListEdit.length) return res.json({ status: 'error', message: 'Wskaż przynajmniej jedną osobę lub rolę' });
       const rzE = parseRodzajPayload(d);
       if (rzE.error) return res.json({ status: 'error', message: rzE.error });
+      // Ticket #17 (26.10.2026): recepcja może edytować zadania do niej przypisane (także cudze). Uprawnienie do zlecania
+      // sprawdzamy tylko dla NOWYCH odbiorców — dotychczasowi (np. manager, który sam się dopisał) zostają bez zmian.
       pobierzRoleUzytkownika(tenant_id, kto_edytuje, (rolaKto) => {
-        sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, przypisaniListEdit, (mozna, msg) => {
+        db.query(`SELECT przypisany FROM Zadania_Przypisani WHERE tenant_id = ? AND id_zadania = ?`, [tenant_id, id], (ePrz, przRows) => {
+        const dotychczas = new Set((ePrz || !Array.isArray(przRows) ? [] : przRows).map(r => String(r.przypisany || '').trim().toLowerCase()));
+        const nowi = przypisaniListEdit.filter(p => !dotychczas.has(String(p).trim().toLowerCase()));
+        const sprawdz = (cb) => nowi.length ? sprawdzCzyMozeZlecicWielu(tenant_id, rolaKto, nowi, cb) : cb(true);
+        sprawdz((mozna, msg) => {
           if (!mozna) return res.json({ status: 'error', message: msg || 'Brak uprawnień' });
           zweryfikujKontakt(tenant_id, rzE.kontakt_typ, rzE.kontakt_id, (bladK, kontaktNazwaE) => {
           if (bladK) return res.json({ status: 'error', message: bladK });
@@ -904,6 +910,7 @@ module.exports = (db) => {
             }
           );
           });
+        });
         });
       });
 
