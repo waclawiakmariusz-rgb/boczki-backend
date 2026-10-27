@@ -1,0 +1,83 @@
+{
+  "nazwa": "pomoc-zadania",
+  "modul": "Pulpit",
+  "opis": "Pomoc kontekstowa przy widgecie Zadań i formularzu nowego zadania (zrzuty chmurek)",
+  "sekcja": "pulpit",
+  "korzen": "#ds-zadania-section",
+  "przechwyc": [
+    "add",
+    "edit"
+  ],
+  "czekajPoSekcji": 3000,
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "sprawdz": "!!document.querySelector('#ds-zadania-section .pk-slot[data-pomoc=\"pulpit.zadania\"] button')",
+      "opis": "P01: slot pomocy w nagłówku widgetu ma przycisk „?”"
+    },
+    {
+      "js": "document.querySelector('#ds-zadania-section .pk-slot[data-pomoc=\"pulpit.zadania\"] button').click(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "(function(){ const k=document.querySelector('.pk-widoczny'); return !!k && /Jedna lista, trzy widoki/.test(k.textContent) && /Tylko moje/.test(k.textContent); })()",
+      "opis": "P02: chmurka „Jedna lista, trzy widoki” z treścią z katalogu"
+    },
+    {
+      "zrzut": "01-pomoc-widget"
+    },
+    {
+      "js": "document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "kliknij": "#ds-zadania-add-btn"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "sprawdz": "!!document.querySelector('#zd-modal-overlay .pk-slot[data-pomoc=\"zadania.formularz\"] button')",
+      "opis": "P03: slot pomocy w nagłówku formularza"
+    },
+    {
+      "js": "document.querySelector('#zd-modal-overlay .pk-slot[data-pomoc=\"zadania.formularz\"] button').click(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "(function(){ const k=document.querySelector('.pk-widoczny'); return !!k && /Telefon czy do zrobienia/.test(k.textContent) && document.getElementById('zd-modal-overlay').style.display === 'flex'; })()",
+      "opis": "P04: chmurka formularza otwarta, formularz nie zamknięty"
+    },
+    {
+      "zrzut": "02-pomoc-formularz"
+    },
+    {
+      "js": "document.dispatchEvent(new KeyboardEvent('keydown', {key:'Escape', bubbles:true})); 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "js": "JSON.stringify({chmurki: document.querySelectorAll('.pk-widoczny').length, modal: document.getElementById('zd-modal-overlay').style.display, fokus: document.activeElement && document.activeElement.className})",
+      "opis": "stan po Esc"
+    },
+    {
+      "sprawdz": "!document.querySelector('.pk-widoczny') && document.getElementById('zd-modal-overlay').style.display === 'flex'",
+      "opis": "P05: Esc zamyka pomoc, formularz zostaje"
+    }
+  ]
+}

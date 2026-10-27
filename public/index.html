@@ -8036,6 +8036,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
       <div class="et-head-actions">
+        <span class="pk-slot" data-pomoc="pulpit.zadania" data-pomoc-nazwa="Zadania na Pulpicie"></span>
         <button type="button" id="ds-zadania-szablony-btn" class="et-link" onclick="ds_zd_toggleSzablony()" style="display:none;">Szablony cykliczne</button>
         <button type="button" id="ds-zadania-add-btn" class="et-primary" onclick="zd_addOpen();" style="display:none;">+ Nowe zadanie</button>
         <button type="button" id="ds-zadania-chevron" class="et-collapse" onclick="ds_zd_toggleCollapse(event)" aria-expanded="true" aria-label="Zwiń zadania"><svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg></button>
@@ -10525,7 +10526,7 @@ ANALIZA MANAGER
     <div class="estelio-task-form" role="dialog" aria-labelledby="zd-modal-title" aria-modal="true">
         <div class="etf-head">
             <div><h3 id="zd-modal-title">Nowe zadanie</h3><p class="etf-sub">Ustal czynność, kontakt i termin.</p></div>
-            <button type="button" class="etf-x" onclick="zd_modalClose()" aria-label="Zamknij formularz">&times;</button>
+            <div class="etf-head-akcje"><span class="pk-slot" data-pomoc="zadania.formularz" data-pomoc-nazwa="Nowe zadanie"></span><button type="button" class="etf-x" onclick="zd_modalClose()" aria-label="Zamknij formularz">&times;</button></div>
         </div>
         <form onsubmit="event.preventDefault(); zd_save();">
             <input type="hidden" id="zd-edit-id" value="">

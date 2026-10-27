@@ -205,7 +205,7 @@
     var prawa = '';
     if (tel && mozeTelefon) {
       var jutro = new Date(); jutro.setDate(jutro.getDate() + 1); jutro.setHours(10, 0, 0, 0);
-      prawa = '<div><form class="et-wynik-form" onsubmit="event.preventDefault(); ds_zd_wynikZapisz(\'' + id + '\', this)"><h5>Wynik rozmowy</h5>' +
+      prawa = '<div><form class="et-wynik-form" onsubmit="event.preventDefault(); ds_zd_wynikZapisz(\'' + id + '\', this)"><h5>Wynik rozmowy <span class="pk-slot" data-pomoc="zadania.telefon" data-pomoc-nazwa="Wynik rozmowy"></span></h5>' +
         '<div class="et-wynik">' + ['UMOWIONA', 'NIE_ODEBRALA', 'NIE_ZAINTERESOWANA'].map(function (w) { return '<label><input type="radio" name="et-wynik-' + id + '" value="' + w + '" required onchange="ds_zd_wynikZmiana(\'' + id + '\', this.form)">' + WYNIK_NAZWA[w] + '</label>'; }).join('') + '</div>' +
         '<textarea class="et-textarea" name="notatka" maxlength="2000" placeholder="Notatka z rozmowy (opcjonalnie)" aria-label="Notatka z rozmowy"></textarea>' +
         '<div class="et-kolejny" hidden><span class="et-label">Kolejny kontakt</span><select name="kolejny" class="et-area" onchange="this.form.querySelector(\'[name=kolejny_custom]\').hidden = this.value !== \'custom\'"><option value="jutro">Jutro 10:00</option><option value="custom">Wybierz termin</option><option value="keep">Zachowaj obecny termin</option></select> <input type="datetime-local" name="kolejny_custom" value="' + lokalnyISO(jutro) + '" hidden aria-label="Własny termin kolejnego kontaktu"></div>' +

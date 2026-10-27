@@ -1658,10 +1658,10 @@
             <li>Powiązany klient: <code>Anna Kowalska (ID 234)</code> — wpisuje "Kowalska", klika z dropdownu</li>
           </ul>
           <p>Klika "Zapisz". Zadanie pojawia się natychmiast.</p>
-          <p>Następnego dnia Marta loguje się o 9:00, widzi Pulpit. Banner pokazuje "Masz 3 zadania na dziś, 1 wymaga pilnego działania". W zakładce 👤 Klient widzi zadanie z czerwonym paskiem (priorytet pilny).</p>
-          <p>Marta klika kafelkę zadania → rozwija się opis. Klika niebieski badge "👤 Anna Kowalska →" → otwiera się profil klientki. Marta widzi telefon, dzwoni.</p>
-          <p>Po telefonie wraca do zadania, klika ⋮ → "Komentarze" → wpisuje: "Oddzwoniono. Klientka umówiona na sobotę 11:00 zamiast piątku. Powtórzono komentarz w sprzedaży."</p>
-          <p>Klika "✓ Zrobione". Wiersz fade-out, zielona ikona. Po sekundzie znika z aktywnych.</p>
+          <p>Następnego dnia Marta loguje się o 9:00, widzi Pulpit. Nagłówek widgetu mówi: "Masz 3 aktywne zadania · 1 telefon · 1 na dziś". Lista otwiera się od razu w widoku <strong>Wszystkie</strong> — zadanie Pani Kowalskiej stoi w grupie <strong>Na dziś</strong> ze znacznikiem "Pilne".</p>
+          <p>Marta klika tytuł zadania → rozwijają się szczegóły. Klika "Otwórz ↗" przy nazwisku → otwiera się profil klientki. Jeśli zadanie jest typu <strong>Telefon</strong>, numer ma od razu przycisk <strong>Zadzwoń</strong>.</p>
+          <p>Po telefonie wraca do zadania i w panelu <strong>Wynik rozmowy</strong> zaznacza "Umówiona", dopisuje: "Klientka umówiona na sobotę 11:00 zamiast piątku". Klika "Zapisz i zamknij".</p>
+          <p>Zadanie zostaje zakończone (jak po "Zrobione"), a wynik i notatka trafiają do jego historii. Wiersz jest przekreślony przez chwilę i znika z aktywnych.</p>
           <div class="scenario-result">Zadanie zamknięte z komentarzem. Patrycja (manager) widzi w "Zlecone przeze mnie" że Marta zrealizowała. Klientka jest umówiona. Komunikacja w salonie zachowana.</div>
         </div>
       </div>
@@ -1669,15 +1669,29 @@
       <h3>Gdzie znajdziesz zadania?</h3>
       <p>Na <strong>Pulpicie</strong>, zaraz pod sekcją "Na dziś". Widget nazywa się <em>"Twoje zadania"</em> (recepcja/praktykantka) lub <em>"Zadania zespołu"</em> (manager/admin).</p>
 
-      <h3>Co widzisz w widget'cie</h3>
+      <h3 id="zadania-widget">Co widzisz w widget'cie (od 27.10.2026)</h3>
       <ul>
-        <li><strong>Banner</strong> — "🎯 Masz X zadań na dziś, Y wymagają pilnego działania" (różowy, z ikoną)</li>
-        <li><strong>Przycisk "+ Nowe zadanie"</strong> w prawym górnym rogu (jeśli masz uprawnienia)</li>
-        <li><strong>5 zakładek kategorii</strong>: Klient · Magazyn · Kosmetyk · Sprzedaż · Inne (z liczbą zadań na każdej)</li>
-        <li><strong>Lista pogrupowana</strong>: ❗ Pilne · 🕘 Na dziś · 📅 Zaplanowane · 🗒 Bez terminu</li>
-        <li><strong>Kolorowy pasek</strong> po lewej każdego wiersza: różowy (normalny), pomarańczowy (ważny), czerwony (pilny)</li>
-        <li><strong>"📤 Zlecone przeze mnie"</strong> — sekcja pod listą (rozwijana), pokazuje co JA wysłałam</li>
+        <li><strong>Nagłówek</strong> — "Masz X aktywnych zadań" i jedno zdanie: ile telefonów, ile po terminie, ile na dziś</li>
+        <li><strong>Przycisk "+ Nowe zadanie"</strong> i link <strong>"Szablony cykliczne (N)"</strong> w prawym górnym rogu (jeśli masz uprawnienia)</li>
+        <li><strong>Trzy przełączniki</strong>: <strong>Wszystkie · Telefony · Do zrobienia</strong> — liczby się sumują, nic nie jest schowane; domyślnie zawsze "Wszystkie"</li>
+        <li><strong>"Tylko moje"</strong> — zadania przypisane do Ciebie (imiennie lub na Twoją rolę); <strong>"Obszar"</strong> — filtr Klient / Magazyn / Kosmetyk / Sprzedaż / Inne; wyszukiwarka po tytule i kontakcie</li>
+        <li><strong>Lista pogrupowana czasem</strong>: Po terminie · Na dziś · Zaplanowane · Bez terminu — po 4 wiersze, dalej "Pokaż pozostałe N"</li>
+        <li><strong>Wiersz zadania</strong>: ikona słuchawki (telefon) albo ptaszka (do zrobienia), tytuł, znacznik obszaru (+N, gdy jest ich więcej), termin (czerwony, gdy minął), "Pilne/Ważne"; przy telefonie przycisk <strong>Zadzwoń · numer</strong></li>
+        <li><strong>Akcje</strong>: "Zrobione", "Przełóż termin" (przy telefonie "Oddzwonić później") i menu "⋮"; <strong>"Zlecone przeze mnie"</strong> — rozwijana sekcja pod listą</li>
       </ul>
+
+      <h3 id="zadania-telefony">Telefony: numer, "Oddzwonić później", wynik rozmowy</h3>
+      <p>Zadanie może być typu <strong>Telefon</strong> albo <strong>Do zrobienia</strong>. Telefon ma adresata (klientkę lub lead z kampanii) i numer — numer dotyczy tylko tego zadania, nie zmienia karty klientki.</p>
+      <ul>
+        <li><strong>Zadzwoń · 601 …</strong> — na telefonie wybiera numer, na komputerze otwiera program do dzwonienia; samo kliknięcie <em>nie</em> kończy zadania. Brak numeru? Wiersz pokazuje "Brak numeru — dodaj".</li>
+        <li><strong>Oddzwonić później</strong> — "za 2 godziny", "jutro 10:00" albo dowolny termin. Zadanie zostaje aktywne, zmiana terminu zapisuje się w historii.</li>
+        <li><strong>Wynik rozmowy</strong> (w szczegółach, po kliknięciu tytułu): <strong>Umówiona</strong> i <strong>Nie zainteresowana</strong> kończą zadanie; <strong>Nie odebrała</strong> zostawia je aktywne, liczy próbę i proponuje kolejny kontakt (domyślnie jutro 10:00). Podpis pod przyciskami mówi, co się stanie, zanim zapiszesz. "Umówiona" <em>nie</em> tworzy wizyty w Terminarzu.</li>
+        <li><strong>Lead</strong>: gdy telefon jest powiązany z leadem, "Umówiona" ustawia mu status <em>umówiony</em>, a "Nie zainteresowana" — <em>odrzucony</em> (tylko gdy lead był "nowy" lub "kontakt"; statusów "klient"/"umówiony"/"odrzucony" system nie zmienia po cichu).</li>
+        <li><strong>Historia</strong> w szczegółach: kto, kiedy, jaki wynik, jaka notatka, jaki kolejny termin.</li>
+      </ul>
+
+      <h3 id="zadania-termin">Przełóż termin — także cudze zadanie</h3>
+      <p>Przycisk <strong>Przełóż termin</strong> ma każdy, kto może zadanie wykonać (czyli ma je przypisane) — niezależnie od tego, kto je utworzył. Nie trzeba już pisać w komentarzu "zadzwonię jutro". Treść zadania (tytuł, opis) zmienia jego autor lub manager; recepcja może też edytować i archiwizować zadania, które ktoś jej zlecił, ale usuwa tylko własne.</p>
 
       <h3>Co możesz zrobić — wg roli</h3>
 
@@ -1686,8 +1700,9 @@
         <li>Tworzyć zadania dla siebie (notatki własne — "zadzwoń do dostawcy o 12")</li>
         <li>Tworzyć zadania dla drugiej recepcjonistki ("Ania, sprawdź zamówienia w piątek")</li>
         <li>Tworzyć zadania dla praktykantek (jednej osoby lub całej roli "Praktykantka")</li>
-        <li>Edytować, archiwizować, usuwać własne zadania (przez ⋮)</li>
-        <li>Oznaczać zadania jako "✓ Zrobione"</li>
+        <li>Edytować i archiwizować zadania własne <em>oraz</em> te, które ktoś jej przypisał (przez ⋮); usuwać tylko własne</li>
+        <li>Przekładać termin każdego przypisanego zadania ("Przełóż termin" / "Oddzwonić później")</li>
+        <li>Oznaczać zadania jako "Zrobione", zapisywać wynik rozmowy przy telefonach</li>
         <li>Dodawać komentarze pod zadaniem (chat)</li>
       </ul>
 
@@ -1715,24 +1730,27 @@
             <li>Przypisz do: <code>Marta</code> (sama sobie)</li>
             <li>Deadline: <code>2026-05-08 11:00</code> (piątek 11:00)</li>
           </ul>
-          <p>Klika "Zapisz". Zadanie znika z modalu, pojawia się na liście w zakładce 📦 Magazyn.</p>
-          <div class="scenario-result">W piątek o 9:00 banner przypomni: "Masz zadanie na dziś". Marta zadzwoni w południe. Po telefonie odhaczy "✓ Zrobione".</div>
+          <p>Klika "Zapisz zadanie". Zadanie pojawia się na liście w grupie "Zaplanowane" ze znacznikiem Magazyn (filtr "Obszar: Magazyn" pokaże tylko takie).</p>
+          <div class="scenario-result">W piątek o 9:00 zadanie stoi w grupie "Na dziś", a nagłówek widgetu pokaże "1 na dziś". Marta zadzwoni w południe. Po telefonie odhaczy "Zrobione".</div>
         </div>
       </div>
 
-      <h3>Pola modalu "Nowe zadanie"</h3>
+      <h3 id="zadania-formularz">Pola okna "Nowe zadanie" (od 27.10.2026)</h3>
+      <p>Sześć najważniejszych rzeczy jest na wierzchu, reszta pod "Więcej":</p>
       <table>
         <thead><tr><th>Pole</th><th>Co wpisać</th></tr></thead>
         <tbody>
-          <tr><td><strong>Tytuł</strong></td><td>Krótkie, konkretne ("Zadzwoń do X w sprawie Y"). Wymagane.</td></tr>
-          <tr><td><strong>Opis</strong></td><td>Szczegóły, kontekst. Tu możesz pisać dłużej.</td></tr>
-          <tr><td><strong>Kategoria</strong></td><td>📋 Inne / 📦 Magazyn / 💄 Kosmetyk / 👤 Klient / 💰 Sprzedaż</td></tr>
-          <tr><td><strong>Priorytet</strong></td><td>▫️ Normalny / 🟠 Ważny / 🔴 Pilny</td></tr>
-          <tr><td><strong>Powtarzaj</strong></td><td>🚫 Nie / 🌞 Codziennie / 📆 Co tydzień / 📅 Co miesiąc</td></tr>
-          <tr><td><strong>Dzień</strong> (jeśli powtarza)</td><td>Tygodnia (Pn-Nd) lub miesiąca (1-28 lub "ostatni dzień")</td></tr>
-          <tr><td><strong>Przypisz do</strong></td><td>Imię osoby LUB rola grupowa (📞 Recepcja, 🌱 Praktykantka). Wymagane.</td></tr>
-          <tr><td><strong>Deadline</strong></td><td>Data i godzina (datetime)</td></tr>
-          <tr><td><strong>Powiązany klient</strong></td><td>Wpisz fragment nazwiska, kliknij z listy. Opcjonalnie.</td></tr>
+          <tr><td><strong>Rodzaj</strong></td><td><strong>Telefon</strong> (ktoś ma zadzwonić) albo <strong>Do zrobienia</strong> (wszystko inne). Telefon odsłania pola kontaktu i numeru.</td></tr>
+          <tr><td><strong>Tytuł</strong></td><td>Krótkie, konkretne ("Potwierdzić termin konsultacji"). Wymagane.</td></tr>
+          <tr><td><strong>Klientka lub lead</strong> (telefon)</td><td>Wpisz fragment nazwiska albo numer (min. 2 znaki), kliknij z listy. Numer z karty wskakuje sam. Można pominąć.</td></tr>
+          <tr><td><strong>Numer telefonu</strong> (telefon)</td><td>Dla tego zadania; zmiana nie edytuje karty klientki ani leada. Jeśli pusty — na liście będzie "Brak numeru — dodaj".</td></tr>
+          <tr><td><strong>Termin</strong></td><td>Data i godzina albo szybki wybór: Dziś 16:00 / Jutro 10:00 / Za tydzień / Bez terminu.</td></tr>
+          <tr><td><strong>Obszary</strong></td><td>Klient / Magazyn / Kosmetyk / Sprzedaż / Inne — można kilka. Telefon podpowiada "Klient", lead — "Sprzedaż".</td></tr>
+          <tr><td><strong>Więcej → Przypisz do</strong></td><td>Imię osoby LUB rola grupowa (Recepcja, Praktykantka, Kosmetolog). Nowe zadanie ma domyślnie wpisaną Ciebie. Wymagane.</td></tr>
+          <tr><td><strong>Więcej → Priorytet</strong></td><td>Normalny / Ważny / Pilny</td></tr>
+          <tr><td><strong>Więcej → Opis</strong></td><td>Szczegóły, kontekst. Nazwisko klientki w treści → system zaproponuje powiązanie.</td></tr>
+          <tr><td><strong>Więcej → Dodatkowe klientki / Produkty</strong></td><td>Kolejne powiązania (opcjonalnie).</td></tr>
+          <tr><td><strong>Więcej → Powtarzaj</strong></td><td>Nie / Codziennie / Co tydzień / Co miesiąc + dzień tygodnia (Pn–Nd) lub miesiąca (1–28, "ostatni dzień")</td></tr>
         </tbody>
       </table>
 

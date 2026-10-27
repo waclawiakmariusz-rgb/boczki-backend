@@ -173,7 +173,9 @@ describe('podpięcie w aplikacji', () => {
   });
 
   test('nie ma nieużywanych kluczy katalogu bez roli nadrzędnej', () => {
-    const uzyte = new Set([...INDEX.matchAll(/data-pomoc="([a-z0-9.-]+)"/g)].map(m => m[1]));
+    // Sloty renderowane przez warstwy prezentacji poza index.html (np. panel „Wynik rozmowy” w zadania-pulpit.js, 27.10.2026)
+    const PREZENTACJA = ['zadania-pulpit.js'].map(f => fs.readFileSync(path.join(KORZEN, 'public', f), 'utf8')).join('\n');
+    const uzyte = new Set([...(INDEX + '\n' + PREZENTACJA).matchAll(/data-pomoc=\\?"([a-z0-9.-]+)\\?"/g)].map(m => m[1]));
     // Konteksty ustawiane w locie (jeden przycisk, wiele zakładek) nie są widoczne w znaczniku —
     // zbieramy też prefiksy sklejane w kodzie, np. setAttribute('data-pomoc', 'klient.profil.' + tabId)
     const prefiksy = [
