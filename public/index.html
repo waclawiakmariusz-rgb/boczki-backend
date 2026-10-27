@@ -8084,10 +8084,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="ds-tile-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="m16.2 16.2 4.3 4.3"/></svg></div>
           <div><strong>Do sprawdzenia <span id="ds-tile-spr-badge" style="display:none;background:#b45309;color:#fff;border-radius:999px;padding:1px 7px;font-size:11px;font-weight:800;margin-left:4px;vertical-align:middle;"></span></strong><span>Pomocny przegląd — zadatki, karnety, drobiazgi</span></div>
         </div>
-        <div class="ds-quick-tile" id="ds-tile-booksy" style="display:none;" onclick="pokaz('booksy-dzis',null)">
-          <div class="ds-tile-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16M9.5 15l1.8 1.8 3.4-3.4"/></svg></div>
-          <div><strong>Dziś w lokalu</strong><span>Wizyty z Booksy na dzisiaj</span></div>
-        </div>
         <div class="ds-quick-tile" id="ds-tile-foto" style="display:none;" onclick="foto_otworzZPulpitu()">
           <div class="ds-tile-icon"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3.2L9 5.8h6L16.8 8H20v11H4z"/><circle cx="12" cy="13.2" r="3.2"/></svg></div>
           <div><strong>Foto przed/po</strong><span>Zdjęcia klienta — kod QR na telefon</span></div>
@@ -16408,6 +16404,8 @@ function booksyDostepne() {
     return (typeof uz_tenantId === 'function' ? uz_tenantId() : (localStorage.getItem('boczki_tenant_id') || '')) === BOOKSY_TENANT_DOZWOLONY;
 }
 function aktualizujBooksyWidocznosc() {
+    // 27.10.2026: kafelek „Dziś w lokalu” zdjęty z Pulpitu (decyzja właściciela — wycofanie z integracji Booksy w UI).
+    // Widok #booksy-dzis i jego kod zostają; bez kafelka nie ma do niego wejścia z interfejsu.
     const tile = document.getElementById('ds-tile-booksy');
     if (tile) tile.style.display = booksyDostepne() ? '' : 'none';
 }
