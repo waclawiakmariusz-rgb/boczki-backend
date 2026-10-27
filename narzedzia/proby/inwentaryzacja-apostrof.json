@@ -1,0 +1,27 @@
+{
+  "nazwa": "inwentaryzacja-apostrof",
+  "modul": "Kosmetyki",
+  "opis": "Inwentaryzacja: produkt z apostrofem w nazwie („Purles 108 Godess' Cream”) — przyciski X / − / + muszą działać (onclick poprawny), X → confirm → action:delete z ID partii; + → action:update. Zapisy przechwycone.",
+  "sekcja": "inwentaryzacja",
+  "korzen": "#inwentaryzacja",
+  "przechwyc": ["delete", "update"],
+  "opoznienieAtrapy": 300,
+  "kroki": [
+    { "viewport": [1440, 900] },
+    { "czekaj": 1500 },
+    { "js": "(function(){ var b=[...document.querySelectorAll('#lista-inv .inv-row')].find(r => /Godess/.test(r.textContent)); return b ? b.querySelector('button.btn-delete').getAttribute('onclick') : 'brak wiersza'; })()", "opis": "onclick przycisku X przy produkcie z apostrofem" },
+    { "sprawdz": "(function(){ var b=[...document.querySelectorAll('#lista-inv .inv-row')].find(r => /Godess/.test(r.textContent)); if(!b) return false; var o=b.querySelector('button.btn-delete').getAttribute('onclick'); return /Godess%27%20Cream/.test(o) && !/Godess'/.test(o); })()", "opis": "A01: apostrof w onclick zakodowany jako %27 (brak surowego apostrofu)" },
+    { "js": "(function(){ var b=[...document.querySelectorAll('#lista-inv .inv-row')].find(r => /Godess/.test(r.textContent)); b.scrollIntoView({block:'center'}); return 'ok'; })()" },
+    { "czekaj": 300 },
+    { "zrzut": "01-wiersz-godess" },
+    { "js": "(function(){ var b=[...document.querySelectorAll('#lista-inv .inv-row')].find(r => /Godess/.test(r.textContent)); b.querySelector('button.pm-btn.plus').click(); return 'klik +'; })()" },
+    { "czekaj": 800 },
+    { "sprawdz": "window.__proba.posty.length === 1 && window.__proba.posty[0].action === 'update' && window.__proba.posty[0].ilosc === 1 && !!window.__proba.posty[0].id", "opis": "A02: + wysyła action:update (+1) z ID partii — przycisk żyje" },
+    { "czekaj": 1200 },
+    { "js": "(function(){ var b=[...document.querySelectorAll('#lista-inv .inv-row')].find(r => /Godess/.test(r.textContent)); b.querySelector('button.btn-delete').click(); return 'klik X'; })()" },
+    { "czekaj": 800 },
+    { "sprawdz": "window.__proba.confirmy.length === 1 && /Godess' Cream/.test(window.__proba.confirmy[0]) && window.__proba.posty.filter(p => p.action === 'delete').length === 1 && !!window.__proba.posty.find(p => p.action === 'delete').id", "opis": "A03: X → pytanie confirm z pełną nazwą (z apostrofem) → action:delete z ID partii" },
+    { "js": "JSON.stringify(window.__proba.posty.map(p => ({action: p.action, id: p.id, ilosc: p.ilosc})))", "opis": "przechwycone zapisy" },
+    { "zrzut": "02-po-kliknieciach" }
+  ]
+}

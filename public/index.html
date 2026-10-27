@@ -19326,9 +19326,10 @@ function renderInwentaryzacja(d, czyArchiwum) {
     const wiersze = [];
     listaDoRysowania.forEach(g => {
         let btns = "";
-        // Kodujemy parametry do funkcji onclick
-        const safeNazwa = encodeURIComponent(g.nazwa);
-        const safeKat = encodeURIComponent(g.kategoria);
+        // Kodujemy parametry do funkcji onclick. encodeURIComponent NIE koduje apostrofu, a parametry stoją w '…' —
+        // „Purles 108 Godess' Cream” rozrywał onclick i X / − / + nie działały (zgłoszenie 27.10.2026). %27 dekoduje się do apostrofu.
+        const safeNazwa = encodeURIComponent(g.nazwa).replace(/'/g, '%27');
+        const safeKat = encodeURIComponent(g.kategoria).replace(/'/g, '%27');
 
         if (czyArchiwum) {
             // W archiwum przywracamy wszystkie partie naraz
