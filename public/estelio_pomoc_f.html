@@ -374,8 +374,8 @@
           <p><strong>Pulpit ma 5 sekcji ułożonych od góry:</strong></p>
           <p><strong>1. "Dzień dobry, Marta! 👋"</strong> + zegar aktualizacji</p>
           <p><strong>2. "📊 Na dziś"</strong> — kafelki KPI ale Marta jako recepcja TEGO NIE WIDZI (to widzi tylko manager/admin). Sekcja ukryta.</p>
-          <p><strong>3. "📋 Twoje zadania"</strong> — banner pokazuje "Masz 3 zadania na dziś, 1 wymaga pilnego działania". Patrycja zostawiła Marcie zadanie "Zadzwoń do Pani Kowalskiej w sprawie rezerwacji" z priorytetem PILNY i terminem na dziś 14:00. Plus "Sprawdź stan kremów Vagheggi" (zwykłe).</p>
-          <p><strong>4. "⚡ Szybki dostęp"</strong> — kompaktowe kafelki-skróty. Marta widzi: Podsumowanie dnia / Do sprawdzenia (z licznikiem spraw) / Dziś w lokalu / Foto przed/po / Link do płatności.</p>
+          <p><strong>3. "Twoje zadania"</strong> — nagłówek mówi: "Masz 3 aktywne zadania · 1 telefon · 1 po terminie · 1 na dziś". Lista otwiera się w widoku <strong>Wszystkie</strong>, pogrupowana czasem. Patrycja zostawiła Marcie telefon "Potwierdzić rezerwację — Pani Kowalska" z numerem i przyciskiem <strong>Zadzwoń</strong>, w grupie "Na dziś" ze znacznikiem "Pilne". Plus "Sprawdź stan kremów Vagheggi" (do zrobienia).</p>
+          <p><strong>4. "⚡ Szybki dostęp"</strong> — kompaktowe kafelki-skróty. Marta widzi: Podsumowanie dnia / Do sprawdzenia (z licznikiem spraw) / Foto przed/po / Link do płatności.</p>
           <p><strong>5. "⚠️ Wymaga uwagi"</strong> — alert: "95 produktów ma niski stan magazynowy", "9 zbliżających się urodzin (2 dziś!)", "87 klientów bez kompletu RODO".</p>
           <div class="scenario-result">Marta wie: 1) zadzwonić do Pani Kowalskiej, 2) zadzwonić do 2 jubilatek, 3) sprawdzić kremy. Plan dnia gotowy w 10 sekund.</div>
         </div>
@@ -391,13 +391,14 @@
       </ul>
       <p><strong>Recepcja, kosmetolog, praktykantka — tej sekcji NIE widzą.</strong> Ochrona — to liczby zarządcze, dla managera/admina.</p>
 
-      <h3>Sekcja "📋 Twoje zadania"</h3>
-      <p>Widget zadań — opisany szczegółowo w sekcji <strong>Zadania</strong>. Tu krótko:</p>
+      <h3>Sekcja "Twoje zadania" (od 27.10.2026 — jedna lista)</h3>
+      <p>Widget zadań — opisany szczegółowo w sekcji <a href="#zadania-widget"><strong>Zadania</strong></a>. Tu krótko:</p>
       <ul>
-        <li>Banner "Masz X zadań na dziś, Y pilnych" — dynamiczny licznik</li>
-        <li>5 zakładek: Klient · Magazyn · Kosmetyk · Sprzedaż · Inne</li>
-        <li>Lista pogrupowana: ❗ Pilne, 🕘 Na dziś, 📅 Zaplanowane, 🗒 Bez terminu</li>
-        <li>Przycisk "+ Nowe zadanie" — jeśli Twoja rola pozwala (recepcja+)</li>
+        <li>Nagłówek "Masz X aktywnych zadań" + "ile telefonów · ile po terminie · ile na dziś"</li>
+        <li>Trzy przełączniki: <strong>Wszystkie · Telefony · Do zrobienia</strong> — liczby się sumują, domyślnie Wszystkie; obok "Tylko moje", filtr obszaru i wyszukiwarka</li>
+        <li>Lista pogrupowana czasem: Po terminie · Na dziś · Zaplanowane · Bez terminu (po 4 wiersze, dalej "Pokaż pozostałe")</li>
+        <li>Przy telefonie: przycisk <strong>Zadzwoń · numer</strong> i "Oddzwonić później"; przy każdym zadaniu "Przełóż termin", "Zrobione" i menu "⋮"</li>
+        <li>Przycisk "+ Nowe zadanie" i link "Szablony cykliczne" — jeśli Twoja rola pozwala (recepcja+)</li>
       </ul>
 
       <h3>Sekcja "⚡ Szybki dostęp"</h3>
@@ -405,7 +406,6 @@
       <div class="feature-grid">
         <div class="feature"><div class="feature-icon">🗓</div><strong>Podsumowanie dnia</strong><span>Pełny raport z dzisiejszych działań — kasowo i analitycznie</span></div>
         <div class="feature"><div class="feature-icon">🔎</div><strong>Do sprawdzenia</strong><span>Pomocny przegląd dla recepcji: wiszące zadatki, wygasające karnety, drobiazgi do ogarnięcia. Pomarańczowy licznik pokazuje ile spraw czeka</span></div>
-        <div class="feature"><div class="feature-icon">📅</div><strong>Dziś w lokalu</strong><span>Wizyty z Booksy na dzisiaj — kto i o której przychodzi (widoczne, gdy salon ma podpiętą skrzynkę Booksy)</span></div>
         <div class="feature"><div class="feature-icon">📷</div><strong>Foto przed/po</strong><span>Start sesji zdjęciowej klientki (widoczne przy aktywnym dodatku)</span></div>
         <div class="feature"><div class="feature-icon">🔗</div><strong>Link do płatności</strong><span>Płatność online tpay z akceptacją regulaminu (widoczne przy aktywnym dodatku)</span></div>
       </div>
