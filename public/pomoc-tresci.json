@@ -1,5 +1,5 @@
 {
- "wersjaKatalogu": "2026-10-27.2",
+ "wersjaKatalogu": "2026-10-27.3",
  "sprawdzonoWobec": "main f488e53 (27.10.2026)",
  "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
  "konteksty": {
@@ -698,13 +698,18 @@
   },
   "admin.sugestie": {
    "parentContextId": null,
-   "items": [],
-   "tip": null,
+   "items": [
+    {
+     "icon": "lista",
+     "text": "Kliknij pole albo strzałkę: lista kategorii z cennika, „pokaż warianty”, szukanie po fragmencie."
+    }
+   ],
+   "tip": "Własną nazwę spoza cennika też możesz wpisać — reguła dopasuje ją po fragmencie.",
    "tipTyp": "informacja",
    "availability": null,
    "reviewStatus": "verified",
-   "verifiedAgainst": "8802107",
-   "contentVersion": 1,
+   "verifiedAgainst": "cbf5722",
+   "contentVersion": 2,
    "eyebrow": "SUGESTIE",
    "title": "Podpowiedzi przy kliencie",
    "body": "Reguły typu „jeśli klientka była na X, zaproponuj Y\". Podpowiedzi pokazują się w profilu klientki.",
@@ -714,7 +719,8 @@
     "anchor": "admin-sugestie"
    },
    "sources": [
-    "public/index.html: sekcja #setup-sugestie („Kreator Sugestii (Cross-selling)\", pole „Jeśli klient był na…\")",
+    "public/index.html: sekcja #setup-sugestie (pola #sug_matka/#sug_dziecko z przyciskiem data-sug-rozwin)",
+    "public/sugestie.js: lista wyboru (poSlowniku, pozycjeDla, wybierz)",
     "public/index.html: #asystent-box w profilu klientki — tam widać efekt",
     "public/estelio_pomoc_f.html: rozdział #admin-sugestie"
    ]

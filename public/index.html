@@ -7800,9 +7800,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     <h2 id="sug-dodaj-tytul">Dodaj regułę</h2>
                     <p class="sug-opis">Połącz zakupiony zabieg z kolejną propozycją.</p>
                     <div class="sug-para">
-                        <div class="sug-field"><label class="sug-label" for="sug_matka">Po zakupie</label><div class="sug-combo"><input type="text" id="sug_matka" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                        <div class="sug-field"><label class="sug-label" for="sug_matka">Po zakupie</label><div class="sug-combo"><input type="text" id="sug_matka" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><button type="button" class="sug-combo-btn" data-sug-rozwin="sug_matka" aria-label="Rozwiń listę zabiegów" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
                         <span class="sug-strzalka" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></svg></span>
-                        <div class="sug-field"><label class="sug-label" for="sug_dziecko">Zaproponuj</label><div class="sug-combo"><input type="text" id="sug_dziecko" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></div></div>
+                        <div class="sug-field"><label class="sug-label" for="sug_dziecko">Zaproponuj</label><div class="sug-combo"><input type="text" id="sug_dziecko" list="lista-zabiegow-sugestie" class="form-control" placeholder="Wpisz lub wybierz…" autocomplete="off"><button type="button" class="sug-combo-btn" data-sug-rozwin="sug_dziecko" aria-label="Rozwiń listę zabiegów" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button></div></div>
                     </div>
                     <datalist id="lista-zabiegow-sugestie"></datalist>
                     <div class="sug-field"><label class="sug-label" for="sug_opis">Wskazówka dla zespołu <span class="sug-opcjonalnie">(opcjonalnie)</span></label><textarea id="sug_opis" class="form-control" rows="3" placeholder="np. Dla podtrzymania efektu, uzupełnienie terapii…"></textarea><p class="sug-help">Krótki argument, który pomoże w rozmowie.</p></div>
@@ -14134,6 +14134,10 @@ function pobierzReguly() {
             salesDictCache = d;
             wypelnijSelectySugestii();
         });
+    } else {
+        // Ticket #14 (27.10.2026): słownik prawie zawsze JEST już w pamięci (ładowany przy starcie), więc bez tej gałęzi
+        // lista zabiegów do wyboru zostawała pusta — „nie działa funkcja wybierz”.
+        wypelnijSelectySugestii();
     }
 
     // 2. Pobieramy reguły sugestii
@@ -14185,8 +14189,13 @@ function wypelnijSelectySugestii() {
             option.value = u;
             dataList.appendChild(option);
         });
-        
+
         console.log("Załadowano usług do sugestii: " + unikalne.size);
+        // Ticket #14 (27.10.2026): własna lista wyboru (kategorie + warianty cennika) w /sugestie.js — datalist zostaje jako zapas,
+        // gdyby plik oprawy się nie wczytał. Tylko przekazanie danych, bez zmiany kontraktu (pola nadal tekstowe).
+        if (window.SUGESTIE_PREZENTACJA && typeof SUGESTIE_PREZENTACJA.poSlowniku === 'function') {
+            SUGESTIE_PREZENTACJA.poSlowniku(salesDictCache.zabiegi.map(z => ({ kategoria: z.kategoria || '', wariant: z.wariant || '' })));
+        }
     }
 }
 

@@ -33,7 +33,6 @@
 .estelio-suggestions .sug-field input.form-control:focus, .estelio-suggestions .sug-field textarea.form-control:focus { outline: 2px solid var(--sug-accent); outline-offset: 3px; border-color: var(--sug-field-border); background: var(--sug-field-bg); box-shadow: none; transform: none; }
 .estelio-suggestions .sug-combo { position: relative; }
 .estelio-suggestions .sug-combo input.form-control { padding-right: 44px; }
-.estelio-suggestions .sug-combo > svg { position: absolute; right: 14px; top: 14px; width: 20px; height: 20px; color: var(--sug-text); pointer-events: none; }
 .estelio-suggestions .sug-combo input::-webkit-calendar-picker-indicator { opacity: 0; }
 .estelio-suggestions .sug-strzalka { display: grid; place-items: center; height: 48px; color: var(--sug-muted); }
 .estelio-suggestions .sug-strzalka svg { width: 24px; height: 24px; }
@@ -96,3 +95,26 @@ body.dark-mode .estelio-suggestions { --sug-text: #f8fafc; --sug-muted: #94a3b8;
 body.dark-mode .estelio-suggestions .sug-primary { color: #1e293b; }
 body.dark-mode .estelio-suggestions .sug-field input.form-control, body.dark-mode .estelio-suggestions .sug-field textarea.form-control, body.dark-mode .estelio-suggestions .sug-szukaj input { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
 body.dark-mode .estelio-suggestions .sug-card { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }
+
+/* ── ticket #14 (27.10.2026): własna lista wyboru zabiegu w polach „Po zakupie” / „Zaproponuj” ───────────────── */
+.estelio-suggestions .sug-combo-btn { position: absolute; right: 2px; top: 2px; width: 44px; height: 44px; border: 0; background: transparent; border-radius: 10px; color: var(--sug-text); cursor: pointer; display: grid; place-items: center; padding: 0; }
+.estelio-suggestions .sug-combo-btn svg { width: 20px; height: 20px; transition: transform .15s ease; }
+.estelio-suggestions .sug-combo-btn:hover { background: var(--sug-hover); }
+.estelio-suggestions .sug-combo-btn[aria-expanded="true"] svg { transform: rotate(180deg); }
+.estelio-suggestions .sug-combo-btn:focus-visible { outline: 2px solid var(--sug-accent); outline-offset: -2px; }
+.estelio-suggestions .sug-lista { position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 60; background: var(--sug-card); border: 1px solid var(--sug-border); border-radius: 14px; box-shadow: 0 12px 32px rgba(45, 30, 35, .14); overflow: hidden; }
+.estelio-suggestions .sug-lista[hidden] { display: none !important; }
+.estelio-suggestions .sug-lista-naglowek { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 8px 12px; border-bottom: 1px solid var(--sug-border); font-size: 12px; color: var(--sug-muted); background: var(--sug-hover); }
+.estelio-suggestions .sug-lista-warianty { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font-size: 12px; color: var(--sug-text); user-select: none; white-space: nowrap; }
+.estelio-suggestions .sug-lista-warianty input { width: 15px; height: 15px; margin: 0; accent-color: var(--sug-accent); }
+.estelio-suggestions .sug-lista-pozycje { max-height: 300px; overflow-y: auto; overscroll-behavior: contain; padding: 6px 0; }
+.estelio-suggestions .sug-lista-pozycja, .estelio-suggestions .sug-lista-grupa { padding: 10px 14px; min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 15px; line-height: 1.3; color: var(--sug-text); cursor: pointer; }
+.estelio-suggestions .sug-lista-grupa { font-weight: 650; background: var(--sug-hover); border-top: 1px solid var(--sug-border); }
+.estelio-suggestions .sug-lista-grupa small { font-size: 11px; font-weight: 500; color: var(--sug-muted); text-transform: uppercase; letter-spacing: .04em; }
+.estelio-suggestions .sug-lista-wariant { padding-left: 30px; font-size: 14px; }
+.estelio-suggestions .sug-lista-pozycja:hover, .estelio-suggestions .sug-lista-grupa:hover, .estelio-suggestions .sug-lista-aktywna { background: var(--sug-accent-bg); color: var(--sug-accent); }
+.estelio-suggestions .sug-lista-pozycja[aria-selected="true"], .estelio-suggestions .sug-lista-grupa[aria-selected="true"] { font-weight: 650; color: var(--sug-accent); }
+.estelio-suggestions .sug-lista-pozycja[aria-selected="true"]::after { content: "✓"; font-weight: 700; }
+.estelio-suggestions .sug-lista-pusto { padding: 14px; font-size: 14px; color: var(--sug-muted); }
+.estelio-suggestions .sug-lista-stopka { padding: 8px 12px; border-top: 1px solid var(--sug-border); font-size: 12px; color: var(--sug-muted); }
+body.dark-mode .estelio-suggestions .sug-lista { box-shadow: 0 12px 32px rgba(0, 0, 0, .5); }
