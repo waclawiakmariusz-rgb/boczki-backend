@@ -1,0 +1,154 @@
+/* Analiza → Zadania zespołu → Statystyki (27.10.2026). Selektory zawężone do .estelio-zstat.
+   Tokeny jak w zadania-pulpit.css (oprawa „lekki nowy”). Wykresy = czyste CSS (paski), bez bibliotek. */
+.estelio-zstat {
+  --zs-bg: #faf8f5; --zs-card: #ffffff; --zs-ink: #242126; --zs-muted: #67616b; --zs-line: #e7e1de; --zs-control: #d9d4d8;
+  --zs-brand: #842d49; --zs-hover: #70243d; --zs-pale: #f8edf1; --zs-soft: #f7f5f6;
+  --zs-s1: #842d49;  /* seria 1: założone / zlecone (bordo marki) */
+  --zs-s2: #1f6f5f;  /* seria 2: zamknięte (zieleń morska) */
+  --zs-s3: #b8863b;  /* seria 3: aktywne / nie odebrała (ochra) */
+  --zs-red: #a52540; --zs-red-pale: #fbe9ed; --zs-green-pale: #e6f3ef; --zs-amber-pale: #fbf3e4;
+  color: var(--zs-ink); font-size: 14px; line-height: 1.5; margin-top: 4px;
+}
+.estelio-zstat *, .estelio-zstat *::before, .estelio-zstat *::after { box-sizing: border-box; }
+.estelio-zstat button { font: inherit; color: inherit; cursor: pointer; }
+.estelio-zstat :focus-visible { outline: 2px solid var(--zs-brand); outline-offset: 2px; }
+.estelio-zstat[hidden], .estelio-zstat [hidden] { display: none !important; }
+
+/* przełącznik Lista / Statystyki (w nagłówku widoku) */
+.zd-widok-segments { display: inline-flex; background: #faf8f5; border: 1px solid #e7e1de; padding: 4px; border-radius: 12px; gap: 2px; margin-bottom: 16px; }
+.zd-widok-segments button { border: 0; background: none; border-radius: 9px; min-height: 40px; padding: 8px 16px; color: #67616b; font-weight: 600; font-size: 14px; cursor: pointer; }
+.zd-widok-segments button[aria-checked="true"] { background: #f8edf1; color: #842d49; font-weight: 700; }
+
+/* pasek okresu */
+.estelio-zstat .zs-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.estelio-zstat .zs-okresy { display: flex; gap: 6px; flex-wrap: wrap; }
+.estelio-zstat .zs-okres { border: 1px solid var(--zs-control); background: var(--zs-card); border-radius: 999px; padding: 7px 14px; min-height: 38px; font-size: 13px; font-weight: 600; color: var(--zs-muted); }
+.estelio-zstat .zs-okres[aria-checked="true"] { background: var(--zs-brand); border-color: var(--zs-brand); color: #fff; }
+.estelio-zstat .zs-okres:hover:not([aria-checked="true"]) { background: var(--zs-soft); }
+.estelio-zstat .zs-meta { font-size: 12px; color: var(--zs-muted); display: flex; align-items: center; gap: 10px; }
+.estelio-zstat .zs-odswiez { border: 1px solid var(--zs-control); background: var(--zs-card); border-radius: 8px; padding: 6px 10px; font-size: 12px; font-weight: 600; color: var(--zs-muted); }
+.estelio-zstat .zs-odswiez:hover { background: var(--zs-soft); }
+
+/* nagłówek-zdanie */
+.estelio-zstat .zs-lead { font-size: 16px; line-height: 1.45; margin: 0 0 18px; color: var(--zs-ink); }
+.estelio-zstat .zs-lead b { color: var(--zs-brand); font-weight: 750; }
+.estelio-zstat .zs-pusto { padding: 48px 24px; text-align: center; color: var(--zs-muted); background: var(--zs-card); border: 1px dashed var(--zs-line); border-radius: 16px; }
+
+/* siatka kafli KPI */
+.estelio-zstat .zs-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 18px; }
+.estelio-zstat .zs-tile { background: var(--zs-card); border: 1px solid var(--zs-line); border-radius: 14px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.estelio-zstat .zs-tile .zs-k { font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--zs-muted); display: flex; align-items: center; gap: 6px; }
+.estelio-zstat .zs-tile .zs-v { font-size: 28px; line-height: 1.1; font-weight: 750; letter-spacing: -.5px; color: var(--zs-ink); font-variant-numeric: tabular-nums; }
+.estelio-zstat .zs-tile .zs-v small { display: block; font-size: 12px; font-weight: 600; color: var(--zs-muted); letter-spacing: 0; margin-top: 2px; }
+.estelio-zstat .zs-tile .zs-sub { font-size: 12px; color: var(--zs-muted); }
+.estelio-zstat .zs-tile.zs-tile-alert { border-color: #efc2cd; background: var(--zs-red-pale); }
+.estelio-zstat .zs-tile.zs-tile-alert .zs-v { color: var(--zs-red); }
+.estelio-zstat .zs-tile.zs-tile-good { border-color: #bfe0d4; background: var(--zs-green-pale); }
+.estelio-zstat .zs-tile.zs-tile-good .zs-v { color: var(--zs-s2); }
+
+/* odznaki */
+.estelio-zstat .zs-odznaki { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-bottom: 18px; }
+.estelio-zstat .zs-odznaka { display: flex; align-items: center; gap: 10px; background: linear-gradient(135deg, var(--zs-pale), var(--zs-card) 70%); border: 1px solid var(--zs-line); border-radius: 14px; padding: 12px 12px; min-width: 0; }
+.estelio-zstat .zs-odznaka .zs-emoji { font-size: 24px; line-height: 1; flex-shrink: 0; }
+.estelio-zstat .zs-odznaka .zs-tytul { font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--zs-muted); }
+.estelio-zstat .zs-odznaka .zs-kto { font-size: 16px; font-weight: 750; color: var(--zs-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.estelio-zstat .zs-odznaka .zs-za { font-size: 12px; color: var(--zs-muted); }
+.estelio-zstat .zs-odznaka.zs-odznaka-brak { opacity: .55; background: var(--zs-card); }
+
+/* sekcje / karty */
+.estelio-zstat .zs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.estelio-zstat .zs-grid .zs-card-wide { grid-column: 1 / -1; }
+.estelio-zstat .zs-card { background: var(--zs-card); border: 1px solid var(--zs-line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
+.estelio-zstat .zs-card h4 { margin: 0 0 2px; font-size: 15px; font-weight: 750; letter-spacing: -.2px; color: var(--zs-ink); display: flex; align-items: center; gap: 8px; }
+.estelio-zstat .zs-card .zs-opis { margin: 0 0 14px; font-size: 12px; color: var(--zs-muted); }
+.estelio-zstat .zs-legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--zs-muted); margin: 0 0 12px; }
+.estelio-zstat .zs-legenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.estelio-zstat .zs-s1 { background: var(--zs-s1); }
+.estelio-zstat .zs-s2 { background: var(--zs-s2); }
+.estelio-zstat .zs-s3 { background: var(--zs-s3); }
+.estelio-zstat .zs-sred { background: var(--zs-red); }
+
+/* wykres słupkowy pionowy (trend) */
+.estelio-zstat .zs-trend { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; align-items: end; height: 170px; padding: 0 2px; border-bottom: 1px solid var(--zs-line); overflow: hidden; }
+.estelio-zstat .zs-kol { display: flex; align-items: flex-end; justify-content: center; gap: 3px; height: 100%; min-width: 0; position: relative; }
+.estelio-zstat .zs-kol .zs-bar { width: 42%; max-width: 26px; min-height: 2px; border-radius: 4px 4px 0 0; position: relative; transition: height .3s ease; }
+.estelio-zstat .zs-kol .zs-bar.zs-s1 { opacity: .92; }
+.estelio-zstat .zs-kol .zs-bar span { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 2px); font-size: 11px; font-weight: 700; color: var(--zs-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.estelio-zstat .zs-kol .zs-bar[data-v="0"] span { display: none; }
+.estelio-zstat .zs-kol:hover .zs-bar { filter: brightness(.92); }
+.estelio-zstat .zs-osie { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin-top: 6px; font-size: 11px; color: var(--zs-muted); text-align: center; }
+.estelio-zstat .zs-osie span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.estelio-zstat .zs-osie span.zs-dzis { color: var(--zs-brand); font-weight: 700; }
+
+/* paski poziome */
+.estelio-zstat .zs-rows { display: flex; flex-direction: column; gap: 10px; }
+.estelio-zstat .zs-row { display: grid; grid-template-columns: 110px 1fr auto; gap: 10px; align-items: center; font-size: 13px; }
+.estelio-zstat .zs-row .zs-lbl { color: var(--zs-ink); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.estelio-zstat .zs-row .zs-track { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.estelio-zstat .zs-row .zs-fill { height: 9px; border-radius: 4px; min-width: 2px; transition: width .3s ease; }
+.estelio-zstat .zs-row .zs-n { font-variant-numeric: tabular-nums; color: var(--zs-muted); font-size: 12px; white-space: nowrap; }
+.estelio-zstat .zs-row .zs-n b { color: var(--zs-ink); }
+
+/* udział rodzajów */
+.estelio-zstat .zs-udzial { display: flex; height: 18px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--zs-soft); margin: 8px 0 10px; }
+.estelio-zstat .zs-udzial div { min-width: 2px; }
+.estelio-zstat .zs-udzial-opis { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--zs-muted); flex-wrap: wrap; }
+.estelio-zstat .zs-udzial-opis b { color: var(--zs-ink); }
+
+/* dni tygodnia */
+.estelio-zstat .zs-dni { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; align-items: end; height: 110px; margin-top: 6px; }
+.estelio-zstat .zs-dni .zs-d { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+.estelio-zstat .zs-dni .zs-d .zs-bar { width: 70%; max-width: 34px; border-radius: 4px 4px 0 0; background: var(--zs-s2); min-height: 2px; }
+.estelio-zstat .zs-dni .zs-d .zs-bar.zs-max { background: var(--zs-brand); }
+.estelio-zstat .zs-dni .zs-d small { font-size: 11px; color: var(--zs-muted); font-weight: 700; }
+.estelio-zstat .zs-dni .zs-d em { font-style: normal; font-size: 11px; color: var(--zs-muted); font-variant-numeric: tabular-nums; }
+
+/* tabela osób */
+.estelio-zstat .zs-tabela-wrap { overflow-x: auto; }
+.estelio-zstat table.zs-tabela { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 760px; }
+.estelio-zstat table.zs-tabela th { text-align: left; font-size: 11px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--zs-muted); padding: 8px 10px; border-bottom: 1px solid var(--zs-line); white-space: nowrap; }
+.estelio-zstat table.zs-tabela td { padding: 10px; border-bottom: 1px solid var(--zs-line); vertical-align: middle; font-variant-numeric: tabular-nums; }
+.estelio-zstat table.zs-tabela tr:last-child td { border-bottom: 0; }
+.estelio-zstat table.zs-tabela td.zs-num, .estelio-zstat table.zs-tabela th.zs-num { text-align: right; }
+.estelio-zstat table.zs-tabela .zs-osoba { font-weight: 750; color: var(--zs-ink); display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.estelio-zstat .zs-avatar { width: 28px; height: 28px; border-radius: 50%; background: var(--zs-pale); color: var(--zs-brand); font-size: 12px; font-weight: 800; display: inline-grid; place-items: center; flex-shrink: 0; }
+.estelio-zstat .zs-mini { display: inline-flex; align-items: center; gap: 8px; min-width: 120px; }
+.estelio-zstat .zs-mini .zs-fill { height: 8px; border-radius: 4px; min-width: 2px; flex: 0 0 auto; }
+.estelio-zstat .zs-mini .zs-mini-track { flex: 1; height: 8px; background: var(--zs-soft); border-radius: 4px; overflow: hidden; }
+.estelio-zstat .zs-pill { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.estelio-zstat .zs-pill-red { background: var(--zs-red-pale); color: var(--zs-red); }
+.estelio-zstat .zs-pill-green { background: var(--zs-green-pale); color: var(--zs-s2); }
+.estelio-zstat .zs-pill-amber { background: var(--zs-amber-pale); color: #7a5416; }
+.estelio-zstat .zs-pill-muted { background: var(--zs-soft); color: var(--zs-muted); }
+.estelio-zstat .zs-rozmowy-inline { display: inline-flex; gap: 6px; font-size: 12px; white-space: nowrap; }
+.estelio-zstat .zs-rozmowy-inline span { display: inline-flex; align-items: center; gap: 3px; color: var(--zs-muted); }
+.estelio-zstat .zs-rozmowy-inline i { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+
+/* najdłużej po terminie */
+.estelio-zstat .zs-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.estelio-zstat .zs-lista li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px 10px; border: 1px solid var(--zs-line); border-radius: 10px; background: var(--zs-bg); font-size: 13px; }
+.estelio-zstat .zs-lista .zs-dni-po { font-weight: 800; color: var(--zs-red); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.estelio-zstat .zs-lista .zs-tyt { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.estelio-zstat .zs-lista .zs-kto-przyp { font-size: 12px; color: var(--zs-muted); white-space: nowrap; }
+.estelio-zstat .zs-ok { color: var(--zs-s2); font-weight: 600; font-size: 13px; }
+
+.estelio-zstat .zs-stopka { font-size: 11px; color: var(--zs-muted); margin-top: 6px; }
+
+@media (max-width: 640px) {
+  .estelio-zstat .zs-row { grid-template-columns: 84px 1fr auto; }
+  .estelio-zstat .zs-trend { height: 130px; gap: 4px; }
+  .estelio-zstat .zs-tile .zs-v { font-size: 24px; }
+}
+
+/* ── tryb ciemny ─────────────────────────────────────────────────────────── */
+body.dark-mode .estelio-zstat {
+  --zs-bg: #0f172a; --zs-card: #1e293b; --zs-ink: #e2e8f0; --zs-muted: #94a3b8; --zs-line: #334155; --zs-control: #475569;
+  --zs-brand: #f5a3c5; --zs-hover: #f9c3d9; --zs-pale: #3b1f2d; --zs-soft: #0f172a;
+  --zs-s1: #e5799f; --zs-s2: #4fb39a; --zs-s3: #d9a65a; --zs-red: #f08aa3; --zs-red-pale: #3f1d28; --zs-green-pale: #16332c; --zs-amber-pale: #3a2e17;
+}
+body.dark-mode .estelio-zstat .zs-okres[aria-checked="true"] { background: #ec4899; border-color: #ec4899; color: #fff; }
+body.dark-mode .estelio-zstat .zs-odznaka { background: linear-gradient(135deg, #2b1a24, #1e293b 70%); }
+body.dark-mode .estelio-zstat .zs-pill-amber { color: #f1c988; }
+body.dark-mode .zd-widok-segments { background: #0f172a; border-color: #334155; }
+body.dark-mode .zd-widok-segments button { color: #94a3b8; }
+body.dark-mode .zd-widok-segments button[aria-checked="true"] { background: #3b1f2d; color: #f5a3c5; }

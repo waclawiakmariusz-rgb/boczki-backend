@@ -10470,6 +10470,15 @@ ANALIZA MANAGER
         <button onclick="zd_addOpen()" style="background:#ec4899; color:white; border:none; padding:10px 18px; border-radius:10px; font-weight:700; cursor:pointer; font-size:14px;">+ Nowe zadanie</button>
     </div>
 
+    <!-- Statystyki zespołu (27.10.2026): drugi widok obok listy — przełącznik, kontener #zd-stat renderuje /zadania-statystyki.js
+         (dane: action 'statystyki' w routes/zadania.js). Lista poniżej owinięta w #zd-lista-wrap, bez zmian w jej logice. -->
+    <div class="zd-widok-segments" id="zd-widok-seg" role="radiogroup" aria-label="Widok">
+        <button type="button" role="radio" aria-checked="true" data-widok="lista" onclick="zst_pokaz('lista')">📋 Lista</button>
+        <button type="button" role="radio" aria-checked="false" data-widok="statystyki" onclick="zst_pokaz('statystyki')">📊 Statystyki</button>
+    </div>
+    <div id="zd-stat" class="estelio-zstat" hidden></div>
+
+    <div id="zd-lista-wrap">
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-bottom:16px;">
         <button class="zd-chip zd-chip-active" data-status="AKTYWNE" onclick="zd_setFilter('AKTYWNE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">🟢 Aktywne</button>
         <button class="zd-chip" data-status="WYKONANE" onclick="zd_setFilter('WYKONANE', this)" style="padding:8px 14px; border-radius:999px; border:1px solid #e2e8f0; background:#fff; cursor:pointer; font-weight:600; font-size:13px;">✅ Wykonane</button>
@@ -10497,6 +10506,7 @@ ANALIZA MANAGER
             <tbody id="zd-tbody"></tbody>
         </table>
     </div>
+    </div><!-- /#zd-lista-wrap -->
 </div>
 
 <!-- Modal: Komentarze do zadania -->
@@ -36993,5 +37003,8 @@ document.addEventListener('DOMContentLoaded', function() {
      ds_zd_renderTabs/renderList/renderTaskCard/ds_zadanieComplete oraz zd_addOpen/zd_editOpen/zd_save z tego pliku -->
 <link rel="stylesheet" href="/zadania-pulpit.css?v=__WERSJA_PLIKOW__">
 <script src="/zadania-pulpit.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Statystyki zespołu w Analiza → Zadania zespołu (27.10.2026): widok #zd-stat, przełącznik zst_pokaz, dane z action 'statystyki' -->
+<link rel="stylesheet" href="/zadania-statystyki.css?v=__WERSJA_PLIKOW__">
+<script src="/zadania-statystyki.js?v=__WERSJA_PLIKOW__" defer></script>
 </body>
 </html>

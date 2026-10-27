@@ -1,0 +1,201 @@
+{
+  "nazwa": "zadania-statystyki",
+  "modul": "Analiza",
+  "opis": "Analiza → Zadania zespołu → Statystyki (27.10.2026): przełącznik Lista/Statystyki, kafle KPI, odznaki, rytm pracy, tabela „Kto ile”, obszary, rozmowy, dni tygodnia, najdłużej po terminie; okresy 30 dni / 7 dni / od początku; tryb ciemny; telefon. Tylko odczyt (akcja statystyki).",
+  "sekcja": "zadania",
+  "korzen": "#an_view-zadania",
+  "przechwyc": [],
+  "czekajPoSekcji": 3000,
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        1000
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "window.__apiStart = performance.getEntriesByType('resource').filter(r => /\\/api\\/zadania/.test(r.name)).length; 'ok'",
+      "opis": "licznik zapytań /api/zadania na starcie"
+    },
+    {
+      "sprawdz": "!document.getElementById('zd-lista-wrap').hidden && document.getElementById('zd-stat').hidden && document.querySelectorAll('#zd-tbody tr').length > 0",
+      "opis": "S01: domyślnie widok Lista z wierszami, statystyki ukryte"
+    },
+    {
+      "zrzut": "01-lista-z-przelacznikiem"
+    },
+    {
+      "kliknij": "#zd-widok-seg button[data-widok=\"statystyki\"]"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "!document.getElementById('zd-stat').hidden && document.getElementById('zd-lista-wrap').hidden && document.querySelector('#zd-widok-seg button[data-widok=\"statystyki\"]').getAttribute('aria-checked') === 'true'",
+      "opis": "S02: po kliknięciu Statystyki lista znika, segment zaznaczony"
+    },
+    {
+      "sprawdz": "document.querySelectorAll('#zd-stat .zs-kpi .zs-tile').length === 6 && document.querySelectorAll('#zd-stat .zs-odznaka').length === 6 && document.querySelectorAll('#zs-tabela-osoby tbody tr').length >= 3 && document.querySelectorAll('#zs-trend .zs-kol').length >= 5",
+      "opis": "S03: 6 kafli, 6 odznak, ≥3 osoby w tabeli, ≥5 kubełków trendu (30 dni = tygodnie)"
+    },
+    {
+      "js": "JSON.stringify({okres: [...document.querySelectorAll('#zd-stat .zs-okres')].map(b => b.textContent + '/' + b.getAttribute('aria-checked')), kafle: [...document.querySelectorAll('#zd-stat .zs-tile')].map(t => t.querySelector('.zs-k').textContent.trim() + ' = ' + t.querySelector('.zs-v').textContent.trim()), lead: document.querySelector('#zd-stat .zs-lead').textContent, odznaki: [...document.querySelectorAll('#zd-stat .zs-odznaka')].map(o => o.querySelector('.zs-tytul').textContent + ': ' + o.querySelector('.zs-kto').textContent + ' (' + o.querySelector('.zs-za').textContent + ')'), osoby: [...document.querySelectorAll('#zs-tabela-osoby tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim().replace(/\\s+/g,' ')).join(' | '))})",
+      "opis": "zawartość statystyk (30 dni)"
+    },
+    {
+      "sprawdz": "(function(){ const t = document.querySelector('#zd-stat .zs-lead').textContent; return /Zespół w ostatnich 30 dniach założył \\d+ spraw/.test(t); })()",
+      "opis": "S04: zdanie wprowadzające dla okresu 30 dni"
+    },
+    {
+      "zrzut": "02-statystyki-30dni-gora"
+    },
+    {
+      "js": "var e=document.getElementById('zs-trend'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = e.getBoundingClientRect().top + mc.scrollTop - 260; window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 260); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "sprawdz": "(function(){ var b=[...document.querySelectorAll('#zs-trend .zs-bar span')].filter(s=>s.offsetParent); var t=document.getElementById('zs-trend').getBoundingClientRect(); return b.length>0 && b.every(s=>s.getBoundingClientRect().top >= t.top - 1); })()",
+      "opis": "S03b: etykiety liczbowe nad słupkami mieszczą się w ramce wykresu (nie są obcięte)"
+    },
+    {
+      "zrzut": "02b-statystyki-30dni-rytm"
+    },
+    {
+      "js": "var e=document.getElementById('zs-tabela-osoby'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = e.getBoundingClientRect().top + mc.scrollTop - 180; window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 180); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "03-statystyki-30dni-osoby"
+    },
+    {
+      "js": "var e=document.querySelector('#zd-stat .zs-grid .zs-card:nth-child(3)'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = e.getBoundingClientRect().top + mc.scrollTop - 80; window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 80); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "04-statystyki-30dni-obszary-rozmowy"
+    },
+    {
+      "js": "var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = mc.scrollHeight; window.scrollTo(0, document.body.scrollHeight); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "05-statystyki-30dni-dol"
+    },
+    {
+      "js": "var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = 0; window.scrollTo(0,0); 'ok'"
+    },
+    {
+      "kliknij": "#zd-stat .zs-okres:nth-child(1)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "document.querySelector('#zd-stat .zs-okres:nth-child(1)').getAttribute('aria-checked') === 'true' && document.querySelectorAll('#zs-trend .zs-kol').length === 8 && /7 dniach/.test(document.querySelector('#zd-stat .zs-lead, #zd-stat .zs-pusto').textContent)",
+      "opis": "S05: okres 7 dni → 8 kubełków dziennych, zdanie o 7 dniach"
+    },
+    {
+      "zrzut": "06-statystyki-7dni"
+    },
+    {
+      "kliknij": "#zd-stat .zs-okres:nth-child(5)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "document.querySelector('#zd-stat .zs-okres:nth-child(5)').getAttribute('aria-checked') === 'true' && /od początku/.test(document.querySelector('#zd-stat .zs-lead').textContent) && document.querySelectorAll('#zs-trend .zs-kol').length >= 2",
+      "opis": "S06: okres „Od początku” → zdanie „od początku”, trend miesięczny"
+    },
+    {
+      "zrzut": "07-statystyki-od-poczatku"
+    },
+    {
+      "kliknij": "#zd-stat .zs-okres:nth-child(2)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "ciemny": true
+    },
+    {
+      "zrzut": "08-statystyki-ciemny"
+    },
+    {
+      "js": "var e=document.getElementById('zs-tabela-osoby'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = e.getBoundingClientRect().top + mc.scrollTop - 180; 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "09-statystyki-ciemny-osoby"
+    },
+    {
+      "ciemny": false
+    },
+    {
+      "js": "var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = 0; 'ok'"
+    },
+    {
+      "kliknij": "#zd-widok-seg button[data-widok=\"lista\"]"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "!document.getElementById('zd-lista-wrap').hidden && document.getElementById('zd-stat').hidden && document.querySelectorAll('#zd-tbody tr').length > 0",
+      "opis": "S07: powrót do Listy — tabela zadań nadal wypełniona"
+    },
+    {
+      "js": "performance.getEntriesByType('resource').filter(r => /\\/api\\/zadania/.test(r.name)).length - window.__apiStart",
+      "opis": "zapytań /api/zadania za cały przebieg"
+    },
+    {
+      "sprawdz": "performance.getEntriesByType('resource').filter(r => /\\/api\\/zadania/.test(r.name)).length - window.__apiStart <= 6",
+      "opis": "S08: najwyżej 6 zapytań (4 zmiany okresu + zapas), brak pętli"
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "kliknij": "#zd-widok-seg button[data-widok=\"statystyki\"]"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "zrzut": "10-telefon-statystyki"
+    },
+    {
+      "js": "var e=document.getElementById('zs-tabela-osoby'); var mc=document.querySelector('.main-content'); if (mc) mc.scrollTop = e.getBoundingClientRect().top + mc.scrollTop - 60; window.scrollTo(0, e.getBoundingClientRect().top + window.scrollY - 60); 'ok'"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "11-telefon-tabela"
+    },
+    {
+      "pomiar": true,
+      "korzen": "#zd-stat"
+    }
+  ]
+}

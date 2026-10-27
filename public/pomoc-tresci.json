@@ -1,5 +1,5 @@
 {
- "wersjaKatalogu": "2026-10-27.1",
+ "wersjaKatalogu": "2026-10-27.2",
  "sprawdzonoWobec": "main f488e53 (27.10.2026)",
  "uwaga": "Katalog czytany przez public/pomoc-kontekstowa.js. Treści powstają podczas prac nad kodem, nie przy kliknięciu użytkownika. Pola techniczne (sources, reviewStatus, verifiedAgainst) NIE trafiają do interfejsu.",
  "konteksty": {
@@ -1003,8 +1003,17 @@
   },
   "analiza.zadania": {
    "parentContextId": "analiza",
-   "items": [],
-   "tip": "Pracownik widzi swoje zadania na Pulpicie — nie musi tu wchodzić.",
+   "items": [
+    {
+     "icon": "lista",
+     "text": "Przełącznik Lista / Statystyki pod nagłówkiem; okres 7 dni – od początku."
+    },
+    {
+     "icon": "osoba",
+     "text": "Odznaki (najwięcej zamkniętych, mistrz telefonów…) liczą się z danych okresu."
+    }
+   ],
+   "tip": "Pracownik widzi swoje zadania na Pulpicie — nie musi tu wchodzić. Statystyki widzi tylko manager.",
    "tipTyp": "informacja",
    "availability": {
     "rola": [
@@ -1014,20 +1023,21 @@
     ]
    },
    "reviewStatus": "verified",
-   "verifiedAgainst": "8802107",
-   "contentVersion": 1,
+   "verifiedAgainst": "3f5425e",
+   "contentVersion": 2,
    "eyebrow": "ZADANIA ZESPOŁU",
    "title": "Zlecasz i sprawdzasz wykonanie",
-   "body": "Zadania dla recepcji i pracowników, z podziałem na aktywne, wykonane i zarchiwizowane.",
+   "body": "Lista zadań recepcji i pracowników (aktywne, wykonane, zarchiwizowane) oraz Statystyki: kto ile zleca i zamyka, terminowość, telefony, rytm tygodnia.",
    "article": {
     "label": "Zadania",
     "href": "/pomoc/",
     "anchor": "zadania"
    },
    "sources": [
-    "public/index.html: #an_view-zadania („Zlecaj zadania recepcji i pracownikom — śledź wykonanie\", chipsy Aktywne/Wykonane/Zarchiwizowane)",
-    "public/index.html: #pulpit — zakładka „Moje\" z zadaniami pracownika",
-    "public/estelio_pomoc_f.html: rozdział #zadania"
+    "public/index.html: #an_view-zadania (chipsy Aktywne/Wykonane/Zarchiwizowane, przełącznik #zd-widok-seg, kontener #zd-stat)",
+    "public/zadania-statystyki.js: render() — kafle, odznaki, rytm, „Kto ile”, obszary, rozmowy, dni tygodnia, najdłużej po terminie",
+    "routes/zadania.js: action statystyki (STAT_ROLE_WGLAD — manager/admin/właściciel)",
+    "public/estelio_pomoc_f.html: rozdział #zadania (#zadania-statystyki)"
    ]
   },
   "analiza.miesiac": {

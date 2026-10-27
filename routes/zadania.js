@@ -23,6 +23,173 @@ module.exports = (db) => {
     return (zSesji || String(d.kto || d.wykonane_przez || d.utworzone_przez || '').trim()).slice(0, 100);
   }
 
+
+  // ── Statystyki zespołu (Analiza → Zadania zespołu, 27.10.2026) ────────────────────────────────
+  // Wszystko w obrębie jednego salonu (tenant_id), bez szablonów. „Okres” liczy założone po data_utworzenia,
+  // zamknięte po data_wykonania, zarchiwizowane po data_archiwizacji; stany „aktywne/po terminie” są zawsze „na teraz”.
+  const STAT_OKRESY = { '7': 7, '30': 30, '90': 90, '365': 365, 'wszystko': 36500 };
+  const STAT_ROLE_WGLAD = ['manager', 'admin', 'megaadmin', 'właściciel', 'wlasciciel'];
+  function statKubelek(dni) {
+    // Ziarno trendu: dni (do 14 dni), tygodnie od poniedziałku (do 120 dni), miesiące (dłużej). Wyrażenia tylko z tej listy.
+    if (dni <= 14) return { ziarno: 'dzien', sql: (kol) => `DATE(${kol})` };
+    if (dni <= 120) return { ziarno: 'tydzien', sql: (kol) => `DATE(DATE_SUB(${kol}, INTERVAL WEEKDAY(${kol}) DAY))` };
+    return { ziarno: 'miesiac', sql: (kol) => `DATE(DATE_FORMAT(${kol}, '%Y-%m-01'))` };
+  }
+  function statData(v) {
+    if (!v) return null;
+    const dt = v instanceof Date ? v : new Date(v);
+    if (isNaN(dt.getTime())) return String(v).slice(0, 10);
+    return dt.getFullYear() + '-' + String(dt.getMonth() + 1).padStart(2, '0') + '-' + String(dt.getDate()).padStart(2, '0');
+  }
+  const n0 = (v) => Number(v) || 0;
+  function statystykiZadan(tenant_id, dni, cb) {
+    const kub = statKubelek(dni);
+    const Z = `FROM Zadania z WHERE z.tenant_id = ? AND z.is_szablon = 0`;
+    const OD = `DATE_SUB(NOW(), INTERVAL ? DAY)`;
+    const zapytania = {
+      podsumowanie: [`SELECT
+          SUM(z.data_utworzenia >= ${OD}) AS zalozone,
+          SUM(z.data_utworzenia >= ${OD} AND z.rodzaj = 'TELEFON') AS zalozone_telefony,
+          SUM(z.status = 'WYKONANE' AND z.data_wykonania >= ${OD}) AS wykonane,
+          SUM(z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} AND z.rodzaj = 'TELEFON') AS wykonane_telefony,
+          SUM(z.status = 'ZARCHIWIZOWANE' AND z.data_archiwizacji >= ${OD}) AS zarchiwizowane,
+          SUM(z.status = 'AKTYWNE') AS aktywne,
+          SUM(z.status = 'AKTYWNE' AND z.rodzaj = 'TELEFON') AS aktywne_telefony,
+          SUM(z.status = 'AKTYWNE' AND z.deadline IS NOT NULL AND z.deadline < NOW()) AS po_terminie,
+          SUM(z.status = 'AKTYWNE' AND z.deadline IS NULL) AS bez_terminu,
+          SUM(z.status = 'AKTYWNE' AND z.priorytet = 'PILNY') AS aktywne_pilne,
+          AVG(CASE WHEN z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} THEN TIMESTAMPDIFF(MINUTE, z.data_utworzenia, z.data_wykonania) END) AS sredni_czas_min,
+          SUM(z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} AND z.deadline IS NOT NULL) AS wykonane_z_terminem,
+          SUM(z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} AND z.deadline IS NOT NULL AND z.data_wykonania <= z.deadline) AS wykonane_na_czas
+        ${Z}`, [dni, dni, dni, dni, dni, dni, dni, dni, tenant_id]],
+      osoby: [`SELECT TRIM(z.utworzone_przez) AS osoba, 'zalozone' AS miara, COUNT(*) AS n, SUM(z.rodzaj = 'TELEFON') AS telefony,
+               NULL AS sredni_czas_min, 0 AS z_terminem, 0 AS na_czas
+          ${Z} AND z.utworzone_przez IS NOT NULL AND TRIM(z.utworzone_przez) <> '' AND z.data_utworzenia >= ${OD} GROUP BY TRIM(z.utworzone_przez)
+        UNION ALL
+        SELECT TRIM(z.wykonane_przez), 'wykonane', COUNT(*), SUM(z.rodzaj = 'TELEFON'),
+               AVG(TIMESTAMPDIFF(MINUTE, z.data_utworzenia, z.data_wykonania)),
+               SUM(z.deadline IS NOT NULL), SUM(z.deadline IS NOT NULL AND z.data_wykonania <= z.deadline)
+          ${Z} AND z.status = 'WYKONANE' AND z.wykonane_przez IS NOT NULL AND TRIM(z.wykonane_przez) <> '' AND z.data_wykonania >= ${OD} GROUP BY TRIM(z.wykonane_przez)
+        UNION ALL
+        SELECT TRIM(z.kto_zarchiwizowal), 'zarchiwizowane', COUNT(*), SUM(z.rodzaj = 'TELEFON'), NULL, 0, 0
+          ${Z} AND z.status = 'ZARCHIWIZOWANE' AND z.kto_zarchiwizowal IS NOT NULL AND TRIM(z.kto_zarchiwizowal) <> '' AND z.data_archiwizacji >= ${OD} GROUP BY TRIM(z.kto_zarchiwizowal)`,
+        [tenant_id, dni, tenant_id, dni, tenant_id, dni]],
+      przypisania: [`SELECT t.osoba,
+          SUM(t.data_utworzenia >= ${OD}) AS otrzymane,
+          SUM(t.status = 'AKTYWNE') AS aktywne,
+          SUM(t.status = 'AKTYWNE' AND t.rodzaj = 'TELEFON') AS aktywne_telefony,
+          SUM(t.status = 'AKTYWNE' AND t.deadline IS NOT NULL AND t.deadline < NOW()) AS po_terminie
+        FROM (
+          SELECT z.id, z.data_utworzenia, z.status, z.rodzaj, z.deadline, TRIM(p.przypisany) AS osoba
+            FROM Zadania z JOIN Zadania_Przypisani p ON p.id_zadania = z.id AND p.tenant_id = z.tenant_id
+           WHERE z.tenant_id = ? AND z.is_szablon = 0
+          UNION ALL
+          SELECT z.id, z.data_utworzenia, z.status, z.rodzaj, z.deadline, TRIM(z.przypisane_do)
+            ${Z} AND z.przypisane_do IS NOT NULL AND TRIM(z.przypisane_do) <> ''
+             AND NOT EXISTS (SELECT 1 FROM Zadania_Przypisani p2 WHERE p2.id_zadania = z.id)
+        ) t WHERE t.osoba <> '' GROUP BY t.osoba`, [dni, tenant_id, tenant_id]],
+      obszary: [`SELECT t.kategoria,
+          SUM(t.data_utworzenia >= ${OD}) AS zalozone,
+          SUM(t.status = 'WYKONANE' AND t.data_wykonania >= ${OD}) AS wykonane,
+          SUM(t.status = 'AKTYWNE') AS aktywne
+        FROM (
+          SELECT z.id, z.data_utworzenia, z.status, z.data_wykonania, k.kategoria
+            FROM Zadania z JOIN Zadania_Kategorie k ON k.id_zadania = z.id AND k.tenant_id = z.tenant_id
+           WHERE z.tenant_id = ? AND z.is_szablon = 0
+          UNION ALL
+          SELECT z.id, z.data_utworzenia, z.status, z.data_wykonania, IFNULL(z.kategoria, 'INNE')
+            ${Z} AND NOT EXISTS (SELECT 1 FROM Zadania_Kategorie k2 WHERE k2.id_zadania = z.id)
+        ) t GROUP BY t.kategoria`, [dni, dni, tenant_id, tenant_id]],
+      priorytety: [`SELECT z.priorytet,
+          SUM(z.data_utworzenia >= ${OD}) AS zalozone,
+          SUM(z.status = 'WYKONANE' AND z.data_wykonania >= ${OD}) AS wykonane,
+          SUM(z.status = 'AKTYWNE') AS aktywne
+        ${Z} GROUP BY z.priorytet`, [dni, dni, tenant_id]],
+      trendZalozone: [`SELECT ${kub.sql('z.data_utworzenia')} AS k, COUNT(*) AS n, SUM(z.rodzaj = 'TELEFON') AS telefony
+        ${Z} AND z.data_utworzenia >= ${OD} GROUP BY k ORDER BY k`, [tenant_id, dni]],
+      trendWykonane: [`SELECT ${kub.sql('z.data_wykonania')} AS k, COUNT(*) AS n
+        ${Z} AND z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} GROUP BY k ORDER BY k`, [tenant_id, dni]],
+      dniTygodnia: [`SELECT WEEKDAY(z.data_wykonania) AS d, COUNT(*) AS n
+        ${Z} AND z.status = 'WYKONANE' AND z.data_wykonania >= ${OD} GROUP BY d`, [tenant_id, dni]],
+      rozmowy: [`SELECT TRIM(IFNULL(h.autor, '')) AS osoba, h.typ, h.wynik, COUNT(*) AS n
+        FROM Zadania_Historia h WHERE h.tenant_id = ? AND h.data >= ${OD} GROUP BY TRIM(IFNULL(h.autor, '')), h.typ, h.wynik`, [tenant_id, dni]],
+      najstarsze: [`SELECT z.id, z.tytul, z.rodzaj, z.priorytet, z.deadline, z.przypisane_do,
+          (SELECT GROUP_CONCAT(TRIM(p.przypisany) ORDER BY p.przypisany SEPARATOR ', ') FROM Zadania_Przypisani p WHERE p.id_zadania = z.id) AS przypisani,
+          TIMESTAMPDIFF(DAY, z.deadline, NOW()) AS dni_po_terminie
+        ${Z} AND z.status = 'AKTYWNE' AND z.deadline IS NOT NULL AND z.deadline < NOW() ORDER BY z.deadline ASC LIMIT 5`, [tenant_id]]
+    };
+    const klucze = Object.keys(zapytania);
+    const wyniki = {};
+    let pozostalo = klucze.length, zakonczone = false;
+    klucze.forEach((k) => {
+      db.query(zapytania[k][0], zapytania[k][1], (err, rows) => {
+        if (zakonczone) return;
+        if (err) { zakonczone = true; return cb(err); }
+        wyniki[k] = Array.isArray(rows) ? rows : [];
+        if (--pozostalo === 0) { zakonczone = true; cb(null, statZloz(wyniki, dni, kub)); }
+      });
+    });
+  }
+  function statZloz(w, dni, kub) {
+    const p = w.podsumowanie[0] || {};
+    const osoby = {};
+    const os = (nazwa) => {
+      const k = String(nazwa || '').trim();
+      if (!osoby[k]) osoby[k] = { osoba: k, zalozone: 0, zalozone_telefony: 0, otrzymane: 0, wykonane: 0, wykonane_telefony: 0, zarchiwizowane: 0,
+        aktywne: 0, aktywne_telefony: 0, po_terminie: 0, sredni_czas_min: null, wykonane_z_terminem: 0, wykonane_na_czas: 0,
+        rozmowy: { UMOWIONA: 0, NIE_ODEBRALA: 0, NIE_ZAINTERESOWANA: 0 }, przelozenia: 0 };
+      return osoby[k];
+    };
+    w.osoby.forEach((r) => {
+      const o = os(r.osoba);
+      if (r.miara === 'zalozone') { o.zalozone = n0(r.n); o.zalozone_telefony = n0(r.telefony); }
+      else if (r.miara === 'wykonane') { o.wykonane = n0(r.n); o.wykonane_telefony = n0(r.telefony); o.sredni_czas_min = r.sredni_czas_min == null ? null : Math.round(Number(r.sredni_czas_min)); o.wykonane_z_terminem = n0(r.z_terminem); o.wykonane_na_czas = n0(r.na_czas); }
+      else if (r.miara === 'zarchiwizowane') { o.zarchiwizowane = n0(r.n); }
+    });
+    w.przypisania.forEach((r) => { const o = os(r.osoba); o.otrzymane = n0(r.otrzymane); o.aktywne = n0(r.aktywne); o.aktywne_telefony = n0(r.aktywne_telefony); o.po_terminie = n0(r.po_terminie); });
+    const rozmowy = { UMOWIONA: 0, NIE_ODEBRALA: 0, NIE_ZAINTERESOWANA: 0, przelozenia: 0 };
+    w.rozmowy.forEach((r) => {
+      if (r.typ === 'WYNIK' && rozmowy[r.wynik] !== undefined) { rozmowy[r.wynik] += n0(r.n); if (r.osoba) os(r.osoba).rozmowy[r.wynik] += n0(r.n); }
+      else if (r.typ === 'TERMIN') { rozmowy.przelozenia += n0(r.n); if (r.osoba) os(r.osoba).przelozenia += n0(r.n); }
+    });
+    // Trend: pełna siatka kubełków od początku okresu do dziś (zera tam, gdzie nic się nie działo)
+    const mapaZ = {}, mapaW = {};
+    w.trendZalozone.forEach((r) => { mapaZ[statData(r.k)] = { n: n0(r.n), telefony: n0(r.telefony) }; });
+    w.trendWykonane.forEach((r) => { mapaW[statData(r.k)] = n0(r.n); });
+    const trend = [];
+    const dzis = new Date(); dzis.setHours(0, 0, 0, 0);
+    const start = new Date(dzis); start.setDate(start.getDate() - Math.min(dni, 36500)); // setDate, nie ms: zmiana czasu (DST) nie gubi dnia
+    const kursor = new Date(start);
+    if (kub.ziarno === 'tydzien') kursor.setDate(kursor.getDate() - ((kursor.getDay() + 6) % 7));
+    if (kub.ziarno === 'miesiac') kursor.setDate(1);
+    let limit = 400;
+    while (kursor <= dzis && limit-- > 0) {
+      const k = statData(kursor);
+      trend.push({ od: k, zalozone: (mapaZ[k] || {}).n || 0, telefony: (mapaZ[k] || {}).telefony || 0, wykonane: mapaW[k] || 0 });
+      if (kub.ziarno === 'dzien') kursor.setDate(kursor.getDate() + 1);
+      else if (kub.ziarno === 'tydzien') kursor.setDate(kursor.getDate() + 7);
+      else kursor.setMonth(kursor.getMonth() + 1);
+    }
+    if (dni >= 36500 && trend.length > 36) trend.splice(0, trend.length - 36);
+    const dniTyg = [0, 0, 0, 0, 0, 0, 0];
+    w.dniTygodnia.forEach((r) => { const d = Number(r.d); if (d >= 0 && d < 7) dniTyg[d] = n0(r.n); });
+    const sredni = p.sredni_czas_min == null ? null : Math.round(Number(p.sredni_czas_min));
+    return {
+      okres_dni: dni >= 36500 ? null : dni, ziarno: kub.ziarno, wygenerowano: new Date().toISOString(),
+      podsumowanie: {
+        zalozone: n0(p.zalozone), zalozone_telefony: n0(p.zalozone_telefony), wykonane: n0(p.wykonane), wykonane_telefony: n0(p.wykonane_telefony),
+        zarchiwizowane: n0(p.zarchiwizowane), aktywne: n0(p.aktywne), aktywne_telefony: n0(p.aktywne_telefony), po_terminie: n0(p.po_terminie),
+        bez_terminu: n0(p.bez_terminu), aktywne_pilne: n0(p.aktywne_pilne), sredni_czas_min: sredni,
+        wykonane_z_terminem: n0(p.wykonane_z_terminem), wykonane_na_czas: n0(p.wykonane_na_czas)
+      },
+      osoby: Object.values(osoby).filter((o) => o.osoba).sort((a, b) => (b.wykonane + b.zalozone + b.aktywne) - (a.wykonane + a.zalozone + a.aktywne) || a.osoba.localeCompare(b.osoba, 'pl')),
+      obszary: w.obszary.map((r) => ({ kategoria: r.kategoria, zalozone: n0(r.zalozone), wykonane: n0(r.wykonane), aktywne: n0(r.aktywne) })),
+      priorytety: w.priorytety.map((r) => ({ priorytet: r.priorytet, zalozone: n0(r.zalozone), wykonane: n0(r.wykonane), aktywne: n0(r.aktywne) })),
+      trend, dni_tygodnia: dniTyg, rozmowy,
+      najstarsze: w.najstarsze.map((r) => ({ id: r.id, tytul: r.tytul, rodzaj: r.rodzaj, priorytet: r.priorytet, deadline: r.deadline, przypisani: r.przypisani || r.przypisane_do || '', dni_po_terminie: n0(r.dni_po_terminie) }))
+    };
+  }
+
   const ALLOWED_KATEGORIE = ['MAGAZYN','KOSMETYK','KLIENT','SPRZEDAZ','INNE'];
   const ALLOWED_PRIORYTETY = ['NORMALNY','WAZNY','PILNY'];
   const ALLOWED_POWTARZAJ = ['NIE','CODZIENNIE','TYGODNIOWO','MIESIECZNIE'];
@@ -1129,6 +1296,18 @@ module.exports = (db) => {
           );
         }
       );
+
+    } else if (action === 'statystyki') {
+      // Analiza → Zadania zespołu → Statystyki. Wgląd tylko dla roli kierowniczej (rola z tabeli Użytkownicy tego salonu).
+      const okres = Object.prototype.hasOwnProperty.call(STAT_OKRESY, String(d.okres)) ? String(d.okres) : '30';
+      const kto = String(d.kto || '').trim().slice(0, 100);
+      pobierzRoleUzytkownika(tenant_id, kto, (rola) => {
+        if (!rola || !STAT_ROLE_WGLAD.includes(rola)) return res.json({ status: 'error', message: 'Statystyki zespołu widzi manager lub właściciel' });
+        statystykiZadan(tenant_id, STAT_OKRESY[okres], (err, dane) => {
+          if (err) return res.json({ status: 'error', message: err.message });
+          return res.json({ status: 'success', okres, data: dane });
+        });
+      });
 
     } else {
       return res.json({ status: 'error', message: 'Nieznana akcja: ' + action });
