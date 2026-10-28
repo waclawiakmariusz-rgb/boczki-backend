@@ -442,6 +442,7 @@
       </div>
       <div class="kogo"><span><b>Dla kogo:</b> manager</span><span><b>Gdzie:</b> Ustawienia → Nieobecności i blokady</span></div>
       <p class="lead">Blokada wyłącza z dostępności osobę, urządzenie, gabinet albo cały salon w konkretnym przedziale czasu. Typ (urlop, choroba, szkolenie, przerwa, serwis, zamknięte, inne) i opis są wewnętrzne — publicznie zawsze „Niedostępne".</p>
+      <div class="tip"><strong>Tu zakłada manager rzeczy długie i kadrowe:</strong> urlop, chorobę, zamknięcie salonu, wielodniowy serwis. Pojedyncze godziny w biegu — szkolenie o 12:00, rozmowa z kandydatką, serwis na dwie godziny — zakłada recepcja przyciskiem <strong>„⛔ Rezerwacja techniczna"</strong> wprost z kalendarza (<a href="#rezerwacja">Krok 19</a>). To ten sam mechanizm blokady, tylko krótsza droga i bez spraw kadrowych.</div>
 
     <figure class="zrzut">
       <img src="/pomoc-terminarz/trm-08-nieobecnosci.png" alt="Formularz nowej blokady i ostrzezenie, ze blokada dotknie dwoch wizyt">
@@ -741,7 +742,7 @@
     </figure>
 
       <h3>Czytanie karty wizyty</h3>
-      <p>Godzina → klientka → usługa (albo „usługa + usługa") → najwyżej dwa znaczniki. Kolor lewej krawędzi to kategoria zabiegu z Administracji → Typy zabiegów. Znaczniki mówią, co odbiega od normy: „Przybyła", „W trakcie", „Do rozliczenia", „Rozliczona", „Spóźniona", „Nieobecna". Anulowane nie zajmują siatki — przełącznik „pokaż anulowane" przy licznikach przywraca je szare i przekreślone.</p>
+      <p>Godzina → klientka → usługa (albo „usługa + usługa") → najwyżej dwa znaczniki. Kolor kafelka mówi, jaki to zabieg; skąd się bierze i co znaczy legenda pod siatką, wyjaśnia <a href="#kolory">Krok 17</a>. Znaczniki mówią, co odbiega od normy: „Przybyła", „W trakcie", „Do rozliczenia", „Rozliczona", „Spóźniona", „Nieobecna". Anulowane nie zajmują siatki — przełącznik „pokaż anulowane" przy licznikach przywraca je szare i przekreślone.</p>
 
       <h3>Wizyta z notatką widać bez klikania</h3>
       <p>Jeżeli przy wizycie jest notatka, w prawym górnym rogu karty pojawia się <strong>bursztynowy znaczek notatki</strong>. Najedź na niego myszą, a zobaczysz treść bez otwierania wizyty. W widoku Agenda i „Mój dzień" notatka jest wypisana wprost pod nazwą zabiegu — nie trzeba nawet najeżdżać.</p>
@@ -929,6 +930,7 @@
 
       <h3>Cztery powody, bez spraw kadrowych</h3>
       <p>Do wyboru: <strong>Szkolenie · Rozmowa / spotkanie · Serwis, naprawa · Inne</strong>. Urlopu i choroby tu nie ma — to zostaje u managera w <a href="#nieobecnosci">Ustawieniach → Nieobecności i blokady</a>, bo dotyczy zatrudnienia, a nie jednego popołudnia.</p>
+      <div class="tip"><strong>Ta sama blokada, dwie drogi.</strong> Rezerwacja techniczna zapisuje się dokładnie tak samo jak blokada z Ustawień i tak samo znika z dostępności. Różnica jest praktyczna: tutaj robi to recepcja, w kalendarzu, na godziny i najwyżej na 14 dni. Wszystko dłuższe i kadrowe zakłada manager w <a href="#nieobecnosci">Kroku 08</a>.</div>
 
       <h3>Kogo dotyczy</h3>
       <table>
@@ -960,7 +962,7 @@
         <li><strong>Urlopu i choroby stąd nie zmienisz.</strong> Otwierają się tylko do podglądu, z notą, że zakłada je i zdejmuje manager w Ustawieniach.</li>
       </ul>
 
-      <div class="info"><strong>Klientek nie zakłada się już z kalendarza.</strong> Z kreatora wizyty zniknęło „+ Dodaj nową klientkę”: nowy profil powstaje w module <strong>Klienci</strong>, gdzie są zgody, dokumenty i kontrola duplikatów. W kreatorze wyszukujesz istniejącą kartotekę — a jeśli okaże się, że to wcale nie wizyta, jest tam przejście <em>„To nie wizyta — zarezerwuj czas technicznie”</em>, które przenosi godzinę i osobę do tego panelu.</div>
+      <div class="info"><strong>Zacząłeś od kreatora wizyty?</strong> Dopóki nie ma w nim klientki ani zabiegu, jest tam przejście <em>„To nie wizyta — zarezerwuj czas technicznie”</em>, które przenosi godzinę i osobę prosto do tego panelu. O samym kreatorze mówi <a href="#nowa-wizyta">Krok 18</a>.</div>
 
       <div class="scenario">
         <span class="scenario-label">Z życia salonu · czwartek, przedstawiciel o 12:00</span>
@@ -1487,18 +1489,11 @@
 
     <figure class="zrzut">
       <img src="/pomoc-terminarz/trm-28-czyszczenie-grafiku.png" alt="Sprawa Czyszczenie grafiku z lista pieciu odwolanych wizyt jednego dnia">
-      <figcaption>Zbiorcza sprawa nie dotyczy jednej wizyty, tylko całego dnia jednej osoby: kto odwołał, ile wizyt i które. Dalej działa jak każda sprawa — można ją przejąć i rozwiązać.</figcaption>
+      <figcaption>Zbiorcza sprawa nie dotyczy jednej wizyty, tylko całego dnia jednej osoby: kto odwołał, ile wizyt i które, z godzinami i nazwiskami. Dalej działa jak każda sprawa — „Zapisz kontakt”, „Rozwiąż”, „Przekaż”.</figcaption>
     </figure>
 
       <h3>Jak pilne jest odwołanie</h3>
-      <p>Wizyta, która zniknęła, ma własną skalę pilności — liczoną od tego, ile czasu zostało do jej terminu:</p>
-      <table>
-        <tr><th>Do wizyty zostało</th><th>Jak zobaczysz</th><th>Dlaczego tak</th></tr>
-        <tr><td>mniej niż 48 godzin</td><td><span class="pill bad">Pilne teraz</span></td><td>Trzeba zareagować dziś: zadzwonić, przestawić pracę, zagospodarować wolne okno.</td></tr>
-        <tr><td>do 7 dni</td><td><span class="pill warn">Wymaga działania</span></td><td>Trzeba wiedzieć, ale jest czas na spokojną decyzję.</td></tr>
-        <tr><td>dalej niż tydzień</td><td><span class="pill neu">Informacja</span></td><td>Fakt do odnotowania; nie podbija licznika przy dzwonku.</td></tr>
-        <tr><td><strong>termin już minął</strong></td><td><span class="pill warn">Wymaga działania</span></td><td>Zostaje do rozstrzygnięcia (godzina, rozliczenie), ale nie udaje alarmu — na przeszłość i tak nie zdążysz.</td></tr>
-      </table>
+      <p>Skalę priorytetów opisuje <a href="#powiadomienia">Krok 29</a>. Zniknięta wizyta ma w niej jedno odstępstwo: zamiast dwóch godzin liczy się <strong>48 godzin do terminu</strong>, bo odwołanie trzeba zdążyć zagospodarować, a nie tylko odnotować. Dalej jest już tak samo: do siedmiu dni „Wymaga działania”, dalej „Informacja”, a gdy <strong>termin już minął</strong>, sprawa po dobie schodzi do „Wymaga działania”.</p>
       <div class="warning"><strong>Odwołanie wpisane po terminie nie znika, ale też nie krzyczy.</strong> Przez pierwszą dobę po terminie sprawa jest pilna — wtedy jeszcze można zagospodarować godzinę i poprawić rozliczenie. Później schodzi do „Wymaga działania” i zostaje na liście jako rzecz do nadrobienia. Nic nie zamyka się samo.</div>
     </section>
 

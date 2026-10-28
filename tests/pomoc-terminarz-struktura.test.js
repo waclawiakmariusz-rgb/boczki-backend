@@ -81,9 +81,31 @@ describe('przewodnik nie opisuje rzeczy, których w Terminarzu już nie ma', () 
         expect(G).not.toContain('wartość wykonanych');
     });
     test('„Dodaj nową klientkę" występuje wyłącznie jako informacja, że tego przycisku już nie ma', () => {
-        const wystapienia = [...G.matchAll(/.{90}Dodaj nową klientkę/g)].map((m) => m[0]);
-        expect(wystapienia.length).toBeGreaterThan(0);
-        expect(wystapienia.every((w) => /zniknęło|nie ma|nie zakłada/i.test(w))).toBe(true);
+        const czesci = G.split('Dodaj nową klientkę');
+        expect(czesci.length).toBeGreaterThan(1);                       // hasło zostaje — po nim ludzie szukają
+        const konteksty = czesci.slice(0, -1).map((c) => c.slice(-120));
+        expect(konteksty.filter((c) => !/zniknęło|nie ma|nie zakłada/i.test(c))).toEqual([]);
+    });
+    test('to samo nie jest tłumaczone dwa razy: żadne zdanie nie powtarza się w dwóch rozdziałach', () => {
+        const sek = [...G.matchAll(/<section class="card" id="([a-z-]+)">([\s\S]*?)<\/section>/g)];
+        const czysty = (s) => s.replace(/<figure[\s\S]*?<\/figure>/g, ' ').replace(/<[^>]*>/g, ' ').replace(/&[a-z]+;/g, ' ').replace(/\s+/g, ' ').trim();
+        const ngramy = (s) => {
+            const w = czysty(s).toLowerCase().replace(/[„”"'’.,;:()—–-]/g, ' ').split(/\s+/).filter(Boolean);
+            const out = new Set();
+            for (let i = 0; i + 12 <= w.length; i++) out.add(w.slice(i, i + 12).join(' '));
+            return out;
+        };
+        // 12 słów pod rząd w dwóch rozdziałach = kopia, nie zbieg okoliczności.
+        // Wyjątki: FAQ i słownik mają z założenia powtarzać to, co stoi w rozdziale źródłowym.
+        const POWTARZALNE = ['faq', 'slownik', 'indeks', 'sciagi'];
+        const g = sek.map((m) => ({ id: m[1], n: ngramy(m[2]) })).filter((x) => !POWTARZALNE.includes(x.id));
+        const kolizje = [];
+        for (let i = 0; i < g.length; i++) {
+            for (let j = i + 1; j < g.length; j++) {
+                for (const frag of g[i].n) if (g[j].n.has(frag)) { kolizje.push(`${g[i].id} ↔ ${g[j].id}: „${frag.slice(0, 70)}…"`); break; }
+            }
+        }
+        expect(kolizje).toEqual([]);
     });
     test('priorytet spraw opisany zgodnie z kodem: po terminie schodzi, a nie zostaje pilny', () => {
         expect(JS.length).toBeGreaterThan(0);
