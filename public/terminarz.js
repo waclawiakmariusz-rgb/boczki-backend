@@ -1471,12 +1471,16 @@
       if (st === 'ok' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin ok"><div class="godz">${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}</div><div class="st">✓ Termin dostępny${dost.wynik.przerwy_min ? ` · w tym ${dost.wynik.przerwy_min} min przerwy` : ''} · ${esc(ladnaData(n.start.slice(0, 10), true))}</div>
         ${dost.wynik.pozycje.map(p => `<div class="seg"><span>${hhmm(p.start)}–${hhmm(p.koniec)}</span><span><b>${esc(p.nazwa)}</b> — ${esc(p.pracownik)}</span><span class="m">${p.gabinet_id ? nazwaZasobu(p.gabinet_id, 'gabinet') : 'bez gabinetu'}${p.urzadzenie_id ? ' · ' + nazwaZasobu(p.urzadzenie_id, 'urządzenie') : ''}</span></div>`).join('')}
         <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">${n.pozycje.some(p => p.zakup_skladnik_id) ? `Rozliczenie: z zakupu klientki — przy zapisie zarezerwujemy ${n.pozycje.filter(p => p.zakup_skladnik_id).length === 1 ? '1 zabieg' : n.pozycje.filter(p => p.zakup_skladnik_id).length + ' zabiegi'} z pakietu${n.pozycje.some(p => !p.zakup_skladnik_id) ? '; pozostałe po wykonaniu, w Sprzedaży' : ''}.` : 'Rozliczenie: po wykonaniu, w Sprzedaży.'}</div></div>`;
+      if (st === 'ok' && dost.wynik && (dost.wynik.ostrzezenia || []).some(o => o.kod === 'GRAFIK')) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>Poza grafikiem.</b> ${esc((dost.wynik.ostrzezenia.find(o => o.kod === 'GRAFIK') || {}).opis || '')} Umawiasz świadomie — ślad zostanie w historii wizyty.</div>`;
       else if (st === 'zajety' && dost.wynik) { // D03: „zajęty” = nakładanie wizyt/zasobów; „niedostępny” = poza grafikiem / brak wykonawcy; przy „dowolnym” mówimy o całym zespole
         const problemy = dost.wynik.problemy || [], kody = problemy.map(p => p.kod || '');
         const zajety = kody.some(k => /ZAJET/.test(k));
         const dowolny = !n.prefPrac && n.pozycje.some(p => !p.pracownik);
         const opis = problemy.map(p => (dowolny && p.kod === 'GRAFIK') ? `Nikt z dostępnych specjalistów nie pracuje o tej godzinie (${p.opis})` : p.opis).join('; ') || 'konflikt zasobów';
         wynikHtml2 = `<div class="trm-wynik-termin zajety"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">✕ ${zajety ? 'Termin zajęty' : 'Termin niedostępny'}</div><div class="m" style="margin-top:6px">${esc(opis)}</div>${alternatywyHtml(dost.wynik.alternatywy, 'TRM.nowaWybierzAlt')}</div>`;
+        // #20 wariant B: jedyną przeszkodą jest koniec grafiku wskazanej osoby → można umówić świadomie, drugim kliknięciem
+        const tylkoGrafik = problemy.length === 1 && problemy[0].kod === 'GRAFIK' && problemy[0].mozna_mimo_grafiku && !dowolny;
+        if (tylkoGrafik) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>To tylko koniec grafiku, nie kolizja.</b> Nikt inny nie jest w tym czasie zajęty. Jeśli ${esc(n.prefPrac || 'ta osoba')} może zostać dłużej, umów mimo grafiku — w historii wizyty zostanie ślad.<br><button class="trm-btn sm" style="margin-top:6px" onclick="TRM.nowaMimoGrafiku()">Umów mimo grafiku</button></div>`;
       }
       else if (st === 'blad') wynikHtml2 = `<div class="trm-wynik-termin blad"><div class="godz">${n.start.slice(11, 16)}</div><div class="st">⚠ Nie udało się sprawdzić terminu</div><div class="m">${esc(dost.komunikat || 'brak odpowiedzi')} <button class="trm-btn link sm" onclick="TRM.nowaZmiana(true)">Sprawdź ponownie</button></div></div>`;
       else if (st === 'czekam') wynikHtml2 = `<div class="trm-wynik-termin"><div class="godz">${n.start.slice(11, 16)}</div><div class="st muted">⏳ Sprawdzamy termin…</div></div>`;
@@ -1494,7 +1498,12 @@
         <div class="trm-field"><label>Data wizyty</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
         <div class="trm-field"><label>Wykonawca dla wszystkich zabiegów</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>${prefOstrzezenieHtml(n)}</div>
       </div>
-      <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}</div>
+      <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}${(() => {
+        const pg = Array.isArray(sloty) ? slotyPoGrafiku(n) : null;
+        if (!pg || !pg.godziny.length) return '';
+        const hhK = String(Math.floor(pg.koniecGrafiku / 60)).padStart(2, '0') + ':' + String(pg.koniecGrafiku % 60).padStart(2, '0');
+        return `<div class="trm-sloty-po-grafiku"><div class="muted small">Po grafiku · ${esc(n.prefPrac)} kończy o ${hhK}. Umówisz świadomie, drugim kliknięciem.</div><div class="trm-sloty po-grafiku">${pg.godziny.map(h => `<button type="button" class="${n.start.slice(11, 16) === h && n.mimoGrafiku ? 'selected' : ''}" onclick="TRM.nowaWybierzPoGrafiku('${n.start.slice(0, 10)} ${h}')">${h}</button>`).join('')}</div></div>`;
+      })()}</div>
       <details class="trm-wiecej" ${innaOtwarta ? 'open' : ''} ontoggle="TRM.nowa&&(TRM.nowa.innaGodzina=this.open)"><summary>Inna godzina</summary><div class="trm-field"><label>Godzina rozpoczęcia</label><input type="time" id="trm-n-godz" step="300" value="${n.godzina ? n.start.slice(11, 16) : ''}" onchange="TRM.nowaStart()"></div></details>
       ${wynikHtml2}
       <details class="trm-wiecej" ${n.notatka || n.kanal !== 'recepcja' ? 'open' : ''}><summary>Notatka i kanał</summary>
@@ -1509,7 +1518,7 @@
   }
   function stopkaNowej(n) {
     const gotowe = n.pozycje.length && n.klient && n.godzina && n.dostep && n.dostep.stan === 'ok';
-    return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">Umów wizytę</button></div>`;
+    return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">${n.mimoGrafiku && gotowe ? 'Umów mimo grafiku' : 'Umów wizytę'}</button></div>`;
   }
   function renderNowa() {
     const n = TRM.nowa; if (!n) return;
@@ -1550,12 +1559,12 @@
   TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
   // czy krok „Termin” jest aktualnie widoczny (tryb szybki pokazuje wszystko na raz)
   const nowaNaTerminie = (n) => n && (n.szybka || n.krok === 3);
-  const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; };
+  const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; n.mimoGrafiku = false; };   // #20: zgoda „mimo grafiku” nie przenosi się na inny termin/osobę
   TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUniewaznij = () => { const n = TRM.nowa; if (!n) return; nowaResetDostep(n); const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaPrefPrac = (v) => { const n = TRM.nowa; if (!n) return; n.prefPrac = v || ''; n.pozycje.forEach(p => { const u = usluga(p.usluga_id); p.pracownik = v && (!u || !u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(v)) ? v : null; }); nowaResetDostep(n); renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(); };
-  TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.godzina = true; n.dataReczna = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };
+  TRM.nowaWybierzSlot = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.godzina = true; n.dataReczna = true; n.dostep = null; n.mimoGrafiku = false; renderNowa(); TRM.nowaZmiana(true); };   // #20: zwykła godzina z listy = bez zgody „mimo grafiku”
   TRM.nowaStart = () => {
     const n = TRM.nowa; if (!n) return;
     const dtEl = el('trm-n-data'), gEl = el('trm-n-godz');
@@ -1586,7 +1595,7 @@
   async function nowaAutoSprawdz() {
     const n = TRM.nowa; if (!n || !n.pozycje.length || !n.godzina) return; // D03: bez wybranej godziny nic nie sprawdzamy
     const req = ++n.req;
-    let d; try { d = await api('trm_sprawdz', { start: n.start, pozycje: n.pozycje, id_klienta: n.klient ? n.klient.id_klienta : null }); } catch (e) { d = { status: 'error', message: 'brak połączenia' }; }
+    let d; try { d = await api('trm_sprawdz', { start: n.start, pozycje: n.pozycje, id_klienta: n.klient ? n.klient.id_klienta : null, mimo_grafiku: !!n.mimoGrafiku }); } catch (e) { d = { status: 'error', message: 'brak połączenia' }; }
     if (TRM.nowa !== n || req !== n.req) return; // stara odpowiedź po kolejnej zmianie — ignorujemy
     if (!d || d.status !== 'success') n.dostep = { stan: 'blad', komunikat: (d && d.message) || 'brak odpowiedzi' };
     else n.dostep = d.ok ? { stan: 'ok', wynik: d } : { stan: 'zajety', wynik: d };
@@ -1714,6 +1723,34 @@
     renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(true);
   };
   TRM.nowaSprawdz = () => TRM.nowaZmiana(true); // zgodność wsteczna — sprawdzanie jest teraz automatyczne
+  // #20 wariant B (30.10.2026): świadoma zgoda na koniec grafiku wskazanej osoby. Flaga gaśnie przy każdej zmianie
+  // terminu, osoby albo zabiegu (nowaResetDostep), więc zgoda dotyczy dokładnie tego, co było na ekranie.
+  TRM.nowaMimoGrafiku = () => { const n = TRM.nowa; if (!n || !n.prefPrac) return; n.mimoGrafiku = true; n.dostep = null; renderNowa(); TRM.nowaZmiana(true); };
+  TRM.nowaWybierzPoGrafiku = (start) => { const n = TRM.nowa; if (!n) return; n.start = start; n.godzina = true; n.dataReczna = true; n.dostep = null; n.mimoGrafiku = true; renderNowa(); TRM.nowaZmiana(true); };
+  // Godziny po grafiku: tylko gdy wykonawczyni wskazana ręcznie i mamy jej grafik na ten dzień. Lista jest podpowiedzią —
+  // kolizje sprawdza serwer po kliknięciu, dokładnie jak przy zwykłej godzinie.
+  function slotyPoGrafiku(n) {
+    if (!n.prefPrac || !n.pozycje.length || !TRM.dzien || TRM.dzien.data !== n.start.slice(0, 10)) return null;
+    const dost = (TRM.dzien.dostepnosc || {})[n.prefPrac] || [];
+    if (!dost.length) return null;
+    const koniecGrafiku = Math.max(...dost.map(x => minDnia(x.do) || 1440));
+    const salon = TRM.dzien.salon || [];
+    const koniecSalonu = salon.length ? Math.max(...salon.map(x => minDnia(x.do) || 1440)) : koniecGrafiku;
+    const granica = Math.min(1440, Math.max(koniecGrafiku + 120, koniecSalonu));   // do 2 h po grafiku albo do zamknięcia salonu, co późniejsze
+    const krok = (TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.siatka_min) || 15;
+    const trwanie = n.pozycje.reduce((s, x) => s + (Number(x.czas_min) || 0), 0) || 30;
+    const od = Math.ceil(Math.max(koniecGrafiku - trwanie + krok, minDnia(TRM.dzien.teraz || '') || 0) / krok) * krok;
+    const zwykle = new Set((Array.isArray(n.sloty) ? n.sloty : []).map(s => s.start.slice(11, 16)));
+    // godziny, w które wskazana osoba już ma wizytę (albo blokadę zasobu), nie są podpowiadane — to tylko podpowiedź ekranu, serwer i tak sprawdza komplet
+    const anul = ['anulowana', 'odrzucona', 'wygasla'];
+    const zajete = [];
+    (TRM.dzien.rezerwacje || []).forEach(r => { if (anul.includes(r.status)) return; (r.pozycje || []).forEach(p => { if (p.pracownik === n.prefPrac && p.stan !== 'anulowana') zajete.push([minDnia(p.start), minDnia(p.koniec) || 1440]); }); });
+    (TRM.dzien.zajecia || []).forEach(z => { if (z.typ_zasobu === 'pracownik' && String(z.klucz) === n.prefPrac) zajete.push([minDnia(z.od), minDnia(z.do) || 1440]); });
+    const koliduje = (a, b) => zajete.some(([x, y]) => a < y && b > x);
+    const out = [];
+    for (let m = od; m + trwanie <= granica && out.length < 6; m += krok) { const hh = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); if (!zwykle.has(hh) && !koliduje(m, m + trwanie)) out.push(hh); }
+    return { koniecGrafiku, godziny: out };
+  }
   TRM.nowaSzukajTerminy = async () => {
     const n = TRM.nowa; if (!n || !n.pozycje.length) return toast('warning', 'Najpierw wybierz usługę');
     const w = el('trm-n-wynik'); if (w) w.innerHTML = '<div class="muted small">Szukamy pełnych kompletów (14 dni)…</div>';
@@ -1727,13 +1764,14 @@
     const n = TRM.nowa; if (!n || n.zapis) return;
     if (!n.klient) return toast('warning', 'Wskaż klientkę');
     n.zapis = true; const btn = el('trm-n-zapisz'); if (btn) { btn.disabled = true; btn.textContent = 'Zapisujemy…'; }
-    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta, nazwa: n.klient.nazwa }, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka });
+    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta, nazwa: n.klient.nazwa }, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka, mimo_grafiku: !!n.mimoGrafiku });
     n.zapis = false;
     if (d.status === 'konflikt') { n.dostep = { stan: 'zajety', wynik: { problemy: d.problemy, alternatywy: d.alternatywy } }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
     if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
     toast('success', d.powtorzenie ? 'Ta wizyta była już zapisana' : 'Zapisano wizytę', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)}`);
     // Z8: wizyta zapisana, ale zabieg pochodzi z pakietu po terminie — osobny, widoczny komunikat po zapisie.
     for (const o of (d.ostrzezenia || [])) if (o.kod === 'PO_TERMINIE') toast('warning', 'Zabieg z pakietu po terminie', `${o.zakup_nazwa ? '„' + o.zakup_nazwa + '”: ' : ''}${o.tekst}`);
+    for (const o of (d.ostrzezenia || [])) if (o.kod === 'GRAFIK') toast('warning', 'Wizyta poza grafikiem', `${o.pracownik} nie pracuje wtedy według grafiku — zapisano świadomie. Daj znać wykonawczyni.`);
     TRM.data = d.rezerwacja.start.slice(0, 10); const di = el('trm-data'); if (di) di.value = TRM.data;
     TRM.nowa = null; TRM.panel = null;
     await odswiez();
@@ -2135,7 +2173,13 @@
   function podgladZmianyHtml(d) {
     const pg = d.podglad || {};
     let h = '';
-    if (d.status === 'konflikt') h += `<div class="trm-note bad"><b>${esc(d.message)}</b></div>` + alternatywyHtml(d.alternatywy, 'TRM.zmianaWybierzAlt');
+    if (d.status === 'konflikt') {
+      h += `<div class="trm-note bad"><b>${esc(d.message)}</b></div>` + alternatywyHtml(d.alternatywy, 'TRM.zmianaWybierzAlt');
+      // #20: jedyna przeszkoda = koniec grafiku wskazanej osoby → można zatwierdzić świadomie
+      const pr = (d.podglad && d.podglad.problemy) || d.problemy || [];
+      if (pr.length === 1 && pr[0].kod === 'GRAFIK' && pr[0].mozna_mimo_grafiku) h += `<div class="trm-note warn"><b>To tylko koniec grafiku, nie kolizja.</b> <button class="trm-btn sm" onclick="TRM.zm.mimoGrafiku=true;TRM.zmianaSprawdz(false)">Sprawdź mimo grafiku</button></div>`;
+    }
+    else if (pg.nowy && (pg.ostrzezenia || []).some(o => o.kod === 'GRAFIK')) h += `<div class="trm-note warn"><b>Poza grafikiem.</b> ${esc((pg.ostrzezenia.find(o => o.kod === 'GRAFIK') || {}).opis || '')} Zatwierdzasz świadomie — ślad zostanie w historii wizyty.</div>`;
     else if (pg.nowy) h += `<div class="trm-note ok"><b>Komplet dostępny</b> · ${ladnaData(pg.nowy.start.slice(0, 10), true)} ${hhmm(pg.nowy.start)}–${hhmm(pg.nowy.koniec)}<br>${pg.nowy.pozycje.map(p => `${esc(p.nazwa)} — <b>${esc(p.pracownik)}</b>${p.gabinet_id ? ' · ' + esc((zasob(p.gabinet_id) || {}).nazwa || '') : ''}${p.urzadzenie_id ? ' · ' + esc((zasob(p.urzadzenie_id) || {}).nazwa || '') : ''}`).join('<br>')}</div>`;
     return h;
   }
@@ -2156,7 +2200,7 @@
   TRM.zmianaSprawdz = async (potwierdz) => {
     const z = TRM.zm, r = TRM.szcz.rez;
     z.start = `${el('trm-z-data').value} ${el('trm-z-godz').value}`;
-    const d = await api('trm_zmien', { id: r.id, wersja: r.wersja, start: z.start, pracownicy_pozycji: z.prac, czasy_pozycji: z.czasy || {}, potwierdz: !!potwierdz, powod: (el('trm-z-powod') || {}).value || '' });
+    const d = await api('trm_zmien', { id: r.id, wersja: r.wersja, start: z.start, pracownicy_pozycji: z.prac, czasy_pozycji: z.czasy || {}, mimo_grafiku: !!z.mimoGrafiku, potwierdz: !!potwierdz, powod: (el('trm-z-powod') || {}).value || '' });
     if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane przed zapisaniem.'); return przeladujSzczegoly(d.rezerwacja); }
     if (d.status === 'error') return toast('error', 'Nie można zmienić', d.message);
     if (potwierdz && d.status === 'success' && d.rezerwacja) { toast('success', 'Termin zmieniony', `${d.rezerwacja.numer} · ${hhmm(d.rezerwacja.start)}`); TRM.data = d.rezerwacja.start.slice(0, 10); const di = el('trm-data'); if (di) di.value = TRM.data; return przeladujSzczegoly(d.rezerwacja); }

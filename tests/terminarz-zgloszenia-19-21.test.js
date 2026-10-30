@@ -79,7 +79,7 @@ describe('czego te zmiany nie ruszyły', () => {
         const h = wytnij(SRV, "case 'trm_zmien': {", "case 'trm_usun'");
         expect(h).toContain("code: 'WERSJA'");
         expect(h).toContain('GET_LOCK');
-        expect(h).toMatch(/S\.sprawdzKomplet\(\{ \.\.\.k2, start, pozycje: poz, pominRezerwacje: rez\.id \}\)/);
+        expect(h).toMatch(/S\.sprawdzKomplet\(\{ \.\.\.k2, start, pozycje: poz, pominRezerwacje: rez\.id(, [^}]*)? \}\)/);   // #20 dopisało mimoGrafiku
         expect(h).toContain('ROLE_OPERACYJNE');
     });
     test('wizyty wykonanej ani rozliczonej nadal nie da się przestawić', () => {

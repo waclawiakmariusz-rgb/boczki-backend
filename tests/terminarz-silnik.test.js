@@ -149,3 +149,65 @@ describe('terminarz-silnik: szukajTerminy', () => {
     expect(r2).toEqual([]);
   });
 });
+
+// #20 wariant B (30.10.2026): koniec grafiku wskazanej osoby może być ostrzeżeniem zamiast odmowy —
+// ale TYLKO z jawną zgodą (mimoGrafiku) i TYLKO dla ręcznie wskazanej osoby. Kolizje zostają odmową.
+describe('terminarz-silnik: „mimo grafiku” (#20, wariant B)', () => {
+  test('bez zgody: odmowa GRAFIK jak dotąd, ale problem mówi, że da się umówić mimo to (osoba wskazana)', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 16:40`, pozycje: [usluga()] }); // Natalia do 17:00, 16:40–17:20
+    expect(r.ok).toBe(false);
+    expect(r.problemy[0].kod).toBe('GRAFIK');
+    expect(r.problemy[0].mozna_mimo_grafiku).toBe(true);
+    expect(r.ostrzezenia).toEqual([]);
+  });
+  test('ze zgodą i wskazaną osobą: termin przechodzi, a koniec grafiku wraca jako ostrzeżenie z godzinami', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 16:40`, pozycje: [usluga()], mimoGrafiku: true });
+    expect(r.ok).toBe(true);
+    expect(r.pozycje[0].pracownik).toBe('Natalia');
+    expect(r.ostrzezenia).toHaveLength(1);
+    expect(r.ostrzezenia[0]).toMatchObject({ kod: 'GRAFIK', pracownik: 'Natalia', pozycja: 0 });
+    expect(r.ostrzezenia[0].opis).toMatch(/Natalia nie pracuje w tym czasie/);
+  });
+  test('ze zgodą, ale „dowolny dostępny” (bez wskazanej osoby): automat NIE sięga poza grafik', () => {
+    const b = bazowe();
+    b.dostepnoscPracownikow = { Natalia: dost('09:00', '12:00'), Emilia: dost('09:00', '12:00') };
+    const r = S.sprawdzKomplet({ ...b, start: `${D} 13:00`, pozycje: [usluga({ pracownik: null })], mimoGrafiku: true });
+    expect(r.ok).toBe(false);
+    expect(r.problemy[0].kod).toBe('GRAFIK');
+    expect(r.problemy[0].mozna_mimo_grafiku).toBe(false);
+    expect(r.ostrzezenia).toEqual([]);
+  });
+  test('ze zgodą: prawdziwa kolizja pracownika nadal jest twardą odmową', () => {
+    const b = bazowe();
+    b.zajete = [{ typ_zasobu: 'pracownik', klucz: 'Natalia', od: `${D} 16:50`, do: `${D} 17:30`, rezerwacja_id: 77 }];
+    const r = S.sprawdzKomplet({ ...b, start: `${D} 16:40`, pozycje: [usluga()], mimoGrafiku: true });
+    expect(r.ok).toBe(false);
+    expect(r.problemy[0].kod).toBe('PRACOWNIK_ZAJETY');
+  });
+  test('ze zgodą: zajęta klientka i zajęte urządzenie nadal blokują', () => {
+    const b = bazowe();
+    b.klientZajety = [{ od: `${D} 16:50`, do: `${D} 17:10`, rezerwacja_id: 5 }];
+    const r = S.sprawdzKomplet({ ...b, start: `${D} 16:40`, pozycje: [usluga()], mimoGrafiku: true });
+    expect(r.ok).toBe(false);
+    expect(r.problemy.map(p => p.kod)).toContain('KLIENT_ZAJETY');
+    const b2 = bazowe();
+    b2.zajete = [{ typ_zasobu: 'urzadzenie', klucz: 'U1', od: `${D} 16:30`, do: `${D} 17:30`, rezerwacja_id: 8 }, { typ_zasobu: 'urzadzenie', klucz: 'U2', od: `${D} 16:30`, do: `${D} 17:30`, rezerwacja_id: 9 }];
+    const r2 = S.sprawdzKomplet({ ...b2, start: `${D} 16:40`, pozycje: [usluga({ urzadzeniaDozwolone: ['U1', 'U2'] })], mimoGrafiku: true });
+    expect(r2.ok).toBe(false);
+    expect(r2.problemy[0].kod).toMatch(/URZADZENIE/);
+  });
+  test('dzień wolny (osoba bez żadnego grafiku tego dnia): zgoda nie działa, problem bez możliwości „mimo”', () => {
+    const b = bazowe();
+    b.dostepnoscPracownikow = { Natalia: [], Emilia: dost('10:00', '18:00') };
+    const r = S.sprawdzKomplet({ ...b, start: `${D} 11:00`, pozycje: [usluga()], mimoGrafiku: true });   // Natalia wskazana ręcznie, ale ma wolne
+    expect(r.ok).toBe(false);
+    expect(r.problemy[0].kod).toBe('GRAFIK');
+    expect(r.problemy[0].mozna_mimo_grafiku).toBe(false);
+    expect(r.ostrzezenia).toEqual([]);
+  });
+  test('w grafiku zgoda niczego nie zmienia: ok bez ostrzeżeń', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 10:00`, pozycje: [usluga()], mimoGrafiku: true });
+    expect(r.ok).toBe(true);
+    expect(r.ostrzezenia).toEqual([]);
+  });
+});

@@ -57,6 +57,10 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-z-poz { flex-wrap:nowrap; }
 .trm-z-poz .trm-z-czas { flex:0 0 auto; width:84px; text-align:right; }
 .trm-z-poz > span { flex:0 0 auto; }
+/* zgłoszenie #20 (30.10.2026): godziny po grafiku wskazanej osoby — podpowiedź, nie obietnica; zapis zawsze drugim kliknięciem */
+.trm-sloty-po-grafiku { margin-top:8px; padding-top:8px; border-top:1px dashed var(--t-line, #e5e7eb); }
+.trm-sloty.po-grafiku button { border-style:dashed; }
+.trm-sloty.po-grafiku button.selected { border-style:solid; }
 /* kontrolki o stałym rozmiarze nigdy nie rozciągają się w .trm-row (raport T07: owalny ✕, rozciągnięty przełącznik) */
 .trm-row > .trm-x, .trm-row > .trm-switch, .trm-row > .trm-awatar, .trm-row > .trm-pill, .trm-row > .trm-segment { flex:0 0 auto; }
 .trm-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }

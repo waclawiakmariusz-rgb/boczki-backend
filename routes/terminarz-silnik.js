@@ -115,6 +115,7 @@ function konflikty(nowe, istniejace) {
  */
 function sprawdzKomplet(w) {
   const problemy = [];
+  const ostrzezenia = [];   // #20 (30.10.2026): rzeczy dopuszczone świadomie, np. koniec grafiku wskazanej osoby
   const wyniki = [];
   let kursor = naMin(w.start);
   const start0 = kursor;
@@ -135,15 +136,29 @@ function sprawdzKomplet(w) {
     }
     if (!kandydaci.length) { problemy.push({ kod: 'BRAK_WYKONAWCY', opis: `Brak pracownika z uprawnieniem do „${poz.nazwa || poz.klucz}”.`, pozycja: idx }); return; }
 
-    let wybrany = null, powodOdrzucenia = null;
+    let wybrany = null, powodOdrzucenia = null, grafikOstrz = null;
     for (const imie of kandydaci) {
       const probne = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: imie, gabinet_id: null, urzadzenie_id: null });
       const dost = (w.dostepnoscPracownikow || {})[imie] || [];
       const pozaGrafikiem = probne.find(z => !miesciSie(z.od, z.do, dost));
-      if (pozaGrafikiem) { powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).` }; continue; }
+      if (pozaGrafikiem) {
+        const opisGrafiku = `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).`;
+        // #20 wariant B (30.10.2026): koniec grafiku to czas salonu, nie zajęty sprzęt. Recepcja może świadomie umówić
+        // poza grafikiem, ale TYLKO osobę wskazaną ręcznie — automat „dowolny dostępny” nigdy nie sięga poza czyjś grafik.
+        // Kolizje (zajęty pracownik, gabinet, urządzenie, klientka) sprawdzane dalej jak zawsze i zostają twardą odmową.
+        // Dzień wolny (brak jakiegokolwiek grafiku tego dnia) to nie „koniec grafiku” — zgoda go nie obchodzi;
+        // wtedy decyduje manager, dopisując godziny w Ustawieniach → Grafik zespołu.
+        const maGrafikTegoDnia = Array.isArray(dost) && dost.length > 0;
+        if (w.mimoGrafiku && poz.pracownik && maGrafikTegoDnia) {
+          grafikOstrz = { kod: 'GRAFIK', pozycja: idx, pracownik: imie, opis: opisGrafiku, od: naStr(pozaGrafikiem.od), do: naStr(pozaGrafikiem.do) };
+        } else {
+          powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: opisGrafiku, mozna_mimo_grafiku: !!poz.pracownik && maGrafikTegoDnia };
+          continue;
+        }
+      }
       const kol = konflikty(probne, zajeteRobocze);
       if (kol.length) { powodOdrzucenia = powodOdrzucenia || { kod: 'PRACOWNIK_ZAJETY', opis: `${imie} ma w tym czasie inną wizytę (${naStr(kol[0].od).slice(11, 16)}–${naStr(kol[0].do).slice(11, 16)}).`, konflikt: kol[0] }; continue; }
-      wybrany = imie; break;
+      wybrany = imie; if (grafikOstrz) ostrzezenia.push(grafikOstrz); break;
     }
     if (!wybrany) { problemy.push({ ...powodOdrzucenia, pozycja: idx }); return; }
 
@@ -194,7 +209,7 @@ function sprawdzKomplet(w) {
   if (!problemy.length && (w.klientZajety || []).some(k => nakladaja(start0, koniec, naMin(k.od), naMin(k.do)))) {
     problemy.push({ kod: 'KLIENT_ZAJETY', opis: 'Klientka ma w tym czasie inną wizytę.', pozycja: null });
   }
-  return { ok: problemy.length === 0 && wyniki.length === w.pozycje.length, start: naStr(start0), koniec: naStr(koniec), pozycje: wyniki, problemy, przerwy_min: przerwy };
+  return { ok: problemy.length === 0 && wyniki.length === w.pozycje.length, start: naStr(start0), koniec: naStr(koniec), pozycje: wyniki, problemy, ostrzezenia, przerwy_min: przerwy };
 }
 
 /**

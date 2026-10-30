@@ -849,7 +849,7 @@
       <div class="step"><div class="num">1</div><div><strong>Klientka</strong><span>Wpisz nazwisko, telefon albo numer ID — lista podpowiada z kartoteki. Przy klientce z ostrzeżeniem w kartotece zobaczysz ⚠. Nowej klientki <strong>nie zakłada się już z kalendarza</strong> — profil powstaje w module Klienci, gdzie są zgody, dokumenty i kontrola duplikatów; tutaj tylko wyszukujesz istniejącą kartotekę. Samo nazwisko nie łączy historii: jeśli pani Kowalska już jest w bazie, znajdź ją po telefonie. Gdy okaże się, że to wcale nie wizyta, kliknij „To nie wizyta — zarezerwuj czas technicznie" (<a href="#rezerwacja">Krok 19</a>).</span></div></div>
       <div class="step"><div class="num">2</div><div><strong>Usługi i wykonawczynie</strong><span>Szukaj w cenniku, klikaj — można dodać kilka (idą po sobie). Usługi „brak czasu" są szare, dopóki manager nie ustawi czasu. Przy każdej: wykonawczyni albo „Dowolna właściwa osoba" (system wybierze pierwszą wolną spośród osób z uprawnieniem). Czas możesz dziś jednorazowo zmienić, np. 30 zamiast 40, gdy klientka prosi o krótszy zabieg.</span></div></div>
       <div class="step"><div class="num">3</div><div><strong>Termin</strong><span>Data i godzina. Nie wiesz, kiedy wolne? „Znajdź najbliższe terminy" przegląda 14 dni i podaje pełne komplety (osoba + gabinet + sprzęt), od najwcześniejszego.</span></div></div>
-      <div class="step"><div class="num">4</div><div><strong>Sprawdź komplet</strong><span>Zielony wynik: kto wykona, w którym gabinecie, na którym urządzeniu, o której koniec, ile minut przerwy między usługami. Czerwony: konkretny powód (rozdział 21) i lista rozwiązań do kliknięcia — jedno kliknięcie podstawia nowy termin lub osobę i sprawdza ponownie.</span></div></div>
+      <div class="step"><div class="num">4</div><div><strong>Sprawdź komplet</strong><span>Zielony wynik: kto wykona, w którym gabinecie, na którym urządzeniu, o której koniec, ile minut przerwy między usługami. Czerwony: konkretny powód (rozdział 21) i lista rozwiązań do kliknięcia — jedno kliknięcie podstawia nowy termin lub osobę i sprawdza ponownie. Gdy jedyną przeszkodą jest koniec grafiku wskazanej osoby, pod listą wolnych godzin jest osobna grupa „Po grafiku”, a w czerwonej karcie przycisk „Umów mimo grafiku”.</span></div></div>
       <div class="step"><div class="num">5</div><div><strong>Zapisz wizytę</strong><span>W chwili zapisu system sprawdza wszystko jeszcze raz — wynik z kroku 4 był ofertą, nie gwarancją. Jeśli w międzyczasie ktoś zajął termin, dostaniesz konflikt zamiast podwójnej rezerwacji. Dwa kliknięcia „Zapisz" to nadal jedna wizyta. Po zapisie otwierają się jej szczegóły i numer, np. EST-0048.</span></div></div>
 
     <figure class="zrzut">
@@ -1038,7 +1038,7 @@
         <tr><th>Komunikat</th><th>Znaczenie</th><th>Co zrobić</th></tr>
         <tr><td>„Usługa nie ma ustawionego czasu trwania"</td><td>Manager nie uzupełnił usługi w Ustawieniach.</td><td>Poproś managera; do tego czasu usługę da się sprzedać, nie umówić.</td></tr>
         <tr><td>„Julia nie wykonuje usługi…"</td><td>Osoba nie ma uprawnienia (kompetencje w Ustawieniach → Usługi).</td><td>Wybierz „Dowolna właściwa osoba" albo inną osobę z listy.</td></tr>
-        <tr><td>„Julia nie pracuje w tym czasie (…)"</td><td>Poza grafikiem, w przerwie, na urlopie — albo bufor po usłudze wychodzi poza grafik.</td><td>Inna godzina albo osoba; manager może zmienić grafik.</td></tr>
+        <tr><td>„Julia nie pracuje w tym czasie (…)"</td><td>Poza grafikiem, w przerwie, na urlopie — albo bufor po usłudze wychodzi poza grafik.</td><td>Inna godzina albo osoba; manager może zmienić grafik. <strong>Wyjątek (od 30.10.2026):</strong> gdy wykonawczyni jest wskazana ręcznie i to jedyna przeszkoda, pojawia się przycisk „Umów mimo grafiku” — zapis świadomy, ze śladem w historii wizyty. Dotyczy końca dnia pracy, nie dnia wolnego: osobę bez grafiku tego dnia umówi dopiero manager, dopisując jej godziny.</td></tr>
         <tr><td>„Julia ma w tym czasie inną wizytę"</td><td>Kolizja z wizytą lub jej buforem.</td><td>Kliknij alternatywę; przy „dowolnej osobie" system sam weźmie wolną.</td></tr>
         <tr><td>„Wszystkie dopuszczone gabinety są zajęte"</td><td>Osoba wolna, pomieszczenia nie.</td><td>Inna godzina; sprawdź widok Zasoby.</td></tr>
         <tr><td>„Urządzenie jest zajęte w wymaganym czasie"</td><td>Osoba i gabinet wolne, sprzęt nie — klasyczna pułapka.</td><td>Alternatywa na drugiej jednostce albo inna godzina. Właścicielka też tego nie nadpisze.</td></tr>
@@ -1555,7 +1555,7 @@
     </figure>
       <ul>
         <li><strong>Nie umawia na niepełny komplet.</strong> Osoba, gabinet i urządzenie muszą być wolne jednocześnie, razem z buforami. Wolna osoba to za mało.</li>
-        <li><strong>Nie omija kolizji.</strong> Nie ma przycisku „mimo to" — ani dla recepcji, ani dla właścicielki.</li>
+        <li><strong>Nie omija kolizji.</strong> Zajęty pracownik, gabinet, urządzenie, zajęta klientka — na to nie ma przycisku „mimo to", ani dla recepcji, ani dla właścicielki. Jedyny wyjątek to <em>koniec grafiku</em> osoby wskazanej ręcznie: to czas salonu, nie zajęty sprzęt, więc recepcja może umówić świadomie, drugim kliknięciem, i zostaje po tym ślad (<a href="#konflikty">Krok 21</a>). Dnia wolnego to nie obejmuje.</li>
         <li><strong>Nie zgaduje nieobecności.</strong> Po tolerancji spóźnienia podpowiada, nie oznacza. Nieobecność potwierdza człowiek.</li>
         <li><strong>Nie przesuwa dnia automatycznie.</strong> Przedłużający się zabieg to informacja dla recepcji, nie przestawienie kolejnych klientek.</li>
         <li><strong>Nie odwołuje wizyt przy zmianie grafiku, nieobecności czy archiwizacji zasobu.</strong> Pokazuje listę i czeka na decyzje.</li>
@@ -1841,6 +1841,7 @@
         <tr><td>Pusty kalendarz / filtr osoby / zakreskowane kolumny</td><td><a href="#widoki">16</a>, <a href="#konflikty">21</a></td></tr>
         <tr><td>Nowa wizyta / klientka nowa / wspólny numer / bez telefonu</td><td><a href="#nowa-wizyta">18</a></td></tr>
         <tr><td>Czerwony wynik / urządzenie zajęte / alternatywy / „mimo to”</td><td><a href="#konflikty">21</a></td></tr>
+        <tr><td>Wizyta po godzinach pracy / „Umów mimo grafiku” / klientka chce zostać dłużej po grafiku</td><td><a href="#konflikty">21</a>, <a href="#zasady">32</a></td></tr>
         <tr><td>Przybyła / spóźniona / nieobecna / Rozpocznij / Zakończ / Przerwij</td><td><a href="#dzien-wizyty">22</a></td></tr>
         <tr><td>Rozlicz w Sprzedaży / Powiąż / zadatek / karnet / Mix</td><td><a href="#rozliczenie">23</a></td></tr>
         <tr><td>Zmiana terminu / inna osoba / „Ktoś zmienił tę wizytę”</td><td><a href="#zmiana">24</a></td></tr>

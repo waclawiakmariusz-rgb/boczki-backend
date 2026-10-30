@@ -1753,8 +1753,8 @@ module.exports = (db, opts = {}) => {
         const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy);
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, d.id_klienta || null);
         if (d.pomin_rezerwacje) k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(d.pomin_rezerwacje));
-        const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: d.pomin_rezerwacje || null });
-        const odp = { status: 'success', ok: w.ok, start: w.start, koniec: w.koniec, przerwy_min: w.przerwy_min, problemy: w.problemy, pozycje: w.pozycje.map(p => ({ usluga_id: p.usluga_id, nazwa: p.nazwa, start: p.start, koniec: p.koniec, pracownik: p.pracownik, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, cena: p.cena, czas_min: p.czas_min })), alternatywy: [] };
+        const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: d.pomin_rezerwacje || null, mimoGrafiku: !!d.mimo_grafiku });
+        const odp = { status: 'success', ok: w.ok, start: w.start, koniec: w.koniec, przerwy_min: w.przerwy_min, problemy: w.problemy, ostrzezenia: w.ostrzezenia || [], pozycje: w.pozycje.map(p => ({ usluga_id: p.usluga_id, nazwa: p.nazwa, start: p.start, koniec: p.koniec, pracownik: p.pracownik, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, cena: p.cena, czas_min: p.czas_min })), alternatywy: [] };
         if (!w.ok && d.z_alternatywami !== false) odp.alternatywy = await alternatywy(tenant, start.slice(0, 10), poz, cfg, d.id_klienta || null, d.pomin_rezerwacje || null);
         return odp;
       }
@@ -1805,7 +1805,7 @@ module.exports = (db, opts = {}) => {
             return { status: 'success', powtorzenie: true, rezerwacja: await rezerwacja(tenant, ist[0].id) };
           }
           const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, idKlienta);
-          const w = S.sprawdzKomplet({ ...k, start, pozycje: poz });
+          const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, mimoGrafiku: !!d.mimo_grafiku });
           if (!w.ok) {
             const alt = await alternatywy(tenant, start.slice(0, 10), poz, cfg, idKlienta, null);
             return { status: 'konflikt', message: w.problemy[0] ? w.problemy[0].opis : 'Wybrany komplet nie jest dostępny.', problemy: w.problemy, alternatywy: alt };
@@ -1827,11 +1827,14 @@ module.exports = (db, opts = {}) => {
             const wynRez = await Z.domena.operacja(repo, ctx, { klucz, rodzaj: 'zapisz', dane: skrotDane }, (operacja_id) => Z.domena.rezerwuj(repo, ctx, { pozycje: lista, id_klienta: idKlienta, data: start.slice(0, 10), uslugaPozycji: (p) => p.usluga_id, operacja_id }));
             ostrzezeniaZakupow = ((wynRez && wynRez.wynik && wynRez.wynik.ostrzezenia) || []); // Z8: np. zabieg po terminie ważności
           }
-          await historia(conn, tenant, rezId, imie, 'utworzono', `${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}`, null, { start: w.start, koniec: w.koniec });
-          return { status: 'success', rezId, w, ostrzezenia: ostrzezeniaZakupow };
+          // #20: wizyta zapisana świadomie poza grafikiem — ślad w historii wizyty (kto, czyj grafik, które godziny)
+          const pozaGrafikiem = (w.ostrzezenia || []).filter(o => o.kod === 'GRAFIK');
+          const dopisekGrafiku = pozaGrafikiem.length ? ' · poza grafikiem: ' + pozaGrafikiem.map(o => `${o.pracownik} ${String(o.od).slice(11, 16)}–${String(o.do).slice(11, 16)}`).join(', ') : '';
+          await historia(conn, tenant, rezId, imie, 'utworzono', `${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}${dopisekGrafiku}`, null, { start: w.start, koniec: w.koniec });
+          return { status: 'success', rezId, w, ostrzezenia: [...ostrzezeniaZakupow, ...pozaGrafikiem] };
         });
         if (wyn.status !== 'success' || wyn.powtorzenie) return wyn;
-        zapiszLog(tenant, 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})`);
+        zapiszLog(tenant, 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})${(wyn.ostrzezenia || []).some(o => o.kod === 'GRAFIK') ? ' — POZA GRAFIKIEM, świadomie' : ''}`);
         // Potwierdzenie e-mail dla klientki (21.10.2026) — w tle i z własnym try/catch:
         // wizyta jest już zapisana i żaden problem z pocztą nie może tego cofnąć ani opóźnić.
         try { maileWizyt().potwierdzenieWTle(tenant, wyn.rezId, imie); } catch (e) { log.error('[terminarz] potwierdzenie e-mail:', e.message); }
@@ -1860,8 +1863,8 @@ module.exports = (db, opts = {}) => {
         const poz = zbudujPozycje(nowePoz, cfg.katalog, cfg.pracownicy);
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, rez.id_klienta);
         k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(rez.id));
-        const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: rez.id });
-        const podglad = { obecny: { start: rez.start, koniec: rez.koniec, pozycje: aktywne.map(p => ({ id: p.id, nazwa: p.kategoria + (p.wariant ? ' / ' + p.wariant : ''), pracownik: p.pracownik, start: p.start, koniec: p.koniec })) }, nowy: { start: w.start, koniec: w.koniec, pozycje: w.pozycje.map(p => ({ nazwa: p.nazwa, pracownik: p.pracownik, start: p.start, koniec: p.koniec, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id })) }, ok: w.ok, problemy: w.problemy };
+        const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: rez.id, mimoGrafiku: !!d.mimo_grafiku });
+        const podglad = { obecny: { start: rez.start, koniec: rez.koniec, pozycje: aktywne.map(p => ({ id: p.id, nazwa: p.kategoria + (p.wariant ? ' / ' + p.wariant : ''), pracownik: p.pracownik, start: p.start, koniec: p.koniec })) }, nowy: { start: w.start, koniec: w.koniec, pozycje: w.pozycje.map(p => ({ nazwa: p.nazwa, pracownik: p.pracownik, start: p.start, koniec: p.koniec, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id })) }, ok: w.ok, problemy: w.problemy, ostrzezenia: w.ostrzezenia || [] };
         if (!w.ok) return { status: 'konflikt', message: w.problemy[0] ? w.problemy[0].opis : 'Wybrany komplet nie jest dostępny.', podglad, alternatywy: await alternatywy(tenant, start.slice(0, 10), poz, cfg, rez.id_klienta, rez.id) };
         if (!d.potwierdz) return { status: 'success', podglad, message: 'Obecna wizyta pozostaje — zmienimy ją po zatwierdzeniu.' };
         const conn = await polacz();
@@ -1872,7 +1875,7 @@ module.exports = (db, opts = {}) => {
             // ponowne sprawdzenie pod blokadą (R08) i kontrola wersji w UPDATE
             const k2 = await kontekstDnia(tenant, start.slice(0, 10), cfg, rez.id_klienta);
             k2.klientZajety = k2.klientZajety.filter(x => String(x.rezerwacja_id) !== String(rez.id));
-            const w2 = S.sprawdzKomplet({ ...k2, start, pozycje: poz, pominRezerwacje: rez.id });
+            const w2 = S.sprawdzKomplet({ ...k2, start, pozycje: poz, pominRezerwacje: rez.id, mimoGrafiku: !!d.mimo_grafiku });
             if (!w2.ok) return { status: 'konflikt', message: 'Termin został w międzyczasie zajęty. ' + (w2.problemy[0] ? w2.problemy[0].opis : ''), podglad: { ...podglad, ok: false, problemy: w2.problemy }, alternatywy: await alternatywy(tenant, start.slice(0, 10), poz, cfg, rez.id_klienta, rez.id) };
             await begin(conn);
             // ZK-02 (U07/U08, §10.1): przesunięcie zachowuje przydziały; składniki sprawdzane na NOWĄ datę (ważność, zawieszenie, stan, aktualne źródło) — odmowa = stara wizyta i rezerwacja bez zmian
@@ -1889,7 +1892,8 @@ module.exports = (db, opts = {}) => {
               for (const z of p.zajecia) await qc(conn, `INSERT INTO Term_Zajecia (tenant_id, rezerwacja_id, pozycja_id, typ_zasobu, klucz, od, do_, powod) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, rez.id, stara.id, z.typ_zasobu, String(z.klucz), S.naStr(z.od), S.naStr(z.do), z.powod]);
             }
             const opisCzasow = aktywne.map((sp, i) => (Number(sp.czas_min) !== Number(w2.pozycje[i].czas_min) ? `${sp.kategoria}${sp.wariant ? ' / ' + sp.wariant : ''}: ${sp.czas_min} → ${w2.pozycje[i].czas_min} min` : null)).filter(Boolean).join('; ');
-            await historia(conn, tenant, rez.id, imie, 'przelozono', `${rez.start === w2.start && opisCzasow ? 'czas trwania' : `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}`}${opisCzasow ? ' · ' + opisCzasow : ''}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, podglad.obecny, podglad.nowy);
+            const pozaGrafikiemZm = (w2.ostrzezenia || []).filter(o => o.kod === 'GRAFIK').map(o => `${o.pracownik} ${String(o.od).slice(11, 16)}–${String(o.do).slice(11, 16)}`).join(', ');
+            await historia(conn, tenant, rez.id, imie, 'przelozono', `${rez.start === w2.start && opisCzasow ? 'czas trwania' : `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}`}${opisCzasow ? ' · ' + opisCzasow : ''}${pozaGrafikiemZm ? ' · poza grafikiem: ' + pozaGrafikiemZm : ''}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, podglad.obecny, podglad.nowy);
             await commit(conn);
             zapiszLog(tenant, 'TERMINARZ: ZMIANA TERMINU', imie, `${rez.numer} ${rez.klient_nazwa}: ` + (rez.start === w2.start && opisCzasow ? `czas trwania — ${opisCzasow}` : `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}${opisCzasow ? ' · czas: ' + opisCzasow : ''}`));
             const czasZmienil = rez.start !== w2.start;
