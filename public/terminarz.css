@@ -53,6 +53,10 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .trm-row > * { flex:1; min-width:0; }
 .trm-row .fix { flex:0 0 auto; }
+/* zgłoszenie #21 (30.10.2026): czas trwania przy pozycji w panelu zmiany — obok wykonawcy, nie pod nim */
+.trm-z-poz { flex-wrap:nowrap; }
+.trm-z-poz .trm-z-czas { flex:0 0 auto; width:84px; text-align:right; }
+.trm-z-poz > span { flex:0 0 auto; }
 /* kontrolki o stałym rozmiarze nigdy nie rozciągają się w .trm-row (raport T07: owalny ✕, rozciągnięty przełącznik) */
 .trm-row > .trm-x, .trm-row > .trm-switch, .trm-row > .trm-awatar, .trm-row > .trm-pill, .trm-row > .trm-segment { flex:0 0 auto; }
 .trm-grid2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -456,6 +460,9 @@ body.trm-aktywny #boczki-toasts { top:16px !important; bottom:auto !important; r
    na kartach wizyt (zielony wykonane, bursztyn odwołane, czerwony nieobecności). */
 .trm-historia { display:flex; flex-direction:column; gap:14px; }
 .trm-hist-pasek { display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between; }
+/* zgłoszenie #19 (30.10.2026): powrót z Historii do kalendarza — ten sam przycisk co w Ustawieniach */
+.trm-hist-wroc { margin-left:auto; white-space:nowrap; }
+@media (max-width: 760px) { .trm-hist-wroc { margin-left:0; width:100%; } }
 .trm-hist-daty { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
 .trm-hist-daty label { margin:0; font-size:12px; color:var(--t-mut); }
 .trm-hist-daty input[type=date] { width:auto; min-width:150px; }

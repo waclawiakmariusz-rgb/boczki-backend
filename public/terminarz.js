@@ -247,14 +247,19 @@
   TRM.widokZmien = (w) => {
     if (w === 'tydzien') w = 'dzien';                       // widok tygodnia zdjęty 21.10.2026 — stare wejścia prowadzą do dnia
     if (w === 'dzien' && waski()) TRM._przewinDoSiatki = true;   // telefon: po wejściu w Dzień pokaż od razu siatkę
-    if (w === 'ustawienia' && TRM.widok !== 'ustawienia') TRM.widokPoprzedni = TRM.widok; // R04: powrót do tego samego widoku, dnia i filtrów
+    // R04: powrót do tego samego widoku, dnia i filtrów. Od 30.10.2026 także dla Historii — zgłoszenie #19:
+    // wejście w historię klientki z otwartej wizyty zabierało z kalendarza i nie było widać, którędy wrócić.
+    if ((w === 'ustawienia' || w === 'historia') && TRM.widok !== w) TRM.widokPoprzedni = TRM.widok;
     TRM.widok = w;
     document.querySelectorAll('#trm-views button').forEach(b => b.classList.toggle('on', b.textContent === ({ dzien: 'Dzień', agenda: 'Agenda', zasoby: 'Zasoby', historia: 'Historia', moj: 'Mój dzień' })[w]));
     const root = document.querySelector('#trm-root .trm'); if (root) root.classList.toggle('tryb-ustawienia', w === 'ustawienia');
     const bu = el('trm-btn-ust'); if (bu) bu.classList.toggle('on', w === 'ustawienia');
     odswiez();
   };
-  TRM.wrocDoKalendarza = () => TRM.widokZmien(TRM.widokPoprzedni && TRM.widokPoprzedni !== 'ustawienia' ? TRM.widokPoprzedni : 'dzien');
+  TRM.wrocDoKalendarza = () => {
+    const p = TRM.widokPoprzedni;
+    TRM.widokZmien(p && p !== 'ustawienia' && p !== 'historia' ? p : 'dzien');
+  };
 
   let odswiezReq = 0; // A17: szybkie klikanie ‹ › / zmiana widoku — starsza odpowiedź nie może nadpisać nowszego widoku
   async function odswiez(opcje) {
@@ -710,7 +715,7 @@
   TRM.bublaStan = async (pozId, stan) => { const id = TRM.bubla && TRM.bubla.id; if (!id || !pozId) return; TRM.zamknijBuble(); const d = await api('trm_pozycja_stan', { id, pozycja_id: pozId, stan }); if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message); toast('success', stan === 'w_trakcie' ? 'Zabieg rozpoczęty' : 'Zabieg zakończony'); await odswiez(); if (TRM.szcz && TRM.szcz.id === id) await przeladujSzczegoly(d.rezerwacja); };
   TRM.zamknijBuble = () => { TRM.bubla = null; const l = el('trm-bubble-layer'); if (l) l.innerHTML = ''; };
   TRM.bublaSzczegoly = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); };
-  TRM.bublaPrzelozenie = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); if (!TRM.szcz || !TRM.szcz.rez) return; TRM.szcz.tryb = 'zmiana'; TRM.zm = { start: TRM.szcz.rez.start.slice(0, 16), prac: {} }; TRM.renderSzczegoly(); };
+  TRM.bublaPrzelozenie = async () => { const id = TRM.bubla.id; TRM.zamknijBuble(); await TRM.otworzSzczegoly(id); if (!TRM.szcz || !TRM.szcz.rez) return; TRM.szcz.tryb = 'zmiana'; TRM.zm = { czasy: {}, start: TRM.szcz.rez.start.slice(0, 16), prac: {} }; TRM.renderSzczegoly(); };
   TRM.bublaObecnosc = async (stan) => { const id = TRM.bubla.id; TRM.zamknijBuble(); const d = await api('trm_obecnosc', { id, obecnosc: stan }); if (d.status !== 'success') return toast('error', 'Nie udało się', d.message); toast('success', 'Zapisano'); await odswiez(); };
   // Hak do prób: pozwala sprawdzić kolory kategorii bez klikania po całym terminarzu
   // (używany przez harness przy zgłoszeniu #12 — rozróżnialność odcieni na prawdziwym cenniku).
@@ -1104,6 +1109,7 @@
             <button class="trm-btn link sm" onclick="TRM.histZakres(365)">rok</button>
           </span>
         </div>
+        <button class="trm-btn fix trm-hist-wroc" onclick="TRM.wrocDoKalendarza()">‹ Wróć do kalendarza</button>
       </div>`;
 
     let wybor = '';
@@ -2043,7 +2049,7 @@
       h += `<div class="trm-card">${glowna ? `<div class="trm-akcja-glowna">${glowna}</div>` : wszystkieWykonane ? `<div class="trm-note ok small">Wizyta wykonana — podsumowanie i rozliczenie w zakładce „Rozliczenie”.</div>` : ''}
       <details class="trm-wiecej"><summary>Więcej działań</summary>
         <div class="trm-akcje">
-          ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{}};TRM.renderSzczegoly()">Przełóż całą wizytę</button>` : ''}
+          ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{},czasy:{}};TRM.renderSzczegoly()">Przełóż całą wizytę</button>` : ''}
           ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
           ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
           ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj wizytę</button>` : ''}
@@ -2121,7 +2127,7 @@
     return `<div class="trm-card"><h3>Zmień termin / osobę</h3>
       <div class="trm-note info small">Obecna wizyta pozostaje: <b>${ladnaData(r.start.slice(0, 10), true)} ${hhmm(r.start)}</b>. Zmienimy ją dopiero po poprawnym zatwierdzeniu.</div>
       <div class="trm-grid2"><div class="trm-field"><label>Nowa data</label><input type="date" id="trm-z-data" value="${z.start.slice(0, 10)}"></div><div class="trm-field"><label>Godzina</label><input type="time" id="trm-z-godz" step="300" value="${z.start.slice(11, 16)}"></div></div>
-      ${akt.map(p => { const u = usluga(p.usluga_id); const lista = (u && u.pracownicy && u.pracownicy.length) ? u.pracownicy : TRM.dane.pracownicy; return `<div class="trm-field"><label>${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</label><select onchange="TRM.zm.prac['${p.id}']=this.value||null"><option value="">Dowolna właściwa osoba</option>${lista.map(x => `<option ${(z.prac[p.id] !== undefined ? z.prac[p.id] : p.pracownik) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>`; }).join('')}
+      ${akt.map(p => { const u = usluga(p.usluga_id); const lista = (u && u.pracownicy && u.pracownicy.length) ? u.pracownicy : TRM.dane.pracownicy; return `<div class="trm-field"><label>${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</label><div class="trm-row trm-z-poz"><select onchange="TRM.zm.prac['${p.id}']=this.value||null"><option value="">Dowolna właściwa osoba</option>${lista.map(x => `<option ${(z.prac[p.id] !== undefined ? z.prac[p.id] : p.pracownik) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><input type="number" class="trm-z-czas" min="5" max="480" step="5" value="${z.czasy[p.id] != null ? z.czasy[p.id] : p.czas_min}" title="Czas trwania zabiegu w minutach" onchange="TRM.zmCzas('${p.id}', this.value)"><span class="muted small">min</span></div></div>`; }).join('')}
       <div class="trm-field"><label>Powód (opcjonalnie)</label><input id="trm-z-powod" placeholder="np. prośba klientki"></div>
       <div id="trm-z-wynik">${z.wynik ? podgladZmianyHtml(z.wynik) : ''}</div>
       <div class="trm-row" style="margin-top:8px"><button class="trm-btn" onclick="TRM.zmianaSprawdz(false)">Sprawdź</button><button class="trm-btn primary" onclick="TRM.zmianaSprawdz(true)" ${z.wynik && z.wynik.status === 'success' ? '' : 'disabled'} id="trm-z-ok">Zatwierdź zmianę</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
@@ -2133,10 +2139,24 @@
     else if (pg.nowy) h += `<div class="trm-note ok"><b>Komplet dostępny</b> · ${ladnaData(pg.nowy.start.slice(0, 10), true)} ${hhmm(pg.nowy.start)}–${hhmm(pg.nowy.koniec)}<br>${pg.nowy.pozycje.map(p => `${esc(p.nazwa)} — <b>${esc(p.pracownik)}</b>${p.gabinet_id ? ' · ' + esc((zasob(p.gabinet_id) || {}).nazwa || '') : ''}${p.urzadzenie_id ? ' · ' + esc((zasob(p.urzadzenie_id) || {}).nazwa || '') : ''}`).join('<br>')}</div>`;
     return h;
   }
+  // Zgłoszenie #21 (30.10.2026): czas trwania już umówionej wizyty. Zakres ten sam co w kreatorze (5–480 min);
+  // wartość spoza zakresu wraca do poprzedniej, żeby nie wysłać na serwer liczby, która i tak zostanie odrzucona.
+  TRM.zmCzas = (id, v) => {
+    const n = Math.round(Number(v));
+    const poz = (TRM.szcz.rez.pozycje || []).find(p => String(p.id) === String(id));
+    if (!Number.isFinite(n) || n < 5 || n > 480) {
+      toast('warning', 'Czas poza zakresem', 'Zabieg może trwać od 5 do 480 minut.');
+      delete TRM.zm.czasy[id];
+      return TRM.renderSzczegoly();
+    }
+    if (poz && n === Number(poz.czas_min)) delete TRM.zm.czasy[id]; else TRM.zm.czasy[id] = n;
+    TRM.zm.wynik = null;                      // zmiana długości unieważnia poprzedni wynik sprawdzenia
+    TRM.renderSzczegoly();
+  };
   TRM.zmianaSprawdz = async (potwierdz) => {
     const z = TRM.zm, r = TRM.szcz.rez;
     z.start = `${el('trm-z-data').value} ${el('trm-z-godz').value}`;
-    const d = await api('trm_zmien', { id: r.id, wersja: r.wersja, start: z.start, pracownicy_pozycji: z.prac, potwierdz: !!potwierdz, powod: (el('trm-z-powod') || {}).value || '' });
+    const d = await api('trm_zmien', { id: r.id, wersja: r.wersja, start: z.start, pracownicy_pozycji: z.prac, czasy_pozycji: z.czasy || {}, potwierdz: !!potwierdz, powod: (el('trm-z-powod') || {}).value || '' });
     if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane przed zapisaniem.'); return przeladujSzczegoly(d.rezerwacja); }
     if (d.status === 'error') return toast('error', 'Nie można zmienić', d.message);
     if (potwierdz && d.status === 'success' && d.rezerwacja) { toast('success', 'Termin zmieniony', `${d.rezerwacja.numer} · ${hhmm(d.rezerwacja.start)}`); TRM.data = d.rezerwacja.start.slice(0, 10); const di = el('trm-data'); if (di) di.value = TRM.data; return przeladujSzczegoly(d.rezerwacja); }

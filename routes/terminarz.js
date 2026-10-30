@@ -1847,7 +1847,16 @@ module.exports = (db, opts = {}) => {
         const start = sprawdzDt(d.start || rez.start, 'start');
         const cfg = await wspolneCfg(tenant);
         const aktywne = rez.pozycje.filter(p => p.stan !== 'anulowana');
-        const nowePoz = aktywne.map(p => ({ usluga_id: p.usluga_id, pracownik: (d.pracownicy_pozycji && d.pracownicy_pozycji[String(p.id)] !== undefined) ? (d.pracownicy_pozycji[String(p.id)] || null) : p.pracownik, czas_min: p.czas_min }));
+        // Zgłoszenie #21 (30.10.2026): czas trwania umówionej wizyty. Brak wpisu = czas zostaje taki, jaki był
+        // (tak działało przekładanie wcześniej). Wartość spoza 5–480 odrzucamy jawnie, zamiast po cichu wracać do cennika.
+        const czasPozycji = (poz) => {
+          const wej = d.czasy_pozycji && d.czasy_pozycji[String(poz.id)];
+          if (wej === undefined || wej === null || wej === '') return poz.czas_min;
+          const n = Math.round(Number(wej));
+          if (!Number.isFinite(n) || n < 5 || n > 480) throw new BladUzytkownika(`Czas zabiegu „${poz.kategoria}${poz.wariant ? ' / ' + poz.wariant : ''}” musi mieścić się w 5–480 minutach.`);
+          return n;
+        };
+        const nowePoz = aktywne.map(p => ({ usluga_id: p.usluga_id, pracownik: (d.pracownicy_pozycji && d.pracownicy_pozycji[String(p.id)] !== undefined) ? (d.pracownicy_pozycji[String(p.id)] || null) : p.pracownik, czas_min: czasPozycji(p) }));
         const poz = zbudujPozycje(nowePoz, cfg.katalog, cfg.pracownicy);
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, rez.id_klienta);
         k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(rez.id));
@@ -1876,12 +1885,13 @@ module.exports = (db, opts = {}) => {
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
             for (let i = 0; i < w2.pozycje.length; i++) {
               const p = w2.pozycje[i], stara = aktywne[i];
-              await qc(conn, `UPDATE Term_Pozycje SET pracownik = ?, start = ?, koniec = ?, gabinet_id = ?, urzadzenie_id = ? WHERE tenant_id = ? AND id = ?`, [p.pracownik, p.start, p.koniec, p.gabinet_id ? Number(p.gabinet_id) : null, p.urzadzenie_id ? Number(p.urzadzenie_id) : null, tenant, stara.id]);
+              await qc(conn, `UPDATE Term_Pozycje SET pracownik = ?, start = ?, koniec = ?, czas_min = ?, gabinet_id = ?, urzadzenie_id = ? WHERE tenant_id = ? AND id = ?`, [p.pracownik, p.start, p.koniec, p.czas_min, p.gabinet_id ? Number(p.gabinet_id) : null, p.urzadzenie_id ? Number(p.urzadzenie_id) : null, tenant, stara.id]);
               for (const z of p.zajecia) await qc(conn, `INSERT INTO Term_Zajecia (tenant_id, rezerwacja_id, pozycja_id, typ_zasobu, klucz, od, do_, powod) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [tenant, rez.id, stara.id, z.typ_zasobu, String(z.klucz), S.naStr(z.od), S.naStr(z.do), z.powod]);
             }
-            await historia(conn, tenant, rez.id, imie, 'przelozono', `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, podglad.obecny, podglad.nowy);
+            const opisCzasow = aktywne.map((sp, i) => (Number(sp.czas_min) !== Number(w2.pozycje[i].czas_min) ? `${sp.kategoria}${sp.wariant ? ' / ' + sp.wariant : ''}: ${sp.czas_min} → ${w2.pozycje[i].czas_min} min` : null)).filter(Boolean).join('; ');
+            await historia(conn, tenant, rez.id, imie, 'przelozono', `${rez.start === w2.start && opisCzasow ? 'czas trwania' : `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}`}${opisCzasow ? ' · ' + opisCzasow : ''}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, podglad.obecny, podglad.nowy);
             await commit(conn);
-            zapiszLog(tenant, 'TERMINARZ: ZMIANA TERMINU', imie, `${rez.numer} ${rez.klient_nazwa}: ${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}`);
+            zapiszLog(tenant, 'TERMINARZ: ZMIANA TERMINU', imie, `${rez.numer} ${rez.klient_nazwa}: ` + (rez.start === w2.start && opisCzasow ? `czas trwania — ${opisCzasow}` : `${rez.start.slice(0, 16)} → ${w2.start.slice(0, 16)}${opisCzasow ? ' · czas: ' + opisCzasow : ''}`));
             const czasZmienil = rez.start !== w2.start;
             const kimZmienil = podglad.obecny.pozycje.some((pp, i) => pp.pracownik !== w2.pozycje[i].pracownik);
             const dotyczyWszyscy = [...new Set([...prIz(podglad.obecny.pozycje), ...prIz(w2.pozycje)])];
