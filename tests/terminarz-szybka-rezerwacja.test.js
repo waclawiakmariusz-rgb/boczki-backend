@@ -141,7 +141,12 @@ describe('moduł zgód i strona linku', () => {
 
 describe('ekran recepcji', () => {
     test('kreator: wejście „bez kartoteki” z imieniem i telefonem; klientka bez ID z flagą', () => {
-        expect(JS).toContain('onclick="TRM.nowaBezKartoteki()">Szybka rezerwacja bez kartoteki (do wpłaty zadatku)</button>');
+        // pełny przycisk z ikoną SVG z prostych linii (uwaga właściciela 30.10: tekstowy odnośnik „wyglądał jak roboczy slop”; zasada: ikony SVG, nie emoji)
+        expect(JS).toContain('<button type="button" class="trm-bk-start" onclick="TRM.nowaBezKartoteki()">${IKONA_TELEFON}<span class="t"><b>Szybka rezerwacja bez kartoteki</b>');
+        expect(JS).toMatch(/const IKONA_TELEFON = '<svg class="ico" viewBox="0 0 24 24"/);
+        expect(JS).not.toMatch(/nowaBezKartoteki\(\)">[^<]*[\u{1F300}-\u{1FAFF}]/u);
+        expect(CSS).toContain('.trm-bk-start { display:flex;');
+        expect(CSS).toContain('body.dark-mode .trm .trm-bk-start {');
         expect(JS).toContain("n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true };");
         expect(JS).toContain("if (telefon.replace(/\\D/g, '').length < 9) return toast('warning', 'Podaj numer telefonu'");
     });
