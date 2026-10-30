@@ -118,23 +118,30 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 /* szybka rezerwacja do wpłaty zadatku (hold): kreskowana, bursztynowa — ma się odróżniać od wizyt potwierdzonych */
 .trm-karta.hold { border-style:dashed; border-color:#d9b25a; background:var(--t-warn-bg); }
 .trm-karta.hold .zn .st { background:#f6dfa4; color:var(--t-warn-fg); }
-.trm-wybrana.hold { border:1px dashed #d9b25a; background:var(--t-warn-bg); }
-.trm-bk { border:1px dashed #d9b25a; border-radius:var(--t-rs); padding:10px 12px; background:var(--t-warn-bg); }
-.trm-bk-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:13px; color:var(--t-warn-fg); }
-.trm-bk-head .ico { color:var(--t-warn-fg); }
-/* przycisk wejścia w szybką rezerwację: pełna szerokość, słuchawka w kółku, dwie linie tekstu, strzałka — nie tekstowy odnośnik */
-.trm-bk-start { display:flex; align-items:center; gap:12px; width:100%; margin-top:10px; padding:10px 12px; text-align:left; font:inherit; cursor:pointer; border-radius:var(--t-rs); border:1px dashed #d9b25a; background:var(--t-warn-bg); color:inherit; transition:background .13s, border-color .13s, box-shadow .13s; }
-.trm-bk-start:hover, .trm-bk-start:focus-visible { background:#fbe9c0; border-style:solid; box-shadow:0 2px 8px rgba(120,82,14,.12); outline:none; }
-.trm-bk-start .ico { flex:0 0 34px; width:34px; height:34px; padding:7px; border-radius:50%; background:#fff; color:var(--t-warn-fg); border:1px solid #ecd59a; }
+/* Szybka rezerwacja (hold) w kreatorze — ta sama karta co reszta panelu (biała, --t-line), tylko złoty akcent z lewej.
+   Żółte kreskowane tło zostaje wyłącznie na kafelku w siatce, gdzie znaczy „niepotwierdzona”. */
+.trm-bk, .trm-wybrana.hold { background:var(--t-sur); border:1px solid var(--t-line); border-left:4px solid var(--t-gold); border-radius:var(--t-rs); padding:12px 14px; margin-top:6px; }
+.trm-bk-head { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+.trm-bk-head .ico, .trm-wybrana.hold .ico, .trm-bk-start .ico { flex:0 0 32px; width:32px; height:32px; padding:7px; border-radius:50%; background:var(--t-acc2); color:var(--t-acc); }
+.trm-bk-head .t { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.trm-bk-head .t b { font-size:13.5px; }
+.trm-bk-head .t small, .trm-bk .trm-pomoc { font-size:12px; color:var(--t-mut); line-height:1.35; margin:0; }
+.trm-bk .trm-grid2 { align-items:start; }
+.trm-bk .trm-field { margin-bottom:8px; }
+.trm-bk .trm-field label { white-space:nowrap; }
+.trm-bk .trm-row { margin-top:4px; }
+.trm-wybrana.hold { display:flex; align-items:center; gap:10px; }
+.trm-wybrana.hold .t { flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.trm-wybrana.hold .t .m { font-size:12px; color:var(--t-mut); }
+.trm-wybrana.hold .trm-pill { font-size:11px; }
+/* wejście w szybką rezerwację: pełny przycisk w języku kart panelu, nie tekstowy odnośnik */
+.trm-bk-start { display:flex; align-items:center; gap:12px; width:100%; margin-top:10px; padding:10px 14px 10px 12px; text-align:left; font:inherit; cursor:pointer; border-radius:var(--t-rs); border:1px solid var(--t-line); border-left:4px solid var(--t-gold); background:var(--t-sur); color:inherit; transition:background .13s, box-shadow .13s; }
+.trm-bk-start:hover, .trm-bk-start:focus-visible { background:var(--t-bg); box-shadow:0 2px 10px rgba(48,39,32,.08); outline:none; }
 .trm-bk-start .t { display:flex; flex-direction:column; gap:1px; min-width:0; flex:1; }
 .trm-bk-start .t b { font-size:13.5px; }
 .trm-bk-start .t small { font-size:12px; color:var(--t-mut); line-height:1.35; }
 .trm-bk-start .chev { flex:0 0 18px; color:var(--t-mut); }
-body.dark-mode .trm .trm-bk-start { background:rgba(217,178,90,.1); border-color:#7a5f1c; }
-body.dark-mode .trm .trm-bk-start:hover { background:rgba(217,178,90,.18); }
-body.dark-mode .trm .trm-bk-start .ico { background:rgba(255,255,255,.06); border-color:#7a5f1c; color:#e9c777; }
-body.dark-mode .trm .trm-bk, body.dark-mode .trm .trm-wybrana.hold { background:rgba(217,178,90,.1); border-color:#7a5f1c; }
-body.dark-mode .trm .trm-bk-head, body.dark-mode .trm .trm-bk-head .ico { color:#e9c777; }
+body.dark-mode .trm .trm-bk-start:hover { background:rgba(255,255,255,.04); }
 .trm-zadatek-os { display:flex; flex-direction:column; gap:4px; margin:6px 0 10px; font-size:12.5px; }
 .trm-zadatek-os > div { display:flex; gap:8px; align-items:flex-start; color:var(--t-mut); }
 .trm-zadatek-os > div i { flex:0 0 10px; width:10px; height:10px; border-radius:50%; border:2px solid #d9b25a; margin-top:4px; background:#fff; }

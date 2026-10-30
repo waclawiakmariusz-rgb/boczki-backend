@@ -146,7 +146,13 @@ describe('ekran recepcji', () => {
         expect(JS).toMatch(/const IKONA_TELEFON = '<svg class="ico" viewBox="0 0 24 24"/);
         expect(JS).not.toMatch(/nowaBezKartoteki\(\)">[^<]*[\u{1F300}-\u{1FAFF}]/u);
         expect(CSS).toContain('.trm-bk-start { display:flex;');
-        expect(CSS).toContain('body.dark-mode .trm .trm-bk-start {');
+        // druga uwaga właściciela (30.10, zrzut z produkcji): żółta kreskowana ramka w kreatorze wyglądała roboczo —
+        // formularz i wybór są teraz zwykłą kartą panelu ze złotym akcentem; kreskowany zostaje tylko kafelek na siatce
+        expect(CSS).toContain('.trm-bk, .trm-wybrana.hold { background:var(--t-sur); border:1px solid var(--t-line); border-left:4px solid var(--t-gold);');
+        expect(CSS).not.toMatch(/\.trm-bk \{[^}]*dashed/);
+        expect(CSS).toContain('.trm-karta.hold { border-style:dashed;');
+        expect(JS).toContain('<label>Telefon</label>');
+        expect(JS).toContain('>Zapisz dane</button>');
         expect(JS).toContain("n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true };");
         expect(JS).toContain("if (telefon.replace(/\\D/g, '').length < 9) return toast('warning', 'Podaj numer telefonu'");
     });
