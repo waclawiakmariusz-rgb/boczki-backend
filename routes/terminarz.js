@@ -1867,7 +1867,7 @@ module.exports = (db, opts = {}) => {
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, d.id_klienta || null);
         if (d.pomin_rezerwacje) k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(d.pomin_rezerwacje));
         const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: d.pomin_rezerwacje || null, mimoGrafiku: !!d.mimo_grafiku });
-        const odp = { status: 'success', ok: w.ok, start: w.start, koniec: w.koniec, przerwy_min: w.przerwy_min, problemy: w.problemy, ostrzezenia: w.ostrzezenia || [], pozycje: w.pozycje.map(p => ({ usluga_id: p.usluga_id, nazwa: p.nazwa, start: p.start, koniec: p.koniec, pracownik: p.pracownik, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, cena: p.cena, czas_min: p.czas_min })), alternatywy: [] };
+        const odp = { status: 'success', ok: w.ok, start: w.start, koniec: w.koniec, przerwy_min: w.przerwy_min, problemy: w.problemy, ostrzezenia: w.ostrzezenia || [], pozycje: w.pozycje.map(p => ({ usluga_id: p.usluga_id, nazwa: p.nazwa, start: p.start, koniec: p.koniec, pracownik: p.pracownik, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, cena: p.cena, czas_min: p.czas_min, bufor_pominiety: !!p.bufor_pominiety })), alternatywy: [] };
         if (!w.ok && d.z_alternatywami !== false) odp.alternatywy = await alternatywy(tenant, start.slice(0, 10), poz, cfg, d.id_klienta || null, d.pomin_rezerwacje || null);
         return odp;
       }

@@ -15,3 +15,11 @@ Jak silnik to ułożył: 10:00–11:00 Endermologia → Ola · 11:10–11:55 Mel
 Reguły: pozycje jedna po drugiej w kolejności dodania; wskazana osoba = tylko ona; „dowolna” = pierwsza kompetentna i wolna w tym oknie (bez preferencji ciągłości); gabinet i urządzenie dobierane z puli zabiegu; każda kolumna pokazuje kafelek tylko ze swoimi pozycjami.
 
 Scenariusz: scratch `komplet-pakiet.json` (wymagał zatwierdzenia stanu składników pakietu Julii jako manager — w demo były „do sprawdzenia”). Wizyta pokazowa po zrzutach usunięta.
+
+## Dopisane 30.10 po południu — 2× ten sam zabieg bez marginesu
+
+Decyzja właściciela: dwa identyczne zabiegi pod rząd (np. 2× Kriolipoliza) nie potrzebują bufora między sobą. Silnik (`routes/terminarz-silnik.js`) zeruje bufor „po” pozycji, po której następuje ta sama usługa, i bufor „przed” pozycji poprzedzonej tą samą usługą; bufory na zewnątrz pary zostają; decyduje usługa, nie wykonawczyni. Karta wyniku dopisuje jedno zdanie o braku marginesu.
+
+Pokaz (`01-2x-*.png`, `02-2x-*.png`, `03-2x-*.png`): 2× Endermologia + 2× Meltivio od 10:00 → 10:00–11:00 Ola, **11:00–12:00** Anna (zaraz po, bez 10 min), 12:10 Meltivio (po buforze drugiej Endermologii), 12:55 Meltivio. Testy silnika: +3. Wizyta pokazowa skasowana przez API.
+
+Przy okazji złapana i naprawiona regresja z #20 (była na produkcji od 30.10 ~14:00): zielona karta „Termin dostępny” bez ostrzeżenia o grafiku wypadała z łańcucha else-if i pokazywała tekst „Wybierz godzinę z listy…”. Przycisk zapisu działał, ale recepcja nie widziała szczegółów (kto, gabinet, urządzenie). Strażnik w `tests/terminarz-zgloszenie-20.test.js`, scenariusz A sprawdza teraz widoczność zielonej karty.

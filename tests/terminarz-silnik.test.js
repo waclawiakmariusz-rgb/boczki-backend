@@ -118,6 +118,30 @@ describe('terminarz-silnik: sprawdzKomplet', () => {
     expect(r.koniec).toBe(`${D} 13:50:00`);
     expect(r.przerwy_min).toBe(10);
   });
+  // Właściciel (30.10.2026): dwa identyczne zabiegi pod rząd (np. 2× Kriolipoliza, kolejny obszar) nie potrzebują marginesu między sobą —
+  // nikt nie sprząta gabinetu ani nie przebiera się między nimi. Marginesy na zewnątrz pary zostają.
+  test('ten sam zabieg 2× pod rząd: bez bufora między nimi, bufor po drugim zostaje', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 12:00`, pozycje: [usluga(), usluga(), usluga({ klucz: 'kob', nazwa: 'Kobido', czas_min: 60, bufor_po_min: 0, urzadzeniaDozwolone: [] })] });
+    expect(r.ok).toBe(true);
+    expect(r.pozycje[1].start).toBe(`${D} 12:40:00`);          // drugi Infinity zaraz po pierwszym, nie po 12:50
+    expect(r.pozycje[2].start).toBe(`${D} 13:30:00`);          // Kobido dopiero po buforze drugiego Infinity (13:20 + 10)
+    expect(r.przerwy_min).toBe(10);                             // jedna przerwa, nie dwie
+    expect(r.pozycje[0].zajecia.filter(z => z.powod === 'bufor')).toEqual([]);                 // pierwszy bez bufora „po”
+    expect(r.pozycje[1].zajecia.filter(z => z.powod === 'bufor').length).toBeGreaterThan(0);   // drugi ma bufor „po” jak zawsze
+    // flaga „bez marginesu” tylko tam, gdzie naprawdę było co pominąć: pierwszy Infinity (bufor po 10 → 0); drugi ma bufor przed 0, a po nim inna usługa
+    expect(r.pozycje[0].bufor_pominiety).toBe(true); expect(r.pozycje[1].bufor_pominiety).toBeUndefined(); expect(r.pozycje[2].bufor_pominiety).toBeUndefined();
+  });
+  test('ten sam zabieg, ale inna osoba przy drugim — też bez marginesu (decyduje usługa, nie wykonawczyni)', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 12:00`, pozycje: [usluga(), usluga({ pracownik: 'Emilia' })] });
+    expect(r.ok).toBe(true);
+    expect(r.pozycje[1].start).toBe(`${D} 12:40:00`);
+    expect(r.pozycje[1].pracownik).toBe('Emilia');
+  });
+  test('dwa różne zabiegi — margines między nimi bez zmian (T055 nadal obowiązuje)', () => {
+    const r = S.sprawdzKomplet({ ...bazowe(), start: `${D} 12:00`, pozycje: [usluga(), usluga({ klucz: 'kob', nazwa: 'Kobido', czas_min: 60, bufor_po_min: 0, urzadzeniaDozwolone: [] })] });
+    expect(r.pozycje[1].start).toBe(`${D} 12:50:00`);
+    expect(r.pozycje[0].bufor_pominiety).toBeUndefined();
+  });
   test('R05: klientka ma inną wizytę w tym czasie', () => {
     const r = S.sprawdzKomplet({ ...bazowe(), klientZajety: [{ od: `${D} 12:30`, do: `${D} 13:00` }], start: `${D} 12:00`, pozycje: [usluga()] });
     expect(r.ok).toBe(false); expect(r.problemy[0].kod).toBe('KLIENT_ZAJETY');

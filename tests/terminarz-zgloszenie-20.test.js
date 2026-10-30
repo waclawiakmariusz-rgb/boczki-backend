@@ -82,6 +82,18 @@ describe('ekran', () => {
     });
 });
 
+describe('karta wyniku terminu — gałąź „ok” nie może wypaść z łańcucha else-if (regresja z 30.10)', () => {
+    test('zielona karta bez ostrzeżeń renderuje się zawsze, gdy stan to ok', () => {
+        const f = wytnij(JS, 'function sekcjaTerminuHtml(n) {', '\n  }');
+        expect(f).toContain("if (st === 'ok' && dost.wynik) { wynikHtml2 = `<div class=\"trm-wynik-termin ok\">");
+        expect(f).toContain("} else if (st === 'zajety' && dost.wynik) {");
+        // dopiski do zielonej karty (GRAFIK, pominięty margines) są wewnątrz bloku „ok”, nie jako osobne if-y przed else-if
+        const blokOk = f.slice(f.indexOf("if (st === 'ok' && dost.wynik) {"), f.indexOf("} else if (st === 'zajety'"));
+        expect(blokOk).toContain("o.kod === 'GRAFIK')) wynikHtml2 +=");
+        expect(blokOk).toContain("p.bufor_pominiety)) wynikHtml2 +=");
+    });
+});
+
 describe('przewodnik mówi to samo, co robi system', () => {
     test('rozdział 32 nie obiecuje już braku wyjątków, ale nazywa jedyny wyjątek', () => {
         expect(G).not.toContain('Nie ma przycisku „mimo to" — ani dla recepcji, ani dla właścicielki.</li>');

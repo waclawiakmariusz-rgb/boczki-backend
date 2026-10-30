@@ -1520,11 +1520,15 @@
     // R03: jedna wyróżniona karta wyniku — duża godzina, wykonawca, gabinet/urządzenie, status; nic nie jest zapisane
     let wynikHtml2 = '';
     if (n.pozycje.length) {
-      if (st === 'ok' && dost.wynik) wynikHtml2 = `<div class="trm-wynik-termin ok"><div class="godz">${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}</div><div class="st">✓ Termin dostępny${dost.wynik.przerwy_min ? ` · w tym ${dost.wynik.przerwy_min} min przerwy` : ''} · ${esc(ladnaData(n.start.slice(0, 10), true))}</div>
+      // UWAGA: cała gałąź „ok” w jednym bloku. Przy #20 dopisana osobna linia „if (GRAFIK) +=” przechwyciła łańcuch else-if
+      // i zielona karta bez ostrzeżenia spadała do gałęzi „neutralna” (regresja widoczna na produkcji 30.10, wychwycona przy pokazie pakietów).
+      if (st === 'ok' && dost.wynik) { wynikHtml2 = `<div class="trm-wynik-termin ok"><div class="godz">${hhmm(dost.wynik.start)}–${hhmm(dost.wynik.koniec)}</div><div class="st">✓ Termin dostępny${dost.wynik.przerwy_min ? ` · w tym ${dost.wynik.przerwy_min} min przerwy` : ''} · ${esc(ladnaData(n.start.slice(0, 10), true))}</div>
         ${dost.wynik.pozycje.map(p => `<div class="seg"><span>${hhmm(p.start)}–${hhmm(p.koniec)}</span><span><b>${esc(p.nazwa)}</b> — ${esc(p.pracownik)}</span><span class="m">${p.gabinet_id ? nazwaZasobu(p.gabinet_id, 'gabinet') : 'bez gabinetu'}${p.urzadzenie_id ? ' · ' + nazwaZasobu(p.urzadzenie_id, 'urządzenie') : ''}</span></div>`).join('')}
         <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">${n.pozycje.some(p => p.zakup_skladnik_id) ? `Rozliczenie: z zakupu klientki — przy zapisie zarezerwujemy ${n.pozycje.filter(p => p.zakup_skladnik_id).length === 1 ? '1 zabieg' : n.pozycje.filter(p => p.zakup_skladnik_id).length + ' zabiegi'} z pakietu${n.pozycje.some(p => !p.zakup_skladnik_id) ? '; pozostałe po wykonaniu, w Sprzedaży' : ''}.` : 'Rozliczenie: po wykonaniu, w Sprzedaży.'}</div></div>`;
+      // ten sam zabieg 2× pod rząd: silnik pominął margines między nimi — recepcja ma to widzieć, żeby nie szukać „zgubionych” 10 minut
+      if (st === 'ok' && dost.wynik && (dost.wynik.pozycje || []).some(p => p.bufor_pominiety)) wynikHtml2 += `<div class="trm-pomoc" style="margin-top:6px">Ten sam zabieg pod rząd — bez marginesu między powtórzeniami (sprzątanie i przygotowanie dopiero po ostatnim).</div>`;
       if (st === 'ok' && dost.wynik && (dost.wynik.ostrzezenia || []).some(o => o.kod === 'GRAFIK')) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>Poza grafikiem.</b> ${esc((dost.wynik.ostrzezenia.find(o => o.kod === 'GRAFIK') || {}).opis || '')} Umawiasz świadomie — ślad zostanie w historii wizyty.</div>`;
-      else if (st === 'zajety' && dost.wynik) { // D03: „zajęty” = nakładanie wizyt/zasobów; „niedostępny” = poza grafikiem / brak wykonawcy; przy „dowolnym” mówimy o całym zespole
+      } else if (st === 'zajety' && dost.wynik) { // D03: „zajęty” = nakładanie wizyt/zasobów; „niedostępny” = poza grafikiem / brak wykonawcy; przy „dowolnym” mówimy o całym zespole
         const problemy = dost.wynik.problemy || [], kody = problemy.map(p => p.kod || '');
         const zajety = kody.some(k => /ZAJET/.test(k));
         const dowolny = !n.prefPrac && n.pozycje.some(p => !p.pracownik);

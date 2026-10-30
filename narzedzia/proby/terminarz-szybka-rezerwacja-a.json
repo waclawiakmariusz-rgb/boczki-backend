@@ -113,8 +113,8 @@
       "czekaj": 2500
     },
     {
-      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && /Zarezerwuj do wpłaty zadatku/.test(document.getElementById('trm-n-zapisz').textContent) && !document.getElementById('trm-n-zapisz').disabled",
-      "opis": "H03: termin dostępny, przycisk główny brzmi „Zarezerwuj do wpłaty zadatku”"
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && /Termin dostępny/.test((document.querySelector('.trm-wynik-termin')||{}).textContent||'') && /Zarezerwuj do wpłaty zadatku/.test(document.getElementById('trm-n-zapisz').textContent) && !document.getElementById('trm-n-zapisz').disabled",
+      "opis": "H03: termin dostępny — ZIELONA karta „Termin dostępny” widoczna (nie tekst „wybierz godzinę”), przycisk główny brzmi „Zarezerwuj do wpłaty zadatku”"
     },
     {
       "js": "(function(){ var e=document.querySelector('.trm-wybrana.hold'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"

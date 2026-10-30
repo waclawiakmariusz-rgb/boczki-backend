@@ -123,7 +123,15 @@ function sprawdzKomplet(w) {
   const zajeteRobocze = zajeteOdfiltrowane.map(z => ({ ...z, od: naMin(z.od), do: naMin(z.do) }));
   let przerwy = 0;
 
-  w.pozycje.forEach((poz, idx) => {
+  w.pozycje.forEach((pozWe, idx) => {
+    // Ten sam zabieg dwa razy pod rząd (np. 2× Kriolipoliza — kolejny obszar): między nimi nie ma marginesu „po” ani „przed”.
+    // Nikt nie sprząta gabinetu i nie przebiera się między dwoma identycznymi zabiegami tej samej klientki (właściciel, 30.10.2026).
+    // Marginesy na zewnątrz pary (przed pierwszym, po ostatnim) zostają. Decyduje tożsamość usługi (klucz), nie wykonawczyni.
+    const tenSam = (a, b) => !!(a && b && String(a.klucz) === String(b.klucz));
+    const tenSamPoprzedni = idx > 0 && tenSam(w.pozycje[idx - 1], pozWe);
+    const tenSamNastepny = idx < w.pozycje.length - 1 && tenSam(pozWe, w.pozycje[idx + 1]);
+    const pominietoPrzed = tenSamPoprzedni && Number(pozWe.bufor_przed_min || 0) > 0, pominietoPo = tenSamNastepny && Number(pozWe.bufor_po_min || 0) > 0;
+    const poz = { ...pozWe, bufor_przed_min: tenSamPoprzedni ? 0 : pozWe.bufor_przed_min, bufor_po_min: tenSamNastepny ? 0 : pozWe.bufor_po_min, bufor_pominiety: (pominietoPrzed || pominietoPo) || undefined };   // flaga tylko, gdy naprawdę było co pominąć
     const czas = Number(poz.czas_min || 0);
     if (!(czas > 0)) { problemy.push({ kod: 'BRAK_CZASU', opis: `Usługa „${poz.nazwa || poz.klucz}” nie ma ustawionego czasu trwania.`, pozycja: idx }); return; }
     const start = kursor, koniec = kursor + czas;
