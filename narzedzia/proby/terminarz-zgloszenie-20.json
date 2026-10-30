@@ -6,87 +6,256 @@
   "korzen": "#trm-root",
   "przechwyc": [],
   "czekajPoSekcji": 4500,
+  "przygotuj": {
+    "skrypt": "narzedzia/proby/skrypty/zasiew-dzien.js",
+    "env": {
+      "DZIEN_PRZESUN": "3"
+    }
+  },
+  "posprzataj": "narzedzia/proby/skrypty/zasiew-dzien.js --usun",
   "kroki": [
-    { "viewport": [1384, 905] },
-    { "czekaj": 1500 },
-    { "js": "TRM.idz(3); 'poniedziałek — Ola pracuje 09:00–17:00'" },
-    { "czekaj": 2500 },
-    { "js": "(function(){ var d=(TRM.dzien.dostepnosc||{}).Ola||[]; return 'grafik Oli: ' + d.map(function(x){return x.od.slice(11,16)+'-'+x.do.slice(11,16);}).join(', '); })()", "opis": "grafik wskazanej osoby na jutro" },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:30', pracownik: 'Ola' }); 'ok'" },
-    { "czekaj": 1200 },
-    { "js": "TRM.nowaSzukaj('Ewa'); 'ok'" },
-    { "czekaj": 1800 },
-    { "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()", "opis": "klientka" },
-    { "czekaj": 1500 },
-    { "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.replace(/\\s+/g,' ').trim().slice(0,50); })()", "opis": "zabieg 60 min" },
-    { "czekaj": 2500 },
-
-    { "js": "(function(){ TRM.nowaPrefPrac('Ola'); return 'wskazana Ola'; })()" },
-    { "czekaj": 2200 },
-    { "sprawdz": "(function(){ var pg=document.querySelector('.trm-sloty.po-grafiku'); return !!pg && pg.querySelectorAll('button').length >= 1; })()", "opis": "B01: pod wolnymi godzinami jest grupa „Po grafiku” dla wskazanej osoby" },
-    { "js": "(function(){ var b=document.querySelector('.trm-sloty.po-grafiku button'); return b ? 'pierwsza po grafiku: ' + b.textContent : 'brak'; })()" },
-    { "js": "(function(){ var e=document.querySelector('.trm-sloty-po-grafiku'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()" },
-    { "czekaj": 600 },
-    { "zrzut": "20-grupa-po-grafiku" },
-
-    { "js": "(function(){ var dt=TRM.nowa.start.slice(0,10); TRM.nowaWybierzSlot(dt + ' 16:30'); return 'godzina 16:30 bez zgody'; })()", "opis": "godzina 16:30 (Ola pracuje do 17:00, zabieg 60 min → koniec 17:30, salon otwarty)" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy.length === 1 && TRM.nowa.dostep.wynik.problemy[0].kod === 'GRAFIK' && TRM.nowa.dostep.wynik.problemy[0].mozna_mimo_grafiku === true", "opis": "B02: bez zgody nadal czerwono, jedyny problem GRAFIK, z możliwością zgody" },
-    { "sprawdz": "!!document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]') && document.getElementById('trm-n-zapisz').disabled", "opis": "B03: jest przycisk „Umów mimo grafiku”, główny przycisk nadal zablokowany" },
-    { "js": "(function(){ var e=document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()" },
-    { "czekaj": 600 },
-    { "zrzut": "20-czerwono-z-przyciskiem" },
-
-    { "js": "TRM.nowaMimoGrafiku(); 'zgoda'" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && (TRM.nowa.dostep.wynik.ostrzezenia||[]).some(function(o){return o.kod==='GRAFIK' && o.pracownik==='Ola';})", "opis": "B04: po zgodzie zielono, z ostrzeżeniem GRAFIK dla Oli" },
-    { "sprawdz": "!document.getElementById('trm-n-zapisz').disabled && /Umów mimo grafiku/.test(document.getElementById('trm-n-zapisz').textContent)", "opis": "B05: główny przycisk odblokowany i podpisany „Umów mimo grafiku”" },
-    { "js": "(function(){ var e=document.querySelector('.trm-wynik-termin'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()" },
-    { "czekaj": 600 },
-    { "zrzut": "20-zielono-poza-grafikiem" },
-
-    { "js": "TRM.nowaZapisz(); 'zapis'" },
-    { "czekaj": 3500 },
-    { "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return x.start && x.start.slice(11,16)==='16:30' && x.klient_nazwa && /Ewa/.test(x.klient_nazwa);})[0]; if(!r) return 'brak wizyty 16:30'; window.__wiz20=r.id; return 'wizyta ' + r.id + ' ' + r.start + ' – ' + r.koniec; })()", "opis": "wizyta po zapisie" },
-    { "sprawdz": "!!window.__wiz20", "opis": "B06: wizyta poza grafikiem zapisana" },
-    { "czekaj": 1200 },
-    { "js": "(function(){ var t=[].slice.call(document.querySelectorAll('.trm-panel button')).filter(function(b){return b.textContent.trim()==='Historia';})[0]; if(t) t.click(); return t?'klik':'brak zakładki'; })()" },
-    { "czekaj": 1500 },
-    { "sprawdz": "/poza grafikiem: Ola/.test(document.body.textContent)", "opis": "B07: historia wizyty ma ślad „poza grafikiem: Ola …”" },
-    { "zrzut": "20-slad-w-historii" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 800 },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 19:30' }); 'ok'" },
-    { "czekaj": 1200 },
-    { "js": "TRM.nowaSzukaj('Lena'); 'ok'" },
-    { "czekaj": 1800 },
-    { "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()" },
-    { "czekaj": 1500 },
-    { "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()", "opis": "zabieg 60 min — 19:30–20:30 wychodzi poza grafik każdej osoby (Anna kończy o 20:00)" },
-    { "czekaj": 2500 },
-    { "js": "(function(){ TRM.nowaPrefPrac(''); TRM.nowa.start = TRM.nowa.start.slice(0,10) + ' 19:30'; TRM.nowa.godzina=true; TRM.nowa.dataReczna=true; TRM.nowa.dostep=null; TRM.nowa.mimoGrafiku=true; TRM.nowaZmiana(true); return 'dowolny specjalista + wymuszona flaga'; })()", "opis": "próba obejścia: „dowolny specjalista” z flagą zgody" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy[0].kod === 'GRAFIK' && !document.querySelector('.trm-sloty.po-grafiku') && !document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]')", "opis": "B08: automat nie sięga poza grafik — odmowa, bez przycisku i bez grupy „Po grafiku”" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 800 },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:30', pracownik: 'Ola' }); 'ok'" },
-    { "czekaj": 1200 },
-    { "js": "TRM.nowaSzukaj('Dominika'); 'ok'" },
-    { "czekaj": 1800 },
-    { "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()" },
-    { "czekaj": 1500 },
-    { "js": "(function(){ var k=document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return 'zabieg'; })()" },
-    { "czekaj": 2500 },
-    { "js": "(function(){ TRM.nowaPrefPrac('Ola'); TRM.nowa.start = TRM.nowa.start.slice(0,10) + ' 16:30'; TRM.nowa.godzina=true; TRM.nowa.dataReczna=true; TRM.nowa.dostep=null; TRM.nowa.mimoGrafiku=true; TRM.nowaZmiana(true); return 'Ola 16:30 ze zgodą, ale Ola już ma wtedy wizytę Ewy'; })()", "opis": "próba: zgoda przy prawdziwej kolizji" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy[0].kod === 'PRACOWNIK_ZAJETY' && !document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]')", "opis": "B09: kolizja pracownika zostaje twardą odmową mimo zgody — bez przycisku" },
-    { "js": "(function(){ var e=document.querySelector('.trm-wynik-termin'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()" },
-    { "czekaj": 600 },
-    { "sprawdz": "(function(){ var g=[].slice.call(document.querySelectorAll('.trm-sloty.po-grafiku button')).map(function(b){return b.textContent.trim();}); return g.length>0 && g.every(function(h){ var m=parseInt(h.slice(0,2))*60+parseInt(h.slice(3)); return m+30 <= 16*60+30 || m >= 17*60+30; }); })()", "opis": "B10: grupa „Po grafiku” nie podpowiada godzin, w które Ola ma już wizytę (16:30–17:30)" },
-    { "zrzut": "20-kolizja-nadal-blokuje" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" }
+    {
+      "viewport": [
+        1384,
+        905
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "TRM.idz(3); 'poniedziałek — Ola pracuje 09:00–17:00'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ var d=(TRM.dzien.dostepnosc||{}).Ola||[]; return 'grafik Oli: ' + d.map(function(x){return x.od.slice(11,16)+'-'+x.do.slice(11,16);}).join(', '); })()",
+      "opis": "grafik wskazanej osoby na jutro"
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:30', pracownik: 'Ola' }); 'ok'"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "TRM.nowaSzukaj('Ewa'); 'ok'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()",
+      "opis": "klientka"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.replace(/\\s+/g,' ').trim().slice(0,50); })()",
+      "opis": "zabieg 60 min"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ TRM.nowaPrefPrac('Ola'); return 'wskazana Ola'; })()"
+    },
+    {
+      "czekaj": 2200
+    },
+    {
+      "sprawdz": "(function(){ var pg=document.querySelector('.trm-sloty.po-grafiku'); return !!pg && pg.querySelectorAll('button').length >= 1; })()",
+      "opis": "B01: pod wolnymi godzinami jest grupa „Po grafiku” dla wskazanej osoby"
+    },
+    {
+      "js": "(function(){ var b=document.querySelector('.trm-sloty.po-grafiku button'); return b ? 'pierwsza po grafiku: ' + b.textContent : 'brak'; })()"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-sloty-po-grafiku'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "zrzut": "20-grupa-po-grafiku"
+    },
+    {
+      "js": "(function(){ var dt=TRM.nowa.start.slice(0,10); TRM.nowaWybierzSlot(dt + ' 16:30'); return 'godzina 16:30 bez zgody'; })()",
+      "opis": "godzina 16:30 (Ola pracuje do 17:00, zabieg 60 min → koniec 17:30, salon otwarty)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy.length === 1 && TRM.nowa.dostep.wynik.problemy[0].kod === 'GRAFIK' && TRM.nowa.dostep.wynik.problemy[0].mozna_mimo_grafiku === true",
+      "opis": "B02: bez zgody nadal czerwono, jedyny problem GRAFIK, z możliwością zgody"
+    },
+    {
+      "sprawdz": "!!document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]') && document.getElementById('trm-n-zapisz').disabled",
+      "opis": "B03: jest przycisk „Umów mimo grafiku”, główny przycisk nadal zablokowany"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "zrzut": "20-czerwono-z-przyciskiem"
+    },
+    {
+      "js": "TRM.nowaMimoGrafiku(); 'zgoda'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && (TRM.nowa.dostep.wynik.ostrzezenia||[]).some(function(o){return o.kod==='GRAFIK' && o.pracownik==='Ola';})",
+      "opis": "B04: po zgodzie zielono, z ostrzeżeniem GRAFIK dla Oli"
+    },
+    {
+      "sprawdz": "!document.getElementById('trm-n-zapisz').disabled && /Umów mimo grafiku/.test(document.getElementById('trm-n-zapisz').textContent)",
+      "opis": "B05: główny przycisk odblokowany i podpisany „Umów mimo grafiku”"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-wynik-termin'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "zrzut": "20-zielono-poza-grafikiem"
+    },
+    {
+      "js": "TRM.nowaZapisz(); 'zapis'"
+    },
+    {
+      "czekaj": 3500
+    },
+    {
+      "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return x.start && x.start.slice(11,16)==='16:30' && x.klient_nazwa && /Ewa/.test(x.klient_nazwa);})[0]; if(!r) return 'brak wizyty 16:30'; window.__wiz20=r.id; return 'wizyta ' + r.id + ' ' + r.start + ' – ' + r.koniec; })()",
+      "opis": "wizyta po zapisie"
+    },
+    {
+      "sprawdz": "!!window.__wiz20",
+      "opis": "B06: wizyta poza grafikiem zapisana"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "(function(){ var t=[].slice.call(document.querySelectorAll('.trm-panel button')).filter(function(b){return b.textContent.trim()==='Historia';})[0]; if(t) t.click(); return t?'klik':'brak zakładki'; })()"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "sprawdz": "/poza grafikiem: Ola/.test(document.body.textContent)",
+      "opis": "B07: historia wizyty ma ślad „poza grafikiem: Ola …”"
+    },
+    {
+      "zrzut": "20-slad-w-historii"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 19:30' }); 'ok'"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "TRM.nowaSzukaj('Lena'); 'ok'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()",
+      "opis": "zabieg 60 min — 19:30–20:30 wychodzi poza grafik każdej osoby (Anna kończy o 20:00)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ TRM.nowaPrefPrac(''); TRM.nowa.start = TRM.nowa.start.slice(0,10) + ' 19:30'; TRM.nowa.godzina=true; TRM.nowa.dataReczna=true; TRM.nowa.dostep=null; TRM.nowa.mimoGrafiku=true; TRM.nowaZmiana(true); return 'dowolny specjalista + wymuszona flaga'; })()",
+      "opis": "próba obejścia: „dowolny specjalista” z flagą zgody"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy[0].kod === 'GRAFIK' && !document.querySelector('.trm-sloty.po-grafiku') && !document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]')",
+      "opis": "B08: automat nie sięga poza grafik — odmowa, bez przycisku i bez grupy „Po grafiku”"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:30', pracownik: 'Ola' }); 'ok'"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "TRM.nowaSzukaj('Dominika'); 'ok'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ var n=TRM.nowa; if(!n||!n.wyniki||!n.wyniki.length) return 'brak'; TRM.nowaKlient(0); return n.wyniki[0].nazwa; })()"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ var k=document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return 'zabieg'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ TRM.nowaPrefPrac('Ola'); TRM.nowa.start = TRM.nowa.start.slice(0,10) + ' 16:30'; TRM.nowa.godzina=true; TRM.nowa.dataReczna=true; TRM.nowa.dostep=null; TRM.nowa.mimoGrafiku=true; TRM.nowaZmiana(true); return 'Ola 16:30 ze zgodą, ale Ola już ma wtedy wizytę Ewy'; })()",
+      "opis": "próba: zgoda przy prawdziwej kolizji"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'zajety' && TRM.nowa.dostep.wynik.problemy[0].kod === 'PRACOWNIK_ZAJETY' && !document.querySelector('button[onclick=\"TRM.nowaMimoGrafiku()\"]')",
+      "opis": "B09: kolizja pracownika zostaje twardą odmową mimo zgody — bez przycisku"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-wynik-termin'); if(e) e.scrollIntoView({block:'center'}); return e?'przewinięto':'brak elementu'; })()"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "(function(){ var g=[].slice.call(document.querySelectorAll('.trm-sloty.po-grafiku button')).map(function(b){return b.textContent.trim();}); return g.length>0 && g.every(function(h){ var m=parseInt(h.slice(0,2))*60+parseInt(h.slice(3)); return m+30 <= 16*60+30 || m >= 17*60+30; }); })()",
+      "opis": "B10: grupa „Po grafiku” nie podpowiada godzin, w które Ola ma już wizytę (16:30–17:30)"
+    },
+    {
+      "zrzut": "20-kolizja-nadal-blokuje"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    }
   ]
 }

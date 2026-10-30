@@ -44,7 +44,7 @@ function portOtwarty(port) { return new Promise(res => { const s = net.connect({
 function scenariusze() {
   return fs.readdirSync(PROBY).filter(f => f.endsWith('.json')).map(f => {
     try { const s = JSON.parse(fs.readFileSync(path.join(PROBY, f), 'utf8'));
-      return { plik: f, nazwa: s.nazwa || f.replace(/\.json$/, ''), modul: s.modul || 'Inne', opis: s.opis || '', sekcja: s.sekcja || '', krokow: (s.kroki || []).length, zrzutow: (s.kroki || []).filter(k => k.zrzut).length, zapisPrawdziwy: !(s.przechwyc || []).length, sprawdzen: (s.kroki || []).filter(k => k.sprawdz).length };
+      return { plik: f, nazwa: s.nazwa || f.replace(/\.json$/, ''), modul: s.modul || 'Inne', opis: s.opis || '', sekcja: s.sekcja || '', krokow: (s.kroki || []).length, przygotuj: !!s.przygotuj, posprzataj: !!s.posprzataj, zrzutow: (s.kroki || []).filter(k => k.zrzut).length, zapisPrawdziwy: !(s.przechwyc || []).length, sprawdzen: (s.kroki || []).filter(k => k.sprawdz).length };
     } catch (e) { return { plik: f, nazwa: f, modul: 'Błędny plik', opis: e.message, krokow: 0, zrzutow: 0 }; }
   }).sort((a, b) => a.modul.localeCompare(b.modul) || a.nazwa.localeCompare(b.nazwa));
 }
@@ -116,6 +116,8 @@ http.createServer(async (req, res) => {
     if (u.pathname === '/') { res.writeHead(200, { 'Content-Type': TYPY['.html'] }); return res.end(fs.readFileSync(path.join(__dirname, 'panel-prob.html'))); }
     if (u.pathname === '/api/scenariusze') return json(res, scenariusze());
     if (u.pathname === '/api/wyniki') return json(res, wyniki());
+    // zbiorcze raporty z `node narzedzia/proby-wszystkie.js` (PODSUMOWANIE-<czas>.md w proby-wyniki/), najnowszy pierwszy
+    if (u.pathname === '/api/podsumowania') return json(res, fs.readdirSync(WYNIKI).filter(f => /^PODSUMOWANIE-.*\.md$/.test(f)).sort().reverse().slice(0, 10).map(f => { const t = fs.readFileSync(path.join(WYNIKI, f), 'utf8'); const m = /Scenariuszy: (\d+) · bez zastrzeżeń: (\d+) · z problemami: (\d+)/.exec(t); return { plik: f, scenariuszy: m ? Number(m[1]) : null, ok: m ? Number(m[2]) : null, problemy: m ? Number(m[3]) : null }; }));
     if (u.pathname === '/api/przebiegi') return json(res, przebiegi.map(podsumuj));
     if (u.pathname === '/api/log') { const p = przebiegi.find(x => x.id === u.searchParams.get('id')); return json(res, p ? p.log : []); }
     if (u.pathname === '/api/srodowisko') return json(res, { baza: await portOtwarty(3307), serwer: await portOtwarty(3999), dzieci: { baza: !!srodowisko.baza, serwer: !!srodowisko.serwer }, log: srodowisko.log.slice(-30) });

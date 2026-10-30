@@ -6,67 +6,192 @@
   "korzen": "#trm-root",
   "przechwyc": [],
   "czekajPoSekcji": 4500,
+  "przygotuj": {
+    "skrypt": "narzedzia/proby/skrypty/zasiew-dzien.js",
+    "env": {
+      "DZIEN_PRZESUN": "1"
+    }
+  },
+  "posprzataj": "narzedzia/proby/skrypty/zasiew-dzien.js --usun",
   "kroki": [
-    { "viewport": [1384, 905] },
-    { "czekaj": 1500 },
-    { "js": "TRM.idz(1); 'jutro'" },
-    { "czekaj": 2500 },
-
-    { "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){ return x.status!=='anulowana' && x.id_klienta && (x.pozycje||[]).some(function(p){return p.stan==='zaplanowana';}); }); if(!r.length) return 'brak'; window.__wiz=r[0].id; TRM.otworzSzczegoly(r[0].id); return 'wizyta ' + r[0].id + ' ' + r[0].klient_nazwa; })()", "opis": "otwarta zaplanowana wizyta" },
-    { "czekaj": 1600 },
-
-    { "js": "(function(){ var b=[].slice.call(document.querySelectorAll('.trm-panel a, .trm-panel button')).filter(function(x){return /Historia wizyt/.test(x.textContent);})[0]; if(!b) return 'brak wejścia'; b.click(); return 'klik w Historia wizyt'; })()", "opis": "#19: wejście w historię klientki z wizyty" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.widok === 'historia' && TRM.widokPoprzedni === 'dzien'", "opis": "A01: jesteśmy w Historii, a poprzedni widok zapamiętany" },
-    { "sprawdz": "!!document.querySelector('.trm-hist-wroc')", "opis": "A02: w pasku Historii jest przycisk powrotu" },
-    { "zrzut": "19-historia-z-powrotem" },
-    { "kliknij": ".trm-hist-wroc" },
-    { "czekaj": 2200 },
-    { "sprawdz": "TRM.widok === 'dzien' && document.querySelectorAll('#trm-root .trm-karta').length >= 3", "opis": "A03: powrót wraca do widoku Dzień z wizytami" },
-    { "js": "TRM.data", "opis": "dzień po powrocie (ma zostać ten sam)" },
-
-    { "js": "(function(){ TRM.widokZmien('agenda'); return 'agenda'; })()" },
-    { "czekaj": 2000 },
-    { "js": "(function(){ TRM.historiaKlientki('1001','Marta Kowalska','601 200 301'); return 'historia z agendy'; })()" },
-    { "czekaj": 2500 },
-    { "kliknij": ".trm-hist-wroc" },
-    { "czekaj": 2000 },
-    { "sprawdz": "TRM.widok === 'agenda'", "opis": "A04: powrót wraca tam, skąd się przyszło (Agenda, nie Dzień)" },
-    { "js": "TRM.widokZmien('dzien'); 'ok'" },
-    { "czekaj": 1800 },
-
-    { "js": "(function(){ TRM.otworzSzczegoly(window.__wiz); return 'ok'; })()", "opis": "#21: wracam do tej samej wizyty" },
-    { "czekaj": 1800 },
-    { "js": "(function(){ var p=(TRM.szcz.rez.pozycje||[])[0]; window.__poz=p.id; window.__czasPrzed=p.czas_min; window.__koniecPrzed=TRM.szcz.rez.koniec; return 'pozycja ' + p.id + ', czas ' + p.czas_min + ' min, koniec ' + TRM.szcz.rez.koniec; })()", "opis": "stan przed zmianą" },
-    { "js": "TRM.szcz.tryb='zmiana'; TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{},czasy:{}}; TRM.renderSzczegoly(); 'ok'" },
-    { "czekaj": 1000 },
-    { "sprawdz": "!!document.querySelector('.trm-z-czas')", "opis": "A05: w panelu zmiany jest pole z minutami" },
-    { "zrzut": "21-panel-zmiany-z-czasem" },
-
-    { "js": "TRM.zmCzas(window.__poz, 4); 'poza zakresem'" },
-    { "czekaj": 900 },
-    { "sprawdz": "window.__proba.alerty.concat(window.__proba.confirmy).length === 0 && TRM.zm.czasy[window.__poz] === undefined", "opis": "A06: 4 minuty odrzucone, nic nie zapisane w stanie" },
-
-    { "js": "TRM.zmCzas(window.__poz, 90); 'nowy czas'" },
-    { "czekaj": 900 },
-    { "sprawdz": "TRM.zm.czasy[window.__poz] === 90 && TRM.zm.wynik === null", "opis": "A07: 90 minut przyjęte, poprzedni wynik sprawdzenia unieważniony" },
-    { "js": "TRM.zmianaSprawdz(false); 'sprawdzam'" },
-    { "czekaj": 2500 },
-    { "js": "(function(){ var w=TRM.zm.wynik||{}; var n=(w.podglad||{}).nowy||{}; return JSON.stringify({status:w.status, start:n.start, koniec:n.koniec}); })()", "opis": "podgląd po sprawdzeniu" },
-    { "sprawdz": "(function(){ var n=((TRM.zm.wynik||{}).podglad||{}).nowy||{}; return TRM.zm.wynik.status==='success' && n.koniec && n.koniec > window.__koniecPrzed; })()", "opis": "A08: podgląd pokazuje późniejszy koniec niż przed zmianą" },
-    { "zrzut": "21-podglad-dluzszej-wizyty" },
-
-    { "js": "TRM.zmianaSprawdz(true); 'zapis'" },
-    { "czekaj": 3000 },
-    { "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return String(x.id)===String(window.__wiz);})[0]; if(!r) return 'nie ma wizyty w dniu'; var p=(r.pozycje||[])[0]; return JSON.stringify({czas:p.czas_min, start:r.start, koniec:r.koniec, przed:window.__czasPrzed}); })()", "opis": "stan po zapisie" },
-    { "sprawdz": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return String(x.id)===String(window.__wiz);})[0]; return !!r && Number((r.pozycje||[])[0].czas_min) === 90 && r.koniec > window.__koniecPrzed; })()", "opis": "A09: wizyta trwa teraz 90 minut i kończy się później" },
-    { "zrzut": "21-po-zapisie" },
-
-    { "js": "(function(){ TRM.otworzSzczegoly(window.__wiz); return 'ok'; })()" },
-    { "czekaj": 1800 },
-    { "js": "(function(){ var t=[].slice.call(document.querySelectorAll('.trm-panel button')).filter(function(b){return b.textContent.trim()==='Historia';})[0]; if(t) t.click(); return t?'klik':'brak'; })()" },
-    { "czekaj": 1600 },
-    { "sprawdz": "/czas:/.test(document.body.textContent) && /min/.test(document.body.textContent)", "opis": "A10: historia wizyty zapisała zmianę czasu trwania" },
-    { "zrzut": "21-slad-w-historii-wizyty" }
+    {
+      "viewport": [
+        1384,
+        905
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "TRM.idz(1); 'jutro'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){ return x.status!=='anulowana' && x.id_klienta && (x.pozycje||[]).some(function(p){return p.stan==='zaplanowana';}); }); if(!r.length) return 'brak'; window.__wiz=r[0].id; TRM.otworzSzczegoly(r[0].id); return 'wizyta ' + r[0].id + ' ' + r[0].klient_nazwa; })()",
+      "opis": "otwarta zaplanowana wizyta"
+    },
+    {
+      "czekaj": 1600
+    },
+    {
+      "js": "(function(){ var b=[].slice.call(document.querySelectorAll('.trm-panel a, .trm-panel button')).filter(function(x){return /Historia wizyt/.test(x.textContent);})[0]; if(!b) return 'brak wejścia'; b.click(); return 'klik w Historia wizyt'; })()",
+      "opis": "#19: wejście w historię klientki z wizyty"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.widok === 'historia' && TRM.widokPoprzedni === 'dzien'",
+      "opis": "A01: jesteśmy w Historii, a poprzedni widok zapamiętany"
+    },
+    {
+      "sprawdz": "!!document.querySelector('.trm-hist-wroc')",
+      "opis": "A02: w pasku Historii jest przycisk powrotu"
+    },
+    {
+      "zrzut": "19-historia-z-powrotem"
+    },
+    {
+      "kliknij": ".trm-hist-wroc"
+    },
+    {
+      "czekaj": 2200
+    },
+    {
+      "sprawdz": "TRM.widok === 'dzien' && document.querySelectorAll('#trm-root .trm-karta').length >= 3",
+      "opis": "A03: powrót wraca do widoku Dzień z wizytami"
+    },
+    {
+      "js": "TRM.data",
+      "opis": "dzień po powrocie (ma zostać ten sam)"
+    },
+    {
+      "js": "(function(){ TRM.widokZmien('agenda'); return 'agenda'; })()"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "js": "(function(){ TRM.historiaKlientki('1001','Marta Kowalska','601 200 301'); return 'historia z agendy'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "kliknij": ".trm-hist-wroc"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "sprawdz": "TRM.widok === 'agenda'",
+      "opis": "A04: powrót wraca tam, skąd się przyszło (Agenda, nie Dzień)"
+    },
+    {
+      "js": "TRM.widokZmien('dzien'); 'ok'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ TRM.otworzSzczegoly(window.__wiz); return 'ok'; })()",
+      "opis": "#21: wracam do tej samej wizyty"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ var p=(TRM.szcz.rez.pozycje||[])[0]; window.__poz=p.id; window.__czasPrzed=p.czas_min; window.__koniecPrzed=TRM.szcz.rez.koniec; return 'pozycja ' + p.id + ', czas ' + p.czas_min + ' min, koniec ' + TRM.szcz.rez.koniec; })()",
+      "opis": "stan przed zmianą"
+    },
+    {
+      "js": "TRM.szcz.tryb='zmiana'; TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{},czasy:{}}; TRM.renderSzczegoly(); 'ok'"
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "sprawdz": "!!document.querySelector('.trm-z-czas')",
+      "opis": "A05: w panelu zmiany jest pole z minutami"
+    },
+    {
+      "zrzut": "21-panel-zmiany-z-czasem"
+    },
+    {
+      "js": "TRM.zmCzas(window.__poz, 4); 'poza zakresem'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "window.__proba.alerty.concat(window.__proba.confirmy).length === 0 && TRM.zm.czasy[window.__poz] === undefined",
+      "opis": "A06: 4 minuty odrzucone, nic nie zapisane w stanie"
+    },
+    {
+      "js": "TRM.zmCzas(window.__poz, 90); 'nowy czas'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "TRM.zm.czasy[window.__poz] === 90 && TRM.zm.wynik === null",
+      "opis": "A07: 90 minut przyjęte, poprzedni wynik sprawdzenia unieważniony"
+    },
+    {
+      "js": "TRM.zmianaSprawdz(false); 'sprawdzam'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ var w=TRM.zm.wynik||{}; var n=(w.podglad||{}).nowy||{}; return JSON.stringify({status:w.status, start:n.start, koniec:n.koniec}); })()",
+      "opis": "podgląd po sprawdzeniu"
+    },
+    {
+      "sprawdz": "(function(){ var n=((TRM.zm.wynik||{}).podglad||{}).nowy||{}; return TRM.zm.wynik.status==='success' && n.koniec && n.koniec > window.__koniecPrzed; })()",
+      "opis": "A08: podgląd pokazuje późniejszy koniec niż przed zmianą"
+    },
+    {
+      "zrzut": "21-podglad-dluzszej-wizyty"
+    },
+    {
+      "js": "TRM.zmianaSprawdz(true); 'zapis'"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return String(x.id)===String(window.__wiz);})[0]; if(!r) return 'nie ma wizyty w dniu'; var p=(r.pozycje||[])[0]; return JSON.stringify({czas:p.czas_min, start:r.start, koniec:r.koniec, przed:window.__czasPrzed}); })()",
+      "opis": "stan po zapisie"
+    },
+    {
+      "sprawdz": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return String(x.id)===String(window.__wiz);})[0]; return !!r && Number((r.pozycje||[])[0].czas_min) === 90 && r.koniec > window.__koniecPrzed; })()",
+      "opis": "A09: wizyta trwa teraz 90 minut i kończy się później"
+    },
+    {
+      "zrzut": "21-po-zapisie"
+    },
+    {
+      "js": "(function(){ TRM.otworzSzczegoly(window.__wiz); return 'ok'; })()"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ var t=[].slice.call(document.querySelectorAll('.trm-panel button')).filter(function(b){return b.textContent.trim()==='Historia';})[0]; if(t) t.click(); return t?'klik':'brak'; })()"
+    },
+    {
+      "czekaj": 1600
+    },
+    {
+      "sprawdz": "/czas trwania|czas:/.test(document.body.textContent) && /60 → 90 min/.test(document.body.textContent)",
+      "opis": "A10: historia wizyty zapisała zmianę czasu trwania (wpis „czas trwania · … 60 → 90 min”)"
+    },
+    {
+      "zrzut": "21-slad-w-historii-wizyty"
+    }
   ]
 }

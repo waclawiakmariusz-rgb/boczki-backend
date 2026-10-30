@@ -48,6 +48,10 @@
         <input type="text" id="prod-potw" placeholder="PRODUKCJA" autocomplete="off">
         <label><input type="checkbox" id="prod-zapis"> zezwól na zapisy (--zapis-tak)</label>
       </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:6px 0 10px">
+        <button class="glowny" id="b-wszystkie" title="Kolejkuje wszystkie scenariusze po kolei (alfabetycznie — część A przed B, 19-21 przed 20); tylko środowisko testowe">▶ Uruchom wszystkie po kolei</button>
+        <span id="wszystkie-opis" style="font-size:13px;color:var(--mut)">Zbiorczy raport z wiersza poleceń: <code>node narzedzia/proby-wszystkie.js</code></span>
+      </div>
       <div id="lista-scen"><div class="pusto">Wczytywanie…</div></div>
     </div>
     <div class="karta" style="margin-top:22px">
@@ -67,6 +71,7 @@
         <h2 style="margin:0">Wyniki</h2>
         <label style="font-size:14px;display:flex;gap:6px;align-items:center;cursor:pointer"><input type="checkbox" id="tylko-najnowsze" checked> tylko najnowszy przebieg każdego scenariusza</label>
       </div>
+      <div id="podsumowania" style="font-size:13px;color:var(--mut);margin-bottom:8px"></div>
       <div id="wyniki"><div class="pusto">Brak wyników.</div></div>
     </div>
   </section>
@@ -82,7 +87,7 @@
     const grupy = {}; lista.forEach(s => (grupy[s.modul] = grupy[s.modul] || []).push(s));
     $('#lista-scen').innerHTML = Object.keys(grupy).sort().map(m => '<h3>' + esc(m) + '</h3>' + grupy[m].map(s => `
       <div class="scen"><div class="t"><b>${esc(s.nazwa)}</b><small>${esc(s.opis || ('sekcja ' + s.sekcja))}</small><div style="margin-top:4px">
-        <span class="tag">${s.krokow} kroków</span><span class="tag">${s.zrzutow} zrzutów</span><span class="tag">${s.sprawdzen} sprawdzeń</span>${s.zapisPrawdziwy ? '<span class="tag zapis">prawdziwy zapis</span>' : '<span class="tag">zapis przechwycony</span>'}</div></div>
+        <span class="tag">${s.krokow} kroków</span><span class="tag">${s.zrzutow} zrzutów</span><span class="tag">${s.sprawdzen} sprawdzeń</span>${s.przygotuj ? '<span class="tag" title="Przed próbą uruchamia skrypt z narzedzia/proby/skrypty (zasiew, czyszczenie, symulacja czasu) — tylko środowisko testowe">⚙ przygotowanie</span>' : ''}${s.posprzataj ? '<span class="tag" title="Po próbie sprząta dane próbne z bazy izolowanej">🧹 sprzątanie</span>' : ''}${s.zapisPrawdziwy ? '<span class="tag zapis">prawdziwy zapis</span>' : '<span class="tag">zapis przechwycony</span>'}</div></div>
         <button class="glowny" data-plik="${esc(s.plik)}">Uruchom</button></div>`).join('')).join('') || '<div class="pusto">Brak scenariuszy w narzedzia/proby/.</div>';
     $('#lista-scen').querySelectorAll('button[data-plik]').forEach(b => b.onclick = () => uruchom(b.dataset.plik));
   }
@@ -111,6 +116,18 @@
   $('#b-start').onclick = async () => { $('#b-start').disabled = true; $('#srod-opis').textContent = 'Startuję bazę i serwer…'; await fetch('/api/srodowisko/start', { method: 'POST' }); };
   $('#b-stop').onclick = async () => { await fetch('/api/srodowisko/stop', { method: 'POST' }); setTimeout(wczytajSrodowisko, 3000); };
   $('#tylko-najnowsze').onchange = wczytajWyniki;
+  // „Uruchom wszystkie”: ta sama kolejka co pojedyncze przyciski, alfabetycznie (szybka-rezerwacja-a przed -b, 19-21 przed 20)
+  $('#b-wszystkie').onclick = async () => {
+    if (document.querySelector('input[name=srod]:checked').value !== 'test') { alert('Wszystkie naraz tylko na środowisku testowym.'); return; }
+    const lista = (await (await fetch('/api/scenariusze')).json()).map(s => s.plik).sort();
+    if (!confirm('Zakolejkować ' + lista.length + ' scenariuszy po kolei? Scenariusze z „przygotowaniem” same zasieją i posprzątają bazę izolowaną.')) return;
+    for (const plik of lista) await fetch('/api/uruchom', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ plik, srodowisko: 'test' }) });
+    $('#log').textContent = 'W kolejce: ' + lista.length + ' scenariuszy (test)\n';
+  };
+  async function wczytajPodsumowania() {
+    const p = await (await fetch('/api/podsumowania')).json();
+    $('#podsumowania').innerHTML = p.length ? 'Zbiorcze raporty (wszystkie scenariusze): ' + p.slice(0, 3).map(x => `<a href="/wyniki/${encodeURIComponent(x.plik)}" target="_blank">${esc(x.plik.replace(/^PODSUMOWANIE-|\.md$/g, ''))}</a> <span class="stan ${x.problemy === 0 ? 'ok' : 'zle'}">${x.ok ?? '?'}/${x.scenariuszy ?? '?'} OK</span>`).join(' · ') : '';
+  }
   document.querySelectorAll('input[name=srod]').forEach(r => r.onchange = () => $('#prod-box').classList.toggle('widoczny', r.value === 'prod' && r.checked));
 
   const es = new EventSource('/api/strumien');
@@ -121,6 +138,6 @@
     if (z.typ === 'koniec' && z.przebieg.id === biezacyId) { $('#biezacy-tytul').textContent = '— ' + z.przebieg.plik + ' · ' + (z.przebieg.kod === 0 ? 'zakończony OK' : 'zakończony z problemami'); if (z.przebieg.katalog) $('#biezacy-link').innerHTML = `<a href="/wyniki/${encodeURIComponent(z.przebieg.katalog)}/raport.html" target="_blank"><b>Otwórz galerię wyniku →</b></a>`; wczytajWyniki(); }
     if (z.typ === 'srodowisko' || z.typ === 'srodowisko-log') wczytajSrodowisko();
   };
-  wczytajScenariusze(); wczytajWyniki(); wczytajSrodowisko(); setInterval(wczytajSrodowisko, 15000);
+  wczytajScenariusze(); wczytajWyniki(); wczytajPodsumowania(); wczytajSrodowisko(); setInterval(wczytajSrodowisko, 15000);
 </script>
 </html>

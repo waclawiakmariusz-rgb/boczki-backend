@@ -44,7 +44,7 @@
     }
 */
 'use strict';
-const { spawn } = require('child_process');
+const { spawn, spawnSync } = require('child_process');
 const http = require('http');
 const https = require('https');
 const os = require('os');
@@ -98,6 +98,31 @@ if (flaga('galeria')) { const dir = opcja('galeria'); const r = JSON.parse(fs.re
 
 const scenariusz = JSON.parse(fs.readFileSync(plikScenariusza, 'utf8'));
 const NAZWA = scenariusz.nazwa || path.basename(plikScenariusza, '.json');
+// ─── przygotuj / posprzataj: skrypty node (narzedzia/proby/skrypty/) uruchamiane przed i po próbie — TYLKO środowisko testowe ───
+// Scenariusz: "przygotuj": "narzedzia/proby/skrypty/x.js [argumenty]" albo { "skrypt": "...", "args": [...], "env": {...} }.
+// Ostatnia linia wyjścia skryptu, jeśli jest JSON-em, daje podstawienia: każde __KLUCZ__ w krokach zamienia się na wartość
+// (np. id rezerwacji i token linku wyliczone przez skrypt). Scenariusz zostaje czytelny, a dane bierze z bazy izolowanej.
+const KORZEN_REPO = path.join(__dirname, '..');
+function uruchomSkrypt(etap, def) {
+  if (!def) return {};
+  if (SRODOWISKO !== 'test') throw new Error(etap + ': skrypty przygotowania i sprzątania działają wyłącznie na środowisku testowym (zapisują w bazie).');
+  const d = typeof def === 'string' ? { skrypt: def.split(/\s+/)[0], args: def.split(/\s+/).slice(1) } : def;
+  const plik = path.isAbsolute(d.skrypt) ? d.skrypt : path.join(KORZEN_REPO, d.skrypt);
+  if (!fs.existsSync(plik)) throw new Error(etap + ': brak skryptu ' + plik);
+  const r = spawnSync(process.execPath, [plik, ...(d.args || [])], { cwd: KORZEN_REPO, encoding: 'utf8', env: { ...process.env, ...(d.env || {}), NODE_PATH: path.join(KORZEN_REPO, 'node_modules') } });
+  const linie = ((r.stdout || '') + '\n' + (r.stderr || '')).split(/\r?\n/).filter(l => l.trim() && !/injected env/.test(l));
+  for (const l of linie) console.log('  [' + etap + '] ' + l.slice(0, 180));
+  if (r.status !== 0) throw new Error(etap + ' zakończone błędem (kod ' + r.status + ')');
+  const ost = [...linie].reverse().find(l => l.trim().startsWith('{'));
+  try { return ost ? JSON.parse(ost) : {}; } catch (e) { return {}; }
+}
+const podstawienia = uruchomSkrypt('przygotuj', scenariusz.przygotuj);
+if (Object.keys(podstawienia).length) {
+  let tk = JSON.stringify(scenariusz.kroki);
+  for (const [k, v] of Object.entries(podstawienia)) tk = tk.split('__' + k + '__').join(String(v).replace(/[\\"]/g, (z) => '\\' + z));
+  scenariusz.kroki = JSON.parse(tk);
+  console.log('  [przygotuj] podstawienia: ' + Object.keys(podstawienia).join(', '));
+}
 const CHROME = process.env.CHROME_PATH || 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe';
 const OUT = path.join(__dirname, '..', 'proby-wyniki', NAZWA + '-' + SRODOWISKO + '-' + new Date().toISOString().replace(/[:T]/g, '-').slice(0, 16));
 fs.mkdirSync(OUT, { recursive: true });
@@ -198,7 +223,9 @@ const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : 
     console.log((wpis.blad ? 'BŁĄD ' : '  ok  ') + JSON.stringify(k).slice(0, 90) + opis + (wpis.wynik !== undefined ? ' → ' + (typeof wpis.wynik === 'string' ? wpis.wynik : JSON.stringify(wpis.wynik)) : '') + (wpis.plik ? ' → ' + wpis.plik : '') + (wpis.blad ? ' → ' + wpis.blad : ''));
   }
 
-  raport.nagrane = JSON.parse(await ev(`JSON.stringify(window.__proba)`));
+  // gdy ostatni krok opuścił aplikację (np. przejście na stronę linku dla klienta), zapis POST-ów jest już niedostępny — raport i tak powstaje
+  try { raport.nagrane = JSON.parse(await ev(`JSON.stringify(window.__proba)`)); }
+  catch (e) { raport.nagrane = { posty: [], zablokowane: [], alerty: [], confirmy: [], uwaga: 'strona opuściła aplikację przed końcem próby (nawigacja) — zapis POST-ów niedostępny' }; }
   raport.bledyJS = bledyJS.slice(0, 20);
   raport.zrzuty = zrzuty;
   fs.writeFileSync(path.join(OUT, 'raport.json'), JSON.stringify(raport, null, 2));
@@ -214,7 +241,8 @@ const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : 
     '## Payloady', '```json', JSON.stringify(raport.nagrane.posty, null, 2), '```'].join('\n');
   fs.writeFileSync(path.join(OUT, 'raport.md'), md);
   fs.writeFileSync(path.join(OUT, 'raport.html'), galeriaHtml(raport));
+  try { uruchomSkrypt('posprzataj', scenariusz.posprzataj); } catch (e) { console.error('posprzataj: ' + e.message); }
   const fail = raport.sprawdzenia.filter(s => s.wynik === 'FAIL').length + raport.kroki.filter(k => k.blad).length;
   console.log('\nWynik: ' + OUT + '\nsprawdzenia FAIL: ' + raport.sprawdzenia.filter(s => s.wynik === 'FAIL').length + ' | kroki z błędem: ' + raport.kroki.filter(k => k.blad).length + ' | błędy JS: ' + bledyJS.length + ' | zrzutów: ' + zrzuty.length);
   ws.close(); ch.kill(); await sleep(800); sprzatnij(); process.exit(fail ? 1 : 0);
-})().catch(e => { console.error('BŁĄD: ' + e.message); sprzatnij(); process.exit(1); });
+})().catch(e => { console.error('BŁĄD: ' + e.message); try { if (typeof scenariusz !== 'undefined' && scenariusz.posprzataj) uruchomSkrypt('posprzataj', scenariusz.posprzataj); } catch (e2) { console.error('posprzataj: ' + e2.message); } sprzatnij(); process.exit(1); });

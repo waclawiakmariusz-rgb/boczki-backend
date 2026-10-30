@@ -1,11 +1,12 @@
 {
   "nazwa": "terminarz-szybka-rezerwacja-a",
   "modul": "Terminarz",
-  "opis": "Szybka rezerwacja do wpłaty zadatku (hold), część A: osoba bez kartoteki → termin „Do wpłaty” → link do zadatku → akceptacja regulaminu z telefonu (profil, ślad, Sprawa) → „Zadatek wpłynął” → potwierdzona. Drugi hold na ten sam numer odrzucony. Realny zapis na izolowanej bazie (wymaga: hold-zasiew.js — regulamin demo-test).",
+  "opis": "Szybka rezerwacja do wpłaty zadatku (hold), część A: numer z kartoteki → pytanie i wybór; osoba bez kartoteki → termin „Do wpłaty” → link do zadatku → akceptacja regulaminu z telefonu (profil, ślad, Sprawa) → „Zadatek wpłynął” → potwierdzona; drugi hold na ten sam numer odrzucony; drugi hold innej osoby zostaje do części B. Realny zapis na izolowanej bazie. Przygotowanie: sprząta ślady poprzedniej próby i ustawia regulamin demo-test.",
   "sekcja": "terminarz",
   "korzen": "#trm-root",
   "przechwyc": [],
   "czekajPoSekcji": 4500,
+  "przygotuj": "narzedzia/proby/skrypty/hold-zasiew.js",
   "kroki": [
     {
       "viewport": [
