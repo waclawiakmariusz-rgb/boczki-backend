@@ -142,6 +142,17 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-bk-start .t small { font-size:12px; color:var(--t-mut); line-height:1.35; }
 .trm-bk-start .chev { flex:0 0 18px; color:var(--t-mut); }
 body.dark-mode .trm .trm-bk-start:hover { background:rgba(255,255,255,.04); }
+/* karta Zadatek: pole kwoty krótkie, przyciski wpłaty/zwolnienia oddzielone kreską od formularza linku */
+.trm-hold-kwota { align-items:center; gap:8px; flex-wrap:wrap; }
+.trm-hold-kwota input { width:140px; flex:0 0 140px; }
+.trm-hold-akcje { border-top:1px solid var(--t-line); padding-top:10px; }
+/* dopasowania po numerze telefonu w szybkiej rezerwacji */
+.trm-bk-dopasowania { margin-top:4px; border:1px solid var(--t-line); border-radius:var(--t-rs); background:var(--t-bg); padding:10px 12px; }
+.trm-bk-dopasowania .n { font-size:12.5px; font-weight:600; margin-bottom:6px; }
+.trm-bk-dopasowania .k { display:flex; align-items:center; gap:10px; padding:6px 0; border-top:1px solid var(--t-line); }
+.trm-bk-dopasowania .k .t { flex:1; min-width:0; display:flex; flex-direction:column; gap:1px; }
+.trm-bk-dopasowania .k .m { font-size:12px; color:var(--t-mut); }
+.trm-bk-dopasowania > .trm-btn.link { margin-top:6px; padding-left:0; }
 .trm-zadatek-os { display:flex; flex-direction:column; gap:4px; margin:6px 0 10px; font-size:12.5px; }
 .trm-zadatek-os > div { display:flex; gap:8px; align-items:flex-start; color:var(--t-mut); }
 .trm-zadatek-os > div i { flex:0 0 10px; width:10px; height:10px; border-radius:50%; border:2px solid #d9b25a; margin-top:4px; background:#fff; }

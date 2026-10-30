@@ -1359,8 +1359,9 @@
         ? `<div class="trm-wybrana hold">${IKONA_TELEFON}<div class="t"><div><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon)}</span></div><div class="m"><span class="trm-pill warn">do wpłaty zadatku</span> bez kartoteki — termin trzymany najdłużej dobę, konto po akceptacji regulaminu na linku</div></div><button class="trm-btn link sm fix" onclick="TRM.nowaKlient(null)">zmień</button></div>`
         : `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`)
       : n.bk ? `<div class="trm-bk"><div class="trm-bk-head">${IKONA_TELEFON}<div class="t"><b>Szybka rezerwacja bez kartoteki</b><small>Termin trzymany do wpłaty zadatku, potem wygasa sam. Konto powstanie po akceptacji regulaminu na linku.</small></div></div>
-           <div class="trm-grid2"><div class="trm-field"><label>Imię i nazwisko</label><input id="trm-bk-nazwa" placeholder="np. Jan Kowalski" value="${esc(n.bk.nazwa || '')}" autocomplete="off"></div><div class="trm-field"><label>Telefon</label><input id="trm-bk-tel" type="tel" placeholder="np. 600 100 200" value="${esc(n.bk.telefon || '')}" autocomplete="off"><div class="trm-pomoc">Na ten numer pójdzie link do zadatku.</div></div></div>
-           <div class="trm-row"><button class="trm-btn sm primary" onclick="TRM.nowaBkZatwierdz()">Zapisz dane</button><button class="trm-btn sm link" onclick="TRM.nowa.bk=null;TRM.renderNowa()">Wróć do kartoteki</button></div></div>`
+           <div class="trm-grid2"><div class="trm-field"><label>Imię i nazwisko</label><input id="trm-bk-nazwa" placeholder="np. Jan Kowalski" value="${esc(n.bk.nazwa || '')}" autocomplete="off"></div><div class="trm-field"><label>Telefon</label><input id="trm-bk-tel" type="tel" placeholder="np. 600 100 200" value="${esc(n.bk.telefon || '')}" autocomplete="off" oninput="TRM.nowa.bk.dopasowania=null"><div class="trm-pomoc">Na ten numer pójdzie link do zadatku.</div></div></div>
+           ${Array.isArray(n.bk.dopasowania) && n.bk.dopasowania.length ? `<div class="trm-bk-dopasowania"><div class="n">Ten numer jest już w kartotece — to ta osoba?</div>${n.bk.dopasowania.map((k, i) => `<div class="k"><div class="t"><b>${esc(k.nazwa)}</b><span class="m">${esc(k.telefon || '')} · ID ${esc(k.id_klienta)}${k.wizyt ? ` · ${k.wizyt} ${k.wizyt === 1 ? 'wizyta' : k.wizyt < 5 ? 'wizyty' : 'wizyt'}${k.ostatnia ? ', ostatnia ' + esc(ladnaData(k.ostatnia, true)) : ''}` : ' · bez wizyt w terminarzu'}</span></div><button class="trm-btn sm primary fix" onclick="TRM.nowaBkUzyjKartoteki(${i})">Tak, użyj kartoteki</button></div>`).join('')}<button class="trm-btn sm link" onclick="TRM.nowaBkZatwierdz(true)">Nie, to inna osoba — zapisz bez kartoteki</button></div>`
+           : `<div class="trm-row"><button class="trm-btn sm primary" onclick="TRM.nowaBkZatwierdz()">Zapisz dane</button><button class="trm-btn sm link" onclick="TRM.nowa.bk=null;TRM.renderNowa()">Wróć do kartoteki</button></div>`}</div>`
       : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
          <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${klientWynikiHtml(n.wyniki)}</div>
          <div class="trm-row" style="margin-top:6px"><span class="muted small">Klientki zakłada się w module <b>Klienci</b> — tam są zgody, dokumenty i kontrola duplikatów. Tutaj tylko wyszukujesz istniejący profil.</span></div>
@@ -1372,16 +1373,30 @@
   // Szybka rezerwacja do wpłaty zadatku (30.10.2026, docs/terminarz-szybka-rezerwacja/): dane z rozmowy zamiast kartoteki.
   // „Klientką” kreatora staje się obiekt bez id_klienta z flagą bez_kartoteki — reszta kreatora (zabiegi, termin, zapis) działa jak zwykle.
   TRM.nowaBezKartoteki = () => { const n = TRM.nowa; if (!n) return; n.bk = { nazwa: '', telefon: n.fraza && /^[\d\s+()-]{7,}$/.test(n.fraza) ? n.fraza : '' }; n.klient = null; renderNowa(); setTimeout(() => { const i = el('trm-bk-nazwa'); if (i) i.focus(); }, 50); };
-  TRM.nowaBkZatwierdz = () => {
+  // „Zapisz dane” najpierw pyta kartotekę o ten numer (właściciel, 30.10: „może go mamy i to nasz klient”). Dopasowanie = wybór:
+  // użyj istniejącej kartoteki albo potwierdź „inna osoba” (innaOsoba=true). Serwer i tak odrzuci hold bez tego potwierdzenia.
+  TRM.nowaBkZatwierdz = async (innaOsoba) => {
     const n = TRM.nowa; if (!n || !n.bk) return;
-    const nazwa = String((el('trm-bk-nazwa') || {}).value || '').trim().replace(/\s+/g, ' ').slice(0, 255);
-    const telefon = String((el('trm-bk-tel') || {}).value || '').trim().slice(0, 50);
-    n.bk = { nazwa, telefon };
+    const nazwa = String((el('trm-bk-nazwa') || {}).value || n.bk.nazwa || '').trim().replace(/\s+/g, ' ').slice(0, 255);
+    const telefon = String((el('trm-bk-tel') || {}).value || n.bk.telefon || '').trim().slice(0, 50);
+    n.bk = { nazwa, telefon, dopasowania: innaOsoba ? n.bk.dopasowania : null };
     if (nazwa.length < 3 || !nazwa.includes(' ')) return toast('warning', 'Podaj imię i nazwisko', 'Tak, jak przedstawiła się ta osoba — to trafi na kafelek i do linku.');
     if (telefon.replace(/\D/g, '').length < 9) return toast('warning', 'Podaj numer telefonu', 'Minimum 9 cyfr — na ten numer pójdzie link do zadatku.');
-    n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true }; n.zakupy = null; n.hist = null;
+    if (!innaOsoba) {
+      const d = await api('trm_klient_po_telefonie', { telefon });
+      if (TRM.nowa !== n || !n.bk) return;
+      if (d.status === 'success' && Array.isArray(d.klienci) && d.klienci.length) { n.bk.dopasowania = d.klienci; renderNowa(); return toast('info', 'Ten numer już znamy', `${d.klienci[0].nazwa} (ID ${d.klienci[0].id_klienta}) — wybierz kartotekę albo potwierdź, że to inna osoba.`); }
+    }
+    n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true, potwierdz_nowy: !!innaOsoba }; n.zakupy = null; n.hist = null;
     if (n.kanal === 'recepcja') n.kanal = 'telefon';
     renderNowa(); nowaLadujSloty(); TRM.nowaZmiana();
+  };
+  TRM.nowaBkUzyjKartoteki = (i) => {
+    const n = TRM.nowa; if (!n || !n.bk || !Array.isArray(n.bk.dopasowania) || !n.bk.dopasowania[i]) return;
+    const k = n.bk.dopasowania[i];
+    n.klient = { id_klienta: k.id_klienta, nazwa: k.nazwa, telefon: k.telefon }; n.bk = null; n.zakupy = null; n.hist = null;
+    toast('success', 'Użyto kartoteki', `${k.nazwa} · ID ${k.id_klienta} — zwykła wizyta, bez holdu.`);
+    renderNowa(); nowaLadujZakupy(); nowaLadujHistorie(); nowaLadujSloty(); TRM.nowaZmiana();
   };
   // T02/T03: zakupy klientki na pierwszym planie kroku „Zabieg”; cennik jako „pojedynczy zabieg” (albo tylko informacja o Sprzedaży przy włączonej kontroli)
   const zakupyIntegracja = () => !!(TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.zakupy_integracja === 'on'); // sekcja 0 odbioru: UI zakupów tylko gdy właściciel włączył integrację
@@ -1802,8 +1817,12 @@
     if (!n.klient) return toast('warning', 'Wskaż klientkę');
     n.zapis = true; const btn = el('trm-n-zapisz'); if (btn) { btn.disabled = true; btn.textContent = 'Zapisujemy…'; }
     const hold = !!n.klient.bez_kartoteki;   // szybka rezerwacja: bez kartoteki, termin trzymany do wpłaty zadatku
-    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta || null, nazwa: n.klient.nazwa, telefon: n.klient.telefon || null }, bez_kartoteki: hold, hold, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka, mimo_grafiku: !!n.mimoGrafiku });
+    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta || null, nazwa: n.klient.nazwa, telefon: n.klient.telefon || null }, bez_kartoteki: hold, hold, potwierdz_nowy: !!n.klient.potwierdz_nowy, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka, mimo_grafiku: !!n.mimoGrafiku });
     n.zapis = false;
+    if (d.code === 'TELEFON_W_KARTOTECE') { // serwer znalazł ten numer w kartotece — wracamy do formularza z listą dopasowań, decyzja należy do recepcji
+      n.bk = { nazwa: n.klient.nazwa, telefon: n.klient.telefon, dopasowania: d.klienci || [] }; n.klient = null; n.idem = uuid(); renderNowa();
+      return toast('warning', 'Ten numer jest już w kartotece', d.message);
+    }
     if (d.status === 'konflikt') { n.dostep = { stan: 'zajety', wynik: { problemy: d.problemy, alternatywy: d.alternatywy } }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
     if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = hold ? 'Zarezerwuj do wpłaty zadatku' : 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
     if (hold && !d.powtorzenie) toast('warning', 'Termin trzymany do wpłaty zadatku', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)} — ważne do ${krotkiTermin(d.hold_do || d.rezerwacja.hold_do)}. Teraz utwórz link do zadatku w karcie wizyty.`);
@@ -2227,8 +2246,9 @@
         html += `<div class="trm-field"><label>Link do zadatku — wyślij SMS-em z telefonu salonu</label><div class="trm-link-box" id="trm-hold-url">${esc(url)}</div>
           <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm primary" onclick="TRM.holdKopiuj()">Kopiuj link</button><button class="trm-btn sm link" onclick="TRM.hold[${r.id}].nowyLink=true;TRM.renderSzczegoly()">Nowy link (inna kwota)</button></div></div>`;
       } else if (linkOn) {
-        html += `<div class="trm-grid2"><div class="trm-field"><label>Kwota zadatku (50% = ${zl(kwotaDom)})</label><div class="trm-row"><input type="number" min="1" step="1" id="trm-hold-kwota" value="${esc(h.kwota)}" onchange="TRM.hold[${r.id}].kwota=Number(this.value)||0"><button class="trm-btn sm fix" onclick="TRM.holdZaokraglij(${r.id})" title="W górę do pełnych 10 zł">do 10 zł ↑</button></div></div>
-          <div class="trm-field"><label>Link z panelu tpay (przycisk „Kopiuj”)</label><input id="trm-hold-tpay" placeholder="https://secure.tpay.com/?h=…" value="${esc(h.tpay || '')}" onchange="TRM.hold[${r.id}].tpay=this.value"></div></div>
+        // dwa osobne wiersze zamiast siatki: długie etykiety łamały się i pola się rozjeżdżały (zrzut właściciela z produkcji, 30.10 14:59)
+        html += `<div class="trm-field"><label>Kwota zadatku</label><div class="trm-row trm-hold-kwota"><input type="number" min="1" step="0.01" id="trm-hold-kwota" value="${esc(h.kwota)}" onchange="TRM.hold[${r.id}].kwota=Number(this.value)||0"><button class="trm-btn sm fix" onclick="TRM.holdZaokraglij(${r.id})" title="W górę do pełnych 10 zł">do 10 zł ↑</button><span class="muted small">50% ceny zabiegów = ${zl(kwotaDom)}</span></div></div>
+          <div class="trm-field"><label>Link z panelu tpay</label><input id="trm-hold-tpay" placeholder="https://secure.tpay.com/?h=…" value="${esc(h.tpay || '')}" onchange="TRM.hold[${r.id}].tpay=this.value"><div class="trm-pomoc">Utwórz płatność w panelu tpay i skopiuj link przyciskiem „Kopiuj” — jak dotąd w Płatnościach online.</div></div>
           <div class="trm-row"><button class="trm-btn sm primary" onclick="TRM.holdLink(${r.id})">Utwórz link do zadatku</button>${url ? `<button class="trm-btn sm link" onclick="TRM.hold[${r.id}].nowyLink=false;TRM.renderSzczegoly()">Zostaw obecny link</button>` : ''}</div>
           <div class="trm-pomoc">Klient zobaczy na linku termin i kwotę, zaakceptuje regulamin i dopiero potem przejdzie do tpay. Po akceptacji powstanie jego profil, a Ty dostaniesz powiadomienie „sprawdź wpłatę”.</div>`;
       } else {
@@ -2242,7 +2262,7 @@
           ${!r.id_klienta ? '<div class="trm-pomoc">Ta osoba nie weszła w link — profil powstanie przy wpłacie z adnotacją „regulamin do podpisania w salonie”.</div>' : ''}
           <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm primary" onclick="TRM.holdWplata(${r.id})">${wygaslaBezWplaty ? 'Zapisz wpłatę mimo wygaśnięcia' : 'Potwierdź: zadatek wpłynął'}</button><button class="trm-btn sm link" onclick="TRM.hold[${r.id}].wplata=false;TRM.renderSzczegoly()">Anuluj</button></div></div>`;
       } else {
-        html += `<div class="trm-akcje" style="margin-top:8px"><button class="trm-btn sm ${hold ? 'primary' : ''}" onclick="TRM.hold[${r.id}].wplata=true;TRM.renderSzczegoly()">${hold ? 'Zadatek wpłynął' : 'Wpłata mimo wygaśnięcia'}</button>${hold ? `<button class="trm-btn sm danger" onclick="TRM.holdZwolnij(${r.id})">Zwolnij termin</button>` : ''}</div>`;
+        html += `<div class="trm-akcje trm-hold-akcje" style="margin-top:8px"><button class="trm-btn sm ${hold ? 'primary' : ''}" onclick="TRM.hold[${r.id}].wplata=true;TRM.renderSzczegoly()">${hold ? 'Zadatek wpłynął' : 'Wpłata mimo wygaśnięcia'}</button>${hold ? `<button class="trm-btn sm danger" onclick="TRM.holdZwolnij(${r.id})">Zwolnij termin</button>` : ''}</div>`;
         if (wygaslaBezWplaty) html += `<div class="trm-note bad small" style="margin-top:8px">Termin wygasł ${esc(krotkiTermin(r.hold_do))} bez wpłaty — godzina wróciła do puli. Jeśli pieniądze mimo to doszły, zapisz je przyciskiem wyżej; wizyta nie wraca sama, umawia się ją na nowo.</div>`;
       }
     }

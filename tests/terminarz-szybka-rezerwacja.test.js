@@ -52,6 +52,21 @@ describe('serwer: zapis holdu', () => {
         expect(zapisz).toContain('const holdDo = hold ? terminHoldu(cfg.terazStr, start) : null;');
         expect(zapisz).toContain("if (hold && !holdDo) throw new BladUzytkownika('Ta godzina już minęła");
     });
+    test('numer z kartoteki: hold bez kartoteki odrzucony z listą dopasowań, dopóki recepcja nie potwierdzi „inna osoba”', () => {
+        expect(zapisz).toContain('if (hold && !idKlienta && !d.potwierdz_nowy) {');
+        expect(zapisz).toContain("code: 'TELEFON_W_KARTOTECE', klienci: dopasowania");
+        const f = wytnij(SRV, 'async function klienciPoTelefonie(tenant, telefon) {', 'async function linkZadatku');
+        expect(f).toContain("replace(/\\D/g, '').slice(-9)");                 // porównanie po 9 cyfrach, bez +48 i spacji
+        expect(f).toContain("(K.status IS NULL OR K.status = 'AKTYWNY')");
+        expect(SRV).toContain("case 'trm_klient_po_telefonie': {");
+        expect(SRV).toContain("'trm_klient_po_telefonie'];");
+        // ekran: pytanie przed zapisem, wybór kartoteki albo „inna osoba”; odpowiedź serwera też wraca do tego wyboru
+        expect(JS).toContain("const d = await api('trm_klient_po_telefonie', { telefon });");
+        expect(JS).toContain('onclick="TRM.nowaBkUzyjKartoteki(${i})">Tak, użyj kartoteki</button>');
+        expect(JS).toContain('onclick="TRM.nowaBkZatwierdz(true)">Nie, to inna osoba — zapisz bez kartoteki</button>');
+        expect(JS).toContain("potwierdz_nowy: !!n.klient.potwierdz_nowy, pozycje: n.pozycje");
+        expect(JS).toContain("if (d.code === 'TELEFON_W_KARTOTECE') {");
+    });
     test('jeden aktywny hold na numer telefonu', () => {
         expect(zapisz).toContain("status = 'do_wplaty' AND hold_do > NOW()");
         expect(zapisz).toContain("code: 'HOLD_TELEFON'");
@@ -153,11 +168,11 @@ describe('ekran recepcji', () => {
         expect(CSS).toContain('.trm-karta.hold { border-style:dashed;');
         expect(JS).toContain('<label>Telefon</label>');
         expect(JS).toContain('>Zapisz dane</button>');
-        expect(JS).toContain("n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true };");
+        expect(JS).toContain("n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true, potwierdz_nowy: !!innaOsoba };");
         expect(JS).toContain("if (telefon.replace(/\\D/g, '').length < 9) return toast('warning', 'Podaj numer telefonu'");
     });
     test('zapis niesie flagę hold i telefon; przycisk nazywa rzecz po imieniu', () => {
-        expect(JS).toContain("bez_kartoteki: hold, hold, pozycje: n.pozycje");
+        expect(JS).toContain("bez_kartoteki: hold, hold, potwierdz_nowy: !!n.klient.potwierdz_nowy, pozycje: n.pozycje");
         expect(JS).toContain("'Zarezerwuj do wpłaty zadatku'");
     });
     test('kartoteka, zakupy i historia nie są pytane o osobę bez ID', () => {

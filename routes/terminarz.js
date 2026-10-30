@@ -855,6 +855,19 @@ module.exports = (db, opts = {}) => {
   // ═══════════ SZYBKA REZERWACJA DO WPŁATY ZADATKU (hold) — docs/terminarz-szybka-rezerwacja/SPECYFIKACJA.md ═══════════
   // Link do zadatku żyje w module zgód (routes/zgody.js, dodatek platnosc_link); terminarz tylko go zakłada i czyta jego stan.
   const zgodyNarzedzia = () => require('./zgody').narzedzia;
+  /** Klientki z kartoteki o tym numerze telefonu (porównanie po ostatnich 9 cyfrach, bez spacji, myślników i +48).
+   *  Szybka rezerwacja „bez kartoteki” najpierw sprawdza, czy ta osoba nie jest już klientką — decyzja właściciela 30.10.2026. */
+  async function klienciPoTelefonie(tenant, telefon) {
+    const cyfry = String(telefon || '').replace(/\D/g, '').slice(-9);
+    if (cyfry.length < 9) return [];
+    const rows = await q(`SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.status,
+        (SELECT COUNT(*) FROM Term_Rezerwacje r WHERE r.tenant_id = K.tenant_id AND r.id_klienta = K.id_klienta AND r.status NOT IN ('anulowana','odrzucona','wygasla')) AS wizyt,
+        (SELECT DATE_FORMAT(MAX(r.start),'%Y-%m-%d') FROM Term_Rezerwacje r WHERE r.tenant_id = K.tenant_id AND r.id_klienta = K.id_klienta AND r.status NOT IN ('anulowana','odrzucona','wygasla')) AS ostatnia
+      FROM Klienci K WHERE K.tenant_id = ? AND (K.status IS NULL OR K.status = 'AKTYWNY')
+        AND RIGHT(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(K.telefon,''),' ',''),'-',''),'+',''),'(',''),')',''), 9) = ?
+      ORDER BY K.imie_nazwisko LIMIT 5`, [tenant, cyfry]).catch(() => []);
+    return rows.map(k => ({ id_klienta: k.id_klienta, nazwa: k.imie_nazwisko, telefon: k.telefon, wizyt: Number(k.wizyt) || 0, ostatnia: k.ostatnia || null }));
+  }
   /** Ostatni link do zadatku tej rezerwacji: stan, kwota, token (adres buduje ekran: /platnosc.html?t=…). */
   async function linkZadatku(tenant, rezId) {
     try {
@@ -1897,6 +1910,12 @@ module.exports = (db, opts = {}) => {
         const cfg = await wspolneCfg(tenant);
         const holdDo = hold ? terminHoldu(cfg.terazStr, start) : null;
         if (hold && !holdDo) throw new BladUzytkownika('Ta godzina już minęła — szybka rezerwacja działa tylko dla przyszłych terminów.');
+        // Właściciel (30.10): „sprawdzajmy, czy takiego telefonu nie ma, bo może to nasz klient”. Bez potwierdzenia „to inna osoba”
+        // hold bez kartoteki na numer z kartoteki jest odrzucany razem z listą dopasowań — ekran daje wybór, serwer pilnuje.
+        if (hold && !idKlienta && !d.potwierdz_nowy) {
+          const dopasowania = await klienciPoTelefonie(tenant, telefon);
+          if (dopasowania.length) throw new BladUzytkownika(`Ten numer jest już w kartotece: ${dopasowania[0].nazwa} (ID ${dopasowania[0].id_klienta}). Wybierz tę klientkę albo potwierdź, że to inna osoba.`, { code: 'TELEFON_W_KARTOTECE', klienci: dopasowania });
+        }
         if (hold) { // jeden aktywny hold na numer telefonu (decyzja właściciela): drugi telefon o kolejny termin nie blokuje dwóch godzin
           const cyfry = telefon.replace(/\D/g, '').slice(-9);
           const inny = (await q(`SELECT id, DATE_FORMAT(start,'%Y-%m-%d %H:%i') AS start FROM Term_Rezerwacje WHERE tenant_id = ? AND status = 'do_wplaty' AND hold_do > NOW() AND REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(klient_telefon,''),' ',''),'-',''),'+',''),'(','') LIKE ? LIMIT 1`, [tenant, '%' + cyfry]))[0];
@@ -2413,6 +2432,10 @@ module.exports = (db, opts = {}) => {
         return { status: 'success', oznaczono: ids.length };
       }
       // ───────── szybka rezerwacja do wpłaty zadatku (hold) — docs/terminarz-szybka-rezerwacja/ ─────────
+      case 'trm_klient_po_telefonie': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        return { status: 'success', klienci: await klienciPoTelefonie(tenant, d.telefon) };
+      }
       case 'trm_hold_link': {
         wymagaj(r, ROLE_OPERACYJNE);
         const rez = await rezerwacja(tenant, d.id);
@@ -2589,4 +2612,4 @@ module.exports = (db, opts = {}) => {
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
 module.exports.terminHoldu = terminHoldu; // do prób jednostkowych (reguła 24 h / 24 h przed / 2 h)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawy_domknij', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane', 'trm_hold_link', 'trm_hold_wplata', 'trm_hold_zwolnij'];
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawy_domknij', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane', 'trm_hold_link', 'trm_hold_wplata', 'trm_hold_zwolnij', 'trm_klient_po_telefonie'];

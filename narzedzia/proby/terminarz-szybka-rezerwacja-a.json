@@ -7,123 +7,413 @@
   "przechwyc": [],
   "czekajPoSekcji": 4500,
   "kroki": [
-    { "viewport": [1384, 905] },
-    { "czekaj": 1500 },
-    { "js": "TRM.idz(3); 'za trzy dni — hold = 24 h od zapisu'" },
-    { "czekaj": 2500 },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 11:00', pracownik: 'Ola' }); 'ok'" },
-    { "czekaj": 1000 },
-    { "sprawdz": "!!document.querySelector('button[onclick=\"TRM.nowaBezKartoteki()\"]')", "opis": "H01: w kroku klientki jest przycisk „Szybka rezerwacja bez kartoteki”" },
-    { "js": "TRM.nowaBezKartoteki(); 'ok'" },
-    { "czekaj": 600 },
-    { "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Jan Testowy'; document.getElementById('trm-bk-tel').value='700 900 100'; TRM.nowaBkZatwierdz(); return 'dane z rozmowy'; })()" },
-    { "czekaj": 1200 },
-    { "sprawdz": "TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.bez_kartoteki === true && !TRM.nowa.klient.id_klienta", "opis": "H02: „klientką” kreatora jest osoba bez kartoteki (bez ID)" },
-    { "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()", "opis": "zabieg 60 min, 200 zł" },
-    { "czekaj": 2500 },
-    { "js": "(function(){ TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 11:00'); return 'godzina 11:00'; })()" },
-    { "czekaj": 2500 },
-    { "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && /Zarezerwuj do wpłaty zadatku/.test(document.getElementById('trm-n-zapisz').textContent) && !document.getElementById('trm-n-zapisz').disabled", "opis": "H03: termin dostępny, przycisk główny brzmi „Zarezerwuj do wpłaty zadatku”" },
-    { "js": "(function(){ var e=document.querySelector('.trm-wybrana.hold'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 500 },
-    { "zrzut": "hold-01-kreator-bez-kartoteki" },
-
-    { "js": "TRM.nowaZapisz().then(function(){ return 'zapisano'; })" },
-    { "czekaj": 3000 },
-    { "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return /Jan Testowy/.test(x.klient_nazwa||'');})[0]; if(!r) return 'brak'; window.__holdA=r.id; return 'rezerwacja ' + r.id + ' · ' + r.status + ' · trzymana do ' + r.hold_do; })()", "opis": "hold po zapisie" },
-    { "sprawdz": "(function(){ var r=(TRM.dzien.rezerwacje||[]).filter(function(x){return x.id===window.__holdA;})[0]; return !!r && r.status==='do_wplaty' && !!r.hold_do && !r.id_klienta; })()", "opis": "H04: rezerwacja w stanie „Do wpłaty”, z terminem ważności, bez konta" },
-    { "sprawdz": "(function(){ var k=document.querySelector('.trm-karta.hold[data-rezerwacja=\"'+window.__holdA+'\"]'); return !!k && /Do wpłaty do/.test(k.textContent); })()", "opis": "H05: kafelek kreskowany z plakietką „Do wpłaty do …”" },
-    { "czekaj": 800 },
-    { "sprawdz": "!!document.querySelector('.trm-zadatek') && !!document.getElementById('trm-hold-kwota') && Number(document.getElementById('trm-hold-kwota').value) === 100", "opis": "H06: panel wizyty ma kartę Zadatek z kwotą domyślną 50% (100 zł z 200 zł)" },
-    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 500 },
-    { "zrzut": "hold-02-kafelek-i-karta-zadatek" },
-
-    { "js": "(function(){ document.getElementById('trm-hold-kwota').value='95'; TRM.holdZaokraglij(window.__holdA); return 'zaokrąglono 95 → ' + document.getElementById('trm-hold-kwota').value; })()" },
-    { "sprawdz": "document.getElementById('trm-hold-kwota').value === '100'", "opis": "H07: „do 10 zł ↑” zaokrągla 95 → 100" },
-    { "js": "(function(){ document.getElementById('trm-hold-tpay').value='https://secure.tpay.com/?h=abcdef0123456789abcdef0123456789abcdef01'; return TRM.holdLink(window.__holdA).then(function(){ return 'link utworzony'; }); })()" },
-    { "czekaj": 1500 },
-    { "sprawdz": "TRM.szcz && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status === 'OCZEKUJACA' && !!TRM.szcz.zadatekLink.token && !!document.getElementById('trm-hold-url')", "opis": "H08: link do zadatku utworzony, widoczny do skopiowania" },
-    { "sprawdz": "(TRM.szcz.historia||[]).some(function(h){return /link do zadatku 100\\.00 zł/.test(h.opis||'');})", "opis": "H09: historia wizyty ma wpis o linku" },
-    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 400 },
-    { "zrzut": "hold-03-link-do-zadatku" },
-
-    { "js": "(function(){ window.__tokA = TRM.szcz.zadatekLink.token; return fetch('/api/zgoda/info?t=' + encodeURIComponent(window.__tokA)).then(function(r){return r.json();}).then(function(d){ window.__infoA=d; return JSON.stringify({status:d.status, wizyta:d.wizyta, imie:d.imie_podpowiedz, kwota:d.kwota, tryb:d.tryb}); }); })()", "opis": "strona linku (to, co widzi klient)" },
-    { "sprawdz": "window.__infoA && window.__infoA.status==='success' && window.__infoA.wizyta && !!window.__infoA.wizyta.hold_do && window.__infoA.imie_podpowiedz==='Jan Testowy' && window.__infoA.kwota===100 && window.__infoA.tryb==='formularz'", "opis": "H10: strona linku zna termin, czas na wpłatę, kwotę i podpowiada dane z rozmowy" },
-    { "js": "(function(){ return fetch('/api/zgoda/akceptuj', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ t: window.__tokA, imie_nazwisko:'Jan Testowy', telefon:'700900100' }) }).then(function(r){return r.json();}).then(function(d){ window.__akcA=d; return JSON.stringify(d); }); })()", "opis": "klient akceptuje regulamin na linku" },
-    { "sprawdz": "window.__akcA && window.__akcA.status==='success' && /tpay\\.com/.test(window.__akcA.tpay_link||'')", "opis": "H11: po akceptacji klient dostaje link tpay" },
-    { "js": "TRM.otworzSzczegoly(window.__holdA).then(function(){ return 'panel odświeżony'; })" },
-    { "czekaj": 1200 },
-    { "sprawdz": "TRM.szcz && !!TRM.szcz.rez.id_klienta && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status==='ZAAKCEPTOWANA' && (TRM.szcz.historia||[]).some(function(h){return /regulamin zaakceptowany online/.test(h.opis||'');})", "opis": "H12: profil przypięty do rezerwacji, link „zaakceptowany”, ślad w historii wizyty" },
-    { "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__spr=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdA;}).map(function(s){return s.typ+':'+s.stan;}).join(',') || 'brak'; }); })()", "opis": "Sprawy dla tej rezerwacji" },
-    { "sprawdz": "window.__spr && (window.__spr.sprawy||[]).some(function(s){return s.typ==='E41' && s.rezerwacja_id===window.__holdA && s.stan!=='rozwiazana';})", "opis": "H13: w Powiadomieniach jest Sprawa E41 „sprawdź wpłatę w tpay”" },
-    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 400 },
-    { "zrzut": "hold-04-po-akceptacji-regulaminu" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 600 },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 14:00', pracownik: 'Ola' }); 'ok'" },
-    { "czekaj": 900 },
-    { "js": "TRM.nowaBezKartoteki(); 'ok'" },
-    { "czekaj": 500 },
-    { "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Jan Testowy'; document.getElementById('trm-bk-tel').value='700900100'; TRM.nowaBkZatwierdz(); return 'ten sam numer'; })()" },
-    { "czekaj": 1000 },
-    { "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return 'zabieg'; })()" },
-    { "czekaj": 2500 },
-    { "js": "TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 14:00'); 'ok'" },
-    { "czekaj": 2500 },
-    { "js": "TRM.nowaZapisz().then(function(){ return 'po próbie zapisu'; })" },
-    { "czekaj": 1500 },
-    { "sprawdz": "!!TRM.nowa && !(TRM.dzien.rezerwacje||[]).some(function(x){return /Jan Testowy/.test(x.klient_nazwa||'') && x.id!==window.__holdA;})", "opis": "H14: drugi hold na ten sam numer odrzucony — kreator zostaje otwarty, nowej rezerwacji nie ma" },
-    { "zrzut": "hold-05-drugi-hold-odrzucony" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 500 },
-
-    { "js": "TRM.otworzSzczegoly(window.__holdA).then(function(){ TRM.hold[window.__holdA].wplata=true; TRM.renderSzczegoly(); return 'formularz wpłaty'; })" },
-    { "czekaj": 800 },
-    { "sprawdz": "!!document.getElementById('trm-hold-wplata-kwota') && Number(document.getElementById('trm-hold-wplata-kwota').value)===100", "opis": "H15: formularz „Zadatek wpłynął” z kwotą z linku" },
-    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 400 },
-    { "zrzut": "hold-06-zadatek-wplynal-formularz" },
-    { "js": "TRM.holdWplata(window.__holdA).then(function(){ return 'wpłata zapisana'; })" },
-    { "czekaj": 2000 },
-    { "sprawdz": "TRM.szcz && TRM.szcz.rez.status==='potwierdzona' && !!TRM.szcz.rez.zadatek_id && (TRM.szcz.historia||[]).some(function(h){return /zadatek wpłynął: 100\\.00 zł \\(tpay\\)/.test(h.opis||'');})", "opis": "H16: rezerwacja potwierdzona, zadatek zapisany, ślad w historii" },
-    { "sprawdz": "(function(){ var k=document.querySelector('.trm-karta[data-rezerwacja=\"'+window.__holdA+'\"]'); return !!k && k.className.indexOf('hold')<0; })()", "opis": "H17: kafelek nie jest już kreskowany" },
-    { "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__spr2=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdA;}).map(function(s){return s.typ+':'+s.stan;}).join(',') || 'brak otwartych'; }); })()" },
-    { "sprawdz": "window.__spr2 && !(window.__spr2.sprawy||[]).some(function(s){return s.typ==='E41' && s.rezerwacja_id===window.__holdA;})", "opis": "H18: Sprawa E41 zamknęła się sama po wpłacie" },
-    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
-    { "czekaj": 400 },
-    { "zrzut": "hold-07-potwierdzona-po-wplacie" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 500 },
-
-    { "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:00', pracownik: 'Anna' }); 'ok'" },
-    { "czekaj": 900 },
-    { "js": "TRM.nowaBezKartoteki(); 'ok'" },
-    { "czekaj": 500 },
-    { "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Anna Testowa'; document.getElementById('trm-bk-tel').value='700 900 200'; TRM.nowaBkZatwierdz(); return 'inna osoba, inny numer'; })()" },
-    { "czekaj": 1000 },
-    { "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Depilacja/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()" },
-    { "czekaj": 2500 },
-    { "js": "TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 16:00'); 'ok'" },
-    { "czekaj": 2500 },
-    { "js": "TRM.nowaZapisz().then(function(){ return 'zapisano hold B'; })" },
-    { "czekaj": 3000 },
-    { "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return /Anna Testowa/.test(x.klient_nazwa||'');})[0]; if(!r) return 'brak'; window.__holdB=r.id; return 'hold B ' + r.id + ' ' + r.status; })()" },
-    { "sprawdz": "!!window.__holdB", "opis": "H19: drugi hold (inny numer) zapisany — zostaje do próby wygaszenia w części B" },
-    { "czekaj": 800 },
-    { "js": "(function(){ document.getElementById('trm-hold-tpay').value='https://secure.tpay.com/?h=0123456789abcdef0123456789abcdef01234567'; return TRM.holdLink(window.__holdB).then(function(){ return 'link B'; }); })()" },
-    { "czekaj": 1200 },
-    { "sprawdz": "TRM.szcz && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status==='OCZEKUJACA' && !!TRM.szcz.zadatekLink.token", "opis": "H20: link B utworzony (po wygaśnięciu holdu ma mówić „termin zwolniony”)" },
-    { "js": "(function(){ window.__tokB = TRM.szcz.zadatekLink.token; return 'token B zapamiętany'; })()" },
-    { "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'" },
-    { "czekaj": 400 },
-
-    { "js": "location.href = location.origin + '/platnosc.html?t=' + encodeURIComponent(window.__tokB); 'strona linku dla klienta'" },
-    { "czekaj": 3000 },
-    { "zrzut": "hold-08-strona-linku-klienta" }
+    {
+      "viewport": [
+        1384,
+        905
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "TRM.idz(3); 'za trzy dni — hold = 24 h od zapisu'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 09:00', pracownik: 'Ola' }); 'ok'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "js": "TRM.nowaBezKartoteki(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Ewa Zielinska'; document.getElementById('trm-bk-tel').value='+48 601-200-305'; return TRM.nowaBkZatwierdz().then(function(){ return 'sprawdzono numer'; }); })()",
+      "opis": "numer istniejącej klientki, zapisany inaczej (+48 i myślniki)"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "sprawdz": "TRM.nowa && TRM.nowa.bk && Array.isArray(TRM.nowa.bk.dopasowania) && TRM.nowa.bk.dopasowania.length>=1 && String(TRM.nowa.bk.dopasowania[0].id_klienta)==='1005' && !TRM.nowa.klient && !!document.querySelector('.trm-bk-dopasowania')",
+      "opis": "D01: numer znaleziony w kartotece mimo innego zapisu — ekran pyta, czy to ta osoba, hold nie powstaje"
+    },
+    {
+      "zrzut": "hold-00-numer-w-kartotece"
+    },
+    {
+      "js": "TRM.nowaBkUzyjKartoteki(0); 'kartoteka'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "sprawdz": "TRM.nowa && TRM.nowa.klient && String(TRM.nowa.klient.id_klienta)==='1005' && !TRM.nowa.klient.bez_kartoteki",
+      "opis": "D02: „Tak, użyj kartoteki” → zwykła wizyta na istniejącą klientkę, bez holdu"
+    },
+    {
+      "js": "(function(){ var u=(TRM.dane.uslugi||[]).filter(function(x){return /Endermologia/.test(x.kategoria||'') && x.skonfigurowana && x.aktywna;})[0]; return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_zapisz', pracownik:'Ola', klucz_idem:'proba-telefon-'+Date.now(), klient:{ id_klienta:null, nazwa:'Ktos Inny', telefon:'601200305' }, bez_kartoteki:true, hold:true, pozycje:[{ usluga_id:u.id, pracownik:'Ola' }], start: TRM.data + ' 09:00', kanal:'telefon' }) }).then(function(r){return r.json();}).then(function(d){ window.__guard=d; return (d.code||d.status) + ': ' + (d.message||'').slice(0,90); }); })()",
+      "opis": "próba obejścia ekranu: hold bez kartoteki na numer z kartoteki, bez potwierdzenia"
+    },
+    {
+      "sprawdz": "window.__guard && window.__guard.code==='TELEFON_W_KARTOTECE' && Array.isArray(window.__guard.klienci) && window.__guard.klienci.length>=1",
+      "opis": "D03: serwer odrzuca hold na numer z kartoteki bez potwierdzenia „inna osoba”"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 11:00', pracownik: 'Ola' }); 'ok'"
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "sprawdz": "!!document.querySelector('button[onclick=\"TRM.nowaBezKartoteki()\"]')",
+      "opis": "H01: w kroku klientki jest przycisk „Szybka rezerwacja bez kartoteki”"
+    },
+    {
+      "js": "TRM.nowaBezKartoteki(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Jan Testowy'; document.getElementById('trm-bk-tel').value='700 900 100'; TRM.nowaBkZatwierdz(); return 'dane z rozmowy'; })()"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "sprawdz": "TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.bez_kartoteki === true && !TRM.nowa.klient.id_klienta",
+      "opis": "H02: „klientką” kreatora jest osoba bez kartoteki (bez ID)"
+    },
+    {
+      "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()",
+      "opis": "zabieg 60 min, 200 zł"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 11:00'); return 'godzina 11:00'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.nowa.dostep && TRM.nowa.dostep.stan === 'ok' && /Zarezerwuj do wpłaty zadatku/.test(document.getElementById('trm-n-zapisz').textContent) && !document.getElementById('trm-n-zapisz').disabled",
+      "opis": "H03: termin dostępny, przycisk główny brzmi „Zarezerwuj do wpłaty zadatku”"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-wybrana.hold'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "zrzut": "hold-01-kreator-bez-kartoteki"
+    },
+    {
+      "js": "TRM.nowaZapisz().then(function(){ return 'zapisano'; })"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return /Jan Testowy/.test(x.klient_nazwa||'');})[0]; if(!r) return 'brak'; window.__holdA=r.id; return 'rezerwacja ' + r.id + ' · ' + r.status + ' · trzymana do ' + r.hold_do; })()",
+      "opis": "hold po zapisie"
+    },
+    {
+      "sprawdz": "(function(){ var r=(TRM.dzien.rezerwacje||[]).filter(function(x){return x.id===window.__holdA;})[0]; return !!r && r.status==='do_wplaty' && !!r.hold_do && !r.id_klienta; })()",
+      "opis": "H04: rezerwacja w stanie „Do wpłaty”, z terminem ważności, bez konta"
+    },
+    {
+      "sprawdz": "(function(){ var k=document.querySelector('.trm-karta.hold[data-rezerwacja=\"'+window.__holdA+'\"]'); return !!k && /Do wpłaty do/.test(k.textContent); })()",
+      "opis": "H05: kafelek kreskowany z plakietką „Do wpłaty do …”"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "sprawdz": "!!document.querySelector('.trm-zadatek') && !!document.getElementById('trm-hold-kwota') && Number(document.getElementById('trm-hold-kwota').value) === 100",
+      "opis": "H06: panel wizyty ma kartę Zadatek z kwotą domyślną 50% (100 zł z 200 zł)"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "zrzut": "hold-02-kafelek-i-karta-zadatek"
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-hold-kwota').value='95'; TRM.holdZaokraglij(window.__holdA); return 'zaokrąglono 95 → ' + document.getElementById('trm-hold-kwota').value; })()"
+    },
+    {
+      "sprawdz": "document.getElementById('trm-hold-kwota').value === '100'",
+      "opis": "H07: „do 10 zł ↑” zaokrągla 95 → 100"
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-hold-tpay').value='https://secure.tpay.com/?h=abcdef0123456789abcdef0123456789abcdef01'; return TRM.holdLink(window.__holdA).then(function(){ return 'link utworzony'; }); })()"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "sprawdz": "TRM.szcz && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status === 'OCZEKUJACA' && !!TRM.szcz.zadatekLink.token && !!document.getElementById('trm-hold-url')",
+      "opis": "H08: link do zadatku utworzony, widoczny do skopiowania"
+    },
+    {
+      "sprawdz": "(TRM.szcz.historia||[]).some(function(h){return /link do zadatku 100\\.00 zł/.test(h.opis||'');})",
+      "opis": "H09: historia wizyty ma wpis o linku"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "hold-03-link-do-zadatku"
+    },
+    {
+      "js": "(function(){ window.__tokA = TRM.szcz.zadatekLink.token; return fetch('/api/zgoda/info?t=' + encodeURIComponent(window.__tokA)).then(function(r){return r.json();}).then(function(d){ window.__infoA=d; return JSON.stringify({status:d.status, wizyta:d.wizyta, imie:d.imie_podpowiedz, kwota:d.kwota, tryb:d.tryb}); }); })()",
+      "opis": "strona linku (to, co widzi klient)"
+    },
+    {
+      "sprawdz": "window.__infoA && window.__infoA.status==='success' && window.__infoA.wizyta && !!window.__infoA.wizyta.hold_do && window.__infoA.imie_podpowiedz==='Jan Testowy' && window.__infoA.kwota===100 && window.__infoA.tryb==='formularz'",
+      "opis": "H10: strona linku zna termin, czas na wpłatę, kwotę i podpowiada dane z rozmowy"
+    },
+    {
+      "js": "(function(){ return fetch('/api/zgoda/akceptuj', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ t: window.__tokA, imie_nazwisko:'Jan Testowy', telefon:'700900100' }) }).then(function(r){return r.json();}).then(function(d){ window.__akcA=d; return JSON.stringify(d); }); })()",
+      "opis": "klient akceptuje regulamin na linku"
+    },
+    {
+      "sprawdz": "window.__akcA && window.__akcA.status==='success' && /tpay\\.com/.test(window.__akcA.tpay_link||'')",
+      "opis": "H11: po akceptacji klient dostaje link tpay"
+    },
+    {
+      "js": "TRM.otworzSzczegoly(window.__holdA).then(function(){ return 'panel odświeżony'; })"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "sprawdz": "TRM.szcz && !!TRM.szcz.rez.id_klienta && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status==='ZAAKCEPTOWANA' && (TRM.szcz.historia||[]).some(function(h){return /regulamin zaakceptowany online/.test(h.opis||'');})",
+      "opis": "H12: profil przypięty do rezerwacji, link „zaakceptowany”, ślad w historii wizyty"
+    },
+    {
+      "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__spr=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdA;}).map(function(s){return s.typ+':'+s.stan;}).join(',') || 'brak'; }); })()",
+      "opis": "Sprawy dla tej rezerwacji"
+    },
+    {
+      "sprawdz": "window.__spr && (window.__spr.sprawy||[]).some(function(s){return s.typ==='E41' && s.rezerwacja_id===window.__holdA && s.stan!=='rozwiazana';})",
+      "opis": "H13: w Powiadomieniach jest Sprawa E41 „sprawdź wpłatę w tpay”"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "hold-04-po-akceptacji-regulaminu"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 14:00', pracownik: 'Ola' }); 'ok'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "js": "TRM.nowaBezKartoteki(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Jan Testowy'; document.getElementById('trm-bk-tel').value='700900100'; TRM.nowaBkZatwierdz(); return 'ten sam numer'; })()"
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Endermologia/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return 'zabieg'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 14:00'); 'ok'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "TRM.nowaZapisz().then(function(){ return 'po próbie zapisu'; })"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "sprawdz": "!!TRM.nowa && !(TRM.dzien.rezerwacje||[]).some(function(x){return /Jan Testowy/.test(x.klient_nazwa||'') && x.id!==window.__holdA;})",
+      "opis": "H14: drugi hold na ten sam numer odrzucony — kreator zostaje otwarty, nowej rezerwacji nie ma"
+    },
+    {
+      "zrzut": "hold-05-drugi-hold-odrzucony"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "TRM.otworzSzczegoly(window.__holdA).then(function(){ TRM.hold[window.__holdA].wplata=true; TRM.renderSzczegoly(); return 'formularz wpłaty'; })"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "sprawdz": "!!document.getElementById('trm-hold-wplata-kwota') && Number(document.getElementById('trm-hold-wplata-kwota').value)===100",
+      "opis": "H15: formularz „Zadatek wpłynął” z kwotą z linku"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "hold-06-zadatek-wplynal-formularz"
+    },
+    {
+      "js": "TRM.holdWplata(window.__holdA).then(function(){ return 'wpłata zapisana'; })"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "sprawdz": "TRM.szcz && TRM.szcz.rez.status==='potwierdzona' && !!TRM.szcz.rez.zadatek_id && (TRM.szcz.historia||[]).some(function(h){return /zadatek wpłynął: 100\\.00 zł \\(tpay\\)/.test(h.opis||'');})",
+      "opis": "H16: rezerwacja potwierdzona, zadatek zapisany, ślad w historii"
+    },
+    {
+      "sprawdz": "(function(){ var k=document.querySelector('.trm-karta[data-rezerwacja=\"'+window.__holdA+'\"]'); return !!k && k.className.indexOf('hold')<0; })()",
+      "opis": "H17: kafelek nie jest już kreskowany"
+    },
+    {
+      "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__spr2=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdA;}).map(function(s){return s.typ+':'+s.stan;}).join(',') || 'brak otwartych'; }); })()"
+    },
+    {
+      "sprawdz": "window.__spr2 && !(window.__spr2.sprawy||[]).some(function(s){return s.typ==='E41' && s.rezerwacja_id===window.__holdA;})",
+      "opis": "H18: Sprawa E41 zamknęła się sama po wpłacie"
+    },
+    {
+      "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "hold-07-potwierdzona-po-wplacie"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "TRM.nowaWizyta({ start: TRM.data + ' 16:00', pracownik: 'Anna' }); 'ok'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "js": "TRM.nowaBezKartoteki(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-bk-nazwa').value='Anna Testowa'; document.getElementById('trm-bk-tel').value='700 900 200'; TRM.nowaBkZatwierdz(); return 'inna osoba, inny numer'; })()"
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "js": "(function(){ var k=[].slice.call(document.querySelectorAll('.trm-usl-karta')).filter(function(x){return x.className.indexOf('off')<0 && /Depilacja/.test(x.textContent);})[0] || document.querySelector('.trm-usl-karta:not(.off)'); if(!k) return 'brak'; k.click(); return k.textContent.trim().slice(0,40); })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "TRM.nowaWybierzSlot(TRM.nowa.start.slice(0,10) + ' 16:00'); 'ok'"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "TRM.nowaZapisz().then(function(){ return 'zapisano hold B'; })"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "js": "(function(){ var r=(TRM.dzien&&TRM.dzien.rezerwacje||[]).filter(function(x){return /Anna Testowa/.test(x.klient_nazwa||'');})[0]; if(!r) return 'brak'; window.__holdB=r.id; return 'hold B ' + r.id + ' ' + r.status; })()"
+    },
+    {
+      "sprawdz": "!!window.__holdB",
+      "opis": "H19: drugi hold (inny numer) zapisany — zostaje do próby wygaszenia w części B"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "js": "(function(){ document.getElementById('trm-hold-tpay').value='https://secure.tpay.com/?h=0123456789abcdef0123456789abcdef01234567'; return TRM.holdLink(window.__holdB).then(function(){ return 'link B'; }); })()"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "sprawdz": "TRM.szcz && TRM.szcz.zadatekLink && TRM.szcz.zadatekLink.status==='OCZEKUJACA' && !!TRM.szcz.zadatekLink.token",
+      "opis": "H20: link B utworzony (po wygaśnięciu holdu ma mówić „termin zwolniony”)"
+    },
+    {
+      "js": "(function(){ window.__tokB = TRM.szcz.zadatekLink.token; return 'token B zapamiętany'; })()"
+    },
+    {
+      "js": "TRM.panelZamknij && TRM.panelZamknij(); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "js": "location.href = location.origin + '/platnosc.html?t=' + encodeURIComponent(window.__tokB); 'strona linku dla klienta'"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "zrzut": "hold-08-strona-linku-klienta"
+    }
   ]
 }
