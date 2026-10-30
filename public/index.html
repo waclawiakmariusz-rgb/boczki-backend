@@ -14654,7 +14654,15 @@ function renderujKafelkiKlientow(data, kontener) {
             else if (zp === 'brak') pubBadge = `<span title="Brak zgody na publikację — warto zapytać" style="${st} background:#fee2e2; color:#b91c1c;">📸 brak</span>`;
             else pubBadge = `<span title="Brak podpisanego formularza RODO" style="${st} background:#f1f5f9; color:#64748b;">📄 bez RODO</span>`;
         }
-        let ikony = rodoIcon + oswIcon + dodIcon + pubBadge;
+        // Szybka rezerwacja (terminarz, 30.10.2026): profil z linku do zadatku albo założony przy wpłacie — ma się odróżniać od klientek, które przyszły do salonu.
+        let onlineBadge = '';
+        if (typeof klient === 'object' && klient.rezerwacja_online) {
+            const stO = 'margin-left:8px; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:700; white-space:nowrap; cursor:help;';
+            onlineBadge = klient.rezerwacja_online === 'link'
+                ? `<span title="Profil powstał przez link do zadatku — regulamin zaakceptowany online, osoba jeszcze nie była w salonie" style="${stO} background:#e0f2fe; color:#0369a1;">🔗 z linku online</span>`
+                : `<span title="Profil założony przy wpłacie zadatku z szybkiej rezerwacji — regulamin do podpisania w salonie" style="${stO} background:#fef3c7; color:#b45309;">📞 szybka rezerwacja · regulamin do podpisania</span>`;
+        }
+        let ikony = rodoIcon + oswIcon + dodIcon + pubBadge + onlineBadge;
 
         let tel = (typeof klient === 'object' && klient.telefon && klient.telefon !== "undefined") ? escHtml(klient.telefon) : "";
         let telefon = tel

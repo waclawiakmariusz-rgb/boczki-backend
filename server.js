@@ -397,7 +397,10 @@ const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
 const gusRoutes        = require('./routes/gus')(db);
 const booksyRoutes     = require('./routes/booksy')(db);
 const fotoRoutes       = require('./routes/foto')(db);
-const zgodyRoutes      = require('./routes/zgody')(db);
+// Most zgody → terminarz (szybka rezerwacja do wpłaty zadatku, 30.10.2026): moduł zgód woła terminarz po akceptacji
+// regulaminu na linku związanym z trzymanym terminem. Obiekt wypełnia się niżej, po załadowaniu terminarza.
+const terminarzHaki = {};
+const zgodyRoutes      = require('./routes/zgody')(db, { terminarz: terminarzHaki });
 const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 // Zgłoszenia salonów do Estelio („tickety", 2026-10-11): własne tabele, akcje tk_*, upload multipart,
 // panel admina. Osobny moduł — nie dotyka żadnej istniejącej tabeli ani trasy.
@@ -411,6 +414,8 @@ try {
     const terminarzModul = require('./routes/terminarz');
     terminarzRoutes = terminarzModul(db);
     terminarzActions = terminarzModul.AKCJE;
+    terminarzHaki.holdInfo = terminarzRoutes.holdInfo;
+    terminarzHaki.poAkceptacji = terminarzRoutes.holdPoAkceptacji;
 } catch (e) {
     console.error('[terminarz] moduł nie został załadowany:', e.message);
 }

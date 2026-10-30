@@ -75,10 +75,13 @@ function maskujTelefon(tel) {
   return cyfry.slice(0, 3) + '***' + cyfry.slice(-2);
 }
 
-module.exports = (db) => {
+module.exports = (db, opts = {}) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
   const hasFeature = makeHasFeature(db);
+  // Most do terminarza (szybka rezerwacja do wpłaty zadatku, 30.10.2026): server.js wstawia tu holdInfo/poAkceptacji
+  // po załadowaniu modułu terminarza. Bez terminarza obiekt zostaje pusty i link działa jak dotąd.
+  const terminarz = opts.terminarz || {};
   const akceptLimiter = makePublicLimiter({ windowMs: 15 * 60 * 1000, max: 30, message: 'Za dużo prób. Spróbuj za 15 minut.' });
 
   function q(sql, params) {
@@ -105,7 +108,11 @@ module.exports = (db) => {
       KEY idx_tenant (tenant_id, status),
       KEY idx_tenant_klient (tenant_id, id_klienta)
     ) CHARACTER SET utf8mb4 COLLATE utf8mb4_polish_ci`, (e) => {
-    if (e) console.error('[zgody] Migracja ZgodyPlatnosci:', e.message);
+    if (e) return console.error('[zgody] Migracja ZgodyPlatnosci:', e.message);
+    // szybka rezerwacja (terminarz): link do zadatku związany z konkretną rezerwacją — kolumna opcjonalna, dopisywana idempotentnie
+    db.query(`ALTER TABLE ZgodyPlatnosci ADD COLUMN rezerwacja_id INT NULL`, (e2) => {
+      if (e2 && e2.code !== 'ER_DUP_FIELDNAME') console.error('[zgody] ALTER ZgodyPlatnosci.rezerwacja_id:', e2.message);
+    });
   });
   db.query(`CREATE TABLE IF NOT EXISTS TenantRegulaminy (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -341,6 +348,10 @@ module.exports = (db) => {
       const rows = await q(`SELECT * FROM ZgodyPlatnosci WHERE tenant_id = ? AND id = ? LIMIT 1`, [payload.t, payload.id]);
       if (!rows.length) return res.json({ status: 'error', message: 'Nie znaleziono płatności. Poproś salon o nowy link.' });
       const z = rows[0];
+      // link związany z trzymanym terminem: po wygaśnięciu holdu nie ma czego opłacać — strona mówi to wprost
+      // (PRZED ogólnym „anulowany przez salon”, bo wygaszenie holdu unieważnia link automatycznie)
+      const hold = await stanHoldu(payload.t, z);
+      if (hold.blokada) return res.json({ status: 'error', kod: hold.blokada, message: hold.komunikat });
       if (z.status === 'ANULOWANA') return res.json({ status: 'error', message: 'Ten link został anulowany przez salon. Poproś o nowy link.' });
 
       const [lic, reg, podpisany] = await Promise.all([
@@ -364,7 +375,12 @@ module.exports = (db) => {
         zaakceptowana: zaakceptowana ? 1 : 0,
         zaakceptowano_at: z.zaakceptowano_at,
         // link tpay ujawniamy dopiero PO akceptacji regulaminu
-        tpay_link: zaakceptowana ? z.tpay_link : null
+        tpay_link: zaakceptowana ? z.tpay_link : null,
+        // szybka rezerwacja: co i kiedy jest trzymane oraz do kiedy trzeba wpłacić; dane z rozmowy jako podpowiedź formularza
+        // (link poszedł SMS-em na ten właśnie numer, więc osoba widzi swoje własne dane, nie cudze)
+        wizyta: hold.wizyta,
+        imie_podpowiedz: !z.id_klienta && !zaakceptowana && z.rezerwacja_id ? (z.imie_nazwisko || '') : '',
+        telefon_podpowiedz: !z.id_klienta && !zaakceptowana && z.rezerwacja_id ? (z.telefon || '') : ''
       });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
@@ -377,6 +393,9 @@ module.exports = (db) => {
       const rows = await q(`SELECT * FROM ZgodyPlatnosci WHERE tenant_id = ? AND id = ? LIMIT 1`, [payload.t, payload.id]);
       if (!rows.length) return res.json({ status: 'error', message: 'Nie znaleziono płatności. Poproś salon o nowy link.' });
       const z = rows[0];
+      // hold wygasł albo wizyta jest już opłacona — nie zakładamy profilu i nie pokazujemy tpay (sprawdzane przed „anulowany”)
+      const hold = await stanHoldu(payload.t, z);
+      if (hold.blokada) return res.json({ status: 'error', kod: hold.blokada, message: hold.komunikat });
       if (z.status === 'ANULOWANA') return res.json({ status: 'error', message: 'Ten link został anulowany przez salon. Poproś o nowy link.' });
       if (z.status === 'ZAAKCEPTOWANA') {
         // Ponowne wejście (np. płatność nie doszła do skutku) — nie duplikujemy zapisu
@@ -403,7 +422,7 @@ module.exports = (db) => {
         await q(
           `INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki)
            VALUES (?, ?, ?, ?, ?, NOW(), 'Regulamin (online przy płatności)', ?)`,
-          [randomUUID(), payload.t, idKlienta, imie, telefon, 'Profil utworzony przy płatności online (link tpay)']);
+          [randomUUID(), payload.t, idKlienta, imie, telefon, z.rezerwacja_id ? `Profil utworzony przy płatności online (link tpay) — szybka rezerwacja EST-${String(z.rezerwacja_id).padStart(4, '0')}` : 'Profil utworzony przy płatności online (link tpay)']);
         await q(
           `INSERT INTO \`Rejestr_Oświadczeń\` (id, tenant_id, id_klienta, data_podpisu, klient, zapoznanie_z_regulaminem, przekazano_wyciag, pracownik)
            VALUES (?, ?, ?, NOW(), ?, 'TAK', 'NIE', 'online (płatność tpay)')`,
@@ -432,9 +451,31 @@ module.exports = (db) => {
 
       zapiszLog(payload.t, 'PŁATNOŚĆ LINK', imie,
         `Akceptacja regulaminu online: ${imie} (ID klienta: ${idKlienta})${z.kwota !== null ? `, kwota ${Number(z.kwota).toFixed(2)} zł` : ''} [IP: ${ip}]`);
+      // szybka rezerwacja: profil przypięty do trzymanego terminu, ślad w historii wizyty, Sprawa „sprawdź wpłatę” dla recepcji.
+      // Błąd mostu nie może zepsuć akceptacji — dowód jest już zapisany, klient ma dostać link do tpay.
+      if (z.rezerwacja_id && typeof terminarz.poAkceptacji === 'function') {
+        try { await terminarz.poAkceptacji(payload.t, z.rezerwacja_id, { id_klienta: idKlienta, imie, telefon, zgoda_id: z.id, kwota: z.kwota }); }
+        catch (e) { console.error('[zgody] most do terminarza po akceptacji:', e.message); }
+      }
       return res.json({ status: 'success', tpay_link: z.tpay_link });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 
+  /** Stan trzymanego terminu dla linku związanego z rezerwacją (szybka rezerwacja). Zwraca { blokada, komunikat, wizyta }. */
+  async function stanHoldu(tenant_id, z) {
+    const nic = { blokada: null, komunikat: '', wizyta: null };
+    if (!z || !z.rezerwacja_id || typeof terminarz.holdInfo !== 'function') return nic;
+    let w = null;
+    try { w = await terminarz.holdInfo(tenant_id, z.rezerwacja_id); } catch (e) { return nic; }
+    if (!w) return nic;
+    const wizyta = { start: w.start, koniec: w.koniec, hold_do: w.hold_do, zabiegi: w.zabiegi || [] };
+    if (w.status === 'potwierdzona' && w.zadatek_id) return { blokada: 'HOLD_OPLACONY', komunikat: 'Zadatek został już zaksięgowany, a wizyta jest potwierdzona. Do zobaczenia w salonie!', wizyta };
+    const poTerminie = w.status === 'do_wplaty' && w.hold_do && w.teraz && String(w.hold_do) <= String(w.teraz);
+    if (w.status !== 'do_wplaty' || poTerminie) return { blokada: 'HOLD_WYGASL', komunikat: 'Termin został zwolniony — czas na wpłatę zadatku minął. Zadzwoń do salonu, umówimy nowy termin.', wizyta };
+    return { blokada: null, komunikat: '', wizyta };
+  }
+
   return router;
 };
+// narzędzia dla terminarza (szybka rezerwacja): ten sam token, ta sama walidacja linku tpay, ten sam klucz dodatku
+module.exports.narzedzia = { normalizujTpayLink, tpayLinkOk, makeToken, verifyToken, TOKEN_TTL_MS, FEATURE_KEY };

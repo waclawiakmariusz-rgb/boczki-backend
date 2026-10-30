@@ -135,7 +135,7 @@ module.exports = (db) => {
       // zmian (testy mockują sekwencyjnie). NULL = brak wpisu RODO; wpis bez wartości
       // = 'NIE'. Filtr „Zgoda na publikację" w Kartotece (prośba recepcji 2026-09-30).
       db.query(
-        `SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.email, K.bez_maili, K.rodo, K.osw, K.status, K.ostrzezenie, K.zmarly, K.data_zgonu, K.data_usuniecia, K.kto_usunal, K.powod_usuniecia, K.odwolanie_ulga, K.odwolanie_ulga_data,
+        `SELECT K.id_klienta, K.imie_nazwisko, K.telefon, K.email, K.bez_maili, K.rodo, K.osw, K.status, K.ostrzezenie, K.zmarly, K.data_zgonu, K.data_usuniecia, K.kto_usunal, K.powod_usuniecia, K.odwolanie_ulga, K.odwolanie_ulga_data, K.zgody_rodo_reg,
                 (SELECT COALESCE(R.wizerunek, 'NIE') FROM Rejestr_RODO R WHERE R.tenant_id = K.tenant_id AND R.id_klienta = K.id_klienta ORDER BY R.data_podpisu DESC LIMIT 1) AS wizerunek
            FROM Klienci K WHERE K.tenant_id = ? ${filtrStatus} ORDER BY K.imie_nazwisko`,
         [tenant_id],
@@ -159,6 +159,9 @@ module.exports = (db) => {
                 rodo: r.rodo && (r.rodo.toUpperCase() === 'TAK' || r.rodo === '1' || r.rodo === 'TRUE'),
                 osw: r.osw && (r.osw.toUpperCase() === 'TAK' || r.osw === '1' || r.osw === 'TRUE'),
                 dodatkowe: dodMap.get(String(r.id_klienta)) || 0,
+                // szybka rezerwacja (terminarz): skąd wziął się profil — 'link' = regulamin zaakceptowany online przy zadatku,
+                // 'hold' = założony przy wpłacie bez wejścia w link (regulamin do podpisania w salonie); null = zwykła kartoteka
+                rezerwacja_online: r.zgody_rodo_reg === 'Regulamin (online przy płatności)' ? 'link' : /szybka rezerwacja/i.test(String(r.zgody_rodo_reg || '')) ? 'hold' : null,
                 status: r.status || 'AKTYWNY',
                 ostrzezenie: r.ostrzezenie || null,
                 zmarly: r.zmarly ? 1 : 0,

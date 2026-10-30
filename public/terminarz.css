@@ -115,6 +115,18 @@ body.dark-mode .trm { --t-bg:#1f1b19; --t-sur:#2a2422; --t-ink:#f3ece6; --t-mut:
 .trm-karta.wyk .zn .st { background:var(--t-ok-bg); color:var(--t-ok-fg); }
 .trm-karta.nieob .zn .st { background:var(--t-bad-bg); color:var(--t-bad-fg); }
 .trm-karta.akt { outline:2px solid var(--t-acc); }
+/* szybka rezerwacja do wpłaty zadatku (hold): kreskowana, bursztynowa — ma się odróżniać od wizyt potwierdzonych */
+.trm-karta.hold { border-style:dashed; border-color:#d9b25a; background:var(--t-warn-bg); }
+.trm-karta.hold .zn .st { background:#f6dfa4; color:var(--t-warn-fg); }
+.trm-wybrana.hold { border:1px dashed #d9b25a; background:var(--t-warn-bg); }
+.trm-bk { border:1px dashed #d9b25a; border-radius:var(--t-rs); padding:10px 12px; background:var(--t-warn-bg); }
+.trm-zadatek-os { display:flex; flex-direction:column; gap:4px; margin:6px 0 10px; font-size:12.5px; }
+.trm-zadatek-os > div { display:flex; gap:8px; align-items:flex-start; color:var(--t-mut); }
+.trm-zadatek-os > div i { flex:0 0 10px; width:10px; height:10px; border-radius:50%; border:2px solid #d9b25a; margin-top:4px; background:#fff; }
+.trm-zadatek-os > div.ok { color:inherit; } .trm-zadatek-os > div.ok i { background:var(--t-ok-fg); border-color:var(--t-ok-fg); }
+.trm-link-box { word-break:break-all; font-size:12px; background:var(--t-bg); border:1px solid rgba(48,39,32,.12); border-radius:8px; padding:8px 10px; font-family:ui-monospace, Menlo, Consolas, monospace; }
+body.dark-mode .trm .trm-link-box { background:rgba(255,255,255,.05); }
+body.dark-mode .trm .trm-zadatek-os > div i { background:transparent; }
 .trm-karta.bufor { background:repeating-linear-gradient(135deg, #f6efe8 0 5px, #ede3d8 5px 6px); border:1px dashed var(--t-line); border-left:4px solid transparent; cursor:default; color:var(--t-mut); font-size:10.5px; z-index:1; }
 .trm-karta.przeciagalna { cursor:grab; }
 .trm-karta.przeciagalna:active { cursor:grabbing; }

@@ -1,0 +1,45 @@
+{
+  "nazwa": "terminarz-szybka-rezerwacja-b",
+  "modul": "Terminarz",
+  "opis": "Szybka rezerwacja, część B (po symulowanym upływie czasu: hold-wygas.js ustawia hold_do w przeszłości i uruchamia wygaszanie): hold znika z siatki, Sprawa E40, panel „Wygasła bez wpłaty”, strona linku mówi „termin zwolniony”, „Wpłata mimo wygaśnięcia” = zadatek na koncie + Sprawa E42. SZABLON: __HOLDB__ i __TOKB__ wstawia hold-wygas.js.",
+  "sekcja": "terminarz",
+  "korzen": "#trm-root",
+  "przechwyc": [],
+  "czekajPoSekcji": 4500,
+  "kroki": [
+    { "viewport": [1384, 905] },
+    { "czekaj": 1500 },
+    { "js": "TRM.idz(3); window.__holdB = __HOLDB__; window.__tokB = '__TOKB__'; 'dzień holdu'" },
+    { "czekaj": 2500 },
+    { "sprawdz": "!document.querySelector('.trm-karta[data-rezerwacja=\"'+window.__holdB+'\"]')", "opis": "W01: wygasłego holdu nie ma na siatce — godzina wróciła do puli" },
+    { "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__sprB=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdB;}).map(function(s){return s.typ+':'+s.stan+' '+s.tytul;}).join(' | ') || 'brak'; }); })()", "opis": "Sprawy dla holdu B" },
+    { "sprawdz": "window.__sprB && (window.__sprB.sprawy||[]).some(function(s){return s.typ==='E40' && s.rezerwacja_id===window.__holdB && /zwolnione/.test(s.tytul||'');})", "opis": "W02: Sprawa E40 „Bez wpłaty — … zwolnione” czeka w Powiadomieniach" },
+    { "js": "TRM.otworzPowiadomienia('do_dzialania').then(function(){ return 'powiadomienia'; })" },
+    { "czekaj": 1500 },
+    { "zrzut": "hold-09-powiadomienie-hold-wygasl" },
+
+    { "js": "(function(){ return fetch('/api/zgoda/info?t=' + encodeURIComponent(window.__tokB)).then(function(r){return r.json();}).then(function(d){ window.__infoB=d; return JSON.stringify(d); }); })()", "opis": "klient otwiera SMS po czasie" },
+    { "sprawdz": "window.__infoB && window.__infoB.status==='error' && window.__infoB.kod==='HOLD_WYGASL'", "opis": "W03: strona linku mówi „termin został zwolniony” — bez przejścia do tpay" },
+    { "js": "(function(){ return fetch('/api/zgoda/akceptuj', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ t: window.__tokB, imie_nazwisko:'Anna Testowa', telefon:'700900200' }) }).then(function(r){return r.json();}).then(function(d){ window.__akcB=d; return JSON.stringify(d); }); })()", "opis": "próba akceptacji po czasie" },
+    { "sprawdz": "window.__akcB && window.__akcB.status==='error' && window.__akcB.kod==='HOLD_WYGASL' && !window.__akcB.tpay_link", "opis": "W04: po wygaśnięciu akceptacja nie zakłada profilu i nie daje linku tpay" },
+
+    { "js": "TRM.otworzSzczegoly(window.__holdB).then(function(){ return 'szczegóły wygasłego holdu'; })" },
+    { "czekaj": 1200 },
+    { "sprawdz": "/Wygasła bez wpłaty/.test((document.querySelector('.trm-status-glowny')||{}).textContent||'') && !!document.querySelector('.trm-zadatek') && /Wpłata mimo wygaśnięcia/.test(document.querySelector('.trm-zadatek').textContent) && !TRM.szcz.rez.id_klienta", "opis": "W05: panel: „Wygasła bez wpłaty”, przycisk „Wpłata mimo wygaśnięcia”, nadal bez konta" },
+    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
+    { "czekaj": 400 },
+    { "zrzut": "hold-10-wygasla-bez-wplaty" },
+    { "js": "(function(){ TRM.hold[window.__holdB].wplata=true; TRM.renderSzczegoly(); document.getElementById('trm-hold-wplata-kwota').value='60'; document.getElementById('trm-hold-wplata-metoda').value='Przelew'; return TRM.holdWplata(window.__holdB).then(function(){ return 'wpłata po wygaśnięciu'; }); })()" },
+    { "czekaj": 2000 },
+    { "sprawdz": "TRM.szcz && TRM.szcz.rez.status==='wygasla' && !!TRM.szcz.rez.zadatek_id && !!TRM.szcz.rez.id_klienta && (TRM.szcz.historia||[]).some(function(h){return /PO WYGAŚNIĘCIU/.test(h.opis||'');})", "opis": "W06: wizyta nie wraca (nadal wygasła), zadatek zapisany na nowo założonym koncie, ślad w historii" },
+    { "js": "(function(){ return fetch(API_URL, { method:'POST', body: JSON.stringify({ action:'trm_sprawy_lista', zakladka:'do_dzialania', pracownik:'Ola' }) }).then(function(r){return r.json();}).then(function(d){ window.__sprB2=d; return (d.sprawy||[]).filter(function(s){return s.rezerwacja_id===window.__holdB;}).map(function(s){return s.typ+':'+s.stan;}).join(',') || 'brak'; }); })()" },
+    { "sprawdz": "window.__sprB2 && (window.__sprB2.sprawy||[]).some(function(s){return s.typ==='E42' && s.rezerwacja_id===window.__holdB;}) && !(window.__sprB2.sprawy||[]).some(function(s){return s.typ==='E40' && s.rezerwacja_id===window.__holdB && s.stan!=='rozwiazana';})", "opis": "W07: Sprawa E42 „nowy termin albo zwrot” otwarta, E40 zamknięta" },
+    { "js": "(function(){ var e=document.querySelector('.trm-zadatek'); if(e) e.scrollIntoView({block:'center'}); return 'ok'; })()" },
+    { "czekaj": 400 },
+    { "zrzut": "hold-11-wplata-po-wygasnieciu" },
+
+    { "js": "location.href = location.origin + '/platnosc.html?t=' + encodeURIComponent(window.__tokB); 'strona linku po czasie'" },
+    { "czekaj": 3000 },
+    { "zrzut": "hold-12-strona-linku-termin-zwolniony" }
+  ]
+}

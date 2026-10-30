@@ -69,6 +69,12 @@
     <h2 id="m-salon">—</h2>
     <div class="muted center" id="m-opis"></div>
     <div class="kwota" id="m-kwota" style="display:none"></div>
+    <!-- szybka rezerwacja: termin trzymany do wpłaty zadatku -->
+    <div id="m-wizyta" style="display:none">
+      <div class="info-row"><span class="muted">Termin wizyty</span><b id="w-termin">—</b></div>
+      <div class="info-row"><span class="muted">Zabiegi</span><b id="w-zabiegi">—</b></div>
+      <div class="info-row"><span class="muted">Wpłata do</span><b id="w-do" style="color:#b45309">—</b></div>
+    </div>
 
     <div id="m-dane-podglad" style="display:none">
       <div class="info-row"><span class="muted">Imię i nazwisko</span><b id="m-imie">—</b></div>
@@ -108,11 +114,19 @@
   var info = null;
 
   function el(id) { return document.getElementById(id); }
-  function pokazBlad(msg) {
-    el('load-msg').textContent = 'Ten link nie działa';
+  function pokazBlad(msg, kod) {
+    // szybka rezerwacja: wygaśnięcie terminu albo już opłacona wizyta to nie „zepsuty link” — mówimy, co się stało
+    el('load-msg').textContent = kod === 'HOLD_WYGASL' ? 'Termin został zwolniony' : kod === 'HOLD_OPLACONY' ? 'Zadatek zaksięgowany' : 'Ten link nie działa';
     el('load-sub').textContent = msg || 'Poproś salon o nowy link.';
     el('c-load').style.display = '';
     el('c-main').style.display = 'none';
+  }
+  var DNI = ['niedziela', 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota'];
+  function ladnyTermin(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/.exec(String(s || ''));
+    if (!m) return String(s || '').slice(0, 16);
+    var d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    return DNI[d.getUTCDay()] + ' ' + Number(m[3]) + '.' + m[2] + '.' + m[1] + ', ' + m[4];
   }
 
   function odswiezPrzycisk() {
@@ -153,6 +167,8 @@
       if (d.status === 'success' && d.tpay_link) {
         btn.textContent = 'Przenoszę do tpay…';
         location.href = d.tpay_link;
+      } else if (d.kod === 'HOLD_WYGASL' || d.kod === 'HOLD_OPLACONY') {
+        pokazBlad(d.message, d.kod);
       } else {
         btn.textContent = 'Przejdź do płatności';
         el('m-err').textContent = d.message || 'Coś poszło nie tak. Spróbuj ponownie.';
@@ -170,12 +186,21 @@
   fetch('/api/zgoda/info?t=' + encodeURIComponent(token))
     .then(function (r) { return r.json(); })
     .then(function (d) {
-      if (d.status !== 'success') { pokazBlad(d.message); return; }
+      if (d.status !== 'success') { pokazBlad(d.message, d.kod); return; }
       info = d;
       el('c-load').style.display = 'none';
       el('c-main').style.display = '';
       el('m-salon').textContent = d.salon || 'Twój salon';
       el('m-opis').textContent = d.opis || '';
+      if (d.wizyta && d.wizyta.start) {
+        // trzymany termin: co, kiedy i do kiedy trzeba wpłacić
+        el('m-wizyta').style.display = '';
+        el('w-termin').textContent = ladnyTermin(d.wizyta.start) + (d.wizyta.koniec ? '–' + String(d.wizyta.koniec).slice(11, 16) : '');
+        el('w-zabiegi').textContent = (d.wizyta.zabiegi || []).join(', ') || '—';
+        el('w-do').textContent = d.wizyta.hold_do ? ladnyTermin(d.wizyta.hold_do) : '—';
+      }
+      if (d.imie_podpowiedz) el('f-imie').value = d.imie_podpowiedz;
+      if (d.telefon_podpowiedz) el('f-tel').value = d.telefon_podpowiedz;
       if (d.kwota !== null && d.kwota !== undefined) {
         el('m-kwota').style.display = '';
         el('m-kwota').textContent = Number(d.kwota).toFixed(2).replace('.', ',') + ' zł';

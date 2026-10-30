@@ -56,6 +56,19 @@ function priorytetZnikaniaWizyty(terazStr, czasStr) {
   return 'P2';
 }
 
+/** Szybka rezerwacja do wpłaty zadatku (hold) — decyzje właściciela z 30.10.2026 (docs/terminarz-szybka-rezerwacja/SPECYFIKACJA.md):
+ *  termin jest trzymany do wcześniejszego z dwóch momentów — 24 h od zapisu albo 24 h przed wizytą. Wizyta za mniej niż dobę:
+ *  2 h, nigdy dłużej niż do jej startu. Zwraca 'YYYY-MM-DD HH:MM:SS' albo null, gdy wizyta już minęła. */
+const HOLD_OD_ZAPISU_H = 24, HOLD_PRZED_WIZYTA_H = 24, HOLD_KROTKI_H = 2;
+function terminHoldu(terazStr, startStr) {
+  const teraz = S.naMin(terazStr), start = S.naMin(startStr);
+  if (start <= teraz) return null;
+  const koniec = (start - teraz) < HOLD_PRZED_WIZYTA_H * 60
+    ? Math.min(teraz + HOLD_KROTKI_H * 60, start)
+    : Math.min(teraz + HOLD_OD_ZAPISU_H * 60, start - HOLD_PRZED_WIZYTA_H * 60);
+  return S.naStr(koniec);
+}
+
 class BladUzytkownika extends Error { constructor(msg, extra) { super(msg); this.extra = extra || {}; this.uzytkownika = true; } }
 
 module.exports = (db, opts = {}) => {
@@ -303,6 +316,10 @@ module.exports = (db, opts = {}) => {
   alterKolumna('Term_Rezerwacje', 'usunieta_kiedy', 'DATETIME NULL');
   alterKolumna('Term_Rezerwacje', 'usunieta_przez', 'VARCHAR(100) NULL');
   alterKolumna('Term_Rezerwacje', 'usunieta_powod', 'VARCHAR(500) NULL');
+  // Szybka rezerwacja do wpłaty zadatku (30.10.2026, docs/terminarz-szybka-rezerwacja/): do kiedy termin jest trzymany
+  // bez wpłaty (hold_do) i który rekord zadatku go potwierdził. Obie NULL-owalne — stary kod ich nie widzi.
+  alterKolumna('Term_Rezerwacje', 'hold_do', 'DATETIME NULL');
+  alterKolumna('Term_Rezerwacje', 'zadatek_id', 'VARCHAR(64) NULL');
   // ── C07: rejestr stanu schematu. Każdy krok DDL powyżej jest idempotentny, ale jego wynik był dotąd tylko w logu.
   // Term_Migracje zapisuje, które elementy schematu zakupów są obecne; brak kolumny NIE może cicho wyłączyć kontroli —
   // trm_zapisz/trm_ustawienia_zapisz odmawiają włączenia/użycia zakupów, gdy schemat jest niekompletny.
@@ -465,6 +482,8 @@ module.exports = (db, opts = {}) => {
 
   // ── pomocnicze ───────────────────────────────────────────────────────────────
   const czyFeature = (tenant) => new Promise((resolve) => hasFeature(tenant, FEATURE_KEY, (ok) => resolve(!!ok)));
+  // 'YYYY-MM-DD HH:MM:SS' → 'śr 5.11 10:00' (opisy zadatków i linków czyta człowiek, nie parser)
+  const ladnyTermin = (s) => { const t = String(s || ''); const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}:\d{2})/.exec(t); if (!m) return t.slice(0, 16); const dz = ['nd', 'pn', 'wt', 'śr', 'cz', 'pt', 'so'][new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).getUTCDay()]; return `${dz} ${Number(m[3])}.${m[2]} ${m[4]}`; };
   const teraz = async () => (await q(`SELECT DATE_FORMAT(NOW(), '%Y-%m-%d %H:%i:%s') AS t`))[0].t;
   const dt = (v) => (v == null ? null : (v instanceof Date ? S.naStr(Math.floor(v.getTime() / 60000)) : String(v).replace('T', ' ').slice(0, 19)));
   const dataZ = (v) => (v == null ? null : (v instanceof Date ? S.naStr(Math.floor(v.getTime() / 60000)).slice(0, 10) : String(v).slice(0, 10)));
@@ -671,6 +690,8 @@ module.exports = (db, opts = {}) => {
       status: r.status, obecnosc: r.obecnosc, kanal: r.kanal, zrodlo: r.zrodlo, start: r.start_s, koniec: r.koniec_s, notatka: r.notatka, brak_kontaktu: !!r.brak_kontaktu,
       wersja: r.wersja, utworzyl: r.utworzyl, utworzono: dt(r.utworzono), anulowano: dt(r.anulowano), anulowal: r.anulowal, powod_anulacji: r.powod_anulacji, kto_anulowal: r.kto_anulowal,
       sprzedaz_id: r.sprzedaz_id, rozliczenie_od: dt(r.rozliczenie_od),
+      // szybka rezerwacja: do kiedy termin jest trzymany bez wpłaty i czy zadatek już wpłynął
+      hold_do: dt(r.hold_do), zadatek_id: r.zadatek_id || null,
       // ślad po skasowanej pomyłce — widoczny w szczegółach i w historii klientki
       usunieta: !!r.usunieta, usunieta_kiedy: dt(r.usunieta_kiedy), usunieta_przez: r.usunieta_przez || null, usunieta_powod: r.usunieta_powod || null,
       pozycje: poz.map(p => ({ id: p.id, kolejnosc: p.kolejnosc, usluga_id: p.usluga_id, kategoria: p.kategoria, wariant: p.wariant, cena: p.cena == null ? null : Number(p.cena), czas_min: p.czas_min, pracownik: p.pracownik, start: p.start_s, koniec: p.koniec_s, gabinet_id: p.gabinet_id, urzadzenie_id: p.urzadzenie_id, gabinet: p.gabinet, urzadzenie: p.urzadzenie, stan: p.stan, start_fakt: dt(p.start_fakt), koniec_fakt: dt(p.koniec_fakt), wykonawca_fakt: p.wykonawca_fakt, zakup_skladnik_id: p.zakup_skladnik_id || null, sprzedaz_id: p.sprzedaz_id })),
@@ -831,6 +852,80 @@ module.exports = (db, opts = {}) => {
       }
     } catch (e) { log.error('[terminarz] sprawaAutoZamknij:', e.message); }
   }
+  // ═══════════ SZYBKA REZERWACJA DO WPŁATY ZADATKU (hold) — docs/terminarz-szybka-rezerwacja/SPECYFIKACJA.md ═══════════
+  // Link do zadatku żyje w module zgód (routes/zgody.js, dodatek platnosc_link); terminarz tylko go zakłada i czyta jego stan.
+  const zgodyNarzedzia = () => require('./zgody').narzedzia;
+  /** Ostatni link do zadatku tej rezerwacji: stan, kwota, token (adres buduje ekran: /platnosc.html?t=…). */
+  async function linkZadatku(tenant, rezId) {
+    try {
+      const z = (await q(`SELECT id, status, kwota, utworzyl, created_at, DATE_FORMAT(zaakceptowano_at,'%Y-%m-%d %H:%i:%s') AS zaakceptowano_at, DATE_FORMAT(created_at,'%Y-%m-%d %H:%i:%s') AS utworzono
+        FROM ZgodyPlatnosci WHERE tenant_id = ? AND rezerwacja_id = ? ORDER BY id DESC LIMIT 1`, [tenant, Number(rezId)]))[0];
+      if (!z) return null;
+      const ZG = zgodyNarzedzia();
+      const exp = new Date(z.created_at).getTime() + ZG.TOKEN_TTL_MS;   // jak zgody_lista: kopiowanie nie przedłuża ważności
+      const aktywny = exp > Date.now() && (z.status === 'OCZEKUJACA' || z.status === 'ZAAKCEPTOWANA');
+      return { id: z.id, status: z.status, kwota: z.kwota == null ? null : Number(z.kwota), utworzyl: z.utworzyl, utworzono: z.utworzono, zaakceptowano_at: z.zaakceptowano_at,
+        wygasly: z.status === 'OCZEKUJACA' && !aktywny, token: aktywny ? ZG.makeToken({ t: tenant, id: z.id, exp }) : null };
+    } catch (e) { return null; }   // brak tabeli zgód = brak dodatku; hold i ręczne „Zadatek wpłynął” działają bez niego
+  }
+  /** Koniec holdu bez wpłaty: pozycje anulowane, zasoby zwolnione, oczekujący link unieważniony. status: 'wygasla' (czas) albo 'anulowana' (ręcznie). */
+  async function zakonczHold(tenant, rez, status, kto, powod) {
+    await wTransakcjiSalonu(tenant, async (conn) => {
+      for (const p of rez.pozycje.filter(p => p.stan !== 'anulowana')) await qc(conn, `UPDATE Term_Pozycje SET stan = 'anulowana' WHERE tenant_id = ? AND id = ?`, [tenant, p.id]);
+      await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
+      await qc(conn, `UPDATE Term_Rezerwacje SET status = ?, anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND status = 'do_wplaty'`,
+        [status, kto || 'System', String(powod || '').slice(0, 255), tenant, rez.id]);
+      await historia(conn, tenant, rez.id, kto || 'System', status === 'wygasla' ? 'wygasla' : 'anulowano',
+        status === 'wygasla' ? `hold wygasł bez wpłaty (termin trzymany do ${String(rez.hold_do || '').slice(0, 16)}) — godzina wróciła do puli` : `zwolniono trzymany termin bez wpłaty: ${powod}`,
+        null, { hold_do: rez.hold_do, powod });
+      await qc(conn, `UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id]).catch(() => {});
+    });
+    await sprawaAutoZamknij(tenant, `E41:${rez.id}`, status === 'wygasla' ? 'Hold wygasł bez wpłaty' : 'Termin zwolniony ręcznie', 'nieaktualna');
+  }
+  /** Tykanie: holdy po terminie wygasają same, recepcja dostaje Sprawę E40; hold, w który nikt nie wszedł, po tygodniu traci dane osobowe. */
+  async function wygasHoldy() {
+    const holdy = await q(`SELECT id, tenant_id FROM Term_Rezerwacje WHERE status = 'do_wplaty' AND hold_do IS NOT NULL AND hold_do <= NOW() LIMIT 100`).catch(() => []);
+    for (const h of (holdy || [])) {
+      try {
+        const rez = await rezerwacja(h.tenant_id, h.id); if (!rez || rez.status !== 'do_wplaty') continue;
+        const link = await linkZadatku(h.tenant_id, rez.id);
+        await zakonczHold(h.tenant_id, rez, 'wygasla', 'System', 'brak wpłaty zadatku w terminie');
+        const regulaminOnline = !!(link && link.status === 'ZAAKCEPTOWANA');
+        await sprawaUpsert(h.tenant_id, { typ: 'E40', rezerwacja_id: rez.id, tytul: `Bez wpłaty — ${rez.klient_nazwa}, ${rez.start.slice(0, 16)} zwolnione`,
+          opis: `Zadatek nie wpłynął do ${String(rez.hold_do).slice(0, 16)}, termin wrócił do puli. ${rez.klient_telefon ? 'Zadzwonić? ' + rez.klient_telefon + '.' : 'Brak telefonu.'}${regulaminOnline ? ' Regulamin był zaakceptowany online — sprawdź w panelu tpay, czy wpłata nie przyszła po czasie (wtedy „Wpłata mimo wygaśnięcia” w wizycie).' : ''}`,
+          dane: { telefon: rez.klient_telefon, hold_do: rez.hold_do, id_klienta: rez.id_klienta, regulamin_online: regulaminOnline, dotyczy: [] },
+          priorytet: 'P1', powiazany_czas: rez.start, klucz: `E40:${rez.id}`, kto: null });
+        zapiszLog(h.tenant_id, 'TERMINARZ: HOLD WYGASŁ', 'System', `${rez.numer} ${rez.klient_nazwa} ${rez.start.slice(0, 16)} — brak wpłaty do ${String(rez.hold_do).slice(0, 16)}`);
+      } catch (e) { log.error('[terminarz] wygasHoldy', h.id, e.message); }
+    }
+    // minimalizacja danych: wygasły hold bez profilu (nikt nie zaakceptował regulaminu, nic nie wpłynęło) po 7 dniach traci imię i telefon
+    await q(`UPDATE ZgodyPlatnosci z JOIN Term_Rezerwacje r ON r.id = z.rezerwacja_id AND r.tenant_id = z.tenant_id
+      SET z.imie_nazwisko = '', z.telefon = '' WHERE r.status = 'wygasla' AND r.id_klienta IS NULL AND r.hold_do IS NOT NULL AND r.hold_do <= DATE_SUB(NOW(), INTERVAL 7 DAY) AND z.status <> 'ZAAKCEPTOWANA' AND (z.telefon <> '' OR z.imie_nazwisko <> '')`).catch(() => {});
+    await q(`UPDATE Term_Rezerwacje SET klient_nazwa = '(dane usunięte — niewpłacony zadatek)', klient_telefon = NULL, zmieniono = NOW()
+      WHERE status = 'wygasla' AND id_klienta IS NULL AND hold_do IS NOT NULL AND hold_do <= DATE_SUB(NOW(), INTERVAL 7 DAY) AND klient_telefon IS NOT NULL LIMIT 200`).catch(() => {});
+  }
+  /** Most z routes/zgody.js: osoba zaakceptowała regulamin na linku związanym z holdem → profil przypięty do rezerwacji, ślad, Sprawa „sprawdź wpłatę”. */
+  router.holdPoAkceptacji = async (tenant, rezId, info) => {
+    const rez = await rezerwacja(tenant, rezId); if (!rez) return;
+    const i = info || {};
+    await q(`UPDATE Term_Rezerwacje SET id_klienta = COALESCE(id_klienta, ?), klient_nazwa = COALESCE(NULLIF(?, ''), klient_nazwa), klient_telefon = COALESCE(klient_telefon, NULLIF(?, '')), brak_kontaktu = 0, zmieniono = NOW() WHERE tenant_id = ? AND id = ?`,
+      [i.id_klienta || null, String(i.imie || '').trim().slice(0, 255), String(i.telefon || '').trim().slice(0, 50), tenant, rezId]);
+    const kwota = i.kwota == null ? null : Number(i.kwota);
+    await historia(db, tenant, rezId, i.imie || rez.klient_nazwa, 'regulamin', `regulamin zaakceptowany online (link #${i.zgoda_id || '?'})${i.id_klienta ? ' · profil ID ' + i.id_klienta : ''}${rez.status === 'do_wplaty' ? ' — czeka wpłata' + (kwota ? ' ' + kwota.toFixed(2) + ' zł' : '') : ''}`, null, { zgoda_id: i.zgoda_id || null, id_klienta: i.id_klienta || null });
+    if (rez.status === 'do_wplaty') await sprawaUpsert(tenant, { typ: 'E41', rezerwacja_id: rezId, tytul: `Regulamin zaakceptowany — sprawdź wpłatę w tpay: ${i.imie || rez.klient_nazwa}`,
+      opis: `${i.imie || rez.klient_nazwa} zaakceptował(a) regulamin online dla wizyty ${rez.start.slice(0, 16)}${kwota ? `, zadatek ${kwota.toFixed(2)} zł` : ''}. Gdy wpłata jest w panelu tpay, kliknij „Zadatek wpłynął” w wizycie. Termin trzymany do ${String(rez.hold_do || '').slice(0, 16)}.`,
+      dane: { zgoda_id: i.zgoda_id || null, id_klienta: i.id_klienta || null, kwota, hold_do: rez.hold_do, dotyczy: [] },
+      priorytet: 'P1', powiazany_czas: rez.hold_do || rez.start, klucz: `E41:${rezId}`, kto: null });
+    zapiszLog(tenant, 'TERMINARZ: REGULAMIN ONLINE', i.imie || rez.klient_nazwa, `${rez.numer} ${rez.start.slice(0, 16)} — akceptacja regulaminu z linku do zadatku${i.id_klienta ? ', profil ID ' + i.id_klienta : ''}`);
+  };
+  /** Most z routes/zgody.js: stan holdu dla strony linku (czy termin jeszcze trzymany, co i kiedy). */
+  router.holdInfo = async (tenant, rezId) => {
+    const rez = await rezerwacja(tenant, rezId); if (!rez) return null;
+    return { status: rez.status, hold_do: rez.hold_do, zadatek_id: rez.zadatek_id, start: rez.start, koniec: rez.koniec, teraz: await teraz(),
+      zabiegi: rez.pozycje.filter(p => p.stan !== 'anulowana').map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')), klient_nazwa: rez.klient_nazwa, klient_telefon: rez.klient_telefon, id_klienta: rez.id_klienta };
+  };
+  router._wygasHoldy = wygasHoldy;   // do prób na bazie izolowanej (tykanie nie startuje w testach)
+
   /** Widoczność i maskowanie sprawy dla odbiorcy (12: tylko dane potrzebne właściwej osobie) — analogicznie do maskuj(). */
   function sprawaDlaOdbiorcy(s, r, imie) {
     const dane = json(s.dane_json, {});
@@ -1335,7 +1430,12 @@ module.exports = (db, opts = {}) => {
         const hist = ROLE_OPERACYJNE.has(r) ? await q(`SELECT DATE_FORMAT(kiedy,'%Y-%m-%d %H:%i:%s') AS kiedy, kto, akcja, opis FROM Term_Historia WHERE tenant_id = ? AND rezerwacja_id = ? ORDER BY id`, [tenant, rez.id]) : [];
         let sprzedaz = null;
         if (rez.sprzedaz_id && ROLE_OPERACYJNE.has(r)) sprzedaz = await q(`SELECT id, DATE_FORMAT(data_sprzedazy,'%Y-%m-%d %H:%i') AS data, zabieg, szczegoly, kwota, platnosc, sprzedawca FROM Sprzedaz WHERE tenant_id = ? AND (id = ? OR id LIKE ?) AND status = 'AKTYWNY' ORDER BY id`, [tenant, rez.sprzedaz_id, rez.sprzedaz_id + '-%']);
-        return { status: 'success', rezerwacja: maskuj(rez, r, imie), historia: hist, sprzedaz };
+        // szybka rezerwacja: stan linku do zadatku (tylko role operacyjne, tylko gdy wizyta przeszła przez hold)
+        const zHoldem = ROLE_OPERACYJNE.has(r) && (rez.status === 'do_wplaty' || !!rez.hold_do);
+        const zadatekLink = zHoldem ? await linkZadatku(tenant, rez.id) : null;
+        // czy salon ma dodatek linku do płatności — rozstrzyga serwer, nie pamięć podręczna przeglądarki
+        const linkDodatek = zHoldem ? await new Promise((res) => hasFeature(tenant, zgodyNarzedzia().FEATURE_KEY, (ok) => res(!!ok))) : false;
+        return { status: 'success', rezerwacja: maskuj(rez, r, imie), historia: hist, sprzedaz, zadatek_link: zadatekLink, link_dodatek: linkDodatek };
       }
       case 'trm_szukaj_klienta': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -1788,14 +1888,27 @@ module.exports = (db, opts = {}) => {
           telefon = kr.telefon || null;
         } else if (!d.bez_kartoteki) {
           throw new BladUzytkownika('Wybierz klientkę z kartoteki albo dodaj nową.');
+        } else {
+          telefon = String(klient.telefon || '').trim().slice(0, 50) || null;
         }
+        // Szybka rezerwacja do wpłaty zadatku (hold): osoba zwykle spoza kartoteki, termin trzymany tylko do hold_do (docs/terminarz-szybka-rezerwacja/)
+        const hold = !!d.hold;
+        if (hold && (telefon || '').replace(/\D/g, '').length < 9) throw new BladUzytkownika('Szybka rezerwacja wymaga numeru telefonu (min. 9 cyfr) — na niego pójdzie link do zadatku.');
         const cfg = await wspolneCfg(tenant);
+        const holdDo = hold ? terminHoldu(cfg.terazStr, start) : null;
+        if (hold && !holdDo) throw new BladUzytkownika('Ta godzina już minęła — szybka rezerwacja działa tylko dla przyszłych terminów.');
+        if (hold) { // jeden aktywny hold na numer telefonu (decyzja właściciela): drugi telefon o kolejny termin nie blokuje dwóch godzin
+          const cyfry = telefon.replace(/\D/g, '').slice(-9);
+          const inny = (await q(`SELECT id, DATE_FORMAT(start,'%Y-%m-%d %H:%i') AS start FROM Term_Rezerwacje WHERE tenant_id = ? AND status = 'do_wplaty' AND hold_do > NOW() AND REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(klient_telefon,''),' ',''),'-',''),'+',''),'(','') LIKE ? LIMIT 1`, [tenant, '%' + cyfry]))[0];
+          if (inny) throw new BladUzytkownika(`Ten numer ma już trzymany termin (EST-${String(inny.id).padStart(4, '0')}, ${inny.start}). Najpierw zakończ tamten hold: „Zadatek wpłynął” albo „Zwolnij termin”.`, { code: 'HOLD_TELEFON', rezerwacja_id: inny.id });
+        }
         const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy);
         // ZK-02: jednostki zakupów — opt-in per pozycja (zakup_skladnik_id); walidacja zasobów i jednostek oraz zapis w JEDNEJ transakcji pod blokadą salonu (§15.2)
         const zakupPoz = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => p && p.zakup_skladnik_id ? Number(p.zakup_skladnik_id) : null);
         if (zakupPoz.some(Boolean) && cfg.ust.zakupy_integracja !== 'on') throw new BladUzytkownika(schemat.gotowy && schematV2.gotowy ? 'Rezerwacja zabiegów z zakupów nie jest włączona w tym salonie.' : 'Rezerwacja zabiegów z zakupów niedostępna — schemat bazy niekompletny.', { code: 'INTEGRACJA' });
         if (zakupPoz.some(Boolean) && !idKlienta) throw new BladUzytkownika('Rezerwacja z zakupu wymaga klientki z kartoteki (ID).', { code: 'WLASCICIEL' });
-        if (cfg.ust.kontrola_zakupow === 'on' && zakupPoz.some(x => !x)) throw new BladUzytkownika('Kontrola zakupów jest włączona — wskaż zakup klientki dla każdego zabiegu (albo zarejestruj nowy zakup w Sprzedaży).');
+        // hold jest ZANIM cokolwiek kupiono — kontrola zakupów go nie dotyczy (zakup rejestruje się przy wpłacie/rozliczeniu)
+        if (cfg.ust.kontrola_zakupow === 'on' && !hold && zakupPoz.some(x => !x)) throw new BladUzytkownika('Kontrola zakupów jest włączona — wskaż zakup klientki dla każdego zabiegu (albo zarejestruj nowy zakup w Sprzedaży).');
         const skrotDane = { start, klient: idKlienta || nazwa, pozycje: (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => ({ usluga_id: p && p.usluga_id ? String(p.usluga_id) : null, pracownik: (p && p.pracownik) || null, zakup_skladnik_id: (p && p.zakup_skladnik_id) || null })) };
         const wyn = await wTransakcjiSalonu(tenant, async (conn, repo) => {
           // idempotencja: ponowienie tej samej akcji zwraca tę samą wizytę; ten sam klucz z INNYM żądaniem = błąd (A07)
@@ -1810,8 +1923,8 @@ module.exports = (db, opts = {}) => {
             const alt = await alternatywy(tenant, start.slice(0, 10), poz, cfg, idKlienta, null);
             return { status: 'konflikt', message: w.problemy[0] ? w.problemy[0].opis : 'Wybrany komplet nie jest dostępny.', problemy: w.problemy, alternatywy: alt };
           }
-          const ins = await qc(conn, `INSERT INTO Term_Rezerwacje (tenant_id, id_klienta, klient_nazwa, klient_telefon, status, kanal, zrodlo, start, koniec, notatka, brak_kontaktu, klucz_idem, utworzyl) VALUES (?, ?, ?, ?, 'potwierdzona', ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [tenant, idKlienta, nazwa, telefon, kanal, String(d.zrodlo || '').slice(0, 100) || null, w.start, w.koniec, String(d.notatka || '').slice(0, 2000) || null, d.brak_kontaktu || !telefon ? 1 : 0, klucz, imie || null]);
+          const ins = await qc(conn, `INSERT INTO Term_Rezerwacje (tenant_id, id_klienta, klient_nazwa, klient_telefon, status, kanal, zrodlo, start, koniec, notatka, brak_kontaktu, klucz_idem, utworzyl, hold_do) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [tenant, idKlienta, nazwa, telefon, hold ? 'do_wplaty' : 'potwierdzona', kanal, String(d.zrodlo || '').slice(0, 100) || null, w.start, w.koniec, String(d.notatka || '').slice(0, 2000) || null, d.brak_kontaktu || !telefon ? 1 : 0, klucz, imie || null, holdDo]);
           const rezId = ins.insertId; const pozIds = [];
           for (let i = 0; i < w.pozycje.length; i++) {
             const p = w.pozycje[i];
@@ -1830,15 +1943,17 @@ module.exports = (db, opts = {}) => {
           // #20: wizyta zapisana świadomie poza grafikiem — ślad w historii wizyty (kto, czyj grafik, które godziny)
           const pozaGrafikiem = (w.ostrzezenia || []).filter(o => o.kod === 'GRAFIK');
           const dopisekGrafiku = pozaGrafikiem.length ? ' · poza grafikiem: ' + pozaGrafikiem.map(o => `${o.pracownik} ${String(o.od).slice(11, 16)}–${String(o.do).slice(11, 16)}`).join(', ') : '';
-          await historia(conn, tenant, rezId, imie, 'utworzono', `${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}${dopisekGrafiku}`, null, { start: w.start, koniec: w.koniec });
+          const dopisekHoldu = hold ? `szybka rezerwacja do wpłaty zadatku (termin trzymany do ${holdDo.slice(0, 16)})${idKlienta ? '' : ', bez kartoteki'} · ` : '';
+          await historia(conn, tenant, rezId, imie, 'utworzono', `${dopisekHoldu}${kanal}: ${w.pozycje.map(p => p.nazwa + ' — ' + p.pracownik).join('; ')}${dopisekGrafiku}`, null, { start: w.start, koniec: w.koniec, hold_do: holdDo });
           return { status: 'success', rezId, w, ostrzezenia: [...ostrzezeniaZakupow, ...pozaGrafikiem] };
         });
         if (wyn.status !== 'success' || wyn.powtorzenie) return wyn;
-        zapiszLog(tenant, 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})${(wyn.ostrzezenia || []).some(o => o.kod === 'GRAFIK') ? ' — POZA GRAFIKIEM, świadomie' : ''}`);
+        zapiszLog(tenant, hold ? 'TERMINARZ: SZYBKA REZERWACJA' : 'TERMINARZ: NOWA WIZYTA', imie, `EST-${String(wyn.rezId).padStart(4, '0')} ${nazwa} ${wyn.w.start.slice(0, 16)} (${wyn.w.pozycje.map(p => p.nazwa).join(', ')})${hold ? ` — DO WPŁATY, termin trzymany do ${holdDo.slice(0, 16)}` : ''}${(wyn.ostrzezenia || []).some(o => o.kod === 'GRAFIK') ? ' — POZA GRAFIKIEM, świadomie' : ''}`);
         // Potwierdzenie e-mail dla klientki (21.10.2026) — w tle i z własnym try/catch:
         // wizyta jest już zapisana i żaden problem z pocztą nie może tego cofnąć ani opóźnić.
-        try { maileWizyt().potwierdzenieWTle(tenant, wyn.rezId, imie); } catch (e) { log.error('[terminarz] potwierdzenie e-mail:', e.message); }
-        return { status: 'success', rezerwacja: await rezerwacja(tenant, wyn.rezId), przerwy_min: wyn.w.przerwy_min, ostrzezenia: wyn.ostrzezenia || [] };
+        // Hold: bez maila — wizyta nie jest potwierdzona, potwierdzenie pójdzie po wpłacie („Zadatek wpłynął”).
+        if (!hold) try { maileWizyt().potwierdzenieWTle(tenant, wyn.rezId, imie); } catch (e) { log.error('[terminarz] potwierdzenie e-mail:', e.message); }
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, wyn.rezId), przerwy_min: wyn.w.przerwy_min, ostrzezenia: wyn.ostrzezenia || [], hold_do: holdDo };
       }
       case 'trm_zmien': {
         wymagaj(r, ROLE_OPERACYJNE);
@@ -2297,6 +2412,90 @@ module.exports = (db, opts = {}) => {
         for (const id of ids.slice(0, 200)) await q(`INSERT IGNORE INTO Term_Sprawy_Odczyt (tenant_id, sprawa_id, pracownik) VALUES (?, ?, ?)`, [tenant, id, imie]);
         return { status: 'success', oznaczono: ids.length };
       }
+      // ───────── szybka rezerwacja do wpłaty zadatku (hold) — docs/terminarz-szybka-rezerwacja/ ─────────
+      case 'trm_hold_link': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const rez = await rezerwacja(tenant, d.id);
+        if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
+        if (rez.status !== 'do_wplaty') throw new BladUzytkownika('Link do zadatku tworzy się tylko dla rezerwacji „Do wpłaty”.');
+        if (rez.hold_do && rez.hold_do <= await teraz()) throw new BladUzytkownika('Ten hold już wygasł — termin został zwolniony.');
+        const ZG = zgodyNarzedzia();
+        const dodatek = await new Promise((res) => hasFeature(tenant, ZG.FEATURE_KEY, (ok) => res(!!ok)));
+        if (!dodatek) throw new BladUzytkownika('Dodatek „Link do płatności z regulaminem” nie jest aktywny w tym salonie. Zadatek przyjmij jak dotąd i kliknij „Zadatek wpłynął”.');
+        const reg = (await q(`SELECT tresc, url FROM TenantRegulaminy WHERE tenant_id = ? LIMIT 1`, [tenant]).catch(() => []))[0];
+        if (!reg || !(String(reg.tresc || '').trim() || String(reg.url || '').trim())) throw new BladUzytkownika('Najpierw uzupełnij regulamin salonu w Administracja → Płatności online — bez niego link nie ma czego pokazać.');
+        const tpayLink = ZG.normalizujTpayLink(d.tpay_link);
+        if (!ZG.tpayLinkOk(tpayLink)) throw new BladUzytkownika('To nie wygląda na link tpay. Wklej link skopiowany przyciskiem „Kopiuj” w panelu tpay (zaczyna się od https://secure.tpay.com/…).');
+        const kwota = Number(String(d.kwota == null ? '' : d.kwota).replace(',', '.'));
+        if (!isFinite(kwota) || kwota <= 0) throw new BladUzytkownika('Podaj kwotę zadatku.');
+        // jeden aktywny link na hold: poprzedni oczekujący przestaje działać, żeby klient nie zapłacił dwa razy z dwóch SMS-ów
+        await q(`UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id]);
+        const zabiegi = rez.pozycje.filter(p => p.stan !== 'anulowana').map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
+        const opis = `Zadatek: ${zabiegi} · ${ladnyTermin(rez.start)}`.slice(0, 255);
+        const ins = await q(`INSERT INTO ZgodyPlatnosci (tenant_id, id_klienta, imie_nazwisko, telefon, kwota, opis, tpay_link, utworzyl, rezerwacja_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [tenant, rez.id_klienta || null, rez.klient_nazwa, rez.klient_telefon || '', kwota, opis, tpayLink, String(imie || '').slice(0, 120), rez.id]);
+        await historia(db, tenant, rez.id, imie, 'zadatek_link', `link do zadatku ${kwota.toFixed(2)} zł (#${ins.insertId}) — do wysłania SMS-em`, null, { zgoda_id: ins.insertId, kwota });
+        zapiszLog(tenant, 'PŁATNOŚĆ LINK', imie, `Link #${ins.insertId} do ${rez.numer} ${rez.klient_nazwa}, ${kwota.toFixed(2)} zł (szybka rezerwacja)`);
+        return { status: 'success', zadatek_link: await linkZadatku(tenant, rez.id), rezerwacja: await rezerwacja(tenant, rez.id) };
+      }
+      case 'trm_hold_wplata': {
+        wymagaj(r, ROLE_OPERACYJNE);
+        const rez = await rezerwacja(tenant, d.id);
+        if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
+        if (rez.zadatek_id) return { status: 'success', powtorzenie: true, rezerwacja: rez, zadatek_id: rez.zadatek_id };
+        if (Number(d.wersja) !== Number(rez.wersja)) throw new BladUzytkownika('Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem.', { code: 'WERSJA', rezerwacja: rez });
+        const poWygasnieciu = rez.status === 'wygasla' && !!rez.hold_do;
+        if (rez.status !== 'do_wplaty' && !poWygasnieciu) throw new BladUzytkownika('Ta rezerwacja nie czeka na zadatek.');
+        const kwota = Number(String(d.kwota == null ? '' : d.kwota).replace(',', '.'));
+        if (!isFinite(kwota) || kwota <= 0) throw new BladUzytkownika('Podaj kwotę, która wpłynęła.');
+        const METODY = ['tpay', 'Przelew', 'Gotówka', 'Karta', 'BLIK'];
+        const metoda = METODY.includes(d.metoda) ? d.metoda : 'tpay';
+        const zabiegi = rez.pozycje.filter(p => p.stan !== 'anulowana').map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
+        let idKlienta = rez.id_klienta, profilBezRegulaminu = false;
+        if (!idKlienta) {
+          // pieniądze są, więc profil musi być — ale regulaminu ta osoba NIE potwierdziła (nie weszła w link). Zostaje do podpisania w salonie, jawnie.
+          const maxR = await q(`SELECT MAX(CAST(id_klienta AS UNSIGNED)) AS maxId FROM Klienci WHERE tenant_id = ?`, [tenant]);
+          idKlienta = String(((maxR[0] && parseInt(maxR[0].maxId)) || 1000) + 1);
+          await q(`INSERT INTO Klienci (id, tenant_id, id_klienta, imie_nazwisko, telefon, data_rejestracji, zgody_rodo_reg, notatki) VALUES (?, ?, ?, ?, ?, NOW(), 'BRAK (szybka rezerwacja)', ?)`,
+            [crypto.randomUUID(), tenant, idKlienta, rez.klient_nazwa, rez.klient_telefon || '', `Profil założony przy wpłacie zadatku z szybkiej rezerwacji ${rez.numer} — regulamin do podpisania w salonie`]);
+          profilBezRegulaminu = true;
+        }
+        const zadatekId = 'DEP-' + Date.now();
+        const cel = poWygasnieciu
+          ? `Wpłata po wygaśnięciu rezerwacji ${rez.numer} (${ladnyTermin(rez.start)}) — do ustalenia: nowy termin albo zwrot`
+          : `Wizyta ${rez.numer} · ${ladnyTermin(rez.start)} · ${zabiegi}`;
+        await q(`INSERT INTO Zadatki (id, tenant_id, id_klienta, data_wplaty, klient, typ, kwota, metoda, cel, status, pracownicy, bon) VALUES (?, ?, ?, NOW(), ?, 'WPŁATA', ?, ?, ?, 'AKTYWNY', ?, 0)`,
+          [zadatekId, tenant, idKlienta, rez.klient_nazwa, kwota, metoda, cel, imie || '']);
+        try { require('./lojalnosc').makeLojalnosc(db).naliczZaZadatek(tenant, { zadatekId, id_klienta: idKlienta, kwota, opis: cel, pracownik: imie || '' }); } catch (e) { /* Klub nieaktywny albo osoba nie jest członkinią — zadatek i tak jest zapisany */ }
+        if (poWygasnieciu) {
+          await q(`UPDATE Term_Rezerwacje SET id_klienta = COALESCE(id_klienta, ?), zadatek_id = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [idKlienta, zadatekId, tenant, rez.id, rez.wersja]);
+          await historia(db, tenant, rez.id, imie, 'zadatek', `wpłata ${kwota.toFixed(2)} zł (${metoda}) PO WYGAŚNIĘCIU holdu — zadatek ${zadatekId} na koncie ID ${idKlienta}, wizyta nie wraca sama${profilBezRegulaminu ? ' · profil założony przy wpłacie, regulamin do podpisania w salonie' : ''}`, null, { zadatek_id: zadatekId, kwota, metoda, id_klienta: idKlienta });
+          await sprawaUpsert(tenant, { typ: 'E42', rezerwacja_id: rez.id, tytul: `Wpłata po wygaśnięciu — ${rez.klient_nazwa}`,
+            opis: `${kwota.toFixed(2)} zł (${metoda}) wpłynęło po zwolnieniu terminu ${rez.start.slice(0, 16)}. Zadzwoń: nowy termin albo zwrot. Zadatek ${zadatekId} jest na koncie klienta (ID ${idKlienta}).${rez.klient_telefon ? ' Tel. ' + rez.klient_telefon : ''}`,
+            dane: { zadatek_id: zadatekId, kwota, metoda, telefon: rez.klient_telefon, id_klienta: idKlienta, dotyczy: [] }, priorytet: 'P1', powiazany_czas: null, klucz: `E42:${rez.id}`, kto: imie });
+          await sprawaAutoZamknij(tenant, `E40:${rez.id}`, 'Wpłata dotarła po wygaśnięciu — sprawa E42', 'rozwiazana');
+          zapiszLog(tenant, 'TERMINARZ: WPŁATA PO WYGAŚNIĘCIU', imie, `${rez.numer} ${rez.klient_nazwa} ${kwota.toFixed(2)} zł (${metoda}) — zadatek ${zadatekId} na koncie ID ${idKlienta}`);
+          return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), zadatek_id: zadatekId, po_wygasnieciu: true, profil_bez_regulaminu: profilBezRegulaminu, id_klienta: idKlienta };
+        }
+        const up = await q(`UPDATE Term_Rezerwacje SET status = 'potwierdzona', id_klienta = COALESCE(id_klienta, ?), zadatek_id = ?, brak_kontaktu = 0, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ? AND status = 'do_wplaty'`, [idKlienta, zadatekId, tenant, rez.id, rez.wersja]);
+        if (!up.affectedRows) throw new BladUzytkownika('Ktoś zmienił tę wizytę w międzyczasie. Odśwież i spróbuj ponownie.', { code: 'WERSJA', rezerwacja: await rezerwacja(tenant, rez.id) });
+        await historia(db, tenant, rez.id, imie, 'zadatek', `zadatek wpłynął: ${kwota.toFixed(2)} zł (${metoda}) — rezerwacja potwierdzona${profilBezRegulaminu ? ' · profil założony przy wpłacie, regulamin do podpisania w salonie' : ''}`, null, { zadatek_id: zadatekId, kwota, metoda, id_klienta: idKlienta });
+        await sprawaAutoZamknij(tenant, `E41:${rez.id}`, 'Zadatek wpłynął — rezerwacja potwierdzona', 'rozwiazana');
+        zapiszLog(tenant, 'TERMINARZ: ZADATEK WPŁYNĄŁ', imie, `${rez.numer} ${rez.klient_nazwa} ${rez.start.slice(0, 16)} — ${kwota.toFixed(2)} zł (${metoda}), zadatek ${zadatekId}`);
+        try { maileWizyt().potwierdzenieWTle(tenant, rez.id, imie); } catch (e) { log.error('[terminarz] potwierdzenie e-mail po zadatku:', e.message); }
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), zadatek_id: zadatekId, profil_bez_regulaminu: profilBezRegulaminu, id_klienta: idKlienta };
+      }
+      case 'trm_hold_zwolnij': {
+        wymagaj(r, ROLE_OPERACYJNE);   // recepcja i manager (decyzja właściciela 30.10.2026)
+        const rez = await rezerwacja(tenant, d.id);
+        if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
+        if (rez.status !== 'do_wplaty') return { status: 'success', powtorzenie: true, rezerwacja: rez };
+        if (Number(d.wersja) !== Number(rez.wersja)) throw new BladUzytkownika('Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem.', { code: 'WERSJA', rezerwacja: rez });
+        const powod = String(d.powod || '').trim().slice(0, 255) || 'zwolniono bez wpłaty';
+        await zakonczHold(tenant, rez, 'anulowana', imie, powod);
+        zapiszLog(tenant, 'TERMINARZ: HOLD ZWOLNIONY', imie, `${rez.numer} ${rez.klient_nazwa} ${rez.start.slice(0, 16)} — ${powod}`);
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
+      }
       default:
         throw new BladUzytkownika('Nieznana akcja terminarza: ' + action);
     }
@@ -2360,6 +2559,8 @@ module.exports = (db, opts = {}) => {
           priorytet: 'P1', powiazany_czas: null, klucz: `E19:rez:${rz.id}`, kto: null });
       }
     } catch (e) { log.error('[terminarz] tickSprawy:', e.message); }
+    // (4) SZYBKA REZERWACJA — hold bez wpłaty wygasa: godzina wraca do puli, recepcja dostaje Sprawę E40 (docs/terminarz-szybka-rezerwacja/)
+    try { await wygasHoldy(); } catch (e) { log.error('[terminarz] wygaszanie holdów:', e.message); }
     // ZK-03 (Z3-07): okresowe uzgadnianie źródeł zakupów — co 5 minut, tylko salony z dostępnością techniczną i zapisaną ewidencją aktywna/konczenie.
     // Brak tabel v2 albo błąd jednego źródła nie zatrzymuje CRM; ten sam problem aktualizuje jedną sprawę (klucz E20:<zakup>), nie tworzy nowej co 5 minut.
     try {
@@ -2387,4 +2588,5 @@ module.exports = (db, opts = {}) => {
 };
 module.exports.FEATURE_KEY = FEATURE_KEY;
 module.exports.priorytetZnikaniaWizyty = priorytetZnikaniaWizyty; // do prob jednostkowych (regula 48h/7dni)
-module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawy_domknij', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane'];
+module.exports.terminHoldu = terminHoldu; // do prób jednostkowych (reguła 24 h / 24 h przed / 2 h)
+module.exports.AKCJE = ['trm_init', 'trm_ustawienia_zapisz', 'trm_zasob_zapisz', 'trm_zasob_archiwizuj', 'trm_usluga_zapisz', 'trm_grafik_zapisz', 'trm_grafik_z_godzin_salonu', 'trm_nieobecnosc_zapisz', 'trm_nieobecnosc_usun', 'trm_blokada_zapisz', 'trm_blokada_usun', 'trm_blokada_szczegoly', 'trm_zespol_zapisz', 'trm_dzien', 'trm_zakres', 'trm_rezerwacja', 'trm_szukaj_klienta', 'trm_szukaj_wizyt', 'trm_historia_klientki', 'trm_pierwsza_wizyta', 'trm_maile_ustawienia', 'trm_maile_proba', 'trm_maile_dziennik', 'trm_historia_pracownika', 'trm_historia_zabiegu', 'trm_zmiany_grafiku', 'trm_zmiany_dnia', 'trm_grafik_dzien_zapisz', 'trm_grafik_dzien_usun', 'trm_zakupy_klientki', 'trm_zakupy_uzgodnij', 'trm_zakupy_podglad', 'trm_zakupy_rejestruj', 'trm_zakup_kwalifikuj', 'trm_skladnik_kandydaci', 'trm_ewidencja_stan', 'trm_oferty_lista', 'trm_oferta_zapisz', 'trm_zakupy_import', 'trm_zakup_bilans', 'trm_ewidencja_ustaw', 'trm_zakup_przyznaj', 'trm_skladnik_weryfikuj', 'trm_skladnik_uruchom', 'trm_wykonanie_koryguj', 'trm_pozycja_zrodlo', 'trm_pozycja_potrac', 'trm_sprawdz', 'trm_szukaj', 'trm_zapisz', 'trm_zmien', 'trm_anuluj', 'trm_usun', 'trm_obecnosc', 'trm_pozycja_stan', 'trm_rozlicz_start', 'trm_rozlicz_powiaz', 'trm_notatka', 'trm_sprawy_lista', 'trm_sprawy_licznik', 'trm_sprawa_szczegoly', 'trm_sprawa_przejmij', 'trm_sprawa_przekaz', 'trm_sprawa_kontakt', 'trm_sprawa_rozwiaz', 'trm_sprawa_wznow', 'trm_sprawy_domknij', 'trm_sprawa_pozycja_obsluzono', 'trm_sprawy_przeczytane', 'trm_hold_link', 'trm_hold_wplata', 'trm_hold_zwolnij'];

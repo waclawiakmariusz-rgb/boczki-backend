@@ -38,6 +38,8 @@
   const dzienTyg = (data) => { const d = new Date(data + 'T00:00:00').getDay(); return d === 0 ? 7 : d; };
   const ladnaData = (data, krotko) => { const d = new Date(data + 'T00:00:00'); return krotko ? `${DNI_K[dzienTyg(data)]} ${d.getDate()}.${pad(d.getMonth() + 1)}` : `${DNI[dzienTyg(data)]}, ${d.getDate()} ${MIES[d.getMonth()]} ${d.getFullYear()}`; };
   const poniedzialek = (data) => dodajDni(data, 1 - dzienTyg(data));
+  // 'YYYY-MM-DD HH:MM:SS' → 'cz 10:00' (plakietki holdu na kafelku i w panelu)
+  const krotkiTermin = (s) => s && /^\d{4}-\d{2}-\d{2}/.test(String(s)) ? `${DNI_K[dzienTyg(String(s).slice(0, 10))].toLowerCase()} ${hhmm(s)}` : '—';
   const zl = (n) => (n == null ? '—' : Number(n).toLocaleString('pl-PL', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' zł');
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : 'k' + Date.now() + Math.random().toString(16).slice(2));
   const el = (id) => document.getElementById(id);
@@ -211,6 +213,16 @@
     if (dzw) { dzw.title = 'Powiadomienia: ' + opis; dzw.setAttribute('aria-label', 'Powiadomienia: ' + opis); }
     if (d.otwarte > 0) { b.hidden = false; b.textContent = d.otwarte; b.classList.toggle('pilne', d.pilne > 0); }
     else { b.hidden = true; b.classList.remove('pilne'); }
+    // Szybka rezerwacja: zmiana licznika = coś się stało poza tym ekranem (np. akceptacja regulaminu z telefonu klienta,
+    // wygaśnięcie holdu). Siatka dnia nie odświeża się sama, więc robimy to tu — tylko gdy licznik naprawdę się zmienił.
+    const odcisk = `${d.otwarte}/${d.pilne}/${d.nieprzeczytane}`;
+    if (TRM._odciskSpraw && TRM._odciskSpraw !== odcisk) {
+      if (['dzien', 'zasoby', 'moj'].includes(TRM.widok) && !drag) odswiez({ cicho: true });
+      if (TRM.panel === 'szczegoly' && TRM.szcz && TRM.szcz.rez && TRM.szcz.tryb === 'podglad' && (TRM.szcz.rez.status === 'do_wplaty' || TRM.szcz.rez.hold_do)) {
+        api('trm_rezerwacja', { id: TRM.szcz.id }).then(x => { if (x.status === 'success' && TRM.szcz && TRM.szcz.id === x.rezerwacja.id && TRM.szcz.tryb === 'podglad') { TRM.szcz.rez = x.rezerwacja; TRM.szcz.historia = x.historia; TRM.szcz.sprzedaz = x.sprzedaz; TRM.szcz.zadatekLink = x.zadatek_link || null; TRM.szcz.linkDodatek = !!x.link_dodatek; renderSzczegoly(); } });
+      }
+    }
+    TRM._odciskSpraw = odcisk;
   }
   TRM.idz = (n) => { if (n === 0) TRM.data = dzisStr(); else TRM.data = dodajDni(TRM.data, TRM.widok === 'agenda' ? 7 * n : n); el('trm-data').value = TRM.data; odswiez(); };
   TRM.ustawDate = (v) => { if (/^\d{4}-\d{2}-\d{2}$/.test(v)) { TRM.data = v; odswiez(); } };
@@ -493,6 +505,8 @@
       const zn = [];
       // Skasowana pomyłka widoczna tylko przy „pokaż anulowane" — i wtedy ma mówić prawdę o sobie.
       if (r.usunieta) zn.push('<span class="st">Skasowana</span>');
+      else if (r.status === 'do_wplaty') zn.push(`<span class="st">Do wpłaty do ${esc(krotkiTermin(r.hold_do))}</span>`);   // szybka rezerwacja: do kiedy termin jest trzymany
+      else if (r.status === 'wygasla' && r.hold_do) zn.push('<span class="st">Wygasła bez wpłaty</span>');
       else if (r.status !== 'potwierdzona') zn.push(`<span class="st">${esc(ST_LABEL[r.status] ? ST_LABEL[r.status][0] : r.status)}</span>`);
       if (r.obecnosc === 'nieobecny') zn.push('<span class="st">Nieobecna</span>'); else if (r.obecnosc === 'spozniony') zn.push('<span class="st">Spóźniona</span>');
       if (r.wykonanie === 'wykonana') zn.push(r.sprzedaz_id ? '<span class="st">Rozliczona</span>' : '<span class="st">Do rozliczenia</span>'); else if (r.wykonanie === 'w_toku') zn.push('<span class="st">W trakcie</span>'); else if (r.obecnosc === 'przybyl') zn.push('<span class="st">Przybyła</span>');
@@ -501,7 +515,7 @@
       const mozePrzeciagac = !!dragPrac && operacyjna() && !anul && r.wykonanie === 'zaplanowana';
       const pozIdsCsv = poz.map(x => x.id).join(',');
       const krotka = (b - a) < 40, mini = (b - a) < 20; // D01: 20–39 min = 2 linie (godzina·klientka / usługa), <20 min = 1 linia
-      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
+      s += `<div class="trm-karta ${anul ? 'anul' : ''} ${r.status === 'do_wplaty' ? 'hold' : ''} ${r.wykonanie === 'wykonana' ? 'wyk' : ''} ${r.obecnosc === 'nieobecny' ? 'nieob' : ''} ${TRM.szcz && TRM.szcz.rez && TRM.szcz.rez.id === r.id ? 'akt' : ''} ${mozePrzeciagac ? 'przeciagalna' : ''} ${krotka ? 'krotka' : ''} ${mini ? 'mini' : ''}" data-rezerwacja="${r.id}" data-pozycje="${pozIdsCsv}" data-prac-zrodlo="${mozePrzeciagac ? esc(dragPrac) : ''}" ${mozePrzeciagac ? 'onpointerdown="TRM.pDown(event)"' : ''} style="--kat:${kol};--tlo:${kol}1f;top:${(a - zak.od) * PX}px;height:${Math.max(22, (b - a) * PX - 2)}px" onclick="event.stopPropagation();TRM.kartaKlik(event, ${r.id})" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();TRM.kartaKlik(event, ${r.id});}" aria-label="${esc(r.klient_nazwa + ', ' + hhmm(poz[0].start) + '–' + hhmm(poz[poz.length - 1].koniec) + ', ' + naz)}">
         ${znakNotatki(r)}${znakPreferencji(r)}${krotka ? `<div class="l1"><span class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</span><span class="sep"> · </span><span class="k">${esc(r.klient_nazwa)}</span></div>${mini ? '' : `<div class="u">${esc(naz)}</div>`}` : `<div class="g">${hhmm(poz[0].start)}–${hhmm(poz[poz.length - 1].koniec)}</div><div class="k">${esc(r.klient_nazwa)}</div><div class="u">${esc(naz)}${poz.some(p => p.pierwsza) ? ' <span class="trm-pierwsza">1. wizyta</span>' : ''}</div>${zn.length ? `<div class="zn">${zn.slice(0, 2).join('')}</div>` : ''}`}
       </div>`;
     });
@@ -684,7 +698,7 @@
     const lista = poz.length ? poz : r.pozycje;
     const op = operacyjna();
     // jeden główny stan obsługi (T05/T06): odwołana > nieobecna > wykonana > w trakcie > przybyła > zaplanowana
-    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : r.status === 'do_wplaty' ? ['Do wpłaty', 'warn'] : anul ? (r.status === 'wygasla' && r.hold_do ? ['Wygasła bez wpłaty', 'bad'] : ST_LABEL[r.status]) : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
     // rozliczenie: tylko to, co system naprawdę wie (bez fikcyjnych liczników pakietu — etap A nie śledzi jednostek zakupu)
     const zPakietu = lista.some(x => x.zakup_skladnik_id);
     const rozl = !op ? '' : (zPakietu ? `<span class="trm-pill pakiet">Z pakietu</span>` : '') + (r.sprzedaz_id ? `<span class="trm-pill ok">Rozliczona</span><span>sprzedaż ${esc(r.sprzedaz_id)}</span>` : (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo') ? `<span class="trm-pill warn">Do rozliczenia</span><span>w Sprzedaży, po wykonaniu</span>` : zPakietu ? `<span>jednostka zarezerwowana</span>` : `<span class="trm-pill neu">Rozliczenie po wykonaniu</span>`);
@@ -1341,17 +1355,37 @@
     // techniczna jest normalnym elementem pracy salonu, więc stoi obok, z gotową godziną.
     return `${n.klient || n.pozycje.length ? '' : `<div class="trm-row" style="justify-content:flex-end;margin:-4px 0 6px"><button class="trm-btn link sm" onclick="TRM.blokadaNowa({ start: '${esc(n.start)}', osoba: '${esc(n.prefPrac || n.domyslny || '')}' })">To nie wizyta — zarezerwuj czas technicznie</button></div>`}
       <div class="trm-field"><label>Klientka</label>
-      ${n.klient ? `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`
+      ${n.klient ? (n.klient.bez_kartoteki
+        ? `<div class="trm-wybrana hold"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon)} · <span class="trm-pill warn">bez kartoteki · do wpłaty zadatku</span></span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>
+           <div class="trm-pomoc">Termin będzie trzymany do wpłaty zadatku (najdłużej dobę, nie później niż dobę przed wizytą). Konto powstanie dopiero, gdy ta osoba zaakceptuje regulamin na linku do zadatku.</div></div>`
+        : `<div class="trm-wybrana"><b>${esc(n.klient.nazwa)}</b> <span class="muted small">· ${esc(n.klient.telefon || 'brak telefonu')} · ID ${esc(n.klient.id_klienta)}</span> <button class="trm-btn link sm" onclick="TRM.nowaKlient(null)">zmień</button>${n.klient.ostrzezenie ? `<div class="trm-note warn small">⚠ ${esc(n.klient.ostrzezenie)}</div>` : ''}</div>`)
+      : n.bk ? `<div class="trm-bk"><div class="trm-grid2"><div class="trm-field"><label>Imię i nazwisko</label><input id="trm-bk-nazwa" placeholder="np. Jan Kowalski" value="${esc(n.bk.nazwa || '')}" autocomplete="off"></div><div class="trm-field"><label>Telefon (na niego pójdzie link do zadatku)</label><input id="trm-bk-tel" type="tel" placeholder="np. 600 100 200" value="${esc(n.bk.telefon || '')}" autocomplete="off"></div></div>
+           <div class="trm-row"><button class="trm-btn sm primary" onclick="TRM.nowaBkZatwierdz()">Użyj tych danych</button><button class="trm-btn sm link" onclick="TRM.nowa.bk=null;TRM.renderNowa()">Wróć do kartoteki</button></div>
+           <div class="trm-pomoc">Szybka rezerwacja: osoba, której nikt jeszcze nie widział. Termin jest trzymany do wpłaty zadatku, potem wygasa sam. Bez konta w Klientach, dopóki nie zaakceptuje regulaminu.</div></div>`
       : `<input id="trm-k-fraza" placeholder="Nazwisko, telefon albo ID klientki…" value="${esc(n.fraza)}" oninput="TRM.nowaSzukaj(this.value)" autocomplete="off">
          <div class="trm-wyniki-klient" id="trm-k-wyniki" ${n.wyniki.length ? '' : 'hidden'}>${klientWynikiHtml(n.wyniki)}</div>
-         <div class="trm-row" style="margin-top:6px"><span class="muted small">Klientki zakłada się w module <b>Klienci</b> — tam są zgody, dokumenty i kontrola duplikatów. Tutaj tylko wyszukujesz istniejący profil.</span></div>`}
+         <div class="trm-row" style="margin-top:6px"><span class="muted small">Klientki zakłada się w module <b>Klienci</b> — tam są zgody, dokumenty i kontrola duplikatów. Tutaj tylko wyszukujesz istniejący profil.</span><div class="trm-spacer"></div><button class="trm-btn link sm fix" onclick="TRM.nowaBezKartoteki()">Szybka rezerwacja bez kartoteki (do wpłaty zadatku)</button></div>`}
     </div>`;
   }
+  // Szybka rezerwacja do wpłaty zadatku (30.10.2026, docs/terminarz-szybka-rezerwacja/): dane z rozmowy zamiast kartoteki.
+  // „Klientką” kreatora staje się obiekt bez id_klienta z flagą bez_kartoteki — reszta kreatora (zabiegi, termin, zapis) działa jak zwykle.
+  TRM.nowaBezKartoteki = () => { const n = TRM.nowa; if (!n) return; n.bk = { nazwa: '', telefon: n.fraza && /^[\d\s+()-]{7,}$/.test(n.fraza) ? n.fraza : '' }; n.klient = null; renderNowa(); setTimeout(() => { const i = el('trm-bk-nazwa'); if (i) i.focus(); }, 50); };
+  TRM.nowaBkZatwierdz = () => {
+    const n = TRM.nowa; if (!n || !n.bk) return;
+    const nazwa = String((el('trm-bk-nazwa') || {}).value || '').trim().replace(/\s+/g, ' ').slice(0, 255);
+    const telefon = String((el('trm-bk-tel') || {}).value || '').trim().slice(0, 50);
+    n.bk = { nazwa, telefon };
+    if (nazwa.length < 3 || !nazwa.includes(' ')) return toast('warning', 'Podaj imię i nazwisko', 'Tak, jak przedstawiła się ta osoba — to trafi na kafelek i do linku.');
+    if (telefon.replace(/\D/g, '').length < 9) return toast('warning', 'Podaj numer telefonu', 'Minimum 9 cyfr — na ten numer pójdzie link do zadatku.');
+    n.klient = { id_klienta: null, nazwa, telefon, bez_kartoteki: true }; n.zakupy = null; n.hist = null;
+    if (n.kanal === 'recepcja') n.kanal = 'telefon';
+    renderNowa(); nowaLadujSloty(); TRM.nowaZmiana();
+  };
   // T02/T03: zakupy klientki na pierwszym planie kroku „Zabieg”; cennik jako „pojedynczy zabieg” (albo tylko informacja o Sprzedaży przy włączonej kontroli)
   const zakupyIntegracja = () => !!(TRM.dane && TRM.dane.ustawienia && TRM.dane.ustawienia.zakupy_integracja === 'on'); // sekcja 0 odbioru: UI zakupów tylko gdy właściciel włączył integrację
   async function nowaLadujZakupy() {
     if (!zakupyIntegracja()) return;
-    const n = TRM.nowa; if (!n || !n.klient) { if (n) n.zakupy = null; return; }
+    const n = TRM.nowa; if (!n || !n.klient || !n.klient.id_klienta) { if (n) n.zakupy = null; return; }   // bez kartoteki = bez zakupów
     const req = n.reqZakupy = (n.reqZakupy || 0) + 1; n.zakupy = undefined; renderNowa();
     let d; try { d = await api('trm_zakupy_klientki', { id_klienta: n.klient.id_klienta, klient_nazwa: n.klient.nazwa }); } catch (e) { d = null; }
     if (TRM.nowa !== n || req !== n.reqZakupy) return;
@@ -1362,7 +1396,7 @@
   async function nowaLadujHistorie() {
     const n = TRM.nowa; if (!n) return;
     const kategorie = [...new Set(n.pozycje.map(p => { const u = usluga(p.usluga_id); return u ? u.kategoria : null; }).filter(Boolean))];
-    if (!n.klient || !kategorie.length) { if (n.hist) { n.hist = null; renderNowa(); } return; }
+    if (!n.klient || !n.klient.id_klienta || !kategorie.length) { if (n.hist) { n.hist = null; renderNowa(); } return; }
     const req = n.reqHist = (n.reqHist || 0) + 1;
     let d; try { d = await api('trm_pierwsza_wizyta', { id_klienta: n.klient.id_klienta, kategorie }); } catch (e) { d = null; }
     if (TRM.nowa !== n || req !== n.reqHist) return;
@@ -1389,6 +1423,7 @@
     if (!zakupyIntegracja()) return '';
     const kontrola = TRM.dane.ustawienia && TRM.dane.ustawienia.kontrola_zakupow === 'on';
     if (!n.klient) return kontrola ? '<div class="trm-pomoc">Najpierw wybierz klientkę — pokażemy jej zakupy.</div>' : '';
+    if (n.klient.bez_kartoteki) return '';   // szybka rezerwacja: nie ma kartoteki, więc nie ma zakupów — zabieg z cennika, zadatek z linku
     if (n.zakupy === undefined) return '<div class="muted small">⏳ Sprawdzamy zakupy klientki…</div>';
     if (n.zakupy && n.zakupy.blad) return '<div class="trm-note warn small">Nie udało się pobrać zakupów klientki. <button class="trm-btn link sm" onclick="TRM.nowaOdswiezZakupy()">Spróbuj ponownie</button></div>';
     const lista = n.zakupy || [];
@@ -1424,7 +1459,7 @@
         <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div>${historiaZabieguHtml(n, u)}</div>`; }).join('')}
     </div>
     ${zakupyKlientkiHtml(n)}
-    ${kontrola ? (n.klient ? `<div class="trm-pomoc">Nowy zakup (pojedynczy zabieg lub pakiet) zarejestruj w <b>Sprzedaży</b> — po zapisaniu pojawi się tutaj.</div>` : '') : `<div class="trm-field"><label>Pojedynczy zabieg z cennika</label>
+    ${kontrola && !(n.klient && n.klient.bez_kartoteki) ? (n.klient ? `<div class="trm-pomoc">Nowy zakup (pojedynczy zabieg lub pakiet) zarejestruj w <b>Sprzedaży</b> — po zapisaniu pojawi się tutaj.</div>` : '') : `<div class="trm-field"><label>Pojedynczy zabieg z cennika</label>
       <input placeholder="Szukaj usługi w cenniku…" value="${esc(n.filtrUsl)}" oninput="TRM.nowa.filtrUsl=this.value;TRM.renderNowaUslugi()">
       <div class="trm-usl-lista" id="trm-usl-lista">${listaUslugHtml(lista)}</div>
       ${!skonf.length ? `<div class="trm-note warn small">Żadna usługa nie ma jeszcze czasu trwania. ${manager() ? 'Ustaw go w Ustawienia → Usługi.' : 'Poproś managera o konfigurację usług w terminarzu.'}</div>` : ''}
@@ -1518,7 +1553,7 @@
   }
   function stopkaNowej(n) {
     const gotowe = n.pozycje.length && n.klient && n.godzina && n.dostep && n.dostep.stan === 'ok';
-    return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">${n.mimoGrafiku && gotowe ? 'Umów mimo grafiku' : 'Umów wizytę'}</button></div>`;
+    return `<div class="trm-stopka">${n.szybka ? '' : `<button class="trm-btn fix" onclick="TRM.nowaWstecz()">Wstecz</button>`}<button class="trm-btn primary" onclick="TRM.nowaZapisz()" ${gotowe ? '' : 'disabled'} id="trm-n-zapisz" title="${gotowe ? '' : 'Najpierw wybierz klientkę, zabieg i dostępny termin'}">${n.klient && n.klient.bez_kartoteki ? 'Zarezerwuj do wpłaty zadatku' : n.mimoGrafiku && gotowe ? 'Umów mimo grafiku' : 'Umów wizytę'}</button></div>`;
   }
   function renderNowa() {
     const n = TRM.nowa; if (!n) return;
@@ -1764,11 +1799,13 @@
     const n = TRM.nowa; if (!n || n.zapis) return;
     if (!n.klient) return toast('warning', 'Wskaż klientkę');
     n.zapis = true; const btn = el('trm-n-zapisz'); if (btn) { btn.disabled = true; btn.textContent = 'Zapisujemy…'; }
-    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta, nazwa: n.klient.nazwa }, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka, mimo_grafiku: !!n.mimoGrafiku });
+    const hold = !!n.klient.bez_kartoteki;   // szybka rezerwacja: bez kartoteki, termin trzymany do wpłaty zadatku
+    const d = await api('trm_zapisz', { klucz_idem: n.idem, klient: { id_klienta: n.klient.id_klienta || null, nazwa: n.klient.nazwa, telefon: n.klient.telefon || null }, bez_kartoteki: hold, hold, pozycje: n.pozycje, start: n.start, kanal: n.kanal, notatka: n.notatka, mimo_grafiku: !!n.mimoGrafiku });
     n.zapis = false;
     if (d.status === 'konflikt') { n.dostep = { stan: 'zajety', wynik: { problemy: d.problemy, alternatywy: d.alternatywy } }; n.idem = uuid(); renderNowa(); return toast('warning', 'Termin niedostępny', d.message); }
-    if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
-    toast('success', d.powtorzenie ? 'Ta wizyta była już zapisana' : 'Zapisano wizytę', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)}`);
+    if (d.status !== 'success') { if (btn) { btn.disabled = false; btn.textContent = hold ? 'Zarezerwuj do wpłaty zadatku' : 'Umów wizytę'; } return toast('error', 'Nie zapisano', d.message); }
+    if (hold && !d.powtorzenie) toast('warning', 'Termin trzymany do wpłaty zadatku', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)} — ważne do ${krotkiTermin(d.hold_do || d.rezerwacja.hold_do)}. Teraz utwórz link do zadatku w karcie wizyty.`);
+    else toast('success', d.powtorzenie ? 'Ta wizyta była już zapisana' : 'Zapisano wizytę', `${d.rezerwacja.numer} · ${d.rezerwacja.klient_nazwa} · ${hhmm(d.rezerwacja.start)}`);
     // Z8: wizyta zapisana, ale zabieg pochodzi z pakietu po terminie — osobny, widoczny komunikat po zapisie.
     for (const o of (d.ostrzezenia || [])) if (o.kod === 'PO_TERMINIE') toast('warning', 'Zabieg z pakietu po terminie', `${o.zakup_nazwa ? '„' + o.zakup_nazwa + '”: ' : ''}${o.tekst}`);
     for (const o of (d.ostrzezenia || [])) if (o.kod === 'GRAFIK') toast('warning', 'Wizyta poza grafikiem', `${o.pracownik} nie pracuje wtedy według grafiku — zapisano świadomie. Daj znać wykonawczyni.`);
@@ -1950,7 +1987,7 @@
     }
     return '';
   }
-  const TYP_SPRAWY_LABEL = { E02: 'Zmiana terminu', E03: 'Zmiana wykonawcy', E05: 'Odwołanie wizyty', E06: 'Nieobecność klientki', E08: 'Przerwany zabieg', E13: 'Brak wyniku wizyty', E15: 'Nieobecność wykonawcy', E16: 'Niedostępny zasób', E18: 'Zmiana grafiku', E19: 'Rozliczenie wizyty', E20: 'Zakup zmieniony w Sprzedaży', E21: 'Wizyta wymaga zakupu lub wyjaśnienia', E22: 'Zmiana ważności pakietu', E23: 'Wykonanie do wyjaśnienia', E24: 'Błąd uzgadniania zakupów', E33: 'Czyszczenie grafiku' };
+  const TYP_SPRAWY_LABEL = { E02: 'Zmiana terminu', E03: 'Zmiana wykonawcy', E05: 'Odwołanie wizyty', E06: 'Nieobecność klientki', E08: 'Przerwany zabieg', E13: 'Brak wyniku wizyty', E15: 'Nieobecność wykonawcy', E16: 'Niedostępny zasób', E18: 'Zmiana grafiku', E19: 'Rozliczenie wizyty', E20: 'Zakup zmieniony w Sprzedaży', E21: 'Wizyta wymaga zakupu lub wyjaśnienia', E22: 'Zmiana ważności pakietu', E23: 'Wykonanie do wyjaśnienia', E24: 'Błąd uzgadniania zakupów', E33: 'Czyszczenie grafiku', E40: 'Hold wygasł bez wpłaty', E41: 'Regulamin zaakceptowany — sprawdź wpłatę', E42: 'Wpłata po wygaśnięciu terminu' };
   const pozostaloWizyt = (sp) => { const d = sp.dane || {}; return Array.isArray(d.dotkniete) ? d.dotkniete.filter(x => !x.rozwiazana).length : 0; };
   function akcjeSprawy(sp) {
     if (['rozwiazana', 'nieaktualna'].includes(sp.stan)) return operacyjna() ? `<button class="trm-btn fix" onclick="TRM.sprawaWznow(${sp.id})">Wznów sprawę</button>` : '';
@@ -2038,21 +2075,21 @@
     panelOtworz(naglowekPanelu('Wizyta', 'Pobieramy…'));
     const d = await api('trm_rezerwacja', { id });
     if (d.status !== 'success') { panelOtworz(naglowekPanelu('Wizyta') + `<div class="trm-note bad">${esc(d.message)}</div>`); return; }
-    TRM.szcz = { id, tryb: 'podglad', rez: d.rezerwacja, historia: d.historia, sprzedaz: d.sprzedaz };
+    TRM.szcz = { id, tryb: 'podglad', rez: d.rezerwacja, historia: d.historia, sprzedaz: d.sprzedaz, zadatekLink: d.zadatek_link || null, linkDodatek: !!d.link_dodatek };
     document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt'));
     renderSzczegoly();
   };
   async function przeladujSzczegoly(rez) {
     if (rez) TRM.szcz.rez = rez;
     const d = await api('trm_rezerwacja', { id: TRM.szcz.id });
-    if (d.status === 'success') { TRM.szcz.rez = d.rezerwacja; TRM.szcz.historia = d.historia; TRM.szcz.sprzedaz = d.sprzedaz; }
+    if (d.status === 'success') { TRM.szcz.rez = d.rezerwacja; TRM.szcz.historia = d.historia; TRM.szcz.sprzedaz = d.sprzedaz; TRM.szcz.zadatekLink = d.zadatek_link || null; TRM.szcz.linkDodatek = !!d.link_dodatek; }
     TRM.szcz.tryb = 'podglad'; renderSzczegoly();
     if (TRM.widok === 'ustawienia') return;
     await odswiez();
   }
   // Jedna główna czynność zależna od etapu (raport T06), reszta w rozwijanym „Więcej działań”.
   function glownaAkcjaWizyty(r, anul, op) {
-    if (anul || !op) return '';
+    if (anul || !op || r.status === 'do_wplaty') return '';   // hold: główna czynność to „Zadatek wpłynął” w karcie Zadatek, nie przybycie
     const akt = r.pozycje.filter(p => !['anulowana', 'niewykonana', 'odmowa'].includes(p.stan));
     const wTrakcie = akt.find(p => p.stan === 'w_trakcie'), zapl = akt.find(p => p.stan === 'zaplanowana');
     const nazwa = (p) => esc(p.kategoria + (p.wariant ? ' · ' + p.wariant : ''));
@@ -2088,8 +2125,8 @@
       <details class="trm-wiecej"><summary>Więcej działań</summary>
         <div class="trm-akcje">
           ${r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.szcz.tryb='zmiana';TRM.zm={start:TRM.szcz.rez.start.slice(0,16),prac:{},czasy:{}};TRM.renderSzczegoly()">Przełóż całą wizytę</button>` : ''}
-          ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
-          ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
+          ${r.obecnosc !== 'spozniony' && r.wykonanie === 'zaplanowana' && r.status !== 'do_wplaty' ? `<button class="trm-btn sm" onclick="TRM.obecnosc('spozniony')">Spóźniona</button>` : ''}
+          ${r.obecnosc !== 'nieobecny' && r.wykonanie === 'zaplanowana' && r.status !== 'do_wplaty' ? `<button class="trm-btn sm danger" onclick="TRM.obecnosc('nieobecny')">Nieobecna (potwierdzona)</button>` : ''}
           ${r.pozycje.some(p => p.stan === 'zaplanowana') ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='anuluj';TRM.an={zakres:'cala',kto:'klient',powod:''};TRM.renderSzczegoly()">Odwołaj wizytę</button>` : ''}
           ${!r.usunieta && !r.sprzedaz_id && !r.pozycje.some(p => ['wykonana', 'w_trakcie', 'przerwana'].includes(p.stan)) ? `<button class="trm-btn sm danger" onclick="TRM.szcz.tryb='usun';TRM.us={powod:''};TRM.renderSzczegoly()" title="Wizyta wpisana przez pomyłkę — zniknie z kalendarza, ale ślad zostanie">Skasuj wizytę</button>` : ''}
         </div>
@@ -2121,15 +2158,18 @@
     // nagłówek: klientka na pierwszym planie, numer EST-… jako informacja pomocnicza (raport T06)
     let html = `<div class="trm-panel-head"><div><h2>${esc(r.klient_nazwa)}</h2><div class="trm-numer">${esc(ladnaData(r.start.slice(0, 10)))} · <b>${hhmm(r.start)}–${hhmm(r.koniec)}</b> · ${aktywne} ${aktywne === 1 ? 'zabieg' : aktywne < 5 ? 'zabiegi' : 'zabiegów'} · ${esc(r.numer)}</div></div><button class="trm-x" onclick="TRM.panelZamknij()" aria-label="Zamknij">✕</button></div>`;
     // jeden główny stan obsługi + pozostałe osie modelu słownie (dane zostają, zmienia się tylko hierarchia prezentacji)
-    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : anul ? ST_LABEL[r.status] : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
+    const glowny = r.usunieta ? ['Skasowana (pomyłka)', 'bad'] : r.status === 'do_wplaty' ? ['Do wpłaty', 'warn'] : anul ? (r.status === 'wygasla' && r.hold_do ? ['Wygasła bez wpłaty', 'bad'] : ST_LABEL[r.status]) : r.obecnosc === 'nieobecny' ? OB_LABEL.nieobecny : r.wykonanie === 'wykonana' ? WYK_LABEL.wykonana : r.wykonanie === 'czesciowo' ? WYK_LABEL.czesciowo : r.wykonanie === 'w_toku' ? WYK_LABEL.w_toku : r.obecnosc === 'przybyl' ? OB_LABEL.przybyl : r.obecnosc === 'spozniony' ? OB_LABEL.spozniony : ['Zaplanowana', 'info'];
     const pomoc = [];
-    if (!anul && r.status !== 'potwierdzona') pomoc.push('rezerwacja: ' + (ST_LABEL[r.status] || [r.status])[0].toLowerCase());
+    if (!anul && r.status !== 'potwierdzona' && r.status !== 'do_wplaty') pomoc.push('rezerwacja: ' + (ST_LABEL[r.status] || [r.status])[0].toLowerCase());
+    if (r.status === 'do_wplaty') pomoc.push('termin trzymany do ' + krotkiTermin(r.hold_do));
+    if (r.zadatek_id && !anul) pomoc.push('zadatek wpłacony');
     if (!anul && glowny !== OB_LABEL[r.obecnosc] && r.obecnosc !== 'oczekiwana') pomoc.push('obecność: ' + OB_LABEL[r.obecnosc][0].toLowerCase());
     if (!anul && (r.wykonanie === 'wykonana' || r.wykonanie === 'czesciowo')) pomoc.push(r.sprzedaz_id ? 'rozliczona' : 'do rozliczenia');
     if (r.usunieta) html += `<div class="trm-note warn" style="margin:10px 0"><b>Ta wizyta została skasowana jako pomyłka.</b> Klientka <b>${esc(r.klient_nazwa)}</b> była umówiona na ${esc(ladnaData(r.start.slice(0,10)))} ${hhmm(r.start)}. Skasował(a): <b>${esc(r.usunieta_przez || "—")}</b>${r.usunieta_kiedy ? ", " + esc(String(r.usunieta_kiedy).slice(0,16).replace("T"," ")) : ""}. Powód: ${esc(r.usunieta_powod || "—")}</div>`;
     html += `<div class="trm-status-glowny">${pill(glowny)}${pomoc.length ? `<span class="pomoc">${esc(pomoc.join(' · '))}</span>` : ''}</div>`;
     html += `<div class="trm-card"><div class="trm-row"><div><b>${esc(r.klient_nazwa)}</b><div class="muted small">${r.klient_telefon ? esc(r.klient_telefon) + ' · ' : ''}${r.id_klienta ? 'ID ' + esc(r.id_klienta) : 'bez kartoteki'} · kanał: ${esc(KANAL_LABEL[r.kanal] || r.kanal)}${r.brak_kontaktu ? ' · <span class="trm-pill warn">brak kontaktu</span>' : ''}</div></div>${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="TRM.historiaKlientki('${esc(r.id_klienta)}')" title="Wszystkie wizyty tej klientki — odbyte i zaplanowane">Historia wizyt ↗</button>` : ''}${r.id_klienta && op ? `<button class="trm-btn link sm fix" onclick="pokaz('klient-profil'); setTimeout(() => otworzProfil('${esc(r.id_klienta)}'), 100);">Profil klientki ↗</button>` : ''}</div></div>`;
     html += prefKartaHtml(r);
+    if (op && s.tryb === 'podglad') html += zadatekKartaHtml(r, s);   // szybka rezerwacja: hold / link / wpłata
     if (s.tryb === 'zmiana') return panelOtworz(html + formZmiany());
     if (s.tryb === 'anuluj') return panelOtworz(html + formAnulacji());
     if (s.tryb === 'usun') return panelOtworz(html + formUsuniecia());
@@ -2158,6 +2198,88 @@
     await przeladujSzczegoly(d.rezerwacja);
   };
   TRM.zapiszNotatke = async () => { const d = await api('trm_notatka', { id: TRM.szcz.id, notatka: el('trm-s-notatka').value }); if (d.status === 'success') toast('success', 'Zapisano notatkę'); else toast('error', 'Nie zapisano', d.message); };
+
+  // ── SZYBKA REZERWACJA DO WPŁATY ZADATKU: karta „Zadatek” w szczegółach wizyty (docs/terminarz-szybka-rezerwacja/) ──
+  // Stan formularza trzymamy per wizyta (kwota, wklejony link tpay, otwarte podformularze), żeby odświeżenie panelu go nie kasowało.
+  TRM.hold = TRM.hold || {};
+  const holdStan = (r) => TRM.hold[r.id] || (TRM.hold[r.id] = {});
+  const holdKwotaDomyslna = (r) => Math.round(r.pozycje.filter(p => p.stan !== 'anulowana').reduce((a, p) => a + (Number(p.cena) || 0), 0) * 0.5 * 100) / 100;   // 50% sumy zabiegów (decyzja właściciela)
+  function zadatekKartaHtml(r, s) {
+    const hold = r.status === 'do_wplaty', wygaslaBezWplaty = r.status === 'wygasla' && !!r.hold_do;
+    if (!hold && !wygaslaBezWplaty && !(r.zadatek_id && r.hold_do)) return '';
+    const h = holdStan(r), link = s.zadatekLink || null, kwotaDom = holdKwotaDomyslna(r);
+    if (h.kwota == null) h.kwota = link && link.kwota ? link.kwota : kwotaDom;
+    const url = link && link.token ? `${location.origin}/platnosc.html?t=${encodeURIComponent(link.token)}` : null;
+    const akcept = !!(link && link.status === 'ZAAKCEPTOWANA');
+    const os = [
+      { ok: true, t: `Termin trzymany${r.hold_do ? ' do ' + esc(krotkiTermin(r.hold_do)) : ''}${hold ? '' : wygaslaBezWplaty ? ' — wygasł bez wpłaty' : ' — zakończony wpłatą'}` },
+      { ok: !!link && link.status !== 'ANULOWANA', t: link ? `Link do zadatku${link.kwota != null ? ' ' + zl(link.kwota) : ''} · ${link.status === 'ANULOWANA' ? 'unieważniony' : link.wygasly ? 'wygasł (7 dni)' : akcept ? 'otwarty przez klienta' : 'utworzony, czeka na klienta'}` : 'Link do zadatku — jeszcze nie utworzony' },
+      { ok: akcept, t: akcept ? `Regulamin zaakceptowany online ${esc(String(link.zaakceptowano_at || '').slice(5, 16))}${r.id_klienta ? ' · profil ID ' + esc(r.id_klienta) : ''}` : 'Regulamin — czeka na akceptację na linku (wtedy powstanie profil)' },
+      { ok: !!r.zadatek_id, t: r.zadatek_id ? `Zadatek wpłacony · ${esc(r.zadatek_id)}` : 'Wpłata — potwierdza recepcja po sprawdzeniu w panelu tpay' },
+    ];
+    let html = `<div class="trm-card trm-zadatek"><h3>Zadatek ${hold ? '<span class="trm-pill warn">do wpłaty</span>' : wygaslaBezWplaty ? '<span class="trm-pill bad">termin wygasł</span>' : '<span class="trm-pill ok">wpłacony</span>'}</h3>
+      <div class="trm-zadatek-os">${os.map(x => `<div class="${x.ok ? 'ok' : ''}"><i></i><span>${x.t}</span></div>`).join('')}</div>`;
+    if (hold) {
+      const linkOn = !!s.linkDodatek;   // rozstrzyga serwer (trm_rezerwacja), nie lokalna lista dodatków
+      if (url && !h.nowyLink) {
+        html += `<div class="trm-field"><label>Link do zadatku — wyślij SMS-em z telefonu salonu</label><div class="trm-link-box" id="trm-hold-url">${esc(url)}</div>
+          <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm primary" onclick="TRM.holdKopiuj()">Kopiuj link</button><button class="trm-btn sm link" onclick="TRM.hold[${r.id}].nowyLink=true;TRM.renderSzczegoly()">Nowy link (inna kwota)</button></div></div>`;
+      } else if (linkOn) {
+        html += `<div class="trm-grid2"><div class="trm-field"><label>Kwota zadatku (50% = ${zl(kwotaDom)})</label><div class="trm-row"><input type="number" min="1" step="1" id="trm-hold-kwota" value="${esc(h.kwota)}" onchange="TRM.hold[${r.id}].kwota=Number(this.value)||0"><button class="trm-btn sm fix" onclick="TRM.holdZaokraglij(${r.id})" title="W górę do pełnych 10 zł">do 10 zł ↑</button></div></div>
+          <div class="trm-field"><label>Link z panelu tpay (przycisk „Kopiuj”)</label><input id="trm-hold-tpay" placeholder="https://secure.tpay.com/?h=…" value="${esc(h.tpay || '')}" onchange="TRM.hold[${r.id}].tpay=this.value"></div></div>
+          <div class="trm-row"><button class="trm-btn sm primary" onclick="TRM.holdLink(${r.id})">Utwórz link do zadatku</button>${url ? `<button class="trm-btn sm link" onclick="TRM.hold[${r.id}].nowyLink=false;TRM.renderSzczegoly()">Zostaw obecny link</button>` : ''}</div>
+          <div class="trm-pomoc">Klient zobaczy na linku termin i kwotę, zaakceptuje regulamin i dopiero potem przejdzie do tpay. Po akceptacji powstanie jego profil, a Ty dostaniesz powiadomienie „sprawdź wpłatę”.</div>`;
+      } else {
+        html += `<div class="trm-note info small">Dodatek „Link do płatności z regulaminem” nie jest aktywny w tym salonie — zadatek przyjmij jak dotąd (przelew, kasa) i potwierdź niżej.</div>`;
+      }
+    }
+    if ((hold || wygaslaBezWplaty) && !r.zadatek_id) {   // po zapisaniu wpłaty przyciski znikają — oś zdarzeń mówi już wszystko
+      if (h.wplata) {
+        html += `<div class="trm-note ${wygaslaBezWplaty ? 'warn' : 'ok'} small" style="margin-top:8px"><b>${wygaslaBezWplaty ? 'Wpłata po wygaśnięciu' : 'Zadatek wpłynął'}</b>${wygaslaBezWplaty ? ' — termin już poszedł. Pieniądze trafią na konto tej osoby jako zwykły zadatek, a w Powiadomieniach pojawi się Sprawa: nowy termin albo zwrot.' : ' — sprawdziłaś wpłatę w panelu tpay (albo przyjęłaś ją inaczej)? Rezerwacja zmieni się w potwierdzoną.'}
+          <div class="trm-grid2" style="margin-top:6px"><div class="trm-field"><label>Kwota</label><input type="number" min="1" step="0.01" id="trm-hold-wplata-kwota" value="${esc(h.kwota)}"></div><div class="trm-field"><label>Jak wpłynęło</label><select id="trm-hold-wplata-metoda">${['tpay', 'Przelew', 'Gotówka', 'Karta', 'BLIK'].map(m => `<option ${m === (h.metoda || 'tpay') ? 'selected' : ''}>${m}</option>`).join('')}</select></div></div>
+          ${!r.id_klienta ? '<div class="trm-pomoc">Ta osoba nie weszła w link — profil powstanie przy wpłacie z adnotacją „regulamin do podpisania w salonie”.</div>' : ''}
+          <div class="trm-row" style="margin-top:6px"><button class="trm-btn sm primary" onclick="TRM.holdWplata(${r.id})">${wygaslaBezWplaty ? 'Zapisz wpłatę mimo wygaśnięcia' : 'Potwierdź: zadatek wpłynął'}</button><button class="trm-btn sm link" onclick="TRM.hold[${r.id}].wplata=false;TRM.renderSzczegoly()">Anuluj</button></div></div>`;
+      } else {
+        html += `<div class="trm-akcje" style="margin-top:8px"><button class="trm-btn sm ${hold ? 'primary' : ''}" onclick="TRM.hold[${r.id}].wplata=true;TRM.renderSzczegoly()">${hold ? 'Zadatek wpłynął' : 'Wpłata mimo wygaśnięcia'}</button>${hold ? `<button class="trm-btn sm danger" onclick="TRM.holdZwolnij(${r.id})">Zwolnij termin</button>` : ''}</div>`;
+        if (wygaslaBezWplaty) html += `<div class="trm-note bad small" style="margin-top:8px">Termin wygasł ${esc(krotkiTermin(r.hold_do))} bez wpłaty — godzina wróciła do puli. Jeśli pieniądze mimo to doszły, zapisz je przyciskiem wyżej; wizyta nie wraca sama, umawia się ją na nowo.</div>`;
+      }
+    }
+    return html + '</div>';
+  }
+  TRM.holdZaokraglij = (id) => { const h = holdStan({ id }); const k = Number((el('trm-hold-kwota') || {}).value || h.kwota || 0); h.kwota = Math.ceil(k / 10) * 10; const i = el('trm-hold-kwota'); if (i) i.value = h.kwota; };
+  TRM.holdKopiuj = () => { const b = el('trm-hold-url'); if (!b) return; const t = b.textContent; const ok = () => toast('success', 'Skopiowano link', 'Wklej go w SMS do klienta.'); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(ok).catch(() => window.prompt('Skopiuj link ręcznie:', t)); else window.prompt('Skopiuj link ręcznie:', t); };
+  TRM.holdLink = async (id) => {
+    const h = holdStan({ id }); const kw = Number((el('trm-hold-kwota') || {}).value || h.kwota || 0); const tp = String((el('trm-hold-tpay') || {}).value || h.tpay || '').trim();
+    if (!(kw > 0)) return toast('warning', 'Podaj kwotę zadatku');
+    if (!tp) return toast('warning', 'Wklej link z panelu tpay', 'Najpierw utwórz płatność w panelu tpay i skopiuj link przyciskiem „Kopiuj”.');
+    const d = await api('trm_hold_link', { id, kwota: kw, tpay_link: tp });
+    if (d.status !== 'success') return toast('error', 'Nie utworzono linku', d.message);
+    h.kwota = kw; h.tpay = ''; h.nowyLink = false;
+    toast('success', 'Link do zadatku gotowy', 'Skopiuj go i wyślij SMS-em. Dowiesz się, gdy klient zaakceptuje regulamin.');
+    await przeladujSzczegoly(d.rezerwacja);
+  };
+  TRM.holdWplata = async (id) => {
+    const r = TRM.szcz && TRM.szcz.rez; if (!r || r.id !== id) return;
+    const kw = Number((el('trm-hold-wplata-kwota') || {}).value || 0); const met = (el('trm-hold-wplata-metoda') || {}).value || 'tpay';
+    if (!(kw > 0)) return toast('warning', 'Podaj kwotę, która wpłynęła');
+    const d = await api('trm_hold_wplata', { id, wersja: r.wersja, kwota: kw, metoda: met });
+    if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane.'); return przeladujSzczegoly(d.rezerwacja); }
+    if (d.status !== 'success') return toast('error', 'Nie zapisano wpłaty', d.message);
+    holdStan({ id }).wplata = false;
+    if (d.po_wygasnieciu) toast('warning', 'Wpłata zapisana jako zadatek na koncie', 'Termin nie wraca sam — w Powiadomieniach jest Sprawa: nowy termin albo zwrot.');
+    else toast('success', 'Rezerwacja potwierdzona', `Zadatek ${zl(kw)} (${met}) zapisany${d.zadatek_id ? ' · ' + d.zadatek_id : ''}.`);
+    if (d.profil_bez_regulaminu) toast('warning', 'Profil założony przy wpłacie', `ID ${d.id_klienta} — regulamin NIE jest podpisany. Do podpisania w salonie przy pierwszej wizycie.`);
+    await przeladujSzczegoly(d.rezerwacja);
+  };
+  TRM.holdZwolnij = async (id) => {
+    const r = TRM.szcz && TRM.szcz.rez; if (!r || r.id !== id) return;
+    const powod = window.prompt('Zwolnić trzymany termin bez wpłaty? Napisz krótko dlaczego (zostanie w historii):', 'klient zrezygnował telefonicznie'); if (powod == null) return;
+    const d = await api('trm_hold_zwolnij', { id, wersja: r.wersja, powod });
+    if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane.'); return przeladujSzczegoly(d.rezerwacja); }
+    if (d.status !== 'success') return toast('error', 'Nie zwolniono', d.message);
+    toast('success', 'Termin zwolniony', 'Godzina wróciła do puli, link do zadatku przestał działać.');
+    await przeladujSzczegoly(d.rezerwacja);
+  };
 
   // zmiana terminu (E08/E09)
   function formZmiany() {
