@@ -1,0 +1,81 @@
+#estelio-mobile-v2{--e2-bg:light-dark(#faf7f4,#221d20);--e2-surface:light-dark(#fff,#30282d);--e2-ink:light-dark(#392c33,#f5e8ef);--e2-muted:light-dark(#796b72,#c5b5bf);--e2-brand:light-dark(#8a3759,#efabc8);--e2-onbrand:light-dark(#fff,#2b1420);--e2-soft:light-dark(#f4e7ed,#49303d);--e2-line:light-dark(#e8dfe3,#594650);--e2-green:light-dark(#23654f,#9fd8be);--e2-greenbg:light-dark(#ebf5ef,#223d31);--e2-amber:light-dark(#805512,#eaca8e);--e2-amberbg:light-dark(#fcf3e1,#47351e);--e2-red:light-dark(#9c3445,#ffb6c0);--e2-redbg:light-dark(#fcedef,#4b2931);font-family:Arial,Helvetica,sans-serif;color:var(--e2-ink);font-size:14px;line-height:1.5;color-scheme:light dark;width:100%}
+#estelio-mobile-v2 *{box-sizing:border-box}
+#estelio-mobile-v2 button,#estelio-mobile-v2 input,#estelio-mobile-v2 select,#estelio-mobile-v2 textarea{font:inherit;max-width:100%;color:var(--e2-ink)}
+#estelio-mobile-v2 button{min-height:44px;border:1px solid var(--e2-line);border-radius:12px;background:var(--e2-surface);padding:9px 13px;font-weight:600}
+#estelio-mobile-v2 button:disabled{opacity:.48}
+#estelio-mobile-v2 button[aria-pressed=true]{color:var(--e2-brand);border-color:var(--e2-brand);background:var(--e2-soft)}
+#estelio-mobile-v2 input:not([type=checkbox]),#estelio-mobile-v2 select,#estelio-mobile-v2 textarea{width:100%;min-height:44px;padding:10px;border:1px solid var(--e2-line);border-radius:10px;background:var(--e2-surface);font-size:16px}
+#estelio-mobile-v2 input[type=checkbox]{width:18px;height:18px;accent-color:var(--e2-brand)}
+#estelio-mobile-v2 label{display:block;font-size:13px;color:var(--e2-muted)}
+#estelio-mobile-v2 label input,#estelio-mobile-v2 label select,#estelio-mobile-v2 label textarea{margin-top:5px}
+#estelio-mobile-v2 .e2-preview{max-width:660px;margin:0 auto 20px}
+#estelio-mobile-v2 .e2-preview-head{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;margin-bottom:14px;padding-right:70px;font-size:12px;letter-spacing:.05em;color:var(--e2-muted)}
+#estelio-mobile-v2 .e2-role{display:flex;gap:8px;margin-bottom:12px}
+#estelio-mobile-v2 .e2-controls{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#estelio-mobile-v2 .e2-switches{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px}
+#estelio-mobile-v2 .e2-switches label{display:flex;align-items:center;gap:5px;min-height:44px}
+#estelio-mobile-v2 .e2-stage{padding:12px 0 20px}
+#estelio-mobile-v2 #e2-phone{max-width:420px;margin:auto;background:var(--e2-bg);border:1px solid var(--e2-line);border-radius:27px;overflow:hidden;box-shadow:0 12px 35px light-dark(#41242c12,#0004)}
+#estelio-mobile-v2 #e2-phone.e2-wide{max-width:800px}
+#estelio-mobile-v2 .e2-header{display:flex;align-items:center;justify-content:space-between;padding:6px 20px;background:var(--e2-surface);gap:12px;min-height:72px}
+#estelio-mobile-v2 .e2-logo{width:155px;height:58px;object-fit:contain;background:#fff;border-radius:6px}
+#estelio-mobile-v2 .e2-icon{border-radius:50%;min-width:44px;color:var(--e2-brand);background:var(--e2-soft)}
+#estelio-mobile-v2 .e2-context{display:flex;gap:8px;justify-content:space-between;padding:9px 18px;border-top:1px solid var(--e2-line);border-bottom:1px solid var(--e2-line);font-size:11px;color:var(--e2-muted);background:var(--e2-surface);flex-wrap:wrap}
+#estelio-mobile-v2 #e2-content{padding:22px 18px;min-height:490px}
+#estelio-mobile-v2 h1{font-family:Georgia,serif;font-size:29px;line-height:1.15;letter-spacing:-.04em;font-weight:400;margin:0 0 6px}
+#estelio-mobile-v2 h2{font-size:17px;line-height:1.3;margin:0}
+#estelio-mobile-v2 h3{font-size:14px;margin:0 0 4px}
+#estelio-mobile-v2 p{margin:6px 0 12px}
+#estelio-mobile-v2 .e2-sub{font-size:13px;color:var(--e2-muted)}
+#estelio-mobile-v2 .e2-eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--e2-brand);margin-bottom:8px}
+#estelio-mobile-v2 .e2-panel{padding:15px;background:var(--e2-surface);border:1px solid var(--e2-line);border-radius:17px;margin-top:14px}
+#estelio-mobile-v2 .e2-panel.e2-tint{background:var(--e2-soft);border-color:transparent}
+#estelio-mobile-v2 .e2-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#estelio-mobile-v2 .e2-grid>.e2-panel{margin-top:12px}
+#estelio-mobile-v2 .e2-amount{font-size:26px;letter-spacing:-.04em;font-variant-numeric:tabular-nums;line-height:1.25;font-weight:500;margin:6px 0}
+#estelio-mobile-v2 .e2-bignum{font-size:35px;font-variant-numeric:tabular-nums;letter-spacing:-.06em}
+#estelio-mobile-v2 .e2-row{display:flex;align-items:center;justify-content:space-between;gap:10px;min-width:0}
+#estelio-mobile-v2 .e2-row>*{min-width:0}
+#estelio-mobile-v2 .e2-wrap{flex-wrap:wrap}
+#estelio-mobile-v2 .e2-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+#estelio-mobile-v2 .e2-actions>button{flex:1}
+#estelio-mobile-v2 .e2-main{background:var(--e2-brand);color:var(--e2-onbrand);border-color:var(--e2-brand)}
+#estelio-mobile-v2 .e2-full{width:100%;margin-top:13px}
+#estelio-mobile-v2 .e2-textbtn{border:0;background:transparent;color:var(--e2-brand);padding:7px 0;text-align:left}
+#estelio-mobile-v2 .e2-pill{display:inline-block;font-size:11px;padding:4px 8px;background:var(--e2-soft);color:var(--e2-brand);border-radius:7px;font-weight:600}
+#estelio-mobile-v2 .e2-pill.ok,#estelio-mobile-v2 .e2-box.ok{background:var(--e2-greenbg);color:var(--e2-green)}
+#estelio-mobile-v2 .e2-pill.warn,#estelio-mobile-v2 .e2-box.warn{background:var(--e2-amberbg);color:var(--e2-amber)}
+#estelio-mobile-v2 .e2-pill.bad,#estelio-mobile-v2 .e2-box.bad{background:var(--e2-redbg);color:var(--e2-red)}
+#estelio-mobile-v2 .e2-box{padding:12px;border-radius:12px;margin-top:12px;font-size:13px;background:var(--e2-soft)}
+#estelio-mobile-v2 .e2-list{margin-top:14px}
+#estelio-mobile-v2 .e2-item{padding:13px 0;border-bottom:1px solid var(--e2-line)}
+#estelio-mobile-v2 .e2-item:last-child{border-bottom:0}
+#estelio-mobile-v2 .e2-filter{display:flex;gap:6px;flex-wrap:wrap;margin-top:15px}
+#estelio-mobile-v2 .e2-filter button{font-size:12px;flex:1;padding:8px 6px}
+#estelio-mobile-v2 .e2-fine{font-size:11px;color:var(--e2-muted)}
+#estelio-mobile-v2 .e2-field{margin-top:12px}
+#estelio-mobile-v2 .e2-line{display:flex;justify-content:space-between;gap:10px;margin:8px 0;font-size:13px}
+#estelio-mobile-v2 .e2-line strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+#estelio-mobile-v2 .e2-counts{display:flex;gap:16px;margin:10px 0;flex-wrap:wrap}
+#estelio-mobile-v2 .e2-counts strong{display:block;font-size:20px}
+#estelio-mobile-v2 .e2-meter{height:7px;background:var(--e2-line);border-radius:5px;overflow:hidden;margin:10px 0}
+#estelio-mobile-v2 .e2-meter span{display:block;height:100%;background:var(--e2-brand)}
+#estelio-mobile-v2 #e2-nav{display:flex;border-top:1px solid var(--e2-line);padding:7px 5px 10px;background:var(--e2-surface);gap:2px}
+#estelio-mobile-v2 #e2-nav button{flex:1;min-width:0;border:0;border-radius:9px;background:transparent;font-size:10px;padding:7px 1px;font-weight:400;min-height:48px}
+#estelio-mobile-v2 #e2-nav button[aria-current=page]{background:var(--e2-soft);color:var(--e2-brand);font-weight:600}
+#estelio-mobile-v2 #e2-nav .e2-symbol{display:block;font-size:19px;line-height:23px}
+#estelio-mobile-v2 #e2-message{margin:12px 16px 0;padding:12px;border-radius:12px;background:var(--e2-greenbg);color:var(--e2-green);font-size:13px}
+#estelio-mobile-v2 .e2-wide .e2-columns{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+#estelio-mobile-v2 .e2-wide #e2-content{padding:26px}
+#estelio-mobile-v2 .e2-empty{text-align:center;padding:35px 10px}
+#estelio-mobile-v2 .e2-visit{display:flex;gap:14px;width:100%;text-align:left;border:0;border-bottom:1px solid var(--e2-line);border-radius:0;background:transparent;padding:15px 0}
+#estelio-mobile-v2 .e2-time{color:var(--e2-brand);font-size:17px;min-width:48px;font-variant-numeric:tabular-nums}
+#estelio-mobile-v2 .e2-visit-main{flex:1;min-width:0;font-weight:400}
+#estelio-mobile-v2 .e2-visit-main strong{display:block}
+#estelio-mobile-v2 .e2-sep{margin-top:20px}
+#estelio-mobile-v2 .e2-step{font-size:12px;color:var(--e2-brand);margin-bottom:12px}
+#estelio-mobile-v2 .e2-mobile-note{color:var(--e2-muted);font-size:11px;margin-top:16px}
+@media(max-width:390px){#estelio-mobile-v2 .e2-controls{grid-template-columns:1fr}#estelio-mobile-v2 #e2-content{padding:18px 13px}#estelio-mobile-v2 .e2-grid{gap:7px}#estelio-mobile-v2 .e2-panel{padding:12px}#estelio-mobile-v2 .e2-amount{font-size:23px}#estelio-mobile-v2 .e2-wide .e2-columns{display:block}#estelio-mobile-v2 .e2-preview-head{padding-right:65px}}
+#estelio-mobile-v2 .e2-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+#estelio-mobile-v2 .e2-panel{min-width:0}
+@media(max-width:360px){#estelio-mobile-v2 .e2-grid{grid-template-columns:1fr}}

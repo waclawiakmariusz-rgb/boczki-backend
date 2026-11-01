@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark">
+<title>Estelio Mobile — makiety v0.2</title><link rel="stylesheet" href="mobile.css">
+</head>
+<body style="margin:0;padding:16px;background:light-dark(#f5f2ef,#191719)">
+<main id="estelio-mobile-v2">
+  <div class="e2-preview">
+    <div class="e2-preview-head"><strong>ESTELIO MOBILE</strong><span>v0.2 · fikcyjne dane</span></div>
+    <div class="e2-role"><button type="button" data-role="reception" aria-pressed="true">Recepcja</button><button type="button" data-role="manager" aria-pressed="false">Manager</button></div>
+    <div class="e2-controls">
+      <label>Ekran<select id="e2-screen"></select></label>
+      <label>Stan<select id="e2-state"><option value="ready">Zwykły</option><option value="offline">Brak internetu</option><option value="conflict">Konflikt zapisu</option><option value="loading">Ładowanie</option><option value="empty">Pusta lista</option><option value="revoked">Odebrany dostęp</option></select></label>
+    </div>
+    <div class="e2-switches"><label><input id="e2-addon" type="checkbox" checked> Terminarz</label><label><input id="e2-units" type="checkbox" checked> Aktywne liczniki</label><label><input id="e2-wide" type="checkbox"> Tablet</label></div>
+  </div>
+  <div class="e2-stage viz-dotted-background">
+    <section id="e2-phone" aria-label="Makieta Estelio Mobile">
+      <header class="e2-header"><img src="assets/estelio-logo.png" class="e2-logo" alt="Estelio Beauty Management"><button data-go="access" class="e2-icon" aria-label="Moja sesja">AK</button></header>
+      <div class="e2-context"><span>Salon demonstracyjny</span><span id="e2-person">Anna · recepcja</span></div>
+      <div id="e2-message" role="status" hidden></div>
+      <div id="e2-content"></div>
+      <nav id="e2-nav" aria-label="Główna nawigacja"></nav>
+    </section>
+  </div>
+</main>
+<script src="mobile.js"></script>
+</body>
+</html>
