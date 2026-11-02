@@ -64,3 +64,11 @@ przywraca też stan magazynowy kremu). Obrazy: `public/img/blog/sprzedaz-od-a-do
 Zaobserwowane działanie systemu (do opisu, nie błąd): „Użyj zaznaczonych” dzieli zadatek na pozycje i dokłada wiersz dopłaty; po częściowym użyciu wpłata dostaje
 status WYKORZYSTANY, a reszta powstaje jako nowy wpis „Reszta z: …” metodą System. Cena detalu NIE podpowiada się z magazynu (pole „Wpisz cenę…”), choć pomoc pracownika
 twierdzi inaczej. Lista Mix nie zawiera Portfela (portfel tylko przez zielony panel). Historia sprzedaży nie ma przycisku edycji; edycja dziś = ołówek w Dzisiejszej sprzedaży.
+
+## Wpis nr 3 (2.11.2026)
+
+`blog/wpisy/kosmetyki-i-liczenie.html` (szkic). 11 zrzutów ze scenariusza `narzedzia/proby/blog-03-kosmetyki.json` (sprzątanie `skrypty/blog-03-sprzatanie.js`).
+Obrazy: `public/img/blog/kosmetyki-i-liczenie/`. Zrzuty strony: 30-wpis-03-gora.jpg, 31-wpis-03-calosc.jpg.
+Pułapka scenariuszy: widoki Stan magazynowy / Inwentaryzacja / lista produktów w Sprzedaży pracują na `window.daneCache` z chwili startu — po zapisie trzeba wywołać `pobierzDane(true)`.
+**BŁĄD ZNALEZIONY (nie naprawiony, do decyzji):** przycisk „−” w Inwentaryzacji wysyła `action: update, ilosc: -1` (delta), a serwer (`routes/magazyn.js`, `parseIlosc`) odrzuca wartość ujemną
+komunikatem „Pole ilość nie może być ujemne” — front nie pokazuje błędu, stan się nie zmienia. „+” działa. We wpisie korekta w dół opisana przez edycję produktu (ołówek), co działa.

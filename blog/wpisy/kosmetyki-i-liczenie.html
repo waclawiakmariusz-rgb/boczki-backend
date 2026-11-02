@@ -1,0 +1,121 @@
+<!--WPIS
+{
+  "slug": "kosmetyki-i-liczenie",
+  "title": "Kosmetyki i liczenie. Skąd system wie, ile zostało na półce",
+  "excerpt": "Nowe serum trafia do słownika, potem do magazynu z dostawy, schodzi ze stanu przy sprzedaży i wraca przy zwrocie. Do tego marża, typ produktu, inwentaryzacja i lista „co zamówić”.",
+  "category": "Magazyn",
+  "emoji": "📦",
+  "okladka": "/img/blog/kosmetyki-i-liczenie/04-stan-po-dostawie.jpg",
+  "date_published": "2026-11-02",
+  "status": "draft"
+}
+-->
+<p class="lead">W Estelio kosmetyk żyje w dwóch miejscach. Słownik mówi, co salon sprzedaje i za ile. Magazyn mówi, ile sztuk leży na półce. Sprzedaż łączy jedno z drugim: wybierasz produkt ze słownika, a stan w magazynie spada o sztukę. W tym wpisie przechodzimy drogę jednego produktu od dostawy, przez sprzedaż i zwrot, po inwentaryzację i listę zamówień.</p>
+
+<h2>Dwa miejsca, dwie różne odpowiedzi</h2>
+<p>Przykład na dziś: salon wprowadza do sprzedaży <strong>serum nawilżające 30 ml</strong> marki Estelio Care. Kupuje je za 80 zł netto, sprzedaje za 160 zł. Przyszło 6 sztuk.</p>
+<ul>
+  <li><strong>Słownik kosmetyków</strong> odpowiada na pytanie „co i za ile sprzedajemy”. Jest w Administracji, ale ma do niego dostęp także recepcja.</li>
+  <li><strong>Magazyn</strong> odpowiada na pytanie „ile tego mamy, z jaką datą ważności i po ile kupiliśmy”. Jest w menu Kosmetyki.</li>
+</ul>
+<p>Nowy produkt zwykle dodajesz w obu miejscach. Najpierw w słowniku, żeby dało się go sprzedać, potem w magazynie, żeby system liczył sztuki.</p>
+
+<h2>Serum trafia do słownika</h2>
+<p><strong>Administracja → Słownik kosmetyków</strong>. Trzy pola: firma (marka), nazwa produktu, cena sprzedaży. Firmę wybierasz z listy albo dodajesz nową, jeśli to marka, której jeszcze nie było w salonie.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/01-slownik-nowy-produkt.jpg" alt="Słownik kosmetyków: firma Estelio Care, nazwa produktu Serum nawilżające 30 ml, cena sprzedaży 160 zł">
+  <figcaption><b>Nowy produkt w słowniku.</b> Firma, nazwa, cena. Od tej chwili produkt da się wybrać przy sprzedaży.</figcaption>
+</figure>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/02-slownik-lista.jpg" alt="Katalog produktów w słowniku z wyszukiwarką zawężoną do serum">
+  <figcaption><b>Katalog produktów.</b> Wyszukiwarka szuka po firmie i nazwie. Przy każdej pozycji edycja i usunięcie.</figcaption>
+</figure>
+<div class="ramka tip">
+  <div class="ramka-tytul">Wskazówka</div>
+  <p>Nazwę produktu pisz tak, jak ma brzmieć przy kasie i w raportach: „Serum nawilżające 30 ml”, nie „serum nawilż. 30”. Ta sama nazwa pojawi się w liście przy sprzedaży, w historii klientki i w rankingu kosmetyków.</p>
+</div>
+
+<h2>Dostawa: 6 sztuk wchodzi do magazynu</h2>
+<p><strong>Kosmetyki → Przyjęcie towaru</strong>. Wybierasz markę i model ze słownika, a system składa z nich nazwę produktu w magazynie. Potem partia: liczba sztuk, data ważności z opakowania, cena netto (za ile kupiłaś) i brutto (za ile sprzedajesz). Podsumowanie na dole liczy wartość dostawy.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/03-przyjecie-towaru.jpg" alt="Przyjęcie towaru: marka Estelio Care, model Serum nawilżające 30 ml, typ Kremy, 6 sztuk, ważność 31.12.2027, netto 80 zł, brutto 160 zł">
+  <figcaption><b>Przyjęcie towaru.</b> Produkt ze słownika, partia z datą ważności, ceny za sztukę. Jedno kliknięcie i 6 sztuk jest na stanie.</figcaption>
+</figure>
+<p>Pole <strong>Typ</strong> wydaje się drobiazgiem, ale decyduje o raportach. Suplement wpisany jako „Kremy” trafi do rankingu kosmetyków i zafałszuje Analizę. Jeśli przyjmujesz witaminy albo kolagen do picia, wybierz „Suplement”. Typ da się poprawić później w edycji produktu, a raporty przeliczą się same.</p>
+<div class="ramka manager">
+  <div class="ramka-tytul">Dla managera: marża</div>
+  <p>System trzyma obie ceny: netto to cena zakupu, brutto to cena sprzedaży. Marża serum: (160 − 80) / 160 = 50%. Przy 80 zł netto i 139 zł brutto byłoby 42%. Produkty z marżą poniżej 30% warto przejrzeć: podnieść cenę w słowniku albo wycofać. Wartość towaru na półce liczy się po cenie zakupu, nie po cenie z metki.</p>
+</div>
+
+<h2>Stan magazynowy po dostawie</h2>
+<p><strong>Kosmetyki → Stan magazynowy</strong> pokazuje każdy produkt z ilością, datą ważności i ceną. Kolory przy ilości mówią od razu, co się kończy: czerwony to brak, żółty to mało. Filtry u góry: wszystkie, detal, lista zbiorcza. Wyszukiwarka działa po nazwie.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/04-stan-po-dostawie.jpg" alt="Stan magazynowy po wyszukaniu serum: Estelio Care Serum nawilżające 30 ml, 6 sztuk, ważność 31.12.2027, 160 zł">
+  <figcaption><b>Serum na stanie.</b> 6 sztuk, data ważności z dostawy, cena brutto. Ołówek po prawej otwiera edycję.</figcaption>
+</figure>
+<p>Ołówek przy produkcie otwiera okno edycji: nazwa, typ, ilość, data ważności, netto i brutto. Tu poprawiasz typ, cenę po podwyżce u dostawcy albo ilość, gdy coś zeszło z półki poza sprzedażą.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/05-edycja-produktu.jpg" alt="Okno Edycja produktu: nazwa, typ Kremy, ilość 6, data ważności, netto 80, brutto 160">
+  <figcaption><b>Edycja produktu.</b> Każda zmiana ilości zostawia w Dzienniku zdarzeń wpis: kto, kiedy, z ilu na ile.</figcaption>
+</figure>
+<div class="ramka uwaga">
+  <div class="ramka-tytul">Tester, próbka, zepsute opakowanie</div>
+  <p>Kosmetolożka bierze serum na tester, żeby móc je polecać. To nie jest sprzedaż, ale sztuka zeszła z półki. Zmniejsz ilość w edycji produktu i powiedz managerowi dlaczego. W Dzienniku zdarzeń zostaje ślad, więc przy inwentaryzacji nikt nie będzie szukał „zaginionej” sztuki.</p>
+</div>
+
+<h2>Sprzedaż zdejmuje sztukę</h2>
+<p>Przy kasie Ola dodaje pozycję <strong>Detal</strong> i wybiera serum z listy. Lista pokazuje przy każdym produkcie, ile sztuk jest dostępnych, więc od razu widać, czy można obiecać klientce drugie opakowanie na przyszły tydzień. Cenę wpisuje się przy sprzedaży, zgodnie ze słownikiem albo z rabatem.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/06-sprzedaz-serum.jpg" alt="Formularz sprzedaży, wiersz Detal: produkt z magazynu Estelio Care Serum nawilżające 30 ml (Dostępne: 6), ilość 1, cena za sztukę 160 zł">
+  <figcaption><b>Pozycja detaliczna.</b> Produkt z listy z liczbą dostępnych sztuk, ilość i cena za sztukę.</figcaption>
+</figure>
+<p>Po zapisie nie trzeba robić nic w magazynie. Stan serum spada z 6 na 5. Jeśli klientka bierze dwa opakowania, wpisujesz ilość 2 i schodzą dwie sztuki.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/07-stan-po-sprzedazy.jpg" alt="Stan magazynowy: serum, 5 sztuk">
+  <figcaption><b>Po sprzedaży.</b> 5 sztuk. Nikt niczego nie przepisywał ręcznie.</figcaption>
+</figure>
+
+<h2>Zwrot nieotwartego opakowania wraca na półkę</h2>
+<p>Klientka oddaje serum następnego dnia, zamknięte, bo kupiła dwa i jedno chce zwrócić. W jej profilu, w zakładce <strong>Produkty</strong>, przy serum jest przycisk <strong>Zwrot</strong>. W oknie zwrotu zaznaczasz <strong>Produkt wraca na stan magazynu</strong> i podajesz powód.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/08-zwrot-na-stan.jpg" alt="Okno Zwrot sprzedaży: serum za 160 zł, sposób zwrotu Karta, zaznaczone pole produkt wraca na stan magazynu, ilość 1, powód: nieotwarte opakowanie">
+  <figcaption><b>Zwrot z przywróceniem na stan.</b> Zaznaczone pole oznacza, że sztuka wraca do magazynu.</figcaption>
+</figure>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/09-stan-po-zwrocie.jpg" alt="Stan magazynowy: serum, znów 6 sztuk">
+  <figcaption><b>Po zwrocie.</b> Znów 6 sztuk. Pieniądze oddane, sztuka na półce, oba ruchy w historii.</figcaption>
+</figure>
+<p>Gdyby opakowanie było otwarte, pole zostaje odznaczone. Pieniądze wracają do klientki, sztuka nie wraca na stan, a w historii jest powód. O samym zwrocie pieniędzy pisaliśmy w <a href="/blog/sprzedaz-od-a-do-z">wpisie o sprzedaży</a>.</p>
+
+<h2>Inwentaryzacja: półka kontra system</h2>
+<p>Raz w miesiącu, po zamknięciu salonu, sprawdzasz, czy liczby w systemie zgadzają się z półką. <strong>Kosmetyki → Inwentaryzacja</strong> pokazuje wszystkie produkty pogrupowane po nazwie, z filtrami Profesja (to, co zużywasz do zabiegów) i Detal (to, co sprzedajesz). Najlepiej we dwie: jedna liczy, druga porównuje.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/10-inwentaryzacja.jpg" alt="Inwentaryzacja: lista produktów z oznaczeniem Detal lub Profesja, przy każdym przyciski X, minus, liczba sztuk, plus">
+  <figcaption><b>Lista do liczenia.</b> Przy każdym produkcie: X przenosi do archiwum, minus i plus korygują stan o sztukę. Eksport PDF drukuje listę do odhaczania.</figcaption>
+</figure>
+<p>Różnica nie jest problemem do schowania, tylko informacją. Najczęściej okazuje się, że ktoś dał klientce produkt i nie wpisał sprzedaży, ktoś wziął tester bez wpisu albo poprzednia inwentaryzacja miała pomyłkę. Każda korekta zostaje w Dzienniku zdarzeń, więc manager po weekendzie widzi, gdzie i o ile się rozjechało.</p>
+<p>Produkty <strong>Profesja</strong>, czyli żele, maski, rękawiczki i płyny zużywane w gabinecie, nie mają ceny sprzedaży i nie schodzą ze stanu same. Ich zużycie wpisujesz właśnie tu albo w edycji produktu, na przykład raz w tygodniu po przeliczeniu zapasu.</p>
+
+<h2>Co zamówić, zanim zabraknie</h2>
+<p><strong>Kosmetyki → Co zamówić?</strong> to raport, który sam wyłapuje dwie rzeczy: produkty detaliczne ze stanem 0 lub 1 oraz produkty z datą ważności krótszą niż dwa miesiące. Pierwsze zamawiasz, drugie sprzedajesz w pierwszej kolejności, zamiast dokupować.</p>
+<figure>
+  <img src="/img/blog/kosmetyki-i-liczenie/11-co-zamowic.jpg" alt="Raport Co zamówić: krytyczne stany: Purles 108 Godess' Cream brak, Witamina D3+K2 1 sztuka; krótka data ważności: Witamina D3+K2, 59 dni">
+  <figcaption><b>Raport zamówień.</b> Krytyczne stany na czerwono, krótka data na żółto. „Usuń” przy pozycji tylko ukrywa ją z listy, produkt zostaje w magazynie.</figcaption>
+</figure>
+<div class="ramka tip">
+  <div class="ramka-tytul">Jeden stały dzień w tygodniu</div>
+  <p>Czwartek rano, pięć minut: otwierasz „Co zamówić?”, wysyłasz zamówienia, dodajesz sobie zadanie „sprawdź dostawę w poniedziałek”. To wystarcza, żeby za miesiąc nie usłyszeć „skończył się krem w trakcie zabiegu”.</p>
+</div>
+
+<h2>Jeśli liczby się nie zgadzają</h2>
+<ul>
+  <li><strong>Produktu nie ma na liście przy sprzedaży.</strong> Jest w słowniku, ale nie w magazynie, albo odwrotnie. Sprawdź oba miejsca. Przy sprzedaży lista pokazuje tylko to, co ma stan.</li>
+  <li><strong>Stan nie spadł po sprzedaży.</strong> Pozycja została wpisana jako zabieg, nie jako detal, albo nazwa w słowniku różni się od nazwy w magazynie.</li>
+  <li><strong>Suplementy liczą się jako kosmetyki.</strong> Zły typ produktu. Popraw w edycji, raporty przeliczą się wstecz.</li>
+  <li><strong>Po zwrocie stan nie wzrósł.</strong> Przy zwrocie pole „Produkt wraca na stan” było odznaczone. Przy otwartym opakowaniu to prawidłowo.</li>
+  <li><strong>Produkt zniknął ze stanu.</strong> Ktoś kliknął X w inwentaryzacji albo kosz w raporcie „po dacie”. Produkt jest w Archiwum i da się go przywrócić.</li>
+  <li><strong>Marża wychodzi dziwnie.</strong> Sprawdź, czy przy przyjęciu nie wpisano ceny brutto w pole netto. Oba pola są obok siebie.</li>
+</ul>
+
+<p>Pełne opisy: <a href="/pomoc/#kosmetyki">„Detal: kosmetyki, suplementy i akcesoria do domu”</a>, <a href="/pomoc/#magazyn">„Magazyn: pilnowanie zapasów”</a> i <a href="/pomoc/#inwentaryzacja">„Inwentaryzacja”</a> w pomocy pracownika.</p>
+<p>Następny wpis: magazyn w wersji rozbudowanej. Kategorie, partie z datami, stany minimalne, przyjęcie dostawy z faktury i raport braków.</p>

@@ -1,0 +1,355 @@
+{
+  "nazwa": "blog-03-kosmetyki",
+  "modul": "Blog",
+  "opis": "Zrzuty do wpisu bloga „Kosmetyki i liczenie”: nowy produkt w Słowniku kosmetyków (Serum nawilżające 30 ml, 160 zł), przyjęcie towaru 6 szt. (netto 80, brutto 160), stan magazynowy po dostawie, edycja produktu (typ, ceny), sprzedaż 1 szt. kartą i stan 5, zwrot z przywróceniem na stan i stan 6, inwentaryzacja: korekta −1 żelu do endermologii, raport „Co zamówić”. Realny zapis na bazie izolowanej; przed i po sprząta po sobie.",
+  "sekcja": "slownik",
+  "korzen": ".section.active",
+  "czekajPoSekcji": 2500,
+  "przygotuj": "narzedzia/proby/skrypty/blog-03-sprzatanie.js",
+  "posprzataj": "narzedzia/proby/skrypty/blog-03-sprzatanie.js",
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ const s=document.getElementById('s_firma_select'); const o=[...s.options].find(o=>/Estelio Care/.test(o.textContent)); if(!o) return 'brak firmy'; s.value=o.value; s.dispatchEvent(new Event('change',{bubbles:true})); return o.textContent; })()",
+      "opis": "firma Estelio Care"
+    },
+    {
+      "wpisz": "#s_model",
+      "wartosc": "Serum nawilżające 30 ml"
+    },
+    {
+      "wpisz": "#s_cena",
+      "wartosc": "160"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "01-slownik-nowy-produkt"
+    },
+    {
+      "kliknij": "#slownik button[type=submit]"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "var s=document.getElementById('szukaj-slownik'); s.value='Serum nawil'; window.szukajWSlowniku(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#lista-slownik li.dict-row')].some(l => l.style.display !== 'none' && /Serum nawilżające 30 ml/.test(l.textContent))",
+      "opis": "produkt w słowniku"
+    },
+    {
+      "zrzut": "02-slownik-lista"
+    },
+    {
+      "pokaz": "nowy",
+      "czekajPo": 2200
+    },
+    {
+      "js": "(function(){ const s=document.getElementById('n_firma'); const o=[...s.options].find(o=>/Estelio Care/.test(o.textContent)); if(!o) return 'brak firmy'; s.value=o.value; s.dispatchEvent(new Event('change',{bubbles:true})); return o.value; })()",
+      "opis": "marka"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "js": "(function(){ const s=document.getElementById('n_model'); const o=[...s.options].find(o=>/Serum nawilżające 30 ml/.test(o.textContent)); if(!o) return 'brak modelu'; s.value=o.value; s.dispatchEvent(new Event('change',{bubbles:true})); return document.getElementById('n_nazwa').value; })()",
+      "opis": "model → nazwa"
+    },
+    {
+      "wpisz": "#n_ilosc",
+      "wartosc": "6"
+    },
+    {
+      "wpisz": "#n_waznosc",
+      "wartosc": "2027-12-31"
+    },
+    {
+      "wpisz": "#n_netto",
+      "wartosc": "80.00"
+    },
+    {
+      "wpisz": "#n_brutto",
+      "wartosc": "160.00"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "document.querySelector('[data-podsumowanie=suma]').textContent === '960,00 zł'",
+      "opis": "podsumowanie 6 × 160 = 960 zł"
+    },
+    {
+      "zrzut": "03-przyjecie-towaru"
+    },
+    {
+      "kliknij": "#nowy button[type=submit]"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "pokaz": "magazyn",
+      "czekajPo": 2500
+    },
+    {
+      "js": "pobierzDane(true); 'odświeżenie danych magazynu'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "wpisz": "#szukaj-magazyn",
+      "wartosc": "Serum nawil"
+    },
+    {
+      "js": "szukajWMagazynie(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r => r.offsetParent !== null && /Serum nawilżające 30 ml/.test(r.innerText) && /\\b6\\b/.test(r.innerText))",
+      "opis": "serum na stanie: 6 szt."
+    },
+    {
+      "zrzut": "04-stan-po-dostawie"
+    },
+    {
+      "js": "(function(){ const r=[...document.querySelectorAll('#tabela-body tr')].find(r=>r.offsetParent!==null && /Serum nawilżające 30 ml/.test(r.innerText)); const b=r && r.querySelector('button[onclick^=\"otworzEdycjeProduktu\"]'); if(!b) return 'brak przycisku'; b.click(); return 'edycja'; })()",
+      "opis": "ołówek przy serum"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "zrzut": "05-edycja-produktu"
+    },
+    {
+      "js": "document.getElementById('edit-product-overlay').style.display='none'; 'ok'"
+    },
+    {
+      "pokaz": "sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "js": "pobierzDane(true); 'odświeżenie danych magazynu'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ const ch=[...document.querySelectorAll('#seller-grid .seller-chip')].find(c=>/Ola/.test(c.textContent)); const cb=ch.querySelector('input'); if(cb && !cb.checked) ch.click(); const o=[...document.querySelectorAll('#lista-klientow option')].find(o => /Julia Wiśniewska/.test(o.value)); const i=document.getElementById('multi_klient'); i.value=o.value; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); return i.value; })()",
+      "opis": "Ola, klientka Julia Wiśniewska"
+    },
+    {
+      "js": "(function(){ const b=document.querySelector('#items-container .item-row button[onclick^=usunWiersz]'); if(b) b.click(); dodajNowyWiersz('Kosmetyk'); return document.querySelectorAll('#items-container .item-row').length; })()",
+      "opis": "wiersz detalu"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const p=w.querySelector('.item-prod'); const o=[...p.options].find(o=>/Serum nawilżające 30 ml/.test(o.value)); if(!o) return 'brak serum w liście'; p.value=o.value; p.dispatchEvent(new Event('change',{bubbles:true})); return o.textContent; })()",
+      "opis": "produkt: serum (lista pokazuje dostępne sztuki)"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const up=w.querySelector('.item-unit-price'); up.value='160'; up.dispatchEvent(new Event('input',{bubbles:true})); const pay=w.querySelector('.item-pay'); pay.value='Karta'; pay.dispatchEvent(new Event('change',{bubbles:true})); return (w.querySelector('.item-price')||{}).value; })()",
+      "opis": "160 zł kartą"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "/160/.test(document.getElementById('total-sum').textContent)",
+      "opis": "Razem 160 zł"
+    },
+    {
+      "zrzut": "06-sprzedaz-serum"
+    },
+    {
+      "kliknij": "button[onclick='wyslijMultiSprzedaz()']"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "pokaz": "magazyn",
+      "czekajPo": 2500
+    },
+    {
+      "js": "pobierzDane(true); 'odświeżenie danych magazynu'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "wpisz": "#szukaj-magazyn",
+      "wartosc": "Serum nawil"
+    },
+    {
+      "js": "szukajWMagazynie(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r => r.offsetParent !== null && /Serum nawilżające 30 ml/.test(r.innerText) && /\\b5\\b/.test(r.innerText))",
+      "opis": "po sprzedaży: 5 szt."
+    },
+    {
+      "zrzut": "07-stan-po-sprzedazy"
+    },
+    {
+      "pokaz": "klient-profil",
+      "czekajPo": 2200
+    },
+    {
+      "js": "(function(){ const k=[...document.querySelectorAll('#klient-profil [onclick^=\"otworzProfil\"]')].find(e=>/Julia Wiśniewska/.test(e.textContent)); if(!k) return 'brak kafelka'; k.click(); return 'profil'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ const b=[...document.querySelectorAll('#klient-profil .pp-tab')].find(b=>/Produkty/.test(b.textContent)); b.click(); return 'produkty'; })()",
+      "opis": "zakładka Produkty"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ const rows=[...document.querySelectorAll('#klient-profil [onclick^=\"otworzZwrot\"]')].filter(b=>b.offsetParent!==null); const b=rows.find(x=>/Serum nawilżające 30 ml/.test(((x.closest('tr')||x.parentElement.parentElement)||{}).textContent||'')); if(!b) return 'brak przycisku zwrotu'; b.click(); return 'zwrot otwarty'; })()",
+      "opis": "Zwrot przy serum"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "wpisz": "#zwrot-powod",
+      "wartosc": "nieotwarte opakowanie, klientka zmieniła zdanie"
+    },
+    {
+      "js": "(function(){ const c=document.getElementById('zwrot-przywroc-stan'); if(c) c.checked=true; return c ? c.checked : 'brak'; })()",
+      "opis": "produkt wraca na stan"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "08-zwrot-na-stan"
+    },
+    {
+      "kliknij": "#zwrot-zapisz-btn"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "pokaz": "magazyn",
+      "czekajPo": 2500
+    },
+    {
+      "js": "pobierzDane(true); 'odświeżenie danych magazynu'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "wpisz": "#szukaj-magazyn",
+      "wartosc": "Serum nawil"
+    },
+    {
+      "js": "szukajWMagazynie(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r => r.offsetParent !== null && /Serum nawilżające 30 ml/.test(r.innerText) && /\\b6\\b/.test(r.innerText))",
+      "opis": "po zwrocie: znów 6 szt."
+    },
+    {
+      "zrzut": "09-stan-po-zwrocie"
+    },
+    {
+      "pokaz": "inwentaryzacja",
+      "czekajPo": 2500
+    },
+    {
+      "js": "pobierzDane(true); 'odświeżenie danych magazynu'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "wpisz": "#szukaj-inv",
+      "wartosc": "Serum nawil"
+    },
+    {
+      "js": "typeof szukajWInwentaryzacji === 'function' && szukajWInwentaryzacji(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ const r=[...document.querySelectorAll('#lista-inv .inv-row')].find(r=>/Serum nawilżające 30 ml/.test(r.innerText)); if(r) r.scrollIntoView({block:'center'}); return r ? r.innerText.replace(/s+/g,' ').slice(0,80) : 'brak wiersza'; })()",
+      "opis": "wiersz serum przed korektą"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "10-inwentaryzacja-serum"
+    },
+    {
+      "js": "(function(){ const r=[...document.querySelectorAll('#lista-inv .inv-row')].find(r=>r.offsetParent!==null && /Serum nawilżające 30 ml/.test(r.innerText)); const b=r && r.querySelector('.pm-btn.minus'); if(!b) return 'brak minusa'; b.click(); return 'korekta -1'; })()",
+      "opis": "tester serum: −1"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "pobierzDane(true); 'ok'"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ const i=document.getElementById('szukaj-inv'); i.value='Serum nawil'; szukajWInwentaryzacji(); const r=[...document.querySelectorAll('#lista-inv .inv-row')].find(r=>/Serum nawilżające 30 ml/.test(r.innerText)); if(r) r.scrollIntoView({block:'center'}); return r ? r.innerText.replace(/s+/g,' ').slice(0,80) : 'brak'; })()",
+      "opis": "wiersz serum po korekcie"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "sprawdz": "(function(){ const r=[...document.querySelectorAll('#lista-inv .inv-row')].find(r=>/Serum nawilżające 30 ml/.test(r.innerText)); return !!r && /(^|s)1(s|$)/.test(r.innerText.replace(/s+/g,' ')); })()",
+      "opis": "serum: 5 szt. po korekcie"
+    },
+    {
+      "zrzut": "11-inwentaryzacja-po-korekcie"
+    },
+    {
+      "pokaz": "co-zamowic",
+      "czekajPo": 3000
+    },
+    {
+      "zrzut": "12-co-zamowic"
+    }
+  ]
+}
