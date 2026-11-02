@@ -7,6 +7,7 @@
   <meta name="description" content="Praktyczne porady dla właścicielek salonów kosmetycznych. Jak zarządzać salonem, rozliczać pracownice, kontrolować magazyn i oszczędzać czas dzięki systemowi Estelio.">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://estelio.com.pl/blog.html">
+  <link rel="alternate" type="application/rss+xml" title="Blog Estelio" href="/blog/rss.xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -145,6 +146,9 @@
     .card-thumb.magazyn     { background: #e0e8e0; }
     .card-thumb.klienci     { background: #dde4ec; }
     .card-thumb.sprzedaz    { background: #eae0ec; }
+    .card-thumb.terminarz   { background: #e6e4dc; }
+    .card-thumb.dodatki     { background: #f0e4dc; }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .card-body { padding: 20px 22px 22px; flex: 1; display: flex; flex-direction: column; }
 
@@ -159,6 +163,22 @@
     .cat-magazyn     { background: #e4f0e4; color: #407040; border-color: #98c498; }
     .cat-klienci     { background: #e4ecf5; color: #405880; border-color: #98b4d4; }
     .cat-sprzedaz    { background: #ece4f5; color: #604080; border-color: #b898d4; }
+    .cat-terminarz   { background: #ecebe2; color: #5a5a3a; border-color: #bdb98f; }
+    .cat-dodatki     { background: #f5e8dc; color: #8a5a30; border-color: #d4b090; }
+
+    /* FILTRY + SZUKANIE */
+    .filtry { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 28px; }
+    .filtry .chipy { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+    .chip { border: 1px solid var(--m-sand); background: var(--m-cream); color: var(--m-muted); border-radius: 20px; padding: 6px 14px; font: inherit; font-size: .78rem; cursor: pointer; transition: all .2s; }
+    .chip:hover { border-color: var(--m-mauve); color: var(--m-ink); }
+    .chip.aktywny { background: var(--m-ink); color: #fff; border-color: var(--m-ink); }
+    .chip small { opacity: .7; margin-left: 4px; }
+    .szukaj { position: relative; }
+    .szukaj input { font: inherit; font-size: .85rem; padding: 8px 12px 8px 34px; border: 1px solid var(--m-sand); border-radius: 10px; background: var(--m-cream); color: var(--m-ink); width: 240px; max-width: 100%; }
+    .szukaj input:focus { outline: none; border-color: var(--m-mauve); background: #fff; }
+    .szukaj svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; stroke: var(--m-taupe); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .brak-wynikow { color: var(--m-muted); text-align: center; grid-column: 1 / -1; padding: 40px 0; font-size: .9rem; }
+    @media (max-width: 560px) { .szukaj, .szukaj input { width: 100%; } }
 
     .card-title {
       font-family: 'Cormorant Garamond', serif;
@@ -225,6 +245,10 @@
 </div>
 
 <div class="blog-section">
+  <div class="filtry" id="filtry" hidden>
+    <div class="chipy" id="chipy"></div>
+    <label class="szukaj"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="szukaj" placeholder="Szukaj we wpisach…" aria-label="Szukaj we wpisach"></label>
+  </div>
   <div class="blog-grid" id="blog-grid">
     <!-- Skeleton loaders -->
     <div class="skeleton-card">
@@ -286,75 +310,77 @@ const CAT_CSS = {
   'Magazyn':     { css: 'cat-magazyn',     thumb: 'magazyn' },
   'Klienci':     { css: 'cat-klienci',     thumb: 'klienci' },
   'Sprzedaż':    { css: 'cat-sprzedaz',    thumb: 'sprzedaz' },
+  'Terminarz':   { css: 'cat-terminarz',   thumb: 'terminarz' },
+  'Dodatki':     { css: 'cat-dodatki',     thumb: 'dodatki' },
 };
-
 function formatDate(str) {
   const d = new Date(str);
   return d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' });
 }
-
 function esc(str) {
   return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
+let WPISY = [];
+let KATEGORIA = '';
+let FRAZA = '';
+
+function kartaHtml(p) {
+  const cat = CAT_CSS[p.category] || CAT_CSS['Zarządzanie'];
+  const url = p.url_override || '/blog/' + p.slug;
+  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy">` : esc(p.emoji || '✍️');
+  return `
+    <a class="blog-card" href="${esc(url)}">
+      <div class="card-thumb ${cat.thumb}">${thumb}</div>
+      <div class="card-body">
+        <span class="card-cat ${cat.css}">${esc(p.category)}</span>
+        <div class="card-title">${esc(p.title)}</div>
+        <div class="card-excerpt">${esc(p.excerpt || '')}</div>
+        <div class="card-footer">
+          <span class="card-date">${formatDate(p.date_published)}</span>
+          <span class="card-read">Czytaj →</span>
+        </div>
+      </div>
+    </a>`;
+}
+
+function rysujChipy() {
+  const liczby = {};
+  WPISY.forEach(p => { liczby[p.category] = (liczby[p.category] || 0) + 1; });
+  const kategorie = Object.keys(CAT_CSS).filter(k => liczby[k]);
+  const chipy = document.getElementById('chipy');
+  chipy.innerHTML = [`<button type="button" class="chip ${KATEGORIA ? '' : 'aktywny'}" data-kat="">Wszystkie <small>${WPISY.length}</small></button>`]
+    .concat(kategorie.map(k => `<button type="button" class="chip ${KATEGORIA === k ? 'aktywny' : ''}" data-kat="${esc(k)}">${esc(k)} <small>${liczby[k]}</small></button>`)).join('');
+  chipy.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { KATEGORIA = b.dataset.kat; rysujChipy(); rysujListe(); }));
+  document.getElementById('filtry').hidden = WPISY.length < 4;
+}
+
+function rysujListe() {
+  const grid = document.getElementById('blog-grid');
+  const f = FRAZA.trim().toLowerCase();
+  const widoczne = WPISY.filter(p => (!KATEGORIA || p.category === KATEGORIA) && (!f || (p.title + ' ' + (p.excerpt || '')).toLowerCase().includes(f)));
+  if (!widoczne.length) {
+    grid.innerHTML = `<p class="brak-wynikow">${WPISY.length ? 'Nic nie pasuje do wybranych filtrów.' : 'Brak wpisów.'}</p>`;
+    return;
+  }
+  grid.innerHTML = widoczne.map(kartaHtml).join('');
+}
+
 async function loadPosts() {
+  const grid = document.getElementById('blog-grid');
   try {
     const res = await fetch('/api/blog/posts');
     const data = await res.json();
-    const grid = document.getElementById('blog-grid');
-    if (!data.posts || !data.posts.length) {
-      grid.innerHTML = '<p style="color:var(--m-muted);text-align:center;grid-column:1/-1;padding:40px 0">Brak wpisów.</p>';
-      return;
-    }
-    grid.innerHTML = data.posts.map(p => {
-      const cat = CAT_CSS[p.category] || CAT_CSS['Zarządzanie'];
-      const url = p.url_override || '/blog/' + p.slug;
-      return `
-        <a class="blog-card" href="${esc(url)}">
-          <div class="card-thumb ${cat.thumb}">${esc(p.emoji || '✍️')}</div>
-          <div class="card-body">
-            <span class="card-cat ${cat.css}">${esc(p.category)}</span>
-            <div class="card-title">${esc(p.title)}</div>
-            <div class="card-excerpt">${esc(p.excerpt || '')}</div>
-            <div class="card-footer">
-              <span class="card-date">${formatDate(p.date_published)}</span>
-              <span class="card-read">Czytaj →</span>
-            </div>
-          </div>
-        </a>`;
-    }).join('');
+    if (!res.ok || !data.posts) throw new Error(data.message || 'Błąd odpowiedzi');
+    WPISY = data.posts;
+    rysujChipy();
+    rysujListe();
   } catch (e) {
-    // Fallback — pokaż statyczne linki jeśli API nie działa
-    document.getElementById('blog-grid').innerHTML = `
-      <a class="blog-card" href="/blog/jak-estelio-oszczedza-czas.html">
-        <div class="card-thumb zarzadzanie">⏱️</div>
-        <div class="card-body">
-          <span class="card-cat cat-zarzadzanie">Zarządzanie</span>
-          <div class="card-title">Jak Estelio oszczędza 4 godziny tygodniowo w salonie kosmetycznym</div>
-          <div class="card-excerpt">Większość właścicielek salonów traci kilka godzin tygodniowo na rozliczenia, które można zautomatyzować.</div>
-          <div class="card-footer"><span class="card-date">16 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
-        </div>
-      </a>
-      <a class="blog-card" href="/blog/rozliczenia-pracownic-salonu.html">
-        <div class="card-thumb pracownicy">💅</div>
-        <div class="card-body">
-          <span class="card-cat cat-pracownicy">Pracownicy</span>
-          <div class="card-title">Rozliczenia pracownic w salonie beauty — koniec z Excelem</div>
-          <div class="card-excerpt">Excel, karteczki, zaufanie na słowo — tak wygląda rozliczanie pracownic w większości salonów.</div>
-          <div class="card-footer"><span class="card-date">14 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
-        </div>
-      </a>
-      <a class="blog-card" href="/blog/magazyn-kosmetykow-w-salonie.html">
-        <div class="card-thumb magazyn">📦</div>
-        <div class="card-body">
-          <span class="card-cat cat-magazyn">Magazyn</span>
-          <div class="card-title">Jak zarządzać magazynem kosmetyków bez chaosu i przepłacania</div>
-          <div class="card-excerpt">Brakujący produkt w połowie zabiegu, przeterminowane zapasy — poznaj sposób na kontrolę magazynu.</div>
-          <div class="card-footer"><span class="card-date">10 kwietnia 2026</span><span class="card-read">Czytaj →</span></div>
-        </div>
-      </a>`;
+    // Bez atrapy: lepiej pokazać prawdę niż trzy zaszyte karty, które udawały działającą listę.
+    grid.innerHTML = `<p class="brak-wynikow">Nie udało się wczytać wpisów. Odśwież stronę za chwilę albo napisz na <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>.</p>`;
   }
 }
+document.getElementById('szukaj').addEventListener('input', (e) => { FRAZA = e.target.value; rysujListe(); });
 
 loadPosts();
 </script>

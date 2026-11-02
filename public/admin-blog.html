@@ -226,6 +226,8 @@
           <option value="Magazyn">Magazyn</option>
           <option value="Klienci">Klienci</option>
           <option value="Sprzedaż">Sprzedaż</option>
+          <option value="Terminarz">Terminarz</option>
+          <option value="Dodatki">Dodatki</option>
         </select>
       </div>
       <div class="field">
@@ -237,6 +239,12 @@
     <div class="field">
       <label>Zajawka (skrócony opis na liście)</label>
       <input type="text" id="f-excerpt" placeholder="1-2 zdania opisujące artykuł...">
+    </div>
+
+    <div class="field">
+      <label>Okładka (adres obrazka, opcjonalnie)</label>
+      <input type="text" id="f-okladka" placeholder="np. /img/blog/sprzedaz/okladka.jpg">
+      <div class="hint">Pokazuje się na karcie listy i w podglądzie linku (WhatsApp, Messenger, e-mail). Pusta = pierwszy obrazek z treści albo logo.</div>
     </div>
 
     <div class="field-row">
@@ -273,12 +281,14 @@ Przykład:
   &lt;p&gt;💡 &lt;strong&gt;Wskazówka:&lt;/strong&gt; tekst&lt;/p&gt;
 &lt;/div&gt;"></textarea>
       <div class="hint">
-        Dostępne klasy: <code>lead</code> (wstęp), <code>highlight-box</code> (ramka złota), <code>steps</code> (lista ol z numerami)
+        Dostępne klasy: <code>lead</code> (wstęp), <code>ramka tip</code> / <code>ramka uwaga</code> / <code>ramka manager</code> (ramki z kolorowym brzegiem; wewnątrz <code>&lt;div class="ramka-tytul"&gt;</code> jako nagłówek), <code>highlight-box</code> (stara ramka złota), <code>ol class="steps"</code> (kroki z numerami), <code>div class="faq"</code> z <code>&lt;details&gt;&lt;summary&gt;</code>, <code>div class="tabela"</code> wokół tabeli.<br>
+        Zrzut ekranu: <code>&lt;figure&gt;&lt;img src="/img/blog/…/01.jpg" alt="…"&gt;&lt;figcaption&gt;Podpis&lt;/figcaption&gt;&lt;/figure&gt;</code> (klasa <code>waska</code> dla pionowych zrzutów z telefonu). Każdy <code>&lt;h2&gt;</code> dostaje automatycznie kotwicę i trafia do spisu treści, gdy sekcji jest co najmniej trzy.
       </div>
     </div>
 
     <div class="modal-footer">
       <button class="btn-secondary" onclick="closeModal()">Anuluj</button>
+      <button class="btn-secondary" onclick="podgladPost()" title="Zapisuje i otwiera stronę wpisu tak, jak zobaczą ją czytelniczki (także szkic)">Zapisz i podejrzyj</button>
       <button class="btn-primary" onclick="savePost()">Zapisz wpis</button>
     </div>
   </div>
@@ -386,6 +396,7 @@ function renderTable() {
             <td class="post-meta-cell">${formatDate(p.date_published)}</td>
             <td><span class="badge badge-${p.status}">${p.status === 'published' ? 'Opublikowany' : 'Szkic'}</span></td>
             <td class="actions-cell">
+              ${p.status === "published" ? `<a class="btn-edit" href="${esc(p.url_override || "/blog/" + p.slug)}" target="_blank" title="Otwórz publiczną stronę wpisu">Otwórz</a> <button class="btn-edit" onclick="kopiujLink(${JSON.stringify(p.url_override || "/blog/" + p.slug)})" title="Skopiuj adres do wysłania">Kopiuj link</button>` : `<button class="btn-edit" onclick="podgladId(${p.id})">Podgląd</button>`}
               <button class="btn-edit" onclick="openEdit(${p.id})">Edytuj</button>
               <button class="btn-danger" onclick="deletePost(${p.id}, '${esc(p.title).replace(/'/g,"\\'")}')">Usuń</button>
             </td>
@@ -405,6 +416,7 @@ function openNew() {
   document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
   document.getElementById('f-status').value = 'published';
   document.getElementById('f-url').value = '';
+  document.getElementById('f-okladka').value = '';
   document.getElementById('f-content').value = '';
   document.getElementById('modal-bg').classList.add('open');
 }
@@ -424,6 +436,7 @@ async function openEdit(id) {
     document.getElementById('f-date').value     = (p.date_published || '').slice(0, 10);
     document.getElementById('f-status').value   = p.status || 'published';
     document.getElementById('f-url').value      = p.url_override || '';
+    document.getElementById('f-okladka').value  = p.okladka || '';
     document.getElementById('f-content').value  = p.content_html || '';
     document.getElementById('modal-bg').classList.add('open');
   } catch (e) {
@@ -435,7 +448,27 @@ function closeModal() {
   document.getElementById('modal-bg').classList.remove('open');
 }
 
-async function savePost() {
+async function podgladPost() {
+  const id = await savePost(true);
+  if (id) podgladId(id);
+}
+async function podgladId(id) {
+  try {
+    const res = await fetch(`/api/admin/blog/podglad/${id}`, { headers: { 'x-admin-token': token() } });
+    if (!res.ok) { showToast('Nie udało się pobrać podglądu.', true); return; }
+    const html = await res.blob();
+    const url = URL.createObjectURL(html);
+    window.open(url, '_blank');
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) { showToast('Błąd sieci.', true); }
+}
+function kopiujLink(sciezka) {
+  const url = location.origin + sciezka;
+  const ok = () => showToast('Skopiowano: ' + url);
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => prompt('Skopiuj adres:', url));
+  else prompt('Skopiuj adres:', url);
+}
+async function savePost(zostawOtwarte) {
   const id      = document.getElementById('edit-id').value;
   const title   = document.getElementById('f-title').value.trim();
   const date    = document.getElementById('f-date').value;
@@ -449,6 +482,7 @@ async function savePost() {
     emoji:        document.getElementById('f-emoji').value.trim(),
     content_html: document.getElementById('f-content').value,
     url_override: document.getElementById('f-url').value.trim() || null,
+    okladka:      document.getElementById('f-okladka').value.trim() || null,
     date_published: date,
     status:       document.getElementById('f-status').value,
   };
@@ -463,15 +497,18 @@ async function savePost() {
     });
     const data = await res.json();
     if (data.status === 'success') {
-      closeModal();
-      showToast(id ? 'Wpis zaktualizowany.' : 'Wpis dodany.');
+      const nowyId = id || data.id;
+      if (!zostawOtwarte) closeModal(); else document.getElementById('edit-id').value = nowyId;
+      showToast(id ? 'Wpis zaktualizowany.' : 'Wpis dodany. Adres: /blog/' + (data.slug || ''));
       loadPosts();
+      return nowyId;
     } else {
       showToast(data.message || 'Błąd zapisu.', true);
     }
   } catch (e) {
     showToast('Błąd sieci.', true);
   }
+  return null;
 }
 
 async function deletePost(id, title) {

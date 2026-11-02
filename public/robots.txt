@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin.html
+Disallow: /admin-blog.html
+Disallow: /admin-guide.html
+Disallow: /admin-guide_2026-06-08.html
+Disallow: /zaloguj
+Disallow: /klub
+
+Sitemap: https://estelio.com.pl/sitemap.xml
