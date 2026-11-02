@@ -98,7 +98,8 @@ describe('renderArticle', () => {
     expect(html).toContain('href="mailto:?subject=');
     expect(html).toContain('https://wa.me/?text=');
     expect(html).toContain('onclick="window.print()"');
-    expect(html).toContain('<nav class="spis"');
+    expect(html).not.toContain('<nav class="spis"');   // spis treści celowo nie jest wyświetlany (decyzja usera 2.11)
+    expect(html).toContain('class="kotwica"');
     expect(html).toContain('id="lightbox"');
     expect(html).toContain('<div class="powiazane"><h3>Zobacz też</h3>');
     expect(html).toContain('Inny &lt;b&gt;wpis&lt;/b&gt;');
