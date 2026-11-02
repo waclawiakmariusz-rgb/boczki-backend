@@ -93,7 +93,7 @@ describe('renderArticle', () => {
     const bez = blog.renderArticle({ ...wpis, content_html: '<p>bez obrazka</p>' });
     expect(bez).toContain('og:image" content="https://estelio.com.pl/img/estelio-logo.png"');
   });
-  test('ma pasek udostępniania (kopiuj link, e-mail, WhatsApp, druk), spis treści, lightbox i powiązane wpisy', () => {
+  test('ma pasek udostępniania (kopiuj link, e-mail, WhatsApp, druk), kotwice bez spisu treści, lightbox i powiązane wpisy', () => {
     expect(html).toContain('onclick="kopiujLink()"');
     expect(html).toContain('href="mailto:?subject=');
     expect(html).toContain('https://wa.me/?text=');

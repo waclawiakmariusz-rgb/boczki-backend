@@ -6,7 +6,7 @@
 //    dostawała „Artykuł nie istnieje.” i strona bloga pokazywała trzy zaszyte na sztywno karty;
 //  • jeden renderer (renderArticle) używany przez server.js (/blog/:slug), podgląd szkicu w panelu
 //    admina i ten router — wcześniej były dwa, a publiczny nie miał stylów dla wstępu, ramek i obrazków;
-//  • czytanie: spis treści z nagłówków h2 (gdy są co najmniej trzy), kotwice sekcji z linkiem „#”,
+//  • czytanie: kotwice sekcji z linkiem „#” (spis treści celowo NIE jest wyświetlany — decyzja usera 2.11: lista „W tym wpisie” brzmiała jak szablon),
 //    zrzuty w <figure> z podpisem i powiększeniem po kliknięciu, ramki tip/uwaga/manager, tabele, kroki;
 //  • udostępnianie: „Kopiuj link”, e-mail, WhatsApp; og:image i twitter card z okładki albo
 //    pierwszego obrazka; kanał RSS (/blog/rss.xml) i mapa strony (/sitemap.xml);
@@ -359,7 +359,6 @@ ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'sz
       <button type="button" onclick="window.print()" title="Drukuj albo zapisz jako PDF">${IKONY.drukuj}<span class="etykieta">Drukuj</span></button>
     </div>
   </div>
-  ${tresc.spis}
   <div class="article-content">${tresc.html}</div>
   ${powiazane.length ? `<div class="powiazane"><h3>Zobacz też</h3><div class="powiazane-lista">${powiazane.map(p => `<a href="/blog/${escHtml(p.slug)}"><div class="kat">${escHtml(p.category || '')}</div><div class="tyt">${escHtml(p.title)}</div></a>`).join('')}</div></div>` : ''}
   <div class="article-cta">
