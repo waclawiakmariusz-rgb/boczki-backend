@@ -97,6 +97,35 @@ describe('POST /api/magazyn — update', () => {
         expect(res.body.status).toBe('success');
     });
 
+    test('przyjmuje ujemną korektę (−1 z inwentaryzacji), gdy stan na to pozwala', async () => {
+        const db = mockDbBezDDL(
+            { rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] },
+            { rows: { affectedRows: 1 } }
+        );
+        const res = await request(buildApp(db)).post('/api/magazyn').send({
+            action: 'update',
+            tenant_id: TENANT,
+            id: '123',
+            ilosc: -1,
+            opis: '-1 (korekta FIFO)',
+            pracownik: 'Anna',
+        });
+        expect(res.body.status).toBe('success');
+    });
+
+    test('odrzuca ujemną korektę, która zbiłaby stan poniżej zera', async () => {
+        const db = mockDbBezDDL({ rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '0' }] });
+        const res = await request(buildApp(db)).post('/api/magazyn').send({
+            action: 'update',
+            tenant_id: TENANT,
+            id: '123',
+            ilosc: -1,
+            pracownik: 'Anna',
+        });
+        expect(res.body.status).toBe('error');
+        expect(res.body.message).toMatch(/poniżej zera/);
+    });
+
     test('odrzuca przyrost jako datę', async () => {
         const db = mockDbBezDDL({ rows: [{ id: '123', nazwa_produktu: 'Krem', ilosc: '10' }] });
         const res = await request(buildApp(db)).post('/api/magazyn').send({

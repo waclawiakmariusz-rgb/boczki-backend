@@ -19407,8 +19407,10 @@ function zmienGrupowo(nazwaEncoded, katEncoded, delta) {
     fetch(API_URL, {
         method: "POST",
         body: JSON.stringify({ action: 'update', id: targetId, ilosc: delta, opis: delta > 0 ? "+1 (korekta)" : "-1 (korekta FIFO)", pracownik: currentUser })
-    }).then(() => {
+    }).then(r => r.json()).catch(() => null).then((odp) => {
         document.body.style.cursor = 'default';
+        // 2.11.2026: odmowa serwera (np. stan poniżej zera) była dotąd niewidoczna — stan się nie zmieniał i nikt nie wiedział dlaczego
+        if (odp && odp.status === 'error') alert(odp.message || 'Nie udało się zmienić stanu.');
         pobierzDane(true); // Odświeżamy widok by zaciągnąć nowe sumy z serwera
     });
 }

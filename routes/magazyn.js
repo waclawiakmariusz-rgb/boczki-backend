@@ -4,7 +4,7 @@
 const express = require('express');
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
-const { parseIlosc, parseKwota, parseNumOpt } = require('./utils');
+const { parseIlosc, parseKwota, parseNumOpt, parseNum } = require('./utils');
 
 module.exports = (db) => {
   const router = express.Router();
@@ -125,8 +125,11 @@ module.exports = (db) => {
           if (err || !rows.length) return res.json({ status: 'error', message: 'Brak ID' });
           const stara = parseFloat(rows[0].ilosc) || 0;
           let delta;
-          try { delta = parseIlosc(d.ilosc, 'ilość'); } catch (e) { return res.json({ status: 'error', message: e.message }); }
-          const nowa = stara + delta;
+          // 2.11.2026: „ilosc” w tej akcji to RÓŻNICA (+1 / −1 z inwentaryzacji), nie stan — ujemna korekta jest poprawna,
+          // dopóki stan nie spada poniżej zera. Wcześniej parseIlosc odrzucał każdą ujemną wartość i przycisk „−” nie działał.
+          try { delta = parseNum(d.ilosc, { wymagana: true, pole: 'ilość' }); } catch (e) { return res.json({ status: 'error', message: e.message }); }
+          const nowa = Math.round((stara + delta) * 100) / 100;
+          if (nowa < 0) return res.json({ status: 'error', message: `Stan nie może spaść poniżej zera (jest ${stara}, korekta ${delta}).` });
           db.query(
             `UPDATE Magazyn SET ilosc = ? WHERE tenant_id = ? AND id = ?`,
             [nowa, tenant_id, d.id],
