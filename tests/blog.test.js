@@ -104,6 +104,7 @@ describe('renderArticle', () => {
     expect(html).toContain('Inny &lt;b&gt;wpis&lt;/b&gt;');
     expect(html).toContain('<link rel="canonical" href="https://estelio.com.pl/blog/test-wpis">');
   });
+  test('bez „N min czytania” w nagłówku (decyzja usera 2.11)', () => { expect(html).not.toMatch(/min czytania/); });
   test('podgląd szkicu: noindex i pasek ostrzegawczy; publiczny: index', () => {
     const p = blog.renderArticle({ ...wpis, status: 'draft' }, { podglad: true });
     expect(p).toContain('content="noindex, nofollow"');

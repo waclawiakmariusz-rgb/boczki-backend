@@ -155,7 +155,6 @@ function renderArticle(post, opcje = {}) {
   const powiazane = Array.isArray(opcje.powiazane) ? opcje.powiazane : [];
   const podglad = !!opcje.podglad;
   const canonical = `${BAZA_URL}/blog/${post.slug}`;
-  const rt = readTime(post.content_html);
   const dateStr = formatDate(post.date_published);
   const catLabel = post.category || 'Blog';
   const tytul = escHtml(post.title);
@@ -347,7 +346,7 @@ ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'sz
   <div class="okruszki"><a href="/blog.html">Blog</a> &nbsp;›&nbsp; ${escHtml(catLabel)}</div>
   <span class="article-cat">${escHtml(catLabel)}</span>
   <h1>${tytul}</h1>
-  <div class="article-meta">${escHtml(dateStr)} &nbsp;·&nbsp; ${rt} min czytania</div>
+  <div class="article-meta">${escHtml(dateStr)}</div>
 </div>
 
 <div class="article-body">
