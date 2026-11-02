@@ -31,7 +31,7 @@ const PUBLIC_PATHS = [
   // zdjęcia przed/po z telefonu pracownika (foto.html: token HMAC z QR + PIN) — UWAGA: /foto?action=… (sesje, urządzenia) jest PRYWATNE
   '/foto/mobile-info', '/foto/urzadzenie', '/foto/dzien', '/foto/klienci', '/foto/start', '/foto/potwierdz', '/foto/upload',
   // zgoda i płatność z linku SMS (platnosc.html: token HMAC) — UWAGA: /zgody (lista, statystyki) jest PRYWATNE
-  '/zgoda/info', '/zgoda/akceptuj',
+  '/zgoda/info', '/zgoda/akceptuj', '/zgoda/zaplac',
   // globalna baza wiedzy czatu pomocy
   '/help-kb/global',
 ];
@@ -42,6 +42,7 @@ const PUBLIC_PREFIXES = [
   '/billing', // panel rozliczeń: x-billing-token
   '/klub',    // aplikacja klientki (PWA): własna sesja Klubu w treści żądania; /klub/img/:tenant/:plik = publiczne zdjęcia nagród
   '/blog',    // publiczne wpisy
+  '/webhooks', // powiadomienia operatorów płatności (Tpay): uwierzytelnienie podpisem w treści, bez sesji
 ];
 
 function czyPubliczna(sciezka) {

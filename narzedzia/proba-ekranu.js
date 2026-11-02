@@ -168,7 +168,7 @@ const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : 
 
   await send('Page.enable'); await send('Runtime.enable');
   await send('Page.navigate', { url: ENV.baza + '/index.html' }); await sleep(2000);
-  await ev(`localStorage.setItem('boczki_tenant_id', ${q(S.login)}); localStorage.setItem('boczki_session_token', ${q(v.session_token)}); localStorage.setItem('boczki_user', ${q(S.login)}); localStorage.setItem('boczki_pracownik_imie', ${q(S.pracownik)}); localStorage.setItem('boczki_pracownik_rola', ${q(ENV.rola)}); if(!localStorage.getItem('boczki_features')) localStorage.setItem('boczki_features', JSON.stringify(['terminarz','rap_module','konsultacje']));`);
+  await ev(`localStorage.setItem('boczki_tenant_id', ${q(S.login)}); localStorage.setItem('boczki_session_token', ${q(v.session_token)}); localStorage.setItem('boczki_user', ${q(S.login)}); localStorage.setItem('boczki_pracownik_imie', ${q(S.pracownik)}); localStorage.setItem('boczki_pracownik_rola', ${q(ENV.rola)}); localStorage.setItem('boczki_features', ${q(JSON.stringify(Array.isArray(v.features) ? v.features : ['terminarz','rap_module','konsultacje']))});`);
   await send('Page.reload', { ignoreCache: true }); await sleep(scenariusz.czekajPoStarcie || 8000);
 
   // Podsłuch w stronie: alerty, confirm-y, POST-y. Przechwycone akcje dostają atrapę i NIE idą do serwera.

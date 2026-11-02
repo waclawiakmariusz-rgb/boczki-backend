@@ -1,0 +1,34 @@
+/* Konfiguracja konta Tpay salonu — Administracja → Płatności online (dodatek platnosc_link) */
+.tpk-karta { padding: 18px 22px; margin-bottom: 20px; }
+.tpk-naglowek { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.tpk-tytul { font-family: 'Cormorant Garamond', serif; font-size: 1.3rem; font-weight: 600; }
+.tpk-pod { font-size: 12.5px; color: #6b7280; margin-top: 3px; line-height: 1.5; }
+.tpk-status { font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.tpk-status.ok { background: #dcfce7; color: #15803d; }
+.tpk-status.brak { background: #f1f5f9; color: #64748b; }
+.tpk-ostrz { background: #fff7ed; border: 1px solid #fed7aa; color: #9a3412; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin: 10px 0; line-height: 1.5; }
+.tpk-info { background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin: 10px 0; }
+.tpk-siatka { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; margin-top: 12px; }
+.tpk-karta label { display: block; font-size: 12px; font-weight: 700; color: #475569; text-transform: none; letter-spacing: 0; }
+.tpk-karta label small { display: block; font-weight: 500; color: #94a3b8; font-size: 11.5px; margin: 1px 0 5px; }
+.tpk-karta input[type=text], .tpk-karta input:not([type]), .tpk-karta input[type=password] { width: 100%; box-sizing: border-box; padding: 10px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; }
+.tpk-karta input:focus { outline: none; border-color: #0f9d8a; }
+.tpk-zaaw { margin-top: 12px; }
+.tpk-zaaw summary { cursor: pointer; font-size: 12.5px; color: #64748b; font-weight: 600; }
+.tpk-zaaw label { margin-top: 10px; }
+.tpk-check { display: flex !important; align-items: center; gap: 8px; font-weight: 600 !important; }
+.tpk-check input { width: 16px; height: 16px; }
+.tpk-webhook { margin-top: 14px; font-size: 12.5px; color: #475569; }
+.tpk-webhook code { display: block; margin-top: 6px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px 10px; font-size: 12px; word-break: break-all; color: #0f766e; }
+.tpk-akcje { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+.tpk-btn { border: 0; border-radius: 10px; padding: 10px 18px; font-size: 13.5px; font-weight: 700; cursor: pointer; background: #f1f5f9; color: #334155; font-family: inherit; }
+.tpk-btn:disabled { opacity: .5; cursor: not-allowed; }
+.tpk-btn-glowny { background: #0f9d8a; color: #fff; }
+.tpk-btn-usun { background: #fee2e2; color: #b91c1c; margin-left: auto; }
+.tpk-wynik { font-size: 12.5px; font-weight: 600; color: #6b7280; }
+.tpk-wynik.ok { color: #15803d; }
+.tpk-wynik.zle { color: #b91c1c; }
+#zg-tryb-api-info { background: #e7f6f2; border: 1px solid #99f6e4; color: #0f766e; border-radius: 10px; padding: 10px 12px; font-size: 12.5px; line-height: 1.5; margin-bottom: 12px; }
+#zg-ekspert summary { cursor: pointer; font-size: 12px; font-weight: 700; color: #64748b; margin: 10px 0 6px; }
+body.dark-mode .tpk-karta input { background: #0f172a !important; color: #e2e8f0 !important; border-color: #475569 !important; }
+body.dark-mode .tpk-webhook code { background: #0f172a; color: #5eead4; border-color: #334155; }

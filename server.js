@@ -101,6 +101,8 @@ app.use('/api/', apiLimiter);
 
 // Stripe webhook musi dostać raw body — PRZED express.json()
 app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+// Webhook Tpay (form-urlencoded) też musi dostać surowe body — podpis JWS liczy się z bajtów, nie z obiektu
+app.use('/api/webhooks/tpay', express.raw({ type: '*/*', limit: '256kb' }));
 
 // Pozostałe endpointy — JSON z limitem 1MB
 app.use(express.json({ limit: '1mb' }));
@@ -319,7 +321,8 @@ const fotoRoutes       = require('./routes/foto')(db);
 // Most zgody → terminarz (szybka rezerwacja do wpłaty zadatku, 30.10.2026): moduł zgód woła terminarz po akceptacji
 // regulaminu na linku związanym z trzymanym terminem. Obiekt wypełnia się niżej, po załadowaniu terminarza.
 const terminarzHaki = {};
-const zgodyRoutes      = require('./routes/zgody')(db, { terminarz: terminarzHaki });
+const tpayModul        = require('./routes/tpay')(db); // Tpay przez API (konfiguracja per salon, transakcje, webhook) — partia 1
+const zgodyRoutes      = require('./routes/zgody')(db, { terminarz: terminarzHaki, tpay: tpayModul.narzedzia });
 const lojalnoscRoutes  = require('./routes/lojalnosc')(db);
 // Zgłoszenia salonów do Estelio („tickety", 2026-10-11): własne tabele, akcje tk_*, upload multipart,
 // panel admina. Osobny moduł — nie dotyka żadnej istniejącej tabeli ani trasy.
@@ -433,6 +436,7 @@ app.use('/api', gusRoutes);
 app.use('/api', booksyRoutes);
 app.use('/api', fotoRoutes);
 app.use('/api', zgodyRoutes);
+app.use('/api', tpayModul.router);
 app.use('/api', lojalnoscRoutes);
 
 // (strażnik sesji przeniesiony PRZED routery — routes/sesja-middleware.js, 2026-10-18)

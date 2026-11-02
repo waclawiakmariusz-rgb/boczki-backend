@@ -8605,6 +8605,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </div>
 
+                <!-- Konto Tpay salonu (API) — kartę renderuje /tpay-konfiguracja.js; pusty, gdy dodatek wyłączony -->
+                <div id="tpay-konfig"></div>
+
                 <div class="card" style="padding:18px 22px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px;">
                         <div style="font-family:'Cormorant Garamond',serif; font-size:1.3rem; font-weight:600;">🧾 Wygenerowane linki</div>
@@ -32385,8 +32388,12 @@ initTheme();
 
         <!-- Krok 2: dane płatności -->
         <div id="zg-krok-dane" style="display:none;">
-            <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Link do płatności z panelu tpay:</label>
-            <input id="zg_tpay_link" placeholder="https://secure.tpay.com/..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            <!-- Tryb API (salon ma konto Tpay w Estelio): link powstaje sam po akceptacji regulaminu; pole z panelu tpay schowane pod „Tryb ekspert” -->
+            <div id="zg-tryb-api-info" style="display:none;">Link do płatności Tpay powstanie automatycznie, gdy klientka potwierdzi regulamin. Wpisz tylko kwotę i czego dotyczy. Status płatności zobaczysz na liście.</div>
+            <details id="zg-ekspert" open>
+                <summary>Link do płatności z panelu tpay</summary>
+                <input id="zg_tpay_link" placeholder="https://secure.tpay.com/..." autocomplete="off" style="width:100%; box-sizing:border-box; padding:10px; border:1.5px solid #e2e8f0; border-radius:8px; font-size:14px;">
+            </details>
             <div style="display:flex; gap:10px; margin-top:12px;">
                 <div style="flex:1;">
                     <label style="font-size:12px; font-weight:700; color:#475569; display:block; margin-bottom:5px;">Kwota (zł, opcjonalnie):</label>
@@ -35029,6 +35036,8 @@ function zg_pokazKrok(krok) {
     const el = document.getElementById(id);
     if (el) el.style.display = (id === 'zg-krok-' + krok) ? 'block' : 'none';
   });
+  // tryb API vs tryb ekspert (pole z linkiem z panelu) — decyduje konfiguracja Tpay salonu
+  if (krok === 'dane' && window.tpayKonfig) tpayKonfig.ustawTrybLinku();
 }
 
 function zg_wyczyscDane() {
@@ -35107,7 +35116,9 @@ function zg_resetDoDanych() {
 
 async function zg_generuj() {
   const tpayLink = document.getElementById('zg_tpay_link').value.trim();
-  if (!tpayLink) { alert('Wklej link do płatności z panelu tpay.'); return; }
+  const trybApi = !!(window.tpayKonfig && tpayKonfig.api);
+  if (!tpayLink && !trybApi) { alert('Wklej link do płatności z panelu tpay.'); return; }
+  if (!tpayLink && trybApi && !document.getElementById('zg_kwota').value.trim()) { alert('Podaj kwotę — link Tpay tworzony automatycznie musi mieć kwotę.'); return; }
   const btn = document.getElementById('zg-generuj-btn');
   btn.disabled = true; btn.textContent = '⏳ Generuję…';
   try {
@@ -35160,6 +35171,11 @@ function zg_renderWiersz(z, pokazKlienta) {
   if (z.status === 'ZAAKCEPTOWANA') {
     badge = '<span style="background:#dcfce7; color:#15803d; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">✓ ZAAKCEPTOWANA</span>';
     extra = `<span style="color:#15803d;">akceptacja: ${dt(z.zaakceptowano_at)}</span>`;
+    // tryb API (Tpay przez Estelio): klientka weszła już do bramki — potwierdzenie wpłaty przyjdzie z Tpay (partia 2)
+    if (z.tryb === 'api' && z.platnosc_start_at && !z.oplacono_at) {
+      badge += ' <span style="background:#fef3c7; color:#92400e; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">W PŁATNOŚCI</span>';
+      extra += ` <span style="color:#92400e;">· do Tpay: ${dt(z.platnosc_start_at)}</span>`;
+    }
   } else if (z.status === 'ANULOWANA') {
     badge = '<span style="background:#f1f5f9; color:#64748b; padding:2px 9px; border-radius:999px; font-size:11px; font-weight:800;">ANULOWANA</span>';
   } else if (z.wygasly) {
@@ -35241,6 +35257,7 @@ function zg_zaladujSekcje() {
     .catch(() => {});
   zg_zaladujListe(1);
   zg_zaladujStatystyki();
+  if (window.tpayKonfig) { tpayKonfig.czyApi(true); tpayKonfig.zaladuj(); }
 }
 
 const zg_MIESIACE_PL = ['styczeń','luty','marzec','kwiecień','maj','czerwiec','lipiec','sierpień','wrzesień','październik','listopad','grudzień'];
@@ -36991,6 +37008,8 @@ document.addEventListener('DOMContentLoaded', function() {
      na 20261018a i po wdrożeniu przeglądarki podawały stary plik; 21.10.2026 -->
 <link rel="stylesheet" href="/terminarz.css?v=__WERSJA_PLIKOW__">
 <script src="/terminarz.js?v=__WERSJA_PLIKOW__" defer></script>
+<link rel="stylesheet" href="/tpay-konfiguracja.css?v=__WERSJA_PLIKOW__">
+<script src="/tpay-konfiguracja.js?v=__WERSJA_PLIKOW__" defer></script>
 <!-- ❓ POMOC KONTEKSTOWA (22.10.2026) — jeden wspólny przycisk „?" i katalog krótkich treści.
      W znaczniku wystarczy pusty <span class="pk-slot"> z atrybutem data-pomoc ustawionym na klucz
      kontekstu; komponent sam podmienia slot na przycisk, także na ekranach rysowanych z JS.

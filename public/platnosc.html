@@ -110,7 +110,9 @@
 
 <script>
 (function () {
-  var token = new URLSearchParams(location.search).get('t') || '';
+  var params = new URLSearchParams(location.search);
+  var token = params.get('t') || '';
+  var wynik = params.get('wynik') || '';   // powrót z bramki Tpay: 'ok' (podziękowanie) albo 'blad' (ponów)
   var info = null;
 
   function el(id) { return document.getElementById(id); }
@@ -152,6 +154,7 @@
     var btn = this;
     el('m-err').textContent = '';
     if (info && info.zaakceptowana && info.tpay_link) { location.href = info.tpay_link; return; }
+    if (info && info.zaakceptowana && info.platnosc_api) { zaplac(btn); return; }
     btn.disabled = true;
     btn.textContent = 'Przetwarzam…';
     var body = { t: token };
@@ -167,6 +170,8 @@
       if (d.status === 'success' && d.tpay_link) {
         btn.textContent = 'Przenoszę do tpay…';
         location.href = d.tpay_link;
+      } else if (d.status === 'success' && d.platnosc_api) {
+        zaplac(btn);
       } else if (d.kod === 'HOLD_WYGASL' || d.kod === 'HOLD_OPLACONY') {
         pokazBlad(d.message, d.kod);
       } else {
@@ -181,7 +186,31 @@
     });
   });
 
+  // Tryb API: Estelio tworzy transakcję Tpay dopiero teraz (po akceptacji regulaminu) i przenosi do bramki
+  function zaplac(btn) {
+    btn.disabled = true;
+    btn.textContent = 'Przygotowuję płatność…';
+    fetch('/api/zgoda/zaplac', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ t: token }) })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (d.status === 'success' && d.url) { btn.textContent = 'Przenoszę do tpay…'; location.href = d.url; return; }
+        if (d.kod === 'HOLD_WYGASL' || d.kod === 'HOLD_OPLACONY') { pokazBlad(d.message, d.kod); return; }
+        btn.textContent = 'Przejdź do płatności';
+        btn.disabled = false;
+        el('m-err').textContent = d.message || 'Nie udało się przygotować płatności. Spróbuj ponownie.';
+      })
+      .catch(function () { btn.textContent = 'Przejdź do płatności'; btn.disabled = false; el('m-err').textContent = 'Brak połączenia. Spróbuj ponownie.'; });
+  }
+
   if (!token) { pokazBlad('Brak tokenu w adresie.'); return; }
+  if (wynik === 'ok') {
+    // powrót ze strony sukcesu Tpay NICZEGO nie potwierdza — potwierdzenie przyjdzie do salonu z Tpay (webhook)
+    el('load-msg').textContent = 'Dziękujemy!';
+    el('load-sub').textContent = 'Płatność została przekazana do Tpay. Salon otrzyma potwierdzenie automatycznie — nie musisz nic więcej robić.';
+    el('c-load').style.display = '';
+    el('c-main').style.display = 'none';
+    return;
+  }
 
   fetch('/api/zgoda/info?t=' + encodeURIComponent(token))
     .then(function (r) { return r.json(); })
@@ -214,6 +243,7 @@
         el('reg-tresc').textContent = d.regulamin || '';
       }
 
+      if (wynik === 'blad') el('m-err').textContent = 'Płatność nie doszła do skutku. Możesz spróbować ponownie.';
       if (d.zaakceptowana) {
         el('m-zaakceptowana').style.display = '';
         if (d.zaakceptowano_at) {

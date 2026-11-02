@@ -129,7 +129,7 @@ describe('serwer: link, wpłata, zwolnienie, wygaszanie', () => {
         expect(m).toContain('id_klienta = COALESCE(id_klienta, ?)');
         expect(m).toContain("'regulamin', `regulamin zaakceptowany online");
         expect(m).toContain("typ: 'E41'");
-        expect(SERVER).toContain("require('./routes/zgody')(db, { terminarz: terminarzHaki })");
+        expect(SERVER).toContain("require('./routes/zgody')(db, { terminarz: terminarzHaki, tpay: tpayModul.narzedzia })");
         expect(SERVER).toContain('terminarzHaki.poAkceptacji = terminarzRoutes.holdPoAkceptacji;');
     });
 });

@@ -82,6 +82,9 @@ module.exports = (db, opts = {}) => {
   // Most do terminarza (szybka rezerwacja do wpłaty zadatku, 30.10.2026): server.js wstawia tu holdInfo/poAkceptacji
   // po załadowaniu modułu terminarza. Bez terminarza obiekt zostaje pusty i link działa jak dotąd.
   const terminarz = opts.terminarz || {};
+  // Tpay przez API (partia 1, 2.11.2026): server.js wstawia tu narzędzia z routes/tpay.js. Bez nich (albo gdy salon nie ma
+  // konfiguracji Tpay) wszystko działa jak dotąd — link wklejany z panelu Tpay („tryb ekspert”).
+  const tpay = opts.tpay || null;
   const akceptLimiter = makePublicLimiter({ windowMs: 15 * 60 * 1000, max: 30, message: 'Za dużo prób. Spróbuj za 15 minut.' });
 
   function q(sql, params) {
@@ -180,7 +183,8 @@ module.exports = (db, opts = {}) => {
       hasFeature(tenant_id, FEATURE_KEY, async (enabled) => {
         try {
           const reg = await pobierzRegulamin(tenant_id);
-          return res.json({ status: 'success', enabled: enabled ? 1 : 0, regulamin_ok: reg.ok ? 1 : 0 });
+          const tpayApi = !!(tpay && await tpay.maKonfig(tenant_id));
+          return res.json({ status: 'success', enabled: enabled ? 1 : 0, regulamin_ok: reg.ok ? 1 : 0, tpay_api: tpayApi ? 1 : 0 });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
@@ -209,7 +213,7 @@ module.exports = (db, opts = {}) => {
         const stron = Math.max(1, Math.ceil(razem / NA_STRONE));
         const rows = await q(
           `SELECT id, id_klienta, imie_nazwisko, telefon, kwota, opis, tpay_link, status,
-                  zaakceptowano_at, utworzyl, created_at
+                  zaakceptowano_at, utworzyl, created_at, tryb, otwarto_at, platnosc_start_at, oplacono_at, zwrot_at, kwota_wplacona
              FROM ZgodyPlatnosci ${where}
             ORDER BY created_at DESC, id DESC
             LIMIT ${NA_STRONE} OFFSET ${(Math.min(strona, stron) - 1) * NA_STRONE}`, paramy);
@@ -259,17 +263,25 @@ module.exports = (db, opts = {}) => {
     const action = d.action;
 
     if (action === 'zgoda_utworz') {
-      const tpayLink = normalizujTpayLink(d.tpay_link);
+      const tpayLink = String(d.tpay_link || '').trim() ? normalizujTpayLink(d.tpay_link) : '';
       const idKlienta = String(d.id_klienta || '').trim();
       const kwota = d.kwota !== undefined && d.kwota !== null && String(d.kwota).trim() !== ''
         ? Number(String(d.kwota).replace(',', '.')) : null;
       const opis = String(d.opis || '').trim().slice(0, 255);
       const generator = String(d.user_log || d.pracownik || '').trim();
-      if (!tpayLinkOk(tpayLink)) return res.json({ status: 'error', message: 'To nie wygląda na link tpay. Wklej link zaczynający się od https://secure.tpay.com/...' });
+      if (tpayLink && !tpayLinkOk(tpayLink)) return res.json({ status: 'error', message: 'To nie wygląda na link tpay. Wklej link zaczynający się od https://secure.tpay.com/...' });
       if (kwota !== null && (!isFinite(kwota) || kwota <= 0)) return res.json({ status: 'error', message: 'Nieprawidłowa kwota.' });
 
       wymagajFeature(tenant_id, res, async () => {
         try {
+          // Bez wklejonego linku: tryb API — transakcja Tpay powstanie po akceptacji regulaminu. Wymaga konta Tpay salonu i kwoty.
+          let tryb = 'manual';
+          if (!tpayLink) {
+            const api = !!(tpay && await tpay.maKonfig(tenant_id));
+            if (!api) return res.json({ status: 'error', message: 'Wklej link do płatności z panelu tpay (https://secure.tpay.com/...) albo skonfiguruj konto Tpay w Administracja → Płatności online.' });
+            if (kwota === null) return res.json({ status: 'error', message: 'Podaj kwotę — przy linku tworzonym automatycznie Tpay wymaga kwoty.' });
+            tryb = 'api';
+          }
           const reg = await pobierzRegulamin(tenant_id);
           if (!reg.ok) return res.json({ status: 'error', message: 'Najpierw uzupełnij regulamin w Administracja → Regulamin płatności.' });
 
@@ -282,9 +294,9 @@ module.exports = (db, opts = {}) => {
           }
 
           const r = await q(
-            `INSERT INTO ZgodyPlatnosci (tenant_id, id_klienta, imie_nazwisko, telefon, kwota, opis, tpay_link, utworzyl)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [tenant_id, idKlienta || null, imie, telefon, kwota, opis, tpayLink, generator.slice(0, 120)]);
+            `INSERT INTO ZgodyPlatnosci (tenant_id, id_klienta, imie_nazwisko, telefon, kwota, opis, tpay_link, utworzyl, tryb)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [tenant_id, idKlienta || null, imie, telefon, kwota, opis, tpayLink || '', generator.slice(0, 120), tryb]);
 
           const token = makeToken({ t: tenant_id, id: r.insertId, exp: Date.now() + TOKEN_TTL_MS });
           const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
@@ -293,7 +305,7 @@ module.exports = (db, opts = {}) => {
 
           zapiszLog(tenant_id, 'PŁATNOŚĆ LINK', generator,
             `Link #${r.insertId}: ${imie || 'osoba spoza bazy'}${kwota !== null ? `, ${kwota.toFixed(2)} zł` : ''}${opis ? ` (${opis})` : ''}`);
-          return res.json({ status: 'success', id: r.insertId, url, wygasa: new Date(Date.now() + TOKEN_TTL_MS).toISOString() });
+          return res.json({ status: 'success', id: r.insertId, url, tryb, wygasa: new Date(Date.now() + TOKEN_TTL_MS).toISOString() });
         } catch (e) { return res.json({ status: 'error', message: e.message }); }
       });
 
@@ -360,8 +372,12 @@ module.exports = (db, opts = {}) => {
         regulaminPodpisany(payload.t, z.id_klienta)
       ]);
       const zaakceptowana = z.status === 'ZAAKCEPTOWANA';
+      // oś czasu: pierwsze otwarcie linku przez klientkę (bez czekania na wynik)
+      q(`UPDATE ZgodyPlatnosci SET otwarto_at = COALESCE(otwarto_at, NOW()) WHERE tenant_id = ? AND id = ?`, [payload.t, payload.id]).catch(() => {});
       return res.json({
         status: 'success',
+        // tryb płatności: 'api' = transakcja Tpay tworzona przez Estelio po akceptacji (POST /zgoda/zaplac); inaczej gotowy link z panelu
+        platnosc_api: z.tryb === 'api' ? 1 : 0,
         salon: (lic[0] && lic[0].nazwa_salonu) || '',
         tryb: z.id_klienta ? 'podglad' : 'formularz',
         imie_nazwisko: z.id_klienta || zaakceptowana ? (z.imie_nazwisko || '') : '',
@@ -399,7 +415,7 @@ module.exports = (db, opts = {}) => {
       if (z.status === 'ANULOWANA') return res.json({ status: 'error', message: 'Ten link został anulowany przez salon. Poproś o nowy link.' });
       if (z.status === 'ZAAKCEPTOWANA') {
         // Ponowne wejście (np. płatność nie doszła do skutku) — nie duplikujemy zapisu
-        return res.json({ status: 'success', tpay_link: z.tpay_link, juz_zaakceptowana: 1 });
+        return res.json({ status: 'success', tpay_link: z.tpay_link || null, platnosc_api: z.tryb === 'api' ? 1 : 0, juz_zaakceptowana: 1 });
       }
 
       const reg = await pobierzRegulamin(payload.t);
@@ -446,7 +462,7 @@ module.exports = (db, opts = {}) => {
         [ip, ua, hash, idKlienta, imie, telefon, payload.t, payload.id]);
       if (!r.affectedRows) {
         const znow = await q(`SELECT tpay_link FROM ZgodyPlatnosci WHERE tenant_id = ? AND id = ? LIMIT 1`, [payload.t, payload.id]);
-        return res.json({ status: 'success', tpay_link: znow[0] ? znow[0].tpay_link : z.tpay_link, juz_zaakceptowana: 1 });
+        return res.json({ status: 'success', tpay_link: (znow[0] ? znow[0].tpay_link : z.tpay_link) || null, platnosc_api: z.tryb === 'api' ? 1 : 0, juz_zaakceptowana: 1 });
       }
 
       zapiszLog(payload.t, 'PŁATNOŚĆ LINK', imie,
@@ -457,7 +473,27 @@ module.exports = (db, opts = {}) => {
         try { await terminarz.poAkceptacji(payload.t, z.rezerwacja_id, { id_klienta: idKlienta, imie, telefon, zgoda_id: z.id, kwota: z.kwota }); }
         catch (e) { console.error('[zgody] most do terminarza po akceptacji:', e.message); }
       }
-      return res.json({ status: 'success', tpay_link: z.tpay_link });
+      return res.json({ status: 'success', tpay_link: z.tpay_link || null, platnosc_api: z.tryb === 'api' ? 1 : 0 });
+    } catch (e) { return res.json({ status: 'error', message: e.message }); }
+  });
+
+  // POST /zgoda/zaplac — { t } → po akceptacji regulaminu: adres bramki Tpay. Tryb API: Estelio tworzy transakcję
+  // (albo zwraca istniejącą „pending” z ostatnich 24 h — ponowne wejście nie robi duplikatu). Tryb ręczny: wklejony link.
+  router.post('/zgoda/zaplac', akceptLimiter, async (req, res) => {
+    const payload = verifyToken(req.body.t);
+    if (!payload) return res.json({ status: 'error', message: 'Link wygasł lub jest nieprawidłowy. Poproś salon o nowy link.' });
+    try {
+      const rows = await q(`SELECT * FROM ZgodyPlatnosci WHERE tenant_id = ? AND id = ? LIMIT 1`, [payload.t, payload.id]);
+      if (!rows.length) return res.json({ status: 'error', message: 'Nie znaleziono płatności. Poproś salon o nowy link.' });
+      const z = rows[0];
+      const hold = await stanHoldu(payload.t, z);
+      if (hold.blokada) return res.json({ status: 'error', kod: hold.blokada, message: hold.komunikat });
+      if (z.status === 'ANULOWANA') return res.json({ status: 'error', message: 'Ten link został anulowany przez salon. Poproś o nowy link.' });
+      if (z.status !== 'ZAAKCEPTOWANA') return res.json({ status: 'error', message: 'Najpierw potwierdź zapoznanie się z regulaminem.' });
+      if (z.tryb !== 'api') return res.json({ status: 'success', url: z.tpay_link });
+      if (!tpay) return res.json({ status: 'error', message: 'Płatności online są chwilowo niedostępne. Skontaktuj się z salonem.' });
+      const w = await tpay.rozpocznijPlatnosc(payload.t, z, req.body.t);
+      return res.json({ status: 'success', url: w.url, ponownie: w.ponownie ? 1 : 0 });
     } catch (e) { return res.json({ status: 'error', message: e.message }); }
   });
 
