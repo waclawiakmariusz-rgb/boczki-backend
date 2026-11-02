@@ -1,0 +1,395 @@
+{
+  "nazwa": "blog-02-sprzedaz-az",
+  "modul": "Blog",
+  "opis": "Zrzuty do wpisu bloga „Sprzedaż od A do Z”: klientka Marta Zielińska, wpłata zadatku 300 zł przelewem, sprzedaż z dwiema pozycjami (zabieg z portfela + krem płatny Mix: gotówka 39 + karta 100), drugi zakup: karnet 4x za 640 zł kartą, dzisiejsza sprzedaż, podsumowanie dnia, historia z edycją, profil z karnetem i zwrot kremu, spis zadatków. Realny zapis na bazie izolowanej; przed i po sprząta po sobie.",
+  "sekcja": "klient-profil",
+  "korzen": ".section.active",
+  "czekajPoSekcji": 2500,
+  "przygotuj": "narzedzia/proby/skrypty/blog-02-sprzatanie.js",
+  "posprzataj": "narzedzia/proby/skrypty/blog-02-sprzatanie.js",
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "otworzPopupNowyKlient(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "wpisz": "#nk_nazwa",
+      "wartosc": "Marta Zielińska"
+    },
+    {
+      "wpisz": "#nk_telefon",
+      "wartosc": "600 700 800"
+    },
+    {
+      "wpisz": "#nk_email",
+      "wartosc": "marta.z@przyklad.pl"
+    },
+    {
+      "kliknij": "#nk_zgoda"
+    },
+    {
+      "js": "(function(){ const d=document.getElementById('nk_data_podpisu'); if(d) d.value=new Date().toISOString().slice(0,10); return 'ok'; })()"
+    },
+    {
+      "kliknij": "#new-client-overlay button[type=submit]"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "/Marta Zieli/.test(document.getElementById('klient-profil').textContent)",
+      "opis": "profil Marty otwarty"
+    },
+    {
+      "js": "otworzWplateZadatku(); 'ok'"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "wpisz": "#dep_cel",
+      "wartosc": "Pakiet 4x oczyszczanie wodorowe"
+    },
+    {
+      "wpisz": "#dep_kwota",
+      "wartosc": "300"
+    },
+    {
+      "wybierz": "#dep_metoda",
+      "wartosc": "Przelew"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "01-wplata-zadatku"
+    },
+    {
+      "kliknij": "#deposit-overlay button[type=submit]"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ const b=[...document.querySelectorAll('#klient-profil button')].find(b=>/Odśwież/.test(b.textContent)); if(b) b.click(); return b ? 'odświeżono' : 'brak'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "/300/.test(document.getElementById('klient-profil').textContent)",
+      "opis": "saldo 300 zł widoczne w profilu"
+    },
+    {
+      "zrzut": "02-profil-saldo-300"
+    },
+    {
+      "pokaz": "sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "js": "(function(){ const ch=[...document.querySelectorAll('#seller-grid .seller-chip')].find(c=>/Ola/.test(c.textContent)); if(!ch) return 'brak kafelka'; const cb=ch.querySelector('input'); if(cb && !cb.checked) ch.click(); return 'Ola'; })()",
+      "opis": "sprzedawczyni Ola"
+    },
+    {
+      "js": "(function(){ const o=[...document.querySelectorAll('#lista-klientow option')].find(o => /Marta Zieli/.test(o.value)); if(!o) return 'brak podpowiedzi'; const i=document.getElementById('multi_klient'); i.value=o.value; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); return i.value; })()",
+      "opis": "klientka z podpowiedzi"
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const cat=w.querySelector('.item-cat'); const o=[...cat.options].find(o=>/Oczyszczanie wodorowe/.test(o.value)); cat.value=o.value; cat.dispatchEvent(new Event('change',{bubbles:true})); return 'kat'; })()",
+      "opis": "zabieg: oczyszczanie wodorowe"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const v=w.querySelector('.item-var'); const o=[...v.options].find(o=>/^1x$/.test(o.value)); v.value=o.value; v.dispatchEvent(new Event('change',{bubbles:true})); const pay=w.querySelector('.item-pay'); pay.value='Portfel'; pay.dispatchEvent(new Event('change',{bubbles:true})); return JSON.stringify({wariant:v.value, cena:(w.querySelector('.item-unit-price')||{}).value, pay:pay.value}); })()",
+      "opis": "wariant 1x, płatność z portfela"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "zrzut": "03a-portfel-panel"
+    },
+    {
+      "js": "(function(){ const cb=[...document.querySelectorAll('#sprzedaz input[type=checkbox]')].find(c=>/300/.test(((c.closest('label')||c.parentElement)||{}).textContent||'')); if(!cb) return 'brak checkboxa zadatku'; if(!cb.checked) cb.click(); return 'zadatek zaznaczony'; })()",
+      "opis": "zaznaczenie zadatku w portfelu"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "js": "uzyjZaznaczonychZadatkow(); 'ok'",
+      "opis": "Użyj zaznaczonych"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "JSON.stringify([...document.querySelectorAll('#items-container .item-row')].map(w=>({pay:(w.querySelector('.item-pay')||{}).value, cena:(w.querySelector('.item-price')||{}).value})))",
+      "opis": "stan wiersza po użyciu portfela"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "/180/.test(document.getElementById('total-sum').textContent)",
+      "opis": "Razem 180 zł z portfela"
+    },
+    {
+      "zrzut": "03-sprzedaz-z-portfela"
+    },
+    {
+      "kliknij": "button[onclick='wyslijMultiSprzedaz()']"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "pokaz": "sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "js": "(function(){ const ch=[...document.querySelectorAll('#seller-grid .seller-chip')].find(c=>/Ola/.test(c.textContent)); const cb=ch.querySelector('input'); if(cb && !cb.checked) ch.click(); const o=[...document.querySelectorAll('#lista-klientow option')].find(o => /Marta Zieli/.test(o.value)); const i=document.getElementById('multi_klient'); i.value=o.value; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); return 'ok'; })()",
+      "opis": "druga sprzedaż: Ola, Marta"
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const cat=w.querySelector('.item-cat'); const o=[...cat.options].find(o=>/Oczyszczanie wodorowe/.test(o.value)); cat.value=o.value; cat.dispatchEvent(new Event('change',{bubbles:true})); return 'kat'; })()"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const v=w.querySelector('.item-var'); const o=[...v.options].find(o=>/^4x$/.test(o.value)); v.value=o.value; v.dispatchEvent(new Event('change',{bubbles:true})); const pay=w.querySelector('.item-pay'); pay.value='Mix'; pay.dispatchEvent(new Event('change',{bubbles:true})); return (w.querySelector('.item-unit-price')||{}).value; })()",
+      "opis": "karnet 4x, płatność Mix"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "sprawdz": "/640/.test(document.getElementById('total-sum').textContent)",
+      "opis": "Razem 640 zł"
+    },
+    {
+      "zrzut": "05-karnet-4x"
+    },
+    {
+      "kliknij": "button[onclick='wyslijMultiSprzedaz()']"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "sprawdz": "getComputedStyle(document.getElementById('split-payment-modal')).display === 'flex'",
+      "opis": "okno Mix otwarte"
+    },
+    {
+      "js": "splitMixRows.length = 0; splitMixRows.push({ method: 'Karta', amount: 400 }); splitMixRows.push({ method: 'Gotówka', amount: 240 }); renderSplitRows(); przeliczReszteSplit(); 'ok'",
+      "opis": "Mix: karta 400 + gotówka 240"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "zrzut": "05a-mix-rozdziel"
+    },
+    {
+      "kliknij": "#btn-confirm-split"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "pokaz": "sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "js": "(function(){ const ch=[...document.querySelectorAll('#seller-grid .seller-chip')].find(c=>/Ola/.test(c.textContent)); const cb=ch.querySelector('input'); if(cb && !cb.checked) ch.click(); const o=[...document.querySelectorAll('#lista-klientow option')].find(o => /Marta Zieli/.test(o.value)); const i=document.getElementById('multi_klient'); i.value=o.value; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); return 'ok'; })()",
+      "opis": "trzecia sprzedaż: Ola, Marta"
+    },
+    {
+      "js": "(function(){ const b=document.querySelector('#items-container .item-row button[onclick^=usunWiersz]'); if(b) b.click(); dodajNowyWiersz('Kosmetyk'); return document.querySelectorAll('#items-container .item-row').length; })()",
+      "opis": "wiersz detalu zamiast zabiegu"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const p=w.querySelector('.item-prod'); const o=[...p.options].find(o=>/Krem regeneruj/.test(o.value)); p.value=o.value; p.dispatchEvent(new Event('change',{bubbles:true})); return o.value; })()",
+      "opis": "produkt: krem SPF 30"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const up=w.querySelector('.item-unit-price'); up.value='139'; up.dispatchEvent(new Event('input',{bubbles:true})); const pay=w.querySelector('.item-pay'); pay.value='Karta'; pay.dispatchEvent(new Event('change',{bubbles:true})); return (w.querySelector('.item-price')||{}).value; })()",
+      "opis": "krem 139 zł kartą"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "/139/.test(document.getElementById('total-sum').textContent)",
+      "opis": "Razem 139 zł"
+    },
+    {
+      "zrzut": "05b-krem-detal"
+    },
+    {
+      "kliknij": "button[onclick='wyslijMultiSprzedaz()']"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "pokaz": "dzisiejsza-sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "sprawdz": "(document.getElementById('dzisiejsza-sprzedaz').textContent.match(/Marta Zieli/g)||[]).length >= 3",
+      "opis": "trzy pozycje Marty w dzisiejszej sprzedaży"
+    },
+    {
+      "zrzut": "06-dzisiejsza-sprzedaz"
+    },
+    {
+      "kliknij": "#dzisiejsza-sprzedaz .btn-edit"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "zrzut": "06a-edycja-transakcji"
+    },
+    {
+      "js": "zamknijPopup(); 'ok'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "pokaz": "podsumowanie",
+      "czekajPo": 3000
+    },
+    {
+      "zrzut": "07-podsumowanie-dnia"
+    },
+    {
+      "pokaz": "historia",
+      "czekajPo": 2500
+    },
+    {
+      "wpisz": "#historia-search",
+      "wartosc": "Zieli"
+    },
+    {
+      "js": "document.getElementById('historia-search').dispatchEvent(new KeyboardEvent('keyup',{bubbles:true})); 'ok'"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "zrzut": "08-historia-szukaj"
+    },
+    {
+      "pokaz": "klient-profil",
+      "czekajPo": 2200
+    },
+    {
+      "js": "(function(){ const k=[...document.querySelectorAll('#klient-profil [onclick^=\"otworzProfil\"]')].find(e=>/Marta Zieli/.test(e.textContent)); if(!k) return 'brak kafelka'; k.click(); return 'profil'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "zrzut": "10-profil-po-zakupach"
+    },
+    {
+      "js": "(function(){ const b=[...document.querySelectorAll('#klient-profil .pp-tab')].find(b=>/Wizyty/.test(b.textContent)); if(!b) return 'brak zakładki'; b.click(); return 'wizyty'; })()",
+      "opis": "zakładka Wizyty"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "js": "(function(){ const t=[...document.querySelectorAll('#klient-profil .pp-tab')].find(b=>/Wizyty/.test(b.textContent)); if(t) t.scrollIntoView({block:'start'}); return 'ok'; })()"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "zrzut": "11-wizyty-karnet"
+    },
+    {
+      "js": "(function(){ const b=[...document.querySelectorAll('#klient-profil .pp-tab')].find(b=>/Produkty/.test(b.textContent)); b.click(); return 'produkty'; })()",
+      "opis": "zakładka Produkty"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "zrzut": "11a-produkty"
+    },
+    {
+      "js": "(function(){ const rows=[...document.querySelectorAll('#klient-profil [onclick^=\"otworzZwrot\"]')].filter(b=>b.offsetParent!==null); const b=rows.find(x=>/Krem/.test(((x.closest('tr')||x.parentElement.parentElement)||{}).textContent||'')) || rows[0]; if(!b) return 'brak przycisku zwrotu'; b.click(); return 'zwrot otwarty'; })()",
+      "opis": "Zwrot przy kremie"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "wpisz": "#zwrot-powod",
+      "wartosc": "reakcja alergiczna, krem nie wraca na półkę"
+    },
+    {
+      "js": "(function(){ const c=document.getElementById('zwrot-przywroc-stan'); if(c) c.checked=false; return 'ok'; })()"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "12-zwrot-okno"
+    },
+    {
+      "kliknij": "#zwrot-zapisz-btn"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "zrzut": "13-produkty-po-zwrocie"
+    },
+    {
+      "pokaz": "zadatki-lista",
+      "czekajPo": 2500
+    },
+    {
+      "wpisz": "#zadatki-search",
+      "wartosc": "Zieli"
+    },
+    {
+      "js": "document.getElementById('zadatki-search').dispatchEvent(new KeyboardEvent('keyup',{bubbles:true})); 'ok'"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "zrzut": "14-spis-zadatkow"
+    }
+  ]
+}

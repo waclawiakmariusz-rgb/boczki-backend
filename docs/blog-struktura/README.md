@@ -56,3 +56,11 @@ Podczas sprawdzania składni przypadkowo załadowałem `server.js` z produkcyjny
 (scenariusz `narzedzia/proby/blog-01-pierwsza-sprzedaz.json` + sprzątanie `skrypty/blog-01-sprzatanie.js`), obrazy w `public/img/blog/pierwsza-sprzedaz/`
 (JPEG 1440 px, ok. 100 KB każdy, konwersja `narzedzia/blog/obrazki.js`). Zrzuty strony: 10-wpis-01-calosc.jpg, 11-wpis-01-gora.jpg, 12-lista-z-wpisem-01.jpg, 13-wpis-01-telefon.jpg.
 Zauważone w próbie (nie we wpisie): profil klientki po sprzedaży pokazywał „Łącznie wydano 0,00 zł” także po „Odśwież” — do sprawdzenia osobno.
+
+## Wpis nr 2 (2.11.2026)
+
+`blog/wpisy/sprzedaz-od-a-do-z.html` (szkic). 1768 słów, 16 zrzutów ze scenariusza `narzedzia/proby/blog-02-sprzedaz-az.json` (sprzątanie `skrypty/blog-02-sprzatanie.js`,
+przywraca też stan magazynowy kremu). Obrazy: `public/img/blog/sprzedaz-od-a-do-z/`. Zrzuty strony: 20-wpis-02-gora.jpg, 21-wpis-02-calosc.jpg.
+Zaobserwowane działanie systemu (do opisu, nie błąd): „Użyj zaznaczonych” dzieli zadatek na pozycje i dokłada wiersz dopłaty; po częściowym użyciu wpłata dostaje
+status WYKORZYSTANY, a reszta powstaje jako nowy wpis „Reszta z: …” metodą System. Cena detalu NIE podpowiada się z magazynu (pole „Wpisz cenę…”), choć pomoc pracownika
+twierdzi inaczej. Lista Mix nie zawiera Portfela (portfel tylko przez zielony panel). Historia sprzedaży nie ma przycisku edycji; edycja dziś = ołówek w Dzisiejszej sprzedaży.
