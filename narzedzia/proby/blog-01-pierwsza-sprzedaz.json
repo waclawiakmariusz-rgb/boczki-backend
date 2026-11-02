@@ -1,0 +1,266 @@
+{
+  "nazwa": "blog-01-pierwsza-sprzedaz",
+  "modul": "Blog",
+  "opis": "Zrzuty do wpisu bloga „Od pustego konta do pierwszej sprzedaży”: nowy zabieg w cenniku (Peeling kawitacyjny · Twarz · 220 zł), pracownica Kasia na liście sprzedawców, konto Kasi z PIN-em i rolą Recepcja, klientka Marta Zielińska, pierwsza sprzedaż kartą, dzisiejsza sprzedaż, podsumowanie dnia, profil klientki, pulpit. Realny zapis na bazie izolowanej; przed i po sprząta po sobie.",
+  "sekcja": "setup-zabiegi",
+  "korzen": ".section.active",
+  "czekajPoSekcji": 2500,
+  "przygotuj": "narzedzia/proby/skrypty/blog-01-sprzatanie.js",
+  "posprzataj": "narzedzia/proby/skrypty/blog-01-sprzatanie.js",
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "zrzut": "01-zabiegi-pusty"
+    },
+    {
+      "wybierz": "#def_kat_select",
+      "wartosc": "NEW"
+    },
+    {
+      "wpisz": "#def_kat_input",
+      "wartosc": "Peeling kawitacyjny"
+    },
+    {
+      "wpisz": "#def_war",
+      "wartosc": "Twarz"
+    },
+    {
+      "wpisz": "#def_cena",
+      "wartosc": "220"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "02-zabieg-wypelniony"
+    },
+    {
+      "kliknij": "#btn-zabieg-submit"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "sprawdz": "/Peeling kawitacyjny/.test(document.querySelector('#setup-zabiegi').textContent)",
+      "opis": "zabieg na liście po zapisie"
+    },
+    {
+      "js": "(function(){ const i=document.getElementById('szukaj-zabieg'); if(!i) return 'brak wyszukiwarki'; i.value='Peeling'; if (typeof filtrujZabiegi==='function') filtrujZabiegi(); else i.dispatchEvent(new Event('keyup',{bubbles:true})); return 'filtr'; })()",
+      "opis": "zawężenie tabeli do nowego zabiegu"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ const t=document.querySelector('#setup-zabiegi table')||document.querySelector('#setup-zabiegi h3, #setup-zabiegi h2'); const m=document.querySelector('.main-content')||document.scrollingElement; if(t){ t.scrollIntoView({block:'start'}); } return m ? m.scrollTop : -1; })()",
+      "opis": "przewinięcie do listy zabiegów"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "zrzut": "03-zabieg-w-tabeli"
+    },
+    {
+      "pokaz": "setup-pracownicy",
+      "czekajPo": 1800
+    },
+    {
+      "wpisz": "#def_prac",
+      "wartosc": "Kasia"
+    },
+    {
+      "zrzut": "04-pracownicy-wpisana"
+    },
+    {
+      "kliknij": "#setup-pracownicy button[type=submit]"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "zrzut": "05-pracownicy-lista"
+    },
+    {
+      "pokaz": "kreator_dostepow",
+      "czekajPo": 1800
+    },
+    {
+      "wpisz": "#admin-imie",
+      "wartosc": "Kasia"
+    },
+    {
+      "wpisz": "#admin-pin",
+      "wartosc": "4827"
+    },
+    {
+      "js": "(function(){ const s=document.getElementById('admin-rola'); const o=[...s.options].find(o=>/recepc/i.test(o.textContent+o.value)); if(!o) return 'brak roli'; s.value=o.value; s.dispatchEvent(new Event('change',{bubbles:true})); return o.value; })()",
+      "opis": "rola Recepcja"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "06-konto-wypelnione"
+    },
+    {
+      "kliknij": "#form-admin-user button[type=submit]"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "sprawdz": "/Kasia/.test(document.getElementById('admin-users-list').textContent)",
+      "opis": "konto Kasi na liście kont"
+    },
+    {
+      "zrzut": "07-konta-lista"
+    },
+    {
+      "pokaz": "klient-profil",
+      "czekajPo": 2200
+    },
+    {
+      "zrzut": "08-klienci-lista"
+    },
+    {
+      "js": "otworzPopupNowyKlient(); 'ok'"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "wpisz": "#nk_nazwa",
+      "wartosc": "Marta Zielińska"
+    },
+    {
+      "wpisz": "#nk_telefon",
+      "wartosc": "600 700 800"
+    },
+    {
+      "wpisz": "#nk_email",
+      "wartosc": "marta.z@przyklad.pl"
+    },
+    {
+      "kliknij": "#nk_zgoda"
+    },
+    {
+      "js": "(function(){ const d=document.getElementById('nk_data_podpisu'); if(d){ d.value=new Date().toISOString().slice(0,10); } return d ? d.value : 'brak pola daty'; })()",
+      "opis": "data podpisu RODO = dziś"
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "zrzut": "09-nowa-klientka"
+    },
+    {
+      "kliknij": "#new-client-overlay button[type=submit]"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "sprawdz": "/Marta Zieli/.test(document.getElementById('klient-profil').textContent)",
+      "opis": "profil Marty otwarty po zapisie"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "zrzut": "10-profil-po-zapisie"
+    },
+    {
+      "pokaz": "sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "zrzut": "11-sprzedaz-pusta"
+    },
+    {
+      "js": "(function(){ const ch=[...document.querySelectorAll('#seller-grid .seller-chip')].find(c=>/Kasia/.test(c.textContent)); if(!ch) return 'brak kafelka Kasia'; const cb=ch.querySelector('input'); if(cb && !cb.checked) ch.click(); return 'Kasia zaznaczona'; })()",
+      "opis": "sprzedawczyni Kasia"
+    },
+    {
+      "js": "(function(){ const o=[...document.querySelectorAll('#lista-klientow option')].find(o => /Marta Zieli/.test(o.value)); if(!o) return 'brak podpowiedzi'; const i=document.getElementById('multi_klient'); i.value=o.value; i.dispatchEvent(new Event('input',{bubbles:true})); i.dispatchEvent(new Event('change',{bubbles:true})); return i.value; })()",
+      "opis": "klientka z podpowiedzi"
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); if(!w) return 'brak wiersza'; const cat=w.querySelector('.item-cat'); const o=[...cat.options].find(o=>/Peeling kawitacyjny/.test(o.textContent+o.value)); if(!o) return 'brak kategorii w liście'; cat.value=o.value; cat.dispatchEvent(new Event('change',{bubbles:true})); return 'kategoria ok'; })()",
+      "opis": "kategoria zabiegu"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const w=document.querySelector('#items-container .item-row'); const v=w.querySelector('.item-var'); if(v){ const o=[...v.options].find(o=>/Twarz/.test(o.textContent+o.value)); if(o){ v.value=o.value; v.dispatchEvent(new Event('change',{bubbles:true})); } } const pay=w.querySelector('.item-pay'); if(pay){ const k=[...pay.options].find(o=>/Karta/i.test(o.textContent+o.value)); if(k){ pay.value=k.value; pay.dispatchEvent(new Event('change',{bubbles:true})); } } return JSON.stringify({wariant: v && v.value, cena: (w.querySelector('.item-unit-price')||{}).value, platnosc: pay && pay.value}); })()",
+      "opis": "wariant Twarz, płatność Karta"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "sprawdz": "/220/.test(document.getElementById('total-sum').textContent)",
+      "opis": "Razem pokazuje 220 zł z cennika"
+    },
+    {
+      "zrzut": "12-sprzedaz-wypelniona"
+    },
+    {
+      "kliknij": "button[onclick='wyslijMultiSprzedaz()']"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "czekaj": 300
+    },
+    {
+      "pokaz": "dzisiejsza-sprzedaz",
+      "czekajPo": 2500
+    },
+    {
+      "sprawdz": "/Marta Zieli/.test(document.getElementById('dzisiejsza-sprzedaz').textContent) && /220/.test(document.getElementById('dzisiejsza-sprzedaz').textContent)",
+      "opis": "sprzedaż 220 zł dla Marty w dzisiejszej sprzedaży"
+    },
+    {
+      "zrzut": "14-dzisiejsza-sprzedaz"
+    },
+    {
+      "pokaz": "podsumowanie",
+      "czekajPo": 3000
+    },
+    {
+      "zrzut": "15-podsumowanie-dnia"
+    },
+    {
+      "pokaz": "klient-profil",
+      "czekajPo": 2200
+    },
+    {
+      "js": "(function(){ const k=[...document.querySelectorAll('#klient-profil [onclick^=\"otworzProfil\"]')].find(e=>/Marta Zieli/.test(e.textContent)); if(!k) return 'brak kafelka klientki'; k.click(); return 'otwarto profil'; })()",
+      "opis": "profil Marty"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ const b=[...document.querySelectorAll('#klient-profil button')].find(b=>/Odśwież/.test(b.textContent)); if(b){ b.click(); return 'odświeżono'; } return 'brak przycisku'; })()",
+      "opis": "odświeżenie profilu"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "zrzut": "16-profil-klientki"
+    }
+  ]
+}

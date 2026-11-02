@@ -49,3 +49,10 @@ Prace przygotowawcze przed serią wpisów ze zrzutami. Wszystkie zrzuty w tym ka
 ## Incydent przy tej pracy
 
 Podczas sprawdzania składni przypadkowo załadowałem `server.js` z produkcyjnym `.env`; proces działał ~2 minuty i migracja startowa dodała pustą kolumnę `okladka` do `blog_posts` na wspólnej bazie. Nic więcej nie zostało zmienione (sprawdzone w `Logi`). Zasada zapisana w pamięci: składnię sprawdza się tylko `node --check`.
+
+## Wpis nr 1 (2.11.2026) — próbka tonu
+
+`blog/wpisy/od-pustego-konta-do-pierwszej-sprzedazy.html` (szkic; w bazie testowej opublikowany do podglądu). 1617 słów, 12 zrzutów z bazy izolowanej
+(scenariusz `narzedzia/proby/blog-01-pierwsza-sprzedaz.json` + sprzątanie `skrypty/blog-01-sprzatanie.js`), obrazy w `public/img/blog/pierwsza-sprzedaz/`
+(JPEG 1440 px, ok. 100 KB każdy, konwersja `narzedzia/blog/obrazki.js`). Zrzuty strony: 10-wpis-01-calosc.jpg, 11-wpis-01-gora.jpg, 12-lista-z-wpisem-01.jpg, 13-wpis-01-telefon.jpg.
+Zauważone w próbie (nie we wpisie): profil klientki po sprzedaży pokazywał „Łącznie wydano 0,00 zł” także po „Odśwież” — do sprawdzenia osobno.
