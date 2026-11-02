@@ -130,6 +130,12 @@ describe('panel admina', () => {
     expect(BLOG).toContain("router.get('/admin/blog/podglad/:id', requireAdmin,");
     expect(BLOG).toContain('okladka || null');
   });
+  test('publikacja jednym kliknięciem z listy: PATCH statusu na serwerze i przyciski Publikuj / Cofnij do szkicu w panelu', () => {
+    expect(BLOG).toContain("router.patch('/admin/blog/posts/:id/status', requireAdmin,");
+    expect(ADMIN).toContain("zmienStatus(${p.id}, 'published')");
+    expect(ADMIN).toContain("zmienStatus(${p.id}, 'draft')");
+    expect(ADMIN).toContain("method: 'PATCH'");
+  });
   test('lista publiczna nie ma już trzech zaszytych na sztywno kart udających działające API', () => {
     expect(LISTA).not.toContain('href="/blog/jak-estelio-oszczedza-czas.html"');
     expect(LISTA).toContain('Nie udało się wczytać wpisów.');

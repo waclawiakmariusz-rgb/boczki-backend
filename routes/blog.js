@@ -657,6 +657,16 @@ module.exports = (db) => {
     );
   });
 
+  // PATCH /api/admin/blog/posts/:id/status — publikacja albo cofnięcie do szkicu jednym kliknięciem z listy
+  router.patch('/admin/blog/posts/:id/status', requireAdmin, (req, res) => {
+    const st = req.body && req.body.status === 'published' ? 'published' : 'draft';
+    db.query('UPDATE blog_posts SET status = ? WHERE id = ?', [st, req.params.id], (err, result) => {
+      if (err) return res.status(500).json({ status: 'error', message: 'Błąd bazy.' });
+      if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono wpisu.' });
+      res.json({ status: 'success', post_status: st });
+    });
+  });
+
   // DELETE /api/admin/blog/posts/:id — usuń wpis
   router.delete('/admin/blog/posts/:id', requireAdmin, (req, res) => {
     db.query('DELETE FROM blog_posts WHERE id = ?', [req.params.id], (err, result) => {

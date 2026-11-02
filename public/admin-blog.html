@@ -397,6 +397,7 @@ function renderTable() {
             <td><span class="badge badge-${p.status}">${p.status === 'published' ? 'Opublikowany' : 'Szkic'}</span></td>
             <td class="actions-cell">
               ${p.status === "published" ? `<a class="btn-edit" href="${esc(p.url_override || "/blog/" + p.slug)}" target="_blank" title="Otwórz publiczną stronę wpisu">Otwórz</a> <button class="btn-edit" onclick="kopiujLink(${JSON.stringify(p.url_override || "/blog/" + p.slug)})" title="Skopiuj adres do wysłania">Kopiuj link</button>` : `<button class="btn-edit" onclick="podgladId(${p.id})">Podgląd</button>`}
+              ${p.status === 'published' ? `<button class="btn-edit" onclick="zmienStatus(${p.id}, 'draft')" title="Zdejmij z bloga, zostaw jako szkic">Cofnij do szkicu</button>` : `<button class="btn-primary" style="padding:6px 12px; font-size:.78rem;" onclick="zmienStatus(${p.id}, 'published')" title="Opublikuj na blogu od razu">Publikuj</button>`}
               <button class="btn-edit" onclick="openEdit(${p.id})">Edytuj</button>
               <button class="btn-danger" onclick="deletePost(${p.id}, '${esc(p.title).replace(/'/g,"\\'")}')">Usuń</button>
             </td>
@@ -509,6 +510,20 @@ async function savePost(zostawOtwarte) {
     showToast('Błąd sieci.', true);
   }
   return null;
+}
+
+async function zmienStatus(id, status) {
+  const p = posts.find(x => x.id === id);
+  if (status === 'published' && !confirm(`Opublikować wpis:
+"${p ? p.title : id}"?
+
+Pojawi się na liście bloga i będzie widoczny dla każdego.`)) return;
+  try {
+    const res  = await fetch(`/api/admin/blog/posts/${id}/status`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-admin-token': token() }, body: JSON.stringify({ status }) });
+    const data = await res.json();
+    if (data.status === 'success') { showToast(status === 'published' ? 'Opublikowano. Adres: /blog/' + (p ? p.slug : '') : 'Wpis wrócił do szkiców.'); loadPosts(); }
+    else showToast(data.message || 'Błąd zmiany statusu.', true);
+  } catch (e) { showToast('Błąd sieci.', true); }
 }
 
 async function deletePost(id, title) {
