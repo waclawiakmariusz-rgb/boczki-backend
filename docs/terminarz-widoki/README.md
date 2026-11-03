@@ -59,3 +59,8 @@ mieści się w jednym rzędzie z zapasem.
 
 `tests/terminarz-widoki.test.js` — przełącznik nie oferuje już widoku tygodnia, w module nie
 został po nim martwy kod, a stare wejście prowadzi do widoku dnia. Pełny zestaw: 772/772.
+
+
+## 3.11.2026 — widok „Tydzień” PRZYWRÓCONY
+
+Decyzja właściciela: „przywróć to, ale nic innego, tylko ten tydzień” (po rozmowie: siatka jak w „Dzień”, kolumny = dni, tylko jedna osoba). Odwrócony commit 5682e97 w `public/terminarz.js` z jedną adaptacją: dostępność dnia liczona jak w Obsadzie zespołu (wyjątki dnia R05, zakres `od_daty`/`do_daty`), bo grafik od 21.10 ma wyjątki, których stary kod nie znał. Rozdział w przewodniku `/pomoc-terminarz/` celowo NIE wrócił. Próba: `narzedzia/proby/terminarz-tydzien.json`, zrzuty w `tydzien-przywrocony/` (01 siatka Anny 19–25.10, 02 strzałka o tydzień, 03 klik nagłówka dnia → Dzień z zespołem). Testy: `tests/terminarz-widoki.test.js` odwrócone (15).

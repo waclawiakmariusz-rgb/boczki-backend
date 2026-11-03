@@ -72,8 +72,8 @@ describe('zrzuty ekranu', () => {
 });
 
 describe('przewodnik nie opisuje rzeczy, których w Terminarzu już nie ma', () => {
-    test('widok „Tydzień" zniknął z kodu i z przewodnika', () => {
-        expect(JS).not.toMatch(/\['tydzien', *'Tydzień'\]/);
+    test('widok „Tydzień" wrócił do kodu 3.11.2026, ale przewodnik celowo go nie opisuje (właściciel: „tylko ten tydzień, nic innego”)', () => {
+        expect(JS).toMatch(/\['tydzien', *'Tydzień'\]/);
         expect(G).not.toMatch(/widok[a-zu]* Tygodnia|w Tygodniu|>Tydzień</);
     });
     test('nie ma „Przejmij" ani kafelka „wartość wykonanych"', () => {

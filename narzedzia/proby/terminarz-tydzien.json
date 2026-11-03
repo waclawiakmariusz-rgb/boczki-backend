@@ -1,0 +1,78 @@
+{
+  "nazwa": "terminarz-tydzien",
+  "modul": "Terminarz",
+  "opis": "Widok „Tydzień” przywrócony 3.11.2026: siatka jak w Dniu, 7 kolumn dni od poniedziałku, tylko jedna osoba (Anna, demo-test, tydzień 19–25.10.2026). Tylko odczyt.",
+  "sekcja": "terminarz",
+  "korzen": "#trm-main",
+  "czekajPoSekcji": 3000,
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        900
+      ]
+    },
+    {
+      "sprawdz": "[...document.querySelectorAll('#trm-views button')].map(b => b.textContent.trim()).join('|') === 'Dzień|Tydzień|Agenda|Zasoby|Historia'",
+      "opis": "przełącznik: Dzień · Tydzień · Agenda · Zasoby · Historia"
+    },
+    {
+      "js": "TRM.data = '2026-10-21'; TRM.osoba = 'Anna'; TRM.widokZmien('tydzien'); 'ok'",
+      "opis": "środa 21.10 → tydzień od poniedziałku 19.10, osoba Anna"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "sprawdz": "document.querySelectorAll('#trm-main .trm-col-h:not(.hours)').length === 7",
+      "opis": "7 kolumn dni"
+    },
+    {
+      "sprawdz": "/Pn 19\\.10/.test(document.querySelector('#trm-main .trm-col-h:not(.hours)').textContent)",
+      "opis": "pierwsza kolumna = poniedziałek 19.10"
+    },
+    {
+      "sprawdz": "document.querySelectorAll('#trm-main .trm-karta').length >= 5 && TRM.zakres.rezerwacje.length > 0 && TRM.zakres.rezerwacje.every(r => r.pozycje.some(p => p.pracownik === 'Anna'))",
+      "opis": "kafelki wizyt (≥5) i każda pobrana wizyta ma pozycję Anny"
+    },
+    {
+      "sprawdz": "document.querySelector('#trm-main select') && document.querySelector('#trm-main select').value === 'Anna'",
+      "opis": "pole Osoba = Anna"
+    },
+    {
+      "sprawdz": "document.querySelector('#trm-views button.on').textContent.trim() === 'Tydzień'",
+      "opis": "podświetlony przycisk Tydzień"
+    },
+    {
+      "zrzut": "01-tydzien-anna"
+    },
+    {
+      "js": "TRM.idz(1); 'ok'",
+      "opis": "strzałka › o tydzień"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "/Pn 26\\.10/.test(document.querySelector('#trm-main .trm-col-h:not(.hours)').textContent)",
+      "opis": "następny tydzień od 26.10"
+    },
+    {
+      "zrzut": "02-tydzien-nastepny"
+    },
+    {
+      "js": "document.querySelector('#trm-main .trm-col-h:not(.hours)').click(); 'ok'",
+      "opis": "klik w nagłówek dnia → widok Dnia z zespołem"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "document.querySelector('#trm-views button.on').textContent.trim() === 'Dzień' && TRM.data === '2026-10-26'",
+      "opis": "przejście do Dnia 26.10"
+    },
+    {
+      "zrzut": "03-klik-naglowka-dzien"
+    }
+  ]
+}
