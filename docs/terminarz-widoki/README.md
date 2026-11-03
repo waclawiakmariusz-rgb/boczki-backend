@@ -64,3 +64,5 @@ został po nim martwy kod, a stare wejście prowadzi do widoku dnia. Pełny zest
 ## 3.11.2026 — widok „Tydzień” PRZYWRÓCONY
 
 Decyzja właściciela: „przywróć to, ale nic innego, tylko ten tydzień” (po rozmowie: siatka jak w „Dzień”, kolumny = dni, tylko jedna osoba). Odwrócony commit 5682e97 w `public/terminarz.js` z jedną adaptacją: dostępność dnia liczona jak w Obsadzie zespołu (wyjątki dnia R05, zakres `od_daty`/`do_daty`), bo grafik od 21.10 ma wyjątki, których stary kod nie znał. Rozdział w przewodniku `/pomoc-terminarz/` celowo NIE wrócił. Próba: `narzedzia/proby/terminarz-tydzien.json`, zrzuty w `tydzien-przywrocony/` (01 siatka Anny 19–25.10, 02 strzałka o tydzień, 03 klik nagłówka dnia → Dzień z zespołem). Testy: `tests/terminarz-widoki.test.js` odwrócone (15).
+
+**3.11.2026 (wieczór) — wybór osoby chipami.** Lista rozwijana „wyglądała technicznie” (właściciel); teraz te same chipy z avatarem co w Dniu, ale zaznaczona dokładnie jedna (rola radio, Enter/spacja działa). Zrzut `02-01b-tydzien-ola-chip.png` — po kliknięciu chipa Oli tydzień przeładowuje się na jej wizyty.

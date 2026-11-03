@@ -36,8 +36,8 @@
       "opis": "kafelki wizyt (≥5) i każda pobrana wizyta ma pozycję Anny"
     },
     {
-      "sprawdz": "document.querySelector('#trm-main select') && document.querySelector('#trm-main select').value === 'Anna'",
-      "opis": "pole Osoba = Anna"
+      "sprawdz": "[...document.querySelectorAll('#trm-main .trm-filtry .trm-chip')].length === 3 && document.querySelectorAll('#trm-main .trm-filtry .trm-chip.on').length === 1 && document.querySelector('#trm-main .trm-filtry .trm-chip.on').textContent.trim().endsWith('Anna')",
+      "opis": "chipy osób jak w Dniu, zaznaczona dokładnie jedna: Anna"
     },
     {
       "sprawdz": "document.querySelector('#trm-views button.on').textContent.trim() === 'Tydzień'",
@@ -45,6 +45,26 @@
     },
     {
       "zrzut": "01-tydzien-anna"
+    },
+    {
+      "js": "[...document.querySelectorAll('#trm-main .trm-filtry .trm-chip')].find(c => c.textContent.trim().endsWith('Ola')).click(); 'ok'",
+      "opis": "klik w chip Ola"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "sprawdz": "TRM.osoba === 'Ola' && document.querySelectorAll('#trm-main .trm-filtry .trm-chip.on').length === 1 && document.querySelector('#trm-main .trm-filtry .trm-chip.on').textContent.trim().endsWith('Ola') && TRM.zakres.rezerwacje.every(r => r.pozycje.some(p => p.pracownik === 'Ola'))",
+      "opis": "tydzień Oli: jeden zaznaczony chip, wizyty Oli"
+    },
+    {
+      "zrzut": "01b-tydzien-ola-chip"
+    },
+    {
+      "js": "TRM.tydzienOsoba('Anna'); 'ok'"
+    },
+    {
+      "czekaj": 2500
     },
     {
       "js": "TRM.idz(1); 'ok'",

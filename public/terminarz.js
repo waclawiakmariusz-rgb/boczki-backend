@@ -1004,12 +1004,14 @@
     return TRM.dane.grafik.filter(x => x.pracownik === osoba && Number(x.dzien_tyg) === dzienTyg(dz) && !jestWyjatkiem(x)
       && (!x.od_daty || String(x.od_daty).slice(0, 10) <= dz) && (!x.do_daty || String(x.do_daty).slice(0, 10) >= dz));
   }
+  TRM.tydzienOsoba = (p) => { if (!p || p === TRM.osoba) return; TRM.osoba = p; TRM.widokZmien('tydzien'); };
   function renderTydzien(od) {
     const main = el('trm-main'), rez = TRM.zakres.rezerwacje;
     const osoba = TRM.osoba || TRM.dane.pracownicy[0];
     const dni = [0, 1, 2, 3, 4, 5, 6].map(i => dodajDni(od, i));
     const zak = TRM._zak = zakresGodzin(Object.values(TRM.dane.ustawienia.godziny).flat().map(p => ({ od: od + ' ' + p.od, do: od + ' ' + p.do })), rez);
-    const html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value;TRM.widokZmien('tydzien')" style="width:auto">${TRM.dane.pracownicy.map(p => `<option ${p === osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div></div>
+    // wybór osoby: te same chipy co w widoku Dnia (avatar + imię), ale zaznaczona jest zawsze dokładnie jedna (3.11.2026, właściciel: lista rozwijana „wygląda technicznie”)
+    const html = `<div class="trm-filtry" style="margin:0 0 10px"><span class="muted small">Osoba:</span>${TRM.dane.pracownicy.map(p => `<span class="trm-chip ${p === osoba ? 'on' : ''}" role="radio" aria-checked="${p === osoba ? 'true' : 'false'}" tabindex="0" onclick="TRM.tydzienOsoba('${esc(p).replace(/'/g, "\\'")}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">${avatarHtml(p, true)}${esc(p)}</span>`).join('')}</div>
     <div class="trm-grid"><div class="trm-grid-inner" style="grid-template-columns:58px repeat(7, minmax(150px,1fr))">
       <div class="trm-col-h hours"></div>${dni.map(dz => { const g = grafikOsobyDnia(osoba, dz); return `<div class="trm-col-h" style="cursor:pointer" onclick="TRM.data='${dz}';TRM.widokZmien('dzien')"><div class="name">${ladnaData(dz, true)}</div><div class="hrs">${g.length ? g.map(x => x.od + '–' + x.do).join(', ') : 'wolne'}</div></div>`; }).join('')}
       ${kolumnaGodzin(zak)}${dni.map(dz => {
