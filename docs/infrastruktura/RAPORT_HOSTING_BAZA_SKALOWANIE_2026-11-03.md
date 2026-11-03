@@ -204,3 +204,61 @@ problemem — problemem jest **model jednego procesu i współdzielona baza bez 
 - **Pula połączeń** — zestaw otwartych połączeń do bazy wielokrotnego użytku (u nas do 10 na proces).
 - **wait_timeout** — po ilu sekundach bezczynności serwer bazy sam zamyka połączenie (u nas 20 s).
 - **Zero-downtime** — wdrożenie bez przerwy w dostępie (drugi proces przejmuje ruch, zanim pierwszy zgaśnie).
+
+---
+
+## 11. Odpowiedź Hostingera o VPS (Kodee, 3.11.2026 wieczór) — streszczenie wierne
+
+**Plany KVM i ceny (netto, katalogowe / pierwszy okres promocyjny):**
+
+| Plan | vCPU | RAM | NVMe | Transfer | mies. | rok | 1. rok promo |
+|---|---|---|---|---|---|---|---|
+| KVM 1 | 1 | 4 GB | 50 GB | 4 TB | 74,99 zł | 671,88 zł | 311,88 zł |
+| **KVM 2** (rekomendowany) | 2 | 8 GB | 100 GB | 8 TB | 91,99 zł | 875,88 zł | 443,88 zł |
+| KVM 4 | 4 | 16 GB | 200 GB | 16 TB | 153,99 zł | 1547,88 zł | 671,88 zł |
+
+- **Root i MariaDB:** pełny root; własne `max_connections`, `max_user_connections`, `wait_timeout`, dowolna liczba
+  użytkowników bazy. **Limit 500 połączeń/h znika.** Sugestia Hostingera: `max_connections` 200–300, pula Node 20–40.
+- **Dwa procesy i wdrożenia bez przerwy:** tak — Nginx + PM2 w trybie cluster (`pm2 start -i 2`, `pm2 reload`),
+  pod warunkiem obsługi SIGTERM, punktu zdrowia, zwalniania połączeń przy zamykaniu i migracji zgodnych wstecz.
+  KVM 2 ma 2 vCPU, więc dwa procesy pracują naprawdę równolegle.
+- **Kopie:** automatyczne backupy VPS w cenie (domyślnie tygodniowe, opcja dzienne; maks. 4 kopie, przy dziennych
+  2 dzienne + 2 tygodniowe); snapshot ręczny, 1 sztuka, wygasa po 1 dniu. Przywrócenie nadpisuje cały VPS i jest
+  nieodwracalne. Brak osobnej zarządzanej kopii samej bazy — własny `mysqldump` codziennie + kopie poza VPS.
+- **Monitoring:** panel pokazuje CPU/RAM/dysk/ruch/uptime (wykresy do 6 mies.), ale **brak alertów e-mail** o 5xx,
+  padnięciu procesu czy bazie. Zalecenie: zewnętrzny monitoring HTTP co 1 min na `/health`, alert po 2 nieudanych,
+  progi RAM/dysk 80/90%. PM2 wznawia proces po awarii, ale nie zastępuje monitoringu.
+- **Self-managed:** Hostinger utrzymuje sprzęt, sieć, platformę i panel; po naszej stronie system (Ubuntu),
+  MariaDB, Node, Nginx, PM2, npm, firewall, kopie, bezpieczeństwo aplikacji. `unattended-upgrades` dla aktualizacji
+  systemu. **Nie ma zarządzanego KVM.**
+- **Firewall/DDoS:** firewall w panelu + Anti-DDoS; 3306 tylko dla 127.0.0.1, publicznie 22/80/443; SSH na klucze,
+  bez hasła roota, fail2ban.
+- **Migracja:** ręczna (brak automatu z Web Hosting). Przenosi się kod, pliki użytkowników, env, bazę (`mysqldump
+  --single-transaction`), Nginx, SSL (Let's Encrypt), cron, PM2. **Domena i poczta kontakt@ zostają na obecnym
+  planie** — zmienia się tylko rekord A; MX bez zmian.
+- **Równolegle:** można trzymać Web Hosting i VPS jednocześnie, testować VPS na tymczasowej subdomenie i przełączyć
+  DNS po testach; w tym czasie płaci się za oba.
+- **Lokalizacja:** Niemcy = **Düsseldorf** (nie Frankfurt); **Polski nie ma**. Baza będzie na tym samym VPS co
+  aplikacja, więc odległość do obecnego serwera bazy nie ma znaczenia po migracji.
+- **Awaria VPS:** konsola w przeglądarce, restart/stop/start z panelu, tryb awaryjny, reset SSH/firewalla; brak
+  gwarantowanego czasu reakcji supportu na konfigurację (to po naszej stronie); po awarii procesu sami robimy
+  `pm2 restart` / `systemctl restart`.
+- **SMTP:** `smtp.hostinger.com` 465 SSL lub 587 STARTTLS działa z VPS; **limit ok. 5 wiadomości/min z VPS**, skrzynka
+  do 1000/dobę, 100 odbiorców/wiadomość. Dla maili transakcyjnych kilku–kilkunastu salonów wystarczy; dla kampanii nie.
+
+**Ocena (Claude, 3.11.2026):** odpowiedź potwierdza, że VPS KVM 2 usuwa dokładnie te trzy ograniczenia, które
+powodowały awarie i blokują spokojne wdrożenia: limit połączeń/h, jeden proces bez zero-downtime, brak kontroli
+nad bazą. Koszt realny: ok. 444 zł za pierwszy rok, potem ok. 876 zł/rok netto (73 zł/mies.) — przy abonamencie
+od salonu rzędu 49–79 zł/mies. zwraca się przy drugim płacącym salonie. Cena, którą się płaci, to
+**administrowanie**: kopie poza VPS (bo wbudowane to 4 sztuki i nieodwracalne przywracanie całego serwera),
+aktualizacje, firewall, monitoring. To da się zautomatyzować w dniu migracji (unattended-upgrades, cron z
+`mysqldump` + wysyłka kopii na zewnątrz, fail2ban, PM2 startup, monitoring HTTP z alertem), ale ktoś musi raz na
+jakiś czas spojrzeć, czy to żyje. Limit 5 maili/min z VPS wymaga kolejki wysyłki w aplikacji (dziś maile o wizytach
+wysyłają się partiami co godzinę — do sprawdzenia, ile naraz).
+
+**Plan migracji, jeśli decyzja = VPS:** (1) wariant A na Web Hosting i tak najpierw (bramka startowa, pula,
+`/api/zdrowie`) — to samo jest potrzebne na VPS pod PM2 reload; (2) KVM 2 Düsseldorf, Ubuntu LTS, Node 22, MariaDB,
+Nginx, PM2 cluster ×2, Let's Encrypt; (3) import bazy i test na subdomenie (np. `nowy.estelio.com.pl`) z pełną
+próbą ekranową; (4) przełączenie rekordu A wieczorem po pracy salonów, instancja Web Hosting zostaje przez 2 tygodnie
+jako awaryjna; (5) wyłączenie dev.estelio.com.pl na Hostingerze (testy są na laptopie), ewentualnie dev jako drugi
+proces PM2 na VPS z osobną bazą.
