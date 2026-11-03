@@ -1,0 +1,29 @@
+{
+  "nazwa": "ticket-22-bonus-powitalny",
+  "modul": "Klub · aplikacja klientki",
+  "opis": "Ticket #22 (Ania, 3.11.2026): bonus powitalny nie naliczał się przy aktywacji kodem od recepcji (tylko przy rejestracji nowego numeru z linku). Po naprawie: klientka z kartoteki (Marta Kowalska, demo-test) aktywuje konto kodem PRB1 w apce /klub/ → toast „Bonus powitalny: +50 pkt!” i saldo 50 pkt (demo-test ma bonus 50). Zapis na bazie izolowanej, sprzątane.",
+  "przygotuj": "narzedzia/proby/skrypty/ticket-22-bonus-sprzatanie.js przygotuj",
+  "posprzataj": "narzedzia/proby/skrypty/ticket-22-bonus-sprzatanie.js posprzataj",
+  "kroki": [
+    { "viewport": [430, 900] },
+    { "js": "localStorage.removeItem('klub_session'); localStorage.removeItem('klub_salony'); localStorage.removeItem('klub_rej'); location.href = '/klub/'; 'nawigacja'", "opis": "apka Klubu bez sesji" },
+    { "czekaj": 3500 },
+    { "js": "pokaz('screen-login'); pokazKodBox(); 'ok'", "opis": "ekran logowania → „Mam kod od recepcji”" },
+    { "czekaj": 500 },
+    { "wpisz": "#kod-tel", "wartosc": "601 200 301" },
+    { "wpisz": "#kod-kod", "wartosc": "prb1" },
+    { "wpisz": "#kod-pin", "wartosc": "2468" },
+    { "wpisz": "#kod-pin2", "wartosc": "2468" },
+    { "js": "document.getElementById('kod-zgoda').checked = true; 'ok'" },
+    { "czekaj": 300 },
+    { "zrzut": "01-apka-kod-od-recepcji" },
+    { "kliknij": "#kod-btn" },
+    { "czekaj": 1600 },
+    { "sprawdz": "/Bonus powitalny: \\+50 pkt/.test(document.getElementById('toast').textContent)", "opis": "toast o bonusie po aktywacji kodem" },
+    { "zrzut": "02-apka-toast-bonus" },
+    { "czekaj": 2500 },
+    { "sprawdz": "document.getElementById('screen-main').classList.contains('visible') && document.getElementById('m-saldo').textContent.trim() === '50'", "opis": "ekran główny: saldo 50 pkt" },
+    { "zrzut": "03-apka-saldo-50" },
+    { "js": "(function(){ const h = document.body.innerText; return /powitalny/i.test(h) ? 'historia zawiera „Bonus powitalny”' : 'brak w widoku (historia w innej zakładce)'; })()", "opis": "wpis w historii" }
+  ]
+}

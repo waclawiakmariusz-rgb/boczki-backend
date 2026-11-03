@@ -940,6 +940,8 @@ async function aktywuj() {
     history.replaceState(null, '', '/klub/'); // sprzątamy jednorazowy token z adresu
     swiezaAktywacja = true; // najlepszy moment na propozycję powiadomień — klient jest przy recepcji
     if (d.pin_dziedziczony) setTimeout(() => toast('Dołączono salon — logujesz się swoim dotychczasowym PIN-em.'), 900);
+    // bonus powitalny przy każdym pierwszym założeniu konta (ticket #22, 3.11.2026) — nie tylko z linku rejestracyjnego
+    if (d.bonus > 0) setTimeout(() => toast('Bonus powitalny: +' + d.bonus + ' pkt!'), d.pin_dziedziczony ? 2600 : 900);
     wczytajKonto();
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }
@@ -1090,6 +1092,8 @@ async function aktywujKodem() {
     localStorage.setItem(LS_SESJA, d.session);
     swiezaAktywacja = true;
     if (d.pin_dziedziczony) setTimeout(() => toast('Użyliśmy Twojego dotychczasowego PIN-u z aplikacji.'), 900);
+    // bonus powitalny przy aktywacji kodem od recepcji (ticket #22, 3.11.2026)
+    if (d.bonus > 0) setTimeout(() => toast('Bonus powitalny: +' + d.bonus + ' pkt!'), d.pin_dziedziczony ? 2600 : 900);
     wczytajKonto();
   } catch (e) { err.textContent = 'Błąd połączenia. Spróbuj ponownie.'; }
   finally { btn.disabled = false; }

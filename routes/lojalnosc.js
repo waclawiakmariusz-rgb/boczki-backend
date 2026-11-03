@@ -2501,9 +2501,10 @@ module.exports = (db) => {
         [p.t, p.k, tel, hash]
       );
       await zamknijWnioskiPoAktywacji(p.t, p.k);
-      zapiszLog(p.t, 'KLUB AKTYWACJA KONTA', 'Klient (apka)', `Klient ${p.k} (${klient.imie_nazwisko || ''}) aktywował konto Klubu${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
+      const bonus = await przyznajBonusPowitalny(p.t, p.k, 'AKT@' + p.k);
+      zapiszLog(p.t, 'KLUB AKTYWACJA KONTA', 'Klient (apka)', `Klient ${p.k} (${klient.imie_nazwisko || ''}) aktywował konto Klubu${odziedziczony ? ' (PIN z aplikacji)' : ''}${bonus ? `, bonus powitalny ${bonus} pkt` : ''}`);
       const session = makeKlubToken({ t: p.t, k: p.k, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
-      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
+      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0, bonus });
     } catch (e) {
       console.error('[lojalnosc] aktywuj:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
@@ -2557,9 +2558,10 @@ module.exports = (db) => {
       );
       await q(`UPDATE Lojalnosc_Kody SET status = 'UZYTY' WHERE id = ?`, [trafiony.id]).catch(() => {});
       await zamknijWnioskiPoAktywacji(trafiony.tenant_id, String(trafiony.id_klienta));
-      zapiszLog(trafiony.tenant_id, 'KLUB AKTYWACJA KODEM', 'Klient (apka)', `Klient ${trafiony.id_klienta}${odziedziczony ? ' (PIN z aplikacji)' : ''}`);
+      const bonus = await przyznajBonusPowitalny(trafiony.tenant_id, String(trafiony.id_klienta), 'KOD@' + trafiony.id_klienta);
+      zapiszLog(trafiony.tenant_id, 'KLUB AKTYWACJA KODEM', 'Klient (apka)', `Klient ${trafiony.id_klienta}${odziedziczony ? ' (PIN z aplikacji)' : ''}${bonus ? `, bonus powitalny ${bonus} pkt` : ''}`);
       const session = makeKlubToken({ t: trafiony.tenant_id, k: String(trafiony.id_klienta), typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
-      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0 });
+      return res.json({ status: 'success', session, imie: String(klient.imie_nazwisko || '').split(' ')[0] || '', pin_dziedziczony: odziedziczony ? 1 : 0, bonus });
     } catch (e) {
       console.error('[lojalnosc] aktywuj_kod:', e.message);
       return res.json({ status: 'error', message: 'Błąd serwera. Spróbuj ponownie.' });
@@ -2594,6 +2596,24 @@ module.exports = (db) => {
   // zostawał na zawsze status='NOWY': klientka miała już aktywne konto, a Pulpit dalej
   // pokazywał "ktoś czeka na aktywację", zmuszając recepcję do ręcznego odklikania
   // "Przygotuj wiadomość" tylko po to, żeby zgłoszenie zniknęło z listy.
+  // Bonus powitalny (Ustawienia.bonus_powitalny_pkt) przy KAŻDYM pierwszym założeniu konta w salonie — link rejestracyjny,
+  // kod od recepcji, link/QR z panelu (ticket #22, 3.11.2026: do tej pory dostawały go tylko nowe numery z linku —
+  // 2 z 61 kont u Boczków, a ekran rejestracji obiecywał go wszystkim). Jeden wpis BONUS na klientkę — strażnik NOT EXISTS
+  // w samym INSERT, więc ponowna aktywacja / reset PIN-u nie dubluje. Kolejność zapytań (SELECT ustawień → INSERT) jest
+  // ta sama co w historycznej rejestracji — testy mockują ją sekwencyjnie. Zwraca liczbę przyznanych punktów (0 = brak).
+  async function przyznajBonusPowitalny(tenant, idKlienta, ref) {
+    const uRows = await q(`SELECT bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [tenant]).catch(() => []);
+    const bonus = parseInt(((Array.isArray(uRows) && uRows[0]) || {}).bonus_powitalny_pkt, 10) || 0;
+    if (bonus <= 0) return 0;
+    const r = await q(
+      `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
+       SELECT ?, ?, ?, 'Bonus powitalny 🎉', 'BONUS', ?, 'System' FROM DUAL
+        WHERE NOT EXISTS (SELECT 1 FROM Lojalnosc_Punkty WHERE tenant_id = ? AND id_klienta = ? AND zrodlo = 'BONUS')`,
+      [tenant, String(idKlienta), bonus, ref, tenant, String(idKlienta)]
+    ).catch(() => null);
+    return r && Number(r.affectedRows) > 0 ? bonus : 0;
+  }
+
   async function zamknijWnioskiPoAktywacji(tenant, idKlienta) {
     await q(
       `UPDATE Lojalnosc_Wnioski SET status = 'AKTYWOWANE', obsluzyl = 'System (aktywacja)', obsluzono_at = NOW()
@@ -3188,15 +3208,7 @@ module.exports = (db) => {
           zapiszLog(p.t, 'KLUB POLECENIE', 'Klient (apka)', `${imie} dołączyła z kodu ${kodPol} (polecająca ${owner})`);
         }
       }
-      const uRows = await q(`SELECT bonus_powitalny_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
-      const bonus = parseInt(((Array.isArray(uRows) && uRows[0]) || {}).bonus_powitalny_pkt, 10) || 0;
-      if (bonus > 0) {
-        await q(
-          `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
-           VALUES (?, ?, ?, 'Bonus powitalny 🎉', 'BONUS', ?, 'System')`,
-          [p.t, noweId, bonus, 'REJ@' + noweId]
-        ).catch(() => {});
-      }
+      const bonus = await przyznajBonusPowitalny(p.t, noweId, 'REJ@' + noweId);
       zapiszLog(p.t, 'KLUB REJESTRACJA ONLINE', 'Klient (apka)', `${imie} — nowa kartoteka ${noweId}${bonus ? `, bonus ${bonus} pkt` : ''}${odziedziczony ? ', PIN z aplikacji' : ''}`);
       const session = makeKlubToken({ t: p.t, k: noweId, typ: 'ses', exp: Date.now() + SESJA_TTL_MS });
       return res.json({ status: 'success', kod: 'NOWE', session, imie: imie.split(' ')[0], bonus, pin_dziedziczony: odziedziczony ? 1 : 0 });
