@@ -1,0 +1,20 @@
+{
+  "nazwa": "sprzedaz-podsumowanie-kafelki",
+  "modul": "Sprzedaż · Podsumowanie dnia",
+  "opis": "Kafelki metod płatności w Podsumowaniu Dnia na mniejszym ekranie (1366×768): mają stać w jednym rzędzie, nie zawijać się. Tylko odczyt.",
+  "sekcja": "podsumowanie",
+  "korzen": "#podsumowanie",
+  "czekajPoSekcji": 2500,
+  "kroki": [
+    { "viewport": [1366, 768] },
+    { "czekaj": 1500 },
+    { "js": "(function(){ const k=[...document.querySelectorAll('#podsumowanie .summary-card')]; const tops=[...new Set(k.map(x=>Math.round(x.getBoundingClientRect().top)))]; return 'kafelków: '+k.length+', rzędów: '+tops.length+', szer. kafelka: '+Math.round(k[0].getBoundingClientRect().width)+'px, kontener: '+Math.round(k[0].parentElement.getBoundingClientRect().width)+'px'; })()", "opis": "pomiar" },
+    { "sprawdz": "[...new Set([...document.querySelectorAll('#podsumowanie .summary-card')].map(x=>Math.round(x.getBoundingClientRect().top)))].length === 1", "opis": "sześć kafelków w jednym rzędzie" },
+    { "zrzut": "01-podsumowanie-1366" },
+    { "viewport": [1280, 720] },
+    { "czekaj": 800 },
+    { "js": "(function(){ const k=[...document.querySelectorAll('#podsumowanie .summary-card')]; const tops=[...new Set(k.map(x=>Math.round(x.getBoundingClientRect().top)))]; return '1280: rzędów '+tops.length+', kontener '+Math.round(k[0].parentElement.getBoundingClientRect().width)+'px'; })()", "opis": "pomiar 1280" },
+    { "sprawdz": "[...new Set([...document.querySelectorAll('#podsumowanie .summary-card')].map(x=>Math.round(x.getBoundingClientRect().top)))].length === 1", "opis": "jeden rząd także przy 1280" },
+    { "zrzut": "02-podsumowanie-1280" }
+  ]
+}

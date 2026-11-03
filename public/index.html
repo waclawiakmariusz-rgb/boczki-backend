@@ -951,6 +951,12 @@ body[data-print-section] .rap_card-collapsible .rap_card-body { display: block !
 .summary-card:hover { transform: translateY(-6px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12); }
 .summary-card .label { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; margin-bottom: 10px; font-weight: 800; z-index: 1;}
 .summary-card .value { font-size: 36px; font-weight: 900; z-index: 1; }
+/* Sprzedaż → Podsumowanie dnia (3.11.2026): kafelki o 20% mniejsze, żeby sześć metod płatności stało w jednym rzędzie
+   także na laptopie (1366/1280 px); kwota nie łamie się, a przy bardzo wąskim oknie siatka znów się zawija. */
+#podsumowanie-kafelki .summary-card { padding: 24px 16px; border-radius: 19px; }
+#podsumowanie-kafelki .summary-card .label { font-size: 10.5px; letter-spacing: 1.6px; margin-bottom: 8px; white-space: nowrap; }
+#podsumowanie-kafelki .summary-card .value { font-size: clamp(18px, 2.1vw, 29px); white-space: nowrap; }
+@media (max-width: 900px) { #podsumowanie-kafelki { grid-template-columns: repeat(auto-fit, minmax(144px, 1fr)) !important; } }
 
 .bg-green { background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%); color: #1a202c; box-shadow: 0 15px 30px rgba(132, 250, 176, 0.4); }
 .bg-blue { background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%); color: #1a202c; box-shadow: 0 15px 30px rgba(142, 197, 252, 0.4); }
@@ -7571,8 +7577,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
     </div>
 
-	<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:20px; margin-bottom:30px;">
-    
+	<!-- 3.11.2026: sześć kafelków zawsze w jednym rzędzie (o 20% mniejsze niż dawniej — zawijały się na laptopach 1366/1280);
+	     poniżej 900 px szerokości okna wracają do zawijania (reguła #podsumowanie-kafelki w <style>) -->
+	<div id="podsumowanie-kafelki" style="display:grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap:16px; margin-bottom:24px;">
+
     <div class="summary-card bg-green">
         <div class="label">💵 GOTÓWKA</div>
         <div class="value" id="sum-cash">0,00 zł</div>
