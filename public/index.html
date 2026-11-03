@@ -17039,14 +17039,10 @@ function przetwarzajHistorieKlienta(idKlienta, nazwaKlienta, frazaSzukania = "")
             const isPortfel = String(t.platnosc || '').toLowerCase().trim() === 'portfel';
             return !isProdukt && !isPortfel;
         });
-        // Łączna wartość — sumujemy WSZYSTKIE pozycje zabiegów (włącznie z Portfel),
-        // bo każdy wiersz w Sprzedaz to osobna kwota faktyczna (375 z zadatku + 220
-        // gotówką = 595 zł realnie wydane).
-        const zabiegiKwoty = transakcje.filter(t => {
-            const n = t.zabieg.toLowerCase();
-            return !(n.includes('kosmetyk') || (t.szczegoly && String(t.szczegoly).includes('szt')));
-        });
-        const lacznaWartosc = zabiegiKwoty.reduce((s, t) => s + parseFloat(t.kwota || 0), 0);
+        // Łączna wartość — sumujemy WSZYSTKIE pozycje klientki: zabiegi I kosmetyki (ticket #23, recepcja 3.11.2026:
+        // „sumują się tylko zakupy za zabiegi, a nie za kosmetyki”), włącznie z Portfel, bo każdy wiersz w Sprzedaz
+        // to osobna kwota faktyczna (375 z zadatku + 220 gotówką = 595 zł realnie wydane). Zwroty są ujemne — same się odejmują.
+        const lacznaWartosc = transakcje.reduce((s, t) => s + parseFloat(t.kwota || 0), 0);
         const statWizyty = document.getElementById('profil-stat-wizyty');
         const statWartosc = document.getElementById('profil-stat-wartosc');
         if (statWizyty) statWizyty.textContent = zabiegi.length;
@@ -18755,6 +18751,10 @@ function _renderSalesHistoryRows(rows) {
 
 function odswiezSprzedaz(wymus) {
     const t = document.getElementById('sales-history-body');
+    // 0. Wymuszone odświeżenie = coś się właśnie zmieniło w sprzedaży (nowa, edycja, ukrycie). Pamięć podręczna historii
+    //    klientów (historiaDane) musi wtedy przepaść, inaczej profil klientki pokazuje stare „Łącznie wydano” i „Liczba wizyt”
+    //    aż do ponownego logowania (zauważone przy tickecie #23, 3.11.2026).
+    if (wymus) historiaDane = [];
     // 1. Cache TTL 30s — drugie wejście do widoku w tym oknie pokazuje natychmiast
     //    (ważne, bo user przełącza Sprzedaż↔Dzisiejsza często; bez cache każde wejście
     //    czekało na nowy fetch i blokowało UI).

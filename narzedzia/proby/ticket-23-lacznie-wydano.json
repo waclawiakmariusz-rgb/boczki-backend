@@ -1,0 +1,22 @@
+{
+  "nazwa": "ticket-23-lacznie-wydano",
+  "modul": "Klienci · profil",
+  "opis": "Ticket #23 (Ania, 3.11.2026): „Łącznie wydano” w profilu klienta sumowało tylko zabiegi, bez kosmetyków. Natalia Krawczyk (demo-test, id 1012): zabiegi 3230 zł + kosmetyki 328 zł = 3558 zł. Dodatkowo: wymuszone odświeżenie sprzedaży (po zarejestrowaniu/edycji/ukryciu) ma kasować pamięć podręczną historii klientów, żeby profil nie pokazywał starej sumy. Tylko odczyt.",
+  "sekcja": "klient-profil",
+  "czekajPoSekcji": 2000,
+  "korzen": "#widok-szczegolow-klienta",
+  "kroki": [
+    { "viewport": [1440, 900] },
+    { "js": "zaladujKlientowDoKartoteki(true); 'ok'", "opis": "kartoteka z serwera" },
+    { "czekaj": 2500 },
+    { "js": "otworzProfil('1012'); 'ok'", "opis": "profil Natalii Krawczyk" },
+    { "czekaj": 4000 },
+    { "js": "'Łącznie wydano = ' + document.getElementById('profil-stat-wartosc').textContent + ' | wizyty = ' + document.getElementById('profil-stat-wizyty').textContent", "opis": "odczyt kafelków" },
+    { "sprawdz": "document.getElementById('profil-stat-wartosc').textContent.replace(/\\s/g,'') === '3558,00zł'", "opis": "suma obejmuje kosmetyki (3230 + 328)" },
+    { "sprawdz": "document.getElementById('profil-stat-wizyty').textContent === '18'", "opis": "liczba wizyt bez zmian (kosmetyki to nie wizyty)" },
+    { "zrzut": "01-profil-lacznie-wydano" },
+    { "js": "'historia w pamięci: ' + historiaDane.length + ' wierszy'", "opis": "pamięć podręczna przed odświeżeniem" },
+    { "js": "odswiezSprzedaz(true); 'historia po wymuszonym odświeżeniu: ' + historiaDane.length", "opis": "po sprzedaży pamięć ma przepaść" },
+    { "sprawdz": "historiaDane.length === 0", "opis": "wymuszone odświeżenie sprzedaży kasuje pamięć historii klientów" }
+  ]
+}
