@@ -235,8 +235,11 @@ const dbConfig = {
     queueLimit: 0,
     dateStrings: true,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 30000
+    keepAliveInitialDelay: 30000   // TCP keepalive (SO_KEEPALIVE) — NIE zapytanie podtrzymujące sesję bazy; wait_timeout serwera go nie widzi
 };
+// Opcje puli do pomiaru przed/po (5.11.2026) — bez zmiennych środowiska nic się nie zmienia (db-pula-opcje.js)
+if (parseInt(process.env.DB_PULA_MAX_IDLE, 10) > 0) dbConfig.maxIdle = parseInt(process.env.DB_PULA_MAX_IDLE, 10);
+if (parseInt(process.env.DB_PULA_IDLE_MS, 10) > 0) dbConfig.idleTimeout = parseInt(process.env.DB_PULA_IDLE_MS, 10);
 if (process.env.DB_SOCKET) {
     dbConfig.socketPath = process.env.DB_SOCKET;
 } else {
@@ -264,6 +267,7 @@ require('./db-strefa').podepnij(db);
 // DB_PULA_LOG_MS (domyślnie 10 min). Nie zmienia zachowania puli, nie dodaje zapytań, nie zapisuje SQL. Powód: limit 500 połączeń/h użytkownika
 // bazy i wait_timeout=20 s na hostingu — z zewnątrz nie da się policzyć otwarć tej instancji (szczegóły w db-licznik-polaczen.js).
 require('./db-licznik-polaczen').podepnij(db, { coMs: Math.max(5000, parseInt(process.env.DB_PULA_LOG_MS, 10) || 600000) });
+require('./db-pula-opcje').podepnij(db, { waitTimeout: parseInt(process.env.DB_SESJA_WAIT_TIMEOUT, 10) || 0, pingMs: parseInt(process.env.DB_PULA_PING_MS, 10) || 0, maxPing: parseInt(process.env.DB_PULA_MAX_PING, 10) || 3 });
 
 db.getConnection((err, connection) => {
     if (err) {
