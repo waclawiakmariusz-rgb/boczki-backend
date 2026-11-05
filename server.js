@@ -260,6 +260,10 @@ const db = mysql.createPool(dbConfig);
 // o 2 h wcześniejszą niż realna (zgłoszone 2026-08-11). Ustawiamy strefę na każdym
 // połączeniu z puli — szczegóły i powód offsetu zamiast 'Europe/Warsaw': db-strefa.js
 require('./db-strefa').podepnij(db);
+// Minimalna diagnostyka puli (5.11.2026): liczy fizyczne otwarcia połączeń, pobrania/zwroty, kolejkę i kody błędów bazy; linia w logu co
+// DB_PULA_LOG_MS (domyślnie 10 min). Nie zmienia zachowania puli, nie dodaje zapytań, nie zapisuje SQL. Powód: limit 500 połączeń/h użytkownika
+// bazy i wait_timeout=20 s na hostingu — z zewnątrz nie da się policzyć otwarć tej instancji (szczegóły w db-licznik-polaczen.js).
+require('./db-licznik-polaczen').podepnij(db, { coMs: Math.max(5000, parseInt(process.env.DB_PULA_LOG_MS, 10) || 600000) });
 
 db.getConnection((err, connection) => {
     if (err) {
