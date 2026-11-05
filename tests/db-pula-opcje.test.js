@@ -41,13 +41,25 @@ test('sprawdzKonfiguracje: czasy niespójne i brak idleTimeout = ostrzeżenia; b
 test('opisKonfiguracji: bez zmiennych = WYŁĄCZONA; wartości wdrożeniowe = AKTYWNA; częściowe/błędne = AKTYWNA tylko to, co działa', () => {
   const info = { pid: 4321, teraz: Date.UTC(2026, 10, 5, 20, 0, 0) };
   const wyl = opisKonfiguracji({ connectionLimit: 10 }, info);
-  expect(wyl).toBe('[db-pula] START pid=4321 uruchomienie=2026-11-05T20:00:00.000Z · poprawka puli: WYŁĄCZONA (zachowanie jak produkcja 8f667f4) · sesja wait_timeout: NIEAKTYWNA (serwer: globalne wait_timeout) · connectionLimit 10 · maxIdle 10 · idleTimeout domyślne mysql2 (NIEAKTYWNY: maxIdle == connectionLimit)');
+  expect(wyl).toBe('[db-pula] START pid=4321 uruchomienie=2026-11-05T20:00:00.000Z · poprawka puli: WYŁĄCZONA (ustawienia puli jak produkcja 8f667f4) · sesja wait_timeout: NIEAKTYWNA (serwer: globalne wait_timeout) · connectionLimit 10 · maxIdle 10 · idleTimeout 60000 ms (domyślne mysql2) (NIEAKTYWNY: maxIdle == connectionLimit)');
   const akt = opisKonfiguracji({ connectionLimit: 10, maxIdle: 9, idleTimeout: 240000, waitTimeout: 300 }, info);
   expect(akt).toBe('[db-pula] START pid=4321 uruchomienie=2026-11-05T20:00:00.000Z · poprawka puli: AKTYWNA · sesja wait_timeout: 300 s (SET SESSION na każdym nowym połączeniu) · connectionLimit 10 · maxIdle 9 · idleTimeout 240000 ms (AKTYWNY: klient zamyka bezczynne)');
   // idleTimeout ustawiony bez maxIdle: sesja aktywna, sprzątacz nie
-  expect(opisKonfiguracji({ connectionLimit: 10, idleTimeout: 240000, waitTimeout: 300 }, info)).toMatch(/AKTYWNA · sesja wait_timeout: 300 s .* idleTimeout 240000 ms \(NIEAKTYWNY: maxIdle == connectionLimit\)/);
+  expect(opisKonfiguracji({ connectionLimit: 10, idleTimeout: 240000, waitTimeout: 300 }, info)).toMatch(/AKTYWNA CZĘŚCIOWO .* sesja wait_timeout: 300 s .* idleTimeout 240000 ms \(NIEAKTYWNY: maxIdle == connectionLimit\)/);
   // wait_timeout poza zakresem, nic więcej: WYŁĄCZONA
-  expect(opisKonfiguracji({ connectionLimit: 10, waitTimeout: 5 }, info)).toMatch(/poprawka puli: WYŁĄCZONA .* sesja wait_timeout: 5 poza zakresem → NIEAKTYWNA/);
+  expect(opisKonfiguracji({ connectionLimit: 10, waitTimeout: 5 }, info)).toMatch(/poprawka puli: WYŁĄCZONA \(ustawienia puli jak produkcja 8f667f4\) .* sesja wait_timeout: 5 poza zakresem → NIEAKTYWNA/);
   // bez info: prawdziwy pid i aktualny czas
   expect(opisKonfiguracji({})).toMatch(new RegExp(`^\\[db-pula\\] START pid=${process.pid} uruchomienie=\\d{4}-`));
+});
+
+test('opisKonfiguracji: samo DB_PULA_MAX_IDLE=9 (pozostawiona zmienna) NIE może dawać „WYŁĄCZONA” — pula jest zmieniona, sprzątacz działa z domyślnym idleTimeout 60 s', () => {
+  const info = { pid: 1, teraz: Date.UTC(2026, 10, 5, 20, 0, 0) };
+  const linia = opisKonfiguracji({ connectionLimit: 10, maxIdle: 9 }, info);
+  expect(linia).not.toMatch(/WYŁĄCZONA/);
+  expect(linia).toBe('[db-pula] START pid=1 uruchomienie=2026-11-05T20:00:00.000Z · poprawka puli: AKTYWNA CZĘŚCIOWO (nie wszystkie ustawienia; sprawdź UWAGI) · sesja wait_timeout: NIEAKTYWNA (serwer: globalne wait_timeout) · connectionLimit 10 · maxIdle 9 · idleTimeout 60000 ms (domyślne mysql2) (AKTYWNY: klient zamyka bezczynne)');
+  expect(sprawdzKonfiguracje({ connectionLimit: 10, maxIdle: 9 })).toEqual([expect.stringContaining('DB_PULA_MAX_IDLE=9 bez DB_SESJA_WAIT_TIMEOUT')]);
+  // samo idleTimeout inne niż domyślne (bez maxIdle): też nie „WYŁĄCZONA”, choć sprzątacz nieaktywny
+  expect(opisKonfiguracji({ connectionLimit: 10, idleTimeout: 240000 }, info)).toMatch(/AKTYWNA CZĘŚCIOWO .* idleTimeout 240000 ms \(NIEAKTYWNY: maxIdle == connectionLimit\)/);
+  // „WYŁĄCZONA” wyłącznie dla kompletu wartości produkcyjnych, także gdy podane jawnie
+  expect(opisKonfiguracji({ connectionLimit: 10, maxIdle: 10, idleTimeout: 60000 }, info)).toMatch(/WYŁĄCZONA \(ustawienia puli jak produkcja 8f667f4\)/);
 });
