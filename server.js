@@ -270,7 +270,9 @@ require('./db-licznik-polaczen').podepnij(db, { coMs: Math.max(5000, parseInt(pr
 const pulaOpcje = require('./db-pula-opcje');
 const sesjaWaitTimeout = parseInt(process.env.DB_SESJA_WAIT_TIMEOUT, 10) || 0;
 pulaOpcje.podepnij(db, { waitTimeout: sesjaWaitTimeout });
-for (const u of pulaOpcje.sprawdzKonfiguracje({ connectionLimit: dbConfig.connectionLimit, maxIdle: dbConfig.maxIdle, idleTimeout: dbConfig.idleTimeout, waitTimeout: sesjaWaitTimeout })) console.error('[db-pula] UWAGA konfiguracja:', u);
+const konfiguracjaPuli = { connectionLimit: dbConfig.connectionLimit, maxIdle: dbConfig.maxIdle, idleTimeout: dbConfig.idleTimeout, waitTimeout: sesjaWaitTimeout };
+console.log(pulaOpcje.opisKonfiguracji(konfiguracjaPuli)); // wpis startowy: AKTYWNA / WYŁĄCZONA + pid + czas — podstawa weryfikacji wyłączenia
+for (const u of pulaOpcje.sprawdzKonfiguracje(konfiguracjaPuli)) console.error('[db-pula] UWAGA konfiguracja:', u);
 
 db.getConnection((err, connection) => {
     if (err) {
