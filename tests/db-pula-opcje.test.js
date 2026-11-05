@@ -31,31 +31,27 @@ test('wariant A: SET SESSION wait_timeout na każdym nowym połączeniu; zakres 
   const p2 = pulaAtrapa(0); podepnij(p2, { waitTimeout: 5, log: cichy }); expect(p2.listenerCount('connection')).toBe(0); // poza zakresem = wyłączone
 });
 
-test('wariant B: ping tylko wolnych, najwyżej maxPing naraz, bez tworzenia nowych gdy brak wolnych; stop() zatrzymuje', async () => {
-  jest.useFakeTimers();
-  try {
-    const p = pulaAtrapa(5); const w = podepnij(p, { pingMs: 3000, maxPing: 3, log: cichy });
-    await jest.advanceTimersByTimeAsync(3000);
-    expect(p.getConnection).toHaveBeenCalledTimes(3); expect(p.zapytania).toEqual(['SELECT 1', 'SELECT 1', 'SELECT 1']); expect(w.pingi).toBe(3);
-    p._freeConnections.length = 0;
-    await jest.advanceTimersByTimeAsync(3000);
-    expect(p.getConnection).toHaveBeenCalledTimes(3); // brak wolnych = nic (nie tworzy nowych połączeń)
-    w.stop();
-    p._freeConnections.length = 5;
-    await jest.advanceTimersByTimeAsync(9000);
-    expect(p.getConnection).toHaveBeenCalledTimes(3);
-  } finally { jest.useRealTimers(); }
+test('wariant B: ping tylko wolnych, najwyżej maxPing naraz, bez tworzenia nowych gdy brak wolnych; stop() zatrzymuje (realne timery, krótkie odstępy)', async () => {
+  const czekaj = (ms) => new Promise(r => setTimeout(r, ms));
+  const p = pulaAtrapa(5); const w = podepnij(p, { pingMs: 50, _minPingMs: 10, maxPing: 3, log: cichy });
+  await czekaj(75);
+  expect(p.getConnection).toHaveBeenCalledTimes(3); expect(p.zapytania).toEqual(['SELECT 1', 'SELECT 1', 'SELECT 1']); expect(w.pingi).toBe(3);
+  p._freeConnections.length = 0;
+  await czekaj(60);
+  expect(p.getConnection).toHaveBeenCalledTimes(3); // brak wolnych = nic (nie tworzy nowych połączeń)
+  w.stop();
+  p._freeConnections.length = 5;
+  await czekaj(120);
+  expect(p.getConnection).toHaveBeenCalledTimes(3);
 });
 
 test('wariant B: po błędzie pingu 3 ticki przerwy', async () => {
-  jest.useFakeTimers();
-  try {
-    const p = pulaAtrapa(2);
-    p.getConnection = jest.fn((cb) => setImmediate(() => cb(Object.assign(new Error('brak'), { code: 'ER_USER_LIMIT_REACHED' }))));
-    const w = podepnij(p, { pingMs: 3000, maxPing: 3, log: cichy });
-    await jest.advanceTimersByTimeAsync(3000); expect(p.getConnection).toHaveBeenCalledTimes(2); expect(w.bledyPingow).toBe(2);
-    await jest.advanceTimersByTimeAsync(9000); expect(p.getConnection).toHaveBeenCalledTimes(2); // 3 ticki przerwy
-    await jest.advanceTimersByTimeAsync(3000); expect(p.getConnection).toHaveBeenCalledTimes(4);
-    w.stop();
-  } finally { jest.useRealTimers(); }
+  const czekaj = (ms) => new Promise(r => setTimeout(r, ms));
+  const p = pulaAtrapa(2);
+  p.getConnection = jest.fn((cb) => setImmediate(() => cb(Object.assign(new Error('brak'), { code: 'ER_USER_LIMIT_REACHED' }))));
+  const w = podepnij(p, { pingMs: 50, _minPingMs: 10, maxPing: 3, log: cichy });
+  await czekaj(75); expect(p.getConnection).toHaveBeenCalledTimes(2); expect(w.bledyPingow).toBe(2);
+  await czekaj(150); expect(p.getConnection).toHaveBeenCalledTimes(2); // 3 ticki przerwy (150 ms)
+  await czekaj(60); expect(p.getConnection).toHaveBeenCalledTimes(4);
+  w.stop();
 });

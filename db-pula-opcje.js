@@ -16,6 +16,7 @@ function podepnij(pula, opcje = {}) {
   const waitTimeout = Number(opcje.waitTimeout) || 0;
   const pingMs = Number(opcje.pingMs) || 0;
   const maxPing = Number(opcje.maxPing) || 3;
+  const minPingMs = Number(opcje._minPingMs) || 3000; // _minPingMs tylko dla testów (realne timery, krótkie odstępy)
   const wynik = { sesje: 0, bledySesji: 0, pingi: 0, bledyPingow: 0, stop: () => {} };
 
   if (waitTimeout >= 20 && waitTimeout <= 3600) {
@@ -26,7 +27,7 @@ function podepnij(pula, opcje = {}) {
     });
   }
 
-  if (pingMs >= 3000) {
+  if (pingMs >= minPingMs) {
     let wToku = false, przerwa = 0;
     const tick = () => {
       if (wToku) return;
