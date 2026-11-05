@@ -48,6 +48,7 @@ function podepnij(pula, opcje = {}) {
     };
     const t = setInterval(tick, pingMs); if (t.unref) t.unref();
     wynik.stop = () => clearInterval(t);
+    wynik._tick = tick; // tylko do testów (deterministycznie, bez zegara)
   }
   return wynik;
 }
