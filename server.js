@@ -235,8 +235,11 @@ const dbConfig = {
     queueLimit: 0,
     dateStrings: true,
     enableKeepAlive: true,
-    keepAliveInitialDelay: 30000
+    keepAliveInitialDelay: 30000   // TCP keepalive (SO_KEEPALIVE) — NIE zapytanie podtrzymujące sesję bazy; wait_timeout serwera go nie widzi
 };
+// Najmniejsza zmiana puli (5.11.2026) — bez zmiennych środowiska nic się nie zmienia; opis i pułapka maxIdle w db-pula-opcje.js
+if (parseInt(process.env.DB_PULA_MAX_IDLE, 10) > 0) dbConfig.maxIdle = parseInt(process.env.DB_PULA_MAX_IDLE, 10);
+if (parseInt(process.env.DB_PULA_IDLE_MS, 10) > 0) dbConfig.idleTimeout = parseInt(process.env.DB_PULA_IDLE_MS, 10);
 if (process.env.DB_SOCKET) {
     dbConfig.socketPath = process.env.DB_SOCKET;
 } else {
@@ -260,6 +263,16 @@ const db = mysql.createPool(dbConfig);
 // o 2 h wcześniejszą niż realna (zgłoszone 2026-08-11). Ustawiamy strefę na każdym
 // połączeniu z puli — szczegóły i powód offsetu zamiast 'Europe/Warsaw': db-strefa.js
 require('./db-strefa').podepnij(db);
+// Minimalna diagnostyka puli (5.11.2026): liczy fizyczne otwarcia połączeń, pobrania/zwroty, kolejkę i kody błędów bazy; linia w logu co
+// DB_PULA_LOG_MS (domyślnie 10 min). Nie zmienia zachowania puli, nie dodaje zapytań, nie zapisuje SQL. Powód: limit 500 połączeń/h użytkownika
+// bazy i wait_timeout=20 s na hostingu — z zewnątrz nie da się policzyć otwarć tej instancji (szczegóły w db-licznik-polaczen.js).
+require('./db-licznik-polaczen').podepnij(db, { coMs: Math.max(5000, parseInt(process.env.DB_PULA_LOG_MS, 10) || 600000) });
+const pulaOpcje = require('./db-pula-opcje');
+const sesjaWaitTimeout = parseInt(process.env.DB_SESJA_WAIT_TIMEOUT, 10) || 0;
+pulaOpcje.podepnij(db, { waitTimeout: sesjaWaitTimeout });
+const konfiguracjaPuli = { connectionLimit: dbConfig.connectionLimit, maxIdle: dbConfig.maxIdle, idleTimeout: dbConfig.idleTimeout, waitTimeout: sesjaWaitTimeout };
+console.log(pulaOpcje.opisKonfiguracji(konfiguracjaPuli)); // wpis startowy: AKTYWNA / WYŁĄCZONA + pid + czas — podstawa weryfikacji wyłączenia
+for (const u of pulaOpcje.sprawdzKonfiguracje(konfiguracjaPuli)) console.error('[db-pula] UWAGA konfiguracja:', u);
 
 db.getConnection((err, connection) => {
     if (err) {
