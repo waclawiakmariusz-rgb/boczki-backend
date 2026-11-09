@@ -330,6 +330,7 @@ const leadyRoutes      = require('./routes/leady')(db);
 const featuresRoutes   = require('./routes/features')(db);
 const dokumentyDodatkoweRoutes = require('./routes/dokumenty_dodatkowe')(db);
 const ustawieniaZadatkiRoutes = require('./routes/ustawienia_zadatki')(db);
+const raportSalonuRoutes = require('./routes/raport-salonu')(db); // Raport Salonu w panelu admina — wyłącznie SELECT (9.11.2026)
 const gusRoutes        = require('./routes/gus')(db);
 const booksyRoutes     = require('./routes/booksy')(db);
 const fotoRoutes       = require('./routes/foto')(db);
@@ -430,6 +431,7 @@ app.use('/api', raportRoutes);
 app.use('/api', usersRoutes);
 app.use('/api', logiRoutes);
 app.use('/api', adminRoutes);
+app.use('/api', raportSalonuRoutes);
 app.use('/api', stripeRoutes);
 app.use('/api', dokumentyRoutes);
 app.use('/api', magdaRoutes);

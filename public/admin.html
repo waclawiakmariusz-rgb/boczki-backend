@@ -453,6 +453,7 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
     <div class="nav-group">
       <div class="nav-group-title">Wsparcie</div>
       <button class="nav-item tab-btn" data-tab="tab-tickety" onclick="showTab('tab-tickety')"><span class="ico">🎫</span><span class="lbl">Tickety</span><span id="badge-tickety" class="nav-badge" style="display:none;">0</span></button>
+      <button class="nav-item tab-btn" data-tab="tab-raport-salonu" onclick="showTab('tab-raport-salonu'); rs_init();"><span class="ico">📋</span><span class="lbl">Raport salonu</span></button>
       <button class="nav-item tab-btn" data-tab="tab-kb" onclick="showTab('tab-kb')"><span class="ico">💬</span><span class="lbl">Baza wiedzy Esti</span></button>
       <button class="nav-item tab-btn" data-tab="tab-pomoc" onclick="showTab('tab-pomoc'); pomoc_init();"><span class="ico">📚</span><span class="lbl">Pomoc i dokumenty</span></button>
       <button class="nav-item tab-btn" data-tab="tab-maile" onclick="showTab('tab-maile'); mw_init();"><span class="ico">✉️</span><span class="lbl">Maile powitalne</span></button>
@@ -516,6 +517,21 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
         <button class="btn-export" onclick="eksportSalonyCSV()">⬇ Eksport CSV</button>
       </div>
       <div id="salony-content"><div class="loading">Ładowanie salonów...</div></div>
+    </div>
+
+    <!-- Tab: Raport salonu (9.11.2026) — wyłącznie odczyt, generowany na kliknięcie -->
+    <div id="tab-raport-salonu" class="tab-panel">
+      <div class="gen-card" style="margin-bottom:18px;">
+        <h3>📋 Raport salonu</h3>
+        <div class="card-sub">Wybierz salon i kliknij „Generuj”. Raport czyta bazę (około 130 zapytań zliczających), niczego nie zmienia. Nie generuj dla wszystkich salonów po kolei bez potrzeby.</div>
+        <div class="toolbar" style="margin:12px 0 0; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+          <select id="rs-salon" style="min-width:320px;"><option value="">Ładowanie listy salonów…</option></select>
+          <button class="btn-primary" id="rs-generuj" onclick="rs_generuj()">Generuj raport</button>
+          <button class="btn-export" id="rs-kopiuj" onclick="rs_kopiuj()" style="display:none;">⎘ Kopiuj jako tekst</button>
+          <span id="rs-meta" class="hint"></span>
+        </div>
+      </div>
+      <div id="rs-wynik"></div>
     </div>
 
     <!-- Tab: Demo Salon -->
@@ -1573,6 +1589,7 @@ const TAB_INFO = {
   'tab-salony':        ['Salony', 'Wszystkie konta klientów: status, licencje, dane kontaktowe, eksport CSV.'],
   'tab-zgloszenia':    ['Zamówienia', 'Zamówienia dostępu złożone przez stronę zamow.html — wysyłka linków rejestracyjnych i ich statusy.'],
   'tab-tickety':       ['Tickety', 'Zgłoszenia salonów wysłane z panelu Estelio (błędy, prośby, pytania) oraz rozmowa z salonem.'],
+  'tab-raport-salonu': ['Raport salonu', 'Co salon robi w systemie: dziennik zdarzeń, lista kontrolna wdrożenia, podejrzane dane, ślady we wszystkich tabelach. Tylko odczyt, generowany na kliknięcie.'],
   'tab-linki':         ['Linki rejestracji', 'Ręczne generowanie jednorazowych linków do założenia salonu.'],
   'tab-vouchery':      ['Vouchery', 'Kody rabatowe i okresy próbne dla klientów kupujących dostęp.'],
   'tab-kb':            ['Baza wiedzy Esti', 'Wpisy globalne — widoczne w chacie pomocy we wszystkich salonach jako domyślne odpowiedzi. Własne wpisy salonu mają wyższy priorytet.'],
@@ -3603,5 +3620,142 @@ async function mw_test() {
   mw_logZaladuj();   // próbka też jest wpisem w dzienniku
 }
 </script>
+
+<!-- ───────────── RAPORT SALONU (9.11.2026) — tylko odczyt: GET /api/admin/raport-salonu ───────────── -->
+<script>
+let _rsOstatni = null;
+function rs_esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function rs_data(v, zGodzina) {
+  if (!v) return '—';
+  const d = new Date(v);
+  if (isNaN(d)) return rs_esc(String(v).slice(0, zGodzina ? 16 : 10));
+  const p = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` + (zGodzina ? ` ${p(d.getHours())}:${p(d.getMinutes())}` : '');
+}
+async function rs_init() {
+  const sel = document.getElementById('rs-salon');
+  if (sel.dataset.gotowe === '1') return;
+  try {
+    const salony = Array.isArray(_salonyAll) && _salonyAll.length ? _salonyAll
+      : await fetch(`${API}/admin/salony`, { headers: { 'X-Admin-Token': adminToken } }).then(r => r.json());
+    if (!Array.isArray(salony)) throw new Error(salony.message || 'Brak listy salonów');
+    const posort = [...salony].sort((a, b) => String(a.nazwa_salonu || a.login).localeCompare(String(b.nazwa_salonu || b.login), 'pl'));
+    sel.innerHTML = '<option value="">— wybierz salon —</option>' + posort.map(s =>
+      `<option value="${rs_esc(s.login)}">${rs_esc(s.nazwa_salonu || s.login)} · ${rs_esc(s.miasto || '')} · ${rs_esc(s.login)}${s.status && s.status !== 'aktywny' ? ' · ' + rs_esc(s.status) : ''}</option>`).join('');
+    sel.dataset.gotowe = '1';
+  } catch (e) {
+    sel.innerHTML = `<option value="">Nie udało się pobrać listy: ${rs_esc(e.message)}</option>`;
+  }
+}
+async function rs_generuj() {
+  const login = document.getElementById('rs-salon').value;
+  const out = document.getElementById('rs-wynik');
+  const meta = document.getElementById('rs-meta');
+  if (!login) { out.innerHTML = '<div class="alert alert-error">Najpierw wybierz salon z listy.</div>'; return; }
+  const btn = document.getElementById('rs-generuj'); btn.disabled = true;
+  out.innerHTML = '<div class="loading">Czytam bazę… to trwa kilka sekund.</div>'; meta.textContent = '';
+  document.getElementById('rs-kopiuj').style.display = 'none';
+  try {
+    const r = await fetch(`${API}/admin/raport-salonu?login=${encodeURIComponent(login)}`, { headers: { 'X-Admin-Token': adminToken } });
+    const d = await r.json();
+    if (d.status !== 'success') throw new Error(d.message || `HTTP ${r.status}`);
+    _rsOstatni = d;
+    meta.textContent = `wygenerowano ${rs_data(d.wygenerowano, true)} · ${d.zapytan} zapytań · ${d.czas_ms} ms`;
+    out.innerHTML = rs_render(d);
+    document.getElementById('rs-kopiuj').style.display = '';
+  } catch (e) {
+    out.innerHTML = `<div class="alert alert-error">Nie udało się wygenerować raportu: ${rs_esc(e.message)}</div>`;
+  } finally { btn.disabled = false; }
+}
+function rs_pill(ok, txt) { return `<span class="pill" style="background:${ok ? '#edf5ed' : '#f9ecea'}; color:${ok ? 'var(--ok-fg)' : 'var(--bad-fg)'}; border:1px solid ${ok ? 'var(--ok-bd)' : '#e0b8b8'};">${ok ? '✓' : '✗'} ${rs_esc(txt)}</span>`; }
+function rs_tabela(naglowki, wiersze) {
+  if (!wiersze.length) return '<div class="hint">brak danych</div>';
+  return `<div class="table-wrap"><table class="rs-tab"><thead><tr>${naglowki.map(h => `<th>${rs_esc(h)}</th>`).join('')}</tr></thead><tbody>${wiersze.map(w => `<tr>${w.map(k => `<td>${k}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+}
+function rs_render(d) {
+  const L = d.licencja || {};
+  const lk = d.lista_kontrolna || [];
+  const ok = lk.filter(p => p.ok).length;
+  const dniMapa = Object.fromEntries((d.logi.dni || []).map(x => [x.dzien, x.n]));
+  const dni = []; for (let i = 29; i >= 0; i--) { const t = new Date(); t.setDate(t.getDate() - i); const k = rs_data(t); dni.push([k, dniMapa[k] || 0]); }
+  const maxDnia = Math.max(1, ...dni.map(x => x[1]));
+  const podejrzane = d.podejrzane || [];
+  let h = '';
+  h += `<div class="pulpit-grid">
+    <div class="stat-card gen-card"><div class="stat-label">Licencja</div><div class="stat-value" style="font-size:20px;">${rs_esc(L.status || '—')}</div><div class="stat-sub">ważna do ${rs_data(L.data_waznosci)} · założona ${rs_data(L.data_utworzenia)}${L.stripe_subscription_id ? ' · Stripe' : ' · bez Stripe'}</div></div>
+    <div class="stat-card gen-card"><div class="stat-label">Dziennik zdarzeń</div><div class="stat-value">${d.logi.razem}</div><div class="stat-sub">${d.logi.od ? `${rs_data(d.logi.od)} → ${rs_data(d.logi.do, true)}` : 'brak wpisów'}</div></div>
+    <div class="stat-card gen-card"><div class="stat-label">Lista kontrolna</div><div class="stat-value">${ok}/${lk.length}</div><div class="stat-sub">etapów wdrożenia zaliczonych</div></div>
+    <div class="stat-card gen-card ${podejrzane.some(p => p.waga === 'blad') ? 'accent-warn' : ''}"><div class="stat-label">Podejrzane dane</div><div class="stat-value">${podejrzane.reduce((s, p) => s + p.ile, 0)}</div><div class="stat-sub">${podejrzane.length ? podejrzane.length + ' rodzajów' : 'nic nie wykryto'}</div></div>
+  </div>`;
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Salon</div><div class="rs-kv">
+    ${[['Nazwa', L.nazwa_salonu], ['Login', L.login], ['Identyfikator danych', d.tenant_id], ['Miasto', L.miasto], ['Adres', L.ulica], ['Firma', L.nazwa_firmy], ['E-mail', L.email], ['Telefon', L.telefon], ['Rola', L.rola], ['Okres karencji do', L.data_grace_until ? rs_data(L.data_grace_until) : '—']]
+      .map(([k, v]) => `<div><span class="rs-k">${rs_esc(k)}</span><span>${rs_esc(v || '—')}</span></div>`).join('')}
+  </div></div>`;
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Lista kontrolna wdrożenia</div><div class="rs-lk">${lk.map(p => `<div class="rs-lk-row">${rs_pill(p.ok, p.nazwa)}<span class="hint">${rs_esc(p.szczegol)}</span></div>`).join('')}</div></div>`;
+  if (podejrzane.length) {
+    h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Podejrzane dane</div>${podejrzane.map(p => `
+      <div class="alert ${p.waga === 'blad' ? 'alert-error' : ''}" style="margin-bottom:10px;${p.waga !== 'blad' ? 'background:#fffaf0;border-color:var(--warn-bd);' : ''}"><b>${rs_esc(p.opis)}</b> — ${p.ile}
+        <ul style="margin:6px 0 0 18px; font-size:13px;">${p.przyklady.map(x => `<li>${rs_esc(x)}</li>`).join('')}${p.ile > p.przyklady.length ? `<li class="hint">… i ${p.ile - p.przyklady.length} więcej</li>` : ''}</ul></div>`).join('')}</div>`;
+  }
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Aktywność dzienna (ostatnie 30 dni, wpisy w dzienniku)</div>
+    <div class="rs-dni">${dni.map(([k, n]) => `<div class="rs-dzien" title="${k}: ${n}"><div class="rs-slupek" style="height:${Math.round(n / maxDnia * 56) + (n ? 2 : 0)}px;"></div><div class="rs-dzien-n">${n || ''}</div><div class="rs-dzien-d">${k.slice(8)}</div></div>`).join('')}</div>
+    <div class="hint" style="margin-top:8px;">W ostatnich ${d.logi.ostatnie.length} wpisach: ${d.logi.bledy_w_ostatnich} z prefiksem BŁĄD, z czego ${d.logi.sesja_wygasla_w_ostatnich} to „Sesja wygasła” (zwykłe wygaszenie sesji, nie awaria).</div></div>`;
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Co robi najczęściej (wszystkie wpisy)</div><div class="chips">${(d.logi.akcje || []).map(a => `<span class="chip">${rs_esc(a.akcja)} <b>${a.n}</b></span>`).join('') || '<span class="hint">brak</span>'}</div></div>`;
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Dodatki, logowania, maile wprowadzające</div>
+    <div class="rs-trzy">
+      <div><b>Dodatki</b>${rs_tabela(['dodatek', 'stan', 'od'], (d.dodatki || []).map(x => [rs_esc(x.feature_key), x.enabled ? 'włączony' : 'wyłączony', rs_data(x.activated_at)]))}</div>
+      <div><b>Ostatnie sesje</b>${rs_tabela(['login', 'utworzona', 'ważna do'], (d.sesje || []).map(s => [rs_esc(s.login), rs_data(s.created_at, true), rs_data(s.expires, true)]))}</div>
+      <div><b>Maile wprowadzające</b>${rs_tabela(['etap', 'wysłano'], (d.maile || []).map(m => [rs_esc(m.etap), rs_data(m.data_wyslania, true)]))}</div>
+    </div></div>`;
+  h += `<div class="gen-card" style="margin-bottom:18px;"><div class="section-title">Ślady w bazie (${(d.tabele.z_danymi || []).length} z ${d.tabele.wszystkich} tabel z danymi tego salonu)</div>
+    ${rs_tabela(['tabela', 'wierszy', 'najnowsza data', 'wg kolumny'], (d.tabele.z_danymi || []).map(t => [`<code>${rs_esc(t.tabela)}</code>`, t.n, rs_data(t.ostatnia, true), `<span class="hint">${rs_esc(t.wg || '')}</span>`]))}
+    ${(d.tabele.bledy || []).length ? `<div class="hint" style="margin-top:8px;">Nie udało się odczytać: ${d.tabele.bledy.map(b => rs_esc(b.tabela + ' (' + b.blad + ')')).join(', ')}</div>` : ''}</div>`;
+  h += `<div class="gen-card"><div class="section-title">Ostatnie wpisy dziennika (${d.logi.ostatnie.length})</div>
+    <input type="text" id="rs-filtr" placeholder="🔍 filtruj wpisy…" oninput="rs_filtruj()" style="width:100%; margin-bottom:10px;">
+    ${rs_tabela(['kiedy', 'kto', 'akcja', 'moduł', 'opis'], d.logi.ostatnie.map(l => [rs_esc(l.kiedy), rs_esc(l.pracownik), rs_esc(l.akcja), rs_esc(l.modul), rs_esc(l.opis)])).replace('<table class="rs-tab">', '<table class="rs-tab" id="rs-logi">')}</div>`;
+  return h;
+}
+function rs_filtruj() {
+  const f = document.getElementById('rs-filtr').value.toLowerCase();
+  document.querySelectorAll('#rs-logi tbody tr').forEach(tr => { tr.style.display = tr.textContent.toLowerCase().includes(f) ? '' : 'none'; });
+}
+function rs_kopiuj() {
+  const d = _rsOstatni; if (!d) return;
+  const L = d.licencja || {};
+  const w = [];
+  w.push(`RAPORT SALONU — ${L.nazwa_salonu || L.login} (login ${L.login}, dane ${d.tenant_id}) — ${rs_data(d.wygenerowano, true)}`);
+  w.push(`Licencja: ${L.status}, ważna do ${rs_data(L.data_waznosci)}, założona ${rs_data(L.data_utworzenia)}, ${L.stripe_subscription_id ? 'Stripe' : 'bez Stripe'}; ${L.miasto || ''}`);
+  w.push(`Dziennik: ${d.logi.razem} wpisów (${rs_data(d.logi.od)} → ${rs_data(d.logi.do, true)})`);
+  w.push('Aktywność dzienna (30 dni): ' + (d.logi.dni || []).map(x => `${x.dzien}:${x.n}`).join('  '));
+  w.push('Najczęstsze akcje: ' + (d.logi.akcje || []).slice(0, 10).map(a => `${a.akcja} ×${a.n}`).join(', '));
+  w.push('Lista kontrolna: ' + (d.lista_kontrolna || []).map(p => `${p.ok ? '✓' : '✗'} ${p.nazwa}${p.szczegol ? ' (' + p.szczegol + ')' : ''}`).join('; '));
+  if ((d.podejrzane || []).length) { w.push('Podejrzane dane:'); for (const p of d.podejrzane) w.push(`  [${p.waga}] ${p.opis} — ${p.ile}: ${p.przyklady.join(' | ')}`); }
+  w.push('Dodatki: ' + ((d.dodatki || []).map(x => `${x.feature_key}=${x.enabled ? 'on' : 'off'}`).join(', ') || 'brak'));
+  w.push(`Tabele z danymi (${(d.tabele.z_danymi || []).length}/${d.tabele.wszystkich}): ` + (d.tabele.z_danymi || []).map(t => `${t.tabela}: ${t.n}${t.ostatnia ? ' (ost. ' + rs_data(t.ostatnia, true) + ')' : ''}`).join('; '));
+  w.push(`Ostatnie wpisy (${d.logi.ostatnie.length}):`);
+  for (const l of d.logi.ostatnie) w.push(`  ${l.kiedy} | ${l.pracownik || ''} | ${l.akcja || ''} | ${l.modul || ''} | ${l.opis || ''}`);
+  const txt = w.join('\n');
+  (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => alert('Skopiowano raport jako tekst.')).catch(() => { prompt('Skopiuj ręcznie:', txt); });
+}
+</script>
+<style>
+.rs-kv { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:6px 18px; font-size:13.5px; }
+.rs-kv > div { display:flex; gap:10px; align-items:baseline; min-width:0; }
+.rs-kv > div > span:last-child { word-break:break-word; }
+.rs-kv .rs-k { flex:0 0 150px; color:var(--taupe); font-size:11.5px; font-weight:600; text-transform:uppercase; letter-spacing:.4px; line-height:1.3; }
+.rs-lk { display:grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap:8px 20px; }
+.rs-lk-row { display:flex; align-items:center; gap:10px; }
+.rs-dni { display:flex; align-items:flex-end; gap:4px; height:92px; padding-top:8px; }
+.rs-dzien { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; min-width:0; }
+.rs-slupek { width:100%; background:var(--primary, #7c5cbf); border-radius:3px 3px 0 0; opacity:.75; }
+.rs-dzien-n { font-size:10px; color:var(--muted); height:12px; line-height:12px; }
+.rs-dzien-d { font-size:10px; color:var(--taupe); }
+.rs-trzy { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:18px; font-size:13px; }
+.rs-trzy > div > b { display:block; margin-bottom:8px; }
+.rs-tab { width:100%; border-collapse:collapse; font-size:13px; }
+.rs-tab th { text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:var(--taupe); padding:6px 8px; border-bottom:1px solid var(--sand); }
+.rs-tab td { padding:6px 8px; border-bottom:1px solid var(--bg); vertical-align:top; word-break:break-word; }
+.rs-tab tbody tr:hover td { background:var(--bg); }
+</style>
 </body>
 </html>
