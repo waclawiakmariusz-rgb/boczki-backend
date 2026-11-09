@@ -206,6 +206,10 @@ function renderArticle(post, opcje = {}) {
   // Filmy z przewodnika wracają do /przewodnik, reszta do bloga
   const przewodnik = post.category === 'Przewodnik';
   const wstecz = przewodnik ? { href: '/przewodnik', tekst: 'Przewodnik', dok: 'przewodnika' } : { href: '/blog.html', tekst: 'Blog', dok: 'bloga' };
+  const numerOdcinka = przewodnik ? (/^\s*(\d{1,3})\s*[.)\-:]/.exec(post.title || '') || [])[1] : null;
+  const okruszki = przewodnik
+    ? `<a href="/przewodnik">Przewodnik wideo</a>${numerOdcinka ? ` &nbsp;›&nbsp; Odcinek ${numerOdcinka}` : ''}`
+    : `<a href="/blog.html">Blog</a> &nbsp;›&nbsp; ${escHtml(catLabel)}`;
   const zmieniono = dataISO(post.updated_at) || dataISO(post.date_published);
   const tematMaila = encodeURIComponent(post.title || 'Wpis z bloga Estelio');
   const trescMaila = encodeURIComponent((post.excerpt ? post.excerpt + '\n\n' : '') + canonical);
@@ -396,7 +400,7 @@ function renderArticle(post, opcje = {}) {
 ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'szkicu' : 'wpisu'} z panelu admina — ta strona nie jest publiczna.</div>` : ''}
 
 <div class="article-hero">
-  <div class="okruszki"><a href="${wstecz.href}">${wstecz.tekst}</a> &nbsp;›&nbsp; ${escHtml(catLabel)}</div>
+  <div class="okruszki">${okruszki}</div>
   <span class="article-cat">${escHtml(catLabel)}</span>
   <h1>${tytul}</h1>
   <div class="article-meta">${escHtml(dateStr)}</div>
@@ -424,6 +428,7 @@ ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'sz
 <footer>
   <nav>
     <a href="/blog.html">Blog</a>
+    <a href="/przewodnik">Przewodnik wideo</a>
     <a href="/pomoc/">Pomoc</a>
     <a href="/zamow.html">Strona główna</a>
     <a href="/zamow.html#formularz" style="color:var(--m-mauve); font-weight:500;">Zamów dostęp</a>

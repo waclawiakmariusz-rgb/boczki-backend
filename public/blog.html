@@ -334,7 +334,7 @@ let FRAZA = '';
 function kartaHtml(p) {
   const cat = CAT_CSS[p.category] || CAT_CSS['Zarządzanie'];
   const url = p.url_override || '/blog/' + p.slug;
-  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy">` : esc(p.emoji || '✍️');
+  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy" onerror="this.remove()">` : esc(p.emoji || '✍️');
   return `
     <a class="blog-card" href="${esc(url)}">
       <div class="card-thumb ${cat.thumb}">${thumb}</div>

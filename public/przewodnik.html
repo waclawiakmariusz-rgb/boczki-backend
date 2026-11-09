@@ -322,7 +322,7 @@ function porownaj(a, b) {
 function kartaHtml(p, i) {
   const url = p.url_override || '/blog/' + p.slug;
   const numer = numerZTytulu(p.title) != null ? numerZTytulu(p.title) : (i + 1);
-  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy">` : esc(p.emoji || '▶️');
+  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy" onerror="this.remove()">` : esc(p.emoji || '▶️');
   return `
     <a class="blog-card" href="${esc(url)}">
       <div class="card-thumb przewodnik">${thumb}<span class="numer" aria-label="Odcinek ${numer}">${numer}</span><div class="play"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div></div>

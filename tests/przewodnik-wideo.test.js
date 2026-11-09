@@ -86,11 +86,23 @@ describe('renderArticle dla wpisu z filmem', () => {
   });
   test('kategoria Przewodnik wraca do /przewodnik (menu, okruszki, „Wróć do przewodnika”); inne kategorie do bloga', () => {
     expect(html).toContain('<a href="/przewodnik">← Przewodnik</a>');
-    expect(html).toContain('<div class="okruszki"><a href="/przewodnik">Przewodnik</a> &nbsp;›&nbsp; Przewodnik</div>');
+    expect(html).toContain('<div class="okruszki"><a href="/przewodnik">Przewodnik wideo</a> &nbsp;›&nbsp; Odcinek 1</div>');
+    expect(blog.renderArticle({ ...wpis, title: 'Bez numeru' })).toContain('<div class="okruszki"><a href="/przewodnik">Przewodnik wideo</a></div>');
+    expect(html).toContain('<a href="/przewodnik">Przewodnik wideo</a>\n    <a href="/pomoc/">Pomoc</a>');   // stopka artykułu
     expect(html).toContain('<a class="back-link" href="/przewodnik">← Wróć do przewodnika</a>');
     const zwykly = blog.renderArticle({ slug: 'z', title: 'Z', category: 'Sprzedaż', content_html: '<p>a</p>', date_published: '2026-11-09' });
     expect(zwykly).toContain('<a href="/blog.html">← Blog</a>');
+    expect(zwykly).toContain('<div class="okruszki"><a href="/blog.html">Blog</a> &nbsp;›&nbsp; Sprzedaż</div>');
     expect(zwykly).toContain('<a class="back-link" href="/blog.html">← Wróć do bloga</a>');
+  });
+});
+
+describe('nagłówki bezpieczeństwa przepuszczają odtwarzacz i miniatury (regresja: szara ramka z 9.11)', () => {
+  const naglowki = require('../routes/naglowki-bezpieczenstwa');
+  test('CSP: frame-src z youtube-nocookie.com (i youtube.com), img-src z i.ytimg.com; nadal bez gwiazdek', () => {
+    expect(naglowki.CSP).toContain("frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com");
+    expect(naglowki.CSP).toMatch(/img-src [^;]*https:\/\/i\.ytimg\.com/);
+    expect(naglowki.CSP).not.toMatch(/\*/);
   });
 });
 
