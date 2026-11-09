@@ -198,6 +198,8 @@ app.get(['/klub', '/klub/'], (req, res) => res.sendFile(path.join(__dirname, 'pu
 // Ładny adres przewodnika/pomocy: /pomoc i /pomoc/ serwują estelio_pomoc_f.html (źródło Esti).
 // Stary /estelio_pomoc_f.html dalej działa (statyka).
 app.get(['/pomoc', '/pomoc/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_f.html')));
+// Przewodnik wideo (9.11.2026): lista filmów z kanału YouTube Estelio = wpisy bloga w kategorii „Przewodnik”.
+app.get(['/przewodnik', '/przewodnik/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'przewodnik.html')));
 // Przewodnik zarządczy (manager/właściciel). Bez danych wrażliwych — statyczny jak /pomoc/;
 // link w aplikacji widzi tylko manager+, a Esti indeksuje go tylko dla ról zarządczych.
 app.get(['/pomoc-manager', '/pomoc-manager/'], (req, res) => res.sendFile(path.join(__dirname, 'public', 'estelio_pomoc_manager.html')));

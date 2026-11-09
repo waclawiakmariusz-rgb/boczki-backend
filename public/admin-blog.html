@@ -228,6 +228,7 @@
           <option value="Sprzedaż">Sprzedaż</option>
           <option value="Terminarz">Terminarz</option>
           <option value="Dodatki">Dodatki</option>
+          <option value="Przewodnik">Przewodnik</option>
         </select>
       </div>
       <div class="field">
@@ -244,7 +245,16 @@
     <div class="field">
       <label>Okładka (adres obrazka, opcjonalnie)</label>
       <input type="text" id="f-okladka" placeholder="np. /img/blog/sprzedaz/okladka.jpg">
-      <div class="hint">Pokazuje się na karcie listy i w podglądzie linku (WhatsApp, Messenger, e-mail). Pusta = pierwszy obrazek z treści albo logo.</div>
+      <div class="hint">Pokazuje się na karcie listy i w podglądzie linku (WhatsApp, Messenger, e-mail). Pusta = pierwszy obrazek z treści, miniatura filmu albo logo.</div>
+    </div>
+
+    <div class="field">
+      <label>Film z YouTube (adres, opcjonalnie — przewodnik wideo)</label>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="text" id="f-youtube" placeholder="np. https://youtu.be/XXXXXXXXXXX albo https://www.youtube.com/watch?v=XXXXXXXXXXX" style="flex:1;">
+        <button type="button" class="btn btn-secondary" onclick="wstawWideo()" style="white-space:nowrap;">Wstaw odtwarzacz</button>
+      </div>
+      <div class="hint">Wklej adres filmu z kanału <a href="https://www.youtube.com/@EstelioSystem" target="_blank" rel="noopener">@EstelioSystem</a> i kliknij „Wstaw odtwarzacz” — odtwarzacz trafi na początek treści, a pusta okładka dostanie miniaturę filmu. Dla filmów wybierz kategorię <b>Przewodnik</b> i numeruj tytuły („1. Pierwsze logowanie”) — to ustala kolejność na stronie /przewodnik.</div>
     </div>
 
     <div class="field-row">
@@ -413,6 +423,7 @@ function openNew() {
   document.getElementById('f-title').value = '';
   document.getElementById('f-category').value = 'Zarządzanie';
   document.getElementById('f-emoji').value = '';
+  document.getElementById('f-youtube').value = '';
   document.getElementById('f-excerpt').value = '';
   document.getElementById('f-date').value = new Date().toISOString().slice(0, 10);
   document.getElementById('f-status').value = 'published';
@@ -469,6 +480,34 @@ function kopiujLink(sciezka) {
   if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(ok, () => prompt('Skopiuj adres:', url));
   else prompt('Skopiuj adres:', url);
 }
+// ── Przewodnik wideo: adres YouTube → odtwarzacz w treści (ta sama logika co youtubeId/osadzenieYoutube w routes/blog.js) ──
+function youtubeId(adres) {
+  const a = String(adres || '').trim(); const ID = /^[A-Za-z0-9_-]{11}$/;
+  if (!a) return null; if (ID.test(a)) return a;
+  let u; try { u = new URL(/^https?:\/\//i.test(a) ? a : 'https://' + a); } catch (e) { return null; }
+  const host = u.hostname.replace(/^www\.|^m\./, '');
+  if (host === 'youtu.be') { const id = u.pathname.split('/')[1]; return ID.test(id || '') ? id : null; }
+  if (host !== 'youtube.com' && host !== 'youtube-nocookie.com') return null;
+  const v = u.searchParams.get('v'); if (v && ID.test(v)) return v;
+  const m = /^\/(?:embed|shorts|live|v)\/([A-Za-z0-9_-]{11})(?:[/?]|$)/.exec(u.pathname); return m ? m[1] : null;
+}
+function wstawWideo() {
+  const pole = document.getElementById('f-youtube');
+  const id = youtubeId(pole.value);
+  if (!id) { showToast('Nie rozpoznaję adresu filmu z YouTube. Wklej link w postaci youtu.be/… albo youtube.com/watch?v=…', true); return; }
+  const tytul = document.getElementById('f-title').value.trim() || 'Film z przewodnika Estelio';
+  const tresc = document.getElementById('f-content');
+  if (/youtube(-nocookie)?\.com\/embed\//.test(tresc.value)) { if (!confirm('W treści jest już odtwarzacz. Dodać drugi na początku?')) return; }
+  const osadzenie = '<div class="wideo"><iframe src="https://www.youtube-nocookie.com/embed/' + id + '" title="' + esc(tytul) + '" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>';
+  tresc.value = osadzenie + '\n' + tresc.value;
+  const okl = document.getElementById('f-okladka');
+  if (!okl.value.trim()) okl.value = 'https://i.ytimg.com/vi/' + id + '/hqdefault.jpg';
+  const kat = document.getElementById('f-category');
+  if (!document.getElementById('edit-id').value && kat.value === 'Zarządzanie') kat.value = 'Przewodnik';
+  pole.value = '';
+  showToast('Odtwarzacz wstawiony na początek treści.');
+}
+
 async function savePost(zostawOtwarte) {
   const id      = document.getElementById('edit-id').value;
   const title   = document.getElementById('f-title').value.trim();

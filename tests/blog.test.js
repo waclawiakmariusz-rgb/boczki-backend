@@ -129,7 +129,7 @@ describe('panel admina', () => {
     expect(ADMIN).toContain('onclick="podgladPost()"');
     expect(ADMIN).toContain('Kopiuj link');
     expect(BLOG).toContain("router.get('/admin/blog/podglad/:id', requireAdmin,");
-    expect(BLOG).toContain('okladka || null');
+    expect(BLOG).toContain('okladka || okladkaZWideo(content_html) || null');   // 9.11: pusta okładka → miniatura filmu z treści
   });
   test('publikacja jednym kliknięciem z listy: PATCH statusu na serwerze i przyciski Publikuj / Cofnij do szkicu w panelu', () => {
     expect(BLOG).toContain("router.patch('/admin/blog/posts/:id/status', requireAdmin,");

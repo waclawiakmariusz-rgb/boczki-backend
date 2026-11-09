@@ -11,6 +11,13 @@
 //  • udostępnianie: „Kopiuj link”, e-mail, WhatsApp; og:image i twitter card z okładki albo
 //    pierwszego obrazka; kanał RSS (/blog/rss.xml) i mapa strony (/sitemap.xml);
 //  • kategorie Terminarz i Dodatki; kolumna okladka (NULL-owalna, dopisana bez ruszania reszty).
+//
+// 9.11.2026 — przewodnik wideo (docs/przewodnik-wideo/PLAN_2026-11-09.md):
+//  • kategoria „Przewodnik” (filmy z kanału YouTube Estelio) — jeden wpis = jeden film, odtwarzacz w treści;
+//  • czyste funkcje youtubeId / osadzenieYoutube / pierwszeWideo / miniaturaYoutube (bez bazy, bez sieci);
+//  • renderArticle: ramka 16:9 dla odtwarzacza, og:image i JSON-LD VideoObject z miniatury YouTube,
+//    powrót „← Przewodnik” zamiast „← Blog” dla tej kategorii; POST/PUT: pusta okładka → miniatura filmu.
+//    ZERO zmian w bazie — film siedzi w content_html, miniatura w istniejącej kolumnie okladka.
 
 const express = require('express');
 const path = require('path');
@@ -41,6 +48,7 @@ const CATEGORIES = {
   'Sprzedaż':     { css: 'cat-sprzedaz',    thumb: 'sprzedaz',    emoji: '💰' },
   'Terminarz':    { css: 'cat-terminarz',   thumb: 'terminarz',   emoji: '🗓️' },
   'Dodatki':      { css: 'cat-dodatki',     thumb: 'dodatki',     emoji: '✨' },
+  'Przewodnik':   { css: 'cat-przewodnik',  thumb: 'przewodnik',  emoji: '▶️' },
 };
 
 // Starter posts — 3 istniejące artykuły
@@ -114,6 +122,39 @@ function absUrl(u) {
   return BAZA_URL + (u.startsWith('/') ? '' : '/') + u;
 }
 
+// ─── Przewodnik wideo (YouTube) ───────────────────────────────────────────────
+// Identyfikator filmu z adresu w dowolnej postaci: watch?v=, youtu.be/, shorts/, embed/, live/,
+// także z dodatkowymi parametrami (?t=, &list=) albo sam 11-znakowy identyfikator. Nieznany adres → null.
+const YT_ID = /^[A-Za-z0-9_-]{11}$/;
+function youtubeId(adres) {
+  const a = String(adres || '').trim();
+  if (!a) return null;
+  if (YT_ID.test(a)) return a;
+  let u;
+  try { u = new URL(/^https?:\/\//i.test(a) ? a : 'https://' + a); } catch (e) { return null; }
+  const host = u.hostname.replace(/^www\.|^m\./, '');
+  if (host === 'youtu.be') { const id = u.pathname.split('/')[1]; return YT_ID.test(id || '') ? id : null; }
+  if (host !== 'youtube.com' && host !== 'youtube-nocookie.com') return null;
+  const v = u.searchParams.get('v');
+  if (v && YT_ID.test(v)) return v;
+  const m = /^\/(?:embed|shorts|live|v)\/([A-Za-z0-9_-]{11})(?:[/?]|$)/.exec(u.pathname);
+  return m ? m[1] : null;
+}
+function miniaturaYoutube(id) { return YT_ID.test(id || '') ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null; }
+// Odtwarzacz do wklejenia w treść wpisu: domena bez ciasteczek (nic nie leci do Google przed kliknięciem Play),
+// ładowanie leniwe, ramka 16:9 (styl .wideo w renderArticle). Zwraca '' dla nierozpoznanego adresu.
+function osadzenieYoutube(adres, tytul) {
+  const id = youtubeId(adres);
+  if (!id) return '';
+  return `<div class="wideo"><iframe src="https://www.youtube-nocookie.com/embed/${id}" title="${escHtml(tytul || 'Film z przewodnika Estelio')}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>`;
+}
+// Pierwszy film w treści (iframe z youtube / youtube-nocookie) → identyfikator albo null
+function pierwszeWideo(html) {
+  const m = /<iframe\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i.exec(html || '');
+  return m ? youtubeId(m[1]) : null;
+}
+function okladkaZWideo(html) { return miniaturaYoutube(pierwszeWideo(html)); }
+
 // Treść wpisu przed wyświetleniem: nadaje nagłówkom h2 identyfikatory (jeśli ich nie mają),
 // dopisuje kotwicę „#” do kopiowania linku do sekcji i buduje spis treści, gdy jest ≥ 3 sekcji.
 // Zwraca { html, spis, naglowki } — czysta funkcja, bez bazy, łatwa do testów.
@@ -159,8 +200,16 @@ function renderArticle(post, opcje = {}) {
   const catLabel = post.category || 'Blog';
   const tytul = escHtml(post.title);
   const zajawka = escHtml(post.excerpt || '');
-  const okladka = absUrl(post.okladka || pierwszyObraz(post.content_html) || '/img/estelio-logo.png');
+  const wideoId = pierwszeWideo(post.content_html);
+  const okladka = absUrl(post.okladka || pierwszyObraz(post.content_html) || miniaturaYoutube(wideoId) || '/img/estelio-logo.png');
   const tresc = przygotujTresc(post.content_html || '<p>Treść artykułu niedostępna.</p>');
+  // Filmy z przewodnika wracają do /przewodnik, reszta do bloga
+  const przewodnik = post.category === 'Przewodnik';
+  const wstecz = przewodnik ? { href: '/przewodnik', tekst: 'Przewodnik', dok: 'przewodnika' } : { href: '/blog.html', tekst: 'Blog', dok: 'bloga' };
+  const numerOdcinka = przewodnik ? (/^\s*(\d{1,3})\s*[.)\-:]/.exec(post.title || '') || [])[1] : null;
+  const okruszki = przewodnik
+    ? `<a href="/przewodnik">Przewodnik wideo</a>${numerOdcinka ? ` &nbsp;›&nbsp; Odcinek ${numerOdcinka}` : ''}`
+    : `<a href="/blog.html">Blog</a> &nbsp;›&nbsp; ${escHtml(catLabel)}`;
   const zmieniono = dataISO(post.updated_at) || dataISO(post.date_published);
   const tematMaila = encodeURIComponent(post.title || 'Wpis z bloga Estelio');
   const trescMaila = encodeURIComponent((post.excerpt ? post.excerpt + '\n\n' : '') + canonical);
@@ -196,7 +245,13 @@ function renderArticle(post, opcje = {}) {
     description: post.excerpt || '', image: okladka, articleSection: catLabel, mainEntityOfPage: canonical,
     author: { '@type': 'Organization', name: 'Estelio' },
     publisher: { '@type': 'Organization', name: 'Estelio', url: BAZA_URL, logo: { '@type': 'ImageObject', url: BAZA_URL + '/img/estelio-logo.png' } },
-  }).replace(/</g, '\\u003c')}</script>
+  }).replace(/</g, '\\u003c')}</script>${wideoId ? `
+  <script type="application/ld+json">${JSON.stringify({
+    '@context': 'https://schema.org', '@type': 'VideoObject',
+    name: post.title || '', description: post.excerpt || '', thumbnailUrl: miniaturaYoutube(wideoId),
+    uploadDate: dataISO(post.date_published), embedUrl: 'https://www.youtube-nocookie.com/embed/' + wideoId,
+    contentUrl: 'https://www.youtube.com/watch?v=' + wideoId, publisher: { '@type': 'Organization', name: 'Estelio', url: BAZA_URL },
+  }).replace(/</g, '\\u003c')}</script>` : ''}
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -263,6 +318,8 @@ function renderArticle(post, opcje = {}) {
     .article-content a { color: var(--m-mauve-d); }
     .article-content hr { border: 0; border-top: 1px solid var(--m-sand); margin: 36px 0; }
     .article-content kbd { font-family: inherit; font-size: .82em; background: var(--m-cream); border: 1px solid var(--m-sand); border-bottom-width: 2px; border-radius: 6px; padding: 1px 7px; color: var(--m-ink); white-space: nowrap; }
+    .article-content .wideo { position: relative; aspect-ratio: 16 / 9; margin: 0 0 30px; border-radius: 12px; overflow: hidden; background: #000; box-shadow: 0 10px 32px rgba(44,36,32,.14); }
+    .article-content .wideo iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
     .article-content figure { margin: 28px 0 32px; }
     .article-content figure img { display: block; width: 100%; height: auto; border: 1px solid var(--m-sand); border-radius: 12px; background: #fff; cursor: zoom-in; box-shadow: 0 6px 24px rgba(44,36,32,.08); }
     .article-content figure.waska img { max-width: 420px; margin: 0 auto; }
@@ -326,7 +383,7 @@ function renderArticle(post, opcje = {}) {
 <nav class="gorne" style="position:relative;">
   <a class="logo" href="/zamow.html" aria-label="Estelio — strona główna"><img src="/img/estelio-logo.png" alt="Estelio" style="height:36px;width:auto;display:block"></a>
   <div class="nav-links">
-    <a href="/blog.html">← Blog</a>
+    <a href="${wstecz.href}">← ${wstecz.tekst}</a>
     <a href="/pomoc/">Pomoc</a>
     <a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a>
   </div>
@@ -334,7 +391,7 @@ function renderArticle(post, opcje = {}) {
     <span></span><span></span><span></span>
   </button>
   <div class="nav-mobile-menu" id="mobileMenu">
-    <a href="/blog.html" onclick="closeMenu()">← Blog</a>
+    <a href="${wstecz.href}" onclick="closeMenu()">← ${wstecz.tekst}</a>
     <a href="/pomoc/" onclick="closeMenu()">Pomoc</a>
     <a href="/zamow.html" onclick="closeMenu()">Strona główna</a>
     <a href="/zamow.html#formularz" class="nav-cta" onclick="closeMenu()">Zamów dostęp</a>
@@ -343,7 +400,7 @@ function renderArticle(post, opcje = {}) {
 ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'szkicu' : 'wpisu'} z panelu admina — ta strona nie jest publiczna.</div>` : ''}
 
 <div class="article-hero">
-  <div class="okruszki"><a href="/blog.html">Blog</a> &nbsp;›&nbsp; ${escHtml(catLabel)}</div>
+  <div class="okruszki">${okruszki}</div>
   <span class="article-cat">${escHtml(catLabel)}</span>
   <h1>${tytul}</h1>
   <div class="article-meta">${escHtml(dateStr)}</div>
@@ -351,7 +408,7 @@ ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'sz
 
 <div class="article-body">
   <div class="pasek-gorny">
-    <a class="back-link" href="/blog.html">← Wróć do bloga</a>
+    <a class="back-link" href="${wstecz.href}">← Wróć do ${wstecz.dok}</a>
     <div class="udostepnij" aria-label="Udostępnij ten wpis">
       <button type="button" onclick="kopiujLink()" title="Skopiuj adres tego wpisu">${IKONY.link}<span class="etykieta">Kopiuj link</span></button>
       <a href="mailto:?subject=${tematMaila}&body=${trescMaila}" title="Wyślij link e-mailem">${IKONY.mail}<span class="etykieta">E-mail</span></a>
@@ -371,6 +428,7 @@ ${podglad ? `<div class="podglad-pasek">Podgląd ${post.status === 'draft' ? 'sz
 <footer>
   <nav>
     <a href="/blog.html">Blog</a>
+    <a href="/przewodnik">Przewodnik wideo</a>
     <a href="/pomoc/">Pomoc</a>
     <a href="/zamow.html">Strona główna</a>
     <a href="/zamow.html#formularz" style="color:var(--m-mauve); font-weight:500;">Zamów dostęp</a>
@@ -438,7 +496,7 @@ function stronaArtykulu(db, slug, cb) {
 }
 
 // Mapa strony: strony stałe + opublikowane wpisy (lastmod z updated_at)
-const STRONY_STALE = ['/zamow.html', '/blog.html', '/pomoc/', '/pomoc-terminarz/', '/regulamin.html', '/polityka-prywatnosci.html'];
+const STRONY_STALE = ['/zamow.html', '/blog.html', '/przewodnik/', '/pomoc/', '/pomoc-terminarz/', '/regulamin.html', '/polityka-prywatnosci.html'];
 function sitemapXml(db, cb) {
   db.query(`SELECT slug, url_override, date_published, updated_at FROM blog_posts WHERE status = 'published' ORDER BY date_published DESC`, (err, rows) => {
     if (err) return cb(err);
@@ -621,7 +679,7 @@ module.exports = (db) => {
     db.query(
       `INSERT INTO blog_posts (slug, title, excerpt, category, emoji, content_html, url_override, okladka, date_published, status)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [slug, title, excerpt || '', cat, emo, content_html || '', url_override || null, okladka || null, date_published, st],
+      [slug, title, excerpt || '', cat, emo, content_html || '', url_override || null, okladka || okladkaZWideo(content_html) || null, date_published, st],
       (err, result) => {
         if (err) {
           if (err.code === 'ER_DUP_ENTRY') {
@@ -647,7 +705,7 @@ module.exports = (db) => {
     db.query(
       `UPDATE blog_posts SET title=?, excerpt=?, category=?, emoji=?, content_html=?, url_override=?, okladka=?, date_published=?, status=?
        WHERE id=?`,
-      [title, excerpt || '', cat, emo, content_html || '', url_override || null, okladka || null, date_published, st, req.params.id],
+      [title, excerpt || '', cat, emo, content_html || '', url_override || null, okladka || okladkaZWideo(content_html) || null, date_published, st, req.params.id],
       (err, result) => {
         if (err) return res.status(500).json({ status: 'error', message: 'Błąd bazy: ' + err.message });
         if (result.affectedRows === 0) return res.json({ status: 'error', message: 'Nie znaleziono wpisu.' });
@@ -684,6 +742,10 @@ module.exports.slugify = slugify;
 module.exports.escHtml = escHtml;
 module.exports.readTime = readTime;
 module.exports.pierwszyObraz = pierwszyObraz;
+module.exports.youtubeId = youtubeId;
+module.exports.osadzenieYoutube = osadzenieYoutube;
+module.exports.pierwszeWideo = pierwszeWideo;
+module.exports.miniaturaYoutube = miniaturaYoutube;
 module.exports.przygotujTresc = przygotujTresc;
 module.exports.renderArticle = renderArticle;
 module.exports.stronaArtykulu = stronaArtykulu;

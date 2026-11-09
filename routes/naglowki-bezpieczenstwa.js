@@ -19,10 +19,15 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://connect.facebook.net",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob: https://www.facebook.com https://www.google-analytics.com",
+  // 9.11.2026 (przewodnik wideo): miniatury filmów z YouTube na listach /przewodnik i /blog.html
+  "img-src 'self' data: blob: https://www.facebook.com https://www.google-analytics.com https://i.ytimg.com",
   "font-src 'self' data: https://fonts.gstatic.com",
   "connect-src 'self' https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://www.facebook.com",
   "object-src 'none'",
+  // 9.11.2026 (przewodnik wideo): odtwarzacz YouTube osadzony w treści wpisu — domyślnie wersja bez ciasteczek
+  // (youtube-nocookie.com); youtube.com na wypadek ręcznie wklejonego kodu osadzenia. Bez tej linii default-src 'self'
+  // blokuje każdą ramkę (błąd widać tylko w konsoli, na stronie szara pusta ramka).
+  "frame-src 'self' https://www.youtube-nocookie.com https://www.youtube.com",
   "frame-ancestors 'self'",
 ].join('; ');
 
