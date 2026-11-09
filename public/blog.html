@@ -148,6 +148,7 @@
     .card-thumb.sprzedaz    { background: #eae0ec; }
     .card-thumb.terminarz   { background: #e6e4dc; }
     .card-thumb.dodatki     { background: #f0e4dc; }
+    .card-thumb.przewodnik  { background: #e4e0e8; }
     .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
 
     .card-body { padding: 20px 22px 22px; flex: 1; display: flex; flex-direction: column; }
@@ -165,6 +166,7 @@
     .cat-sprzedaz    { background: #ece4f5; color: #604080; border-color: #b898d4; }
     .cat-terminarz   { background: #ecebe2; color: #5a5a3a; border-color: #bdb98f; }
     .cat-dodatki     { background: #f5e8dc; color: #8a5a30; border-color: #d4b090; }
+    .cat-przewodnik  { background: #e9e4ec; color: #5a4a6a; border-color: #b8a8c4; }
 
     /* FILTRY + SZUKANIE */
     .filtry { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 28px; }
@@ -227,6 +229,7 @@
   <a class="logo" href="/zamow.html"><img src="img/estelio-logo.png" alt="Estelio"></a>
   <ul>
     <li><a href="/zamow.html">Strona główna</a></li>
+    <li><a href="/przewodnik">Przewodnik wideo</a></li>
     <li><a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a></li>
   </ul>
   <button class="hamburger" id="hamburger" aria-label="Menu" onclick="toggleMenu()">
@@ -234,6 +237,7 @@
   </button>
   <div class="nav-mobile-menu" id="mobileMenu">
     <a href="/zamow.html" onclick="closeMenu()">Strona główna</a>
+    <a href="/przewodnik" onclick="closeMenu()">Przewodnik wideo</a>
     <a href="/zamow.html#formularz" class="nav-cta" onclick="closeMenu()">Zamów dostęp</a>
   </div>
 </nav>
@@ -291,6 +295,7 @@
 <footer>
   <nav style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px 24px; margin-bottom:14px; padding:0;">
     <a href="/zamow.html">Strona główna</a>
+    <a href="/przewodnik">Przewodnik wideo</a>
     <a href="/zamow.html#formularz" style="color:var(--m-mauve); font-weight:500;">Zamów dostęp</a>
   </nav>
   <div>
@@ -312,6 +317,7 @@ const CAT_CSS = {
   'Sprzedaż':    { css: 'cat-sprzedaz',    thumb: 'sprzedaz' },
   'Terminarz':   { css: 'cat-terminarz',   thumb: 'terminarz' },
   'Dodatki':     { css: 'cat-dodatki',     thumb: 'dodatki' },
+  'Przewodnik':  { css: 'cat-przewodnik',  thumb: 'przewodnik' },
 };
 function formatDate(str) {
   const d = new Date(str);
@@ -338,7 +344,7 @@ function kartaHtml(p) {
         <div class="card-excerpt">${esc(p.excerpt || '')}</div>
         <div class="card-footer">
           <span class="card-date">${formatDate(p.date_published)}</span>
-          <span class="card-read">Czytaj →</span>
+          <span class="card-read">${p.category === 'Przewodnik' ? 'Obejrzyj' : 'Czytaj'} →</span>
         </div>
       </div>
     </a>`;

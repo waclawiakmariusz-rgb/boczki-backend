@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Przewodnik wideo Estelio — krótkie filmy, jak korzystać z systemu</title>
+  <meta name="description" content="Filmy krok po kroku dla salonów beauty: logowanie, terminarz, klientki, sprzedaż, magazyn i rozliczenia w Estelio. Oglądaj w kolejności albo wybierz temat.">
+  <meta name="robots" content="index, follow">
+  <link rel="canonical" href="https://estelio.com.pl/przewodnik">
+  <meta property="og:title" content="Przewodnik wideo Estelio">
+  <meta property="og:description" content="Krótkie filmy, jak korzystać z systemu Estelio w salonie beauty.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://estelio.com.pl/przewodnik">
+  <meta property="og:image" content="https://estelio.com.pl/img/estelio-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Paleta Morandi ── */
+    :root {
+      --m-linen:    #e8e0d5;
+      --m-cream:    #f2ede6;
+      --m-sand:     #d4c4a8;
+      --m-taupe:    #b8a898;
+      --m-mauve:    #c4a0a0;
+      --m-mauve-d:  #a88080;
+      --m-sage:     #9aab9a;
+      --m-slate:    #8b9aaa;
+      --m-camel:    #c4a870;
+      --m-ink:      #2c2420;
+      --m-muted:    #6a5e56;
+    }
+
+    body { font-family: 'DM Sans', sans-serif; background: var(--m-linen); color: var(--m-ink); }
+
+    /* NAV */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 60px; background: var(--m-cream);
+      border-bottom: 1px solid var(--m-sand);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo { display: inline-flex; align-items: center; text-decoration: none; }
+    .logo img { height: 36px; width: auto; display: block; }
+    nav ul { display: flex; gap: 32px; list-style: none; align-items: center; }
+    nav ul a { text-decoration: none; font-size: .88rem; color: var(--m-muted); transition: color .2s; }
+    nav ul a:hover { color: var(--m-ink); }
+    .nav-cta {
+      background: var(--m-mauve) !important; color: #fff !important;
+      padding: 8px 20px; border-radius: 6px; font-weight: 500 !important;
+      transition: background .2s !important;
+    }
+    .nav-cta:hover { background: var(--m-mauve-d) !important; }
+    @media (max-width: 768px) { nav { padding: 16px 20px; } nav ul { display: none; } .hamburger { display: block; } }
+  .hamburger {
+    display: none; background: none; border: none; cursor: pointer;
+    padding: 6px; color: var(--m-ink);
+  }
+  .hamburger span {
+    display: block; width: 24px; height: 2px;
+    background: var(--m-ink); margin: 5px 0;
+    transition: transform .3s, opacity .3s;
+  }
+  .hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .hamburger.open span:nth-child(2) { opacity: 0; }
+  .hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+  .nav-mobile-menu {
+    display: none; flex-direction: column;
+    background: var(--m-cream); border-top: 1px solid var(--m-sand);
+    padding: 14px 20px 20px;
+    position: absolute; top: 100%; left: 0; right: 0;
+    box-shadow: 0 8px 24px rgba(0,0,0,.08); z-index: 99;
+  }
+  .nav-mobile-menu.open { display: flex; }
+  .nav-mobile-menu a {
+    text-decoration: none; font-size: .93rem; color: var(--m-muted);
+    padding: 11px 0; border-bottom: 1px solid var(--m-sand); transition: color .2s;
+  }
+  .nav-mobile-menu a:last-child { border-bottom: none; }
+  .nav-mobile-menu a:hover { color: var(--m-ink); }
+  .nav-mobile-menu .nav-cta {
+    margin-top: 6px; text-align: center;
+    background: var(--m-mauve); color: #fff !important;
+    border-radius: 6px; padding: 11px; font-weight: 500; border-bottom: none;
+  }
+
+    /* HERO */
+    .blog-hero {
+      padding: 72px 60px 60px;
+      text-align: center;
+      background: var(--m-cream);
+      border-bottom: 1px solid var(--m-sand);
+      position: relative;
+      overflow: hidden;
+    }
+    .blog-hero::before {
+      content: '';
+      position: absolute;
+      width: 480px; height: 480px;
+      background: radial-gradient(circle, rgba(196,160,160,.18) 0%, transparent 65%);
+      top: -120px; right: -80px; border-radius: 50%;
+    }
+    .blog-hero::after {
+      content: '';
+      position: absolute;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(154,171,154,.15) 0%, transparent 65%);
+      bottom: -80px; left: -40px; border-radius: 50%;
+    }
+    .blog-hero .eyebrow {
+      font-size: .7rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase;
+      color: var(--m-camel); margin-bottom: 14px; position: relative; z-index: 1;
+    }
+    .blog-hero h1 {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 3rem; font-weight: 600; color: var(--m-ink);
+      margin-bottom: 14px; line-height: 1.15; position: relative; z-index: 1;
+    }
+    .blog-hero h1 em { color: var(--m-mauve); font-style: italic; font-weight: 400; }
+    .blog-hero p {
+      font-size: .95rem; color: var(--m-muted);
+      max-width: 500px; margin: 0 auto; line-height: 1.75;
+      position: relative; z-index: 1;
+    }
+
+    /* GRID */
+    .blog-section { max-width: 1060px; margin: 0 auto; padding: 60px 40px 80px; }
+
+    .blog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    @media (max-width: 900px) { .blog-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 560px) { .blog-grid { grid-template-columns: 1fr; } .blog-section { padding: 36px 20px 56px; } .blog-hero { padding: 48px 20px 40px; } .blog-hero h1 { font-size: 2.1rem; } }
+
+    /* CARD */
+    .blog-card {
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 18px; overflow: hidden;
+      transition: box-shadow .3s, transform .3s;
+      text-decoration: none; color: inherit; display: flex; flex-direction: column;
+    }
+    .blog-card:hover { box-shadow: 0 10px 32px rgba(44,36,32,.1); transform: translateY(-3px); }
+
+    .card-thumb {
+      height: 148px; display: flex; align-items: center; justify-content: center;
+      font-size: 3.2rem;
+    }
+    .card-thumb.zarzadzanie { background: #f0e8de; }
+    .card-thumb.pracownicy  { background: #ecdde0; }
+    .card-thumb.magazyn     { background: #e0e8e0; }
+    .card-thumb.klienci     { background: #dde4ec; }
+    .card-thumb.sprzedaz    { background: #eae0ec; }
+    .card-thumb.terminarz   { background: #e6e4dc; }
+    .card-thumb.dodatki     { background: #f0e4dc; }
+    .card-thumb.przewodnik  { background: #e4e0e8; }
+    .card-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    .card-body { padding: 20px 22px 22px; flex: 1; display: flex; flex-direction: column; }
+
+    .card-cat {
+      display: inline-block; font-size: .67rem; font-weight: 600;
+      letter-spacing: .1em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 10px;
+      border: 1px solid;
+    }
+    .cat-zarzadzanie { background: #f5ede4; color: #8a6040; border-color: #d4b898; }
+    .cat-pracownicy  { background: #f5e4e8; color: #8a4050; border-color: #d4a0a8; }
+    .cat-magazyn     { background: #e4f0e4; color: #407040; border-color: #98c498; }
+    .cat-klienci     { background: #e4ecf5; color: #405880; border-color: #98b4d4; }
+    .cat-sprzedaz    { background: #ece4f5; color: #604080; border-color: #b898d4; }
+    .cat-terminarz   { background: #ecebe2; color: #5a5a3a; border-color: #bdb98f; }
+    .cat-dodatki     { background: #f5e8dc; color: #8a5a30; border-color: #d4b090; }
+    .cat-przewodnik  { background: #e9e4ec; color: #5a4a6a; border-color: #b8a8c4; }
+
+    /* FILTRY + SZUKANIE */
+    .filtry { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 28px; }
+    .filtry .chipy { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+    .chip { border: 1px solid var(--m-sand); background: var(--m-cream); color: var(--m-muted); border-radius: 20px; padding: 6px 14px; font: inherit; font-size: .78rem; cursor: pointer; transition: all .2s; }
+    .chip:hover { border-color: var(--m-mauve); color: var(--m-ink); }
+    .chip.aktywny { background: var(--m-ink); color: #fff; border-color: var(--m-ink); }
+    .chip small { opacity: .7; margin-left: 4px; }
+    .szukaj { position: relative; }
+    .szukaj input { font: inherit; font-size: .85rem; padding: 8px 12px 8px 34px; border: 1px solid var(--m-sand); border-radius: 10px; background: var(--m-cream); color: var(--m-ink); width: 240px; max-width: 100%; }
+    .szukaj input:focus { outline: none; border-color: var(--m-mauve); background: #fff; }
+    .szukaj svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; stroke: var(--m-taupe); fill: none; stroke-width: 1.8; stroke-linecap: round; }
+    .brak-wynikow { color: var(--m-muted); text-align: center; grid-column: 1 / -1; padding: 40px 0; font-size: .9rem; }
+    @media (max-width: 560px) { .szukaj, .szukaj input { width: 100%; } }
+
+    .card-title {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 1.2rem; font-weight: 600; color: var(--m-ink);
+      line-height: 1.3; margin-bottom: 10px;
+    }
+    .card-excerpt { font-size: .84rem; color: var(--m-muted); line-height: 1.7; flex: 1; margin-bottom: 16px; }
+    .card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .card-date { font-size: .73rem; color: var(--m-taupe); }
+    .card-read { font-size: .8rem; font-weight: 600; color: var(--m-mauve); }
+
+    /* Skeleton loader */
+    .skeleton { background: linear-gradient(90deg, var(--m-sand) 25%, var(--m-cream) 50%, var(--m-sand) 75%); background-size: 200% 100%; animation: shimmer 1.4s infinite; border-radius: 8px; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+    .skeleton-card { background: var(--m-cream); border: 1px solid var(--m-sand); border-radius: 18px; overflow: hidden; }
+    .skeleton-thumb { height: 148px; background: var(--m-sand); opacity: .4; }
+    .skeleton-body { padding: 20px 22px 22px; }
+    .sk-line { height: 12px; margin-bottom: 10px; }
+
+    /* CTA */
+    .blog-cta {
+      background: var(--m-cream); border: 1px solid var(--m-sand);
+      border-radius: 20px; padding: 48px 40px; text-align: center; margin-top: 56px;
+    }
+    .blog-cta .cta-eyebrow { font-size: .7rem; letter-spacing: .2em; text-transform: uppercase; color: var(--m-camel); margin-bottom: 10px; }
+    .blog-cta h2 { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--m-ink); margin-bottom: 10px; }
+    .blog-cta p { color: var(--m-muted); font-size: .9rem; margin-bottom: 24px; }
+    .blog-cta a {
+      background: var(--m-mauve); color: #fff; padding: 13px 32px;
+      border-radius: 8px; text-decoration: none; font-weight: 600; font-size: .92rem;
+      transition: background .2s; display: inline-block;
+    }
+    .blog-cta a:hover { background: var(--m-mauve-d); }
+
+    footer {
+      text-align: center; padding: 28px 40px;
+      font-size: .75rem; color: var(--m-taupe);
+      border-top: 1px solid var(--m-sand);
+    }
+    footer a { color: var(--m-mauve); text-decoration: none; }
+  </style>
+  <style>
+    /* Przewodnik wideo — dodatki do oprawy bloga */
+    .blog-hero .kanal { display: inline-flex; align-items: center; gap: 10px; margin-top: 22px; padding: 11px 20px; border-radius: 8px; background: var(--m-ink); color: #fff; text-decoration: none; font-size: .9rem; font-weight: 500; position: relative; z-index: 1; transition: background .2s; }
+    .blog-hero .kanal:hover { background: #4a3c34; }
+    .blog-hero .kanal svg { width: 20px; height: 20px; fill: #fff; }
+    .card-thumb.przewodnik { position: relative; }
+    .card-thumb .numer { position: absolute; top: 12px; left: 12px; min-width: 34px; height: 34px; padding: 0 10px; border-radius: 17px; background: rgba(44,36,32,.86); color: #fff; font-size: .9rem; font-weight: 600; display: flex; align-items: center; justify-content: center; letter-spacing: .02em; }
+    .card-thumb .play { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+    .card-thumb .play span { width: 56px; height: 56px; border-radius: 50%; background: rgba(255,255,255,.92); display: flex; align-items: center; justify-content: center; box-shadow: 0 6px 20px rgba(0,0,0,.25); transition: transform .2s; }
+    .blog-card:hover .card-thumb .play span { transform: scale(1.08); }
+    .card-thumb .play svg { width: 22px; height: 22px; fill: var(--m-ink); margin-left: 3px; }
+    .brak-wynikow a { color: var(--m-mauve); }
+    .wskazowka { max-width: 1060px; margin: -24px auto 0; padding: 0 40px 48px; color: var(--m-muted); font-size: .9rem; line-height: 1.6; }
+    @media (max-width: 600px) { .wskazowka { padding: 0 20px 36px; } }
+  </style>
+</head>
+<body>
+
+<nav style="position:relative;">
+  <a class="logo" href="/zamow.html"><img src="img/estelio-logo.png" alt="Estelio"></a>
+  <ul>
+    <li><a href="/zamow.html">Strona główna</a></li>
+    <li><a href="/blog.html">Blog</a></li>
+    <li><a href="/zamow.html#formularz" class="nav-cta">Zamów dostęp</a></li>
+  </ul>
+  <button class="hamburger" id="hamburger" aria-label="Menu" onclick="toggleMenu()">
+    <span></span><span></span><span></span>
+  </button>
+  <div class="nav-mobile-menu" id="mobileMenu">
+    <a href="/zamow.html" onclick="closeMenu()">Strona główna</a>
+    <a href="/blog.html" onclick="closeMenu()">Blog</a>
+    <a href="/zamow.html#formularz" class="nav-cta" onclick="closeMenu()">Zamów dostęp</a>
+  </div>
+</nav>
+
+<div class="blog-hero">
+  <div class="eyebrow">Przewodnik wideo</div>
+  <h1>Zobacz, jak działa Estelio<br><em>w kilka minut</em></h1>
+  <p>Krótkie filmy krok po kroku: od pierwszego logowania po rozliczenia. Oglądaj po kolei albo wybierz temat, który jest Ci teraz potrzebny.</p>
+  <a class="kanal" href="https://www.youtube.com/@EstelioSystem" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>Kanał Estelio na YouTube</a>
+</div>
+
+<div class="blog-section">
+  <div class="blog-grid" id="blog-grid">
+    <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton sk-line" style="width:40%"></div><div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:60%;margin-top:16px"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton sk-line" style="width:40%"></div><div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:60%;margin-top:16px"></div></div></div>
+    <div class="skeleton-card"><div class="skeleton-thumb"></div><div class="skeleton-body"><div class="skeleton sk-line" style="width:40%"></div><div class="skeleton sk-line" style="width:90%;height:18px;margin-bottom:8px"></div><div class="skeleton sk-line" style="width:60%;margin-top:16px"></div></div></div>
+  </div>
+</div>
+<p class="wskazowka">Filmy są ułożone w kolejności nauki. Jeśli czegoś brakuje, napisz na <a href="mailto:kontakt@estelio.com.pl" style="color:var(--m-mauve)">kontakt@estelio.com.pl</a> — nagramy kolejny odcinek. Odpowiedzi na pytania tekstowo znajdziesz też w <a href="/pomoc/" style="color:var(--m-mauve)">Pomocy</a> i na <a href="/blog.html" style="color:var(--m-mauve)">blogu</a>.</p>
+
+<div class="blog-section" style="padding-top:0;">
+  <div class="blog-cta">
+    <div class="cta-eyebrow">Wolisz spróbować samodzielnie?</div>
+    <h2>Konto testowe na 14 dni</h2>
+    <p>Zamów dostęp i przeklikaj wszystko, co widzisz na filmach — bez zobowiązań.</p>
+    <a href="/zamow.html#formularz">Zamów dostęp →</a>
+  </div>
+</div>
+
+<footer>
+  <nav style="display:flex; flex-wrap:wrap; justify-content:center; gap:6px 24px; margin-bottom:14px; padding:0;">
+    <a href="/zamow.html">Strona główna</a>
+    <a href="/przewodnik">Przewodnik wideo</a>
+    <a href="/zamow.html#formularz" style="color:var(--m-mauve); font-weight:500;">Zamów dostęp</a>
+  </nav>
+  <div>
+    © 2026 Estelio ·
+    <a href="/zamow.html">Strona główna</a> ·
+    <a href="/dokumentacja.html">Dokumentacja</a> ·
+    <a href="/regulamin.html">Regulamin</a> ·
+    <a href="/polityka-prywatnosci.html">Polityka prywatności</a> ·
+    <a href="mailto:kontakt@estelio.com.pl">kontakt@estelio.com.pl</a>
+  </div>
+</footer>
+
+<script>
+// Lista filmów = opublikowane wpisy bloga w kategorii „Przewodnik”. Kolejność: numer z początku tytułu
+// („1. Pierwsze logowanie”), wpisy bez numeru na końcu wg daty. Miniatura: okładka (edytor wstawia miniaturę YouTube).
+const KATEGORIA = 'Przewodnik';
+function esc(str) {
+  return String(str == null ? '' : str).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function numerZTytulu(t) { const m = /^\s*(\d{1,3})\s*[.)\-:]/.exec(t || ''); return m ? Number(m[1]) : null; }
+function tytulBezNumeru(t) { return String(t || '').replace(/^\s*\d{1,3}\s*[.)\-:]\s*/, ''); }
+function formatDate(str) { const d = new Date(str); return isNaN(d) ? '' : d.toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }); }
+function porownaj(a, b) {
+  const na = numerZTytulu(a.title), nb = numerZTytulu(b.title);
+  if (na != null && nb != null && na !== nb) return na - nb;
+  if (na != null && nb == null) return -1;
+  if (na == null && nb != null) return 1;
+  return String(a.date_published).localeCompare(String(b.date_published)) || (a.id - b.id);
+}
+function kartaHtml(p, i) {
+  const url = p.url_override || '/blog/' + p.slug;
+  const numer = numerZTytulu(p.title) != null ? numerZTytulu(p.title) : (i + 1);
+  const thumb = p.okladka ? `<img src="${esc(p.okladka)}" alt="" loading="lazy">` : esc(p.emoji || '▶️');
+  return `
+    <a class="blog-card" href="${esc(url)}">
+      <div class="card-thumb przewodnik">${thumb}<span class="numer" aria-label="Odcinek ${numer}">${numer}</span><div class="play"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></span></div></div>
+      <div class="card-body">
+        <span class="card-cat cat-przewodnik">Film</span>
+        <div class="card-title">${esc(tytulBezNumeru(p.title))}</div>
+        <div class="card-excerpt">${esc(p.excerpt || '')}</div>
+        <div class="card-footer">
+          <span class="card-date">${formatDate(p.date_published)}</span>
+          <span class="card-read">Obejrzyj →</span>
+        </div>
+      </div>
+    </a>`;
+}
+async function loadPosts() {
+  const grid = document.getElementById('blog-grid');
+  try {
+    const res = await fetch('/api/blog/posts');
+    const data = await res.json();
+    if (!res.ok || !data.posts) throw new Error(data.message || 'Błąd odpowiedzi');
+    const filmy = data.posts.filter(p => p.category === KATEGORIA).sort(porownaj);
+    if (!filmy.length) {
+      grid.innerHTML = `<p class="brak-wynikow">Pierwsze odcinki są w przygotowaniu. Tymczasem zajrzyj na <a href="https://www.youtube.com/@EstelioSystem" target="_blank" rel="noopener">kanał Estelio na YouTube</a>.</p>`;
+      return;
+    }
+    grid.innerHTML = filmy.map(kartaHtml).join('');
+  } catch (e) {
+    grid.innerHTML = `<p class="brak-wynikow">Nie udało się wczytać listy filmów. Odśwież stronę za chwilę albo obejrzyj je bezpośrednio na <a href="https://www.youtube.com/@EstelioSystem" target="_blank" rel="noopener">kanale Estelio</a>.</p>`;
+  }
+}
+loadPosts();
+</script>
+<script>
+function toggleMenu() {
+  document.getElementById('hamburger').classList.toggle('open');
+  document.getElementById('mobileMenu').classList.toggle('open');
+}
+function closeMenu() {
+  document.getElementById('hamburger').classList.remove('open');
+  document.getElementById('mobileMenu').classList.remove('open');
+}
+document.addEventListener('click', function(e) {
+  const nav = document.querySelector('nav');
+  if (nav && !nav.contains(e.target)) closeMenu();
+});
+</script>
+</body>
+</html>
