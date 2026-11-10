@@ -92,7 +92,15 @@ module.exports = (db, opts = {}) => {
   const KOL = ' DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
   const mk = (sql, nazwa) => db.query(sql, (e) => { if (e) log.error(`[terminarz] CREATE ${nazwa}:`, e.message); });
   // kolumny dodawane idempotentnie (ER_DUP_FIELDNAME = już jest); zawsze NULL-owalne / z domyślną wartością, żeby stary kod działał bez zmian
-  const alterKolumna = (tabela, kolumna, def) => db.query(`ALTER TABLE ${tabela} ADD COLUMN ${kolumna} ${def}`, (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') log.error(`[terminarz] ALTER ${tabela}.${kolumna}:`, e.message); });
+  // audyt 10.11.2026 (#13b): najpierw pytamy schemat, ALTER idzie tylko dla brakującej kolumny — log startu bez dziesiątek odmów
+  const alterKolumna = (tabela, kolumna, def) => db.query(
+    `SELECT 1 AS jest FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1`,
+    [tabela, kolumna],
+    (eS, rows) => {
+      if (!eS && rows && rows.length) return;   // kolumna już jest — nic nie robimy
+      db.query(`ALTER TABLE ${tabela} ADD COLUMN ${kolumna} ${def}`, (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') log.error(`[terminarz] ALTER ${tabela}.${kolumna}:`, e.message); });
+    },
+  );
 
   // ── tabele własne (idempotentnie, przy ładowaniu modułu) ─────────────────────
   mk(`CREATE TABLE IF NOT EXISTS Term_Ustawienia (
@@ -398,9 +406,11 @@ module.exports = (db, opts = {}) => {
   async function wTransakcjiSalonu(tenant, fn) {
     const conn = await polacz();
     try {
-      // R3: na czas kontrolowanej migracji schematu (blokada 'trm:migracja' trzymana przez narzędzie) operacje dodatku są odrzucane; rdzeń nie jest wstrzymywany
+      // R3: na czas kontrolowanej migracji schematu (blokada 'trm:migracja' trzymana przez narzędzie) operacje dodatku są odrzucane.
+      // Audyt 10.11.2026 (#17): rdzeń (umawianie, odwołanie, obecność) NIE jest wstrzymywany w salonach bez integracji zakupów —
+      // wcześniej komentarz tak twierdził, ale kod odrzucał każdy zapis każdego salonu.
       const wolna = await qc(conn, `SELECT IS_FREE_LOCK('trm:migracja') AS w`);
-      if (wolna[0] && Number(wolna[0].w) === 0) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
+      if (wolna[0] && Number(wolna[0].w) === 0 && await integracjaZakupow(tenant)) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
       const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, ['trm:' + tenant]);
       if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.', { code: 'BLOKADA' });
       try {
@@ -894,17 +904,23 @@ module.exports = (db, opts = {}) => {
   }
   /** Koniec holdu bez wpłaty: pozycje anulowane, zasoby zwolnione, oczekujący link unieważniony. status: 'wygasla' (czas) albo 'anulowana' (ręcznie). */
   async function zakonczHold(tenant, rez, status, kto, powod) {
-    await wTransakcjiSalonu(tenant, async (conn) => {
+    // audyt 10.11.2026 (#16): najpierw próbujemy przestawić status — przy trzech instancjach tylko jedna trafia,
+    // reszta kończy bez wpisu w historii i bez drugiego logu (wcześniej każda pisała swój ślad).
+    const zamkniete = await wTransakcjiSalonu(tenant, async (conn) => {
+      const up = await qc(conn, `UPDATE Term_Rezerwacje SET status = ?, anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND status = 'do_wplaty'`,
+        [status, kto || 'System', String(powod || '').slice(0, 255), tenant, rez.id]);
+      if (!up || !up.affectedRows) return false;   // inna instancja albo recepcja już zamknęła ten hold
       for (const p of rez.pozycje.filter(p => p.stan !== 'anulowana')) await qc(conn, `UPDATE Term_Pozycje SET stan = 'anulowana' WHERE tenant_id = ? AND id = ?`, [tenant, p.id]);
       await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
-      await qc(conn, `UPDATE Term_Rezerwacje SET status = ?, anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND status = 'do_wplaty'`,
-        [status, kto || 'System', String(powod || '').slice(0, 255), tenant, rez.id]);
       await historia(conn, tenant, rez.id, kto || 'System', status === 'wygasla' ? 'wygasla' : 'anulowano',
         status === 'wygasla' ? `hold wygasł bez wpłaty (termin trzymany do ${String(rez.hold_do || '').slice(0, 16)}) — godzina wróciła do puli` : `zwolniono trzymany termin bez wpłaty: ${powod}`,
         null, { hold_do: rez.hold_do, powod });
       await qc(conn, `UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id]).catch(() => {});
+      return true;
     });
+    if (!zamkniete) return false;
     await sprawaAutoZamknij(tenant, `E41:${rez.id}`, status === 'wygasla' ? 'Hold wygasł bez wpłaty' : 'Termin zwolniony ręcznie', 'nieaktualna');
+    return true;
   }
   /** Tykanie: holdy po terminie wygasają same, recepcja dostaje Sprawę E40; hold, w który nikt nie wszedł, po tygodniu traci dane osobowe. */
   async function wygasHoldy() {
@@ -913,7 +929,7 @@ module.exports = (db, opts = {}) => {
       try {
         const rez = await rezerwacja(h.tenant_id, h.id); if (!rez || rez.status !== 'do_wplaty') continue;
         const link = await linkZadatku(h.tenant_id, rez.id);
-        await zakonczHold(h.tenant_id, rez, 'wygasla', 'System', 'brak wpłaty zadatku w terminie');
+        if (!await zakonczHold(h.tenant_id, rez, 'wygasla', 'System', 'brak wpłaty zadatku w terminie')) continue;   // #16: inna instancja była szybsza
         const regulaminOnline = !!(link && link.status === 'ZAAKCEPTOWANA');
         await sprawaUpsert(h.tenant_id, { typ: 'E40', rezerwacja_id: rez.id, tytul: `Bez wpłaty — ${rez.klient_nazwa}, ${rez.start.slice(0, 16)} zwolnione`,
           opis: `Zadatek nie wpłynął do ${String(rez.hold_do).slice(0, 16)}, termin wrócił do puli. ${rez.klient_telefon ? 'Zadzwonić? ' + rez.klient_telefon + '.' : 'Brak telefonu.'}${regulaminOnline ? ' Regulamin był zaakceptowany online — sprawdź w panelu tpay, czy wpłata nie przyszła po czasie (wtedy „Wpłata mimo wygaśnięcia” w wizycie).' : ''}`,
@@ -2130,6 +2146,14 @@ module.exports = (db, opts = {}) => {
         if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
         if (['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) return { status: 'success', powtorzenie: true, rezerwacja: rez }; // T159
         if (Number(d.wersja) !== Number(rez.wersja)) throw new BladUzytkownika('Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem.', { code: 'WERSJA', rezerwacja: rez });
+        if (rez.status === 'do_wplaty') {
+          // audyt 10.11.2026 (#14): trzymany termin zwalniamy tą samą drogą co wygaśnięcie — inaczej link do zadatku zostawał
+          // aktywny i klientka mogła zapłacić za odwołaną wizytę (sprawa E41 też zostawała otwarta).
+          const powodH = String(d.powod || '').trim().slice(0, 255) || 'zwolniono trzymany termin';
+          await zakonczHold(tenant, rez, 'anulowana', imie, powodH);
+          zapiszLog(tenant, 'TERMINARZ: ODWOŁANIE', imie, `${rez.numer} ${rez.klient_nazwa} (trzymany termin): ${powodH}`);
+          return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), message: 'Termin zwolniony. Link do zadatku przestał działać.' };
+        }
         const pozId = d.pozycja_id ? Number(d.pozycja_id) : null;
         const cel = pozId ? rez.pozycje.filter(p => p.id === pozId) : rez.pozycje.filter(p => p.stan === 'zaplanowana');
         if (pozId && (!cel.length || cel[0].stan !== 'zaplanowana')) throw new BladUzytkownika('Tę pozycję można anulować tylko, gdy jest jeszcze zaplanowana (wykonanej części nie anulujemy).');
