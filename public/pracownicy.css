@@ -54,3 +54,7 @@ body.dark-mode .est-employees .emp-primary { color: #1e293b; }
 body.dark-mode .est-employees .emp-remove:hover { background: #334155; }
 body.dark-mode .est-employees form input[type="text"] { background: #0f172a !important; color: #f8fafc !important; border: 1px solid #334155 !important; }
 body.dark-mode .est-employees .emp-card { box-shadow: 0 15px 35px rgba(0, 0, 0, .3); }
+
+/* Audyt 10.11.2026: przycisk „Zmień” (imię i nazwisko) obok „Usuń” — ta sama oprawa, neutralny kolor */
+.est-employees .emp-edit { color: var(--emp-muted, #6b6560); }
+.est-employees .emp-edit:hover { color: var(--emp-text, #2b2622); background: #f3efe9; }

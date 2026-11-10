@@ -45,6 +45,8 @@ function baza(rez, poz, rola = 'recepcja') {
     [/IS_FREE_LOCK/, [{ w: 1 }]],
     [/GET_LOCK/, [{ l: 1 }]],
     [/RELEASE_LOCK/, [{ r: 1 }]],
+    // audyt 10.11.2026 (#5): UPDATE z warunkiem wersji musi zgłosić trafienie — prawdziwa baza zwraca affectedRows
+    [/^s*UPDATE Term_Rezerwacje SET/, { affectedRows: 1 }],
   ]);
 }
 const aplikacja = (db) => { const app = express(); app.use(express.json()); app.use('/api', M(db, { hasFeature: (t, k, cb) => cb(true) })); return app; };

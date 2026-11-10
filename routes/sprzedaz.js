@@ -3,9 +3,37 @@
 //           add_sales_def, add_multi_sale, emergency_edit_sale, get_discounts, add_discount_def
 
 const express = require('express');
-const { parseKwota, parseIlosc, parseNumOpt } = require('./utils');
+const { parseKwota, parseIlosc, parseNumOpt, parseNum } = require('./utils');
 const { randomUUID } = require('crypto');
 const { makeZapiszLog } = require('./logi');
+const { normalizujNazwe } = require('./nazwy');
+
+// Imię pracownika jest KLUCZEM w wielu tabelach (tekst, nie id). Zmiana imienia przepisuje je wszędzie,
+// gdzie służy do łączenia/filtrowania: zespół, PIN-login, terminarz (grafik, nieobecności, pozycje wizyt,
+// zajęcia, usługi z listą wykonawców), sprzedaż (raporty per osoba), zadania, targety, konsultacje, foto.
+// Dzienniki (Logi, Term_Historia, Term_Sprawy_Dziennik) zostają z historycznym brzmieniem — to zapisy zdarzeń.
+const KOLUMNY_IMIENIA = [
+  ['Pracownicy', 'imie'],
+  ['`Użytkownicy`', 'imie_login'],
+  ['Term_Pracownicy', 'pracownik'],
+  ['Term_Grafik', 'pracownik'],
+  ['Term_Nieobecnosci', 'pracownik'],
+  ['Term_Pozycje', 'pracownik'],
+  ['Term_Pozycje', 'wykonawca_fakt'],
+  ['Term_Realizacje', 'wykonawca_fakt'],
+  ['Term_Sprawy_Odczyt', 'pracownik'],
+  ['Sprzedaz', 'sprzedawca'],
+  ['Pracownicy_Targety', 'pracownik'],
+  ['Pracownicy_Konsultacja', 'imie'],
+  ['Zadania_przypisani', 'przypisany'],
+  ['Retencja', 'pracownik'],
+  ['Lojalnosc_Punkty', 'pracownik'],
+  ['FotoSesje', 'pracownik'],
+  ['FotoZdjecia', 'pracownik'],
+  ['Dokumenty_dodatkowe_klienta', 'pracownik'],
+  ['Rejestr_RODO', 'pracownik'],
+  ['`Rejestr_Oświadczeń`', 'pracownik'],
+];
 const { makeLojalnosc } = require('./lojalnosc');
 
 module.exports = (db) => {
@@ -1163,26 +1191,113 @@ module.exports = (db) => {
     // --- ADD_SALES_DEF ---
     } else if (action === 'add_sales_def') {
       if (d.typ === 'Pracownik') {
-        const id = randomUUID();
-        db.query(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (?, ?, ?)`, [id, tenant_id, d.wartosc], (err) => {
-          if (err) return res.json({ status: 'error', message: err.message });
-          zapiszLog(tenant_id, 'DODANO PRACOWNIKA', d.pracownik, d.wartosc);
-          return res.json({ status: 'success', message: 'Dodano pomyślnie!' });
+        // Audyt 10.11.2026: imię bez spacji na końcach (było „Aleksandra Cabaj ” → „Nieznany pracownik” w terminarzu),
+        // bez dubli (ta sama osoba dwa razy = dwie „osoby” w grafiku i raportach).
+        const imie = normalizujNazwe(d.wartosc);
+        if (!imie) return res.json({ status: 'error', message: 'Podaj imię i nazwisko pracownika — pole jest puste.' });
+        if (imie.length > 100) return res.json({ status: 'error', message: 'Imię i nazwisko może mieć najwyżej 100 znaków.' });
+        db.query(`SELECT imie FROM Pracownicy WHERE tenant_id = ? AND LOWER(TRIM(imie)) = LOWER(?) LIMIT 1`, [tenant_id, imie], (errD, rowsD) => {
+          if (errD) return res.json({ status: 'error', message: errD.message });
+          if (rowsD && rowsD.length) return res.json({ status: 'error', message: `Pracownik „${rowsD[0].imie.trim()}” już jest na liście. Nie dodano drugi raz.` });
+          const id = randomUUID();
+          db.query(`INSERT INTO Pracownicy (id, tenant_id, imie) VALUES (?, ?, ?)`, [id, tenant_id, imie], (err) => {
+            if (err) return res.json({ status: 'error', message: err.message });
+            zapiszLog(tenant_id, 'DODANO PRACOWNIKA', d.pracownik, imie);
+            return res.json({ status: 'success', message: `Dodano pomyślnie: ${imie}` });
+          });
         });
       } else {
-        const id = randomUUID();
+        // Audyt 10.11.2026: cennik nie przyjmuje pustej nazwy ani usługi bez ceny (u Ambasady 2 puste usługi
+        // zapisane pustym formularzem); spacje na końcach obcinane (22 usługi ze spacjami → podwójne kategorie).
+        const kategoria = normalizujNazwe(d.kategoria);
+        const wariant = normalizujNazwe(d.wariant);
+        if (!kategoria) return res.json({ status: 'error', message: 'Podaj nazwę usługi (kategorię) — pole jest puste. Usługa bez nazwy nie zostanie dodana.' });
+        let cena;
+        try { cena = parseNum(d.cena, { wymagana: true, pole: 'cena' }); } catch (e) {
+          return res.json({ status: 'error', message: String(d.cena || '').trim() === '' ? 'Podaj cenę usługi (może być 0 zł). Usługa bez ceny nie zostanie dodana.' : e.message });
+        }
+        if (cena < 0) return res.json({ status: 'error', message: 'Cena nie może być ujemna.' });
         const typZabiegu = d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null;
         // waznosc_dni: '' / brak = bezterminowo (NULL); inaczej liczba dni
         const waznoscDni = parseWaznoscDni(d.waznosc_dni);
-        db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, typ_zabiegu, waznosc_dni) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-          [id, tenant_id, d.kategoria, d.wariant, d.cena ? parseNumOpt(d.cena) : null, typZabiegu, waznoscDni],
-          (err) => {
-            if (err) return res.json({ status: 'error', message: err.message });
-            zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${d.kategoria} ${d.wariant} (${d.cena} zł)${typZabiegu ? ' [typ: ' + typZabiegu + ']' : ''}${waznoscDni === null ? ' [bezterminowo]' : ' [ważność: ' + waznoscDni + ' dni]'}`);
-            return res.json({ status: 'success', message: 'Dodano pomyślnie!' });
-          }
-        );
+        db.query(`SELECT kategoria, wariant FROM Uslugi WHERE tenant_id = ? AND LOWER(TRIM(kategoria)) = LOWER(?) AND LOWER(TRIM(COALESCE(wariant, ''))) = LOWER(?) LIMIT 1`, [tenant_id, kategoria, wariant], (errD, rowsD) => {
+          if (errD) return res.json({ status: 'error', message: errD.message });
+          if (rowsD && rowsD.length) return res.json({ status: 'error', message: `Usługa „${kategoria}${wariant ? ' / ' + wariant : ''}” już jest w cenniku. Nie dodano drugi raz — jeśli chcesz zmienić cenę, użyj edycji.` });
+          const id = randomUUID();
+          db.query(`INSERT INTO Uslugi (id, tenant_id, kategoria, wariant, cena, typ_zabiegu, waznosc_dni) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            [id, tenant_id, kategoria, wariant, cena, typZabiegu, waznoscDni],
+            (err) => {
+              if (err) return res.json({ status: 'error', message: err.message });
+              zapiszLog(tenant_id, 'DODANO ZABIEG', d.pracownik, `${kategoria} ${wariant} (${cena} zł)${typZabiegu ? ' [typ: ' + typZabiegu + ']' : ''}${waznoscDni === null ? ' [bezterminowo]' : ' [ważność: ' + waznoscDni + ' dni]'}`);
+              return res.json({ status: 'success', message: `Dodano pomyślnie: ${kategoria}${wariant ? ' / ' + wariant : ''}` });
+            }
+          );
+        });
       }
+
+    // --- EDIT_EMPLOYEE (zmiana imienia z przepisaniem wszędzie, gdzie imię jest kluczem) ---
+    } else if (action === 'edit_employee') {
+      const stare = normalizujNazwe(d.stare_imie);
+      const nowe = normalizujNazwe(d.nowe_imie);
+      if (!stare) return res.json({ status: 'error', message: 'Nie wiadomo, którą osobę zmienić (brak dotychczasowego imienia).' });
+      if (!nowe) return res.json({ status: 'error', message: 'Podaj nowe imię i nazwisko — pole jest puste.' });
+      if (nowe.length > 100) return res.json({ status: 'error', message: 'Imię i nazwisko może mieć najwyżej 100 znaków.' });
+      db.getConnection((errC, conn) => {
+        if (errC) return res.json({ status: 'error', message: errC.message });
+        const koniec = (odp) => { conn.release(); return res.json(odp); };
+        const wycofaj = (msg) => conn.rollback(() => koniec({ status: 'error', message: msg }));
+        conn.query(`SELECT imie FROM Pracownicy WHERE tenant_id = ? AND TRIM(imie) = ? LIMIT 1`, [tenant_id, stare], (e1, r1) => {
+          if (e1) return koniec({ status: 'error', message: e1.message });
+          if (!r1 || !r1.length) return koniec({ status: 'error', message: `Nie ma pracownika „${stare}” na liście — odśwież stronę i spróbuj ponownie.` });
+          const stareWBazie = r1[0].imie; // dokładne brzmienie z bazy (może mieć spację na końcu)
+          const tylkoPisownia = stareWBazie.trim().toLowerCase() === nowe.toLowerCase();
+          conn.query(`SELECT imie FROM Pracownicy WHERE tenant_id = ? AND LOWER(TRIM(imie)) = LOWER(?) AND TRIM(imie) <> ? LIMIT 1`, [tenant_id, nowe, stare], (e2, r2) => {
+            if (e2) return koniec({ status: 'error', message: e2.message });
+            if (r2 && r2.length) return koniec({ status: 'error', message: `Pracownik „${r2[0].imie.trim()}” już jest na liście — nie można nadać dwóm osobom tego samego imienia.` });
+            if (stareWBazie === nowe) return koniec({ status: 'success', message: 'Bez zmian — imię jest już zapisane w tej postaci.', zmieniono: {} });
+            conn.beginTransaction((e3) => {
+              if (e3) return koniec({ status: 'error', message: e3.message });
+              const zmieniono = {};
+              const kroki = KOLUMNY_IMIENIA.map(([tabela, kolumna]) => (dalej) => {
+                // TRIM po obu stronach: wartość w bazie mogła zostać zapisana ze spacją na końcu (stare formularze)
+                conn.query(`UPDATE ${tabela} SET ${kolumna} = ? WHERE tenant_id = ? AND TRIM(${kolumna}) = ?`, [nowe, tenant_id, stare], (e, r) => {
+                  if (e) { if (e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR') return dalej(null); return dalej(e); }
+                  if (r && r.affectedRows) zmieniono[tabela.replace(/`/g, '') + '.' + kolumna] = r.affectedRows;
+                  dalej(null);
+                });
+              });
+              // zajęcia pracownika w terminarzu: klucz = imię tylko dla typu 'pracownik'
+              kroki.push((dalej) => conn.query(`UPDATE Term_Zajecia SET klucz = ? WHERE tenant_id = ? AND typ_zasobu = 'pracownik' AND TRIM(klucz) = ?`, [nowe, tenant_id, stare], (e, r) => {
+                if (e) return dalej(e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR' ? null : e);
+                if (r && r.affectedRows) zmieniono['Term_Zajecia.klucz'] = r.affectedRows; dalej(null);
+              }));
+              // lista wykonawców w usłudze terminarza: JSON ["Anna","Ola"] — podmiana nazwy w tekście JSON
+              kroki.push((dalej) => conn.query(`UPDATE Term_Uslugi SET pracownicy_json = REPLACE(pracownicy_json, ?, ?) WHERE tenant_id = ? AND pracownicy_json LIKE ?`,
+                [JSON.stringify(stareWBazie), JSON.stringify(nowe), tenant_id, '%' + JSON.stringify(stareWBazie) + '%'], (e, r) => {
+                  if (e) return dalej(e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR' ? null : e);
+                  if (r && r.affectedRows) zmieniono['Term_Uslugi.pracownicy_json'] = r.affectedRows; dalej(null);
+                }));
+              let i = 0;
+              const nastepny = (e) => {
+                if (e) return wycofaj(e.message);
+                if (i >= kroki.length) {
+                  return conn.commit((e4) => {
+                    if (e4) return wycofaj(e4.message);
+                    const gdzie = Object.entries(zmieniono).map(([k, v]) => `${k}: ${v}`).join(', ');
+                    zapiszLog(tenant_id, 'ZMIANA IMIENIA PRACOWNIKA', d.pracownik, `„${stareWBazie}” → „${nowe}”${gdzie ? ' (' + gdzie + ')' : ''}`);
+                    const ileTabel = Object.keys(zmieniono).length;
+                    return koniec({ status: 'success', zmieniono, message: tylkoPisownia
+                      ? `Poprawiono pisownię: „${nowe}”. Zaktualizowano ${ileTabel} ${ileTabel === 1 ? 'miejsce' : 'miejsc'} w danych salonu.`
+                      : `Zmieniono imię: „${stareWBazie.trim()}” → „${nowe}”. Zaktualizowano ${ileTabel} ${ileTabel === 1 ? 'miejsce' : 'miejsc'} w danych salonu (zespół, terminarz, sprzedaż).` });
+                  });
+                }
+                kroki[i++](nastepny);
+              };
+              nastepny(null);
+            });
+          });
+        });
+      });
 
     // --- ADD_DISCOUNT_DEF ---
     } else if (action === 'add_discount_def') {
@@ -1234,9 +1349,18 @@ module.exports = (db) => {
 
     // --- EDIT_SERVICE ---
     } else if (action === 'edit_service') {
+      // Audyt 10.11.2026: te same reguły co przy dodawaniu — nazwa bez spacji na końcach, nie pusta, cena wymagana.
+      const nowaKategoria = normalizujNazwe(d.new_kategoria);
+      const nowyWariant = normalizujNazwe(d.new_wariant);
+      if (!nowaKategoria) return res.json({ status: 'error', message: 'Podaj nazwę usługi (kategorię) — pole jest puste.' });
+      let nowaCena;
+      try { nowaCena = parseNum(d.new_cena, { wymagana: true, pole: 'cena' }); } catch (e) {
+        return res.json({ status: 'error', message: String(d.new_cena || '').trim() === '' ? 'Podaj cenę usługi (może być 0 zł).' : e.message });
+      }
+      if (nowaCena < 0) return res.json({ status: 'error', message: 'Cena nie może być ujemna.' });
       // typ_zabiegu opcjonalny — jeśli klient go nie wysłał, zostaw bez zmian
       const fields = ['kategoria = ?', 'wariant = ?', 'cena = ?'];
-      const vals = [d.new_kategoria, d.new_wariant, d.new_cena ? parseFloat(d.new_cena) : null];
+      const vals = [nowaKategoria, nowyWariant, nowaCena];
       if (d.typ_zabiegu !== undefined) {
         fields.push('typ_zabiegu = ?');
         vals.push(d.typ_zabiegu ? String(d.typ_zabiegu).trim().toLowerCase().slice(0, 80) : null);
@@ -1246,9 +1370,9 @@ module.exports = (db) => {
         fields.push('waznosc_dni = ?');
         vals.push(parseWaznoscDni(d.waznosc_dni));
       }
-      vals.push(tenant_id, d.old_kategoria, d.old_wariant);
+      vals.push(tenant_id, normalizujNazwe(d.old_kategoria), normalizujNazwe(d.old_wariant));
       db.query(
-        `UPDATE Uslugi SET ${fields.join(', ')} WHERE tenant_id = ? AND TRIM(kategoria) = ? AND TRIM(wariant) = ? LIMIT 1`,
+        `UPDATE Uslugi SET ${fields.join(', ')} WHERE tenant_id = ? AND TRIM(kategoria) = ? AND TRIM(COALESCE(wariant, '')) = ? LIMIT 1`,
         vals,
         (err) => {
           if (err) return res.json({ status: 'error', message: err.message });

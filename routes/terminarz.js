@@ -16,6 +16,7 @@ const { getSession } = require('./sessions'); // C06/A24: tożsamość osoby z s
 // ═══════════════════════════════════════════════════════════════════════════
 'use strict';
 const express = require('express');
+const { normalizujNazwe } = require('./nazwy'); // audyt 10.11.2026: imiona bez spacji na końcach, jedna reguła dla listy z bazy i wejścia
 const crypto = require('crypto');
 const { makeZapiszLog } = require('./logi');
 const S = require('./terminarz-silnik');
@@ -69,6 +70,8 @@ function terminHoldu(terazStr, startStr) {
   return S.naStr(koniec);
 }
 
+const bladNieznanyPracownik = (kto) => new BladUzytkownika(`Nie ma osoby „${kto}” na liście zespołu wykonującego zabiegi. Sprawdź pisownię w Pracownicy (Ustawienia) albo oznaczenie „tylko recepcja” w Ustawieniach → Zespół, potem odśwież terminarz.`);
+const bladWersji = () => new BladUzytkownika('Ktoś zmienił tę wizytę w międzyczasie — nic nie zapisano. Odśwież wizytę i spróbuj ponownie.', { code: 'WERSJA' });
 class BladUzytkownika extends Error { constructor(msg, extra) { super(msg); this.extra = extra || {}; this.uzytkownika = true; } }
 
 module.exports = (db, opts = {}) => {
@@ -89,7 +92,15 @@ module.exports = (db, opts = {}) => {
   const KOL = ' DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci';
   const mk = (sql, nazwa) => db.query(sql, (e) => { if (e) log.error(`[terminarz] CREATE ${nazwa}:`, e.message); });
   // kolumny dodawane idempotentnie (ER_DUP_FIELDNAME = już jest); zawsze NULL-owalne / z domyślną wartością, żeby stary kod działał bez zmian
-  const alterKolumna = (tabela, kolumna, def) => db.query(`ALTER TABLE ${tabela} ADD COLUMN ${kolumna} ${def}`, (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') log.error(`[terminarz] ALTER ${tabela}.${kolumna}:`, e.message); });
+  // audyt 10.11.2026 (#13b): najpierw pytamy schemat, ALTER idzie tylko dla brakującej kolumny — log startu bez dziesiątek odmów
+  const alterKolumna = (tabela, kolumna, def) => db.query(
+    `SELECT 1 AS jest FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1`,
+    [tabela, kolumna],
+    (eS, rows) => {
+      if (!eS && rows && rows.length) return;   // kolumna już jest — nic nie robimy
+      db.query(`ALTER TABLE ${tabela} ADD COLUMN ${kolumna} ${def}`, (e) => { if (e && e.code !== 'ER_DUP_FIELDNAME') log.error(`[terminarz] ALTER ${tabela}.${kolumna}:`, e.message); });
+    },
+  );
 
   // ── tabele własne (idempotentnie, przy ładowaniu modułu) ─────────────────────
   mk(`CREATE TABLE IF NOT EXISTS Term_Ustawienia (
@@ -395,9 +406,11 @@ module.exports = (db, opts = {}) => {
   async function wTransakcjiSalonu(tenant, fn) {
     const conn = await polacz();
     try {
-      // R3: na czas kontrolowanej migracji schematu (blokada 'trm:migracja' trzymana przez narzędzie) operacje dodatku są odrzucane; rdzeń nie jest wstrzymywany
+      // R3: na czas kontrolowanej migracji schematu (blokada 'trm:migracja' trzymana przez narzędzie) operacje dodatku są odrzucane.
+      // Audyt 10.11.2026 (#17): rdzeń (umawianie, odwołanie, obecność) NIE jest wstrzymywany w salonach bez integracji zakupów —
+      // wcześniej komentarz tak twierdził, ale kod odrzucał każdy zapis każdego salonu.
       const wolna = await qc(conn, `SELECT IS_FREE_LOCK('trm:migracja') AS w`);
-      if (wolna[0] && Number(wolna[0].w) === 0) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
+      if (wolna[0] && Number(wolna[0].w) === 0 && await integracjaZakupow(tenant)) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
       const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, ['trm:' + tenant]);
       if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.', { code: 'BLOKADA' });
       try {
@@ -599,11 +612,11 @@ module.exports = (db, opts = {}) => {
   // Tylko osoby oznaczone jako wykonujące zabiegi (brak wpisu w Term_Pracownicy = domyślnie TAK, nic się nie zmienia dla nikogo bez decyzji managera).
   // To jest JEDYNE miejsce filtrowania — propaguje się do wszystkich widoków (siatki dni, listy, grafik, nowa wizyta) przez wspólną funkcję.
   const pracownicy = (tenant) => q(`SELECT p.imie FROM Pracownicy p LEFT JOIN Term_Pracownicy tp ON tp.tenant_id = p.tenant_id AND tp.pracownik = p.imie
-      WHERE p.tenant_id = ? AND COALESCE(tp.wykonuje_zabiegi, 1) = 1 ORDER BY p.imie`, [tenant]).then(r => r.map(x => x.imie));
+      WHERE p.tenant_id = ? AND COALESCE(tp.wykonuje_zabiegi, 1) = 1 ORDER BY p.imie`, [tenant]).then(r => r.map(x => normalizujNazwe(x.imie)));
   // Pełna lista (łącznie z osobami „tylko recepcja”) — tylko do ekranu ustawień „Zespół”.
   const zespol = (tenant) => q(`SELECT p.imie, COALESCE(tp.wykonuje_zabiegi, 1) AS wykonuje_zabiegi FROM Pracownicy p LEFT JOIN Term_Pracownicy tp ON tp.tenant_id = p.tenant_id AND tp.pracownik = p.imie
-      WHERE p.tenant_id = ? ORDER BY p.imie`, [tenant]).then(r => r.map(x => ({ imie: x.imie, wykonuje_zabiegi: !!x.wykonuje_zabiegi })));
-  const grafik = (tenant) => q(`SELECT id, pracownik, dzien_tyg, od, do_ AS \`do\`, od_daty, do_daty FROM Term_Grafik WHERE tenant_id = ? ORDER BY pracownik, dzien_tyg, od`, [tenant]).then(r => r.map(x => ({ ...x, od_daty: dataZ(x.od_daty), do_daty: dataZ(x.do_daty) })));
+      WHERE p.tenant_id = ? ORDER BY p.imie`, [tenant]).then(r => r.map(x => ({ imie: normalizujNazwe(x.imie), wykonuje_zabiegi: !!x.wykonuje_zabiegi })));
+  const grafik = (tenant) => q(`SELECT id, pracownik, dzien_tyg, od, do_ AS \`do\`, od_daty, do_daty FROM Term_Grafik WHERE tenant_id = ? ORDER BY pracownik, dzien_tyg, od`, [tenant]).then(r => r.map(x => ({ ...x, pracownik: normalizujNazwe(x.pracownik), od_daty: dataZ(x.od_daty), do_daty: dataZ(x.do_daty) })));
 
   /** Godziny salonu dla dnia → przedziały w minutach. */
   function godzinySalonu(ust, data) {
@@ -628,8 +641,10 @@ module.exports = (db, opts = {}) => {
     const blokadyDla = (pred) => nieob.filter(pred).map(n => ({ od: S.naMin(n.od), do: S.naMin(n.do_) }));
     const wszystkie = blokadyDla(n => !n.pracownik && !n.zasob_id);
     const dostepnoscPracownikow = {};
+    const twardeBlokadyPracownikow = {}; // audyt 10.11.2026 (#6): nieobecności i blokady „cały salon” osobno — zgoda „mimo grafiku” ich nie obchodzi
     for (const p of prac) {
-      dostepnoscPracownikow[p] = S.odejmij(S.przedzialyZGrafiku(graf.filter(g => g.pracownik === p), data), [...wszystkie, ...blokadyDla(n => n.pracownik === p)]);
+      twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik === p)];
+      dostepnoscPracownikow[p] = S.odejmij(S.przedzialyZGrafiku(graf.filter(g => g.pracownik === p), data), twardeBlokadyPracownikow[p]);
     }
     const salon = godzinySalonu(ust, data);
     const dostepnoscZasobow = {};
@@ -640,20 +655,26 @@ module.exports = (db, opts = {}) => {
     if (idKlienta) {
       klientZajety = (await q(`SELECT DATE_FORMAT(start,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(koniec,'%Y-%m-%d %H:%i:%s') AS do_, id FROM Term_Rezerwacje WHERE tenant_id = ? AND id_klienta = ? AND status NOT IN ('anulowana','odrzucona','wygasla') AND start < ? AND koniec > ?`, [tenant, String(idKlienta), do_, od])).map(r => ({ od: r.od, do: r.do_, rezerwacja_id: r.id }));
     }
-    return { ust, salon, dostepnoscPracownikow, dostepnoscZasobow, zajete: zajete.map(z => ({ ...z, do: z.do_ })), klientZajety, nieobecnosci: nieob, gabinety: zas.filter(z => z.typ === 'gabinet').map(z => String(z.id)), urzadzenia: zas.filter(z => z.typ === 'urzadzenie').map(z => String(z.id)) };
+    return { ust, salon, dostepnoscPracownikow, twardeBlokadyPracownikow, dostepnoscZasobow, zajete: zajete.map(z => ({ ...z, do: z.do_ })), klientZajety, nieobecnosci: nieob, gabinety: zas.filter(z => z.typ === 'gabinet').map(z => String(z.id)), urzadzenia: zas.filter(z => z.typ === 'urzadzenie').map(z => String(z.id)) };
   }
 
   /** Pozycje z żądania → pozycje silnika (konfiguracja usługi, kompetencje, pula zasobów). */
-  function zbudujPozycje(wejscie, katalog, prac) {
+  function zbudujPozycje(wejscie, katalog, prac, zespolPelny) {
     if (!Array.isArray(wejscie) || !wejscie.length) throw new BladUzytkownika('Wybierz co najmniej jedną usługę.');
     if (wejscie.length > 8) throw new BladUzytkownika('Maksymalnie 8 usług w jednej wizycie.');
     return wejscie.map((p, i) => {
       const u = katalog.find(x => String(x.id) === String(p.usluga_id));
       if (!u) throw new BladUzytkownika(`Usługa nr ${i + 1} nie istnieje w cenniku.`);
       if (!u.aktywna) throw new BladUzytkownika(`Usługa „${u.kategoria}${u.wariant ? ' / ' + u.wariant : ''}” jest wyłączona w terminarzu.`);
-      const dozwoleni = Array.isArray(u.pracownicy) && u.pracownicy.length ? u.pracownicy.filter(x => prac.includes(x)) : prac;
-      const wybrany = p.pracownik ? String(p.pracownik).trim() : null;
-      if (wybrany && !prac.includes(wybrany)) throw new BladUzytkownika(`Pracownik „${wybrany}” nie istnieje.`);
+      const dozwoleni = Array.isArray(u.pracownicy) && u.pracownicy.length ? u.pracownicy.map(normalizujNazwe).filter(x => prac.includes(x)) : prac;
+      const wybrany = p.pracownik ? normalizujNazwe(p.pracownik) : null;
+      if (wybrany && !prac.includes(wybrany)) {
+        // audyt 10.11.2026: rozróżniamy „tylko recepcja” od literówki — recepcja ma wiedzieć, co zrobić
+        const wZespole = Array.isArray(zespolPelny) && zespolPelny.some(z => normalizujNazwe(z.imie) === wybrany);
+        throw new BladUzytkownika(wZespole
+          ? `„${wybrany}” jest oznaczona jako „tylko recepcja” i nie może mieć przypisanych zabiegów. Zmień to w Ustawieniach → Zespół albo wybierz inną osobę.`
+          : `Nie ma osoby „${wybrany}” na liście zespołu. Sprawdź pisownię w Pracownicy (Ustawienia) i odśwież terminarz.`);
+      }
       return {
         klucz: u.id, usluga_id: u.id, nazwa: u.kategoria + (u.wariant ? ' / ' + u.wariant : ''), kategoria: u.kategoria, wariant: u.wariant, cena: u.cena,
         czas_min: p.czas_min != null && ROLE_OPERACYJNE_CZAS(p) ? Number(p.czas_min) : u.czas_min,
@@ -883,17 +904,23 @@ module.exports = (db, opts = {}) => {
   }
   /** Koniec holdu bez wpłaty: pozycje anulowane, zasoby zwolnione, oczekujący link unieważniony. status: 'wygasla' (czas) albo 'anulowana' (ręcznie). */
   async function zakonczHold(tenant, rez, status, kto, powod) {
-    await wTransakcjiSalonu(tenant, async (conn) => {
+    // audyt 10.11.2026 (#16): najpierw próbujemy przestawić status — przy trzech instancjach tylko jedna trafia,
+    // reszta kończy bez wpisu w historii i bez drugiego logu (wcześniej każda pisała swój ślad).
+    const zamkniete = await wTransakcjiSalonu(tenant, async (conn) => {
+      const up = await qc(conn, `UPDATE Term_Rezerwacje SET status = ?, anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND status = 'do_wplaty'`,
+        [status, kto || 'System', String(powod || '').slice(0, 255), tenant, rez.id]);
+      if (!up || !up.affectedRows) return false;   // inna instancja albo recepcja już zamknęła ten hold
       for (const p of rez.pozycje.filter(p => p.stan !== 'anulowana')) await qc(conn, `UPDATE Term_Pozycje SET stan = 'anulowana' WHERE tenant_id = ? AND id = ?`, [tenant, p.id]);
       await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
-      await qc(conn, `UPDATE Term_Rezerwacje SET status = ?, anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND status = 'do_wplaty'`,
-        [status, kto || 'System', String(powod || '').slice(0, 255), tenant, rez.id]);
       await historia(conn, tenant, rez.id, kto || 'System', status === 'wygasla' ? 'wygasla' : 'anulowano',
         status === 'wygasla' ? `hold wygasł bez wpłaty (termin trzymany do ${String(rez.hold_do || '').slice(0, 16)}) — godzina wróciła do puli` : `zwolniono trzymany termin bez wpłaty: ${powod}`,
         null, { hold_do: rez.hold_do, powod });
       await qc(conn, `UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id]).catch(() => {});
+      return true;
     });
+    if (!zamkniete) return false;
     await sprawaAutoZamknij(tenant, `E41:${rez.id}`, status === 'wygasla' ? 'Hold wygasł bez wpłaty' : 'Termin zwolniony ręcznie', 'nieaktualna');
+    return true;
   }
   /** Tykanie: holdy po terminie wygasają same, recepcja dostaje Sprawę E40; hold, w który nikt nie wszedł, po tygodniu traci dane osobowe. */
   async function wygasHoldy() {
@@ -902,7 +929,7 @@ module.exports = (db, opts = {}) => {
       try {
         const rez = await rezerwacja(h.tenant_id, h.id); if (!rez || rez.status !== 'do_wplaty') continue;
         const link = await linkZadatku(h.tenant_id, rez.id);
-        await zakonczHold(h.tenant_id, rez, 'wygasla', 'System', 'brak wpłaty zadatku w terminie');
+        if (!await zakonczHold(h.tenant_id, rez, 'wygasla', 'System', 'brak wpłaty zadatku w terminie')) continue;   // #16: inna instancja była szybsza
         const regulaminOnline = !!(link && link.status === 'ZAAKCEPTOWANA');
         await sprawaUpsert(h.tenant_id, { typ: 'E40', rezerwacja_id: rez.id, tytul: `Bez wpłaty — ${rez.klient_nazwa}, ${rez.start.slice(0, 16)} zwolnione`,
           opis: `Zadatek nie wpłynął do ${String(rez.hold_do).slice(0, 16)}, termin wrócił do puli. ${rez.klient_telefon ? 'Zadzwonić? ' + rez.klient_telefon + '.' : 'Brak telefonu.'}${regulaminOnline ? ' Regulamin był zaakceptowany online — sprawdź w panelu tpay, czy wpłata nie przyszła po czasie (wtedy „Wpłata mimo wygaśnięcia” w wizycie).' : ''}`,
@@ -1040,9 +1067,22 @@ module.exports = (db, opts = {}) => {
     return wynik.slice(0, 6);
   }
 
+  /** Skrót konfiguracji salonu (audyt 10.11.2026, #10): zmiana zespołu, usług, grafiku, zasobów albo ustawień daje inny odcisk.
+   * Przeglądarka dostaje go przy każdym odświeżeniu dnia i sama dociąga nowe dane — recepcja nie pracuje na liście sprzed zmiany. */
+  function odciskCfg(cfg) {
+    const z = JSON.stringify([
+      (cfg.pracownicy || []),
+      (cfg.ust || {}).wersja, (cfg.ust || {}).zmieniono, (cfg.ust || {}).godziny,
+      (cfg.grafik || []).map(g => [g.id, g.pracownik, g.dzien_tyg, g.od, g.do, g.od_daty, g.do_daty]),
+      (cfg.zasoby || []).map(x => [x.id, x.nazwa, x.typ, x.aktywny ? 1 : 0, x.pojemnosc]),
+      (cfg.katalog || []).map(u => [u.id, u.czas_min, u.aktywna ? 1 : 0, u.wymaga_gabinet ? 1 : 0, (u.pracownicy || []).join('|')]),
+    ]);
+    return crypto.createHash('md5').update(z).digest('hex').slice(0, 12);
+  }
+
   async function wspolneCfg(tenant) {
-    const [ust, prac, graf, zas, kat, terazStr] = await Promise.all([ustawienia(tenant), pracownicy(tenant), grafik(tenant), zasoby(tenant, true), uslugi(tenant), teraz()]);
-    return { ust, pracownicy: prac, grafik: graf, zasoby: zas, katalog: kat, terazStr };
+    const [ust, prac, graf, zas, kat, terazStr, zesp] = await Promise.all([ustawienia(tenant), pracownicy(tenant), grafik(tenant), zasoby(tenant, true), uslugi(tenant), teraz(), zespol(tenant)]);
+    return { ust, pracownicy: prac, grafik: graf, zasoby: zas, katalog: kat, terazStr, zespol: zesp };
   }
 
   /** Wizyty dotknięte zmianą dostępności (T191/T193): pozycje poza nową dostępnością w zakresie dat. */
@@ -1085,15 +1125,16 @@ module.exports = (db, opts = {}) => {
         if (!on) return res.json({ status: 'success', feature_on: false, rola: r });
         const cfg = await wspolneCfg(tenant);
         const nieob = await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i:%s') AS \`do\`, typ, opis, utworzyl FROM Term_Nieobecnosci WHERE tenant_id = ? AND do_ >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY od`, [tenant]);
-        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, schemat, schemat_v2: schematV2, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
+        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, cfg_odcisk: odciskCfg(cfg), schemat, schemat_v2: schematV2, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
       }
       if (!(await czyFeature(tenant))) return res.json({ status: 'error', code: 'DODATEK', message: 'Dodatek „Terminarz” nie jest aktywny w tym salonie.' });
       const wynik = await obsluz(action, d, tenant, imie, r);
       return res.json(wynik);
     } catch (e) {
       if (e && e.uzytkownika) return res.json({ status: 'error', message: e.message, ...e.extra });
-      log.error('[terminarz]', action, e && e.message);
-      return res.json({ status: 'error', message: 'Błąd terminarza. Spróbuj ponownie.' });
+      // audyt 10.11.2026: bez kodu SQL i stosu nie da się odróżnić pustej puli od błędu kodu (2× trm_init 3.11 nierozpoznane)
+      log.error('[terminarz]', action, `tenant=${tenant}`, (e && e.code) || '', e && e.message, e && e.sqlMessage ? `sql: ${e.sqlMessage}` : '', e && e.stack ? '\n' + String(e.stack).split('\n').slice(0, 4).join('\n') : '');
+      return res.json({ status: 'error', message: `Błąd terminarza po stronie serwera (akcja ${action}). Spróbuj ponownie za chwilę; jeśli się powtarza, zgłoś problem przyciskiem „Zgłoś problem” z godziną.` });
     }
   });
 
@@ -1131,7 +1172,9 @@ module.exports = (db, opts = {}) => {
         if (!nazwa) throw new BladUzytkownika('Podaj nazwę zasobu.');
         const poj = Math.max(1, Math.min(50, Number(d.pojemnosc) || 1));
         if (d.id) {
-          await q(`UPDATE Term_Zasoby SET nazwa = ?, pojemnosc = ?, aktywny = ?, kolejnosc = ? WHERE tenant_id = ? AND id = ?`, [nazwa, poj, d.aktywny === false || d.aktywny === 0 ? 0 : 1, Number(d.kolejnosc) || 0, tenant, Number(d.id)]);
+          const aktywnyZ = d.aktywny === false || d.aktywny === 0 ? 0 : 1;
+          // audyt 10.11.2026 (#7c): przywrócenie (aktywny=1) musi też wyczyścić datę archiwizacji, inaczej zasób zostaje niewidoczny
+          await q(`UPDATE Term_Zasoby SET nazwa = ?, pojemnosc = ?, aktywny = ?, zarchiwizowano = IF(? = 1, NULL, zarchiwizowano), kolejnosc = ? WHERE tenant_id = ? AND id = ?`, [nazwa, poj, aktywnyZ, aktywnyZ, Number(d.kolejnosc) || 0, tenant, Number(d.id)]);
         } else {
           await q(`INSERT INTO Term_Zasoby (tenant_id, typ, nazwa, pojemnosc, kolejnosc) VALUES (?, ?, ?, ?, ?)`, [tenant, typ, nazwa, poj, Number(d.kolejnosc) || 0]);
         }
@@ -1175,8 +1218,8 @@ module.exports = (db, opts = {}) => {
       case 'trm_grafik_zapisz': {
         wymagaj(r, ROLE_MANAGER_PLUS);
         const prac = await pracownicy(tenant);
-        const kto = String(d.pracownik_grafik || '').trim();
-        if (!prac.includes(kto)) throw new BladUzytkownika('Nieznany pracownik.');
+        const kto = normalizujNazwe(d.pracownik_grafik);
+        if (!prac.includes(kto)) throw bladNieznanyPracownik(kto);
         const wzorce = (Array.isArray(d.wzorce) ? d.wzorce : []).filter(w => w.dzien_tyg >= 1 && w.dzien_tyg <= 7 && RE_HHMM.test(w.od) && RE_HHMM.test(w.do) && w.od < w.do);
         const cfg = await wspolneCfg(tenant);
         // podgląd wpływu (T191): przyszłe pozycje tego pracownika poza nową dostępnością
@@ -1208,7 +1251,7 @@ module.exports = (db, opts = {}) => {
         wymagaj(r, ROLE_MANAGER_PLUS);
         const ust = await ustawienia(tenant);
         const prac = await pracownicy(tenant);
-        const wybrani = (Array.isArray(d.pracownicy_lista) ? d.pracownicy_lista : prac).filter(p => prac.includes(p));
+        const wybrani = (Array.isArray(d.pracownicy_lista) ? d.pracownicy_lista : prac).map(normalizujNazwe).filter(p => prac.includes(p));
         const conn = await polacz();
         try {
           await begin(conn);
@@ -1226,8 +1269,8 @@ module.exports = (db, opts = {}) => {
       // ───────── R05: wyjątek jednego dnia w grafiku (pierwszeństwo nad regułą cykliczną, nie zmienia innych tygodni) ─────────
       case 'trm_grafik_dzien_zapisz': {
         wymagaj(r, ROLE_MANAGER_PLUS);
-        const kto = String(d.pracownik_grafik || '').trim();
-        if (!(await pracownicy(tenant)).includes(kto)) throw new BladUzytkownika('Nieznany pracownik.');
+        const kto = normalizujNazwe(d.pracownik_grafik);
+        if (!(await pracownicy(tenant)).includes(kto)) throw bladNieznanyPracownik(kto);
         const data = sprawdzData(d.data, 'data');
         const wolne = !!d.wolne;
         const przedz = wolne ? [] : (Array.isArray(d.przedzialy) ? d.przedzialy : []).filter(w => RE_HHMM.test(w.od) && RE_HHMM.test(w.do) && w.od < w.do);
@@ -1258,7 +1301,7 @@ module.exports = (db, opts = {}) => {
       }
       case 'trm_grafik_dzien_usun': {
         wymagaj(r, ROLE_MANAGER_PLUS);
-        const kto = String(d.pracownik_grafik || '').trim(), data = sprawdzData(d.data, 'data');
+        const kto = normalizujNazwe(d.pracownik_grafik), data = sprawdzData(d.data, 'data');
         await q(`DELETE FROM Term_Grafik WHERE tenant_id = ? AND pracownik = ? AND od_daty = ? AND do_daty = ?`, [tenant, kto, data, data]);
         zapiszLog(tenant, 'TERMINARZ: GRAFIK DZIEŃ', imie, `${kto} ${data}: przywrócono stały harmonogram`);
         return { status: 'success', grafik: await grafik(tenant) };
@@ -1268,9 +1311,9 @@ module.exports = (db, opts = {}) => {
         const od = sprawdzDt(d.od, 'od'), do_ = sprawdzDt(d.do, 'do');
         if (do_ <= od) throw new BladUzytkownika('Koniec nieobecności musi być po początku.');
         const typ = ['urlop', 'choroba', 'szkolenie', 'przerwa', 'serwis', 'zamkniete', 'inne'].includes(d.typ) ? d.typ : 'inne';
-        const prac = d.pracownik_nieob ? String(d.pracownik_nieob).trim() : null;
+        const prac = d.pracownik_nieob ? normalizujNazwe(d.pracownik_nieob) : null;
         const zasob = d.zasob_id ? Number(d.zasob_id) : null;
-        if (prac && !(await pracownicy(tenant)).includes(prac)) throw new BladUzytkownika('Nieznany pracownik.');
+        if (prac && !(await pracownicy(tenant)).includes(prac)) throw bladNieznanyPracownik(prac);
         const dotk = await wizytyDotkniete(tenant, prac, zasob, od.slice(0, 10), do_.slice(0, 10), (p) => !S.nakladaja(S.naMin(p.start), S.naMin(p.koniec), S.naMin(od), S.naMin(do_)));
         // podgląd skutków bez zapisu (raport naprawczy T10) — ta sama lista co przy zapisie, nic nie zmienia w bazie
         if (d.podglad) return { status: 'success', podglad: true, dotkniete: dotk };
@@ -1291,9 +1334,9 @@ module.exports = (db, opts = {}) => {
       }
       case 'trm_zespol_zapisz': {
         wymagaj(r, ROLE_MANAGER_PLUS);
-        const kto = String(d.pracownik_zespol || '').trim();
-        const wszyscyProc = await q(`SELECT imie FROM Pracownicy WHERE tenant_id = ?`, [tenant]).then(rr => rr.map(x => x.imie));
-        if (!wszyscyProc.includes(kto)) throw new BladUzytkownika('Nieznany pracownik.');
+        const kto = normalizujNazwe(d.pracownik_zespol);
+        const wszyscyProc = await q(`SELECT imie FROM Pracownicy WHERE tenant_id = ?`, [tenant]).then(rr => rr.map(x => normalizujNazwe(x.imie)));
+        if (!wszyscyProc.includes(kto)) throw new BladUzytkownika(`Nie ma osoby „${kto}” na liście pracowników salonu. Dodaj ją najpierw w Pracownicy (Ustawienia), potem odśwież terminarz.`);
         const wartosc = (d.wykonuje_zabiegi === false || d.wykonuje_zabiegi === 0 || d.wykonuje_zabiegi === '0') ? 0 : 1;
         await q(`INSERT INTO Term_Pracownicy (tenant_id, pracownik, wykonuje_zabiegi, zmieniono) VALUES (?, ?, ?, NOW())
                  ON DUPLICATE KEY UPDATE wykonuje_zabiegi = VALUES(wykonuje_zabiegi), zmieniono = NOW()`, [tenant, kto, wartosc]);
@@ -1323,10 +1366,10 @@ module.exports = (db, opts = {}) => {
         // i bez zasobu — silnik dostępności odejmuje taki czas każdej osobie i każdemu gabinetowi.
         // Wymaga jawnego zaznaczenia, żeby pusty formularz nie zablokował przez przypadek salonu.
         const calySalon = d.caly_salon === true || d.caly_salon === 'true' || d.caly_salon === 1;
-        const prac = calySalon ? null : (d.osoba ? String(d.osoba).trim() : null);
+        const prac = calySalon ? null : (d.osoba ? normalizujNazwe(d.osoba) : null);
         const zasob = calySalon ? null : (d.zasob_id ? Number(d.zasob_id) : null);
         if (!calySalon && !prac && !zasob) throw new BladUzytkownika('Wskaż, czyj czas albo który gabinet rezerwujesz — albo zaznacz „cały salon".');
-        if (prac && !(await pracownicy(tenant)).includes(prac)) throw new BladUzytkownika('Nieznana osoba.');
+        if (prac && !(await pracownicy(tenant)).includes(prac)) throw bladNieznanyPracownik(prac);
         if (zasob && !(await zasoby(tenant, true)).some(z => Number(z.id) === zasob)) throw new BladUzytkownika('Nieznany gabinet albo urządzenie.');
         const opis = String(d.opis || '').trim().slice(0, 255);
         if (!opis) throw new BladUzytkownika('Napisz jednym zdaniem, czego dotyczy rezerwacja — zobaczy to cała zmiana.');
@@ -1427,7 +1470,7 @@ module.exports = (db, opts = {}) => {
         await oznaczPierwszeWizyty(tenant, lista, data);     // #12b: „1. wizyta" na kafelku
         const dostep = {}; Object.keys(k.dostepnoscPracownikow).forEach(p => { dostep[p] = k.dostepnoscPracownikow[p].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
         const dostepZas = {}; Object.keys(k.dostepnoscZasobow).forEach(z => { dostepZas[z] = k.dostepnoscZasobow[z].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
-        return { status: 'success', data, teraz: cfg.terazStr, rezerwacje: lista, dostepnosc: dostep, dostepnosc_zasobow: dostepZas, salon: k.salon.map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })), nieobecnosci: k.nieobecnosci.map(n => ({ ...n, do: n.do_ })), zajecia: ROLE_OPERACYJNE.has(r) ? k.zajete : [] };
+        return { status: 'success', data, teraz: cfg.terazStr, cfg_odcisk: odciskCfg(cfg), rezerwacje: lista, dostepnosc: dostep, dostepnosc_zasobow: dostepZas, salon: k.salon.map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })), nieobecnosci: k.nieobecnosci.map(n => ({ ...n, do: n.do_ })), zajecia: ROLE_OPERACYJNE.has(r) ? k.zajete : [] };
       }
       case 'trm_zakres': {
         const od = sprawdzData(d.od, 'od'), do_ = sprawdzData(d.do, 'do');
@@ -1863,7 +1906,7 @@ module.exports = (db, opts = {}) => {
         wymagaj(r, ROLE_OPERACYJNE);
         const start = sprawdzDt(d.start, 'start');
         const cfg = await wspolneCfg(tenant);
-        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy);
+        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy, cfg.zespol);
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, d.id_klienta || null);
         if (d.pomin_rezerwacje) k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(d.pomin_rezerwacje));
         const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: d.pomin_rezerwacje || null, mimoGrafiku: !!d.mimo_grafiku });
@@ -1876,7 +1919,7 @@ module.exports = (db, opts = {}) => {
         const od = sprawdzData(d.dzien_od, 'od'), do_ = sprawdzData(d.dzien_do, 'do');
         if (S.naMin(do_ + ' 00:00') - S.naMin(od + ' 00:00') > 60 * 1440) throw new BladUzytkownika('Zakres wyszukiwania maksymalnie 60 dni.');
         const cfg = await wspolneCfg(tenant);
-        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy);
+        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy, cfg.zespol);
         // szukajTerminy jest synchroniczne — konteksty dni dociągamy wcześniej (dni bez grafiku dają pusty kontekst)
         const cache = {};
         for (let m = S.naMin(od + ' 00:00'); m <= S.naMin(do_ + ' 00:00'); m += 1440) { const data = S.dzienZ(m); cache[data] = await kontekstDnia(tenant, data, cfg, d.id_klienta || null); }
@@ -1921,7 +1964,7 @@ module.exports = (db, opts = {}) => {
           const inny = (await q(`SELECT id, DATE_FORMAT(start,'%Y-%m-%d %H:%i') AS start FROM Term_Rezerwacje WHERE tenant_id = ? AND status = 'do_wplaty' AND hold_do > NOW() AND REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(klient_telefon,''),' ',''),'-',''),'+',''),'(','') LIKE ? LIMIT 1`, [tenant, '%' + cyfry]))[0];
           if (inny) throw new BladUzytkownika(`Ten numer ma już trzymany termin (EST-${String(inny.id).padStart(4, '0')}, ${inny.start}). Najpierw zakończ tamten hold: „Zadatek wpłynął” albo „Zwolnij termin”.`, { code: 'HOLD_TELEFON', rezerwacja_id: inny.id });
         }
-        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy);
+        const poz = zbudujPozycje(d.pozycje, cfg.katalog, cfg.pracownicy, cfg.zespol);
         // ZK-02: jednostki zakupów — opt-in per pozycja (zakup_skladnik_id); walidacja zasobów i jednostek oraz zapis w JEDNEJ transakcji pod blokadą salonu (§15.2)
         const zakupPoz = (Array.isArray(d.pozycje) ? d.pozycje : []).map(p => p && p.zakup_skladnik_id ? Number(p.zakup_skladnik_id) : null);
         if (zakupPoz.some(Boolean) && cfg.ust.zakupy_integracja !== 'on') throw new BladUzytkownika(schemat.gotowy && schematV2.gotowy ? 'Rezerwacja zabiegów z zakupów nie jest włączona w tym salonie.' : 'Rezerwacja zabiegów z zakupów niedostępna — schemat bazy niekompletny.', { code: 'INTEGRACJA' });
@@ -1994,7 +2037,7 @@ module.exports = (db, opts = {}) => {
           return n;
         };
         const nowePoz = aktywne.map(p => ({ usluga_id: p.usluga_id, pracownik: (d.pracownicy_pozycji && d.pracownicy_pozycji[String(p.id)] !== undefined) ? (d.pracownicy_pozycji[String(p.id)] || null) : p.pracownik, czas_min: czasPozycji(p) }));
-        const poz = zbudujPozycje(nowePoz, cfg.katalog, cfg.pracownicy);
+        const poz = zbudujPozycje(nowePoz, cfg.katalog, cfg.pracownicy, cfg.zespol);
         const k = await kontekstDnia(tenant, start.slice(0, 10), cfg, rez.id_klienta);
         k.klientZajety = k.klientZajety.filter(x => String(x.rezerwacja_id) !== String(rez.id));
         const w = S.sprawdzKomplet({ ...k, start, pozycje: poz, pominRezerwacje: rez.id, mimoGrafiku: !!d.mimo_grafiku });
@@ -2078,11 +2121,12 @@ module.exports = (db, opts = {}) => {
             if (ctx) zw += (await Z.domena.zwolnij(repo, ctx, { pozycja_id: p.id, powod: `${rez.numer}: skasowano (pomyłka)` })).zwolniono;
           }
           await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
-          await qc(conn,
+          const upU = await qc(conn,
             `UPDATE Term_Rezerwacje SET status = 'anulowana', usunieta = 1, usunieta_kiedy = NOW(), usunieta_przez = ?, usunieta_powod = ?,
                     anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW()
               WHERE tenant_id = ? AND id = ? AND wersja = ?`,
             [imie || null, powod, imie || null, 'Skasowano: ' + powod, tenant, rez.id, rez.wersja]);
+          if (!upU || !upU.affectedRows) throw bladWersji();
           await historia(conn, tenant, rez.id, imie, 'usunieto', `Skasowano wizytę (${opisPoz || 'bez pozycji'}) — ${powod}${zw ? ` (do pakietu wróciło: ${zw})` : ''}`, null, { powod, zwolnione_jednostki: zw });
           return zw;
         });
@@ -2102,6 +2146,14 @@ module.exports = (db, opts = {}) => {
         if (!rez) throw new BladUzytkownika('Nie znaleziono wizyty.');
         if (['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) return { status: 'success', powtorzenie: true, rezerwacja: rez }; // T159
         if (Number(d.wersja) !== Number(rez.wersja)) throw new BladUzytkownika('Ktoś zmienił tę wizytę. Sprawdź aktualne dane przed zapisaniem.', { code: 'WERSJA', rezerwacja: rez });
+        if (rez.status === 'do_wplaty') {
+          // audyt 10.11.2026 (#14): trzymany termin zwalniamy tą samą drogą co wygaśnięcie — inaczej link do zadatku zostawał
+          // aktywny i klientka mogła zapłacić za odwołaną wizytę (sprawa E41 też zostawała otwarta).
+          const powodH = String(d.powod || '').trim().slice(0, 255) || 'zwolniono trzymany termin';
+          await zakonczHold(tenant, rez, 'anulowana', imie, powodH);
+          zapiszLog(tenant, 'TERMINARZ: ODWOŁANIE', imie, `${rez.numer} ${rez.klient_nazwa} (trzymany termin): ${powodH}`);
+          return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), message: 'Termin zwolniony. Link do zadatku przestał działać.' };
+        }
         const pozId = d.pozycja_id ? Number(d.pozycja_id) : null;
         const cel = pozId ? rez.pozycje.filter(p => p.id === pozId) : rez.pozycje.filter(p => p.stan === 'zaplanowana');
         if (pozId && (!cel.length || cel[0].stan !== 'zaplanowana')) throw new BladUzytkownika('Tę pozycję można anulować tylko, gdy jest jeszcze zaplanowana (wykonanej części nie anulujemy).');
@@ -2123,13 +2175,15 @@ module.exports = (db, opts = {}) => {
           const calosc = pozostale.length === 0 || pozostale.every(p => ['niewykonana', 'odmowa'].includes(p.stan));
           const nicNieWykonano = !rez.pozycje.some(p => ['wykonana', 'przerwana', 'w_trakcie'].includes(p.stan));
           if (calosc && nicNieWykonano) {
-            await qc(conn, `UPDATE Term_Rezerwacje SET status = 'anulowana', anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [imie || null, powod, kto, tenant, rez.id, rez.wersja]);
+            const upA = await qc(conn, `UPDATE Term_Rezerwacje SET status = 'anulowana', anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [imie || null, powod, kto, tenant, rez.id, rez.wersja]);
+            if (!upA || !upA.affectedRows) throw bladWersji(); // audyt 10.11.2026 (#5): bez tego pozycje były anulowane, a wizyta zostawała „potwierdzona”
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
           } else {
             // częściowa anulacja: wizyta pozostaje, koniec przeliczony z pozostałych pozycji (R13: zwolnienie po zapisie)
             const kon = pozostale.length ? pozostale.map(p => p.koniec).sort().slice(-1)[0] : rez.koniec;
             const st = pozostale.length ? pozostale.map(p => p.start).sort()[0] : rez.start;
-            await qc(conn, `UPDATE Term_Rezerwacje SET start = ?, koniec = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [st, kon, tenant, rez.id, rez.wersja]);
+            const upB = await qc(conn, `UPDATE Term_Rezerwacje SET start = ?, koniec = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [st, kon, tenant, rez.id, rez.wersja]);
+            if (!upB || !upB.affectedRows) throw bladWersji();
           }
           await historia(conn, tenant, rez.id, imie, calosc && nicNieWykonano ? 'anulowano' : 'anulowano_pozycje', `${kto === 'klient' ? 'Klientka odwołała' : 'Salon odwołał'}: ${pozn} — ${powod}${zw ? ` (do pakietu wróciło: ${zw})` : ''}`, null, { pozycje: cel.map(p => p.id), zwolnione_jednostki: zw });
           return zw;
@@ -2153,6 +2207,7 @@ module.exports = (db, opts = {}) => {
         if (!OBECNOSCI.includes(d.obecnosc)) throw new BladUzytkownika('Nieznany stan obecności.');
         if (['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) throw new BladUzytkownika('Wizyta anulowana — nie oznaczamy obecności.');
         if (rez.obecnosc === d.obecnosc) return { status: 'success', powtorzenie: true, rezerwacja: rez };
+        let przywrocone = 0;
         await wTransakcjiSalonu(tenant, async (conn, repo) => {
           await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = ?, obecnosc_zmieniono = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [d.obecnosc, tenant, rez.id]);
           if (d.obecnosc === 'nieobecny') {
@@ -2161,6 +2216,17 @@ module.exports = (db, opts = {}) => {
             if (schematV2.gotowy) { const ctx = await ctxZ(tenant, imie, r); for (const p of rez.pozycje.filter(x => x.stan === 'zaplanowana')) await Z.domena.zwolnij(repo, ctx, { pozycja_id: p.id, powod: `${rez.numer}: nieobecność` }); }
             await qc(conn, `UPDATE Term_Pozycje SET stan = 'niewykonana' WHERE tenant_id = ? AND rezerwacja_id = ? AND stan = 'zaplanowana'`, [tenant, rez.id]);
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ? AND do_ > NOW()`, [tenant, rez.id]);
+          } else if (rez.obecnosc === 'nieobecny') {
+            // audyt 10.11.2026 (#3): cofnięcie pomyłkowej „nieobecności” — pozycje niewykonane, których nikt nie rozpoczął, wracają
+            // do „zaplanowana”, a ich zajęcia ożywają, o ile termin nie został w międzyczasie zajęty przez inną wizytę.
+            const doPowrotu = rez.pozycje.filter(x => x.stan === 'niewykonana' && !x.start_fakt && !x.koniec_fakt);
+            for (const x of doPowrotu) {
+              const kol = await qc(conn, `SELECT z2.rezerwacja_id FROM Term_Zajecia z1 JOIN Term_Zajecia z2 ON z2.tenant_id = z1.tenant_id AND z2.typ_zasobu = z1.typ_zasobu AND z2.klucz = z1.klucz AND z2.aktywne = 1 AND z2.rezerwacja_id <> z1.rezerwacja_id AND z2.od < z1.do_ AND z2.do_ > z1.od WHERE z1.tenant_id = ? AND z1.pozycja_id = ? LIMIT 1`, [tenant, x.id]);
+              if (kol.length) throw new BladUzytkownika(`Nie można cofnąć nieobecności: termin ${String(x.start_s || x.start).slice(11, 16)} (${x.kategoria}${x.wariant ? ' / ' + x.wariant : ''}) został już zajęty przez inną wizytę (nr ${kol[0].rezerwacja_id}). Przełóż tę wizytę na inny termin.`);
+              await qc(conn, `UPDATE Term_Pozycje SET stan = 'zaplanowana' WHERE tenant_id = ? AND id = ? AND stan = 'niewykonana'`, [tenant, x.id]);
+              await qc(conn, `UPDATE Term_Zajecia SET aktywne = 1 WHERE tenant_id = ? AND pozycja_id = ?`, [tenant, x.id]);
+              przywrocone++;
+            }
           }
           await historia(conn, tenant, rez.id, imie, 'obecnosc', `${rez.obecnosc} → ${d.obecnosc}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, { obecnosc: rez.obecnosc }, { obecnosc: d.obecnosc });
         });
@@ -2172,7 +2238,12 @@ module.exports = (db, opts = {}) => {
             priorytet: 'P2', powiazany_czas: null, klucz: `E06:${rez.id}`, kto: imie });
           for (const pid of zaplanowaneIdy) await sprawaAutoZamknij(tenant, `E13:poz:${pid}`, 'Potwierdzono nieobecność klientki');
         }
-        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
+        if (przywrocone) {
+          await sprawaAutoZamknij(tenant, `E06:${rez.id}`, 'Cofnięto nieobecność', 'nieaktualna');
+          zapiszLog(tenant, 'TERMINARZ: COFNIĘCIE NIEOBECNOŚCI', imie, `${rez.numer} ${rez.klient_nazwa}: ${przywrocone} ${przywrocone === 1 ? 'zabieg wrócił' : 'zabiegi wróciły'} do planu`);
+        }
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), przywrocone,
+          message: przywrocone ? `Cofnięto nieobecność: ${przywrocone} ${przywrocone === 1 ? 'zabieg wrócił' : 'zabiegi wróciły'} do planu.${schematV2.gotowy ? ' Jeśli przy nieobecności zwolniono jednostki pakietu, przypisz je ponownie w „Rozlicz”.' : ''}` : undefined };
       }
       case 'trm_pozycja_stan': {
         const rez = await rezerwacja(tenant, d.id);
@@ -2186,8 +2257,8 @@ module.exports = (db, opts = {}) => {
         if (p.stan === stan) return { status: 'success', powtorzenie: true, rezerwacja: rez }; // T121: drugie „Zakończ” nic nie zmienia
         const dozw = { zaplanowana: ['w_trakcie', 'wykonana', 'niewykonana', 'odmowa'], w_trakcie: ['wykonana', 'przerwana'] };
         if (!(dozw[p.stan] || []).includes(stan)) throw new BladUzytkownika(`Z „${p.stan}” nie można przejść do „${stan}”.`);
-        const wyk = d.wykonawca ? String(d.wykonawca).trim() : (imie || p.pracownik);
-        if (d.wykonawca && !(await pracownicy(tenant)).includes(wyk)) throw new BladUzytkownika('Wskazany wykonawca nie jest pracownikiem salonu.');
+        const wyk = d.wykonawca ? normalizujNazwe(d.wykonawca) : (imie || p.pracownik);
+        if (d.wykonawca && !(await pracownicy(tenant)).includes(wyk)) throw new BladUzytkownika(`Wskazany wykonawca „${wyk}” nie jest na liście zespołu wykonującego zabiegi (Ustawienia → Zespół).`);
         // ZK-02: pozycja z aktywnym przydziałem — potwierdzenie wykonania zużywa jednostkę (D04). Uprawnienie (§18.1): manager+, wykonawca własnej pozycji,
         // recepcja tylko z włączonym ustawieniem salonu. Rzeczywista data: moment potwierdzenia albo jawnie wskazana (manager+, powód); planowana godzina NIE jest faktem (§9.2).
         const przydzialy = schematV2.gotowy ? await q(`SELECT id, cykl FROM Term_Przydzialy WHERE tenant_id = ? AND pozycja_id = ? AND stan = 'zarezerwowany' ORDER BY id`, [tenant, p.id]) : [];
@@ -2199,11 +2270,14 @@ module.exports = (db, opts = {}) => {
           if (!wolno) throw new BladUzytkownika('Potwierdzenie wykonania zabiegu z pakietu należy do wykonawcy albo managera (recepcja — tylko gdy salon to włączył w ustawieniach).', { code: 'UPRAWNIENIA' });
           if (d.data_fakt) { wymagaj(r, ROLE_MANAGER_PLUS, 'Wskazanie innej daty wykonania wymaga uprawnienia managera.'); if (!String(d.powod || '').trim()) throw new BladUzytkownika('Podaj powód wpisania wykonania z inną datą.'); dataFakt = sprawdzDt(d.data_fakt, 'data wykonania'); }
         }
-        if (['w_trakcie', 'wykonana'].includes(stan) && rez.obecnosc === 'oczekiwana') await q(`UPDATE Term_Rezerwacje SET obecnosc = 'przybyl', obecnosc_zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [tenant, rez.id]);
         const wynJ = await wTransakcjiSalonu(tenant, async (conn, repo) => {
-          if (stan === 'w_trakcie') await qc(conn, `UPDATE Term_Pozycje SET stan = 'w_trakcie', start_fakt = NOW(), wykonawca_fakt = ? WHERE tenant_id = ? AND id = ?`, [wyk, tenant, p.id]);
-          else if (stan === 'wykonana' || stan === 'przerwana') await qc(conn, `UPDATE Term_Pozycje SET stan = ?, koniec_fakt = NOW(), wykonawca_fakt = COALESCE(wykonawca_fakt, ?) WHERE tenant_id = ? AND id = ?`, [stan, wyk, tenant, p.id]); // start_fakt zostaje NULL, gdy nie było „Rozpocznij”: planowana godzina nie udaje faktycznej (§9.2)
-          else await qc(conn, `UPDATE Term_Pozycje SET stan = ? WHERE tenant_id = ? AND id = ?`, [stan, tenant, p.id]);
+          // audyt 10.11.2026 (#15): obecność w tej samej transakcji; UPDATE pilnuje stanu sprzed decyzji — drugie stanowisko z nieodświeżonym ekranem nie nadpisze „wykonana” na „niewykonana”
+          if (['w_trakcie', 'wykonana'].includes(stan) && rez.obecnosc === 'oczekiwana') await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = 'przybyl', obecnosc_zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [tenant, rez.id]);
+          let upP;
+          if (stan === 'w_trakcie') upP = await qc(conn, `UPDATE Term_Pozycje SET stan = 'w_trakcie', start_fakt = NOW(), wykonawca_fakt = ? WHERE tenant_id = ? AND id = ? AND stan = ?`, [wyk, tenant, p.id, p.stan]);
+          else if (stan === 'wykonana' || stan === 'przerwana') upP = await qc(conn, `UPDATE Term_Pozycje SET stan = ?, koniec_fakt = NOW(), wykonawca_fakt = COALESCE(wykonawca_fakt, ?) WHERE tenant_id = ? AND id = ? AND stan = ?`, [stan, wyk, tenant, p.id, p.stan]); // start_fakt zostaje NULL, gdy nie było „Rozpocznij”: planowana godzina nie udaje faktycznej (§9.2)
+          else upP = await qc(conn, `UPDATE Term_Pozycje SET stan = ? WHERE tenant_id = ? AND id = ? AND stan = ?`, [stan, tenant, p.id, p.stan]);
+          if (!upP || !upP.affectedRows) throw new BladUzytkownika(`Stan zabiegu „${p.kategoria}${p.wariant ? ' / ' + p.wariant : ''}” zmienił się w międzyczasie (ktoś już go oznaczył). Odśwież wizytę i sprawdź aktualny stan.`, { code: 'WERSJA' });
           if (['niewykonana', 'odmowa', 'przerwana'].includes(stan)) await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND pozycja_id = ? AND do_ > NOW()`, [tenant, p.id]);
           let j = null;
           if (zPakietu) {
@@ -2562,7 +2636,8 @@ module.exports = (db, opts = {}) => {
       const bezWyniku = await q(`SELECT p.id AS pozycja_id, p.rezerwacja_id, p.tenant_id, p.pracownik, p.kategoria, p.wariant, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec, r.klient_nazwa
         FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.id = p.rezerwacja_id AND r.tenant_id = p.tenant_id
         WHERE p.stan IN ('zaplanowana', 'w_trakcie') AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla') AND p.koniec <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
-        LIMIT 200`).catch(() => []);
+          AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = p.tenant_id AND s.klucz_dedup = CONCAT('E13:poz:', p.id))
+        ORDER BY p.koniec DESC LIMIT 200`).catch(() => []); // audyt 10.11.2026 (#4): tylko brakujące sprawy — zamknięte ręcznie nie wracają co minutę, limit nie blokuje nowych salonów
       for (const poz of (bezWyniku || [])) {
         await sprawaUpsert(poz.tenant_id, { typ: 'E13', rezerwacja_id: poz.rezerwacja_id, tytul: `Brak wyniku wizyty — ${poz.klient_nazwa}`,
           opis: `${poz.kategoria}${poz.wariant ? ' / ' + poz.wariant : ''} — planowany koniec ${poz.koniec.slice(0, 16)}, brak potwierdzonego wykonania lub nieobecności.`,
@@ -2573,7 +2648,8 @@ module.exports = (db, opts = {}) => {
         FROM Term_Rezerwacje r WHERE r.sprzedaz_id IS NULL AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla')
           AND r.koniec <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
           AND EXISTS (SELECT 1 FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.stan IN ('wykonana', 'przerwana'))
-        LIMIT 200`).catch(() => []);
+          AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = r.tenant_id AND s.klucz_dedup = CONCAT('E19:rez:', r.id))
+        ORDER BY r.koniec DESC LIMIT 200`).catch(() => []);
       for (const rz of (bezPokrycia || [])) {
         const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch(() => []);
         await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Potwierdź rozliczenie — ${rz.klient_nazwa}`,

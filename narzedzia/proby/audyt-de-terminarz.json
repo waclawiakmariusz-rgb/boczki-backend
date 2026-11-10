@@ -1,0 +1,109 @@
+{
+  "nazwa": "audyt-de-terminarz",
+  "modul": "Terminarz",
+  "opis": "Audyt terminarza, paczki C–E: ostrzeżenie o terminie w przeszłości, komunikat o braku grafiku, pasek przywracania niedokończonej wizyty, jedno kliknięcie przy rezerwacji technicznej",
+  "sekcja": "terminarz",
+  "korzen": "#trm-root",
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        950
+      ]
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "zrzut": "01-terminarz-dzien"
+    },
+    {
+      "sprawdz": "!!(window.TRM && TRM.dane && TRM.dane.cfg_odcisk)",
+      "opis": "przeglądarka zna odcisk konfiguracji (#10)"
+    },
+    {
+      "sprawdz": "typeof TRM.szkicPrzywroc === 'function' && typeof TRM.szkicOdrzuc === 'function'",
+      "opis": "obsługa niedokończonego formularza (#23)"
+    },
+    {
+      "js": "TRM.nowaWizyta(); 'otwarto'",
+      "opis": "otwarcie formularza nowej wizyty"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "const u=(TRM.dane.uslugi||[]).find(x=>x.czas_min&&x.aktywna); if(u) TRM.nowaDodajPoz(u.id); TRM.nowa.klient={id_klienta:null,nazwa:'PROBA Ekranowa',telefon:'500100200',bez_kartoteki:true}; TRM.nowa.krok=3; const dzis=TRM.dzien&&TRM.dzien.teraz?TRM.dzien.teraz.slice(0,10):TRM.data; TRM.nowaWybierzSlot(dzis+' 06:00'); 'krok 3 + przeszly termin'",
+      "opis": "wizyta z godziną, która już minęła"
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "zrzut": "02-termin-w-przeszlosci"
+    },
+    {
+      "sprawdz": "document.body.innerHTML.includes('Termin w przeszłości')",
+      "opis": "#12 ostrzeżenie o terminie w przeszłości widoczne"
+    },
+    {
+      "js": "sessionStorage.getItem('trm_szkic_wizyty') ? 'szkic zapisany' : 'BRAK'",
+      "opis": "#23 szkic trafia do pamięci przeglądarki"
+    },
+    {
+      "sprawdz": "!!sessionStorage.getItem('trm_szkic_wizyty')",
+      "opis": "#23 szkic zapisany przy wypełnianiu formularza"
+    },
+    {
+      "js": "TRM.nowa = null; trm_otworz().then(()=>{}); 'przeladowano widok jak po wygasnieciu sesji'",
+      "opis": "symulacja utraty formularza (wygaśnięcie sesji)"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "zrzut": "03-pasek-przywroc-wizyte"
+    },
+    {
+      "sprawdz": "!!document.getElementById('trm-pasek-szkic')",
+      "opis": "#23 pasek „Masz niedokończoną wizytę” z przyciskiem Przywróć"
+    },
+    {
+      "js": "TRM.szkicOdrzuc(); sessionStorage.getItem('trm_szkic_wizyty') ? 'NADAL' : 'odrzucono'",
+      "opis": "#23 odrzucenie szkicu czyści pamięć"
+    },
+    {
+      "sprawdz": "!sessionStorage.getItem('trm_szkic_wizyty')",
+      "opis": "#23 po odrzuceniu szkic znika"
+    },
+    {
+      "js": "TRM.blokadaNowa({ start: TRM.data + ' 12:00', caly_salon: true }); 'otwarto blokade'",
+      "opis": "formularz rezerwacji technicznej"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "zrzut": "04-rezerwacja-techniczna"
+    },
+    {
+      "sprawdz": "!!document.getElementById('trm-blok-zapisz')",
+      "opis": "#11 przycisk zapisu ma identyfikator (da się go zablokować)"
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "zrzut": "05-telefon"
+    },
+    {
+      "pomiar": true
+    }
+  ]
+}

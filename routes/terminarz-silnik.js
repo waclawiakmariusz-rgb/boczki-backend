@@ -148,9 +148,21 @@ function sprawdzKomplet(w) {
     for (const imie of kandydaci) {
       const probne = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: imie, gabinet_id: null, urzadzenie_id: null });
       const dost = (w.dostepnoscPracownikow || {})[imie] || [];
+      // audyt 10.11.2026 (#6): nieobecność/blokada to twarda odmowa — także ze zgodą „mimo grafiku” (koniec grafiku to czas salonu, nieobecność nie)
+      const twarde = (w.twardeBlokadyPracownikow || {})[imie] || [];
+      const wBlokadzie = probne.find(z => twarde.some(b => nakladaja(z.od, z.do, b.od, b.do)));
+      if (wBlokadzie) {
+        const b = twarde.find(x => nakladaja(wBlokadzie.od, wBlokadzie.do, x.od, x.do));
+        powodOdrzucenia = powodOdrzucenia || { kod: 'NIEOBECNOSC', opis: `${imie} ma w tym czasie nieobecność albo blokadę (${naStr(b.od).slice(11, 16)}–${naStr(b.do).slice(11, 16)}) — tego nie da się obejść zgodą „mimo grafiku”. Wybierz inną osobę albo godzinę.`, mozna_mimo_grafiku: false };
+        continue;
+      }
       const pozaGrafikiem = probne.find(z => !miesciSie(z.od, z.do, dost));
       if (pozaGrafikiem) {
-        const opisGrafiku = `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).`;
+        // audyt 10.11.2026: brak jakiegokolwiek grafiku tego dnia to inna sytuacja niż „poza godzinami” — recepcja ma wiedzieć, że to manager uzupełnia grafik
+        const brakGrafiku = !Array.isArray(dost) || dost.length === 0;
+        const opisGrafiku = brakGrafiku
+          ? `${imie} nie ma grafiku na ${naStr(start).slice(0, 10)} — nie wiadomo, w jakich godzinach pracuje. Manager ustawia to w Ustawieniach → Grafik zespołu (przycisk „z godzin salonu” wypełnia cały tydzień).`
+          : `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).`;
         // #20 wariant B (30.10.2026): koniec grafiku to czas salonu, nie zajęty sprzęt. Recepcja może świadomie umówić
         // poza grafikiem, ale TYLKO osobę wskazaną ręcznie — automat „dowolny dostępny” nigdy nie sięga poza czyjś grafik.
         // Kolizje (zajęty pracownik, gabinet, urządzenie, klientka) sprawdzane dalej jak zawsze i zostają twardą odmową.
@@ -160,7 +172,7 @@ function sprawdzKomplet(w) {
         if (w.mimoGrafiku && poz.pracownik && maGrafikTegoDnia) {
           grafikOstrz = { kod: 'GRAFIK', pozycja: idx, pracownik: imie, opis: opisGrafiku, od: naStr(pozaGrafikiem.od), do: naStr(pozaGrafikiem.do) };
         } else {
-          powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: opisGrafiku, mozna_mimo_grafiku: !!poz.pracownik && maGrafikTegoDnia };
+          powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: opisGrafiku, mozna_mimo_grafiku: !!poz.pracownik && maGrafikTegoDnia, brak_grafiku: brakGrafiku };
           continue;
         }
       }
@@ -173,7 +185,11 @@ function sprawdzKomplet(w) {
     // 2) gabinet (R02)
     let gabinet = null;
     if (poz.wymagaGabinetu) {
-      const pula = (poz.gabinetyDozwolone && poz.gabinetyDozwolone.length) ? poz.gabinetyDozwolone : (w.gabinety || []);
+      // audyt 10.11.2026 (#7b): gabinet zarchiwizowany nie wchodzi do puli, nawet gdy jest wpisany w usłudze (urządzenia miały ten filtr, gabinety nie)
+      const aktywneGab = Array.isArray(w.gabinety) ? w.gabinety.map(String) : null;
+      const dozwGab = (poz.gabinetyDozwolone && poz.gabinetyDozwolone.length) ? poz.gabinetyDozwolone.map(String) : null;
+      const pula = dozwGab ? (aktywneGab ? dozwGab.filter(g => aktywneGab.includes(g)) : dozwGab) : (aktywneGab || []);
+      if (dozwGab && !pula.length) { problemy.push({ kod: 'BRAK_GABINETU', opis: 'Gabinet przypisany do tej usługi został zarchiwizowany — w Ustawieniach → Zasoby przywróć go albo wskaż usłudze inny gabinet.', pozycja: idx }); return; }
       let pow = null;
       for (const g of pula) {
         const probne = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: null, gabinet_id: g, urzadzenie_id: null });
