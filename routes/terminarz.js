@@ -1051,6 +1051,19 @@ module.exports = (db, opts = {}) => {
     return wynik.slice(0, 6);
   }
 
+  /** Skrót konfiguracji salonu (audyt 10.11.2026, #10): zmiana zespołu, usług, grafiku, zasobów albo ustawień daje inny odcisk.
+   * Przeglądarka dostaje go przy każdym odświeżeniu dnia i sama dociąga nowe dane — recepcja nie pracuje na liście sprzed zmiany. */
+  function odciskCfg(cfg) {
+    const z = JSON.stringify([
+      (cfg.pracownicy || []),
+      (cfg.ust || {}).wersja, (cfg.ust || {}).zmieniono, (cfg.ust || {}).godziny,
+      (cfg.grafik || []).map(g => [g.id, g.pracownik, g.dzien_tyg, g.od, g.do, g.od_daty, g.do_daty]),
+      (cfg.zasoby || []).map(x => [x.id, x.nazwa, x.typ, x.aktywny ? 1 : 0, x.pojemnosc]),
+      (cfg.katalog || []).map(u => [u.id, u.czas_min, u.aktywna ? 1 : 0, u.wymaga_gabinet ? 1 : 0, (u.pracownicy || []).join('|')]),
+    ]);
+    return crypto.createHash('md5').update(z).digest('hex').slice(0, 12);
+  }
+
   async function wspolneCfg(tenant) {
     const [ust, prac, graf, zas, kat, terazStr, zesp] = await Promise.all([ustawienia(tenant), pracownicy(tenant), grafik(tenant), zasoby(tenant, true), uslugi(tenant), teraz(), zespol(tenant)]);
     return { ust, pracownicy: prac, grafik: graf, zasoby: zas, katalog: kat, terazStr, zespol: zesp };
@@ -1096,7 +1109,7 @@ module.exports = (db, opts = {}) => {
         if (!on) return res.json({ status: 'success', feature_on: false, rola: r });
         const cfg = await wspolneCfg(tenant);
         const nieob = await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i:%s') AS \`do\`, typ, opis, utworzyl FROM Term_Nieobecnosci WHERE tenant_id = ? AND do_ >= DATE_SUB(NOW(), INTERVAL 30 DAY) ORDER BY od`, [tenant]);
-        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, schemat, schemat_v2: schematV2, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
+        return res.json({ status: 'success', feature_on: true, rola: r, teraz: cfg.terazStr, cfg_odcisk: odciskCfg(cfg), schemat, schemat_v2: schematV2, ustawienia: cfg.ust, pracownicy: cfg.pracownicy, grafik: cfg.grafik, zasoby: await zasoby(tenant, false), uslugi: cfg.katalog, nieobecnosci: nieob, zespol: await zespol(tenant) });
       }
       if (!(await czyFeature(tenant))) return res.json({ status: 'error', code: 'DODATEK', message: 'Dodatek „Terminarz” nie jest aktywny w tym salonie.' });
       const wynik = await obsluz(action, d, tenant, imie, r);
@@ -1441,7 +1454,7 @@ module.exports = (db, opts = {}) => {
         await oznaczPierwszeWizyty(tenant, lista, data);     // #12b: „1. wizyta" na kafelku
         const dostep = {}; Object.keys(k.dostepnoscPracownikow).forEach(p => { dostep[p] = k.dostepnoscPracownikow[p].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
         const dostepZas = {}; Object.keys(k.dostepnoscZasobow).forEach(z => { dostepZas[z] = k.dostepnoscZasobow[z].map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })); });
-        return { status: 'success', data, teraz: cfg.terazStr, rezerwacje: lista, dostepnosc: dostep, dostepnosc_zasobow: dostepZas, salon: k.salon.map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })), nieobecnosci: k.nieobecnosci.map(n => ({ ...n, do: n.do_ })), zajecia: ROLE_OPERACYJNE.has(r) ? k.zajete : [] };
+        return { status: 'success', data, teraz: cfg.terazStr, cfg_odcisk: odciskCfg(cfg), rezerwacje: lista, dostepnosc: dostep, dostepnosc_zasobow: dostepZas, salon: k.salon.map(x => ({ od: S.naStr(x.od), do: S.naStr(x.do) })), nieobecnosci: k.nieobecnosci.map(n => ({ ...n, do: n.do_ })), zajecia: ROLE_OPERACYJNE.has(r) ? k.zajete : [] };
       }
       case 'trm_zakres': {
         const od = sprawdzData(d.od, 'od'), do_ = sprawdzData(d.do, 'do');
