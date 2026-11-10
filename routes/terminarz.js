@@ -71,6 +71,7 @@ function terminHoldu(terazStr, startStr) {
 }
 
 const bladNieznanyPracownik = (kto) => new BladUzytkownika(`Nie ma osoby „${kto}” na liście zespołu wykonującego zabiegi. Sprawdź pisownię w Pracownicy (Ustawienia) albo oznaczenie „tylko recepcja” w Ustawieniach → Zespół, potem odśwież terminarz.`);
+const bladWersji = () => new BladUzytkownika('Ktoś zmienił tę wizytę w międzyczasie — nic nie zapisano. Odśwież wizytę i spróbuj ponownie.', { code: 'WERSJA' });
 class BladUzytkownika extends Error { constructor(msg, extra) { super(msg); this.extra = extra || {}; this.uzytkownika = true; } }
 
 module.exports = (db, opts = {}) => {
@@ -2087,11 +2088,12 @@ module.exports = (db, opts = {}) => {
             if (ctx) zw += (await Z.domena.zwolnij(repo, ctx, { pozycja_id: p.id, powod: `${rez.numer}: skasowano (pomyłka)` })).zwolniono;
           }
           await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
-          await qc(conn,
+          const upU = await qc(conn,
             `UPDATE Term_Rezerwacje SET status = 'anulowana', usunieta = 1, usunieta_kiedy = NOW(), usunieta_przez = ?, usunieta_powod = ?,
                     anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = 'salon', wersja = wersja + 1, zmieniono = NOW()
               WHERE tenant_id = ? AND id = ? AND wersja = ?`,
             [imie || null, powod, imie || null, 'Skasowano: ' + powod, tenant, rez.id, rez.wersja]);
+          if (!upU || !upU.affectedRows) throw bladWersji();
           await historia(conn, tenant, rez.id, imie, 'usunieto', `Skasowano wizytę (${opisPoz || 'bez pozycji'}) — ${powod}${zw ? ` (do pakietu wróciło: ${zw})` : ''}`, null, { powod, zwolnione_jednostki: zw });
           return zw;
         });
@@ -2132,13 +2134,15 @@ module.exports = (db, opts = {}) => {
           const calosc = pozostale.length === 0 || pozostale.every(p => ['niewykonana', 'odmowa'].includes(p.stan));
           const nicNieWykonano = !rez.pozycje.some(p => ['wykonana', 'przerwana', 'w_trakcie'].includes(p.stan));
           if (calosc && nicNieWykonano) {
-            await qc(conn, `UPDATE Term_Rezerwacje SET status = 'anulowana', anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [imie || null, powod, kto, tenant, rez.id, rez.wersja]);
+            const upA = await qc(conn, `UPDATE Term_Rezerwacje SET status = 'anulowana', anulowano = NOW(), anulowal = ?, powod_anulacji = ?, kto_anulowal = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [imie || null, powod, kto, tenant, rez.id, rez.wersja]);
+            if (!upA || !upA.affectedRows) throw bladWersji(); // audyt 10.11.2026 (#5): bez tego pozycje były anulowane, a wizyta zostawała „potwierdzona”
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ?`, [tenant, rez.id]);
           } else {
             // częściowa anulacja: wizyta pozostaje, koniec przeliczony z pozostałych pozycji (R13: zwolnienie po zapisie)
             const kon = pozostale.length ? pozostale.map(p => p.koniec).sort().slice(-1)[0] : rez.koniec;
             const st = pozostale.length ? pozostale.map(p => p.start).sort()[0] : rez.start;
-            await qc(conn, `UPDATE Term_Rezerwacje SET start = ?, koniec = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [st, kon, tenant, rez.id, rez.wersja]);
+            const upB = await qc(conn, `UPDATE Term_Rezerwacje SET start = ?, koniec = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND id = ? AND wersja = ?`, [st, kon, tenant, rez.id, rez.wersja]);
+            if (!upB || !upB.affectedRows) throw bladWersji();
           }
           await historia(conn, tenant, rez.id, imie, calosc && nicNieWykonano ? 'anulowano' : 'anulowano_pozycje', `${kto === 'klient' ? 'Klientka odwołała' : 'Salon odwołał'}: ${pozn} — ${powod}${zw ? ` (do pakietu wróciło: ${zw})` : ''}`, null, { pozycje: cel.map(p => p.id), zwolnione_jednostki: zw });
           return zw;
@@ -2162,6 +2166,7 @@ module.exports = (db, opts = {}) => {
         if (!OBECNOSCI.includes(d.obecnosc)) throw new BladUzytkownika('Nieznany stan obecności.');
         if (['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) throw new BladUzytkownika('Wizyta anulowana — nie oznaczamy obecności.');
         if (rez.obecnosc === d.obecnosc) return { status: 'success', powtorzenie: true, rezerwacja: rez };
+        let przywrocone = 0;
         await wTransakcjiSalonu(tenant, async (conn, repo) => {
           await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = ?, obecnosc_zmieniono = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [d.obecnosc, tenant, rez.id]);
           if (d.obecnosc === 'nieobecny') {
@@ -2170,6 +2175,17 @@ module.exports = (db, opts = {}) => {
             if (schematV2.gotowy) { const ctx = await ctxZ(tenant, imie, r); for (const p of rez.pozycje.filter(x => x.stan === 'zaplanowana')) await Z.domena.zwolnij(repo, ctx, { pozycja_id: p.id, powod: `${rez.numer}: nieobecność` }); }
             await qc(conn, `UPDATE Term_Pozycje SET stan = 'niewykonana' WHERE tenant_id = ? AND rezerwacja_id = ? AND stan = 'zaplanowana'`, [tenant, rez.id]);
             await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND rezerwacja_id = ? AND do_ > NOW()`, [tenant, rez.id]);
+          } else if (rez.obecnosc === 'nieobecny') {
+            // audyt 10.11.2026 (#3): cofnięcie pomyłkowej „nieobecności” — pozycje niewykonane, których nikt nie rozpoczął, wracają
+            // do „zaplanowana”, a ich zajęcia ożywają, o ile termin nie został w międzyczasie zajęty przez inną wizytę.
+            const doPowrotu = rez.pozycje.filter(x => x.stan === 'niewykonana' && !x.start_fakt && !x.koniec_fakt);
+            for (const x of doPowrotu) {
+              const kol = await qc(conn, `SELECT z2.rezerwacja_id FROM Term_Zajecia z1 JOIN Term_Zajecia z2 ON z2.tenant_id = z1.tenant_id AND z2.typ_zasobu = z1.typ_zasobu AND z2.klucz = z1.klucz AND z2.aktywne = 1 AND z2.rezerwacja_id <> z1.rezerwacja_id AND z2.od < z1.do_ AND z2.do_ > z1.od WHERE z1.tenant_id = ? AND z1.pozycja_id = ? LIMIT 1`, [tenant, x.id]);
+              if (kol.length) throw new BladUzytkownika(`Nie można cofnąć nieobecności: termin ${String(x.start_s || x.start).slice(11, 16)} (${x.kategoria}${x.wariant ? ' / ' + x.wariant : ''}) został już zajęty przez inną wizytę (nr ${kol[0].rezerwacja_id}). Przełóż tę wizytę na inny termin.`);
+              await qc(conn, `UPDATE Term_Pozycje SET stan = 'zaplanowana' WHERE tenant_id = ? AND id = ? AND stan = 'niewykonana'`, [tenant, x.id]);
+              await qc(conn, `UPDATE Term_Zajecia SET aktywne = 1 WHERE tenant_id = ? AND pozycja_id = ?`, [tenant, x.id]);
+              przywrocone++;
+            }
           }
           await historia(conn, tenant, rez.id, imie, 'obecnosc', `${rez.obecnosc} → ${d.obecnosc}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, { obecnosc: rez.obecnosc }, { obecnosc: d.obecnosc });
         });
@@ -2181,7 +2197,12 @@ module.exports = (db, opts = {}) => {
             priorytet: 'P2', powiazany_czas: null, klucz: `E06:${rez.id}`, kto: imie });
           for (const pid of zaplanowaneIdy) await sprawaAutoZamknij(tenant, `E13:poz:${pid}`, 'Potwierdzono nieobecność klientki');
         }
-        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
+        if (przywrocone) {
+          await sprawaAutoZamknij(tenant, `E06:${rez.id}`, 'Cofnięto nieobecność', 'nieaktualna');
+          zapiszLog(tenant, 'TERMINARZ: COFNIĘCIE NIEOBECNOŚCI', imie, `${rez.numer} ${rez.klient_nazwa}: ${przywrocone} ${przywrocone === 1 ? 'zabieg wrócił' : 'zabiegi wróciły'} do planu`);
+        }
+        return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), przywrocone,
+          message: przywrocone ? `Cofnięto nieobecność: ${przywrocone} ${przywrocone === 1 ? 'zabieg wrócił' : 'zabiegi wróciły'} do planu.${schematV2.gotowy ? ' Jeśli przy nieobecności zwolniono jednostki pakietu, przypisz je ponownie w „Rozlicz”.' : ''}` : undefined };
       }
       case 'trm_pozycja_stan': {
         const rez = await rezerwacja(tenant, d.id);
@@ -2208,11 +2229,14 @@ module.exports = (db, opts = {}) => {
           if (!wolno) throw new BladUzytkownika('Potwierdzenie wykonania zabiegu z pakietu należy do wykonawcy albo managera (recepcja — tylko gdy salon to włączył w ustawieniach).', { code: 'UPRAWNIENIA' });
           if (d.data_fakt) { wymagaj(r, ROLE_MANAGER_PLUS, 'Wskazanie innej daty wykonania wymaga uprawnienia managera.'); if (!String(d.powod || '').trim()) throw new BladUzytkownika('Podaj powód wpisania wykonania z inną datą.'); dataFakt = sprawdzDt(d.data_fakt, 'data wykonania'); }
         }
-        if (['w_trakcie', 'wykonana'].includes(stan) && rez.obecnosc === 'oczekiwana') await q(`UPDATE Term_Rezerwacje SET obecnosc = 'przybyl', obecnosc_zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [tenant, rez.id]);
         const wynJ = await wTransakcjiSalonu(tenant, async (conn, repo) => {
-          if (stan === 'w_trakcie') await qc(conn, `UPDATE Term_Pozycje SET stan = 'w_trakcie', start_fakt = NOW(), wykonawca_fakt = ? WHERE tenant_id = ? AND id = ?`, [wyk, tenant, p.id]);
-          else if (stan === 'wykonana' || stan === 'przerwana') await qc(conn, `UPDATE Term_Pozycje SET stan = ?, koniec_fakt = NOW(), wykonawca_fakt = COALESCE(wykonawca_fakt, ?) WHERE tenant_id = ? AND id = ?`, [stan, wyk, tenant, p.id]); // start_fakt zostaje NULL, gdy nie było „Rozpocznij”: planowana godzina nie udaje faktycznej (§9.2)
-          else await qc(conn, `UPDATE Term_Pozycje SET stan = ? WHERE tenant_id = ? AND id = ?`, [stan, tenant, p.id]);
+          // audyt 10.11.2026 (#15): obecność w tej samej transakcji; UPDATE pilnuje stanu sprzed decyzji — drugie stanowisko z nieodświeżonym ekranem nie nadpisze „wykonana” na „niewykonana”
+          if (['w_trakcie', 'wykonana'].includes(stan) && rez.obecnosc === 'oczekiwana') await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = 'przybyl', obecnosc_zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [tenant, rez.id]);
+          let upP;
+          if (stan === 'w_trakcie') upP = await qc(conn, `UPDATE Term_Pozycje SET stan = 'w_trakcie', start_fakt = NOW(), wykonawca_fakt = ? WHERE tenant_id = ? AND id = ? AND stan = ?`, [wyk, tenant, p.id, p.stan]);
+          else if (stan === 'wykonana' || stan === 'przerwana') upP = await qc(conn, `UPDATE Term_Pozycje SET stan = ?, koniec_fakt = NOW(), wykonawca_fakt = COALESCE(wykonawca_fakt, ?) WHERE tenant_id = ? AND id = ? AND stan = ?`, [stan, wyk, tenant, p.id, p.stan]); // start_fakt zostaje NULL, gdy nie było „Rozpocznij”: planowana godzina nie udaje faktycznej (§9.2)
+          else upP = await qc(conn, `UPDATE Term_Pozycje SET stan = ? WHERE tenant_id = ? AND id = ? AND stan = ?`, [stan, tenant, p.id, p.stan]);
+          if (!upP || !upP.affectedRows) throw new BladUzytkownika(`Stan zabiegu „${p.kategoria}${p.wariant ? ' / ' + p.wariant : ''}” zmienił się w międzyczasie (ktoś już go oznaczył). Odśwież wizytę i sprawdź aktualny stan.`, { code: 'WERSJA' });
           if (['niewykonana', 'odmowa', 'przerwana'].includes(stan)) await qc(conn, `UPDATE Term_Zajecia SET aktywne = 0 WHERE tenant_id = ? AND pozycja_id = ? AND do_ > NOW()`, [tenant, p.id]);
           let j = null;
           if (zPakietu) {
@@ -2571,7 +2595,8 @@ module.exports = (db, opts = {}) => {
       const bezWyniku = await q(`SELECT p.id AS pozycja_id, p.rezerwacja_id, p.tenant_id, p.pracownik, p.kategoria, p.wariant, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec, r.klient_nazwa
         FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.id = p.rezerwacja_id AND r.tenant_id = p.tenant_id
         WHERE p.stan IN ('zaplanowana', 'w_trakcie') AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla') AND p.koniec <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
-        LIMIT 200`).catch(() => []);
+          AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = p.tenant_id AND s.klucz_dedup = CONCAT('E13:poz:', p.id))
+        ORDER BY p.koniec DESC LIMIT 200`).catch(() => []); // audyt 10.11.2026 (#4): tylko brakujące sprawy — zamknięte ręcznie nie wracają co minutę, limit nie blokuje nowych salonów
       for (const poz of (bezWyniku || [])) {
         await sprawaUpsert(poz.tenant_id, { typ: 'E13', rezerwacja_id: poz.rezerwacja_id, tytul: `Brak wyniku wizyty — ${poz.klient_nazwa}`,
           opis: `${poz.kategoria}${poz.wariant ? ' / ' + poz.wariant : ''} — planowany koniec ${poz.koniec.slice(0, 16)}, brak potwierdzonego wykonania lub nieobecności.`,
@@ -2582,7 +2607,8 @@ module.exports = (db, opts = {}) => {
         FROM Term_Rezerwacje r WHERE r.sprzedaz_id IS NULL AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla')
           AND r.koniec <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
           AND EXISTS (SELECT 1 FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.stan IN ('wykonana', 'przerwana'))
-        LIMIT 200`).catch(() => []);
+          AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = r.tenant_id AND s.klucz_dedup = CONCAT('E19:rez:', r.id))
+        ORDER BY r.koniec DESC LIMIT 200`).catch(() => []);
       for (const rz of (bezPokrycia || [])) {
         const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch(() => []);
         await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Potwierdź rozliczenie — ${rz.klient_nazwa}`,
