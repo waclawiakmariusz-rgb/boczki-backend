@@ -85,6 +85,12 @@ describe('front terminarza — paczka D', () => {
   test('#12 termin w przeszłości daje widoczne ostrzeżenie w karcie wyniku', () => {
     expect(F).toContain('<b>Termin w przeszłości.</b>');
     expect(F).toContain("n.godzina && TRM.dzien && TRM.dzien.teraz && n.start.slice(0, 16) < String(TRM.dzien.teraz).slice(0, 16)");
+    // regresja 30.10.2026 i powtórka 10.11: osobny warunek WEWNĄTRZ gałęzi „ok” pokazywał notkę tylko dla wolnych terminów —
+    // ostrzeżenie musi stać PO całym łańcuchu if/else if, czyli po linii z „if (!n.godzina)”
+    const iLancuch = F.indexOf("if (!n.godzina) wynikHtml2 =");
+    const iNotka = F.indexOf("<b>Termin w przeszłości.</b>");
+    expect(iLancuch).toBeGreaterThan(0);
+    expect(iNotka).toBeGreaterThan(iLancuch);
   });
   test('#21 błąd serwera nie udaje braku sieci; wyszukiwarki pokazują powód', () => {
     expect(F).not.toContain("message: 'Brak połączenia. Zapis będzie możliwy po odzyskaniu połączenia.'");

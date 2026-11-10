@@ -1575,8 +1575,6 @@
         <div class="m" style="margin-top:8px;font-size:12.5px;color:var(--t-mut)">${n.pozycje.some(p => p.zakup_skladnik_id) ? `Rozliczenie: z zakupu klientki — przy zapisie zarezerwujemy ${n.pozycje.filter(p => p.zakup_skladnik_id).length === 1 ? '1 zabieg' : n.pozycje.filter(p => p.zakup_skladnik_id).length + ' zabiegi'} z pakietu${n.pozycje.some(p => !p.zakup_skladnik_id) ? '; pozostałe po wykonaniu, w Sprzedaży' : ''}.` : 'Rozliczenie: po wykonaniu, w Sprzedaży.'}</div></div>`;
       // ten sam zabieg 2× pod rząd: silnik pominął margines między nimi — recepcja ma to widzieć, żeby nie szukać „zgubionych” 10 minut
       if (st === 'ok' && dost.wynik && (dost.wynik.pozycje || []).some(p => p.bufor_pominiety)) wynikHtml2 += `<div class="trm-pomoc" style="margin-top:6px">Ten sam zabieg pod rząd — bez marginesu między powtórzeniami (sprzątanie i przygotowanie dopiero po ostatnim).</div>`;
-      // audyt 10.11.2026 (#12): wpisanie wizyty wstecz bywa celowe (uzupełnianie), ale nigdy nie powinno być niezauważone
-      if (n.godzina && TRM.dzien && TRM.dzien.teraz && n.start.slice(0, 16) < String(TRM.dzien.teraz).slice(0, 16)) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>Termin w przeszłości.</b> ${esc(ladnaData(n.start.slice(0, 10), true))} ${esc(n.start.slice(11, 16))} już minęło (teraz ${esc(String(TRM.dzien.teraz).slice(11, 16))}). Jeśli uzupełniasz wizytę, która się odbyła — w porządku; jeśli nie, popraw datę.</div>`;
       if (st === 'ok' && dost.wynik && (dost.wynik.ostrzezenia || []).some(o => o.kod === 'GRAFIK')) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>Poza grafikiem.</b> ${esc((dost.wynik.ostrzezenia.find(o => o.kod === 'GRAFIK') || {}).opis || '')} Umawiasz świadomie — ślad zostanie w historii wizyty.</div>`;
       } else if (st === 'zajety' && dost.wynik) { // D03: „zajęty” = nakładanie wizyt/zasobów; „niedostępny” = poza grafikiem / brak wykonawcy; przy „dowolnym” mówimy o całym zespole
         const problemy = dost.wynik.problemy || [], kody = problemy.map(p => p.kod || '');
@@ -1592,6 +1590,10 @@
       else if (st === 'czekam') wynikHtml2 = `<div class="trm-wynik-termin"><div class="godz">${n.start.slice(11, 16)}</div><div class="st muted">⏳ Sprawdzamy termin…</div></div>`;
       else wynikHtml2 = `<div class="trm-wynik-termin neutralna"><div class="st">Wybierz godzinę z listy albo wpisz własną — dostępność sprawdzimy automatycznie, bez zapisu.</div></div>`;
       if (!n.godzina) wynikHtml2 = `<div class="trm-wynik-termin neutralna"><div class="godz muted">Wybierz godzinę</div><div class="st">${esc(ladnaData(n.start.slice(0, 10), true))} · ${n.prefPrac ? esc(n.prefPrac) : 'dowolny dostępny specjalista'} — po wyborze godziny pokażemy wykonawcę i czas końca.</div></div>`;
+      // audyt 10.11.2026 (#12): wizyta wstecz bywa celowa (uzupełnianie), ale nigdy nie powinna być niezauważona.
+      // Notka doklejana PO całym łańcuchu if/else if — żeby pokazywała się przy każdym stanie karty (dostępny, zajęty, niedostępny),
+      // a nie tylko w gałęzi „ok” (ta sama pułapka co regresja z 30.10.2026 opisana wyżej).
+      if (n.godzina && TRM.dzien && TRM.dzien.teraz && n.start.slice(0, 16) < String(TRM.dzien.teraz).slice(0, 16)) wynikHtml2 += `<div class="trm-note warn" style="margin-top:8px"><b>Termin w przeszłości.</b> ${esc(ladnaData(n.start.slice(0, 10), true))} ${esc(n.start.slice(11, 16))} już minęło (teraz ${esc(String(TRM.dzien.teraz).slice(11, 16))}). Jeśli uzupełniasz wizytę, która się odbyła — w porządku; jeśli nie, popraw datę.</div>`;
     }
     const sloty = n.sloty;
     const slotyHtml = !n.pozycje.length ? '<div class="muted small">Najpierw wybierz zabieg.</div>'
