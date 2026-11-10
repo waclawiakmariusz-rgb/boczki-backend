@@ -584,7 +584,7 @@
   };
   function renderBlokada() {
     const b = TRM.blok; if (!b) return;
-    const zas = (TRM.dane.zasoby || []).filter(z => !z.archiwalny);
+    const zas = (TRM.dane.zasoby || []).filter(z => z.aktywny && !z.zarchiwizowano); // audyt 10.11.2026 (#7a): ten sam filtr co w innych widokach
     const istniejaca = !!b.id;
     const nazwaZasobu = (id) => { const z = (TRM.dane.zasoby || []).find(x => String(x.id) === String(id)); return z ? z.nazwa : null; };
     // Podgląd: dla osób bez prawa zmiany, a także dla KAŻDEJ nieobecności (urlop, choroba).

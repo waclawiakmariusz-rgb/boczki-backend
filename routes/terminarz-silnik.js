@@ -148,6 +148,14 @@ function sprawdzKomplet(w) {
     for (const imie of kandydaci) {
       const probne = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: imie, gabinet_id: null, urzadzenie_id: null });
       const dost = (w.dostepnoscPracownikow || {})[imie] || [];
+      // audyt 10.11.2026 (#6): nieobecność/blokada to twarda odmowa — także ze zgodą „mimo grafiku” (koniec grafiku to czas salonu, nieobecność nie)
+      const twarde = (w.twardeBlokadyPracownikow || {})[imie] || [];
+      const wBlokadzie = probne.find(z => twarde.some(b => nakladaja(z.od, z.do, b.od, b.do)));
+      if (wBlokadzie) {
+        const b = twarde.find(x => nakladaja(wBlokadzie.od, wBlokadzie.do, x.od, x.do));
+        powodOdrzucenia = powodOdrzucenia || { kod: 'NIEOBECNOSC', opis: `${imie} ma w tym czasie nieobecność albo blokadę (${naStr(b.od).slice(11, 16)}–${naStr(b.do).slice(11, 16)}) — tego nie da się obejść zgodą „mimo grafiku”. Wybierz inną osobę albo godzinę.`, mozna_mimo_grafiku: false };
+        continue;
+      }
       const pozaGrafikiem = probne.find(z => !miesciSie(z.od, z.do, dost));
       if (pozaGrafikiem) {
         // audyt 10.11.2026: brak jakiegokolwiek grafiku tego dnia to inna sytuacja niż „poza godzinami” — recepcja ma wiedzieć, że to manager uzupełnia grafik
@@ -177,7 +185,11 @@ function sprawdzKomplet(w) {
     // 2) gabinet (R02)
     let gabinet = null;
     if (poz.wymagaGabinetu) {
-      const pula = (poz.gabinetyDozwolone && poz.gabinetyDozwolone.length) ? poz.gabinetyDozwolone : (w.gabinety || []);
+      // audyt 10.11.2026 (#7b): gabinet zarchiwizowany nie wchodzi do puli, nawet gdy jest wpisany w usłudze (urządzenia miały ten filtr, gabinety nie)
+      const aktywneGab = Array.isArray(w.gabinety) ? w.gabinety.map(String) : null;
+      const dozwGab = (poz.gabinetyDozwolone && poz.gabinetyDozwolone.length) ? poz.gabinetyDozwolone.map(String) : null;
+      const pula = dozwGab ? (aktywneGab ? dozwGab.filter(g => aktywneGab.includes(g)) : dozwGab) : (aktywneGab || []);
+      if (dozwGab && !pula.length) { problemy.push({ kod: 'BRAK_GABINETU', opis: 'Gabinet przypisany do tej usługi został zarchiwizowany — w Ustawieniach → Zasoby przywróć go albo wskaż usłudze inny gabinet.', pozycja: idx }); return; }
       let pow = null;
       for (const g of pula) {
         const probne = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: null, gabinet_id: g, urzadzenie_id: null });

@@ -631,8 +631,10 @@ module.exports = (db, opts = {}) => {
     const blokadyDla = (pred) => nieob.filter(pred).map(n => ({ od: S.naMin(n.od), do: S.naMin(n.do_) }));
     const wszystkie = blokadyDla(n => !n.pracownik && !n.zasob_id);
     const dostepnoscPracownikow = {};
+    const twardeBlokadyPracownikow = {}; // audyt 10.11.2026 (#6): nieobecności i blokady „cały salon” osobno — zgoda „mimo grafiku” ich nie obchodzi
     for (const p of prac) {
-      dostepnoscPracownikow[p] = S.odejmij(S.przedzialyZGrafiku(graf.filter(g => g.pracownik === p), data), [...wszystkie, ...blokadyDla(n => n.pracownik === p)]);
+      twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik === p)];
+      dostepnoscPracownikow[p] = S.odejmij(S.przedzialyZGrafiku(graf.filter(g => g.pracownik === p), data), twardeBlokadyPracownikow[p]);
     }
     const salon = godzinySalonu(ust, data);
     const dostepnoscZasobow = {};
@@ -643,7 +645,7 @@ module.exports = (db, opts = {}) => {
     if (idKlienta) {
       klientZajety = (await q(`SELECT DATE_FORMAT(start,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(koniec,'%Y-%m-%d %H:%i:%s') AS do_, id FROM Term_Rezerwacje WHERE tenant_id = ? AND id_klienta = ? AND status NOT IN ('anulowana','odrzucona','wygasla') AND start < ? AND koniec > ?`, [tenant, String(idKlienta), do_, od])).map(r => ({ od: r.od, do: r.do_, rezerwacja_id: r.id }));
     }
-    return { ust, salon, dostepnoscPracownikow, dostepnoscZasobow, zajete: zajete.map(z => ({ ...z, do: z.do_ })), klientZajety, nieobecnosci: nieob, gabinety: zas.filter(z => z.typ === 'gabinet').map(z => String(z.id)), urzadzenia: zas.filter(z => z.typ === 'urzadzenie').map(z => String(z.id)) };
+    return { ust, salon, dostepnoscPracownikow, twardeBlokadyPracownikow, dostepnoscZasobow, zajete: zajete.map(z => ({ ...z, do: z.do_ })), klientZajety, nieobecnosci: nieob, gabinety: zas.filter(z => z.typ === 'gabinet').map(z => String(z.id)), urzadzenia: zas.filter(z => z.typ === 'urzadzenie').map(z => String(z.id)) };
   }
 
   /** Pozycje z żądania → pozycje silnika (konfiguracja usługi, kompetencje, pula zasobów). */
@@ -1141,7 +1143,9 @@ module.exports = (db, opts = {}) => {
         if (!nazwa) throw new BladUzytkownika('Podaj nazwę zasobu.');
         const poj = Math.max(1, Math.min(50, Number(d.pojemnosc) || 1));
         if (d.id) {
-          await q(`UPDATE Term_Zasoby SET nazwa = ?, pojemnosc = ?, aktywny = ?, kolejnosc = ? WHERE tenant_id = ? AND id = ?`, [nazwa, poj, d.aktywny === false || d.aktywny === 0 ? 0 : 1, Number(d.kolejnosc) || 0, tenant, Number(d.id)]);
+          const aktywnyZ = d.aktywny === false || d.aktywny === 0 ? 0 : 1;
+          // audyt 10.11.2026 (#7c): przywrócenie (aktywny=1) musi też wyczyścić datę archiwizacji, inaczej zasób zostaje niewidoczny
+          await q(`UPDATE Term_Zasoby SET nazwa = ?, pojemnosc = ?, aktywny = ?, zarchiwizowano = IF(? = 1, NULL, zarchiwizowano), kolejnosc = ? WHERE tenant_id = ? AND id = ?`, [nazwa, poj, aktywnyZ, aktywnyZ, Number(d.kolejnosc) || 0, tenant, Number(d.id)]);
         } else {
           await q(`INSERT INTO Term_Zasoby (tenant_id, typ, nazwa, pojemnosc, kolejnosc) VALUES (?, ?, ?, ?, ?)`, [tenant, typ, nazwa, poj, Number(d.kolejnosc) || 0]);
         }
