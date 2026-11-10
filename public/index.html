@@ -11485,7 +11485,9 @@ if (location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
 // =========================================================================
 
 window.pokazPowiadomienie = function(typ, tytul, wiadomosc, czas) {
-    czas = czas || (typ === 'error' ? 7000 : 4500);
+    // Audyt 10.11.2026 (uwaga właściciela): błędy znikały za szybko, zanim recepcja zdążyła przeczytać — teraz 15 s,
+    // ostrzeżenia 9 s; kliknięcie nadal zamyka od razu.
+    czas = czas || (typ === 'error' ? 15000 : typ === 'warning' ? 9000 : 4500);
     const ikonki = { success: '✅', error: '⚠️', warning: '⚡', info: 'ℹ️' };
     const container = document.getElementById('boczki-toasts');
     if (!container) { console.warn('[Toast]', tytul, wiadomosc); return; }
@@ -18379,7 +18381,7 @@ function _renderSalesDictUI(d) {
         }
         d.pracownicy.forEach(p => {
             const inicjal = escHtml(String(p).trim().charAt(0).toUpperCase() || '?');
-            htmlList += `<li class="emp-row"><span class="emp-avatar" aria-hidden="true">${inicjal}</span><span class="emp-name">${escHtml(p)}</span><button type="button" class="emp-remove" onclick="usunPracownika('${p}')" aria-label="Usuń pracownika: ${escHtml(p)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Usuń</button></li>`;
+            htmlList += `<li class="emp-row"><span class="emp-avatar" aria-hidden="true">${inicjal}</span><span class="emp-name">${escHtml(p)}</span><button type="button" class="emp-remove emp-edit" data-imie="${escHtml(p)}" onclick="edytujPracownika(this.dataset.imie)" aria-label="Zmień imię pracownika: ${escHtml(p)}" title="Zmień imię i nazwisko (poprawka pisowni, nazwisko po ślubie)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4l10-10-4-4L4 16v4zM13 7l4 4"/></svg>Zmień</button><button type="button" class="emp-remove" data-imie="${escHtml(p)}" onclick="usunPracownika(this.dataset.imie)" aria-label="Usuń pracownika: ${escHtml(p)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>Usuń</button></li>`;
         });
         listPrac.innerHTML = htmlList;
     }
@@ -18724,6 +18726,19 @@ document.addEventListener('keydown', function(event) {
         function ukryjSprzedaz(id) { if(confirm("Ukryć?")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_sale', id, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); odswiezSprzedaz(true);}); }
         // Treść pytania wg redesignu 23.10.2026 — skutek sprawdzony w kodzie: delete_employee kasuje wpis z tabeli Pracownicy;
         // sprzedaże trzymają sprzedawcę jako tekst, więc wcześniejsze zapisy zostają. Logika (confirm → delete_employee) bez zmian.
+        // Audyt 10.11.2026: zmiana imienia (literówka, spacja na końcu, nazwisko po ślubie). Serwer (edit_employee) przepisuje imię
+        // wszędzie, gdzie jest kluczem: zespół, PIN-login, terminarz (grafik, nieobecności, wizyty), sprzedaż, zadania, targety.
+        function edytujPracownika(imie) {
+            const nowe = prompt('Nowe imię i nazwisko pracownika:\n\nZmiana zostanie przepisana w terminarzu, sprzedaży i logowaniu PIN-em tej osoby.', String(imie || '').trim());
+            if (nowe === null) return;
+            const czyste = String(nowe).replace(/\s+/g, ' ').trim();
+            if (!czyste) { alert('Błąd: nowe imię i nazwisko jest puste — nic nie zmieniono.'); return; }
+            if (czyste === String(imie || '').trim()) { alert('Bez zmian — wpisano to samo imię.'); return; }
+            fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_employee', stare_imie: imie, nowe_imie: czyste, pracownik: currentUser }) })
+                .then(r => r.json())
+                .then(d => { alert(d.message || (d.status === 'success' ? 'Zmieniono' : 'Błąd: nie udało się zmienić imienia')); if (d.status === 'success') pobierzSlownikSprzedazy(true); })
+                .catch(() => alert('Błąd połączenia — imię nie zostało zmienione. Spróbuj ponownie.'));
+        }
         function usunPracownika(imie) { if(confirm("Usunąć pracownika?\n\nCzy chcesz usunąć " + imie + " z listy pracowników?\nOsoba zniknie z listy przy sprzedaży. Wcześniejsze sprzedaże zapisane na tę osobę zostają.")) fetch(API_URL, {method:"POST", body:JSON.stringify({action:'delete_employee', imie, pracownik:currentUser})}).then(r=>r.json()).then(d=>{alert(d.message); pobierzSlownikSprzedazy(true);}); }
         function toggleDefKat(force) { const s=document.getElementById('def_kat_select'), i=document.getElementById('def_kat_input'); if(force || s.value==='NEW'){s.style.display='none';i.style.display='block';i.value='';} else {i.style.display='none';s.style.display='block';} }
 
@@ -18796,10 +18811,14 @@ function dodajDefinicje(e, typ) {
     e.preventDefault(); 
     const p = { pracownik:currentUser }; 
     
+    // Audyt 10.11.2026: spacje na początku i końcu obcinane już w przeglądarce (spacja między imieniem a nazwiskiem zostaje);
+    // puste pola zatrzymane tu, z czytelnym komunikatem, zanim cokolwiek pójdzie na serwer (serwer sprawdza to samo drugi raz).
+    const czysc = (v) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
     if(typ==='Pracownik') {
         p.action = 'add_sales_def';
         p.typ = typ;
-        p.wartosc = document.getElementById('def_prac').value;
+        p.wartosc = czysc(document.getElementById('def_prac').value);
+        if (!p.wartosc) { alert('Błąd: podaj imię i nazwisko pracownika — pole jest puste.'); return; }
     } else {
         // Logika dla Zabiegów
         const isEdit = document.getElementById('edit_old_kat').value !== "";
@@ -18807,15 +18826,17 @@ function dodajDefinicje(e, typ) {
         p.typ = typ;
         
         const s=document.getElementById('def_kat_select'), i=document.getElementById('def_kat_input');
-        p.kategoria = (s.style.display!=='none' && s.value!=='NEW') ? s.value : i.value; 
+        p.kategoria = czysc((s.style.display!=='none' && s.value!=='NEW') ? s.value : i.value);
         if(isEdit) p.new_kategoria = p.kategoria;
-        
-        p.wariant = document.getElementById('def_war').value || ""; 
+
+        p.wariant = czysc(document.getElementById('def_war').value);
         if(isEdit) p.new_wariant = p.wariant;
 
         // --- NOWOŚĆ: Pobieranie ceny ---
-        p.cena = document.getElementById('def_cena').value || "";
+        p.cena = czysc(document.getElementById('def_cena').value);
         if(isEdit) p.new_cena = p.cena;
+        if (!p.kategoria) { alert('Błąd: podaj nazwę usługi (kategorię) — pole jest puste. Usługa bez nazwy nie zostanie zapisana.'); return; }
+        if (p.cena === '') { alert('Błąd: podaj cenę usługi (może być 0 zł). Usługa bez ceny nie zostanie zapisana.'); return; }
 
         // Typ zabiegu (opcjonalny)
         const typSel = document.getElementById('def_typ_zabiegu');
@@ -18831,10 +18852,10 @@ function dodajDefinicje(e, typ) {
         p.waznosc_dni = wazVal;
 
         if(isEdit) {
-            p.old_kategoria = document.getElementById('edit_old_kat').value;
-            p.old_wariant = document.getElementById('edit_old_war').value;
+            p.old_kategoria = czysc(document.getElementById('edit_old_kat').value);
+            p.old_wariant = czysc(document.getElementById('edit_old_war').value);
         }
-    } 
+    }
     
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
         alert(d.message);

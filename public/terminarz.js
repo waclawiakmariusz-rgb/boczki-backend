@@ -444,7 +444,7 @@
           <input type="text" maxlength="120" value="${esc(w)}" placeholder="wpisz…" onchange="TRM.prefUstaw('${esc(r.id_klienta)}','${esc(s.klucz)}', this.value)"></label>`;
         return `<label class="trm-pref-pole"><span>${esc(s.ikona || '')} ${esc(s.nazwa)}</span>
           <select onchange="TRM.prefUstaw('${esc(r.id_klienta)}','${esc(s.klucz)}', this.value)">
-            <option value="">—</option>${(s.opcje || []).map(o => `<option ${o === w ? 'selected' : ''}>${esc(o)}</option>`).join('')}
+            <option value="">—</option>${(s.opcje || []).map(o => `<option value="${esc(o)}" ${o === w ? 'selected' : ''}>${esc(o)}</option>`).join('')}
           </select></label>`;
       }).join('')}</div>
       <div class="trm-pomoc">Preferencje to komfort obsługi. Alergie, choroby i leki zapisuj w konsultacji i dokumentach klientki — nie tutaj.</div>
@@ -624,7 +624,7 @@
         ${b.caly_salon
           ? '<div class="trm-note warn small"><b>Cały salon</b> — w tym czasie nikt nie przyjmuje i żaden gabinet nie jest dostępny. Tak zapisuje się zebranie zespołu, remanent czy szkolenie dla wszystkich.</div>'
           : `<div class="trm-grid2">
-          <div class="trm-field"><label>Osoba (opcjonalnie)</label><select onchange="TRM.blokadaPole('osoba', this.value)"><option value="">— nikogo nie zajmuje —</option>${(TRM.dane.pracownicy || []).map(p => `<option ${b.osoba === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
+          <div class="trm-field"><label>Osoba (opcjonalnie)</label><select onchange="TRM.blokadaPole('osoba', this.value)"><option value="">— nikogo nie zajmuje —</option>${(TRM.dane.pracownicy || []).map(p => `<option value="${esc(p)}" ${b.osoba === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>
           <div class="trm-field"><label>Gabinet lub urządzenie (opcjonalnie)</label>
             <select onchange="TRM.blokadaPole('zasob_id', this.value)"><option value="">— żadnego —</option>${zas.map(z => `<option value="${z.id}" ${String(b.zasob_id) === String(z.id) ? 'selected' : ''}>${esc(z.nazwa)}${z.typ === 'urzadzenie' ? ' (urządzenie)' : ''}</option>`).join('')}</select></div>
         </div>`}
@@ -1181,7 +1181,7 @@
       const lista = (TRM.dane.pracownicy || []);
       wybor = `<div class="trm-card"><label>Pracownik</label>
           <select onchange="TRM.histPracownik(this.value)"><option value="">— wybierz osobę —</option>
-            ${lista.map(p => `<option ${h.pracownik === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
+            ${lista.map(p => `<option value="${esc(p)}" ${h.pracownik === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div>`;
     }
 
     let tresc = '';
@@ -1316,7 +1316,7 @@
 
   function renderAgenda(od, do_) {
     const main = el('trm-main'), rez = TRM.zakres.rezerwacje;
-    let html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value||null;TRM.widokZmien('agenda')" style="width:auto"><option value="">Cały zespół</option>${TRM.dane.pracownicy.map(p => `<option ${p === TRM.osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="fix muted small">${rez.length} wizyt · każda pozycja otwiera tę samą wizytę</div></div>`;
+    let html = `<div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Osoba</label><select onchange="TRM.osoba=this.value||null;TRM.widokZmien('agenda')" style="width:auto"><option value="">Cały zespół</option>${TRM.dane.pracownicy.map(p => `<option value="${esc(p)}" ${p === TRM.osoba ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="fix muted small">${rez.length} wizyt · każda pozycja otwiera tę samą wizytę</div></div>`;
     if (!rez.length) html += `<div class="trm-empty"><div class="big">🗓️</div><p>Brak wizyt w tym zakresie.</p></div>`;
     else html += TRM_AG_HEAD;
     for (let i = 0; i < 7; i++) {
@@ -1499,7 +1499,7 @@
     const kontrola = TRM.dane.ustawienia && TRM.dane.ustawienia.kontrola_zakupow === 'on';
     return `<div class="trm-field"><label>Usługi i wykonawcy</label>
       ${n.pozycje.map((p, i) => { const u = usluga(p.usluga_id); return `<div class="trm-wybrana"><div class="trm-row"><b>${esc(nazwaUslugi(u))}</b>${p.zakup_skladnik_id ? `<span class="trm-pill pakiet fix">Z pakietu${p.zakup_nazwa ? ': ' + esc(p.zakup_nazwa) : ''}</span>` : ''}<span class="fix muted small">${u.cena != null && !p.zakup_skladnik_id ? zl(u.cena) : ''}</span><button class="trm-btn link sm fix" onclick="TRM.nowaUsunPoz(${i})">usuń</button></div>
-        <div class="r"><select onchange="TRM.nowa.pozycje[${i}].pracownik=this.value||null;TRM.nowaUniewaznij()"><option value="">Dowolna właściwa osoba</option>${(u.pracownicy && u.pracownicy.length ? u.pracownicy : TRM.dane.pracownicy).map(x => `<option ${p.pracownik === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+        <div class="r"><select onchange="TRM.nowa.pozycje[${i}].pracownik=this.value||null;TRM.nowaUniewaznij()"><option value="">Dowolna właściwa osoba</option>${(u.pracownicy && u.pracownicy.length ? u.pracownicy : TRM.dane.pracownicy).map(x => `<option value="${esc(x)}" ${p.pracownik === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
         <input type="number" min="5" max="480" step="5" value="${p.czas_min}" title="Czas (min) — dziś krócej/dłużej" onchange="TRM.nowa.pozycje[${i}].czas_min=Number(this.value)||${u.czas_min};TRM.nowaUniewaznij()"><span class="muted small">min</span></div>${historiaZabieguHtml(n, u)}</div>`; }).join('')}
     </div>
     ${zakupyKlientkiHtml(n)}
@@ -1579,7 +1579,7 @@
     const innaOtwarta = n.innaGodzina || (sloty && Array.isArray(sloty) && sloty.length && !sloty.some(s => s.start.slice(0, 16) === n.start));
     return `<div class="trm-grid2">
         <div class="trm-field"><label>Data wizyty</label><input type="date" id="trm-n-data" value="${n.start.slice(0, 10)}" onchange="TRM.nowaStart()"></div>
-        <div class="trm-field"><label>Wykonawca dla wszystkich zabiegów</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>${prefOstrzezenieHtml(n)}</div>
+        <div class="trm-field"><label>Wykonawca dla wszystkich zabiegów</label><select id="trm-n-pref" onchange="TRM.nowaPrefPrac(this.value)"><option value="">Dowolny dostępny specjalista</option>${prac.map(p => `<option value="${esc(p)}" ${n.prefPrac === p ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select>${prefOstrzezenieHtml(n)}</div>
       </div>
       <div class="trm-field"><label>Wolne godziny · ${esc(ladnaData(n.start.slice(0, 10), true))}</label>${slotyHtml}${(() => {
         const pg = Array.isArray(sloty) ? slotyPoGrafiku(n) : null;
@@ -2058,7 +2058,7 @@
     if (typ === 'przekaz') {
       const prac = (TRM.dane && TRM.dane.pracownicy) || [];
       return `<div class="trm-card" style="margin-top:10px"><label>Komu przekazujesz</label>
-        <select id="trm-sf-komu">${prac.map(pp => `<option ${pp === kto() ? 'disabled' : ''}>${esc(pp)}</option>`).join('')}</select>
+        <select id="trm-sf-komu">${prac.map(pp => `<option value="${esc(pp)}" ${pp === kto() ? 'disabled' : ''}>${esc(pp)}</option>`).join('')}</select>
         <div style="margin-top:8px"><label>Powód (opcjonalnie)</label><input id="trm-sf-tekst" placeholder="np. koniec zmiany"></div>
         <div class="trm-row" style="margin-top:8px"><button class="trm-btn primary sm fix" onclick="TRM.sprawaWyslijForme()">Przekaż</button><button class="trm-btn sm fix" onclick="TRM.sprawaFormaAnuluj()">Anuluj</button></div></div>`;
     }
@@ -2340,7 +2340,7 @@
     return `<div class="trm-card"><h3>Zmień termin / osobę</h3>
       <div class="trm-note info small">Obecna wizyta pozostaje: <b>${ladnaData(r.start.slice(0, 10), true)} ${hhmm(r.start)}</b>. Zmienimy ją dopiero po poprawnym zatwierdzeniu.</div>
       <div class="trm-grid2"><div class="trm-field"><label>Nowa data</label><input type="date" id="trm-z-data" value="${z.start.slice(0, 10)}"></div><div class="trm-field"><label>Godzina</label><input type="time" id="trm-z-godz" step="300" value="${z.start.slice(11, 16)}"></div></div>
-      ${akt.map(p => { const u = usluga(p.usluga_id); const lista = (u && u.pracownicy && u.pracownicy.length) ? u.pracownicy : TRM.dane.pracownicy; return `<div class="trm-field"><label>${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</label><div class="trm-row trm-z-poz"><select onchange="TRM.zm.prac['${p.id}']=this.value||null"><option value="">Dowolna właściwa osoba</option>${lista.map(x => `<option ${(z.prac[p.id] !== undefined ? z.prac[p.id] : p.pracownik) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><input type="number" class="trm-z-czas" min="5" max="480" step="5" value="${z.czasy[p.id] != null ? z.czasy[p.id] : p.czas_min}" title="Czas trwania zabiegu w minutach" onchange="TRM.zmCzas('${p.id}', this.value)"><span class="muted small">min</span></div></div>`; }).join('')}
+      ${akt.map(p => { const u = usluga(p.usluga_id); const lista = (u && u.pracownicy && u.pracownicy.length) ? u.pracownicy : TRM.dane.pracownicy; return `<div class="trm-field"><label>${esc(p.kategoria)}${p.wariant ? ' · ' + esc(p.wariant) : ''}</label><div class="trm-row trm-z-poz"><select onchange="TRM.zm.prac['${p.id}']=this.value||null"><option value="">Dowolna właściwa osoba</option>${lista.map(x => `<option value="${esc(x)}" ${(z.prac[p.id] !== undefined ? z.prac[p.id] : p.pracownik) === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select><input type="number" class="trm-z-czas" min="5" max="480" step="5" value="${z.czasy[p.id] != null ? z.czasy[p.id] : p.czas_min}" title="Czas trwania zabiegu w minutach" onchange="TRM.zmCzas('${p.id}', this.value)"><span class="muted small">min</span></div></div>`; }).join('')}
       <div class="trm-field"><label>Powód (opcjonalnie)</label><input id="trm-z-powod" placeholder="np. prośba klientki"></div>
       <div id="trm-z-wynik">${z.wynik ? podgladZmianyHtml(z.wynik) : ''}</div>
       <div class="trm-row" style="margin-top:8px"><button class="trm-btn" onclick="TRM.zmianaSprawdz(false)">Sprawdź</button><button class="trm-btn primary" onclick="TRM.zmianaSprawdz(true)" ${z.wynik && z.wynik.status === 'success' ? '' : 'disabled'} id="trm-z-ok">Zatwierdź zmianę</button><button class="trm-btn fix" onclick="TRM.szcz.tryb='podglad';TRM.renderSzczegoly()">Wróć</button></div></div>`;
@@ -2860,7 +2860,7 @@
     const bez = prac.filter(p => !TRM.dane.grafik.some(x => x.pracownik === p));
     return obsadaTabela(prac) +
     `${bez.length ? `<div class="trm-note warn small">Bez grafiku: ${bez.map(esc).join(', ')}. <button class="trm-btn sm" onclick="TRM.ustGrafikZSalonu()">Skopiuj godziny salonu do osób bez grafiku</button></div>` : ''}
-    <div class="trm-card" id="trm-grafik-osoba"><div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Stały harmonogram osoby</label><select onchange="TRM.ust.prac=this.value;TRM.widokZmien('ustawienia')" style="width:auto">${prac.map(p => `<option ${p === kto_ ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="trm-pomoc" style="align-self:flex-end">Reguła cykliczna (co tydzień). Zmiana nie odwołuje wizyt — najpierw pokażemy listę zagrożonych terminów.</div></div>
+    <div class="trm-card" id="trm-grafik-osoba"><div class="trm-row" style="margin-bottom:10px"><div class="fix"><label>Stały harmonogram osoby</label><select onchange="TRM.ust.prac=this.value;TRM.widokZmien('ustawienia')" style="width:auto">${prac.map(p => `<option value="${esc(p)}" ${p === kto_ ? 'selected' : ''}>${esc(p)}</option>`).join('')}</select></div><div class="trm-pomoc" style="align-self:flex-end">Reguła cykliczna (co tydzień). Zmiana nie odwołuje wizyt — najpierw pokażemy listę zagrożonych terminów.</div></div>
     ${godzinyHtml(g, 'trm-gr')}<div class="trm-stopka"><span class="muted small fix">Stały harmonogram: <b>${esc(kto_)}</b></span><button class="trm-btn primary" onclick="TRM.ustZapiszGrafik(false)">Zapisz grafik</button></div></div>`;
   }
   // zbiorczy podgląd obsady: pracownicy w wierszach, realne dni wybranego tygodnia w kolumnach (raport T09)

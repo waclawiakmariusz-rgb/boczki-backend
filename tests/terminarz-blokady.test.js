@@ -93,7 +93,7 @@ describe('B01 — zakładanie rezerwacji technicznej', () => {
 
   test('nieznana osoba i nieznany gabinet nie przechodzą', async () => {
     const db = baza('recepcja');
-    expect((await post(aplikacja(db), { ...DOBRA, osoba: 'Ktoś' }, 'Ola')).body.message).toMatch(/Nieznana osoba/);
+    expect((await post(aplikacja(db), { ...DOBRA, osoba: 'Ktoś' }, 'Ola')).body.message).toMatch(/Nie ma osoby „Ktoś”/ /* audyt 10.11.2026: komunikat mówi, kogo nie ma i gdzie to sprawdzić */);
     const db2 = baza('recepcja');
     expect((await post(aplikacja(db2), { ...DOBRA, zasob_id: 999 }, 'Ola')).body.message).toMatch(/Nieznany gabinet/);
   });

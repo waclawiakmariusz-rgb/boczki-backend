@@ -150,7 +150,11 @@ function sprawdzKomplet(w) {
       const dost = (w.dostepnoscPracownikow || {})[imie] || [];
       const pozaGrafikiem = probne.find(z => !miesciSie(z.od, z.do, dost));
       if (pozaGrafikiem) {
-        const opisGrafiku = `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).`;
+        // audyt 10.11.2026: brak jakiegokolwiek grafiku tego dnia to inna sytuacja niż „poza godzinami” — recepcja ma wiedzieć, że to manager uzupełnia grafik
+        const brakGrafiku = !Array.isArray(dost) || dost.length === 0;
+        const opisGrafiku = brakGrafiku
+          ? `${imie} nie ma grafiku na ${naStr(start).slice(0, 10)} — nie wiadomo, w jakich godzinach pracuje. Manager ustawia to w Ustawieniach → Grafik zespołu (przycisk „z godzin salonu” wypełnia cały tydzień).`
+          : `${imie} nie pracuje w tym czasie (${naStr(pozaGrafikiem.od).slice(11, 16)}–${naStr(pozaGrafikiem.do).slice(11, 16)}).`;
         // #20 wariant B (30.10.2026): koniec grafiku to czas salonu, nie zajęty sprzęt. Recepcja może świadomie umówić
         // poza grafikiem, ale TYLKO osobę wskazaną ręcznie — automat „dowolny dostępny” nigdy nie sięga poza czyjś grafik.
         // Kolizje (zajęty pracownik, gabinet, urządzenie, klientka) sprawdzane dalej jak zawsze i zostają twardą odmową.
@@ -160,7 +164,7 @@ function sprawdzKomplet(w) {
         if (w.mimoGrafiku && poz.pracownik && maGrafikTegoDnia) {
           grafikOstrz = { kod: 'GRAFIK', pozycja: idx, pracownik: imie, opis: opisGrafiku, od: naStr(pozaGrafikiem.od), do: naStr(pozaGrafikiem.do) };
         } else {
-          powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: opisGrafiku, mozna_mimo_grafiku: !!poz.pracownik && maGrafikTegoDnia };
+          powodOdrzucenia = powodOdrzucenia || { kod: 'GRAFIK', opis: opisGrafiku, mozna_mimo_grafiku: !!poz.pracownik && maGrafikTegoDnia, brak_grafiku: brakGrafiku };
           continue;
         }
       }

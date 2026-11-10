@@ -25,7 +25,9 @@ describe('Pracownicy po redesignie — pola, lista i operacje bez zmian', () => 
     test('render listy: te same dane, usunPracownika(imie) jak dotąd, nazwa przez escHtml', () => {
         const r = INDEX.slice(INDEX.indexOf("const listPrac = document.getElementById('pracownicy-list');"), INDEX.indexOf('// Kategorie zabiegów (Kreator)'));
         expect(r).toContain('d.pracownicy.forEach(p => {');
-        expect(r).toContain(`onclick="usunPracownika('\${p}')"`);
+        // audyt 10.11.2026: imię idzie przez data-imie (bezpieczne apostrofy), obok przycisk „Zmień” (edit_employee)
+        expect(r).toContain(`data-imie="\${escHtml(p)}" onclick="usunPracownika(this.dataset.imie)"`);
+        expect(r).toContain(`onclick="edytujPracownika(this.dataset.imie)"`);
         expect(r).toContain('${escHtml(p)}');
         expect(r).toContain('listPrac.innerHTML = htmlList;');
         expect(r).toContain("licznikPrac.textContent = String(d.pracownicy.length)");
@@ -33,7 +35,7 @@ describe('Pracownicy po redesignie — pola, lista i operacje bez zmian', () => 
     test('dodajDefinicje wysyła add_sales_def z wartością z #def_prac i czyści pole po odpowiedzi', () => {
         const f = INDEX.slice(INDEX.indexOf('function dodajDefinicje(e, typ)'), INDEX.indexOf('function pobierzLogi()'));
         expect(f).toContain("p.action = 'add_sales_def';");
-        expect(f).toContain("p.wartosc = document.getElementById('def_prac').value;");
+        expect(f).toContain("p.wartosc = czysc(document.getElementById('def_prac').value);"); // audyt 10.11.2026: spacje na końcach obcinane
         expect(f).toContain("if(typ==='Pracownik') document.getElementById('def_prac').value='';");
         expect(f).toContain('alert(d.message);');
     });
