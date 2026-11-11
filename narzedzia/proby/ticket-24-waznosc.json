@@ -1,0 +1,51 @@
+{
+  "nazwa": "ticket-24-waznosc",
+  "modul": "Kosmetyki → Stan Magazynowy",
+  "opis": "Ticket #24 (Ola, 4.11.2026) i #13 (Gosia, 24.10.2026): data ważności produktu liczona wyłącznie z dostaw, które mają towar. Próba na bazie izolowanej, na danych odwzorowujących przypadek ze zgłoszenia (Apis Dermasoft: 11 szt. z czterech dostaw, dwie najstarsze wyprzedane). Sprawdza nagłówek produktu, rozwinięcie dostaw, napis „brak na stanie” dla produktu wyprzedanego w całości oraz nowy chip „Po terminie”. Przy okazji strażnik naprawy z 11.11.2026: kliknięcie chipa nie może czyścić listy. Zasiew i sprzątanie po sobie.",
+  "sekcja": "magazyn",
+  "korzen": "#magazyn",
+  "czekajPoSekcji": 2000,
+  "przygotuj": "narzedzia/proby/skrypty/ticket-24-zasiew.js",
+  "posprzataj": "narzedzia/proby/skrypty/ticket-24-sprzatanie.js",
+  "kroki": [
+    { "viewport": [1440, 900] },
+    { "czekaj": 1500 },
+
+    { "js": "(function(){document.getElementById('szukaj-magazyn').value='T24'; szukajWMagazynie(); return 'wierszy: '+document.querySelectorAll('#tabela-body tr').length;})()", "opis": "zawężenie listy do produktów próby" },
+    { "czekaj": 400 },
+    { "zrzut": "01-lista-trzy-przypadki" },
+
+    { "js": "(function(){const r=[...document.querySelectorAll('#tabela-body tr')].find(x=>/T24 Apis/.test(x.textContent)); window.__t24={apis: r? r.innerText.replace(/\\s+/g,' ') : ''}; return window.__t24.apis.slice(0,200);})()", "opis": "wiersz Apisa po poprawce" },
+    { "sprawdz": "/2027/.test(window.__t24.apis) && !/2026/.test(window.__t24.apis)", "opis": "nagłówek Apisa pokazuje datę towaru na stanie (2027), nie wyprzedanej dostawy (2026)" },
+    { "sprawdz": "/2 na stanie/.test(window.__t24.apis)", "opis": "podtytuł mówi, ile dostaw naprawdę leży na półce" },
+    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r=>/T24 Krem wyprzedany/.test(r.textContent) && /brak na stanie/.test(r.textContent))", "opis": "produkt wyprzedany w całości pokazuje „brak na stanie” zamiast daty" },
+    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r=>/T24 Krem wyprzedany/.test(r.textContent))", "opis": "produkt ze stanem zero nadal widoczny na liście (ticket #4, Ania)" },
+
+    { "js": "(function(){const r=[...document.querySelectorAll('#tabela-body tr')].find(x=>/T24 Apis/.test(x.textContent)); const m=(r.getAttribute('onclick')||'').match(/mag-group-\\d+/); r.click(); const kl=m?m[0]:''; const dzieci=[...document.querySelectorAll('tr.'+kl)]; window.__t24.dzieci=dzieci.length; window.__t24.wyprzedane=dzieci.filter(d=>/wyprzedana/.test(d.textContent)).length; window.__t24.gwiazdka=dzieci.filter(d=>/Najstarsza na stanie/.test(d.textContent)).length; return JSON.stringify(window.__t24);})()", "opis": "rozwinięcie dostaw Apisa i policzenie etykiet" },
+    { "czekaj": 500 },
+    { "zrzut": "02-dostawy-apis-rozwiniete" },
+    { "sprawdz": "window.__t24.dzieci === 4", "opis": "wszystkie cztery dostawy nadal widoczne" },
+    { "sprawdz": "window.__t24.wyprzedane === 2", "opis": "obie puste dostawy opisane jako wyprzedane" },
+    { "sprawdz": "window.__t24.gwiazdka === 1", "opis": "„sprzedawana pierwsza” stoi dokładnie przy jednej dostawie — tej z towarem" },
+
+    { "js": "(function(){document.getElementById('szukaj-magazyn').value=''; szukajWMagazynie(); return [...document.querySelectorAll('#magazyn-legenda button')].map(x=>x.textContent.trim()).join(' | ');})()", "opis": "chipy statusu" },
+    { "czekaj": 400 },
+    { "sprawdz": "[...document.querySelectorAll('#magazyn-legenda button')].some(b=>/Po terminie/.test(b.textContent))", "opis": "nowy chip „Po terminie” jest na ekranie" },
+    { "zrzut": "03-chipy-z-po-terminie" },
+
+    { "js": "(function(){const przed=document.querySelectorAll('#tabela-body tr').length; [...document.querySelectorAll('#magazyn-legenda button')].forEach(b=>{ if(/Mniej|3 m-ce|OK/.test(b.textContent)) b.click(); }); document.getElementById('szukaj-magazyn').value='T24'; szukajWMagazynie(); const po=document.querySelectorAll('#tabela-body tr').length; window.__t24.przed=przed; window.__t24.po=po; return 'wierszy przed: '+przed+', po filtrze: '+po;})()", "opis": "filtr: tylko produkty po terminie" },
+    { "czekaj": 500 },
+    { "zrzut": "04-filtr-po-terminie" },
+    { "sprawdz": "window.__t24.po > 0", "opis": "kliknięcie chipa nie czyści listy (naprawa z 11.11.2026)" },
+    { "sprawdz": "[...document.querySelectorAll('#tabela-body tr')].some(r=>/T24 Serum po terminie/.test(r.textContent))", "opis": "towar po terminie trafia na nowy chip" },
+    { "sprawdz": "![...document.querySelectorAll('#tabela-body tr')].some(r=>/T24 Apis/.test(r.textContent))", "opis": "Apis nie jest już liczony jako przeterminowany" },
+    { "sprawdz": "![...document.querySelectorAll('#tabela-body tr')].some(r=>/T24 Krem wyprzedany/.test(r.textContent))", "opis": "produkt bez towaru nie trafia do „po terminie” — nie ma czego zdejmować z półki" },
+
+    { "js": "(function(){[...document.querySelectorAll(\"#magazyn-legenda button\")].forEach(b=>{ if(/Mniej|3 m-ce|OK/.test(b.textContent)) b.click(); }); document.getElementById(\"szukaj-magazyn\").value=\"T24\"; szukajWMagazynie(); return \"przywrocono wszystkie chipy\";})()", "opis": "powrot do pelnej listy przed zrzutem mobilnym" },
+    { "czekaj": 500 },
+    { "viewport": [390, 844] },
+    { "czekaj": 400 },
+    { "zrzut": "05-telefon" },
+    { "pomiar": true }
+  ]
+}
