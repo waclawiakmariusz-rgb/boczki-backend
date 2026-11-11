@@ -256,6 +256,7 @@ button { cursor: pointer; font-family: 'Poppins', sans-serif; transition: all 0.
 .status-ok { background: #ecfdf5; color: #059669; } 
 .status-warn { background: #fffbeb; color: #d97706; } 
 .status-bad { background: #fef2f2; color: #dc2626; }
+.status-none { background: #f1f5f9; color: #64748b; }
 .qty-ok { background: #dcfce7; color: #166534; }
 .qty-warn { background: #fef9c3; color: #854d0e; }
 .qty-bad { background: #fee2e2; color: #991b1b; }
@@ -12250,7 +12251,7 @@ function normNumOr0(val) {
         let daneCache=[], slownikCache=[], salesDictCache={pracownicy:[], zabiegi:[]}, currentUser=null, aktualnyMiesiac="";
         let allBirthdays = [], currentBirthdayPage = 1, itemsPerPage = 20;
         let aktualnyFiltrMagazyn='Wszystkie', aktualnyFiltrInv='Wszystkie';
-        let aktywneStatusyMagazyn = new Set(['mniej','krotko','ok']);
+        let aktywneStatusyMagazyn = new Set(['poterminie','mniej','krotko','ok']);
         let cacheZadatkow = []; // Magazyn tymczasowy dla zadatków
 		let stanSortowania = { kolumna: 'waznosc', kierunek: 'asc' };
         // NOWE ZMIENNE DLA HISTORII
@@ -19076,12 +19077,16 @@ function renderMagazyn(d) {
             
             zgrupowane[klucz].iloscCalkowita += Number(p.ilosc);
             zgrupowane[klucz].partie.push(p);
+        });
 
-            let pdDate = p.waznosc ? new Date(p.waznosc).getTime() : Infinity;
-            if (pdDate < zgrupowane[klucz].najblizszaWaznoscTs) {
-                zgrupowane[klucz].najblizszaWaznoscTs = pdDate;
-                zgrupowane[klucz].najblizszaWaznoscStr = p.waznosc;
-            }
+        // Ticket #24 (Ola, 4.11.2026) i #13 (Gosia, 24.10.2026): data ważności produktu ma opisywać TOWAR,
+        // który leży w gabinecie. Liczymy ją wyłącznie z dostaw ze stanem > 0 — wyprzedana dostawa zostaje
+        // widoczna w akordeonie (ticket #4, Ania), ale nie wyznacza już daty, koloru ani statusu grupy.
+        // Tak samo liczy sprzedaż (routes/sprzedaz.js: AND ilosc > 0 ORDER BY data_waznosci) i ekran „Co zamówić?".
+        Object.values(zgrupowane).forEach(g => {
+            const w = waznoscGrupyMagazyn(g.partie);
+            g.najblizszaWaznoscTs = w.ts;
+            g.najblizszaWaznoscStr = w.str;
         });
 
         // 2. Filtrowanie po statusie (chipy)
@@ -19096,8 +19101,13 @@ function renderMagazyn(d) {
             if (kolumnaSort === 'ilosc') {
                 return (a.iloscCalkowita - b.iloscCalkowita) * kierunekSort;
             } else if (kolumnaSort === 'waznosc') {
-                let dA = a.najblizszaWaznoscTs === Infinity ? 0 : a.najblizszaWaznoscTs;
-                let dB = b.najblizszaWaznoscTs === Infinity ? 0 : b.najblizszaWaznoscTs;
+                // produkt bez towaru nie ma daty, która cokolwiek znaczy → zawsze na dole, w obie strony sortowania
+                const BRAK_DATY = Number.MAX_SAFE_INTEGER;
+                let dA = a.najblizszaWaznoscTs === Infinity ? BRAK_DATY : a.najblizszaWaznoscTs;
+                let dB = b.najblizszaWaznoscTs === Infinity ? BRAK_DATY : b.najblizszaWaznoscTs;
+                if (dA === BRAK_DATY && dB === BRAK_DATY) return String(a.nazwa).localeCompare(String(b.nazwa));
+                if (dA === BRAK_DATY) return 1;
+                if (dB === BRAK_DATY) return -1;
                 return (dA - dB) * kierunekSort;
             } else if (kolumnaSort === 'brutto') {
                 return (Number(a.cena) - Number(b.cena)) * kierunekSort;
@@ -19110,10 +19120,10 @@ function renderMagazyn(d) {
         let htmlWynikowy = "";
         
         listaDoSortowania.forEach((g, index) => {
-            if (!g.najblizszaWaznoscStr && g.partie.length > 0) g.najblizszaWaznoscStr = g.partie[0].waznosc;
-
-            let df = Math.ceil((new Date(g.najblizszaWaznoscStr) - new Date()) / 86400000);
-            let c = df < 0 ? 'status-bad' : (df <= 90 ? 'status-warn' : 'status-ok');
+            // brak daty = brak towaru z datą; nie podstawiamy już pierwszej (często wyprzedanej) partii
+            let maStan = g.iloscCalkowita > 0;
+            let df = dniDoWaznosciGrupy(g);
+            let c = (!maStan || df === null) ? 'status-none' : (df < 0 ? 'status-bad' : (df <= 90 ? 'status-warn' : 'status-ok'));
             let cb = g.kategoria === 'Detal' ? 'cat-detal' : 'cat-pro';
 
             let stylIlosci = "qty-badge";
@@ -19136,11 +19146,19 @@ function renderMagazyn(d) {
 
             if (czyWielePartii) {
                 zdarzenieKlik = 'onclick="toggleMagazynAkordeon(\'' + rowId + '\')" style="cursor:pointer;" title="Kliknij, aby zobaczyć dostawy"';
-                let datySortowane = g.partie.slice().sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
-                let najstarsza = new Date(datySortowane[0].waznosc).toLocaleDateString();
-                let najnowsza = new Date(datySortowane[datySortowane.length-1].waznosc).toLocaleDateString();
-                podtytulHtml = '<br><span style="font-size:11px; font-weight:600; color:#0284c7; display:inline-block; margin-top:4px; background:#e0f2fe; padding:2px 10px; border-radius:20px; cursor:pointer;">🚛 ' + g.partie.length + ' dostawy — ważność: ' + najstarsza + ' – ' + najnowsza + '</span>'
-                    + '<br><span style="font-size:11px; color:#94a3b8; margin-top:2px; display:inline-block;">↓ sprzedaż pobiera automatycznie z najstarszej</span>';
+                let naStanieZData = partieNaStanie(g.partie).filter(p => p.waznosc);
+                let datySortowane = naStanieZData.slice().sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
+                let opisDostaw;
+                if (datySortowane.length) {
+                    let najstarsza = new Date(datySortowane[0].waznosc).toLocaleDateString();
+                    let najnowsza = new Date(datySortowane[datySortowane.length-1].waznosc).toLocaleDateString();
+                    opisDostaw = g.partie.length + ' dostawy (' + datySortowane.length + ' na stanie) — ważność: '
+                        + (najstarsza === najnowsza ? najstarsza : najstarsza + ' – ' + najnowsza);
+                } else {
+                    opisDostaw = g.partie.length + ' dostawy — wszystkie wyprzedane';
+                }
+                podtytulHtml = '<br><span style="font-size:11px; font-weight:600; color:#0284c7; display:inline-block; margin-top:4px; background:#e0f2fe; padding:2px 10px; border-radius:20px; cursor:pointer;">🚛 ' + opisDostaw + '</span>'
+                    + (datySortowane.length ? '<br><span style="font-size:11px; color:#94a3b8; margin-top:2px; display:inline-block;">↓ sprzedaż pobiera automatycznie z najstarszej dostawy, która ma towar</span>' : '');
                 akcjaHtml = '<span style="font-size:11px; color:#94a3b8; font-style:italic;">(kliknij wiersz, by zobaczyć)</span>';
             } else {
                 let dostawaJednej = dataDostawy(g.partie[0] && g.partie[0].data_dodania);
@@ -19160,7 +19178,7 @@ function renderMagazyn(d) {
                     ${podtytulHtml}
                 </td>
                 <td style="text-align:center; font-weight:700; color:#1e293b; font-size:15px;">${g.iloscCalkowita > 0 ? g.iloscCalkowita : '<span style="color:#ef4444;">0</span>'}</td>
-                <td><div class="date-badge ${c}">${new Date(g.najblizszaWaznoscStr).toLocaleDateString()}</div></td>
+                <td><div class="date-badge ${c}">${!maStan ? 'brak na stanie' : (g.najblizszaWaznoscStr ? new Date(g.najblizszaWaznoscStr).toLocaleDateString() : 'bez daty')}</div></td>
                 <td style="color:#475569; font-size:13px;">${cenaFormatowana}</td>
                 <td style="text-align:center;">${akcjaHtml}</td>
             </tr>`;
@@ -19168,14 +19186,17 @@ function renderMagazyn(d) {
             // B. Wiersze Dzieci (Partie)
             if (czyWielePartii) {
                 let partieSort = g.partie.slice().sort((a,b) => new Date(a.waznosc) - new Date(b.waznosc));
+                // gwiazdka i „sprzedawana pierwsza" należą się najstarszej dostawie, która MA towar — sprzedaż pomija puste
+                let idxPierwszejZTowarem = partieSort.findIndex(p => Number(p.ilosc) > 0);
                 partieSort.forEach((p, pIdx) => {
-                    let pdf = Math.ceil((new Date(p.waznosc) - new Date()) / 86400000);
-                    let pc = pdf < 0 ? 'status-bad' : (pdf <= 90 ? 'status-warn' : 'status-ok');
+                    let pustaPartia = Number(p.ilosc) <= 0;
+                    let pdf = p.waznosc ? Math.ceil((new Date(p.waznosc) - new Date()) / 86400000) : null;
+                    let pc = (pustaPartia || pdf === null) ? 'status-none' : (pdf < 0 ? 'status-bad' : (pdf <= 90 ? 'status-warn' : 'status-ok'));
                     const rowStr = encodeURIComponent(JSON.stringify(p));
-                    let ikonaDostawy = pIdx === 0 ? '☆' : '○';
-                    let etykietaDostawy = pIdx === 0
-                        ? ikonaDostawy + ' <strong style="color:#475569;">Starsza dostawa</strong> <span style="font-size:10px;color:#f59e0b;font-weight:600;">(sprzedawana pierwsza)</span>'
-                        : ikonaDostawy + ' Dostawa ' + (pIdx + 1);
+                    let ikonaDostawy = pIdx === idxPierwszejZTowarem ? '☆' : '○';
+                    let etykietaDostawy = pIdx === idxPierwszejZTowarem
+                        ? ikonaDostawy + ' <strong style="color:#475569;">Najstarsza na stanie</strong> <span style="font-size:10px;color:#f59e0b;font-weight:600;">(sprzedawana pierwsza)</span>'
+                        : ikonaDostawy + ' Dostawa ' + (pIdx + 1) + (pustaPartia ? ' <span style="font-size:10px;color:#94a3b8;font-weight:600;">(wyprzedana)</span>' : '');
                     let dzieckoIlosc = p.ilosc == 0 ? '<span style="color:#ef4444;font-size:12px;font-weight:700;">0 (BRAK)</span>' : '<span style="font-size:12px;color:#475569;">' + parseFloat(p.ilosc).toFixed(2).replace('.', ',') + ' SZT.</span>';
                     let cenaPartii = parseFloat(p.brutto || 0).toFixed(2).replace('.', ',') + ' PLN';
 
@@ -19186,7 +19207,7 @@ function renderMagazyn(d) {
                             <small style="color:#94a3b8; margin-left:18px;">Dodał: ${p.kto_dodal || '-'}${dataDostawy(p.data_dodania) ? ' · dostawa ' + dataDostawy(p.data_dodania) : ''}</small>
                         </td>
                         <td style="border-bottom:1px dashed #e2e8f0; text-align:center; font-size:12px; color:#475569;">${dzieckoIlosc}</td>
-                        <td style="border-bottom:1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${new Date(p.waznosc).toLocaleDateString()}</div></td>
+                        <td style="border-bottom:1px dashed #e2e8f0;"><div class="date-badge ${pc}" style="font-size:10px; padding:3px 8px;">${p.waznosc ? new Date(p.waznosc).toLocaleDateString() : 'bez daty'}</div></td>
                         <td style="border-bottom:1px dashed #e2e8f0; font-size:12px; color:#64748b;">${cenaPartii}</td>
                         <td style="border-bottom:1px dashed #e2e8f0; text-align:center;">
                             <button onclick="otworzEdycjeProduktu('${rowStr}')" style="background:none;border:none;cursor:pointer;color:#16a34a;padding:6px;" title="Edytuj partię">${ICON_EDIT}</button>
@@ -19229,14 +19250,32 @@ function toggleMagazynAkordeon(groupId) {
 }
 
 // --- STATUSY I CHIPY FILTROWANIA MAGAZYNU ---
+// Ticket #24 (Ola, 4.11.2026): o produkcie mówią wyłącznie dostawy, które mają towar.
+// Wyprzedana partia zostaje widoczna, ale nie wyznacza daty, koloru ani statusu.
+function partieNaStanie(partie) {
+    return (partie || []).filter(p => Number(p.ilosc) > 0);
+}
+function waznoscGrupyMagazyn(partie) {
+    const zTowarem = partieNaStanie(partie).filter(p => p.waznosc);
+    if (!zTowarem.length) return { ts: Infinity, str: '' };
+    const naj = zTowarem.slice().sort((a, b) => new Date(a.waznosc) - new Date(b.waznosc))[0];
+    return { ts: new Date(naj.waznosc).getTime(), str: naj.waznosc };
+}
+function dniDoWaznosciGrupy(g) {
+    if (!g.najblizszaWaznoscStr) return null;
+    return Math.ceil((new Date(g.najblizszaWaznoscStr) - new Date()) / 86400000);
+}
 function statusGrupyMagazyn(g) {
+    const df = dniDoWaznosciGrupy(g);
+    // towar po terminie leży na półce i trzeba go zdjąć — pilniejsze niż niski stan
+    if (g.iloscCalkowita > 0 && df !== null && df < 0) return 'poterminie';
     if (g.iloscCalkowita <= 2) return 'mniej';
-    const df = Math.ceil((new Date(g.najblizszaWaznoscStr) - new Date()) / 86400000);
-    return df <= 90 ? 'krotko' : 'ok';
+    return (df !== null && df <= 90) ? 'krotko' : 'ok';
 }
 
 function renderChipsyStatusMagazyn() {
     const chips = [
+        { id: 'poterminie', label: 'Po terminie', color: '#991b1b' },
         { id: 'mniej', label: 'Mniej', color: '#ef4444' },
         { id: 'krotko', label: '< 3 m-ce', color: '#f59e0b' },
         { id: 'ok', label: 'OK', color: '#22c55e' }
@@ -19256,7 +19295,9 @@ function toggleStatusMagazyn(status) {
     } else {
         aktywneStatusyMagazyn.add(status);
     }
-    renderMagazyn(daneCache);
+    // 11.11.2026 (próba do ticketu #24): dane magazynu żyją w window.daneCache — lokalne daneCache zostaje
+    // pustą tablicą z deklaracji, więc kliknięcie chipa czyściło całą listę. Ten sam fallback co w pobierzDane().
+    renderMagazyn(window.daneCache || daneCache);
 }
 
 // --- NOWE FUNKCJE DO OBSŁUGI POPUPA PRODUKTU ---
