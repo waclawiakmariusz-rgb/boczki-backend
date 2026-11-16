@@ -23,6 +23,18 @@ describe('ticket #29 — cena w edycji produktu magazynu pro', () => {
         expect(FORM).not.toContain('Cena sprzedaży brutto');
     });
 
+    test('podpis jest jednym zdaniem (uwaga właściciela 16.11: bez dopisku o liczeniu)', () => {
+        const i = FORM.indexOf('<span class="ei-help">Cena, za jaką salon kupił produkt do użytku w gabinecie.');
+        expect(i).toBeGreaterThan(-1);
+        expect(FORM.slice(i, FORM.indexOf('</span>', i))).not.toMatch(/nic z niej|Tylko do informacji/);
+    });
+
+    test('sufiks „zł” nie wystaje pod pole: input w grupie jest blokiem (ramka równa z polem)', () => {
+        const CSS = fs.readFileSync(path.join(__dirname, '..', 'public', 'magazyn-produkt.css'), 'utf8');
+        expect(CSS).toMatch(/\.estelio-inventory \.ei-input-group input\.modern-form-control \{[^}]*display: block;/);
+        expect(CSS).toMatch(/\.estelio-inventory \.ei-suffix \{[^}]*position: absolute;[^}]*bottom: 1px;/);
+    });
+
     test('zapis i odczyt pola bez zmian (price_gross → cena_brutto po stronie serwera)', () => {
         expect(INDEX).toContain("price_gross: document.getElementById('rap_p_price').value");
         const RAPORT = fs.readFileSync(path.join(__dirname, '..', 'routes', 'raport.js'), 'utf8');
