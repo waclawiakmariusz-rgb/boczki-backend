@@ -2183,6 +2183,27 @@ body.dark-mode .kon_radio-label:has(input:checked) { background: #1e293b !import
 body.dark-mode .filter-btn { background: #1e293b !important; color: #94a3b8 !important; }
 body.dark-mode .filter-btn.active { background: #f8fafc !important; color: #1e293b !important; }
 
+/* 🎫 Zgłoszenia do Estelio w trybie ciemnym — ticket #27 (Gosia, 14.11.2026): lista i rozmowa mają kolory wpisane w HTML
+   (tk_render / tk_rozwin), więc w ciemnym tle tekst ginął. Klasy tk-* dostają ciemne odpowiedniki; tryb jasny bez zmian. */
+body.dark-mode #tickety .tk-wstep, body.dark-mode #tickety #tk-podsumowanie, body.dark-mode #tickety .tk-meta,
+body.dark-mode #tickety .tk-czeka, body.dark-mode #tickety .tk-zamkniete, body.dark-mode #tickety .tk-pusto,
+body.dark-mode #tickety .tk-zal-label { color: #94a3b8 !important; }
+body.dark-mode #tickety #tk-auto { background: #0f172a !important; color: #cbd5e1 !important; border-color: #334155 !important; }
+body.dark-mode #tickety .tk-karta { background: #1e293b !important; border-color: #334155 !important; }
+body.dark-mode #tickety .tk-karta[data-nowa="1"] { border-color: #f59e0b !important; }
+body.dark-mode #tickety .tk-tytul { color: #f8fafc !important; }
+body.dark-mode #tickety .tk-opis, body.dark-mode #tickety .tk-odp-tresc, body.dark-mode #tickety .tk-dymek-tresc { color: #e2e8f0 !important; }
+body.dark-mode #tickety .tk-odp { background: #052e16 !important; border-color: #166534 !important; }
+body.dark-mode #tickety .tk-karta[data-nowa="1"] .tk-odp { background: #3b2305 !important; border-color: #b45309 !important; }
+body.dark-mode #tickety .tk-odp-naglowek { color: #86efac !important; }
+body.dark-mode #tickety .tk-nowa { color: #fbbf24 !important; }
+body.dark-mode #tickety .tk-watek { border-top-color: #334155 !important; }
+body.dark-mode #tickety .tk-dymek[data-estelio="1"] { background: #052e16 !important; border-color: #166534 !important; }
+body.dark-mode #tickety .tk-dymek[data-estelio="1"] .tk-dymek-kto { color: #86efac !important; }
+body.dark-mode #tickety .tk-dymek[data-estelio="0"] { background: #172554 !important; border-color: #1e40af !important; }
+body.dark-mode #tickety .tk-dymek[data-estelio="0"] .tk-dymek-kto { color: #93c5fd !important; }
+/* koniec reguł ticketu #27 */
+
 body.dark-mode .action-btn-light { background: #1e293b !important; color: #f8fafc !important; border-color: #334155 !important; }
 body.dark-mode .action-btn-light:hover { background: #334155 !important; }
 body.dark-mode .action-btn-outline { border-color: #334155 !important; }
@@ -5878,7 +5899,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
 
     <div class="card" id="tk-formularz" style="display:none;">
         <h3 style="margin-top:0;">Nowe zgłoszenie</h3>
-        <p style="color:#64748b; font-size:13px; margin:0 0 12px;">Błąd, prośba o zmianę, pytanie — opisz własnymi słowami, jak na kartce dla koleżanki. Nazwa salonu, Twoje imię oraz data i godzina dopisują się same. Zrzut ekranu możesz wkleić (Ctrl+V) prosto do opisu.</p>
+        <p class="tk-wstep" style="color:#64748b; font-size:13px; margin:0 0 12px;">Błąd, prośba o zmianę, pytanie — opisz własnymi słowami, jak na kartce dla koleżanki. Nazwa salonu, Twoje imię oraz data i godzina dopisują się same. Zrzut ekranu możesz wkleić (Ctrl+V) prosto do opisu.</p>
         <div id="tk-auto" style="font-size:12.5px; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:8px 12px; margin-bottom:12px;"></div>
         <div class="form-grid">
             <div style="grid-column:1 / -1;"><label>Tytuł (jedno zdanie):</label><input type="text" id="tk-tytul" class="form-control" maxlength="200" placeholder="np. Przycisk Zwrot nie reaguje w profilu klientki"></div>
@@ -22114,28 +22135,28 @@ function tk_render() {
     const otwarte = tk_dane.filter(t => t.status !== 'zamkniete').length;
     const pods = document.getElementById('tk-podsumowanie');
     if (pods) pods.textContent = tk_dane.length ? `Zgłoszeń w tym salonie: ${tk_dane.length} · aktywnych: ${otwarte} · zamkniętych: ${tk_dane.length - otwarte}${nieprzeczytane ? ` · nowych odpowiedzi: ${nieprzeczytane}` : ''}` : '';
-    if (!lista.length) { box.innerHTML = `<div style="color:#94a3b8; padding:14px; text-align:center;">${tk_dane.length ? 'Brak zgłoszeń w tym widoku.' : 'Jeszcze nic nie zgłoszono. Gdy coś nie działa albo czegoś brakuje — kliknij „Nowe zgłoszenie".'}</div>`; return; }
+    if (!lista.length) { box.innerHTML = `<div class="tk-pusto" style="color:#94a3b8; padding:14px; text-align:center;">${tk_dane.length ? 'Brak zgłoszeń w tym widoku.' : 'Jeszcze nic nie zgłoszono. Gdy coś nie działa albo czegoś brakuje — kliknij „Nowe zgłoszenie".'}</div>`; return; }
     box.innerHTML = lista.map(t => {
         const st = TK_STATUS[t.status] || [t.status, '#f1f5f9', '#334155'];
         const pil = TK_PIL[t.pilnosc] || [t.pilnosc, '#64748b'];
         const nowaOdp = t.odpowiedz && Number(t.odpowiedz_przeczytana) === 0;
-        return `<div style="border:1px solid ${nowaOdp ? '#f59e0b' : '#e2e8f0'}; border-left:4px solid ${pil[1]}; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff;">
+        return `<div class="tk-karta" data-nowa="${nowaOdp ? 1 : 0}" style="border:1px solid ${nowaOdp ? '#f59e0b' : '#e2e8f0'}; border-left:4px solid ${pil[1]}; border-radius:10px; padding:12px 14px; margin-bottom:10px; background:#fff;">
             <div style="display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:flex-start;">
                 <div style="min-width:0;">
-                    <div style="font-weight:700; color:#0f172a;">#${t.id} · ${escHtml(t.tytul)}</div>
-                    <div style="font-size:12px; color:#64748b; margin-top:3px;">${TK_KAT[t.kategoria] || escHtml(t.kategoria)} · pilność: <span style="color:${pil[1]}; font-weight:600;">${pil[0]}</span> · ${escHtml(t.pracownik || '')}${t.rola ? ' (' + escHtml(t.rola) + ')' : ''} · ${tk_data(t.data_utworzenia)}${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}</div>
+                    <div class="tk-tytul" style="font-weight:700; color:#0f172a;">#${t.id} · ${escHtml(t.tytul)}</div>
+                    <div class="tk-meta" style="font-size:12px; color:#64748b; margin-top:3px;">${TK_KAT[t.kategoria] || escHtml(t.kategoria)} · pilność: <span style="color:${pil[1]}; font-weight:600;">${pil[0]}</span> · ${escHtml(t.pracownik || '')}${t.rola ? ' (' + escHtml(t.rola) + ')' : ''} · ${tk_data(t.data_utworzenia)}${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}</div>
                 </div>
                 <span style="background:${st[1]}; color:${st[2]}; border-radius:999px; padding:3px 10px; font-size:12px; font-weight:700; white-space:nowrap;">${st[0]}</span>
             </div>
-            <div style="font-size:13px; color:#334155; margin-top:8px; white-space:pre-line;">${escHtml(t.opis || '')}</div>
-            ${t.odpowiedz ? `<div style="margin-top:10px; background:${nowaOdp ? '#fffbeb' : '#f0fdf4'}; border:1px solid ${nowaOdp ? '#fde68a' : '#bbf7d0'}; border-radius:8px; padding:10px 12px;">
-                <div style="font-size:12px; font-weight:700; color:#166534;">💬 Ostatnia odpowiedź Estelio${t.odpowiedz_data ? ' · ' + tk_data(t.odpowiedz_data) : ''}${nowaOdp ? ' · <span style="color:#b45309;">NOWA</span>' : ''}</div>
-                <div style="font-size:13px; color:#1f2937; margin-top:4px; white-space:pre-line;">${escHtml(t.odpowiedz)}</div>
+            <div class="tk-opis" style="font-size:13px; color:#334155; margin-top:8px; white-space:pre-line;">${escHtml(t.opis || '')}</div>
+            ${t.odpowiedz ? `<div class="tk-odp" style="margin-top:10px; background:${nowaOdp ? '#fffbeb' : '#f0fdf4'}; border:1px solid ${nowaOdp ? '#fde68a' : '#bbf7d0'}; border-radius:8px; padding:10px 12px;">
+                <div class="tk-odp-naglowek" style="font-size:12px; font-weight:700; color:#166534;">💬 Ostatnia odpowiedź Estelio${t.odpowiedz_data ? ' · ' + tk_data(t.odpowiedz_data) : ''}${nowaOdp ? ' · <span class="tk-nowa" style="color:#b45309;">NOWA</span>' : ''}</div>
+                <div class="tk-odp-tresc" style="font-size:13px; color:#1f2937; margin-top:4px; white-space:pre-line;">${escHtml(t.odpowiedz)}</div>
                 ${nowaOdp ? `<button onclick="tk_przeczytane(${t.id})" class="filter-btn" style="font-size:12px; margin-top:6px;">✓ Przeczytane</button>` : ''}
-            </div>` : (t.status !== 'zamkniete' ? `<div style="font-size:12px; color:#94a3b8; margin-top:8px;">${Number(t.czeka_na_estelio) ? 'Czeka na odpowiedź Estelio.' : ''}</div>` : '')}
+            </div>` : (t.status !== 'zamkniete' ? `<div class="tk-czeka" style="font-size:12px; color:#94a3b8; margin-top:8px;">${Number(t.czeka_na_estelio) ? 'Czeka na odpowiedź Estelio.' : ''}</div>` : '')}
             <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                 <button onclick="tk_rozwin(${t.id})" class="filter-btn" style="font-size:12px;" id="tk-btn-rozwin-${t.id}">💬 Rozmowa${Number(t.komentarze) ? ` (${t.komentarze})` : ''} · dopisz${Number(t.zalaczniki) ? ` · 📎 ${t.zalaczniki}` : ''}</button>
-                ${t.data_zamkniecia ? `<span style="font-size:11.5px; color:#94a3b8;">Zamknięte ${tk_data(t.data_zamkniecia)}</span>` : ''}
+                ${t.data_zamkniecia ? `<span class="tk-zamkniete" style="font-size:11.5px; color:#94a3b8;">Zamknięte ${tk_data(t.data_zamkniecia)}</span>` : ''}
             </div>
             <div id="tk-watek-${t.id}" style="display:none; margin-top:10px;"></div>
         </div>`;
@@ -22152,15 +22173,15 @@ async function tk_rozwin(id) {
         if (d.status !== 'success') { box.innerHTML = `<span style="font-size:12px; color:#dc2626;">${escHtml(d.message || 'Błąd')}</span>`; return; }
         const t = d.data; const kom = t.komentarze_lista || []; const zal = t.zalaczniki_lista || [];
         const bubble = (kto, kiedy, tresc, estelio) => `<div style="display:flex; justify-content:${estelio ? 'flex-start' : 'flex-end'}; margin:6px 0;">
-            <div style="max-width:85%; background:${estelio ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${estelio ? '#bbf7d0' : '#bfdbfe'}; border-radius:10px; padding:8px 12px;">
-                <div style="font-size:11px; font-weight:700; color:${estelio ? '#166534' : '#1e40af'};">${estelio ? '🛠️ Estelio' : '👤 ' + escHtml(kto || 'salon')} · ${tk_data(kiedy)}</div>
-                <div style="font-size:13px; color:#1f2937; margin-top:3px; white-space:pre-line;">${escHtml(tresc)}</div>
+            <div class="tk-dymek" data-estelio="${estelio ? 1 : 0}" style="max-width:85%; background:${estelio ? '#f0fdf4' : '#eff6ff'}; border:1px solid ${estelio ? '#bbf7d0' : '#bfdbfe'}; border-radius:10px; padding:8px 12px;">
+                <div class="tk-dymek-kto" style="font-size:11px; font-weight:700; color:${estelio ? '#166534' : '#1e40af'};">${estelio ? '🛠️ Estelio' : '👤 ' + escHtml(kto || 'salon')} · ${tk_data(kiedy)}</div>
+                <div class="tk-dymek-tresc" style="font-size:13px; color:#1f2937; margin-top:3px; white-space:pre-line;">${escHtml(tresc)}</div>
             </div></div>`;
         box.innerHTML = `
-            <div style="border-top:1px dashed #e2e8f0; padding-top:8px;">
+            <div class="tk-watek" style="border-top:1px dashed #e2e8f0; padding-top:8px;">
                 ${bubble(t.pracownik, t.data_utworzenia, t.opis, false)}
                 ${kom.map(k => bubble(k.autor, k.data_dodania, k.tresc, k.autor_typ === 'estelio')).join('')}
-                ${zal.length ? `<div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><span style="font-size:12px; color:#64748b;">Załączniki:</span>${zal.map(z => `<button onclick="tk_otworzZalacznik(${z.id})" class="filter-btn" style="font-size:12px;">${/^image\//.test(z.typ || '') ? '🖼️' : '📄'} ${escHtml(z.nazwa || 'załącznik')} <small style="color:#94a3b8;">${Math.round((z.rozmiar || 0) / 1024)} KB</small></button>`).join('')}</div>` : ''}
+                ${zal.length ? `<div style="margin:8px 0; display:flex; gap:8px; flex-wrap:wrap; align-items:center;"><span class="tk-zal-label" style="font-size:12px; color:#64748b;">Załączniki:</span>${zal.map(z => `<button onclick="tk_otworzZalacznik(${z.id})" class="filter-btn" style="font-size:12px;">${/^image\//.test(z.typ || '') ? '🖼️' : '📄'} ${escHtml(z.nazwa || 'załącznik')} <small style="color:#94a3b8;">${Math.round((z.rozmiar || 0) / 1024)} KB</small></button>`).join('')}</div>` : ''}
                 <div style="margin-top:10px;">
                     <textarea id="tk-dopisz-${id}" class="form-control" rows="3" maxlength="5000" placeholder="${t.status === 'zamkniete' ? 'Dopisz wyjaśnienie — zgłoszenie otworzy się ponownie i trafi do Estelio.' : 'Dopisz wyjaśnienie albo pytanie do tego zgłoszenia…'}"></textarea>
                     <div style="display:flex; gap:8px; align-items:center; margin-top:6px; flex-wrap:wrap;">
