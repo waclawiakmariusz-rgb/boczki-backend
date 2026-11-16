@@ -37,7 +37,9 @@
 .estelio-inventory .ei-grid-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .estelio-inventory .ei-grid-two { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; }
 .estelio-inventory .ei-input-group { position: relative; display: block; }
-.estelio-inventory .ei-input-group input.modern-form-control { padding-right: 90px; }
+/* Ticket #29 (16.11.2026): input jest elementem liniowym, więc blok grupy był wyższy od pola o odstęp linii bazowej,
+   a sufiks „zł” (absolute, bottom:1px) wystawał pod pole. display:block zrównuje wysokość grupy z wysokością pola. */
+.estelio-inventory .ei-input-group input.modern-form-control { padding-right: 90px; display: block; }
 .estelio-inventory .ei-suffix { position: absolute; top: 1px; right: 1px; bottom: 1px; width: 88px; display: grid; place-items: center; border-left: 1px solid var(--ei-border); border-radius: 0 11px 11px 0; background: var(--ei-suffix-bg); color: var(--ei-text); font-size: 16px; pointer-events: none; }
 /* Kategoria: przycisk-wyzwalacz nad ukrytym selectem. Select zostaje w drzewie (required, czytany przez zapis). */
 .estelio-inventory .ei-category-box { position: relative; }
