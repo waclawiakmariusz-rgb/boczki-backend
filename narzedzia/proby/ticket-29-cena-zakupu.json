@@ -1,0 +1,23 @@
+{
+  "nazwa": "ticket-29-cena-zakupu",
+  "modul": "Magazyn pro",
+  "opis": "Ticket #29 (Gosia), część 1: w formularzu produktu magazynu pro pole ceny nazywa się „Cena zakupu brutto” z podpisem o cenie zakupu do użytku w gabinecie (bez „sprzedajesz detalicznie”). Bez zapisu — tylko widok formularza.",
+  "pracownik": "Ola",
+  "pin": "1111",
+  "rola": "manager",
+  "sekcja": "rap_add",
+  "korzen": "#rap_add",
+  "czekajPoSekcji": 2000,
+  "kroki": [
+    { "viewport": [1440, 1000] },
+    { "js": "(function(){ var l=document.querySelector('label[for=\"rap_p_price\"]'); if(!l) return 'brak etykiety'; l.scrollIntoView({block:'center', behavior:'instant'}); var h=l.parentElement.querySelector('.ei-help'); return JSON.stringify({ etykieta: l.textContent.replace(/\\s+/g,' ').trim(), podpis: h ? h.textContent.trim() : null }); })()", "opis": "etykieta i podpis pola ceny" },
+    { "czekaj": 500 },
+    { "zrzut": "01-formularz-produktu-cena-zakupu" },
+    { "sprawdz": "(function(){ var l=document.querySelector('label[for=\"rap_p_price\"]'); return !!l && /^Cena zakupu brutto/.test(l.textContent.replace(/\\s+/g,' ').trim()); })()", "opis": "A01: etykieta to „Cena zakupu brutto”" },
+    { "sprawdz": "(function(){ var l=document.querySelector('label[for=\"rap_p_price\"]'); var h=l && l.parentElement.querySelector('.ei-help'); return !!h && /kupił produkt do użytku w gabinecie/.test(h.textContent) && !/sprzedajesz detalicznie/.test(h.textContent); })()", "opis": "A02: podpis mówi o cenie zakupu, nie o sprzedaży detalicznej" },
+    { "ciemny": true },
+    { "czekaj": 400 },
+    { "zrzut": "02-formularz-produktu-cena-zakupu-ciemny" },
+    { "ciemny": false }
+  ]
+}
