@@ -21067,6 +21067,59 @@ function wyczyscCeny(selectEl) {
     odswiezSume();
 }
 
+// Ticket #26 (Gosia, 14.11.2026): rabat na wierszu ZADATKU liczy się od CENY ZABIEGU, a zadatek jest proponowany od ceny
+// po rabacie (decyzja właściciela 16.11: „rabat od ceny zabiegu”). Wcześniej rabat brał ukrytą cenę bazową wiersza, którą
+// wypełnia tylko mnożenie ilość × cena (zabieg/kosmetyk) — dla zadatku było to 0, więc każdy rabat zerował kwotę zadatku.
+// Czysta matematyka rabatu, wspólna dla obu ścieżek: zwraca kwotę rabatu i opis do zapisu.
+function liczRabatOdCeny(baza, val, recznaWartosc) {
+    baza = parseFloat(baza) || 0;
+    const reczna = parseFloat(recznaWartosc) || 0;
+    if (val === 'MANUAL_PLN') return { kwota: reczna, opis: `Rabat: -${reczna} zł` };
+    if (val === 'MANUAL_PERC') return { kwota: baza * (reczna / 100), opis: `Rabat: -${reczna}%` };
+    const parts = String(val || '').split('|');
+    if (parts.length >= 2) {
+        const wartosc = parseFloat(parts[1]) || 0, nazwa = parts[2] || '';
+        if (parts[0] === 'PROCENT') return { kwota: baza * (wartosc / 100), opis: `${nazwa}: -${wartosc}%` };
+        return { kwota: wartosc, opis: `${nazwa}: -${wartosc} zł` };
+    }
+    return { kwota: 0, opis: '' };
+}
+const zad_timeryRabatu = {};
+function obslugaRabatuZadatku(id, row, val, manualBox, manualInput, manualSymbol, infoDiv, priceInput) {
+    const cenaZabiegu = parseFloat((row.querySelector('.zad-base-price') || {}).value) || 0;
+    if (val === 'MANUAL_PLN' || val === 'MANUAL_PERC') {
+        if (manualBox) manualBox.style.display = 'flex';
+        if (manualSymbol) manualSymbol.innerText = val === 'MANUAL_PLN' ? 'zł' : '%';
+    }
+    if (val === '') {
+        // Rabat zdjęty: kwota zadatku wraca do propozycji od pełnej ceny zabiegu (gdy jest zabieg z listy).
+        infoDiv.innerHTML = '';
+        row.dataset.discountInfo = '';
+        if (cenaZabiegu > 0) zad_wyliczPropozycje(row, cenaZabiegu, '');
+        return;
+    }
+    if (cenaZabiegu <= 0) {
+        // Zadatek bez ceny z listy (kwota wpisana ręcznie): nie ma od czego liczyć rabatu — kwoty nie ruszamy.
+        infoDiv.innerHTML = 'Rabat liczy się od ceny zabiegu z listy. Przy zadatku na kwotę wpisaną ręcznie wpisz od razu kwotę po rabacie.';
+        row.dataset.discountInfo = '';
+        return;
+    }
+    const r = liczRabatOdCeny(cenaZabiegu, val, manualInput ? manualInput.value : 0);
+    const cenaPoRabacie = Math.max(0, cenaZabiegu - r.kwota);
+    if (r.kwota > 0) {
+        infoDiv.innerHTML = `Rabat od ceny zabiegu: ${r.kwota.toFixed(2)} zł → zadatek liczony od ${cenaPoRabacie.toFixed(2)} zł`;
+        row.dataset.discountInfo = `${r.opis} od ceny zabiegu`;
+    } else {
+        infoDiv.innerHTML = '';
+        row.dataset.discountInfo = '';
+    }
+    // Propozycja z serwera (progi/procent z ustawień zadatków) od ceny po rabacie; przy wpisywaniu kwoty rabatu czekamy chwilę,
+    // żeby nie odpytywać serwera po każdym znaku.
+    clearTimeout(zad_timeryRabatu[id]);
+    const dopisek = r.kwota > 0 ? `cena zabiegu: ${cenaZabiegu.toFixed(2)} zł − rabat ${r.kwota.toFixed(2)} zł = ${cenaPoRabacie.toFixed(2)} zł` : '';
+    zad_timeryRabatu[id] = setTimeout(() => zad_wyliczPropozycje(row, cenaPoRabacie, dopisek), 250);
+}
+
 // GŁÓWNA LOGIKA RABATU
 function obslugaRabatu(id) {
     const row = document.getElementById(`row-${id}`);
@@ -21079,7 +21132,13 @@ function obslugaRabatu(id) {
     const manualSymbol = document.getElementById(`manual-discount-symbol-${id}`);
     const infoDiv = document.getElementById(`discount-info-${id}`);
     const priceInput = row.querySelector('.item-price');
-    
+
+    // Reset widoczności manuala (dla zadatku pokazuje go obslugaRabatuZadatku)
+    if(manualBox) manualBox.style.display = 'none';
+    // Ticket #26: wiersz zadatku ma własną drogę — rabat od ceny zabiegu, zadatek od ceny po rabacie.
+    const typWiersza = (document.querySelector(`input[name="typ-${id}"]:checked`) || {}).value;
+    if (typWiersza === 'Zadatek') return obslugaRabatuZadatku(id, row, val, manualBox, manualInput, manualSymbol, infoDiv, priceInput);
+
     // --- KLUCZOWE: Zawsze bierzemy cenę BAZOWĄ (ukrytą), a nie to co widać w inpucie ---
     const basePrice = parseFloat(document.getElementById(`base-price-${id}`).value) || 0;
     
@@ -21258,19 +21317,30 @@ function zad_zmienWariant(selectEl) {
         return;
     }
 
-    // 3. Pobierz propozycję zadatku z backendu
+    // 3. Propozycja zadatku z backendu. Ticket #26: jeśli na wierszu jest już wybrany rabat, liczymy od ceny po rabacie.
+    const rabatSelect = row.querySelector('.item-discount-select');
+    if (rabatSelect && rabatSelect.value) { obslugaRabatu(id); return; }
+    zad_wyliczPropozycje(row, cenaBazowa, '');
+}
+
+// Propozycja zadatku od podanej kwoty zabiegu (pełnej albo po rabacie) — progi/procent z ustawień zadatków po stronie serwera.
+// `dopisek` trafia do opisu pod polem (np. „cena zabiegu: 699,00 zł − rabat 100,00 zł = 599,00 zł”).
+function zad_wyliczPropozycje(row, kwotaZabiegu, dopisek) {
+    const id = row.id.replace('row-', '');
+    const priceInput = row.querySelector('.item-price');
+    const info = document.getElementById('zad-info-' + id);
+    const opisCeny = dopisek || ('cena zabiegu: ' + kwotaZabiegu.toFixed(2) + ' zł');
     const tenant_id = uz_tenantId();
     if (!tenant_id) {
-        priceInput.value = (cenaBazowa / 2).toFixed(2);
-        if (info) info.textContent = 'Brak tenant_id — wyliczono lokalnie 50% (' + (cenaBazowa).toFixed(2) + ' zł).';
+        priceInput.value = (kwotaZabiegu / 2).toFixed(2);
+        if (info) info.textContent = 'Brak tenant_id — wyliczono lokalnie 50% (' + opisCeny + ').';
         odswiezSume();
-        return;
+        return Promise.resolve();
     }
-
-    fetch('/api/ustawienia/zadatki/oblicz', {
+    return fetch('/api/ustawienia/zadatki/oblicz', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') || '' },
-        body: JSON.stringify({ tenant_id, kwota_zabiegu: cenaBazowa }),
+        body: JSON.stringify({ tenant_id, kwota_zabiegu: kwotaZabiegu }),
     })
     .then(r => r.json())
     .then(d => {
@@ -21279,12 +21349,12 @@ function zad_zmienWariant(selectEl) {
             return;
         }
         priceInput.value = parseFloat(d.zadatek_proponowany || 0).toFixed(2);
-        if (info) info.textContent = '✓ ' + d.opis + ' (cena zabiegu: ' + cenaBazowa.toFixed(2) + ' zł). Możesz edytować kwotę.';
+        if (info) info.textContent = '✓ ' + d.opis + ' (' + opisCeny + '). Możesz edytować kwotę.';
         odswiezSume();
     })
     .catch(e => {
-        priceInput.value = (cenaBazowa / 2).toFixed(2);
-        if (info) info.textContent = 'Brak połączenia — fallback 50%: ' + (cenaBazowa / 2).toFixed(2) + ' zł.';
+        priceInput.value = (kwotaZabiegu / 2).toFixed(2);
+        if (info) info.textContent = 'Brak połączenia — fallback 50%: ' + (kwotaZabiegu / 2).toFixed(2) + ' zł (' + opisCeny + ').';
         odswiezSume();
     });
 }
