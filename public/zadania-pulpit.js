@@ -392,12 +392,16 @@
     var pw = $('zd-powtarzaj'); if (pw && pw.value !== 'NIE') czesci.push('cykliczne');
     s.textContent = czesci.length ? czesci.join(' · ') : 'przypisania, priorytet, opis, klientki, produkty, cykliczność';
   }
+  // Ticket #28 (Gosia, 14.11.2026): zadanie zakładane przez recepcję ma domyślnie trafiać do CAŁEJ recepcji („recepcja” = rola
+  // grupowa, którą serwer dopasowuje do każdej osoby z tą rolą), a nie tylko do osoby, która je wpisuje — telefon odbiera ta,
+  // która akurat jest na zmianie. Pigułkę można usunąć i wskazać konkretną osobę. Pozostałe role bez zmian: zalogowana osoba.
+  function domyslnyPrzypisany() { return mojaRola() === 'recepcja' ? 'recepcja' : ls('boczki_pracownik_imie').trim(); }
   function domyslnePrzypisanie() {
-    var ja = ls('boczki_pracownik_imie').trim();
-    if (!ja || typeof zd_przypisani === 'undefined' || zd_przypisani.length) return;
-    zd_przypisani = [ja];
+    var kto = domyslnyPrzypisany();
+    if (!kto || typeof zd_przypisani === 'undefined' || zd_przypisani.length) return;
+    zd_przypisani = [kto];
     var sel = $('zd-przypisane-source');
-    if (sel && !Array.from(sel.options).some(function (o) { return o.value === ja; })) { var o = document.createElement('option'); o.value = ja; o.textContent = ja; sel.appendChild(o); }
+    if (sel && !Array.from(sel.options).some(function (o) { return o.value === kto; })) { var o = document.createElement('option'); o.value = kto; o.textContent = kto === 'recepcja' ? '📞 Recepcja (cała rola)' : kto; if (kto === 'recepcja') o.dataset.ico = '📞'; sel.appendChild(o); }
     if (typeof zd_renderPrzypisaniBadges === 'function') zd_renderPrzypisaniBadges();
   }
 
