@@ -48,7 +48,7 @@ describe('nowyTenantId / slugify', () => {
 
 describe('zalozSalon — transakcja', () => {
     test('pełna ścieżka: token, licencja, 2 pracowników (×2 tabele), 1 usługa → commit', async () => {
-        const pool = fakePool([{ rows: { affectedRows: 1 } }]);   // token; reszta domyślnie OK
+        const pool = fakePool([{ rows: { affectedRows: 1 } }, { rows: [] }]);   // token, e-mail wolny; reszta domyślnie OK
         const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
         expect(w.wynik).toBe('ok');
         expect(w.tenant_id).toMatch(/^studio-urody-lodz-[0-9a-f]{8}$/);
@@ -74,7 +74,7 @@ describe('zalozSalon — transakcja', () => {
     });
 
     test('login zajęty → rollback (token wraca do „nowy" przez rollback, bez osobnego UPDATE)', async () => {
-        const pool = fakePool([{ rows: { affectedRows: 1 } }, { err: dupErr("Duplicate entry 'studio-lodz' for key 'PRIMARY'") }]);
+        const pool = fakePool([{ rows: { affectedRows: 1 } }, { rows: [] }, { err: dupErr("Duplicate entry 'studio-lodz' for key 'PRIMARY'") }]);
         const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
         expect(w.wynik).toBe('login_zajety');
         expect(pool.conn.n.rollback).toBe(1); expect(pool.conn.n.commit).toBe(0);
@@ -83,7 +83,7 @@ describe('zalozSalon — transakcja', () => {
     });
 
     test('kolizja id_bazy → jedna ponowna próba z innym sufiksem → commit', async () => {
-        const pool = fakePool([{ rows: { affectedRows: 1 } }, { err: dupErr("Duplicate entry 'x' for key 'uq_licencje_id_bazy'") }]);
+        const pool = fakePool([{ rows: { affectedRows: 1 } }, { rows: [] }, { err: dupErr("Duplicate entry 'x' for key 'uq_licencje_id_bazy'") }]);
         const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
         expect(w.wynik).toBe('ok');
         const lic = sqlZ(pool.conn, 'INSERT INTO Licencje');
@@ -96,6 +96,7 @@ describe('zalozSalon — transakcja', () => {
     test('INSERT Użytkownicy pada → rollback CAŁOŚCI (żadnego pół-salonu), komunikat dla klienta', async () => {
         const pool = fakePool([
             { rows: { affectedRows: 1 } },     // token
+            { rows: [] },                      // e-mail wolny
             { rows: { affectedRows: 1 } },     // Licencje
             { rows: { affectedRows: 1 } },     // tenant_id_utworzony
             { err: Object.assign(new Error('Data too long'), { code: 'ER_DATA_TOO_LONG' }) },  // Użytkownicy
@@ -105,6 +106,54 @@ describe('zalozSalon — transakcja', () => {
         expect(w.message).toMatch(/link pozostaje ważny/i);
         expect(pool.conn.n.rollback).toBe(1); expect(pool.conn.n.commit).toBe(0); expect(pool.conn.n.release).toBe(1);
         expect(sqlZ(pool.conn, 'INSERT INTO Uslugi')).toHaveLength(0);
+    });
+
+    test('e-mail licencji ma już inny salon → rollback, bez licencji (jeden adres = jeden salon)', async () => {
+        const pool = fakePool([
+            { rows: { affectedRows: 1 } },                            // token
+            { rows: [{ id_bazy: 'boczki-salon-glowny-001' }] },        // adres zajęty
+        ]);
+        const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
+        expect(w.wynik).toBe('email_zajety');
+        expect(pool.conn.n.rollback).toBe(1); expect(pool.conn.n.commit).toBe(0); expect(pool.conn.n.release).toBe(1);
+        expect(sqlZ(pool.conn, 'INSERT INTO Licencje')).toHaveLength(0);
+        // token wraca do „nowy" przez rollback — klient nie traci linku
+        expect(sqlZ(pool.conn, "SET status='nowy'")).toHaveLength(0);
+        const sel = sqlZ(pool.conn, 'LOWER(TRIM(email))');
+        expect(sel).toHaveLength(1);
+        expect(sel[0][1]).toEqual(['a@b.pl']);
+    });
+
+    test('wyścig dwóch rejestracji: UNIQUE uq_licencje_email na INSERT → email_zajety, nie „login zajęty"', async () => {
+        const pool = fakePool([
+            { rows: { affectedRows: 1 } },                                                      // token
+            { rows: [] },                                                                       // kontrola: wolny
+            { err: dupErr("Duplicate entry 'a@b.pl' for key 'uq_licencje_email'") },            // INSERT Licencje
+        ]);
+        const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
+        expect(w.wynik).toBe('email_zajety');
+        expect(pool.conn.n.rollback).toBe(1); expect(pool.conn.n.commit).toBe(0);
+        expect(sqlZ(pool.conn, 'INSERT INTO Użytkownicy')).toHaveLength(0);
+    });
+
+    test('licencja bez e-maila (null) → żadnego zapytania o zajętość, salon powstaje', async () => {
+        const pool = fakePool([{ rows: { affectedRows: 1 } }]);
+        const d = dane(); d.emailLicencji = null;
+        const w = await zalozSalon({ db: pool, dane: d, log: cichyLog });
+        expect(w.wynik).toBe('ok');
+        expect(sqlZ(pool.conn, 'LOWER(TRIM(email))')).toHaveLength(0);
+        expect(pool.conn.n.commit).toBe(1);
+    });
+
+    test('błąd bazy przy kontroli e-maila → rollback i komunikat, nigdy cichy zapis', async () => {
+        const pool = fakePool([
+            { rows: { affectedRows: 1 } },                                  // token
+            { err: Object.assign(new Error('ECONNRESET'), { code: 'PROTOCOL_CONNECTION_LOST' }) },
+        ]);
+        const w = await zalozSalon({ db: pool, dane: dane(), log: cichyLog });
+        expect(w.wynik).toBe('blad');
+        expect(pool.conn.n.rollback).toBe(1); expect(pool.conn.n.commit).toBe(0); expect(pool.conn.n.release).toBe(1);
+        expect(sqlZ(pool.conn, 'INSERT INTO Licencje')).toHaveLength(0);
     });
 
     test('brak połączenia z puli → błąd bez dotykania bazy', async () => {

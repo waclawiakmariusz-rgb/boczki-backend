@@ -23,6 +23,8 @@
     {
       "nazwa": "rabaty",
       "sekcja": "sekcja-kreator-rabatow",            // pokaz('…') po zalogowaniu
+      "strona": "/zamow.html",                       // inna strona niż /index.html (np. publiczny formularz)
+      "bezLogowania": true,                          // strona publiczna — bez logowania do salonu i bez zasiewu localStorage
       "korzen": "#sekcja-kreator-rabatow",           // do pomiaru „co wyszło poza ekran”
       "przechwyc": ["add_discount_def"],             // akcje POST, które mają NIE dotrzeć do serwera (odpowiedź-atrapa)
       "opoznienieAtrapy": 600,                       // ms — żeby złapać stan „w trakcie zapisu”
@@ -144,11 +146,17 @@ const post = (b, h = {}) => fetch(ENV.baza + '/api', { method: 'POST', headers: 
 const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : http).get(u, r => { let s = ''; r.on('data', d => s += d); r.on('end', () => { try { res(JSON.parse(s)); } catch (e) { rej(e); } }); }).on('error', rej));
 
 (async () => {
-  const S = sekrety();
-  const l = await post({ action: 'login', login: S.login, haslo: S.haslo });
-  if (!l || !l.session_token) throw new Error('Logowanie nie powiodło się: ' + JSON.stringify(l).slice(0, 200));
-  const v = await post({ action: 'verify_pin', tenant_id: S.login, imie: S.pracownik, pin: S.pin }, { 'x-session-token': l.session_token });
-  if (!v || !v.session_token) throw new Error('PIN nie przyjęty: ' + JSON.stringify(v).slice(0, 200));
+  // Strony publiczne (zamow.html, rejestracja.html) i panel admina nie mają sesji salonu — scenariusz
+  // z "bezLogowania": true pomija logowanie i zasiew localStorage, reszta kroków działa tak samo.
+  const BEZ_LOGOWANIA = scenariusz.bezLogowania === true;
+  const S = BEZ_LOGOWANIA ? { login: null, pracownik: null } : sekrety();
+  let v = { session_token: null, features: null };
+  if (!BEZ_LOGOWANIA) {
+    const l = await post({ action: 'login', login: S.login, haslo: S.haslo });
+    if (!l || !l.session_token) throw new Error('Logowanie nie powiodło się: ' + JSON.stringify(l).slice(0, 200));
+    v = await post({ action: 'verify_pin', tenant_id: S.login, imie: S.pracownik, pin: S.pin }, { 'x-session-token': l.session_token });
+    if (!v || !v.session_token) throw new Error('PIN nie przyjęty: ' + JSON.stringify(v).slice(0, 200));
+  }
 
   // ─── Chrome + CDP ─────────────────────────────────────────────────────────
   const [w0, h0] = (scenariusz.kroki.find(k => k.viewport) || { viewport: [1663, 946] }).viewport;
@@ -167,9 +175,9 @@ const getJson = u => new Promise((res, rej) => (u.startsWith('https') ? https : 
   const q = s => JSON.stringify(s);
 
   await send('Page.enable'); await send('Runtime.enable');
-  await send('Page.navigate', { url: ENV.baza + '/index.html' }); await sleep(2000);
-  await ev(`localStorage.setItem('boczki_tenant_id', ${q(S.login)}); localStorage.setItem('boczki_session_token', ${q(v.session_token)}); localStorage.setItem('boczki_user', ${q(S.login)}); localStorage.setItem('boczki_pracownik_imie', ${q(S.pracownik)}); localStorage.setItem('boczki_pracownik_rola', ${q(ENV.rola)}); localStorage.setItem('boczki_features', ${q(JSON.stringify(Array.isArray(v.features) ? v.features : ['terminarz','rap_module','konsultacje']))});`);
-  await send('Page.reload', { ignoreCache: true }); await sleep(scenariusz.czekajPoStarcie || 8000);
+  await send('Page.navigate', { url: ENV.baza + (scenariusz.strona || '/index.html') }); await sleep(2000);
+  if (!BEZ_LOGOWANIA) await ev(`localStorage.setItem('boczki_tenant_id', ${q(S.login)}); localStorage.setItem('boczki_session_token', ${q(v.session_token)}); localStorage.setItem('boczki_user', ${q(S.login)}); localStorage.setItem('boczki_pracownik_imie', ${q(S.pracownik)}); localStorage.setItem('boczki_pracownik_rola', ${q(ENV.rola)}); localStorage.setItem('boczki_features', ${q(JSON.stringify(Array.isArray(v.features) ? v.features : ['terminarz','rap_module','konsultacje']))});`);
+  await send('Page.reload', { ignoreCache: true }); await sleep(scenariusz.czekajPoStarcie || (BEZ_LOGOWANIA ? 1500 : 8000));
 
   // Podsłuch w stronie: alerty, confirm-y, POST-y. Przechwycone akcje dostają atrapę i NIE idą do serwera.
   const przechwyc = scenariusz.przechwyc || [];

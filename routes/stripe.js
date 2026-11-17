@@ -4,6 +4,7 @@
 const express = require('express');
 const router = express.Router();
 const { randomUUID } = require('crypto');
+const { KOMUNIKAT_ZAJETY, normalizujEmail, emailZajety } = require('./email-unikalny');
 
 let stripe;
 try {
@@ -152,6 +153,21 @@ module.exports = (db) => {
     if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
       return res.json({ status: 'error', message: 'Podaj poprawny adres email — trafi na niego link rejestracyjny i faktura.' });
     }
+    // 2026-11-17 (jeden e-mail = jedna licencja): zajęty adres zatrzymujemy PRZED zapisem zamówienia i przed Stripe,
+    // żeby klient nie doszedł do karty. Błąd bazy = odmowa, nie przepuszczenie bez kontroli.
+    const emailNorm = normalizujEmail(email);
+    try {
+      if (await emailZajety(db, emailNorm)) return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY });
+    } catch (e) {
+      console.error('[stripe] create-checkout: kontrola e-maila:', e.message);
+      return res.json({ status: 'error', message: 'Chwilowy problem z bazą danych. Spróbuj ponownie za chwilę.' });
+    }
+    // Powtórka przerwanego zakupu (otwarte zamówienie z ostatnich 24 h) NIE blokuje — zostaje tylko ślad w logu.
+    db.query(
+      `SELECT 1 FROM Zamowienia WHERE LOWER(TRIM(email)) = ? AND status IN ('nowe','wyslano_link') AND data_zgloszenia > DATE_SUB(NOW(), INTERVAL 24 HOUR) LIMIT 1`,
+      [emailNorm],
+      (e, r) => { if (!e && r && r.length) console.warn(`[stripe] create-checkout: powtórne zamówienie z adresu ${emailNorm} w ciągu 24 h`); }
+    );
     // Wymagane zgody — bez nich nie zawieramy umowy (RODO art. 7 + UŚUDE + RODO art. 28)
     if (zgoda_regulamin !== true || zgoda_dpa !== true) {
       return res.json({ status: 'error', message: 'Wymagana akceptacja Regulaminu, Polityki prywatności i Umowy powierzenia danych.' });
@@ -198,7 +214,7 @@ module.exports = (db) => {
     const zamowienieId = randomUUID();
     db.query(
       `INSERT INTO Zamowienia (id, imie, nazwa_salonu, nazwa_firmy, email, telefon, ulica, miasto, wiadomosc, status, zgoda_regulamin, zgoda_dpa, wersja_regulaminu, wersja_polityki, wersja_dpa, ip_akceptacji, user_agent_akceptacji, data_akceptacji) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'nowe', 1, 1, ?, ?, ?, ?, ?, NOW())`,
-      [zamowienieId, imie.trim(), nazwa_salonu.trim(), (nazwa_firmy || '').trim() || null, email.trim(), telefon || null, ulica || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
+      [zamowienieId, imie.trim(), nazwa_salonu.trim(), (nazwa_firmy || '').trim() || null, emailNorm, telefon || null, ulica || null, miasto || null, wiadomosc || null, REGULAMIN_VERSION, POLITYKA_VERSION, DPA_VERSION, ipAkceptacji, userAgentAkceptacji],
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
@@ -220,7 +236,7 @@ module.exports = (db) => {
             imie,
             nazwa_salonu,
             firma:   (nazwa_firmy || '').trim(),
-            email,
+            email:   emailNorm,
             telefon: telefon || '',
             ulica:   ulica   || '',
             miasto:  miasto  || '',
@@ -274,7 +290,7 @@ module.exports = (db) => {
             payment_method_types: ['card'],
             line_items: [{ price: priceId, quantity: 1 }],
             mode: 'subscription',
-            customer_email: email,
+            customer_email: emailNorm,
             // metadata na session i subscription — potrzebne w webhookach
             metadata: sessionMeta,
             subscription_data: {

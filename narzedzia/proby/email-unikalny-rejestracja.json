@@ -1,0 +1,26 @@
+{
+  "nazwa": "email-unikalny-rejestracja",
+  "strona": "/rejestracja.html?token=zrzut-email-unikalny-tok",
+  "bezLogowania": true,
+  "czekajPoStarcie": 2500,
+  "korzen": "body",
+  "kroki": [
+    { "viewport": [1400, 950] },
+    { "js": "document.getElementById('s1-email').offsetParent !== null ? 'pole e-mail widoczne' : 'pole e-mail ukryte'", "opis": "czy pole e-mail jest widoczne (brak zamowienia = widoczne)" },
+    { "wpisz": "#s1-nazwa", "wartosc": "Studio Prob" },
+    { "wpisz": "#s1-email", "wartosc": "test@example.invalid" },
+    { "czekaj": 300 },
+    { "zrzut": "rejestracja-krok1-wypelniony" },
+    { "kliknij": "button[onclick='step1()']" },
+    { "czekaj": 1200 },
+    { "js": "document.getElementById('s1-err').textContent", "opis": "komunikat po kliknieciu Dalej" },
+    { "js": "document.querySelector('.step.active') ? document.querySelector('.step.active').id : 'brak'", "opis": "aktywny krok kreatora" },
+    { "zrzut": "rejestracja-email-zajety" },
+    { "wpisz": "#s1-email", "wartosc": "zupelnie-wolny@example.invalid" },
+    { "kliknij": "button[onclick='step1()']" },
+    { "czekaj": 1200 },
+    { "js": "document.getElementById('s1-err').style.display", "opis": "czy komunikat zniknal" },
+    { "zrzut": "rejestracja-email-wolny-przeszedl" },
+    { "pomiar": true }
+  ]
+}

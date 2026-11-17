@@ -1343,8 +1343,8 @@ src="https://www.facebook.com/tr?id=1303322262083801&ev=PageView&noscript=1"
           </div>
           <div class="form-group">
             <label>Adres e-mail *</label>
-            <input type="email" id="f-email" placeholder="np. anna@salon.pl" required>
-            <div style="font-size:.72rem; color:var(--text-muted); margin-top:5px;">Na ten adres wyślemy link aktywacyjny.</div>
+            <input type="email" id="f-email" placeholder="np. anna@salon.pl" required onblur="sprawdzEmailZamowienia()">
+            <div id="f-email-hint" style="font-size:.72rem; color:var(--text-muted); margin-top:5px;">Na ten adres wyślemy link aktywacyjny.</div>
           </div>
           <div class="form-row">
             <div class="form-group">
@@ -1768,6 +1768,29 @@ async function pobierzZGus() {
   btn.disabled = false;
 }
 
+// ── Kontrola e-maila: jeden adres = jeden salon (2026-11-17) ──────
+// Mówimy o tym przy wyjściu z pola, a nie dopiero po kliknięciu „Zapłać", żeby nikt nie wypełniał
+// całego formularza na darmo. Serwer sprawdza to ponownie i on jest rozstrzygający.
+const EMAIL_HINT_DOMYSLNY = 'Na ten adres wyślemy link aktywacyjny.';
+window._emailZajety = false;
+async function sprawdzEmailZamowienia() {
+  const hint = document.getElementById('f-email-hint');
+  const email = document.getElementById('f-email').value.trim();
+  window._emailZajety = false;
+  hint.style.color = 'var(--text-muted)';
+  hint.textContent = EMAIL_HINT_DOMYSLNY;
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) return;
+  try {
+    const res = await fetch('/api/rejestracja/check-email?email=' + encodeURIComponent(email));
+    const d = await res.json();
+    if (d.code === 'EMAIL_ZAJETY') {
+      window._emailZajety = true;
+      hint.style.color = '#991b1b';
+      hint.textContent = d.message;
+    }
+  } catch { /* brak sieci — zostaje kontrola serwera przy wysyłce */ }
+}
+
 // ── Submit ────────────────────────────────────────────────────────
 async function wyslij(e) {
   e.preventDefault();
@@ -1781,6 +1804,14 @@ async function wyslij(e) {
   if (!zgodaReg || !zgodaDpa) {
     errEl.style.display = 'block';
     errEl.textContent = 'Wymagana akceptacja Regulaminu, Polityki prywatności i Umowy powierzenia danych.';
+    return;
+  }
+
+  // E-mail zajęty przez inny salon — nie wysyłamy do Stripe (2026-11-17)
+  if (window._emailZajety) {
+    errEl.style.display = 'block';
+    errEl.textContent = document.getElementById('f-email-hint').textContent;
+    document.getElementById('f-email').focus();
     return;
   }
 

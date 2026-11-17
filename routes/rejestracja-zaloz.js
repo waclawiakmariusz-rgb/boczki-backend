@@ -11,6 +11,7 @@
 // tenant_id = slug + losowy sufiks 8 hex (było: ostatnie 4 cyfry ms — powtarzalne co 10 s) i UNIQUE
 // na Licencje.id_bazy (ALTER w admin.js); przy nieprawdopodobnej kolizji jedna ponowna próba.
 const { randomUUID } = require('crypto');
+const { emailZajety, czyDuplikatEmail } = require('./email-unikalny');
 
 function slugify(text) {
   return String(text || '')
@@ -42,7 +43,7 @@ const czyDuplikatIdBazy = (err) => err && err.code === 'ER_DUP_ENTRY' && /id_baz
  * @param {object} p.dane          { token, nazwa_salonu, ulica, miasto, telefon, loginNorm, hasloHash,
  *                                   nazwaFirmy, emailLicencji, stripeCustomerId, stripeSubscriptionId,
  *                                   pracownicy: [{imie, pin, rola}], uslugi: [{kategoria, wariant, cena, zrodlo}] }
- * @returns {Promise<{wynik:'ok',tenant_id}|{wynik:'token'|'login_zajety'|'blad',message?}>}
+ * @returns {Promise<{wynik:'ok',tenant_id}|{wynik:'token'|'login_zajety'|'email_zajety'|'blad',message?}>}
  */
 async function zalozSalon({ db, dane, log = console }) {
   const d = dane;
@@ -66,6 +67,14 @@ async function zalozSalon({ db, dane, log = console }) {
       return { wynik: 'token' };
     }
 
+    // 1b. E-mail licencji — jeden adres = jeden salon (2026-11-17). Sprawdzenie w TEJ transakcji; indeks UNIQUE
+    //     uq_licencje_email (paczka C) jest drugą linią i wraca tą samą ścieżką (czyDuplikatEmail w catch niżej).
+    //     Rollback = token wraca do 'nowy', klient nie traci linku; admin poprawia adres w zamówieniu.
+    if (d.emailLicencji && await emailZajety(conn, d.emailLicencji)) {
+      await rollback(conn);
+      return { wynik: 'email_zajety' };
+    }
+
     // 2. Licencja — id_bazy losowe; przy kolizji (UNIQUE) jedna ponowna próba
     let tenant_id = null;
     for (let proba = 0; proba < 2; proba++) {
@@ -79,6 +88,7 @@ async function zalozSalon({ db, dane, log = console }) {
         break;
       } catch (err) {
         if (czyDuplikatIdBazy(err) && proba === 0) { log.warn('[rejestracja/zaloz] kolizja id_bazy — ponawiam z nowym sufiksem'); continue; }
+        if (czyDuplikatEmail(err)) { await rollback(conn); return { wynik: 'email_zajety' }; }
         if (err.code === 'ER_DUP_ENTRY') { await rollback(conn); return { wynik: 'login_zajety' }; }
         throw err;
       }
