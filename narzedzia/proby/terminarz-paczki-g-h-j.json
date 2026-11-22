@@ -1,0 +1,301 @@
+{
+  "nazwa": "terminarz-paczki-g-h-j",
+  "modul": "Terminarz",
+  "opis": "Paczki G, H i J planu poprawy (16.11.2026) na ekranie: G/R3 przycisk cofnięcia nieobecności, H/R12 szkic wizyty (zapis, pasek „Przywróć”, przywrócenie w dniu szkicu, świadome zamknięcie, zmiana rozmiaru okna nie gubi formularza), J funkcja ładowania pakietów widoczna z onclick. Zasiew: jedna wizyta w pierwszym dniu z wolnym terminem; sprzątanie na końcu (wizyta skasowana).",
+  "pracownik": "Ola",
+  "pin": "1111",
+  "rola": "manager",
+  "sekcja": "terminarz",
+  "korzen": "#trm-root",
+  "confirmOdpowiedz": true,
+  "kroki": [
+    {
+      "viewport": [
+        1440,
+        950
+      ]
+    },
+    {
+      "czekaj": 1800
+    },
+    {
+      "js": "(function(){ window.__bledy = []; window.addEventListener('error', function(e){ window.__bledy.push('error: ' + e.message); }); window.addEventListener('unhandledrejection', function(e){ window.__bledy.push('rejection: ' + (e.reason && e.reason.message || e.reason)); }); window.__api = function(body){ return fetch('/api', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': localStorage.getItem('boczki_session_token') }, body: JSON.stringify(Object.assign({ tenant_id: 'demo-test', pracownik: 'Ola' }, body)) }).then(function(r){ return r.json(); }); }; return 'nasłuch błędów i pomocnik API gotowe'; })()",
+      "opis": "przygotowanie"
+    },
+    {
+      "js": "(function(){ var u = (TRM.dane.uslugi || []).filter(function(x){ return Number(x.czas_min) > 0 && !x.wymaga_gabinet && !(x.urzadzenia && x.urzadzenia.length) && x.aktywna !== 0; })[0]; if (!u) return 'BRAK pasującej usługi'; window.__usl = u.id; return 'usługa do zasiewu: ' + u.id + ' (' + (u.kategoria || '') + (u.wariant ? ' / ' + u.wariant : '') + ', ' + u.czas_min + ' min)'; })()",
+      "opis": "wybór usługi bez gabinetu i urządzenia"
+    },
+    {
+      "js": "(function(){ var dzis = TRM.data; function plus(d, n){ var x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0,10); } var dni = []; for (var i = 1; i <= 12; i++) dni.push(plus(dzis, i)); return (function nast(k){ if (k >= dni.length) return 'BRAK dnia z wolnym terminem'; return window.__api({ action: 'trm_szukaj', dzien_od: dni[k], dzien_do: dni[k], limit: 5, pozycje: [{ usluga_id: window.__usl, pracownik: null }] }).then(function(d){ var t = (d.terminy || [])[0]; if (!t) return nast(k + 1); window.__dzien = dni[k]; window.__start = t.start; return 'wolny termin: ' + t.start; }); })(0); })()",
+      "opis": "szukanie pierwszego dnia z wolnym terminem"
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "(function(){ return window.__api({ action: 'trm_zapisz', klucz_idem: 'proba-gh-' + Date.now(), kanal: 'recepcja', bez_kartoteki: true, klient: { nazwa: 'Próba Paczki G', telefon: '600555222' }, pozycje: [{ usluga_id: window.__usl, pracownik: null }], start: window.__start, notatka: 'PRÓBA PACZEK G/H/J — do usunięcia' }).then(function(d){ window.__rez = d.rezerwacja ? d.rezerwacja.id : null; window.__numer = d.rezerwacja ? d.rezerwacja.numer : null; return d.status + ' id=' + window.__rez + ' ' + (d.message || ''); }); })()",
+      "opis": "zasiew: wizyta do próby nieobecności"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "sprawdz": "!!window.__rez",
+      "opis": "zasiew: wizyta powstała"
+    },
+    {
+      "js": "(function(){ TRM.ustawDate(window.__dzien); return 'przechodzę na ' + window.__dzien; })()",
+      "opis": "widok dnia z zasianą wizytą"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ TRM.otworzSzczegoly(window.__rez); return 'otwieram kartę ' + window.__numer; })()"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "zrzut": "01-karta-wizyty-przed-nieobecnoscia"
+    },
+    {
+      "js": "(function(){ var b = document.querySelector('#trm-panel .trm-btn.primary'); return 'główna czynność: ' + (b ? b.textContent.trim() : '(brak)'); })()",
+      "opis": "G/R3: stan wyjściowy — „Oznacz przybycie”"
+    },
+    {
+      "js": "(function(){ TRM.obecnosc('nieobecny'); return 'oznaczam nieobecność (confirm potwierdzony automatycznie)'; })()",
+      "opis": "G/R3: potwierdzenie nieobecności"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ var b = document.querySelector('#trm-panel .trm-btn.primary'); return 'główna czynność po nieobecności: ' + (b ? b.textContent.trim() : '(brak)'); })()",
+      "opis": "G/R3: czy jest czym cofnąć"
+    },
+    {
+      "zrzut": "02-nieobecnosc-przycisk-cofniecia"
+    },
+    {
+      "sprawdz": "/Jednak przybyła/.test((document.querySelector('#trm-panel') || document.body).textContent)",
+      "opis": "G/R3: BŁĄD Z 14.11 NAPRAWIONY — jest przycisk cofnięcia nieobecności"
+    },
+    {
+      "sprawdz": "(TRM.szcz.rez.pozycje || []).every(function(p){ return p.stan === 'niewykonana'; })",
+      "opis": "G: nieobecność zdjęła zaplanowane zabiegi"
+    },
+    {
+      "js": "(function(){ document.querySelectorAll('#boczki-toasts .b-toast, .trm-toast').forEach(function(t){ t.remove(); }); TRM.obecnosc('przybyl'); return 'cofam nieobecność'; })()",
+      "opis": "G/R3: cofnięcie nieobecności"
+    },
+    {
+      "czekaj": 2800
+    },
+    {
+      "js": "(function(){ var t = document.querySelector('.trm-toast, #boczki-toasts .b-toast'); return 'komunikat: ' + (t ? t.textContent.trim().slice(0, 140) : '(brak)'); })()",
+      "opis": "G/R3: komunikat po cofnięciu"
+    },
+    {
+      "zrzut": "03-po-cofnieciu-nieobecnosci"
+    },
+    {
+      "sprawdz": "(TRM.szcz.rez.pozycje || []).some(function(p){ return p.stan === 'zaplanowana'; })",
+      "opis": "G: zabieg wrócił do planu"
+    },
+    {
+      "sprawdz": "/Cofnięto nieobecność/.test(document.body.textContent)",
+      "opis": "G: recepcja dowiaduje się, ile wróciło (nie zgaduje z siatki)"
+    },
+    {
+      "js": "(function(){ TRM.panelZamknij(); try { sessionStorage.removeItem('trm_szkic_wizyty'); } catch (e) {} return 'panel zamknięty, szkic wyczyszczony przed próbą H'; })()"
+    },
+    {
+      "czekaj": 800
+    },
+    {
+      "js": "(function(){ TRM.nowaWizyta(); return 'formularz nowej wizyty, panel=' + TRM.panel; })()",
+      "opis": "H: otwarcie formularza"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ TRM.nowa.klient = { nazwa: 'Szkic Próbny', telefon: '600555333', id: null }; TRM.nowaDodajPoz(window.__usl); return 'wpisana klientka i dodany zabieg'; })()",
+      "opis": "H/R12b: zmiana w formularzu zapisuje szkic"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ var s = sessionStorage.getItem('trm_szkic_wizyty'); return 'szkic w pamięci: ' + (s ? s.slice(0, 150) : '(brak)'); })()",
+      "opis": "H/R12b: szkic zapisany bez klikania czegokolwiek"
+    },
+    {
+      "sprawdz": "/Szkic Próbny/.test(sessionStorage.getItem('trm_szkic_wizyty') || '')",
+      "opis": "H/R12b: szkic zawiera wpisaną klientkę"
+    },
+    {
+      "sprawdz": "JSON.parse(sessionStorage.getItem('trm_szkic_wizyty')).nowa.pozycje.length === 1",
+      "opis": "H/R12b: szkic zawiera dodany zabieg"
+    },
+    {
+      "zrzut": "04-formularz-ze-szkicem"
+    },
+    {
+      "js": "(function(){ window.__dzienSzkicu = JSON.parse(sessionStorage.getItem('trm_szkic_wizyty')).data; TRM.nowa = null; TRM.panel = null; var p = document.getElementById('trm-panel'); if (p) { p.hidden = true; p.innerHTML = ''; } document.body.classList.remove('trm-panel-otwarty'); return 'formularz zniknął BEZ świadomego zamknięcia (tak jak przy wygaśnięciu PIN-u); dzień szkicu ' + window.__dzienSzkicu; })()",
+      "opis": "H: symulacja utraty formularza"
+    },
+    {
+      "js": "(function(){ window.trm_otworz(); return 'ponowne wejście w sekcję Terminarz — tak jak po przeładowaniu strony przy wygaśnięciu PIN-u'; })()",
+      "opis": "H: odbudowa ekranu"
+    },
+    {
+      "czekaj": 3000
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ var p = document.getElementById('trm-pasek-szkic'); return 'pasek szkicu: ' + (p ? p.textContent.trim().slice(0, 140) : '(BRAK)'); })()",
+      "opis": "H: pasek „Masz niedokończoną wizytę”"
+    },
+    {
+      "zrzut": "05-pasek-przywroc-szkic"
+    },
+    {
+      "sprawdz": "!!document.getElementById('trm-pasek-szkic')",
+      "opis": "H: szkic nie przepadł — jest co przywrócić"
+    },
+    {
+      "js": "(function(){ TRM.szkicPrzywroc(); return 'przywracam szkic'; })()",
+      "opis": "H/R12a: przywrócenie"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ return JSON.stringify({ panel: TRM.panel, klientka: TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa, pozycji: TRM.nowa ? TRM.nowa.pozycje.length : null, data_trm: TRM.data, pole_daty: (document.getElementById('trm-data') || {}).value, dzien_szkicu: window.__dzienSzkicu, pasek: !!document.getElementById('trm-pasek-szkic') }); })()",
+      "opis": "H/R12a: stan po przywróceniu"
+    },
+    {
+      "zrzut": "06-szkic-przywrocony"
+    },
+    {
+      "sprawdz": "TRM.panel === 'nowa'",
+      "opis": "H/R12a: aplikacja wie, że formularz jest znów otwarty"
+    },
+    {
+      "sprawdz": "TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa === 'Szkic Próbny' && TRM.nowa.pozycje.length === 1",
+      "opis": "H/R12a: wróciła klientka i zabieg"
+    },
+    {
+      "sprawdz": "TRM.data === window.__dzienSzkicu && (document.getElementById('trm-data') || {}).value === window.__dzienSzkicu",
+      "opis": "H/R12a: siatka i pole daty pokazują dzień, do którego powstał szkic"
+    },
+    {
+      "sprawdz": "!document.getElementById('trm-pasek-szkic')",
+      "opis": "H/R12c: pasek nie zostaje martwy po przywróceniu"
+    },
+    {
+      "viewport": [
+        1200,
+        820
+      ]
+    },
+    {
+      "czekaj": 1200
+    },
+    {
+      "js": "(function(){ window.trm_otworz(); return 'ponowne wejście w sekcję z OTWARTYM formularzem'; })()",
+      "opis": "H/R17: wejście w sekcję przy otwartym formularzu"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "js": "(function(){ return JSON.stringify({ panel: TRM.panel, klientka: TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa, pozycji: TRM.nowa ? TRM.nowa.pozycje.length : null, formularzNaEkranie: !!document.getElementById('trm-n-data') }); })()",
+      "opis": "H/R17: stan formularza po ponownym wejściu"
+    },
+    {
+      "zrzut": "07-r17-formularz-przezyl-wejscie-w-sekcje"
+    },
+    {
+      "sprawdz": "TRM.panel === 'nowa' && TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa === 'Szkic Próbny' && TRM.nowa.pozycje.length === 1",
+      "opis": "H/R17: ponowne wejście w sekcję nie wyrzuciło wpisanych danych"
+    },
+    {
+      "js": "(function(){ return JSON.stringify({ panel: TRM.panel, klientka: TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa, pozycji: TRM.nowa ? TRM.nowa.pozycje.length : null }); })()",
+      "opis": "H/R17: zmiana rozmiaru okna nie przebudowuje formularza"
+    },
+    {
+      "sprawdz": "TRM.panel === 'nowa' && TRM.nowa && TRM.nowa.klient && TRM.nowa.klient.nazwa === 'Szkic Próbny'",
+      "opis": "H/R17: formularz przeżył zmianę rozmiaru okna"
+    },
+    {
+      "viewport": [
+        1440,
+        950
+      ]
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "js": "(function(){ TRM.panelZamknij(); return 'świadome zamknięcie formularza'; })()",
+      "opis": "H/R12c: zamknięcie na krzyżyk czyści szkic"
+    },
+    {
+      "czekaj": 1000
+    },
+    {
+      "sprawdz": "!sessionStorage.getItem('trm_szkic_wizyty')",
+      "opis": "H/R12c: po świadomym zamknięciu pasek już nie wraca"
+    },
+    {
+      "js": "(function(){ return 'TRM.ustPakietyZaladuj: ' + typeof TRM.ustPakietyZaladuj; })()",
+      "opis": "J: przycisk „Spróbuj ponownie” w Pakietach ma co wołać"
+    },
+    {
+      "sprawdz": "typeof TRM.ustPakietyZaladuj === 'function'",
+      "opis": "J: funkcja widoczna z atrybutu onclick (wcześniej lokalna — przycisk nic nie robił)"
+    },
+    {
+      "js": "(function(){ TRM.widokZmien('ustawienia'); return 'ustawienia'; })()"
+    },
+    {
+      "czekaj": 2000
+    },
+    {
+      "js": "(function(){ TRM.ustTab('pakiety'); return 'zakładka Pakiety'; })()"
+    },
+    {
+      "czekaj": 2500
+    },
+    {
+      "zrzut": "07-ustawienia-pakiety"
+    },
+    {
+      "pomiar": true
+    },
+    {
+      "js": "(function(){ return JSON.stringify(window.__bledy); })()",
+      "opis": "błędy JS w całym przebiegu"
+    },
+    {
+      "sprawdz": "window.__bledy.length === 0",
+      "opis": "cały przebieg bez błędu JS"
+    },
+    {
+      "js": "(function(){ if (!window.__rez) return 'nic do sprzątania'; return window.__api({ action: 'trm_rezerwacja', id: window.__rez }).then(function(d){ var w = d.rezerwacja ? d.rezerwacja.wersja : null; return window.__api({ action: 'trm_usun', id: window.__rez, wersja: w, potwierdz: true, powod: 'sprzątanie po próbie paczek G/H/J' }); }).then(function(d){ return 'sprzątanie wizyty: ' + d.status + ' ' + (d.message || ''); }); })()",
+      "opis": "sprzątanie: zasiana wizyta skasowana"
+    },
+    {
+      "czekaj": 1500
+    },
+    {
+      "js": "(function(){ try { sessionStorage.removeItem('trm_szkic_wizyty'); } catch (e) {} return 'pamięć szkicu wyczyszczona'; })()"
+    }
+  ]
+}
