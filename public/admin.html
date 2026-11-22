@@ -1010,7 +1010,7 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
           </div>
           <div class="form-group">
             <label>E-mail</label>
-            <input type="email" id="s1-email" placeholder="np. kontakt@salon.pl">
+            <input type="email" id="s1-email" placeholder="np. kontakt@salon.pl" onblur="sprawdzEmailSalonu('s1-email', 's1-error')">
           </div>
           <div class="wizard-nav">
             <button class="btn-primary" onclick="step1next()">Dalej →</button>
@@ -1136,7 +1136,7 @@ input:focus, select:focus, textarea:focus { background: #fff; border-color: var(
     </div>
     <div class="form-group">
       <label>E-mail</label>
-      <input type="email" id="em-email">
+      <input type="email" id="em-email" onblur="sprawdzEmailSalonu('em-email', 'em-error', 'em-tenant-id')">
     </div>
     <div class="form-group">
       <label>Licencja ważna do</label>
@@ -2538,11 +2538,37 @@ function goStep(n) {
 // ═══════════════════════════════════════════════
 // KROK 1
 // ═══════════════════════════════════════════════
-function step1next() {
+// Kontrola e-maila: jeden adres = jedna licencja (2026-11-17). 'polePomin' = id pola z id_bazy
+// edytowanego salonu — jego własny adres nie jest kolizją. Serwer sprawdza to samo przy zapisie.
+async function sprawdzEmailSalonu(poleId, bladId, polePomin) {
+  const errEl = document.getElementById(bladId);
+  const email = document.getElementById(poleId).value.trim();
+  if (!email) return;
+  const pomin = polePomin ? (document.getElementById(polePomin).value || '') : '';
+  try {
+    const r = await fetch(API + '/admin/check-email?email=' + encodeURIComponent(email) + (pomin ? '&pomin=' + encodeURIComponent(pomin) : ''), {
+      headers: { 'X-Admin-Token': adminToken }
+    });
+    const d = await r.json();
+    if (d.code === 'EMAIL_ZAJETY') { errEl.style.display = 'block'; errEl.textContent = d.message; }
+    else if (errEl.textContent === d.message || d.code === 'WOLNY') { errEl.style.display = 'none'; }
+  } catch { /* brak sieci — rozstrzyga serwer przy zapisie */ }
+}
+
+async function step1next() {
   const errEl = document.getElementById('s1-error');
   errEl.style.display = 'none';
   const nazwa = document.getElementById('s1-nazwa').value.trim();
   if (!nazwa) { errEl.style.display = 'block'; errEl.textContent = 'Podaj nazwę salonu.'; return; }
+  // 2026-11-17: zajęty e-mail zatrzymujemy w kroku 1, a nie po wypełnieniu całego kreatora
+  const emailSalonu = document.getElementById('s1-email').value.trim();
+  if (emailSalonu) {
+    try {
+      const r = await fetch(API + '/admin/check-email?email=' + encodeURIComponent(emailSalonu), { headers: { 'X-Admin-Token': adminToken } });
+      const d = await r.json();
+      if (d.code === 'EMAIL_ZAJETY') { errEl.style.display = 'block'; errEl.textContent = d.message; return; }
+    } catch { /* brak sieci — rozstrzyga serwer przy tworzeniu licencji */ }
+  }
   wizardData.salon = {
     nazwa_salonu: nazwa,
     miasto: document.getElementById('s1-miasto').value.trim(),

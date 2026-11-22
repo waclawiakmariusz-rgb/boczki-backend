@@ -1,0 +1,116 @@
+{
+  "nazwa": "email-unikalny-zamow",
+  "strona": "/zamow.html",
+  "bezLogowania": true,
+  "korzen": "#zamow-form",
+  "kroki": [
+    {
+      "viewport": [
+        1400,
+        950
+      ]
+    },
+    {
+      "js": "otworzDane(); document.getElementById('dane-body').scrollIntoView(); 'sekcja danych otwarta'",
+      "opis": "rozwiniecie sekcji danych"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "wpisz": "#f-imie",
+      "wartosc": "Anna"
+    },
+    {
+      "wpisz": "#f-salon",
+      "wartosc": "Studio Prob"
+    },
+    {
+      "wpisz": "#f-email",
+      "wartosc": "test@example.invalid"
+    },
+    {
+      "js": "document.getElementById('f-email').dispatchEvent(new Event('blur')); 'blur wyslany'",
+      "opis": "opuszczenie pola e-mail"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "js": "document.getElementById('f-email-hint').textContent",
+      "opis": "podpowiedz pod polem e-mail"
+    },
+    {
+      "js": "String(window._emailZajety)",
+      "opis": "flaga blokady wysylki"
+    },
+    {
+      "zrzut": "zamow-email-zajety"
+    },
+    {
+      "js": "document.getElementById('f-zgoda-regulamin').checked=true; document.getElementById('f-zgoda-dpa').checked=true; 'zgody zaznaczone'",
+      "opis": "zaznaczenie wymaganych zgod"
+    },
+    {
+      "js": "document.getElementById('zamow-form').dispatchEvent(new Event('submit')); 'submit'",
+      "opis": "proba wyslania mimo zajetego adresu"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "js": "document.getElementById('form-error').textContent",
+      "opis": "komunikat nad formularzem"
+    },
+    {
+      "zrzut": "zamow-submit-zablokowany"
+    },
+    {
+      "wpisz": "#f-email",
+      "wartosc": "zupelnie-wolny@example.invalid"
+    },
+    {
+      "js": "document.getElementById('f-email').dispatchEvent(new Event('blur')); 'blur wyslany'",
+      "opis": "opuszczenie pola z wolnym adresem"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "js": "document.getElementById('f-email-hint').textContent",
+      "opis": "podpowiedz po wpisaniu wolnego adresu"
+    },
+    {
+      "js": "String(window._emailZajety)",
+      "opis": "flaga po wolnym adresie"
+    },
+    {
+      "zrzut": "zamow-email-wolny"
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "js": "document.getElementById('f-email').scrollIntoView({block:'center'}); 'przewiniete'"
+    },
+    {
+      "wpisz": "#f-email",
+      "wartosc": "test@example.invalid"
+    },
+    {
+      "js": "document.getElementById('f-email').dispatchEvent(new Event('blur')); 'blur'"
+    },
+    {
+      "czekaj": 900
+    },
+    {
+      "zrzut": "zamow-telefon-email-zajety"
+    },
+    {
+      "pomiar": true
+    }
+  ]
+}

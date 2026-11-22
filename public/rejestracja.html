@@ -505,7 +505,7 @@ function goStep(n) {
 // ═══════════════════════════════════════
 // KROK 1
 // ═══════════════════════════════════════
-function step1() {
+async function step1() {
   const err = document.getElementById('s1-err');
   err.style.display = 'none';
   const nazwa = document.getElementById('s1-nazwa').value.trim();
@@ -513,6 +513,15 @@ function step1() {
   const emailWpisany = document.getElementById('s1-email').value.trim();
   if (!emailZakupu && emailWpisany && !/^\S+@\S+\.\S+$/.test(emailWpisany)) {
     err.style.display='block'; err.textContent='Podaj poprawny adres e-mail.'; return;
+  }
+  // 2026-11-17 (jeden e-mail = jedna licencja): adres innego salonu zatrzymujemy już tutaj, zamiast
+  // na ostatnim kroku. Adres z zakupu pomijamy — pole jest wtedy ukryte i rozstrzyga zamówienie.
+  if (!emailZakupu && emailWpisany) {
+    try {
+      const r = await fetch(API + '/rejestracja/check-email?email=' + encodeURIComponent(emailWpisany));
+      const d = await r.json();
+      if (d.code === 'EMAIL_ZAJETY') { err.style.display='block'; err.textContent=d.message; return; }
+    } catch { /* brak sieci — rozstrzyga serwer przy zakładaniu salonu */ }
   }
   wData.salon = {
     nazwa_salonu: nazwa,

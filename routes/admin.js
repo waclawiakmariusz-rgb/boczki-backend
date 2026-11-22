@@ -6,6 +6,7 @@ const { randomUUID } = require('crypto');
 const bcrypt = require('bcrypt');
 const { rateLimitLogin, recordFailedLogin, recordSuccessLogin, makePublicLimiter } = require('./sessions');
 const { zalozSalon } = require('./rejestracja-zaloz');
+const { KOMUNIKAT_ZAJETY, normalizujEmail, poprawnyFormatEmail, emailZajety, czyDuplikatEmail } = require('./email-unikalny');
 const { cloneBoczkiToDemo } = require('../scripts/clone_to_demo_lib');
 const { migracjaTenanta: migracjaTypyZabiegow, listaTenantow: listaTenantowDoMigracji } = require('../scripts/migrate_typy_lib');
 
@@ -318,6 +319,14 @@ module.exports = (db) => {
     if (!nazwa_salonu || !login || !haslo) {
       return res.json({ status: 'error', message: 'Podaj nazwę salonu, login i hasło.' });
     }
+    // 2026-11-17 (jeden e-mail = jedna licencja): brak adresu = NULL (nigdy ''), zajęty adres = odmowa przed zapisem
+    const emailNorm = normalizujEmail(email);
+    if (emailNorm && !poprawnyFormatEmail(emailNorm)) return res.json({ status: 'error', message: 'Podaj poprawny adres e-mail.' });
+    try {
+      if (await emailZajety(db, emailNorm)) return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY });
+    } catch (e) {
+      return res.json({ status: 'error', message: 'Błąd kontroli e-maila: ' + e.message });
+    }
 
     // Generuj unikalny tenant_id
     const slug = slugify(nazwa_salonu);
@@ -330,10 +339,10 @@ module.exports = (db) => {
     db.query(
       `INSERT INTO Licencje (id, login, haslo, rola, id_bazy, status, data_waznosci, nazwa_salonu, miasto, telefon, email, data_utworzenia)
        VALUES (?, ?, ?, 'salon', ?, 'aktywny', ?, ?, ?, ?, ?, NOW())`,
-      [licId, login.trim(), hasloHash, tenant_id, data_waznosci || null, nazwa_salonu, miasto || '', telefon || '', email || ''],
+      [licId, login.trim(), hasloHash, tenant_id, data_waznosci || null, nazwa_salonu, miasto || '', telefon || '', emailNorm],
       (err) => {
         if (err) {
-          if (err.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', message: 'Login już istnieje!' });
+          if (err.code === 'ER_DUP_ENTRY') return res.json({ status: 'error', code: czyDuplikatEmail(err) ? 'EMAIL_ZAJETY' : undefined, message: czyDuplikatEmail(err) ? KOMUNIKAT_ZAJETY : 'Login już istnieje!' });
           return res.json({ status: 'error', message: 'Błąd tworzenia licencji: ' + err.message });
         }
 
@@ -383,16 +392,26 @@ module.exports = (db) => {
   });
 
   // POST /api/admin/update_tenant — edycja salonu
-  router.post('/admin/update_tenant', requireAdmin, (req, res) => {
+  router.post('/admin/update_tenant', requireAdmin, async (req, res) => {
     const d = req.body;
     if (!d.id_bazy) return res.json({ status: 'error', message: 'Brak tenant_id' });
+
+    // 2026-11-17 (jeden e-mail = jedna licencja): adres innego salonu = odmowa; własny adres salonu przechodzi
+    // (to jest też ścieżka awaryjna admina do ZWOLNIENIA adresu zajętego przez stary salon). Brak adresu = NULL.
+    const emailNorm = normalizujEmail(d.email);
+    if (emailNorm && !poprawnyFormatEmail(emailNorm)) return res.json({ status: 'error', message: 'Podaj poprawny adres e-mail.' });
+    try {
+      if (await emailZajety(db, emailNorm, d.id_bazy)) return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY });
+    } catch (e) {
+      return res.json({ status: 'error', message: 'Błąd kontroli e-maila: ' + e.message });
+    }
 
     db.query(
       `UPDATE Licencje SET nazwa_salonu=?, miasto=?, telefon=?, email=?, data_waznosci=?, status=?
        WHERE id_bazy=? LIMIT 1`,
-      [d.nazwa_salonu, d.miasto || '', d.telefon || '', d.email || '', d.data_waznosci || null, d.status || 'aktywny', d.id_bazy],
+      [d.nazwa_salonu, d.miasto || '', d.telefon || '', emailNorm, d.data_waznosci || null, d.status || 'aktywny', d.id_bazy],
       (err) => {
-        if (err) return res.json({ status: 'error', message: err.message });
+        if (err) return res.json({ status: 'error', code: czyDuplikatEmail(err) ? 'EMAIL_ZAJETY' : undefined, message: czyDuplikatEmail(err) ? KOMUNIKAT_ZAJETY : err.message });
         return res.json({ status: 'success', message: 'Zaktualizowano dane salonu.' });
       }
     );
@@ -542,11 +561,19 @@ module.exports = (db) => {
     if (!/^\S+@\S+\.\S+$/.test(String(email).trim())) {
       return res.json({ status: 'error', message: 'Podaj poprawny adres email.' });
     }
+    // 2026-11-17 (jeden e-mail = jedna licencja): ta sama kontrola co przy zakupie przez Stripe
+    const emailNorm = normalizujEmail(email);
+    try {
+      if (await emailZajety(db, emailNorm)) return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY });
+    } catch (e) {
+      console.error('[admin] /zamowienie: kontrola e-maila:', e.message);
+      return res.json({ status: 'error', message: 'Chwilowy problem z bazą danych. Spróbuj ponownie za chwilę.' });
+    }
 
     const id = randomUUID();
     db.query(
       `INSERT INTO Zamowienia (id, imie, nazwa_salonu, email, telefon, miasto, wiadomosc) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [id, imie.trim(), nazwa_salonu.trim(), email.trim(), telefon || null, miasto || null, wiadomosc || null],
+      [id, imie.trim(), nazwa_salonu.trim(), emailNorm, telefon || null, miasto || null, wiadomosc || null],
       async (err) => {
         if (err) return res.json({ status: 'error', message: 'Błąd zapisu: ' + err.message });
 
@@ -611,6 +638,9 @@ module.exports = (db) => {
       const z = rows && rows[0];
       if (!z) return res.json({ status: 'error', message: 'Nie znaleziono zamówienia.' });
       const stary = String(z.email || '').trim().toLowerCase();
+      // 2026-11-17 (jeden e-mail = jedna licencja): adres innego salonu = odmowa; salon z TEGO zamówienia jest wykluczony,
+      // żeby poprawka na ten sam adres przechodziła. Odmowa zanim cokolwiek pójdzie do Stripe.
+      if (await emailZajety(db, email, z.tenant_id || null)) return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY });
       await q(`UPDATE Zamowienia SET email = ? WHERE id = ?`, [email, id]);
       const zmiany = ['zamówienie'];
       if (z.tenant_id) {
@@ -697,12 +727,55 @@ module.exports = (db) => {
     });
   });
 
+  // GET /api/rejestracja/check-email?email= — sprawdzenie na żywo w formularzach (2026-11-17, jeden e-mail = jedna licencja).
+  // Odpowiedź NIGDY nie zdradza, który salon ma adres (ochrona przed wyliczaniem klientów): tylko dostepny + komunikat.
+  const limiterCheckEmail = makePublicLimiter({ max: 30, message: 'Za dużo zapytań.' });
+  router.get('/rejestracja/check-email', limiterCheckEmail, async (req, res) => {
+    const email = normalizujEmail(req.query.email);
+    if (!email || !poprawnyFormatEmail(email)) return res.json({ status: 'success', dostepny: false, code: 'FORMAT', message: 'Podaj poprawny adres e-mail.' });
+    try {
+      const zajety = await emailZajety(db, email);
+      return res.json({ status: 'success', dostepny: !zajety, code: zajety ? 'EMAIL_ZAJETY' : 'WOLNY', message: zajety ? KOMUNIKAT_ZAJETY : '' });
+    } catch (e) {
+      return res.json({ status: 'error', dostepny: false, message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+  // Wersja dla panelu admina: 'pomin' = id_bazy edytowanego salonu (jego własny adres nie jest kolizją).
+  // Tylko za tokenem admina — publiczny wariant z 'pomin' zdradzałby, do którego salonu należy adres.
+  router.get('/admin/check-email', requireAdmin, async (req, res) => {
+    const email = normalizujEmail(req.query.email);
+    const pomin = String(req.query.pomin || '').trim().slice(0, 100) || null;
+    if (!email || !poprawnyFormatEmail(email)) return res.json({ status: 'success', dostepny: false, code: 'FORMAT', message: 'Podaj poprawny adres e-mail.' });
+    try {
+      const zajety = await emailZajety(db, email, pomin);
+      return res.json({ status: 'success', dostepny: !zajety, code: zajety ? 'EMAIL_ZAJETY' : 'WOLNY', message: zajety ? KOMUNIKAT_ZAJETY : '' });
+    } catch (e) {
+      return res.json({ status: 'error', dostepny: false, message: 'Błąd serwera. Spróbuj ponownie.' });
+    }
+  });
+
   // POST /api/rejestracja/zaloz — utwórz salon przez token (publiczne)
   // 2026-10-09 (etap 1 audytu): UNIQUE na Licencje.id_bazy — dotąd zwykły indeks; dwa salony
   // mogły dostać ten sam id_bazy (sufiks z ms powtarzalny co 10 s) i widzieć nawzajem swoje dane.
   // Idempotentnie: ER_DUP_KEYNAME (1061) = indeks już jest.
   db.query(`ALTER TABLE Licencje ADD UNIQUE INDEX uq_licencje_id_bazy (id_bazy)`, (err) => {
     if (err && err.code !== 'ER_DUP_KEYNAME') console.error('[admin] ALTER Licencje UNIQUE id_bazy:', err.message);
+  });
+  // 2026-11-17 (jeden e-mail = jedna licencja, paczka C): puste adresy → NULL, potem UNIQUE na email — ale TYLKO gdy nie ma
+  // powtórzonych adresów. Przy duplikatach: głośne ostrzeżenie z listą i brak indeksu (start serwera nigdy nie pada przez dane).
+  // Kolacja kolumny utf8mb4_unicode_ci = indeks nieczuły na wielkość liter. Idempotentnie: ER_DUP_KEYNAME = indeks już jest.
+  db.query(`UPDATE Licencje SET email = NULL WHERE email IS NOT NULL AND TRIM(email) = ''`, (e1) => {
+    if (e1) return console.error('[admin] Licencje: puste e-maile → NULL:', e1.message);
+    db.query(`SELECT LOWER(TRIM(email)) AS e, COUNT(*) AS n FROM Licencje WHERE email IS NOT NULL GROUP BY LOWER(TRIM(email)) HAVING n > 1`, (e2, dup) => {
+      if (e2) return console.error('[admin] Licencje: kontrola duplikatów e-maila:', e2.message);
+      if (dup && dup.length) {
+        return console.warn(`[admin] UWAGA: indeks UNIQUE na Licencje.email NIE założony — powtórzone adresy: ${dup.map(d => d.e + ' ×' + d.n).join(', ')}. Rozdziel adresy (docs/PLAN_UNIKALNY_EMAIL_2026-11-16.md, paczka A); blokady w kodzie działają niezależnie.`);
+      }
+      db.query(`ALTER TABLE Licencje ADD UNIQUE INDEX uq_licencje_email (email)`, (e3) => {
+        if (e3 && e3.code !== 'ER_DUP_KEYNAME') console.error('[admin] ALTER Licencje UNIQUE email:', e3.message);
+        else if (!e3) console.log('[admin] Licencje: założono indeks UNIQUE uq_licencje_email');
+      });
+    });
   });
 
   const limiterRejestracja = makePublicLimiter({ max: 10, message: 'Za dużo prób rejestracji.' });
@@ -737,7 +810,7 @@ module.exports = (db) => {
       db.query(`SELECT email, nazwa_firmy, stripe_customer_id, stripe_subscription_id FROM Zamowienia WHERE token_wyslany = ? LIMIT 1`, [token],
         (e, rows) => resolve((rows && rows[0]) || null));
     });
-    const emailLicencji = ((zakup && zakup.email) || email || '').trim();
+    const emailLicencji = normalizujEmail((zakup && zakup.email) || email); // null gdy brak — nigdy ''
     const nazwaFirmy = ((zakup && zakup.nazwa_firmy) || '').trim() || null; // nabywca faktur recurring
     // Stripe IDs z zakupu — wpisane od razu do Licencje, niezależnie od wyścigu z invoice.paid
     const stripeCustomerId = (zakup && zakup.stripe_customer_id) || null;
@@ -764,6 +837,7 @@ module.exports = (db) => {
 
     if (wynik.wynik === 'token') return res.json({ status: 'error', message: 'Link jest nieważny, wygasł lub został już użyty.' });
     if (wynik.wynik === 'login_zajety') return res.json({ status: 'error', message: 'Ten login jest już zajęty. Wybierz inny.' });
+    if (wynik.wynik === 'email_zajety') return res.json({ status: 'error', code: 'EMAIL_ZAJETY', message: KOMUNIKAT_ZAJETY + ' Jeśli ten adres podałeś przy zakupie, napisz do nas — poprawimy go w zamówieniu i wyślemy link ponownie. Twój link pozostaje ważny.' });
     if (wynik.wynik !== 'ok') return res.json({ status: 'error', message: wynik.message || 'Nie udało się założyć salonu. Spróbuj ponownie.' });
 
     const tenant_id = wynik.tenant_id;
