@@ -70,7 +70,10 @@ describe('#10 odcisk konfiguracji (serwer)', () => {
 describe('front terminarza — paczka D', () => {
   test('#10 przeglądarka porównuje odcisk i dociąga dane po zmianie na innym stanowisku', () => {
     expect(F).toContain('async function sprawdzOdciskCfg(d)');
-    expect(F).toContain('if (await sprawdzOdciskCfg(d)) { if (req !== odswiezReq) return; renderFiltry(d); }');
+    // R1 (16.11): renderFiltry dostaje LISTĘ OSÓB, nie całą odpowiedź dnia — wcześniej ten test
+    // utrwalał błędną linię i dlatego regresja przeszła niezauważona.
+    expect(F).toContain('if (await sprawdzOdciskCfg(d)) { if (req !== odswiezReq) return; renderFiltry(TRM.dane.pracownicy); }');
+    expect(F).not.toContain('return; renderFiltry(d); }');
     expect(F).toContain("toast('info', 'Ustawienia salonu się zmieniły'");
     expect(F).toContain('TRM.cfgOdcisk = d.cfg_odcisk || null;');
   });

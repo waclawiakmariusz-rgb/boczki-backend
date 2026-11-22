@@ -320,7 +320,7 @@
     if (req !== odswiezReq) return;
     if (d.status !== 'success') { main.innerHTML = `<div class="trm-note bad">${esc(d.message)}</div>`; return; }
     TRM.dzien = d;
-    if (await sprawdzOdciskCfg(d)) { if (req !== odswiezReq) return; renderFiltry(d); }   // #10: zmiana zespołu/usług/grafiku na innym stanowisku
+    if (await sprawdzOdciskCfg(d)) { if (req !== odswiezReq) return; renderFiltry(TRM.dane.pracownicy); }   // #10: zmiana zespołu/usług/grafiku na innym stanowisku (R1 16.11: lista osób, nie cała odpowiedź dnia)
     liczniki(d);
     odswiezPasekZmian();
     pobierzPreferencje(d.rezerwacje, TRM.data).then(() => { if (req === odswiezReq && TRM.pref.dzien === TRM.data) odswiezWidokPoPreferencjach(); });

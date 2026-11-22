@@ -18758,7 +18758,9 @@ document.addEventListener('keydown', function(event) {
             if (nowe === null) return;
             const czyste = String(nowe).replace(/\s+/g, ' ').trim();
             if (!czyste) { alert('Błąd: nowe imię i nazwisko jest puste — nic nie zmieniono.'); return; }
-            if (czyste === String(imie || '').trim()) { alert('Bez zmian — wpisano to samo imię.'); return; }
+            // R6 (16.11): porównanie z SUROWYM imieniem, nie przyciętym — inaczej poprawka samej spacji
+            // na końcu („Anna ” → „Anna”) wyglądała jak brak zmiany, choć serwer umie ją zapisać.
+            if (czyste === String(imie || '')) { alert('Bez zmian — wpisano to samo imię.'); return; }
             fetch(API_URL, { method: 'POST', body: JSON.stringify({ action: 'edit_employee', stare_imie: imie, nowe_imie: czyste, pracownik: currentUser }) })
                 .then(r => r.json())
                 .then(d => { alert(d.message || (d.status === 'success' ? 'Zmieniono' : 'Błąd: nie udało się zmienić imienia')); if (d.status === 'success') pobierzSlownikSprzedazy(true); })
@@ -18883,7 +18885,13 @@ function dodajDefinicje(e, typ) {
     }
     
     fetch(API_URL, { method:"POST", body:JSON.stringify(p) }).then(r=>r.json()).then(d=>{
-        alert(d.message);
+        const ok = d.status === 'success';
+        // R7 (16.11): odmowa ma wyglądać jak odmowa. Czerwony toast i NIE czyścimy pola —
+        // wpisana wartość zostaje, żeby dało się ją poprawić zamiast wpisywać od nowa.
+        // pokazPowiadomienie(typ, tytuł, treść) — błąd trzyma się 15 s sam z siebie
+        if (typeof pokazPowiadomienie === 'function') pokazPowiadomienie(ok ? 'success' : 'error', ok ? null : 'Nie udało się zapisać', d.message || (ok ? 'Zapisano' : 'Serwer odrzucił zapis.'));
+        else alert(d.message);
+        if (!ok) return;
         pobierzSlownikSprzedazy(true);
         if(typ==='Pracownik') document.getElementById('def_prac').value='';
         else anulujEdycjeZabiegu();

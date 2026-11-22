@@ -1,0 +1,32 @@
+{
+  "nazwa": "terminarz-paczka-f",
+  "sekcja": "setup-pracownicy",
+  "korzen": ".section.active",
+  "przechwyc": ["edit_employee"],
+  "promptOdpowiedz": "Prob F Spacja",
+  "kroki": [
+    { "viewport": [1440, 900] },
+    { "czekaj": 1500 },
+    { "wpisz": "#def_prac", "wartosc": "Prob F Dubel" },
+    { "js": "(function(){ document.querySelector('#setup-pracownicy form').requestSubmit(); return 'pierwszy zapis'; })()", "opis": "R7: pierwszy zapis pracownika" },
+    { "czekaj": 1500 },
+    { "js": "(function(){ var t=document.querySelector('#boczki-toasts .b-toast'); return t ? t.className+' | '+t.textContent.slice(0,70) : 'brak toasta'; })()", "opis": "toast po pierwszym zapisie" },
+    { "wpisz": "#def_prac", "wartosc": "Prob F Dubel" },
+    { "js": "(function(){ document.querySelector('#setup-pracownicy form').requestSubmit(); return 'drugi zapis (dubel)'; })()", "opis": "R7: ten sam pracownik drugi raz" },
+    { "czekaj": 1800 },
+    { "js": "(function(){ var t=document.querySelector('#boczki-toasts .b-toast.b-error'); return t ? t.textContent.slice(0,90) : 'BRAK czerwonego toasta'; })()", "opis": "R7: czerwony toast przy dublu" },
+    { "js": "(function(){ return 'pole po odmowie: ['+document.getElementById('def_prac').value+']'; })()", "opis": "R7: pole zachowuje wpisaną wartość" },
+    { "js": "(function(){ document.getElementById('def_prac').scrollIntoView({block:'center'}); return 'przewiniete'; })()" },
+    { "zrzut": "r7-dubel-czerwony-toast" },
+    { "sprawdz": "!!document.querySelector('#boczki-toasts .b-toast.b-error')", "opis": "R7: odmowa pokazana jako błąd, nie sukces" },
+    { "sprawdz": "document.getElementById('def_prac').value === 'Prob F Dubel'", "opis": "R7: pole nie jest czyszczone przy odmowie" },
+    { "js": "(function(){ window.__proba.alerty.length = 0; edytujPracownika('Prob F Spacja '); return 'wywolano Zmien dla imienia ze spacja na koncu'; })()", "opis": "R6: poprawka samej spacji" },
+    { "czekaj": 1200 },
+    { "js": "JSON.stringify(window.__proba.alerty)", "opis": "R6: komunikaty po kliknieciu Zmien" },
+    { "js": "JSON.stringify((window.__proba.posty||[]).filter(function(p){return p.action==='edit_employee';}))", "opis": "R6: czy zadanie poszlo do serwera" },
+    { "sprawdz": "!window.__proba.alerty.some(function(a){ return /Bez zmian/.test(a); })", "opis": "R6: poprawka spacji NIE jest odrzucana jako brak zmiany" },
+    { "sprawdz": "(window.__proba.posty||[]).some(function(p){ return p.action==='edit_employee' && p.stare_imie==='Prob F Spacja ' && p.nowe_imie==='Prob F Spacja'; })", "opis": "R6: serwer dostaje surowe stare imie i przyciete nowe" },
+    { "zrzut": "r6-zmien-spacja" },
+    { "pomiar": true }
+  ]
+}
