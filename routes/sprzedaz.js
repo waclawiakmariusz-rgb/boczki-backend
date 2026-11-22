@@ -31,6 +31,11 @@ const KOLUMNY_IMIENIA = [
   ['FotoSesje', 'pracownik'],
   ['FotoZdjecia', 'pracownik'],
   ['Dokumenty_Dodatkowe_Klienta', 'pracownik'],
+  // R16 (plan 16.11): kolejne cztery miejsca, w których imię jest kluczem, a zmiana je omijała
+  ['Zadania', 'przypisane_do'],
+  ['Wyniki_konsultacja', 'kto_wykonal'],
+  ['Zadatki', 'pracownicy'],
+  ['Term_Sprawy', 'wlasciciel'],
   ['Rejestr_RODO', 'pracownik'],
   ['`Rejestr_Oświadczeń`', 'pracownik'],
 ];
@@ -1258,7 +1263,15 @@ module.exports = (db) => {
             conn.beginTransaction((e3) => {
               if (e3) return koniec({ status: 'error', message: e3.message });
               const zmieniono = {};
-              const kroki = KOLUMNY_IMIENIA.map(([tabela, kolumna]) => (dalej) => {
+              // R16 (plan 16.11): dubla sprawdzamy JESZCZE RAZ w transakcji, z blokadą wiersza.
+              // Pierwsze sprawdzenie jest poza nią, więc między nim a zapisem ktoś mógł dodać tę samą osobę.
+              const kroki = [(dalej) => conn.query(
+                `SELECT imie FROM Pracownicy WHERE tenant_id = ? AND LOWER(TRIM(imie)) = LOWER(?) AND TRIM(imie) <> ? LIMIT 1 FOR UPDATE`,
+                [tenant_id, nowe, stare], (eD, rD) => {
+                  if (eD) return dalej(eD);
+                  if (rD && rD.length) return dalej(new Error(`Pracownik „${String(rD[0].imie).trim()}" już jest na liście — nie można nadać dwóm osobom tego samego imienia.`));
+                  dalej(null);
+                })].concat(KOLUMNY_IMIENIA.map(([tabela, kolumna]) => (dalej) => {
                 // TRIM po obu stronach: wartość w bazie mogła zostać zapisana ze spacją na końcu (stare formularze)
                 conn.query(`UPDATE ${tabela} SET ${kolumna} = ? WHERE tenant_id = ? AND TRIM(${kolumna}) = ?`, [nowe, tenant_id, stare], (e, r) => {
                   if (e) {
@@ -1273,18 +1286,39 @@ module.exports = (db) => {
                   if (r && r.affectedRows) zmieniono[tabela.replace(/`/g, '') + '.' + kolumna] = r.affectedRows;
                   dalej(null);
                 });
-              });
+              }));
               // zajęcia pracownika w terminarzu: klucz = imię tylko dla typu 'pracownik'
               kroki.push((dalej) => conn.query(`UPDATE Term_Zajecia SET klucz = ? WHERE tenant_id = ? AND typ_zasobu = 'pracownik' AND TRIM(klucz) = ?`, [nowe, tenant_id, stare], (e, r) => {
                 if (e) return dalej(e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR' ? null : e);
                 if (r && r.affectedRows) zmieniono['Term_Zajecia.klucz'] = r.affectedRows; dalej(null);
               }));
-              // lista wykonawców w usłudze terminarza: JSON ["Anna","Ola"] — podmiana nazwy w tekście JSON
-              kroki.push((dalej) => conn.query(`UPDATE Term_Uslugi SET pracownicy_json = REPLACE(pracownicy_json, ?, ?) WHERE tenant_id = ? AND pracownicy_json LIKE ?`,
-                [JSON.stringify(stareWBazie), JSON.stringify(nowe), tenant_id, '%' + JSON.stringify(stareWBazie) + '%'], (e, r) => {
-                  if (e) return dalej(e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR' ? null : e);
-                  if (r && r.affectedRows) zmieniono['Term_Uslugi.pracownicy_json'] = r.affectedRows; dalej(null);
-                }));
+              // R15 (plan 16.11): lista wykonawców to JSON ["Anna","Ola"]. REPLACE po dokładnym łańcuchu
+              // gubił wpisy zapisane inną pisownią i potrafił trafić w środek innego imienia. Teraz parsujemy,
+              // podmieniamy element i zapisujemy z powrotem. Gdy po zmianie lista zostałaby PUSTA, zapisujemy
+              // NULL (czyli „wszyscy") i mówimy o tym wprost w odpowiedzi — po cichu byłoby to ukryte otwarcie usługi.
+              const pustePoZmianie = [];
+              kroki.push((dalej) => conn.query(`SELECT usluga_id, pracownicy_json FROM Term_Uslugi WHERE tenant_id = ? AND pracownicy_json IS NOT NULL`, [tenant_id], (e, rows) => {
+                if (e) return dalej(e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR' ? null : e);
+                const norm = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+                const cel = norm(stareWBazie);
+                const doZmiany = [];
+                for (const row of (Array.isArray(rows) ? rows : [])) {
+                  let lista; try { lista = JSON.parse(row.pracownicy_json); } catch (x) { continue; }
+                  if (!Array.isArray(lista) || !lista.some(x => norm(x) === cel)) continue;
+                  const nowa = [...new Set(lista.map(x => (norm(x) === cel ? nowe : norm(x))).filter(Boolean))];
+                  if (!nowa.length) pustePoZmianie.push(row.usluga_id);
+                  doZmiany.push([row.usluga_id, nowa.length ? JSON.stringify(nowa) : null]);
+                }
+                if (!doZmiany.length) return dalej(null);
+                let i = 0;
+                const kolejny = (err) => {
+                  if (err) return dalej(err);
+                  if (i >= doZmiany.length) { zmieniono['Term_Uslugi.pracownicy_json'] = doZmiany.length; return dalej(null); }
+                  const [uid, json] = doZmiany[i++];
+                  conn.query(`UPDATE Term_Uslugi SET pracownicy_json = ?, wersja = wersja + 1, zmieniono = NOW() WHERE tenant_id = ? AND usluga_id = ?`, [json, tenant_id, uid], (e2) => kolejny(e2 || null));
+                };
+                kolejny(null);
+              }));
               let i = 0;
               const nastepny = (e) => {
                 if (e) return wycofaj(e.message);

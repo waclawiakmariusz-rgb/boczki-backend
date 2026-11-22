@@ -83,11 +83,19 @@ function zajeciaPozycji(poz) {
 }
 
 /** Konflikty między nowymi zajęciami a istniejącymi (ten sam typ i klucz, nachodzące przedziały). */
+/** R11 (plan 16.11): klucze zasobów typu „pracownik" to imiona, więc porównujemy je po jednej pisowni.
+ *  Gabinety i urządzenia mają klucze liczbowe — tych nie ruszamy. */
+function tenSamKlucz(typ, a, b) {
+  if (typ !== 'pracownik') return String(a) === String(b);
+  const n = (s) => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  return n(a) === n(b);
+}
+
 function konflikty(nowe, istniejace) {
   const wynik = [];
   for (const n of nowe) {
     for (const z of (istniejace || [])) {
-      if (z.typ_zasobu !== n.typ_zasobu || String(z.klucz) !== String(n.klucz)) continue;
+      if (z.typ_zasobu !== n.typ_zasobu || !tenSamKlucz(n.typ_zasobu, z.klucz, n.klucz)) continue;
       const zo = naMin(z.od), zd = naMin(z.do);
       if (nakladaja(n.od, n.do, zo, zd)) wynik.push({ typ_zasobu: n.typ_zasobu, klucz: n.klucz, od: zo, do: zd, zrodlo: z.zrodlo || null, rezerwacja_id: z.rezerwacja_id || null });
     }

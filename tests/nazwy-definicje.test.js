@@ -113,6 +113,9 @@ describe('edit_employee — zmiana imienia z przepisaniem wszędzie', () => {
       [/UPDATE Pracownicy SET imie/, { affectedRows: 1 }],
       [/UPDATE Term_Pozycje SET pracownik/, { affectedRows: 3 }],
       [/UPDATE Term_Zajecia/, { affectedRows: 3 }],
+      // R15 (16.11): lista wykonawców nie jest już podmieniana przez REPLACE w tekście — najpierw ją czytamy,
+      // parsujemy JSON i zapisujemy z powrotem, więc atrapa musi odpowiedzieć też na SELECT.
+      [/SELECT usluga_id, pracownicy_json FROM Term_Uslugi/, [{ usluga_id: 'U1', pracownicy_json: '["Aleksandra Cabaj ","Anna"]' }]],
       [/UPDATE Term_Uslugi/, { affectedRows: 1 }],
       [/UPDATE Sprzedaz SET sprzedawca/, { affectedRows: 12 }],
       [/UPDATE FotoSesje/, (cb) => cb(Object.assign(new Error('nie ma'), { code: 'ER_NO_SUCH_TABLE' }))],
@@ -129,7 +132,10 @@ describe('edit_employee — zmiana imienia z przepisaniem wszędzie', () => {
     const zaj = wykonane.find(w => /UPDATE Term_Zajecia/.test(w.sql));
     expect(zaj.sql).toMatch(/typ_zasobu = 'pracownik'/);
     const js = wykonane.find(w => /UPDATE Term_Uslugi/.test(w.sql));
-    expect(js.params[0]).toBe('"Aleksandra Cabaj "'); expect(js.params[1]).toBe('"Aleksandra Cabaj-Nowak"');
+    // R15 (16.11): lista wykonawców nie jest już podmieniana w tekście — parsujemy JSON, podmieniamy
+    // element i zapisujemy od nowa, więc pierwszy parametr to GOTOWA lista, a nie szukany łańcuch.
+    expect(JSON.parse(js.params[0])).toEqual(['Aleksandra Cabaj-Nowak', 'Anna']);
+    expect(js.sql).toMatch(/SET pracownicy_json = \?/);
   });
   test('nowe imię zajęte przez inną osobę → odmowa; nieznane stare → odmowa; puste nowe → odmowa', async () => {
     const z = atrapaPuli([[/TRIM\(imie\) = \?/, [{ imie: 'Anna' }]], [/LOWER\(TRIM\(imie\)\) = LOWER\(\?\) AND TRIM\(imie\) <> \?/, [{ imie: 'Ola' }]]]);

@@ -62,7 +62,10 @@ describe('#7 zarchiwizowany gabinet', () => {
     expect(F).toContain("const zas = (TRM.dane.zasoby || []).filter(z => z.aktywny && !z.zarchiwizowano);");
     const T = fs.readFileSync(path.join(__dirname, '..', 'routes', 'terminarz.js'), 'utf8');
     expect(T).toContain('zarchiwizowano = IF(? = 1, NULL, zarchiwizowano)');
-    expect(T).toContain('twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik === p)];');
+    // R11 (16.11): porównanie po znormalizowanej nazwie — nieobecność zapisana ze spacją na końcu
+    // nie dopasowywała się do osoby z listy i osoba wyglądała na dostępną mimo urlopu.
+    expect(T).toContain('twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik && takaSamaOsoba(n.pracownik, p))];');
+    expect(T).toContain('const takaSamaOsoba = (a, b) => normalizujNazwe(a) === normalizujNazwe(b);');
     expect(T).toContain('return { ust, salon, dostepnoscPracownikow, twardeBlokadyPracownikow, dostepnoscZasobow,');
   });
 });

@@ -638,12 +638,15 @@ module.exports = (db, opts = {}) => {
     const zas = cfg.zasoby || await zasoby(tenant, true);
     const od = data + ' 00:00:00', do_ = data + ' 23:59:59';
     const nieob = await q(`SELECT id, pracownik, zasob_id, DATE_FORMAT(od,'%Y-%m-%d %H:%i:%s') AS od, DATE_FORMAT(do_,'%Y-%m-%d %H:%i:%s') AS do_, typ, opis FROM Term_Nieobecnosci WHERE tenant_id = ? AND od < ? AND do_ > ?`, [tenant, do_, od]);
+    // R11 (plan 16.11): nieobecność zapisana kiedyś ze spacją na końcu („Anna ") nie dopasowywała się
+    // do osoby z listy („Anna") i w praktyce znikała — osoba wyglądała na dostępną mimo urlopu.
     const blokadyDla = (pred) => nieob.filter(pred).map(n => ({ od: S.naMin(n.od), do: S.naMin(n.do_) }));
+    const takaSamaOsoba = (a, b) => normalizujNazwe(a) === normalizujNazwe(b);
     const wszystkie = blokadyDla(n => !n.pracownik && !n.zasob_id);
     const dostepnoscPracownikow = {};
     const twardeBlokadyPracownikow = {}; // audyt 10.11.2026 (#6): nieobecności i blokady „cały salon” osobno — zgoda „mimo grafiku” ich nie obchodzi
     for (const p of prac) {
-      twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik === p)];
+      twardeBlokadyPracownikow[p] = [...wszystkie, ...blokadyDla(n => n.pracownik && takaSamaOsoba(n.pracownik, p))];
       dostepnoscPracownikow[p] = S.odejmij(S.przedzialyZGrafiku(graf.filter(g => g.pracownik === p), data), twardeBlokadyPracownikow[p]);
     }
     const salon = godzinySalonu(ust, data);
@@ -1221,7 +1224,9 @@ module.exports = (db, opts = {}) => {
         const dot = ['pracownik', 'gabinet', 'oba', 'brak'].includes(d.bufor_dotyczy) ? d.bufor_dotyczy : 'oba';
         const gab = Array.isArray(d.gabinety) ? d.gabinety.map(Number).filter(Boolean) : null;
         const urz = Array.isArray(d.urzadzenia) ? d.urzadzenia.map(Number).filter(Boolean) : [];
-        const prac = Array.isArray(d.pracownicy) ? d.pracownicy.map(String) : null;
+        // R15 (plan 16.11): lista wykonawców to klucze po imionach — zapisujemy je w jednej pisowni,
+        // inaczej „Anna " w konfiguracji usługi nie pasuje do „Anna" z zespołu i usługa nie ma wykonawcy.
+        const prac = Array.isArray(d.pracownicy) ? [...new Set(d.pracownicy.map(x => normalizujNazwe(x)).filter(Boolean))] : null;
         await q(`INSERT INTO Term_Uslugi (tenant_id, usluga_id, czas_min, bufor_przed_min, bufor_po_min, bufor_dotyczy, wymaga_gabinet, gabinety_json, urzadzenia_json, pracownicy_json, aktywna, zmieniono)
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                  ON DUPLICATE KEY UPDATE czas_min = VALUES(czas_min), bufor_przed_min = VALUES(bufor_przed_min), bufor_po_min = VALUES(bufor_po_min), bufor_dotyczy = VALUES(bufor_dotyczy), wymaga_gabinet = VALUES(wymaga_gabinet), gabinety_json = VALUES(gabinety_json), urzadzenia_json = VALUES(urzadzenia_json), pracownicy_json = VALUES(pracownicy_json), aktywna = VALUES(aktywna), wersja = wersja + 1, zmieniono = NOW()`,
