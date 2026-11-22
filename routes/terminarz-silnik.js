@@ -96,8 +96,14 @@ function konflikty(nowe, istniejace) {
   for (const n of nowe) {
     for (const z of (istniejace || [])) {
       if (z.typ_zasobu !== n.typ_zasobu || !tenSamKlucz(n.typ_zasobu, z.klucz, n.klucz)) continue;
+      // R18 (#24 audytu, plan 16.11): bufor PO jednym zabiegu i bufor PRZED następnym mogą się
+      // spokojnie nakładać — to czas na sprzątnięcie stanowiska, a nie dwie wizyty naraz.
+      // Kolizją jest dopiero bufor przy prawdziwej wizycie albo dwie wizyty.
+      if (n.powod === 'bufor' && z.powod === 'bufor') continue;
       const zo = naMin(z.od), zd = naMin(z.do);
-      if (nakladaja(n.od, n.do, zo, zd)) wynik.push({ typ_zasobu: n.typ_zasobu, klucz: n.klucz, od: zo, do: zd, zrodlo: z.zrodlo || null, rezerwacja_id: z.rezerwacja_id || null });
+      if (nakladaja(n.od, n.do, zo, zd)) wynik.push({ typ_zasobu: n.typ_zasobu, klucz: n.klucz, od: zo, do: zd, zrodlo: z.zrodlo || null, rezerwacja_id: z.rezerwacja_id || null,
+        // kto wnosi bufor — pozwala napisać „bufor po poprzednim zabiegu" zamiast „inna wizyta"
+        powod: (n.powod === 'bufor' || z.powod === 'bufor') ? 'bufor' : null });
     }
   }
   return wynik;
@@ -221,7 +227,7 @@ function sprawdzKomplet(w) {
         if (konflikty(probne, zajeteRobocze).length) { pow = pow || { kod: 'URZADZENIE_ZAJETE', opis: 'Urządzenie jest zajęte w wymaganym czasie. Wybierz inny termin lub zgodne urządzenie.' }; continue; }
         urzadzenie = u; break;
       }
-      if (urzadzenie === null) { problemy.push({ ...(pow || { kod: 'BRAK_URZADZENIA', opis: 'Żadne zgodne urządzenie nie jest aktywne.' }), pozycja: idx }); return; }
+      if (urzadzenie === null) { problemy.push({ ...(pow || { kod: 'BRAK_URZADZENIA', opis: 'Żadne urządzenie wymagane przez tę usługę nie jest aktywne — w Ustawieniach → Zasoby przywróć urządzenie albo wskaż usłudze inne.' }), pozycja: idx }); return; }
     }
 
     const zaj = zajeciaPozycji({ ...poz, start: naStr(start), pracownik: wybrany, gabinet_id: gabinet, urzadzenie_id: urzadzenie });

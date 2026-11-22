@@ -2335,6 +2335,10 @@
     let uwaga = '';
     if (pytanie) { uwaga = window.prompt(pytanie) || ''; if (!uwaga.trim()) return; }
     const d = await api('trm_pozycja_stan', { id: TRM.szcz.id, pozycja_id: pozId, stan, uwaga });
+    // R13 (plan 16.11): przy zmianie stanu pozycji konflikt wersji kończył się suchym „Nie zapisano",
+    // bez odświeżenia karty — recepcja widziała nieaktualne dane i klikała drugi raz. Teraz tak samo
+    // jak przy odwołaniu i skasowaniu: wyjaśnienie i przeładowanie szczegółów.
+    if (d.code === 'WERSJA') { toast('warning', 'Ktoś zmienił tę wizytę', 'Sprawdź aktualne dane.'); return przeladujSzczegoly(d.rezerwacja); }
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
     if (d.powtorzenie) toast('info', 'Bez zmian', 'Ten stan był już zapisany.');
     await przeladujSzczegoly(d.rezerwacja);
@@ -2600,7 +2604,10 @@
   const KATEGORIA_LABEL = { gotowe: ['Gotowe do zarejestrowania', 'ok'], wymaga_mapowania: ['Wymaga mapowania', 'warn'], wymaga_rozstrzygniecia: ['Do rozstrzygnięcia', 'warn'], pominiete: ['Pominięte', 'neu'], istniejace: ['Już zarejestrowane', 'neu'], zmienione: ['Zmienione od ostatniego sprawdzenia', 'bad'] };
   const TRYB_LABEL = { nie_uruchomiono: 'Nie uruchomiono', przygotowanie: 'Przygotowanie', aktywna: 'Aktywna', konczenie: 'Kończenie pracy z licznikami', wstrzymana: 'Wstrzymana', zakonczona: 'Zakończona', uzgadnianie: 'Wymaga uzgodnienia po przerwie', niedostepna: 'Technicznie niedostępna' };
   const PRZEJSCIA_UI = { nie_uruchomiono: ['przygotowanie'], przygotowanie: ['aktywna', 'nie_uruchomiono'], aktywna: ['konczenie', 'wstrzymana'], konczenie: ['aktywna', 'zakonczona'], wstrzymana: ['uzgadnianie'], zakonczona: ['uzgadnianie'], uzgadnianie: ['aktywna'] };
+  // Niskie z planu 16.11.2026: przycisk „Spróbuj ponownie" w zakładce Pakiety wołał tę funkcję
+  // z atrybutu onclick, a ona jest lokalna — czyli po błędzie wczytywania ofert przycisk nie robił nic.
   async function ustPakietyZaladuj() { TRM.ust.oferty = 'ladowanie'; const pz = PZ(); const d = await api('trm_oferty_lista', {}); if (d.status !== 'success') pz.oferty = Object.assign([], { blad: d.message }); else { pz.oferty = d.oferty; pz.ewidencja = d.ewidencja; } if (TRM.widok === 'ustawienia' && TRM.ust.tab === 'pakiety') renderUstawienia(); }
+  TRM.ustPakietyZaladuj = ustPakietyZaladuj;   // wołana z onclick, więc musi być widoczna poza modułem
   async function pzZaladujStan() { const pz = PZ(); pz.stan = 'ladowanie'; const d = await api('trm_ewidencja_stan', {}); pz.stan = d.status === 'success' ? d : { blad: d.message }; if (TRM.widok === 'ustawienia' && TRM.ust.tab === 'pakiety') renderUstawienia(); }
   function ustPakiety() {
     const pz = PZ(); const u = TRM.dane.ustawienia || {};
@@ -2616,7 +2623,7 @@
   function pzOferty() {
     const pz = PZ(); const of = pz.oferty;
     if (!of || of === 'ladowanie') return '<div class="muted small">⏳ Wczytujemy cennik i mapowania…</div>';
-    if (of.blad) return `<div class="trm-note bad small">${esc(of.blad)} <button class="trm-btn link sm" onclick="ustPakietyZaladuj()">Spróbuj ponownie</button></div>`;
+    if (of.blad) return `<div class="trm-note bad small">${esc(of.blad)} <button class="trm-btn link sm" onclick="TRM.ustPakietyZaladuj()">Spróbuj ponownie</button></div>`;
     const fr = (pz.ofFiltr || '').toLowerCase(); const widok = pz.ofWidok;
     const lista = of.filter(o => (widok === 'wszystkie' || /\d+\s*[x×]\s*$/i.test(o.nazwa) || o.stan !== 'brak') && (!fr || o.nazwa.toLowerCase().includes(fr)));
     const e = pz.edycja;

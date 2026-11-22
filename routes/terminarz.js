@@ -398,6 +398,9 @@ module.exports = (db, opts = {}) => {
     const st = await stanEwidencji(tenant);
     return { tenant, autor: imie || null, autor_id: konto ? String(konto.id) : null, rola: r, teraz: await teraz(), tryb: st.tryb, techniczna: st.techniczna, zapisany: st.zapisany, przerwa_od: st.przerwa_od, widziKwoty: ROLE_OPERACYJNE.has(r) };
   }
+  /** Nazwa blokady salonu dla GET_LOCK. MariaDB przyjmuje najwyzej 64 znaki — dluzsza nazwa to blad,
+   *  czyli brak blokady i zapisy bez wzajemnego wykluczania (niskie z planu poprawy 16.11.2026). */
+  const nazwaBlokadySalonu = (t) => ('trm:' + t).slice(0, 64);
   /**
    * Jedyna droga mutacji jednostek (§15.2): GET_LOCK salonu → BEGIN → fn(conn, repo) → COMMIT → RELEASE_LOCK; błąd = ROLLBACK.
    * Blokada i zwolnienie na TYM SAMYM połączeniu; blokada jest po stronie serwera MySQL (działa też przy wielu procesach).
@@ -411,7 +414,7 @@ module.exports = (db, opts = {}) => {
       // wcześniej komentarz tak twierdził, ale kod odrzucał każdy zapis każdego salonu.
       const wolna = await qc(conn, `SELECT IS_FREE_LOCK('trm:migracja') AS w`);
       if (wolna[0] && Number(wolna[0].w) === 0 && await integracjaZakupow(tenant)) throw new BladUzytkownika('Trwa migracja schematu ewidencji zakupów — spróbuj za chwilę.', { code: 'MIGRACJA' });
-      const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, ['trm:' + tenant]);
+      const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, [nazwaBlokadySalonu(tenant)]);
       if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.', { code: 'BLOKADA' });
       try {
         await begin(conn);
@@ -429,7 +432,7 @@ module.exports = (db, opts = {}) => {
           }
           throw e;
         }
-      } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
+      } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, [nazwaBlokadySalonu(tenant)]).catch(() => {}); }
     } finally { conn.release(); }
   }
   /** Sprawa „zakup zmieniony w Sprzedaży” (E20) — jedna na zakup, aktualizowana (klucz dedup per zakup), nie co 5 minut nowa. */
@@ -931,7 +934,11 @@ module.exports = (db, opts = {}) => {
       await historia(conn, tenant, rez.id, kto || 'System', status === 'wygasla' ? 'wygasla' : 'anulowano',
         status === 'wygasla' ? `hold wygasł bez wpłaty (termin trzymany do ${String(rez.hold_do || '').slice(0, 16)}) — godzina wróciła do puli` : `zwolniono trzymany termin bez wpłaty: ${powod}`,
         null, { hold_do: rez.hold_do, powod });
-      await qc(conn, `UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id]).catch(() => {});
+      // R14 (plan 16.11): brak tabeli zgód = salon bez dodatku płatności, to normalne. Ale KAŻDY inny błąd
+      // znaczy, że link do zadatku mógł zostać aktywny mimo zwolnienia terminu — wtedy transakcja musi paść,
+      // zamiast po cichu zostawić klientkę z możliwością zapłaty za wolny już termin.
+      await qc(conn, `UPDATE ZgodyPlatnosci SET status = 'ANULOWANA' WHERE tenant_id = ? AND rezerwacja_id = ? AND status = 'OCZEKUJACA'`, [tenant, rez.id])
+        .catch((e) => { if (e && e.code === 'ER_NO_SUCH_TABLE') return null; throw e; });
       return true;
     });
     if (!zamkniete) return false;
@@ -1219,7 +1226,14 @@ module.exports = (db, opts = {}) => {
         wymagaj(r, ROLE_MANAGER_PLUS);
         const u = (await q(`SELECT id FROM Uslugi WHERE tenant_id = ? AND id = ?`, [tenant, String(d.usluga_id || '')]))[0];
         if (!u) throw new BladUzytkownika('Usługa nie istnieje w cenniku.');
-        const czas = d.czas_min == null || d.czas_min === '' ? null : Math.max(5, Math.min(480, Number(d.czas_min) || 0));
+        // Niskie z planu 16.11: „abc" w polu czasu dawało Number(...) = NaN → `|| 0` → 5 minut po cichu.
+        // Puste pole nadal znaczy „nie skonfigurowano", ale śmieci odrzucamy z wyjaśnieniem.
+        let czas = null;
+        if (!(d.czas_min == null || d.czas_min === '')) {
+          const liczba = Number(d.czas_min);
+          if (!Number.isFinite(liczba)) throw new BladUzytkownika('Czas trwania usługi musi być liczbą minut (np. 45). Zostaw puste, jeśli jeszcze go nie znasz.');
+          czas = Math.max(5, Math.min(480, Math.round(liczba)));
+        }
         const bp = Math.max(0, Math.min(120, Number(d.bufor_przed_min) || 0)), ba = Math.max(0, Math.min(120, Number(d.bufor_po_min) || 0));
         const dot = ['pracownik', 'gabinet', 'oba', 'brak'].includes(d.bufor_dotyczy) ? d.bufor_dotyczy : 'oba';
         const gab = Array.isArray(d.gabinety) ? d.gabinety.map(Number).filter(Boolean) : null;
@@ -2069,7 +2083,7 @@ module.exports = (db, opts = {}) => {
         if (!d.potwierdz) return { status: 'success', podglad, message: 'Obecna wizyta pozostaje — zmienimy ją po zatwierdzeniu.' };
         const conn = await polacz();
         try {
-          const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, ['trm:' + tenant]);
+          const lock = await qc(conn, `SELECT GET_LOCK(?, 8) AS l`, [nazwaBlokadySalonu(tenant)]);
           if (!lock[0] || Number(lock[0].l) !== 1) throw new BladUzytkownika('Salon zapisuje właśnie inną wizytę. Spróbuj za chwilę.');
           try {
             // ponowne sprawdzenie pod blokadą (R08) i kontrola wersji w UPDATE
@@ -2113,7 +2127,7 @@ module.exports = (db, opts = {}) => {
             }
             await sprawyPoZmianieWizyty(tenant, rez.id, imie, 'wizyta przełożona / zmieniony wykonawca'); // E02
             return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id) };
-          } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, ['trm:' + tenant]).catch(() => {}); }
+          } finally { await qc(conn, `SELECT RELEASE_LOCK(?)`, [nazwaBlokadySalonu(tenant)]).catch(() => {}); }
         } catch (e) { await rollback(conn); throw e; } finally { conn.release(); }
       }
       // Skasowanie wizyty wpisanej przez pomyłkę (21.10.2026). Świadomie osobno od odwołania:
@@ -2661,24 +2675,36 @@ module.exports = (db, opts = {}) => {
   // ─── Centrum powiadomień: eskalacja czasowa + zdarzenia bez pojedynczego wyzwalacza (E13/E19) ───
   // Ten sam wzorzec co w routes/lojalnosc.js (tickHarmonogramu): co 60 s, własny try/catch,
   // nie startuje w testach. Baza wspólna dla dev+prod — UPDATE z warunkiem w WHERE jest atomowym claimem.
+  // Niskie z planu 16.11.2026: poller milczał o KAŻDYM błędzie zapytania, więc np. rozjechana kolacja
+  // w bazie potrafiła psuć odświeżanie spraw bez jednego słowa w logu. Teraz kod błędu trafia do logu,
+  // ale raz na 10 minut dla danego kodu — wpis co minutę zalałby log dnia roboczego.
+  const tickCisza = new Map();
+  const tickBlad = (e, zwroc) => {
+    const kod = (e && (e.code || e.message)) || 'nieznany błąd';
+    if (Date.now() - (tickCisza.get(kod) || 0) > 10 * 60 * 1000) {
+      tickCisza.set(kod, Date.now());
+      log.error('[terminarz] poller spraw pominął zapytanie:', kod, '— centrum powiadomień może być nieaktualne');
+    }
+    return zwroc;
+  };
   async function tickSprawy() {
     try {
       // (1) ZBLIŻAJĄCY SIĘ TERMIN — jedyny powód, dla którego coś robi się „pilne teraz".
       // `powiazany_czas >= NOW()` dopisane 21.10.2026: wcześniej warunek łapał także terminy
       // z przeszłości, więc każda zaległa sprawa stawała się P0 w ciągu minuty od powstania.
-      const kandydaciEskalacji = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje') AND powiazany_czas IS NOT NULL AND powiazany_czas >= NOW() AND powiazany_czas <= DATE_ADD(NOW(), INTERVAL 120 MINUTE) LIMIT 100`).catch(() => []);
+      const kandydaciEskalacji = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P1' AND stan IN ('nowa', 'w_trakcie', 'oczekuje') AND powiazany_czas IS NOT NULL AND powiazany_czas >= NOW() AND powiazany_czas <= DATE_ADD(NOW(), INTERVAL 120 MINUTE) LIMIT 100`).catch((e) => tickBlad(e, []));
       for (const s of (kandydaciEskalacji || [])) {
-        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch(() => null);
-        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — zbliża się powiązany termin' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch((e) => tickBlad(e, null));
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — zbliża się powiązany termin' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch((e) => tickBlad(e, null));
       }
       // (2) ZALEGŁOŚĆ BEZ REAKCJI — „brak wyniku wizyty" i „potwierdź rozliczenie" dotykają pieniędzy,
       // więc po dobie ciszy mają prawo się upomnieć. Ale tylko przez tydzień: sprawa sprzed miesiąca
       // to materiał do nadrobienia, nie alarm (inaczej wracalibyśmy do ściany czerwonych plakietek).
       const zaleglosci = await q(`SELECT id FROM Term_Sprawy WHERE typ IN ('E13', 'E19') AND priorytet = 'P1' AND stan = 'nowa' AND eskalowano_o IS NULL
-        AND utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_H} HOUR) AND utworzono >= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY) LIMIT 100`).catch(() => []);
+        AND utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_H} HOUR) AND utworzono >= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY) LIMIT 100`).catch((e) => tickBlad(e, []));
       for (const s of (zaleglosci || [])) {
-        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch(() => null);
-        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — doba bez reakcji' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P0', eskalowano_o = NOW(), zmieniono = NOW() WHERE id = ? AND priorytet = 'P1'`, [s.id]).catch((e) => tickBlad(e, null));
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'eskalacja', 'Podniesiono priorytet do P0 — doba bez reakcji' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch((e) => tickBlad(e, null));
       }
       // (3) WYGASZENIE — sprawa, której moment minął ponad dobę temu, przestaje krzyczeć.
       // Zostaje w „Do działania" jako P1: nie znika, nie zamyka się sama, ale nie udaje już alarmu.
@@ -2688,16 +2714,16 @@ module.exports = (db, opts = {}) => {
       // obie reguły przerzucałyby tę samą sprawę w tę i z powrotem co minutę.
       const przeterminowane = await q(`SELECT id FROM Term_Sprawy WHERE priorytet = 'P0' AND stan IN ('nowa', 'w_trakcie', 'oczekuje')
         AND (powiazany_czas IS NULL OR powiazany_czas <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_H} HOUR))
-        AND (typ NOT IN ('E13', 'E19') OR utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY)) LIMIT 100`).catch(() => []);
+        AND (typ NOT IN ('E13', 'E19') OR utworzono <= DATE_SUB(NOW(), INTERVAL ${ZALEGLOSC_DNI} DAY)) LIMIT 100`).catch((e) => tickBlad(e, []));
       for (const s of (przeterminowane || [])) {
-        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P1', zmieniono = NOW() WHERE id = ? AND priorytet = 'P0'`, [s.id]).catch(() => null);
-        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'wygaszenie', 'Obniżono priorytet do P1 — termin minął ponad dobę temu, sprawa zostaje do nadrobienia' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch(() => {});
+        const up = await q(`UPDATE Term_Sprawy SET priorytet = 'P1', zmieniono = NOW() WHERE id = ? AND priorytet = 'P0'`, [s.id]).catch((e) => tickBlad(e, null));
+        if (up && up.affectedRows) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) SELECT tenant_id, id, 'System', 'wygaszenie', 'Obniżono priorytet do P1 — termin minął ponad dobę temu, sprawa zostaje do nadrobienia' FROM Term_Sprawy WHERE id = ?`, [s.id]).catch((e) => tickBlad(e, null));
       }
       const bezWyniku = await q(`SELECT p.id AS pozycja_id, p.rezerwacja_id, p.tenant_id, p.pracownik, p.kategoria, p.wariant, DATE_FORMAT(p.koniec,'%Y-%m-%d %H:%i:%s') AS koniec, r.klient_nazwa
         FROM Term_Pozycje p JOIN Term_Rezerwacje r ON r.id = p.rezerwacja_id AND r.tenant_id = p.tenant_id
         WHERE p.stan IN ('zaplanowana', 'w_trakcie') AND r.status NOT IN ('anulowana', 'odrzucona', 'wygasla') AND p.koniec <= DATE_SUB(NOW(), INTERVAL 15 MINUTE)
           AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = p.tenant_id AND s.klucz_dedup = CONCAT('E13:poz:', p.id))
-        ORDER BY p.koniec DESC LIMIT 200`).catch(() => []); // audyt 10.11.2026 (#4): tylko brakujące sprawy — zamknięte ręcznie nie wracają co minutę, limit nie blokuje nowych salonów
+        ORDER BY p.koniec DESC LIMIT 200`).catch((e) => tickBlad(e, [])); // audyt 10.11.2026 (#4): tylko brakujące sprawy — zamknięte ręcznie nie wracają co minutę, limit nie blokuje nowych salonów
       for (const poz of (bezWyniku || [])) {
         await sprawaUpsert(poz.tenant_id, { typ: 'E13', rezerwacja_id: poz.rezerwacja_id, tytul: `Brak wyniku wizyty — ${poz.klient_nazwa}`,
           opis: `${poz.kategoria}${poz.wariant ? ' / ' + poz.wariant : ''} — planowany koniec ${poz.koniec.slice(0, 16)}, brak potwierdzonego wykonania lub nieobecności.`,
@@ -2709,9 +2735,9 @@ module.exports = (db, opts = {}) => {
           AND r.koniec <= DATE_SUB(NOW(), INTERVAL 30 MINUTE)
           AND EXISTS (SELECT 1 FROM Term_Pozycje p WHERE p.tenant_id = r.tenant_id AND p.rezerwacja_id = r.id AND p.stan IN ('wykonana', 'przerwana'))
           AND NOT EXISTS (SELECT 1 FROM Term_Sprawy s WHERE s.tenant_id = r.tenant_id AND s.klucz_dedup = CONCAT('E19:rez:', r.id))
-        ORDER BY r.koniec DESC LIMIT 200`).catch(() => []);
+        ORDER BY r.koniec DESC LIMIT 200`).catch((e) => tickBlad(e, []));
       for (const rz of (bezPokrycia || [])) {
-        const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch(() => []);
+        const wyk = await q(`SELECT pracownik, kategoria, wariant FROM Term_Pozycje WHERE tenant_id = ? AND rezerwacja_id = ? AND stan IN ('wykonana', 'przerwana')`, [rz.tenant_id, rz.id]).catch((e) => tickBlad(e, []));
         await sprawaUpsert(rz.tenant_id, { typ: 'E19', rezerwacja_id: rz.id, tytul: `Potwierdź rozliczenie — ${rz.klient_nazwa}`,
           opis: `Wizyta zakończona ${rz.koniec.slice(0, 16)}, brak powiązanej sprzedaży.`,
           dane: { pozycje: wyk, dotyczy: prIz(wyk) },
@@ -2724,11 +2750,11 @@ module.exports = (db, opts = {}) => {
     // Brak tabel v2 albo błąd jednego źródła nie zatrzymuje CRM; ten sam problem aktualizuje jedną sprawę (klucz E20:<zakup>), nie tworzy nowej co 5 minut.
     try {
       if (schematV2.gotowy && (tickSprawy.licznik = (tickSprawy.licznik || 0) + 1) % 5 === 0) {
-        const salony = await q(`SELECT tenant_id FROM Term_Ewidencja WHERE tryb IN ('aktywna','konczenie') AND przerwa_od IS NULL`).catch(() => []);
+        const salony = await q(`SELECT tenant_id FROM Term_Ewidencja WHERE tryb IN ('aktywna','konczenie') AND przerwa_od IS NULL`).catch((e) => tickBlad(e, []));
         for (const s of salony) {
           if (!await integracjaZakupow(s.tenant_id)) continue;
           const w = await wTransakcjiSalonu(s.tenant_id, async (conn, repo) => Z.domena.uzgodnijOkresowo(repo, await ctxZ(s.tenant_id, null, null), { limit: 200 })).catch(e => { log.error('[terminarz] uzgadnianie', s.tenant_id, e.message); return null; });
-          for (const x of ((w && w.zmiany) || [])) await sprawaZrodla(s.tenant_id, { ...x, kto: null }).catch(() => {});
+          for (const x of ((w && w.zmiany) || [])) await sprawaZrodla(s.tenant_id, { ...x, kto: null }).catch((e) => tickBlad(e, null));
         }
       }
     } catch (e) { log.error('[terminarz] uzgadnianie okresowe:', e.message); }
