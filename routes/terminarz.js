@@ -873,6 +873,19 @@ module.exports = (db, opts = {}) => {
       }
     } catch (e) { log.error('[terminarz] sprawaAutoZamknij:', e.message); }
   }
+  /** Odwrotność sprawaAutoZamknij: sprawa zamknięta automatem wraca na listę, gdy zdarzenie zostało cofnięte.
+   *  Używane przy cofaniu nieobecności (R8) — bez tego poller „tylko brakujące" nigdy nie wróci do tej wizyty. */
+  async function sprawaAutoWznow(tenant, klucz, powod) {
+    try {
+      const up = await q(`UPDATE Term_Sprawy SET stan = 'nowa', wlasciciel = NULL, wynik = NULL, rozwiazal = NULL, rozwiazano = NULL, zmieniono = NOW()
+                           WHERE tenant_id = ? AND klucz_dedup = ? AND stan IN ('rozwiazana', 'nieaktualna')`, [tenant, klucz]);
+      if (!up.affectedRows) return false;
+      const row = (await q(`SELECT id FROM Term_Sprawy WHERE tenant_id = ? AND klucz_dedup = ?`, [tenant, klucz]))[0];
+      if (row) await q(`INSERT INTO Term_Sprawy_Dziennik (tenant_id, sprawa_id, kto, akcja, opis) VALUES (?, ?, 'System', 'wznowiono', ?)`, [tenant, row.id, String(powod).slice(0, 500)]);
+      return true;
+    } catch (e) { log.error('[terminarz] sprawaAutoWznow:', e.message); return false; }
+  }
+
   // ═══════════ SZYBKA REZERWACJA DO WPŁATY ZADATKU (hold) — docs/terminarz-szybka-rezerwacja/SPECYFIKACJA.md ═══════════
   // Link do zadatku żyje w module zgód (routes/zgody.js, dodatek platnosc_link); terminarz tylko go zakłada i czyta jego stan.
   const zgodyNarzedzia = () => require('./zgody').narzedzia;
@@ -1313,6 +1326,11 @@ module.exports = (db, opts = {}) => {
         const typ = ['urlop', 'choroba', 'szkolenie', 'przerwa', 'serwis', 'zamkniete', 'inne'].includes(d.typ) ? d.typ : 'inne';
         const prac = d.pracownik_nieob ? normalizujNazwe(d.pracownik_nieob) : null;
         const zasob = d.zasob_id ? Number(d.zasob_id) : null;
+        // Plan 16.11, pozycja niska: bez osoby i bez zasobu wpis zamyka CAŁY salon. Przez interfejs tak się nie da,
+        // ale przez API owszem — i nikt by nie wiedział, czemu nagle nie ma terminów. Żądamy świadomej deklaracji,
+        // tym samym strażnikiem co przy rezerwacji technicznej (trm_blokada_zapisz).
+        const calySalonNieob = d.caly_salon === true || d.caly_salon === 'true' || d.caly_salon === 1;
+        if (!prac && !zasob && !calySalonNieob) throw new BladUzytkownika('Wskaż, kogo albo czego dotyczy nieobecność — albo zaznacz „cały salon".');
         if (prac && !(await pracownicy(tenant)).includes(prac)) throw bladNieznanyPracownik(prac);
         const dotk = await wizytyDotkniete(tenant, prac, zasob, od.slice(0, 10), do_.slice(0, 10), (p) => !S.nakladaja(S.naMin(p.start), S.naMin(p.koniec), S.naMin(od), S.naMin(do_)));
         // podgląd skutków bez zapisu (raport naprawczy T10) — ta sama lista co przy zapisie, nic nie zmienia w bazie
@@ -2224,6 +2242,10 @@ module.exports = (db, opts = {}) => {
         if (['anulowana', 'odrzucona', 'wygasla'].includes(rez.status)) throw new BladUzytkownika('Wizyta anulowana — nie oznaczamy obecności.');
         if (rez.obecnosc === d.obecnosc) return { status: 'success', powtorzenie: true, rezerwacja: rez };
         let przywrocone = 0;
+        // R9 (plan 16.11): cofnięcie ma przywrócić TYLKO to, co zdjęła nieobecność. Pozycje odpuszczone
+        // wcześniej ręcznie („klientka zrezygnowała z jednego zabiegu") mają zostać niewykonane.
+        const zdjetePrzezNieobecnosc = rez.pozycje.filter(x => x.stan === 'zaplanowana').map(x => x.id);
+        let przywroconeIdy = [];
         await wTransakcjiSalonu(tenant, async (conn, repo) => {
           await qc(conn, `UPDATE Term_Rezerwacje SET obecnosc = ?, obecnosc_zmieniono = NOW(), zmieniono = NOW() WHERE tenant_id = ? AND id = ?`, [d.obecnosc, tenant, rez.id]);
           if (d.obecnosc === 'nieobecny') {
@@ -2235,16 +2257,30 @@ module.exports = (db, opts = {}) => {
           } else if (rez.obecnosc === 'nieobecny') {
             // audyt 10.11.2026 (#3): cofnięcie pomyłkowej „nieobecności” — pozycje niewykonane, których nikt nie rozpoczął, wracają
             // do „zaplanowana”, a ich zajęcia ożywają, o ile termin nie został w międzyczasie zajęty przez inną wizytę.
-            const doPowrotu = rez.pozycje.filter(x => x.stan === 'niewykonana' && !x.start_fakt && !x.koniec_fakt);
+            // Lista z ostatniego wpisu „obecnosc → nieobecny". Starsze wizyty śladu nie mają —
+            // wtedy zachowujemy się jak dotąd (wracają wszystkie nierozpoczęte), bo to lepsze niż nic.
+            const slad = await qc(conn,
+              `SELECT po_json FROM Term_Historia WHERE tenant_id = ? AND rezerwacja_id = ? AND akcja = 'obecnosc'
+                 AND po_json LIKE '%"obecnosc":"nieobecny"%' ORDER BY id DESC LIMIT 1`, [tenant, rez.id]);
+            let tylkoTe = null;
+            try {
+              const j = slad && slad[0] ? JSON.parse(slad[0].po_json) : null;
+              if (j && Array.isArray(j.pozycje_zdjete)) tylkoTe = new Set(j.pozycje_zdjete.map(Number));
+            } catch (e) { tylkoTe = null; }
+            const doPowrotu = rez.pozycje.filter(x => x.stan === 'niewykonana' && !x.start_fakt && !x.koniec_fakt
+              && (!tylkoTe || tylkoTe.has(Number(x.id))));
             for (const x of doPowrotu) {
               const kol = await qc(conn, `SELECT z2.rezerwacja_id FROM Term_Zajecia z1 JOIN Term_Zajecia z2 ON z2.tenant_id = z1.tenant_id AND z2.typ_zasobu = z1.typ_zasobu AND z2.klucz = z1.klucz AND z2.aktywne = 1 AND z2.rezerwacja_id <> z1.rezerwacja_id AND z2.od < z1.do_ AND z2.do_ > z1.od WHERE z1.tenant_id = ? AND z1.pozycja_id = ? LIMIT 1`, [tenant, x.id]);
               if (kol.length) throw new BladUzytkownika(`Nie można cofnąć nieobecności: termin ${String(x.start_s || x.start).slice(11, 16)} (${x.kategoria}${x.wariant ? ' / ' + x.wariant : ''}) został już zajęty przez inną wizytę (nr ${kol[0].rezerwacja_id}). Przełóż tę wizytę na inny termin.`);
               await qc(conn, `UPDATE Term_Pozycje SET stan = 'zaplanowana' WHERE tenant_id = ? AND id = ? AND stan = 'niewykonana'`, [tenant, x.id]);
               await qc(conn, `UPDATE Term_Zajecia SET aktywne = 1 WHERE tenant_id = ? AND pozycja_id = ?`, [tenant, x.id]);
+              przywroconeIdy.push(x.id);
               przywrocone++;
             }
           }
-          await historia(conn, tenant, rez.id, imie, 'obecnosc', `${rez.obecnosc} → ${d.obecnosc}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`, { obecnosc: rez.obecnosc }, { obecnosc: d.obecnosc });
+          await historia(conn, tenant, rez.id, imie, 'obecnosc', `${rez.obecnosc} → ${d.obecnosc}${d.powod ? ' — ' + String(d.powod).slice(0, 200) : ''}`,
+            { obecnosc: rez.obecnosc },
+            d.obecnosc === 'nieobecny' ? { obecnosc: d.obecnosc, pozycje_zdjete: zdjetePrzezNieobecnosc } : { obecnosc: d.obecnosc });
         });
         if (d.obecnosc === 'nieobecny') {
           const zaplanowaneIdy = rez.pozycje.filter(p => p.stan === 'zaplanowana').map(p => p.id);
@@ -2256,6 +2292,9 @@ module.exports = (db, opts = {}) => {
         }
         if (przywrocone) {
           await sprawaAutoZamknij(tenant, `E06:${rez.id}`, 'Cofnięto nieobecność', 'nieaktualna');
+          // R8 (plan 16.11): sprawy „brakujące wykonanie" zamknięte przy nieobecności muszą wrócić na listę,
+          // inaczej poller „tylko brakujące" nigdy już nie upomni się o tę wizytę.
+          for (const pid of przywroconeIdy) await sprawaAutoWznow(tenant, `E13:poz:${pid}`, 'Cofnięto nieobecność — zabieg wrócił do planu');
           zapiszLog(tenant, 'TERMINARZ: COFNIĘCIE NIEOBECNOŚCI', imie, `${rez.numer} ${rez.klient_nazwa}: ${przywrocone} ${przywrocone === 1 ? 'zabieg wrócił' : 'zabiegi wróciły'} do planu`);
         }
         return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id), przywrocone,

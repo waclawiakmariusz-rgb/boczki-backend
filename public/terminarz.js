@@ -1872,7 +1872,15 @@
     if (!n.prefPrac || !n.pozycje.length || !TRM.dzien || TRM.dzien.data !== n.start.slice(0, 10)) return null;
     const dost = (TRM.dzien.dostepnosc || {})[n.prefPrac] || [];
     if (!dost.length) return null;
-    const koniecGrafiku = Math.max(...dost.map(x => minDnia(x.do) || 1440));
+    // R10 (plan 16.11): koniec grafiku bierzemy z GRAFIKU, nie z dostępności — dostępność ma już odjęte
+    // nieobecności, więc przy urlopie od południa „koniec grafiku" wypadał w środku wolnego.
+    const grafikDnia = (TRM.dane && Array.isArray(TRM.dane.grafik))
+      ? TRM.dane.grafik.filter(x => x.pracownik === n.prefPrac && Number(x.dzien_tyg) === dzienTyg(TRM.dzien.data) && !jestWyjatkiem(x)
+          && (!x.od_daty || x.od_daty <= TRM.dzien.data) && (!x.do_daty || x.do_daty >= TRM.dzien.data))
+      : [];
+    const koniecGrafiku = grafikDnia.length
+      ? Math.max(...grafikDnia.map(x => minDnia(x.do) || 1440))
+      : Math.max(...dost.map(x => minDnia(x.do) || 1440));
     const salon = TRM.dzien.salon || [];
     const koniecSalonu = salon.length ? Math.max(...salon.map(x => minDnia(x.do) || 1440)) : koniecGrafiku;
     const granica = Math.min(1440, Math.max(koniecGrafiku + 120, koniecSalonu));   // do 2 h po grafiku albo do zamknięcia salonu, co późniejsze
@@ -1885,6 +1893,16 @@
     const zajete = [];
     (TRM.dzien.rezerwacje || []).forEach(r => { if (anul.includes(r.status)) return; (r.pozycje || []).forEach(p => { if (p.pracownik === n.prefPrac && p.stan !== 'anulowana') zajete.push([minDnia(p.start), minDnia(p.koniec) || 1440]); }); });
     (TRM.dzien.zajecia || []).forEach(z => { if (z.typ_zasobu === 'pracownik' && String(z.klucz) === n.prefPrac) zajete.push([minDnia(z.od), minDnia(z.do) || 1440]); });
+    // R10: urlop, choroba i zamknięcie całego salonu też zajmują czas — wcześniej podpowiadaliśmy
+    // godziny leżące w środku nieobecności. Wielodniowe wpisy przycinamy do granic tego dnia.
+    (TRM.dzien.nieobecnosci || []).forEach(nb => {
+      const dotyczy = (!nb.pracownik && !nb.zasob_id) || String(nb.pracownik || '') === n.prefPrac;
+      if (!dotyczy) return;
+      const od = String(nb.od || ''), doNb = String(nb.do || nb.do_ || '');
+      const a = od.slice(0, 10) < TRM.dzien.data ? 0 : (minDnia(od) || 0);
+      const b = doNb.slice(0, 10) > TRM.dzien.data ? 1440 : (minDnia(doNb) || 1440);
+      if (b > a) zajete.push([a, b]);
+    });
     const koliduje = (a, b) => zajete.some(([x, y]) => a < y && b > x);
     const out = [];
     for (let m = od; m + trwanie <= granica && out.length < 6; m += krok) { const hh = String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0'); if (!zwykle.has(hh) && !koliduje(m, m + trwanie)) out.push(hh); }
@@ -2202,6 +2220,9 @@
     const wTrakcie = akt.find(p => p.stan === 'w_trakcie'), zapl = akt.find(p => p.stan === 'zaplanowana');
     const nazwa = (p) => esc(p.kategoria + (p.wariant ? ' · ' + p.wariant : ''));
     if (wTrakcie) return `<button class="trm-btn primary" onclick="TRM.pozStan(${wTrakcie.id},'wykonana')">Zakończ zabieg${akt.length > 1 ? ': ' + nazwa(wTrakcie) : ''}</button>`;
+    // R3 (plan 16.11): serwer umiał cofnąć nieobecność od 10.11, ale nie było czym tego uruchomić —
+    // przy „nieobecna" nie ma już pozycji zaplanowanych, więc warunek niżej nigdy nie przechodził.
+    if (r.obecnosc === 'nieobecny') return `<button class="trm-btn primary" onclick="TRM.obecnosc('przybyl')">Jednak przybyła (cofnij nieobecność)</button>`;
     if (zapl && r.obecnosc !== 'przybyl' && r.obecnosc !== 'spozniony') return `<button class="trm-btn primary" onclick="TRM.obecnosc('przybyl')">Oznacz przybycie</button>`;
     if (zapl) return `<button class="trm-btn primary" onclick="TRM.pozStan(${zapl.id},'w_trakcie')">${akt.some(p => p.stan === 'wykonana') ? 'Rozpocznij kolejny' : 'Rozpocznij zabieg'}${akt.length > 1 ? ': ' + nazwa(zapl) : ''}</button>`;
     return '';
@@ -2304,6 +2325,8 @@
     const d = await api('trm_obecnosc', { id: TRM.szcz.id, obecnosc: ob });
     if (d.status !== 'success') return toast('error', 'Nie zapisano', d.message);
     await przeladujSzczegoly(d.rezerwacja);
+    // serwer liczy, ile zabiegów wróciło do planu — recepcja ma to zobaczyć, a nie zgadywać z siatki
+    if (d.message) toast('success', d.przywrocone ? 'Cofnięto nieobecność' : 'Zapisano', d.message);
   };
   TRM.zapiszNotatke = async () => { const d = await api('trm_notatka', { id: TRM.szcz.id, notatka: el('trm-s-notatka').value }); if (d.status === 'success') toast('success', 'Zapisano notatkę'); else toast('error', 'Nie zapisano', d.message); };
 
