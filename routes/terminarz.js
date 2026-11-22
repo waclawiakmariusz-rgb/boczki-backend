@@ -2114,6 +2114,22 @@ module.exports = (db, opts = {}) => {
         const doZwolnienia = rez.pozycje.filter(p => p.stan !== 'anulowana');
         const opisPoz = doZwolnienia.map(p => p.kategoria + (p.wariant ? ' / ' + p.wariant : '')).join(', ');
 
+        // R4 (plan poprawy 16.11): trzymany termin kasujemy tą samą drogą co odwołanie (trm_anuluj),
+        // inaczej link do zadatku zostawał aktywny i klientka mogła zapłacić za skasowaną wizytę.
+        if (rez.status === 'do_wplaty') {
+          await zakonczHold(tenant, rez, 'anulowana', imie, 'skasowano: ' + powod);
+          await wTransakcjiSalonu(tenant, async (conn) => {
+            await qc(conn,
+              `UPDATE Term_Rezerwacje SET usunieta = 1, usunieta_kiedy = NOW(), usunieta_przez = ?, usunieta_powod = ?, wersja = wersja + 1, zmieniono = NOW()
+                WHERE tenant_id = ? AND id = ?`,
+              [imie || null, powod, tenant, rez.id]);
+            await historia(conn, tenant, rez.id, imie, 'usunieto', `Skasowano trzymany termin (${opisPoz || 'bez pozycji'}) — ${powod}`, null, { powod });
+          });
+          zapiszLog(tenant, 'TERMINARZ: SKASOWANIE WIZYTY', imie, `${rez.numer} ${rez.klient_nazwa} (trzymany termin): ${powod}`);
+          return { status: 'success', rezerwacja: await rezerwacja(tenant, rez.id),
+            message: 'Wizyta skasowana. Link do zadatku przestał działać.' };
+        }
+
         const zwolnione = await wTransakcjiSalonu(tenant, async (conn, repo) => {
           const ctx = schematV2.gotowy ? await ctxZ(tenant, imie, r) : null; let zw = 0;
           for (const p of doZwolnienia) {

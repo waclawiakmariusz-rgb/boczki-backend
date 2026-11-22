@@ -23,14 +23,14 @@ const KOLUMNY_IMIENIA = [
   ['Term_Realizacje', 'wykonawca_fakt'],
   ['Term_Sprawy_Odczyt', 'pracownik'],
   ['Sprzedaz', 'sprzedawca'],
-  ['Pracownicy_Targety', 'pracownik'],
-  ['Pracownicy_Konsultacja', 'imie'],
-  ['Zadania_przypisani', 'przypisany'],
+  ['Pracownicy_targety', 'pracownik'],
+  ['Pracownicy_konsultacja', 'imie'],
+  ['Zadania_Przypisani', 'przypisany'],
   ['Retencja', 'pracownik'],
   ['Lojalnosc_Punkty', 'pracownik'],
   ['FotoSesje', 'pracownik'],
   ['FotoZdjecia', 'pracownik'],
-  ['Dokumenty_dodatkowe_klienta', 'pracownik'],
+  ['Dokumenty_Dodatkowe_Klienta', 'pracownik'],
   ['Rejestr_RODO', 'pracownik'],
   ['`Rejestr_Oświadczeń`', 'pracownik'],
 ];
@@ -1261,7 +1261,15 @@ module.exports = (db) => {
               const kroki = KOLUMNY_IMIENIA.map(([tabela, kolumna]) => (dalej) => {
                 // TRIM po obu stronach: wartość w bazie mogła zostać zapisana ze spacją na końcu (stare formularze)
                 conn.query(`UPDATE ${tabela} SET ${kolumna} = ? WHERE tenant_id = ? AND TRIM(${kolumna}) = ?`, [nowe, tenant_id, stare], (e, r) => {
-                  if (e) { if (e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR') return dalej(null); return dalej(e); }
+                  if (e) {
+                    // R2 (16.11): brak tabeli albo kolumny NIE może przejść bez śladu — tak właśnie cztery
+                    // tabele latami nie dostawały nowego imienia na produkcji. Pomijamy, ale głośno.
+                    if (e.code === 'ER_NO_SUCH_TABLE' || e.code === 'ER_BAD_FIELD_ERROR') {
+                      console.warn(`[edit_employee] pominięto ${tabela}.${kolumna}: ${e.code} — sprawdź nazwę tabeli/kolumny w kodzie`);
+                      return dalej(null);
+                    }
+                    return dalej(e);
+                  }
                   if (r && r.affectedRows) zmieniono[tabela.replace(/`/g, '') + '.' + kolumna] = r.affectedRows;
                   dalej(null);
                 });
