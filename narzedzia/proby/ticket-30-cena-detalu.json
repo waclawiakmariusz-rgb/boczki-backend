@@ -1,0 +1,124 @@
+{
+  "nazwa": "ticket-30-cena-detalu",
+  "sekcja": "sprzedaz",
+  "korzen": "#items-container",
+  "przechwyc": [
+    "add_multi_sale",
+    "add_sale"
+  ],
+  "confirmOdpowiedz": false,
+  "kroki": [
+    {
+      "viewport": [
+        1500,
+        950
+      ]
+    },
+    {
+      "js": "inicjalizujMultiSprzedaz(); 'formularz sprzedazy gotowy'",
+      "opis": "przygotowanie formularza"
+    },
+    {
+      "czekaj": 600
+    },
+    {
+      "js": "(function(){ var r=document.querySelector('.item-row'); r.querySelector('input[value=\"Kosmetyk\"]').click(); return 'przelaczono na DETAL'; })()",
+      "opis": "przelaczenie wiersza na detal"
+    },
+    {
+      "czekaj": 500
+    },
+    {
+      "js": "(function(){ const s=document.querySelector('.item-row .item-prod'); Array.from(s.options).map(o=>o.value).filter(v=>v.indexOf('Proba30')===0).join(' | ') })()",
+      "opis": "produkty proby na liscie"
+    },
+    {
+      "js": "(function(){ var sel=document.querySelector('.item-row .item-prod'); sel.value='Proba30 Krem Anti-Ageing SPF 50'; sel.dispatchEvent(new Event('change')); return 'wybrano: Proba30 Krem Anti-Ageing SPF 50'; })()",
+      "opis": "wybor produktu z rozjechana nazwa"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "js": "document.querySelector('.item-row .item-cena-uwaga').textContent",
+      "opis": "KOMUNIKAT pod cena"
+    },
+    {
+      "js": "JSON.stringify({cena: document.querySelector('.item-row .item-unit-price').value, razem: document.querySelector('.item-row .item-price').value})",
+      "opis": "cena i suma"
+    },
+    {
+      "js": "document.querySelector('.item-row').scrollIntoView({block:'center'}); 'przewiniete'"
+    },
+    {
+      "zrzut": "detal-brak-ceny-komunikat"
+    },
+    {
+      "js": "(function(){ var b=document.querySelector('.item-row .item-cena-uwaga'); return b.style.display+' / '+b.textContent.length+' znakow'; })()",
+      "opis": "sprawdzenie: komunikat widoczny"
+    },
+    {
+      "sprawdz": "document.querySelector('.item-row .item-cena-uwaga').style.display === 'block'",
+      "opis": "ostrzezenie jest widoczne"
+    },
+    {
+      "sprawdz": "document.querySelector('.item-row .item-unit-price').value === ''",
+      "opis": "cena pozostaje pusta, nie zero"
+    },
+    {
+      "js": "(function(){ var sel=document.querySelector('.item-row .item-prod'); sel.value='Proba30 Krem Dobry'; sel.dispatchEvent(new Event('change')); return 'wybrano: Proba30 Krem Dobry'; })()",
+      "opis": "wybor produktu dopasowanego"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "js": "JSON.stringify({cena: document.querySelector('.item-row .item-unit-price').value, razem: document.querySelector('.item-row .item-price').value, uwaga: document.querySelector('.item-row .item-cena-uwaga').style.display})",
+      "opis": "cena uzupelniona z cennika"
+    },
+    {
+      "zrzut": "detal-cena-z-cennika"
+    },
+    {
+      "sprawdz": "parseFloat(document.querySelector('.item-row .item-unit-price').value) === 199",
+      "opis": "cena 199 zl z cennika"
+    },
+    {
+      "sprawdz": "document.querySelector('.item-row .item-cena-uwaga').style.display === 'none'",
+      "opis": "ostrzezenie znika przy poprawnym dopasowaniu"
+    },
+    {
+      "ciemny": true
+    },
+    {
+      "js": "(function(){ var sel=document.querySelector('.item-row .item-prod'); sel.value='Proba30 Krem Anti-Ageing SPF 50'; sel.dispatchEvent(new Event('change')); return 'wybrano: Proba30 Krem Anti-Ageing SPF 50'; })()"
+    },
+    {
+      "czekaj": 700
+    },
+    {
+      "zrzut": "detal-brak-ceny-ciemny"
+    },
+    {
+      "ciemny": false
+    },
+    {
+      "viewport": [
+        390,
+        844
+      ]
+    },
+    {
+      "js": "document.querySelector('.item-row').scrollIntoView({block:'center'}); 'przewiniete'"
+    },
+    {
+      "czekaj": 400
+    },
+    {
+      "zrzut": "detal-brak-ceny-telefon"
+    },
+    {
+      "pomiar": true
+    }
+  ]
+}
