@@ -185,6 +185,9 @@
 
   function szkielet() {
     const root = el('trm-root');
+    // R17: ponowne wejście w sekcję przebudowywało cały widok i kasowało otwarty formularz nowej wizyty
+    // razem z wpisanymi danymi. Szkielet stoi już na ekranie — nie ma po co go odtwarzać.
+    if (TRM.panel === 'nowa' && root && root.querySelector('#trm-main')) { zapiszSzkic(); return; }
     // R04: przełącznik widoków kalendarza w jednej grupie; Ustawienia modułu jako osobne wejście (nie „kolejny widok dnia”)
     // Widok „Tydzień" (siatka tygodnia JEDNEJ osoby, jak „Dzień", ale kolumny = dni) — zdjęty 21.10.2026,
     // PRZYWRÓCONY 3.11.2026 na prośbę właściciela („z taką samą siatką zabiegów jak w 'dziś' … tylko konkretnej osoby").
@@ -1368,7 +1371,7 @@
     // D04: wizyta otwarta ze sprawy ma drogę powrotu do tej sprawy (kontekst listy zostaje w TRM.sprawy)
     if (TRM.panel === 'szczegoly' && TRM.szcz && TRM.szcz.powrotSprawa) { const head = p.querySelector('.trm-panel-head'); if (head) head.insertAdjacentHTML('afterend', `<button class="trm-btn link sm" onclick="TRM.otworzSprawe(${TRM.szcz.powrotSprawa})">← wróć do sprawy</button>`); }
   }
-  TRM.panelZamknij = () => { czyscSzkic();   /* #23: świadome zamknięcie formularza kasuje szkic; zostaje tylko po wygaśnięciu sesji */ document.querySelectorAll('.trm-propozycja, .trm-szkic').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); document.body.classList.remove('trm-panel-otwarty', 'trm-pomoc-otwarta'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
+  TRM.panelZamknij = () => { if (TRM.panel === 'nowa') czyscSzkic();   /* #23 + R12c: szkic kasuje tylko świadome zamknięcie FORMULARZA, nie dowolnego panelu */ document.querySelectorAll('.trm-propozycja, .trm-szkic').forEach(x => x.remove()); const p = el('trm-panel'), b = el('trm-body'); if (p) { p.hidden = true; p.innerHTML = ''; } if (b) b.classList.remove('z-panelem'); document.body.classList.remove('trm-panel-otwarty', 'trm-pomoc-otwarta'); TRM.panel = null; TRM.szcz = null; TRM.nowa = null; document.querySelectorAll('.trm-karta.akt').forEach(k => k.classList.remove('akt')); };
   // E01: pomoc (Esti) jako mała akcja nagłówka panelu — pływający widget hosta jest schowany, dopóki panel jest otwarty (CSS: body.trm-panel-otwarty)
   const naglowekPanelu = (tytul, sub) => `<div class="trm-panel-head"><div><h2>${tytul}</h2>${sub ? `<div class="muted small">${sub}</div>` : ''}</div><div class="trm-row" style="gap:6px"><button class="trm-x trm-pomoc-btn" onclick="TRM.pomocOtworz()" title="Pomoc (Esti)" aria-label="Pomoc">?</button><button class="trm-x" onclick="TRM.panelZamknij()" title="Zamknij" aria-label="Zamknij">✕</button></div></div>`;
   TRM.pomocOtworz = () => { document.body.classList.add('trm-pomoc-otwarta'); const btn = document.getElementById('est-help-btn'), pan = document.getElementById('est-help-panel'); if (btn && pan && !pan.classList.contains('est-open')) btn.click(); };
@@ -1615,8 +1618,8 @@
       <details class="trm-wiecej" ${innaOtwarta ? 'open' : ''} ontoggle="TRM.nowa&&(TRM.nowa.innaGodzina=this.open)"><summary>Inna godzina</summary><div class="trm-field"><label>Godzina rozpoczęcia</label><input type="time" id="trm-n-godz" step="300" value="${n.godzina ? n.start.slice(11, 16) : ''}" onchange="TRM.nowaStart()"></div></details>
       ${wynikHtml2}
       <details class="trm-wiecej" ${n.notatka || n.kanal !== 'recepcja' ? 'open' : ''}><summary>Notatka i kanał</summary>
-        <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value">${esc(n.notatka)}</textarea></div>
-        <div class="trm-field"><label>Kanał</label><select onchange="TRM.nowa.kanal=this.value">${Object.entries(KANAL_LABEL).filter(([k]) => !['online', 'klub', 'import'].includes(k)).map(([k, v]) => `<option value="${k}" ${n.kanal === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        <div class="trm-field"><label>Notatka (wewnętrzna)</label><textarea rows="2" onchange="TRM.nowa.notatka=this.value; TRM.szkicZapisz();">${esc(n.notatka)}</textarea></div>
+        <div class="trm-field"><label>Kanał</label><select onchange="TRM.nowa.kanal=this.value; TRM.szkicZapisz();">${Object.entries(KANAL_LABEL).filter(([k]) => !['online', 'klub', 'import'].includes(k)).map(([k, v]) => `<option value="${k}" ${n.kanal === k ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
       </details>
       <div id="trm-n-wynik"></div>`;
   }
@@ -1664,11 +1667,11 @@
   TRM.renderNowaUslugi = () => { const fr = (TRM.nowa.filtrUsl || '').toLowerCase(); const l = el('trm-usl-lista'); if (l) l.innerHTML = listaUslugHtml(TRM.dane.uslugi.filter(u => !fr || nazwaUslugi(u).toLowerCase().includes(fr)).slice(0, 60)); };
   let szukajT = null;
   TRM.nowaSzukaj = (v) => { TRM.nowa.fraza = v; clearTimeout(szukajT); szukajT = setTimeout(async () => { const d = await api('trm_szukaj_klienta', { fraza: v }); if (!TRM.nowa) return; if (d.status !== 'success') { toast('error', 'Nie udało się wyszukać klientki', d.message); return; }   /* audyt 10.11.2026 (#21): błąd serwera nie może wyglądać jak „nie ma takiej klientki” */ TRM.nowa.wyniki = d.klienci || []; const w = el('trm-k-wyniki'); if (w) { w.hidden = !TRM.nowa.wyniki.length; w.innerHTML = klientWynikiHtml(TRM.nowa.wyniki); } }, 250); };
-  TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
+  TRM.nowaKlient = (i) => { const n = TRM.nowa; if (!n) return; n.klient = i == null ? null : n.wyniki[i]; n.zakupy = null; n.pozycje = n.pozycje.filter(p => !p.zakup_skladnik_id); /* zmiana klientki czyści obce zakupy (A03) */ nowaResetDostep(n); renderNowa(); zapiszSzkic();   /* R12b */ if (i == null) setTimeout(() => { const f = el('trm-k-fraza'); if (f) f.focus(); }, 30); else { nowaLadujZakupy(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } } };
   // czy krok „Termin” jest aktualnie widoczny (tryb szybki pokazuje wszystko na raz)
   const nowaNaTerminie = (n) => n && (n.szybka || n.krok === 3);
   const nowaResetDostep = (n) => { n.wynik = null; n.dostep = null; n.sloty = null; n.mimoGrafiku = false; };   // #20: zgoda „mimo grafiku” nie przenosi się na inny termin/osobę
-  TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
+  TRM.nowaDodajPoz = (id) => { const n = TRM.nowa; const u = usluga(id); if (!n || !u) return; const pref = n.prefPrac || n.domyslny; n.pozycje.push({ usluga_id: u.id, pracownik: pref && (!u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(pref)) ? pref : null, czas_min: u.czas_min }); n.filtrUsl = ''; nowaResetDostep(n); renderNowa(); zapiszSzkic();   /* R12b */ nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUsunPoz = (i) => { const n = TRM.nowa; if (!n) return; n.pozycje.splice(i, 1); nowaResetDostep(n); renderNowa(); nowaLadujHistorie(); if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaUniewaznij = () => { const n = TRM.nowa; if (!n) return; nowaResetDostep(n); const w = el('trm-n-wynik'); if (w) w.innerHTML = ''; if (nowaNaTerminie(n)) { nowaLadujSloty(); TRM.nowaZmiana(); } };
   TRM.nowaPrefPrac = (v) => { const n = TRM.nowa; if (!n) return; n.prefPrac = v || ''; n.pozycje.forEach(p => { const u = usluga(p.usluga_id); p.pracownik = v && (!u || !u.pracownicy || !u.pracownicy.length || u.pracownicy.includes(v)) ? v : null; }); nowaResetDostep(n); renderNowa(); nowaLadujSloty(); TRM.nowaZmiana(); };
@@ -1708,6 +1711,7 @@
     } catch (e) { /* tryb prywatny albo pełny magazyn — szkic to wygoda, nie wymóg */ }
   }
   function czyscSzkic() { try { sessionStorage.removeItem(SZKIC_KLUCZ); } catch (e) {} }
+  TRM.szkicZapisz = () => zapiszSzkic();   /* R12b: wołane z onchange notatki i kanału */
   function odczytajSzkic() {
     try {
       const s = JSON.parse(sessionStorage.getItem(SZKIC_KLUCZ) || 'null');
@@ -1715,7 +1719,22 @@
       return s;
     } catch (e) { return null; }
   }
-  TRM.szkicPrzywroc = () => { const s = odczytajSzkic(); czyscSzkic(); if (!s) return odswiez({ cicho: true }); TRM.data = s.data || TRM.data; TRM.nowa = { ...s.nowa, zapis: false, wyniki: [] }; renderNowa(); TRM.nowaZmiana(true); const p = el('trm-pasek-szkic'); if (p) p.remove(); };
+  TRM.szkicPrzywroc = () => {
+    const s = odczytajSzkic(); czyscSzkic();
+    // R12c (plan 16.11): pasek znika ZAWSZE, nawet gdy szkicu już nie ma — wcześniej zostawał martwy.
+    const pasek = el('trm-pasek-szkic'); if (pasek) pasek.remove();
+    if (!s) return odswiez({ cicho: true });
+    // R12a: bez TRM.panel reszta kodu nie wiedziała, że formularz jest otwarty, więc siatka i sloty
+    // zostawały z poprzedniego dnia, a Escape i zamykanie panelu nie działały.
+    TRM.data = s.data || TRM.data;
+    const poleData = el('trm-data'); if (poleData) poleData.value = TRM.data;
+    TRM.panel = 'nowa';
+    TRM.nowa = { ...s.nowa, zapis: false, wyniki: [] };
+    renderNowa();
+    TRM.nowaZmiana(true);
+    if (nowaNaTerminie(TRM.nowa)) nowaLadujSloty();
+    odswiez({ cicho: true });
+  };
   TRM.szkicOdrzuc = () => { czyscSzkic(); const p = el('trm-pasek-szkic'); if (p) p.remove(); };
   function paskiSzkicu() {
     const s = odczytajSzkic(); if (!s || TRM.nowa) return '';
@@ -3204,7 +3223,12 @@
     else if (e.key === 'ArrowLeft') TRM.idz(-1);
     else if (e.key === 'ArrowRight') TRM.idz(1);
   });
-  window.addEventListener('resize', () => { if (el('trm-main') && (TRM.widok === 'dzien') && el('terminarz') && el('terminarz').classList.contains('active')) odswiez(); });
+  // R17 (plan 16.11): przeciąganie okna wołało odswiez() przy KAŻDYM pikselu — dziesiątki zapytań pod rząd.
+  let resizeT = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeT);
+    resizeT = setTimeout(() => { if (el('trm-main') && (TRM.widok === 'dzien') && el('terminarz') && el('terminarz').classList.contains('active')) odswiez(); }, 300);
+  });
   // lekkie odświeżanie dzwonka powiadomień, tylko gdy sekcja terminarza jest aktywna (bez pollingu w tle poza nią)
   setInterval(() => { if (el('terminarz') && el('terminarz').classList.contains('active') && el('trm-dzwonek-licz')) odswiezLicznikSpraw(); }, 45000);
   // po załadowaniu pliku (defer): menu mogło zostać policzone zanim ten plik się wczytał

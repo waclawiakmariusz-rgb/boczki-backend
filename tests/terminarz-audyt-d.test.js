@@ -114,7 +114,10 @@ describe('front terminarza — paczka D', () => {
     expect(F).toContain('TRM.szkicOdrzuc');
     expect(F).toContain('${paskiSzkicu()}');
     expect(F).toContain('TRM.nowa = null; TRM.panel = null; czyscSzkic();');
-    expect(F).toContain('TRM.panelZamknij = () => { czyscSzkic();');
+    // R12c (16.11): szkic kasuje tylko swiadome zamkniecie FORMULARZA, nie dowolnego panelu —
+    // wczesniej zamkniecie szczegolow wizyty kasowalo szkic i zostawialo martwy pasek „Przywroc”.
+    expect(F).toContain("TRM.panelZamknij = () => { if (TRM.panel === 'nowa') czyscSzkic();");
+    expect(F).not.toContain('TRM.panelZamknij = () => { czyscSzkic();');
     expect(F).toContain('SZKIC_WAZNY_MS = 30 * 60 * 1000');
   });
 });

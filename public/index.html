@@ -13125,9 +13125,15 @@ function wyloguj() {
 // Jeśli jednak chcemy wylogować urządzenie (do loginu bazy)
 // Jeśli chcemy wylogować urządzenie (do loginu bazy)
 function wylogujGlowne() {
+    // R5 (plan 16.11): niedokończona wizyta ma przeżyć wygaśnięcie sesji — czyli dokładnie ten moment.
+    // Wcześniej sessionStorage.clear() kasował szkic razem z sesją i pasek „Przywróć" nie miał czego pokazać.
+    let szkicWizyty = null;
+    try { szkicWizyty = sessionStorage.getItem('trm_szkic_wizyty'); } catch (e) {}
+
     // Czyścimy CAŁĄ pamięć przeglądarki dla tej aplikacji (ID, sesje, role)
     localStorage.clear();
     sessionStorage.clear();
+    try { if (szkicWizyty) sessionStorage.setItem('trm_szkic_wizyty', szkicWizyty); } catch (e) {}
 
     // Odświeżamy stronę
     location.reload();
