@@ -48,7 +48,9 @@ module.exports = (db) => {
     } else if (action === 'get_rodo') {
       const id = req.query.id;
       db.query(
-        `SELECT data_podpisu, wizerunek, newsletter_sms, kontakt_tel, newsletter_email, booksy_sms, email_adres, link_pdf, email_kontaktowy FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`,
+        // Jeden ustalony wpis na klientkę (najstarszy) — ten sam, który edytuje save_rodo i czyta get_all_rodo.
+        // 12 klientek Boczków ma po dwa wpisy z importów (kwiecień 2026); bez ORDER BY wybór był przypadkowy.
+        `SELECT data_podpisu, wizerunek, newsletter_sms, kontakt_tel, newsletter_email, booksy_sms, email_adres, link_pdf, email_kontaktowy FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? ORDER BY utworzono_w ASC, id ASC LIMIT 1`,
         [tenant_id, id],
         (err, rows) => {
           if (err || !rows.length) return res.json({ znaleziona: false });
@@ -124,10 +126,11 @@ module.exports = (db) => {
     } else if (action === 'get_all_rodo') {
       db.query(
         // Ticket #32 (Ania, 24.11.2026): Retencja czyta też zgodę marketingową SMS (newsletter_sms) i pokazuje,
-        // którą zgodę klientka ma. Najnowszy wpis pierwszy — przy dwóch wpisach tej samej osoby front bierze
-        // pierwszy z listy, czyli aktualną zgodę, a nie przypadkowy.
+        // którą zgodę klientka ma. Kolejność NAJSTARSZY wpis pierwszy — dokładnie ten, który pokazuje i edytuje
+        // profil klientki (get_rodo / save_rodo). Regresja z 24.11 19:10: „najnowszy pierwszy” brało przy
+        // zdublowanych wpisach kopię z importu z TAK, choć w profilu zgody były już wycofane (pani Urban, 7 osób).
         `SELECT id_klienta, kontakt_tel, newsletter_sms FROM Rejestr_RODO WHERE tenant_id = ?
-          ORDER BY data_podpisu DESC, utworzono_w DESC`,
+          ORDER BY utworzono_w ASC, id ASC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
@@ -156,7 +159,7 @@ module.exports = (db) => {
     if (action === 'save_rodo') {
       // Sprawdź czy istnieje wpis dla tego klienta
       db.query(
-        `SELECT id FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`,
+        `SELECT id FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? ORDER BY utworzono_w ASC, id ASC LIMIT 1`,
         [tenant_id, d.id_klienta],
         (err, rows) => {
           const values = [
@@ -176,7 +179,16 @@ module.exports = (db) => {
               [...values, tenant_id, rows[0].id],
               (err2) => {
                 if (err2) return res.json({ status: 'error', message: err2.message });
-                return res.json({ status: 'success', message: 'Zaktualizowano zgody, link i email!' });
+                // Zgody dotyczą osoby, nie wpisu: pozostałe (zdublowane) wpisy tej klientki dostają te same zgody,
+                // żeby żaden ekran nie czytał już wycofanej zgody z kopii. Dokument i e-mail zostają bez zmian.
+                db.query(
+                  `UPDATE Rejestr_RODO SET wizerunek = ?, newsletter_sms = ?, kontakt_tel = ?, newsletter_email = ?, booksy_sms = ?, pracownik = ? WHERE tenant_id = ? AND id_klienta = ? AND id <> ?`,
+                  [d.wizerunek || 'NIE', d.news_sms || 'NIE', d.kontakt_tel || 'NIE', d.news_email || 'NIE', d.booksy_sms || 'Nie dotyczy', d.pracownik || '', tenant_id, d.id_klienta, rows[0].id],
+                  (err3) => {
+                    if (err3) return res.json({ status: 'error', message: 'Zgody zapisane, ale nie udało się ujednolicić zdublowanych wpisów: ' + err3.message });
+                    return res.json({ status: 'success', message: 'Zaktualizowano zgody, link i email!' });
+                  }
+                );
               }
             );
           } else {

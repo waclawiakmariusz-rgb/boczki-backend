@@ -212,13 +212,73 @@ describe('ticket #32 — GET /api/rodo?action=get_all_rodo', () => {
         ]);
     });
 
-    test('zapytanie czyta newsletter_sms i oddaje najnowszy wpis pierwszy (dwa wpisy tej samej osoby)', async () => {
+    test('zapytanie czyta newsletter_sms i oddaje wpisy w kolejności profilu: najstarszy pierwszy', async () => {
         const db = mockDb([]);
         await request(app(db)).get('/api/rodo').query({ action: 'get_all_rodo', tenant_id: 'salon-test' });
         const sql = String(db.query.mock.calls[0][0]).replace(/\s+/g, ' ');
         expect(sql).toContain('newsletter_sms');
         expect(sql).toContain('kontakt_tel');
-        expect(sql).toMatch(/ORDER BY data_podpisu DESC, utworzono_w DESC/);
+        expect(sql).toMatch(/ORDER BY utworzono_w ASC, id ASC/);
         expect(db.query.mock.calls[0][1]).toEqual(['salon-test']);
+    });
+});
+
+// Regresja z 24.11.2026 19:10 (zgłoszenie recepcji tego samego wieczoru): pani U. ma dwa wpisy RODO — pierwszy, który
+// pokazuje profil i w którym recepcja wycofała zgody (NIE), i kopię z importu 9.04 z TAK. „Najnowszy wpis pierwszy”
+// w get_all_rodo wzięło kopię i klientka wróciła na listę retencji, choć w profilu zgód już nie miała. U Boczków 7 osób.
+describe('ticket #32b — zdublowane wpisy RODO: lista czyta ten sam wpis co profil, zapis obejmuje wszystkie', () => {
+    function mockDbSql(odpowiedzi) {
+        return { query: jest.fn((sql, paramsOrCb, maybeCb) => {
+            const cb = typeof paramsOrCb === 'function' ? paramsOrCb : maybeCb;
+            const klucz = Object.keys(odpowiedzi).find((k) => String(sql).includes(k));
+            if (cb) cb(null, klucz ? odpowiedzi[klucz] : []);
+        }) };
+    }
+    function app(db) { const a = express(); a.use(express.json()); a.use('/api', require('../routes/rodo')(db)); return a; }
+
+    test('BŁĄD, KTÓRY NAPRAWIAMY: dwa wpisy tej samej osoby — lista bierze pierwszy, czyli ten z profilu (wycofane zgody)', () => {
+        const w = uruchom({ rodo: [
+            { id_klienta: '2', telefon_zgoda: 'NIE', sms_zgoda: 'NIE' },   // wpis profilu, zgody wycofane w sobotę
+            { id_klienta: '2', telefon_zgoda: 'TAK', sms_zgoda: 'TAK' },   // kopia z importu, nikt jej nie edytował
+        ] });
+        expect(w.nazwy).not.toContain('Sms Tylko');
+    });
+
+    test('get_rodo (profil), save_rodo (zapis) i get_all_rodo (lista) używają tej samej kolejności wpisów', async () => {
+        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [{ id: 'pierwszy' }] });
+        const a = app(db);
+        await request(a).get('/api/rodo').query({ action: 'get_rodo', tenant_id: 'salon-test', id: '1143' });
+        await request(a).get('/api/rodo').query({ action: 'get_all_rodo', tenant_id: 'salon-test' });
+        await request(a).post('/api/rodo').send({ action: 'save_rodo', tenant_id: 'salon-test', id_klienta: '1143', kontakt_tel: 'NIE', news_sms: 'NIE' });
+        const sqle = db.query.mock.calls.map((c) => String(c[0]).replace(/\s+/g, ' '));
+        const czytajace = sqle.filter((s) => /^SELECT .*FROM Rejestr_RODO/.test(s));
+        expect(czytajace.length).toBe(3);
+        for (const s of czytajace) expect(s).toMatch(/ORDER BY utworzono_w ASC, id ASC/);
+    });
+
+    test('save_rodo: po zapisie wpisu profilu te same zgody trafiają do pozostałych wpisów tej klientki', async () => {
+        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [{ id: 'pierwszy' }] });
+        const res = await request(app(db)).post('/api/rodo').send({
+            action: 'save_rodo', tenant_id: 'salon-test', id_klienta: '1143', pracownik: 'Ania',
+            kontakt_tel: 'NIE', news_sms: 'NIE', news_email: 'NIE', wizerunek: 'TAK',
+        });
+        expect(res.body.status).toBe('success');
+        const updaty = db.query.mock.calls.filter((c) => /^UPDATE Rejestr_RODO/.test(String(c[0])));
+        expect(updaty.length).toBe(2);
+        const [glowny, reszta] = updaty;
+        expect(String(glowny[0])).toContain('WHERE tenant_id = ? AND id = ?');
+        expect(glowny[1].slice(-2)).toEqual(['salon-test', 'pierwszy']);
+        expect(String(reszta[0]).replace(/\s+/g, ' ')).toContain('WHERE tenant_id = ? AND id_klienta = ? AND id <> ?');
+        expect(reszta[1]).toEqual(['TAK', 'NIE', 'NIE', 'NIE', 'Nie dotyczy', 'Ania', 'salon-test', '1143', 'pierwszy']);
+        expect(String(reszta[0])).not.toContain('link_pdf');
+        expect(String(reszta[0])).not.toContain('email_kontaktowy');
+    });
+
+    test('save_rodo bez istniejącego wpisu nadal tylko dodaje nowy (bez ujednolicania)', async () => {
+        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [] });
+        const res = await request(app(db)).post('/api/rodo').send({ action: 'save_rodo', tenant_id: 'salon-test', id_klienta: '9', kontakt_tel: 'TAK' });
+        expect(res.body.status).toBe('success');
+        expect(db.query.mock.calls.filter((c) => /^UPDATE Rejestr_RODO/.test(String(c[0]))).length).toBe(0);
+        expect(db.query.mock.calls.filter((c) => /^INSERT INTO Rejestr_RODO/.test(String(c[0]))).length).toBe(1);
     });
 });
