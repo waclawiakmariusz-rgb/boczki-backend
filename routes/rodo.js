@@ -14,6 +14,75 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
 
+  // ── Dziennik Zdarzeń dla zgód (polecenie właściciela 24.11.2026: „każdorazowo zmiany zgód mają zapisywać się
+  // w rejestrze"). Rejestr_RODO nie ma daty zmiany, więc jedynym śladem „kto, komu, kiedy, co" jest wpis w Logi —
+  // zawsze pełnym zdaniem, z wartością przed i po. Zapis zgód nie zależy od powodzenia wpisu (zapiszLog nie rzuca).
+  const POLA_ZGOD = [
+    ['kontakt_tel', 'kontakt_tel', 'kontakt telefoniczny'],
+    ['newsletter_sms', 'news_sms', 'SMS marketingowy'],
+    ['newsletter_email', 'news_email', 'e-mail marketingowy'],
+    ['wizerunek', 'wizerunek', 'wizerunek'],
+    ['booksy_sms', 'booksy_sms', 'Booksy SMS'],
+  ];
+  const DOMYSLNE_ZGODY = { kontakt_tel: 'NIE', news_sms: 'NIE', news_email: 'NIE', wizerunek: 'NIE', booksy_sms: 'Nie dotyczy' };
+  const tekst = (v) => String(v == null ? '' : v).trim();
+  const emailTekst = (v) => { const t = tekst(v).toLowerCase(); return t === 'nie dotyczy' ? '' : t; };
+  const dataTekst = (v) => {
+    if (v instanceof Date) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+    const t = tekst(v); return /^\d{4}-\d{2}-\d{2}/.test(t) ? t.slice(0, 10) : t;
+  };
+  const kiedy = () => {
+    const d = new Date();
+    const f = (o) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(d);
+    return `${f({ day: '2-digit', month: '2-digit', year: 'numeric' })} o ${f({ hour: '2-digit', minute: '2-digit' })}`;
+  };
+  function zdanieZmian(naglowek, kto, nowe, stare, inneZmiany, czego) {
+    if (!stare) return `${naglowek} Zapisane po raz pierwszy ${kiedy()} (zapis: ${kto}): ${nowe.map(([e, v]) => `${e} ${v}`).join(', ')}.`;
+    const zmienione = [], bezZmian = [];
+    for (const [etykieta, nowa, kol, domyslna] of nowe) {
+      const staraW = tekst(stare[kol]) || domyslna || '';
+      if (staraW.toUpperCase() !== nowa.toUpperCase()) zmienione.push(`${etykieta} ${staraW || 'brak'} → ${nowa}`);
+      else bezZmian.push(`${etykieta} ${nowa}`);
+    }
+    if (zmienione.length) {
+      return `${naglowek} Zmienione ${kiedy()} (zapis: ${kto}): ${zmienione.join(', ')}.`
+        + (bezZmian.length ? ` Bez zmian: ${bezZmian.join(', ')}.` : '')
+        + (inneZmiany.length ? ` Zmieniono też: ${inneZmiany.join(', ')}.` : '');
+    }
+    if (inneZmiany.length) return `${naglowek} Zapisane ${kiedy()} (zapis: ${kto}) bez zmiany ${czego} (${bezZmian.join(', ')}). Zmieniono: ${inneZmiany.join(', ')}.`;
+    return `${naglowek} Zapisane ${kiedy()} (zapis: ${kto}) bez żadnych zmian (${bezZmian.join(', ')}).`;
+  }
+  function zapiszZmianeZgod(tenant_id, d, stare) {
+    const kto = tekst(d.pracownik) || 'nieznana osoba';
+    const nazwa = tekst(d.klient_nazwa) || tekst(stare && stare.klient) || 'bez nazwy';
+    const naglowek = `Zgody RODO: ${nazwa} (nr ${tekst(d.id_klienta)}).`;
+    const nowe = POLA_ZGOD.map(([kol, pole, etykieta]) => [etykieta, tekst(d[pole]) || DOMYSLNE_ZGODY[pole], kol, DOMYSLNE_ZGODY[pole]]);
+    const inne = [];
+    if (stare) {
+      const sd = dataTekst(stare.data_podpisu), nd = dataTekst(d.data_podpisu);
+      if (sd !== nd) inne.push(`data podpisu ${sd || 'brak'} → ${nd || 'brak'}`);
+      if (tekst(stare.link_pdf) !== tekst(d.link_pdf)) inne.push('link do dokumentu');
+      if (emailTekst(stare.email_kontaktowy) !== emailTekst(d.email_kontaktowy) || emailTekst(stare.email_adres) !== emailTekst(d.email_adres)) inne.push('adres e-mail');
+    }
+    zapiszLog(tenant_id, 'ZMIANA ZGÓD RODO', kto, zdanieZmian(naglowek, kto, nowe, stare, inne, 'zgód'));
+  }
+  function zapiszZmianeOswiadczen(tenant_id, d, stare) {
+    const kto = tekst(d.pracownik) || 'nieznana osoba';
+    const nazwa = tekst(d.klient_nazwa) || tekst(stare && stare.klient) || 'bez nazwy';
+    const naglowek = `Oświadczenia: ${nazwa} (nr ${tekst(d.id_klienta)}).`;
+    const nowe = [
+      ['zapoznanie z regulaminem', tekst(d.zapoznal) || 'NIE', 'zapoznanie_z_regulaminem', 'NIE'],
+      ['przekazanie wyciągu', tekst(d.wyciag) || 'NIE', 'przekazano_wyciag', 'NIE'],
+    ];
+    const inne = [];
+    if (stare) {
+      const sd = dataTekst(stare.data_podpisu), nd = dataTekst(d.data_podpisu);
+      if (sd !== nd) inne.push(`data podpisu ${sd || 'brak'} → ${nd || 'brak'}`);
+      if (tekst(stare.link_pdf) !== tekst(d.link_pdf)) inne.push('link do dokumentu');
+    }
+    zapiszLog(tenant_id, 'ZMIANA OŚWIADCZEŃ', kto, zdanieZmian(naglowek, kto, nowe, stare, inne, 'oświadczeń'));
+  }
+
   // Helper: zaktualizuj flagę dokumentów w Klienci
   function zaktualizujFlageDokumentow(tenant_id, idKlienta, typDokumentu) {
     const col = typDokumentu === 'RODO' ? 'rodo' : 'osw';
@@ -159,7 +228,7 @@ module.exports = (db) => {
     if (action === 'save_rodo') {
       // Sprawdź czy istnieje wpis dla tego klienta
       db.query(
-        `SELECT id FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? ORDER BY utworzono_w ASC, id ASC LIMIT 1`,
+        `SELECT id, klient, data_podpisu, wizerunek, newsletter_sms, kontakt_tel, newsletter_email, booksy_sms, email_adres, link_pdf, email_kontaktowy FROM Rejestr_RODO WHERE tenant_id = ? AND id_klienta = ? ORDER BY utworzono_w ASC, id ASC LIMIT 1`,
         [tenant_id, d.id_klienta],
         (err, rows) => {
           const values = [
@@ -185,6 +254,7 @@ module.exports = (db) => {
                   `UPDATE Rejestr_RODO SET wizerunek = ?, newsletter_sms = ?, kontakt_tel = ?, newsletter_email = ?, booksy_sms = ?, pracownik = ? WHERE tenant_id = ? AND id_klienta = ? AND id <> ?`,
                   [d.wizerunek || 'NIE', d.news_sms || 'NIE', d.kontakt_tel || 'NIE', d.news_email || 'NIE', d.booksy_sms || 'Nie dotyczy', d.pracownik || '', tenant_id, d.id_klienta, rows[0].id],
                   (err3) => {
+                    zapiszZmianeZgod(tenant_id, d, rows[0]);
                     if (err3) return res.json({ status: 'error', message: 'Zgody zapisane, ale nie udało się ujednolicić zdublowanych wpisów: ' + err3.message });
                     return res.json({ status: 'success', message: 'Zaktualizowano zgody, link i email!' });
                   }
@@ -198,6 +268,7 @@ module.exports = (db) => {
               [id, tenant_id, d.klient_nazwa || '', d.id_klienta, ...values],
               (err2) => {
                 if (err2) return res.json({ status: 'error', message: err2.message });
+                zapiszZmianeZgod(tenant_id, d, null);
                 return res.json({ status: 'success', message: 'Dodano deklarację z emailem!' });
               }
             );
@@ -208,7 +279,7 @@ module.exports = (db) => {
     } else if (action === 'update_consents') {
       // Sprawdź czy istnieje wpis
       db.query(
-        `SELECT id FROM \`Rejestr_Oświadczeń\` WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`,
+        `SELECT id, klient, data_podpisu, zapoznanie_z_regulaminem, przekazano_wyciag, link_pdf FROM \`Rejestr_Oświadczeń\` WHERE tenant_id = ? AND id_klienta = ? LIMIT 1`,
         [tenant_id, d.id_klienta],
         (err, rows) => {
           // Sprawdź link
@@ -222,6 +293,7 @@ module.exports = (db) => {
               [d.data_podpisu || null, d.zapoznal || 'NIE', d.wyciag || 'NIE', d.pracownik || '', d.link_pdf || '', tenant_id, rows[0].id],
               (err2) => {
                 if (err2) return res.json({ status: 'error', message: err2.message });
+                zapiszZmianeOswiadczen(tenant_id, d, rows[0]);
                 return res.json({ status: 'success', message: 'Zaktualizowano status regulaminu i link!' });
               }
             );
@@ -232,6 +304,7 @@ module.exports = (db) => {
               [id, tenant_id, d.id_klienta, d.klient_nazwa || '', d.data_podpisu || null, d.zapoznal || 'NIE', d.wyciag || 'NIE', d.pracownik || '', d.link_pdf || ''],
               (err2) => {
                 if (err2) return res.json({ status: 'error', message: err2.message });
+                zapiszZmianeOswiadczen(tenant_id, d, null);
                 return res.json({ status: 'success', message: 'Dodano oświadczenie z linkiem!' });
               }
             );

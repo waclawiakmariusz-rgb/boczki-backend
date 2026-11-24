@@ -245,7 +245,7 @@ describe('ticket #32b — zdublowane wpisy RODO: lista czyta ten sam wpis co pro
     });
 
     test('get_rodo (profil), save_rodo (zapis) i get_all_rodo (lista) używają tej samej kolejności wpisów', async () => {
-        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [{ id: 'pierwszy' }] });
+        const db = mockDbSql({ 'SELECT id, klient, data_podpisu, wizerunek': [{ id: 'pierwszy' }] });
         const a = app(db);
         await request(a).get('/api/rodo').query({ action: 'get_rodo', tenant_id: 'salon-test', id: '1143' });
         await request(a).get('/api/rodo').query({ action: 'get_all_rodo', tenant_id: 'salon-test' });
@@ -257,7 +257,7 @@ describe('ticket #32b — zdublowane wpisy RODO: lista czyta ten sam wpis co pro
     });
 
     test('save_rodo: po zapisie wpisu profilu te same zgody trafiają do pozostałych wpisów tej klientki', async () => {
-        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [{ id: 'pierwszy' }] });
+        const db = mockDbSql({ 'SELECT id, klient, data_podpisu, wizerunek': [{ id: 'pierwszy' }] });
         const res = await request(app(db)).post('/api/rodo').send({
             action: 'save_rodo', tenant_id: 'salon-test', id_klienta: '1143', pracownik: 'Ania',
             kontakt_tel: 'NIE', news_sms: 'NIE', news_email: 'NIE', wizerunek: 'TAK',
@@ -275,7 +275,7 @@ describe('ticket #32b — zdublowane wpisy RODO: lista czyta ten sam wpis co pro
     });
 
     test('save_rodo bez istniejącego wpisu nadal tylko dodaje nowy (bez ujednolicania)', async () => {
-        const db = mockDbSql({ 'SELECT id FROM Rejestr_RODO': [] });
+        const db = mockDbSql({ 'SELECT id, klient, data_podpisu, wizerunek': [] });
         const res = await request(app(db)).post('/api/rodo').send({ action: 'save_rodo', tenant_id: 'salon-test', id_klienta: '9', kontakt_tel: 'TAK' });
         expect(res.body.status).toBe('success');
         expect(db.query.mock.calls.filter((c) => /^UPDATE Rejestr_RODO/.test(String(c[0]))).length).toBe(0);
