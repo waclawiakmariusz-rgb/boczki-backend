@@ -3236,6 +3236,9 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
 .ret-zabieg { color: #475569; }
 .ret-data   { color: #64748b; }
 .ret-id     { color: #94a3b8; }
+.ret-zgoda  { display:inline-block; margin:4px 4px 0 0; padding:2px 8px; border-radius:999px; font-size:10.5px; font-weight:600; letter-spacing:.2px; }
+.ret-zgoda-tel { background:#ecfdf5; color:#166534; border:1px solid #bbf7d0; }
+.ret-zgoda-sms { background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; }
 
 /* CIEMNY MOTYW (Dark Mode) */
 /* Uwaga: Jeśli do aktywacji ciemnego motywu używasz np. atrybutu [data-theme="dark"], zmień poniżej '.dark-mode' na swoj aktywator */
@@ -3245,6 +3248,8 @@ body.dark-mode .odp-zone-red { background: rgba(239, 68, 68, 0.1) !important; }
 .dark-mode .ret-zabieg { color: #cbd5e1; } /* Jasnoszary dla usług */
 .dark-mode .ret-data   { color: #94a3b8; } /* Szary dla etykiet */
 .dark-mode .ret-id     { color: #64748b; } /* Ciemniejszy szary dla ID */
+.dark-mode .ret-zgoda-tel { background:#064e3b; color:#bbf7d0; border-color:#166534; }
+.dark-mode .ret-zgoda-sms { background:#1e3a8a; color:#bfdbfe; border-color:#1d4ed8; }
 
 /* =========================================
    🛠️ ŁATKA: Ciemny motyw dla formularzy
@@ -5973,6 +5978,14 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
                 <label>Nazwa zabiegu:</label>
                 <input type="text" id="ret-custom-input" class="form-control" placeholder="np. Kriolipoliza">
             </div>
+            <div>
+                <label>Zgoda na kontakt:</label>
+                <select id="ret-kanal" class="form-control" style="min-width: 220px;" onchange="generujListeRetencji()" title="Które zgody RODO wpuszczają klientkę na listę">
+                    <option value="tel_sms">📞💬 Telefon lub SMS</option>
+                    <option value="tel">📞 Tylko zgoda na telefon</option>
+                    <option value="sms">💬 Tylko zgoda na SMS</option>
+                </select>
+            </div>
             
             <div style="flex:1;"></div>
             
@@ -5994,7 +6007,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         </div>
 
         <div style="background:#f0fdf4; color:#166534; padding:10px; border-radius:8px; font-size:12px; margin-bottom:15px;">
-            💡 Algorytm B+C: <b>seria aktywna</b> → klientka pomijana; <b>seria zakończona</b> → baza = koniec serii. Interwał powrotu: średnia z ostatnich wizyt (min. 3 wizyty) lub domyślny wg kategorii. Filtruje tylko osoby z <b>zgodą RODO</b> na kontakt telefoniczny.
+            💡 Algorytm B+C: <b>seria aktywna</b> → klientka pomijana; <b>seria zakończona</b> → baza = koniec serii. Interwał powrotu: średnia z ostatnich wizyt (min. 3 wizyty) lub domyślny wg kategorii. Pokazuje osoby ze <b>zgodą RODO</b> na kontakt telefoniczny lub na SMS — przy każdej widać, którą zgodę ma; filtr „Zgoda na kontakt” zawęża listę do jednego kanału.
         </div>
 
         <div id="ret-stats" style="display:none; margin-bottom:12px; display:flex; gap:12px; flex-wrap:wrap;"></div>
@@ -6031,6 +6044,7 @@ body.dark-mode #tgt-modal .btn-icon:hover { color: #f490b3 !important; }
         <select id="ret-modal-status" class="form-control" style="margin-bottom:15px; font-weight:bold;">
             <option value="Umówiona">✅ Umówiona na zabieg</option>
             <option value="Oddzwonić później">⏳ Oddzwonić później</option>
+            <option value="SMS wysłany">📨 SMS wysłany</option>
             <option value="Nie odbiera">🔇 Nie odbiera</option>
             <option value="Nie zainteresowana">⛔ Nie zainteresowana</option>
             <option value="Zły numer">❌ Zły numer</option>
@@ -22484,6 +22498,7 @@ function generujListeRetencji() {
 
     const tryb = document.getElementById('ret-kat').value;
     const customFraz = document.getElementById('ret-custom-input').value.toLowerCase().trim();
+    const kanalZgody = (document.getElementById('ret-kanal') || {}).value || 'tel_sms';
     const tbody = document.getElementById('retencja-lista');
     tbody.innerHTML = "";
 
@@ -22506,8 +22521,14 @@ function generujListeRetencji() {
     const wyniki = [];
 
     window.wszyscyKlienciDane.forEach(klient => {
+        // Ticket #32 (Ania, 24.11.2026): na listę wchodzi zgoda na kontakt telefoniczny LUB zgoda na SMS,
+        // a przy klientce widać, którą ma. Filtr „Zgoda na kontakt” zawęża do jednego kanału.
         const zgoda = rodoCache.find(r => String(r.id_klienta) === String(klient.id));
-        if (!zgoda || zgoda.telefon_zgoda !== 'TAK') return;
+        const zgodaTel = !!zgoda && zgoda.telefon_zgoda === 'TAK';
+        const zgodaSms = !!zgoda && zgoda.sms_zgoda === 'TAK';
+        if (kanalZgody === 'tel') { if (!zgodaTel) return; }
+        else if (kanalZgody === 'sms') { if (!zgodaSms) return; }
+        else if (!zgodaTel && !zgodaSms) return;
 
         const transakcjeKlienta = dostepnaHistoria.filter(t => {
             if ((t.id_klienta && String(t.id_klienta) === String(klient.id)) || (!t.id_klienta && t.klient === klient.nazwa)) {
@@ -22570,6 +22591,7 @@ function generujListeRetencji() {
             wyniki.push({
                 klient: klient,
                 telefon: klient.telefon || "Brak w bazie",
+                zgodaTel, zgodaSms,
                 zabieg: ostatni.zabieg,
                 dataOryginalna: dataOstatniej.toLocaleDateString(),
                 dataOczekiwana: dataOczekiwana.toLocaleDateString(),
@@ -22594,13 +22616,17 @@ function generujListeRetencji() {
     const wszystkich = wynikiFinal.length;
     const zHistoria = wynikiFinal.filter(w => (window.retencjaCache||[]).some(r => String(r.id_klienta)===String(w.klient.id))).length;
     const bezKontaktu = wszystkich - zHistoria;
+    const zZgodaTel = wynikiFinal.filter(w => w.zgodaTel).length;
+    const tylkoSms = wynikiFinal.filter(w => !w.zgodaTel && w.zgodaSms).length;
     if (statsDiv) {
         statsDiv.style.display = 'flex';
         const pill = (txt, bg, clr) => `<span style="background:${bg}; color:${clr}; padding:5px 12px; border-radius:20px; font-size:12px; font-weight:600;">${txt}</span>`;
         statsDiv.innerHTML =
             pill(`📋 Łącznie: ${wszystkich}`, '#f1f5f9', '#334155') +
             pill(`📞 Bez kontaktu: ${bezKontaktu}`, '#ecfdf5', '#166534') +
-            pill(`🔄 Kontaktowanych: ${zHistoria}`, '#eff6ff', '#1e40af');
+            pill(`🔄 Kontaktowanych: ${zHistoria}`, '#eff6ff', '#1e40af') +
+            pill(`📞 Zgoda na telefon: ${zZgodaTel}`, '#f0fdf4', '#15803d') +
+            pill(`💬 Tylko SMS: ${tylkoSms}`, '#f0f9ff', '#1d4ed8');
     }
 
     if (wynikiFinal.length === 0) {
@@ -22618,7 +22644,7 @@ function generujListeRetencji() {
         const historiaKlienta = (window.retencjaCache || []).filter(r => String(r.id_klienta) === String(w.klient.id));
         let infoKontakt = "";
         let kolorPrzycisku = "#3b82f6";
-        let tekstPrzycisku = "📝 Zadzwoń";
+        let tekstPrzycisku = w.zgodaTel ? "📝 Zadzwoń" : "📝 Napisz SMS";
 
         if (historiaKlienta.length > 0) {
             const ost = historiaKlienta[0];
@@ -22627,6 +22653,7 @@ function generujListeRetencji() {
             if(ost.status.includes('Umówiona')) hColor = "#10b981";
             else if(ost.status.includes('Nie odbiera')) hColor = "#f59e0b";
             else if(ost.status.includes('Nie zaint')) hColor = "#ef4444";
+            else if(ost.status.includes('SMS')) hColor = "#0ea5e9";
             infoKontakt = `<div style="font-size:10px; margin-bottom:5px;">Ostatnio: <b style="color:${hColor}">${ost.status}</b> (${dataSkrocona})</div>`;
             kolorPrzycisku = "#64748b";
             tekstPrzycisku = "📝 Ponów kontakt";
@@ -22636,7 +22663,8 @@ function generujListeRetencji() {
         <tr class="ret-wiersz">
             <td style="padding:10px;">
                 <strong class="ret-klient" style="font-size:14px; display:block; cursor:pointer;" onclick="pokaz('klient-profil'); setTimeout(()=>otworzProfil('${w.klient.id}'),100);">${w.klient.nazwa}</strong>
-                <span class="ret-id" style="font-size:11px;">📞 ${w.telefon}</span>
+                <span class="ret-id" style="font-size:11px;">📞 ${w.telefon}</span><br>
+                ${w.zgodaTel ? '<span class="ret-zgoda ret-zgoda-tel" title="Zgoda RODO na kontakt telefoniczny">📞 zgoda: telefon</span>' : ''}${w.zgodaSms ? '<span class="ret-zgoda ret-zgoda-sms" title="Zgoda marketingowa RODO na SMS">💬 zgoda: SMS</span>' : ''}
             </td>
             <td class="ret-zabieg" style="padding:10px; font-size:13px;">
                 ${w.zabieg}<br>
@@ -22650,7 +22678,7 @@ function generujListeRetencji() {
             </td>
             <td style="padding:10px; text-align:right;">
                 ${infoKontakt}
-                <button onclick="otworzModalRetencji('${w.klient.id}', '${w.klient.nazwa}', '${kampania}', '${w.telefon}')"
+                <button onclick="otworzModalRetencji('${w.klient.id}', '${w.klient.nazwa}', '${kampania}', '${w.telefon}', '${w.zgodaTel ? 'tel' : ''}${w.zgodaSms ? 'sms' : ''}')"
                         class="btn-primary" style="padding:6px 12px; font-size:11px; width:auto; background:${kolorPrzycisku}; margin:0;">
                     ${tekstPrzycisku}
                 </button>
@@ -22659,14 +22687,16 @@ function generujListeRetencji() {
     });
 }
 
-function otworzModalRetencji(id, nazwa, kampania, telefon) {
+function otworzModalRetencji(id, nazwa, kampania, telefon, zgody = '') {
     document.getElementById('ret-modal-id').value = id;
     document.getElementById('ret-modal-nazwa').value = nazwa;
     //document.getElementById('ret-modal-klient').innerText = "Klient: " + nazwa;
     document.getElementById('ret-modal-kampania').innerText = "Kampania: " + kampania;
     document.getElementById('ret-modal-status').value = "Umówiona";
     document.getElementById('ret-modal-notatka').value = "";
-    document.getElementById('ret-modal-klient').innerHTML = `Klient: ${nazwa} <br><span style="color:#0f766e; font-size:14px; font-weight:bold; display:inline-block; margin-top:4px;">📞 ${telefon}</span>`;
+    const zgodyHtml = (String(zgody).includes('tel') ? '<span class="ret-zgoda ret-zgoda-tel">📞 zgoda: telefon</span>' : '')
+                   + (String(zgody).includes('sms') ? '<span class="ret-zgoda ret-zgoda-sms">💬 zgoda: SMS</span>' : '');
+    document.getElementById('ret-modal-klient').innerHTML = `Klient: ${nazwa} <br><span style="color:#0f766e; font-size:14px; font-weight:bold; display:inline-block; margin-top:4px;">📞 ${telefon}</span>${zgodyHtml ? '<br>' + zgodyHtml : ''}`;
     // Wyświetlanie historii wewnątrz Modala
     const histDiv = document.getElementById('ret-modal-historia');
     const historiaKontaktow = (window.retencjaCache || []).filter(r => String(r.id_klienta) === String(id));
