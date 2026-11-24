@@ -123,11 +123,19 @@ module.exports = (db) => {
 
     } else if (action === 'get_all_rodo') {
       db.query(
-        `SELECT id_klienta, kontakt_tel FROM Rejestr_RODO WHERE tenant_id = ?`,
+        // Ticket #32 (Ania, 24.11.2026): Retencja czyta też zgodę marketingową SMS (newsletter_sms) i pokazuje,
+        // którą zgodę klientka ma. Najnowszy wpis pierwszy — przy dwóch wpisach tej samej osoby front bierze
+        // pierwszy z listy, czyli aktualną zgodę, a nie przypadkowy.
+        `SELECT id_klienta, kontakt_tel, newsletter_sms FROM Rejestr_RODO WHERE tenant_id = ?
+          ORDER BY data_podpisu DESC, utworzono_w DESC`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json([]);
-          return res.json((rows || []).map(r => ({ id_klienta: r.id_klienta, telefon_zgoda: String(r.kontakt_tel || '').toUpperCase() })));
+          return res.json((rows || []).map(r => ({
+            id_klienta: r.id_klienta,
+            telefon_zgoda: String(r.kontakt_tel || '').trim().toUpperCase(),
+            sms_zgoda: String(r.newsletter_sms || '').trim().toUpperCase()
+          })));
         }
       );
 
