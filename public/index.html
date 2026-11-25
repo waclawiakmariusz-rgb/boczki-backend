@@ -8789,7 +8789,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="klubadm-label" for="klubadm-reset-data" style="margin-top:16px;">Data resetu punktów (puste = punkty nie wygasają)</label>
                             <input id="klubadm-reset-data" type="date" class="klubadm-input" style="width:190px;" min="2026-01-01" max="2100-12-31">
                             <div id="klubadm-reset-info" class="klubadm-pod" style="margin-top:6px; font-weight:600; color:#6b3a4e;"></div>
-                            <div class="klubadm-pod">W tym dniu o północy wszystkie wcześniejsze punkty wygasają i naliczają się od zera, a data przesuwa się sama o rok. 29 lutego liczy się jako 1 marca. Klientki widzą w aplikacji „ważne do" dnia przed resetem. Każda zmiana daty trafia do Dziennika Zdarzeń z nazwiskiem osoby, która ją zmieniła.</div>
+                            <div class="klubadm-pod">W tym dniu o północy wszystkie wcześniejsze punkty wygasają i naliczają się od zera, a data przesuwa się sama o rok. 29 lutego liczy się jako 1 marca. Klientki widzą w aplikacji „ważne do" dnia przed resetem. Przed zapisem nowej daty panel pyta o potwierdzenie. Każda zmiana daty trafia do Dziennika Zdarzeń z nazwiskiem osoby, która ją zmieniła.</div>
                             <div style="display:flex; align-items:center; gap:12px; margin-top:18px;">
                                 <button onclick="klubadm_zapiszUstawienia()" class="klubadm-glowny">Zapisz ustawienia</button>
                                 <span id="klubadm-ust-status" style="font-size:12.5px; color:#8a8f9c;"></span>
@@ -33934,13 +33934,59 @@ async function klubadm_zaladujUstawienia() {
     if (p) p.value = d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1;
     if (b) b.value = d.ustawienia.bonus_powitalny_pkt != null ? d.ustawienia.bonus_powitalny_pkt : 0;
     if (rd) rd.value = d.ustawienia.nastepny_reset || '';
+    klubadm_dataResetuZBazy = d.ustawienia.nastepny_reset || '';   // do porównania przy zapisie (popup tylko przy ZMIANIE daty)
     if (ri) ri.textContent = klubadm_opisResetu(d.ustawienia);
     const pol = document.getElementById('klubadm-polecenie');
     if (pol) pol.value = d.ustawienia.polecenie_pkt != null ? d.ustawienia.polecenie_pkt : 0;
   } catch (e) {}
 }
+let klubadm_dataResetuZBazy = '';
+const KLUBADM_MIESIACE = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+// 29 lutego liczy się jako 1 marca — tak samo zrobi serwer; tu tylko po to, żeby pytanie w popupie mówiło prawdę.
+function klubadm_normalizujDateResetu(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  return (m[2] === '02' && m[3] === '29') ? (m[1] + '-03-01') : (m[1] + '-' + m[2] + '-' + m[3]);
+}
+function klubadm_dataPL(v) {
+  const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? (Number(m[3]) + ' ' + KLUBADM_MIESIACE[Number(m[2]) - 1] + ' ' + m[1]) : String(v || '');
+}
+function klubadm_dzisiajISO() {
+  const t = new Date();
+  return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0');
+}
+// Pytanie przed zmianą daty resetu (polecenie właściciela 25.11.2026: „popup z pytaniem czy aby na 100% chce zresetować wszystkim punkty z dniem xx”).
+// Zwraca tekst pytania albo '' gdy data się nie zmienia; osobna funkcja, żeby test mógł sprawdzić treść bez okienka.
+function klubadm_pytanieOReset(nowaData, staraData) {
+  if ((nowaData || '') === (staraData || '')) return '';
+  if (nowaData) {
+    return 'Czy na 100% chcesz ustawić reset punktów na ' + klubadm_dataPL(nowaData) + '?\n\n'
+      + 'Tego dnia o północy WSZYSTKIM członkom Klubu wygasną wszystkie punkty i zaczną naliczać się od nowa'
+      + (staraData ? ' (dotychczasowa data: ' + klubadm_dataPL(staraData) + ')' : '') + '.\n'
+      + 'Zmiana zostanie zapisana w Dzienniku Zdarzeń z Twoim imieniem.';
+  }
+  return 'Wyłączyć reset punktów? Punkty przestaną wygasać (dotychczasowa data: ' + klubadm_dataPL(staraData) + ').\n\n'
+    + 'Zmiana zostanie zapisana w Dzienniku Zdarzeń z Twoim imieniem.';
+}
 async function klubadm_zapiszUstawienia() {
   const status = document.getElementById('klubadm-ust-status');
+  const poleDaty = document.getElementById('klubadm-reset-data');
+  const nowaData = klubadm_normalizujDateResetu(poleDaty.value || '');
+  const staraData = klubadm_dataResetuZBazy || '';
+  if (poleDaty.value && !nowaData) { status.textContent = 'Błąd: Data resetu punktów: podaj dzień w formacie RRRR-MM-DD.'; return; }
+  if (nowaData !== staraData) {
+    // Data z przeszłości lub dzisiejsza: od razu błąd, bez pytania (serwer i tak by odrzucił).
+    if (nowaData && nowaData <= klubadm_dzisiajISO()) {
+      status.textContent = 'Błąd: Data resetu punktów musi być w przyszłości — reset w tym dniu wyzerowałby punkty od ręki.';
+      return;
+    }
+    if (!confirm(klubadm_pytanieOReset(nowaData, staraData))) {
+      poleDaty.value = staraData;
+      status.textContent = 'Anulowano — data resetu bez zmian' + (staraData ? ' (' + klubadm_dataPL(staraData) + ')' : '') + '.';
+      return;
+    }
+  }
   status.textContent = '⏳ Zapisywanie…';
   const d = await klubadm_apiPost({
     action: 'loj_ustawienia_zapisz',

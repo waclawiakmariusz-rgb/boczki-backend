@@ -186,3 +186,16 @@ Druga próba ekranowa `narzedzia/proby/klub-data-resetu-apka.json` — aplikacja
 0 FAIL, 4 zrzuty w `proby-wyniki/klub-data-resetu-apka-test-2026-11-25-09-45/` — saldo, zasady „Punkty są ważne do 31 grudnia 2027”,
 FAQ „ważne do 31 grudnia 2027 i 1 stycznia 2028 naliczają się od nowa”, historia z oboma wpisami z 2026. Strona przeglądowa ze
 wszystkimi zrzutami: `proby-wyniki/PRZEGLAD_klub-data-resetu_2026-11-25.html`. Baza izolowana posprzątana, serwer 3999 zatrzymany.
+
+**Dopisek 25.11 (pytanie właściciela: „a co się stanie, jak ktoś ustawi reset na datę wcześniejszą niż dziś? … przydałby się popup
+z pytaniem czy aby na 100% chce zresetować wszystkim punkty z dniem xx”):**
+- Data dzisiejsza lub wcześniejsza: panel pokazuje błąd od razu (bez popupu), serwer odrzuca ją niezależnie; nic nie zapisane,
+  poprzednia data zostaje, bez wpisu w Dzienniku. Najwcześniejsza dopuszczalna data = jutro.
+- **Popup (zbudowany):** przed zapisem ZMIENIONEJ daty `confirm()` z treścią „Czy na 100% chcesz ustawić reset punktów na 1 stycznia 2028?
+  / Tego dnia o północy WSZYSTKIM członkom Klubu wygasną wszystkie punkty i zaczną naliczać się od nowa (dotychczasowa data: …). /
+  Zmiana zostanie zapisana w Dzienniku Zdarzeń z Twoim imieniem.”; 29 lutego brzmi w pytaniu „1 marca”; wyczyszczenie pola pyta
+  „Wyłączyć reset punktów?”; odpowiedź NIE cofa pole i nic nie wysyła (status „Anulowano — data resetu bez zmian”); zapis bez zmiany daty
+  (np. sama nazwa klubu) nie pyta. Funkcje `klubadm_pytanieOReset`, `klubadm_normalizujDateResetu`, `klubadm_dataPL`, `klubadm_dzisiajISO`
+  w `public/index.html`; `klubadm_dataResetuZBazy` pamięta datę z serwera.
+- Testy: `tests/klub-data-resetu-panel.test.js` (11, funkcje wycięte z index.html z atrapą DOM). Próba panelu powtórzona z popupem
+  (NIE i TAK): 0 FAIL, 8 zrzutów — `proby-wyniki/klub-data-resetu-test-2026-11-25-09-53/`; strona przeglądowa zaktualizowana.
