@@ -180,3 +180,9 @@ domyślnie wyłączony (puste pole) — bez zmian.
 
 **Po wdrożeniu na produkcję:** wejść w Klub → Ustawienia → wpisać 2028-01-01 → Zapisz. Do tego czasu Boczki mają datę 2027-01-01
 (jak dotąd), więc **termin pozostaje: przed 1.01.2027**.
+
+**Dopisek 25.11, po „zrób lokalnie”:** scalone do lokalnego `dev` (fast-forward, `4cc41ab`; origin/dev i produkcja nadal `cf0c96b`).
+Druga próba ekranowa `narzedzia/proby/klub-data-resetu-apka.json` — aplikacja klientki (/klub/, demo-test, konto próbne 1001, 200 pkt):
+0 FAIL, 4 zrzuty w `proby-wyniki/klub-data-resetu-apka-test-2026-11-25-09-45/` — saldo, zasady „Punkty są ważne do 31 grudnia 2027”,
+FAQ „ważne do 31 grudnia 2027 i 1 stycznia 2028 naliczają się od nowa”, historia z oboma wpisami z 2026. Strona przeglądowa ze
+wszystkimi zrzutami: `proby-wyniki/PRZEGLAD_klub-data-resetu_2026-11-25.html`. Baza izolowana posprzątana, serwer 3999 zatrzymany.
