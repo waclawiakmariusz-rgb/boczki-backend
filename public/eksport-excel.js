@@ -156,15 +156,58 @@
   }
   function czysc(t) { return String(t == null ? '' : t).replace(/[  ]/g, ' ').replace(/[⇅▲▼↑↓⬆⬇]/g, '').replace(/\s+/g, ' ').trim().replace(/[:]$/, ''); }
   function tekstEl(el) { return (typeof el.innerText === 'string' ? el.innerText : el.textContent) || ''; }
-  function tekstKomorki(td) {
+  // Komórka z kilkoma informacjami (plakietka + nazwa + podtytuł „Suplement | Ola | dostawa 1.09.2026”) → OSOBNE KOLUMNY w pliku,
+  // nie jeden tekst z kreskami (uwaga właściciela 25.11.2026: „powinno być w osobnych kolumnach, a nie |”).
+  // Części = linie tekstu komórki, a w linii fragmenty rozdzielone „ | ”, „ · ”, „ • ”.
+  function czesciKomorki(td) {
     const pole = td.querySelector ? td.querySelector('input, select, textarea') : null;
     if (pole) {
       const typ = String(pole.type || '').toLowerCase();
-      if (pole.tagName === 'SELECT') { const o = pole.options && pole.options[pole.selectedIndex]; return o ? czysc(o.text) : String(pole.value || ''); }
-      if (typ === 'checkbox' || typ === 'radio') return pole.checked ? 'TAK' : 'NIE';
-      if (typ !== 'button' && typ !== 'submit') return String(pole.value || '').trim();
+      if (pole.tagName === 'SELECT') { const o = pole.options && pole.options[pole.selectedIndex]; return [o ? czysc(o.text) : String(pole.value || '')]; }
+      if (typ === 'checkbox' || typ === 'radio') return [pole.checked ? 'TAK' : 'NIE'];
+      if (typ !== 'button' && typ !== 'submit') return [String(pole.value || '').trim()];
     }
-    return tekstEl(td).replace(/[  ]/g, ' ').split(/\s*\n+\s*/).map((x) => x.trim()).filter(Boolean).join(' · ');
+    const czesci = [];
+    for (const linia of tekstEl(td).replace(/[  ]/g, ' ').split(/\s*\n+\s*/)) {
+      for (const f of linia.split(/\s+[|·•]\s+/)) { const t = f.trim(); if (t) czesci.push(t); }
+    }
+    return czesci.length ? czesci : [''];
+  }
+  // Nazwy kolumn dla rozbitych komórek w znanych widokach (klucz: id sekcji → nagłówek kolumny). `pozycyjne` — nazwy kolejnych
+  // części; `reguly` — część pasująca do wzorca trafia do wskazanej kolumny (z obcięciem przedrostka) albo jest pomijana.
+  const ROZBICIA = {
+    magazyn: {
+      'Produkt': {
+        pozycyjne: ['Kategoria', 'Produkt', 'Typ', 'Przyjął(a)'],
+        reguly: [
+          { re: /^dostawa\s+/i, kolumna: 'Dostawa' },
+          { re: /^🚛\s*/, kolumna: 'Dostawy' },
+          { re: /^↓/, pomin: true },                       // podpowiedź „sprzedaż pobiera automatycznie…” — nie dane
+          { re: /^(Najstarsza na stanie|Dodał:)/, kolumna: 'Dostawa (partia)' },
+        ],
+      },
+    },
+  };
+  function rozbijKolumne(naglowek, czesciWierszy, konfig) {
+    // czesciWierszy: tablica (na wiersz) tablic części. Zwraca { nazwy, wartosci: [na wiersz tablica tekstów] }.
+    const k = konfig || { pozycyjne: [], reguly: [] };
+    const nazwy = [];
+    const indeks = (nazwa) => { let i = nazwy.indexOf(nazwa); if (i < 0) { nazwy.push(nazwa); i = nazwy.length - 1; } return i; };
+    const nazwaPozycyjna = (p) => (p === 0 ? naglowek : (k.pozycyjne[p] || (naglowek + ' (' + (p + 1) + ')')));
+    if (k.pozycyjne.length) k.pozycyjne.forEach((n) => indeks(n)); else indeks(naglowek);
+    const wartosci = czesciWierszy.map((czesci) => {
+      const w = {};
+      let poz = 0;
+      for (const cz of czesci) {
+        const r = (k.reguly || []).find((x) => x.re.test(cz));
+        if (r && r.pomin) continue;
+        if (r) { const n = r.kolumna; w[n] = (w[n] ? w[n] + '; ' : '') + cz.replace(r.re, '').trim(); indeks(n); continue; }
+        const n = k.pozycyjne.length ? (k.pozycyjne[poz] || nazwaPozycyjna(poz)) : nazwaPozycyjna(poz);
+        w[n] = cz; indeks(n); poz++;
+      }
+      return w;
+    });
+    return { nazwy, wartosci: wartosci.map((w) => nazwy.map((n) => (w[n] != null ? w[n] : ''))) };
   }
   function czyTylkoPrzyciski(td) {
     if (!td.querySelectorAll) return false;
@@ -195,7 +238,7 @@
     }
     return wiersze;
   }
-  function zbierzTabele(table) {
+  function zbierzTabele(table, sekcjaId) {
     const nagl = naglowkiTabeli(table);
     const rows = wierszeTabeli(table);
     const n = Math.max(nagl.length, rows.reduce((m, r) => Math.max(m, r.length), 0));
@@ -207,11 +250,22 @@
       return kom.filter(czyTylkoPrzyciski).length >= Math.ceil(kom.length * 0.8);
     });
     const kol = nazwy.map((h, i) => i).filter((i) => !akcja[i]);
-    return {
-      naglowki: kol.map((i) => nazwy[i]),
-      wiersze: rows.map((r) => kol.map((i) => (r[i] ? wartosc(tekstKomorki(r[i]), nazwy[i]) : ''))),
-      pominiete: nazwy.filter((h, i) => akcja[i]),
-    };
+    const konfigSekcji = (sekcjaId && ROZBICIA[sekcjaId]) || {};
+    const naglowki = [];
+    const kolumnyWierszy = rows.map(() => []);
+    for (const i of kol) {
+      const czesci = rows.map((r) => (r[i] ? czesciKomorki(r[i]) : ['']));
+      const maks = czesci.reduce((m, c) => Math.max(m, c.length), 0);
+      if (maks <= 1 && !konfigSekcji[nazwy[i]]) {   // zwykła kolumna
+        naglowki.push(nazwy[i]);
+        czesci.forEach((c, r) => kolumnyWierszy[r].push(wartosc(c[0], nazwy[i])));
+        continue;
+      }
+      const roz = rozbijKolumne(nazwy[i], czesci, konfigSekcji[nazwy[i]]);
+      roz.nazwy.forEach((nz) => naglowki.push(nz));
+      roz.wartosci.forEach((w, r) => w.forEach((v, j) => kolumnyWierszy[r].push(wartosc(v, roz.nazwy[j]))));
+    }
+    return { naglowki, wiersze: kolumnyWierszy, pominiete: nazwy.filter((h, i) => akcja[i]) };
   }
   function tytulSekcji(sekcja) {
     const h = (sekcja.querySelector && (sekcja.querySelector('.header h1, .header h2') || sekcja.querySelector('h1, h2'))) || null;
@@ -236,7 +290,7 @@
       && !(t.closest && t.closest('[data-eksport="nie"]'))
       && !(t.parentElement && t.parentElement.closest && t.parentElement.closest('table')));
     const zebrane = [];
-    for (const t of tabele) { const z = zbierzTabele(t); if (z.wiersze.length) zebrane.push({ el: t, naglowki: z.naglowki, wiersze: z.wiersze, pominiete: z.pominiete }); }
+    for (const t of tabele) { const z = zbierzTabele(t, sekcja.id); if (z.wiersze.length) zebrane.push({ el: t, naglowki: z.naglowki, wiersze: z.wiersze, pominiete: z.pominiete }); }
     const grupy = new Map();
     for (const z of zebrane) { const k = z.naglowki.join('|'); if (!grupy.has(k)) grupy.set(k, []); grupy.get(k).push(z); }
     const arkusze = [];

@@ -140,3 +140,12 @@ sprzedaży 20 wierszy; praktykantka bez przycisku; Dziennik ze zdaniem o eksporc
 
 **Poza zakresem (jak w planie):** Terminarz, wykresy Analizy, załączniki; Klub → inne podstrony (Nagrody, Promocje…) działają przez
 zwykłe czytanie tabel, jeśli jakąś mają.
+
+**Poprawka po odbiorze (25.11, ok. 12:20):** właściciel otworzył przykładowy plik w Excelu — otworzył się bez naprawy, ale komórka
+Produkt z Magazynu była jednym tekstem „DETAL · Witamina D3+K2 · Suplementy | Ola | dostawa 1.09.2026” („źle to wygląda, powinno być
+w osobnych kolumnach, a nie |”). Od teraz komórka z kilkoma informacjami (linie, „ | ”, „ · ”) rozbija się na osobne kolumny; w znanych
+widokach kolumny mają nazwy (Magazyn → Produkt: Kategoria, Produkt, Typ, Przyjął(a), Dostawa; przy kilku dostawach „Dostawy”;
+podpowiedź „↓ sprzedaż pobiera…” pomijana), w pozostałych: „Nagłówek”, „Nagłówek (2)”, … (np. Historia: „Zabieg / Produkt”, „Zabieg / Produkt (2)”).
+Mapa nazw: `ROZBICIA` w `public/eksport-excel.js` — łatwo dopisać kolejne widoki. Próba powtórzona: 0 FAIL
+(`proby-wyniki/eksport-excel-test-2026-11-25-11-23/`), testy 21/10. Przykładowe pliki: `narzedzia/proby/skrypty/eksport-excel-przyklady.js`
+→ `proby-wyniki/przyklady-eksportu/`.

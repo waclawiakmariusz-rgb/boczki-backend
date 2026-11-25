@@ -132,12 +132,25 @@ describe('Czytanie tabeli z ekranu', () => {
         expect(z.wiersze).toEqual([['A'], ['B']]);
     });
 
-    test('komórka z kilkoma liniami (nazwa + kategoria) łączy się kropką, a tabela bez thead dostaje nazwy „Kolumna n”', () => {
-        const t = tabela([], [tr([td('Krem X\nTwarz'), td('5')])]);
+    test('komórka z kilkoma informacjami (linie, „ | ”, „ · ”) rozbija się na osobne kolumny, a tabela bez thead dostaje nazwy „Kolumna n”', () => {
+        const t = tabela([], [tr([td('Krem X\nTwarz | Ola'), td('5')]), tr([td('Tonik'), td('2')])]);
         t.tHead = null;
         const z = EstelioExcel.zbierzTabele(t);
-        expect(z.naglowki).toEqual(['Kolumna 1', 'Kolumna 2']);
-        expect(z.wiersze).toEqual([['Krem X · Twarz', 5]]);
+        expect(z.naglowki).toEqual(['Kolumna 1', 'Kolumna 1 (2)', 'Kolumna 1 (3)', 'Kolumna 2']);
+        expect(z.wiersze).toEqual([['Krem X', 'Twarz', 'Ola', 5], ['Tonik', '', '', 2]]);
+    });
+
+    test('Magazyn: komórka Produkt → kolumny Kategoria, Produkt, Typ, Przyjął(a), Dostawa; przy kilku dostawach kolumna „Dostawy”, podpowiedź „↓ sprzedaż…” pomijana', () => {
+        const t = tabela(['Produkt', 'Il.', 'Ważność', 'Cena'], [
+            tr([td('DETAL\nWitamina D3+K2\nSuplement | Ola | dostawa 1.09.2026'), td('1'), td('31.12.2026'), td('79,00 PLN')]),
+            tr([td('PRO\nWosk twardy\n🚛 2 dostawy: 1.09.2026, 1.10.2026\n↓ sprzedaż pobiera automatycznie z najstarszej dostawy, która ma towar'), td('7'), td('bez daty'), td('—')]),
+        ]);
+        const z = EstelioExcel.zbierzTabele(t, 'magazyn');
+        expect(z.naglowki).toEqual(['Kategoria', 'Produkt', 'Typ', 'Przyjął(a)', 'Dostawa', 'Dostawy', 'Il.', 'Ważność', 'Cena']);
+        expect(z.wiersze).toEqual([
+            ['DETAL', 'Witamina D3+K2', 'Suplement', 'Ola', '1.09.2026', '', 1, '31.12.2026', 79],
+            ['PRO', 'Wosk twardy', '', '', '', '2 dostawy: 1.09.2026, 1.10.2026', 7, 'bez daty', '—'],
+        ]);
     });
 });
 
