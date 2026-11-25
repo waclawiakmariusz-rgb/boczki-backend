@@ -2578,7 +2578,7 @@
         <li><strong>Poziomy</strong> — progi typu Srebro / Złoto / Diament wg rocznych wydatków.</li>
         <li><strong>Członkowie</strong> — lista kont z saldami i ostatnią wizytą, z wyszukiwarką; domyślnie posortowana wg punktów, po 20 na stronę. Kliknięcie w osobę otwiera szczegóły z historią punktów.</li>
         <li><strong>Do obsłużenia</strong> — odbiory nagród, zgłoszenia „BIORĘ", wnioski o konto i resety PIN — wszystko z licznikiem przy zakładce i <strong>godziną zgłoszenia</strong>, żeby było widać, czy klientka czeka dziesięć minut, czy od wczoraj.</li>
-        <li><strong>Ustawienia</strong> — nazwa klubu, przelicznik punktów, bonus powitalny, punkty za polecenie, kasowanie punktów 1 stycznia, regulamin, link rejestracyjny, QR na ladę.</li>
+        <li><strong>Ustawienia</strong> — nazwa klubu, przelicznik punktów, bonus powitalny, punkty za polecenie, data resetu punktów, regulamin, link rejestracyjny, QR na ladę.</li>
       </ul>
 
       <div class="tip"><strong>💡 Nie musisz wchodzić w Klub, żeby wiedzieć, że coś czeka.</strong> Gdy pojawi się nowy wniosek, nagroda do wydania albo zgłoszenie z promocji, na <strong>Pulpicie</strong> wyświetli się fioletowy pasek „💎 Klub" z liczbami. Gdy nie ma nic do zrobienia — pasek jest niewidoczny.</div>
@@ -2605,11 +2605,12 @@
 
       <div class="warning"><strong>Polecenia są włączane przez salon.</strong> Pole „Kod polecający" w rejestracji pokazuje się klientkom tylko wtedy, gdy w Ustawieniach Klubu punkty za polecenie są większe od zera. Przy zerze pola nie ma — salon, który nie prowadzi programu poleceń, nie myli klientek niepotrzebnym polem. <strong>Poleceń nie obsługuje recepcja.</strong> Kod polecający klientka wpisuje sama, przy zakładaniu konta w aplikacji. Punkty przyznają się dopiero przy pierwszym prawdziwym zakupie poleconej osoby — czyli nie da się „nabić" poleceń bez sprzedaży. Przy kasie nie robisz nic.</div>
 
-      <h3>Kasowanie punktów 1 stycznia (opcjonalne)</h3>
-      <p>W Ustawieniach Klubu można włączyć zerowanie punktów z początkiem roku. Sens jest handlowy: punkty, które „przepadną", motywują do wykorzystania ich w grudniu — a to zwykle najlepszy miesiąc salonu.</p>
+      <h3>Reset punktów w wybranym dniu (opcjonalny)</h3>
+      <p>W Ustawieniach Klubu można wpisać dzień, w którym punkty zerują się i naliczają od nowa (np. 1 stycznia 2028). Po resecie data przesuwa się sama o rok, więc reset powtarza się co roku w tym samym dniu. Puste pole = punkty nie wygasają. Sens jest handlowy: punkty, które „przepadną", motywują do wykorzystania ich przed tym dniem.</p>
       <ul>
-        <li>Włączenie w trakcie roku <strong>nie kasuje bieżących punktów</strong> — pierwsze zerowanie nastąpi dopiero 1 stycznia następnego roku.</li>
-        <li>W aplikacji klientka widzi na karcie salda „ważne do 31 grudnia".</li>
+        <li>Data musi być w przyszłości — jej zapisanie <strong>nie kasuje bieżących punktów</strong>; zerowanie następuje dopiero o północy wybranego dnia. 29 lutego liczy się jako 1 marca.</li>
+        <li>Każda zmiana daty trafia do Dziennika Zdarzeń jako zdanie: kto, kiedy i na jaki dzień zmienił datę resetu. Pod polem w Ustawieniach widać ostatnią zmianę.</li>
+        <li>W aplikacji klientka widzi na karcie salda „ważne do" dnia przed resetem (np. 31 grudnia 2027).</li>
         <li>Po zerowaniu aplikacja pokazuje świeży start, a nie listę strat — celowo, żeby program nie kojarzył się z karą.</li>
         <li>Poziomy liczą się od wydatków, nie od punktów, więc <strong>zerowanie punktów nie odbiera klientce statusu</strong>.</li>
       </ul>
@@ -3139,7 +3140,7 @@
           <tr><td><strong>Kod do apki</strong></td><td>Czteroznakowy kod aktywacyjny, który recepcja odczytuje klientce na głos, gdy skanowanie QR z monitora jest niewygodne. Ważny 6 godzin, przypisany do numeru z kartoteki.</td></tr>
           <tr><td><strong>Mnożnik ×2</strong></td><td>Okno czasowe ustawione przez salon, w którym punkty naliczają się podwójnie — sposób na ożywienie martwego tygodnia.</td></tr>
           <tr><td><strong>Automat (Klub)</strong></td><td>Samoczynna akcja nagradzająca: urodziny, powrót po przerwie, rocznica, „brakuje Ci trochę do nagrody", awans na wyższy poziom. Działa raz dziennie, bez udziału recepcji.</td></tr>
-          <tr><td><strong>Poziom (Srebro/Złoto/Diament)</strong></td><td>Status klientki wyliczany z <em>wydatków w bieżącym roku</em>, nie z salda punktów. Kasowanie punktów 1 stycznia nie odbiera statusu.</td></tr>
+          <tr><td><strong>Poziom (Srebro/Złoto/Diament)</strong></td><td>Status klientki wyliczany z <em>wydatków w bieżącym roku</em>, nie z salda punktów. Reset punktów nie odbiera statusu.</td></tr>
           <tr><td><strong>Kod polecający</strong></td><td>Indywidualny kod członkini Klubu. Gdy polecona osoba zrobi pierwszy zakup, punkty dostają obie strony. Recepcja niczego nie wpisuje.</td></tr>
           <tr><td><strong>Foto przed/po</strong></td><td>Dodatek do wystandaryzowanych zdjęć efektów zabiegów — telefon salonu z nakładkami póz i poziomicą, galeria na profilu klientki.</td></tr>
           <tr><td><strong>Link do płatności</strong></td><td>Dodatek: link tpay „opakowany" w akceptację regulaminu salonu — klientka najpierw potwierdza regulamin, potem płaci; system zapisuje kto/kiedy/z jakiego IP.</td></tr>

@@ -1796,14 +1796,15 @@ describe('Polecane nagrody (loj_nagroda_polecana)', () => {
     });
 });
 
-describe('Reset roczny punktów', () => {
-    test('_tickResetRoczny wygasza dodatnie saldo z poprzednich lat (ref idempotentny)', async () => {
-        const rok = new Date().getFullYear();
+describe('Reset punktów w dniu ustawionym przez salon (dawniej „reset roczny”)', () => {
+    // Pełny scenariusz dat, Dziennika i apki: tests/klub-data-resetu.test.js. Tu zostaje rdzeń: wygaszenie salda i idempotentny ref.
+    test('_tickResetRoczny wygasza dodatnie saldo sprzed dnia resetu (ref idempotentny per dzień+klient)', async () => {
         const db = mockDb(
             ...INIT,
-            { rows: [{ tenant_id: 't-reset' }] },        // salony z resetem, jeszcze nie w tym roku
-            { rows: { affectedRows: 1 } },                // atomowy claim
-            { rows: [{ id_klienta: '42', saldo: 180 }] }, // konta z dodatnim saldem sprzed roku
+            { rows: { affectedRows: 0 } },                // dopisanie daty salonom sprzed 25.11.2026 (tu nic)
+            { rows: [{ tenant_id: 't-reset', nastepny_reset: '2027-01-01' }] },   // salony z datą resetu <= dziś (zegar bazy)
+            { rows: { affectedRows: 1 } },                // atomowy claim: data przesunięta o rok
+            { rows: [{ id_klienta: '42', saldo: 180 }] }, // konta z dodatnim saldem sprzed dnia resetu
             { rows: { affectedRows: 1 } },                // INSERT WYGASNIECIE
             { rows: { affectedRows: 1 } }                 // zapiszLog
         );
@@ -1811,18 +1812,18 @@ describe('Reset roczny punktów', () => {
         await router._tickResetRoczny();
         const ins = db.query.mock.calls.find(c => /INSERT INTO Lojalnosc_Punkty/.test(c[0]) && /WYGASNIECIE/.test(c[0]));
         expect(ins).toBeTruthy();
-        expect(ins[1][2]).toBe(-180);                    // zmiana = −saldo
-        expect(ins[1][3]).toBe('WYGAS@' + rok + '@42');  // idempotencja per rok+klient
+        expect(ins[1][2]).toBe(-180);                       // zmiana = −saldo
+        expect(ins[1][3]).toBe('WYGAS@2027-01-01@42');      // idempotencja per dzień resetu + klient
     });
 
-    test('brak salonów z resetem → żadnych wygaśnięć', async () => {
-        const db = mockDb(...INIT, { rows: [] });
+    test('brak salonów z datą resetu na dziś → żadnych wygaśnięć', async () => {
+        const db = mockDb(...INIT, { rows: { affectedRows: 0 } }, { rows: [] });
         const router = lojalnoscFactory(db);
         await router._tickResetRoczny();
         expect(db.query.mock.calls.some(c => /WYGASNIECIE/.test(c[0]))).toBe(false);
     });
 
-    test('loj_ustawienia_zapisz zapisuje reset_roczny (admin)', async () => {
+    test('loj_ustawienia_zapisz bez pola daty (stare wywołanie) nadal zapisuje sam przełącznik reset_roczny (admin)', async () => {
         const db = mockDb(...INIT, ROLA_ADMIN, { rows: { affectedRows: 1 } });
         const res = await request(buildApp(db)).post('/api/lojalnosc').send({
             action: 'loj_ustawienia_zapisz', tenant_id: 't-set', user_log: 'Szefowa',

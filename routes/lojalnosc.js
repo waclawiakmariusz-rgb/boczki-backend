@@ -636,6 +636,62 @@ module.exports = (db) => {
   const router = express.Router();
   const zapiszLog = makeZapiszLog(db);
   const hook = makeLojalnosc(db);
+
+  // ── Data resetu punktów (25.11.2026) ───────────────────────────────────────────────────────────
+  // Reguła właściciela: 29 lutego nie istnieje jako dzień resetu — przechodzi na 1 marca (także po przesunięciu o rok).
+  const MIESIACE_DOP = ['stycznia', 'lutego', 'marca', 'kwietnia', 'maja', 'czerwca', 'lipca', 'sierpnia', 'września', 'października', 'listopada', 'grudnia'];
+  const dwa = (n) => String(n).padStart(2, '0');
+  function dataNaTekst(v) {
+    if (!v) return '';
+    if (v instanceof Date) return `${v.getFullYear()}-${dwa(v.getMonth() + 1)}-${dwa(v.getDate())}`;
+    const m = String(v).match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${m[1]}-${m[2]}-${m[3]}` : '';
+  }
+  function dataCzasNaTekst(v) {
+    const d = v instanceof Date ? v : new Date(String(v).replace(' ', 'T'));
+    return isNaN(d.getTime()) ? String(v) : `${dwa(d.getDate())}.${dwa(d.getMonth() + 1)}.${d.getFullYear()} ${dwa(d.getHours())}:${dwa(d.getMinutes())}`;
+  }
+  // Data resetu z wiersza ustawień: jawna `nastepny_reset`, a dla salonu sprzed 25.11.2026 (sam przełącznik) to,
+  // co zrobi pierwszy tick — 1 stycznia po licznikowym roku, nie wcześniej niż 1 stycznia przyszłego roku.
+  function dataResetuZUstawien(u) {
+    const jawna = dataNaTekst(u && u.nastepny_reset);
+    if (jawna) return jawna;
+    if (!Number(u && u.reset_roczny)) return '';
+    return `${Math.max(Number(u.ostatni_reset_rok) || 0, new Date().getFullYear()) + 1}-01-01`;
+  }
+  function normalizujDateResetu(v) {
+    const m = String(v || '').trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return null;
+    let [rok, mies, dzien] = [Number(m[1]), Number(m[2]), Number(m[3])];
+    if (rok < 2000 || rok > 2100 || mies < 1 || mies > 12 || dzien < 1 || dzien > 31) return null;
+    if (mies === 2 && dzien === 29) { mies = 3; dzien = 1; }
+    const spr = new Date(Date.UTC(rok, mies - 1, dzien));
+    if (spr.getUTCFullYear() !== rok || spr.getUTCMonth() !== mies - 1 || spr.getUTCDate() !== dzien) return null;
+    return `${rok}-${dwa(mies)}-${dwa(dzien)}`;
+  }
+  function nastepnaDataResetu(data) {
+    const m = String(data).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    return normalizujDateResetu(`${Number(m[1]) + 1}-${m[2]}-${m[3]}`);
+  }
+  function dzienPrzed(data) {
+    const m = String(data).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!m) return null;
+    const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]) - 1));
+    return `${d.getUTCFullYear()}-${dwa(d.getUTCMonth() + 1)}-${dwa(d.getUTCDate())}`;
+  }
+  function dataResetuTekst(data) {
+    const m = String(data || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? `${Number(m[3])} ${MIESIACE_DOP[Number(m[2]) - 1]} ${m[1]}` : String(data || '');
+  }
+  function dzisiajPL() {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Warsaw', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
+  }
+  function kiedyPL() {
+    const d = new Date();
+    const f = (o) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(d);
+    return `${f({ day: '2-digit', month: '2-digit', year: 'numeric' })} o ${f({ hour: '2-digit', minute: '2-digit' })}`;
+  }
   // Limity na publiczne endpointy apki klienta (bez sesji panelu — HMAC only)
   const loginLimiter = makePublicLimiter({ windowMs: 15 * 60 * 1000, max: 20, message: 'Za dużo prób logowania. Spróbuj za 15 minut.' });
   const klubLimiter = makePublicLimiter({ windowMs: 15 * 60 * 1000, max: 120, message: 'Za dużo żądań. Spróbuj za chwilę.' });
@@ -936,6 +992,10 @@ module.exports = (db) => {
     `ALTER TABLE Lojalnosc_Nagrody ADD COLUMN polecana TINYINT DEFAULT 0`,
     `ALTER TABLE Lojalnosc_Konta ADD COLUMN kod_polec VARCHAR(12) DEFAULT ''`,
     `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN polecenie_pkt INT DEFAULT 0`,
+    // Data resetu punktów ustawiana przez salon (25.11.2026) + kto i kiedy ją ostatnio zmienił (widoczne w panelu).
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN nastepny_reset DATE NULL`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN reset_zmienil VARCHAR(100) DEFAULT ''`,
+    `ALTER TABLE Lojalnosc_Ustawienia ADD COLUMN reset_zmieniono DATETIME NULL`,
   ].forEach(sql => db.query(sql, (e) => {
     if (e && e.code !== 'ER_DUP_FIELDNAME') console.error('[lojalnosc] ALTER:', e.message);
   }));
@@ -1269,21 +1329,33 @@ module.exports = (db) => {
     }
   }
 
-  // Reset roczny: 1 stycznia punkty z poprzednich lat wygasają (dopisujemy WYGASNIECIE
-  // = −saldo, żeby saldo spadło do zera). Idempotentne: ostatni_reset_rok (claim per salon)
-  // + UNIQUE(tenant, zrodlo, ref_id) na wpisie. Wspólna baza dev+prod → atomowy claim.
+  // Reset punktów w dniu ustawionym przez salon (25.11.2026; wcześniej sztywno 1 stycznia): w dniu
+  // `nastepny_reset` punkty sprzed tego dnia wygasają (dopisujemy WYGASNIECIE = −saldo, żeby saldo
+  // spadło do zera), a data przesuwa się o rok (29 lutego → 1 marca). Idempotentne: claim = podmiana
+  // daty tylko wtedy, gdy w bazie jest wciąż ta sama (jedna z trzech instancji wygrywa) + UNIQUE(tenant,
+  // zrodlo, ref_id) na wpisie. Dzień porównujemy zegarem BAZY (sesja w czasie polskim), nie procesu.
   async function tickResetRoczny() {
-    const rok = new Date().getFullYear();
+    // Salony z włączonym resetem bez daty (stan sprzed 25.11.2026): data = 1 stycznia po licznikowym roku,
+    // nigdy wcześniej niż 1 stycznia przyszłego roku — żeby samo wdrożenie nie wyzerowało nikomu punktów.
+    await q(
+      `UPDATE Lojalnosc_Ustawienia
+          SET nastepny_reset = DATE(CONCAT(GREATEST(COALESCE(ostatni_reset_rok, 0), YEAR(CURDATE())) + 1, '-01-01'))
+        WHERE reset_roczny = 1 AND nastepny_reset IS NULL`, []
+    ).catch(() => null);
     const salony = await q(
-      `SELECT tenant_id FROM Lojalnosc_Ustawienia WHERE reset_roczny = 1 AND COALESCE(ostatni_reset_rok, 0) < ? LIMIT 50`, [rok]
+      `SELECT tenant_id, nastepny_reset FROM Lojalnosc_Ustawienia
+        WHERE reset_roczny = 1 AND nastepny_reset IS NOT NULL AND nastepny_reset <= CURDATE() LIMIT 50`, []
     ).catch(() => []);
     for (const s of (Array.isArray(salony) ? salony : [])) {
+      const data = dataNaTekst(s.nastepny_reset);
+      if (!data) continue;
+      const nastepna = nastepnaDataResetu(data);
       const claim = await q(
-        `UPDATE Lojalnosc_Ustawienia SET ostatni_reset_rok = ? WHERE tenant_id = ? AND reset_roczny = 1 AND COALESCE(ostatni_reset_rok, 0) < ?`,
-        [rok, s.tenant_id, rok]
+        `UPDATE Lojalnosc_Ustawienia SET nastepny_reset = ?, ostatni_reset_rok = ? WHERE tenant_id = ? AND nastepny_reset = ?`,
+        [nastepna, Number(data.slice(0, 4)), s.tenant_id, data]
       ).catch(() => null);
       if (!claim || !claim.affectedRows) continue;   // inna instancja już przejęła
-      const start = `${rok}-01-01 00:00:00`;
+      const start = `${data} 00:00:00`;
       const konta = await q(
         `SELECT id_klienta, SUM(zmiana) AS saldo FROM Lojalnosc_Punkty
           WHERE tenant_id = ? AND created_at < ? GROUP BY id_klienta HAVING saldo > 0`, [s.tenant_id, start]
@@ -1294,12 +1366,13 @@ module.exports = (db) => {
         if (saldo <= 0) continue;
         const ins = await q(
           `INSERT INTO Lojalnosc_Punkty (tenant_id, id_klienta, zmiana, powod, zrodlo, ref_id, pracownik)
-           VALUES (?, ?, ?, 'Punkty wygasły (koniec roku)', 'WYGASNIECIE', ?, 'System')`,
-          [s.tenant_id, String(k.id_klienta), -saldo, `WYGAS@${rok}@${k.id_klienta}`]
+           VALUES (?, ?, ?, 'Punkty wygasły (reset punktów)', 'WYGASNIECIE', ?, 'System')`,
+          [s.tenant_id, String(k.id_klienta), -saldo, `WYGAS@${data}@${k.id_klienta}`]
         ).catch(() => null);
         if (ins) ile++;
       }
-      zapiszLog(s.tenant_id, 'KLUB RESET ROCZNY', 'System', `Punkty z ${rok - 1} wygasły — ${ile} kont`);
+      zapiszLog(s.tenant_id, 'KLUB RESET PUNKTÓW', 'System',
+        `Punkty sprzed ${dataResetuTekst(data)} wygasły — ${ile} kont. Następny reset: ${dataResetuTekst(nastepna)}.`);
     }
   }
 
@@ -1398,11 +1471,12 @@ module.exports = (db) => {
 
     } else if (action === 'loj_ustawienia') {
       db.query(
-        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, polecenie_pkt, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
+        `SELECT pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, ostatni_reset_rok, nastepny_reset, reset_zmienil, reset_zmieniono, polecenie_pkt, updated_by, updated_at FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`,
         [tenant_id],
         (err, rows) => {
           if (err) return res.json({ status: 'error', message: err.message });
           const u = (Array.isArray(rows) && rows[0]) || {};
+          const dataResetu = dataResetuZUstawien(u);
           return res.json({
             status: 'success',
             ustawienia: {
@@ -1410,6 +1484,10 @@ module.exports = (db) => {
               nazwa_klubu: u.nazwa_klubu || 'Klub',
               bonus_powitalny_pkt: parseInt(u.bonus_powitalny_pkt, 10) || 0,
               reset_roczny: Number(u.reset_roczny) ? 1 : 0,
+              nastepny_reset: dataResetu,
+              nastepny_reset_tekst: dataResetu ? dataResetuTekst(dataResetu) : '',
+              reset_zmienil: u.reset_zmienil || '',
+              reset_zmieniono: u.reset_zmieniono ? dataCzasNaTekst(u.reset_zmieniono) : '',
               polecenie_pkt: parseInt(u.polecenie_pkt, 10) || 0
             }
           });
@@ -1720,13 +1798,59 @@ module.exports = (db) => {
       const pkt = parseInt(d.pkt_za_10zl, 10);
       const bonus = parseInt(d.bonus_powitalny_pkt, 10) || 0;
       const nazwa = String(d.nazwa_klubu || 'Klub').trim().slice(0, 120) || 'Klub';
-      const resetRoczny = (d.reset_roczny === 1 || d.reset_roczny === '1' || d.reset_roczny === true) ? 1 : 0;
+      // Data resetu (25.11.2026): pole w panelu zastępuje przełącznik; pusta data = punkty nie wygasają.
+      // Stare wywołania bez pola `nastepny_reset` działają jak dawniej (sam przełącznik).
+      const podanoDate = Object.prototype.hasOwnProperty.call(d, 'nastepny_reset');
+      let nowaData = null;
+      if (podanoDate) {
+        const surowa = String(d.nastepny_reset || '').trim();
+        if (surowa) {
+          nowaData = normalizujDateResetu(surowa);
+          if (!nowaData) return res.json({ status: 'error', message: 'Data resetu punktów: podaj dzień w formacie RRRR-MM-DD.' });
+          if (nowaData <= dzisiajPL()) return res.json({ status: 'error', message: 'Data resetu punktów musi być w przyszłości — reset w tym dniu wyzerowałby punkty od ręki.' });
+        }
+      }
+      const resetRoczny = podanoDate ? (nowaData ? 1 : 0) : ((d.reset_roczny === 1 || d.reset_roczny === '1' || d.reset_roczny === true) ? 1 : 0);
       const poleceniePkt = Math.max(0, Math.min(100000, parseInt(d.polecenie_pkt, 10) || 0));
       if (!Number.isFinite(pkt) || pkt < 0 || pkt > 100) {
         return res.json({ status: 'error', message: 'Punkty za 10 zł: liczba 0–100.' });
       }
       if (bonus < 0 || bonus > 1000) return res.json({ status: 'error', message: 'Bonus powitalny: 0–1000 pkt.' });
       wymagajAdmina(tenant_id, kto, res, () => {
+        if (podanoDate) {
+          // Najpierw stara data — żeby wpis w Dzienniku mówił, z czego na co, i żeby „kto zmienił” zapisywać tylko przy zmianie.
+          db.query(`SELECT nastepny_reset, reset_roczny, ostatni_reset_rok FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [tenant_id], (errS, rowsS) => {
+            const u = (Array.isArray(rowsS) && rowsS[0]) || {};
+            const staraData = dataResetuZUstawien(u);
+            const zmiana = (nowaData || '') !== staraData;
+            db.query(
+              `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, polecenie_pkt, nastepny_reset, reset_zmienil, reset_zmieniono, updated_by)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ${zmiana ? 'NOW()' : 'NULL'}, ?)
+               ON DUPLICATE KEY UPDATE pkt_za_10zl = VALUES(pkt_za_10zl), nazwa_klubu = VALUES(nazwa_klubu),
+                 bonus_powitalny_pkt = VALUES(bonus_powitalny_pkt), reset_roczny = VALUES(reset_roczny),
+                 polecenie_pkt = VALUES(polecenie_pkt), updated_by = VALUES(updated_by),
+                 nastepny_reset = VALUES(nastepny_reset)${zmiana ? ', reset_zmienil = VALUES(reset_zmienil), reset_zmieniono = NOW()' : ''}`,
+              [tenant_id, pkt, nazwa, bonus, resetRoczny, poleceniePkt, nowaData, zmiana ? kto : '', kto],
+              (err) => {
+                if (err) return res.json({ status: 'error', message: err.message });
+                zapiszLog(tenant_id, 'KLUB USTAWIENIA', kto, `pkt_za_10zl=${pkt}, nazwa=${nazwa}, bonus_powitalny=${bonus}, reset=${nowaData || 'wyłączony'}, polecenie=${poleceniePkt}`);
+                if (zmiana) {
+                  // Polecenie właściciela 25.11.2026: ma być zapisane i widoczne, kto zmienił datę resetu — „żeby nie było wątpliwości kto napsuł”.
+                  const zdanie = nowaData
+                    ? `Użytkownik ${kto} zmienił datę resetu punktów Klubu na ${dataResetuTekst(nowaData)} (${kiedyPL()}; poprzednio: ${staraData ? dataResetuTekst(staraData) : 'reset wyłączony'}). W tym dniu wszystkie wcześniejsze punkty wygasną i zaczną naliczać się od nowa.`
+                    : `Użytkownik ${kto} wyłączył reset punktów Klubu (${kiedyPL()}; poprzednio: ${dataResetuTekst(staraData)}). Punkty nie będą już wygasać.`;
+                  zapiszLog(tenant_id, 'KLUB DATA RESETU', kto, zdanie);
+                }
+                return res.json({
+                  status: 'success',
+                  message: zmiana ? (nowaData ? `Zapisano. Reset punktów: ${dataResetuTekst(nowaData)}.` : 'Zapisano. Reset punktów wyłączony.') : 'Zapisano ustawienia Klubu.',
+                  nastepny_reset: nowaData || '', nastepny_reset_tekst: nowaData ? dataResetuTekst(nowaData) : ''
+                });
+              }
+            );
+          });
+          return;
+        }
         db.query(
           `INSERT INTO Lojalnosc_Ustawienia (tenant_id, pkt_za_10zl, nazwa_klubu, bonus_powitalny_pkt, reset_roczny, polecenie_pkt, ostatni_reset_rok, updated_by)
            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -2693,14 +2817,18 @@ module.exports = (db) => {
       // Historia dla klientki: NIE pokazujemy wpisu wygaśnięcia (rodziłby złość — „−180 wygasło").
       // Przy resecie rocznym (filtr niżej) zostają tylko wpisy z bieżącego roku → wygląda jak
       // świeży start, a nie kara. Saldo i tak spójne (suma księgi = punkty bieżącego sezonu).
-      const wRows = await q(
+      // Wpis WYGASNIECIE zostaje w zapytaniu tylko po to, żeby wyznaczyć początek bieżącego sezonu — sam nigdy nie trafia do apki.
+      const wRowsAll = await q(
         `SELECT zmiana, powod, zrodlo, created_at FROM Lojalnosc_Punkty
-          WHERE tenant_id = ? AND id_klienta = ? AND zrodlo <> 'WYGASNIECIE' ORDER BY id DESC LIMIT 20`,
+          WHERE tenant_id = ? AND id_klienta = ? ORDER BY id DESC LIMIT 20`,
         [p.t, p.k]
       );
-      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny, polecenie_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
+      const ostatnieWygasniecie = (Array.isArray(wRowsAll) ? wRowsAll : []).find(w => w.zrodlo === 'WYGASNIECIE');
+      const sezonOdMs = ostatnieWygasniecie ? new Date(String(ostatnieWygasniecie.created_at || '').replace(' ', 'T')).getTime() : 0;
+      const wRows = (Array.isArray(wRowsAll) ? wRowsAll : []).filter(w => w.zrodlo !== 'WYGASNIECIE');
+      const uRows = await q(`SELECT nazwa_klubu, pkt_za_10zl, reset_roczny, nastepny_reset, ostatni_reset_rok, polecenie_pkt FROM Lojalnosc_Ustawienia WHERE tenant_id = ? LIMIT 1`, [p.t]).catch(() => []);
       const ust = (Array.isArray(uRows) && uRows[0]) || {};
-      const rokStartMs = new Date(new Date().getFullYear(), 0, 1).getTime();
+      const dataResetuApki = dataResetuZUstawien(ust);
       // Faza 3: nagrody + moje oczekujące odbiory (saldo dostępne = saldo − rezerwacje)
       const rezRows = await q(
         `SELECT COALESCE(SUM(koszt_pkt), 0) AS rez FROM Lojalnosc_Odbiory WHERE tenant_id = ? AND id_klienta = ? AND status = 'OCZEKUJE'`,
@@ -2792,7 +2920,7 @@ module.exports = (db) => {
         saldo,
         saldo_dostepne: saldo - zarezerwowane,
         wpisy: (Array.isArray(wRows) ? wRows : [])
-          .filter(w => !Number(ust.reset_roczny) || new Date(String(w.created_at || '').replace(' ', 'T')).getTime() >= rokStartMs)
+          .filter(w => !sezonOdMs || new Date(String(w.created_at || '').replace(' ', 'T')).getTime() >= sezonOdMs)
           .map(w => ({
             zmiana: Number(w.zmiana) || 0,
             powod: w.powod || '',
@@ -2825,8 +2953,9 @@ module.exports = (db) => {
         push_vapid: vapidPublic(),
         nazwa_klubu: ust.nazwa_klubu || 'Klub',
         pkt_za_10zl: parseInt(ust.pkt_za_10zl, 10) || 1,
-        // Reset roczny: punkty ważne do 31.12 bieżącego roku (motywacja: wykorzystaj przed końcem roku)
-        punkty_do: Number(ust.reset_roczny) ? (new Date().getFullYear() + '-12-31') : null,
+        // Punkty ważne do dnia przed resetem ustawionym przez salon (np. 2027-12-31 przy resecie 1.01.2028); bez resetu — bezterminowo
+        punkty_do: dataResetuApki ? dzienPrzed(dataResetuApki) : null,
+        reset_od: dataResetuApki || null,
         // Mnożnik czasowy — apka pokazuje baner „Punkty ×2 do …"
         mnoznik_aktywny: (mn && Number(mn.mnoznik) > 1)
           ? { mnoznik: Number(mn.mnoznik), opis: mn.opis || '', data_do: mn.data_do }
@@ -3363,6 +3492,7 @@ module.exports = (db) => {
   });
 
   router._tickResetRoczny = tickResetRoczny;   // hook do testów resetu rocznego
+  router._datyResetu = { normalizujDateResetu, nastepnaDataResetu, dzienPrzed, dataResetuTekst, dataResetuZUstawien };   // hook do testów dat resetu
   router._tickAutomaty = tickAutomaty;         // hooki automatów (testy)
   router._wykonajAutomat = wykonajAutomat;
   router._kandydaciAutomatu = kandydaciAutomatu;

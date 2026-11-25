@@ -8786,11 +8786,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             <label class="klubadm-label">Nagroda za polecenie koleżanki (0 = wyłączone)</label>
                             <input id="klubadm-polecenie" type="number" min="0" max="100000" step="1" class="klubadm-input" style="width:110px;">
                             <div class="klubadm-pod">Ile punktów dostaną OBIE strony, gdy poleconą koleżanka zrobi pierwszy zakup. Klientka udostępnia swój kod z aplikacji; nagroda nalicza się automatycznie po realnej wizycie. 0 = funkcja ukryta w apce.</div>
-                            <label class="klubadm-label" style="display:flex; align-items:center; gap:9px; margin-top:16px; cursor:pointer;">
-                                <input id="klubadm-reset" type="checkbox" style="width:18px; height:18px; accent-color:#c54f7f; flex-shrink:0;">
-                                <span>Punkty kasują się na koniec roku (1 stycznia)</span>
-                            </label>
-                            <div class="klubadm-pod">Wszystkie punkty wygasają 1 stycznia i naliczają się od zera. Klientki widzą w aplikacji „ważne do 31.12" — to napędza grudzień. Tegoroczne punkty są bezpieczne: pierwsze wygaśnięcie dopiero 1 stycznia przyszłego roku.</div>
+                            <label class="klubadm-label" for="klubadm-reset-data" style="margin-top:16px;">Data resetu punktów (puste = punkty nie wygasają)</label>
+                            <input id="klubadm-reset-data" type="date" class="klubadm-input" style="width:190px;" min="2026-01-01" max="2100-12-31">
+                            <div id="klubadm-reset-info" class="klubadm-pod" style="margin-top:6px; font-weight:600; color:#6b3a4e;"></div>
+                            <div class="klubadm-pod">W tym dniu o północy wszystkie wcześniejsze punkty wygasają i naliczają się od zera, a data przesuwa się sama o rok. 29 lutego liczy się jako 1 marca. Klientki widzą w aplikacji „ważne do" dnia przed resetem. Każda zmiana daty trafia do Dziennika Zdarzeń z nazwiskiem osoby, która ją zmieniła.</div>
                             <div style="display:flex; align-items:center; gap:12px; margin-top:18px;">
                                 <button onclick="klubadm_zapiszUstawienia()" class="klubadm-glowny">Zapisz ustawienia</button>
                                 <span id="klubadm-ust-status" style="font-size:12.5px; color:#8a8f9c;"></span>
@@ -33929,11 +33928,13 @@ async function klubadm_zaladujUstawienia() {
     const n = document.getElementById('klubadm-nazwa');
     const p = document.getElementById('klubadm-pkt');
     const b = document.getElementById('klubadm-bonus');
-    const rs = document.getElementById('klubadm-reset');
+    const rd = document.getElementById('klubadm-reset-data');
+    const ri = document.getElementById('klubadm-reset-info');
     if (n) n.value = d.ustawienia.nazwa_klubu || 'Klub';
     if (p) p.value = d.ustawienia.pkt_za_10zl != null ? d.ustawienia.pkt_za_10zl : 1;
     if (b) b.value = d.ustawienia.bonus_powitalny_pkt != null ? d.ustawienia.bonus_powitalny_pkt : 0;
-    if (rs) rs.checked = !!Number(d.ustawienia.reset_roczny);
+    if (rd) rd.value = d.ustawienia.nastepny_reset || '';
+    if (ri) ri.textContent = klubadm_opisResetu(d.ustawienia);
     const pol = document.getElementById('klubadm-polecenie');
     if (pol) pol.value = d.ustawienia.polecenie_pkt != null ? d.ustawienia.polecenie_pkt : 0;
   } catch (e) {}
@@ -33946,10 +33947,18 @@ async function klubadm_zapiszUstawienia() {
     nazwa_klubu: document.getElementById('klubadm-nazwa').value.trim(),
     pkt_za_10zl: document.getElementById('klubadm-pkt').value,
     bonus_powitalny_pkt: document.getElementById('klubadm-bonus').value,
-    reset_roczny: document.getElementById('klubadm-reset').checked ? 1 : 0,
+    nastepny_reset: document.getElementById('klubadm-reset-data').value || '',
+    reset_roczny: document.getElementById('klubadm-reset-data').value ? 1 : 0,
     polecenie_pkt: document.getElementById('klubadm-polecenie').value
   }).catch(() => null);
-  status.textContent = (d && d.status === 'success') ? '✅ Zapisano.' : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+  status.textContent = (d && d.status === 'success') ? ('✅ ' + (d.message || 'Zapisano.')) : ('Błąd: ' + ((d && d.message) || 'połączenia'));
+  if (d && d.status === 'success') klubadm_zaladujUstawienia();
+}
+// Zdanie pod polem daty: najbliższy reset + kto i kiedy ostatnio zmienił datę (polecenie właściciela 25.11.2026: „żeby nie było wątpliwości kto napsuł”).
+function klubadm_opisResetu(u) {
+  const kto = (u && u.reset_zmienil) ? ' Ostatnia zmiana: ' + u.reset_zmienil + ', ' + u.reset_zmieniono + '.' : '';
+  if (!u || !u.nastepny_reset) return 'Reset wyłączony — punkty nie wygasają.' + kto;
+  return 'Najbliższy reset: ' + (u.nastepny_reset_tekst || u.nastepny_reset) + '.' + (kto || ' Data z dawnego ustawienia „koniec roku” — nikt jej jeszcze nie zmieniał.');
 }
 async function klubadm_linkRejestracyjny() {
   const area = document.getElementById('klubadm-rejlink-area');
