@@ -164,3 +164,7 @@ dane w pamięci i rysują jedną stronę, więc silnik klika „Poprzednia” do
 („Pokaż więcej” doczytuje z serwera) — przed eksportem doczytuje wszystko. Klub → Członkowie już eksportował całą listę z pamięci.
 Stopka i Dziennik dostają „wszystkie N stron”. Próba: Historia sprzedaży „Strona 1 z 8” → 148 wierszy z 8 stron, ekran wrócił na stronę 1.
 Logi (Dziennik) mają sztywny limit 300 ostatnich wpisów po stronie serwera — eksport bierze te 300 (tyle widzi widok).
+
+**Dziennik Zdarzeń 500 wpisów (prośba właściciela 25.11 ok. 13:20: „300 ostatnio było dla mnie niewystarczające, np. na 400 lub 500”):**
+`routes/logi.js` → `LIMIT 500` (było 300). Panel rysuje wszystko, co dostanie (bez własnego limitu), więc podgląd i eksport Dziennika obejmują
+500 ostatnich wpisów. Test w `tests/eksport-log.test.js`.

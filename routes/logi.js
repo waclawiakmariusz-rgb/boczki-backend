@@ -23,7 +23,8 @@ module.exports = (db) => {
     const tenant_id = req.query.tenant_id;
     if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
 
-    const sql = `SELECT data_zdarzenia, pracownik, akcja, opis FROM Logi WHERE tenant_id = ? ORDER BY data_zdarzenia DESC LIMIT 300`;
+    // 500 ostatnich wpisów (25.11.2026, prośba właściciela: „300 ostatnio było dla mnie niewystarczające, np. na 400 lub 500”; było 300)
+    const sql = `SELECT data_zdarzenia, pracownik, akcja, opis FROM Logi WHERE tenant_id = ? ORDER BY data_zdarzenia DESC LIMIT 500`;
     db.query(sql, [tenant_id], (err, rows) => {
       if (err) return res.json([]);
       const logi = rows.map(r => ({
@@ -82,7 +83,7 @@ module.exports = (db) => {
 //
 // Tłumienie powtórek: identyczny błąd (ten sam salon + akcja + treść) zapisujemy raz
 // na minutę. Bez tego jeden zepsuty endpoint w pętli zalałby dziennik i wypchnął
-// z niego wszystko inne (widok pokazuje 300 ostatnich wpisów).
+// z niego wszystko inne (widok pokazuje 500 ostatnich wpisów; do 25.11.2026 było 300).
 module.exports.makeZapiszBlad = (db) => {
   const ostatnie = new Map();
   const OKNO_MS = 60000;

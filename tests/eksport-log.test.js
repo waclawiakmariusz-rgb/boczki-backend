@@ -66,6 +66,13 @@ describe('eksport_log — wpis w Dzienniku o eksporcie do Excela', () => {
         expect(opis.length).toBeLessThanOrEqual(500);
     });
 
+    test('podgląd Dziennika (get_system_logs) pokazuje 500 ostatnich wpisów (25.11.2026: było 300, „niewystarczające”)', async () => {
+        const db = mockDb({ rows: [{ data_zdarzenia: '2026-11-25 12:00:00', pracownik: 'Ola', akcja: 'EKSPORT DANYCH', opis: 'x' }] });
+        const res = await request(buildApp(db)).get('/api/get_system_logs').query({ tenant_id: 'demo-test' });
+        expect(db.query.mock.calls[0][0]).toMatch(/ORDER BY data_zdarzenia DESC LIMIT 500$/);
+        expect(res.body).toEqual([{ data: '2026-11-25 12:00:00', kto: 'Ola', akcja: 'EKSPORT DANYCH', opis: 'x' }]);
+    });
+
     test('inna akcja na /logi jest odrzucana', async () => {
         const db = mockDb();
         const res = await request(buildApp(db)).post('/api/logi').send({ action: 'cokolwiek', tenant_id: 'demo-test', user_log: 'Ola' });
