@@ -5,7 +5,7 @@ np. jak jestem w kosmetykach, to mogę sobie zrobić kliknięcie i to, co widzę
 do pliku Excel; tak samo rzeczy w magazynie i innego rodzaju miejscach, gdzie są jakieś dane … eksporty danych, które w razie potrzeb
 chcę pozyskać do np. jakiejś zewnętrznej analizy AI.”*
 
-Stan: ZBUDOWANE 25.11.2026 (rozdz. 7) po „rób wszystko lokalnie” — gałąź `eksport-excel`, lokalnie, czeka na decyzję o pushu.
+Stan: ZBUDOWANE 25.11.2026 (rozdz. 7); scalone do lokalnego dev = f44077e („przygotuj to na wieczorny push na main”), push na main zaplanowany 25.11 20:35 razem z datą resetu Klubu.
 
 ## 1. Co jest dziś
 
