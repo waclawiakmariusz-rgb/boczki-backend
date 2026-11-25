@@ -149,3 +149,9 @@ podpowiedź „↓ sprzedaż pobiera…” pomijana), w pozostałych: „Nagłó
 Mapa nazw: `ROZBICIA` w `public/eksport-excel.js` — łatwo dopisać kolejne widoki. Próba powtórzona: 0 FAIL
 (`proby-wyniki/eksport-excel-test-2026-11-25-11-23/`), testy 21/10. Przykładowe pliki: `narzedzia/proby/skrypty/eksport-excel-przyklady.js`
 → `proby-wyniki/przyklady-eksportu/`.
+
+**Odbiór kolumn (25.11 ok. 12:25):** właściciel: „zdecydowanie lepiej, chcę, żeby wszystkie dane były tak rozłożone na komórki”.
+Dlatego w przeglądarce części komórki wynikają z jej budowy, nie tylko z linii tekstu: plakietki (inline-block, klasy badge/chip/status),
+bloki, `<br>`, `<small>` to osobne części, tekst przycisków wewnątrz komórki z danymi jest pomijany, a każda część rozbijana jeszcze
+po „ | ”, „ · ”. Działa we wszystkich widokach tabelarycznych; nazwy kolumn z mapy `ROZBICIA` (Magazyn) albo „Nagłówek (n)”.
+Testy 22+10, próba 0 FAIL (`proby-wyniki/eksport-excel-test-2026-11-25-11-29/`).

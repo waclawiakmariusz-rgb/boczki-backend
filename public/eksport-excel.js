@@ -167,11 +167,35 @@
       if (typ === 'checkbox' || typ === 'radio') return [pole.checked ? 'TAK' : 'NIE'];
       if (typ !== 'button' && typ !== 'submit') return [String(pole.value || '').trim()];
     }
-    const czesci = [];
-    for (const linia of tekstEl(td).replace(/[  ]/g, ' ').split(/\s*\n+\s*/)) {
-      for (const f of linia.split(/\s+[|·•]\s+/)) { const t = f.trim(); if (t) czesci.push(t); }
+    // Polecenie właściciela 25.11: „chcę, żeby wszystkie dane były tak rozłożone na komórki” — w przeglądarce idziemy po budowie
+    // komórki: plakietki (inline-block, klasa badge/chip/status…), bloki, <br>, <small> to osobne części, a tekst przycisków
+    // wewnątrz komórki z danymi jest pomijany. Bez DOM (testy) — części z linii tekstu.
+    let czesci = [];
+    if (td.childNodes && td.nodeType === 1 && typeof getComputedStyle === 'function') {
+      let biez = '';
+      const flush = () => { const t = biez.replace(/[  ]/g, ' ').replace(/\s+/g, ' ').trim(); if (t) czesci.push(t); biez = ''; };
+      const idz = (node) => {
+        for (const n of Array.from(node.childNodes)) {
+          if (n.nodeType === 3) { biez += n.nodeValue; continue; }
+          if (n.nodeType !== 1) continue;
+          const tag = String(n.tagName).toUpperCase();
+          if (tag === 'BR') { flush(); continue; }
+          if (tag === 'BUTTON' || tag === 'SELECT' || tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SCRIPT' || tag === 'STYLE' || (tag === 'A' && n.hasAttribute && n.hasAttribute('onclick'))) continue;
+          const cs = getComputedStyle(n);
+          if (cs.display === 'none' || cs.visibility === 'hidden') continue;
+          const osobno = /^(DIV|P|UL|OL|LI|H[1-6]|TABLE|TR|SECTION|HR|SMALL)$/.test(tag)
+            || /inline-block|flex|grid|^block|list-item|table/.test(cs.display)
+            || /badge|chip|pill|\btag\b|status|etykiet/i.test(String(n.className || ''));
+          if (osobno) { flush(); idz(n); flush(); } else idz(n);
+        }
+      };
+      idz(td); flush();
+    } else {
+      czesci = tekstEl(td).replace(/[  ]/g, ' ').split(/\s*\n+\s*/).map((x) => x.trim()).filter(Boolean);
     }
-    return czesci.length ? czesci : [''];
+    const wynik = [];
+    for (const c of czesci) for (const f of c.split(/\s+[|·•]\s+/)) { const t = f.trim(); if (t) wynik.push(t); }
+    return wynik.length ? wynik : [''];
   }
   // Nazwy kolumn dla rozbitych komórek w znanych widokach (klucz: id sekcji → nagłówek kolumny). `pozycyjne` — nazwy kolejnych
   // części; `reguly` — część pasująca do wzorca trafia do wskazanej kolumny (z obcięciem przedrostka) albo jest pomijana.

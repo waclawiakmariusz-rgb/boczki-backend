@@ -140,6 +140,28 @@ describe('Czytanie tabeli z ekranu', () => {
         expect(z.wiersze).toEqual([['Krem X', 'Twarz', 'Ola', 5], ['Tonik', '', '', 2]]);
     });
 
+    test('w przeglądarce części wynikają z budowy komórki: plakietka (inline-block) i <small> osobno, <br> dzieli, tekst przycisku pomijany', () => {
+        const tekst = (t) => ({ nodeType: 3, nodeValue: t });
+        const el = (tag, dzieci, opcje = {}) => ({ nodeType: 1, tagName: tag, childNodes: dzieci, className: opcje.className || '', display: opcje.display || 'inline', hasAttribute: (a) => a === 'onclick' && !!opcje.onclick });
+        global.getComputedStyle = (n) => ({ display: n.display, visibility: 'visible' });
+        try {
+            const komorka = el('TD', [
+                el('SPAN', [tekst('DETAL')], { className: 'cat-badge cat-detal', display: 'inline-block' }),
+                tekst(' '),
+                el('STRONG', [tekst('Witamina D3+K2')]),
+                el('BR', []),
+                el('SMALL', [tekst('Suplementy | Ola | dostawa 1.09.2026')]),
+                el('BUTTON', [tekst('Edytuj')], { display: 'inline-block' }),
+                el('DIV', [tekst('ukryte')], { display: 'none' }),
+            ]);
+            komorka.querySelector = () => null; komorka.querySelectorAll = () => [];
+            const t = tabela(['Produkt'], [{ cells: [komorka], offsetParent: {}, querySelector: () => null, querySelectorAll: () => [komorka] }]);
+            const z = EstelioExcel.zbierzTabele(t, 'magazyn');
+            expect(z.naglowki).toEqual(['Kategoria', 'Produkt', 'Typ', 'Przyjął(a)', 'Dostawa']);
+            expect(z.wiersze).toEqual([['DETAL', 'Witamina D3+K2', 'Suplementy', 'Ola', '1.09.2026']]);
+        } finally { delete global.getComputedStyle; }
+    });
+
     test('Magazyn: komórka Produkt → kolumny Kategoria, Produkt, Typ, Przyjął(a), Dostawa; przy kilku dostawach kolumna „Dostawy”, podpowiedź „↓ sprzedaż…” pomijana', () => {
         const t = tabela(['Produkt', 'Il.', 'Ważność', 'Cena'], [
             tr([td('DETAL\nWitamina D3+K2\nSuplement | Ola | dostawa 1.09.2026'), td('1'), td('31.12.2026'), td('79,00 PLN')]),
