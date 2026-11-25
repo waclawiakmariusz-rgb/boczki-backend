@@ -155,3 +155,12 @@ Dlatego w przeglądarce części komórki wynikają z jej budowy, nie tylko z li
 bloki, `<br>`, `<small>` to osobne części, tekst przycisków wewnątrz komórki z danymi jest pomijany, a każda część rozbijana jeszcze
 po „ | ”, „ · ”. Działa we wszystkich widokach tabelarycznych; nazwy kolumn z mapy `ROZBICIA` (Magazyn) albo „Nagłówek (n)”.
 Testy 22+10, próba 0 FAIL (`proby-wyniki/eksport-excel-test-2026-11-25-11-29/`).
+
+**Stronicowanie (pytanie właściciela 25.11 ok. 13:00: „a co, jeżeli w widoku jest paginacja? czy eksportowane są wszystkie dane…?”):**
+do tej pory eksport brał tylko wiersze narysowane na ekranie, czyli przy stronach — jedną stronę. Od teraz **eksport przechodzi wszystkie
+strony**: widoki ze stronami (Zadatki, Historia sprzedaży, Kartoteka klientki, Urodziny, Konsultacje, Targety…) trzymają przefiltrowane
+dane w pamięci i rysują jedną stronę, więc silnik klika „Poprzednia” do pierwszej strony, zbiera wiersze z każdej strony klikając
+„Następna” (etykiety z ozdobnikami „◀/➡️” też), scala je w jeden arkusz i wraca na stronę, na której był użytkownik. Ranking
+(„Pokaż więcej” doczytuje z serwera) — przed eksportem doczytuje wszystko. Klub → Członkowie już eksportował całą listę z pamięci.
+Stopka i Dziennik dostają „wszystkie N stron”. Próba: Historia sprzedaży „Strona 1 z 8” → 148 wierszy z 8 stron, ekran wrócił na stronę 1.
+Logi (Dziennik) mają sztywny limit 300 ostatnich wpisów po stronie serwera — eksport bierze te 300 (tyle widzi widok).

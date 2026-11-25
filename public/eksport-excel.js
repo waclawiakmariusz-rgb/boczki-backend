@@ -472,16 +472,79 @@
   function slug(t) { return String(t || '').toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => PL[c]).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'dane'; }
   function dataISO(d) { return d.getFullYear() + '-' + dwa(d.getMonth() + 1) + '-' + dwa(d.getDate()); }
   function dataPL(d) { return dwa(d.getDate()) + '.' + dwa(d.getMonth() + 1) + '.' + d.getFullYear() + ' o ' + dwa(d.getHours()) + ':' + dwa(d.getMinutes()); }
-  function przygotuj(sekcja, teraz) {
+  // ───────────────────────── Stronicowanie: eksport WSZYSTKICH stron, nie tylko widocznej ─────────────────────────
+  // Pytanie właściciela 25.11.2026: „a co, jeżeli w widoku jest paginacja? czy eksportowane są wszystkie dane, nawet te, których
+  // użytkownik bezpośrednio nie widzi, ale filtr je powinien wyświetlać?” — TAK: widoki ze stronami (Zadatki, Historia sprzedaży,
+  // Kartoteka klientki, Urodziny, Konsultacje…) trzymają przefiltrowane dane w pamięci i rysują jedną stronę. Eksport przechodzi
+  // strony przyciskami „Poprzednia/Następna”, zbiera wiersze z każdej i wraca na stronę, na której był użytkownik.
+  const czekaj = (ms) => new Promise((r) => setTimeout(r, ms));
+  function przyciskiStron(sekcja) {
+    const przyciski = Array.from(sekcja.querySelectorAll('button, .pagination-btn')).filter((b) => widoczny(b) && !(b.closest && b.closest('table')));
+    // etykiety w panelu bywają z ozdobnikami („◀ Poprzednia”, „Następna ➡️”, „«”) — liczą się same litery
+    const same = (b) => czysc(tekstEl(b)).replace(/[^\p{L}\s]/gu, '').replace(/\s+/g, ' ').trim();
+    const szukaj = (re) => przyciski.find((b) => re.test(same(b)));
+    return { poprzednia: szukaj(/^poprzedni[ae]?$/i), nastepna: szukaj(/^nast[eę]pn[ae]?$/i) };
+  }
+  function etykietaStrony(sekcja) {
+    const m = (tekstEl(sekcja) || '').match(/Strona\s+(\d+)\s+z\s+(\d+)/i);
+    return m ? { strona: Number(m[1]), stron: Number(m[2]) } : null;
+  }
+  async function zbierzWszystkieStrony(sekcja) {
+    const p = przyciskiStron(sekcja);
+    if (!p.nastepna && !p.poprzednia) return null;                     // widok bez stron
+    const klik = async (btn) => { btn.click(); await czekaj(0); };
+    // na pierwszą stronę, licząc, skąd startowaliśmy
+    let cofniec = 0;
+    for (let i = 0; i < 500; i++) { const b = przyciskiStron(sekcja).poprzednia; if (!b || b.disabled) break; await klik(b); cofniec++; }
+    const zebrane = new Map();   // sygnatura kolumn → arkusz
+    let stron = 0;
+    for (let i = 0; i < 500; i++) {
+      stron++;
+      for (const a of tabeleSekcji(sekcja)) {
+        const k = a.nazwa + '|' + a.naglowki.join('|');
+        if (!zebrane.has(k)) zebrane.set(k, { nazwa: a.nazwa, naglowki: a.naglowki, wiersze: [], pominiete: a.pominiete });
+        const cel = zebrane.get(k);
+        for (const w of a.wiersze) cel.wiersze.push(w);
+      }
+      const b = przyciskiStron(sekcja).nastepna;
+      if (!b || b.disabled) break;
+      await klik(b);
+    }
+    // z powrotem tam, gdzie był użytkownik
+    for (let i = 0; i < 500; i++) { const b = przyciskiStron(sekcja).poprzednia; if (!b || b.disabled) break; await klik(b); }
+    for (let i = 0; i < cofniec; i++) { const b = przyciskiStron(sekcja).nastepna; if (!b || b.disabled) break; await klik(b); }
+    return { arkusze: Array.from(zebrane.values()), stron };
+  }
+  // Ranking: „Pokaż więcej” doczytuje z serwera — przed eksportem doczytujemy wszystko, co filtr obejmuje.
+  async function doczytajWszystko(sekcja) {
+    const btn = sekcja.querySelector('#rnk-wiecej-btn');
+    if (!btn) return 0;
+    let doczytane = 0;
+    for (let i = 0; i < 200; i++) {
+      if (!widoczny(btn) || btn.disabled || (btn.style && btn.style.display === 'none')) break;
+      const lista = sekcja.querySelector('#rnk-lista');
+      const przed = lista ? lista.children.length : 0;
+      btn.click();
+      let urosla = false;
+      for (let t = 0; t < 40; t++) { await czekaj(100); if ((lista ? lista.children.length : 0) > przed) { urosla = true; break; } }
+      if (!urosla) break;
+      doczytane++;
+    }
+    return doczytane;
+  }
+
+  function przygotuj(sekcja, teraz, zebrane) {
     teraz = teraz || new Date();
     const ded = dedykowany(sekcja);
     const tytul = (ded && ded.tytul) || tytulSekcji(sekcja);
     const filtry = (ded && ded.filtry) || opisFiltrow(sekcja);
-    const arkusze = ded ? ded.arkusze.map((a) => ({ nazwa: a.nazwa, naglowki: a.naglowki, wiersze: a.wiersze, pominiete: a.pominiete || [] })) : tabeleSekcji(sekcja);
+    const zrodlo = ded ? ded.arkusze : (zebrane && zebrane.arkusze) ? zebrane.arkusze : tabeleSekcji(sekcja);
+    const arkusze = zrodlo.map((a) => ({ nazwa: a.nazwa, naglowki: a.naglowki, wiersze: a.wiersze, pominiete: a.pominiete || [] }));
     const wierszy = arkusze.reduce((s, a) => s + a.wiersze.length, 0);
+    const stron = zebrane && zebrane.stron > 1 ? zebrane.stron : 0;
     const plik = 'estelio-' + slug(tytul) + '-' + dataISO(teraz) + '.xlsx';
-    const stopka = 'Eksport z Estelio · salon ' + salon() + ' · widok „' + tytul + '” · ' + dataPL(teraz) + ' · filtry: ' + (filtry || 'brak') + ' · wierszy: ' + wierszy + ' · wykonał(a): ' + kto();
-    return { tytul, filtry, wierszy, plik, sekcjaId: String(sekcja.id || ''), arkusze: arkusze.map((a) => ({ nazwa: a.nazwa, naglowki: a.naglowki, wiersze: a.wiersze, pominiete: a.pominiete, stopka })) };
+    const stopka = 'Eksport z Estelio · salon ' + salon() + ' · widok „' + tytul + '” · ' + dataPL(teraz) + ' · filtry: ' + (filtry || 'brak') + ' · wierszy: ' + wierszy + (stron ? ' (wszystkie ' + stron + ' stron)' : '') + ' · wykonał(a): ' + kto();
+    return { tytul, filtry, wierszy, stron, plik, sekcjaId: String(sekcja.id || ''), arkusze: arkusze.map((a) => ({ nazwa: a.nazwa, naglowki: a.naglowki, wiersze: a.wiersze, pominiete: a.pominiete, stopka })) };
   }
   function pobierz(nazwa, bajty) {
     const blob = new Blob([bajty], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -495,17 +558,23 @@
     sekcja = sekcja || document.querySelector('.section.active');
     if (!sekcja) return null;
     const btn = sekcja.querySelector('.eksport-excel-btn');
-    const p = przygotuj(sekcja);
-    if (!p.wierszy) { alert('W tym widoku nie ma teraz żadnych wierszy do eksportu.'); return null; }
     if (ROLE_EKSPORTU.indexOf(rola()) < 0) { alert('Eksport danych jest dostępny dla recepcji, managera i administratora.'); return null; }
-    if (btn) { btn.disabled = true; btn.textContent = '⏳ Zapisuję w Dzienniku…'; }
     const przywroc = () => { if (btn) { btn.disabled = false; btn.textContent = ETYKIETA; } };
+    if (btn) { btn.disabled = true; btn.textContent = '⏳ Zbieram wszystkie strony…'; }
+    let zebrane = null;
+    try {
+      if (!dedykowany(sekcja)) zebrane = await zbierzWszystkieStrony(sekcja);   // widoki ze stronami: wszystkie strony
+      else await doczytajWszystko(sekcja);                                        // Ranking: doczytanie „Pokaż więcej”
+    } catch (e) { zebrane = null; }
+    const p = przygotuj(sekcja, null, zebrane);
+    if (!p.wierszy) { przywroc(); alert('W tym widoku nie ma teraz żadnych wierszy do eksportu.'); return null; }
+    if (btn) btn.textContent = '⏳ Zapisuję w Dzienniku…';
     try {
       // Polecenie właściciela 25.11.2026: KAŻDY eksport zapisany w Dzienniku Zdarzeń — bez potwierdzonego wpisu plik nie powstaje.
       const api = (typeof API_URL === 'string') ? API_URL : (global.location.origin + '/api');
       const r = await fetch(api, { method: 'POST', body: JSON.stringify({
         action: 'eksport_log', user_log: kto(), widok: p.tytul, sekcja: p.sekcjaId, wierszy: p.wierszy, arkusze: p.arkusze.length,
-        kolumny: p.arkusze.map((a) => a.naglowki.join(', ')).join(' | ').slice(0, 300), filtry: p.filtry, plik: p.plik,
+        kolumny: p.arkusze.map((a) => a.naglowki.join(', ')).join(' | ').slice(0, 300), filtry: (p.filtry || '') + (p.stron ? (p.filtry ? '; ' : '') + 'wszystkie ' + p.stron + ' stron' : ''), plik: p.plik,
       }) });
       const d = await r.json().catch(() => null);
       if (!d || d.status !== 'success') throw new Error((d && d.message) || 'serwer nie potwierdził wpisu w Dzienniku');
@@ -550,7 +619,7 @@
     document.head.appendChild(s);
   }
 
-  const EstelioExcel = { zip, xlsx, wartosc, zbierzTabele, tabeleSekcji, opisFiltrow, tytulSekcji, przygotuj, eksportuj, zapewnijPrzycisk, widoki, dedykowany, maDane, ROLE_EKSPORTU, slug, _crc32: crc32 };
+  const EstelioExcel = { zip, xlsx, wartosc, zbierzTabele, tabeleSekcji, opisFiltrow, tytulSekcji, przygotuj, eksportuj, zapewnijPrzycisk, widoki, dedykowany, maDane, zbierzWszystkieStrony, doczytajWszystko, przyciskiStron, ROLE_EKSPORTU, slug, _crc32: crc32 };
   global.EstelioExcel = EstelioExcel;
   if (typeof module !== 'undefined' && module.exports) module.exports = EstelioExcel;
   if (typeof document !== 'undefined' && document.head) {

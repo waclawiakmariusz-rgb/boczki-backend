@@ -50,8 +50,12 @@
     { "sprawdz": "window.__klub.tytul === 'Klub — członkowie' && window.__klub.wierszy === (klubadm_czlonkowieCache || []).length && (!!document.querySelector('#klub-admin .eksport-excel-btn') === (window.__klub.wierszy > 0))", "opis": "eksport członków z pamięci widoku; przycisk tylko, gdy ktoś jest w Klubie" },
 
     { "pokaz": "historia", "czekajPo": 3000 },
-    { "js": "(function(){ const p = EstelioExcel.przygotuj(document.getElementById('historia')); window.__hist = p; return 'wierszy: ' + p.wierszy + '; kolumny: ' + (p.arkusze[0] ? p.arkusze[0].naglowki.join(', ') : '-') + '; przycisk: ' + !!document.querySelector('#historia .eksport-excel-btn'); })()", "opis": "Historia sprzedaży: co widzi silnik" },
+    { "js": "(function(){ const p = EstelioExcel.przygotuj(document.getElementById('historia')); window.__hist = p; window.__histStrona = (document.getElementById('historia').innerText.match(/Strona \\d+ z \\d+/) || ['bez stron'])[0]; return 'na ekranie wierszy: ' + p.wierszy + '; ' + window.__histStrona + '; kolumny: ' + (p.arkusze[0] ? p.arkusze[0].naglowki.join(', ') : '-') + '; przycisk: ' + !!document.querySelector('#historia .eksport-excel-btn'); })()", "opis": "Historia sprzedaży: jedna strona na ekranie" },
     { "sprawdz": "(window.__hist.wierszy > 0) === !!document.querySelector('#historia .eksport-excel-btn')", "opis": "przycisk jest dokładnie wtedy, gdy są wiersze" },
+    { "js": "(function(){ window.__histWszystkie = null; EstelioExcel.zbierzWszystkieStrony(document.getElementById('historia')).then(z => { window.__histWszystkie = z || false; }); return 'zbieranie stron uruchomione'; })()", "opis": "zebranie WSZYSTKICH stron Historii (jak przy eksporcie)" },
+    { "czekaj": 2500 },
+    { "js": "(function(){ const z = window.__histWszystkie; const m = window.__histStrona.match(/z (\\d+)/); return z ? ('stron: ' + z.stron + ' (etykieta: ' + window.__histStrona + '); wierszy łącznie: ' + z.arkusze.reduce((s,a)=>s+a.wiersze.length,0) + '; po zebraniu ekran pokazuje: ' + (document.getElementById('historia').innerText.match(/Strona \\d+ z \\d+/) || ['bez stron'])[0]) : 'brak stron w tym widoku'; })()", "opis": "wynik zbierania stron" },
+    { "sprawdz": "window.__histWszystkie === false || (window.__histWszystkie.stron === Number((window.__histStrona.match(/z (\\d+)/) || [0, 1])[1]) && window.__histWszystkie.arkusze.reduce((s,a)=>s+a.wiersze.length,0) >= window.__hist.wierszy && (document.getElementById('historia').innerText.match(/Strona \\d+ z \\d+/) || ['bez stron'])[0] === window.__histStrona)", "opis": "zebrano tyle stron, ile mówi etykieta; wierszy nie mniej niż na ekranie; ekran wrócił na tę samą stronę" },
     { "zrzut": "04-historia" },
 
     { "pokaz": "magazyn", "czekajPo": 2500 },

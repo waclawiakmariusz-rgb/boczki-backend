@@ -243,6 +243,60 @@ describe('Widok z kilkoma tabelami', () => {
     });
 });
 
+describe('Stronicowanie: eksport wszystkich stron, powrót na stronę użytkownika', () => {
+    /** Atrapa widoku ze stronami: 3 strony po 2 wiersze, przyciski Poprzednia/Następna jak w Zadatkach/Historii. */
+    function widokZeStronami(startowa) {
+        const dane = [['A', '1'], ['B', '2'], ['C', '3'], ['D', '4'], ['E', '5']];
+        const stan = { strona: startowa, kliki: 0 };
+        const naStrone = 2, stron = Math.ceil(dane.length / naStrone);
+        const przycisk = (tekst, disabled, idz) => ({ textContent: tekst, innerText: tekst, disabled, offsetParent: {}, closest: () => null, click: () => { stan.kliki++; if (!disabled) stan.strona = idz(); } });
+        const sekcja = {
+            id: 'zadatki-lista',
+            get innerText() { return 'Spis Zadatków Strona ' + stan.strona + ' z ' + stron; },
+            querySelector: (sel) => (/h1/.test(sel) ? { innerText: 'Spis Zadatków' } : null),
+            querySelectorAll: (sel) => {
+                if (sel === 'table') {
+                    const wiersze = dane.slice((stan.strona - 1) * naStrone, stan.strona * naStrone).map((w) => tr(w.map((x) => td(x))));
+                    return [tabela(['Klient', 'Kwota'], wiersze)];
+                }
+                if (/button/.test(sel)) return [przycisk('Poprzednia', stan.strona === 1, () => stan.strona - 1), { textContent: 'Strona ' + stan.strona + ' z ' + stron, innerText: 'x', offsetParent: {}, closest: () => null }, przycisk('Następna', stan.strona === stron, () => stan.strona + 1)];
+                return [];
+            },
+        };
+        return { sekcja, stan };
+    }
+
+    test('z 2. strony: zbiera wszystkie 5 wierszy z 3 stron i wraca na stronę 2', async () => {
+        const { sekcja, stan } = widokZeStronami(2);
+        const z = await EstelioExcel.zbierzWszystkieStrony(sekcja);
+        expect(z.stron).toBe(3);
+        expect(z.arkusze).toHaveLength(1);
+        expect(z.arkusze[0].wiersze).toEqual([['A', 1], ['B', 2], ['C', 3], ['D', 4], ['E', 5]]);
+        expect(stan.strona).toBe(2);
+        const p = EstelioExcel.przygotuj(sekcja, new Date(2026, 10, 25, 14, 5), z);
+        expect(p.wierszy).toBe(5);
+        expect(p.stron).toBe(3);
+        expect(p.arkusze[0].stopka).toMatch(/wierszy: 5 \(wszystkie 3 stron\)/);
+    });
+
+    test('przyciski z ozdobnikami („◀ Poprzednia”, „Następna ➡️”) też są rozpoznawane', () => {
+        const btn = (t, disabled) => ({ textContent: t, innerText: t, disabled, offsetParent: {}, closest: () => null });
+        const sekcja = { querySelectorAll: () => [btn('◀ Poprzednia', true), btn('Następna ➡️', false), btn('Usuń', false)] };
+        const p = EstelioExcel.przyciskiStron(sekcja);
+        expect(p.poprzednia.textContent).toBe('◀ Poprzednia');
+        expect(p.nastepna.textContent).toBe('Następna ➡️');
+    });
+
+    test('z 1. strony: to samo, powrót na stronę 1; bez przycisków stron → null (zwykłe czytanie)', async () => {
+        const { sekcja, stan } = widokZeStronami(1);
+        const z = await EstelioExcel.zbierzWszystkieStrony(sekcja);
+        expect(z.arkusze[0].wiersze.map((w) => w[0])).toEqual(['A', 'B', 'C', 'D', 'E']);
+        expect(stan.strona).toBe(1);
+        const bez = { id: 'x', innerText: '', querySelector: () => null, querySelectorAll: () => [] };
+        expect(await EstelioExcel.zbierzWszystkieStrony(bez)).toBeNull();
+    });
+});
+
 describe('Widoki dedykowane (paczka B): Kosmetyki, Inwentaryzacja, Ranking, Klub', () => {
     afterEach(() => { delete global.rap_inventoryData; delete global.rap_getStatus; delete global.klubadm_czlonkowieCache; delete global.klubadm_eksportWnioski; delete global.klubadm_eksportOdbiory; delete global.klubadm_eksportZgloszenia; delete global.document; });
     const el = (o) => Object.assign({ offsetParent: {}, style: {}, querySelector: () => null, querySelectorAll: () => [], children: [] }, o);
