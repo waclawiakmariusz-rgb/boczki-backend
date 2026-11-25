@@ -669,8 +669,12 @@ app.post('/api', async (req, res) => {
         'loj_rejestracja_link', 'loj_wniosek_wyslij', 'loj_wniosek_odrzuc',
         'loj_kod_aktywacyjny', 'loj_app_qr'];
     const ticketyActions = ['tk_add', 'tk_list', 'tk_get', 'tk_licznik', 'tk_przeczytane', 'tk_zalacznik', 'tk_komentarz'];
+    const logiActions = ['eksport_log'];   // eksport do Excela: wpis w Dzienniku PRZED zapisaniem pliku (25.11.2026)
 
-    if (magazynActions.includes(action)) {
+    if (logiActions.includes(action)) {
+        req.url = '/logi';
+        return logiRoutes(req, res, () => {});
+    } else if (magazynActions.includes(action)) {
         req.url = '/magazyn';
         return magazynRoutes(req, res, () => {});
     } else if (sprzedazActions.includes(action)) {

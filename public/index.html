@@ -34923,6 +34923,7 @@ async function klubadm_zaladujOdbiory() {
   const boxW = document.getElementById('klubadm-wnioski-lista');
   if (boxW && dW && dW.status === 'success') {
     const wnioski = dW.wnioski || [];
+    window.klubadm_eksportWnioski = wnioski;   // eksport do Excela (eksport-excel.js) czyta to, co widać na stronie „Do obsłużenia”
     const noweW = wnioski.filter(w => w.status === 'NOWY');
     nowe += noweW.length;
     const stareW = wnioski.filter(w => w.status !== 'NOWY').slice(0, 5);
@@ -34949,6 +34950,7 @@ async function klubadm_zaladujOdbiory() {
   }
   if (dO && dO.status === 'success') {
     const odbiory = dO.odbiory || [];
+    window.klubadm_eksportOdbiory = odbiory;   // eksport do Excela
     const oczekuje = odbiory.filter(o => o.status === 'OCZEKUJE');
     nowe += oczekuje.length;
     const reszta = odbiory.filter(o => o.status !== 'OCZEKUJE').slice(0, 10);
@@ -34964,6 +34966,7 @@ async function klubadm_zaladujOdbiory() {
   }
   if (dZ && dZ.status === 'success') {
     const zgl = dZ.zgloszenia || [];
+    window.klubadm_eksportZgloszenia = zgl;   // eksport do Excela
     const noweZ = zgl.filter(z => z.status === 'NOWE');
     nowe += noweZ.length;
     const stare = zgl.filter(z => z.status !== 'NOWE').slice(0, 5);
@@ -37350,6 +37353,8 @@ document.addEventListener('DOMContentLoaded', function() {
      ds_zd_renderTabs/renderList/renderTaskCard/ds_zadanieComplete oraz zd_addOpen/zd_editOpen/zd_save z tego pliku -->
 <link rel="stylesheet" href="/zadania-pulpit.css?v=__WERSJA_PLIKOW__">
 <script src="/zadania-pulpit.js?v=__WERSJA_PLIKOW__" defer></script>
+<!-- Eksport widocznych danych do Excela (25.11.2026): przycisk „⬇ Excel” pojawia się sam w każdym widoku z tabelą; każdy eksport = wpis w Dzienniku (eksport_log) -->
+<script src="/eksport-excel.js?v=__WERSJA_PLIKOW__" defer></script>
 <!-- Statystyki zespołu w Analiza → Zadania zespołu (27.10.2026): widok #zd-stat, przełącznik zst_pokaz, dane z action 'statystyki' -->
 <link rel="stylesheet" href="/zadania-statystyki.css?v=__WERSJA_PLIKOW__">
 <script src="/zadania-statystyki.js?v=__WERSJA_PLIKOW__" defer></script>

@@ -2,10 +2,12 @@
 // Funkcje logowania do bazy i pobierania logów systemowych
 
 const express = require('express');
-const router = express.Router();
 const { randomUUID } = require('crypto');
 
 module.exports = (db) => {
+  // Router tworzony W fabryce (25.11.2026; wcześniej na poziomie modułu): każde wywołanie fabryki dostaje własny router,
+  // zamiast dokładać obsługę do wspólnego — w serwerze bez różnicy (jedno wywołanie), w testach konieczne.
+  const router = express.Router();
   // Pomocnicza funkcja zapiszLog - eksportowana do użycia w innych routes
   // Wewnętrzna wersja - używa db bezpośrednio
   function zapiszLog(tenant_id, akcja, kto, opis) {
@@ -31,6 +33,42 @@ module.exports = (db) => {
         opis: r.opis
       }));
       return res.json(logi);
+    });
+  });
+
+  // POST /logi — akcja `eksport_log` (25.11.2026): wpis w Dzienniku o eksporcie widocznych danych do Excela.
+  // Polecenie właściciela: eksport może zrobić manager, megaadmin, recepcja (i admin), a KAŻDY eksport musi być
+  // zarejestrowany w Dzienniku Zdarzeń. Panel pyta o ten wpis PRZED zapisaniem pliku — bez potwierdzenia plik nie powstaje.
+  const ROLE_EKSPORTU = new Set(['admin', 'megaadmin', 'manager', 'recepcja']);
+  router.post('/logi', (req, res) => {
+    const d = req.body || {};
+    const tenant_id = d.tenant_id;
+    if (!tenant_id) return res.json({ status: 'error', message: 'Brak tenant_id' });
+    if (d.action !== 'eksport_log') return res.json({ status: 'error', message: 'Nieznana akcja: ' + d.action });
+    const kto = String(d.user_log || '').trim();
+    if (!kto) return res.json({ status: 'error', message: 'Brak identyfikacji pracownika — zaloguj się ponownie.' });
+    db.query(`SELECT rola FROM Użytkownicy WHERE tenant_id = ? AND TRIM(imie_login) = TRIM(?) LIMIT 1`, [tenant_id, kto], (err, rows) => {
+      const rola = (!err && Array.isArray(rows) && rows[0]) ? String(rows[0].rola || '').toLowerCase().trim() : '';
+      if (!ROLE_EKSPORTU.has(rola)) return res.json({ status: 'error', message: 'Eksport danych jest dostępny dla recepcji, managera i administratora.' });
+      const tekst = (v, n) => String(v == null ? '' : v).replace(/\s+/g, ' ').trim().slice(0, n);
+      const widok = tekst(d.widok, 80) || tekst(d.sekcja, 80) || 'widok';
+      const wierszy = Math.max(0, parseInt(d.wierszy, 10) || 0);
+      const arkusze = Math.max(1, parseInt(d.arkusze, 10) || 1);
+      const kolumny = tekst(d.kolumny, 200);
+      const filtry = tekst(d.filtry, 150);
+      const plik = tekst(d.plik, 80);
+      const teraz = new Date();
+      const f = (o) => new Intl.DateTimeFormat('pl-PL', { timeZone: 'Europe/Warsaw', ...o }).format(teraz);
+      const kiedy = f({ day: '2-digit', month: '2-digit', year: 'numeric' }) + ' o ' + f({ hour: '2-digit', minute: '2-digit' });
+      const opis = `Użytkownik ${kto} wyeksportował do Excela widok „${widok}” (${kiedy}): ${wierszy} wierszy${arkusze > 1 ? ' w ' + arkusze + ' arkuszach' : ''}; kolumny: ${kolumny || 'brak'}; filtry: ${filtry || 'brak'}; plik: ${plik || 'bez nazwy'}.`;
+      db.query(
+        `INSERT INTO Logi (id, tenant_id, data_zdarzenia, pracownik, akcja, modul, opis) VALUES (?, ?, NOW(), ?, 'EKSPORT DANYCH', 'SYSTEM', ?)`,
+        [randomUUID(), tenant_id, kto, opis.slice(0, 500)],
+        (err2) => {
+          if (err2) return res.json({ status: 'error', message: 'Nie udało się zapisać wpisu w Dzienniku: ' + err2.message });
+          return res.json({ status: 'success', message: 'Eksport zapisany w Dzienniku Zdarzeń.', opis });
+        }
+      );
     });
   });
 
